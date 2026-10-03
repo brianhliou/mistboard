@@ -26,14 +26,12 @@ import {
 } from './review/game-review-meta.js';
 import {
   fetchCachedJieqiDecisions,
-  type JieqiDecisionSummary,
+  jieqiDecisionOverlay,
   requestJieqiDecisions,
 } from './review/jieqi-decisions.js';
 import { mountJieqiReview } from './review/jieqi-review.js';
 import { recoverJieqiDeal } from './review/jieqi-tree-adapter.js';
-import { formatJieqiBestMove } from './review/move-advice.js';
 import { analysisHref, editorHref } from './review/position-links.js';
-import type { DecisionOverlay } from './review/tree-review.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
 
@@ -242,42 +240,12 @@ function renderPostgame(root: HTMLElement, postgame: JieqiPostgameResponse): voi
     decisions: {
       fetchCached: () =>
         fetchCachedJieqiDecisions(postgame.game.roomId).then((summary) =>
-          summary ? toDecisionOverlay(summary) : null,
+          summary ? jieqiDecisionOverlay(summary) : null,
         ),
       canRun: isLikelySignedIn(),
-      run: () => requestJieqiDecisions(postgame.game.roomId).then(toDecisionOverlay),
+      run: () => requestJieqiDecisions(postgame.game.roomId).then(jieqiDecisionOverlay),
     },
   });
-}
-
-// Adapt the jieqi-specific decomposition summary to the review's variant-agnostic overlay shape.
-function toDecisionOverlay(summary: JieqiDecisionSummary): DecisionOverlay {
-  return {
-    byPly: new Map(
-      [...summary.byPly].map(([ply, view]) => [
-        ply,
-        {
-          judgment: view.judgment,
-          accuracy: view.accuracy,
-          luck: view.luck,
-          playedRank: view.playedRank,
-          // Format at the variant seam: the review layer is variant-agnostic and must never
-          // see engine UCI. Same formatter the "… was best." advice line uses.
-          ...(view.candidates?.length
-            ? {
-                candidates: view.candidates.map((candidate) => ({
-                  label: formatJieqiBestMove(candidate.move),
-                  win: candidate.win,
-                  ...(candidate.played ? { played: true } : {}),
-                })),
-              }
-            : {}),
-        },
-      ]),
-    ),
-    red: { reveals: summary.red.reveals, decisionAccuracy: summary.red.decisionAccuracy },
-    black: { reveals: summary.black.reveals, decisionAccuracy: summary.black.decisionAccuracy },
-  };
 }
 
 // Exported for the watch-replay surface to reuse the per-ply view selection,

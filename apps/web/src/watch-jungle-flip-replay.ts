@@ -10,6 +10,8 @@ import { type JungleFlipPlayerView, jungleFlipLastMoverInk } from '@mistboard/ga
 import { flipSeatInk } from './flip-seat-ink.js';
 import {
   animateJungleFlipBoardMove,
+  type JungleFlipBoardArrow,
+  type JungleFlipBoardMarker,
   type JungleFlipRenderBoard,
   renderJungleFlipBoardSvg,
 } from './jungle-flip-render.js';
@@ -46,10 +48,12 @@ export function mountJungleFlipWatchReplay(
     viewEntries: () => [{ key: 'truth', label: t('watch.truth') }],
     viewAtPly,
     paneKind: () => 'truth',
-    renderBoard: (view) =>
+    renderBoard: (view, _orientation, _key, overlay) =>
       renderJungleFlipBoardSvg(view.board as JungleFlipRenderBoard, {
         lastMove: view.lastMove ?? null,
         lastMoveInk: jungleFlipLastMoverInk(view),
+        arrows: overlay.arrows as readonly JungleFlipBoardArrow[],
+        markers: overlay.glyphs as readonly JungleFlipBoardMarker[],
       }),
     // One-ply steps glide: forward animates the newly rendered view's lastMove,
     // a back step reverse-animates the move the previous ply carried. A flip is a

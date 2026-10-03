@@ -20,6 +20,8 @@ import {
 import {
   animateJieqiBoardMove,
   installJieqiBoardStyles,
+  type JieqiBoardArrow,
+  type JieqiBoardMarker,
   renderJieqiBoardSvg,
 } from './live-jieqi-render.js';
 import type { ReplayHandle } from './replay.js';
@@ -79,7 +81,11 @@ export function mountJieqiWatchReplay(
         (key === 'masked' ? postgameViewAtPly(postgame, 'truth', ply) : null),
       reveal: { hiddenKey: 'masked', truthKey: 'truth' },
       paneKind,
-      renderBoard: (view, orientation) => renderJieqiBoardSvg(view, orientation, {}),
+      renderBoard: (view, orientation, _key, overlay) =>
+        renderJieqiBoardSvg(view, orientation, {
+          arrows: overlay.arrows as readonly JieqiBoardArrow[],
+          markers: overlay.glyphs as readonly JieqiBoardMarker[],
+        }),
       // One-ply steps glide (pieceAnimation pref): forward animates the newly
       // rendered view's lastMove; a back step reverse-animates the move the
       // previous ply carried. Moves come from the watch payload's views only.

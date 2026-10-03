@@ -10,6 +10,8 @@ import {
   type PieceRole,
   replayGameEvents,
 } from '@mistboard/game';
+import type { DrawShape } from 'chessground/draw';
+import type { Key } from 'chessground/types';
 import 'chessground/assets/chessground.base.css';
 import 'chessground/assets/chessground.brown.css';
 import 'chessground/assets/chessground.cburnett.css';
@@ -93,6 +95,8 @@ import {
 } from './replay-wall-clock.js';
 import type { MoveListEntry } from './review/move-list.js';
 import { seatDiscEl } from './seat-disc.js';
+import type { SvgBoardSquareArrow, SvgBoardSquareGlyph } from './svg-board-arrow.js';
+import { svgBoardGlyphMarker } from './svg-board-marker.js';
 import { escapeHtml } from './web-utils.js';
 
 const replayAbortControllers = new WeakMap<HTMLElement, AbortController>();
@@ -274,6 +278,23 @@ export type ReplayHandle = {
   /** Which move-order seat the board is drawn for (sits at the bottom). OPTIONAL;
    *  the embed card reads it to put its own seat rows the right way up. */
   bottomSeat?: () => 'first' | 'second';
+  /** Draw this overlay on the board at each ply (null clears), repainting the current
+   *  ply now: arrows, and judgment badges pinned to a square. The squares are the board's
+   *  own notation. OPTIONAL. The game embed's stored best-move arrows and move badges
+   *  ride this (the chess path draws the badges through chessground's shapes). */
+  setBoardOverlay?: (overlayAtPly: ((ply: number) => ReplayBoardOverlay) | null) => void;
+  /** The game's played moves as board squares, one per ply (a drop has no `from`, a flip
+   *  has from === to). OPTIONAL; lets a caller match a stored best move against the
+   *  move played without decoding the variant's rules. */
+  playedMoves?: () => Array<{ ply: number; from?: string; to?: string }>;
+};
+
+/** What a caller draws over a replay board at one ply. */
+export type ReplayBoardOverlay = {
+  arrows: readonly SvgBoardSquareArrow[];
+  /** Judgment badges (?!, ?, ??) in a square's top-right corner, in the shared
+   *  board-glyph-marker.css palette (`className` = `xq-marker--<tone>`). */
+  glyphs: readonly SvgBoardSquareGlyph[];
 };
 
 /** A per-ply clock snapshot, keyed by move order rather than colour so it carries across
@@ -555,6 +576,32 @@ export async function mountReplay(
   const whiteCg = createBoard(whitePane.boardEl, boardOrientation);
   const truthCg = createBoard(truthPane.boardEl, boardOrientation);
   const blackCg = createBoard(blackPane.boardEl, boardOrientation);
+  // A caller's overlay per ply (handle.setBoardOverlay: the game embed's judgment
+  // badges and stored best-move arrows), drawn as chessground auto-shapes on every pane.
+  let overlayAtPly: ((ply: number) => ReplayBoardOverlay) | null = null;
+  const applyBoardOverlay = (): void => {
+    const overlay = overlayAtPly?.(currentPly);
+    const shapes: DrawShape[] = overlay
+      ? [
+          ...overlay.arrows.map(
+            (arrow): DrawShape => ({
+              orig: arrow.from as Key,
+              dest: arrow.to as Key,
+              brush: arrow.className?.includes('best') ? 'blue' : 'paleGrey',
+            }),
+          ),
+          ...overlay.glyphs.map(
+            (glyph): DrawShape => ({
+              orig: glyph.square as Key,
+              // Chessground hands a custom shape the square as a 100x100 box; the badge
+              // is the same markup and palette every SVG board draws.
+              customSvg: { html: svgBoardGlyphMarker(glyph, { x: 50, y: 50 }, 17, 32) },
+            }),
+          ),
+        ]
+      : [];
+    for (const cg of [whiteCg, truthCg, blackCg]) cg.setAutoShapes(shapes);
+  };
 
   const annotation = options.annotation;
   const belief = options.belief;
@@ -676,6 +723,7 @@ export async function mountReplay(
       setBoardFromView(whiteCg, whiteView, boardOrientation, animBase && moverColor === 'white');
       setBoardFromView(blackCg, blackView, boardOrientation, animBase && moverColor === 'black');
     }
+    applyBoardOverlay();
 
     const showRevealLabels = finished && reveal;
     whitePane.labelEl.textContent = showRevealLabels
@@ -1521,6 +1569,10 @@ export async function mountReplay(
     },
     availablePovs: () => ['white', 'truth', 'black'],
     bottomSeat: () => (boardOrientation === 'white' ? 'first' : 'second'),
+    setBoardOverlay: (next) => {
+      overlayAtPly = next;
+      applyBoardOverlay();
+    },
     prefetchGame: (sampleId: string) => {
       if (
         abortController.signal.aborted ||

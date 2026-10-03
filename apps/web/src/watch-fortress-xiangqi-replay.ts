@@ -8,6 +8,8 @@ import {
 } from './fortress-xiangqi-postgame.js';
 import {
   animateFortressXiangqiBoardMove,
+  type FortressXiangqiBoardArrow,
+  type FortressXiangqiBoardMarker,
   installFortressXiangqiBoardStyles,
   renderFortressXiangqiBoardSvg,
 } from './fortress-xiangqi-render.js';
@@ -40,7 +42,11 @@ export function mountFortressXiangqiWatchReplay(
     viewEntries: () => [{ key: 'truth', label: 'Server truth' }],
     viewAtPly: postgameViewAtPly,
     paneKind: () => 'truth',
-    renderBoard: (view, orientation) => renderFortressXiangqiBoardSvg(view, orientation),
+    renderBoard: (view, orientation, _key, overlay) =>
+      renderFortressXiangqiBoardSvg(view, orientation, {
+        arrows: overlay.arrows as readonly FortressXiangqiBoardArrow[],
+        markers: overlay.glyphs as readonly FortressXiangqiBoardMarker[],
+      }),
     // allRoles: the showcase draws every droppable role and ghosts the ones
     // held none of, the way lichess draws a crazyhouse pocket. Held-only rows
     // render the common empty pocket as a blank band, and shift the pieces

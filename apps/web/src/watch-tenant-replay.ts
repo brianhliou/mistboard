@@ -19,7 +19,7 @@ import {
   offsetsFromTimestamps,
   positionAt,
 } from './recorded-playback.js';
-import type { GameMeta, ReplayHandle } from './replay.js';
+import type { GameMeta, ReplayBoardOverlay, ReplayHandle } from './replay.js';
 import { createPane, type ReplayPaneHandle } from './replay-board.js';
 import { createGameHeaderStrip } from './replay-meta.js';
 import type { MoveListEntry } from './review/move-list.js';
@@ -115,7 +115,16 @@ export type TenantWatchAdapter<Postgame extends WatchPostgameMeta, View, ViewKey
   paneKind(key: ViewKey): 'white' | 'truth' | 'black';
   // The adapter owns fog/perspective (e.g. a fog tenant passes showFog when the
   // pane is a per-color view rather than truth).
-  renderBoard(view: View, orientation: 'red' | 'black', key: ViewKey): string;
+  // `overlay` is the caller's drawing for this ply (the game embed's stored best moves
+  // and judgment badges), in the board's own square notation; an adapter forwards the
+  // arrows to its renderer's arrow layer and the badges to its marker layer. Empty on
+  // every surface that sets none (TV, showcase), so nothing changes there.
+  renderBoard(
+    view: View,
+    orientation: 'red' | 'black',
+    key: ViewKey,
+    overlay: ReplayBoardOverlay,
+  ): string;
   fillCaptures(host: HTMLElement, view: View, owner: 'red' | 'black'): void;
   // Label one ply for the move list. The default writes `${from}-${to}`, which
   // is every tenant whose move IS a from/to pair. A tenant whose move carries
@@ -373,6 +382,29 @@ function buildTenantMoveEntries(
   return entries;
 }
 
+// The played moves as board squares, numbered exactly as buildTenantMoveEntries numbers
+// them, so a ply here is the same ply on the score sheet.
+export function tenantPlayedMoves(
+  postgame: WatchPostgameMeta,
+): Array<{ ply: number; from?: string; to?: string }> {
+  const moves: Array<{ ply: number; from?: string; to?: string }> = [];
+  for (const event of postgame.timeline ?? []) {
+    const move = event.move;
+    if (!move) continue;
+    const from = typeof move.from === 'string' ? move.from : '';
+    const to = typeof move.to === 'string' ? move.to : '';
+    if (!from && !to) continue;
+    moves.push({
+      ply: typeof event.ply === 'number' ? event.ply : moves.length + 1,
+      ...(from ? { from } : {}),
+      ...(to ? { to } : {}),
+    });
+  }
+  return moves;
+}
+
+const NO_OVERLAY: ReplayBoardOverlay = { arrows: [], glyphs: [] };
+
 function controlButton(symbol: string, aria: string): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
@@ -422,6 +454,9 @@ export async function mountTenantWatchReplay<
       : null;
   // Guards a single onGameEnd fire per game so the loop hold can't re-enter it.
   let endFired = false;
+
+  // Caller-supplied board overlay per ply (handle.setBoardOverlay); null draws none.
+  let overlayAtPly: ((ply: number) => ReplayBoardOverlay) | null = null;
 
   // Per-game render state, rebuilt on each loadGame.
   let boardTargets: Array<{ pane: ReplayPaneHandle; key: ViewKey }> = [];
@@ -594,7 +629,12 @@ export async function mountTenantWatchReplay<
         adapter.viewAtPly(activePostgame, key, currentPly) ??
         adapter.viewAtPly(activePostgame, target.key, currentPly);
       if (view) {
-        target.pane.boardEl.innerHTML = adapter.renderBoard(view, boardOrientation, key);
+        target.pane.boardEl.innerHTML = adapter.renderBoard(
+          view,
+          boardOrientation,
+          key,
+          overlayAtPly?.(currentPly) ?? NO_OVERLAY,
+        );
         if (adapter.animateMove && animatedPrevPly !== null) {
           const prevView =
             adapter.viewAtPly(activePostgame, key, animatedPrevPly) ??
@@ -1240,6 +1280,14 @@ export async function mountTenantWatchReplay<
       sync();
     },
     bottomSeat: () => (boardOrientation === 'red' ? 'first' : 'second'),
+    // A repaint at the same ply: sync() only glides on a one-ply step and only
+    // notifies on a ply change, so this redraws the board with the new arrows and
+    // nothing else moves.
+    setBoardOverlay: (next) => {
+      overlayAtPly = next;
+      sync();
+    },
+    playedMoves: () => (activePostgame ? tenantPlayedMoves(activePostgame) : []),
     availablePovs: () => {
       if (!activePostgame) return [];
       const kinds = new Set<'white' | 'truth' | 'black'>();
