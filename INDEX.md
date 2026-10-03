@@ -281,7 +281,7 @@ Edit task → find file → open only that file.
 | `persistence-correspondence-digest.ts` | Digest reads/write: `listCorrespondenceDigestCandidates` (waiting `room_deadlines` rows grouped by seated account, with the `correspondenceTurnDigest` opt-out, last-sent and last-seen filters in the query) and `markCorrespondenceDigestSent` |
 | `send-email.ts` | Shared Resend transactional-email sender — the single wire call to the email provider (auth codes, feedback, engine alerts, correspondence nudges). Never logs (API key must not leak); policy stays caller-owned |
 | `persistence-room-deadlines.ts` | `room_deadlines` persistence: durable index for correspondence deadline enforcement (upsert per event, delete on terminal); the event log stays source of truth |
-| `persistence-correspondence-seeks.ts` | `correspondence_seeks` persistence: the open async-seek board; per-user cap via `countOpenSeeksForUser` |
+| `persistence-correspondence-seeks.ts` | `correspondence_seeks` persistence: the open async-seek board; per-user cap via `countOpenSeeksForUser`; board seeks lapse `CORRESPONDENCE_SEEK_TTL_MS` (14 days) after posting, computed at read time; `findOpenDuplicatePublicSeek` backs create-time dedupe |
 | `persistence-engine-jobs.ts` | Live-engine move work-queue (Postgres): enqueue+await on the server, `FOR UPDATE SKIP LOCKED` claim on engine-worker replicas with soft affinity. NOT yet wired (lands behind a flag) |
 | `persistence-engine-seats.ts` | Centralized live-engine seat accounting (Postgres) across an elastic worker fleet; the multi-replica replacement for the in-memory reservation store. NOT yet wired (flag-gated later) |
 | `accounts-count.ts` | CLI: count accounts (total + new in last 7/30d) |
