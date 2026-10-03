@@ -73,6 +73,7 @@ import {
   mountCrazyhouseXiangqiReplay,
 } from './crazyhouse-xiangqi-replay.js';
 import { type DuckXiangqiReplayController, mountDuckXiangqiReplay } from './duck-xiangqi-replay.js';
+import { autosizeEmbedFrame } from './embed/embed-autosize.js';
 import {
   type FortressXiangqiReplayController,
   mountFortressXiangqiReplay,
@@ -1966,7 +1967,10 @@ function renderEmbedBlock(block: EmbedBlock): HTMLElement {
   iframe.title = block.title;
   iframe.setAttribute('loading', 'lazy');
   const [w, h] = block.aspect ?? [EMBED_DEFAULT_WIDTH, EMBED_DEFAULT_HEIGHT];
+  // The aspect is a placeholder: the card inside reports the height that fits
+  // its width, so no block's guess leaves empty space under it.
   iframe.style.aspectRatio = `${w} / ${h}`;
+  autosizeEmbedFrame(iframe);
   figure.append(iframe);
   if (block.caption) {
     const caption = document.createElement('figcaption');

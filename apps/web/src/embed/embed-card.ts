@@ -45,6 +45,10 @@ const RAIL_WIDTH_PX = 226;
 const DUCK_RAIL_WIDTH_PX = 276;
 // The card's own border, left and right (or top and bottom when stacked).
 const CARD_BORDER_PX = 2;
+// The mat each board sits on (embed.css, .embed-card .embed-board
+// padding-inline): the board column is this much wider than the board drawn
+// in it, at the same height.
+const BOARD_MAT_INLINE_PX = 16;
 // Two seat rows (39px each) frame the board, and the step-control row sits
 // under the bottom row. Reserved out of the box height so the board never
 // pushes them off the bottom.
@@ -226,8 +230,35 @@ export function fitBoardWidth(
   const reservedHeight =
     SEAT_ROWS_PX + CONTROLS_PX + CARD_BORDER_PX + (stacked ? STACKED_MOVES_MIN_PX : 0);
   const availableHeight = frame.height - reservedHeight;
-  return Math.max(120, Math.floor(Math.min(availableWidth, availableHeight * aspect)));
+  return Math.max(
+    120,
+    Math.floor(Math.min(availableWidth, availableHeight * aspect + BOARD_MAT_INLINE_PX)),
+  );
 }
+
+/** The box height at which fitBoardWidth is bound by the width alone: the
+ *  height a host should give the frame so the board takes the whole width and
+ *  nothing below the card is left empty. Inverse of fitBoardWidth. */
+export function naturalBoxHeight(
+  width: number,
+  aspect: number,
+  stacked: boolean,
+  railWidthPx: number = RAIL_WIDTH_PX,
+): number {
+  const boardWidth = Math.max(
+    120,
+    Math.floor(width - CARD_BORDER_PX - (stacked ? 0 : railWidthPx)),
+  );
+  const reservedHeight =
+    SEAT_ROWS_PX + CONTROLS_PX + CARD_BORDER_PX + (stacked ? STACKED_MOVES_MIN_PX : 0);
+  return Math.ceil((boardWidth - BOARD_MAT_INLINE_PX) / aspect) + reservedHeight;
+}
+
+/** The message a framed card sends its host with the frame height it needs
+ *  (embed-autosize.ts listens). `height: null` hands the height back to the
+ *  host's own CSS. */
+export const EMBED_HEIGHT_MESSAGE = 'mistboard:embed-height';
+export type EmbedHeightMessage = { type: typeof EMBED_HEIGHT_MESSAGE; height: number | null };
 
 // Drawn, not typed: the media glyphs and the arrows resolve from different
 // fallback fonts, never match in weight, and on some platforms the media pair
@@ -398,6 +429,28 @@ export async function mountEmbedCard(
   // is already the right size, and again whenever the host resizes the frame.
   // Measured from the frame, not the card: the card is only as tall as its
   // board column, so its own rect is the answer, not the question.
+  // The board's shape: the variant's table value until the renderer has drawn,
+  // then the drawn board's own. The table can be off for a renderer that draws
+  // a frame round its grid (banqi: 2.0 in the table, 1.82 drawn), and a frame
+  // sized by the wrong shape clips the card or leaves space under it.
+  let aspect = options.aspect;
+  const measureAspect = (): boolean => {
+    const r = boardHost.getBoundingClientRect();
+    const drawnWidth = r.width - BOARD_MAT_INLINE_PX;
+    if (drawnWidth < 50 || r.height < 50) return false;
+    const drawn = drawnWidth / r.height;
+    if (Math.abs(drawn - aspect) / aspect < 0.005) return false;
+    aspect = drawn;
+    return true;
+  };
+  let lastPosted: number | null | undefined;
+  const postHeight = (height: number | null): void => {
+    if (window.parent === window || height === lastPosted) return;
+    lastPosted = height;
+    const message: EmbedHeightMessage = { type: EMBED_HEIGHT_MESSAGE, height };
+    // Only a height leaves the frame, so any host may read it.
+    window.parent.postMessage(message, '*');
+  };
   const fitBoard = (): void => {
     const rect = frame.getBoundingClientRect();
     const box = {
@@ -406,7 +459,7 @@ export async function mountEmbedCard(
     };
     if (box.width <= 0 || box.height <= 0) return;
     const stacked = box.width < STACK_BELOW_PX;
-    const boardWidth = fitBoardWidth(box, options.aspect, stacked, options.railWidthPx);
+    const boardWidth = fitBoardWidth(box, aspect, stacked, options.railWidthPx);
     boardCol.style.width = `${boardWidth}px`;
     // Beside the board the card is the board plus the sheet at its floor, the
     // article replay's proportions, and centres in whatever the frame has
@@ -419,6 +472,29 @@ export async function mountEmbedCard(
     // the sheet has no content width of its own (its scroller is out of flow).
     const railWidth = options.railWidthPx ?? RAIL_WIDTH_PX;
     card.style.width = stacked ? '' : `${boardWidth + railWidth + CARD_BORDER_PX}px`;
+    reportHeight();
+  };
+  // Tell the host the frame height that fits this width exactly, so a host that
+  // listens (articles, the forum) sizes the frame to the card instead of a
+  // hand-set aspect that leaves empty space under it (Brian, 2026-10-03: "big
+  // vertical space after the embeds"). The height comes from the same model
+  // fitBoardWidth sizes the board by, never from a measurement: a measured card
+  // and a modelled one that disagree by a pixel make the host and the card
+  // resize each other forever. Stacked, the host's CSS keeps the height: its
+  // phone rule leaves the move sheet more room than the floor here.
+  const reportHeight = (): void => {
+    const rect = frame.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    if (rect.width < STACK_BELOW_PX) {
+      postHeight(null);
+      return;
+    }
+    const box = naturalBoxHeight(rect.width, aspect, false, options.railWidthPx);
+    // The window beyond the frame element is the frame's own padding.
+    const chrome = window.innerHeight - rect.height;
+    postHeight(
+      Math.ceil(box + header.offsetHeight + credit.offsetHeight + 2 * FRAME_GAP_PX + chrome),
+    );
   };
   fitBoard();
   if (typeof ResizeObserver !== 'undefined') {
@@ -426,6 +502,13 @@ export async function mountEmbedCard(
   }
 
   handle = await options.mountBoard(boardHost, { onPlyChange });
+  if (measureAspect()) fitBoard();
+  if (typeof ResizeObserver !== 'undefined') {
+    // A renderer that paints after its mount resolves settles its height later.
+    new ResizeObserver(() => {
+      if (measureAspect()) fitBoard();
+    }).observe(boardHost);
+  }
 
   // Marks from the stored analysis (setAnnotations), folded into every build of the sheet.
   let annotations: ReadonlyMap<number, EmbedSheetAnnotation> = new Map();

@@ -97,6 +97,27 @@ describe('study-annotate', () => {
     assert.equal(verdict(67, 68), '−+');
   });
 
+  it('grades a hidden-information move by its own search, not the luck after it', () => {
+    // Ply 2 turns over a piece: the next position (redScore[2]) knows what it
+    // was, so it carries the luck of the draw. moveScore is red's score of the
+    // move as searched before it (the mover's view), and the grade reads that.
+    const input = {
+      rootFen: 'root',
+      moves: ['a1a2', 'b8b7', 'c1c2'],
+      redScore: [0.5, 0.5, 0.9, 0.9],
+      best: ['a1a2', 'h8h7', 'c1c2'],
+      moveScore: [null, 0.52, null],
+    };
+    // The draw went black's way badly (red 50% -> 90%), but the move cost black 2 points.
+    assert.deepEqual(judgedMoves(input), []);
+    // Searched as a 10-point loss for black, it is a mistake whatever the draw.
+    const graded = judgedMoves({ ...input, moveScore: [null, 0.6, null] });
+    assert.deepEqual(
+      graded.map((m) => [m.ply, m.glyph, m.before, m.after]),
+      [[2, '?', 0.5, 0.4]],
+    );
+  });
+
   it('hangs a sideline only off a move that earned a glyph', () => {
     const tree = annotateFromEngine({
       rootFen: 'root',

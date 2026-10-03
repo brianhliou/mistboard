@@ -308,6 +308,43 @@ const ZH_HANS: Record<string, string> = {
   '[Pikafish](https://github.com/official-pikafish/Pikafish) is built for speed. It looks at more than a million positions a second and judges each one by rules written by hand. AB-JChess is built from Pikafish too, but it judges positions with a neural network trained on about a billion jieqi positions. It looks at about fifty times fewer positions, and understands each one better. Its training code is public in the same repository, under [abjchess-nnue-pytorch](https://github.com/lxsgx23/AB-JChess/tree/main/abjchess-nnue-pytorch).':
     '[皮卡鱼](https://github.com/official-pikafish/Pikafish)靠速度取胜。它每秒看一百多万个局面，用人工写成的规则评估每一个局面。AB-JChess 同样由皮卡鱼改造而来，但它用神经网络评估局面，这个网络用大约十亿个揭棋局面训练而成。它看的局面少了大约五十倍，但对每个局面理解得更深。它的训练代码也公开在同一个代码库里，见 [abjchess-nnue-pytorch](https://github.com/lxsgx23/AB-JChess/tree/main/abjchess-nnue-pytorch)。',
   'Where it sits': '它排在哪里',
+  // ab-jchess examples: machine-drafted 2026-10-03, not native-reviewed.
+  'Where the edge comes from': '优势从哪里来',
+  'Each engine reported a score with every move it played in the match, and when the two disagreed, AB-JChess was usually the one that was right. In 137 games there came a point where AB-JChess gave itself 75% or more while Pikafish, on the move before or after, gave AB-JChess 60% or less. AB-JChess won 115 of those games, lost 13 and drew 9. The other way round, Pikafish at 75% or more for itself while AB-JChess gave it 60% or less, happened in 202 games, and Pikafish won 101 of them, lost 90 and drew 11. These are the numbers Pikafish reported during the match, with the reveal bug we have since fixed.':
+    '比赛中，两个引擎每走一步都会报出一个分数；两者看法不一致时，通常是 AB-JChess 看对了。有 137 盘棋出现过这样的时刻：AB-JChess 给自己 75% 或更高，而皮卡鱼在前一步或后一步只给 AB-JChess 60% 或更低。这些棋 AB-JChess 赢了 115 盘，输 13 盘，和 9 盘。反过来，皮卡鱼给自己 75% 或更高、而 AB-JChess 只给它 60% 或更低的情况出现在 202 盘棋中，皮卡鱼赢了其中 101 盘，输 90 盘，和 11 盘。这些是皮卡鱼在比赛中报出的分数，当时还带着我们后来修复的翻子错误。',
+  "Here are two of AB-JChess's wins, both as Red, where its score climbed while Pikafish's stayed level. We scored every position again with both engines, AB-JChess searching 1 million positions and the fixed Pikafish 64 million, and turned each engine's numbers into an expected score with a curve fitted on the match. Each chart shows AB-JChess's score as each engine saw it, with moves numbered as on the board below it. On the boards, ?! marks a Pikafish move that cost 5 to 10 points by AB-JChess's count; neither game has a worse one.":
+    '下面是 AB-JChess 的两盘胜局，两盘它都执红，它的分数一路上升，而皮卡鱼的分数一直持平。我们用两个引擎把每个局面重新评估了一遍（AB-JChess 每个局面搜索 100 万个节点，修复后的皮卡鱼搜索 6400 万个），并用一条按这次对抗赛拟合的曲线把各自的分值换算成期望得分。每张图显示两个引擎各自眼中 AB-JChess 的得分，回合编号与下方棋盘一致。棋盘上的 ?! 标出按 AB-JChess 的算法让皮卡鱼损失 5 到 10 个百分点的着法；两盘棋里都没有更差的着法。',
+  'Game 68: two advisors and an elephant, for an attack': '第 68 盘：两个士和一个象，换来一场攻势',
+  'AB-JChess thinks': 'AB-JChess 的判断',
+  'Pikafish thinks': '皮卡鱼的判断',
+  'Move 18: the horse takes the elephant': '第 18 回合：马吃象',
+  'AB-JChess 85%, Pikafish 50%': 'AB-JChess 85%，皮卡鱼 50%',
+  'Move 23: Pikafish': '第 23 回合：皮卡鱼',
+  agrees: '才认同',
+  'Move 16: the chariots are off': '第 16 回合：双方兑掉车',
+  'AB-JChess 83%, Pikafish 48%': 'AB-JChess 83%，皮卡鱼 48%',
+  'Move 21: Pikafish': '第 21 回合：皮卡鱼',
+  "Pikafish, as Black, took a face-down advisor with its chariot on move 11, then sent the horse that came up on b1 into Red's camp, where it took the second advisor and an elephant. AB-JChess spent those moves bringing a chariot, a horse and a soldier near Black's king. From move 13 to move 21, AB-JChess never had Red below 69%; Pikafish, searching the same positions, had Red between 40% and 58%.":
+    '皮卡鱼执黑，第 11 回合用车吃掉一个暗子士，随后把在 b1 翻出的马杀进红方阵地，又吃掉第二个士和一个象。AB-JChess 利用这几步把一个车、一个马和一个兵调到黑将附近。从第 13 回合到第 21 回合，AB-JChess 给红方的估分从未低于 69%；皮卡鱼搜索同样的局面，给红方的估分在 40% 到 58% 之间。',
+  "Game 68: AB-JChess's score, as each engine saw it": '第 68 盘：两个引擎眼中 AB-JChess 的得分',
+  "Game 68, AB-JChess's expected score by move as AB-JChess and Pikafish saw it. On move 18 AB-JChess has Red at 85% and Pikafish at 50%; Pikafish agrees from move 23.":
+    '第 68 盘，AB-JChess 和皮卡鱼各自眼中 AB-JChess 每回合的期望得分。第 18 回合 AB-JChess 给红方 85%，皮卡鱼给 50%；皮卡鱼从第 23 回合起才认同。',
+  "Jieqi, game 68: Pikafish's moves marked by AB-JChess":
+    '揭棋第 68 盘：AB-JChess 标注的皮卡鱼着法',
+  "On move 18 the horse took the elephant on c1. AB-JChess had Red at 85%; Pikafish had Red at 50%, and during the game it had reported 47%. Red's elephant took the horse on move 20. Pikafish's own score for Red reached 85% on move 21, when the piece it turned over on b10 came up a soldier.":
+    '第 18 回合，马吃掉了 c1 的象。AB-JChess 给红方 85%；皮卡鱼给红方 50%，对局中它报的是 47%。第 20 回合红象吃掉了这匹马。第 21 回合皮卡鱼在 b10 翻出的棋子是兵，它自己给红方的估分这才升到 85%。',
+  'Game 6: one chariot against a face-down back row': '第 6 盘：一车对一排没翻开的暗子',
+  'In game 6 AB-JChess took an advisor with its chariot on move 15 and let the chariots come off. After move 16 Red had the only chariot on the board, and the seven pieces Black had not turned over could only be five soldiers and two horses. AB-JChess had Red at 83%; Pikafish had Red at 48%.':
+    '第 6 盘，AB-JChess 第 15 回合用车吃掉一个士，并让双方兑车。第 16 回合之后，盘面上只剩红方一个车，而黑方还没翻开的七个棋子只可能是五个兵和两个马。AB-JChess 给红方 83%；皮卡鱼给红方 48%。',
+  "Game 6: AB-JChess's score, as each engine saw it": '第 6 盘：两个引擎眼中 AB-JChess 的得分',
+  "Game 6, AB-JChess's expected score by move as AB-JChess and Pikafish saw it. On move 16 AB-JChess has Red at 83% and Pikafish at 48%; Pikafish agrees from move 21.":
+    '第 6 盘，AB-JChess 和皮卡鱼各自眼中 AB-JChess 每回合的期望得分。第 16 回合 AB-JChess 给红方 83%，皮卡鱼给 48%；皮卡鱼从第 21 回合起才认同。',
+  "Jieqi, game 6: Pikafish's moves marked by AB-JChess": '揭棋第 6 盘：AB-JChess 标注的皮卡鱼着法',
+  "Red's chariot reached Black's back row on move 19 and took two horses there. AB-JChess had Red above 80% from move 17, Pikafish from move 21.":
+    '第 19 回合红车冲到黑方底线，吃掉了那里的两个马。AB-JChess 从第 17 回合起给红方的估分就在 80% 以上，皮卡鱼要到第 21 回合。',
+  'What a longer search says': '搜得更久会怎样',
+  "We searched each of the five marked moves again, the game move and AB-JChess's choice each on its own: AB-JChess at 4 million positions, the fixed Pikafish at 256 million. AB-JChess still puts two of them 5 points or more below its choice and the other three within 2 points. Pikafish prefers AB-JChess's choice once and its own game move four times. So the single moves are close calls. The gap is in the scores the two engines give the positions, and in both games Pikafish's own score came round to AB-JChess's later: on move 23 rather than 18 in game 68, and on move 21 rather than 17 in game 6. The study shows both engines' numbers at every marked move.":
+    '我们把五步被标注的着法重新搜索了一遍，实战着法和 AB-JChess 的选择各自单独搜索：AB-JChess 搜索 400 万个节点，修复后的皮卡鱼搜索 2.56 亿个。AB-JChess 仍然认为其中两步比它的选择差 5 个百分点以上，另外三步相差不到 2 个百分点。皮卡鱼有一次更喜欢 AB-JChess 的选择，另外四次更喜欢自己的实战着法。所以单看每一步，差别都很小。差距在于两个引擎对局面给出的分数；两盘棋里，皮卡鱼自己的分数都是后来才跟上 AB-JChess：第 68 盘是第 23 回合而不是第 18 回合，第 6 盘是第 21 回合而不是第 17 回合。研究里每一步被标注的着法都附有两个引擎的分数。',
   Thanks: '致谢',
   'AB-JChess is open source under the GPL-3.0 licence, at [github.com/lxsgx23/AB-JChess](https://github.com/lxsgx23/AB-JChess). Its authors let us use the engine and its network on Mistboard. The network is downloaded from their own release each time we build the site, never copied. Thank you, Huorongrong and Laoxu.':
     'AB-JChess 以 GPL-3.0 许可证开源，地址是 [github.com/lxsgx23/AB-JChess](https://github.com/lxsgx23/AB-JChess)。作者允许我们在 Mistboard 上使用这个引擎及其神经网络。每次构建网站时，神经网络都从作者自己的发布页下载，从不另存副本。谢谢 Huorongrong 和 Laoxu。',
@@ -3700,6 +3737,43 @@ const ZH_HANT: Record<string, string> = {
   '[Pikafish](https://github.com/official-pikafish/Pikafish) is built for speed. It looks at more than a million positions a second and judges each one by rules written by hand. AB-JChess is built from Pikafish too, but it judges positions with a neural network trained on about a billion jieqi positions. It looks at about fifty times fewer positions, and understands each one better. Its training code is public in the same repository, under [abjchess-nnue-pytorch](https://github.com/lxsgx23/AB-JChess/tree/main/abjchess-nnue-pytorch).':
     '[皮卡魚](https://github.com/official-pikafish/Pikafish)靠速度取勝。它每秒看一百多萬個局面，用人工寫成的規則評估每一個局面。AB-JChess 同樣由皮卡魚改造而來，但它用神經網路評估局面，這個網路用大約十億個揭棋局面訓練而成。它看的局面少了大約五十倍，但對每個局面理解得更深。它的訓練程式碼也公開在同一個程式庫裡，見 [abjchess-nnue-pytorch](https://github.com/lxsgx23/AB-JChess/tree/main/abjchess-nnue-pytorch)。',
   'Where it sits': '它排在哪裡',
+  // ab-jchess examples: machine-drafted 2026-10-03, not native-reviewed.
+  'Where the edge comes from': '優勢從哪裡來',
+  'Each engine reported a score with every move it played in the match, and when the two disagreed, AB-JChess was usually the one that was right. In 137 games there came a point where AB-JChess gave itself 75% or more while Pikafish, on the move before or after, gave AB-JChess 60% or less. AB-JChess won 115 of those games, lost 13 and drew 9. The other way round, Pikafish at 75% or more for itself while AB-JChess gave it 60% or less, happened in 202 games, and Pikafish won 101 of them, lost 90 and drew 11. These are the numbers Pikafish reported during the match, with the reveal bug we have since fixed.':
+    '比賽中，兩個引擎每走一步都會報出一個分數；兩者看法不一致時，通常是 AB-JChess 看對了。有 137 盤棋出現過這樣的時刻：AB-JChess 給自己 75% 或更高，而皮卡魚在前一步或後一步只給 AB-JChess 60% 或更低。這些棋 AB-JChess 贏了 115 盤，輸 13 盤，和 9 盤。反過來，皮卡魚給自己 75% 或更高、而 AB-JChess 只給它 60% 或更低的情況出現在 202 盤棋中，皮卡魚贏了其中 101 盤，輸 90 盤，和 11 盤。這些是皮卡魚在比賽中報出的分數，當時還帶著我們後來修復的翻子錯誤。',
+  "Here are two of AB-JChess's wins, both as Red, where its score climbed while Pikafish's stayed level. We scored every position again with both engines, AB-JChess searching 1 million positions and the fixed Pikafish 64 million, and turned each engine's numbers into an expected score with a curve fitted on the match. Each chart shows AB-JChess's score as each engine saw it, with moves numbered as on the board below it. On the boards, ?! marks a Pikafish move that cost 5 to 10 points by AB-JChess's count; neither game has a worse one.":
+    '下面是 AB-JChess 的兩盤勝局，兩盤它都執紅，它的分數一路上升，而皮卡魚的分數一直持平。我們用兩個引擎把每個局面重新評估了一遍（AB-JChess 每個局面搜尋 100 萬個節點，修復後的皮卡魚搜尋 6400 萬個），並用一條按這次對抗賽擬合的曲線把各自的分值換算成期望得分。每張圖顯示兩個引擎各自眼中 AB-JChess 的得分，回合編號與下方棋盤一致。棋盤上的 ?! 標出按 AB-JChess 的算法讓皮卡魚損失 5 到 10 個百分點的著法；兩盤棋裡都沒有更差的著法。',
+  'Game 68: two advisors and an elephant, for an attack': '第 68 盤：兩個士和一個象，換來一場攻勢',
+  'AB-JChess thinks': 'AB-JChess 的判斷',
+  'Pikafish thinks': '皮卡魚的判斷',
+  'Move 18: the horse takes the elephant': '第 18 回合：馬吃象',
+  'AB-JChess 85%, Pikafish 50%': 'AB-JChess 85%，皮卡魚 50%',
+  'Move 23: Pikafish': '第 23 回合：皮卡魚',
+  agrees: '才認同',
+  'Move 16: the chariots are off': '第 16 回合：雙方兌掉車',
+  'AB-JChess 83%, Pikafish 48%': 'AB-JChess 83%，皮卡魚 48%',
+  'Move 21: Pikafish': '第 21 回合：皮卡魚',
+  "Pikafish, as Black, took a face-down advisor with its chariot on move 11, then sent the horse that came up on b1 into Red's camp, where it took the second advisor and an elephant. AB-JChess spent those moves bringing a chariot, a horse and a soldier near Black's king. From move 13 to move 21, AB-JChess never had Red below 69%; Pikafish, searching the same positions, had Red between 40% and 58%.":
+    '皮卡魚執黑，第 11 回合用車吃掉一個暗子士，隨後把在 b1 翻出的馬殺進紅方陣地，又吃掉第二個士和一個象。AB-JChess 利用這幾步把一個車、一個馬和一個兵調到黑將附近。從第 13 回合到第 21 回合，AB-JChess 給紅方的估分從未低於 69%；皮卡魚搜尋同樣的局面，給紅方的估分在 40% 到 58% 之間。',
+  "Game 68: AB-JChess's score, as each engine saw it": '第 68 盤：兩個引擎眼中 AB-JChess 的得分',
+  "Game 68, AB-JChess's expected score by move as AB-JChess and Pikafish saw it. On move 18 AB-JChess has Red at 85% and Pikafish at 50%; Pikafish agrees from move 23.":
+    '第 68 盤，AB-JChess 和皮卡魚各自眼中 AB-JChess 每回合的期望得分。第 18 回合 AB-JChess 給紅方 85%，皮卡魚給 50%；皮卡魚從第 23 回合起才認同。',
+  "Jieqi, game 68: Pikafish's moves marked by AB-JChess":
+    '揭棋第 68 盤：AB-JChess 標註的皮卡魚著法',
+  "On move 18 the horse took the elephant on c1. AB-JChess had Red at 85%; Pikafish had Red at 50%, and during the game it had reported 47%. Red's elephant took the horse on move 20. Pikafish's own score for Red reached 85% on move 21, when the piece it turned over on b10 came up a soldier.":
+    '第 18 回合，馬吃掉了 c1 的象。AB-JChess 給紅方 85%；皮卡魚給紅方 50%，對局中它報的是 47%。第 20 回合紅象吃掉了這匹馬。第 21 回合皮卡魚在 b10 翻出的棋子是兵，它自己給紅方的估分這才升到 85%。',
+  'Game 6: one chariot against a face-down back row': '第 6 盤：一車對一排沒翻開的暗子',
+  'In game 6 AB-JChess took an advisor with its chariot on move 15 and let the chariots come off. After move 16 Red had the only chariot on the board, and the seven pieces Black had not turned over could only be five soldiers and two horses. AB-JChess had Red at 83%; Pikafish had Red at 48%.':
+    '第 6 盤，AB-JChess 第 15 回合用車吃掉一個士，並讓雙方兌車。第 16 回合之後，盤面上只剩紅方一個車，而黑方還沒翻開的七個棋子只可能是五個兵和兩個馬。AB-JChess 給紅方 83%；皮卡魚給紅方 48%。',
+  "Game 6: AB-JChess's score, as each engine saw it": '第 6 盤：兩個引擎眼中 AB-JChess 的得分',
+  "Game 6, AB-JChess's expected score by move as AB-JChess and Pikafish saw it. On move 16 AB-JChess has Red at 83% and Pikafish at 48%; Pikafish agrees from move 21.":
+    '第 6 盤，AB-JChess 和皮卡魚各自眼中 AB-JChess 每回合的期望得分。第 16 回合 AB-JChess 給紅方 83%，皮卡魚給 48%；皮卡魚從第 21 回合起才認同。',
+  "Jieqi, game 6: Pikafish's moves marked by AB-JChess": '揭棋第 6 盤：AB-JChess 標註的皮卡魚著法',
+  "Red's chariot reached Black's back row on move 19 and took two horses there. AB-JChess had Red above 80% from move 17, Pikafish from move 21.":
+    '第 19 回合紅車衝到黑方底線，吃掉了那裡的兩個馬。AB-JChess 從第 17 回合起給紅方的估分就在 80% 以上，皮卡魚要到第 21 回合。',
+  'What a longer search says': '搜得更久會怎樣',
+  "We searched each of the five marked moves again, the game move and AB-JChess's choice each on its own: AB-JChess at 4 million positions, the fixed Pikafish at 256 million. AB-JChess still puts two of them 5 points or more below its choice and the other three within 2 points. Pikafish prefers AB-JChess's choice once and its own game move four times. So the single moves are close calls. The gap is in the scores the two engines give the positions, and in both games Pikafish's own score came round to AB-JChess's later: on move 23 rather than 18 in game 68, and on move 21 rather than 17 in game 6. The study shows both engines' numbers at every marked move.":
+    '我們把五步被標註的著法重新搜尋了一遍，實戰著法和 AB-JChess 的選擇各自單獨搜尋：AB-JChess 搜尋 400 萬個節點，修復後的皮卡魚搜尋 2.56 億個。AB-JChess 仍然認為其中兩步比它的選擇差 5 個百分點以上，另外三步相差不到 2 個百分點。皮卡魚有一次更喜歡 AB-JChess 的選擇，另外四次更喜歡自己的實戰著法。所以單看每一步，差別都很小。差距在於兩個引擎對局面給出的分數；兩盤棋裡，皮卡魚自己的分數都是後來才跟上 AB-JChess：第 68 盤是第 23 回合而不是第 18 回合，第 6 盤是第 21 回合而不是第 17 回合。研究裡每一步被標註的著法都附有兩個引擎的分數。',
   Thanks: '致謝',
   'AB-JChess is open source under the GPL-3.0 licence, at [github.com/lxsgx23/AB-JChess](https://github.com/lxsgx23/AB-JChess). Its authors let us use the engine and its network on Mistboard. The network is downloaded from their own release each time we build the site, never copied. Thank you, Huorongrong and Laoxu.':
     'AB-JChess 以 GPL-3.0 授權條款開源，網址是 [github.com/lxsgx23/AB-JChess](https://github.com/lxsgx23/AB-JChess)。作者允許我們在 Mistboard 上使用這個引擎及其神經網路。每次建置網站時，神經網路都從作者自己的發佈頁下載，從不另存副本。謝謝 Huorongrong 和 Laoxu。',

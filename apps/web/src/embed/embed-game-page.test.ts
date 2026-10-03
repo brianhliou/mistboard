@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { embedRailWidthPx } from './embed-card.js';
+import { embedRailWidthPx, naturalBoxHeight } from './embed-card.js';
 import { embedGameHeader, fitBoardWidth, mountEmbedGame, seatDiscInk } from './embed-game-page.js';
 import { embedGameRouteFromPath, embedPlyFromSearch, embedRouteFromPath } from './embed-route.js';
 
@@ -74,16 +74,34 @@ describe('fitBoardWidth', () => {
 
   it('is bounded by the height when the frame is short', () => {
     // 700 tall minus two seat bars (78), the control row (39) and the card
-    // border (2) = 581, times a 9:10 board = 522.
-    expect(fitBoardWidth({ width: 1200, height: 700 }, 0.9, false)).toBe(522);
+    // border (2) = 581, times a 9:10 board = 522, plus the 16px mat the board
+    // sits on (the column is the board and its mat) = 538.
+    expect(fitBoardWidth({ width: 1200, height: 700 }, 0.9, false)).toBe(538);
   });
 
   it('keeps room for the move list when stacked', () => {
     // 500 tall: bars, controls and border leave 381; the stacked layout also
-    // holds 112 back for the sheet under the board, so a square board gets 269.
-    expect(fitBoardWidth({ width: 400, height: 500 }, 1, true)).toBe(269);
+    // holds 112 back for the sheet under the board, so a square board gets 269,
+    // and its column 285 with the mat.
+    expect(fitBoardWidth({ width: 400, height: 500 }, 1, true)).toBe(285);
     // A tall frame is bounded by the width instead (398 = 400 minus the border).
     expect(fitBoardWidth({ width: 400, height: 700 }, 1, true)).toBe(398);
+  });
+
+  it('has naturalBoxHeight as its inverse: at that height the width binds, exactly', () => {
+    // The height an embed reports to its host must be one at which the board
+    // takes the whole width (no empty space under the card) and no taller.
+    for (const [width, aspect, rail] of [
+      [702, 0.9017, 226],
+      [702, 1.818, 226],
+      [702, 0.7, 276],
+      [560, 1, 226],
+    ] as const) {
+      const full = width - 2 - rail;
+      const height = naturalBoxHeight(width, aspect, false, rail);
+      expect(fitBoardWidth({ width, height }, aspect, false, rail)).toBe(full);
+      expect(fitBoardWidth({ width, height: height - 2 }, aspect, false, rail)).toBeLessThan(full);
+    }
   });
 
   it('never collapses to nothing', () => {

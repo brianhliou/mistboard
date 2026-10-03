@@ -486,14 +486,18 @@ async function mountCrazyhouseXiangqiEmbed(
 // Jieqi is its own branch for the banqi reason: the moves only replay against
 // the deal, which rides in the root's sixth FEN field; the xiangqi board would
 // start every dark piece as the piece its square begins with. The seats own a
-// fixed ink from move one (unlike banqi), so they are the inks.
+// fixed ink from move one (unlike banqi), so they are the inks. The chapter's
+// argument rides along as on the jungle embed: glyphs on the sheet and the
+// board, verdicts, comments, each move's first sideline (replayed against the
+// same deal, steppable), the drawn shapes and the chapter's orientation.
 async function mountJieqiEmbed(
   root: HTMLElement,
   credit: EmbedCredit,
   chapter: StudyChapterPayload,
   options: { startPly?: number | null },
 ): Promise<void> {
-  const line = replayJieqiLine(chapter.root?.rootFen, mainlineTokens(chapter));
+  const { moves, glyphs, notes, lines, assessments, shapes } = chapterAnnotations(chapter);
+  const line = replayJieqiLine(chapter.root?.rootFen, moves);
   if (!line) {
     note(root, 'This chapter has no dealt position to show.');
     return;
@@ -513,7 +517,19 @@ async function mountJieqiEmbed(
     railWidthPx: embedRailWidthPx('jieqi'),
     startPly: options.startPly ?? 0,
     mountBoard: async (host, hooks) =>
-      mountJieqiReplayBoard(host, line, { perspective: 'red' }, hooks),
+      mountJieqiReplayBoard(
+        host,
+        line,
+        {
+          perspective: chapter.orientation === 'black' ? 'black' : 'red',
+          glyphs,
+          notes,
+          lines,
+          assessments,
+          shapes,
+        },
+        hooks,
+      ),
   });
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;
 }
