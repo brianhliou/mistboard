@@ -375,14 +375,9 @@ test('banqi plays itself for data, jungle pairs its tiers, and neither can be ra
   assert.equal(banqi.anchorEngineId, null);
   assert.equal(banqi.requiredCapability, 'banqi_engine');
   const jungle = config.plans.find((plan) => plan.variant === 'jungle')!;
-  // Weakest first: Misty's tiers by node budget (level 2 is the offered Misty),
-  // then the KataGo top seat above them.
-  assert.deepEqual(jungle.ladder, [
-    'misty-jungle-level-1',
-    'misty-jungle-level-3',
-    'misty-jungle-level-2',
-    'katago-jungle',
-  ]);
+  // Weakest first, the bots a player can pick: Misty, then the KataGo top seat.
+  // The retired Misty levels never play scheduled games.
+  assert.deepEqual(jungle.ladder, ['misty-jungle-level-2', 'katago-jungle']);
   assert.equal(jungle.anchorEngineId, null);
   assert.equal(jungle.requiredCapability, 'jungle_engine');
 

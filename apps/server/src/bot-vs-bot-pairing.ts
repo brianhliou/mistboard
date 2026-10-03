@@ -20,8 +20,7 @@ import { CRAZYHOUSE_XIANGQI_PLAYABLE_ENGINES } from './crazyhouse-xiangqi-fsf-en
 import { DUCK_XIANGQI_PLAYABLE_ENGINES } from './duck-xiangqi-fsf-engine.js';
 import { FORTRESS_XIANGQI_PLAYABLE_ENGINES } from './fortress-xiangqi-fsf-engine.js';
 import { JIEQI_PLAYABLE_ENGINES } from './jieqi-engine.js';
-import { JUNGLE_RUST_TIER_LIST } from './jungle-engine.js';
-import { KATAGO_JUNGLE_ENGINE_ID } from './jungle-katago-engine.js';
+import { JUNGLE_PLAYABLE_ENGINE_IDS } from './server-jungle-engine.js';
 import { XIANGQI_PUBLIC_ENGINES } from './xiangqi-engine-catalog.js';
 
 export type BotVsBotLane = 'content' | 'calibration';
@@ -39,8 +38,9 @@ export function xiangqiBotLadder(): string[] {
 // (bot-vs-bot-pairing.test.ts pins every rung to a first-party bot of that
 // variant). A variant missing here has no ladder, and the scheduler skips it;
 // nothing falls back to the xiangqi ladder. Banqi has one rung, so its bot plays
-// itself; jungle's three Rust tiers are Misty (level 2, the strongest of them) and
-// the two retired levels that still attribute to her, with KataGo on top (2026-10).
+// itself. Jungle's ladder is the two bots a player can pick, Misty and KataGo on
+// top (2026-10): its retired Misty levels stay seatable for old rooms but never
+// play scheduled games, so every published game shows a bot as prod serves it.
 const BOT_LADDERS: Readonly<Record<string, () => string[]>> = {
   xiangqi: xiangqiBotLadder,
   jieqi: () => JIEQI_PLAYABLE_ENGINES.map((engine) => engine.id),
@@ -49,10 +49,8 @@ const BOT_LADDERS: Readonly<Record<string, () => string[]>> = {
   'atomic-xiangqi': () => ATOMIC_XIANGQI_PLAYABLE_ENGINES.map((engine) => engine.id),
   'crazyhouse-xiangqi': () => CRAZYHOUSE_XIANGQI_PLAYABLE_ENGINES.map((engine) => engine.id),
   banqi: () => BANQI_PLAYABLE_ENGINES.map((engine) => engine.id),
-  jungle: () => [
-    ...[...JUNGLE_RUST_TIER_LIST].sort((a, b) => a.nodes - b.nodes).map((tier) => tier.id),
-    KATAGO_JUNGLE_ENGINE_ID,
-  ],
+  // JUNGLE_PLAYABLE_ENGINE_IDS runs strongest first.
+  jungle: () => [...JUNGLE_PLAYABLE_ENGINE_IDS].reverse(),
 };
 
 /** A variant's public bot ladder, weakest first, or null when it has none. */

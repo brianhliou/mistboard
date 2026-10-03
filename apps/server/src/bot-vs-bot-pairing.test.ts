@@ -86,12 +86,12 @@ test('each variant ladder is the engines its first-party bots play, and only its
     );
     // Every offered bot is on the ladder...
     for (const id of fronted) assert.ok(ladder.includes(id), `${variant}: ${id} missing`);
-    // ...and every rung is one, or (jungle's retired levels) still attributes to one.
+    // ...and every rung is one.
     for (const id of ladder) {
       const bot = firstPartyBotForEngine(id);
       assert.ok(bot && Object.hasOwn(bot.engines, variant), `${variant}: ${id} is no bot's`);
     }
-    if (variant !== 'jungle') assert.deepEqual(new Set(ladder), new Set(fronted), variant);
+    assert.deepEqual(new Set(ladder), new Set(fronted), variant);
   }
   // No ladder, no fallback: a variant without one answers null, not xiangqi's.
   assert.equal(botLadderFor('jungle-flip'), null);
