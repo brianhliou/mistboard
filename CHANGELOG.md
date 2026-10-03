@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- Game room clocks are a compact tab again, like lichess ([ca833e03](https://github.com/brianhliou/mistboard/commit/ca833e03))
 - Crazyhouse Xiangqi soldiers now drop on any empty point, like chariots, horses and cannons; advisors and elephants still drop on their own half ([17e145f5](https://github.com/brianhliou/mistboard/commit/17e145f5))
 - The homepage Jungle Chess row steps from Misty up to KataGo, the new top Jungle Chess bot ([c44741d5](https://github.com/brianhliou/mistboard/commit/c44741d5))
 - When your open correspondence game expires with no taker, the bell tells you and offers to post it again ([58b0ac0d](https://github.com/brianhliou/mistboard/commit/58b0ac0d))
@@ -44,6 +45,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- The champions article explains how its games were annotated, with totals across both champion pages ([ca833e03](https://github.com/brianhliou/mistboard/commit/ca833e03))
 - the KataGo post's charts count moves and mark the move Misty lost and the move it saw it ([f30597b2](https://github.com/brianhliou/mistboard/commit/f30597b2))
 - New post: KataGo, a stronger Jungle Chess bot, reading two of its wins over Misty with both engines' evaluations ([fa06feca](https://github.com/brianhliou/mistboard/commit/fa06feca))
 - A Crazyhouse Xiangqi study of six engine games, with notes on the drops that decided them, embedded on the rules page ([95b57417](https://github.com/brianhliou/mistboard/commit/95b57417))
@@ -54,6 +56,7 @@ Conventions:
 
 ### Watching and review
 
+- Mistboard TV's game card links to the variant's rules and shows when the game finished, and its clocks match the game room ([ca833e03](https://github.com/brianhliou/mistboard/commit/ca833e03))
 - The AB-JChess post shows where its edge comes from, with two of its wins, each with a chart of both engines' scores and an annotated board ([f30597b2](https://github.com/brianhliou/mistboard/commit/f30597b2))
 - Jungle bot games now pair only Misty and KataGo, at the strength you play against ([e4d993df](https://github.com/brianhliou/mistboard/commit/e4d993df))
 - A post on the reveal bug in our Pikafish jieqi bot (/blog/pikafish-reveal-bug): what went wrong, where it is in the code, the fix, and what it cost in strength; in English and Chinese ([b9ef83cf](https://github.com/brianhliou/mistboard/commit/b9ef83cf))
@@ -105,6 +108,8 @@ Conventions:
 
 ### Fixed
 
+- The homepage live board no longer jumps to an old game when a player stops moving with time still on their clock ([ca833e03](https://github.com/brianhliou/mistboard/commit/ca833e03))
+- The face-down pieces under Flip Jungle and Banqi boards line up for both sides ([ca833e03](https://github.com/brianhliou/mistboard/commit/ca833e03))
 - The Traditional Chinese versions of the Pikafish reveal-bug and KataGo posts show in Traditional characters again ([13bc87a1](https://github.com/brianhliou/mistboard/commit/13bc87a1))
 - Boards embedded in posts and forum threads are sized to fit, with no empty space under them ([f30597b2](https://github.com/brianhliou/mistboard/commit/f30597b2))
 - Pikafish Level 8 in xiangqi plays again; since Friday evening it resigned every game before its first move ([17e145f5](https://github.com/brianhliou/mistboard/commit/17e145f5))
