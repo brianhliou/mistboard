@@ -1,5 +1,16 @@
 import type { Locale } from '../../i18n/locale.js';
-import type { Article } from '../types.js';
+import { evalCompareChartSvg } from '../eval-compare-chart.js';
+import {
+  type EvalsData,
+  type EvaluatedGame,
+  MARK_GLYPH,
+  mistyMoveMarks,
+  seriesFor,
+  settledPly,
+  winnerSeries,
+} from '../katago-jungle-analysis.js';
+import type { Article, ArticleBlock } from '../types.js';
+import evalsJson from './katago-jungle-evals.json' with { type: 'json' };
 
 // Facts from the KataGo seat (#434, be6fc95e) and the match write-up linked
 // below: 200 games against MistyJungle at 1,000 visits a move (82-0-118, 0.705,
@@ -44,12 +55,79 @@ const KATAGO_JUNGLE_THUMBNAIL = (locale: Locale): string => {
 
 const KATAGOMO = 'https://github.com/hzyhhzy/KataGomo';
 
+// Both engines' evaluation of every position of the two games below, at the
+// match budgets (scripts/variant-lab/jungle-katago-evals.ts, reduced to this
+// JSON by jungle-katago-evals-reduce.ts). Charts, marks and the numbers the
+// prose quotes all come from it; katago-jungle-evals.test.ts pins the prose.
+export const KATAGO_EVALS = evalsJson as EvalsData;
+export const SETTLE_LEVEL = 0.8;
+
+export function evaluatedGame(game: number): EvaluatedGame {
+  const found = KATAGO_EVALS.games.find((g) => g.game === game);
+  if (!found) throw new Error(`katago-jungle: game ${game} is not in the evals data`);
+  return found;
+}
+
+/** KataGo's score as each engine saw it, and the ply each settled above SETTLE_LEVEL. */
+export function katagoScoreSeries(game: EvaluatedGame) {
+  const kata = winnerSeries(game, seriesFor(game, 'kata'))!;
+  const misty = winnerSeries(game, seriesFor(game, 'misty'))!;
+  return {
+    kata,
+    misty,
+    settledKata: settledPly(kata, SETTLE_LEVEL),
+    settledMisty: settledPly(misty, SETTLE_LEVEL),
+  };
+}
+
+// The annotated games: a @mistboard study made from
+// scripts/variant-lab/jungle-katago-annotated-study.ts (one chapter a game) by
+// study:edit. THESE IDS ARE A LOCAL DEV DATABASE'S (2026-10-02): the prod study
+// is created from the same plan on Brian's go, and its ids replace these.
+export const KATAGO_STUDY = {
+  id: '11Jru0He',
+  chapters: { 67: '1AurXLdB', 94: '0SKU4EJs' },
+} as const;
+
+function gameChart(game: number, heading: string, ariaLabel: string): ArticleBlock {
+  const g = evaluatedGame(game);
+  const s = katagoScoreSeries(g);
+  return {
+    kind: 'raw-svg',
+    className: 'article-figure-eval-compare',
+    // Phone width shrinks the axis text below reading size; a tap opens it full screen.
+    zoomable: true,
+    svg: evalCompareChartSvg({
+      id: `katago-jungle-g${game}`,
+      heading,
+      ariaLabel,
+      nameA: 'KataGo',
+      nameB: 'Misty',
+      a: s.kata,
+      b: s.misty,
+      threshold: { level: SETTLE_LEVEL, settledA: s.settledKata, settledB: s.settledMisty },
+      marks: mistyMoveMarks(g).map((m) => ({ ply: m.ply + 1, glyph: MARK_GLYPH[m.mark] })),
+      xLabel: 'Ply',
+    }),
+  };
+}
+
+function gameEmbed(game: 67 | 94, ply: number, title: string): ArticleBlock {
+  return {
+    kind: 'embed',
+    path: `/embed/study/${KATAGO_STUDY.id}/${KATAGO_STUDY.chapters[game]}?ply=${ply}`,
+    title,
+    // Width-bound at the 702px column, as the rules page's jungle embed.
+    aspect: [702, 780],
+  };
+}
+
 export const katagoJungleArticle: Article = {
   slug: 'katago-jungle',
   kind: 'article',
   publisher: 'mistboard',
   title: 'KataGo, a stronger Jungle Chess bot',
-  seoTitle: 'KataGo for Jungle Chess: the self-play engine that beat Misty 82 to 0',
+  seoTitle: 'KataGo for Jungle Chess: 82 wins, 118 draws and no losses against Misty',
   summary:
     'A Jungle Chess engine that learned by playing itself now sits above Misty. In 200 games against Misty it won 82, lost none and drew 118.',
   showSummaryOnPage: false,
@@ -86,6 +164,41 @@ export const katagoJungleArticle: Article = {
         {
           kind: 'paragraph',
           text: 'All 200 games are in [one study](/study/0t8xpyv6), and the [match write-up](https://brianhliou.com/posts/katago-beats-misty-jungle/) has the details.',
+        },
+      ],
+    },
+    {
+      heading: 'Two wins, read by both engines',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'Here are two of those wins, with every position scored again by both engines at the match settings. Each chart shows both engines\' estimate of KataGo\'s score, where a win is 100% and a draw 50%. KataGo\'s own number counts a draw as half a point; Misty\'s centipawns become a score through the curve our analysis board uses, 1 / (1 + e^(−0.00368 × cp)). The dashed line is 80%, and each dotted line marks the ply from which that engine stayed above it to the end. A ply is one side\'s move.',
+        },
+        { kind: 'sub-heading', text: 'Game 67: a wolf up, and lost' },
+        {
+          kind: 'paragraph',
+          text: "Misty played red. On ply 21 its tiger took KataGo's wolf, and Misty scored itself 113 centipawns ahead. KataGo's number stayed at 50%. On ply 57 Misty moved its cornered tiger from g8 to g9, and KataGo's score for itself went from 61% to 92%. KataGo marks the move ?? and would have played lion b1-b2 instead. Misty still read itself a wolf up, at +111. KataGo stayed above 80% from there to the den on ply 90; Misty got there on ply 72, 15 plies later.",
+        },
+        gameChart(
+          67,
+          "Game 67: KataGo's score, as each engine saw it",
+          "Game 67, KataGo's expected score by ply as KataGo and Misty saw it. KataGo stays above 80% from ply 57, Misty from ply 72.",
+        ),
+        gameEmbed(67, 57, "Jungle Chess, game 67: Misty's moves marked by KataGo"),
+        { kind: 'sub-heading', text: 'Game 94: the slow squeeze' },
+        {
+          kind: 'paragraph',
+          text: "KataGo played red. On ply 38 Misty's tiger took KataGo's wolf, and Misty scored itself ahead for most of the next 60 plies. KataGo saw the game tipping its way instead, slowly, from 50% to 63% by ply 90. On ply 100 Misty moved its cat from c8 to c7, and KataGo's score went from 63% to 98%. KataGo marks it ?? and would have played elephant d6-d7. Misty still had itself ahead, at +80, and found the forced loss four plies later. KataGo's lion reached the den on ply 117.",
+        },
+        gameChart(
+          94,
+          "Game 94: KataGo's score, as each engine saw it",
+          "Game 94, KataGo's expected score by ply as KataGo and Misty saw it. KataGo stays above 80% from ply 100, Misty from ply 104.",
+        ),
+        gameEmbed(94, 100, "Jungle Chess, game 94: Misty's moves marked by KataGo"),
+        {
+          kind: 'paragraph',
+          text: 'In both games Misty was a piece up and still read itself ahead after the move that lost. In these two games, KataGo settled on the result 15 and 4 plies before Misty did. Each marked move in the study has KataGo\'s choice beside it.',
         },
       ],
     },
