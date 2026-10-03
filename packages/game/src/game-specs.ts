@@ -213,10 +213,6 @@ export const STUDY_ELIGIBLE_SPEC_IDS: readonly GameSpecId[] = [
   XIANGQI_SPEC_ID,
   JIEQI_SPEC_ID,
   BANQI_SPEC_ID,
-  // Atomic Xiangqi: a tree-review stack (review/atomic-xiangqi-tree-adapter.ts
-  // + -review.ts) over the standard board, and the standard start.
-  ATOMIC_XIANGQI_SPEC_ID,
-  DARK_XIANGQI_SPEC_ID,
   // Duck Xiangqi qualifies on the same two counts as the rest: it has a
   // tree-review stack (review/duck-xiangqi-tree-adapter.ts + -review.ts) and a
   // deterministic start position spellable as a FEN (duck-xiangqi-fen.ts, whose
@@ -224,11 +220,15 @@ export const STUDY_ELIGIBLE_SPEC_IDS: readonly GameSpecId[] = [
   // appended: study-catalog.test.ts asserts the picker built from this list is
   // sorted by canonicalVariantOrderIndex.
   DUCK_XIANGQI_SPEC_ID,
-  FORTRESS_XIANGQI_SPEC_ID,
   // Crazyhouse Xiangqi: a tree-review stack (review/crazyhouse-xiangqi-tree-
   // adapter.ts + -review.ts) and the standard start; a chapter's rootFen
   // carries both hands in the pocket brackets.
   CRAZYHOUSE_XIANGQI_SPEC_ID,
+  FORTRESS_XIANGQI_SPEC_ID,
+  // Atomic Xiangqi: a tree-review stack (review/atomic-xiangqi-tree-adapter.ts
+  // + -review.ts) over the standard board, and the standard start.
+  ATOMIC_XIANGQI_SPEC_ID,
+  DARK_XIANGQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
@@ -253,17 +253,20 @@ export function isStudyEligibleSpecId(value: string): value is GameSpecId {
 // the shelf together.
 export const CANONICAL_VARIANT_ORDER: readonly GameSpecId[] = [
   // The Chinese-chess pillar first, in play order (2026-09-17 read: jieqi is
-  // 59% of counted human games, xiangqi and banqi next), then the originals,
-  // confidence first (atomic, then fog xiangqi, which bridges to fog chess,
-  // then duck, then fortress, then crazyhouse), then the rest of the games.
+  // 59% of counted human games, xiangqi and banqi next), then the originals
+  // (re-cut 2026-10-02 by Brian on 28 days of games started: duck 63, fog
+  // xiangqi 36, fortress 16, atomic 9). Duck leads; crazyhouse and fortress sit
+  // side by side so neither gets a placement edge until the 2026-10-30 read
+  // decides between them; then atomic, then fog xiangqi, which bridges to fog
+  // chess; then the rest of the games.
   XIANGQI_SPEC_ID,
   JIEQI_SPEC_ID,
   BANQI_SPEC_ID,
+  DUCK_XIANGQI_SPEC_ID,
+  CRAZYHOUSE_XIANGQI_SPEC_ID,
+  FORTRESS_XIANGQI_SPEC_ID,
   ATOMIC_XIANGQI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
-  DUCK_XIANGQI_SPEC_ID,
-  FORTRESS_XIANGQI_SPEC_ID,
-  CRAZYHOUSE_XIANGQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,

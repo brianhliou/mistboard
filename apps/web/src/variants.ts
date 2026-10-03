@@ -149,6 +149,42 @@ export const VARIANTS: VariantDef[] = [
     onLeaderboard: banqiOn,
     onProfile: banqiOn,
   },
+  // Duck: xiangqi plus Duck Chess's shared blocker. Launched casual and
+  // rating-ready on the same terms as Fortress; the lobby seek stays unrated
+  // (registration.ts) until the pool has games in it.
+  {
+    id: currentRatingVariantForSpec(DUCK_XIANGQI_SPEC_ID),
+    gameSpecId: duckXiangqiSpec.id,
+    apiParam: DUCK_XIANGQI_SPEC_ID,
+    label: duckXiangqiSpec.publicName,
+    miniId: 'duck-xiangqi',
+    enabled: false,
+    onLeaderboard: duckXiangqiOn,
+    onProfile: duckXiangqiOn,
+  },
+  // Crazyhouse: xiangqi with captures to hand and drops. Rated through the
+  // lobby seek on the duck and atomic terms (migration 158).
+  {
+    id: currentRatingVariantForSpec(CRAZYHOUSE_XIANGQI_SPEC_ID),
+    gameSpecId: crazyhouseXiangqiSpec.id,
+    apiParam: CRAZYHOUSE_XIANGQI_SPEC_ID,
+    label: crazyhouseXiangqiSpec.publicName,
+    miniId: 'crazyhouse-xiangqi',
+    enabled: false,
+    onLeaderboard: crazyhouseXiangqiOn,
+    onProfile: crazyhouseXiangqiOn,
+  },
+  // Fortress: the authored open-information xiangqi product variant.
+  {
+    id: currentRatingVariantForSpec(FORTRESS_XIANGQI_SPEC_ID),
+    gameSpecId: fortressXiangqiSpec.id,
+    apiParam: FORTRESS_XIANGQI_SPEC_ID,
+    label: fortressXiangqiSpec.publicName,
+    miniId: 'fortress-xiangqi',
+    enabled: false,
+    onLeaderboard: fortressXiangqiOn,
+    onProfile: fortressXiangqiOn,
+  },
   // Atomic: xiangqi where a capture explodes. Launched casual and rating-ready
   // on the same terms as duck (migration 147); the lobby seek can be rated.
   {
@@ -172,42 +208,6 @@ export const VARIANTS: VariantDef[] = [
     enabled: false,
     onLeaderboard: darkXiangqiOn,
     onProfile: darkXiangqiOn,
-  },
-  // Duck: xiangqi plus Duck Chess's shared blocker. Launched casual and
-  // rating-ready on the same terms as Fortress; the lobby seek stays unrated
-  // (registration.ts) until the pool has games in it.
-  {
-    id: currentRatingVariantForSpec(DUCK_XIANGQI_SPEC_ID),
-    gameSpecId: duckXiangqiSpec.id,
-    apiParam: DUCK_XIANGQI_SPEC_ID,
-    label: duckXiangqiSpec.publicName,
-    miniId: 'duck-xiangqi',
-    enabled: false,
-    onLeaderboard: duckXiangqiOn,
-    onProfile: duckXiangqiOn,
-  },
-  // Fortress: the authored open-information xiangqi product variant.
-  {
-    id: currentRatingVariantForSpec(FORTRESS_XIANGQI_SPEC_ID),
-    gameSpecId: fortressXiangqiSpec.id,
-    apiParam: FORTRESS_XIANGQI_SPEC_ID,
-    label: fortressXiangqiSpec.publicName,
-    miniId: 'fortress-xiangqi',
-    enabled: false,
-    onLeaderboard: fortressXiangqiOn,
-    onProfile: fortressXiangqiOn,
-  },
-  // Crazyhouse: xiangqi with captures to hand and drops. Rated through the
-  // lobby seek on the duck and atomic terms (migration 158).
-  {
-    id: currentRatingVariantForSpec(CRAZYHOUSE_XIANGQI_SPEC_ID),
-    gameSpecId: crazyhouseXiangqiSpec.id,
-    apiParam: CRAZYHOUSE_XIANGQI_SPEC_ID,
-    label: crazyhouseXiangqiSpec.publicName,
-    miniId: 'crazyhouse-xiangqi',
-    enabled: false,
-    onLeaderboard: crazyhouseXiangqiOn,
-    onProfile: crazyhouseXiangqiOn,
   },
   {
     id: currentRatingVariantForSpec(DARK_CHESS_SPEC_ID),

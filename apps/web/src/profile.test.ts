@@ -651,8 +651,8 @@ describe('profile ratings rail', () => {
     // Populate Dark Chess ('fog') to prove a populated ladder no longer floats
     // to the front (#137):
     // the leaderboard keys off CANONICAL_VARIANT_ORDER like the picker/profile/
-    // rail, so Fortress still leads with no data and Dark Chess keeps its slot
-    // between Fortress and the Jungle pair.
+    // rail, so Duck still leads with no data and Dark Chess keeps its slot
+    // between Atomic and the Jungle pair.
     stubLeaderboardFetch({
       ladders: [
         {
@@ -684,16 +684,16 @@ describe('profile ratings rail', () => {
     // Ladders absent from the summary render the no-rated-games state.
     expect(root.textContent).toContain('No rated games yet.');
 
-    // Canonical filtered order: Atomic, Duck, Fortress, Crazyhouse, Fog Chess,
+    // Canonical filtered order: Duck, Crazyhouse, Fortress, Atomic, Fog Chess,
     // Jungle, Flip Jungle.
     const titles = [...root.querySelectorAll('.leaderboard-panel-title')].map(
       (el) => el.textContent,
     );
     expect(titles).toEqual([
-      'Atomic Xiangqi',
       'Duck Xiangqi',
-      'Fortress Xiangqi',
       'Crazyhouse Xiangqi',
+      'Fortress Xiangqi',
+      'Atomic Xiangqi',
       'Fog Chess',
       'Jungle Chess',
       'Flip Jungle',
