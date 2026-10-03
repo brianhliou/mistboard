@@ -26,6 +26,8 @@ Conventions:
 
 ### Playing
 
+- Every variant can now be played by correspondence, days per move, from the correspondence page, the lobby and a player's profile ([851d1a41](https://github.com/brianhliou/mistboard/commit/851d1a41))
+- Correspondence games can now be rated, with their own correspondence rating kept apart from your live ratings ([851d1a41](https://github.com/brianhliou/mistboard/commit/851d1a41))
 - Correspondence is now an inbox with boards and deadlines, your own fog view on Fog Chess games, a start-a-game panel, open seeks, and a page for visitors showing every game in progress ([e14e36b0](https://github.com/brianhliou/mistboard/commit/e14e36b0))
 - The Flip Jungle room has a larger board with the face-down pieces under it, laid out like the banqi room ([574656cf](https://github.com/brianhliou/mistboard/commit/574656cf))
 - The banqi room is laid out around its wide board, with the face-down pieces under the board and the table level with it ([6ffe2f45](https://github.com/brianhliou/mistboard/commit/6ffe2f45))
@@ -88,6 +90,7 @@ Conventions:
 
 ### Fixed
 
+- A correspondence game posted from the homepage lobby now uses the variant you picked, and variant game headers show Rated for rated games ([851d1a41](https://github.com/brianhliou/mistboard/commit/851d1a41))
 - On the homepage, only the Play button starts a bot game; a click elsewhere on the row no longer does ([5edb33f3](https://github.com/brianhliou/mistboard/commit/5edb33f3))
 - Open correspondence games now leave the board after 14 days, and posting the same open game twice keeps just one ([5edb33f3](https://github.com/brianhliou/mistboard/commit/5edb33f3))
 - Banqi and Flip Jungle rooms show Resign, the move list and your own seat row again, after two days hidden on short boards ([6ffe2f45](https://github.com/brianhliou/mistboard/commit/6ffe2f45))
