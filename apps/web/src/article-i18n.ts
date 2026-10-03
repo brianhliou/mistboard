@@ -3279,10 +3279,11 @@ const ZH_HANS: Record<string, string> = {
     'Fairy-Stockfish 按这套规则自我对弈，每步五秒。双方都把士和象打入象棋里到不了的点，红方的进攻则来自持子：它有七次将军是打入，最后一次就是将死。',
   'Watch Red’s advisor dropped on d4 on move 6, Black’s elephant dropped in the corner on a10 on move 18, the cannon Red drops with check on move 31, and the mate on move 49.':
     '留意第 6 回合红方打入 d4 的士、第 18 回合黑方打入角上 a10 的象、第 31 回合红方打入将军的炮，以及第 49 回合的将死。',
-  'Crazyhouse Xiangqi · engine game, 5 seconds a move': '疯狂屋象棋 · 引擎对局，每步 5 秒',
-  'Red mates with a soldier dropped on e9. Red wins.': '红方把兵打入 e9 将死。红方胜。',
-  'This game was picked from sixteen played the same way. A study with more of them will follow.':
-    '这盘棋是从同样条件下的十六盘对局中挑出来的。收录更多对局的研究稍后发布。',
+  'Crazyhouse Xiangqi: a comeback, and a soldier drop mates':
+    '疯狂屋象棋：一盘翻盘局，打入一兵将死',
+  'This game is one of six in the [companion study](/study/nlZy4yNA), each with notes on the drops that decided it.':
+    '这盘棋是[配套研究](/study/nlZy4yNA)中的六盘之一，每盘都注明了决定胜负的打入。',
+  'The six engine games': '六盘引擎对局',
   'Xiangqi where a captured piece joins your hand and the advisors and elephants start there: drop a piece on any empty point where it could stand, check and mate included.':
     '被吃的子归入吃子一方持子、士和象开局就在持子里的象棋：把持子打入任何一个它能站的空点，可以将军，也可以将死。',
   'Everything else is xiangqi: the board, how the other pieces move, the general in its palace, the river, the rule that the two generals may not face each other on an open file, and the way a game ends.':
@@ -6429,10 +6430,11 @@ const ZH_HANT: Record<string, string> = {
     'Fairy-Stockfish 按這套規則自我對弈，每步五秒。雙方都把士和象打入象棋裡到不了的點，紅方的進攻則來自持子：它有七次將軍是打入，最後一次就是將死。',
   'Watch Red’s advisor dropped on d4 on move 6, Black’s elephant dropped in the corner on a10 on move 18, the cannon Red drops with check on move 31, and the mate on move 49.':
     '留意第 6 回合紅方打入 d4 的士、第 18 回合黑方打入角上 a10 的象、第 31 回合紅方打入將軍的炮，以及第 49 回合的將死。',
-  'Crazyhouse Xiangqi · engine game, 5 seconds a move': '瘋狂屋象棋 · 引擎對局，每步 5 秒',
-  'Red mates with a soldier dropped on e9. Red wins.': '紅方把兵打入 e9 將死。紅方勝。',
-  'This game was picked from sixteen played the same way. A study with more of them will follow.':
-    '這盤棋是從同樣條件下的十六盤對局中挑出來的。收錄更多對局的研究稍後發布。',
+  'Crazyhouse Xiangqi: a comeback, and a soldier drop mates':
+    '瘋狂屋象棋：一盤翻盤局，打入一兵將死',
+  'This game is one of six in the [companion study](/study/nlZy4yNA), each with notes on the drops that decided it.':
+    '這盤棋是[配套研究](/study/nlZy4yNA)中的六盤之一，每盤都註明了決定勝負的打入。',
+  'The six engine games': '六盤引擎對局',
   'Xiangqi where a captured piece joins your hand and the advisors and elephants start there: drop a piece on any empty point where it could stand, check and mate included.':
     '被吃的子歸入吃子一方持子、士和象開局就在持子裡的象棋：把持子打入任何一個它能站的空點，可以將軍，也可以將死。',
   'Everything else is xiangqi: the board, how the other pieces move, the general in its palace, the river, the rule that the two generals may not face each other on an open file, and the way a game ends.':

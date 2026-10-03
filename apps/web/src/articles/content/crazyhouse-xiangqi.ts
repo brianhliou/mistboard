@@ -11,7 +11,6 @@ import {
   CRAZYHOUSE_XIANGQI_ZONE_OWN_HALF,
   CRAZYHOUSE_XIANGQI_ZONE_SOLDIER,
 } from '../../crazyhouse-xiangqi-rules-diagrams.js';
-import { CRAZYHOUSE_XIANGQI_SAMPLE_GAME_MOVES } from '../../crazyhouse-xiangqi-sample-game.js';
 import { playClosing } from '../diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
@@ -21,9 +20,10 @@ import type { Article, ArticleBlock } from '../types.js';
 // createInitialCrazyhouseXiangqiState, the drop zones are
 // crazyhouseXiangqiDropRegion, the advisor and elephant moves are its rule
 // geometry, and the endings are applyCrazyhouseXiangqiMove. The diagrams are
-// drawn from the kernel (crazyhouse-xiangqi-rules-diagrams.ts) and the sample
-// game is replayed through it; captions that name a count or a move number
-// are pinned by those modules' tests. Change the two together.
+// drawn from the kernel (crazyhouse-xiangqi-rules-diagrams.ts). The sample game
+// is chapter 3 of study nlZy4yNA (scripts/data/crazyhouse-xiangqi-study.json)
+// and crazyhouse-xiangqi-sample-game.ts; captions that name a count or a move
+// number are pinned by those modules' tests. Change them together.
 export const crazyhouseXiangqiArticle: Article = {
   slug: 'crazyhouse-xiangqi',
   gameSpecId: 'crazyhouse-xiangqi',
@@ -214,20 +214,20 @@ export const crazyhouseXiangqiArticle: Article = {
           text: 'Fairy-Stockfish against itself under these rules, five seconds a move. Both sides drop advisors and elephants on points they never reach in xiangqi, and Red’s attack comes out of its hand: seven of its checks are drops, and the last is mate.',
         },
         {
-          kind: 'crazyhouse-xiangqi-replay',
-          spec: {
-            moves: CRAZYHOUSE_XIANGQI_SAMPLE_GAME_MOVES,
-            red: 'Fairy-Stockfish',
-            black: 'Fairy-Stockfish',
-            event: 'Crazyhouse Xiangqi · engine game, 5 seconds a move',
-            resultText: 'Red mates with a soldier dropped on e9. Red wins.',
-          },
+          kind: 'embed',
+          path: '/embed/study/nlZy4yNA/EBLNng54',
+          title: 'Crazyhouse Xiangqi: a comeback, and a soldier drop mates',
           caption:
             'Watch Red’s advisor dropped on d4 on move 6, Black’s elephant dropped in the corner on a10 on move 18, the cannon Red drops with check on move 31, and the mate on move 49.',
+          // Sized so the card is width-bound at the article's 702px column, as
+          // the Atomic page's is: the board column tops out at 447px beside the
+          // 225px move sheet, and the two hand bands make it taller than a
+          // plain xiangqi card. Measured 2026-10-02: height-bound below 788px.
+          aspect: [702, 790],
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: 'This game was picked from sixteen played the same way. A study with more of them will follow.',
+          text: 'This game is one of six in the [companion study](/study/nlZy4yNA), each with notes on the drops that decided it.',
         },
       ],
     },
@@ -266,6 +266,7 @@ export const crazyhouseXiangqiArticle: Article = {
       lead: 'Crazyhouse Xiangqi is on Mistboard against the Fairy-Stockfish ladder, a friend with an invite link, or whoever is waiting in the lobby.',
       playLabel: 'Play the computer',
       playHref: '/?play=computer&gameSpecId=crazyhouse-xiangqi',
+      secondary: [{ label: 'The six engine games', href: '/study/nlZy4yNA', emphasis: 'secondary' }],
     }),
   ],
 };
