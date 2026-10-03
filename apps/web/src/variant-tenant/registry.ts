@@ -589,12 +589,20 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: jungleEnabled,
       acceptsDeepLink: jungleEnabled,
-      // Misty Jungle: one bot, full strength. The three-rung ladder behind this
-      // picker was collapsed for real on 2026-07-27 — the server now REJECTS a
-      // create request naming level 1 or 3 (they stay resolvable only so finished
-      // games that recorded them still replay as PvE). This single entry is no
-      // longer just a UI choice hiding selectable rungs behind it.
+      // Strongest first: KataGo-AnimalChess on top (2026-10, #434: it won the
+      // jungle challenge), then Misty at full strength. Misty's old three-rung
+      // ladder was collapsed on 2026-07-27 and the server REJECTS a create request
+      // naming level 1 or 3 (they stay resolvable only so finished games that
+      // recorded them still replay as PvE). Hand mirror of the server's
+      // JUNGLE_PLAYABLE_ENGINE_IDS; variant-registry-sync.test.ts asserts parity.
+      // Misty stays the default: the top seat is a challenge, not a first game.
       engineOptions: [
+        {
+          id: 'katago-jungle',
+          name: 'KataGo',
+          familyName: 'KataGo',
+          kind: 'container',
+        },
         {
           id: 'misty-jungle-level-2',
           name: 'Misty',

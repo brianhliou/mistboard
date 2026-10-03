@@ -183,6 +183,11 @@ export const ZH_HANT_CONTENT = {
   'source.stockfish': 'Stockfish：研究和引擎 worker 流程的可選引擎/執行時依賴，GPL 系列。',
   'source.abJchess':
     'AB-JChess，作者 Huorongrong 和 Laoxu（Kouza）：本站最強的揭棋機器人，GPL-3.0；其神經網路經作者許可使用。',
+  'source.katagomo':
+    'KataGomo，作者 hzyhhzy：鬥獸棋版 KataGo（AnimalChess2025 分支），本站最強的鬥獸棋機器人，MIT；經作者許可使用。',
+  'source.katago': 'KataGo，作者 lightvector：KataGomo 所基於的引擎，MIT。',
+  'source.dandelion':
+    'Dandelion 4，作者 Kouza（lxsgx23）：本站最強鬥獸棋機器人的神經網路來源，從其發布頁取得，不在本站轉存。',
   'source.projectIdentity': '專案身份',
   'source.identityAssets':
     'Mistboard 名稱、標誌、mistboard.com 網域、託管服務身份和官方活動都是受控專案資產。',

@@ -24,6 +24,11 @@ import {
 } from '@mistboard/game';
 import { crosstableReviewUrl } from '../../server/src/crosstable.js';
 import { JIEQI_DEFAULT_ENGINE_ID, JIEQI_PLAYABLE_ENGINES } from '../../server/src/jieqi-engine.js';
+import {
+  JUNGLE_PLAYABLE_ENGINE_ID,
+  JUNGLE_PLAYABLE_ENGINE_IDS,
+  jungleEngineDisplayName,
+} from '../../server/src/server-jungle-engine.js';
 import { registeredVariantTenants } from '../../server/src/variant-tenant/registry.js';
 import {
   XIANGQI_DEFAULT_ENGINE_ID,
@@ -163,6 +168,18 @@ describe('web tenant registry <-> server tenant registry parity', () => {
       })),
     );
     expect(tenant?.landing?.defaultEngineId).toBe('pikafish-jieqi-level-4');
+  });
+
+  it('jungle picker engine options mirror the server seats', () => {
+    // Hand mirror of JUNGLE_PLAYABLE_ENGINE_IDS (apps/server/src/server-jungle-engine.ts),
+    // strongest first: KataGo, then Misty, each under the name its seat shows.
+    // Drift means a picker entry the create route refuses.
+    const tenant = webTenants.find((candidate) => candidate.gameSpecId === 'jungle');
+    const options = tenant?.landing?.engineOptions ?? [];
+    expect(options.map((option) => ({ id: option.id, name: option.name }))).toEqual(
+      JUNGLE_PLAYABLE_ENGINE_IDS.map((id) => ({ id, name: jungleEngineDisplayName(id) })),
+    );
+    expect(tenant?.landing?.defaultEngineId).toBe(JUNGLE_PLAYABLE_ENGINE_ID);
   });
 
   it('every server watch channel has a variant marker', () => {

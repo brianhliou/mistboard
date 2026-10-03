@@ -509,6 +509,11 @@ export const EN_COMMUNITY = {
     'Open source, built from Stockfish, and searching three million positions a move. It plays jieqi too.',
   'bots.abJchessBio':
     'An open-source jieqi engine with its own neural network, by Huorongrong and Laoxu (Kouza). Played here with their permission.',
+  'bots.katagoBio':
+    "The strongest Jungle Chess engine we know of: hzyhhzy's KataGomo, built on lightvector's KataGo, with the neural network from Kouza's Dandelion 4. Played here with permission.",
+  'bots.katagoCreditKatagomo': 'KataGomo by hzyhhzy',
+  'bots.katagoCreditKatago': 'KataGo by lightvector',
+  'bots.katagoCreditNet': "Neural network: Kouza's Dandelion 4",
   'bots.mistyBio':
     "Mistboard's own engine for Fog Chess, Fog Xiangqi, banqi, Jungle Chess and Flip Jungle.",
   'bots.firstParty': 'First-party bot',
@@ -548,6 +553,10 @@ export const CRITICAL_COMMUNITY_I18N_KEYS = [
   'bots.otherIntro',
   'bots.pikafishBio',
   'bots.abJchessBio',
+  'bots.katagoBio',
+  'bots.katagoCreditKatagomo',
+  'bots.katagoCreditKatago',
+  'bots.katagoCreditNet',
   'bots.mistyBio',
   'bots.firstParty',
   'bots.gameCountOne',

@@ -31,7 +31,10 @@ const NOT_EVE_RATED_VARIANTS: ReadonlyMap<string, string> = new Map([
 // a rating_policy and nothing reaches the Elo report. Each needs its reason.
 const EVE_DATA_ONLY_VARIANTS: ReadonlyMap<string, string> = new Map([
   ['banqi', 'one node-budgeted bot that plays itself; nothing to rank it against'],
-  ['jungle', 'one offered bot (level 2) and two retired levels; never ladder-rated'],
+  [
+    'jungle',
+    'KataGo over Misty plus two retired Misty levels, no random floor yet; never ladder-rated',
+  ],
 ]);
 
 test('data-only adapters have no random floor, so nothing can rate them', () => {
