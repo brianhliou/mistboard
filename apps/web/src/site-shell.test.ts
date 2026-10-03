@@ -69,13 +69,13 @@ describe('site shell nav', () => {
       nav.querySelector<HTMLAnchorElement>('.site-nav-menu-toggle[href="/rules"]')?.textContent,
     ).toBe('Learn');
     // Play is a split menu now: the title navigates to the lobby, the panel
-    // carries Correspondence (signed-in only, so hidden until auth resolves).
+    // carries Correspondence, shown to everyone (signed out lands on its explainer).
     const playMenu = [...nav.querySelectorAll<HTMLElement>('.site-nav-menu')].find(
       (menu) => menu.querySelector('.site-nav-menu-toggle')?.textContent === 'Play',
     );
     const correspondence = playMenu?.querySelector<HTMLAnchorElement>('a[href="/correspondence"]');
     expect(correspondence?.textContent).toBe('Correspondence');
-    expect(correspondence?.hidden).toBe(true);
+    expect(correspondence?.hidden).toBe(false);
     expect(nav.querySelector<HTMLAnchorElement>('a[href="/forum"]')?.textContent).toBe('Forum');
     // Community dropdown: Players (the leaderboard), Friends, Forum, Blog. The
     // title also links to /player, so scope item lookups to the panel.

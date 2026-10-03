@@ -1,5 +1,6 @@
 import { CORRESPONDENCE_ELIGIBLE_SPEC_IDS, DAYS_PER_MOVE_OPTIONS } from '@mistboard/game';
 import './challenge-dialog.css';
+import { trackCorrespondenceSeekPosted } from './analytics.js';
 import { firstMoverColorName, secondMoverColorName, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
@@ -125,6 +126,12 @@ export function openChallengeDialog(opts: {
           error?: string;
         } | null;
         if (res.ok && body?.challengeUrl) {
+          trackCorrespondenceSeekPosted({
+            gameSpecId: variant.value,
+            daysPerMove: Number(days.value),
+            kind: 'direct',
+            surface: 'profile',
+          });
           location.href = body.challengeUrl;
           return;
         }

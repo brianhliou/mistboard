@@ -44,7 +44,7 @@ import {
   createTenantCorrespondenceGameForSeek,
   createTenantLiveRoom,
 } from './variant-tenant/room-factory.js';
-import { tenantReplayCheck } from './variant-tenant/runtime.js';
+import { tenantReplayCheck, tenantSeatStateView } from './variant-tenant/runtime.js';
 import type { TenantRuntimeRoom } from './variant-tenant/tenant.js';
 import { createTenantWsRuntime, type TenantLiveRoom } from './variant-tenant/ws.js';
 
@@ -130,6 +130,19 @@ export function getOrLoadDarkChessTenantRoom(roomId: string): Promise<DarkChessR
   return getOrLoadTenantRoom(darkChessTenant, darkChessTenantRooms, roomId);
 }
 
+// The seat's own fog view for the /correspondence inbox card: the same
+// redaction the room snapshot runs for that seat (tenantSeatStateView), keyed
+// to the seat's own client id. Anything that is not white or black (a
+// spectator seat, a typo, another tenant's color) gets null.
+export function darkChessSeatBoard(room: DarkChessRuntimeRoom, seat: string): unknown | null {
+  if (!darkChessTenant.rules.isColor(seat)) return null;
+  return tenantSeatStateView(darkChessTenant, room, {
+    id: room.seatTokens[seat]?.clientId ?? `seat-board:${seat}`,
+    seat,
+    solo: false,
+  });
+}
+
 // Durable-deadline enforcement (the sweeper's per-room hook): hydrate, then
 // re-derive and act through the ws runtime's lifecycle context so the
 // timeout/abort appends persist, maintain the deadline row, and broadcast to
@@ -161,6 +174,7 @@ registerVariantTenant({
   activeGameCount: () => countDeployGatingRooms(darkChessTenantRooms.values()),
   getOrLoadRoom: (roomId) =>
     getOrLoadDarkChessTenantRoom(roomId) as Promise<TenantManagedRoom | null>,
+  seatBoard: (room, seat) => darkChessSeatBoard(room as unknown as DarkChessRuntimeRoom, seat),
   attachWebSocket: (ctx, socket, request, room) =>
     darkChessWs.handleConnection(
       {
