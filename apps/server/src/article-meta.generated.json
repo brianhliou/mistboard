@@ -212,7 +212,7 @@
   "pikafish-reveal-bug": {
     "title": "Our Pikafish jieqi bot misjudged its reveals",
     "kind": "article",
-    "description": "Our Pikafish jieqi bot rated some reveals far better than they were. Two bugs caused it. Both are fixed, at a cost of about 20 Elo.",
+    "description": "Our Pikafish jieqi bot rated some reveals far better than they were. Two bugs caused it. Both are fixed, at little or no cost in strength.",
     "status": "draft"
   },
   "puzzles-with-more-than-one-solution": {

@@ -11,7 +11,7 @@ import type { Article } from '../types.js';
 // - 71 decisive moves (fresh, 2M nodes, 1 thread): over-rated by 5+ pawns 16 -> 3;
 //   30 controls 0 -> 0. Self-play vs e75cee3a, 1M nodes/move: colour fix alone
 //   95-95-10 (200); everywhere re-search -150 Elo (128 games); shipped root-only
-//   264-300-36 (600), -21 Elo [-48, +6].
+//   264-300-36 (600), -21 Elo [-48, +6]; at 4M nodes/move 95-97-8 (200), -3 [-51, +44].
 // - AB-JChess: worst move in each of its 136 run7 losses, 60 reveals, 2 over-rated by
 //   15+ win points. Rigs: mistboard-engine lab, issue #497.
 
@@ -61,7 +61,7 @@ export const pikafishRevealBugArticle: Article = {
   title: 'Our Pikafish jieqi bot misjudged its reveals',
   seoTitle: 'A bug in the Pikafish jieqi bot: how it misjudged turning over a piece',
   summary:
-    'Our Pikafish jieqi bot rated some reveals far better than they were. Two bugs caused it. Both are fixed, at a cost of about 20 Elo.',
+    'Our Pikafish jieqi bot rated some reveals far better than they were. Two bugs caused it. Both are fixed, at little or no cost in strength.',
   showSummaryOnPage: false,
   status: 'draft',
   publishedAt: '2026-10-03',
@@ -139,11 +139,11 @@ export const pikafishRevealBugArticle: Article = {
       ],
     },
     {
-      heading: 'The fix costs about 20 Elo',
+      heading: 'The fix costs little or no strength',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The first fix cost nothing: in 200 games against the old bot it won 95 and lost 95. The second costs time, because every cut-short score now has to be searched again for its exact value. Doing that everywhere in the search cost about 150 Elo. Doing it only for the move the bot is choosing costs about 20: over 600 games it scored 264 wins to 300 losses, a result anywhere from 48 Elo weaker to 6 stronger.',
+          text: 'The first fix cost nothing: in 200 games against the old bot it won 95 and lost 95. The second costs time, because every cut-short score now has to be searched again for its exact value. Doing that everywhere in the search cost about 150 Elo. Doing it only for the move the bot is choosing costs little. At a million positions a move, it scored 264 wins to 300 losses over 600 games, about 20 Elo weaker. At four million, closer to how deep the site\'s bots search, it came out even: 95 wins to 97 losses over 200 games.',
         },
         {
           kind: 'paragraph',
@@ -151,7 +151,7 @@ export const pikafishRevealBugArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'We kept the trade. AB-JChess is the strongest jieqi bot on the site now, and an engine that calls a losing reveal winning teaches the wrong thing to anyone using it to study.',
+          text: 'We would have kept it at 20 Elo. AB-JChess is the strongest jieqi bot on the site now, and an engine that calls a losing reveal winning teaches the wrong thing to anyone using it to study.',
         },
       ],
     },
