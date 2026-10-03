@@ -57,20 +57,22 @@ describe('viewer-visible study comments', () => {
       version: 1,
       root: { children: [{ uci: 'h3e3', children: [{ uci: 'h8e8', children: [] }] }] },
     });
-    const panel = root.querySelector('.review-comment-panel');
-    // No reserved two-line gap between the board and the tabs.
-    expect(panel?.classList.contains('review-comment-panel--unused')).toBe(true);
+    const panel = root.querySelector<HTMLElement>('.review-comment-panel');
+    expect(panel?.hidden).toBe(true);
     key('ArrowLeft');
-    expect(panel?.classList.contains('review-comment-panel--unused')).toBe(true);
+    expect(panel?.hidden).toBe(true);
     root.remove();
   });
 
-  it('keeps the box on uncommented moves of a game with notes, so stepping never reflows', () => {
+  it('hides the box on an uncommented move of a game with notes, leaving no empty gap', () => {
     const root = mount();
     // Mount lands on h8e8, which has no note; the game has others.
-    const panel = root.querySelector('.review-comment-panel');
-    expect(panel?.classList.contains('review-comment-panel--empty')).toBe(true);
-    expect(panel?.classList.contains('review-comment-panel--unused')).toBe(false);
+    const panel = root.querySelector<HTMLElement>('.review-comment-panel');
+    expect(panel?.hidden).toBe(true);
+    // Back one move onto the commented h3e3: the box appears with its note.
+    key('ArrowLeft');
+    expect(panel?.hidden).toBe(false);
+    expect(panel?.textContent).toBe('The cannon centralises.');
     root.remove();
   });
 
@@ -82,8 +84,8 @@ describe('viewer-visible study comments', () => {
     expect(root.querySelector('.move-tree__comment--user')).toBeNull();
 
     // Mount lands on the mainline tip (h8e8, uncommented): panel hidden.
-    const panel = root.querySelector('.review-comment-panel');
-    expect(panel?.classList.contains('review-comment-panel--empty')).toBe(true);
+    const panel = root.querySelector<HTMLElement>('.review-comment-panel');
+    expect(panel?.hidden).toBe(true);
 
     // Click the commented move: its text appears in the panel.
     const cell = [...root.querySelectorAll('.review-move-list__move')].find((c) =>
@@ -91,7 +93,7 @@ describe('viewer-visible study comments', () => {
     ) as HTMLElement;
     cell.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(panel?.textContent).toBe('The cannon centralises.');
-    expect(panel?.classList.contains('review-comment-panel--empty')).toBe(false);
+    expect(panel?.hidden).toBe(false);
 
     // Step back to the root: the intro shows.
     key('ArrowLeft');

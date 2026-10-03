@@ -596,16 +596,6 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   let flipped = config.initialFlipped ?? flippedFromUrl();
 
   const currentNode = (): Node => tree.nodeAt(currentPath) ?? tree.root;
-  // Whether the comment panel has anything to show anywhere in the tree. A
-  // study's root comment is its chapter intro, shown in the About tab, so it
-  // does not count there (render() keeps it out of the panel too).
-  const hasNote = (node: Node): boolean =>
-    Boolean(displayComment(node.annotations?.comments?.[0])) ||
-    node.children.some((child) => hasNote(child));
-  const treeHasNotes = (): boolean =>
-    config.reviewSurface === 'study'
-      ? tree.root.children.some((child) => hasNote(child))
-      : hasNote(tree.root);
   const orientation = (): Color => presentation.perspective(flipped);
 
   const uciTo = (node: Node): string[] => {
@@ -1362,7 +1352,8 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // Authored comment for the CURRENT node, under the board. The move list shows
   // only a bubble marker per commented move; navigation brings the text here.
   const commentPanelEl = document.createElement('section');
-  commentPanelEl.className = 'review-comment-panel review-comment-panel--empty';
+  commentPanelEl.className = 'review-comment-panel';
+  commentPanelEl.hidden = true;
   commentPanelEl.setAttribute('aria-live', 'polite');
   const analysisSummaryEl = document.createElement('div');
   analysisSummaryEl.className = 'review-analysis-summary-slot';
@@ -1539,8 +1530,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
           moveTree.setCurrent(currentPath); // the rebuild dropped the highlight
           const trimmed = text.trim();
           commentPanelEl.textContent = trimmed;
-          commentPanelEl.classList.toggle('review-comment-panel--empty', !trimmed);
-          if (trimmed) commentPanelEl.classList.remove('review-comment-panel--unused');
+          commentPanelEl.hidden = !trimmed;
           notifyChange();
         },
         onClearShapes: () => {
@@ -1843,14 +1833,11 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         ? ''
         : (displayComment(node.annotations?.comments?.[0]) ?? '');
     commentPanelEl.textContent = authoredComment;
-    commentPanelEl.classList.toggle('review-comment-panel--empty', !authoredComment);
-    // The box holds its two lines only where notes exist to step between: a
-    // game with none (every review, most studies) has no box at all, rather
-    // than an empty two-line gap between the board and the tabs.
-    commentPanelEl.classList.toggle(
-      'review-comment-panel--unused',
-      !authoredComment && !treeHasNotes(),
-    );
+    // Only a move with a note gets the box. An uncommented move shows no empty
+    // box between the board and the tabs; stepping onto or off a note moves what
+    // is below the board by the note's height (Brian, 2026-10-02, over the
+    // reserved two-line box that never reflowed).
+    commentPanelEl.hidden = !authoredComment;
     moveTree.setCurrent(currentPath);
     controls.setBounds({ atStart: currentPath.length === 0, atEnd: node.children.length === 0 });
     // Opening statistics follow the board like every other per-node panel.
