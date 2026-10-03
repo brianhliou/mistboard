@@ -282,13 +282,24 @@ describe('homepage play panel', () => {
     expect(panelPersonPaces('jieqi', 'casual').some((p) => p.kind === 'days')).toBe(false);
   });
 
-  it('orders rows by the server ranking, then canonical order', () => {
-    expect(orderPanelSpecs(['xiangqi', 'banqi', 'jieqi'], ['jieqi'])).toEqual([
-      'jieqi',
-      'xiangqi',
-      'banqi',
-    ]);
-    expect(orderPanelSpecs(['banqi', 'xiangqi'], undefined)).toEqual(['xiangqi', 'banqi']);
+  it('orders rows in canonical order', () => {
+    expect(orderPanelSpecs(['fortress-xiangqi', 'banqi', 'crazyhouse-xiangqi', 'xiangqi'])).toEqual(
+      ['xiangqi', 'banqi', 'crazyhouse-xiangqi', 'fortress-xiangqi'],
+    );
+  });
+
+  it('ignores a play-count order cached by an earlier visit', () => {
+    localStorage.setItem(
+      'mistboard.playPanel.v1',
+      JSON.stringify({ order: ['jieqi', 'banqi', 'xiangqi', 'crazyhouse-xiangqi'] }),
+    );
+    const board = buildPlayPanel('en', { hydrate: false });
+    const specs = [...board.querySelectorAll<HTMLElement>('.pp-row-bot')].map(
+      (row) => row.dataset.gameSpec as string,
+    );
+    expect(specs.length).toBeGreaterThan(1);
+    expect(specs).toEqual(orderPanelSpecs(specs));
+    expect(specs[0]).toBe('xiangqi');
   });
 
   it('is on by default; ?hero=lobby brings the old tabs back until ?hero=grid', () => {
