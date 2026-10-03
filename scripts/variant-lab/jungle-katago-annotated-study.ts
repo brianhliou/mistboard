@@ -185,7 +185,7 @@ function chapter(game: EvaluatedGame, lines: readonly KatagoLine[]) {
       node.annotations = { glyphs: [NAG[glyph]] };
       comment(
         node,
-        `${glyph} By KataGo, Misty (${mistyColor}) went from ${pct(mark.before)} to ${pct(mark.after)}. KataGo would have played ${said(state, mark.kataBest)}.`,
+        `${glyph} By KataGo's count this move takes Misty (${mistyColor}) from ${pct(mark.before)} to ${pct(mark.after)}. KataGo's choice was ${said(state, mark.kataBest)}, the line beside this move.`,
       );
     }
     const note = notes.get(ply + 1);

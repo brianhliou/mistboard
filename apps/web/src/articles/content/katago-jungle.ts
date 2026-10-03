@@ -3,7 +3,6 @@ import {
   createInitialJungleState,
   engineUciToJungleMove,
   type JungleGameState,
-  jungleStateToEngineFen,
 } from '@mistboard/game';
 import type { Locale } from '../../i18n/locale.js';
 import { evalCompareChartSvg } from '../eval-compare-chart.js';
@@ -94,8 +93,8 @@ export function katagoScoreSeries(game: EvaluatedGame) {
 // study:edit. THESE IDS ARE A LOCAL DEV DATABASE'S (2026-10-02): the prod study
 // is created from the same plan on Brian's go, and its ids replace these.
 export const KATAGO_STUDY = {
-  id: '5Ok9lIk6',
-  chapters: { 67: '4kuCdgjz', 94: '99linjAn' },
+  id: 'ZVXAyBai',
+  chapters: { 67: 'ae4qGLXC', 94: 'GQOlYPTt' },
 } as const;
 
 function gameChart(game: number, heading: string, ariaLabel: string): ArticleBlock {
@@ -134,7 +133,8 @@ function gameEmbed(game: 67 | 94, ply: number, title: string): ArticleBlock {
 export const studyChapterHref = (game: 67 | 94): string =>
   `/study/${KATAGO_STUDY.id}/${KATAGO_STUDY.chapters[game]}`;
 
-// KataGo's own lines where the games went another way (the study's sidelines),
+// KataGo's own lines where the games went another way (the study's sidelines,
+// which the study embed lets a reader step into),
 // from scripts/variant-lab/jungle-katago-lines.ts and the September video work;
 // reduced to this JSON by jungle-katago-evals-reduce.ts.
 export const KATAGO_LINES = linesJson as KatagoLine[];
@@ -148,20 +148,6 @@ export function lineStart(game: number, ply: number): JungleGameState {
     state = next;
   }
   return state;
-}
-
-/** KataGo's line on its own board (/embed/line), from the game position. */
-function lineEmbed(game: 67 | 94, ply: number, title: string): ArticleBlock {
-  const line = KATAGO_LINES.find((l) => l.game === game && l.ply === ply);
-  if (!line) throw new Error(`katago-jungle: no KataGo line for game ${game} at ply ${ply}`);
-  const g = evaluatedGame(game);
-  const params = new URLSearchParams({
-    fen: jungleStateToEngineFen(lineStart(game, ply)).replace(/ /g, '_'),
-    moves: line.line.join(','),
-    red: g.red === 'katago' ? 'KataGo-AnimalChess' : 'MistyJungle',
-    black: g.red === 'katago' ? 'MistyJungle' : 'KataGo-AnimalChess',
-  });
-  return { kind: 'embed', path: `/embed/line/jungle?${params}`, title, aspect: [702, 780] };
 }
 
 export const katagoJungleArticle: Article = {
@@ -227,7 +213,6 @@ export const katagoJungleArticle: Article = {
           "Game 67, KataGo's expected score by ply as KataGo and Misty saw it. KataGo stays above 80% from ply 57, Misty from ply 72.",
         ),
         gameEmbed(67, 57, "Jungle Chess, game 67: Misty's moves marked by KataGo"),
-        lineEmbed(67, 56, "Jungle Chess, game 67: KataGo's line for red at ply 57"),
         {
           kind: 'paragraph',
           text: "On ply 57 Misty moved its cornered tiger from g8 to g9, and KataGo's score for itself went from 61% to 92% while Misty still read +111. KataGo's line for red starts with lion b1-b2 and keeps red at 37%. KataGo stayed above 80% from that ply; Misty got there on ply 72, 15 plies later.",
@@ -250,7 +235,6 @@ export const katagoJungleArticle: Article = {
           "Game 94, KataGo's expected score by ply as KataGo and Misty saw it. KataGo stays above 80% from ply 100, Misty from ply 104.",
         ),
         gameEmbed(94, 100, "Jungle Chess, game 94: Misty's moves marked by KataGo"),
-        lineEmbed(94, 99, "Jungle Chess, game 94: KataGo's line for black at ply 100"),
         {
           kind: 'paragraph',
           text: "On ply 100 Misty moved its cat from c8 to c7, and KataGo went from 63% to 98%. Misty read +80 and found the forced loss four plies later. KataGo's line for black, elephant d6-d7, keeps black at 38%.",

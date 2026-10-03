@@ -160,15 +160,11 @@ const ZH_HANS: Record<string, string> = {
     '我们用两个引擎按比赛设置，把其中两盘胜局的每个局面重新评估了一遍。每张图显示两个引擎对 KataGo 得分的估计：赢为 100%，和为 50%。KataGo 自己的数字把和棋算作半分；Misty 的分数（厘兵）按我们分析棋盘使用的曲线 1 / (1 + e^(−0.00368 × cp)) 换算成得分。虚线是 80%，每条点线标出该引擎从哪一步起一直保持在 80% 以上直到终局，?? 标出 KataGo 认为输棋的那一步。一步（ply）指一方走一着。',
   "Misty, playing red, won a wolf on ply 21 and read itself ahead for most of the game, while KataGo's score stayed at 50% and then climbed.":
     'Misty 执红，第 21 步吃掉一只狼，大半盘都认为自己领先；而 KataGo 的得分先停在 50%，随后一路上升。',
-  "Jungle Chess, game 67: KataGo's line for red at ply 57":
-    '斗兽棋第 67 盘：第 57 步时 KataGo 为红方给出的变化',
   "On ply 57 Misty moved its cornered tiger from g8 to g9, and KataGo's score for itself went from 61% to 92% while Misty still read +111. KataGo's line for red starts with lion b1-b2 and keeps red at 37%. KataGo stayed above 80% from that ply; Misty got there on ply 72, 15 plies later.":
     '第 57 步 Misty 把困在角落的虎从 g8 走到 g9，KataGo 对自己的得分从 61% 升到 92%，而 Misty 仍认为自己 +111。KataGo 为红方给出的变化从狮 b1-b2 开始，能让红方保持 37%。KataGo 从这一步起一直在 80% 以上；Misty 到第 72 步才达到，晚了 15 步。',
   'Full annotated game 67': '第 67 盘完整注释',
   "Misty, playing black, won a wolf on ply 38 and read itself ahead for most of the next 60 plies, while KataGo's score crept from 50% to 63%.":
     'Misty 执黑，第 38 步吃掉一只狼，此后 60 步里大部分时间都认为自己领先；而 KataGo 的得分从 50% 慢慢升到 63%。',
-  "Jungle Chess, game 94: KataGo's line for black at ply 100":
-    '斗兽棋第 94 盘：第 100 步时 KataGo 为黑方给出的变化',
   "On ply 100 Misty moved its cat from c8 to c7, and KataGo went from 63% to 98%. Misty read +80 and found the forced loss four plies later. KataGo's line for black, elephant d6-d7, keeps black at 38%.":
     '第 100 步 Misty 把猫从 c8 走到 c7，KataGo 从 63% 升到 98%。Misty 仍认为自己 +80，四步之后才算出必输。KataGo 为黑方给出的变化是象 d6-d7，能让黑方保持 38%。',
   'Full annotated game 94': '第 94 盘完整注释',
@@ -3488,15 +3484,11 @@ const ZH_HANT: Record<string, string> = {
     '我們用兩個引擎按比賽設定，把其中兩盤勝局的每個局面重新評估了一遍。每張圖顯示兩個引擎對 KataGo 得分的估計：贏為 100%，和為 50%。KataGo 自己的數字把和棋算作半分；Misty 的分數（釐兵）按我們分析棋盤使用的曲線 1 / (1 + e^(−0.00368 × cp)) 換算成得分。虛線是 80%，每條點線標出該引擎從哪一步起一直保持在 80% 以上直到終局，?? 標出 KataGo 認為輸棋的那一步。一步（ply）指一方走一著。',
   "Misty, playing red, won a wolf on ply 21 and read itself ahead for most of the game, while KataGo's score stayed at 50% and then climbed.":
     'Misty 執紅，第 21 步吃掉一隻狼，大半盤都認為自己領先；而 KataGo 的得分先停在 50%，隨後一路上升。',
-  "Jungle Chess, game 67: KataGo's line for red at ply 57":
-    '鬥獸棋第 67 盤：第 57 步時 KataGo 為紅方給出的變化',
   "On ply 57 Misty moved its cornered tiger from g8 to g9, and KataGo's score for itself went from 61% to 92% while Misty still read +111. KataGo's line for red starts with lion b1-b2 and keeps red at 37%. KataGo stayed above 80% from that ply; Misty got there on ply 72, 15 plies later.":
     '第 57 步 Misty 把困在角落的虎從 g8 走到 g9，KataGo 對自己的得分從 61% 升到 92%，而 Misty 仍認為自己 +111。KataGo 為紅方給出的變化從獅 b1-b2 開始，能讓紅方保持 37%。KataGo 從這一步起一直在 80% 以上；Misty 到第 72 步才達到，晚了 15 步。',
   'Full annotated game 67': '第 67 盤完整註釋',
   "Misty, playing black, won a wolf on ply 38 and read itself ahead for most of the next 60 plies, while KataGo's score crept from 50% to 63%.":
     'Misty 執黑，第 38 步吃掉一隻狼，此後 60 步裡大部分時間都認為自己領先；而 KataGo 的得分從 50% 慢慢升到 63%。',
-  "Jungle Chess, game 94: KataGo's line for black at ply 100":
-    '鬥獸棋第 94 盤：第 100 步時 KataGo 為黑方給出的變化',
   "On ply 100 Misty moved its cat from c8 to c7, and KataGo went from 63% to 98%. Misty read +80 and found the forced loss four plies later. KataGo's line for black, elephant d6-d7, keeps black at 38%.":
     '第 100 步 Misty 把貓從 c8 走到 c7，KataGo 從 63% 升到 98%。Misty 仍認為自己 +80，四步之後才算出必輸。KataGo 為黑方給出的變化是象 d6-d7，能讓黑方保持 38%。',
   'Full annotated game 94': '第 94 盤完整註釋',

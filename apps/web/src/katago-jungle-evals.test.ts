@@ -4,7 +4,6 @@ import {
   engineUciToJungleMove,
   type JungleGameState,
   type JungleSquare,
-  jungleStateToEngineFen,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import {
@@ -80,25 +79,14 @@ describe('katago-jungle lines', () => {
     }
   });
 
-  it('puts each line board at its game position, and links the study chapters', () => {
+  it('embeds one annotated study chapter per game, and links each chapter', () => {
     const embeds = katagoJungleArticle.sections
       .flatMap((s) => s.blocks)
       .filter((b): b is Extract<typeof b, { kind: 'embed' }> => b?.kind === 'embed');
-    const lineEmbeds = embeds.filter((b) => b.path.startsWith('/embed/line/jungle?'));
-    expect(lineEmbeds).toHaveLength(2);
-    for (const [embed, game, ply] of [
-      [lineEmbeds[0]!, 67, 56],
-      [lineEmbeds[1]!, 94, 99],
-    ] as const) {
-      const q = new URLSearchParams(embed.path.split('?')[1]);
-      expect(q.get('fen')!.replace(/_/g, ' ')).toBe(jungleStateToEngineFen(lineStart(game, ply)));
-      expect(q.get('moves')!.split(',')).toEqual(
-        KATAGO_LINES.find((l) => l.game === game && l.ply === ply)!.line,
-      );
-    }
-    expect(
-      embeds.filter((b) => b.path.startsWith(`/embed/study/${KATAGO_STUDY.id}/`)),
-    ).toHaveLength(2);
+    expect(embeds.map((b) => b.path)).toEqual([
+      `/embed/study/${KATAGO_STUDY.id}/${KATAGO_STUDY.chapters[67]}?ply=57`,
+      `/embed/study/${KATAGO_STUDY.id}/${KATAGO_STUDY.chapters[94]}?ply=100`,
+    ]);
     expect(studyChapterHref(94)).toBe(`/study/${KATAGO_STUDY.id}/${KATAGO_STUDY.chapters[94]}`);
   });
 });

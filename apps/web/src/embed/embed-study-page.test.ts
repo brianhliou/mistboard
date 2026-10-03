@@ -329,6 +329,86 @@ describe('mountEmbedStudy', () => {
     root.remove();
   });
 
+  it("shows a jungle chapter's comments, glyph and KataGo sideline, and opens on the turning ply", async () => {
+    // Shaped like the KataGo post's study: the played move carries a ?? and the
+    // story's comment; KataGo's alternative hangs off the same position as the
+    // second child, with its own comment. The jungle embed drew the mainline
+    // alone, so the post's readers never saw the argument (Brian, 2026-10-02).
+    const jungleChapter = {
+      id: 'Jngl5678',
+      name: 'Game 67, read by KataGo',
+      orientation: 'black',
+      variant: 'jungle',
+      tags: { red: 'MistyJungle', black: 'KataGo-AnimalChess', event: 'match', result: '0-1' },
+      root: {
+        rootFen: 't5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1',
+        root: {
+          children: [
+            {
+              uci: 'a1b1',
+              children: [
+                {
+                  uci: 'a9b9',
+                  children: [
+                    {
+                      uci: 'g1g2',
+                      annotations: {
+                        glyphs: [4],
+                        comments: [{ text: '?? The turning point, by KataGo.' }],
+                      },
+                      children: [{ uci: 'g9g8' }],
+                    },
+                    {
+                      uci: 'b1c1',
+                      annotations: { comments: [{ text: "KataGo's line." }] },
+                      children: [{ uci: 'b9c9' }],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    };
+    stubFetch(200, { study: { id: 's' }, chapters: [jungleChapter] });
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'Jngl5678' }, { startPly: 3 });
+
+    // Opens on the turning ply, the move marked and its comment under it.
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('3 / 4');
+    const moves = Array.from(root.querySelectorAll('button.review-move-list__move'));
+    expect(
+      moves.map((m) => m.querySelector('.review-move-list__san')?.textContent?.trim()),
+    ).toEqual(['a1-b1', 'a9-b9', 'g1-g2 ??', 'g9-g8']);
+    const branch = root.querySelector<HTMLElement>('.review-move-list__branch');
+    expect(branch?.dataset.atPly).toBe('3');
+    expect(branch?.querySelector('.review-move-list__note')?.textContent).toBe(
+      '?? The turning point, by KataGo.',
+    );
+    expect(branch?.querySelector('.review-move-list__note--line')?.textContent).toBe(
+      "KataGo's line.",
+    );
+    // KataGo's line beside the played move, steppable on the board and back.
+    const line = Array.from(branch?.querySelectorAll('.review-move-list__line-move') ?? []);
+    expect(line.map((m) => m.textContent)).toEqual(['b1-c1', 'b9-c9']);
+    (line[1] as HTMLButtonElement).click();
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('2+2');
+    expect(root.innerHTML).toContain('data-piece-square="c9"');
+    root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')?.click();
+    root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')?.click();
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('2 / 4');
+    // The position the line leaves from draws its first move as an arrow.
+    expect(root.querySelector('.jungle-board-arrows')?.innerHTML).not.toBe('');
+    // The chapter's orientation: KataGo (black) at the bottom.
+    const seats = Array.from(root.querySelectorAll('.embed-card-seat'));
+    expect(seats.at(-1)?.querySelector('.embed-card-seat-name')?.textContent).toBe(
+      'KataGo-AnimalChess',
+    );
+    root.remove();
+  });
+
   it('draws a fortress chapter on the FORTRESS board with both hands, drops included', async () => {
     // Prod study NUVBVjFf, chapter qh5eSTC9, as stored: no rootFen (the
     // standard start), no tags, FSF UCI with the treasure dropped as `Q@`.

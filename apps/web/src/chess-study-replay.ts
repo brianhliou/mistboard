@@ -16,11 +16,11 @@ import {
   standardChessSan,
   standardChessVariant,
 } from '@mistboard/game';
-import { ASSESSMENT_GLYPH } from './assessment-glyphs.js';
 import { animateChessBoardMove, renderDarkChessBoardSvg } from './dark-chess-render.js';
 import { revealKingCaptureForLoser } from './replay-board.js';
 import { chessUciToMove } from './review/chess-tree-adapter.js';
-import type { StudyChapterPayload, StudyTreeNode } from './study-chapter-spec.js';
+import { chapterAnnotations, GLYPH_SUFFIX_CLASS } from './study-chapter-annotations.js';
+import type { StudyChapterPayload } from './study-chapter-spec.js';
 
 export type ChessReplaySpec = {
   /** Which kernel replays the line. Fog chess ('dark-chess') has no check: a
@@ -47,63 +47,13 @@ export type ChessReplaySpec = {
   lines?: Record<number, { moves: string[]; verdict?: string; note?: string }>;
 };
 
-/** NAG codes as the study stores them, to the glyph the board and sheet show. */
-const NAG_GLYPH: Record<number, string> = { 1: '!', 2: '?', 3: '!!', 4: '??', 6: '?!' };
-const GLYPH_SUFFIX_CLASS: Record<string, string> = {
-  '??': 'blunder',
-  '?': 'mistake',
-  '?!': 'inaccuracy',
-  '!!': 'brilliant',
-  '!': 'great',
-};
-
 /** A chess chapter's tree as the embed shows it: the FIRST child at every node
  *  is the mainline, in the tree adapter's own UCI; any later child is a
  *  sideline hung off the same position, kept with its verdict and comment so
  *  the embed shows what the chapter argues (the same walk as
  *  studyChapterToReplaySpec, which the xiangqi embed reads). */
 export function chessChapterToReplaySpec(chapter: StudyChapterPayload): ChessReplaySpec | null {
-  const moves: string[] = [];
-  const glyphs: Record<number, string> = {};
-  const notes: Record<number, string> = {};
-  const assessments: Record<number, string> = {};
-  const lines: Record<number, { moves: string[]; verdict?: string; note?: string }> = {};
-  let node: StudyTreeNode | undefined = chapter.root?.root;
-  while (node?.children?.length) {
-    const played = node.children[0];
-    if (!played?.uci) break;
-    moves.push(played.uci);
-    const ply = moves.length;
-    const glyph = (played.annotations?.glyphs ?? []).map((code) => NAG_GLYPH[code]).find(Boolean);
-    if (glyph) glyphs[ply] = glyph;
-    const note = played.annotations?.comments?.[0]?.text;
-    if (note) notes[ply] = note;
-    const assessedCode = (played.annotations?.glyphs ?? []).find(
-      (code) => ASSESSMENT_GLYPH[code] !== undefined,
-    );
-    if (assessedCode !== undefined) assessments[ply] = ASSESSMENT_GLYPH[assessedCode];
-    const sibling = node.children[1];
-    if (sibling?.uci) {
-      const line: string[] = [];
-      let verdict: string | undefined;
-      let variation: StudyTreeNode | undefined = sibling;
-      while (variation?.uci) {
-        line.push(variation.uci);
-        const assessed = (variation.annotations?.glyphs ?? []).find(
-          (code) => ASSESSMENT_GLYPH[code] !== undefined,
-        );
-        verdict = assessed === undefined ? undefined : ASSESSMENT_GLYPH[assessed];
-        variation = variation.children?.[0];
-      }
-      const lineNote = sibling.annotations?.comments?.[0]?.text;
-      lines[ply] = {
-        moves: line,
-        ...(verdict ? { verdict } : {}),
-        ...(lineNote ? { note: lineNote } : {}),
-      };
-    }
-    node = played;
-  }
+  const { moves, glyphs, notes, assessments, lines } = chapterAnnotations(chapter);
   if (!moves.length) return null;
   const variant = chapter.variant === 'dark-chess' ? 'dark-chess' : 'chess';
   const rootFen = variant === 'chess' ? chapter.root?.rootFen : undefined;
