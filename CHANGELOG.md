@@ -65,6 +65,7 @@ Conventions:
 
 ### Site
 
+- The homepage deep-dives row is now labelled Xiangqi deep dives ([5edb33f3](https://github.com/brianhliou/mistboard/commit/5edb33f3))
 - the Crazyhouse Xiangqi rules page is unlisted while it is revised, and its News entry links to the game ([ce818f36](https://github.com/brianhliou/mistboard/commit/ce818f36))
 - the privacy page now names PostHog and what it records ([3ec676b4](https://github.com/brianhliou/mistboard/commit/3ec676b4))
 - less empty space above and below the footer on the homepage ([774f9cff](https://github.com/brianhliou/mistboard/commit/774f9cff))
@@ -80,6 +81,8 @@ Conventions:
 
 ### Fixed
 
+- On the homepage, only the Play button starts a bot game; a click elsewhere on the row no longer does ([5edb33f3](https://github.com/brianhliou/mistboard/commit/5edb33f3))
+- Open correspondence games now leave the board after 14 days, and posting the same open game twice keeps just one ([5edb33f3](https://github.com/brianhliou/mistboard/commit/5edb33f3))
 - Banqi and Flip Jungle rooms show Resign, the move list and your own seat row again, after two days hidden on short boards ([6ffe2f45](https://github.com/brianhliou/mistboard/commit/6ffe2f45))
 - a game whose stored moves no longer replay now reads as not found and stays out of TV and game lists ([e463a334](https://github.com/brianhliou/mistboard/commit/e463a334))
 - The banqi rules page names the cannon house rule it does not play, instead of listing its own rules as rejected ones ([1a95e357](https://github.com/brianhliou/mistboard/commit/1a95e357))
