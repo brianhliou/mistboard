@@ -75,8 +75,9 @@ export function primaryNavItems(): NavItem[] {
 // Correspondence is here because the page has existed since correspondence
 // shipped but was reachable ONLY from the notification bell (which shows only
 // when a game already needs your move) and a footer link on the page itself, so
-// a player with several games in flight had no menu path to them. Signed-in
-// only, so it costs a visitor nothing.
+// a player with several games in flight had no menu path to them. Shown to
+// everyone since 2026-10-02: a signed-out visitor lands on the page's explainer
+// and the open seeks, which is how anyone finds out correspondence exists.
 export function playNavItems(): NavItem[] {
   return [
     { label: 'Lobby', labelKey: 'nav.lobby', href: '/' },
@@ -84,7 +85,6 @@ export function playNavItems(): NavItem[] {
       label: 'Correspondence',
       labelKey: 'nav.correspondence',
       href: '/correspondence',
-      signedInOnly: true,
     },
   ];
 }

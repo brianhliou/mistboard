@@ -1,266 +1,523 @@
+/* /correspondence inbox (correspondence.ts). Boards, the misty tile, the
+   placeholder and the variant chip reuse the /games wall's classes from
+   current-games.css; everything here is the inbox's own layout. */
+
 .correspondence-shell {
-  max-width: 720px;
+  width: 100%;
+  max-width: 1180px;
   margin: 0 auto;
   padding: 28px 16px 64px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 28px;
+  box-sizing: border-box;
 }
 
 .correspondence-header {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
 .correspondence-header h1 {
   margin: 0;
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 2rem;
+  font-weight: 400;
   color: var(--site-heading);
 }
 
 .correspondence-subtitle {
   margin: 0;
+  max-width: 62ch;
   color: var(--site-muted);
-  font-size: 14px;
+  font-size: 0.9rem;
 }
 
-.correspondence-group {
+/* Main column + side panel; the side drops under the main column when the
+   two cannot both have their minimum width (phones, narrow tablets). */
+.correspondence-layout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 28px;
+}
+
+.correspondence-main {
+  flex: 999 1 560px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
+  gap: 32px;
+}
+
+.correspondence-side {
+  flex: 1 1 320px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.correspondence-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.correspondence-section-head {
+  display: flex;
+  align-items: baseline;
   gap: 10px;
 }
 
-.correspondence-group-heading {
+.correspondence-section-head h2,
+.correspondence-start h2 {
   margin: 0;
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--site-heading);
+}
+
+.correspondence-count {
+  font-size: 0.82rem;
+  color: var(--site-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.correspondence-panel {
+  border: 1px solid var(--site-border);
+  border-radius: 8px;
+  background: var(--site-panel);
+}
+
+.correspondence-quiet {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 0.88rem;
+}
+
+.correspondence-quiet-panel,
+.correspondence-empty p {
+  margin: 0;
+  padding: 16px;
+  color: var(--site-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* ---- Your move: big cards ---------------------------------------------------- */
+
+.correspondence-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.correspondence-card {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding: 14px;
+}
+
+.correspondence-card-board {
+  flex: none;
+  width: 210px;
+  max-width: 100%;
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.correspondence-card-body {
+  flex: 1 1 240px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.correspondence-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 0.8rem;
   color: var(--site-muted);
 }
 
-.correspondence-list {
-  list-style: none;
+.correspondence-card-vs {
   margin: 0;
-  padding: 0;
+  font-size: 1.35rem;
+  font-weight: 400;
+  color: var(--site-heading);
+  overflow-wrap: anywhere;
+}
+
+.correspondence-card-updated {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--site-muted);
+}
+
+.correspondence-deadline {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.correspondence-deadline-labels {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  font-size: 0.85rem;
+}
+
+.correspondence-deadline-left {
+  font-weight: 600;
+  color: var(--site-accent-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.correspondence-deadline-due {
+  color: var(--site-muted);
+}
+
+.correspondence-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--site-panel-soft);
+  overflow: hidden;
+}
+
+.correspondence-bar span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--site-accent);
+}
+
+/* Under a day left: the site's warning tokens (amber), not the clock's red. */
+.correspondence-card[data-urgency="urgent"] .correspondence-deadline-left,
+.correspondence-card[data-urgency="due"] .correspondence-deadline-left {
+  color: var(--site-warning-text);
+}
+
+.correspondence-card[data-urgency="urgent"] .correspondence-bar span,
+.correspondence-card[data-urgency="due"] .correspondence-bar span {
+  background: var(--site-warning-border);
+}
+
+/* ---- Rows (waiting, open seeks, your challenges) ----------------------------------- */
+
+.correspondence-rows {
+  display: flex;
+  flex-direction: column;
 }
 
 .correspondence-row {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
-  border: 1px solid var(--site-border-soft);
-  border-radius: var(--site-radius);
-  background: var(--site-surface);
+  padding: 12px;
+  border-top: 1px solid var(--site-border);
   color: inherit;
   text-decoration: none;
-  transition:
-    border-color 120ms ease,
-    background 120ms ease;
+  min-width: 0;
 }
 
-.correspondence-row:hover {
-  border-color: var(--site-border);
-  background: var(--site-surface-raised, var(--site-surface));
+.correspondence-row:first-child {
+  border-top: 0;
 }
 
-.correspondence-row.is-your-move {
-  border-color: #b6d6c8;
-  box-shadow: inset 3px 0 0 var(--site-accent);
+a.correspondence-row:hover,
+a.correspondence-row:focus-visible {
+  background: var(--site-panel-soft);
 }
 
-.correspondence-opponent {
+.correspondence-row-board {
+  flex: none;
+  width: 64px;
+}
+
+/* At thumbnail size the tiles keep only their shape. */
+.correspondence-row-board .current-game-fog,
+.correspondence-row-board .current-game-hidden {
+  padding: 4px;
+  gap: 2px;
+}
+
+.correspondence-row-board .current-game-fog-note,
+.correspondence-row-board .current-game-fog-variant,
+.correspondence-row-board .current-game-hidden-label {
+  display: none;
+}
+
+.correspondence-row-board .current-game-fog-waves svg {
+  width: 28px;
+  height: 20px;
+}
+
+.correspondence-row-text {
+  flex: 1 1 150px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.correspondence-row-name {
   font-weight: 600;
+  font-size: 0.9rem;
   color: var(--site-heading);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.correspondence-turn {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+.correspondence-row-detail {
+  font-size: 0.78rem;
   color: var(--site-muted);
 }
 
-.correspondence-row.is-your-move .correspondence-turn {
-  color: var(--site-accent);
+.correspondence-row-error {
+  font-size: 0.78rem;
+  color: var(--site-warning-text);
 }
 
-.correspondence-deadline {
-  font-variant-numeric: tabular-nums;
-  font-size: 13px;
-  color: var(--site-muted);
-  white-space: nowrap;
-}
-
-.correspondence-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 28px;
-  border: 1px solid var(--site-border-soft);
-  border-radius: var(--site-radius);
-  background: var(--site-surface);
-}
-
-.correspondence-empty h2 {
-  margin: 0;
-  font-size: 16px;
-  color: var(--site-heading);
-}
-
-.correspondence-empty p {
-  margin: 0;
-  color: var(--site-muted);
-  font-size: 14px;
-}
-
-.correspondence-cta {
-  display: inline-flex;
-  align-items: center;
-  margin-top: 8px;
-  padding: 8px 16px;
-  border-radius: var(--site-radius);
-  background: var(--site-accent);
-  color: #fff;
-  font-weight: 600;
-  font-size: 14px;
-  text-decoration: none;
-}
-
-.correspondence-cta:hover {
-  filter: brightness(1.05);
-}
-
-.correspondence-seekboard {
-  border-top: 1px solid var(--site-border-soft);
-  padding-top: 20px;
-}
-
-/* The CTA base was written for <a>; normalize it for the board's <button>s. */
-.correspondence-post-form button.correspondence-cta,
-.correspondence-seek-action {
-  margin-top: 0;
-  border: none;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.correspondence-seek-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-/* "Post a game" is a secondary trigger, not a second green primary. */
-.correspondence-seek-toggle {
-  flex-shrink: 0;
-  padding: 6px 14px;
-  border-radius: var(--site-radius);
-  border: 1px solid var(--site-border-soft);
-  background: var(--site-surface);
-  color: var(--site-heading);
-  font-weight: 600;
-  font-size: 13px;
-  font-family: inherit;
-  cursor: pointer;
-}
-
-.correspondence-seek-toggle:hover {
-  border-color: var(--site-border);
-}
-
-.correspondence-seek-toggle.is-open {
-  border-color: var(--site-accent);
-  color: var(--site-accent);
-}
-
-.correspondence-post-form {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-/* `display: flex` above and the UA's `[hidden] { display: none }` have the same
-   specificity, so source order decided it and the form rendered even though the
-   script sets form.hidden = true. The "Post a game" toggle was inert and the
-   form was permanently expanded. Restate the hidden case after the display rule. */
-.correspondence-post-form[hidden] {
+.correspondence-row-error[hidden] {
   display: none;
 }
 
-.correspondence-post-field {
-  padding: 8px 10px;
-  border: 1px solid var(--site-border-soft);
-  border-radius: var(--site-radius);
-  background: var(--site-surface);
-  color: inherit;
-  font-size: 14px;
-  font-family: inherit;
-}
-
-.correspondence-post-error {
-  margin: 0;
-  flex-basis: 100%;
-  color: var(--site-danger, #c0392b);
-  font-size: 13px;
-}
-
-.correspondence-seek-empty {
-  margin: 0;
-  padding: 16px 14px;
-  border: 1px dashed var(--site-border-soft);
-  border-radius: var(--site-radius);
+.correspondence-row-left {
+  flex: none;
+  margin-left: auto;
+  font-size: 0.82rem;
   color: var(--site-muted);
-  font-size: 14px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
-.correspondence-seek-action {
-  padding: 6px 14px;
-  font-size: 13px;
+.correspondence-row-actions {
+  flex: none;
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
 }
 
-.correspondence-seek-action.is-cancel {
-  background: transparent;
-  color: var(--site-muted);
-  border: 1px solid var(--site-border-soft);
+/* ---- Buttons ----------------------------------------------------------------------- */
+
+.correspondence-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--site-accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  cursor: pointer;
 }
 
-.correspondence-seek-action.is-cancel:hover {
-  filter: none;
-  border-color: var(--site-border);
-  color: var(--site-heading);
+.correspondence-btn:hover {
+  filter: brightness(1.06);
 }
 
-.correspondence-seek-action:disabled {
+.correspondence-btn:focus-visible,
+.correspondence-ghost:focus-visible,
+.correspondence-seg button:focus-visible {
+  outline: 2px solid var(--site-accent-strong);
+  outline-offset: 2px;
+}
+
+.correspondence-btn:disabled {
   opacity: 0.6;
   cursor: default;
 }
 
-.correspondence-friend-link {
-  margin: 4px 0 0;
-  color: var(--site-muted);
-  font-size: 13px;
-}
-
-.correspondence-friend-link a {
-  color: var(--site-accent);
+.correspondence-ghost {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--site-border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--site-text);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
   text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
-.correspondence-friend-link a:hover {
-  text-decoration: underline;
+.correspondence-ghost:hover {
+  border-color: var(--site-accent);
+  color: var(--site-heading);
+}
+
+.correspondence-ghost.is-quiet {
+  color: var(--site-muted);
+  font-weight: 400;
+}
+
+.correspondence-ghost:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ---- Start a game ------------------------------------------------------------------- */
+
+.correspondence-start {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.correspondence-start-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.correspondence-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.correspondence-field[hidden] {
+  display: none;
+}
+
+.correspondence-field-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--site-muted);
+}
+
+.correspondence-seg {
+  display: flex;
+  border: 1px solid var(--site-border);
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.correspondence-seg button {
+  flex: 1;
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  color: var(--site-muted);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.correspondence-seg button + button {
+  border-left: 1px solid var(--site-border);
+}
+
+.correspondence-seg button:hover {
+  color: var(--site-heading);
+}
+
+.correspondence-seg button.is-on {
+  background: var(--site-accent-soft);
+  color: var(--site-accent-strong);
+  font-weight: 600;
+}
+
+.correspondence-input {
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--site-border);
+  border-radius: 7px;
+  background: var(--site-panel);
+  color: var(--site-text);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.correspondence-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--site-muted);
+}
+
+.correspondence-form-status {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--site-accent-strong);
+}
+
+.correspondence-form-status.is-error {
+  color: var(--site-warning-text);
+}
+
+.correspondence-form-status[hidden] {
+  display: none;
+}
+
+/* ---- Signed out ------------------------------------------------------------------- */
+
+.correspondence-signedout {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+}
+
+.correspondence-signedout p {
+  margin: 0;
+  color: var(--site-text);
+  line-height: 1.5;
+}
+
+.correspondence-signedout-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.correspondence-signedout-actions .correspondence-ghost {
+  min-height: 40px;
+}
+
+@media (max-width: 520px) {
+  .correspondence-header h1 {
+    font-size: 1.6rem;
+  }
+
+  .correspondence-card {
+    gap: 14px;
+  }
+
+  .correspondence-card-board {
+    width: 100%;
+    max-width: 360px;
+  }
+
+  .correspondence-btn {
+    align-self: stretch;
+  }
 }

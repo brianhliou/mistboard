@@ -378,3 +378,29 @@ export function trackLocaleChanged(from: Locale, to: Locale): void {
 export function trackNotationChanged(from: string, to: string, path: string): void {
   track('notation_changed', { from_notation: from, to_notation: to, path });
 }
+
+// Correspondence funnel (2026-10-02). game_started already fires when a
+// correspondence room starts playing, but nothing recorded the two steps before
+// it: a seek going up, and someone taking one. `surface` says which page did it
+// (the /correspondence inbox, the homepage lobby, a profile challenge, or the
+// /challenge accept page), which is the question behind making correspondence
+// easier to find. Fired only on the server's 201, never on a re-post that
+// returned an existing seek.
+export type CorrespondenceSeekKind = 'public' | 'link' | 'direct';
+
+export function trackCorrespondenceSeekPosted(props: {
+  gameSpecId: string;
+  daysPerMove: number;
+  kind: CorrespondenceSeekKind;
+  surface: 'correspondence' | 'lobby' | 'profile';
+}): void {
+  track('correspondence_seek_posted', props);
+}
+
+export function trackCorrespondenceSeekAccepted(props: {
+  gameSpecId: string;
+  daysPerMove: number;
+  surface: 'correspondence' | 'challenge';
+}): void {
+  track('correspondence_seek_accepted', props);
+}

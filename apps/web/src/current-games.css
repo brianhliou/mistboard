@@ -189,7 +189,10 @@
    the rules above are shared with /games/search and /data.
    --------------------------------------------------------------------------- */
 
-.current-games-page {
+/* The misty tile tokens also serve the /correspondence inbox, which draws the
+   same tile for its Fog Chess games. */
+.current-games-page,
+.correspondence-page {
   /* The misty tile for hidden-information games (fog, sealed, masked). */
   --current-games-fog-ink: hsl(140, 14%, 34%);
   --current-games-fog-strong: hsl(140, 20%, 22%);
@@ -199,7 +202,8 @@
   --current-games-fog-stripe: rgba(255, 255, 255, 0.35);
 }
 
-:root[data-effective-theme="dark"] .current-games-page {
+:root[data-effective-theme="dark"] .current-games-page,
+:root[data-effective-theme="dark"] .correspondence-page {
   --current-games-fog-ink: #b7cbbd;
   --current-games-fog-strong: #d6e3da;
   --current-games-fog-bg: #17261a;

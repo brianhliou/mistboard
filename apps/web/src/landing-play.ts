@@ -22,7 +22,12 @@ import {
   type TimeControlId,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
-import { classifyTimeControl, gameSpecAnalyticsPropsForId, track } from './analytics.js';
+import {
+  classifyTimeControl,
+  gameSpecAnalyticsPropsForId,
+  track,
+  trackCorrespondenceSeekPosted,
+} from './analytics.js';
 import { type BotPlayRequest, bindBotPlayControl, createBotGame } from './bot-play.js';
 import { correspondenceEnabled } from './feature-flags.js';
 import { variantNameKeyForSpecId } from './game-display.js';
@@ -2455,6 +2460,18 @@ async function postCorrespondenceSeekFromPlay(
       body: JSON.stringify({ daysPerMove, preferredColor: 'random' }),
     });
     if (response.ok) {
+      if (response.status === 201) {
+        const posted = (await response
+          .clone()
+          .json()
+          .catch(() => null)) as { seek?: { gameSpecId?: string } } | null;
+        trackCorrespondenceSeekPosted({
+          gameSpecId: posted?.seek?.gameSpecId ?? DARK_CHESS_SPEC_ID,
+          daysPerMove,
+          kind: 'public',
+          surface: 'lobby',
+        });
+      }
       if (!status.isConnected) return;
       roomNavigator('/correspondence');
       return;

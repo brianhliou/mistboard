@@ -1,4 +1,5 @@
 import './challenge.css';
+import { trackCorrespondenceSeekAccepted } from './analytics.js';
 import { firstMoverColorName, secondMoverColorName, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
@@ -150,6 +151,11 @@ function buildChallengeCard(view: ChallengeView): HTMLElement {
             error?: string;
           } | null;
           if (res.ok && body?.url) {
+            trackCorrespondenceSeekAccepted({
+              gameSpecId: view.gameSpecId,
+              daysPerMove: view.daysPerMove,
+              surface: 'challenge',
+            });
             location.href = body.url;
             return;
           }
