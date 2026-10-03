@@ -155,6 +155,9 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // ab-jchess (match link): machine-drafted 2026-10-02, not native-reviewed.
+  'All 400 games are on the site, each with its own review page: [browse the match](/games/search?variant=jieqi&source=engine-match).':
+    '全部 400 盘对局都在网站上，每盘都有自己的复盘页面：[查看这场对抗赛](/games/search?variant=jieqi&source=engine-match)。',
   // pikafish-reveal-bug: machine-drafted 2026-10-02, not native-reviewed.
   'Our Pikafish jieqi bot misjudged its reveals': '我们的皮卡鱼揭棋电脑误判了翻子',
   'Our Pikafish jieqi bot rated some reveals far better than they were. Two bugs caused it. Both are fixed, at little or no cost in strength.':
@@ -3474,6 +3477,9 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ab-jchess (match link): machine-drafted 2026-10-02, not native-reviewed.
+  'All 400 games are on the site, each with its own review page: [browse the match](/games/search?variant=jieqi&source=engine-match).':
+    '全部 400 盤對局都在網站上，每盤都有自己的覆盤頁面：[查看這場對抗賽](/games/search?variant=jieqi&source=engine-match)。',
   // pikafish-reveal-bug: machine-drafted 2026-10-02, not native-reviewed.
   'Our Pikafish jieqi bot misjudged its reveals': '我們的皮卡魚揭棋電腦誤判了翻子',
   'Our Pikafish jieqi bot rated some reveals far better than they were. Two bugs caused it. Both are fixed, at little or no cost in strength.':

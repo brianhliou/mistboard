@@ -75,6 +75,10 @@ export const abJchessArticle: Article = {
       text: "In late September, before putting it on the site, we played it against that bot: 400 games at 4 seconds a move, on the same settings the site uses, with AB-JChess's network of September 11. AB-JChess won 248, lost 136 and drew 16, a 64% score. It won as Red and as Black.",
     },
     {
+      kind: 'paragraph',
+      text: 'All 400 games are on the site, each with its own review page: [browse the match](/games/search?variant=jieqi&source=engine-match).',
+    },
+    {
       kind: 'cta',
       layout: 'single-row',
       buttons: [
