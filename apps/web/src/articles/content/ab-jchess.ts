@@ -86,13 +86,13 @@ export function abScoreSeries(game: AbMatchGame) {
   };
 }
 
-// The annotated games: a @mistboard study made from
-// scripts/variant-lab/ab-jchess-annotated-study.ts (one chapter a game) by
-// study:edit. THESE IDS ARE A LOCAL DEV DATABASE'S (2026-10-03): the prod study
-// is created from the same plan on Brian's go, and its ids replace these.
+// The annotated games: @mistboard's public study Df5rtaMN on mistboard.com,
+// made from scripts/variant-lab/ab-jchess-annotated-study.ts (one chapter a
+// game) by study:edit on 2026-10-03. Rewrite its trees with that script's
+// --update mode, never by hand.
 export const AB_JCHESS_STUDY = {
-  id: 'wKfGDpWq',
-  chapters: { 68: 'xoqhrDS4', 6: 'Wb0NC9yA' },
+  id: 'Df5rtaMN',
+  chapters: { 68: 'Gq3g6Oqx', 6: '3p8LDUEQ' },
 } as const;
 
 type ChartNote = { lines: readonly string[]; side: 'left' | 'right'; level: number };
