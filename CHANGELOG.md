@@ -96,6 +96,7 @@ Conventions:
 
 ### Fixed
 
+- The rules pages now load with their text in English and both Chinese scripts, and the localized blog, rules, videos, bots and course pages each name their own address to search engines ([3edc86b1](https://github.com/brianhliou/mistboard/commit/3edc86b1))
 - A correspondence game posted from the homepage lobby now uses the variant you picked, and variant game headers show Rated for rated games ([851d1a41](https://github.com/brianhliou/mistboard/commit/851d1a41))
 - The jieqi Pikafish bot and its analysis no longer overrate turning over a piece: Black's reveals were scored by their best possible outcome, and outcomes the search cut short were averaged in as if exact ([d00a1b82](https://github.com/brianhliou/mistboard/commit/d00a1b82))
 - On the homepage, only the Play button starts a bot game; a click elsewhere on the row no longer does ([5edb33f3](https://github.com/brianhliou/mistboard/commit/5edb33f3))
