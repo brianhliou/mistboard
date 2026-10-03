@@ -26,7 +26,16 @@ export type { RatingVariant } from '@mistboard/game';
 // games never share a ladder with any live pace. It is not a live pace, so it is
 // not in RatedTimeClass (which types TIME_CONTROLS); it exists only here.
 export const CORRESPONDENCE_RATING_TIME_CLASS = 'correspondence' as const;
-export type RatingTimeClass = RatedTimeClass | typeof CORRESPONDENCE_RATING_TIME_CLASS;
+// Spelled out as literals so scripts/drift-check.mjs can compare it with the
+// user_ratings.time_class CHECK; the two assignments below keep it equal to
+// RatedTimeClass plus the correspondence pool at compile time.
+export type RatingTimeClass = 'bullet' | 'blitz' | 'rapid' | 'correspondence';
+export const LIVE_TIME_CLASSES_ARE_RATING_CLASSES: readonly RatingTimeClass[] =
+  [] as RatedTimeClass[];
+export const RATING_CLASSES_ARE_LIVE_OR_CORRESPONDENCE: readonly (
+  | RatedTimeClass
+  | typeof CORRESPONDENCE_RATING_TIME_CLASS
+)[] = [] as RatingTimeClass[];
 
 export type RatingBucket = {
   variant: RatingVariant;
