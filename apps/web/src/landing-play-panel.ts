@@ -16,10 +16,12 @@ import { correspondenceEnabled } from './feature-flags.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import {
+  type LandingBotRosterPlayOptions,
   type LandingBotRung,
   landingBotLadder,
   landingBotLadderIndex,
   landingBotOffer,
+  playableBotIdsBySpec,
 } from './landing-bot-policy.js';
 import {
   allowedTimePresetIds,
@@ -316,6 +318,13 @@ export function buildPlayPanel(
     { ladder: readonly LandingBotRung[]; at: number; tc: TimeControlId }
   >();
   const playingEls = new Map<string, HTMLElement>();
+  // What GET /api/bots says each variant can seat; gated rungs (KataGo) wait for
+  // it, so a box without the engine never offers a bot that cannot move.
+  let playableBots = new Map<string, ReadonlySet<string>>();
+  const ladderFor = (gameSpecId: string): readonly LandingBotRung[] =>
+    landingBotLadder(gameSpecId, playableBots.get(gameSpecId));
+  const sameLadder = (a: readonly LandingBotRung[], b: readonly LandingBotRung[]): boolean =>
+    a.length === b.length && a.every((rung, i) => rung.botId === b[i]?.botId);
 
   const botRequest = (gameSpecId: string): BotPlayRequest => {
     const state = botState.get(gameSpecId)!;
@@ -342,14 +351,16 @@ export function buildPlayPanel(
     playingEls.clear();
     for (const gameSpecId of ordered()) {
       if (!landingVariantSupportsPve(gameSpecId)) continue;
-      const ladder = landingBotLadder(gameSpecId);
+      const ladder = ladderFor(gameSpecId);
       if (ladder.length === 0) continue;
       const paces = panelBotPaces(gameSpecId);
       if (paces.ids.length === 0) continue;
       const label = labelFor(gameSpecId);
-      const saved = stored.bots?.[gameSpecId];
       let state = botState.get(gameSpecId);
-      if (!state) {
+      // A ladder that grew when the roster arrived re-resolves the pick from
+      // what is stored now, so a remembered KataGo comes back once it is offered.
+      if (!state || !sameLadder(state.ladder, ladder)) {
+        const saved = state ? readStored().bots?.[gameSpecId] : stored.bots?.[gameSpecId];
         const fromPanel = landingBotLadderIndex(ladder, saved?.botId);
         const fromMemory = landingBotLadderIndex(ladder, rememberedPveEngine(gameSpecId));
         const policy = landingBotLadderIndex(
@@ -359,7 +370,8 @@ export function buildPlayPanel(
           })?.botId,
         );
         const at = [fromPanel, fromMemory, policy, 0].find((i) => i >= 0) ?? 0;
-        const tc = saved?.tc && paces.ids.includes(saved.tc) ? saved.tc : paces.defaultId;
+        const tc =
+          state?.tc ?? (saved?.tc && paces.ids.includes(saved.tc) ? saved.tc : paces.defaultId);
         state = { ladder, at, tc };
         botState.set(gameSpecId, state);
       }
@@ -477,7 +489,7 @@ export function buildPlayPanel(
   const renderFeatures = (): void => {
     const rows: HTMLElement[] = [];
     const last = readStored().last;
-    const lastLadder = last ? landingBotLadder(last.gameSpecId) : [];
+    const lastLadder = last ? ladderFor(last.gameSpecId) : [];
     const lastRung = last ? lastLadder.find((r) => r.botId === last.botId) : undefined;
     const lastPaces = last ? panelBotPaces(last.gameSpecId as LandingGameSpecId).ids : [];
     if (
@@ -820,7 +832,7 @@ export function buildPlayPanel(
         };
         // Casual seekers get the 15 s "play a bot instead" offer; a rated
         // seeker asked for a rated game, so it is not offered there.
-        const fallbackBot = mode === 'casual' ? landingBotLadder(gameSpecId) : [];
+        const fallbackBot = mode === 'casual' ? ladderFor(gameSpecId) : [];
         const policyBot = landingBotOffer(gameSpecId)?.botId;
         const botId =
           fallbackBot.find((r) => r.botId === policyBot)?.botId ?? fallbackBot[0]?.botId;
@@ -903,6 +915,23 @@ export function buildPlayPanel(
         })
         .catch(() => {});
     };
+    // One-shot: which gated rungs this server can seat (playOptions[].playable).
+    // A failure leaves them off, which is the safe side.
+    void fetch('/api/bots', { headers: { accept: 'application/json' } })
+      .then((r) => (r.ok ? (r.json() as Promise<{ bots?: LandingBotRosterPlayOptions[] }>) : null))
+      .then((data) => {
+        if (!data?.bots) return;
+        playableBots = playableBotIdsBySpec(data.bots);
+        // Re-render only when a ladder changed, so a Play already pending on
+        // another row keeps its button.
+        const changed = [...botState].some(
+          ([gameSpecId, state]) => !sameLadder(state.ladder, ladderFor(gameSpecId)),
+        );
+        if (!changed) return;
+        renderBotRows();
+        renderFeatures();
+      })
+      .catch(() => {});
     void refreshLobby();
     refreshCorrespondence();
     refreshPlaying();

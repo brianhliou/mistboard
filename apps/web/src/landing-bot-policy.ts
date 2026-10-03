@@ -289,8 +289,9 @@ function positiveModulo(value: number, divisor: number): number {
 // Every public bot a variant can be played against, weakest first, so the
 // stepper walks the real ladder: xiangqi's Fairy-Stockfish Levels 1-8 then
 // full-strength Pikafish; jieqi's Pikafish Levels 1-8 (Level 8 is the
-// `pikafish` bot, the strongest Pikafish setting), then AB-JChess; the other Fairy-Stockfish variants Levels 1-8; the house-built
-// variants a single Misty (no stepper). Mirrors the server roster in
+// `pikafish` bot, the strongest Pikafish setting), then AB-JChess; the other
+// Fairy-Stockfish variants Levels 1-8; jungle Misty then KataGo; the other
+// house-built variants a single Misty (no stepper). Mirrors the server roster in
 // apps/server/src/first-party-bots.ts; a rung the server cannot serve fails the
 // room create, so landing-bot-policy.test.ts pins the ids.
 export type LandingBotRung = {
@@ -300,11 +301,14 @@ export type LandingBotRung = {
   /** Display name for a named rung (Pikafish, AB-JChess, Misty). */
   name: string;
   /** The engine family behind the rung, shown under the level. */
-  engine: 'Fairy-Stockfish' | 'Pikafish' | 'AB-JChess' | 'Misty';
+  engine: 'Fairy-Stockfish' | 'Pikafish' | 'AB-JChess' | 'KataGo' | 'Misty';
   /** Evaluates with a trained net. Only xiangqi Fairy-Stockfish Level 8 (the
    *  official xiangqi net), xiangqi Pikafish and AB-JChess do: the jieqi
    *  Pikafish levels run classical, its jieqi branch has never had weights. */
   nnue: boolean;
+  /** The engine needs a binary and net the server box may lack (KataGo), so the
+   *  rung is offered only where GET /api/bots reports it playable. */
+  gated?: boolean;
 };
 
 const FSF_LADDER_SPECS: readonly LandingBotGameSpecId[] = [
@@ -316,7 +320,16 @@ const FSF_LADDER_SPECS: readonly LandingBotGameSpecId[] = [
 ];
 const JIEQI_LADDER_TOP_LEVEL = 7;
 
-export function landingBotLadder(gameSpecId: string): readonly LandingBotRung[] {
+const NO_PLAYABLE_BOTS: ReadonlySet<string> = new Set();
+
+// `playable` is the set of bot ids the server says it can seat for this variant
+// (playableBotIdsBySpec over GET /api/bots). Only gated rungs consult it; until
+// the roster arrives, or where the box lacks the engine, a gated rung is left
+// off and the ladder is what every box can serve.
+export function landingBotLadder(
+  gameSpecId: string,
+  playable: ReadonlySet<string> = NO_PLAYABLE_BOTS,
+): readonly LandingBotRung[] {
   if (!isLandingBotGameSpecId(gameSpecId)) return [];
   if (FSF_LADDER_SPECS.includes(gameSpecId)) {
     const levels: LandingBotRung[] = Array.from({ length: 8 }, (_, i) => ({
@@ -358,11 +371,56 @@ export function landingBotLadder(gameSpecId: string): readonly LandingBotRung[] 
       { botId: 'ab-jchess', level: null, name: 'AB-JChess', engine: 'AB-JChess', nnue: true },
     ];
   }
-  return [{ botId: 'misty', level: null, name: 'Misty', engine: 'Misty', nnue: false }];
+  const misty: LandingBotRung = {
+    botId: 'misty',
+    level: null,
+    name: 'Misty',
+    engine: 'Misty',
+    nnue: false,
+  };
+  if (gameSpecId === JUNGLE_SPEC_ID) {
+    // Misty stays the starter (the canonical offer); KataGo (#434) is the
+    // stronger rung above it. Its net is a ResNet, not an NNUE, so no tag.
+    const katago: LandingBotRung = {
+      botId: 'katago',
+      level: null,
+      name: 'KataGo',
+      engine: 'KataGo',
+      nnue: false,
+      gated: true,
+    };
+    return [misty, katago].filter((rung) => !rung.gated || playable.has(rung.botId));
+  }
+  return [misty];
+}
+
+// Minimal slice of GET /api/bots: each bot's per-variant play options.
+export type LandingBotRosterPlayOptions = {
+  id: string;
+  playOptions?: readonly { gameSpecId: string; playable: boolean }[];
+};
+
+/** Bot ids the server can seat, per variant, from the GET /api/bots roster. */
+export function playableBotIdsBySpec(
+  bots: readonly LandingBotRosterPlayOptions[],
+): Map<string, ReadonlySet<string>> {
+  const bySpec = new Map<string, Set<string>>();
+  for (const bot of bots) {
+    for (const option of bot.playOptions ?? []) {
+      if (!option.playable) continue;
+      let ids = bySpec.get(option.gameSpecId);
+      if (!ids) {
+        ids = new Set();
+        bySpec.set(option.gameSpecId, ids);
+      }
+      ids.add(bot.id);
+    }
+  }
+  return bySpec;
 }
 
 // The rung a remembered pick lands on: a bot id from a one-click start, or the
-// engine id the setup dialog stored for jieqi (pveEngineIdForRememberedPick's
+// engine id the setup dialog stored for jieqi or jungle (pveEngineIdForRememberedPick's
 // inverse). Anything unrecognised returns -1 and the caller uses its default.
 export function landingBotLadderIndex(
   ladder: readonly LandingBotRung[],
@@ -378,6 +436,8 @@ export function landingBotLadderIndex(
       ? 'pikafish'
       : remembered === 'ab-jchess-jieqi'
         ? 'ab-jchess'
-        : null;
+        : remembered === 'katago-jungle'
+          ? 'katago'
+          : null;
   return botId ? ladder.findIndex((rung) => rung.botId === botId) : -1;
 }

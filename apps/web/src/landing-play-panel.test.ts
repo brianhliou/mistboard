@@ -126,6 +126,106 @@ describe('homepage play panel', () => {
     expect(board.querySelector<HTMLElement>('.pp-search')?.hidden).toBe(true);
   });
 
+  it('offers KataGo above Misty in jungle once /api/bots says it is playable', async () => {
+    vi.useFakeTimers();
+    const fetchSpy = vi.fn(async (input: string, _init?: RequestInit) => {
+      if (input === '/api/bots') {
+        return Response.json({
+          bots: [
+            {
+              id: 'misty',
+              playOptions: [
+                { gameSpecId: 'jungle', playable: true },
+                { gameSpecId: 'jungle-flip', playable: true },
+              ],
+            },
+            { id: 'katago', playOptions: [{ gameSpecId: 'jungle', playable: true }] },
+          ],
+        });
+      }
+      if (input === '/api/rooms') return Response.json({ url: '/jungle/room-1' }, { status: 201 });
+      return Response.json({});
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const board = buildPlayPanel('en');
+    document.body.append(board);
+    // Before the roster lands the row is the fixed Misty every box can serve.
+    expect(row(board, 'jungle').querySelector('.pp-step-level.is-fixed')).not.toBeNull();
+    await vi.advanceTimersByTimeAsync(0);
+    await flush();
+
+    const jungle = row(board, 'jungle');
+    expect(stepValue(jungle, 'level')).toBe('Misty');
+    expect(jungle.querySelector('.pp-step-level.is-fixed')).toBeNull();
+    const [easier, stronger] = jungle.querySelectorAll<HTMLButtonElement>(
+      '.pp-step-level .pp-step-btn',
+    );
+    expect(easier?.getAttribute('aria-label')).toBe('Easier opponent');
+    expect(stronger?.getAttribute('aria-label')).toBe('Stronger opponent');
+    expect(easier?.disabled).toBe(true);
+    clickNext(jungle, 'level');
+    expect(stepValue(jungle, 'level')).toBe('KataGo');
+    expect(stronger?.disabled).toBe(true);
+    expect(jungle.querySelector('.pp-step-level .pp-step-tag')).toBeNull();
+    // Flip Jungle keeps its single Misty.
+    expect(row(board, 'jungle-flip').querySelector('.pp-step-level.is-fixed')).not.toBeNull();
+
+    jungle.querySelector<HTMLButtonElement>('.pp-act')!.click();
+    await flush();
+    const create = fetchSpy.mock.calls.find(([url]) => url === '/api/rooms');
+    expect(JSON.parse(String(create?.[1]?.body))).toMatchObject({
+      mode: 'pve',
+      botId: 'katago',
+      gameSpecId: 'jungle',
+    });
+    const stored = JSON.parse(localStorage.getItem('mistboard.playPanel.v1') ?? '{}');
+    expect(stored.bots.jungle.botId).toBe('katago');
+    board.remove();
+    await vi.advanceTimersByTimeAsync(3_000);
+  });
+
+  it('comes back to a remembered KataGo, and never offers it when the server cannot seat it', async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(
+      'mistboard.playPanel.v1',
+      JSON.stringify({ bots: { jungle: { botId: 'katago', tc: '10m5' } } }),
+    );
+    let katagoPlayable = true;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: string) =>
+        input === '/api/bots'
+          ? Response.json({
+              bots: [
+                { id: 'misty', playOptions: [{ gameSpecId: 'jungle', playable: true }] },
+                {
+                  id: 'katago',
+                  playOptions: [{ gameSpecId: 'jungle', playable: katagoPlayable }],
+                },
+              ],
+            })
+          : Response.json({}),
+      ),
+    );
+    const remembered = buildPlayPanel('en');
+    document.body.append(remembered);
+    await vi.advanceTimersByTimeAsync(0);
+    await flush();
+    expect(stepValue(row(remembered, 'jungle'), 'level')).toBe('KataGo');
+    remembered.remove();
+
+    katagoPlayable = false;
+    const unplayable = buildPlayPanel('en');
+    document.body.append(unplayable);
+    await vi.advanceTimersByTimeAsync(0);
+    await flush();
+    const jungle = row(unplayable, 'jungle');
+    expect(stepValue(jungle, 'level')).toBe('Misty');
+    expect(jungle.querySelector('.pp-step-level.is-fixed')).not.toBeNull();
+    unplayable.remove();
+    await vi.advanceTimersByTimeAsync(3_000);
+  });
+
   it('starts a bot game only from Play, never from a stray row click', () => {
     const fetchSpy = vi.fn(async () => Response.json({}));
     vi.stubGlobal('fetch', fetchSpy);
