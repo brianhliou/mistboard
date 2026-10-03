@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- When your open correspondence game expires with no taker, the bell tells you and offers to post it again ([58b0ac0d](https://github.com/brianhliou/mistboard/commit/58b0ac0d))
 - KataGo, the engine that won the Jungle challenge, is the new top Jungle bot above Misty, credited to hzyhhzy's KataGomo, lightvector's KataGo and Kouza's Dandelion 4 network ([f424b2df](https://github.com/brianhliou/mistboard/commit/f424b2df))
 - Every variant can now be played by correspondence, days per move, from the correspondence page, the lobby and a player's profile ([851d1a41](https://github.com/brianhliou/mistboard/commit/851d1a41))
 - Correspondence is now an inbox with boards and deadlines, your own fog view on Fog Chess games, a start-a-game panel, open seeks, and a page for visitors showing every game in progress ([e14e36b0](https://github.com/brianhliou/mistboard/commit/e14e36b0))
@@ -49,6 +50,7 @@ Conventions:
 
 ### Watching and review
 
+- Atomic Xiangqi games in progress now show their board on Current games, Watch live and the correspondence inbox ([58b0ac0d](https://github.com/brianhliou/mistboard/commit/58b0ac0d))
 - The note box under a study board shows only on a move with a note, with no empty gap on the others ([95b57417](https://github.com/brianhliou/mistboard/commit/95b57417))
 - Finished Flip Jungle games on Current games show their final board, with unflipped pieces face-down ([dbb4ce56](https://github.com/brianhliou/mistboard/commit/dbb4ce56))
 - Current games is now a board wall: live and correspondence boards side by side, filters for variant and for people or bots, and the latest finished games below ([e3c8e84f](https://github.com/brianhliou/mistboard/commit/e3c8e84f))
