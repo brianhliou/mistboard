@@ -9,6 +9,7 @@ import {
   landingBotRotationBucket,
   landingLobbyBotOffer,
   landingXiangqiBotOffers,
+  playableBotIdsBySpec,
   pveEngineIdForRememberedPick,
   xiangqiPrimaryLevel,
 } from './landing-bot-policy.js';
@@ -249,6 +250,54 @@ describe('landing bot ladder (homepage play panel)', () => {
       expect(ids(spec)).toEqual(['misty']);
     }
     expect(ids('not-a-variant')).toEqual([]);
+  });
+
+  it('puts KataGo above Misty in jungle only where the server can seat it', () => {
+    const jungle = (playable: string[]) =>
+      landingBotLadder('jungle', new Set(playable)).map((rung) => rung.botId);
+    expect(jungle([])).toEqual(['misty']);
+    expect(jungle(['misty'])).toEqual(['misty']);
+    expect(jungle(['misty', 'katago'])).toEqual(['misty', 'katago']);
+    // Flip Jungle has no KataGo seat, whatever the roster says.
+    expect(
+      landingBotLadder('jungle-flip', new Set(['misty', 'katago'])).map((r) => r.botId),
+    ).toEqual(['misty']);
+    const top = landingBotLadder('jungle', new Set(['katago']))[1];
+    expect(top).toMatchObject({ name: 'KataGo', engine: 'KataGo', level: null, nnue: false });
+  });
+
+  it('keeps Misty as the jungle starter when KataGo is offered', () => {
+    const ladder = landingBotLadder('jungle', new Set(['katago']));
+    expect(ladder[landingBotLadderIndex(ladder, landingBotOffer('jungle')?.botId)]?.botId).toBe(
+      'misty',
+    );
+    // A pick remembered as the bot id or the setup dialog's engine id lands on KataGo.
+    expect(ladder[landingBotLadderIndex(ladder, 'katago')]?.botId).toBe('katago');
+    expect(ladder[landingBotLadderIndex(ladder, 'katago-jungle')]?.botId).toBe('katago');
+    // Not offered: the remembered pick misses and the caller falls back to Misty.
+    expect(landingBotLadderIndex(landingBotLadder('jungle'), 'katago-jungle')).toBe(-1);
+  });
+
+  it('reads the playable bots per variant from the /api/bots roster', () => {
+    const bySpec = playableBotIdsBySpec([
+      {
+        id: 'misty',
+        playOptions: [
+          { gameSpecId: 'jungle', playable: true },
+          { gameSpecId: 'jungle-flip', playable: true },
+        ],
+      },
+      { id: 'katago', playOptions: [{ gameSpecId: 'jungle', playable: false }] },
+      { id: 'ab-jchess' },
+    ]);
+    expect([...(bySpec.get('jungle') ?? [])]).toEqual(['misty']);
+    expect([...(bySpec.get('jungle-flip') ?? [])]).toEqual(['misty']);
+    expect(bySpec.has('jieqi')).toBe(false);
+    expect(
+      playableBotIdsBySpec([
+        { id: 'katago', playOptions: [{ gameSpecId: 'jungle', playable: true }] },
+      ]).get('jungle'),
+    ).toEqual(new Set(['katago']));
   });
 
   it('starts every ladder variant on a rung its canonical offer names', () => {
