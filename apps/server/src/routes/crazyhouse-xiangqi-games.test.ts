@@ -5,12 +5,20 @@ import {
   CRAZYHOUSE_XIANGQI_SPEC_ID,
   type CrazyhouseXiangqiGameState,
   type CrazyhouseXiangqiMove,
+  type CrazyhouseXiangqiPlayerView,
   createInitialCrazyhouseXiangqiState,
 } from '@mistboard/game';
-import type { CrazyhouseXiangqiEvent } from '../crazyhouse-xiangqi-tenant.js';
+import {
+  type CrazyhouseXiangqiEvent,
+  crazyhouseXiangqiTenant,
+} from '../crazyhouse-xiangqi-tenant.js';
 import type { RecentEveGameRecord } from '../persistence.js';
+import { registeredVariantTenants } from '../variant-tenant/registry.js';
+import { replayTenantEvents } from '../variant-tenant/runtime.js';
+import { hasLiveWatchPayloadBuilder } from '../watch-live.js';
 import {
   type CrazyhouseXiangqiPostgamePersistence,
+  crazyhouseXiangqiLiveWatchPayloadFor,
   crazyhouseXiangqiPostgameForApi,
 } from './crazyhouse-xiangqi-games.js';
 
@@ -132,4 +140,72 @@ test('Crazyhouse Xiangqi postgame refuses an unfinished game and another variant
     ),
     null,
   );
+});
+
+// ---------------------------------------------------------------------------
+// Live payload (Mistboard TV, /games, the correspondence inbox): the postgame
+// shape from an IN-PROGRESS room, both hands in every view. Open information,
+// so the one truth view is what both seats and every spectator see.
+// ---------------------------------------------------------------------------
+
+// The first two plies (a capture each way), game still in progress.
+function liveRoom(events: CrazyhouseXiangqiEvent[] = finishedGameEvents().slice(0, 5)) {
+  return {
+    id: ROOM_ID,
+    events,
+    projection: replayTenantEvents(crazyhouseXiangqiTenant, events),
+  };
+}
+
+type LivePayload = {
+  game: { variant: string; result: string; endedAt: string | null; plyCount: number };
+  state: { status: { type: string } };
+  view: CrazyhouseXiangqiPlayerView;
+  views: { truth: CrazyhouseXiangqiPlayerView };
+  history: { truth: Array<{ ply: number; view: CrazyhouseXiangqiPlayerView }> };
+};
+
+test('Crazyhouse Xiangqi live payload carries both hands in the view and every ply', () => {
+  const payload = crazyhouseXiangqiLiveWatchPayloadFor(ROOM_ID, liveRoom()) as LivePayload | null;
+  assert.ok(payload);
+  assert.equal(payload.game.variant, CRAZYHOUSE_XIANGQI_SPEC_ID);
+  const start = { advisor: 2, elephant: 2 };
+  assert.deepEqual(payload.view.hands, {
+    red: { ...start, horse: 1 },
+    black: { ...start, cannon: 1 },
+  });
+  // One view for everyone: no per-seat or masked track exists.
+  assert.deepEqual(Object.keys(payload.views), ['truth']);
+  assert.deepEqual(payload.views.truth, payload.view);
+  assert.deepEqual(Object.keys(payload.history), ['truth']);
+  const truth = payload.history.truth;
+  assert.deepEqual(
+    truth.map((snapshot) => snapshot.ply),
+    [0, 1, 2],
+  );
+  assert.deepEqual(truth[0]?.view.hands, { red: start, black: start });
+  assert.deepEqual(truth[1]?.view.hands, { red: { ...start, horse: 1 }, black: start });
+  assert.deepEqual(truth[2]?.view.hands, payload.view.hands);
+});
+
+test('Crazyhouse Xiangqi live payload reports the game in progress with no end time', () => {
+  const payload = crazyhouseXiangqiLiveWatchPayloadFor(ROOM_ID, liveRoom()) as LivePayload | null;
+  assert.ok(payload);
+  assert.equal(payload.game.result, 'in-progress');
+  assert.equal(payload.game.endedAt, null);
+  assert.equal(payload.game.plyCount, 2);
+  assert.equal(payload.state.status.type, 'playing');
+});
+
+test('Crazyhouse Xiangqi live payload is withheld for a finished room or another room id', () => {
+  assert.equal(crazyhouseXiangqiLiveWatchPayloadFor(ROOM_ID, liveRoom(finishedGameEvents())), null);
+  assert.equal(crazyhouseXiangqiLiveWatchPayloadFor('chx_other', liveRoom()), null);
+});
+
+test('the Crazyhouse Xiangqi watch channel has a live payload builder', () => {
+  const registration = registeredVariantTenants().find(
+    (entry) => entry.gameSpecId === CRAZYHOUSE_XIANGQI_SPEC_ID,
+  );
+  assert.ok(registration?.watch, 'crazyhouse-xiangqi registers a watch channel');
+  assert.equal(hasLiveWatchPayloadBuilder(registration.watch.channelId), true);
 });

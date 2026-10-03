@@ -66,7 +66,7 @@ test('every routes/*-games.ts module is registered in the http-api dispatch', as
 //
 // Known gaps, each a missing builder rather than a policy: remove an entry when
 // its builder lands, and never add one for a new variant.
-const OPEN_CHANNELS_WITHOUT_LIVE_BUILDER: ReadonlySet<string> = new Set(['crazyhouse-xiangqi']);
+const OPEN_CHANNELS_WITHOUT_LIVE_BUILDER: ReadonlySet<string> = new Set([]);
 
 test('every open watch channel has a live board payload builder', () => {
   const missing: string[] = [];
