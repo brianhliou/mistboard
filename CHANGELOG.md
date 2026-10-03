@@ -67,6 +67,7 @@ Conventions:
 
 ### Site
 
+- the homepage play panel lists variants in the same order as the menus, not by recent play ([5e2e44d1](https://github.com/brianhliou/mistboard/commit/5e2e44d1))
 - the variant menus and rules list put Duck, Crazyhouse and Fortress ahead of Atomic and Fog Xiangqi ([e3c8e84f](https://github.com/brianhliou/mistboard/commit/e3c8e84f))
 - The homepage deep-dives row is now labelled Xiangqi deep dives ([5edb33f3](https://github.com/brianhliou/mistboard/commit/5edb33f3))
 - the Crazyhouse Xiangqi rules page is unlisted while it is revised, and its News entry links to the game ([ce818f36](https://github.com/brianhliou/mistboard/commit/ce818f36))
