@@ -617,6 +617,88 @@ test('serveRulesIndexPage injects rules metadata', async () => {
   );
 });
 
+// /rules, /zh-hans/rules and /zh-hant/rules are in the sitemap; until
+// 2026-10-02 they answered with the 4.9KB shell (no canonical, no hreflang, no
+// text). Each locale now serves its own baked index, and the shell fallback
+// (an older build, or a scheduled page gone live since the build) still names
+// its canonical and the locale group.
+test('serveRulesIndexPage serves each locale its own prerendered index', async () => {
+  resetArticleScheduleCache();
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  await writeFile(join(staticDir, 'rules.html'), '<html><body>baked en rules</body></html>');
+  for (const langDir of ['zh-hans', 'zh-hant']) {
+    await mkdir(join(staticDir, langDir), { recursive: true });
+    await writeFile(
+      join(staticDir, langDir, 'rules.html'),
+      `<html><body>baked ${langDir} rules</body></html>`,
+    );
+  }
+  for (const langPrefix of [undefined, 'zh-hans', 'zh-hant']) {
+    const response = captureResponse();
+    await serveRulesIndexPage({
+      response,
+      publicHost: 'https://mistboard.test',
+      staticDir,
+      langPrefix,
+    });
+    assert.equal(response.status, 200);
+    assert.match(response.body, new RegExp(`baked ${langPrefix ?? 'en'} rules`));
+  }
+});
+
+test('serveRulesIndexPage never hands a localized index the English file', async () => {
+  resetArticleScheduleCache();
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  await writeFile(join(staticDir, 'rules.html'), '<html><body>baked en rules</body></html>');
+  const response = captureResponse();
+  await serveRulesIndexPage({
+    response,
+    publicHost: 'https://mistboard.test',
+    staticDir,
+    langPrefix: 'zh-hans',
+  });
+  assert.equal(response.status, 200);
+  assert.doesNotMatch(response.body, /baked/);
+  assert.match(response.body, /<title>规则 \| Mistboard<\/title>/);
+});
+
+test('the rules index shell fallback carries a self canonical and the locale group', async () => {
+  resetArticleScheduleCache();
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  for (const [langPrefix, path] of [
+    [undefined, '/rules'],
+    ['zh-hans', '/zh-hans/rules'],
+    ['zh-hant', '/zh-hant/rules'],
+  ] as const) {
+    const response = captureResponse();
+    await serveRulesIndexPage({
+      response,
+      publicHost: 'https://mistboard.test',
+      staticDir,
+      langPrefix,
+    });
+    assert.equal(response.status, 200);
+    assert.ok(
+      response.body.includes(`<link rel="canonical" href="https://mistboard.test${path}">`),
+      `${path} has no self canonical`,
+    );
+    for (const [lang, href] of [
+      ['en', 'https://mistboard.test/rules'],
+      ['zh-Hans', 'https://mistboard.test/zh-hans/rules'],
+      ['zh-Hant', 'https://mistboard.test/zh-hant/rules'],
+      ['x-default', 'https://mistboard.test/rules'],
+    ]) {
+      assert.ok(
+        response.body.includes(`<link rel="alternate" hreflang="${lang}" href="${href}">`),
+        `${path} is missing the ${lang} alternate`,
+      );
+    }
+  }
+});
+
 // --- per-route modulepreload hints (issue #31) ---------------------------------
 
 function routePreloadManifestJson(): string {

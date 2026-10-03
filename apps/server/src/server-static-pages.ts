@@ -1214,19 +1214,45 @@ export async function serveRulesIndexPage(params: {
   staticDir: string;
   langPrefix?: string;
 }): Promise<void> {
-  const indexPath = resolve(params.staticDir, 'index.html');
-  let html = await fs.readFile(indexPath, 'utf-8');
   const langKey =
     params.langPrefix === 'zh-hans' || params.langPrefix === 'zh-hant' ? params.langPrefix : 'en';
+
+  // Each locale's rules index is prerendered (rules.html, zh-hans/rules.html,
+  // zh-hant/rules.html) with its own canonical and the locale group's
+  // hreflang; until 2026-10-02 all three answered with the bare shell. The
+  // tile list honours publish times the way the blog index does, so the same
+  // staleness rule hands a page gone live since the build to the shell below.
+  if (!prerenderedIndexIsStale(await readArticleSchedule(params.staticDir))) {
+    const bakedFile = langKey === 'en' ? 'rules.html' : `${langKey}/rules.html`;
+    const prerendered = await fs
+      .readFile(resolve(params.staticDir, bakedFile), 'utf-8')
+      .catch(() => null);
+    if (prerendered !== null) {
+      params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      params.response.end(prerendered);
+      return;
+    }
+  }
+
+  const indexPath = resolve(params.staticDir, 'index.html');
+  let html = await fs.readFile(indexPath, 'utf-8');
   const meta = RULES_INDEX_META[langKey];
   if (langKey !== 'en') {
     html = html.replace('<html lang="en">', `<html lang="${meta.htmlLang}">`);
   }
+  const url = `${params.publicHost}${langKey === 'en' ? '' : `/${langKey}`}/rules`;
   html = injectPageMeta(html, {
     title: meta.title,
     description: meta.description,
-    url: `${params.publicHost}${langKey === 'en' ? '' : `/${langKey}`}/rules`,
+    url,
   });
+  // The fallback names the same canonical and alternates as the baked file, so
+  // a crawler that lands on it sees one page in three languages either way.
+  html = html.replace(
+    '</head>',
+    `<link rel="canonical" href="${url}">${localeAlternateLinks(params.publicHost, '/rules')}` +
+      `<link rel="alternate" hreflang="x-default" href="${params.publicHost}/rules"></head>`,
+  );
   params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
   params.response.end(html);
 }
