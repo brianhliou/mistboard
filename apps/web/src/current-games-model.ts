@@ -4,7 +4,7 @@
 // time-left bar. DOM-free so it is unit-tested directly
 // (current-games-model.test.ts).
 
-import { maybeGameSpecForId } from '@mistboard/game';
+import { CRAZYHOUSE_XIANGQI_SPEC_ID, maybeGameSpecForId } from '@mistboard/game';
 import { clockEmergencyMs } from './clock-emphasis.js';
 
 export const CHANNEL_ALL = 'all';
@@ -190,6 +190,16 @@ export function liveTileKind(
 ): 'board' | 'fog' | 'placeholder' {
   if (game.observe !== 'open') return 'fog';
   return game.payload ? 'board' : 'placeholder';
+}
+
+// Whether a live board card (this page and the correspondence inbox) keeps a
+// drop variant's hands, drawn as a band above and below the board the way the
+// game embed draws them (current-games.css). Crazyhouse Xiangqi starts with
+// both sides' advisors and elephants in hand and drops are most of its play,
+// so a bare board misstates the position. Every other variant keeps the card's
+// bare board (the renderer's hideReserve).
+export function liveCardShowsHands(gameSpecId: string): boolean {
+  return gameSpecId === CRAZYHOUSE_XIANGQI_SPEC_ID;
 }
 
 // Hidden-identity variants whose finished board /watch already shows publicly,

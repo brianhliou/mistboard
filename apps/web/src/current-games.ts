@@ -39,6 +39,7 @@ import {
   finishedMatchesFilter,
   finishedTileKind,
   isLowClock,
+  liveCardShowsHands,
   liveTileKind,
   PLAYER_FILTER_PARAM,
   PLAYER_FILTERS,
@@ -364,7 +365,7 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
           card.game.roomId,
           {
             autoplay: false,
-            hideReserve: true,
+            hideReserve: !liveCardShowsHands(card.game.gameSpecId),
             live: true,
             loadPostgameOverride: async (roomId) =>
               card.payload && roomId === card.game.roomId

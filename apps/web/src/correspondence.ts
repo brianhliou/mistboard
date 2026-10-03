@@ -60,7 +60,11 @@ import {
   splitInbox,
   variantFact,
 } from './correspondence-model.js';
-import type { CurrentGame, CurrentGamesResponse } from './current-games-model.js';
+import {
+  type CurrentGame,
+  type CurrentGamesResponse,
+  liveCardShowsHands,
+} from './current-games-model.js';
 import type { DarkChessBoardView } from './dark-chess-render.js';
 import {
   displayLiveName,
@@ -456,7 +460,7 @@ async function mountBoard(
     host.replaceChildren();
     const handle = await mountShowcaseBoard(host, gameSpecId, roomId, {
       autoplay: false,
-      hideReserve: true,
+      hideReserve: !liveCardShowsHands(gameSpecId),
       live: true,
       loadPostgameOverride: async (id) =>
         id === roomId ? { ok: true, postgame: payload } : { ok: false },
