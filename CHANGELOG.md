@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- KataGo, the engine that won the Jungle challenge, is the new top Jungle bot above Misty, credited to hzyhhzy's KataGomo, lightvector's KataGo and Kouza's Dandelion 4 network ([f424b2df](https://github.com/brianhliou/mistboard/commit/f424b2df))
 - Every variant can now be played by correspondence, days per move, from the correspondence page, the lobby and a player's profile ([851d1a41](https://github.com/brianhliou/mistboard/commit/851d1a41))
 - Correspondence is now an inbox with boards and deadlines, your own fog view on Fog Chess games, a start-a-game panel, open seeks, and a page for visitors showing every game in progress ([e14e36b0](https://github.com/brianhliou/mistboard/commit/e14e36b0))
 - The Flip Jungle room has a larger board with the face-down pieces under it, laid out like the banqi room ([574656cf](https://github.com/brianhliou/mistboard/commit/574656cf))
