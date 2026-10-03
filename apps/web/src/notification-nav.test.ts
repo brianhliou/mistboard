@@ -13,6 +13,8 @@ import {
   refreshNotifications,
   registerNotificationSource,
   resetNotificationSourcesForTest,
+  type SeekExpiryNotification,
+  seekExpiryNotificationSource,
 } from './notification-nav.js';
 
 const NO_COUNTS: NotificationCounts = {
@@ -22,7 +24,21 @@ const NO_COUNTS: NotificationCounts = {
   forumTopics: 0,
   forumWatched: [],
   incomingChallenges: 0,
+  seekExpiries: 0,
+  seekExpired: [],
 };
+
+function expiredRow(overrides: Partial<SeekExpiryNotification> = {}): SeekExpiryNotification {
+  return {
+    seekId: 'seek_lapsed',
+    gameSpecId: 'xiangqi',
+    daysPerMove: 3,
+    preferredColor: 'second',
+    rated: false,
+    ttlDays: 14,
+    ...overrides,
+  };
+}
 
 function counts(overrides: Partial<NotificationCounts> = {}): NotificationCounts {
   return { ...NO_COUNTS, ...overrides };
@@ -246,6 +262,78 @@ describe('notification nav', () => {
     expect(followersNotificationSource.read(NO_COUNTS).entries).toEqual([]);
     expect(forumNotificationSource.read(NO_COUNTS).entries).toEqual([]);
     expect(challengesNotificationSource.read(NO_COUNTS).entries).toEqual([]);
+  });
+
+  it('tells the creator a board seek expired and links to the start form set to its terms', () => {
+    const snapshot = seekExpiryNotificationSource.read(
+      counts({ seekExpiries: 1, seekExpired: [expiredRow()] }),
+    );
+    expect(snapshot.count).toBe(1);
+    expect(snapshot.entries).toEqual([
+      {
+        label:
+          'Your open Xiangqi correspondence game expired after 14 days with no taker. Post it again',
+        href: '/correspondence?gameSpecId=xiangqi&days=3&side=second#start',
+      },
+    ]);
+    expect(seekExpiryNotificationSource.read(NO_COUNTS).entries).toEqual([]);
+  });
+
+  it('adds one overflow row past the capped expired-seek rows', () => {
+    const snapshot = seekExpiryNotificationSource.read(
+      counts({ seekExpiries: 3, seekExpired: [expiredRow()] }),
+    );
+    expect(snapshot.entries.at(-1)).toEqual({
+      label: '2 more open games expired with no taker',
+      href: '/correspondence',
+    });
+  });
+
+  it('hides expired seeks with the correspondence bell, and clears them on open', async () => {
+    writeAccountPreference('correspondenceBell', false);
+    expect(
+      seekExpiryNotificationSource.read(counts({ seekExpiries: 1, seekExpired: [expiredRow()] })),
+    ).toEqual({ count: 0, entries: [] });
+    writeAccountPreference('correspondenceBell', true);
+
+    const posted: unknown[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: unknown, init?: RequestInit) => {
+        if (String(input) === '/api/notifications/seen') {
+          posted.push(JSON.parse(String(init?.body)));
+          return new Response('{"ok":true}', { status: 200 });
+        }
+        // A malformed row is dropped by the client's parse, never rendered.
+        const payload =
+          posted.length > 0
+            ? counts()
+            : {
+                ...counts(),
+                seekExpiries: 1,
+                seekExpired: [expiredRow(), { seekId: 'malformed' }],
+              };
+        return new Response(JSON.stringify(payload), { status: 200 });
+      }),
+    );
+    registerNotificationSource(seekExpiryNotificationSource);
+    const nav = document.createElement('nav');
+    nav.innerHTML = '<div class="site-nav-utilities"><div data-account-nav></div></div>';
+    document.body.append(nav);
+    mountNotificationBell(nav);
+    await refreshNotifications();
+
+    const badge = nav.querySelector<HTMLElement>('.notif-nav-badge');
+    const links = () =>
+      Array.from(nav.querySelectorAll<HTMLAnchorElement>('.notif-nav-item'), (row) =>
+        row.getAttribute('href'),
+      );
+    expect(badge?.textContent).toBe('1');
+    expect(links()).toEqual(['/correspondence?gameSpecId=xiangqi&days=3&side=second#start']);
+
+    nav.querySelector<HTMLButtonElement>('.notif-nav-trigger')?.click();
+    await vi.waitFor(() => expect(badge?.hidden).toBe(true));
+    expect(posted).toEqual([{ kind: 'seek-expiries' }]);
   });
 
   // Watermarked feeds clear on open; live state must not, or the badge would

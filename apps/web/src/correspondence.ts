@@ -49,10 +49,12 @@ import {
   type OpenSeek,
   type OutgoingSeek,
   othersSeeks,
+  parseStartFormPrefill,
   SEEK_KINDS,
   type SeatBoardView,
   type SeekKind,
   type SeekPreferredColor,
+  type StartFormPrefill,
   seatBoardView,
   seekRequestBody,
   splitInbox,
@@ -191,8 +193,17 @@ function buildSignedIn(
     soon.textContent = t('lobby.corrComingSoon');
     side.append(soon);
   } else {
-    side.append(buildStartForm(refreshChallenges), seekHost, challenges);
+    // A link can carry the form's terms (the bell's "post it again" row for a
+    // lapsed seek); the form opens set to them and scrolls into view.
+    const prefill = parseStartFormPrefill(location.search);
+    const startForm = buildStartForm(refreshChallenges, prefill);
+    side.append(startForm, seekHost, challenges);
     refreshChallenges();
+    if (prefill) {
+      requestAnimationFrame(() => {
+        if (startForm.isConnected) startForm.scrollIntoView({ block: 'start' });
+      });
+    }
   }
 
   layout.append(main, side);
@@ -680,16 +691,20 @@ function buildSelect(
   return { root: field, value: () => select.value };
 }
 
-export function buildStartForm(onChanged: () => void): HTMLElement {
+export function buildStartForm(
+  onChanged: () => void,
+  prefill: StartFormPrefill | null = null,
+): HTMLElement {
   const panel = document.createElement('section');
   panel.className = 'correspondence-panel correspondence-start';
+  panel.id = 'start';
   const heading = document.createElement('h2');
   heading.textContent = t('correspondence.startGame');
   const form = document.createElement('form');
   form.className = 'correspondence-start-form';
   form.noValidate = true;
 
-  const defaultVariant = CORRESPONDENCE_ELIGIBLE_SPEC_IDS[0] ?? 'xiangqi';
+  const defaultVariant = prefill?.gameSpecId ?? CORRESPONDENCE_ELIGIBLE_SPEC_IDS[0] ?? 'xiangqi';
   const variant = buildSelect(
     t('correspondence.variantLabel'),
     CORRESPONDENCE_ELIGIBLE_SPEC_IDS.map((specId) => ({
@@ -707,7 +722,7 @@ export function buildStartForm(onChanged: () => void): HTMLElement {
   const days = buildSegmented<string>(
     t('correspondence.daysPerMoveLabel'),
     DAYS_PER_MOVE_OPTIONS.map((option) => ({ value: String(option), label: String(option) })),
-    String(DAYS_PER_MOVE_OPTIONS[1] ?? DAYS_PER_MOVE_OPTIONS[0]),
+    String(prefill?.daysPerMove ?? DAYS_PER_MOVE_OPTIONS[1] ?? DAYS_PER_MOVE_OPTIONS[0]),
   );
 
   // Casual or Rated (2026-10-02). Rated writes the variant's own correspondence rating,
@@ -719,7 +734,7 @@ export function buildStartForm(onChanged: () => void): HTMLElement {
       { value: 'casual', label: t('play.casual') },
       { value: 'rated', label: t('play.rated') },
     ],
-    'casual',
+    prefill?.rated === true ? 'rated' : 'casual',
   );
   const syncRated = (): void => {
     // The whole control is absent while rated correspondence is held (flag off).
@@ -766,7 +781,7 @@ export function buildStartForm(onChanged: () => void): HTMLElement {
       { value: 'first', label: firstMoverColorName(defaultVariant) },
       { value: 'second', label: secondMoverColorName(defaultVariant) },
     ],
-    'random',
+    prefill?.preferredColor ?? 'random',
   );
   const relabelSides = (): void => {
     side.relabel({

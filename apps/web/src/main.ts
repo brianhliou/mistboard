@@ -40,6 +40,7 @@ import {
   forumNotificationSource,
   inboxNotificationSource,
   registerNotificationSource,
+  seekExpiryNotificationSource,
 } from './notification-nav.js';
 import { setRatedModeEnabled } from './rated-flag.js';
 import { mountRestartBanner, refreshRestartBanner, setRestartBanner } from './restart-banner.js';
@@ -81,6 +82,8 @@ registerNotificationSource(forumNotificationSource);
 // Directed challenges are correspondence seeks, so this source has nothing to
 // report unless correspondence is on.
 if (correspondenceEnabled()) registerNotificationSource(challengesNotificationSource);
+// A public board seek that lapsed with no taker: told once, then seen.
+if (correspondenceEnabled()) registerNotificationSource(seekExpiryNotificationSource);
 // An embed runs inside SOMEONE ELSE'S page, so the site bootstrap below is not
 // just wasted work there, it is work we have no business doing in their document:
 // the account nav fetches /api/auth/me with credentials, and analytics reports a
