@@ -53,7 +53,12 @@ describe('replay clock tick rate (tenant renderer)', () => {
     await vi.advanceTimersByTimeAsync(2_900);
     expect(handle.clockAtPly?.()).toMatchObject({ toMove: 'second' });
     await vi.advanceTimersByTimeAsync(100);
-    expect(handle.clockAtPly?.()).toEqual({ first: 605_000, second: 605_000, toMove: 'first' });
+    expect(handle.clockAtPly?.()).toEqual({
+      first: 605_000,
+      second: 605_000,
+      toMove: 'first',
+      initialMs: 600_000,
+    });
 
     // Red now thinks for NINETEEN seconds, and the board sits on ply 2 for all of it. Her
     // clock drops by exactly the real time elapsed, sampled every second: rate 1.00x.
@@ -65,6 +70,7 @@ describe('replay clock tick rate (tenant renderer)', () => {
         first: 605_000 - second * 1_000,
         second: 605_000,
         toMove: 'first',
+        initialMs: 600_000,
       });
       expect(previous - readout!.first).toBe(1_000);
       previous = readout!.first;
@@ -74,7 +80,12 @@ describe('replay clock tick rate (tenant renderer)', () => {
 
     // The move lands at 22 s on its recorded value: 605_000 - 19_000 + 5_000 increment.
     await vi.advanceTimersByTimeAsync(1_000);
-    expect(handle.clockAtPly?.()).toEqual({ first: 591_000, second: 605_000, toMove: 'second' });
+    expect(handle.clockAtPly?.()).toEqual({
+      first: 591_000,
+      second: 605_000,
+      toMove: 'second',
+      initialMs: 600_000,
+    });
     handle.destroy();
   });
 
@@ -87,9 +98,19 @@ describe('replay clock tick rate (tenant renderer)', () => {
     const handle = await mountJieqiWatchReplay(root, 'jq_rate', { autoplay: true, compact: true });
 
     await vi.advanceTimersByTimeAsync(1_200); // ply 1 on, black's first think under way
-    expect(handle.clockAtPly?.()).toEqual({ first: 605_000, second: 600_000, toMove: 'second' });
+    expect(handle.clockAtPly?.()).toEqual({
+      first: 605_000,
+      second: 600_000,
+      toMove: 'second',
+      initialMs: 600_000,
+    });
     await vi.advanceTimersByTimeAsync(1_500);
-    expect(handle.clockAtPly?.()).toEqual({ first: 605_000, second: 600_000, toMove: 'second' });
+    expect(handle.clockAtPly?.()).toEqual({
+      first: 605_000,
+      second: 600_000,
+      toMove: 'second',
+      initialMs: 600_000,
+    });
     handle.destroy();
   });
 
@@ -105,10 +126,20 @@ describe('replay clock tick rate (tenant renderer)', () => {
 
     // A manual jump pauses playback: the clock parks on the ply's recorded value.
     handle.jumpToPly?.(2);
-    expect(handle.clockAtPly?.()).toEqual({ first: 605_000, second: 605_000, toMove: 'first' });
+    expect(handle.clockAtPly?.()).toEqual({
+      first: 605_000,
+      second: 605_000,
+      toMove: 'first',
+      initialMs: 600_000,
+    });
     const rendered = seatClockText(root);
     await vi.advanceTimersByTimeAsync(10_000);
-    expect(handle.clockAtPly?.()).toEqual({ first: 605_000, second: 605_000, toMove: 'first' });
+    expect(handle.clockAtPly?.()).toEqual({
+      first: 605_000,
+      second: 605_000,
+      toMove: 'first',
+      initialMs: 600_000,
+    });
     expect(seatClockText(root)).toEqual(rendered);
     handle.destroy();
   });
@@ -160,17 +191,37 @@ describe('replay clock tick rate (chess renderer)', () => {
     try {
       // Ply 2 (black's first move, which arms the clock) lands 2 s in.
       await vi.advanceTimersByTimeAsync(2_000);
-      expect(replay.clockAtPly?.()).toEqual({ first: 60_000, second: 60_000, toMove: 'first' });
+      expect(replay.clockAtPly?.()).toEqual({
+        first: 60_000,
+        second: 60_000,
+        toMove: 'first',
+        initialMs: 60_000,
+      });
 
       // White's 10 s think: one second off per second of playback.
       await vi.advanceTimersByTimeAsync(3_000);
-      expect(replay.clockAtPly?.()).toEqual({ first: 57_000, second: 60_000, toMove: 'first' });
+      expect(replay.clockAtPly?.()).toEqual({
+        first: 57_000,
+        second: 60_000,
+        toMove: 'first',
+        initialMs: 60_000,
+      });
       await vi.advanceTimersByTimeAsync(4_000);
-      expect(replay.clockAtPly?.()).toEqual({ first: 53_000, second: 60_000, toMove: 'first' });
+      expect(replay.clockAtPly?.()).toEqual({
+        first: 53_000,
+        second: 60_000,
+        toMove: 'first',
+        initialMs: 60_000,
+      });
 
       // The move lands at 12 s on the recorded value (no increment in this time control).
       await vi.advanceTimersByTimeAsync(3_000);
-      expect(replay.clockAtPly?.()).toEqual({ first: 50_000, second: 60_000, toMove: 'second' });
+      expect(replay.clockAtPly?.()).toEqual({
+        first: 50_000,
+        second: 60_000,
+        toMove: 'second',
+        initialMs: 60_000,
+      });
     } finally {
       replay.destroy();
       root.remove();
@@ -204,9 +255,19 @@ describe('wall-anchored playback', () => {
       compact: true,
       airStartMs: NOW - 10_000,
     });
-    expect(handle.clockAtPly?.()).toEqual({ first: 598_000, second: 605_000, toMove: 'first' });
+    expect(handle.clockAtPly?.()).toEqual({
+      first: 598_000,
+      second: 605_000,
+      toMove: 'first',
+      initialMs: 600_000,
+    });
     await vi.advanceTimersByTimeAsync(12_000);
-    expect(handle.clockAtPly?.()).toEqual({ first: 591_000, second: 605_000, toMove: 'second' });
+    expect(handle.clockAtPly?.()).toEqual({
+      first: 591_000,
+      second: 605_000,
+      toMove: 'second',
+      initialMs: 600_000,
+    });
     handle.destroy();
   });
 
@@ -230,7 +291,12 @@ describe('wall-anchored playback', () => {
 
     // Straight to ply 3 (landed at 22 s), black 1 s into his think; no replay of 1 and 2.
     expect(plies).toEqual([0, 3]);
-    expect(handle.clockAtPly?.()).toEqual({ first: 591_000, second: 604_000, toMove: 'second' });
+    expect(handle.clockAtPly?.()).toEqual({
+      first: 591_000,
+      second: 604_000,
+      toMove: 'second',
+      initialMs: 600_000,
+    });
     handle.destroy();
   });
 
@@ -246,7 +312,12 @@ describe('wall-anchored playback', () => {
     });
     try {
       expect(root.dataset.ply).toBe('2');
-      expect(replay.clockAtPly?.()).toEqual({ first: 55_000, second: 60_000, toMove: 'first' });
+      expect(replay.clockAtPly?.()).toEqual({
+        first: 55_000,
+        second: 60_000,
+        toMove: 'first',
+        initialMs: 60_000,
+      });
 
       // Stall past the next move, then come back: one step to ply 3.
       vi.setSystemTime(NOW + 5_500);

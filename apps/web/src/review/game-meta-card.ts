@@ -96,6 +96,8 @@ export type GameMetaCardConfig = {
   headlineHref?: string;
   /** Accented trailing headline segment (the variant name). */
   variantName?: string;
+  /** Makes the variant name a link (its rules page). */
+  variantHref?: string | null;
   /** Subline under the headline (e.g. "3 days ago", "Waiting for opponent"). */
   subline?: string | null;
   players?: GameMetaPlayer[];
@@ -145,8 +147,12 @@ export function createGameMetaCard(config: GameMetaCardConfig): GameMetaCard {
   }
   if (config.variantName) {
     if (segments.length > 0) headline.append(document.createTextNode(' • '));
-    const variant = document.createElement('span');
+    const variant = document.createElement(config.variantHref ? 'a' : 'span');
     variant.className = 'game-meta-card__variant';
+    if (variant instanceof HTMLAnchorElement && config.variantHref) {
+      variant.classList.add('game-meta-card__variant-link');
+      variant.href = config.variantHref;
+    }
     variant.textContent = config.variantName;
     headline.append(variant);
   }

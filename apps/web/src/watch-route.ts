@@ -1,8 +1,11 @@
 import { type GameEvent, maybeGameSpecForId } from '@mistboard/game';
+import { shouldShowClockTenths, shouldShowFinalClockTenths } from './account-preferences.js';
+import { applyClockEmphasis, setClockFace } from './clock-emphasis.js';
 import { resultLabel, watchQueueResultLabel } from './finished-result-label.js';
 import { seatInkForVariant } from './flip-seat-ink.js';
 import { createGameTable } from './game-table.js';
 import { t } from './i18n/catalog.js';
+import { localizedHref } from './i18n/locale.js';
 import { renderVariantMarker } from './variant-markers.js';
 import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
 import { variantMiniIdForRawVariant } from './variants.js';
@@ -32,6 +35,7 @@ import {
   createGameMetaCard,
   type GameMetaPlayer,
   seatResultScores,
+  timeAgoLabel,
 } from './review/game-meta-card.js';
 import { createMoveList, type MoveList } from './review/move-list.js';
 import { installReviewKeyboard } from './review/review-layout.js';
@@ -40,6 +44,7 @@ import { seatDiscEl } from './seat-disc.js';
 import { showcaseRendererKindForSpec, specIdForShowcaseVariant } from './showcase-dispatch.js';
 import { buildLoadingState, buildNav } from './site-shell.js';
 import { buildUiIcon } from './ui-icon.js';
+import { rulesHrefForGameSpec } from './variant-public-surfaces.js';
 import { seatColorWord, seatInkFamily } from './variant-seat-label.js';
 import { formatClock } from './web-utils.js';
 
@@ -122,6 +127,7 @@ const LIVE_TV_TOP_POLL_MS = 4_000;
 // only changes about once a second, but a move's whole think can drain inside a ~700ms
 // playback window, so the poll has to be finer than the digits it shows.
 const WATCH_CLOCK_TICK_MS = 100;
+const WATCH_CORRESPONDENCE_MIN_MS = 24 * 60 * 60 * 1000;
 
 // The featured LIVE game from /api/watch/live?channel=top (the cross-channel
 // election). Mirrors landing-tv.ts's shape; the payload is the tenant's
@@ -453,7 +459,10 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   const ensureClockSeats = (): { top: HTMLElement; bottom: HTMLElement } => {
     if (clockSeats) return clockSeats;
     const mount = (host: HTMLElement): HTMLElement => {
+      // The room's clock row (room-chrome.ts): same class, face and time-left bar,
+      // so the two right columns read as one table.
       const row = document.createElement('div');
+      row.className = 'clock-time-row';
       row.append(document.createElement('strong'));
       host.replaceChildren(row);
       return row;
@@ -469,14 +478,42 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
       return;
     }
     const seats = ensureClockSeats();
-    const paint = (row: HTMLElement, remainingMs: number, live: boolean): void => {
+    const ended = readout.toMove === null;
+    // A day-long allowance is correspondence: it resets every move, so a share of
+    // it says nothing (room-chrome passes null for days-per-move rooms too).
+    const barStartMs =
+      readout.initialMs && readout.initialMs < WATCH_CORRESPONDENCE_MIN_MS
+        ? readout.initialMs
+        : null;
+    const paint = (
+      row: HTMLElement,
+      playerLine: Element | null,
+      remainingMs: number,
+      live: boolean,
+    ): void => {
       const time = row.firstElementChild;
-      const text = formatClock(remainingMs);
-      if (time && time.textContent !== text) time.textContent = text;
+      // A finished game's final times keep their tenths, as in the room; an hours
+      // clock never does (72:00:00.0 reads as noise).
+      const tenths =
+        remainingMs < 3_600_000 &&
+        (ended ? shouldShowFinalClockTenths() : shouldShowClockTenths(remainingMs, live));
+      if (time instanceof HTMLElement) setClockFace(time, formatClock(remainingMs, tenths));
+      applyClockEmphasis(row, remainingMs, barStartMs);
       row.classList.toggle('active', live);
+      playerLine?.classList.toggle('active', live);
     };
-    paint(seats.top, readout.second, readout.toMove === 'second');
-    paint(seats.bottom, readout.first, readout.toMove === 'first');
+    paint(
+      seats.top,
+      watch.playerTop.firstElementChild,
+      readout.second,
+      readout.toMove === 'second',
+    );
+    paint(
+      seats.bottom,
+      watch.playerBottom.firstElementChild,
+      readout.first,
+      readout.toMove === 'first',
+    );
   };
 
   // Poll the handle rather than having it push: both renderers already interpolate the
@@ -894,6 +931,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
       markerId: variantMiniIdForRawVariant(featured.gameSpecId) ?? undefined,
       headline: [t('watch.inProgress')],
       variantName,
+      variantHref: watchRulesHref(featured.gameSpecId),
       players,
       status: null,
     });
@@ -1744,10 +1782,17 @@ function renderWatchMetaCard(root: HTMLElement, game: FeaturedGame | null): void
     markerId: variantMiniIdForRawVariant(game.variant) ?? undefined,
     headline: [timeControlLabelForGame(game), ratedSegment, sourceLabel(game.mode)],
     variantName: variantDisplayLabel(game.variant),
+    variantHref: watchRulesHref(game.variant),
+    subline: timeAgoLabel(game.endedAt) || null,
     players,
     status: watchGameStatusLine(game),
   });
   root.append(card.el);
+}
+
+function watchRulesHref(gameSpecId: string | null | undefined): string | null {
+  const href = gameSpecId ? rulesHrefForGameSpec(gameSpecId) : null;
+  return href ? localizedHref(href) : null;
 }
 
 // The phone headline: who is playing on the first line, what you are watching on
@@ -1830,6 +1875,11 @@ function watchGameTablePlayer(player: GameMetaPlayer): HTMLElement {
     rating.textContent = String(player.rating);
     row.append(rating);
   }
+  // The room's turn pill; syncClocks marks the side whose clock is running.
+  const toMove = document.createElement('span');
+  toMove.className = 'clock-to-move';
+  toMove.textContent = t('live.toMove');
+  row.append(toMove);
   return row;
 }
 

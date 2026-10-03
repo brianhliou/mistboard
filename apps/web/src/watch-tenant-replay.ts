@@ -1261,11 +1261,12 @@ export async function mountTenantWatchReplay<
     // clock) for an untimed game.
     clockAtPly: () => {
       const toMove = toMoveAtPly();
+      const initialMs = initialClock?.red ?? null;
       const liveNow = liveClockNow();
-      if (liveNow) return { ...liveNow, toMove };
+      if (liveNow) return { ...liveNow, toMove, initialMs };
       const at = replayClockNow();
       if (!at) return null;
-      return { first: at.first, second: at.second, toMove };
+      return { first: at.first, second: at.second, toMove, initialMs };
     },
     // Re-point the single compact board at the view whose paneKind matches, then
     // re-render at the current ply (no glide: pov swap doesn't move the ply). A

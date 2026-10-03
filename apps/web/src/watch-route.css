@@ -818,21 +818,12 @@
   gap: 0;
 }
 
-.watch-game-table .clocks strong {
-  font-size: 52px;
-  letter-spacing: -0.025em;
-}
-
 .watch-game-table .round-table__box {
   width: 100%;
 }
 
 .watch-game-table__player {
   width: 100%;
-}
-
-.watch-game-table__player .clock-name {
-  flex: 1 1 auto;
 }
 
 .watch-player-disc {

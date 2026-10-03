@@ -128,6 +128,15 @@
   text-transform: none;
 }
 
+.game-meta-card__variant-link {
+  text-decoration: none;
+}
+
+.game-meta-card__variant-link:hover,
+.game-meta-card__variant-link:focus-visible {
+  text-decoration: underline;
+}
+
 .game-meta-card__subline {
   margin: 2px 0 0;
   font-size: 12px;

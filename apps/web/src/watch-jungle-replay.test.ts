@@ -111,7 +111,12 @@ describe('Jungle watch replay', () => {
     expect(clockText()).toEqual({ RedSeat: formatClock(178_000), BlackSeat: formatClock(169_500) });
     await vi.advanceTimersByTimeAsync(1_500);
     expect(clockText()).toEqual({ RedSeat: formatClock(178_000), BlackSeat: formatClock(168_000) });
-    expect(handle.clockAtPly?.()).toEqual({ first: 178_000, second: 168_000, toMove: 'second' });
+    expect(handle.clockAtPly?.()).toEqual({
+      first: 178_000,
+      second: 168_000,
+      toMove: 'second',
+      initialMs: 180_000,
+    });
 
     // Scrubbed back from the newest ply, the recorded value shows, not the projection.
     handle.jumpToPly?.(0);

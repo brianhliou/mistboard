@@ -307,6 +307,8 @@ export type ReplayClockReadout = {
   second: number;
   /** Whose clock is live at this ply; null once the game has ended. */
   toMove: 'first' | 'second' | null;
+  /** The starting time, for the rail's time-left bar; null leaves it bare. */
+  initialMs?: number | null;
 };
 
 export async function mountReplay(
@@ -1555,6 +1557,7 @@ export async function mountReplay(
               ? 'first'
               : 'second'
             : null,
+        initialMs: clock.initialMs,
       };
     },
     // Switch the visible pane via a data-attr on the replay root; watch-route.css

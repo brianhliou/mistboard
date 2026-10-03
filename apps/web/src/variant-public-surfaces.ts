@@ -59,6 +59,15 @@ export function variantPublicSurfaceEnabled(id: GameSpecId): boolean {
   return VARIANT_PUBLIC_SURFACE_ENABLED[id];
 }
 
+/** The listed `/rules/<slug>` page for a game spec id off the wire, or null
+ *  when the variant has no public rules page (study-only, unlisted, retired,
+ *  unknown). The forward direction of RULES_GAME_SPEC_BY_SLUG. */
+export function rulesHrefForGameSpec(id: string): string | null {
+  if (!isGameSpecId(id) || !variantPublicSurfaceEnabled(id) || isRetiredGameSpec(id)) return null;
+  const aliased = Object.entries(RULES_GAME_SPEC_BY_SLUG).find(([, specId]) => specId === id);
+  return `/rules/${aliased?.[0] ?? id}`;
+}
+
 /**
  * A rules page whose variant is retired (runtimeStatus 'retired' in
  * packages/game).
