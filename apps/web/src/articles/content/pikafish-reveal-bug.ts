@@ -11,7 +11,8 @@ import type { Article } from '../types.js';
 // - 71 decisive moves (fresh, 2M nodes, 1 thread): over-rated by 5+ pawns 16 -> 3;
 //   30 controls 0 -> 0. Self-play vs e75cee3a, 1M nodes/move: colour fix alone
 //   95-95-10 (200); everywhere re-search -150 Elo (128 games); shipped root-only
-//   264-300-36 (600), -21 Elo [-48, +6]; at 4M nodes/move 95-97-8 (200), -3 [-51, +44].
+//   264-300-36 (600), -21 Elo [-48, +6]; at 4M nodes/move 95-97-8 (200), -3 [-51, +44]
+//   (the post quotes the 4M result as "plays about as well").
 // - AB-JChess: worst move in each of its 136 run7 losses, 60 reveals, 2 over-rated by
 //   15+ win points. Rigs: mistboard-engine lab, issue #497.
 
@@ -139,37 +140,24 @@ export const pikafishRevealBugArticle: Article = {
       ],
     },
     {
-      heading: 'The fix costs little or no strength',
+      heading: 'The fixed bot rates reveals close to their worth, and plays about as well',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The first fix cost nothing: in 200 games against the old bot it won 95 and lost 95. The second costs time, because every cut-short score now has to be searched again for its exact value. Doing that everywhere in the search cost about 150 Elo. Doing it only for the move the bot is choosing costs little. At a million positions a move, it scored 264 wins to 300 losses over 600 games, about 20 Elo weaker. At four million, closer to how deep the site\'s bots search, it came out even: 95 wins to 97 losses over 200 games.',
+          text: "Of the 71 moves that decided Pikafish's losses in the AB-JChess match, the old bot rated 16 at least five pawns better than they were. The fixed bot rates 3. It plays about as well as the old one: in 200 games between them, it won 95 and lost 97.",
         },
         {
           kind: 'paragraph',
-          text: 'In return, it prices its reveals close to their worth. We took the 71 moves that decided Pikafish\'s losses in the AB-JChess match. The old bot rated 16 of them at least five pawns better than they were. The fixed bot rates 3. On 30 moves from games Pikafish won, neither version was that far off.',
-        },
-        {
-          kind: 'paragraph',
-          text: 'We would have kept it at 20 Elo. AB-JChess is the strongest jieqi bot on the site now, and an engine that calls a losing reveal winning teaches the wrong thing to anyone using it to study.',
+          text: 'The fix covers the move the bot is choosing. Deeper in its search the old averaging is still there, because fixing it everywhere made the bot about 150 Elo weaker.',
         },
       ],
     },
     {
-      heading: 'Below the move being chosen, cut-short scores still count',
+      heading: 'AB-JChess has the second flaw, and it rarely matters',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The repair covers the move the bot is deciding on. Deeper in its search, a reveal can still be averaged with a cut-short score in it. Fixing those too is what cost 150 Elo. A better method exists in the research on searching games with chance moves, and we have not tried it yet.',
-        },
-      ],
-    },
-    {
-      heading: 'AB-JChess shares the second flaw, and it rarely costs it',
-      blocks: [
-        {
-          kind: 'paragraph',
-          text: 'AB-JChess is built from Pikafish and averages reveals the same way. It has the cut-short flaw and not the colour one. In each of its 136 losses to our bot, we took the move that cost it the most: 60 were reveals, and AB-JChess overrated 2 of them by a wide margin. Its scores for the different pieces sit closer together than our bot\'s, so one cut-short score moves the average less.',
+          text: 'AB-JChess is built from Pikafish and averages reveals the same way. It has the cut-short flaw and not the colour one. Of the 60 reveals that decided its losses to our bot, it overrated 2.',
         },
       ],
     },
@@ -178,11 +166,7 @@ export const pikafishRevealBugArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The AB-JChess post first used game 108 to show how Pikafish judged a reveal: it bet and lost. The numbers came from the engine\'s own account of what it thought, and tests checked the post against those numbers. The numbers were the bug. What caught it was asking why the bot would play d10-e9 at all. A correct search cannot find a mate in its own best line and still call the position winning. We took the examples out of that post the same day.',
-        },
-        {
-          kind: 'paragraph',
-          text: `The fix is two changes to [our copy](${FORK}) of Pikafish's jieqi branch, tracked in [issue #497](https://github.com/brianhliou/mistboard/issues/497).`,
+          text: "The AB-JChess post first used game 108 to show how Pikafish judged a reveal. What caught the bug was asking why the bot would play d10-e9 at all. A correct search cannot find a mate in its own best line and still call the position winning. We took the examples out of that post the same day.",
         },
         {
           kind: 'cta',
