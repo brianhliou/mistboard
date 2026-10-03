@@ -1,5 +1,5 @@
 // /creators: "Work with us", the public offer to titled players and coaches,
-// creators and streamers, event organizers, writers and enthusiasts, and engine
+// creators and streamers, event organizers, writers and composers, and engine
 // authors. Each section leads with what we do for them, and every offer links to
 // something live. Renders inside the shared /about rail + panel shell.
 
@@ -85,6 +85,12 @@ function buildCreators(locale: Locale = currentLocale()): HTMLElement {
       t('creators.contactPrefix', {}, locale),
       proseLink(t('creators.contactLink', {}, locale), '/contact'),
       t('creators.contactSuffix', {}, locale),
+    ]),
+
+    proseParagraph([
+      t('creators.crossLinkPrefix', {}, locale),
+      proseLink(t('contribute.heading', {}, locale), '/contribute'),
+      t('creators.crossLinkSuffix', {}, locale),
     ]),
   );
   return section;

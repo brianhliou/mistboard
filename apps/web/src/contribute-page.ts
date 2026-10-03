@@ -59,6 +59,12 @@ function buildContribute(locale: Locale = currentLocale()): HTMLElement {
       proseLink(t('contribute.supportLink', {}, locale), '/patron'),
       t('contribute.supportSuffix', {}, locale),
     ]),
+
+    proseParagraph([
+      t('contribute.crossLinkPrefix', {}, locale),
+      proseLink(t('creators.heading', {}, locale), '/creators'),
+      t('contribute.crossLinkSuffix', {}, locale),
+    ]),
   );
   return section;
 }

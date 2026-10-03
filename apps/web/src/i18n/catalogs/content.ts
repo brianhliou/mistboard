@@ -250,7 +250,7 @@ export const EN_CONTENT = {
     'Mistboard is free and open source, built in the open. There is a lot to do and many ways to help, whether or not you write code.',
   'contribute.playHeading': 'Play and give feedback',
   'contribute.playBody':
-    'The most useful thing you can do right now is play, then tell us what broke or felt wrong. Real games surface rule bugs, unclear moments, and missing features faster than anything else.',
+    'The most useful thing you can do right now is play, then tell us what broke or felt wrong. Real games surface rule bugs, unclear moments, and missing features faster than anything else. New games we design need play-testers too.',
   'contribute.reportHeading': 'Report bugs and suggest ideas',
   'contribute.reportPrefix': 'Found a bug or have an idea? Open an issue on ',
   'contribute.reportMiddle': ', or reach us through the ',
@@ -267,6 +267,8 @@ export const EN_CONTENT = {
     'Servers and development cost money. If you want to help keep Mistboard free and ad-free, you can ',
   'contribute.supportLink': 'support Mistboard',
   'contribute.supportSuffix': '. Every bit helps, and it is never required to play.',
+  'contribute.crossLinkPrefix': 'Have an audience, an event or an engine? See ',
+  'contribute.crossLinkSuffix': '.',
   'creators.heading': 'Work with us',
   'creators.intro':
     'Mistboard is a free, open-source site for Chinese chess and original strategy games, in English and Chinese, with no ads. We work with players, creators and organizers who want to bring the game to more people.',
@@ -299,9 +301,9 @@ export const EN_CONTENT = {
     'We broadcast events at no cost: an event page, analysis of every game, and boards you can embed on your own site. Send us the game files and we build and publish the page. ',
   'creators.eventsLink': 'See current broadcasts',
   'creators.eventsSuffix': '.',
-  'creators.writersHeading': 'Writers, composers and enthusiasts',
+  'creators.writersHeading': 'Writers and composers',
   'creators.writersBody':
-    'Articles and opening guides under your name, endgame compositions published with credit, play-testing the new games we design, and corrections to our Chinese translations.',
+    'Articles and opening guides under your name, and endgame compositions published with credit.',
   'creators.enginesHeading': 'Engine authors',
   'creators.enginesBody':
     'We serve strong engines as bots on the site, credited by name, and rate them against our bot ladder.',
@@ -310,6 +312,9 @@ export const EN_CONTENT = {
   'creators.contactLink': 'contact form',
   'creators.contactSuffix':
     '. Tell us who you are and what you are working on, with a link to your channel, event or profile.',
+  'creators.crossLinkPrefix':
+    'Want to help in other ways, like reporting bugs, translating or writing code? See ',
+  'creators.crossLinkSuffix': '.',
   'thanks.heading': 'Thank you',
   'thanks.intro':
     'Mistboard stands on open-source work by many people and projects, and on everyone who plays, reports bugs, and helps it get better.',

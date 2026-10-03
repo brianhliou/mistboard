@@ -349,7 +349,7 @@ export const ZH_HANS_CONTENT = {
     'Mistboard 是免费开源的，公开开发。要做的事还有很多，无论你写不写代码，都有很多种帮忙的方式。',
   'contribute.playHeading': '下棋并给出反馈',
   'contribute.playBody':
-    '眼下你能做的最有用的事，就是下棋，然后告诉我们哪里坏了、哪里别扭。真实对局暴露规则漏洞、含糊之处和缺失功能的速度，比任何其他方式都快。',
+    '眼下你能做的最有用的事，就是下棋，然后告诉我们哪里坏了、哪里别扭。真实对局暴露规则漏洞、含糊之处和缺失功能的速度，比任何其他方式都快。我们设计的新游戏也需要试玩。',
   'contribute.reportHeading': '报告问题、提出想法',
   'contribute.reportPrefix': '发现了问题，或者有什么想法？可以在 ',
   'contribute.reportMiddle': ' 上开一个 issue，或者通过',
@@ -365,6 +365,8 @@ export const ZH_HANS_CONTENT = {
   'contribute.supportPrefix': '服务器和开发都要花钱。如果你想帮 Mistboard 保持免费、无广告，可以',
   'contribute.supportLink': '赞助 Mistboard',
   'contribute.supportSuffix': '。哪怕一点也有用，而且下棋从来不需要付费。',
+  'contribute.crossLinkPrefix': '如果你有观众、赛事或引擎，请看',
+  'contribute.crossLinkSuffix': '。',
   'creators.heading': '与我们合作',
   'creators.intro':
     'Mistboard 是一个免费、开源、无广告的网站，提供中国象棋和原创策略游戏，支持中文和英文。我们希望与愿意把这项棋类带给更多人的棋手、内容作者和主办方合作。',
@@ -395,9 +397,8 @@ export const ZH_HANS_CONTENT = {
     '我们免费转播赛事：赛事页面、每盘棋的分析，以及可以嵌入你自己网站的棋盘。把棋谱文件发给我们，页面由我们制作并发布。',
   'creators.eventsLink': '查看当前转播',
   'creators.eventsSuffix': '。',
-  'creators.writersHeading': '作者、排局作者和爱好者',
-  'creators.writersBody':
-    '以你的名字发表文章和布局指南，署名发表排局作品，试玩我们设计的新游戏，以及纠正我们的中文翻译。',
+  'creators.writersHeading': '作者和排局作者',
+  'creators.writersBody': '以你的名字发表文章和布局指南，署名发表排局作品。',
   'creators.enginesHeading': '引擎作者',
   'creators.enginesBody':
     '我们把强引擎作为网站上的机器人提供服务，注明作者，并在我们的机器人梯队中评定等级分。',
@@ -405,6 +406,8 @@ export const ZH_HANS_CONTENT = {
   'creators.contactPrefix': '请使用',
   'creators.contactLink': '联系表单',
   'creators.contactSuffix': '。告诉我们你是谁、在做什么，并附上你的频道、赛事或个人资料链接。',
+  'creators.crossLinkPrefix': '想用其他方式帮忙，比如报告问题、翻译或写代码？请看',
+  'creators.crossLinkSuffix': '。',
   'thanks.heading': '致谢',
   'thanks.intro':
     'Mistboard 站在许多人和项目的开源工作之上，也站在每一位下棋、报告问题、帮它变得更好的人之上。',
