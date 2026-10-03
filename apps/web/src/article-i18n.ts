@@ -33,6 +33,8 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
   // Machine-drafted 2026-10-02, not native-reviewed, locked with its English
+  // copy, which publishes in the same release (the AB-JChess post's follow-up).
+  'pikafish-reveal-bug',
   // copy, which publishes in the same release (the AB-JChess post's pattern).
   'katago-jungle',
   // Machine-drafted 2026-10-01, not native-reviewed, locked the day after the
@@ -155,6 +157,57 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // ab-jchess (match link): machine-drafted 2026-10-02, not native-reviewed.
+  'All 400 games are on the site, each with its own review page: [browse the match](/games/search?variant=jieqi&source=engine-match).':
+    '全部 400 盘对局都在网站上，每盘都有自己的复盘页面：[查看这场对抗赛](/games/search?variant=jieqi&source=engine-match)。',
+  // pikafish-reveal-bug: machine-drafted 2026-10-02, not native-reviewed.
+  'Our Pikafish jieqi bot misjudged its reveals': '我们的皮卡鱼揭棋电脑误判了翻子',
+  'Our Pikafish jieqi bot rated some reveals far better than they were. Two bugs caused it. Both are fixed, at little or no cost in strength.':
+    '我们的皮卡鱼揭棋电脑把一些翻子评得远比实际要好。原因是两个错误。两个都已修复，棋力几乎没有损失。',
+  'In [jieqi](/rules/jieqi), turning over a face-down piece is a bet. You know which pieces it could be, and not which one it is. Our Pikafish bot, the engine behind Levels 1 to 8, priced some of those bets far too well. It would turn over a piece that gets mated for most of what it could be, and rate the move as winning.':
+    '在[揭棋](/rules/jieqi)里，翻开一个暗子就是一次下注。你知道它可能是哪些棋子，但不知道究竟是哪一个。我们的皮卡鱼电脑，也就是第 1 到第 8 级背后的引擎，把其中一些赌注估得太好了。它会翻开一个在大多数可能下都会被将死的棋子，还把这步棋评为胜势。',
+  'We found it on October 2, while writing the [AB-JChess post](/blog/ab-jchess). The fix is live for every level and for the engine you can run on the analysis board.':
+    '我们在 10 月 2 日写 [AB-JChess 那篇文章](/blog/ab-jchess)时发现了这个问题。修复已经上线，所有级别都已更新，分析棋盘上可以运行的引擎也一样。',
+  'The bot averages a reveal over the pieces it could be': '电脑会对暗子可能是的每一种棋子取平均',
+  'When the bot considers a move that turns a piece over, it plays the move once for each piece the face-down one could be. It scores each, then averages the scores, weighted by how many of each piece are left. A reveal that wins if the piece is a chariot and gets mated if it is a soldier should score somewhere in between. Two bugs broke that average.':
+    '电脑考虑一步翻子时，会对暗子可能是的每一种棋子各走一次这步棋，分别打分，再按每种棋子剩余的数量加权平均。一步翻子如果翻出车就赢、翻出兵就被将死，分数应该介于两者之间。两个错误破坏了这个平均。',
+  'For Black, the average took the best piece': '对黑方来说，平均取了最好的那个棋子',
+  "Before averaging, the code turns every score to one player's point of view. It picked the player from a setting that was never filled in, so it always assumed Red. For Red's reveals that was right. For Black's, the scores were upside down, and a rule meant to take the worst outcome, when the outcomes spread far apart, took the best one.":
+    '取平均之前，代码会把每个分数换算到某一方的视角。它根据一个从未被赋值的设置来判断是哪一方，所以总是当成红方。对红方的翻子，这样没有问题。对黑方的翻子，分数就是反的：一条本该在结果相差很大时取最差结果的规则，取了最好的结果。',
+  "That was the game the AB-JChess post first led with. Pikafish, as Black, turned over the piece on d10 and moved it to e9, rating the game nearly 19 pawns in its favour. Only an advisor on e9 stops the chariot's mate on f10, and an advisor was 1 of the 11 pieces it could have been. It was a chariot, and Black was mated next move.":
+    'AB-JChess 那篇文章最初开头用的就是这盘棋。皮卡鱼执黑，把 d10 的暗子翻开走到 e9，自评领先将近 19 个兵。只有 e9 上是士，才能挡住车在 f10 的将杀，而在它可能是的 11 个棋子里，士只有 1 个。翻出来是车，黑方下一步就被将死。',
+  'Jieqi: Pikafish, as Black, is about to reveal on d10': '揭棋：皮卡鱼执黑，即将翻开 d10 的暗子',
+  'Scores the search cut short were averaged as exact':
+    '被搜索中途放弃的分数，被当成精确值取了平均',
+  'An engine saves time by giving up on a move once it knows the move is worse than the best one so far. It then returns a bound, which means "this much, or worse". That is safe when the next step is a comparison. The bot fed these bounds into the average as if they were exact scores, so a piece that gets mated could come back as "no better than +7" and count as +7.':
+    '引擎为了节省时间，一旦知道某步棋不如目前最好的一步，就会放弃继续搜索它，返回一个界限，意思是“最多这么多，或者更差”。如果接下来只是比较大小，这样做是安全的。但这个电脑把这些界限当成精确分数放进了平均，于是一个会被将死的棋子可能返回“不超过 +7”，然后就按 +7 计算。',
+  "In the first game of the AB-JChess post, the bot, as Red, turned over the piece on b3 and moved it to d3. Searched again with the old bot, the move rates more than eight pawns in Red's favour. Six times in ten that piece is a soldier or an elephant, and Black's cannon mates at once on h1. Averaged honestly, the move is worth about three pawns to Black. The fixed bot sees the mate and plays the advisor from e2 to f3, the move AB-JChess recommends.":
+    '在 AB-JChess 那篇文章的第一盘棋里，电脑执红，把 b3 的暗子翻开走到 d3。用旧版电脑重新搜索，这步棋评为红方领先八个兵以上。这个棋子十次里有六次是兵或相，黑炮立刻在 h1 将死。如实平均的话，这步棋对黑方来说价值大约三个兵。修复后的电脑看到了这个将杀，改走仕从 e2 到 f3，也就是 AB-JChess 推荐的着法。',
+  'Jieqi: the bot is about to reveal on b3': '揭棋：电脑即将翻开 b3 的暗子',
+  'Where the bugs are in the code': '错误在代码里的位置',
+  "Both are in our copy of Pikafish's jieqi branch. Simplified, the old code scored a reveal like this:":
+    '两个错误都在我们复制的皮卡鱼揭棋分支里。简化后，旧代码是这样给翻子打分的：',
+  'The colour flip is in [misc.h, lines 360 to 366](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/misc.h#L360-L366), set from [search.cpp, line 1310](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/search.cpp#L1310) by asking whether the side to move is the "first side", a field [nothing ever assigns](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/position.h#L212). The window is the one at [search.cpp, line 1462](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/search.cpp#L1462): each piece is searched inside the window of the move above it, and a piece that gets mated comes back as the window\'s lower edge.':
+    '颜色翻转在 [misc.h 第 360 到 366 行](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/misc.h#L360-L366)，由 [search.cpp 第 1310 行](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/search.cpp#L1310)设置：它判断走棋方是不是“先手方”，而这个字段[从来没有被赋值](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/position.h#L212)。窗口问题在 [search.cpp 第 1462 行](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/search.cpp#L1462)：每种棋子都在上一层着法的窗口内搜索，一个会被将死的棋子返回的是窗口的下沿。',
+  "We found the second one by printing every piece's score at a reveal. In one match game, three of the four pieces the bot could turn over were mated, and all three came back as exactly 738, the bottom of the window. The fourth scored 792. The bot averaged them to 745 and rated the move as winning.":
+    '我们通过打印翻子时每种棋子的分数找到了第二个错误。在一盘对抗赛对局里，电脑可能翻出的四种棋子中有三种会被将死，而这三种返回的都恰好是 738，也就是窗口的下沿。第四种得 792。电脑把它们平均成 745，把这步棋评为胜势。',
+  'The colour flip is gone, and a piece whose score came back as a bound is searched again. The whole change is [one commit, 28 lines](https://github.com/brianhliou/pikafish-jieqi-wasm/commit/bcc83f88ee18760e60903d1a3aaa61ef6f70f2c9).':
+    '颜色翻转已经去掉，返回界限值的棋子会重新搜索。全部改动是[一次提交，28 行](https://github.com/brianhliou/pikafish-jieqi-wasm/commit/bcc83f88ee18760e60903d1a3aaa61ef6f70f2c9)。',
+  'The fixed bot rates reveals close to their worth, and plays about as well':
+    '修复后的电脑对翻子的估值接近实际，棋力也基本不变',
+  "Of the 71 moves that decided Pikafish's losses in the AB-JChess match, the old bot rated 16 at least five pawns better than they were. The fixed bot rates 3. It plays about as well as the old one: in 200 games between them, it won 95 and lost 97.":
+    '在 AB-JChess 对抗赛中决定皮卡鱼输棋的 71 步里，旧版电脑把其中 16 步评得比实际好至少五个兵。修复后的电脑只有 3 步。它的棋力和旧版差不多：两者对下 200 盘，它赢 95 盘、输 97 盘。',
+  'The fix covers the move the bot is choosing. Deeper in its search the old averaging is still there, because fixing it everywhere made the bot about 150 Elo weaker.':
+    '修复只覆盖电脑正在选择的那一步。在更深的搜索里，旧的平均方式依然存在，因为在所有地方都修复会让电脑弱大约 150 Elo。',
+  'AB-JChess has the second flaw, and it rarely matters': 'AB-JChess 也有第二个错误，但很少有影响',
+  'AB-JChess is built from Pikafish and averages reveals the same way. It has the cut-short flaw and not the colour one. Of the 60 reveals that decided its losses to our bot, it overrated 2.':
+    'AB-JChess 基于皮卡鱼，也用同样的方式对翻子取平均。它有搜索中途放弃的问题，没有颜色的问题。在决定它输给我们电脑的 60 步翻子中，它只高估了 2 步。',
+  'A question about one move caught it': '一个关于一步棋的问题发现了它',
+  'The AB-JChess post first used game 108 to show how Pikafish judged a reveal. What caught the bug was asking why the bot would play d10-e9 at all. A correct search cannot find a mate in its own best line and still call the position winning. We took the examples out of that post the same day.':
+    'AB-JChess 那篇文章最初用第 108 盘来说明皮卡鱼如何判断翻子。发现这个错误的，是一个问题：电脑到底为什么会走 d10-e9？正确的搜索不可能在自己的最佳变化里看到将杀，还把局面评为胜势。我们当天就把那些例子从那篇文章里删掉了。',
+  'Play the jieqi bot': '挑战揭棋电脑',
+  'A bug in the Pikafish jieqi bot: how it misjudged turning over a piece':
+    '皮卡鱼揭棋电脑的一个错误：它如何误判翻开暗子',
   // katago-jungle: machine-drafted 2026-10-02, not native-reviewed.
   "We scored every position of two of those wins again with both engines, at the match settings. Each chart shows both engines' estimate of KataGo's score, where a win is 100% and a draw 50%. KataGo's own number counts a draw as half a point; Misty's centipawns become a score through the curve our analysis board uses, 1 / (1 + e^(−0.00368 × cp)). The dashed line is 80%, each dotted line marks the ply from which that engine stayed above it to the end, and ?? marks the move KataGo calls the losing one. A ply is one side's move.":
     '我们用两个引擎按比赛设置，把其中两盘胜局的每个局面重新评估了一遍。每张图显示两个引擎对 KataGo 得分的估计：赢为 100%，和为 50%。KataGo 自己的数字把和棋算作半分；Misty 的分数（厘兵）按我们分析棋盘使用的曲线 1 / (1 + e^(−0.00368 × cp)) 换算成得分。虚线是 80%，每条点线标出该引擎从哪一步起一直保持在 80% 以上直到终局，?? 标出 KataGo 认为输棋的那一步。一步（ply）指一方走一着。',
@@ -232,8 +285,8 @@ const ZH_HANS: Record<string, string> = {
   "AB-JChess is at the top of the jieqi bot list, above Level 8. Levels 1 to 8 stay Pikafish, and Level 4 is still where a new player starts. It does not take a level number: the top place holds the strongest jieqi engine we have measured, under its own name. Its rating on the [bots page](/bots), 2354 against Level 8's 2226, comes from the same bot-against-bot games that rate the levels. Its authors are training stronger networks; when one is released, we will play it against this one and switch if it wins.":
     'AB-JChess 排在揭棋电脑列表的最上面，在第 8 级之上。第 1 到第 8 级仍是皮卡鱼，新手仍从第 4 级开始。它不占用级别编号：最高的位置留给我们实测过最强的揭棋引擎，并以它自己的名字标示。它在[电脑对手页面](/bots)上的等级分是 2354（第 8 级为 2226），和各个级别一样，来自电脑之间的对局。作者们正在训练更强的网络；新网络发布后，我们会让它和现在这个对弈，赢了就换上。',
   // ab-jchess: machine-drafted 2026-09-30, not native-reviewed.
-  'While writing this post we found a bug in how our Pikafish bot scores reveals. We are fixing it, and a follow-up post will cover what it was and what it cost.':
-    '写这篇文章的过程中，我们发现我们的皮卡鱼电脑在给翻子打分时有一个错误。我们正在修复，后续会再写一篇文章，讲清楚这个错误是什么、造成了多大影响。',
+  'While writing this post we found a bug in how our Pikafish bot scored reveals. It is fixed; [a follow-up post](/blog/pikafish-reveal-bug) covers what it was and what it cost.':
+    '写这篇文章的过程中，我们发现我们的皮卡鱼电脑在给翻子打分时有一个错误。现已修复，[后续文章](/blog/pikafish-reveal-bug)讲清楚了这个错误是什么、造成了多大影响。',
   'AB-JChess, a stronger jieqi bot': 'AB-JChess：更强的揭棋电脑',
   'AB-JChess: the open-source jieqi engine that beat Pikafish 248 to 136':
     'AB-JChess：以 248 比 136 战胜皮卡鱼的开源揭棋引擎',
@@ -3477,6 +3530,57 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ab-jchess (match link): machine-drafted 2026-10-02, not native-reviewed.
+  'All 400 games are on the site, each with its own review page: [browse the match](/games/search?variant=jieqi&source=engine-match).':
+    '全部 400 盤對局都在網站上，每盤都有自己的覆盤頁面：[查看這場對抗賽](/games/search?variant=jieqi&source=engine-match)。',
+  // pikafish-reveal-bug: machine-drafted 2026-10-02, not native-reviewed.
+  'Our Pikafish jieqi bot misjudged its reveals': '我們的皮卡魚揭棋電腦誤判了翻子',
+  'Our Pikafish jieqi bot rated some reveals far better than they were. Two bugs caused it. Both are fixed, at little or no cost in strength.':
+    '我們的皮卡魚揭棋電腦把一些翻子評得遠比實際要好。原因是兩個錯誤。兩個都已修復，棋力幾乎沒有損失。',
+  'In [jieqi](/rules/jieqi), turning over a face-down piece is a bet. You know which pieces it could be, and not which one it is. Our Pikafish bot, the engine behind Levels 1 to 8, priced some of those bets far too well. It would turn over a piece that gets mated for most of what it could be, and rate the move as winning.':
+    '在[揭棋](/rules/jieqi)裡，翻開一個暗子就是一次下注。你知道它可能是哪些棋子，但不知道究竟是哪一個。我們的皮卡魚電腦，也就是第 1 到第 8 級背後的引擎，把其中一些賭注估得太好了。它會翻開一個在大多數可能下都會被將死的棋子，還把這步棋評為勝勢。',
+  'We found it on October 2, while writing the [AB-JChess post](/blog/ab-jchess). The fix is live for every level and for the engine you can run on the analysis board.':
+    '我們在 10 月 2 日寫 [AB-JChess 那篇文章](/blog/ab-jchess)時發現了這個問題。修復已經上線，所有級別都已更新，分析棋盤上可以運行的引擎也一樣。',
+  'The bot averages a reveal over the pieces it could be': '電腦會對暗子可能是的每一種棋子取平均',
+  'When the bot considers a move that turns a piece over, it plays the move once for each piece the face-down one could be. It scores each, then averages the scores, weighted by how many of each piece are left. A reveal that wins if the piece is a chariot and gets mated if it is a soldier should score somewhere in between. Two bugs broke that average.':
+    '電腦考慮一步翻子時，會對暗子可能是的每一種棋子各走一次這步棋，分別打分，再按每種棋子剩餘的數量加權平均。一步翻子如果翻出車就贏、翻出兵就被將死，分數應該介於兩者之間。兩個錯誤破壞了這個平均。',
+  'For Black, the average took the best piece': '對黑方來說，平均取了最好的那個棋子',
+  "Before averaging, the code turns every score to one player's point of view. It picked the player from a setting that was never filled in, so it always assumed Red. For Red's reveals that was right. For Black's, the scores were upside down, and a rule meant to take the worst outcome, when the outcomes spread far apart, took the best one.":
+    '取平均之前，程式會把每個分數換算到某一方的視角。它根據一個從未被賦值的設定來判斷是哪一方，所以總是當成紅方。對紅方的翻子，這樣沒有問題。對黑方的翻子，分數就是反的：一條本該在結果相差很大時取最差結果的規則，取了最好的結果。',
+  "That was the game the AB-JChess post first led with. Pikafish, as Black, turned over the piece on d10 and moved it to e9, rating the game nearly 19 pawns in its favour. Only an advisor on e9 stops the chariot's mate on f10, and an advisor was 1 of the 11 pieces it could have been. It was a chariot, and Black was mated next move.":
+    'AB-JChess 那篇文章最初開頭用的就是這盤棋。皮卡魚執黑，把 d10 的暗子翻開走到 e9，自評領先將近 19 個兵。只有 e9 上是士，才能擋住車在 f10 的將殺，而在它可能是的 11 個棋子裡，士只有 1 個。翻出來是車，黑方下一步就被將死。',
+  'Jieqi: Pikafish, as Black, is about to reveal on d10': '揭棋：皮卡魚執黑，即將翻開 d10 的暗子',
+  'Scores the search cut short were averaged as exact':
+    '被搜尋中途放棄的分數，被當成精確值取了平均',
+  'An engine saves time by giving up on a move once it knows the move is worse than the best one so far. It then returns a bound, which means "this much, or worse". That is safe when the next step is a comparison. The bot fed these bounds into the average as if they were exact scores, so a piece that gets mated could come back as "no better than +7" and count as +7.':
+    '引擎為了節省時間，一旦知道某步棋不如目前最好的一步，就會放棄繼續搜尋它，返回一個界限，意思是「最多這麼多，或者更差」。如果接下來只是比較大小，這樣做是安全的。但這個電腦把這些界限當成精確分數放進了平均，於是一個會被將死的棋子可能返回「不超過 +7」，然後就按 +7 計算。',
+  "In the first game of the AB-JChess post, the bot, as Red, turned over the piece on b3 and moved it to d3. Searched again with the old bot, the move rates more than eight pawns in Red's favour. Six times in ten that piece is a soldier or an elephant, and Black's cannon mates at once on h1. Averaged honestly, the move is worth about three pawns to Black. The fixed bot sees the mate and plays the advisor from e2 to f3, the move AB-JChess recommends.":
+    '在 AB-JChess 那篇文章的第一盤棋裡，電腦執紅，把 b3 的暗子翻開走到 d3。用舊版電腦重新搜尋，這步棋評為紅方領先八個兵以上。這個棋子十次裡有六次是兵或相，黑炮立刻在 h1 將死。如實平均的話，這步棋對黑方來說價值大約三個兵。修復後的電腦看到了這個將殺，改走仕從 e2 到 f3，也就是 AB-JChess 推薦的著法。',
+  'Jieqi: the bot is about to reveal on b3': '揭棋：電腦即將翻開 b3 的暗子',
+  'Where the bugs are in the code': '錯誤在程式碼裡的位置',
+  "Both are in our copy of Pikafish's jieqi branch. Simplified, the old code scored a reveal like this:":
+    '兩個錯誤都在我們複製的皮卡魚揭棋分支裡。簡化後，舊程式碼是這樣給翻子打分的：',
+  'The colour flip is in [misc.h, lines 360 to 366](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/misc.h#L360-L366), set from [search.cpp, line 1310](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/search.cpp#L1310) by asking whether the side to move is the "first side", a field [nothing ever assigns](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/position.h#L212). The window is the one at [search.cpp, line 1462](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/search.cpp#L1462): each piece is searched inside the window of the move above it, and a piece that gets mated comes back as the window\'s lower edge.':
+    '顏色翻轉在 [misc.h 第 360 到 366 行](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/misc.h#L360-L366)，由 [search.cpp 第 1310 行](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/search.cpp#L1310)設定：它判斷走棋方是不是「先手方」，而這個欄位[從來沒有被賦值](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/position.h#L212)。窗口問題在 [search.cpp 第 1462 行](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/search.cpp#L1462)：每種棋子都在上一層著法的窗口內搜尋，一個會被將死的棋子返回的是窗口的下沿。',
+  "We found the second one by printing every piece's score at a reveal. In one match game, three of the four pieces the bot could turn over were mated, and all three came back as exactly 738, the bottom of the window. The fourth scored 792. The bot averaged them to 745 and rated the move as winning.":
+    '我們透過列印翻子時每種棋子的分數找到了第二個錯誤。在一盤對抗賽對局裡，電腦可能翻出的四種棋子中有三種會被將死，而這三種返回的都恰好是 738，也就是窗口的下沿。第四種得 792。電腦把它們平均成 745，把這步棋評為勝勢。',
+  'The colour flip is gone, and a piece whose score came back as a bound is searched again. The whole change is [one commit, 28 lines](https://github.com/brianhliou/pikafish-jieqi-wasm/commit/bcc83f88ee18760e60903d1a3aaa61ef6f70f2c9).':
+    '顏色翻轉已經去掉，返回界限值的棋子會重新搜尋。全部改動是[一次提交，28 行](https://github.com/brianhliou/pikafish-jieqi-wasm/commit/bcc83f88ee18760e60903d1a3aaa61ef6f70f2c9)。',
+  'The fixed bot rates reveals close to their worth, and plays about as well':
+    '修復後的電腦對翻子的估值接近實際，棋力也基本不變',
+  "Of the 71 moves that decided Pikafish's losses in the AB-JChess match, the old bot rated 16 at least five pawns better than they were. The fixed bot rates 3. It plays about as well as the old one: in 200 games between them, it won 95 and lost 97.":
+    '在 AB-JChess 對抗賽中決定皮卡魚輸棋的 71 步裡，舊版電腦把其中 16 步評得比實際好至少五個兵。修復後的電腦只有 3 步。它的棋力和舊版差不多：兩者對下 200 盤，它贏 95 盤、輸 97 盤。',
+  'The fix covers the move the bot is choosing. Deeper in its search the old averaging is still there, because fixing it everywhere made the bot about 150 Elo weaker.':
+    '修復只涵蓋電腦正在選擇的那一步。在更深的搜尋裡，舊的平均方式依然存在，因為在所有地方都修復會讓電腦弱大約 150 Elo。',
+  'AB-JChess has the second flaw, and it rarely matters': 'AB-JChess 也有第二個錯誤，但很少有影響',
+  'AB-JChess is built from Pikafish and averages reveals the same way. It has the cut-short flaw and not the colour one. Of the 60 reveals that decided its losses to our bot, it overrated 2.':
+    'AB-JChess 基於皮卡魚，也用同樣的方式對翻子取平均。它有搜尋中途放棄的問題，沒有顏色的問題。在決定它輸給我們電腦的 60 步翻子中，它只高估了 2 步。',
+  'A question about one move caught it': '一個關於一步棋的問題發現了它',
+  'The AB-JChess post first used game 108 to show how Pikafish judged a reveal. What caught the bug was asking why the bot would play d10-e9 at all. A correct search cannot find a mate in its own best line and still call the position winning. We took the examples out of that post the same day.':
+    'AB-JChess 那篇文章最初用第 108 盤來說明皮卡魚如何判斷翻子。發現這個錯誤的，是一個問題：電腦到底為什麼會走 d10-e9？正確的搜尋不可能在自己的最佳變化裡看到將殺，還把局面評為勝勢。我們當天就把那些例子從那篇文章裡刪掉了。',
+  'Play the jieqi bot': '挑戰揭棋電腦',
+  'A bug in the Pikafish jieqi bot: how it misjudged turning over a piece':
+    '皮卡魚揭棋電腦的一個錯誤：它如何誤判翻開暗子',
   // katago-jungle: machine-drafted 2026-10-02, not native-reviewed.
   "We scored every position of two of those wins again with both engines, at the match settings. Each chart shows both engines' estimate of KataGo's score, where a win is 100% and a draw 50%. KataGo's own number counts a draw as half a point; Misty's centipawns become a score through the curve our analysis board uses, 1 / (1 + e^(−0.00368 × cp)). The dashed line is 80%, each dotted line marks the ply from which that engine stayed above it to the end, and ?? marks the move KataGo calls the losing one. A ply is one side's move.":
     '我們用兩個引擎按比賽設定，把其中兩盤勝局的每個局面重新評估了一遍。每張圖顯示兩個引擎對 KataGo 得分的估計：贏為 100%，和為 50%。KataGo 自己的數字把和棋算作半分；Misty 的分數（釐兵）按我們分析棋盤使用的曲線 1 / (1 + e^(−0.00368 × cp)) 換算成得分。虛線是 80%，每條點線標出該引擎從哪一步起一直保持在 80% 以上直到終局，?? 標出 KataGo 認為輸棋的那一步。一步（ply）指一方走一著。',
@@ -3565,8 +3669,8 @@ const ZH_HANT: Record<string, string> = {
   "AB-JChess is at the top of the jieqi bot list, above Level 8. Levels 1 to 8 stay Pikafish, and Level 4 is still where a new player starts. It does not take a level number: the top place holds the strongest jieqi engine we have measured, under its own name. Its rating on the [bots page](/bots), 2354 against Level 8's 2226, comes from the same bot-against-bot games that rate the levels. Its authors are training stronger networks; when one is released, we will play it against this one and switch if it wins.":
     'AB-JChess 排在揭棋電腦列表的最上面，在第 8 級之上。第 1 到第 8 級仍是皮卡魚，新手仍從第 4 級開始。它不佔用級別編號：最高的位置留給我們實測過最強的揭棋引擎，並以它自己的名字標示。它在[電腦對手頁面](/bots)上的等級分是 2354（第 8 級為 2226），和各個級別一樣，來自電腦之間的對局。作者們正在訓練更強的網路；新網路發布後，我們會讓它和現在這個對弈，贏了就換上。',
   // ab-jchess: machine-drafted 2026-09-30, not native-reviewed.
-  'While writing this post we found a bug in how our Pikafish bot scores reveals. We are fixing it, and a follow-up post will cover what it was and what it cost.':
-    '寫這篇文章的過程中，我們發現我們的皮卡魚電腦在給翻子打分時有一個錯誤。我們正在修復，後續會再寫一篇文章，講清楚這個錯誤是什麼、造成了多大影響。',
+  'While writing this post we found a bug in how our Pikafish bot scored reveals. It is fixed; [a follow-up post](/blog/pikafish-reveal-bug) covers what it was and what it cost.':
+    '寫這篇文章的過程中，我們發現我們的皮卡魚電腦在給翻子打分時有一個錯誤。現已修復，[後續文章](/blog/pikafish-reveal-bug)講清楚了這個錯誤是什麼、造成了多大影響。',
   'AB-JChess, a stronger jieqi bot': 'AB-JChess：更強的揭棋電腦',
   'AB-JChess: the open-source jieqi engine that beat Pikafish 248 to 136':
     'AB-JChess：以 248 比 136 戰勝皮卡魚的開源揭棋引擎',

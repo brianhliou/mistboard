@@ -52,6 +52,8 @@ describe('article public listing gates', () => {
     expect(hrefs).toEqual([
       // KataGo, the new top Jungle Chess bot, scheduled for 2026-10-03.
       '/blog/katago-jungle',
+      // The Pikafish reveal bug (#497), the AB-JChess post's follow-up, 2026-10-03.
+      '/blog/pikafish-reveal-bug',
       // AB-JChess, the new top jieqi bot, scheduled for 2026-10-02.
       '/blog/ab-jchess',
       // The third player page, the world champion Lại Lý Huynh, 2026-10-02.
@@ -265,6 +267,7 @@ describe('article public listing gates', () => {
     // curated list. Deep dives have their own row (next test).
     expect(hrefs).toEqual([
       '/blog/katago-jungle',
+      '/blog/pikafish-reveal-bug',
       '/blog/ab-jchess',
       '/blog/jieqi-bot-wins',
       '/blog/one-thousand-games',

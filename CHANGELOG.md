@@ -52,6 +52,8 @@ Conventions:
 
 ### Watching and review
 
+- A post on the reveal bug in our Pikafish jieqi bot (/blog/pikafish-reveal-bug): what went wrong, where it is in the code, the fix, and what it cost in strength; in English and Chinese ([cde6a398](https://github.com/brianhliou/mistboard/commit/cde6a398))
+- The AB-JChess post links all 400 match games, each with its own review page ([cde6a398](https://github.com/brianhliou/mistboard/commit/cde6a398))
 - Embedded Jungle studies show comments, move marks and side lines, like the study page ([fa06feca](https://github.com/brianhliou/mistboard/commit/fa06feca))
 - Live Crazyhouse Xiangqi games show their board with both hands on Current games and correspondence cards, instead of a variant icon ([c44741d5](https://github.com/brianhliou/mistboard/commit/c44741d5))
 - Atomic Xiangqi games in progress now show their board on Current games, Watch live and the correspondence inbox ([58b0ac0d](https://github.com/brianhliou/mistboard/commit/58b0ac0d))
@@ -101,7 +103,7 @@ Conventions:
 - A judged jieqi reveal's best move is now a clickable branch in the review, and jieqi game links with ?ply= open on that move ([67546f65](https://github.com/brianhliou/mistboard/commit/67546f65))
 - The rules pages now load with their text in English and both Chinese scripts, and the localized blog, rules, videos, bots and course pages each name their own address to search engines ([3edc86b1](https://github.com/brianhliou/mistboard/commit/3edc86b1))
 - A correspondence game posted from the homepage lobby now uses the variant you picked, and variant game headers show Rated for rated games ([851d1a41](https://github.com/brianhliou/mistboard/commit/851d1a41))
-- The jieqi Pikafish bot and its analysis no longer overrate turning over a piece: Black's reveals were scored by their best possible outcome, and outcomes the search cut short were averaged in as if exact ([d00a1b82](https://github.com/brianhliou/mistboard/commit/d00a1b82))
+- The jieqi Pikafish bot and its analysis no longer overrate turning over a piece: Black's reveals were scored by their best possible outcome, and outcomes the search cut short were averaged in as if exact ([94eec584](https://github.com/brianhliou/mistboard/commit/94eec584))
 - On the homepage, only the Play button starts a bot game; a click elsewhere on the row no longer does ([5edb33f3](https://github.com/brianhliou/mistboard/commit/5edb33f3))
 - Open correspondence games now leave the board after 14 days, and posting the same open game twice keeps just one ([5edb33f3](https://github.com/brianhliou/mistboard/commit/5edb33f3))
 - Banqi and Flip Jungle rooms show Resign, the move list and your own seat row again, after two days hidden on short boards ([6ffe2f45](https://github.com/brianhliou/mistboard/commit/6ffe2f45))
