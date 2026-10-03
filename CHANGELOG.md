@@ -44,6 +44,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- the KataGo post's charts count moves and mark the move Misty lost and the move it saw it ([f30597b2](https://github.com/brianhliou/mistboard/commit/f30597b2))
 - New post: KataGo, a stronger Jungle Chess bot, reading two of its wins over Misty with both engines' evaluations ([fa06feca](https://github.com/brianhliou/mistboard/commit/fa06feca))
 - A Crazyhouse Xiangqi study of six engine games, with notes on the drops that decided them, embedded on the rules page ([95b57417](https://github.com/brianhliou/mistboard/commit/95b57417))
 - Crazyhouse Xiangqi games, studies and lines can be embedded, with both hands shown ([0bc99f1f](https://github.com/brianhliou/mistboard/commit/0bc99f1f))
@@ -53,6 +54,7 @@ Conventions:
 
 ### Watching and review
 
+- The AB-JChess post shows where its edge comes from, with two of its wins, each with a chart of both engines' scores and an annotated board ([f30597b2](https://github.com/brianhliou/mistboard/commit/f30597b2))
 - Jungle bot games now pair only Misty and KataGo, at the strength you play against ([e4d993df](https://github.com/brianhliou/mistboard/commit/e4d993df))
 - A post on the reveal bug in our Pikafish jieqi bot (/blog/pikafish-reveal-bug): what went wrong, where it is in the code, the fix, and what it cost in strength; in English and Chinese ([b9ef83cf](https://github.com/brianhliou/mistboard/commit/b9ef83cf))
 - The AB-JChess post links all 400 match games, each with its own review page ([8b6617f1](https://github.com/brianhliou/mistboard/commit/8b6617f1))
@@ -103,6 +105,7 @@ Conventions:
 
 ### Fixed
 
+- Boards embedded in posts and forum threads are sized to fit, with no empty space under them ([f30597b2](https://github.com/brianhliou/mistboard/commit/f30597b2))
 - Pikafish Level 8 in xiangqi plays again; since Friday evening it resigned every game before its first move ([17e145f5](https://github.com/brianhliou/mistboard/commit/17e145f5))
 - A judged jieqi reveal's best move is now a clickable branch in the review, and jieqi game links with ?ply= open on that move ([67546f65](https://github.com/brianhliou/mistboard/commit/67546f65))
 - The rules pages now load with their text in English and both Chinese scripts, and the localized blog, rules, videos, bots and course pages each name their own address to search engines ([3edc86b1](https://github.com/brianhliou/mistboard/commit/3edc86b1))
