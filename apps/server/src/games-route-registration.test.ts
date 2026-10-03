@@ -4,6 +4,10 @@ import { dirname, join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { routes } from './http-api.js';
+import { canServeLiveBoard } from './server-policy.js';
+import './variant-tenant/register-tenants.js';
+import { registeredVariantTenants } from './variant-tenant/registry.js';
+import { hasLiveWatchPayloadBuilder } from './watch-live.js';
 
 // Fail-closed conformance backstop for the http-api dispatch array.
 //
@@ -50,5 +54,41 @@ test('every routes/*-games.ts module is registered in the http-api dispatch', as
     unregistered,
     [],
     `these games-route modules exist but are NOT wired into http-api.ts's routes[] dispatch array, so their /api/<variant>/games/:id endpoint 404s in production: ${unregistered.join(', ')}. Import the module and add it to the routes array in http-api.ts.`,
+  );
+});
+
+// Same backstop for the live board. A tenant whose watch channel is open
+// (canServeLiveBoard) but whose route module registers no live payload builder
+// lists its in-progress games on /games, Watch live and the correspondence inbox
+// as a variant icon instead of a board, with nothing failing anywhere (Atomic
+// Xiangqi shipped that way). Builders register as a side effect of the route
+// modules http-api.ts imports, so this runs after that import.
+//
+// Known gaps, each a missing builder rather than a policy: remove an entry when
+// its builder lands, and never add one for a new variant.
+const OPEN_CHANNELS_WITHOUT_LIVE_BUILDER: ReadonlySet<string> = new Set(['crazyhouse-xiangqi']);
+
+test('every open watch channel has a live board payload builder', () => {
+  const missing: string[] = [];
+  const stale: string[] = [];
+  for (const registration of registeredVariantTenants()) {
+    const channelId = registration.watch?.channelId;
+    if (!channelId || !canServeLiveBoard(registration.gameSpecId)) continue;
+    const hasBuilder = hasLiveWatchPayloadBuilder(channelId);
+    if (OPEN_CHANNELS_WITHOUT_LIVE_BUILDER.has(channelId)) {
+      if (hasBuilder) stale.push(channelId);
+      continue;
+    }
+    if (!hasBuilder) missing.push(channelId);
+  }
+  assert.deepEqual(
+    missing,
+    [],
+    `these open watch channels have no registerLiveWatchPayloadBuilder(...), so their live games show an icon instead of a board: ${missing.join(', ')}`,
+  );
+  assert.deepEqual(
+    stale,
+    [],
+    `remove from OPEN_CHANNELS_WITHOUT_LIVE_BUILDER: ${stale.join(', ')}`,
   );
 });
