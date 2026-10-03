@@ -3,8 +3,8 @@ import { currentAccountUser } from './../account-session.js';
 import * as persistence from './../persistence.js';
 import {
   PUBLIC_RATING_TIME_CLASS,
-  parseRatingTimeClass,
   parseRatingVariant,
+  parseVisibleRatingTimeClass,
 } from './../rating-buckets.js';
 import { filterReplayableGames } from './../replayable-games.js';
 import { requireMethod, requirePersistence, writeJson } from './lib.js';
@@ -120,7 +120,9 @@ export async function tryHandle(
     // minted before rated widened still resolve to the same ladder.
     const timeClassParam = parsedUrl.searchParams.get('timeClass');
     const timeClass =
-      timeClassParam === null ? PUBLIC_RATING_TIME_CLASS : parseRatingTimeClass(timeClassParam);
+      timeClassParam === null
+        ? PUBLIC_RATING_TIME_CLASS
+        : parseVisibleRatingTimeClass(timeClassParam);
     if (!timeClass) {
       writeJson(response, 400, { error: 'invalid_rating_time_class' });
       return true;

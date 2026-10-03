@@ -45,7 +45,7 @@ import {
   pveEngineIdForRememberedPick,
 } from './landing-bot-policy.js';
 import { rememberedPveEngine } from './pve-memory.js';
-import { isRatedModeEnabled } from './rated-flag.js';
+import { isCorrespondenceRatedModeEnabled, isRatedModeEnabled } from './rated-flag.js';
 import { postThroughRestart } from './room-create-retry.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildUiIcon, type UiIconName } from './ui-icon.js';
@@ -1982,7 +1982,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   // friend's direct room stays casual.
   const correspondenceRatedOffered = () =>
     choice.mode === 'lobby' &&
-    correspondenceRatedAvailable(selectedGameSpecId, isRatedModeEnabled());
+    correspondenceRatedAvailable(selectedGameSpecId, isCorrespondenceRatedModeEnabled());
   const correspondenceAvailable = () =>
     (choice.mode === 'pvp' || choice.mode === 'lobby') &&
     (CORRESPONDENCE_ELIGIBLE_SPEC_IDS as readonly string[]).includes(selectedGameSpecId) &&
@@ -2135,7 +2135,15 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     },
     locale,
   );
-  syncRatedToggle = ratingSection.sync;
+  syncRatedToggle = () => {
+    ratingSection.sync();
+    // A correspondence game shows no Casual/Rated choice at all while rated
+    // correspondence is held (server flag off). Inline display: the section's own
+    // `display: grid` would defeat the hidden attribute.
+    const hide = selectedTimeMode === 'correspondence' && !isCorrespondenceRatedModeEnabled();
+    ratingSection.section.style.display = hide ? 'none' : '';
+  };
+  syncRatedToggle();
 
   // Color picker shows for PvE and Challenge-a-friend. Hidden for casual/rated
   // lobby matchmaking — color is server-assigned there so the pool stays unified.

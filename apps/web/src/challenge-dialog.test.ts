@@ -67,13 +67,20 @@ describe('openChallengeDialog', () => {
       return { dialog, rated };
     };
 
-    // Rated switch off: the option is disabled and the body stays casual.
+    // Rated correspondence held (the default): the control is absent and the body casual.
     const off = open();
+    expect(off.rated?.hidden).toBe(true);
     expect(off.rated?.options[1]?.disabled).toBe(true);
     off.dialog?.remove();
-
+    // Live rated on alone does not bring it back.
     setRatedModeEnabled(true);
+    const liveOnly = open();
+    expect(liveOnly.rated?.hidden).toBe(true);
+    liveOnly.dialog?.remove();
+
+    setRatedModeEnabled(true, true);
     const on = open();
+    expect(on.rated?.hidden).toBe(false);
     expect(on.rated?.options[1]?.disabled).toBe(false);
     on.rated!.value = 'rated';
     [...(on.dialog?.querySelectorAll('button') ?? [])]

@@ -258,16 +258,17 @@ export type StartGameInput = {
 };
 
 /**
- * Whether the Start a game form may offer Rated for this variant: the server's rated
- * switch is on AND the spec is correspondence-rated (eligible with a rating pool,
+ * Whether a correspondence form may offer Rated for this variant: the server's rated
+ * CORRESPONDENCE switch is on (isCorrespondenceRatedModeEnabled, off by default) AND
+ * the spec is correspondence-rated (eligible with a rating pool,
  * isCorrespondenceRatedSpec, the same predicate the server gates on). Anything else
- * shows Rated disabled and posts casual.
+ * posts casual.
  */
 export function correspondenceRatedAvailable(
   gameSpecId: string,
-  ratedModeEnabled: boolean,
+  correspondenceRatedModeEnabled: boolean,
 ): boolean {
-  return ratedModeEnabled && isCorrespondenceRatedSpec(gameSpecId);
+  return correspondenceRatedModeEnabled && isCorrespondenceRatedSpec(gameSpecId);
 }
 
 // The POST /api/correspondence/seeks body for the Start a game form, or an error

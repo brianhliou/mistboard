@@ -38,7 +38,7 @@ import {
 } from './landing-play.js';
 import './landing-play-panel.css';
 import { rememberedPveEngine } from './pve-memory.js';
-import { isRatedModeEnabled } from './rated-flag.js';
+import { isCorrespondenceRatedModeEnabled, isRatedModeEnabled } from './rated-flag.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { renderVariantMarker } from './variant-markers.js';
 import { variantMiniIdForGameSpec } from './variants.js';
@@ -205,7 +205,8 @@ export function panelPersonPaces(gameSpecId: LandingGameSpecId, mode: PersonMode
     id: tc.id,
   }));
   const days: PersonPace[] =
-    (mode === 'casual' || correspondenceRatedAvailable(gameSpecId, isRatedModeEnabled())) &&
+    (mode === 'casual' ||
+      correspondenceRatedAvailable(gameSpecId, isCorrespondenceRatedModeEnabled())) &&
     correspondenceEnabled() &&
     (CORRESPONDENCE_ELIGIBLE_SPEC_IDS as readonly string[]).includes(gameSpecId)
       ? DAYS_PER_MOVE_OPTIONS.map((d) => ({ kind: 'days', days: d }))

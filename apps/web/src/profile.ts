@@ -38,6 +38,7 @@ import {
   profileGameSpecLabel,
   profileResultTone,
 } from './profile-ui.js';
+import { isCorrespondenceRatedModeEnabled, onRatedModeChange } from './rated-flag.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { attachUserCard } from './user-card.js';
 import { renderVariantMarker } from './variant-markers.js';
@@ -373,6 +374,14 @@ function buildLeaderboardFrame(locale: Locale): {
     const selected = pace.id === DEFAULT_LEADERBOARD_TIME_CLASS;
     button.classList.toggle('selected', selected);
     button.setAttribute('aria-selected', selected ? 'true' : 'false');
+    // No correspondence ladder while rated correspondence is held (server flag off).
+    if (pace.id === 'correspondence') {
+      const sync = (): void => {
+        button.style.display = isCorrespondenceRatedModeEnabled() ? '' : 'none';
+      };
+      sync();
+      onRatedModeChange(sync);
+    }
     paceTabs.append(button);
   }
 
@@ -2475,7 +2484,9 @@ function buildRatingRailRow(
   }
 
   meta.append(figures);
-  const corr = correspondenceRailBucket(ratings, variant, bucket);
+  const corr = isCorrespondenceRatedModeEnabled()
+    ? correspondenceRailBucket(ratings, variant, bucket)
+    : undefined;
   if (corr?.eloRating != null) {
     const line = document.createElement('span');
     line.className = 'profile-rating-games profile-rating-corr';

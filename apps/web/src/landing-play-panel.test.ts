@@ -286,7 +286,10 @@ describe('homepage play panel', () => {
     expect(panelPersonPaces('jieqi', 'rated').some((p) => p.kind === 'days')).toBe(false);
     // Rated switch on (2026-10-02): a correspondence-rated variant offers days in Rated
     // too, live clocks still narrowed to the rated ones.
+    // Live rated on alone (rated correspondence held, the default): no rated days.
     setRatedModeEnabled(true);
+    expect(panelPersonPaces('xiangqi', 'rated').some((p) => p.kind === 'days')).toBe(false);
+    setRatedModeEnabled(true, true);
     const ratedOn = panelPersonPaces('xiangqi', 'rated');
     expect(ratedOn.filter((p) => p.kind === 'live').every((p) => ratedIds.has(p.id))).toBe(true);
     expect(ratedOn.some((p) => p.kind === 'days')).toBe(true);

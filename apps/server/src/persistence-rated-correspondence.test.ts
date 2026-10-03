@@ -18,7 +18,7 @@ import {
   listOpenCorrespondenceSeeks,
 } from './persistence.js';
 import { getPool } from './persistence-db.js';
-import { getUserRatingHistory } from './persistence-profiles.js';
+import { getUserProfileByHandle, getUserRatingHistory } from './persistence-profiles.js';
 import { assert, definePersistenceTests, sha256, test } from './persistence-test-support.js';
 import { tryHandle as tryHandleSeekRoute } from './routes/correspondence-seeks.js';
 import type { HttpApiContext } from './routes/lib.js';
@@ -33,6 +33,9 @@ import { xiangqiTenant } from './xiangqi-tenant.js';
 
 process.env.MISTBOARD_CORRESPONDENCE_ENABLED = 'true';
 process.env.MISTBOARD_RATED_ENABLED = 'true';
+// Rated correspondence is held by default (feature-flags.ts); this file tests it ON,
+// except where a test turns it off to pin the held behaviour.
+process.env.MISTBOARD_CORRESPONDENCE_RATED_ENABLED = 'true';
 process.env.MISTBOARD_XIANGQI_ENABLED = 'true';
 
 type RatingRow = {
@@ -99,6 +102,55 @@ definePersistenceTests('rated correspondence', () => {
     }
     const { rows } = await getPool().query('SELECT 1 FROM correspondence_seeks');
     assert.equal(rows.length, 0, 'a refused rated seek writes nothing');
+  });
+
+  test('held (correspondence flag off): a rated post is refused, a rated seek cannot be accepted', async () => {
+    const cy = await seedUser('rc-cy');
+    const di = await seedUser('rc-di');
+    const cyCookie = await makeSessionCookie(cy);
+    const diCookie = await makeSessionCookie(di);
+    // A rated seek posted while the flag was on...
+    const posted = await callSeekRoute('POST', '/api/correspondence/seeks', cyCookie, {
+      gameSpecId: XIANGQI_SPEC_ID,
+      daysPerMove: 3,
+      rated: true,
+    });
+    assert.equal(posted.status, 201);
+    const seekId = (posted.json.seek as { id: string }).id;
+    process.env.MISTBOARD_CORRESPONDENCE_RATED_ENABLED = 'false';
+    try {
+      // ...a new rated post is refused (403, nothing stored), never stored casual...
+      const refused = await callSeekRoute('POST', '/api/correspondence/seeks', diCookie, {
+        gameSpecId: XIANGQI_SPEC_ID,
+        daysPerMove: 3,
+        rated: true,
+      });
+      assert.equal(refused.status, 403);
+      assert.equal(refused.json.error, 'rated_disabled');
+      // ...a casual post is unaffected...
+      const casual = await callSeekRoute('POST', '/api/correspondence/seeks', diCookie, {
+        gameSpecId: XIANGQI_SPEC_ID,
+        daysPerMove: 3,
+      });
+      assert.equal(casual.status, 201);
+      assert.equal((casual.json.seek as { rated: boolean }).rated, false);
+      // ...and the earlier rated seek cannot become a game, so no room is created rated.
+      const accept = await callSeekRoute(
+        'POST',
+        `/api/correspondence/seeks/${seekId}/accept`,
+        diCookie,
+      );
+      assert.equal(accept.status, 403);
+      assert.equal(accept.json.error, 'rated_disabled');
+      assert.notEqual(await getCorrespondenceSeek(seekId), null, 'the refused accept took nothing');
+    } finally {
+      process.env.MISTBOARD_CORRESPONDENCE_RATED_ENABLED = 'true';
+    }
+    const { rows } = await getPool().query(
+      'SELECT rated FROM correspondence_seeks WHERE creator_user_id = $1',
+      [di],
+    );
+    assert.deepEqual(rows, [{ rated: false }]);
   });
 
   test('rated accept creates a rated game; resignation moves ONLY the correspondence pool', async () => {
@@ -183,6 +235,21 @@ definePersistenceTests('rated correspondence', () => {
     );
     const blitzHistory = await getUserRatingHistory('rc-cal', cal, 'xiangqi', 'blitz');
     assert.deepEqual(blitzHistory?.points, []);
+
+    // The profile shows the correspondence rating only while the flag is on.
+    const shown = await getUserProfileByHandle('rc-cal', null);
+    assert.ok(shown?.ratings.some((rating) => rating.timeClass === 'correspondence'));
+    process.env.MISTBOARD_CORRESPONDENCE_RATED_ENABLED = 'false';
+    try {
+      const held = await getUserProfileByHandle('rc-cal', null);
+      assert.equal(
+        held?.ratings.some((rating) => rating.timeClass === 'correspondence'),
+        false,
+      );
+      assert.ok(held?.ratings.some((rating) => rating.timeClass === 'blitz'));
+    } finally {
+      process.env.MISTBOARD_CORRESPONDENCE_RATED_ENABLED = 'true';
+    }
     xiangqiRooms.clear();
   });
 

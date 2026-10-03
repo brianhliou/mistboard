@@ -22,6 +22,7 @@ import {
   parseRatingTimeClass,
   parseRatingVariant,
   type RatingVariant,
+  visibleRatingTimeClasses,
 } from './rating-buckets.js';
 
 test('default rating bucket uses the Dark chess game spec rating pool', () => {
@@ -161,4 +162,17 @@ test('the correspondence time class parses and is listed after the live paces', 
   assert.equal(parseRatingTimeClass('correspondence'), 'correspondence');
   assert.equal(parseRatingTimeClass('classical'), null);
   assert.deepEqual(PUBLIC_RATING_TIME_CLASSES, ['bullet', 'blitz', 'rapid', 'correspondence']);
+});
+
+test('surfaces show no correspondence ladder while rated correspondence is held', () => {
+  assert.deepEqual(visibleRatingTimeClasses(false), ['bullet', 'blitz', 'rapid']);
+  assert.deepEqual(visibleRatingTimeClasses(true), ['bullet', 'blitz', 'rapid', 'correspondence']);
+  // Default reads the env: off unless MISTBOARD_CORRESPONDENCE_RATED_ENABLED is on.
+  const prior = process.env.MISTBOARD_CORRESPONDENCE_RATED_ENABLED;
+  delete process.env.MISTBOARD_CORRESPONDENCE_RATED_ENABLED;
+  try {
+    assert.equal(visibleRatingTimeClasses().includes('correspondence'), false);
+  } finally {
+    if (prior !== undefined) process.env.MISTBOARD_CORRESPONDENCE_RATED_ENABLED = prior;
+  }
 });

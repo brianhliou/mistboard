@@ -138,3 +138,16 @@ const VARIANT_FLAGS = [
   'MISTBOARD_CRAZYHOUSE_XIANGQI_ENABLED',
   'MISTBOARD_CORRESPONDENCE_ENABLED',
 ];
+
+test('held by default: with the correspondence-rated flag off no eligible spec takes a rated seek', async () => {
+  // The factory test above proves the plumbing for the day the flag goes on; this pins
+  // that, until then, the route's one gate refuses rated for the whole eligible set.
+  const { ratedSeekError } = await import('./routes/correspondence-seeks.js');
+  for (const specId of CORRESPONDENCE_ELIGIBLE_SPECS) {
+    assert.equal(
+      ratedSeekError(specId, correspondenceTimeControl(3), false),
+      'rated_disabled',
+      specId,
+    );
+  }
+});

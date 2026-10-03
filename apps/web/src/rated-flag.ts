@@ -5,12 +5,21 @@
 // server confirms rated is live.
 
 let ratedModeEnabled = false;
+// Rated CORRESPONDENCE (server MISTBOARD_CORRESPONDENCE_RATED_ENABLED, off by default:
+// held until integrity tooling exists). Off hides every correspondence Casual/Rated
+// control and every correspondence rating; live rated play reads only the flag above.
+let correspondenceRatedModeEnabled = false;
 const listeners = new Set<() => void>();
 
-export function setRatedModeEnabled(value: boolean): void {
-  const changed = value !== ratedModeEnabled;
+export function setRatedModeEnabled(value: boolean, correspondence = false): void {
+  const changed = value !== ratedModeEnabled || correspondence !== correspondenceRatedModeEnabled;
   ratedModeEnabled = value;
+  correspondenceRatedModeEnabled = correspondence;
   if (changed) for (const listener of listeners) listener();
+}
+
+export function isCorrespondenceRatedModeEnabled(): boolean {
+  return ratedModeEnabled && correspondenceRatedModeEnabled;
 }
 
 // For a control rendered before /api/server-status answers (the correspondence

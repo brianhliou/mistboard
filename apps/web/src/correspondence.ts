@@ -70,7 +70,7 @@ import {
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, localizedHref } from './i18n/locale.js';
 import type { DarkXiangqiWireView } from './live-dark-xiangqi.js';
-import { isRatedModeEnabled, onRatedModeChange } from './rated-flag.js';
+import { isCorrespondenceRatedModeEnabled, onRatedModeChange } from './rated-flag.js';
 import { timeAgo } from './relative-time.js';
 import type { ReplayHandle } from './replay.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
@@ -680,7 +680,7 @@ function buildSelect(
   return { root: field, value: () => select.value };
 }
 
-function buildStartForm(onChanged: () => void): HTMLElement {
+export function buildStartForm(onChanged: () => void): HTMLElement {
   const panel = document.createElement('section');
   panel.className = 'correspondence-panel correspondence-start';
   const heading = document.createElement('h2');
@@ -722,7 +722,12 @@ function buildStartForm(onChanged: () => void): HTMLElement {
     'casual',
   );
   const syncRated = (): void => {
-    const available = correspondenceRatedAvailable(variant.value(), isRatedModeEnabled());
+    // The whole control is absent while rated correspondence is held (flag off).
+    rated.root.hidden = !isCorrespondenceRatedModeEnabled();
+    const available = correspondenceRatedAvailable(
+      variant.value(),
+      isCorrespondenceRatedModeEnabled(),
+    );
     rated.setDisabled('rated', !available);
     if (!available) rated.select('casual');
   };
@@ -817,7 +822,7 @@ function buildStartForm(onChanged: () => void): HTMLElement {
       preferredColor: side.value(),
       rated:
         rated.value() === 'rated' &&
-        correspondenceRatedAvailable(variant.value(), isRatedModeEnabled()),
+        correspondenceRatedAvailable(variant.value(), isCorrespondenceRatedModeEnabled()),
     });
     if (!request.ok) {
       showStatus(t('correspondence.handleRequired'), true);

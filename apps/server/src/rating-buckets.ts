@@ -10,6 +10,7 @@ import {
   type RatingVariant,
   ratingPoolForSpec,
 } from '@mistboard/game';
+import { correspondenceRatedEnabled } from './feature-flags.js';
 
 // Rated-pool vocabulary lives on the game spec (single source of truth):
 // RatingVariant + ratingPoolForSpec derive from each spec's `rated` flag.
@@ -71,7 +72,7 @@ export function bucketForGame(input: BucketInput): RatingBucket | null {
   // Fail closed twice over: an unofficial pace and a pace whose spec is not
   // rated both yield no bucket, so the game is simply not rated.
   const spec = findTimeControl(input.initialMs, input.incrementMs);
-  if (!spec || !spec.rated) return null;
+  if (!spec?.rated) return null;
   // Same for a casual-only game spec (no active rating pool) and for a variant
   // string the registry no longer knows: no bucket rather than mis-crediting
   // the game to fog. Until 2026-09-12 an unknown variant fell back to the
@@ -91,6 +92,25 @@ export function parseRatingVariant(value: string | null | undefined): RatingVari
   if (isRatedPoolBase(value)) return value;
   const spec = maybeGameSpecForId(value);
   return spec ? ratingPoolForSpec(spec.id) : null;
+}
+
+// The time classes a rating SURFACE may show (profile rail, players page, rating
+// history). Correspondence is held back while MISTBOARD_CORRESPONDENCE_RATED_ENABLED
+// is off, so no correspondence rating is shown while rated correspondence is held.
+export function visibleRatingTimeClasses(
+  correspondenceShown: boolean = correspondenceRatedEnabled(),
+): readonly RatingTimeClass[] {
+  return correspondenceShown
+    ? PUBLIC_RATING_TIME_CLASSES
+    : PUBLIC_RATING_TIME_CLASSES.filter((tc) => tc !== CORRESPONDENCE_RATING_TIME_CLASS);
+}
+
+// parseRatingTimeClass narrowed to the classes a surface may show.
+export function parseVisibleRatingTimeClass(
+  value: string | null | undefined,
+): RatingTimeClass | null {
+  const parsed = parseRatingTimeClass(value);
+  return parsed && visibleRatingTimeClasses().includes(parsed) ? parsed : null;
 }
 
 export function parseRatingTimeClass(value: string | null | undefined): RatingTimeClass | null {

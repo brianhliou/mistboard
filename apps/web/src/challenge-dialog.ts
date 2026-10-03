@@ -5,7 +5,7 @@ import { correspondenceRatedAvailable } from './correspondence-model.js';
 import { firstMoverColorName, secondMoverColorName, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
-import { isRatedModeEnabled } from './rated-flag.js';
+import { isCorrespondenceRatedModeEnabled } from './rated-flag.js';
 
 // A small modal to send a directed correspondence challenge to a specific player
 // (from their profile or the hover user-card). It posts to /api/correspondence/seeks
@@ -106,7 +106,7 @@ export function openChallengeDialog(opts: {
     rated.append(opt);
   }
   const ratedAvailable = (): boolean =>
-    correspondenceRatedAvailable(variant.value, isRatedModeEnabled());
+    correspondenceRatedAvailable(variant.value, isCorrespondenceRatedModeEnabled());
   const syncRated = (): void => {
     const available = ratedAvailable();
     const ratedOption = rated.options[1];
@@ -114,6 +114,8 @@ export function openChallengeDialog(opts: {
     if (!available) rated.value = 'casual';
   };
   syncRated();
+  // Absent, not just disabled, while rated correspondence is held (flag off).
+  rated.hidden = !isCorrespondenceRatedModeEnabled();
   variant.addEventListener('change', () => {
     relabelColors();
     syncRated();

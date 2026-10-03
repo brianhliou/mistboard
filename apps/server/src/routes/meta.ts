@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { getBuildInfo } from '../build-info.js';
 import { buildDeployHistory, DEPLOY_HISTORY_KINDS } from '../deploy-history.js';
-import { darkXiangqiEnabled, ratedEnabled } from '../feature-flags.js';
+import { correspondenceRatedEnabled, darkXiangqiEnabled, ratedEnabled } from '../feature-flags.js';
 import { collectLiveRoomStats } from '../live-room-stats.js';
 import * as persistence from '../persistence.js';
 import { onlinePresence, refreshPresence } from '../presence.js';
@@ -44,6 +44,7 @@ export async function tryHandle(
       build: getBuildInfo(),
       darkXiangqiEnabled: darkXiangqiEnabled(),
       ratedEnabled: ratedEnabled(),
+      correspondenceRatedEnabled: correspondenceRatedEnabled(),
       proxyTrust: getProxyTrustWarning(),
       // Web-side in-process UCI engine-pool saturation (#203): the leading signal for
       // the non-fog engine-service split, visible before it sheds load as timeouts.

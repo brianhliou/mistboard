@@ -399,3 +399,29 @@ test('a rated seek accept creates a rated room that stays rated through hydratio
     darkChessTenantRooms.clear();
   }
 });
+
+test('rated correspondence is held by default: the flag off refuses every rated seek', async () => {
+  const { ratedSeekError } = await import('./routes/correspondence-seeks.js');
+  const prior = {
+    rated: process.env.MISTBOARD_RATED_ENABLED,
+    corr: process.env.MISTBOARD_CORRESPONDENCE_RATED_ENABLED,
+  };
+  process.env.MISTBOARD_RATED_ENABLED = 'true';
+  try {
+    delete process.env.MISTBOARD_CORRESPONDENCE_RATED_ENABLED;
+    assert.equal(ratedSeekError('xiangqi', correspondenceTimeControl(3)), 'rated_disabled');
+    process.env.MISTBOARD_CORRESPONDENCE_RATED_ENABLED = 'true';
+    assert.equal(ratedSeekError('xiangqi', correspondenceTimeControl(3)), null);
+    // The correspondence switch alone is not enough: live rated must be on too.
+    process.env.MISTBOARD_RATED_ENABLED = 'false';
+    assert.equal(ratedSeekError('xiangqi', correspondenceTimeControl(3)), 'rated_disabled');
+  } finally {
+    for (const [key, value] of [
+      ['MISTBOARD_RATED_ENABLED', prior.rated],
+      ['MISTBOARD_CORRESPONDENCE_RATED_ENABLED', prior.corr],
+    ] as const) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});

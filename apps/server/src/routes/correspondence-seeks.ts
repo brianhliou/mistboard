@@ -12,7 +12,7 @@ import {
   type CorrespondenceStartNotice,
   notifyCorrespondenceStart,
 } from './../correspondence-start-email.js';
-import { correspondenceEnabled, ratedEnabled } from './../feature-flags.js';
+import { correspondenceEnabled, correspondenceRatedEnabled } from './../feature-flags.js';
 import { logger } from './../obs.js';
 import type { SeekColorPreference, SeekVisibility, UserAccount } from './../persistence.js';
 import * as persistence from './../persistence.js';
@@ -65,7 +65,10 @@ export function parseSeekVisibility(value: unknown): SeekVisibility | undefined 
  * when it may be rated. One gate for both create and accept, so a seek that was legal
  * when posted but whose terms stopped qualifying (the flag turned off, the spec left the
  * rated set) is refused at accept rather than silently seated casual.
- *   - the server-wide rated switch (MISTBOARD_RATED_ENABLED), as the live lobby;
+ *   - the rated switches: MISTBOARD_RATED_ENABLED, as the live lobby, AND
+ *     MISTBOARD_CORRESPONDENCE_RATED_ENABLED (off by default; feature-flags.ts). Off,
+ *     a rated post is REFUSED (403 rated_disabled), never stored casual, and a rated
+ *     seek posted while it was on cannot be accepted;
  *   - isCorrespondenceRatedSpec: correspondence-eligible AND an active rating pool;
  *   - an official days-per-move allowance: a compressed dev allowance has no pool
  *     (bucketForGame would never rate it), so calling it rated would be a lie.
@@ -73,7 +76,7 @@ export function parseSeekVisibility(value: unknown): SeekVisibility | undefined 
 export function ratedSeekError(
   gameSpecId: string,
   timeControl: RoomTimeControl,
-  enabled: boolean = ratedEnabled(),
+  enabled: boolean = correspondenceRatedEnabled(),
 ): 'rated_disabled' | 'rated_unsupported_spec' | 'rated_unsupported_time_control' | null {
   if (!enabled) return 'rated_disabled';
   if (!isCorrespondenceRatedSpec(gameSpecId)) return 'rated_unsupported_spec';
