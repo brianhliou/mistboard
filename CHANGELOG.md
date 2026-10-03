@@ -105,6 +105,7 @@ Conventions:
 
 ### Fixed
 
+- The Traditional Chinese versions of the Pikafish reveal-bug and KataGo posts show in Traditional characters again ([13bc87a1](https://github.com/brianhliou/mistboard/commit/13bc87a1))
 - Boards embedded in posts and forum threads are sized to fit, with no empty space under them ([f30597b2](https://github.com/brianhliou/mistboard/commit/f30597b2))
 - Pikafish Level 8 in xiangqi plays again; since Friday evening it resigned every game before its first move ([17e145f5](https://github.com/brianhliou/mistboard/commit/17e145f5))
 - A judged jieqi reveal's best move is now a clickable branch in the review, and jieqi game links with ?ply= open on that move ([67546f65](https://github.com/brianhliou/mistboard/commit/67546f65))
