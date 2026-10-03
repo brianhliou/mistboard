@@ -39,6 +39,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- A Crazyhouse Xiangqi study of six engine games, with notes on the drops that decided them, embedded on the rules page ([95b57417](https://github.com/brianhliou/mistboard/commit/95b57417))
 - Crazyhouse Xiangqi games, studies and lines can be embedded, with both hands shown ([0bc99f1f](https://github.com/brianhliou/mistboard/commit/0bc99f1f))
 - the Crazyhouse Xiangqi rules page is rebuilt around boards with both hands drawn: drop zones, drop check and mate, and an engine game to play through ([d2170ca3](https://github.com/brianhliou/mistboard/commit/d2170ca3))
 - The jieqi bot wins post shows each game from the winner's side ([e2800c4d](https://github.com/brianhliou/mistboard/commit/e2800c4d))
@@ -46,6 +47,7 @@ Conventions:
 
 ### Watching and review
 
+- The note box under a study board shows only on a move with a note, with no empty gap on the others ([95b57417](https://github.com/brianhliou/mistboard/commit/95b57417))
 - Current games is now a board wall: live and correspondence boards side by side, filters for variant and for people or bots, and the latest finished games below ([e3c8e84f](https://github.com/brianhliou/mistboard/commit/e3c8e84f))
 - Embedded games show the analysis marks, and the better move as an arrow on the position where it was missed; the review page draws the stored better move without your engine running ([e3c8e84f](https://github.com/brianhliou/mistboard/commit/e3c8e84f))
 - Crazyhouse Xiangqi games get computer analysis, and its bot games appear on Watch ([0bc99f1f](https://github.com/brianhliou/mistboard/commit/0bc99f1f))
