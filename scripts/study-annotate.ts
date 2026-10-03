@@ -19,7 +19,9 @@
 //     review's engine lines close on (60 / 180 / 450 cp: 55.5%, 66.0% and 84.0%
 //     for red). Stored as the PGN assessment NAG that assessment-glyphs.ts decodes.
 //   - each sideline as the played move's sibling, with its own comment and a
-//     green arrow on the position it leaves from.
+//     green arrow on the position it leaves from, and ONLY beside a move that
+//     earned a glyph: a line exists because the move played was worse, so a
+//     candidate line off an unfaulted move is dropped (Brian, 2026-10-02).
 //   - one comment per move (the study shows the first only), notes joined.
 //
 // Moves are tokens in the chapter's own spelling; the caller checks legality.
@@ -158,7 +160,10 @@ export function annotateFromEngine(input: EngineAnnotationInput): {
     const note = input.comments?.[ply];
     if (note) comment(node, note);
     cursor.children.push(node);
-    const side = sidelines.get(i);
+    // A sideline hangs only off a move that earns a glyph (lichess convention):
+    // the line is there because the move played was worse. A candidate line
+    // off a move the engine does not fault is dropped.
+    const side = mark ? sidelines.get(i) : undefined;
     if (side?.moves.length) {
       if (side.moves[0] === uci) throw new Error(`sideline at ply ${i} repeats the game move`);
       let head: StudyNode | null = null;

@@ -96,4 +96,24 @@ describe('study-annotate', () => {
     // Wolf d2-e2 instead of taking the tiger: black winning either way.
     assert.equal(verdict(67, 68), '−+');
   });
+
+  it('hangs a sideline only off a move that earned a glyph', () => {
+    const tree = annotateFromEngine({
+      rootFen: 'root',
+      moves: ['a1a2', 'b9b8', 'c1c2'],
+      // ply 1 costs red nothing; ply 3 costs red 40 points.
+      redScore: [0.5, 0.5, 0.6, 0.2],
+      best: ['g1g2', 'b9b8', 'e1e2'],
+      sidelines: [
+        { ply: 0, moves: ['g1g2'], redScoreEnd: 0.5 },
+        { ply: 2, moves: ['e1e2'], redScoreEnd: 0.6 },
+      ],
+    });
+    const first = tree.root.children;
+    assert.equal(first.length, 1, 'no line beside an unfaulted move');
+    assert.equal(tree.root.annotations?.shapes, undefined);
+    const beforeThird = first[0]!.children[0]!;
+    assert.equal(beforeThird.children.length, 2, 'the line beside the ?? move stays');
+    assert.equal(beforeThird.children[1]!.uci, 'e1e2');
+  });
 });

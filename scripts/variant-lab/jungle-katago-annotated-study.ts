@@ -9,6 +9,8 @@
 //   npx tsx scripts/variant-lab/jungle-katago-annotated-study.ts --out <plan.json>
 //   npm run study:edit -- --plan <plan.json>            # dry run
 //   npm run study:edit -- --plan <plan.json> --apply    # create it
+//   … --update h2DLEHEC --chapters 67:3ZKOQobN,94:TAPsmuCM --out <plan.json>
+//                                                  # rewrite the prod study's trees
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -201,18 +203,42 @@ function chapter(game: EvaluatedGame, lines: readonly KatagoLine[]) {
 
 const data = JSON.parse(readFileSync(DATA, 'utf8')) as EvalsData;
 const lines = JSON.parse(readFileSync(LINES, 'utf8')) as KatagoLine[];
-const [first, ...rest] = data.games.map((g) => chapter(g, lines));
-if (!first) throw new Error('no games in the data');
-const plan = {
-  create: {
-    owner: 'mistboard',
-    name: 'KataGo reads two games against Misty',
-    description:
-      'Two decisive games from the 2026-09-21 match between KataGo-AnimalChess and MistyJungle, told at their turning points, with Misty\'s weak moves marked and KataGo\'s own lines as sidelines. From the post "KataGo, a stronger Jungle Chess bot".',
-    visibility: 'public',
-    chapter: first,
-  },
-  ops: rest.map((c, i) => ({ op: 'add', ref: `g${i + 2}`, ...c })),
-};
+const chapters = data.games.map((g) => ({ game: g.game, ...chapter(g, lines) }));
+// `--update <studyId> --chapters 67:<chapterId>,94:<chapterId>` rewrites the
+// trees of a study that already exists (the prod study, once created);
+// otherwise the plan creates a new study.
+const UPDATE = arg('--update', '');
+const CHAPTER_IDS = new Map(
+  arg('--chapters', '')
+    .split(',')
+    .filter(Boolean)
+    .map((pair) => pair.split(':') as [string, string])
+    .map(([game, id]) => [Number(game), id] as const),
+);
+let plan: unknown;
+if (UPDATE) {
+  plan = {
+    study: UPDATE,
+    ops: chapters.map((c) => {
+      const id = CHAPTER_IDS.get(c.game);
+      if (!id) throw new Error(`--chapters has no id for game ${c.game}`);
+      return { op: 'tree', chapter: id, tree: c.tree };
+    }),
+  };
+} else {
+  const [first, ...rest] = chapters.map(({ game: _game, ...c }) => c);
+  if (!first) throw new Error('no games in the data');
+  plan = {
+    create: {
+      owner: 'mistboard',
+      name: 'KataGo reads two games against Misty',
+      description:
+        'Two decisive games from the 2026-09-21 match between KataGo-AnimalChess and MistyJungle, told at their turning points, with Misty\'s weak moves marked and KataGo\'s own lines as sidelines. From the post "KataGo, a stronger Jungle Chess bot".',
+      visibility: 'public',
+      chapter: first,
+    },
+    ops: rest.map((c, i) => ({ op: 'add', ref: `g${i + 2}`, ...c })),
+  };
+}
 writeFileSync(OUT, `${JSON.stringify(plan, null, 1)}\n`);
 console.log(`wrote ${OUT}: ${data.games.length} chapters, ${lines.length} sidelines`);
