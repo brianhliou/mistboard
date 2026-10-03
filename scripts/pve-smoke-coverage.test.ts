@@ -56,6 +56,46 @@ test('every PvE variant has a prod smoke, or a written reason it does not', () =
   );
 });
 
+// An engine family is one binary behind one variant: the rungs of a ladder
+// (`-level-3`, `-strongest`) are the same engine at a different budget.
+function engineFamily(engineId: string): string {
+  return engineId.replace(/-level-\d+$/, '').replace(/-(amateur|strong|strongest)$/, '');
+}
+
+test('every engine family of a PvE variant is smoked, not just the default one', () => {
+  // The variant test above passed on 2026-10-03 while Pikafish Level 8 resigned
+  // every xiangqi game at move 1: the xiangqi smoke played the default
+  // Fairy-Stockfish rung, and nothing asked the second family for a move. The
+  // default smoke reaches one family per variant; every other family needs a
+  // row that names its engineId.
+  const families = new Map<string, Set<string>>();
+  for (const bot of FIRST_PARTY_BOT_PROFILES) {
+    for (const [spec, engineId] of Object.entries(bot.engines)) {
+      if (spec in EXEMPT) continue;
+      if (!families.has(spec)) families.set(spec, new Set());
+      families.get(spec)?.add(engineFamily(engineId));
+    }
+  }
+  const pinned = new Set(
+    Object.values(VARIANT_SMOKE_CONFIGS)
+      .map((config) => (config as { engineId?: string }).engineId)
+      .filter((engineId): engineId is string => typeof engineId === 'string')
+      .map(engineFamily),
+  );
+  assert.ok(families.get('xiangqi')?.size === 2, 'expected two xiangqi engine families');
+  const unsmoked: string[] = [];
+  for (const [spec, specFamilies] of families) {
+    const unpinned = [...specFamilies].filter((family) => !pinned.has(family));
+    if (unpinned.length > 1) unsmoked.push(`${spec}: ${unpinned.join(', ')}`);
+  }
+  assert.deepEqual(
+    unsmoked,
+    [],
+    `variants with more than one engine family the default smoke cannot reach: ${unsmoked.join('; ')}. ` +
+      'Add a row with engineId to scripts/lib/variant-smoke-configs.mjs for all but the default family.',
+  );
+});
+
 test('every smoked variant is wired into the release gate', async () => {
   const { readFile } = await import('node:fs/promises');
   const releaseSource = await readFile(new URL('./release-prod.mjs', import.meta.url), 'utf8');

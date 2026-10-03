@@ -1245,6 +1245,21 @@ async function runSmoke({ deployRequired, headRevision }) {
       tag: 'jungle-flip',
       command: npmCommand('prod:smoke:jungle-flip', baseArgs()),
     },
+    {
+      label: 'prod Xiangqi Pikafish L8 smoke',
+      tag: 'xiangqi-pikafish',
+      command: npmCommand('prod:smoke:xiangqi-pikafish', baseArgs()),
+    },
+    {
+      label: 'prod Jieqi AB-JChess smoke',
+      tag: 'jieqi-abjchess',
+      command: npmCommand('prod:smoke:jieqi-abjchess', baseArgs()),
+    },
+    {
+      label: 'prod Jungle KataGo smoke',
+      tag: 'jungle-katago',
+      command: npmCommand('prod:smoke:jungle-katago', baseArgs()),
+    },
   ]);
 }
 

@@ -61,6 +61,9 @@ async function createRoom(config, baseUrl, timeoutMs) {
       // Human black makes the engine red, so the smoke proves the opening
       // engine move and can still clean up with a pregame abort.
       preferredColor: 'black',
+      // Only the top-bot rows name an engine; the variant rows smoke whatever a
+      // bare create resolves to.
+      ...(config.engineId ? { engineId: config.engineId } : {}),
       // No pace named on purpose. The smoke cares that the engine moves, not
       // about the clock, and the server owns which pace an engine may play:
       // pinned variants resolve to their pin (the fog engines cannot honor the

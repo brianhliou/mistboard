@@ -222,6 +222,9 @@ test('variant configs: every entry is complete and self-consistent', () => {
     jungle: 'jungle',
     'jungle-flip': 'jungle-flip',
     xiangqi: 'xiangqi',
+    'xiangqi-pikafish': 'xiangqi',
+    'jieqi-abjchess': 'jieqi',
+    'jungle-katago': 'jungle',
   };
   assert.deepEqual(Object.keys(VARIANT_SMOKE_CONFIGS).sort(), Object.keys(expected).sort());
   for (const [key, config] of Object.entries(VARIANT_SMOKE_CONFIGS)) {
@@ -236,6 +239,9 @@ test('variant configs: every entry is complete and self-consistent', () => {
         config.engineSeat.prefixes !== undefined,
       `${key} engineSeat needs equals, prefix, or prefixes`,
     );
+    // A row that names its engine must also require that exact seat, or a room
+    // that quietly seated another engine would pass.
+    if (config.engineId !== undefined) assert.equal(config.engineSeat.equals, config.engineId);
   }
 });
 
