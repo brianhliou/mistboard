@@ -45,6 +45,8 @@ Conventions:
 
 ### Watching and review
 
+- Current games is now a board wall: live and correspondence boards side by side, filters for variant and for people or bots, and the latest finished games below ([e3c8e84f](https://github.com/brianhliou/mistboard/commit/e3c8e84f))
+- Embedded games show the analysis marks, and the better move as an arrow on the position where it was missed; the review page draws the stored better move without your engine running ([e3c8e84f](https://github.com/brianhliou/mistboard/commit/e3c8e84f))
 - Crazyhouse Xiangqi games get computer analysis, and its bot games appear on Watch ([0bc99f1f](https://github.com/brianhliou/mistboard/commit/0bc99f1f))
 - upcoming events on the broadcasts page are listed soonest first ([95b11226](https://github.com/brianhliou/mistboard/commit/95b11226))
 - The third player page, Lại Lý Huynh 赖理兄 (/blog/lai-ly-huynh), the world champion: his unbeaten 2025 title run and the final he won with black, the year since, five wins on the board and a 38-chapter study; in English, Chinese and, a first for a player page, Vietnamese (/blog/lai-ly-huynh-co-tuong) ([dc9614b2](https://github.com/brianhliou/mistboard/commit/dc9614b2))
@@ -65,6 +67,7 @@ Conventions:
 
 ### Site
 
+- the variant menus and rules list put Duck, Crazyhouse and Fortress ahead of Atomic and Fog Xiangqi ([e3c8e84f](https://github.com/brianhliou/mistboard/commit/e3c8e84f))
 - The homepage deep-dives row is now labelled Xiangqi deep dives ([5edb33f3](https://github.com/brianhliou/mistboard/commit/5edb33f3))
 - the Crazyhouse Xiangqi rules page is unlisted while it is revised, and its News entry links to the game ([ce818f36](https://github.com/brianhliou/mistboard/commit/ce818f36))
 - the privacy page now names PostHog and what it records ([3ec676b4](https://github.com/brianhliou/mistboard/commit/3ec676b4))
