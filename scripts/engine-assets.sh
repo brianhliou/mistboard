@@ -43,6 +43,15 @@ ABJ_ARCH=x86-64-avx2
 KATA_CMAKE_FLAGS="-DUSE_BACKEND=EIGEN -DUSE_AVX2=1 -DCMAKE_BUILD_TYPE=Release -DNO_GIT_REVISION=1 -DZLIB_USE_STATIC_LIBS=ON -DLIBZIP_LIBRARY=OFF -DCMAKE_EXE_LINKER_FLAGS=-static"
 ASSET="engines-$ARCH.tar.gz"
 RELEASE_REPO=brianhliou/mistboard
+# Pikafish's `make build` downloads official-pikafish/Networks `master-net`, a
+# release asset upstream replaces in place: on 2026-10-01 it became a net the
+# pinned binary refuses ("Network evaluation parameters compatible with the
+# engine must be available"), the 10-02 rebuild packaged it, and Level 8
+# resigned every game at move 1. The net is pinned by hash like everything
+# else, from our own copy of the one that pairs with pikafish.ref. A Pikafish
+# bump picks its matching net and uploads it the same way.
+PIKAFISH_NET_SHA256=7d13d73569a9b571ba0eb20cf1596247bc2a42738967e61afef6482b231e900e
+PIKAFISH_NET_URL=https://github.com/$RELEASE_REPO/releases/download/pikafish-net-7d13d735/pikafish.nnue
 # Every file whose content decides the binaries. The workflow's push paths and
 # the Railway watch patterns list the same files; scripts/engine-assets.test.mjs
 # fails if they drift apart.
@@ -69,6 +78,7 @@ recipe_hash() {
     echo "arch=$ARCH"
     echo "abj-arch=$ABJ_ARCH"
     echo "kata-cmake=$KATA_CMAKE_FLAGS"
+    echo "pikafish-net=$PIKAFISH_NET_SHA256"
     for input in $RECIPE_INPUTS; do
       case "$input" in
         *.ref) echo "$input=$(pin "$input")" ;;
@@ -137,6 +147,9 @@ build() {
   ref=$(pin pikafish.ref)
   log "pikafish @ $ref"
   fetch_source "$work/pikafish" https://github.com/official-pikafish/Pikafish.git "$ref"
+  # Placed before make, so its net.sh finds it and skips master-net.
+  curl -fsSL --proto =https --tlsv1.2 --retry 3 -o "$work/pikafish/src/pikafish.nnue" "$PIKAFISH_NET_URL"
+  net_pinned "$work/pikafish/src/pikafish.nnue"
   sf_make "$work/pikafish/src"
   cp "$work/pikafish/src/pikafish" "$bin/pikafish"
   cp "$work/pikafish/src/pikafish.nnue" "$bin/pikafish.nnue"
@@ -170,6 +183,29 @@ build() {
 # uci_ok <binary> <label> <pattern>: the binary answers `uci` with <pattern>.
 uci_ok() {
   echo uci | "$1" | grep -q "$3" && log "$2 ok" || die "$2: no '$3' in the uci reply"
+}
+
+# net_pinned <net>: the file is the net PIKAFISH_NET_SHA256 names.
+net_pinned() {
+  got=$(sha256 "$1" | cut -c1-64)
+  [ "$got" = "$PIKAFISH_NET_SHA256" ] || die "pikafish.nnue is $got, not the pinned $PIKAFISH_NET_SHA256"
+}
+
+# net_search_ok <binary> <net> <label>: the binary loads <net> and searches.
+# `uci` alone never touches the net; Pikafish loads it on `isready` and exits 1
+# on a net it cannot read, which is how a bad net passed this gate on 10-02.
+net_search_ok() {
+  out=$(mktemp)
+  {
+    printf 'uci\nsetoption name EvalFile value %s\nisready\nposition startpos\ngo nodes 20000\n' "$2"
+    i=0
+    until grep -q '^bestmove' "$out" || [ "$i" -ge 300 ]; do sleep 0.1; i=$((i + 1)); done
+    echo quit
+  } | "$1" > "$out" 2>&1 || true
+  best=$(grep '^bestmove' "$out" | tail -1 || true)
+  err=$(grep 'ERROR' "$out" | head -1 || true)
+  rm -f "$out"
+  [ -n "$best" ] && log "$3 ok (net loads, $best)" || die "$3: no bestmove with its net: ${err:-no output}"
 }
 
 # perft_ok <binary> <ini> <variant> <position> <nodes> <label>: FSF agrees with
@@ -223,7 +259,9 @@ verify() {
   uci_ok "$bin/stockfish" stockfish 'id name Stockfish'
   uci_ok "$bin/pikafish-jieqi" pikafish-jieqi uciok
   test -s "$bin/pikafish.nnue" || die "pikafish.nnue is missing or empty"
+  net_pinned "$bin/pikafish.nnue"
   uci_ok "$bin/pikafish" pikafish uciok
+  net_search_ok "$bin/pikafish" "$bin/pikafish.nnue" pikafish-search
   uci_ok "$bin/ab-jchess" ab-jchess 'id name AB JChess'
   # GTP, not UCI, and nothing to search without its net (the railpack net step
   # loads it and plays a move); here the build must be the Eigen one with AVX2.
@@ -242,6 +280,7 @@ package() {
     echo "arch=$ARCH"
     echo "abj-arch=$ABJ_ARCH"
     echo "recipe-version=$RECIPE_VERSION"
+    echo "pikafish-net=sha256:$PIKAFISH_NET_SHA256"
     for input in $RECIPE_INPUTS; do
       case "$input" in
         *.ref) echo "$input=$(pin "$input")" ;;
