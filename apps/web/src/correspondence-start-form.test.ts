@@ -44,3 +44,20 @@ describe('correspondence Start a game: Casual/Rated', () => {
     expect(postedBody(panel, fetchMock).rated).toBe(true);
   });
 });
+
+describe('correspondence Start a game: prefill', () => {
+  it('opens set to the terms a link carries', () => {
+    const panel = buildStartForm(() => {}, {
+      gameSpecId: 'xiangqi',
+      daysPerMove: 7,
+      preferredColor: 'second',
+    });
+    expect(panel.id).toBe('start');
+    expect(panel.querySelector<HTMLSelectElement>('select')?.value).toBe('xiangqi');
+    const fetchMock = vi.fn(() => new Promise<Response>(() => {}));
+    vi.stubGlobal('fetch', fetchMock);
+    const body = postedBody(panel, fetchMock) as Record<string, unknown>;
+    expect(body).toMatchObject({ gameSpecId: 'xiangqi', daysPerMove: 7, preferredColor: 'second' });
+    vi.unstubAllGlobals();
+  });
+});

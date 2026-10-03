@@ -247,12 +247,106 @@ export async function listOutgoingSeeksForUser(
 // depends on this running (accept refuses an expired seek and lists filter it
 // out); it just keeps the table from accreting dead links. Returns the count
 // removed. Runs on the deadline sweeper's interval.
+//
+// A public board seek that lapses also leaves its creator one bell notice
+// (migration 161), written by the same statement that deletes it: the INSERT
+// reads the DELETE's RETURNING rows, so the two commit together or not at all.
+// A crash cannot drop the notice after the seek is gone, or send it while the
+// seek survives to be swept again. A seek deleted by an accept or a cancel first
+// is simply not returned here, so it never notifies; seek_id as the notice's
+// primary key backs this up if two sweepers ever race. Link and direct
+// challenges carry their own expires_at and are deleted without a notice, and a
+// closed or play-locked creator gets nothing.
 export async function deleteExpiredCorrespondenceSeeks(now: Date = new Date()): Promise<number> {
-  const result = await getPool().query(
-    `DELETE FROM correspondence_seeks WHERE ${seekExpirySql()} <= $1`,
+  const { rows } = await getPool().query<{ deleted: number }>(
+    `WITH expired AS (
+       DELETE FROM correspondence_seeks WHERE ${seekExpirySql()} <= $1
+       RETURNING id, creator_user_id, game_spec_id, days_per_move, preferred_color,
+                 rated, created_at, visibility, target_user_id
+     ),
+     noticed AS (
+       INSERT INTO correspondence_seek_expiry_notices
+         (seek_id, user_id, game_spec_id, days_per_move, preferred_color, rated,
+          posted_at, expired_at)
+       SELECT e.id, e.creator_user_id, e.game_spec_id, e.days_per_move, e.preferred_color,
+              e.rated, e.created_at, $1
+       FROM expired e
+       JOIN users u ON u.id = e.creator_user_id
+       WHERE e.visibility = 'public' AND e.target_user_id IS NULL
+         AND u.closed_at IS NULL
+         AND u.play_disabled_at IS NULL
+       ON CONFLICT (seek_id) DO NOTHING
+     )
+     -- A data-modifying CTE runs to completion whether or not the outer query
+     -- reads it, so the notices are written even though only the count is.
+     SELECT (SELECT count(*) FROM expired)::int AS deleted`,
     [now],
   );
-  return result.rowCount ?? 0;
+  return rows[0]?.deleted ?? 0;
+}
+
+/** A board seek that lapsed unanswered, as the creator's bell shows it. */
+export type SeekExpiryNotice = {
+  seekId: string;
+  gameSpecId: string;
+  daysPerMove: number;
+  preferredColor: SeekColorPreference;
+  rated: boolean;
+  expiredAt: Date;
+};
+
+// Unseen notices older than this drop off the bell by themselves.
+export const SEEK_EXPIRY_NOTICE_WINDOW_DAYS = 30;
+
+// This account's unseen expired-seek notices, newest first, capped by the
+// caller, plus the uncapped total for the badge.
+export async function unseenSeekExpiryNotices(
+  userId: string,
+  options: { limit?: number } = {},
+): Promise<{ total: number; notices: SeekExpiryNotice[] }> {
+  const limit = Math.max(1, Math.min(20, Math.floor(options.limit ?? 5)));
+  const { rows } = await getPool().query<{
+    seek_id: string;
+    game_spec_id: string;
+    days_per_move: number;
+    preferred_color: SeekColorPreference;
+    rated: boolean;
+    expired_at: Date;
+    total: number;
+  }>(
+    `SELECT seek_id, game_spec_id, days_per_move, preferred_color, rated, expired_at,
+            (count(*) OVER ())::int AS total
+     FROM correspondence_seek_expiry_notices
+     WHERE user_id = $1
+       AND seen_at IS NULL
+       AND expired_at > now() - make_interval(days => $2::int)
+     ORDER BY expired_at DESC, seek_id ASC
+     LIMIT $3::int`,
+    [userId, SEEK_EXPIRY_NOTICE_WINDOW_DAYS, limit],
+  );
+  return {
+    total: rows[0]?.total ?? 0,
+    notices: rows.map((row) => ({
+      seekId: row.seek_id,
+      gameSpecId: row.game_spec_id,
+      daysPerMove: row.days_per_move,
+      preferredColor: row.preferred_color,
+      rated: row.rated,
+      expiredAt: row.expired_at,
+    })),
+  };
+}
+
+// Opening the bell is the read receipt: every unseen notice leaves the panel.
+export async function markSeekExpiryNoticesSeen(
+  userId: string,
+  at: Date = new Date(),
+): Promise<void> {
+  await getPool().query(
+    `UPDATE correspondence_seek_expiry_notices SET seen_at = $2
+     WHERE user_id = $1 AND seen_at IS NULL`,
+    [userId, at],
+  );
 }
 
 // One seek by id with the creator's display name — the accept/challenge landing
