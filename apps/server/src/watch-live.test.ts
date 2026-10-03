@@ -189,6 +189,8 @@ function tenantRoom(args: {
   lastEventAt?: number;
   moveNumber?: number;
   setup?: unknown;
+  clock?: unknown;
+  timeControl?: NonNullable<TenantManagedRoom['projection']>['timeControl'];
 }): TenantManagedRoom {
   const lastEventAt = args.lastEventAt ?? NOW - 1_000;
   return {
@@ -206,6 +208,8 @@ function tenantRoom(args: {
       state: { status: { type: args.status ?? 'playing' }, moveNumber: args.moveNumber ?? 4 },
       seats: args.seats ?? { black: 'client-b', red: 'client-a' },
       rated: false,
+      ...(args.clock !== undefined ? { clock: args.clock } : {}),
+      ...(args.timeControl !== undefined ? { timeControl: args.timeControl } : {}),
     },
     seatTokens: {
       red: {
@@ -304,6 +308,55 @@ test('finished, stale, and half-seated rooms are excluded', () => {
   );
   openRooms.set('fko_half', tenantRoom({ id: 'fko_half', seats: { red: 'client-a' } }));
   assert.deepEqual(collectLiveTvCandidates(context(), NOW), []);
+});
+
+// A guest who walks away leaves a running clock: the game ends at the flag,
+// so it stays on the hero board past the quiet window until then (2026-10-03:
+// a 10+5 jungle game left the feed 8 s before the flag and the homepage board
+// swapped to a 2-hour-old game). Correspondence and flagged clocks still age out.
+test('a quiet room with a live clock that has not flagged stays a candidate', () => {
+  const lastEventAt = NOW - LIVE_TV_FRESH_WINDOW_MS - 1;
+  const clock = (remainingMs: number) => ({
+    activeColor: 'red',
+    incrementMs: 5_000,
+    initialMs: 600_000,
+    remainingMs: { black: 600_000, red: remainingMs },
+    runningSince: lastEventAt,
+  });
+  openRooms.set(
+    'fko_ticking',
+    tenantRoom({
+      id: 'fko_ticking',
+      lastEventAt,
+      clock: clock(LIVE_TV_FRESH_WINDOW_MS + 10_000),
+      timeControl: { initialMs: 600_000, incrementMs: 5_000 },
+    }),
+  );
+  openRooms.set(
+    'fko_flagged',
+    tenantRoom({ id: 'fko_flagged', lastEventAt, clock: clock(LIVE_TV_FRESH_WINDOW_MS - 10_000) }),
+  );
+  openRooms.set(
+    'fko_corr',
+    tenantRoom({
+      id: 'fko_corr',
+      lastEventAt,
+      clock: clock(86_400_000),
+      timeControl: { daysPerMove: 1, initialMs: 86_400_000, incrementMs: 0 },
+    }),
+  );
+  openRooms.set(
+    'fko_paused',
+    tenantRoom({
+      id: 'fko_paused',
+      lastEventAt,
+      clock: { ...clock(600_000), activeColor: null, runningSince: null },
+    }),
+  );
+  assert.deepEqual(
+    collectLiveTvCandidates(context(), NOW).map((candidate) => candidate.roomId),
+    ['fko_ticking'],
+  );
 });
 
 // The hero board is not a lobby: a room nobody has answered yet can be

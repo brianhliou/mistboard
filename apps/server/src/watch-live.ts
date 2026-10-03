@@ -78,8 +78,27 @@ export async function liveWatchPayloadForFeatured(
 
 // A live game with no event in this window is dormant (an idle correspondence
 // game, an abandoned room the sweeps have not reaped yet) and does not belong
-// on the hero board.
+// on the hero board. A live clock still ticking toward its flag overrides it
+// (see clockStillRunning).
 export const LIVE_TV_FRESH_WINDOW_MS = 10 * 60 * 1000;
+
+// A live (non-correspondence) clock that is running and has not yet flagged
+// means the game ends on the board soon, by a move or by the flag, so it is
+// not dormant however long the mover has sat. Until 2026-10-03 the window
+// above alone decided: a 10+5 jungle game whose guest walked away left the
+// feed at last-move + 10:00, 8 s before the flag, the homepage board's load
+// of the finished record 404'd, and it hard-swapped to a 2-hour-old game.
+function clockStillRunning(clock: unknown, timeControl: unknown, now: number): boolean {
+  if ((timeControl as { daysPerMove?: number } | null)?.daysPerMove) return false;
+  const live = clock as {
+    activeColor?: string | null;
+    remainingMs?: Record<string, number>;
+    runningSince?: number | null;
+  } | null;
+  if (!live?.activeColor || typeof live.runningSince !== 'number') return false;
+  const remaining = live.remainingMs?.[live.activeColor];
+  return typeof remaining === 'number' && now - live.runningSince < remaining;
+}
 
 // A game earns the hero board only once BOTH sides have moved. The gate reads
 // the state's moveNumber, which every variant starts at 1 and advances after
@@ -264,7 +283,13 @@ function finishCandidate(args: {
   if (args.players.every((player) => player.isEngine)) return null;
   if (args.moveNumber < LIVE_TV_MIN_MOVE_NUMBER) return null;
   const lastActivityAt = latestEventAt(args.events);
-  if (lastActivityAt === null || args.now - lastActivityAt > LIVE_TV_FRESH_WINDOW_MS) return null;
+  if (lastActivityAt === null) return null;
+  if (
+    args.now - lastActivityAt > LIVE_TV_FRESH_WINDOW_MS &&
+    !clockStillRunning(args.clock, args.timeControl, args.now)
+  ) {
+    return null;
+  }
   return {
     channelId: args.channelId,
     clock: args.clock,
