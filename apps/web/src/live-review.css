@@ -249,8 +249,7 @@
   gap: 14px;
 }
 :is(.live-route--banqi, .live-route--jungle-flip) .live-review__cluster .hidden-pool--under-board {
-  /* Board discs at ~40% size: the tally reads as the board's own inventory. */
-  --capture-piece-size: clamp(26px, calc(var(--uni-board-width, 360px) * 0.05), 36px);
+  --capture-row-gap: 3px;
   box-sizing: border-box;
   width: var(--uni-board-width, 100%);
   max-width: 100%;
@@ -260,16 +259,79 @@
   border-top: 0;
   padding: 0 4px;
   /* Red and black side by side: one row of the board's width, not a column
-     that leaves the right half of the board's footprint empty. */
+     that leaves the right half of the board's footprint empty. Under a board
+     too narrow for two halves of 8 discs at 26px (229px each), the sides stack
+     and each gets the full width. */
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 229px), 1fr));
   column-gap: 24px;
+  row-gap: 8px;
+  /* Named: each row is a container too (its discs size off it), and an
+     unnamed query from a label or disc row would ask the row, not the pool. */
+  container: hidden-pool / inline-size;
 }
 :is(.live-route--banqi, .live-route--jungle-flip)
   .live-review__cluster
   .hidden-pool--under-board
   .hidden-pool__caption {
   grid-column: 1 / -1;
+}
+/* Each side is its label over its discs, so both halves start on the same
+   line whatever their counts. Inline, the side with more discs wrapped under
+   its label and the two labels sat at different heights (Brian, 2026-10-03). */
+:is(.live-route--banqi, .live-route--jungle-flip)
+  .live-review__cluster
+  .hidden-pool--under-board
+  .hidden-pool__row {
+  flex-direction: column;
+  align-items: flex-start;
+  align-content: flex-start;
+  gap: 4px;
+  /* The discs size off the side's own width (below), whichever layout the
+     grid picked. */
+  container-type: inline-size;
+}
+:is(.live-route--banqi, .live-route--jungle-flip)
+  .live-review__cluster
+  .hidden-pool--under-board
+  .hidden-pool__pieces {
+  /* A full side (8 discs, flip jungle's whole army, plus 7 gaps of 3px) fits
+     one line: a side that wrapped sat lower than the other. */
+  --capture-piece-size: clamp(18px, calc((100cqw - 21px) / 8), 36px);
+  flex: 0 0 auto;
+}
+/* Stacked (the grid's one-column case: two 229px halves and the gap need
+   482px), each side is one line again, its label in a fixed column so both
+   sides' discs start at the same x. */
+@container hidden-pool (width < 482px) {
+  :is(.live-route--banqi, .live-route--jungle-flip)
+    .live-review__cluster
+    .hidden-pool--under-board
+    .hidden-pool__row {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+  }
+  :is(.live-route--banqi, .live-route--jungle-flip)
+    .live-review__cluster
+    .hidden-pool--under-board
+    .hidden-pool__label {
+    flex: 0 0 3.2em;
+  }
+  :is(.live-route--banqi, .live-route--jungle-flip)
+    .live-review__cluster
+    .hidden-pool--under-board
+    .hidden-pool__pieces {
+    --capture-piece-size: clamp(18px, calc((100cqw - 21px - 3.2em - 6px) / 8), 36px);
+  }
+}
+/* The note's 100% basis is a line break in the inline row; in a column it
+   would be a height. */
+:is(.live-route--banqi, .live-route--jungle-flip)
+  .live-review__cluster
+  .hidden-pool--under-board
+  .hidden-pool__note {
+  flex-basis: auto;
 }
 
 @media (min-width: 1260px) {
