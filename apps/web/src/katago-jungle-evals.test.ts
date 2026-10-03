@@ -15,7 +15,7 @@ import {
   katagoScoreSeries,
   lineStart,
 } from './articles/content/katago-jungle.js';
-import { evalCompareChartSvg } from './articles/eval-compare-chart.js';
+import { evalCompareChartSvg, moveLabel } from './articles/eval-compare-chart.js';
 import {
   MARK_GLYPH,
   mistyExpected,
@@ -91,29 +91,58 @@ describe('katago-jungle lines', () => {
   });
 });
 
+/** The move a ply belongs to: red's ply 2m - 1 and black's ply 2m are move m. */
+const moveOf = (ply: number): number => Math.ceil(ply / 2);
+
 describe('katago-jungle charts', () => {
-  it('draw each game from the data: both settle plies, and one mark per marked move', () => {
-    for (const [game, a, b] of [
-      [67, 57, 72],
-      [94, 100, 104],
-    ] as const) {
+  it('number positions the way the study embeds do', () => {
+    expect([0, 1, 2, 57, 72, 100].map(moveLabel)).toEqual(['0', '1', '1…', '29', '36…', '50…']);
+  });
+
+  it('label settle points as moves on a move axis', () => {
+    const g = evaluatedGame(67);
+    const s = katagoScoreSeries(g);
+    const svg = evalCompareChartSvg({
+      id: 't67',
+      heading: 'h',
+      ariaLabel: 'a',
+      nameA: 'KataGo',
+      nameB: 'Misty',
+      a: s.kata,
+      b: s.misty,
+      threshold: { level: 0.8, settledA: s.settledKata, settledB: s.settledMisty },
+      marks: mistyMoveMarks(g).map((m) => ({ ply: m.ply + 1, glyph: MARK_GLYPH[m.mark] })),
+      xLabel: 'Move',
+      axis: 'move',
+    });
+    expect(svg).toContain('translate="no">29</text>');
+    expect(svg).toContain('translate="no">36…</text>');
+    expect(svg.match(/>\?\?</g)).toHaveLength(1);
+    // Ticks count moves, every 10, sitting on red's move.
+    expect(svg).toContain('translate="no">10</text>');
+    expect(svg).not.toContain('translate="no">5</text>');
+  });
+
+  it("pin each post chart's notes to the data: Misty's ?? move and where Misty sees it", () => {
+    const charts = katagoJungleArticle.sections
+      .flatMap((section) => section.blocks)
+      .filter((b): b is Extract<typeof b, { kind: 'raw-svg' }> => b?.kind === 'raw-svg');
+    for (const [index, game] of [67, 94].entries()) {
+      const block = charts[index]!.svg;
+      const svg = typeof block === 'function' ? block() : block;
       const g = evaluatedGame(game);
       const s = katagoScoreSeries(g);
-      const svg = evalCompareChartSvg({
-        id: `t${game}`,
-        heading: 'h',
-        ariaLabel: 'a',
-        nameA: 'KataGo',
-        nameB: 'Misty',
-        a: s.kata,
-        b: s.misty,
-        threshold: { level: 0.8, settledA: s.settledKata, settledB: s.settledMisty },
-        marks: mistyMoveMarks(g).map((m) => ({ ply: m.ply + 1, glyph: MARK_GLYPH[m.mark] })),
-        xLabel: 'Ply',
-      });
-      expect(svg).toContain(`translate="no">${a}</text>`);
-      expect(svg).toContain(`translate="no">${b}</text>`);
-      expect(svg.match(/>\?\?</g)).toHaveLength(1);
+      const blunder = mistyMoveMarks(g)[0]!.ply + 1;
+      expect(svg).toContain(`>Move ${moveOf(blunder)}: Misty plays `);
+      expect(svg).toContain(
+        `>KataGo jumps from ${pct(s.kata[blunder - 1]!)} to ${pct(s.kata[blunder]!)}<`,
+      );
+      expect(svg).toContain(`>Move ${moveOf(s.settledMisty!)}: Misty<`);
+      // No legend, no threshold lines: the lines carry their names.
+      expect(svg).toContain('>KataGo thinks<');
+      expect(svg).toContain('>Misty thinks<');
+      expect(svg).not.toContain('stroke-dasharray');
+      expect(svg.match(/<circle /g)).toHaveLength(2);
     }
   });
 });
@@ -136,8 +165,9 @@ describe('katago-jungle prose matches the data', () => {
     expect([s.settledKata, s.settledMisty, g.plies]).toEqual([57, 72, 90]);
     const text = prose();
     expect(text).toContain('from 61% to 92% while Misty still read +111');
-    expect(text).toContain('won a wolf on ply 21');
-    expect(text).toContain('Misty got there on ply 72, 15 plies later');
+    expect(text).toContain(`won a wolf on move ${moveOf(21)}`);
+    expect(text).toContain(`On move ${moveOf(57)} Misty moved its cornered tiger`);
+    expect(text).toContain(`Misty only saw it on move ${moveOf(72)}, seven moves later`);
     // KataGo's line for red from ply 56: lion b1-b2, red at 37% after it.
     const line = KATAGO_LINES.find((l) => l.game === 67 && l.ply === 56)!;
     expect(line.line[0]).toBe('b1b2');
@@ -176,10 +206,11 @@ describe('katago-jungle prose matches the data', () => {
     expect([s.settledKata, s.settledMisty, g.plies]).toEqual([100, 104, 117]);
     const text = prose();
     expect(text).toContain('crept from 50% to 63%');
-    expect(text).toContain('won a wolf on ply 38');
+    expect(text).toContain(`won a wolf on move ${moveOf(38)}`);
     expect(text).toContain('KataGo went from 63% to 98%');
-    expect(text).toContain('Misty read +80 and found the forced loss four plies later');
-    expect(text).toContain('15 and 4 plies before Misty');
+    expect(text).toContain(`On move ${moveOf(100)} Misty moved its cat`);
+    expect(text).toContain('Misty read +80 and found the forced loss two moves later');
+    expect(text).toContain('KataGo saw the win seven moves and two moves before Misty did');
     const line = KATAGO_LINES.find((l) => l.game === 94 && l.ply === 99)!;
     expect(line.line[0]).toBe('d6d7');
     expect(lineStart(94, 99).board.d6).toMatchObject({ role: 'elephant', color: 'black' });

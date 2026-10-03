@@ -10,7 +10,6 @@ import {
   type EvalsData,
   type EvaluatedGame,
   type KatagoLine,
-  MARK_GLYPH,
   mistyMoveMarks,
   seriesFor,
   settledPly,
@@ -97,9 +96,23 @@ export const KATAGO_STUDY = {
   chapters: { 67: '3ZKOQobN', 94: 'TAPsmuCM' },
 } as const;
 
-function gameChart(game: number, heading: string, ariaLabel: string): ArticleBlock {
+type ChartNote = { lines: readonly string[]; side: 'left' | 'right'; level: number };
+
+/**
+ * One game's chart, told in two notes: on KataGo's line where Misty's ?? move
+ * lands, and on Misty's line where Misty finally sees the loss (its settle
+ * point). The plies come from the data; the words and placement from the post.
+ */
+function gameChart(
+  game: number,
+  heading: string,
+  ariaLabel: string,
+  labelsAt: number,
+  notes: { blunder: ChartNote; sees: ChartNote },
+): ArticleBlock {
   const g = evaluatedGame(game);
   const s = katagoScoreSeries(g);
+  const blunder = mistyMoveMarks(g)[0]!.ply + 1;
   return {
     kind: 'raw-svg',
     className: 'article-figure-eval-compare',
@@ -113,9 +126,14 @@ function gameChart(game: number, heading: string, ariaLabel: string): ArticleBlo
       nameB: 'Misty',
       a: s.kata,
       b: s.misty,
-      threshold: { level: SETTLE_LEVEL, settledA: s.settledKata, settledB: s.settledMisty },
-      marks: mistyMoveMarks(g).map((m) => ({ ply: m.ply + 1, glyph: MARK_GLYPH[m.mark] })),
-      xLabel: 'Ply',
+      xLabel: 'Move',
+      axis: 'move',
+      yTicks: [0.5, 1],
+      lineLabels: { at: labelsAt, a: 'KataGo thinks', b: 'Misty thinks' },
+      callouts: [
+        { ply: blunder, on: 'a', ...notes.blunder },
+        { ply: s.settledMisty!, on: 'b', ...notes.sees },
+      ],
     }),
   };
 }
@@ -197,41 +215,59 @@ export const katagoJungleArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: "We scored every position of two of those wins again with both engines, at the match settings. Each chart shows both engines' estimate of KataGo's score, where a win is 100% and a draw 50%. KataGo's own number counts a draw as half a point; Misty's centipawns become a score through the curve our analysis board uses, 1 / (1 + e^(−0.00368 × cp)). The dashed line is 80%, each dotted line marks the ply from which that engine stayed above it to the end, and ?? marks the move KataGo calls the losing one. A ply is one side's move.",
+          text: "We scored every position of two of those wins again with both engines, at the match settings. Each chart shows one number, KataGo's chance of winning, judged twice: once by KataGo and once by Misty. Where the lines part, the engines disagree about who is winning. A draw counts as half a win, and Misty's centipawns become a chance through the curve our analysis board uses, 1 / (1 + e^(−0.00368 × cp)).",
         },
         { kind: 'sub-heading', text: 'Game 67: a wolf up, and lost' },
         {
           kind: 'paragraph',
-          text: "Misty, playing red, won a wolf on ply 21 and read itself ahead for most of the game, while KataGo's score stayed at 50% and then climbed.",
+          text: "Misty, playing red, won a wolf on move 11 and read itself ahead for most of the game, while KataGo's score stayed at 50% and then climbed.",
         },
         gameChart(
           67,
-          "Game 67: KataGo's score, as each engine saw it",
-          "Game 67, KataGo's expected score by ply as KataGo and Misty saw it. KataGo stays above 80% from ply 57, Misty from ply 72.",
+          "Game 67: KataGo's chances of winning",
+          "Game 67, KataGo's chances of winning as KataGo and Misty judged them. KataGo's jumps on move 29, when Misty plays tiger g8-g9; Misty's catches up on move 36.",
+          24,
+          {
+            blunder: {
+              side: 'left',
+              level: 0.93,
+              lines: ['Move 29: Misty plays tiger g8-g9', 'KataGo jumps from 61% to 92%'],
+            },
+            sees: { side: 'right', level: 0.42, lines: ['Move 36: Misty', 'finally sees it'] },
+          },
         ),
         gameEmbed(67, 57, "Jungle Chess, game 67: Misty's moves marked by KataGo"),
         {
           kind: 'paragraph',
-          text: "On ply 57 Misty moved its cornered tiger from g8 to g9, and KataGo's score for itself went from 61% to 92% while Misty still read +111. KataGo's line for red starts with lion b1-b2 and keeps red at 37%. KataGo stayed above 80% from that ply; Misty got there on ply 72, 15 plies later.",
+          text: "On move 29 Misty moved its cornered tiger from g8 to g9, and KataGo's score for itself went from 61% to 92% while Misty still read +111. KataGo's line for red starts with lion b1-b2 and keeps red at 37%. Misty only saw it on move 36, seven moves later.",
         },
         { kind: 'sub-heading', text: 'Game 94: the slow squeeze' },
         {
           kind: 'paragraph',
-          text: "Misty, playing black, won a wolf on ply 38 and read itself ahead for most of the next 60 plies, while KataGo's score crept from 50% to 63%.",
+          text: "Misty, playing black, won a wolf on move 19 and read itself ahead for most of the next 30 moves, while KataGo's score crept from 50% to 63%.",
         },
         gameChart(
           94,
-          "Game 94: KataGo's score, as each engine saw it",
-          "Game 94, KataGo's expected score by ply as KataGo and Misty saw it. KataGo stays above 80% from ply 100, Misty from ply 104.",
+          "Game 94: KataGo's chances of winning",
+          "Game 94, KataGo's chances of winning as KataGo and Misty judged them. KataGo's jumps on move 50, when Misty plays cat c8-c7; Misty's catches up on move 52.",
+          40,
+          {
+            blunder: {
+              side: 'left',
+              level: 0.93,
+              lines: ['Move 50: Misty plays cat c8-c7', 'KataGo jumps from 63% to 98%'],
+            },
+            sees: { side: 'left', level: 0.14, lines: ['Move 52: Misty', 'finally sees it'] },
+          },
         ),
         gameEmbed(94, 100, "Jungle Chess, game 94: Misty's moves marked by KataGo"),
         {
           kind: 'paragraph',
-          text: "On ply 100 Misty moved its cat from c8 to c7, and KataGo went from 63% to 98%. Misty read +80 and found the forced loss four plies later. KataGo's line for black, elephant d6-d7, keeps black at 38%.",
+          text: "On move 50 Misty moved its cat from c8 to c7, and KataGo went from 63% to 98%. Misty read +80 and found the forced loss two moves later. KataGo's line for black, elephant d6-d7, keeps black at 38%.",
         },
         {
           kind: 'paragraph',
-          text: 'In these two games, KataGo settled on the result 15 and 4 plies before Misty did.',
+          text: 'In these two games, KataGo saw the win seven moves and two moves before Misty did.',
         },
       ],
     },
