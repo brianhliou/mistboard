@@ -49,6 +49,7 @@ Conventions:
 ### Watching and review
 
 - The note box under a study board shows only on a move with a note, with no empty gap on the others ([95b57417](https://github.com/brianhliou/mistboard/commit/95b57417))
+- Finished Flip Jungle games on Current games show their final board, with unflipped pieces face-down ([dbb4ce56](https://github.com/brianhliou/mistboard/commit/dbb4ce56))
 - Current games is now a board wall: live and correspondence boards side by side, filters for variant and for people or bots, and the latest finished games below ([e3c8e84f](https://github.com/brianhliou/mistboard/commit/e3c8e84f))
 - Embedded games show the analysis marks, and the better move as an arrow on the position where it was missed; the review page draws the stored better move without your engine running ([e3c8e84f](https://github.com/brianhliou/mistboard/commit/e3c8e84f))
 - Crazyhouse Xiangqi games get computer analysis, and its bot games appear on Watch ([0bc99f1f](https://github.com/brianhliou/mistboard/commit/0bc99f1f))
