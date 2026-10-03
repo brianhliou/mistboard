@@ -2,15 +2,24 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   BANQI_SPEC_ID,
+  CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+  correspondenceTimeControl,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
+  DAY_MS,
+  GAME_SPECS,
   gameSpecForId,
+  isCorrespondenceRatedSpec,
   JIEQI_SPEC_ID,
+  XIANGQI_SPEC_ID,
 } from '@mistboard/game';
 import {
   bucketForGame,
+  CORRESPONDENCE_RATING_TIME_CLASS,
   DEFAULT_RATING_BUCKET,
   PUBLIC_RATING_TIME_CLASS,
+  PUBLIC_RATING_TIME_CLASSES,
+  parseRatingTimeClass,
   parseRatingVariant,
   type RatingVariant,
 } from './rating-buckets.js';
@@ -106,4 +115,50 @@ test('parseRatingVariant keeps legacy leaderboard API params stable', () => {
   assert.equal(parseRatingVariant('banqi'), 'banqi');
   assert.equal(parseRatingVariant('dark-xiangqi'), 'dark_xiangqi');
   assert.equal(parseRatingVariant('dark_xiangqi'), 'dark_xiangqi');
+});
+
+test('a rated correspondence game buckets into its variant pool under its OWN time class', () => {
+  for (const days of [1, 3, 7] as const) {
+    const tc = correspondenceTimeControl(days);
+    assert.deepEqual(
+      bucketForGame({ variant: XIANGQI_SPEC_ID, initialMs: tc.initialMs, incrementMs: 0 }),
+      { variant: gameSpecForId(XIANGQI_SPEC_ID).ratingPoolBase, timeClass: 'correspondence' },
+    );
+    assert.deepEqual(
+      bucketForGame({ variant: DARK_CHESS_SPEC_ID, initialMs: tc.initialMs, incrementMs: 0 }),
+      { variant: gameSpecForId(DARK_CHESS_SPEC_ID).ratingPoolBase, timeClass: 'correspondence' },
+    );
+  }
+  // Never a live class: the same variant at a live pace keeps its live bucket.
+  assert.equal(
+    bucketForGame({ variant: XIANGQI_SPEC_ID, initialMs: 180_000, incrementMs: 2_000 })?.timeClass,
+    'blitz',
+  );
+});
+
+test('correspondence buckets fail closed: dev paces, non-eligible specs, unknown variants', () => {
+  // A compressed dev allowance is not an official pace: no pool at all.
+  assert.equal(bucketForGame({ variant: XIANGQI_SPEC_ID, initialMs: 900, incrementMs: 0 }), null);
+  // Every spec at a correspondence pace buckets exactly when the shared predicate says so.
+  for (const spec of GAME_SPECS) {
+    const bucket = bucketForGame({ variant: spec.id, initialMs: 3 * DAY_MS, incrementMs: 0 });
+    assert.equal(bucket !== null, isCorrespondenceRatedSpec(spec.id), spec.id);
+    if (bucket) assert.equal(bucket.timeClass, CORRESPONDENCE_RATING_TIME_CLASS);
+  }
+  if (!CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(JIEQI_SPEC_ID)) {
+    assert.equal(
+      bucketForGame({ variant: JIEQI_SPEC_ID, initialMs: DAY_MS, incrementMs: 0 }),
+      null,
+    );
+  }
+  assert.equal(
+    bucketForGame({ variant: 'dark-mini-xiangqi', initialMs: DAY_MS, incrementMs: 0 }),
+    null,
+  );
+});
+
+test('the correspondence time class parses and is listed after the live paces', () => {
+  assert.equal(parseRatingTimeClass('correspondence'), 'correspondence');
+  assert.equal(parseRatingTimeClass('classical'), null);
+  assert.deepEqual(PUBLIC_RATING_TIME_CLASSES, ['bullet', 'blitz', 'rapid', 'correspondence']);
 });

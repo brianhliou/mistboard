@@ -119,6 +119,10 @@ export type TenantLiveState<C extends string, V> = {
   forfeitDeadline: number | null;
   // The lobby made this room (snapshot `lobbyMatch`, sent only when true).
   lobbyMatch: boolean;
+  // The room is rated (snapshot `rated`, a room fact every rated-capable tenant
+  // sends). Until 2026-10-02 nothing read it, so every tenant room's meta card said
+  // Casual, rated lobby games and rated correspondence alike.
+  rated: boolean;
 };
 
 // Everything a tenant's interaction/setup code needs from the core. Handed to
@@ -339,6 +343,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     abortDeadline: null,
     forfeitDeadline: null,
     lobbyMatch: false,
+    rated: false,
   };
 
   let socket: TenantSocketClient | null = null;
@@ -422,6 +427,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     playAgainRequestBody: () => config.playAgainRequestBody(state),
     rematchControls: config.chrome?.rematchControls ?? (() => null),
     lobbyMatch: () => state.lobbyMatch,
+    rated: () => state.rated,
     ...(config.chrome?.variantDetail ? { variantDetail: config.chrome.variantDetail } : {}),
   });
 
@@ -454,6 +460,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     // A room fact like the countdowns, so read here for every tenant. Sticky:
     // a room never stops being a lobby room.
     if (frame.lobbyMatch === true) state.lobbyMatch = true;
+    if (typeof frame.rated === 'boolean') state.rated = frame.rated;
     if (frame.events) state.events = frame.events;
     config.onFrame?.(frame);
   }
@@ -526,6 +533,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     state.forfeitDeadline = null;
     state.abortDeadline = null;
     state.lobbyMatch = false;
+    state.rated = false;
     lastCapturedView = null;
     lastCapturedKey = null;
     pendingLiveAnimation = null;

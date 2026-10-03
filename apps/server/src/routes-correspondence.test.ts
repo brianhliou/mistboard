@@ -354,3 +354,48 @@ test('the seek game seats exactly the colors it is handed (creator-chose-black c
     darkChessTenantRooms.clear();
   }
 });
+
+test('ratedSeekError: the one rated gate for correspondence create and accept', async () => {
+  const { ratedSeekError } = await import('./routes/correspondence-seeks.js');
+  const threeDays = correspondenceTimeControl(3);
+  assert.equal(ratedSeekError('xiangqi', threeDays, true), null);
+  assert.equal(ratedSeekError('dark-chess', threeDays, true), null);
+  // The server-wide rated switch, as the live lobby.
+  assert.equal(ratedSeekError('xiangqi', threeDays, false), 'rated_disabled');
+  // Not correspondence-rated (casual-only or not eligible): refused, never downgraded.
+  assert.equal(ratedSeekError('mahjong', threeDays, true), 'rated_unsupported_spec');
+  assert.equal(ratedSeekError('nope', threeDays, true), 'rated_unsupported_spec');
+  // A compressed dev allowance has no pool, so it cannot be called rated.
+  const devPace: RoomTimeControl = { initialMs: 900, incrementMs: 0, daysPerMove: 900 / DAY_MS };
+  assert.equal(ratedSeekError('xiangqi', devPace, true), 'rated_unsupported_time_control');
+});
+
+test('a rated seek accept creates a rated room that stays rated through hydration', async () => {
+  const created = await createDarkChessCorrespondenceGameForSeek({
+    timeControl: correspondenceTimeControl(3),
+    first: { userId: 'creator-r' },
+    second: { userId: 'accepter-r' },
+    rated: true,
+  });
+  assert.ok(created.ok);
+  assert.equal(created.room.rated, true);
+  const room = darkChessTenantRooms.get(created.room.id);
+  assert.ok(room);
+  try {
+    assert.equal(room.rated, true);
+    // Durable: the flag rides the room-created event, so a server restart keeps it.
+    const hydrated = createTenantRuntimeRoomFromEvents(darkChessTenant, room.events);
+    assert.ok(hydrated.ok);
+    assert.equal(hydrated.room.rated, true);
+    // And the casual default is unchanged.
+    const casual = await createDarkChessCorrespondenceGameForSeek({
+      timeControl: correspondenceTimeControl(3),
+      first: { userId: 'creator-c' },
+      second: { userId: 'accepter-c' },
+    });
+    assert.ok(casual.ok);
+    assert.equal(casual.room.rated, false);
+  } finally {
+    darkChessTenantRooms.clear();
+  }
+});

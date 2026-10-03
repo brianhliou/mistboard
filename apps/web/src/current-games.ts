@@ -834,7 +834,9 @@ function renderMeta(root: HTMLElement, game: CurrentGame): void {
   const parts: string[] = [];
   if (game.timeClass === 'correspondence') {
     const days = game.timeControl?.daysPerMove ?? 0;
-    parts.push(days === 1 ? t('games.oneDayPerMove') : t('games.daysPerMove', { count: days }));
+    const cadence = days === 1 ? t('games.oneDayPerMove') : t('games.daysPerMove', { count: days });
+    // Marked exactly like a live game since correspondence can be rated (2026-10-02).
+    parts.push(cadence, game.rated ? t('games.rated') : t('games.casual'));
   } else {
     const label = game.timeControl ? timeControlLabelForGame(asFeaturedGame(game)) : null;
     parts.push(

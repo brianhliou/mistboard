@@ -193,9 +193,10 @@ export const CHESS_SPEC_ID = 'chess' satisfies GameSpecId;
 // (CORRESPONDENCE_ELIGIBLE_SPECS builds its Set from this) and the web variant pickers, so
 // the two can never drift. This is a product decision, not a capability: the list was
 // hidden-info-only under fork-6, then opened to perfect-info xiangqi on 2026-07-04 (casual
-// -only) — see the comment on CORRESPONDENCE_ELIGIBLE_SPECS. A new member also needs a
-// tenant that supplies both a seek factory and a deadline sweeper
-// (correspondence-eligibility.test.ts).
+// -only at the time) — see the comment on CORRESPONDENCE_ELIGIBLE_SPECS. A new member also
+// needs a tenant that supplies both a seek factory and a deadline sweeper
+// (correspondence-eligibility.test.ts). Whether a member may also be RATED by
+// correspondence is isCorrespondenceRatedSpec below.
 export const CORRESPONDENCE_ELIGIBLE_SPEC_IDS: readonly GameSpecId[] = [
   XIANGQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
@@ -680,4 +681,19 @@ export function isRatedPoolBase(value: string | null | undefined): value is Rati
 export function ratingPoolForSpec(id: GameSpecId): RatingVariant | null {
   const pool = gameSpecForId(id).ratingPoolBase;
   return isRatedPoolBase(pool) ? pool : null;
+}
+
+// Rated correspondence (Brian, 2026-10-02): a correspondence seek or challenge may be
+// casual or rated, and a rated one writes the variant's pool under its OWN
+// 'correspondence' time class, never a live one. THE single predicate every surface
+// asks (seek create, accept, the rating bucket, the web Rated toggle): a spec qualifies
+// exactly when it is correspondence-eligible AND has an active rating pool. Nothing
+// variant-specific beyond that: the rating write is generic over pools and seat colors,
+// and the tenant seek factory carries `rated` into the room (createTenantCorrespondence
+// GameForSeek), which correspondence-eligibility.test.ts proves for every spec this
+// returns true for. A casual-only spec (no pool) is cleanly excluded.
+export function isCorrespondenceRatedSpec(id: string | null | undefined): boolean {
+  if (!id || !CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(id as GameSpecId)) return false;
+  const spec = maybeGameSpecForId(id);
+  return spec !== null && ratingPoolForSpec(spec.id) !== null;
 }

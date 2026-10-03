@@ -1,12 +1,19 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { DARK_CHESS_SPEC_ID, DAY_MS } from '@mistboard/game';
+import {
+  DARK_CHESS_SPEC_ID,
+  DAY_MS,
+  isCorrespondenceRatedSpec,
+  isOfficialCorrespondenceTimeControl,
+  type RoomTimeControl,
+} from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
 import {
   type CorrespondenceStartNotice,
   notifyCorrespondenceStart,
 } from './../correspondence-start-email.js';
-import { correspondenceEnabled } from './../feature-flags.js';
+import { correspondenceEnabled, ratedEnabled } from './../feature-flags.js';
+import { logger } from './../obs.js';
 import type { SeekColorPreference, SeekVisibility, UserAccount } from './../persistence.js';
 import * as persistence from './../persistence.js';
 import { correspondenceTenantForSpecId } from './../variant-tenant/registry.js';
@@ -51,6 +58,33 @@ const CHALLENGE_TTL_MS = 7 * DAY_MS;
 export function parseSeekVisibility(value: unknown): SeekVisibility | undefined {
   if (value === undefined || value === null) return undefined;
   return value === 'public' || value === 'private' ? value : undefined;
+}
+
+/**
+ * Rated correspondence (2026-10-02): why a rated seek on these terms is refused, or null
+ * when it may be rated. One gate for both create and accept, so a seek that was legal
+ * when posted but whose terms stopped qualifying (the flag turned off, the spec left the
+ * rated set) is refused at accept rather than silently seated casual.
+ *   - the server-wide rated switch (MISTBOARD_RATED_ENABLED), as the live lobby;
+ *   - isCorrespondenceRatedSpec: correspondence-eligible AND an active rating pool;
+ *   - an official days-per-move allowance: a compressed dev allowance has no pool
+ *     (bucketForGame would never rate it), so calling it rated would be a lie.
+ */
+export function ratedSeekError(
+  gameSpecId: string,
+  timeControl: RoomTimeControl,
+  enabled: boolean = ratedEnabled(),
+): 'rated_disabled' | 'rated_unsupported_spec' | 'rated_unsupported_time_control' | null {
+  if (!enabled) return 'rated_disabled';
+  if (!isCorrespondenceRatedSpec(gameSpecId)) return 'rated_unsupported_spec';
+  if (!isOfficialCorrespondenceTimeControl(timeControl)) return 'rated_unsupported_time_control';
+  return null;
+}
+
+function ratedSeekErrorStatus(error: NonNullable<ReturnType<typeof ratedSeekError>>): number {
+  if (error === 'rated_disabled') return 403;
+  if (error === 'rated_unsupported_spec') return 501;
+  return 400;
 }
 
 // Pure accept gate, shared by the accept route and its tests. Returns the error
@@ -210,6 +244,7 @@ export function openSeekPayload(
     creatorName: string | null;
     createdAt: Date;
     creatorUserId: string;
+    rated?: boolean;
   },
   viewerUserId: string | null,
 ): Record<string, unknown> {
@@ -218,6 +253,7 @@ export function openSeekPayload(
     gameSpecId: seek.gameSpecId,
     daysPerMove: seek.daysPerMove,
     preferredColor: seek.preferredColor,
+    rated: seek.rated === true,
     creatorName: seek.creatorName,
     createdAt: seek.createdAt.toISOString(),
     isMine: viewerUserId !== null && seek.creatorUserId === viewerUserId,
@@ -243,6 +279,7 @@ async function listIncomingChallenges(
       gameSpecId: seek.gameSpecId,
       daysPerMove: seek.daysPerMove,
       preferredColor: seek.preferredColor,
+      rated: seek.rated === true,
       challengerName: seek.creatorName,
       createdAt: seek.createdAt.toISOString(),
     })),
@@ -265,6 +302,7 @@ async function listOutgoingChallenges(
       gameSpecId: seek.gameSpecId,
       daysPerMove: seek.daysPerMove,
       preferredColor: seek.preferredColor,
+      rated: seek.rated === true,
       visibility: seek.visibility,
       // Present only for a directed challenge; a link challenge has no target.
       targetName: seek.targetName,
@@ -307,6 +345,16 @@ async function createSeek(
     return true;
   }
   const preferredColor = parseSeekColorPreference(body.preferredColor) ?? 'random';
+  // Casual unless the body says exactly `rated: true`; a rated request that cannot be
+  // honoured is refused, never quietly downgraded to casual.
+  const rated = body.rated === true;
+  if (rated) {
+    const ratedError = ratedSeekError(gameSpecId, timeControl);
+    if (ratedError) {
+      writeJson(response, ratedSeekErrorStatus(ratedError), { error: ratedError });
+      return true;
+    }
+  }
 
   // Challenge dimensions. A target forces a private, directed seek; otherwise
   // visibility defaults to the public board.
@@ -358,6 +406,7 @@ async function createSeek(
       gameSpecId,
       daysPerMove,
       preferredColor,
+      rated,
     });
     if (existing) {
       writeJson(response, 200, {
@@ -366,6 +415,7 @@ async function createSeek(
           gameSpecId: existing.gameSpecId,
           daysPerMove: existing.daysPerMove,
           preferredColor: existing.preferredColor,
+          rated: existing.rated === true,
           targetUserId: null,
           visibility: existing.visibility,
           expiresAt: existing.expiresAt ? existing.expiresAt.toISOString() : null,
@@ -398,6 +448,7 @@ async function createSeek(
     targetUserId,
     visibility,
     expiresAt,
+    rated,
   });
   writeJson(response, 201, {
     seek: {
@@ -405,6 +456,7 @@ async function createSeek(
       gameSpecId,
       daysPerMove,
       preferredColor,
+      rated,
       targetUserId,
       visibility,
       expiresAt: effectiveExpiresAt.toISOString(),
@@ -482,6 +534,20 @@ async function acceptSeek(
     writeJson(response, 500, { error: 'invalid_seek' });
     return true;
   }
+  // A rated seek re-passes the rated gate at accept (the terms may have stopped
+  // qualifying since it was posted), and both players must be free to play: the
+  // accepter's lock is checked above, the creator's here, because accepting seats them.
+  if (seek.rated) {
+    const ratedError = ratedSeekError(seek.gameSpecId, timeControl);
+    if (ratedError) {
+      writeJson(response, ratedSeekErrorStatus(ratedError), { error: ratedError });
+      return true;
+    }
+    if (await persistence.isUserIdPlayDisabled(seek.creatorUserId)) {
+      writeJson(response, 409, { error: 'opponent_play_disabled' });
+      return true;
+    }
+  }
   // The DB decides the race: deleteCorrespondenceSeek removes the row once, so
   // exactly one of two simultaneous accepters proceeds to create the game; the
   // loser gets 409 and the row is already gone.
@@ -513,6 +579,7 @@ async function acceptSeek(
     timeControl,
     first: { userId: creatorSide === 'first' ? seek.creatorUserId : user.id },
     second: { userId: creatorSide === 'second' ? seek.creatorUserId : user.id },
+    rated: seek.rated === true,
   });
   if (!created.ok) {
     // The seek row is already deleted, so a failure here is a rare persistence
@@ -526,12 +593,22 @@ async function acceptSeek(
   // so a mail provider outage must never turn a successful accept into an error
   // for the accepter, who is right here watching this response.
   notifyCorrespondenceStart(correspondenceStartNoticeFor(created.room.id, seek, user, creatorSide));
+  const roomRated = created.room.rated === true;
+  if ((seek.rated === true) !== roomRated) {
+    // Unreachable while the conformance test holds (every isCorrespondenceRatedSpec
+    // factory honours `rated`); logged loudly because the game already exists.
+    logger.error(
+      { roomId: created.room.id, gameSpecId: seek.gameSpecId, seekRated: seek.rated, roomRated },
+      'correspondence accept: room rated flag does not match the seek',
+    );
+  }
   writeJson(response, 201, {
     roomId: created.room.id,
     url: `/room/${encodeURIComponent(created.room.id)}`,
     // The tenant's own color for the side the accepter took (white/black, red/black, ...).
     seat: created.seats[accepterSide],
     gameSpecId: created.room.gameSpecId,
+    rated: roomRated,
   });
   return true;
 }
@@ -559,6 +636,7 @@ async function viewSeek(
     gameSpecId: seek.gameSpecId,
     daysPerMove: seek.daysPerMove,
     preferredColor: seek.preferredColor,
+    rated: seek.rated === true,
     visibility: seek.visibility,
     challengerName: seek.creatorName,
     isMine: view.isMine,

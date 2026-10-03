@@ -86,10 +86,11 @@ export async function createXiangqiCorrespondenceGameForSeek(args: {
   timeControl: RoomTimeControl;
   first: { userId: string };
   second: { userId: string };
+  rated?: boolean;
 }): Promise<
   | {
       ok: true;
-      room: { id: string; gameSpecId: string };
+      room: { id: string; gameSpecId: string; rated: boolean };
       seats: { first: string; second: string };
     }
   | { ok: false; error: 'disabled' | 'persistence_failure' | 'room_id_collision' }
@@ -109,7 +110,7 @@ export async function createXiangqiCorrespondenceGameForSeek(args: {
   if (!created.ok) return created;
   return {
     ok: true,
-    room: { id: created.room.id, gameSpecId: created.room.gameSpecId },
+    room: { id: created.room.id, gameSpecId: created.room.gameSpecId, rated: created.room.rated },
     seats: { first: xiangqiTenant.colors[0], second: xiangqiTenant.colors[1] },
   };
 }

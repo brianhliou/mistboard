@@ -39,6 +39,7 @@ import {
   type CorrespondenceGame,
   type CorrespondenceGamesResponse,
   correspondenceInProgress,
+  correspondenceRatedAvailable,
   deadlineFraction,
   deadlineRemainingMs,
   deadlineUrgency,
@@ -67,6 +68,7 @@ import {
 } from './game-display.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, localizedHref } from './i18n/locale.js';
+import { isRatedModeEnabled, onRatedModeChange } from './rated-flag.js';
 import { timeAgo } from './relative-time.js';
 import type { ReplayHandle } from './replay.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
@@ -503,6 +505,7 @@ function buildMetaLine(game: CorrespondenceGame, current: CurrentGame | undefine
   const parts: string[] = [];
   const days = current?.timeControl?.daysPerMove;
   if (days) parts.push(cadenceLabel(days));
+  if (game.rated === true) parts.push(t('play.rated'));
   if (current && current.ply > 0) parts.push(t('games.moveCount', { count: current.ply }));
   if (parts.length > 0) {
     const text = document.createElement('span');
@@ -510,6 +513,12 @@ function buildMetaLine(game: CorrespondenceGame, current: CurrentGame | undefine
     meta.append(text);
   }
   return meta;
+}
+
+// A rated seek or challenge says so on its row, the way a live rated game does; a
+// casual one stays as it always read.
+function withRatedMark(text: string, rated: boolean | undefined): string {
+  return rated === true ? `${text} · ${t('play.rated')}` : text;
 }
 
 function vsLabel(game: CorrespondenceGame): string {
@@ -560,6 +569,9 @@ type Segmented<T extends string> = {
   root: HTMLElement;
   value: () => T;
   relabel: (labels: Partial<Record<T, string>>) => void;
+  // Select a value programmatically (no onChange), and disable one option.
+  select: (value: T) => void;
+  setDisabled: (value: T, disabled: boolean) => void;
 };
 
 function buildSegmented<T extends string>(
@@ -612,6 +624,15 @@ function buildSegmented<T extends string>(
         if (button) button.textContent = text;
       }
     },
+    select: (value) => {
+      if (!buttons.has(value)) return;
+      current = value;
+      paint();
+    },
+    setDisabled: (value, disabled) => {
+      const button = buttons.get(value);
+      if (button) button.disabled = disabled;
+    },
   };
 }
 
@@ -632,7 +653,10 @@ function buildStartForm(onChanged: () => void): HTMLElement {
       label: variantDisplayLabel(specId),
     })),
     defaultVariant,
-    () => relabelSides(),
+    () => {
+      relabelSides();
+      syncRated();
+    },
   );
   variant.root.hidden = CORRESPONDENCE_ELIGIBLE_SPEC_IDS.length < 2;
 
@@ -641,6 +665,25 @@ function buildStartForm(onChanged: () => void): HTMLElement {
     DAYS_PER_MOVE_OPTIONS.map((option) => ({ value: String(option), label: String(option) })),
     String(DAYS_PER_MOVE_OPTIONS[1] ?? DAYS_PER_MOVE_OPTIONS[0]),
   );
+
+  // Casual or Rated (2026-10-02). Rated writes the variant's own correspondence rating,
+  // never a live one. Offered only where correspondenceRatedAvailable says so; anywhere
+  // else Rated is shown disabled and the seek posts casual.
+  const rated = buildSegmented<'casual' | 'rated'>(
+    t('setup.gameType'),
+    [
+      { value: 'casual', label: t('play.casual') },
+      { value: 'rated', label: t('play.rated') },
+    ],
+    'casual',
+  );
+  const syncRated = (): void => {
+    const available = correspondenceRatedAvailable(variant.value(), isRatedModeEnabled());
+    rated.setDisabled('rated', !available);
+    if (!available) rated.select('casual');
+  };
+  syncRated();
+  onRatedModeChange(syncRated);
 
   const kindLabels: Record<SeekKind, I18nKey> = {
     direct: 'correspondence.opponentPlayer',
@@ -728,6 +771,9 @@ function buildStartForm(onChanged: () => void): HTMLElement {
       handle: handle.value,
       kind: seekKind,
       preferredColor: side.value(),
+      rated:
+        rated.value() === 'rated' &&
+        correspondenceRatedAvailable(variant.value(), isRatedModeEnabled()),
     });
     if (!request.ok) {
       showStatus(t('correspondence.handleRequired'), true);
@@ -783,7 +829,17 @@ function buildStartForm(onChanged: () => void): HTMLElement {
       });
   });
 
-  form.append(variant.root, days.root, kind.root, handleField, side.root, hint, submit, status);
+  form.append(
+    variant.root,
+    days.root,
+    rated.root,
+    kind.root,
+    handleField,
+    side.root,
+    hint,
+    submit,
+    status,
+  );
   panel.append(heading, form);
   return panel;
 }
@@ -873,11 +929,14 @@ function buildOpenSeekRow(ctx: PageContext, host: HTMLElement, seek: OpenSeek): 
   name.textContent = seek.creatorName ?? t('lobby.anonymous');
   const detail = document.createElement('span');
   detail.className = 'correspondence-row-detail';
-  detail.textContent = t('correspondence.seekRowDetail', {
-    ago: timeAgo(seek.createdAt, 'narrow'),
-    cadence: cadenceLabel(seek.daysPerMove),
-    variant: variantDisplayLabel(seek.gameSpecId),
-  });
+  detail.textContent = withRatedMark(
+    t('correspondence.seekRowDetail', {
+      ago: timeAgo(seek.createdAt, 'narrow'),
+      cadence: cadenceLabel(seek.daysPerMove),
+      variant: variantDisplayLabel(seek.gameSpecId),
+    }),
+    seek.rated,
+  );
   const error = document.createElement('span');
   error.className = 'correspondence-row-error';
   error.hidden = true;
@@ -1011,6 +1070,7 @@ function buildChallengeRow(seek: OutgoingSeek, onChange: () => void): HTMLElemen
       variant: variantDisplayLabel(seek.gameSpecId),
     }),
   ];
+  if (seek.rated === true) parts.push(t('play.rated'));
   const remaining = seek.expiresAt ? deadlineRemainingMs(seek.expiresAt, Date.now()) : null;
   if (remaining !== null && remaining > 0) {
     parts.push(t('correspondence.expiresIn', { time: formatDayClock(remaining) }));

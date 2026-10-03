@@ -5,9 +5,19 @@
 // server confirms rated is live.
 
 let ratedModeEnabled = false;
+const listeners = new Set<() => void>();
 
 export function setRatedModeEnabled(value: boolean): void {
+  const changed = value !== ratedModeEnabled;
   ratedModeEnabled = value;
+  if (changed) for (const listener of listeners) listener();
+}
+
+// For a control rendered before /api/server-status answers (the correspondence
+// Start a game form): re-sync when the switch lands. Returns an unsubscribe.
+export function onRatedModeChange(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
 }
 
 export function isRatedModeEnabled(): boolean {

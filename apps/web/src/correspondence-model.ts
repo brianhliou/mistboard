@@ -4,7 +4,7 @@
 // seeks, and the Start a game request body. DOM-free so it is unit-tested
 // directly (correspondence-model.test.ts).
 
-import { maybeGameSpecForId } from '@mistboard/game';
+import { isCorrespondenceRatedSpec, maybeGameSpecForId } from '@mistboard/game';
 import type { CurrentGame } from './current-games-model.js';
 
 // One in-flight correspondence game, as served by GET /api/correspondence/games.
@@ -16,6 +16,8 @@ export type CorrespondenceGame = {
   isYourMove: boolean;
   opponentName: string | null;
   dueAt: string;
+  // Rated correspondence (2026-10-02); absent from an older server reads as casual.
+  rated?: boolean;
   // The board THIS player's seat sees, exactly the state of that seat's own
   // room snapshot (server: correspondenceSeatBoard). Present only for tenants
   // that opt in (Fog Chess today); read through seatBoardView, never trusted.
@@ -40,6 +42,7 @@ export type OpenSeek = {
   creatorName: string | null;
   createdAt: string;
   isMine: boolean;
+  rated?: boolean;
 };
 
 // One invitation THIS player sent, as served by GET /api/correspondence/seeks/mine.
@@ -56,6 +59,7 @@ export type OutgoingSeek = {
   challengeUrl: string | null;
   expiresAt: string | null;
   createdAt: string;
+  rated?: boolean;
 };
 
 // ---- Your move / Waiting ------------------------------------------------------
@@ -188,7 +192,21 @@ export type StartGameInput = {
   preferredColor: SeekPreferredColor;
   kind: SeekKind;
   handle?: string;
+  rated?: boolean;
 };
+
+/**
+ * Whether the Start a game form may offer Rated for this variant: the server's rated
+ * switch is on AND the spec is correspondence-rated (eligible with a rating pool,
+ * isCorrespondenceRatedSpec, the same predicate the server gates on). Anything else
+ * shows Rated disabled and posts casual.
+ */
+export function correspondenceRatedAvailable(
+  gameSpecId: string,
+  ratedModeEnabled: boolean,
+): boolean {
+  return ratedModeEnabled && isCorrespondenceRatedSpec(gameSpecId);
+}
 
 // The POST /api/correspondence/seeks body for the Start a game form, or an error
 // the form shows before sending. A handle may be typed with its leading @.
@@ -199,6 +217,8 @@ export function seekRequestBody(
     gameSpecId: input.gameSpecId,
     daysPerMove: input.daysPerMove,
     preferredColor: input.preferredColor,
+    // Sent only when rated: a casual body stays exactly what it was.
+    ...(input.rated === true ? { rated: true } : {}),
   };
   if (input.kind === 'link') return { ok: true, body: { ...base, visibility: 'private' } };
   if (input.kind === 'direct') {

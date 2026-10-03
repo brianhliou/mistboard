@@ -58,6 +58,10 @@ export type CorrespondenceSeekRecord = {
   // after created_at; a timestamp → a challenge's own expiry. On read: always the
   // effective expiry (seekExpirySql), refused and swept once past.
   expiresAt: Date | null;
+  // Casual (false/absent) or rated (migration 160). Carried into the room the
+  // accept creates; the route admits true only for isCorrespondenceRatedSpec.
+  // Always set on read.
+  rated?: boolean;
 };
 
 export type CorrespondenceSeekListing = CorrespondenceSeekRecord & {
@@ -68,8 +72,8 @@ export type CorrespondenceSeekListing = CorrespondenceSeekRecord & {
 export async function createCorrespondenceSeek(seek: CorrespondenceSeekRecord): Promise<void> {
   await getPool().query(
     `INSERT INTO correspondence_seeks
-       (id, creator_user_id, game_spec_id, days_per_move, preferred_color, target_user_id, visibility, expires_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+       (id, creator_user_id, game_spec_id, days_per_move, preferred_color, target_user_id, visibility, expires_at, rated)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
     [
       seek.id,
       seek.creatorUserId,
@@ -79,6 +83,7 @@ export async function createCorrespondenceSeek(seek: CorrespondenceSeekRecord): 
       seek.targetUserId,
       seek.visibility,
       seek.expiresAt,
+      seek.rated === true,
     ],
   );
 }
@@ -101,7 +106,7 @@ export async function countOpenSeeksForUser(userId: string): Promise<number> {
 }
 
 const SEEK_COLUMNS = `s.id, s.creator_user_id, s.game_spec_id, s.days_per_move, s.preferred_color,
-            s.target_user_id, s.visibility, ${seekExpirySql('s.')} AS expires_at,
+            s.target_user_id, s.visibility, ${seekExpirySql('s.')} AS expires_at, s.rated,
             COALESCE(u.display_name, u.handle) AS creator_name, s.created_at`;
 
 type SeekListingRow = {
@@ -113,6 +118,7 @@ type SeekListingRow = {
   target_user_id: string | null;
   visibility: SeekVisibility;
   expires_at: Date | null;
+  rated: boolean;
   creator_name: string | null;
   created_at: Date;
 };
@@ -132,6 +138,7 @@ function toListing(row: SeekListingRow): CorrespondenceSeekListing {
     targetUserId: row.target_user_id,
     visibility: row.visibility,
     expiresAt: row.expires_at,
+    rated: row.rated,
     creatorName: row.creator_name,
     createdAt: row.created_at,
   };
@@ -163,6 +170,7 @@ export async function findOpenDuplicatePublicSeek(seek: {
   gameSpecId: string;
   daysPerMove: number;
   preferredColor: SeekColorPreference;
+  rated?: boolean;
 }): Promise<CorrespondenceSeekListing | null> {
   const { rows } = await getPool().query<SeekListingRow>(
     `SELECT ${SEEK_COLUMNS}
@@ -172,11 +180,18 @@ export async function findOpenDuplicatePublicSeek(seek: {
        AND s.game_spec_id = $2
        AND s.days_per_move = $3
        AND s.preferred_color = $4
+       AND s.rated = $5
        AND s.visibility = 'public' AND s.target_user_id IS NULL
        AND ${seekExpirySql('s.')} > now()
      ORDER BY s.created_at DESC
      LIMIT 1`,
-    [seek.creatorUserId, seek.gameSpecId, seek.daysPerMove, seek.preferredColor],
+    [
+      seek.creatorUserId,
+      seek.gameSpecId,
+      seek.daysPerMove,
+      seek.preferredColor,
+      seek.rated === true,
+    ],
   );
   const row = rows[0];
   return row ? toListing(row) : null;
@@ -266,9 +281,10 @@ export async function getCorrespondenceSeek(id: string): Promise<CorrespondenceS
     target_user_id: string | null;
     visibility: SeekVisibility;
     expires_at: Date | null;
+    rated: boolean;
   }>(
     `SELECT id, creator_user_id, game_spec_id, days_per_move, preferred_color,
-            target_user_id, visibility, ${seekExpirySql()} AS expires_at
+            target_user_id, visibility, ${seekExpirySql()} AS expires_at, rated
      FROM correspondence_seeks WHERE id = $1`,
     [id],
   );
@@ -283,6 +299,7 @@ export async function getCorrespondenceSeek(id: string): Promise<CorrespondenceS
     targetUserId: row.target_user_id,
     visibility: row.visibility,
     expiresAt: row.expires_at,
+    rated: row.rated,
   };
 }
 

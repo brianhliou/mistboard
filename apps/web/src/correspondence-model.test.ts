@@ -4,6 +4,7 @@ import { liveObservePolicy } from '../../server/src/server-policy.js';
 import {
   type CorrespondenceGame,
   correspondenceInProgress,
+  correspondenceRatedAvailable,
   deadlineFraction,
   deadlineRemainingMs,
   deadlineUrgency,
@@ -155,6 +156,35 @@ describe('seekRequestBody', () => {
       ok: false,
       error: 'handle_required',
     });
+  });
+
+  it('carries rated only when rated, on every kind', () => {
+    expect(seekRequestBody({ ...base, kind: 'public', rated: true })).toEqual({
+      ok: true,
+      body: { ...base, rated: true },
+    });
+    expect(seekRequestBody({ ...base, kind: 'direct', handle: 'kim', rated: true })).toEqual({
+      ok: true,
+      body: { ...base, rated: true, targetHandle: 'kim' },
+    });
+    // A casual body is byte-for-byte what it was before rated existed.
+    expect(seekRequestBody({ ...base, kind: 'link', rated: false })).toEqual({
+      ok: true,
+      body: { ...base, visibility: 'private' },
+    });
+  });
+});
+
+describe('correspondenceRatedAvailable', () => {
+  it('offers Rated only for a correspondence-rated variant while the rated switch is on', () => {
+    for (const specId of CORRESPONDENCE_ELIGIBLE_SPEC_IDS) {
+      expect(correspondenceRatedAvailable(specId, false)).toBe(false);
+    }
+    expect(correspondenceRatedAvailable('xiangqi', true)).toBe(true);
+    expect(correspondenceRatedAvailable('dark-chess', true)).toBe(true);
+    // Not correspondence-eligible, or no rating pool: never offered.
+    expect(correspondenceRatedAvailable('mahjong', true)).toBe(false);
+    expect(correspondenceRatedAvailable('not-a-spec', true)).toBe(false);
   });
 });
 

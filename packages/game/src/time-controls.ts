@@ -299,8 +299,10 @@ export function isOfficialTimeControl(tc: RoomTimeControl): boolean {
 }
 
 // Correspondence (days-per-move) time controls. Kept apart from
-// TIME_CONTROLS: live specs feed rating buckets and the PvE allowlist, and
-// correspondence is casual-only with no live-engine surface.
+// TIME_CONTROLS: live specs feed the LIVE rating buckets and the PvE allowlist.
+// Correspondence has no live-engine surface; a rated correspondence game rates
+// in its own 'correspondence' pool (officialCorrespondenceDays below), never a
+// live one.
 export const DAY_MS = 24 * 60 * 60 * 1000;
 export const DAYS_PER_MOVE_OPTIONS = [1, 3, 7] as const;
 export type DaysPerMove = (typeof DAYS_PER_MOVE_OPTIONS)[number];
@@ -316,4 +318,20 @@ export function isOfficialCorrespondenceTimeControl(tc: RoomTimeControl): boolea
     tc.initialMs === tc.daysPerMove * DAY_MS &&
     tc.incrementMs === 0
   );
+}
+
+/**
+ * The official days-per-move allowance a stored (initialMs, incrementMs) pair
+ * encodes, or null. A games row keeps only the two ms values, and a
+ * correspondence game stores daysPerMove * DAY_MS with no increment, which no
+ * live preset can equal; this is how the rating bucket recognises a
+ * correspondence game from the row alone. Fail closed: a compressed dev
+ * allowance (MISTBOARD_DEV_CORRESPONDENCE_TC) matches no option and returns null.
+ */
+export function officialCorrespondenceDays(
+  initialMs: number | null | undefined,
+  incrementMs: number | null | undefined,
+): DaysPerMove | null {
+  if (initialMs == null || incrementMs !== 0) return null;
+  return DAYS_PER_MOVE_OPTIONS.find((days) => days * DAY_MS === initialMs) ?? null;
 }

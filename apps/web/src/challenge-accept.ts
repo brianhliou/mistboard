@@ -21,6 +21,8 @@ type ChallengeView = {
   canAccept: boolean;
   canDecline: boolean;
   expired: boolean;
+  // Rated correspondence (2026-10-02); absent reads as casual.
+  rated?: boolean;
 };
 
 function specLabel(gameSpecId: string): string {
@@ -91,7 +93,7 @@ function buildChallengeCard(view: ChallengeView): HTMLElement {
 
   const detail = document.createElement('p');
   detail.className = 'challenge-subhead';
-  detail.textContent = t('challenge.detail', {
+  const terms = t('challenge.detail', {
     variant: specLabel(view.gameSpecId),
     cadence:
       view.daysPerMove === 1
@@ -99,6 +101,8 @@ function buildChallengeCard(view: ChallengeView): HTMLElement {
         : t('challenge.daysOption', { days: view.daysPerMove }),
     color: colorLabel(view.gameSpecId, view.preferredColor),
   });
+  // Accepting a rated challenge plays for rating: say so before the button, not after.
+  detail.textContent = view.rated === true ? `${terms} · ${t('play.rated')}` : terms;
   card.append(detail);
 
   if (view.expired) {

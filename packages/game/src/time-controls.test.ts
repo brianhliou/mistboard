@@ -14,6 +14,7 @@ import {
   isOfficialCorrespondenceTimeControl,
   isOfficialTimeControl,
   isRatedTimeControl,
+  officialCorrespondenceDays,
   RATED_TIME_CONTROLS,
   TIME_CONTROLS,
   timeClassFromTimeControl,
@@ -261,4 +262,21 @@ test('every variant default is a real, offerable pace', () => {
       `${gameSpecId} defaults to unknown pace ${spec.id}`,
     );
   }
+});
+
+test('officialCorrespondenceDays recognises a stored correspondence pace and nothing else', () => {
+  for (const days of DAYS_PER_MOVE_OPTIONS) {
+    const tc = correspondenceTimeControl(days);
+    assert.equal(officialCorrespondenceDays(tc.initialMs, tc.incrementMs), days);
+  }
+  // No live preset can be mistaken for correspondence (the rating bucket keys off this).
+  for (const tc of TIME_CONTROLS) {
+    assert.equal(officialCorrespondenceDays(tc.initialMs, tc.incrementMs), null, tc.id);
+  }
+  // A compressed dev allowance, an increment, or a missing clock fail closed.
+  assert.equal(officialCorrespondenceDays(900, 0), null);
+  assert.equal(officialCorrespondenceDays(DAY_MS, 1_000), null);
+  assert.equal(officialCorrespondenceDays(2 * DAY_MS, 0), null);
+  assert.equal(officialCorrespondenceDays(null, 0), null);
+  assert.equal(officialCorrespondenceDays(DAY_MS, null), null);
 });

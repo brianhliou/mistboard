@@ -10,7 +10,13 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { GAME_SPECS, isOfficialTimeControl, XIANGQI_SPEC_ID } from '@mistboard/game';
+import {
+  correspondenceTimeControl,
+  GAME_SPECS,
+  isCorrespondenceRatedSpec,
+  isOfficialTimeControl,
+  XIANGQI_SPEC_ID,
+} from '@mistboard/game';
 import { CORRESPONDENCE_ELIGIBLE_SPECS } from './routes/correspondence-rooms.js';
 // Side-effect import: registers every tenant, so this sees the set the server boots with.
 import './variant-tenant/register-tenants.js';
@@ -54,15 +60,48 @@ test('standard xiangqi is eligible — the 2026-07-04 fork-6 partial reversal', 
   assert.equal(xiangqi?.visibility, 'open');
 });
 
-test('correspondence can never be rated — the guardrail the reversal rests on', () => {
-  // The reversal trades anti-cheat enforcement for casual-only containment, so this is the
-  // load-bearing assertion of the whole feature, not a detail: a correspondence allowance
-  // is never an official (ratable) time control, so it cannot reach a rating bucket.
+test('correspondence never becomes a LIVE rated pace — it rates only in its own pool', () => {
+  // 2026-10-02: rated correspondence exists, but in a separate 'correspondence' pool per
+  // variant (rating-buckets.ts). The live allowlist must still never admit a
+  // days-per-move allowance, or a correspondence game could land on a live ladder.
   for (const daysPerMove of [1, 3, 7]) {
     assert.equal(
       isOfficialTimeControl({ initialMs: daysPerMove * 86_400_000, incrementMs: 0, daysPerMove }),
       false,
-      `${daysPerMove}-day correspondence must never be a ratable time control`,
+      `${daysPerMove}-day correspondence must never be a live ratable time control`,
     );
+  }
+});
+
+test('every rated-correspondence spec has a seek factory that honours `rated`', async () => {
+  // isCorrespondenceRatedSpec is derived (eligible AND a rating pool), so a spec another
+  // change makes correspondence-eligible becomes rateable on its own. This is what makes
+  // that safe: its factory must actually create a rated room when asked, and a casual
+  // one otherwise, and report which. A factory that drops `rated` fails here instead of
+  // quietly seating rated seeks in casual games.
+  const prior = process.env.MISTBOARD_XIANGQI_ENABLED;
+  process.env.MISTBOARD_XIANGQI_ENABLED = 'true';
+  try {
+    const ratedSpecs = [...CORRESPONDENCE_ELIGIBLE_SPECS].filter(isCorrespondenceRatedSpec);
+    assert.ok(ratedSpecs.length > 0);
+    for (const specId of ratedSpecs) {
+      const tenant = correspondenceTenantForSpecId(specId);
+      const create = tenant?.createCorrespondenceGameForSeek;
+      assert.ok(create, `${specId} is rated-eligible but has no seek factory`);
+      for (const rated of [true, false]) {
+        const created = await create({
+          timeControl: correspondenceTimeControl(3),
+          first: { userId: `first-${specId}` },
+          second: { userId: `second-${specId}` },
+          rated,
+        });
+        assert.ok(created.ok, `${specId} factory failed (${rated ? 'rated' : 'casual'})`);
+        assert.equal(created.room.rated, rated, `${specId} factory ignored rated=${rated}`);
+      }
+      tenant?.clearRooms();
+    }
+  } finally {
+    if (prior === undefined) delete process.env.MISTBOARD_XIANGQI_ENABLED;
+    else process.env.MISTBOARD_XIANGQI_ENABLED = prior;
   }
 });

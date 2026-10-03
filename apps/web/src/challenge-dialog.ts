@@ -1,9 +1,11 @@
 import { CORRESPONDENCE_ELIGIBLE_SPEC_IDS, DAYS_PER_MOVE_OPTIONS } from '@mistboard/game';
 import './challenge-dialog.css';
 import { trackCorrespondenceSeekPosted } from './analytics.js';
+import { correspondenceRatedAvailable } from './correspondence-model.js';
 import { firstMoverColorName, secondMoverColorName, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
+import { isRatedModeEnabled } from './rated-flag.js';
 
 // A small modal to send a directed correspondence challenge to a specific player
 // (from their profile or the hover user-card). It posts to /api/correspondence/seeks
@@ -87,8 +89,36 @@ export function openChallengeDialog(opts: {
     );
   };
   relabelColors();
-  variant.addEventListener('change', relabelColors);
-  fields.append(variant, days, color);
+
+  // Casual or Rated (rated correspondence, 2026-10-02): its own correspondence rating,
+  // never a live one. Rated is disabled for a variant the rating system cannot rate
+  // correspondence in, or while the server's rated switch is off.
+  const rated = document.createElement('select');
+  rated.className = 'challenge-dialog-field';
+  rated.setAttribute('aria-label', t('setup.gameType', {}, locale));
+  for (const [value, key] of [
+    ['casual', 'play.casual'],
+    ['rated', 'play.rated'],
+  ] as const) {
+    const opt = document.createElement('option');
+    opt.value = value;
+    opt.textContent = t(key, {}, locale);
+    rated.append(opt);
+  }
+  const ratedAvailable = (): boolean =>
+    correspondenceRatedAvailable(variant.value, isRatedModeEnabled());
+  const syncRated = (): void => {
+    const available = ratedAvailable();
+    const ratedOption = rated.options[1];
+    if (ratedOption) ratedOption.disabled = !available;
+    if (!available) rated.value = 'casual';
+  };
+  syncRated();
+  variant.addEventListener('change', () => {
+    relabelColors();
+    syncRated();
+  });
+  fields.append(variant, days, rated, color);
 
   const error = document.createElement('p');
   error.className = 'challenge-dialog-error';
@@ -118,6 +148,7 @@ export function openChallengeDialog(opts: {
         gameSpecId: variant.value,
         daysPerMove: Number(days.value),
         preferredColor: color.value,
+        ...(rated.value === 'rated' && ratedAvailable() ? { rated: true } : {}),
       }),
     })
       .then(async (res) => {
