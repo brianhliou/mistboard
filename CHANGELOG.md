@@ -81,6 +81,7 @@ Conventions:
 
 ### Site
 
+- Contribute and Work with us now link to each other; play-testing and translation help live on Contribute ([efc0c7c2](https://github.com/brianhliou/mistboard/commit/efc0c7c2))
 - New Work with us page for titled players and coaches, creators and streamers, event organizers, writers and engine authors ([c44741d5](https://github.com/brianhliou/mistboard/commit/c44741d5))
 - the homepage play panel lists variants in the same order as the menus, not by recent play ([5e2e44d1](https://github.com/brianhliou/mistboard/commit/5e2e44d1))
 - the variant menus and rules list put Duck, Crazyhouse and Fortress ahead of Atomic and Fog Xiangqi ([e3c8e84f](https://github.com/brianhliou/mistboard/commit/e3c8e84f))
