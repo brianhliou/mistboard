@@ -958,6 +958,34 @@ test('the xiangqi course serves all three locales, each distinct and cross-linke
   assert.match(seen.get('/learn/xiangqi')!.body, /<html lang="en">/);
 });
 
+// The locale groups carried hreflang but no canonical until 2026-10-02, so a
+// crawler had alternates naming three URLs and nothing saying which URL each
+// page is (a query-string variant or a trailing-slash copy could compete). Each
+// member names itself, exactly once.
+test('every locale-group SPA route names itself as canonical', async () => {
+  const staticDir = await staticDirWithPreloadManifest();
+  const groups = ['/videos', '/bots', '/learn/xiangqi'];
+  for (const group of groups) {
+    for (const route of [group, `/zh-hans${group}`, `/zh-hant${group}`]) {
+      const response = captureResponse();
+      const served = await serveSpaShellWithRoutePreloads({
+        response,
+        staticDir,
+        pathname: route,
+        publicHost: 'https://mistboard.com',
+        routeBody: async () => null,
+      });
+      assert.equal(served, true, `${route} fell through to the plain shell`);
+      const canonicals = response.body.match(/<link rel="canonical"[^>]*>/g) ?? [];
+      assert.deepEqual(
+        canonicals,
+        [`<link rel="canonical" href="https://mistboard.com${route}">`],
+        `${route} canonical`,
+      );
+    }
+  }
+});
+
 // --- position routes (/analysis, /editor) --------------------------------------
 
 // A mid-game banqi deal: five public fields plus the sixth field naming the

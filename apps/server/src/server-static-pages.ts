@@ -557,9 +557,14 @@ export async function serveSpaShellWithRoutePreloads(params: {
     html = html.replace('<html lang="en">', `<html lang="${spaMeta.htmlLang}">`);
   }
   if (spaMeta?.localeGroup && params.publicHost) {
+    // A self canonical beside the alternates: each member of the group is its
+    // own page, and hreflang without a canonical left a crawler to pick which
+    // URL (query-string or trailing-slash copies included) each one is. Until
+    // 2026-10-02 the zh videos, bots and course URLs had alternates only.
     html = html.replace(
       '</head>',
-      `${localeAlternateLinks(params.publicHost, spaMeta.localeGroup)}</head>`,
+      `<link rel="canonical" href="${params.publicHost}${params.pathname}">` +
+        `${localeAlternateLinks(params.publicHost, spaMeta.localeGroup)}</head>`,
     );
   }
   if (player?.meta && params.publicHost) {
