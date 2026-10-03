@@ -1150,6 +1150,11 @@ export const xiangqiChampionsArticle: Article = {
           caption:
             'The same record as the figure, with the years written out. An asterisk marks the one shared title, in 1962. Every entry in the last column is a published ruling of the Chinese Xiangqi Association, not an allegation; the section below explains them.',
         },
+        {
+          kind: 'paragraph',
+          text:
+            'The record was assembled from Chinese sources and cross-checked: title counts, every year won, and the shared title marked as shared. The figure and the table both render from that one dataset, so the picture and the table cannot disagree with each other.',
+        },
       ],
     },
     {
@@ -1433,6 +1438,11 @@ export const xiangqiChampionsArticle: Article = {
         {
           kind: 'paragraph',
           text:
+            'The association sanctioned 49 people over buying and selling games, and a court in Hangzhou convicted six grandmasters of bribery.',
+        },
+        {
+          kind: 'paragraph',
+          text:
             'Set that against the table above and the damage is easier to see than to state. Thirteen men have won the national championship since 2005 and ten of them have a ruling against them, including every single winner from 2010 to 2023. Xu Yinchuan, Zhao Guorong and Wang Yubo are the three who do not.',
         },
         {
@@ -1449,6 +1459,59 @@ export const xiangqiChampionsArticle: Article = {
               emphasis: 'secondary',
             },
           ],
+        },
+      ],
+    },
+    {
+      heading: 'How the games were annotated',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text:
+            'Every annotation on this page comes out of one analysis pipeline. Give it a game and it returns a finished study: every move judged, the engine’s preferred alternative hung as a branch you can play into, a verdict closing each branch, and a note saying what the move cost. It runs in four stages.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            '**Harvest and verify.** The games come out of the public archives, and every one is replayed through the rules engine before it is kept. A record that does not replay legally is reported as broken rather than published. That matters more than it sounds: the archives contain transcription errors, and a game nobody checked is a game that will eventually show a reader an illegal move.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            '**Analyse.** Pikafish at a million nodes a position, once per ply, at MultiPV 2, so every position yields a best move and a runner-up. The runner-up is the expensive part and it earns its keep: without it you can say a move was bad, but you cannot say a move was the only one, so ! and !! could not be marked. Plies where a piece was offered get a second search, to find out whether the engine’s own line takes it.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            '**Judge.** Win probability before and after each move decides whether it was an inaccuracy, a mistake or a blunder. A separate pass looks for the moves worth praising. The engine’s own line becomes a sibling branch on the move it should have replaced.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            '**Score.** Each branch closes with an assessment symbol in the notation chess players already read: ± a clear advantage, ⩲ a slight one, = level, and the same signs reversed when Black is better.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'None of it is specific to these games. The same machinery produces the alternative lines and annotations everywhere else on Mistboard, and pointing it at a new game costs an afternoon of engine time rather than a month of annotating by hand.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'Across this page and its companion on [the world title](/blog/xiangqi-world-championship), that comes to 25 games. Of the 201 moves judged, 108 are inaccuracies, 82 are mistakes or blunders, and 11 are moves the engine wanted to praise, three of them marked brilliant.',
+        },
+        {
+          kind: 'table',
+          headers: ['Both champion pages', ''],
+          rows: [
+            ['games annotated', '25'],
+            ['mainline moves', '3,081'],
+            ['moves judged worth marking', '201'],
+            ['engine sidelines', '183'],
+            ['moves inside those sidelines', '4,228'],
+            ['moves in the published trees', '7,309'],
+          ],
+          keyColumn: true,
         },
       ],
     },
