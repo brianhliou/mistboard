@@ -157,5 +157,11 @@ describe('a reveal blunder: ranked alternatives before it, the badge on it (jieq
     expect(html.match(/xq-arrow--best/g)).toHaveLength(1);
     // Best paints last, over the alternates.
     expect(html.lastIndexOf('xq-arrow--best')).toBeGreaterThan(html.lastIndexOf('xq-arrow--alt'));
+    // The move the advice names is a clickable one-move branch, never a line past it.
+    const variations = [...root.querySelectorAll('.move-tree__variation')];
+    expect(variations).toHaveLength(1);
+    expect(variations[0]?.textContent).toContain('b3-b10');
+    expect(variations[0]?.textContent).not.toContain('h3-h10');
+    expect(variations[0]?.querySelectorAll('.move-tree__move')).toHaveLength(1);
   });
 });

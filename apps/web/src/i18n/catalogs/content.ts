@@ -231,6 +231,11 @@ export const EN_CONTENT = {
     'Stockfish: optional engine/runtime dependency for research and engine-worker flows, GPL family.',
   'source.abJchess':
     "AB-JChess by Huorongrong and Laoxu (Kouza): the top jieqi bot, GPL-3.0; its neural network is used with the authors' permission.",
+  'source.katagomo':
+    "KataGomo by hzyhhzy: KataGo for jungle (the AnimalChess2025 branch), the top jungle bot, MIT; played here with the author's permission.",
+  'source.katago': 'KataGo by lightvector: the engine KataGomo is built on, MIT.',
+  'source.dandelion':
+    "Dandelion 4 by Kouza (lxsgx23): the source of the top jungle bot's neural network, fetched from its release and never re-hosted.",
   'source.projectIdentity': 'Project identity',
   'source.identityAssets':
     'The Mistboard name, logo, mistboard.com domain, hosted service identity, and official events are controlled project assets.',
@@ -262,6 +267,49 @@ export const EN_CONTENT = {
     'Servers and development cost money. If you want to help keep Mistboard free and ad-free, you can ',
   'contribute.supportLink': 'support Mistboard',
   'contribute.supportSuffix': '. Every bit helps, and it is never required to play.',
+  'creators.heading': 'Work with us',
+  'creators.intro':
+    'Mistboard is a free, open-source site for Chinese chess and original strategy games, in English and Chinese, with no ads. We work with players, creators and organizers who want to bring the game to more people.',
+  'creators.playersHeading': 'Titled players and coaches',
+  'creators.playersPrefix': 'A verified title badge, and a ',
+  'creators.playersCoachLink': 'coaching page',
+  'creators.playersBody':
+    ' where students contact and pay you directly. We take no commission. Annotated studies that can lead the homepage under your name, articles under your byline, and credited review of our lessons and puzzles. Start with ',
+  'creators.playersVerifyLink': 'title verification',
+  'creators.playersOr': ', or ',
+  'creators.playersLink': 'read what we offer titled players',
+  'creators.playersSuffix': '.',
+  'creators.videoHeading': 'Creators and streamers',
+  'creators.gamesLead': 'Game research.',
+  'creators.gamesPrefix':
+    'We find games for your topic, by opening, player or event, from top competitions and our ',
+  'creators.gamesLink': 'broadcast archive',
+  'creators.gamesSuffix': '.',
+  'creators.analysisLead': 'Prepared analysis.',
+  'creators.analysisPrefix': 'Each game comes as a ',
+  'creators.analysisLink': 'study',
+  'creators.analysisSuffix':
+    ' with engine analysis and the critical moments annotated, ready to present on screen.',
+  'creators.streamLead': 'Stream setup.',
+  'creators.streamBody':
+    'A board you can embed in OBS, a bot opponent at the level you choose, and a technical check with us before you go live.',
+  'creators.videoClose': 'Your content remains yours.',
+  'creators.eventsHeading': 'Event organizers, clubs and federations',
+  'creators.eventsBody':
+    'We broadcast events at no cost: an event page, analysis of every game, and boards you can embed on your own site. Send us the game files and we build and publish the page. ',
+  'creators.eventsLink': 'See current broadcasts',
+  'creators.eventsSuffix': '.',
+  'creators.writersHeading': 'Writers, composers and enthusiasts',
+  'creators.writersBody':
+    'Articles and opening guides under your name, endgame compositions published with credit, play-testing the new games we design, and corrections to our Chinese translations.',
+  'creators.enginesHeading': 'Engine authors',
+  'creators.enginesBody':
+    'We serve strong engines as bots on the site, credited by name, and rate them against our bot ladder.',
+  'creators.contactHeading': 'Contact',
+  'creators.contactPrefix': 'Use the ',
+  'creators.contactLink': 'contact form',
+  'creators.contactSuffix':
+    '. Tell us who you are and what you are working on, with a link to your channel, event or profile.',
   'thanks.heading': 'Thank you',
   'thanks.intro':
     'Mistboard stands on open-source work by many people and projects, and on everyone who plays, reports bugs, and helps it get better.',
@@ -603,6 +651,9 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'source.chessops',
   'source.stockfish',
   'source.abJchess',
+  'source.katagomo',
+  'source.katago',
+  'source.dandelion',
   'source.projectIdentity',
   'source.identityAssets',
   'source.identityForksName',

@@ -50,6 +50,8 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      // KataGo, the new top Jungle Chess bot, scheduled for 2026-10-03.
+      '/blog/katago-jungle',
       // The Pikafish reveal bug (#497), the AB-JChess post's follow-up, 2026-10-03.
       '/blog/pikafish-reveal-bug',
       // AB-JChess, the new top jieqi bot, scheduled for 2026-10-02.
@@ -264,6 +266,7 @@ describe('article public listing gates', () => {
     // (blog/concept) article without a homeRow appears, newest first, with no
     // curated list. Deep dives have their own row (next test).
     expect(hrefs).toEqual([
+      '/blog/katago-jungle',
       '/blog/pikafish-reveal-bug',
       '/blog/ab-jchess',
       '/blog/jieqi-bot-wins',

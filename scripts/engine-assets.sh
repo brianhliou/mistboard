@@ -37,13 +37,17 @@ ARCH=x86-64-sse41-popcnt
 # times slower on sse41. Prod web's EPYC has avx2/bmi2/avx512 (checked
 # 2026-09-30); the Build engines runner has avx2 too, so verify runs it there.
 ABJ_ARCH=x86-64-avx2
+# KataGo-AnimalChess is CMake, not a Stockfish makefile: the Eigen CPU backend
+# with AVX2/FMA (its net is its strength, like AB-JChess), linked static, and
+# without libzip, which only selfplay uses (katago-jungle.ref).
+KATA_CMAKE_FLAGS="-DUSE_BACKEND=EIGEN -DUSE_AVX2=1 -DCMAKE_BUILD_TYPE=Release -DNO_GIT_REVISION=1 -DZLIB_USE_STATIC_LIBS=ON -DLIBZIP_LIBRARY=OFF -DCMAKE_EXE_LINKER_FLAGS=-static"
 ASSET="engines-$ARCH.tar.gz"
 RELEASE_REPO=brianhliou/mistboard
 # Every file whose content decides the binaries. The workflow's push paths and
 # the Railway watch patterns list the same files; scripts/engine-assets.test.mjs
 # fails if they drift apart.
-RECIPE_INPUTS="fairy-stockfish-xiangqi.ref fairy-stockfish-duck-xiangqi.ref fairy-stockfish-duck-xiangqi.patch fairy-stockfish-atomic-xiangqi.ref fairy-stockfish-atomic-xiangqi.patch stockfish.ref pikafish-jieqi.ref pikafish.ref ab-jchess.ref"
-BINARIES="fairy-stockfish-xiangqi fairy-stockfish-duck-xiangqi fairy-stockfish-atomic-xiangqi stockfish pikafish-jieqi pikafish ab-jchess"
+RECIPE_INPUTS="fairy-stockfish-xiangqi.ref fairy-stockfish-duck-xiangqi.ref fairy-stockfish-duck-xiangqi.patch fairy-stockfish-atomic-xiangqi.ref fairy-stockfish-atomic-xiangqi.patch stockfish.ref pikafish-jieqi.ref pikafish.ref ab-jchess.ref katago-jungle.ref"
+BINARIES="fairy-stockfish-xiangqi fairy-stockfish-duck-xiangqi fairy-stockfish-atomic-xiangqi stockfish pikafish-jieqi pikafish ab-jchess katago-jungle"
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 JOBS=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
@@ -64,6 +68,7 @@ recipe_hash() {
     echo "recipe-version=$RECIPE_VERSION"
     echo "arch=$ARCH"
     echo "abj-arch=$ABJ_ARCH"
+    echo "kata-cmake=$KATA_CMAKE_FLAGS"
     for input in $RECIPE_INPUTS; do
       case "$input" in
         *.ref) echo "$input=$(pin "$input")" ;;
@@ -144,6 +149,17 @@ build() {
   make -C "$work/ab-jchess/src" -j"$JOBS" ARCH="$ABJ_ARCH" COMP=clang EXTRALDFLAGS=-static build >/dev/null
   cp "$work/ab-jchess/src/AB-JChess" "$bin/ab-jchess"
 
+  # The binary only, stripped (74 MB of debug info otherwise): its net is fetched
+  # from Kouza's Dandelion release by railpack.json and never packaged here
+  # (katago-jungle.ref says why). Needs cmake, libeigen3-dev and zlib1g-dev.
+  ref=$(pin katago-jungle.ref)
+  log "katago-jungle @ $ref (hzyhhzy/KataGomo AnimalChess2025, Eigen, avx2)"
+  fetch_source "$work/katago-jungle" https://github.com/hzyhhzy/KataGomo.git "$ref"
+  # shellcheck disable=SC2086
+  cmake -S "$work/katago-jungle/cpp" -B "$work/katago-jungle/build" $KATA_CMAKE_FLAGS >/dev/null
+  cmake --build "$work/katago-jungle/build" -j"$JOBS" >/dev/null
+  strip -o "$bin/katago-jungle" "$work/katago-jungle/build/katago"
+
   chmod +x "$bin"/*
   rm -rf "$work"
   for name in $BINARIES; do
@@ -209,6 +225,11 @@ verify() {
   test -s "$bin/pikafish.nnue" || die "pikafish.nnue is missing or empty"
   uci_ok "$bin/pikafish" pikafish uciok
   uci_ok "$bin/ab-jchess" ab-jchess 'id name AB JChess'
+  # GTP, not UCI, and nothing to search without its net (the railpack net step
+  # loads it and plays a move); here the build must be the Eigen one with AVX2.
+  "$bin/katago-jungle" version | grep -q 'Using Eigen(CPU) backend' &&
+    "$bin/katago-jungle" version | grep -q 'Compiled with AVX2' &&
+    log "katago-jungle ok" || die "katago-jungle: not an Eigen AVX2 build of KataGo"
   log "verified $(tag) in $bin"
 }
 

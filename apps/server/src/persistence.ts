@@ -113,6 +113,7 @@ export type {
   CorrespondenceSeekListing,
   CorrespondenceSeekRecord,
   SeekColorPreference,
+  SeekExpiryNotice,
   SeekVisibility,
 } from './persistence-correspondence-seeks.js';
 export {
@@ -128,6 +129,9 @@ export {
   listChallengesForUser,
   listOpenCorrespondenceSeeks,
   listOutgoingSeeksForUser,
+  markSeekExpiryNoticesSeen,
+  SEEK_EXPIRY_NOTICE_WINDOW_DAYS,
+  unseenSeekExpiryNotices,
 } from './persistence-correspondence-seeks.js';
 export { close, init, isInitialized, probeDb } from './persistence-db.js';
 export type {

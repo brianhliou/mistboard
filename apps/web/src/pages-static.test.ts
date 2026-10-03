@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { isArticleTranslationPublished, translateArticle } from './article-i18n.js';
+import { articles } from './articles-data.js';
+import { t } from './i18n/catalog.js';
 import {
+  articlesIndexPrerenderHead,
   mountAbout,
   mountContact,
   mountFaq,
@@ -8,6 +12,9 @@ import {
   mountPrivacy,
   mountSource,
   mountTerms,
+  renderArticlesIndexShellForPrerender,
+  renderRulesIndexShellForPrerender,
+  rulesIndexPrerenderHead,
 } from './pages-static.js';
 
 async function flushPromises(): Promise<void> {
@@ -77,6 +84,7 @@ describe('about page platform activity', () => {
       'Title verification',
       'Source code',
       'Contribute',
+      'Work with us',
       'Developers',
       'Game data',
       'API',
@@ -300,5 +308,124 @@ describe('about page platform activity', () => {
     expect(root.textContent).toContain('這個頁面不存在，或已經移動。');
     expect(root.textContent).toContain('返回首頁');
     expect(root.textContent).toContain('還是找不到？聯絡。');
+  });
+});
+
+// The zh blog indexes were served as a client-rendered shell with no canonical
+// or hreflang until 2026-10-02; the prerender now bakes one per locale. The
+// baked DOM must be the localized list, and every member of the group must
+// name the same alternates with its own canonical.
+describe('prerendered blog index', () => {
+  it('bakes the Chinese post titles into the zh indexes', async () => {
+    const zhOnly = articles.filter(
+      (a) =>
+        a.kind === 'article' &&
+        a.status === 'published' &&
+        isArticleTranslationPublished(a.slug) &&
+        translateArticle(a, 'zh-Hans').title !== a.title,
+    );
+    expect(zhOnly.length).toBeGreaterThan(0);
+    const sample = zhOnly[0];
+    if (!sample) throw new Error('no translated article');
+
+    const hans = await renderArticlesIndexShellForPrerender('zh-Hans');
+    const hant = await renderArticlesIndexShellForPrerender('zh-Hant');
+    const en = await renderArticlesIndexShellForPrerender();
+    expect(hans).toContain(translateArticle(sample, 'zh-Hans').title);
+    expect(hant).toContain(translateArticle(sample, 'zh-Hant').title);
+    expect(en).toContain(sample.title);
+    expect(hans).not.toBe(en);
+  });
+
+  it('gives each index a self canonical and the same alternate set', () => {
+    const host = 'https://mistboard.com';
+    const heads = [undefined, 'zh-Hans', 'zh-Hant'].map((lang) =>
+      articlesIndexPrerenderHead(host, lang as 'zh-Hans' | 'zh-Hant' | undefined),
+    );
+    expect(heads.map((h) => h.url)).toEqual([
+      `${host}/blog`,
+      `${host}/zh-hans/blog`,
+      `${host}/zh-hant/blog`,
+    ]);
+    const alternatesOf = (links: string) =>
+      (links.match(/<link rel="alternate" hreflang=[^>]*>/g) ?? []).join('');
+    for (const head of heads) {
+      expect(head.headLinks).toContain(`<link rel="canonical" href="${head.url}" />`);
+      expect(alternatesOf(head.headLinks)).toBe(alternatesOf(heads[0]?.headLinks ?? ''));
+    }
+    const alternates = alternatesOf(heads[0]?.headLinks ?? '');
+    for (const [lang, href] of [
+      ['en', `${host}/blog`],
+      ['zh-Hans', `${host}/zh-hans/blog`],
+      ['zh-Hant', `${host}/zh-hant/blog`],
+      ['x-default', `${host}/blog`],
+    ]) {
+      expect(alternates).toContain(`hreflang="${lang}" href="${href}"`);
+    }
+    expect(heads[1]?.title).toBe('文章 | Mistboard');
+  });
+});
+
+// /rules, /zh-hans/rules and /zh-hant/rules sat in the sitemap answering with
+// the 4.9KB client shell (no canonical, no hreflang, no text) until 2026-10-02.
+// The prerender bakes one per locale: the baked DOM must carry that locale's
+// own copy, and every member names the same alternates with its own canonical.
+describe('prerendered rules index', () => {
+  it('bakes each locale its own heading, intro and rules tiles', async () => {
+    // The prerender points the DOM at each page's own URL while it bakes, so a
+    // widget that reads currentLocale() itself gets the right language.
+    window.history.replaceState(null, '', '/rules');
+    const en = await renderRulesIndexShellForPrerender();
+    window.history.replaceState(null, '', '/zh-hans/rules');
+    const hans = await renderRulesIndexShellForPrerender('zh-Hans');
+    window.history.replaceState(null, '', '/zh-hant/rules');
+    const hant = await renderRulesIndexShellForPrerender('zh-Hant');
+    window.history.replaceState(null, '', '/');
+    for (const [html, locale] of [
+      [en, 'en'],
+      [hans, 'zh-Hans'],
+      [hant, 'zh-Hant'],
+    ] as const) {
+      expect(html).toContain(t('rules.heading', {}, locale));
+      expect(html).toContain(t('rules.intro', {}, locale));
+      expect(html).toContain(t('rules.body1', {}, locale));
+      expect(html).toContain('rules-landing-tile');
+    }
+    expect(t('rules.intro', {}, 'zh-Hans')).not.toBe(t('rules.intro', {}, 'en'));
+    expect(hans).toContain('href="/zh-hans/rules/');
+    expect(hant).toContain('href="/zh-hant/rules/');
+    expect(en).not.toContain('href="/zh-hans/rules/');
+  });
+
+  it('gives each index a self canonical and the same alternate set', () => {
+    const host = 'https://mistboard.com';
+    const heads = [undefined, 'zh-Hans', 'zh-Hant'].map((lang) =>
+      rulesIndexPrerenderHead(host, lang as 'zh-Hans' | 'zh-Hant' | undefined),
+    );
+    expect(heads.map((h) => h.url)).toEqual([
+      `${host}/rules`,
+      `${host}/zh-hans/rules`,
+      `${host}/zh-hant/rules`,
+    ]);
+    const alternatesOf = (links: string) =>
+      (links.match(/<link rel="alternate" hreflang=[^>]*>/g) ?? []).join('');
+    for (const head of heads) {
+      expect(head.headLinks).toContain(`<link rel="canonical" href="${head.url}" />`);
+      expect(alternatesOf(head.headLinks)).toBe(alternatesOf(heads[0]?.headLinks ?? ''));
+    }
+    const alternates = alternatesOf(heads[0]?.headLinks ?? '');
+    for (const [lang, href] of [
+      ['en', `${host}/rules`],
+      ['zh-Hans', `${host}/zh-hans/rules`],
+      ['zh-Hant', `${host}/zh-hant/rules`],
+      ['x-default', `${host}/rules`],
+    ]) {
+      expect(alternates).toContain(`hreflang="${lang}" href="${href}"`);
+    }
+    expect(heads.map((h) => h.title)).toEqual([
+      'Rules | Mistboard',
+      '规则 | Mistboard',
+      '規則 | Mistboard',
+    ]);
   });
 });

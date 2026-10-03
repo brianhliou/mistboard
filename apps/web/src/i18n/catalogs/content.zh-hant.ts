@@ -183,6 +183,11 @@ export const ZH_HANT_CONTENT = {
   'source.stockfish': 'Stockfish：研究和引擎 worker 流程的可選引擎/執行時依賴，GPL 系列。',
   'source.abJchess':
     'AB-JChess，作者 Huorongrong 和 Laoxu（Kouza）：本站最強的揭棋機器人，GPL-3.0；其神經網路經作者許可使用。',
+  'source.katagomo':
+    'KataGomo，作者 hzyhhzy：鬥獸棋版 KataGo（AnimalChess2025 分支），本站最強的鬥獸棋機器人，MIT；經作者許可使用。',
+  'source.katago': 'KataGo，作者 lightvector：KataGomo 所基於的引擎，MIT。',
+  'source.dandelion':
+    'Dandelion 4，作者 Kouza（lxsgx23）：本站最強鬥獸棋機器人的神經網路來源，從其發布頁取得，不在本站轉存。',
   'source.projectIdentity': '專案身份',
   'source.identityAssets':
     'Mistboard 名稱、標誌、mistboard.com 網域、託管服務身份和官方活動都是受控專案資產。',
@@ -360,6 +365,46 @@ export const ZH_HANT_CONTENT = {
   'contribute.supportPrefix': '伺服器和開發都要花錢。如果你想幫 Mistboard 保持免費、無廣告，可以',
   'contribute.supportLink': '贊助 Mistboard',
   'contribute.supportSuffix': '。哪怕一點也有用，而且下棋從來不需要付費。',
+  'creators.heading': '與我們合作',
+  'creators.intro':
+    'Mistboard 是一個免費、開源、無廣告的網站，提供中國象棋和原創策略遊戲，支援中文和英文。我們希望與願意把這項棋類帶給更多人的棋手、內容創作者和主辦方合作。',
+  'creators.playersHeading': '有等級稱號的棋手和教練',
+  'creators.playersPrefix': '經過認證的稱號徽章，以及一個',
+  'creators.playersCoachLink': '教練頁面',
+  'creators.playersBody':
+    '，學生直接聯絡你、直接付費給你，我們不抽取任何佣金。你的評註研究可以署名登上首頁，文章以你的名字發表，審閱我們的課程和題目也會註明你的貢獻。可以先進行',
+  'creators.playersVerifyLink': '稱號認證',
+  'creators.playersOr': '，或',
+  'creators.playersLink': '了解我們為有稱號棋手提供什麼',
+  'creators.playersSuffix': '。',
+  'creators.videoHeading': '內容創作者和實況主',
+  'creators.gamesLead': '對局檢索。',
+  'creators.gamesPrefix': '我們按你的主題，按佈局、棋手或賽事，從頂級比賽和我們的',
+  'creators.gamesLink': '轉播存檔',
+  'creators.gamesSuffix': '中找出合適的對局。',
+  'creators.analysisLead': '現成的分析。',
+  'creators.analysisPrefix': '每盤棋都整理成一個',
+  'creators.analysisLink': '研究',
+  'creators.analysisSuffix': '，附引擎分析並標註關鍵時刻，可以直接在鏡頭前講解。',
+  'creators.streamLead': '直播準備。',
+  'creators.streamBody':
+    '可嵌入 OBS 的棋盤、按你選擇的強度對弈的機器人，開播前我們和你一起做一次技術檢查。',
+  'creators.videoClose': '你的內容歸你所有。',
+  'creators.eventsHeading': '賽事主辦方、俱樂部和協會',
+  'creators.eventsBody':
+    '我們免費轉播賽事：賽事頁面、每盤棋的分析，以及可以嵌入你自己網站的棋盤。把棋譜檔案寄給我們，頁面由我們製作並發布。',
+  'creators.eventsLink': '查看目前的轉播',
+  'creators.eventsSuffix': '。',
+  'creators.writersHeading': '作者、排局作者和愛好者',
+  'creators.writersBody':
+    '以你的名字發表文章和佈局指南，署名發表排局作品，試玩我們設計的新遊戲，以及修正我們的中文翻譯。',
+  'creators.enginesHeading': '引擎作者',
+  'creators.enginesBody':
+    '我們把強引擎作為網站上的機器人提供服務，註明作者，並在我們的機器人梯隊中評定等級分。',
+  'creators.contactHeading': '聯絡',
+  'creators.contactPrefix': '請使用',
+  'creators.contactLink': '聯絡表單',
+  'creators.contactSuffix': '。告訴我們你是誰、在做什麼，並附上你的頻道、賽事或個人資料連結。',
   'thanks.heading': '致謝',
   'thanks.intro':
     'Mistboard 站在許多人和專案的開源工作之上，也站在每一位下棋、回報問題、幫它變得更好的人之上。',

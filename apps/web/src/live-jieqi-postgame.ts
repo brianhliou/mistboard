@@ -208,6 +208,9 @@ function renderPostgame(root: HTMLElement, postgame: JieqiPostgameResponse): voi
     seatLabels: true,
     players: playerNames,
     playerProfiles: reviewSeatProfiles(gamePlayers),
+    // A link can name a move (?ply=34), as on the xiangqi review. Without it the
+    // page always opened on the final position and dropped the link's ply.
+    urlPly: true,
     // An imported game's seats are off-site engines with no record here, so
     // there is no crosstable to show.
     ...(postgame.game.mode === 'imported'

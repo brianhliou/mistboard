@@ -87,7 +87,7 @@ test('railpack fetches the published engines, verifies them, and compiles none o
   );
 });
 
-test('the recipe builds and verifies the same seven binaries the image expects', () => {
+test('the recipe builds and verifies the same eight binaries the image expects', () => {
   const binaries = recipe.match(/^BINARIES="([^"]+)"$/m)[1].split(/\s+/);
   assert.deepEqual(binaries, [
     'fairy-stockfish-xiangqi',
@@ -97,11 +97,47 @@ test('the recipe builds and verifies the same seven binaries the image expects',
     'pikafish-jieqi',
     'pikafish',
     'ab-jchess',
+    'katago-jungle',
   ]);
   // Every binary is built with the ISA the container was measured for; AB-JChess
   // alone targets avx2 (its NNUE is its strength; ab-jchess.ref).
   assert.match(recipe, /^ARCH=x86-64-sse41-popcnt$/m);
   assert.match(recipe, /^ABJ_ARCH=x86-64-avx2$/m);
+  // KataGo-AnimalChess: the Eigen CPU backend with AVX2, linked static (katago-jungle.ref).
+  assert.match(recipe, /^KATA_CMAKE_FLAGS=".*-DUSE_BACKEND=EIGEN .*-DUSE_AVX2=1 .*-static"$/m);
+  assert.match(recipe, /echo "kata-cmake=\$KATA_CMAKE_FLAGS"/, 'the cmake flags are in the hash');
+});
+
+// The KataGo-AnimalChess net has no release of its own; it ships inside Kouza's
+// Dandelion 4 GUI zip. We run it with hzyhhzy's agreement (hzyhhzy/KataGomo#12)
+// and never re-host it: the engines tarball never contains it, and the image
+// checks the zip and the net before the fetched binary plays a move on it.
+test('the KataGo jungle net is fetched from Dandelion, checksummed, and never packaged', () => {
+  assert.doesNotMatch(
+    recipe,
+    /b10c384|katago-jungle-net/,
+    'engine-assets.sh never touches the net',
+  );
+  const fetchNet = readFileSync(resolve(repoRoot, 'scripts/fetch-katago-jungle-net.sh'), 'utf8');
+  assert.match(
+    fetchNet,
+    /^url=https:\/\/github\.com\/lxsgx23\/Dandelion-Chess\/releases\/download\/v4\.0\//m,
+  );
+  assert.match(fetchNet, /^zip_sha=[0-9a-f]{64}$/m, 'the zip is checked');
+  assert.match(fetchNet, /^net_sha=[0-9a-f]{64}$/m, 'the extracted net is checked');
+  assert.match(fetchNet, /Loaded model/, 'the fetched binary loads the net');
+  const step = railpack.indexOf(
+    'sh /app/scripts/fetch-katago-jungle-net.sh /app/bin /app/apps/server/src/katago-jungle-gtp.cfg',
+  );
+  assert.ok(step > 0, 'railpack.json runs the net script with the seat config');
+  assert.ok(
+    step > railpack.indexOf('sh /app/scripts/engine-assets.sh verify'),
+    'the net gate runs the fetched binary, so it comes after verify',
+  );
+  assert.ok(
+    existsSync(resolve(repoRoot, 'apps/server/src/katago-jungle-gtp.cfg')),
+    'the config the step loads is in the repo',
+  );
 });
 
 // The author allowed site use on the terms that we fetch his net from his own

@@ -42,6 +42,7 @@ const jungleRoute = createTenantRoomsRoute<
     // PLAYABLE, not "is an engine": this is a create-time allowlist, so it must reject
     // the retired level-1/level-3 ids that the tenant runtime still recognises for
     // finished games. See server-jungle-engine.ts for why the two predicates differ.
+    // The KataGo top seat passes only where its binary, net and config resolve.
     isEngineClientId: isJunglePlayableEngineClientId,
     seats: JUNGLE_SEATS,
   },

@@ -35,6 +35,10 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-10-03 (KataGo) ── 电脑 / 斗兽棋 follow the katago-jungle article.
+  'KataGo is the new top Jungle Chess bot.': 'KataGo 成为新的最强斗兽棋电脑。',
+  "hzyhhzy's KataGomo, built on KataGo with Kouza's Dandelion 4 network, learned Jungle Chess by playing itself and now sits above Misty. It beat Misty 82 to 0 in 200 games, with 118 draws. Misty stays the default; KataGo is the stronger pick.":
+    'hzyhhzy 的 KataGomo 以 KataGo 为基础，使用 Kouza 的 Dandelion 4 神经网络，靠自我对弈学会了斗兽棋，现在排在 Misty 之上。它在 200 盘中以 82 比 0 战胜 Misty，另有 118 盘和棋。Misty 仍是默认对手；想要更强的对手就选 KataGo。',
   // ── 2026-10-02 (rated on every game; homepage play panel) ── 计分 / 寻找对手 / 休闲 / 通信 / 再来一局 / 与真人对弈 follow the play catalog.
   'Every game on Mistboard can now be played rated.': 'Mistboard 上的每种棋现在都可以下计分对局。',
   'Sign in and use Find opponent. A rated game between two signed-in players now counts in every variant: xiangqi, jieqi, Banqi, Jungle, Flip Jungle, and Duck, Fog, Fortress and Atomic Xiangqi. Games against a friend or a bot stay casual.':
@@ -417,6 +421,10 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-10-03 (KataGo) ── 電腦 / 鬥獸棋 follow the katago-jungle article.
+  'KataGo is the new top Jungle Chess bot.': 'KataGo 成為新的最強鬥獸棋電腦。',
+  "hzyhhzy's KataGomo, built on KataGo with Kouza's Dandelion 4 network, learned Jungle Chess by playing itself and now sits above Misty. It beat Misty 82 to 0 in 200 games, with 118 draws. Misty stays the default; KataGo is the stronger pick.":
+    'hzyhhzy 的 KataGomo 以 KataGo 為基礎，使用 Kouza 的 Dandelion 4 神經網路，靠自我對弈學會了鬥獸棋，現在排在 Misty 之上。它在 200 盤中以 82 比 0 戰勝 Misty，另有 118 盤和棋。Misty 仍是預設對手；想要更強的對手就選 KataGo。',
   // ── 2026-10-02 (rated on every game; homepage play panel) ── 計分 / 尋找對手 / 休閒 / 通信 / 再來一局 / 與真人對弈 follow the play catalog.
   'Every game on Mistboard can now be played rated.': 'Mistboard 上的每種棋現在都可以下計分對局。',
   'Sign in and use Find opponent. A rated game between two signed-in players now counts in every variant: xiangqi, jieqi, Banqi, Jungle, Flip Jungle, and Duck, Fog, Fortress and Atomic Xiangqi. Games against a friend or a bot stay casual.':

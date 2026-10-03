@@ -26,6 +26,9 @@ Conventions:
 
 ### Playing
 
+- The homepage Jungle Chess row steps from Misty up to KataGo, the new top Jungle Chess bot ([c44741d5](https://github.com/brianhliou/mistboard/commit/c44741d5))
+- When your open correspondence game expires with no taker, the bell tells you and offers to post it again ([58b0ac0d](https://github.com/brianhliou/mistboard/commit/58b0ac0d))
+- KataGo, the engine that won the Jungle challenge, is the new top Jungle bot above Misty, credited to hzyhhzy's KataGomo, lightvector's KataGo and Kouza's Dandelion 4 network ([f424b2df](https://github.com/brianhliou/mistboard/commit/f424b2df))
 - Every variant can now be played by correspondence, days per move, from the correspondence page, the lobby and a player's profile ([851d1a41](https://github.com/brianhliou/mistboard/commit/851d1a41))
 - Correspondence is now an inbox with boards and deadlines, your own fog view on Fog Chess games, a start-a-game panel, open seeks, and a page for visitors showing every game in progress ([e14e36b0](https://github.com/brianhliou/mistboard/commit/e14e36b0))
 - The Flip Jungle room has a larger board with the face-down pieces under it, laid out like the banqi room ([574656cf](https://github.com/brianhliou/mistboard/commit/574656cf))
@@ -40,6 +43,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- New post: KataGo, a stronger Jungle Chess bot, reading two of its wins over Misty with both engines' evaluations ([fa06feca](https://github.com/brianhliou/mistboard/commit/fa06feca))
 - A Crazyhouse Xiangqi study of six engine games, with notes on the drops that decided them, embedded on the rules page ([95b57417](https://github.com/brianhliou/mistboard/commit/95b57417))
 - Crazyhouse Xiangqi games, studies and lines can be embedded, with both hands shown ([0bc99f1f](https://github.com/brianhliou/mistboard/commit/0bc99f1f))
 - the Crazyhouse Xiangqi rules page is rebuilt around boards with both hands drawn: drop zones, drop check and mate, and an engine game to play through ([d2170ca3](https://github.com/brianhliou/mistboard/commit/d2170ca3))
@@ -48,6 +52,9 @@ Conventions:
 
 ### Watching and review
 
+- Embedded Jungle studies show comments, move marks and side lines, like the study page ([fa06feca](https://github.com/brianhliou/mistboard/commit/fa06feca))
+- Live Crazyhouse Xiangqi games show their board with both hands on Current games and correspondence cards, instead of a variant icon ([c44741d5](https://github.com/brianhliou/mistboard/commit/c44741d5))
+- Atomic Xiangqi games in progress now show their board on Current games, Watch live and the correspondence inbox ([58b0ac0d](https://github.com/brianhliou/mistboard/commit/58b0ac0d))
 - The note box under a study board shows only on a move with a note, with no empty gap on the others ([95b57417](https://github.com/brianhliou/mistboard/commit/95b57417))
 - Finished Flip Jungle games on Current games show their final board, with unflipped pieces face-down ([dbb4ce56](https://github.com/brianhliou/mistboard/commit/dbb4ce56))
 - Current games is now a board wall: live and correspondence boards side by side, filters for variant and for people or bots, and the latest finished games below ([e3c8e84f](https://github.com/brianhliou/mistboard/commit/e3c8e84f))
@@ -72,6 +79,7 @@ Conventions:
 
 ### Site
 
+- New Work with us page for titled players and coaches, creators and streamers, event organizers, writers and engine authors ([c44741d5](https://github.com/brianhliou/mistboard/commit/c44741d5))
 - the homepage play panel lists variants in the same order as the menus, not by recent play ([5e2e44d1](https://github.com/brianhliou/mistboard/commit/5e2e44d1))
 - the variant menus and rules list put Duck, Crazyhouse and Fortress ahead of Atomic and Fog Xiangqi ([e3c8e84f](https://github.com/brianhliou/mistboard/commit/e3c8e84f))
 - The homepage deep-dives row is now labelled Xiangqi deep dives ([5edb33f3](https://github.com/brianhliou/mistboard/commit/5edb33f3))
@@ -90,6 +98,8 @@ Conventions:
 
 ### Fixed
 
+- A judged jieqi reveal's best move is now a clickable branch in the review, and jieqi game links with ?ply= open on that move ([67546f65](https://github.com/brianhliou/mistboard/commit/67546f65))
+- The rules pages now load with their text in English and both Chinese scripts, and the localized blog, rules, videos, bots and course pages each name their own address to search engines ([3edc86b1](https://github.com/brianhliou/mistboard/commit/3edc86b1))
 - A correspondence game posted from the homepage lobby now uses the variant you picked, and variant game headers show Rated for rated games ([851d1a41](https://github.com/brianhliou/mistboard/commit/851d1a41))
 - The jieqi Pikafish bot and its analysis no longer overrate turning over a piece: Black's reveals were scored by their best possible outcome, and outcomes the search cut short were averaged in as if exact ([94eec584](https://github.com/brianhliou/mistboard/commit/94eec584))
 - On the homepage, only the Play button starts a bot game; a click elsewhere on the row no longer does ([5edb33f3](https://github.com/brianhliou/mistboard/commit/5edb33f3))

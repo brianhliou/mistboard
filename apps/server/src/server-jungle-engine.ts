@@ -45,6 +45,13 @@ import {
   jungleMoveToEngineUci,
   jungleStateToEngineFen,
 } from './jungle-fen.js';
+import {
+  KATAGO_JUNGLE_ENGINE_ID,
+  KATAGO_JUNGLE_ENGINE_VERSION,
+  katagoJungleAvailable,
+  katagoJungleLiveEngineMove,
+  katagoJungleTierFor,
+} from './jungle-katago-engine.js';
 import { logger } from './obs.js';
 import type { UciEval } from './uci-engine-harness.js';
 import {
@@ -71,12 +78,21 @@ export const JUNGLE_ENGINE_VERSION = '0.1.0';
 // would answer "no" and silently reclassify finished games as PvP.
 //
 // Hence two predicates, deliberately different:
-//   isJunglePlayableEngineClientId — may a NEW room be created against this id? (one id)
+//   isJunglePlayableEngineClientId — may a NEW room be created against this id?
 //   isJungleEngineClientId         — is this seat an engine at all? (every id, ever)
 // The create route takes the first; the tenant runtime takes the second. Collapsing
 // them back into one is the bug this split exists to prevent.
-// There is no "default" any more — with one bot, default and only are the same thing.
+//
+// 2026-10: KataGo-AnimalChess (jungle-katago-engine.ts) takes the TOP seat above
+// Misty, because it won the jungle challenge (#434). Misty stays the default and
+// the rung below; the KataGo seat is creatable only where its binary, net and
+// config resolve, like AB-JChess for jieqi.
 export const JUNGLE_PLAYABLE_ENGINE_ID = 'misty-jungle-level-2';
+/** Every id a new room may take, strongest first (the web picker mirrors this). */
+export const JUNGLE_PLAYABLE_ENGINE_IDS: readonly string[] = [
+  KATAGO_JUNGLE_ENGINE_ID,
+  JUNGLE_PLAYABLE_ENGINE_ID,
+];
 export const JUNGLE_RETIRED_ENGINE_IDS: readonly string[] = [
   'misty-jungle-level-1',
   'misty-jungle-level-3',
@@ -169,23 +185,32 @@ export function jungleEngineTierFor(engineId: string | undefined): JungleEngineT
   return ENGINE_BY_ID.get(engineId) ?? null;
 }
 
+export const KATAGO_JUNGLE_DISPLAY_NAME = 'KataGo';
+
 export function jungleEngineDisplayName(engineId: string): string {
+  if (engineId === KATAGO_JUNGLE_ENGINE_ID) return KATAGO_JUNGLE_DISPLAY_NAME;
   return jungleEngineTierFor(engineId)?.name ?? engineId;
 }
 
 export function jungleEngineVersion(engineId: string | undefined): string | null {
+  if (engineId === KATAGO_JUNGLE_ENGINE_ID) return KATAGO_JUNGLE_ENGINE_VERSION;
   return isJungleEngineClientId(engineId) ? JUNGLE_ENGINE_VERSION : null;
 }
 
 // "Is this seat an engine?" — true for retired ids too, because finished games still
 // carry them. Used by the tenant runtime (replay, mode detection, forfeit exemption).
+// The KataGo seat is an engine whether or not this box can run it: a game recorded
+// in prod must replay as PvE on a dev box without the net.
 export function isJungleEngineClientId(clientId: string | undefined): boolean {
-  return jungleEngineTierFor(clientId) !== null;
+  return clientId === KATAGO_JUNGLE_ENGINE_ID || jungleEngineTierFor(clientId) !== null;
 }
 
-// "May a NEW room be created against this id?" — the create-route allowlist. Exactly one
-// id passes; a retired id is rejected as invalid_engine rather than quietly honoured.
+// "May a NEW room be created against this id?" — the create-route allowlist. Misty
+// always; KataGo only where its assets resolve, so a box without them refuses the
+// room (invalid_engine) instead of seating a bot that resigns at its first move. A
+// retired id is rejected rather than quietly honoured.
 export function isJunglePlayableEngineClientId(clientId: string | undefined): boolean {
+  if (clientId === KATAGO_JUNGLE_ENGINE_ID) return katagoJungleAvailable();
   return clientId === JUNGLE_PLAYABLE_ENGINE_ID;
 }
 
@@ -223,16 +248,23 @@ export type JungleEngineMoveProvider = (
   opts: { nodes?: number; movetimeCapMs?: number; repSeedFens?: readonly string[] },
 ) => Promise<UciEval>;
 
+/** KataGo's provider: our full-board FEN and the side to move, nothing else (its
+ *  loop rule is NONE, so the kernel's repetition rule governs). Tests inject a stub. */
+export type KatagoJungleMoveProvider = (
+  fen: string,
+  mover: JungleColor,
+  opts: { visits: number; movetimeCapMs: number },
+) => Promise<UciEval>;
+
 export async function playJungleEngineMoveIfReady(
   ctx: JungleEngineContext,
   room: JungleEngineRoom,
   moveProvider: JungleEngineMoveProvider = jungleLiveEngineMove,
+  katagoProvider: KatagoJungleMoveProvider = katagoJungleLiveEngineMove,
 ): Promise<void> {
   const seat = jungleEngineSeatFor(room);
   if (seat === null || !engineToMove(room, seat)) return;
   const engineId = room.projection.seats[seat]!;
-  const tier = jungleEngineTierFor(engineId);
-  if (!tier) return;
 
   const now = ctx.now?.() ?? Date.now();
   const clock = room.projection.clock;
@@ -240,26 +272,49 @@ export async function playJungleEngineMoveIfReady(
   const incrementMs = clock?.incrementMs ?? 0;
   if (remainingMs !== null && remainingMs <= 0) return;
 
+  // The KataGo seat has no in-process fallback: its strength is the net. Missing
+  // assets on a box that seated it (a broken deploy; the boot check pages first)
+  // fail closed exactly like a missing MistyJungle binary.
+  const katagoTier = katagoJungleTierFor(engineId);
+  if (katagoTier) {
+    if (!katagoJungleAvailable()) {
+      await failClosedJungleBinaryMissing(ctx, room, seat, engineId);
+      return;
+    }
+    await playJungleSearchedEngineMove(ctx, room, seat, engineId, remainingMs, incrementMs, {
+      engineVersion: KATAGO_JUNGLE_ENGINE_VERSION,
+      ceilingMs: katagoTier.movetimeCapMs,
+      // The decision artifact's tier_nodes column carries KataGo's VISIT budget.
+      tier: { nodes: katagoTier.visits, movetimeMs: katagoTier.movetimeCapMs },
+      search: (fen, movetimeCapMs) =>
+        katagoProvider(fen, seat, { visits: katagoTier.visits, movetimeCapMs }),
+    });
+    return;
+  }
+
+  const tier = jungleEngineTierFor(engineId);
+  if (!tier) return;
+
   // Rust `jungle-engine` binary is the intended engine when MISTBOARD_JUNGLE_RUST_ENGINE
   // is on. If it is intended but the binary is missing — a broken deploy the boot check
   // (engine-boot-check.ts) should already have alerted on — FAIL CLOSED (alert + resign
   // the engine seat) rather than SILENTLY substituting the weaker in-process TS search.
   // The silent downgrade was a fail-open that hid a missing binary; surfacing it is the
   // point. Routed through the shared fail-closed/observability boundary.
-  if (jungleRustEngineEnabled() && jungleRustTierFor(engineId)) {
+  const rustTier = jungleRustEngineEnabled() ? jungleRustTierFor(engineId) : null;
+  if (rustTier) {
     if (!jungleEngineBinaryAvailable()) {
       await failClosedJungleBinaryMissing(ctx, room, seat, engineId);
       return;
     }
-    await playJungleRustEngineMove(
-      ctx,
-      room,
-      seat,
-      engineId,
-      remainingMs,
-      incrementMs,
-      moveProvider,
-    );
+    const repSeedFens = jungleRepSeedFensForRoom(room);
+    await playJungleSearchedEngineMove(ctx, room, seat, engineId, remainingMs, incrementMs, {
+      engineVersion: JUNGLE_RUST_ENGINE_VERSION,
+      ceilingMs: rustTier.movetimeCapMs,
+      tier: { nodes: rustTier.nodes, movetimeMs: rustTier.movetimeCapMs },
+      search: (fen, movetimeCapMs) =>
+        moveProvider(engineId, fen, { nodes: rustTier.nodes, movetimeCapMs, repSeedFens }),
+    });
     return;
   }
 
@@ -326,7 +381,7 @@ async function failClosedJungleBinaryMissing(
 ): Promise<void> {
   logger.error(
     { kind: 'jungle_engine_binary_missing', room_id: room.id, engine_id: engineId },
-    'Jungle Rust engine intended but its binary is missing; failing closed and resigning the engine seat',
+    'Jungle engine intended but its binary or net is missing; failing closed and resigning the engine seat',
   );
   void sendEngineAlertNotification({
     severity: 'critical',
@@ -346,31 +401,37 @@ async function failClosedJungleBinaryMissing(
   ctx.broadcastEventAppended(room, resign, seq);
 }
 
-// Rust-engine move with the engine-move-guard contract: bounded retries, validate
+// One searched engine (the MistyJungle binary or KataGo), not the in-process TS search.
+type JungleSearchedEngine = {
+  engineVersion: string;
+  /** The tier's latency ceiling; the clock can only lower it. */
+  ceilingMs: number;
+  /** The tier as the decision artifact records it (KataGo's visits ride `nodes`). */
+  tier: { nodes: number; movetimeMs: number };
+  search(fen: string, movetimeCapMs: number): Promise<UciEval>;
+};
+
+// Searched-engine move with the engine-move-guard contract: bounded retries, validate
 // every output against the kernel, FAIL CLOSED (resign + page) on an unusable move.
 // Jungle is perfect-information, so a kernel-rejected move is a bug, not fog — resign
 // (mirrors server-banqi-engine.ts).
-async function playJungleRustEngineMove(
+async function playJungleSearchedEngineMove(
   ctx: JungleEngineContext,
   room: JungleEngineRoom,
   seat: JungleColor,
   engineId: string,
   remainingMs: number | null,
   incrementMs: number,
-  moveProvider: JungleEngineMoveProvider,
+  engine: JungleSearchedEngine,
 ): Promise<void> {
-  const rustTier = jungleRustTierFor(engineId);
-  if (!rustTier) return;
   const state = room.projection.state;
   const fen = jungleStateToEngineFen(state);
-  const repSeedFens = jungleRepSeedFensForRoom(room);
-  // Clock-aware per-move budget (shared allocator). Strength = the rust tier's NODE
-  // budget; this movetime is the latency ceiling + time-pressure guard. Existing
-  // ceiling preserved — behavior-neutral for untimed play; adds increment awareness.
+  // Clock-aware per-move budget (shared allocator). Strength = the tier's NODE (or
+  // visit) budget; this movetime is the latency ceiling + time-pressure guard.
   const { computeBudgetMs: movetimeCapMs } = budgetForMove({
     remainingMs,
     incrementMs,
-    ceilingMs: rustTier.movetimeCapMs,
+    ceilingMs: engine.ceilingMs,
     reserveMs: CLOCK_SAFETY_MS,
     floorMs: MIN_MOVETIME_MS,
   });
@@ -384,11 +445,7 @@ async function playJungleRustEngineMove(
   } = await resolveValidatedEngineMove<JungleMove>({
     maxAttempts: ENGINE_MOVE_MAX_ATTEMPTS,
     requestMove: async () => {
-      const search = await moveProvider(engineId, fen, {
-        nodes: rustTier.nodes,
-        movetimeCapMs,
-        repSeedFens,
-      });
+      const search = await engine.search(fen, movetimeCapMs);
       lastSearch = search;
       return search.best;
     },
@@ -420,9 +477,9 @@ async function playJungleRustEngineMove(
       variant: 'jungle',
       roomId: room.id,
       engineId,
-      engineVersion: JUNGLE_RUST_ENGINE_VERSION,
+      engineVersion: engine.engineVersion,
       movetimeMs: movetimeCapMs,
-      tier: { nodes: rustTier.nodes, movetimeMs: rustTier.movetimeCapMs },
+      tier: engine.tier,
       ply: state.moveNumber,
       toMove: seat,
       inCheck: false,
@@ -460,13 +517,13 @@ async function playJungleRustEngineMove(
       variant: 'jungle',
       roomId: room.id,
       engineId,
-      engineVersion: JUNGLE_RUST_ENGINE_VERSION,
+      engineVersion: engine.engineVersion,
       seat,
       ply: state.moveNumber,
       budgetMs: movetimeCapMs,
       remainingMs,
       incrementMs,
-      tier: { nodes: rustTier.nodes, movetimeMs: rustTier.movetimeCapMs },
+      tier: engine.tier,
       search: lastSearch,
       thinkTimeMs: Date.now() - startedAt,
       attempts,

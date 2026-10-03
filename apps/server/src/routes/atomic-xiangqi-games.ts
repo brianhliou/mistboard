@@ -2,8 +2,10 @@
  * Atomic Xiangqi postgame route — `GET /api/atomic-xiangqi/games/:id`, plus
  * the whole-game analysis routes under it (`…/analysis`, the shared factory).
  *
- * Shape-for-shape the Duck Xiangqi route (the TV builder lives in the
- * registration's `watch:` block). Open information, so the payload carries one
+ * Shape-for-shape the Duck Xiangqi route, including the live board builder
+ * (`atomicXiangqiLiveWatchPayload`) that /games, Watch live and the
+ * correspondence inbox draw an in-progress game from; the registration's
+ * `watch:` block names its channel. Open information, so the payload carries one
  * view (`truth`) built from Red's perspective and both seats plus spectators
  * get it. The per-ply history is the server's own snapshots, each carrying the
  * aftermath of its move (`lastBlast`), so the watch board can draw what every
@@ -49,6 +51,7 @@ import {
   tenantPveEngineId,
 } from './../variant-tenant/runtime.js';
 import type { TenantRuntimeRoom } from './../variant-tenant/tenant.js';
+import { registerLiveWatchPayloadBuilder } from './../watch-live.js';
 import { createGameAnalysisRoutes } from './game-analysis-route.js';
 import { type HttpApiContext, postgamePlayers, requireMethod, writeJson } from './lib.js';
 
@@ -304,6 +307,69 @@ export async function atomicXiangqiPostgameForApi(
     history: atomicXiangqiPostgameHistory(source.events),
   };
 }
+
+// Mistboard TV live payload: the postgame shape built from an IN-PROGRESS room's
+// events so far, so the watch renderer can draw and follow the live board.
+// Atomic Xiangqi is OPEN INFORMATION, so every field here is already public to
+// both players. The board is the kernel's own post-explosion state (the room's
+// projection, and per ply the replayed snapshots, each carrying `lastBlast`);
+// nothing here re-derives an explosion. Mirrors duckXiangqiLiveWatchPayload.
+export function atomicXiangqiLiveWatchPayloadFor(
+  roomId: string,
+  room: Pick<AtomicXiangqiRuntimeRoom, 'id' | 'events' | 'projection'>,
+): Record<string, unknown> | null {
+  if (room.id !== roomId) return null;
+  const projection = room.projection;
+  if (projection.state.status.type !== 'playing') return null;
+  if (!isTenantEventLog(atomicXiangqiTenant, room.events, roomId)) return null;
+  const timeline = atomicXiangqiPostgameTimeline(room.events);
+  const isEngine = atomicXiangqiTenant.engine?.isEngineClientId ?? (() => false);
+  const hasEngineSeat = Object.values(projection.seats).some((clientId) => isEngine(clientId));
+  const view = getAtomicXiangqiPlayerView(projection.state, 'red');
+  return {
+    game: {
+      roomId,
+      variant: ATOMIC_XIANGQI_SPEC_ID,
+      mode: hasEngineSeat ? 'pve' : 'pvp',
+      result: 'in-progress',
+      termination: 'in-progress',
+      plyCount: timeline.filter((entry) => entry.type === 'move-played').length,
+      startedAt: new Date(room.events[0]?.at ?? Date.now()).toISOString(),
+      endedAt: null,
+      rated: projection.rated,
+      visibility: 'public',
+      initialMs: projection.timeControl?.initialMs ?? null,
+      incrementMs: projection.timeControl?.incrementMs ?? null,
+    },
+    state: {
+      status: projection.state.status,
+      moveNumber: projection.state.moveNumber,
+      ...(projection.clock ? { clock: projection.clock } : {}),
+      ...(projection.timeControl ? { timeControl: projection.timeControl } : {}),
+    },
+    timeline,
+    view,
+    views: { truth: view },
+    history: atomicXiangqiPostgameHistory(room.events),
+  };
+}
+
+async function atomicXiangqiLiveWatchPayload(
+  roomId: string,
+): Promise<Record<string, unknown> | null> {
+  if (!atomicXiangqiEnabled()) return null;
+  const room = atomicXiangqiRooms.get(roomId) ?? null;
+  if (!room) return null;
+  await room.pendingWrites.catch(() => undefined);
+  return atomicXiangqiLiveWatchPayloadFor(roomId, room);
+}
+
+// Module scope on purpose (duck and fortress do the same): importing the route
+// module is what registers the TV builder, and http-api.ts's dispatch array is
+// the only import site. Channel id 'atomic-xiangqi' must match the
+// `watch.channelId` the tenant registration declares, or the builder is never
+// reached (games-route-registration.test.ts checks every open channel has one).
+registerLiveWatchPayloadBuilder('atomic-xiangqi', atomicXiangqiLiveWatchPayload);
 
 function atomicXiangqiPostgameFromLiveRoom(
   roomId: string,

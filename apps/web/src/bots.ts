@@ -85,6 +85,8 @@ const LADDER_BOT_ID_PREFIX = 'fairy-stockfish-level-';
 const JIEQI_LADDER_BOT_ID_PREFIX = 'pikafish-level-';
 // The top jieqi slot above Pikafish (level 8); server first-party-bots.ts.
 const JIEQI_TOP_BOT_ID = 'ab-jchess';
+// The top jungle slot above Misty (2026-10, #434); server first-party-bots.ts.
+const JUNGLE_TOP_BOT_ID = 'katago';
 
 // /bots is the page for "play xiangqi against the computer" (象棋人机对战), in
 // all three interface languages (/zh-hans/bots, /zh-hant/bots): the heading
@@ -363,8 +365,42 @@ function buildBotDirectorySections(bots: BotProfile[]): HTMLElement[] {
 function systemBotBio(bot: BotProfile): string | undefined {
   if (bot.id === 'pikafish') return t('bots.pikafishBio');
   if (bot.id === JIEQI_TOP_BOT_ID) return t('bots.abJchessBio');
+  if (bot.id === JUNGLE_TOP_BOT_ID) return t('bots.katagoBio');
   if (bot.id === 'misty') return t('bots.mistyBio');
   return undefined;
+}
+
+// Linked credits for a bot built on other people's engines and nets, shown on its
+// page under the bio. hzyhhzy agreed to KataGo running here credited
+// (hzyhhzy/KataGomo#12); the net is Kouza's, shipped in Dandelion 4.
+type BotCredit = { label: string; href: string };
+
+export function botCredits(botId: string): BotCredit[] {
+  if (botId !== JUNGLE_TOP_BOT_ID) return [];
+  return [
+    {
+      label: t('bots.katagoCreditKatagomo'),
+      href: 'https://github.com/hzyhhzy/KataGomo/tree/AnimalChess2025',
+    },
+    { label: t('bots.katagoCreditKatago'), href: 'https://github.com/lightvector/KataGo' },
+    { label: t('bots.katagoCreditNet'), href: 'https://github.com/lxsgx23/Dandelion-Chess' },
+  ];
+}
+
+function buildBotCredits(credits: readonly BotCredit[]): HTMLElement {
+  const list = document.createElement('ul');
+  list.className = 'profile-side-links bot-profile-credits';
+  for (const credit of credits) {
+    const item = document.createElement('li');
+    const link = document.createElement('a');
+    link.href = credit.href;
+    link.target = '_blank';
+    link.rel = 'noreferrer noopener';
+    link.textContent = credit.label;
+    item.append(link);
+    list.append(item);
+  }
+  return list;
 }
 
 function playsGame(bot: BotProfile, gameSpecId: string): boolean {
@@ -572,6 +608,8 @@ function buildBotSideInfo(bot: BotProfile, gameSpecId: string): HTMLElement {
     bio.textContent = bot.bio;
     side.append(bio);
   }
+  const credits = botCredits(bot.id);
+  if (credits.length > 0) side.append(buildBotCredits(credits));
 
   const rating = botRatings(bot).find((candidate) => candidate.gameSpecId === gameSpecId);
   if (rating) side.append(buildBotSideStat('Published rating', ratingLabel(rating)));

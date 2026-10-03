@@ -1,13 +1,15 @@
 // EvE adapter for Jungle (斗兽棋): scheduled data games between the site's own
-// jungle engine tiers (#488), on the Rust binary prod serves (jungle-engine.ts).
-// Jungle offers ONE bot (misty-jungle-level-2, "Misty"); the retired levels 1
-// and 3 still resolve, attribute to Misty (first-party-bots.ts), and give the
-// scheduler a three-rung ladder to pair. Not a rating adapter: there is no
+// jungle engine tiers (#488), on the engines prod serves. Jungle offers two bots:
+// KataGo-AnimalChess on top (katago-jungle, jungle-katago-engine.ts) and Misty
+// (misty-jungle-level-2, the Rust binary in jungle-engine.ts); Misty's retired
+// levels 1 and 3 still resolve and attribute to her (first-party-bots.ts), so the
+// scheduler has a four-rung ladder to pair. Not a rating adapter: there is no
 // random floor, so no job of this variant carries a rating_policy.
 //
-// The engine is fed what the live Rust path feeds it (server-jungle-engine.ts):
-// the full-board FEN (perfect information) and the repetition seeds of the game
-// so far. No guard or pre-search scan runs on that path, so none runs here.
+// Each engine is fed what its live path feeds it (server-jungle-engine.ts): Misty
+// the full-board FEN and the repetition seeds of the game so far, KataGo the FEN
+// and the side to move (its loop rule is NONE; the kernel's repetition rule
+// governs). No guard or pre-search scan runs on either path, so none runs here.
 
 import {
   getJungleLegalMoves,
@@ -27,6 +29,11 @@ import {
   jungleRepSeedFens,
   jungleStateToEngineFen,
 } from './jungle-fen.js';
+import {
+  katagoJungleAvailable,
+  katagoJungleLiveEngineMove,
+  katagoJungleTierFor,
+} from './jungle-katago-engine.js';
 import { jungleTenant } from './jungle-tenant.js';
 import type { VariantEveAdapter } from './variant-eve.js';
 import { applyTenantEvent, replayTenantEvents } from './variant-tenant/runtime.js';
@@ -55,7 +62,7 @@ export const jungleEveAdapter: VariantEveAdapter<
   colors: ['red', 'black'],
   tenant: jungleTenant,
   tierFor: (engineId) => {
-    const tier = jungleRustTierFor(engineId);
+    const tier = jungleRustTierFor(engineId) ?? katagoJungleTierFor(engineId);
     return tier ? { id: tier.id, movetimeMs: tier.movetimeCapMs } : null;
   },
   legalMoves: getJungleLegalMoves,
@@ -67,11 +74,24 @@ export const jungleEveAdapter: VariantEveAdapter<
   },
   search: (engineId, _history, opts, context) => {
     const states = jungleEveStates(context.events as readonly JungleEvent[]);
-    return jungleLiveEngineMove(engineId, jungleStateToEngineFen(states[states.length - 1]!), {
+    const state = states[states.length - 1]!;
+    const fen = jungleStateToEngineFen(state);
+    const katago = katagoJungleTierFor(engineId);
+    if (katago) {
+      if (state.status.type !== 'playing')
+        throw new Error('katago-jungle asked to move a finished game');
+      return katagoJungleLiveEngineMove(fen, state.status.turn, {
+        visits: katago.visits,
+        movetimeCapMs: opts.movetimeMs,
+      });
+    }
+    return jungleLiveEngineMove(engineId, fen, {
       movetimeCapMs: opts.movetimeMs,
       repSeedFens: jungleRepSeedFens(states),
     });
   },
+  // A jungle task may seat either engine, so a worker claims one only when it can
+  // run both: a missing binary or net leaves the game queued instead of failing it.
   requiredCapability: 'jungle_engine',
-  available: jungleEngineBinaryAvailable,
+  available: () => jungleEngineBinaryAvailable() && katagoJungleAvailable(),
 };

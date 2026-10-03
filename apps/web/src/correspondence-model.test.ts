@@ -12,9 +12,11 @@ import {
   inboxTileKind,
   indexByRoom,
   othersSeeks,
+  parseStartFormPrefill,
   seatBoardView,
   seekRequestBody,
   splitInbox,
+  startFormPrefillHref,
   URGENT_DEADLINE_MS,
   variantFact,
 } from './correspondence-model.js';
@@ -308,5 +310,33 @@ describe('signed-out showcase', () => {
     expect(heroBoardGame(correspondenceInProgress(feed))).toBe(feed[3]);
     expect(heroBoardGame([feed[1], feed[2]])).toBeNull();
     expect(heroBoardGame([])).toBeNull();
+  });
+});
+
+describe('start form prefill (the bell\'s "post it again" link)', () => {
+  it("round-trips a lapsed seek's terms through the /correspondence URL", () => {
+    const href = startFormPrefillHref({
+      gameSpecId: 'xiangqi',
+      daysPerMove: 7,
+      preferredColor: 'first',
+      rated: true,
+    });
+    expect(href).toBe('/correspondence?gameSpecId=xiangqi&days=7&side=first&rated=1#start');
+    expect(parseStartFormPrefill(new URL(href, 'https://x.test').search)).toEqual({
+      gameSpecId: 'xiangqi',
+      daysPerMove: 7,
+      preferredColor: 'first',
+      rated: true,
+    });
+  });
+
+  it('drops anything the form does not offer', () => {
+    expect(parseStartFormPrefill('')).toBeNull();
+    expect(parseStartFormPrefill('?gameSpecId=not-a-game&days=2&side=white')).toBeNull();
+    expect(
+      parseStartFormPrefill(`?gameSpecId=${CORRESPONDENCE_ELIGIBLE_SPEC_IDS[0]}&days=5`),
+    ).toEqual({
+      gameSpecId: CORRESPONDENCE_ELIGIBLE_SPEC_IDS[0],
+    });
   });
 });

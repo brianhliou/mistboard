@@ -4,7 +4,12 @@
 // seeks, and the Start a game request body. DOM-free so it is unit-tested
 // directly (correspondence-model.test.ts).
 
-import { isCorrespondenceRatedSpec, maybeGameSpecForId } from '@mistboard/game';
+import {
+  CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+  DAYS_PER_MOVE_OPTIONS,
+  isCorrespondenceRatedSpec,
+  maybeGameSpecForId,
+} from '@mistboard/game';
 import type { CurrentGame } from './current-games-model.js';
 
 // One in-flight correspondence game, as served by GET /api/correspondence/games.
@@ -290,6 +295,49 @@ export function seekRequestBody(
     return { ok: true, body: { ...base, targetHandle: handle } };
   }
   return { ok: true, body: base };
+}
+
+// Start-form terms carried in the /correspondence URL, so a link (the bell's
+// "post it again" row for a lapsed seek) can open the form already set. Every
+// field is optional and validated against what the form offers; anything else
+// is dropped and the form keeps its own default. The variant rides as
+// `gameSpecId`, never `variant`: main.ts's dev live-room shortcut claims any
+// page carrying `?variant=`.
+export type StartFormPrefill = {
+  gameSpecId?: string;
+  daysPerMove?: number;
+  preferredColor?: SeekPreferredColor;
+  rated?: boolean;
+};
+
+export function startFormPrefillHref(terms: {
+  gameSpecId: string;
+  daysPerMove: number;
+  preferredColor: SeekPreferredColor;
+  rated?: boolean;
+}): string {
+  const params = new URLSearchParams({
+    gameSpecId: terms.gameSpecId,
+    days: String(terms.daysPerMove),
+    side: terms.preferredColor,
+  });
+  if (terms.rated === true) params.set('rated', '1');
+  return `/correspondence?${params.toString()}#start`;
+}
+
+export function parseStartFormPrefill(search: string): StartFormPrefill | null {
+  const params = new URLSearchParams(search);
+  const prefill: StartFormPrefill = {};
+  const variant = params.get('gameSpecId');
+  if (variant && (CORRESPONDENCE_ELIGIBLE_SPEC_IDS as readonly string[]).includes(variant)) {
+    prefill.gameSpecId = variant;
+  }
+  const days = Number(params.get('days'));
+  if ((DAYS_PER_MOVE_OPTIONS as readonly number[]).includes(days)) prefill.daysPerMove = days;
+  const side = params.get('side');
+  if (side === 'first' || side === 'second' || side === 'random') prefill.preferredColor = side;
+  if (params.get('rated') === '1') prefill.rated = true;
+  return Object.keys(prefill).length > 0 ? prefill : null;
 }
 
 // ---- Signed-out showcase ------------------------------------------------------

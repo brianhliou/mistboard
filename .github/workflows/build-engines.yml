@@ -1,7 +1,8 @@
 name: Build engines
 
-# Compiles the seven server engines (three patched Fairy-Stockfish builds,
-# Stockfish, Pikafish-jieqi, Pikafish, AB-JChess) once per recipe and publishes them as
+# Compiles the eight server engines (three patched Fairy-Stockfish builds,
+# Stockfish, Pikafish-jieqi, Pikafish, AB-JChess, KataGo-AnimalChess) once per
+# recipe and publishes them as
 # release `engines-<recipe hash>`; railpack.json fetches that release at image
 # build time instead of compiling on every deploy. The recipe and its hash live
 # in scripts/engine-assets.sh; the paths below are exactly its inputs
@@ -24,6 +25,7 @@ on:
       - pikafish-jieqi.ref
       - pikafish.ref
       - ab-jchess.ref
+      - katago-jungle.ref
       - scripts/engine-assets.sh
       - .github/workflows/build-engines.yml
 
@@ -56,6 +58,11 @@ jobs:
           else
             echo "yes=false" >> "$GITHUB_OUTPUT"
           fi
+
+      # KataGo-AnimalChess builds with CMake against Eigen and a static zlib.
+      - name: Build dependencies
+        if: steps.published.outputs.yes != 'true'
+        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends cmake libeigen3-dev zlib1g-dev
 
       - name: Build
         if: steps.published.outputs.yes != 'true'

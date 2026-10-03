@@ -53,6 +53,7 @@ import {
   tenantPveEngineId,
 } from './../variant-tenant/runtime.js';
 import type { TenantRuntimeRoom } from './../variant-tenant/tenant.js';
+import { registerLiveWatchPayloadBuilder } from './../watch-live.js';
 import { createGameAnalysisRoutes, type GameAnalysisRouteDeps } from './game-analysis-route.js';
 import { type HttpApiContext, postgamePlayers, requireMethod, writeJson } from './lib.js';
 
@@ -365,6 +366,66 @@ export async function crazyhouseXiangqiPostgameForApi(
     history: crazyhouseXiangqiPostgameHistory(source.events),
   };
 }
+
+// Mistboard TV live payload, which /games and the correspondence inbox also
+// draw: the postgame shape built from an IN-PROGRESS room's events so far, so
+// the watch renderer can draw and follow the live board. Crazyhouse Xiangqi is
+// OPEN INFORMATION: every field here, both hands included, is already public to
+// both players, so seats and spectators get the same one view. Mirrors
+// fortressXiangqiLiveWatchPayload; split like jungleFlipLiveWatchPayloadFor so
+// the shape is testable without the live room map.
+export function crazyhouseXiangqiLiveWatchPayloadFor(
+  roomId: string,
+  room: Pick<CrazyhouseXiangqiRuntimeRoom, 'id' | 'events' | 'projection'>,
+): Record<string, unknown> | null {
+  if (room.id !== roomId) return null;
+  const projection = room.projection;
+  if (projection.state.status.type !== 'playing') return null;
+  if (!isTenantEventLog(crazyhouseXiangqiTenant, room.events, roomId)) return null;
+  const timeline = crazyhouseXiangqiPostgameTimeline(room.events);
+  const isEngine = crazyhouseXiangqiTenant.engine?.isEngineClientId ?? (() => false);
+  const hasEngineSeat = Object.values(projection.seats).some((clientId) => isEngine(clientId));
+  const view = getCrazyhouseXiangqiPlayerView(projection.state, 'red');
+  return {
+    game: {
+      roomId,
+      variant: CRAZYHOUSE_XIANGQI_SPEC_ID,
+      mode: hasEngineSeat ? 'pve' : 'pvp',
+      result: 'in-progress',
+      termination: 'in-progress',
+      plyCount: timeline.filter((entry) => entry.type === 'move-played').length,
+      startedAt: new Date(room.events[0]?.at ?? Date.now()).toISOString(),
+      endedAt: null,
+      rated: projection.rated,
+      visibility: 'public',
+      initialMs: projection.timeControl?.initialMs ?? null,
+      incrementMs: projection.timeControl?.incrementMs ?? null,
+    },
+    state: {
+      status: projection.state.status,
+      moveNumber: projection.state.moveNumber,
+      ...(projection.clock ? { clock: projection.clock } : {}),
+      ...(projection.timeControl ? { timeControl: projection.timeControl } : {}),
+    },
+    timeline,
+    view,
+    views: { truth: view },
+    history: crazyhouseXiangqiPostgameHistory(room.events),
+  };
+}
+
+async function crazyhouseXiangqiLiveWatchPayload(
+  roomId: string,
+): Promise<Record<string, unknown> | null> {
+  if (!crazyhouseXiangqiTenant.enabled()) return null;
+  const room = crazyhouseXiangqiRooms.get(roomId) ?? null;
+  if (!room) return null;
+  await room.pendingWrites.catch(() => undefined);
+  return crazyhouseXiangqiLiveWatchPayloadFor(roomId, room);
+}
+
+// The channel id is crazyhouse-xiangqi-registration.ts's watch.channelId.
+registerLiveWatchPayloadBuilder('crazyhouse-xiangqi', crazyhouseXiangqiLiveWatchPayload);
 
 function crazyhouseXiangqiPostgameFromLiveRoom(
   roomId: string,

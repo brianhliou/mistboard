@@ -12,6 +12,8 @@
 //                        xiangqi, fortress xiangqi, duck xiangqi and atomic xiangqi.
 //   - Pikafish Level 1..7 — the jieqi ladder (2026-09-29, migration 151); its
 //                        level 8 is Pikafish itself.
+//   - AB-JChess / KataGo — top slots named for their engines (migrations 152,
+//                        159): the strongest jieqi and jungle engines we know of.
 // Retired rosters (pre-merge Misty and
 // Pikafish tiers) stay resolvable through `legacyBotIds` and
 // `attributionEngineIds` so old rooms, replays, and game attribution keep their
@@ -158,6 +160,14 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
     displayName: 'AB-JChess',
     engines: { jieqi: 'ab-jchess-jieqi' },
     defaultGameSpecId: 'jieqi',
+  },
+  // The top jungle slot above Misty (migration 159): KataGo-AnimalChess, which won
+  // the jungle challenge (#434). Named for its engine, like AB-JChess.
+  {
+    id: 'katago',
+    displayName: 'KataGo',
+    engines: { jungle: 'katago-jungle' },
+    defaultGameSpecId: 'jungle',
   },
 ];
 

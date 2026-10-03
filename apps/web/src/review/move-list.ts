@@ -120,6 +120,7 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
   panel.append(list);
 
   const cellsByPly = new Map<number, HTMLButtonElement>();
+  const branchesByPly = new Map<number, HTMLLIElement>();
   const lineCells = new Map<string, HTMLButtonElement>();
   let onJump: ((ply: number) => void) | null = null;
   let onJumpLine: ((atPly: number, cursor: number) => void) | null = null;
@@ -173,6 +174,7 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
     const li = document.createElement('li');
     li.className = 'review-move-list__branch';
     li.dataset.atPly = String(entry.ply);
+    branchesByPly.set(entry.ply, li);
     if (entry.note) {
       const note = document.createElement('p');
       note.className = 'review-move-list__note';
@@ -263,7 +265,14 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
       cell.classList.toggle('review-move-list__move--current', isCurrent);
       if (isCurrent) current = cell;
     }
-    if (current) revealInScroller(current);
+    if (!current) return;
+    // A move with a comment or a sideline: bring that under-row into view too
+    // (an embed opened on a study's turning point showed the move at the foot
+    // of the sheet and its comment cut off below), then the move itself, so a
+    // branch taller than the sheet never pushes the current move out.
+    const branch = branchesByPly.get(currentPly);
+    if (branch) revealInScroller(branch);
+    revealInScroller(current);
   }
 
   function annotate(byPly: Map<number, MoveAnnotation>): void {

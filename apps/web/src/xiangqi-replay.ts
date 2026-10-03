@@ -30,6 +30,7 @@ import {
 import { tokenPieceSize } from './board-metrics.js';
 import { type ReplayStepperCopy, replayStepperCopy } from './replay-stepper-copy.js';
 import { seatDiscEl } from './seat-disc.js';
+import { GLYPH_SUFFIX_CLASS } from './study-chapter-annotations.js';
 import { readStoredXiangqiPieceSet, xiangqiAppearanceChangedEvent } from './theme.js';
 import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle, xiangqiNotationChangedEvent } from './xiangqi-notation.js';
@@ -1200,14 +1201,6 @@ export type XiangqiReplayBoardHandle = {
   jumpToLine: (atPly: number, cursor: number) => void;
   /** Which move-order seat sits at the bottom of the board. */
   bottomSeat: () => 'first' | 'second';
-};
-
-const GLYPH_SUFFIX_CLASS: Record<string, string> = {
-  '??': 'blunder',
-  '?': 'mistake',
-  '?!': 'inaccuracy',
-  '!!': 'brilliant',
-  '!': 'great',
 };
 
 const FAULT_GLYPHS: ReadonlySet<string> = new Set(['?', '??', '?!']);

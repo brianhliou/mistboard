@@ -165,6 +165,11 @@ const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     title: 'Contribute | Mistboard',
     description: 'Mistboard is free and open source. Ways to help, whether or not you write code.',
   },
+  '/creators': {
+    title: 'Work With Us | Mistboard',
+    description:
+      'Work with Mistboard: titled players and coaches, creators and streamers, event organizers and clubs, writers and composers, and engine authors.',
+  },
   '/changelog': {
     title: 'Changelog | Mistboard',
     description:
@@ -552,9 +557,14 @@ export async function serveSpaShellWithRoutePreloads(params: {
     html = html.replace('<html lang="en">', `<html lang="${spaMeta.htmlLang}">`);
   }
   if (spaMeta?.localeGroup && params.publicHost) {
+    // A self canonical beside the alternates: each member of the group is its
+    // own page, and hreflang without a canonical left a crawler to pick which
+    // URL (query-string or trailing-slash copies included) each one is. Until
+    // 2026-10-02 the zh videos, bots and course URLs had alternates only.
     html = html.replace(
       '</head>',
-      `${localeAlternateLinks(params.publicHost, spaMeta.localeGroup)}</head>`,
+      `<link rel="canonical" href="${params.publicHost}${params.pathname}">` +
+        `${localeAlternateLinks(params.publicHost, spaMeta.localeGroup)}</head>`,
     );
   }
   if (player?.meta && params.publicHost) {
@@ -897,6 +907,7 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/faq',
   '/patron',
   '/contribute',
+  '/creators',
   '/changelog',
   '/developers',
   '/api-docs',
@@ -1165,17 +1176,18 @@ export async function serveArticlesIndexPage(params: {
   const langKey =
     params.langPrefix === 'zh-hans' || params.langPrefix === 'zh-hant' ? params.langPrefix : 'en';
 
-  // The default-locale post list is prerendered (blog.html). The localized
-  // indexes and the community view are not, and stay on the shell below.
-  // Once a scheduled post has gone live since the build, blog.html predates
-  // it; the shell renders a current list client-side until the next deploy.
+  // Each locale's post list is prerendered (blog.html, zh-hans/blog.html,
+  // zh-hant/blog.html). The community view is not, and stays on the shell
+  // below. Once a scheduled post has gone live since the build, the baked list
+  // predates it; the shell renders a current list client-side until the next
+  // deploy.
   if (
-    langKey === 'en' &&
     params.view !== 'community' &&
     !prerenderedIndexIsStale(await readArticleSchedule(params.staticDir))
   ) {
+    const bakedFile = langKey === 'en' ? 'blog.html' : `${langKey}/blog.html`;
     const prerendered = await fs
-      .readFile(resolve(params.staticDir, 'blog.html'), 'utf-8')
+      .readFile(resolve(params.staticDir, bakedFile), 'utf-8')
       .catch(() => null);
     if (prerendered !== null) {
       params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
@@ -1207,19 +1219,45 @@ export async function serveRulesIndexPage(params: {
   staticDir: string;
   langPrefix?: string;
 }): Promise<void> {
-  const indexPath = resolve(params.staticDir, 'index.html');
-  let html = await fs.readFile(indexPath, 'utf-8');
   const langKey =
     params.langPrefix === 'zh-hans' || params.langPrefix === 'zh-hant' ? params.langPrefix : 'en';
+
+  // Each locale's rules index is prerendered (rules.html, zh-hans/rules.html,
+  // zh-hant/rules.html) with its own canonical and the locale group's
+  // hreflang; until 2026-10-02 all three answered with the bare shell. The
+  // tile list honours publish times the way the blog index does, so the same
+  // staleness rule hands a page gone live since the build to the shell below.
+  if (!prerenderedIndexIsStale(await readArticleSchedule(params.staticDir))) {
+    const bakedFile = langKey === 'en' ? 'rules.html' : `${langKey}/rules.html`;
+    const prerendered = await fs
+      .readFile(resolve(params.staticDir, bakedFile), 'utf-8')
+      .catch(() => null);
+    if (prerendered !== null) {
+      params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      params.response.end(prerendered);
+      return;
+    }
+  }
+
+  const indexPath = resolve(params.staticDir, 'index.html');
+  let html = await fs.readFile(indexPath, 'utf-8');
   const meta = RULES_INDEX_META[langKey];
   if (langKey !== 'en') {
     html = html.replace('<html lang="en">', `<html lang="${meta.htmlLang}">`);
   }
+  const url = `${params.publicHost}${langKey === 'en' ? '' : `/${langKey}`}/rules`;
   html = injectPageMeta(html, {
     title: meta.title,
     description: meta.description,
-    url: `${params.publicHost}${langKey === 'en' ? '' : `/${langKey}`}/rules`,
+    url,
   });
+  // The fallback names the same canonical and alternates as the baked file, so
+  // a crawler that lands on it sees one page in three languages either way.
+  html = html.replace(
+    '</head>',
+    `<link rel="canonical" href="${url}">${localeAlternateLinks(params.publicHost, '/rules')}` +
+      `<link rel="alternate" hreflang="x-default" href="${params.publicHost}/rules"></head>`,
+  );
   params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
   params.response.end(html);
 }
