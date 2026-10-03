@@ -14,7 +14,7 @@ import type { Article, ArticleBlock } from '../types.js';
 //   30 controls 0 -> 0. Self-play vs e75cee3a, 1M nodes/move: colour fix alone
 //   95-95-10 (200); everywhere re-search -150 Elo (128 games); shipped root-only
 //   264-300-36 (600), -21 Elo [-48, +6]; at 4M nodes/move 95-97-8 (200), -3 [-51, +44]
-//   (the post quotes the 4M result as "plays about as well").
+//   (the post quotes both).
 // - AB-JChess: worst move in each of its 136 run7 losses, 60 reveals, 2 over-rated by
 //   15+ win points. Rigs: mistboard-engine lab, issue #497.
 
@@ -193,7 +193,7 @@ export const pikafishRevealBugArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: "Of the 71 moves that decided Pikafish's losses in the AB-JChess match, the old bot rated 16 at least five pawns better than they were. The fixed bot rates 3. It plays about as well as the old one: in 200 games between them, it won 95 and lost 97.",
+          text: "Of the 71 moves that decided Pikafish's losses in the AB-JChess match, the old bot rated 16 at least five pawns better than they were. The fixed bot rates 3. It plays about as well as the old one, perhaps slightly weaker: in 600 quick games it won 264 and lost 300, and with four times the search per move it won 95 and lost 97 in 200.",
         },
         {
           kind: 'paragraph',

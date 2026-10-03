@@ -195,8 +195,8 @@ const ZH_HANS: Record<string, string> = {
     '颜色翻转已经去掉，返回界限值的棋子会重新搜索。全部改动是[一次提交，28 行](https://github.com/brianhliou/pikafish-jieqi-wasm/commit/bcc83f88ee18760e60903d1a3aaa61ef6f70f2c9)。',
   'The fixed bot rates reveals close to their worth, and plays about as well':
     '修复后的电脑对翻子的估值接近实际，棋力也基本不变',
-  "Of the 71 moves that decided Pikafish's losses in the AB-JChess match, the old bot rated 16 at least five pawns better than they were. The fixed bot rates 3. It plays about as well as the old one: in 200 games between them, it won 95 and lost 97.":
-    '在 AB-JChess 对抗赛中决定皮卡鱼输棋的 71 步里，旧版电脑把其中 16 步评得比实际好至少五个兵。修复后的电脑只有 3 步。它的棋力和旧版差不多：两者对下 200 盘，它赢 95 盘、输 97 盘。',
+  "Of the 71 moves that decided Pikafish's losses in the AB-JChess match, the old bot rated 16 at least five pawns better than they were. The fixed bot rates 3. It plays about as well as the old one, perhaps slightly weaker: in 600 quick games it won 264 and lost 300, and with four times the search per move it won 95 and lost 97 in 200.":
+    '在 AB-JChess 对抗赛中决定皮卡鱼输棋的 71 步里，旧版电脑把其中 16 步评得比实际好至少五个兵。修复后的电脑只有 3 步。它的棋力和旧版差不多，也许略弱一点：快棋 600 盘，它赢 264 盘、输 300 盘；每步搜索量加到四倍后对下 200 盘，它赢 95 盘、输 97 盘。',
   'The fix covers the move the bot is choosing. Deeper in its search the old averaging is still there, because fixing it everywhere made the bot about 150 Elo weaker.':
     '修复只覆盖电脑正在选择的那一步。在更深的搜索里，旧的平均方式依然存在，因为在所有地方都修复会让电脑弱大约 150 Elo。',
   'AB-JChess has the second flaw, and it rarely matters': 'AB-JChess 也有第二个错误，但很少有影响',
@@ -3613,8 +3613,8 @@ const ZH_HANT: Record<string, string> = {
     '顏色翻轉已經去掉，返回界限值的棋子會重新搜尋。全部改動是[一次提交，28 行](https://github.com/brianhliou/pikafish-jieqi-wasm/commit/bcc83f88ee18760e60903d1a3aaa61ef6f70f2c9)。',
   'The fixed bot rates reveals close to their worth, and plays about as well':
     '修復後的電腦對翻子的估值接近實際，棋力也基本不變',
-  "Of the 71 moves that decided Pikafish's losses in the AB-JChess match, the old bot rated 16 at least five pawns better than they were. The fixed bot rates 3. It plays about as well as the old one: in 200 games between them, it won 95 and lost 97.":
-    '在 AB-JChess 對抗賽中決定皮卡魚輸棋的 71 步裡，舊版電腦把其中 16 步評得比實際好至少五個兵。修復後的電腦只有 3 步。它的棋力和舊版差不多：兩者對下 200 盤，它贏 95 盤、輸 97 盤。',
+  "Of the 71 moves that decided Pikafish's losses in the AB-JChess match, the old bot rated 16 at least five pawns better than they were. The fixed bot rates 3. It plays about as well as the old one, perhaps slightly weaker: in 600 quick games it won 264 and lost 300, and with four times the search per move it won 95 and lost 97 in 200.":
+    '在 AB-JChess 對抗賽中決定皮卡魚輸棋的 71 步裡，舊版電腦把其中 16 步評得比實際好至少五個兵。修復後的電腦只有 3 步。它的棋力和舊版差不多，也許略弱一點：快棋 600 盤，它贏 264 盤、輸 300 盤；每步搜索量加到四倍後對下 200 盤，它贏 95 盤、輸 97 盤。',
   'The fix covers the move the bot is choosing. Deeper in its search the old averaging is still there, because fixing it everywhere made the bot about 150 Elo weaker.':
     '修復只涵蓋電腦正在選擇的那一步。在更深的搜尋裡，舊的平均方式依然存在，因為在所有地方都修復會讓電腦弱大約 150 Elo。',
   'AB-JChess has the second flaw, and it rarely matters': 'AB-JChess 也有第二個錯誤，但很少有影響',
