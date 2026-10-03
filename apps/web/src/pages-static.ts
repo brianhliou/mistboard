@@ -397,6 +397,14 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     textLine(t('source.stockfish', {}, locale)),
     // Its authors asked for a credit with a link (lxsgx23/AB-JChess#1).
     linkLine(t('source.abJchess', {}, locale), 'https://github.com/lxsgx23/AB-JChess'),
+    // The top jungle bot (#434): engine, the engine it is built on, and the net's
+    // source, each linked; hzyhhzy agreed to it running here credited (hzyhhzy/KataGomo#12).
+    linkLine(
+      t('source.katagomo', {}, locale),
+      'https://github.com/hzyhhzy/KataGomo/tree/AnimalChess2025',
+    ),
+    linkLine(t('source.katago', {}, locale), 'https://github.com/lightvector/KataGo'),
+    linkLine(t('source.dandelion', {}, locale), 'https://github.com/lxsgx23/Dandelion-Chess'),
   ]);
 
   const identity = sourceBlock(t('source.projectIdentity', {}, locale), [

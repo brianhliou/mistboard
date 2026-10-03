@@ -482,6 +482,11 @@ export const ZH_HANS_COMMUNITY = {
   'bots.pikafishBio': '开源，由 Stockfish 改造而来，每步搜索三百万个局面。也可以下揭棋。',
   'bots.abJchessBio':
     '开源揭棋引擎，自带神经网络，作者 Huorongrong 和 Laoxu（Kouza）。经作者许可在本站使用。',
+  'bots.katagoBio':
+    '我们所知最强的斗兽棋引擎：hzyhhzy 的 KataGomo，基于 lightvector 的 KataGo，神经网络来自 Kouza 的 Dandelion 4。经作者许可在本站使用。',
+  'bots.katagoCreditKatagomo': 'KataGomo，作者 hzyhhzy',
+  'bots.katagoCreditKatago': 'KataGo，作者 lightvector',
+  'bots.katagoCreditNet': '神经网络：Kouza 的 Dandelion 4',
   'bots.mistyBio': 'Mistboard 自研引擎，下迷雾国际象棋、迷雾象棋、暗棋、斗兽棋和翻翻棋。',
   'bots.firstParty': '官方机器人',
   'bots.gameCountOne': '{count} 局',

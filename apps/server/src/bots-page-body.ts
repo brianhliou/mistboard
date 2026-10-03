@@ -38,6 +38,7 @@ const COPY: Record<
     jieqiIntro: string;
     otherTitle: string;
     misty: string;
+    katago: string;
   }
 > = {
   en: {
@@ -56,6 +57,8 @@ const COPY: Record<
     otherTitle: 'Other games',
     misty:
       "Mistboard's own engine for Fog Chess, Fog Xiangqi, banqi, Jungle Chess and Flip Jungle.",
+    katago:
+      "The strongest Jungle Chess engine we know of: hzyhhzy's KataGomo, built on lightvector's KataGo, with the neural network from Kouza's Dandelion 4.",
   },
   'zh-Hans': {
     heading: '和电脑下象棋',
@@ -71,6 +74,8 @@ const COPY: Record<
     jieqiIntro: '刚开始下揭棋？从第 4 级开始。赢几盘之后，再往上挑战一级。',
     otherTitle: '其他棋类',
     misty: 'Mistboard 自研引擎，下迷雾国际象棋、迷雾象棋、暗棋、斗兽棋和翻翻棋。',
+    katago:
+      '我们所知最强的斗兽棋引擎：hzyhhzy 的 KataGomo，基于 lightvector 的 KataGo，神经网络来自 Kouza 的 Dandelion 4。',
   },
   'zh-Hant': {
     heading: '和電腦下象棋',
@@ -86,6 +91,8 @@ const COPY: Record<
     jieqiIntro: '剛開始下揭棋？從第 4 級開始。贏幾盤之後，再往上挑戰一級。',
     otherTitle: '其他棋類',
     misty: 'Mistboard 自研引擎，下迷霧國際象棋、迷霧象棋、暗棋、鬥獸棋和翻翻棋。',
+    katago:
+      '我們所知最強的鬥獸棋引擎：hzyhhzy 的 KataGomo，基於 lightvector 的 KataGo，神經網路來自 Kouza 的 Dandelion 4。',
   },
 };
 
@@ -165,7 +172,7 @@ export async function botsDirectoryBody(
   const otherGames = others
     .filter((bot) => !playsXiangqi(bot) && !playsGame(bot, 'jieqi'))
     .map((bot) => {
-      const blurb = bot.id === 'misty' ? copy.misty : bot.bio;
+      const blurb = bot.id === 'misty' ? copy.misty : bot.id === 'katago' ? copy.katago : bot.bio;
       return `<li><a href="${botHref(bot.id)}">${escapeHtml(bot.displayName)}</a>. ${escapeHtml(blurb)}</li>`;
     });
 

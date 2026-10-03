@@ -77,7 +77,9 @@ export type EngineId =
   // MistyJungleFlip (Flip Jungle)
   | 'misty-jungle-flip'
   // MistyJungle Rust tiers (Jungle): level 2 is the one offered bot, 1 and 3 retired
-  | `misty-jungle-level-${1 | 2 | 3}`;
+  | `misty-jungle-level-${1 | 2 | 3}`
+  // KataGo-AnimalChess (Jungle): the top seat above Misty (jungle-katago-engine.ts)
+  | 'katago-jungle';
 
 /**
  * A seat's client id that denotes a registered engine. Superset of `EngineId`
@@ -145,7 +147,8 @@ export type EngineConfigKind =
   | 'pikafish-xiangqi'
   | 'banqi-uci'
   | 'jungle-flip-uci'
-  | 'jungle-uci';
+  | 'jungle-uci'
+  | 'katago-gtp';
 
 /** In-process TypeScript baseline engines (capture-seeker, random-legal). */
 export type BuiltinEngineConfig = {
@@ -223,6 +226,14 @@ export type JungleUciEngineConfig = {
   movetime_ms: number;
 };
 
+/** KataGo-AnimalChess over GTP (jungle-katago-engine.ts KATAGO_JUNGLE_TIER_LIST):
+ *  a visit budget per stage of the two-stage move, under a whole-move ceiling. */
+export type KatagoGtpEngineConfig = {
+  kind: 'katago-gtp';
+  visits: number;
+  movetime_ms: number;
+};
+
 export type EngineConfig =
   | BuiltinEngineConfig
   | PythonSubprocessEngineConfig
@@ -231,7 +242,8 @@ export type EngineConfig =
   | PikafishXiangqiEngineConfig
   | BanqiUciEngineConfig
   | JungleFlipUciEngineConfig
-  | JungleUciEngineConfig;
+  | JungleUciEngineConfig
+  | KatagoGtpEngineConfig;
 
 export type EngineDefinition = {
   id: EngineId;

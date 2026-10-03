@@ -121,8 +121,10 @@ const LOBBY_LEVEL_OFFSETS = [0, -1, 1] as const;
 // The per-variant PvE memory holds a bot id after a one-click start (bot-play.ts)
 // and an engine id after a setup-dialog pick. The dialog lists engines, so a
 // remembered jieqi bot is mapped back to its engine here; otherwise it misses the
-// menu and a player who last played Pikafish reopens the dialog on Level 4.
+// menu and a player who last played Pikafish reopens the dialog on Level 4. Same
+// for the jungle top seat: its bot is 'katago', its engine 'katago-jungle'.
 export function pveEngineIdForRememberedPick(gameSpecId: string, id: string): string {
+  if (gameSpecId === JUNGLE_SPEC_ID) return id === 'katago' ? 'katago-jungle' : id;
   if (gameSpecId !== JIEQI_SPEC_ID) return id;
   if (id === 'pikafish') return 'pikafish-jieqi-strongest';
   if (id === 'ab-jchess') return 'ab-jchess-jieqi';

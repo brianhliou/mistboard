@@ -182,6 +182,16 @@ describe('landing bot policy', () => {
     );
     expect(pveEngineIdForRememberedPick('xiangqi', 'pikafish')).toBe('pikafish');
   });
+
+  it('maps a remembered KataGo bot to the jungle engine the setup menu lists', () => {
+    const menu =
+      webVariantTenantForSpecId('jungle')?.landing?.engineOptions?.map((e) => e.id) ?? [];
+    expect(menu).toContain(pveEngineIdForRememberedPick('jungle', 'katago'));
+    expect(pveEngineIdForRememberedPick('jungle', 'katago')).toBe('katago-jungle');
+    expect(pveEngineIdForRememberedPick('jungle', 'misty-jungle-level-2')).toBe(
+      'misty-jungle-level-2',
+    );
+  });
 });
 
 describe('landing bot ladder (homepage play panel)', () => {

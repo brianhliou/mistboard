@@ -231,6 +231,11 @@ export const EN_CONTENT = {
     'Stockfish: optional engine/runtime dependency for research and engine-worker flows, GPL family.',
   'source.abJchess':
     "AB-JChess by Huorongrong and Laoxu (Kouza): the top jieqi bot, GPL-3.0; its neural network is used with the authors' permission.",
+  'source.katagomo':
+    "KataGomo by hzyhhzy: KataGo for jungle (the AnimalChess2025 branch), the top jungle bot, MIT; played here with the author's permission.",
+  'source.katago': 'KataGo by lightvector: the engine KataGomo is built on, MIT.',
+  'source.dandelion':
+    "Dandelion 4 by Kouza (lxsgx23): the source of the top jungle bot's neural network, fetched from its release and never re-hosted.",
   'source.projectIdentity': 'Project identity',
   'source.identityAssets':
     'The Mistboard name, logo, mistboard.com domain, hosted service identity, and official events are controlled project assets.',
@@ -603,6 +608,9 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'source.chessops',
   'source.stockfish',
   'source.abJchess',
+  'source.katagomo',
+  'source.katago',
+  'source.dandelion',
   'source.projectIdentity',
   'source.identityAssets',
   'source.identityForksName',

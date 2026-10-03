@@ -27,6 +27,7 @@ import {
 import { abJchessNetPath, abJchessPath, pikaJieqiPath } from './jieqi-engine.js';
 import { jungleEnginePath } from './jungle-engine.js';
 import { jungleFlipEnginePath } from './jungle-flip-engine.js';
+import { katagoJungleEnginePath, katagoJungleNetPath } from './jungle-katago-engine.js';
 import { logger } from './obs.js';
 import { fairyStockfishPath } from './uci-engine-harness.js';
 import { pikafishXiangqiPath } from './xiangqi-pikafish-engine.js';
@@ -104,6 +105,18 @@ const ENGINE_PROBES: readonly EngineProbe[] = [
     binary: 'jungle-engine',
     enabled: jungleEnabled,
     resolvePath: jungleEnginePath,
+  },
+  {
+    // The top jungle seat's engine and its net (fetched from Kouza's Dandelion
+    // release by railpack.json). Missing either one hides the seat
+    // (katagoJungleAvailable) rather than failing the jungle ladder.
+    variant: 'jungle',
+    binary: 'katago-jungle',
+    enabled: jungleEnabled,
+    resolvePath: () => {
+      katagoJungleNetPath();
+      return katagoJungleEnginePath();
+    },
   },
   {
     variant: 'jungle-flip',

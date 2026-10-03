@@ -39,6 +39,7 @@ import {
   type JieqiEngineTier,
 } from '../jieqi-engine.js';
 import { JUNGLE_RUST_ENGINE_VERSION, JUNGLE_RUST_TIER_LIST } from '../jungle-engine.js';
+import { KATAGO_JUNGLE_ENGINE_VERSION, KATAGO_JUNGLE_TIER_LIST } from '../jungle-katago-engine.js';
 import {
   XIANGQI_FSF_ENGINE_REF,
   XIANGQI_FSF_ENGINE_VERSION,
@@ -1142,6 +1143,34 @@ const JUNGLE_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
   }),
 );
 
+// KataGo-AnimalChess (Jungle): the top seat (#434), registered so the EvE runner
+// can pair it with Misty for the scheduler's jungle games. Generated from its tier
+// table; the hash names the KataGomo commit, the net and the visit budget.
+const KATAGO_JUNGLE_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
+  KATAGO_JUNGLE_TIER_LIST.map((tier) => {
+    const signature = `katago-jungle-${KATAGO_JUNGLE_ENGINE_VERSION}-visits-${tier.visits}`;
+    return [
+      tier.id,
+      {
+        id: tier.id as EngineId,
+        engineId: 'katago-jungle',
+        engineName: 'KataGo-AnimalChess',
+        name: 'KataGo',
+        kind: 'container',
+        gameSpecId: 'jungle',
+        configHash: signature,
+        playSignature: signature,
+        config: { kind: 'katago-gtp', visits: tier.visits, movetime_ms: tier.movetimeCapMs },
+        notes:
+          `KataGo-AnimalChess (hzyhhzy/KataGomo AnimalChess2025, MIT, on lightvector's KataGo) ` +
+          `with Kouza's b10c384 net from Dandelion 4, ${tier.visits} visits per stage under a ` +
+          `${tier.movetimeCapMs} ms cap. The net is fetched from Dandelion's release at build ` +
+          'time, never re-hosted.',
+      } satisfies EngineDefinition,
+    ];
+  }),
+);
+
 const KNOWN_ENGINES: Record<string, EngineDefinition> = {
   ...BUILTIN_ENGINES,
   ...PYTHON_ENGINES,
@@ -1157,6 +1186,7 @@ const KNOWN_ENGINES: Record<string, EngineDefinition> = {
   ...BANQI_ENGINES,
   ...JUNGLE_FLIP_ENGINES,
   ...JUNGLE_ENGINES,
+  ...KATAGO_JUNGLE_ENGINES,
 };
 
 /**
