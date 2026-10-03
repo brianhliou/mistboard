@@ -444,16 +444,18 @@
 }
 
 /* Clock rows hold only the big time (the player line lives in the boxed
-   table's player rows): one column, left-aligned, lichess-large. The clock
-   spans the full column, the same width as the boxed table it joins, rounded
-   on its outer corners and sharing the table's whole edge on the joining side.
-   It used to be a partial-width lichess tab (`fit-content`), which left a
-   ~40% gap to its right beside the full-width table (Brian, 2026-10-02). */
+   table's player rows): one column, left-aligned, lichess-large. The clock is
+   a partial-width lichess tab joined to the boxed table, rounded on its outer
+   corners only and sharing the table's edge on the joining side. 6e9613e2
+   (2026-10-02) stretched it to the full column; that read as a slab, and the
+   tab came back the next day (Brian: "we want more like lichess"). */
 .clocks div {
   grid-template-columns: 1fr;
   justify-items: start;
   align-items: center;
-  width: 100%;
+  /* Wide enough for the digits it holds (`00:24.9` in the last stretch is
+     wider than `05:00`); the face's min-width keeps the tab from jumping. */
+  width: fit-content;
   max-width: 100%;
   box-sizing: border-box;
   min-height: 52px;
@@ -472,16 +474,31 @@
   border-radius: 0 0 var(--site-radius, 10px) var(--site-radius, 10px);
 }
 
-/* Square the whole table edge the full-width clock sits on, so clock, table
-   and clock read as one stacked block. */
+/* Square the table corner the clock tab sits on, so the two read as one shape. */
 [data-clock-top]:not(:empty) + .round-table__box {
   border-top-left-radius: 0;
-  border-top-right-radius: 0;
 }
 
 .round-table__box:has(+ [data-clock-bottom]:not(:empty)) {
   border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
+}
+
+/* col1 (phone): the partial-width tab is a RAIL idiom. Stacked full-bleed under
+   the board it reads as an unresolved block left-aligned against a full-width
+   card, so the clock takes the full column and the pair squares the whole
+   joining edge instead of one corner. */
+@media (max-width: 799px) {
+  .clocks div {
+    width: 100%;
+  }
+
+  [data-clock-top]:not(:empty) + .round-table__box {
+    border-top-right-radius: 0;
+  }
+
+  .round-table__box:has(+ [data-clock-bottom]:not(:empty)) {
+    border-bottom-right-radius: 0;
+  }
 }
 
 .clocks div.pregame {

@@ -25,11 +25,19 @@ function rule(selector: string): string {
 }
 
 describe('room clocks', () => {
-  it('span the full column, the width of the boxed table they join', () => {
-    // A `fit-content` tab left ~40% of the column empty beside the clock.
+  // 2026-10-02 stretched the clock to the full column (the tab's gap beside the
+  // table read as unfinished); 2026-10-03 Brian asked for the lichess tab back
+  // ("all the way long to the right ... we want more like lichess").
+  it('are a lichess tab beside the rail, sized to their digits', () => {
     const body = rule('.clocks div');
-    expect(body).toContain('width: 100%;');
-    expect(body).not.toContain('fit-content');
+    expect(body).toContain('width: fit-content;');
+    expect(body).not.toMatch(/^\s*width: 100%;/m);
+  });
+
+  it('take the full column on a phone, where they stack under the board', () => {
+    const phone = css.slice(css.indexOf('@media (max-width: 799px) {\n  .clocks div {'));
+    expect(phone.length, 'phone clock override missing').toBeLessThan(css.length);
+    expect(phone.slice(0, phone.indexOf('}'))).toContain('width: 100%;');
   });
 });
 
