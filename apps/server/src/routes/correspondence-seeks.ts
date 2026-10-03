@@ -39,7 +39,8 @@ export function parseSeekColorPreference(value: unknown): SeekColorPreference | 
 const MAX_OPEN_SEEKS_PER_USER = 6;
 
 // How long a challenge (private seek: direct or link) stays live before the
-// sweep reclaims it. Public board seeks never expire. A week is long enough for
+// sweep reclaims it. Public board seeks lapse on their own, longer clock
+// (persistence.CORRESPONDENCE_SEEK_TTL_MS, read-time from created_at). A week is long enough for
 // a shared "play me" link to reach a friend, short enough that dead links do not
 // accrete (lichess uses 1 day open / 2 weeks direct; one window is simpler).
 const CHALLENGE_TTL_MS = 7 * DAY_MS;
@@ -347,6 +348,34 @@ async function createSeek(
     writeJson(response, 503, { error: 'server_draining', restartAt: ctx.drainDeadlineMs() });
     return true;
   }
+  // The same board offer posted twice returns the live one instead of stacking a
+  // duplicate row. Checked before the cap so a player at the limit re-posting an
+  // offer they already have gets it back rather than a refusal. Best-effort under
+  // concurrency like the cap: two simultaneous posts can still both insert.
+  if (visibility === 'public' && !targetUserId) {
+    const existing = await persistence.findOpenDuplicatePublicSeek({
+      creatorUserId: user.id,
+      gameSpecId,
+      daysPerMove,
+      preferredColor,
+    });
+    if (existing) {
+      writeJson(response, 200, {
+        seek: {
+          id: existing.id,
+          gameSpecId: existing.gameSpecId,
+          daysPerMove: existing.daysPerMove,
+          preferredColor: existing.preferredColor,
+          targetUserId: null,
+          visibility: existing.visibility,
+          expiresAt: existing.expiresAt ? existing.expiresAt.toISOString() : null,
+        },
+        challengeUrl: null,
+        existing: true,
+      });
+      return true;
+    }
+  }
   // Cap is best-effort under concurrency (no unique constraint); a racing pair of
   // creates could both pass at exactly the limit. Acceptable for a spam bound.
   const open = await persistence.countOpenSeeksForUser(user.id);
@@ -354,9 +383,11 @@ async function createSeek(
     writeJson(response, 409, { error: 'seek_limit_reached', limit: MAX_OPEN_SEEKS_PER_USER });
     return true;
   }
-  // Private challenges lapse after the TTL; public board seeks stand until
-  // accepted or cancelled.
-  const expiresAt = visibility === 'private' ? new Date(Date.now() + CHALLENGE_TTL_MS) : null;
+  // Private challenges store their expiry; a public board seek stores none and
+  // lapses CORRESPONDENCE_SEEK_TTL_MS after posting, computed at read time.
+  const now = Date.now();
+  const expiresAt = visibility === 'private' ? new Date(now + CHALLENGE_TTL_MS) : null;
+  const effectiveExpiresAt = expiresAt ?? new Date(now + persistence.CORRESPONDENCE_SEEK_TTL_MS);
   const id = `seek_${randomUUID()}`;
   await persistence.createCorrespondenceSeek({
     id,
@@ -376,7 +407,7 @@ async function createSeek(
       preferredColor,
       targetUserId,
       visibility,
-      expiresAt: expiresAt ? expiresAt.toISOString() : null,
+      expiresAt: effectiveExpiresAt.toISOString(),
     },
     // The shareable "play me" URL: the accept page keyed by the unguessable id.
     // Present for off-board seeks (link + directed challenges); the public board
@@ -436,7 +467,8 @@ async function acceptSeek(
     writeJson(response, gateError === 'cannot_accept_own_seek' ? 409 : 403, { error: gateError });
     return true;
   }
-  // A lapsed challenge is gone: refuse it even before the sweep reclaims the row.
+  // A lapsed challenge or board seek is gone: refuse it even before the sweep
+  // reclaims the row. expiresAt is the effective expiry, board TTL included.
   if (seek.expiresAt && seek.expiresAt.getTime() <= Date.now()) {
     writeJson(response, 410, { error: 'challenge_expired' });
     return true;
