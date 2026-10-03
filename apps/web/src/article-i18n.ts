@@ -3575,6 +3575,10 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // Traditional starts from the complete Simplified key set, then every
+  // authored Taiwan lexical or glyph fork below overrides that shared value.
+  // Keep this spread first so new Traditional entries cannot be overwritten.
+  ...ZH_HANS,
   // ab-jchess (match link): machine-drafted 2026-10-02, not native-reviewed.
   'All 400 games are on the site, each with its own review page: [browse the match](/games/search?variant=jieqi&source=engine-match).':
     '全部 400 盤對局都在網站上，每盤都有自己的覆盤頁面：[查看這場對抗賽](/games/search?variant=jieqi&source=engine-match)。',
@@ -3692,10 +3696,6 @@ const ZH_HANT: Record<string, string> = {
     '這對你是有好處的。如果你子力落後，不代表就輸了：把它一顆強子引進長捉，MistyBanqi 可能就走進那個它看不出該拒絕的和棋。這種事多到可以量：引擎自我對弈的 200 盤裡，[每六盤就有一盤和棋](/blog/banqi-statistics)，其中一半曾經走到贏定的局面。',
   "A related blind spot involves the general. Only a soldier, the other general or a cannon's jump can take it, so a boxed-in general is in danger from one piece at a time, and the engine is slow to make room for one cornered. It will sometimes march a piece off to the far side of the board while a lone enemy soldier walks up and traps it. Same gap as the draw above: the evaluation has no real sense of a slow, quiet threat building several moves away.":
     '另一個相關的盲點跟將有關。只有卒、對方的將或砲的跳吃拿得下它，所以被圍住的將一次只怕一種子，而引擎很慢才會替被逼到角落的將騰出空間。它有時候會把一顆子調到棋盤另一頭，同時一顆孤零零的敵方卒走過來把它困死。跟上面那個和棋是同一個缺口：這套評估函數對於好幾步之外慢慢成形的安靜威脅，沒有什麼感覺。',
-  // Traditional starts from the complete Simplified key set, then every
-  // authored Taiwan lexical or glyph fork below overrides that shared value.
-  // Keep this spread first so new Traditional entries cannot be overwritten.
-  ...ZH_HANS,
   // one-thousand-games: machine-drafted 2026-10-01, not native-reviewed. Variant names follow the
   // rules pages (迷霧國際象棋, 鬥獸棋, 鴨子象棋, 翻翻棋, 堡壘象棋).
   '1,000 games played': '已下完 1,000 盤棋',
