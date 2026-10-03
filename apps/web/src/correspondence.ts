@@ -342,6 +342,7 @@ function buildWaitingRow(
   const parts = [variantDisplayLabel(game.gameSpecId)];
   const days = current?.timeControl?.daysPerMove;
   if (days) parts.push(cadenceLabel(days));
+  if (game.rated === true) parts.push(t('play.rated'));
   if (current?.lastActivityAt) {
     parts.push(
       t('correspondence.updatedAgo', {
