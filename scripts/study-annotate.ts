@@ -23,6 +23,8 @@
 //     earned a glyph: a line exists because the move played was worse, so a
 //     candidate line off an unfaulted move is dropped (Brian, 2026-10-02).
 //   - one comment per move (the study shows the first only), notes joined.
+//   - a move whose next position carries luck (a jieqi reveal) is graded on
+//     its own search from the position before (moveScore), the mover's view.
 //
 // Moves are tokens in the chapter's own spelling; the caller checks legality.
 
@@ -99,6 +101,12 @@ export type EngineAnnotationInput = {
   redScore: readonly number[];
   /** The engine's preferred move at each position, if known. */
   best?: readonly (string | null)[];
+  /** Red's expected score of move i as searched from the position before it,
+   *  where the next position would grade it unfairly: a move that turns over a
+   *  hidden piece (jieqi) is worth the average over what it could be, and the
+   *  next position already knows which it was. When set, it grades move i in
+   *  place of redScore[i + 1]. */
+  moveScore?: readonly (number | null)[];
   /** Whose moves are judged; both by default. */
   judge?: 'red' | 'black' | 'both';
   sidelines?: readonly EngineSideline[];
@@ -132,7 +140,7 @@ export function judgedMoves(input: EngineAnnotationInput): JudgedMove[] {
     if (best === uci) continue;
     const forMover = (red: number): number => (mover === 'red' ? red : 1 - red);
     const before = forMover(input.redScore[i]!);
-    const after = forMover(input.redScore[i + 1]!);
+    const after = forMover(input.moveScore?.[i] ?? input.redScore[i + 1]!);
     const g = moveGlyphFor(before, after);
     if (g) out.push({ ply: i + 1, uci, mover, glyph: g, before, after, best });
   }

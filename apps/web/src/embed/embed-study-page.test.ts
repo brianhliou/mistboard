@@ -1,6 +1,11 @@
-import { createInitialJungleFlipState, jungleFlipStateToDealtFen } from '@mistboard/game';
+import {
+  createInitialJungleFlipState,
+  type JieqiSquare,
+  jungleFlipStateToDealtFen,
+} from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { JUNGLE_ART } from '../jungle-art.js';
+import { jieqiMarkerSvg } from '../live-jieqi-render.js';
 import { STUDY_VARIANTS } from '../study-catalog.js';
 import { embedStudyRouteFromPath } from './embed-route.js';
 import { CHAPTER_EMBED_VARIANTS, mountEmbedStudy } from './embed-study-page.js';
@@ -51,6 +56,26 @@ const JIEQI_GAME_18 = (
   'a5a4 h3h9 i10i9 b3b9 i9h9 e4e5 i5g4 f1e2 h9h1 e2e3 h1g1 e1e2 b10d9 g5h7 g1d1 h7f8 e10e9 ' +
   'e7c8 e9f9 c8d10 a10d10 b1b2 d9d2'
 ).split(' ');
+
+/** Where a glyph badge sits on a jieqi board: its disc's centre and label. */
+function badgeAt(board: Element | null | undefined, selector: string) {
+  const disc = board?.querySelector(`${selector} circle`);
+  return {
+    cx: disc?.getAttribute('cx'),
+    cy: disc?.getAttribute('cy'),
+    text: board?.querySelector(selector)?.textContent,
+  };
+}
+
+/** The badge the jieqi board's own marker renderer pins on `square`. */
+function expectedBadge(square: string, text: string, perspective: 'red' | 'black') {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.innerHTML = jieqiMarkerSvg(
+    { square: square as JieqiSquare, kind: 'glyph', text, className: 'probe' },
+    perspective,
+  );
+  return badgeAt(svg, '.probe');
+}
 
 function stubFetch(status: number, body: unknown) {
   vi.stubGlobal('fetch', async () => ({
@@ -615,6 +640,138 @@ describe('mountEmbedStudy', () => {
     toEnd?.click();
     expect(root.querySelector('.embed-card-status')?.textContent).toBe('40 / 40');
     expect(root.querySelector('.embed-card-result')?.textContent).toBe('Black wins');
+    root.remove();
+  });
+
+  it("shows a jieqi chapter's glyphs, comments, verdicts, sidelines and shapes, not the mainline alone", async () => {
+    // The opening of prod game 18 (wd6c7qvG / AMY9DrPj) annotated the way the
+    // study page shows a chapter: a ?! with a verdict and comment, a ?, a
+    // sideline off each with a closing verdict, and an arrow and ring on the
+    // position before the branch. The jieqi embed drew the mainline alone.
+    const [m1, m2, m3, m4, m5, m6] = JIEQI_GAME_18;
+    const jieqiChapter = {
+      id: 'JqAnn123',
+      name: 'Game 18, annotated',
+      orientation: 'black',
+      variant: 'jieqi',
+      tags: { red: 'Red seat', black: 'Black seat' },
+      root: {
+        rootFen: JIEQI_GAME_18_ROOT,
+        root: {
+          children: [
+            {
+              uci: m1,
+              children: [
+                {
+                  uci: m2,
+                  annotations: {
+                    shapes: [
+                      { brush: 'green', orig: 'c4', dest: 'c5' },
+                      { brush: 'red', orig: 'e4' },
+                    ],
+                  },
+                  children: [
+                    {
+                      uci: m3,
+                      annotations: {
+                        glyphs: [6, 16],
+                        comments: [{ text: 'Red loosens the flank.' }],
+                      },
+                      children: [
+                        {
+                          uci: m4,
+                          annotations: { glyphs: [2] },
+                          children: [{ uci: m5, children: [{ uci: m6 }] }],
+                        },
+                        // A sideline the kernel refuses past its first move
+                        // (e1e9 is no general's move) ends there.
+                        { uci: 'c7c6', children: [{ uci: 'e1e9' }] },
+                      ],
+                    },
+                    {
+                      uci: 'c4c5',
+                      annotations: { comments: [{ text: 'The quiet pawn.' }] },
+                      children: [{ uci: 'c7c6', annotations: { glyphs: [10] } }],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    };
+    stubFetch(200, { study: { id: 's' }, chapters: [jieqiChapter] });
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'JqAnn123' }, { startPly: 3 });
+
+    // Opens on the ?! move, its badge pinned on the square it landed on (g5),
+    // drawn by the jieqi board's own marker renderer in the chapter's
+    // orientation.
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('3 / 6');
+    const board = () => root.querySelector('.jieqi-embed-board');
+    const badge = board()?.querySelector('.xq-marker--inaccuracy');
+    expect(badge?.textContent).toContain('?!');
+    expect(badgeAt(board(), '.xq-marker--inaccuracy')).toEqual(expectedBadge('g5', '?!', 'black'));
+    const moves = Array.from(root.querySelectorAll('button.review-move-list__move'));
+    expect(
+      moves.map((m) => m.querySelector('.review-move-list__san')?.textContent?.trim()),
+    ).toEqual(['i4-i5', 'a7-a6', 'g4-g5 ?!', 'g7-g6 ?', 'c4-c5', 'h8-h1']);
+    // The verdict on the ?! move's own position, in the sheet's eval slot.
+    expect(
+      Array.from(
+        root.querySelectorAll('button.review-move-list__move .review-move-list__eval'),
+      ).map((e) => e.textContent),
+    ).toEqual(['', '', '±', '', '', '']);
+    const branches = Array.from(root.querySelectorAll<HTMLElement>('.review-move-list__branch'));
+    const branch = branches.find((b) => b.dataset.atPly === '3');
+    expect(branch?.querySelector('.review-move-list__note')?.textContent).toBe(
+      'Red loosens the flank.',
+    );
+    expect(branch?.querySelector('.review-move-list__note--line')?.textContent).toBe(
+      'The quiet pawn.',
+    );
+    expect(branch?.querySelector('.review-move-list__line-verdict')?.textContent).toBe('=');
+    // The refused sideline stops at the kernel's last accepted move.
+    const refused = branches.find((b) => b.dataset.atPly === '4');
+    expect(
+      Array.from(refused?.querySelectorAll('.review-move-list__line-move') ?? []).map(
+        (m) => m.textContent,
+      ),
+    ).toEqual(['c7-c6']);
+
+    // The sideline, steppable on the board from the position before the ?! move
+    // and back: c4c5 and c7c6 move dark pawns, which then show their dealt
+    // identity, as on the mainline.
+    const line = Array.from(branch?.querySelectorAll('.review-move-list__line-move') ?? []);
+    expect(line.map((m) => m.textContent)).toEqual(['c4-c5', 'c7-c6']);
+    expect(board()?.querySelector('[data-piece-square="c5"]')).toBeNull();
+    (line[1] as HTMLButtonElement).click();
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('2+2');
+    expect(board()?.querySelector('[data-piece-square="c5"]')).not.toBeNull();
+    expect(board()?.querySelector('[data-piece-square="c6"]')).not.toBeNull();
+    expect(board()?.querySelector('[data-piece-square="c6"]')?.innerHTML).not.toContain(
+      'hidden piece',
+    );
+    expect(board()?.querySelector('.xq-marker--inaccuracy')).toBeNull();
+    root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')?.click();
+    root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')?.click();
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('2 / 6');
+    expect(board()?.querySelector('[data-piece-square="c5"]')).toBeNull();
+    // The chapter's arrow and ring on the position the line leaves from, in the
+    // review's brush classes.
+    expect(board()?.querySelector('.jieqi-board-arrows .xq-shape--green')).not.toBeNull();
+    expect(board()?.querySelector('.jieqi-board-markers .xq-shape--red')).not.toBeNull();
+    // The ? on g7-g6 badges its own landing square one step on.
+    root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')?.click();
+    root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')?.click();
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('4 / 6');
+    expect(badgeAt(board(), '.xq-marker--mistake')).toEqual(expectedBadge('g6', '?', 'black'));
+    expect(board()?.querySelector('.jieqi-board-arrows .xq-shape--green')).toBeNull();
+    // The chapter's orientation: black at the bottom.
+    const seats = Array.from(root.querySelectorAll('.embed-card-seat'));
+    expect(seats.at(-1)?.querySelector('.embed-card-seat-name')?.textContent).toBe('Black seat');
     root.remove();
   });
 
