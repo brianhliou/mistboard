@@ -56,6 +56,7 @@ Conventions:
 
 ### Watching and review
 
+- Correspondence games show their time control as days per move, and every game card links its variant name to the rules ([3c98c885](https://github.com/brianhliou/mistboard/commit/3c98c885))
 - Mistboard TV's game card links to the variant's rules and shows when the game finished, and its clocks match the game room ([ca833e03](https://github.com/brianhliou/mistboard/commit/ca833e03))
 - The AB-JChess post shows where its edge comes from, with two of its wins, each with a chart of both engines' scores and an annotated board ([f30597b2](https://github.com/brianhliou/mistboard/commit/f30597b2))
 - Jungle bot games now pair only Misty and KataGo, at the strength you play against ([e4d993df](https://github.com/brianhliou/mistboard/commit/e4d993df))
