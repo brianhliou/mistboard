@@ -93,7 +93,7 @@ const NARRATIVE: Record<number, Array<{ ply: number; text: (r: Reading) => strin
       text: (r) =>
         `Misty takes the tiger and is two pieces up, but its elephant has left d3, and KataGo's elephant takes the leopard on c3 next. Misty now reads ${r.misty}; KataGo has itself at ${r.kata}.`,
     },
-    { ply: 73, text: (r) => `Misty finds ${r.misty} here, 16 plies after KataGo settled.` },
+    { ply: 73, text: (r) => `Misty finds ${r.misty} here, eight moves after KataGo saw the win.` },
     { ply: 90, text: () => "KataGo's lion walks into the den." },
   ],
   94: [
@@ -105,14 +105,14 @@ const NARRATIVE: Record<number, Array<{ ply: number; text: (r: Reading) => strin
     {
       ply: 90,
       text: (r) =>
-        `Fifty plies later Misty still reads ${r.misty}, and KataGo has the game tipping its way, at ${r.kata}.`,
+        `Twenty-six moves later Misty still reads ${r.misty}, and KataGo has the game tipping its way, at ${r.kata}.`,
     },
     {
       ply: 100,
       text: (r) =>
         `The turning point. KataGo jumps to ${r.kata} and stays above 80% to the end; Misty still reads ${r.misty}.`,
     },
-    { ply: 104, text: (r) => `Misty finds ${r.misty} here, four plies after the cat move.` },
+    { ply: 104, text: (r) => `Misty finds ${r.misty} here, two moves after the cat move.` },
     { ply: 117, text: () => "KataGo's lion walks into the den." },
   ],
 };
