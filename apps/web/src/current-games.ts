@@ -17,8 +17,10 @@
 //
 // Just finished: /api/watch's public replay pool (the same games /watch plays),
 // final positions drawn by the same showcase renderer /watch's queue preview
-// uses. Only open-information variants draw a board (finishedTileKind); every
-// hidden-information variant keeps the misty tile there too.
+// uses, in its default compact view. Open-information variants plus jieqi and
+// banqi (whose finished boards /watch already shows publicly, face-down pieces
+// face-down) draw a board (finishedTileKind); fog and every other hidden variant
+// keep the misty tile.
 //
 // Pure logic (chips, filter, sections, empty state, urgency) lives in
 // current-games-model.ts.
@@ -37,6 +39,7 @@ import {
   finishedMatchesFilter,
   finishedTileKind,
   isLowClock,
+  liveTileKind,
   PLAYER_FILTER_PARAM,
   PLAYER_FILTERS,
   type PlayerFilter,
@@ -274,7 +277,9 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
     // import never blocks the cards' text from appearing.
     for (const game of games) {
       const card = cards.get(game.roomId);
-      if (card && game.payload) void showBoard(card, game.payload);
+      if (card && game.payload && liveTileKind(game) === 'board') {
+        void showBoard(card, game.payload);
+      }
     }
   }
 
@@ -777,7 +782,7 @@ function clockRemaining(
 // gets the misty tile for its whole life on this page; an open game shows its
 // variant marker until the live renderer mounts.
 function renderBoardPlaceholder(root: HTMLElement, game: CurrentGame): void {
-  if (game.observe !== 'open') {
+  if (liveTileKind(game) === 'fog') {
     root.replaceChildren(buildFogTile(variantDisplayLabel(game.gameSpecId), t('games.inTheFog')));
     return;
   }

@@ -10,6 +10,7 @@ import {
   finishedMatchesFilter,
   finishedTileKind,
   isLowClock,
+  liveTileKind,
   parsePlayerFilter,
   splitSections,
   variantChips,
@@ -151,15 +152,46 @@ describe('clock urgency and the correspondence bar', () => {
   });
 });
 
+describe('liveTileKind', () => {
+  it('mists a Fog Chess correspondence game even if a payload slipped in', () => {
+    const fog = game({
+      channelId: 'dark-chess',
+      gameSpecId: 'dark-chess',
+      observe: 'sealed',
+      timeClass: 'correspondence',
+      payload: { leaked: true },
+    });
+    expect(liveTileKind(fog)).toBe('fog');
+  });
+
+  it('draws an open correspondence game from its payload, placeholder until it arrives', () => {
+    const corr = game({ timeClass: 'correspondence' });
+    expect(liveTileKind({ ...corr, payload: { view: {} } })).toBe('board');
+    expect(liveTileKind(corr)).toBe('placeholder');
+  });
+});
+
 describe('finishedTileKind', () => {
-  it('draws a board for open variants and mists every hidden one', () => {
+  it('draws open variants and the public-view jieqi and banqi boards', () => {
     expect(finishedTileKind('xiangqi')).toBe('board');
+    expect(finishedTileKind('jieqi')).toBe('board');
+    expect(finishedTileKind('banqi')).toBe('board');
+  });
+
+  it('keeps Fog Chess, Fog Xiangqi and every other hidden or unknown variant in the mist', () => {
     expect(finishedTileKind('fog')).toBe('fog');
     expect(finishedTileKind('dark-chess')).toBe('fog');
     expect(finishedTileKind('dark-xiangqi')).toBe('fog');
-    expect(finishedTileKind('banqi')).toBe('fog');
-    expect(finishedTileKind('jieqi')).toBe('fog');
+    expect(finishedTileKind('jungle-flip')).toBe('fog');
     expect(finishedTileKind('no-such-variant')).toBe('fog');
+  });
+
+  it('draws exactly the open specs plus jieqi and banqi', () => {
+    const drawn = GAME_SPECS.filter((spec) => finishedTileKind(spec.id) === 'board').map(
+      (spec) => spec.id,
+    );
+    const open = GAME_SPECS.filter((spec) => spec.visibility === 'open').map((spec) => spec.id);
+    expect(drawn.sort()).toEqual([...open, 'banqi', 'jieqi'].sort());
   });
 
   // Hidden-info guard: the client never decides on its own to draw a board the

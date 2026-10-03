@@ -180,11 +180,35 @@ export function deadlineFractionLeft(
 
 // ---- Finished boards ----------------------------------------------------------
 
+// ---- In-progress tiles ----------------------------------------------------------
+
+// What an in-progress card draws where the board goes: the server's live board
+// when it sent one; the mist for any game it does not call open (live or
+// correspondence alike); otherwise the variant placeholder until a board arrives.
+export function liveTileKind(
+  game: Pick<CurrentGame, 'observe' | 'payload'>,
+): 'board' | 'fog' | 'placeholder' {
+  if (game.observe !== 'open') return 'fog';
+  return game.payload ? 'board' : 'placeholder';
+}
+
+// Hidden-identity variants whose finished board /watch already shows publicly,
+// drawn here through the same compact showcase renderer and its default view:
+// jieqi's as-played board (a piece nobody moved stays face-down) and banqi's
+// board (unflipped pieces stay face-down). Both are 'open' to spectators in the
+// server's liveObservePolicy. Any other hidden variant fails closed to the mist.
+const FINISHED_PUBLIC_VIEW_SPECS: ReadonlySet<string> = new Set(['jieqi', 'banqi']);
+
 // Whether a finished game's tile draws its final position or the misty tile.
-// Only open-information variants draw a board: fog (dark), hidden-identity
-// (jieqi, banqi, flip jungle), concealed hands and unknown ids all keep the mist,
-// so this page never decides on its own what a hidden game may reveal.
+// Open-information variants and the public-view list above draw a board; fog
+// (dark), other hidden-identity specs, concealed hands and unknown ids keep the
+// mist, so this page never decides on its own what a hidden game may reveal.
 export function finishedTileKind(variant: string): 'board' | 'fog' {
-  const id = variant === 'fog' ? 'dark-chess' : variant;
-  return maybeGameSpecForId(id)?.visibility === 'open' ? 'board' : 'fog';
+  const spec = maybeGameSpecForId(variant === 'fog' ? 'dark-chess' : variant);
+  if (!spec) return 'fog';
+  if (spec.visibility === 'open') return 'board';
+  if (spec.visibility === 'hidden-identity' && FINISHED_PUBLIC_VIEW_SPECS.has(spec.id)) {
+    return 'board';
+  }
+  return 'fog';
 }
