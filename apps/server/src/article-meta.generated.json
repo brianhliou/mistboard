@@ -62,7 +62,7 @@
   "crazyhouse-xiangqi": {
     "title": "Crazyhouse Xiangqi Rules",
     "kind": "rules",
-    "description": "Xiangqi where a captured piece joins your hand and the advisors and elephants start there: drop a piece on any empty point where it could stand, check and mate included.",
+    "description": "Xiangqi where a captured piece joins your hand and the advisors and elephants start there: drop a piece on any empty point, advisors and elephants on their own half, check and mate included.",
     "status": "published"
   },
   "duck-xiangqi": {

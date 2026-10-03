@@ -85,7 +85,7 @@ test('a capture goes to the capturer’s hand as its own colour', () => {
   assert.deepEqual(dropped.board.e5, { color: 'red', role: 'horse' });
 });
 
-test('drops go where the piece could stand: advisors, elephants and soldiers', () => {
+test('drops: advisors and elephants on their own half, soldiers anywhere', () => {
   // Bare generals off each other's file, red to move with one of each.
   const red = fromFen('4k4/9/9/9/9/9/9/9/9/3K5[ABP] w - - 0 1');
   const ownHalf = (color: 'red' | 'black', occupied: string) =>
@@ -98,28 +98,32 @@ test('drops go where the piece could stand: advisors, elephants and soldiers', (
   assert.deepEqual(dropSquares(red, 'B'), ownHalf('red', 'd1'));
   assert.ok(dropSquares(red, 'A').every((s) => Number(s.slice(1)) <= 5));
   const soldiers = dropSquares(red, 'P');
-  // Home half: only the soldier files' two ranks.
-  assert.deepEqual(
-    soldiers.filter((s) => Number(s.slice(1)) <= 5),
-    ['a4', 'a5', 'c4', 'c5', 'e4', 'e5', 'g4', 'g5', 'i4', 'i5'],
-  );
-  // Across the river: every empty point, the three that check e10 included.
-  for (const square of ['e9', 'd10', 'f10', 'b6', 'a10'])
+  // Soldiers: every empty point on both halves, the own back rank and the three
+  // points that check e10 included.
+  for (const square of ['a1', 'b2', 'e3', 'b4', 'e9', 'd10', 'f10', 'b6', 'a10'])
     assert.ok(soldiers.includes(square), square);
-  assert.equal(soldiers.length, 10 + 45 - 1);
+  assert.equal(soldiers.length, 90 - 2);
 
   const black = fromFen('4k4/9/9/9/9/9/9/9/9/3K5[abp] b - - 0 1');
   assert.deepEqual(dropSquares(black, 'A'), ownHalf('black', 'e10'));
   assert.deepEqual(dropSquares(black, 'B'), ownHalf('black', 'e10'));
   const blackSoldiers = dropSquares(black, 'P');
-  assert.deepEqual(
-    blackSoldiers.filter((s) => Number(s.slice(1)) >= 6),
-    ['a6', 'a7', 'c6', 'c7', 'e6', 'e7', 'g6', 'g7', 'i6', 'i7'],
-  );
-  for (const square of ['d2', 'c1', 'e1']) assert.ok(blackSoldiers.includes(square), square);
-  assert.equal(blackSoldiers.length, 10 + 45 - 1);
+  for (const square of ['a10', 'b9', 'h8', 'd2', 'c1', 'e1'])
+    assert.ok(blackSoldiers.includes(square), square);
+  assert.equal(blackSoldiers.length, 90 - 2);
   assert.equal(crazyhouseXiangqiDropRegion('elephant', 'red').length, 45);
   assert.ok(crazyhouseXiangqiDropRegion('elephant', 'black').every((s) => Number(s.slice(1)) >= 6));
+});
+
+test('a soldier dropped on its own half walks forward, sideways only after the river', () => {
+  const moves = (fen: string, from: string) =>
+    getCrazyhouseXiangqiLegalMoves(fromFen(fen))
+      .map(crazyhouseXiangqiMoveToUci)
+      .filter((m) => m.startsWith(from) && !m.includes('@'))
+      .sort();
+  assert.deepEqual(moves('4k4/9/9/9/9/9/9/9/1P7/3K5[] w - - 0 1', 'b2'), ['b2b3']);
+  assert.deepEqual(moves('4k4/9/9/9/9/9/9/9/9/P2K5[] w - - 0 1', 'a1'), ['a1a2']);
+  assert.deepEqual(moves('3k5/1p7/9/9/9/9/9/9/9/5K3[] b - - 0 1', 'b9'), ['b9b8']);
 });
 
 test('advisors and elephants roam their own half and never cross the river', () => {
@@ -235,7 +239,6 @@ test('the FEN parser rejects what play cannot produce', () => {
     '4k4/9/9/9/9/9/9/9/9/3K5[RRRRR] w - - 0 1', // five chariots
     '4k4/9/9/9/A8/9/9/9/9/3K5[] w - - 0 1', // red advisor across the river (a6)
     '4k4/9/9/9/9/4b4/9/9/9/3K5[] w - - 0 1', // black elephant across the river (e5)
-    '4k4/9/9/9/9/9/1P7/9/9/3K5[] w - - 0 1', // red soldier on b4
     '4k4/9/9/9/9/9/9/9/9/4K4[] w - - 0 1', // facing generals
     '3rk4/9/9/9/9/9/9/9/9/3K5[] b - - 0 1', // red general attacked, black to move
     '4k4/9/9/9/9/9/9/9/9/3K5[X] w - - 0 1', // unknown pocket piece

@@ -3373,10 +3373,10 @@ const ZH_HANS: Record<string, string> = {
   'Red’s chariot takes the black horse on c7, and a red horse joins the soldier already in Red’s hand.':
     '红车吃掉 c7 的黑马，红方持子里原有一个兵，现在又多了一匹红马。',
   'Where each piece may drop': '每种棋子可以打入的位置',
-  'A piece may be dropped only on an empty point where it could stand, which leaves three zones. Chariots, horses and cannons may go anywhere. Advisors and elephants stay on your own half of the board. A soldier may go on any of its ten home points (the five soldier files, on the rank where soldiers start and the rank in front of it) or anywhere across the river.':
-    '棋子只能打入它能站的空点，因此分为三个区域。车、马、炮可以打入任何地方。士和象只能留在己方半盘。兵可以打入它的十个本方点（五条兵线上，兵的起始横线及其前一条横线），或者河对岸的任何点。',
-  'Red’s drop zones on an empty board: 45 points for an advisor or elephant, all 90 for a chariot, horse or cannon, and 10 plus 45 for a soldier. Black’s are the mirror image.':
-    '红方在空棋盘上的打入区域：士或象 45 个点，车、马、炮全部 90 个点，兵 10 加 45 个点。黑方的区域与之上下对称。',
+  'A piece may be dropped on any empty point, with one limit: advisors and elephants stay on your own half of the board. Chariots, horses, cannons and soldiers may go anywhere, the enemy palace and your own back rank included.':
+    '棋子可以打入任何空点，只有一个限制：士和象只能留在己方半盘。车、马、炮、兵可以打入任何地方，包括对方九宫和己方底线。',
+  'Red’s drop zones on an empty board: 45 points for an advisor or elephant, all 90 for a chariot, horse, cannon or soldier. Black’s are the mirror image.':
+    '红方在空棋盘上的打入区域：士或象 45 个点，车、马、炮、兵全部 90 个点。黑方的区域与之上下对称。',
   'A drop may give check and mate': '打入可以将军，也可以将死',
   'The dropped piece may attack the general itself, or become the screen one of your own cannons fires over. A drop may also block a check. The one drop you may not make is one that leaves your own general in check, such as a piece that becomes the screen an enemy cannon fires over at your general.':
     '打入的棋子可以自己攻击对方将帅，也可以成为己方某个炮隔着打将的炮架。打入也可以挡将。唯一不允许的打入，是让己方将帅处于被将军状态的打入，例如打入的棋子成了对方炮隔着打己方将帅的炮架。',
@@ -3391,8 +3391,8 @@ const ZH_HANS: Record<string, string> = {
   'This game is one of six in the [companion study](/study/nlZy4yNA), each with notes on the drops that decided it.':
     '这盘棋是[配套研究](/study/nlZy4yNA)中的六盘之一，每盘都注明了决定胜负的打入。',
   'The six engine games': '六盘引擎对局',
-  'Xiangqi where a captured piece joins your hand and the advisors and elephants start there: drop a piece on any empty point where it could stand, check and mate included.':
-    '被吃的子归入吃子一方持子、士和象开局就在持子里的象棋：把持子打入任何一个它能站的空点，可以将军，也可以将死。',
+  'Xiangqi where a captured piece joins your hand and the advisors and elephants start there: drop a piece on any empty point, advisors and elephants on their own half, check and mate included.':
+    '被吃的子归入吃子一方持子、士和象开局就在持子里的象棋：把持子打入任何一个空点，士和象限己方半盘，可以将军，也可以将死。',
   'Everything else is xiangqi: the board, how the other pieces move, the general in its palace, the river, the rule that the two generals may not face each other on an open file, and the way a game ends.':
     '其余一切都是象棋：棋盘、其他棋子的走法、待在九宫里的将帅、河界、双方将帅不能在同一条直线上无子相隔地照面的规则，以及对局结束的方式。',
   'Each side begins with its two advisors and two elephants in hand, not on the board. The back rank reads chariot, horse, two empty points, the general, two empty points, horse, chariot. The cannons and soldiers stand where they always do.':
@@ -3402,8 +3402,8 @@ const ZH_HANS: Record<string, string> = {
     '你吃掉一枚棋子后，它离开棋盘，作为你自己的棋子进入你的持子。吃掉黑马，你就持有一匹红马。双方的持子都显示在棋盘旁边，所以你随时知道对手能打入什么。',
   'The general is never captured, so it is never in a hand. Every other piece can be: chariots, horses, elephants, advisors, cannons and soldiers.':
     '将帅永远不会被吃，所以永远不会成为持子。其他棋子都可以：车、马、象、士、炮和兵。',
-  'Any number of soldiers may share a file. A soldier dropped across the river already moves sideways, as a soldier that walked there would.':
-    '同一条直线上可以有任意多个兵。打入到河对岸的兵已经可以横走，和走过河的兵一样。',
+  'Any number of soldiers may share a file. A soldier moves from wherever it lands as if it had walked there: one step forward on your own half, even from your back rank, and forward or sideways once across the river.':
+    '同一条直线上可以有任意多个兵。兵从落点起照常行走，就像走到那里一样：在己方半盘只能向前一步，即使从底线出发也是如此；过河后可以向前或横走。',
   'How the game ends': '对局如何结束',
   '**Checkmate wins,** by a move or by a drop. As in xiangqi, so does stalemate: a player with no legal move loses, in check or not. Count your drops as moves. A player with a piece in hand and an empty point to put it on is rarely out of moves.':
     '**将死获胜，**无论是走子将死还是打入将死。和象棋一样，困毙也获胜：无子可动的一方判负，无论是否被将军。打入也算着法。手里有持子、盘上又有空点可放的一方，很少会无棋可走。',
@@ -3491,7 +3491,6 @@ const ZH_HANS: Record<string, string> = {
   'A DROP': '打入',
   'BEFORE THE CAPTURE': '吃子之前',
   'AFTER: A RED HORSE IN HAND': '之后：红马进入持子',
-  'HOME POINTS AND OVER THE RIVER': '本方兵点与河对岸',
   'A DROP THAT CHECKS': '打入将军',
   'A DROP THAT SCREENS': '打入作炮架',
   'ADVISOR OUTSIDE THE PALACE': '九宫外的士',
@@ -6626,10 +6625,10 @@ const ZH_HANT: Record<string, string> = {
   'Red’s chariot takes the black horse on c7, and a red horse joins the soldier already in Red’s hand.':
     '紅車吃掉 c7 的黑馬，紅方持子裡原有一個兵，現在又多了一匹紅馬。',
   'Where each piece may drop': '每種棋子可以打入的位置',
-  'A piece may be dropped only on an empty point where it could stand, which leaves three zones. Chariots, horses and cannons may go anywhere. Advisors and elephants stay on your own half of the board. A soldier may go on any of its ten home points (the five soldier files, on the rank where soldiers start and the rank in front of it) or anywhere across the river.':
-    '棋子只能打入它能站的空點，因此分為三個區域。車、馬、炮可以打入任何地方。士和象只能留在己方半盤。兵可以打入它的十個本方點（五條兵線上，兵的起始橫線及其前一條橫線），或者河對岸的任何點。',
-  'Red’s drop zones on an empty board: 45 points for an advisor or elephant, all 90 for a chariot, horse or cannon, and 10 plus 45 for a soldier. Black’s are the mirror image.':
-    '紅方在空棋盤上的打入區域：士或象 45 個點，車、馬、炮全部 90 個點，兵 10 加 45 個點。黑方的區域與之上下對稱。',
+  'A piece may be dropped on any empty point, with one limit: advisors and elephants stay on your own half of the board. Chariots, horses, cannons and soldiers may go anywhere, the enemy palace and your own back rank included.':
+    '棋子可以打入任何空點，只有一個限制：士和象只能留在己方半盤。車、馬、炮、兵可以打入任何地方，包括對方九宮和己方底線。',
+  'Red’s drop zones on an empty board: 45 points for an advisor or elephant, all 90 for a chariot, horse, cannon or soldier. Black’s are the mirror image.':
+    '紅方在空棋盤上的打入區域：士或象 45 個點，車、馬、炮、兵全部 90 個點。黑方的區域與之上下對稱。',
   'A drop may give check and mate': '打入可以將軍，也可以將死',
   'The dropped piece may attack the general itself, or become the screen one of your own cannons fires over. A drop may also block a check. The one drop you may not make is one that leaves your own general in check, such as a piece that becomes the screen an enemy cannon fires over at your general.':
     '打入的棋子可以自己攻擊對方將帥，也可以成為己方某個炮隔著打將的炮架。打入也可以擋將。唯一不允許的打入，是讓己方將帥處於被將軍狀態的打入，例如打入的棋子成了對方炮隔著打己方將帥的炮架。',
@@ -6644,8 +6643,8 @@ const ZH_HANT: Record<string, string> = {
   'This game is one of six in the [companion study](/study/nlZy4yNA), each with notes on the drops that decided it.':
     '這盤棋是[配套研究](/study/nlZy4yNA)中的六盤之一，每盤都註明了決定勝負的打入。',
   'The six engine games': '六盤引擎對局',
-  'Xiangqi where a captured piece joins your hand and the advisors and elephants start there: drop a piece on any empty point where it could stand, check and mate included.':
-    '被吃的子歸入吃子一方持子、士和象開局就在持子裡的象棋：把持子打入任何一個它能站的空點，可以將軍，也可以將死。',
+  'Xiangqi where a captured piece joins your hand and the advisors and elephants start there: drop a piece on any empty point, advisors and elephants on their own half, check and mate included.':
+    '被吃的子歸入吃子一方持子、士和象開局就在持子裡的象棋：把持子打入任何一個空點，士和象限己方半盤，可以將軍，也可以將死。',
   'Everything else is xiangqi: the board, how the other pieces move, the general in its palace, the river, the rule that the two generals may not face each other on an open file, and the way a game ends.':
     '其餘一切都是象棋：棋盤、其他棋子的走法、待在九宮裡的將帥、河界、雙方將帥不能在同一條直線上無子相隔地照面的規則，以及對局結束的方式。',
   'Each side begins with its two advisors and two elephants in hand, not on the board. The back rank reads chariot, horse, two empty points, the general, two empty points, horse, chariot. The cannons and soldiers stand where they always do.':
@@ -6655,8 +6654,8 @@ const ZH_HANT: Record<string, string> = {
     '你吃掉一枚棋子後，它離開棋盤，作為你自己的棋子進入你的持子。吃掉黑馬，你就持有一匹紅馬。雙方的持子都顯示在棋盤旁邊，所以你隨時知道對手能打入什麼。',
   'The general is never captured, so it is never in a hand. Every other piece can be: chariots, horses, elephants, advisors, cannons and soldiers.':
     '將帥永遠不會被吃，所以永遠不會成為持子。其他棋子都可以：車、馬、象、士、炮和兵。',
-  'Any number of soldiers may share a file. A soldier dropped across the river already moves sideways, as a soldier that walked there would.':
-    '同一條直線上可以有任意多個兵。打入到河對岸的兵已經可以橫走，和走過河的兵一樣。',
+  'Any number of soldiers may share a file. A soldier moves from wherever it lands as if it had walked there: one step forward on your own half, even from your back rank, and forward or sideways once across the river.':
+    '同一條直線上可以有任意多個兵。兵從落點起照常行走，就像走到那裡一樣：在己方半盤只能向前一步，即使從底線出發也是如此；過河後可以向前或橫走。',
   'How the game ends': '對局如何結束',
   '**Checkmate wins,** by a move or by a drop. As in xiangqi, so does stalemate: a player with no legal move loses, in check or not. Count your drops as moves. A player with a piece in hand and an empty point to put it on is rarely out of moves.':
     '**將死獲勝，**無論是走子將死還是打入將死。和象棋一樣，困斃也獲勝：無子可動的一方判負，無論是否被將軍。打入也算著法。手裡有持子、盤上又有空點可放的一方，很少會無棋可走。',
@@ -6744,7 +6743,6 @@ const ZH_HANT: Record<string, string> = {
   'A DROP': '打入',
   'BEFORE THE CAPTURE': '吃子之前',
   'AFTER: A RED HORSE IN HAND': '之後：紅馬進入持子',
-  'HOME POINTS AND OVER THE RIVER': '本方兵點與河對岸',
   'A DROP THAT CHECKS': '打入將軍',
   'A DROP THAT SCREENS': '打入作炮架',
   'ADVISOR OUTSIDE THE PALACE': '九宮外的士',
