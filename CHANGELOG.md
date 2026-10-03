@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- Crazyhouse Xiangqi soldiers now drop on any empty point, like chariots, horses and cannons; advisors and elephants still drop on their own half ([17e145f5](https://github.com/brianhliou/mistboard/commit/17e145f5))
 - The homepage Jungle Chess row steps from Misty up to KataGo, the new top Jungle Chess bot ([c44741d5](https://github.com/brianhliou/mistboard/commit/c44741d5))
 - When your open correspondence game expires with no taker, the bell tells you and offers to post it again ([58b0ac0d](https://github.com/brianhliou/mistboard/commit/58b0ac0d))
 - KataGo, the engine that won the Jungle challenge, is the new top Jungle bot above Misty, credited to hzyhhzy's KataGomo, lightvector's KataGo and Kouza's Dandelion 4 network ([f424b2df](https://github.com/brianhliou/mistboard/commit/f424b2df))
@@ -102,6 +103,7 @@ Conventions:
 
 ### Fixed
 
+- Pikafish Level 8 in xiangqi plays again; since Friday evening it resigned every game before its first move ([17e145f5](https://github.com/brianhliou/mistboard/commit/17e145f5))
 - A judged jieqi reveal's best move is now a clickable branch in the review, and jieqi game links with ?ply= open on that move ([67546f65](https://github.com/brianhliou/mistboard/commit/67546f65))
 - The rules pages now load with their text in English and both Chinese scripts, and the localized blog, rules, videos, bots and course pages each name their own address to search engines ([3edc86b1](https://github.com/brianhliou/mistboard/commit/3edc86b1))
 - A correspondence game posted from the homepage lobby now uses the variant you picked, and variant game headers show Rated for rated games ([851d1a41](https://github.com/brianhliou/mistboard/commit/851d1a41))
