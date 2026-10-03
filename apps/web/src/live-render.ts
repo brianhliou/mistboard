@@ -72,6 +72,7 @@ import { currentCaptures, currentView } from './live-view.js';
 import { renderGameResult, resultScore } from './postgame-panel.js';
 import { createGameMetaCard, seatResultScores } from './review/game-meta-card.js';
 import type { VariantMiniId } from './variant-mini-boards.js';
+import { localizedRulesHref } from './variant-public-surfaces.js';
 import { activeLiveShellTenant, liveShellTenants } from './variant-tenant/live-shell.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
 import { variantMiniIdForRawVariant } from './variants.js';
@@ -363,6 +364,10 @@ function renderGameInfo(view: PlayerView | null): void {
     glyph: '♔',
     headline: [timeLabel, modeEntry ? modeEntry[1] : t('live.modeCasual')],
     variantName: fmt,
+    variantHref: localizedRulesHref(
+      view?.variant ?? liveState.state?.variant ?? liveState.variantRequested ?? 'dark-chess',
+    ),
+    variantHrefNewTab: true,
     subline,
     players: seats.map((color, index) => {
       const colorName = color === 'white' ? t('setup.white') : t('setup.black');

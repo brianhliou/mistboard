@@ -8,7 +8,7 @@ import {
   sourceLabel,
 } from './game-display.js';
 import type { GameMeta } from './replay.js';
-import { timeControlLabelFromMeta } from './replay-meta.js';
+import { correspondenceLabelFromMs, timeControlLabelFromMeta } from './replay-meta.js';
 import { webVariantTenantForRoomId, webVariantTenantForSpecId } from './variant-tenant/registry.js';
 
 export function gameMetaForGame(game: FeaturedGame): GameMeta {
@@ -49,6 +49,8 @@ function clockTimeControlFromGame(game: FeaturedGame): Record<string, unknown> |
 export function timeControlLabelForGame(game: FeaturedGame): string | null {
   const spec = findTimeControl(game.initialMs, game.incrementMs);
   if (spec) return spec.label;
+  const correspondence = correspondenceLabelFromMs(game.initialMs, game.incrementMs);
+  if (correspondence) return correspondence;
   return timeControlLabelFromMeta(game.timeControl ?? clockTimeControlFromGame(game));
 }
 

@@ -1,4 +1,4 @@
-import type { GameEvent } from '@mistboard/game';
+import { type GameEvent, officialCorrespondenceDays } from '@mistboard/game';
 import { terminationLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { escapeHtml, formatClock } from './web-utils.js';
@@ -226,6 +226,18 @@ export function renderGameMetaPanel(
     link.textContent = t('replay.viewGame');
     panel.details.append(link);
   }
+}
+
+/** "3 days per move" for a finished correspondence game, which a games row
+ *  stores as days * 24h with no increment (the room card's wording); null for
+ *  any live clock. Without it a 3-day game read "72:00:00". */
+export function correspondenceLabelFromMs(
+  initialMs: number | null | undefined,
+  incrementMs: number | null | undefined,
+): string | null {
+  const days = officialCorrespondenceDays(initialMs, incrementMs);
+  if (days === null) return null;
+  return days === 1 ? t('live.oneDayPerMoveNote') : t('live.daysPerMoveNote', { count: days });
 }
 
 export function timeControlLabelFromMeta(

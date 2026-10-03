@@ -407,6 +407,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   }
 
   const chrome = createTenantRoomChrome(tenant, {
+    gameSpecId: config.gameSpecId,
     view: () => state.view,
     seat: () => state.seat,
     connectionState: () => connection(),

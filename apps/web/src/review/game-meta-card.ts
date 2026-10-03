@@ -98,6 +98,8 @@ export type GameMetaCardConfig = {
   variantName?: string;
   /** Makes the variant name a link (its rules page). */
   variantHref?: string | null;
+  /** Opens that link in a new tab: a live room must not be left by a stray click. */
+  variantHrefNewTab?: boolean;
   /** Subline under the headline (e.g. "3 days ago", "Waiting for opponent"). */
   subline?: string | null;
   players?: GameMetaPlayer[];
@@ -152,6 +154,10 @@ export function createGameMetaCard(config: GameMetaCardConfig): GameMetaCard {
     if (variant instanceof HTMLAnchorElement && config.variantHref) {
       variant.classList.add('game-meta-card__variant-link');
       variant.href = config.variantHref;
+      if (config.variantHrefNewTab) {
+        variant.target = '_blank';
+        variant.rel = 'noopener';
+      }
     }
     variant.textContent = config.variantName;
     headline.append(variant);

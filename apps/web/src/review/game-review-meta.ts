@@ -30,7 +30,9 @@ import {
 import { t } from '../i18n/catalog.js';
 import { currentLocale } from '../i18n/locale.js';
 import { profileTargetFor } from '../profile-link.js';
+import { correspondenceLabelFromMs } from '../replay-meta.js';
 import type { VariantMiniId } from '../variant-mini-boards.js';
+import { localizedRulesHrefForRoom } from '../variant-public-surfaces.js';
 import {
   createGameMetaCard,
   type GameMetaPlayer,
@@ -118,6 +120,7 @@ export function buildReviewMeta(config: ReviewMetaConfig): ReviewMeta {
     glyph: config.glyph,
     headline: [reviewTimeControlLabel(game), game.rated ? t('watch.rated') : t('watch.casual')],
     variantName: config.variantName,
+    variantHref: localizedRulesHrefForRoom(game.roomId),
     subline: timeAgoLabel(game.endedAt),
     players: reviewMetaPlayers(game.players, config.seatColors, game.result),
     status: config.status,
@@ -232,6 +235,8 @@ export function reviewTimeControlLabel(game: {
     }
     return t('watch.untimed');
   }
+  const correspondence = correspondenceLabelFromMs(initialMs, incrementMs);
+  if (correspondence) return correspondence;
   return `${clockLabel(initialMs ?? 0)}+${Math.round((incrementMs ?? 0) / 1000)}`;
 }
 

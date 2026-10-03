@@ -5,7 +5,8 @@ import {
   type GameSpecId,
   isRetiredGameSpec,
 } from '@mistboard/game';
-import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
+import { localizedHref } from './i18n/locale.js';
+import { webVariantTenantForRoomId, webVariantTenantForSpecId } from './variant-tenant/registry.js';
 
 // One public-surface switch per game spec. This controls discoverable UI:
 // rules rails/tiles, homepage article cards, homepage News, and /feed entries.
@@ -66,6 +67,18 @@ export function rulesHrefForGameSpec(id: string): string | null {
   if (!isGameSpecId(id) || !variantPublicSurfaceEnabled(id) || isRetiredGameSpec(id)) return null;
   const aliased = Object.entries(RULES_GAME_SPEC_BY_SLUG).find(([, specId]) => specId === id);
   return `/rules/${aliased?.[0] ?? id}`;
+}
+
+/** rulesHrefForGameSpec in the page locale, for a meta card's variant link. */
+export function localizedRulesHref(gameSpecId: string | null | undefined): string | null {
+  const href = gameSpecId ? rulesHrefForGameSpec(gameSpecId) : null;
+  return href ? localizedHref(href) : null;
+}
+
+/** The same link for a room id, resolved by its tenant's prefix (review pages
+ *  know the room, not the spec). */
+export function localizedRulesHrefForRoom(roomId: string): string | null {
+  return localizedRulesHref(webVariantTenantForRoomId(roomId)?.gameSpecId);
 }
 
 /**

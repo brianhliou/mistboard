@@ -28,6 +28,7 @@ import { postGameActions, renderGameResult, resultScore } from '../postgame-pane
 import { type ProfileIdentity, playerNameEl, profileTargetFor } from '../profile-link.js';
 import { createGameMetaCard, seatResultScores } from '../review/game-meta-card.js';
 import type { VariantMiniId } from '../variant-mini-boards.js';
+import { localizedRulesHref } from '../variant-public-surfaces.js';
 import { formatClock } from '../web-utils.js';
 import { capitalize, noticeBody, noticeTitle, presenceDot } from './chrome-dom.js';
 
@@ -116,6 +117,8 @@ export type WebVariantTenant<C extends string> = {
 };
 
 export type TenantChromeContext<C extends string> = {
+  // The room's game spec, for the meta card's rules link.
+  gameSpecId?: string;
   // Live (never replay-scrubbed) view, or null before the first frame.
   view(): TenantWebView<C> | null;
   seat(): unknown;
@@ -519,6 +522,8 @@ export function createTenantRoomChrome<C extends string>(
       glyph: tenant.metaGlyph,
       headline: [tcLabel, ctx.rated?.() ? t('live.modeRated') : t('live.modeCasual')],
       variantName: detail ? `${variantName()} · ${detail}` : variantName(),
+      variantHref: localizedRulesHref(ctx.gameSpecId),
+      variantHrefNewTab: true,
       subline,
       players: tenant.colors.map((color, index) => {
         const serverName = ctx.seatDisplayNames()[color];

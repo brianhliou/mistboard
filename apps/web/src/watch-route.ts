@@ -5,7 +5,6 @@ import { resultLabel, watchQueueResultLabel } from './finished-result-label.js';
 import { seatInkForVariant } from './flip-seat-ink.js';
 import { createGameTable } from './game-table.js';
 import { t } from './i18n/catalog.js';
-import { localizedHref } from './i18n/locale.js';
 import { renderVariantMarker } from './variant-markers.js';
 import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
 import { variantMiniIdForRawVariant } from './variants.js';
@@ -44,7 +43,7 @@ import { seatDiscEl } from './seat-disc.js';
 import { showcaseRendererKindForSpec, specIdForShowcaseVariant } from './showcase-dispatch.js';
 import { buildLoadingState, buildNav } from './site-shell.js';
 import { buildUiIcon } from './ui-icon.js';
-import { rulesHrefForGameSpec } from './variant-public-surfaces.js';
+import { localizedRulesHref } from './variant-public-surfaces.js';
 import { seatColorWord, seatInkFamily } from './variant-seat-label.js';
 import { formatClock } from './web-utils.js';
 
@@ -931,7 +930,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
       markerId: variantMiniIdForRawVariant(featured.gameSpecId) ?? undefined,
       headline: [t('watch.inProgress')],
       variantName,
-      variantHref: watchRulesHref(featured.gameSpecId),
+      variantHref: localizedRulesHref(featured.gameSpecId),
       players,
       status: null,
     });
@@ -1782,17 +1781,12 @@ function renderWatchMetaCard(root: HTMLElement, game: FeaturedGame | null): void
     markerId: variantMiniIdForRawVariant(game.variant) ?? undefined,
     headline: [timeControlLabelForGame(game), ratedSegment, sourceLabel(game.mode)],
     variantName: variantDisplayLabel(game.variant),
-    variantHref: watchRulesHref(game.variant),
+    variantHref: localizedRulesHref(game.variant),
     subline: timeAgoLabel(game.endedAt) || null,
     players,
     status: watchGameStatusLine(game),
   });
   root.append(card.el);
-}
-
-function watchRulesHref(gameSpecId: string | null | undefined): string | null {
-  const href = gameSpecId ? rulesHrefForGameSpec(gameSpecId) : null;
-  return href ? localizedHref(href) : null;
 }
 
 // The phone headline: who is playing on the first line, what you are watching on
