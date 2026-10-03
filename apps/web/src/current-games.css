@@ -624,6 +624,118 @@
   display: block;
 }
 
+/* Crazyhouse Xiangqi keeps its hands on a live card (liveCardShowsHands in
+   current-games-model.ts; every other drop variant mounts with hideReserve).
+   The renderer lays [hand, board, hand] in one row; stacked here as the game
+   embed does (embed.css, EMBED_HAND_BAND_RATIO in embed/embed-card.ts): each
+   hand the game room's pocket bar in a band 0.12 of the board's width above and
+   below it, slots 0.085 wide. The column's aspect is the board's (9 / 10) made
+   taller by both bands, 1 / (10 / 9 + 2 * 0.12), so it fits the card's tile by
+   height and centres. Shared with the correspondence inbox, which loads this
+   sheet. Below a 160px card (the inbox's 64px row thumbnail) a piece in hand
+   would be a few pixels across, so the hands drop and the board stands alone,
+   as it does for every other variant. */
+.current-game-board {
+  container: live-card / inline-size;
+}
+
+.current-game-board .replay-layout-solo .showcase-board-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.current-game-board .replay-layout-solo .showcase-board-row .replay-pane {
+  flex: 1 1 0;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+}
+
+.current-game-board .showcase-board-row > .showcase-reserve {
+  display: none;
+}
+
+@container live-card (min-width: 160px) {
+  .current-game-board .replay-layout-solo .showcase-board-row:has(> .showcase-reserve) {
+    container-type: inline-size;
+    align-self: center;
+    width: auto;
+    max-width: 100%;
+    aspect-ratio: 0.74;
+  }
+
+  .current-game-board .showcase-board-row > .showcase-reserve.drop-mini-reserve-strip {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 100%;
+    height: calc(100cqw * 0.12);
+    min-height: 0;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .current-game-board .showcase-board-row > .showcase-reserve .drop-mini-reserve-row {
+    flex: 0 0 auto;
+    width: auto;
+    min-height: 0;
+    gap: calc(100cqw * 0.01);
+    padding: calc(100cqw * 0.008);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--site-border) 46%, transparent);
+  }
+
+  .current-game-board .showcase-board-row > .showcase-reserve .drop-mini-reserve-piece {
+    position: relative;
+    flex: 0 0 calc(100cqw * 0.085);
+    width: calc(100cqw * 0.085);
+    height: calc(100cqw * 0.085);
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+  }
+
+  .current-game-board .showcase-board-row > .showcase-reserve .drop-mini-reserve-piece svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .current-game-board .showcase-board-row > .showcase-reserve .drop-mini-reserve-piece.is-empty {
+    opacity: 0.26;
+    filter: grayscale(1);
+  }
+
+  /* The count badge bottom-right, as on the game room's pocket. */
+  .current-game-board .showcase-board-row > .showcase-reserve .captures-count-badge {
+    position: absolute;
+    display: inline-grid;
+    place-items: center;
+    box-sizing: border-box;
+    right: -3px;
+    bottom: -3px;
+    min-width: 13px;
+    height: 13px;
+    padding: 0 2px;
+    border: 1px solid var(--site-panel, #ffffff);
+    border-radius: 999px;
+    background: var(--site-accent);
+    color: var(--site-on-accent, #ffffff);
+    font-size: 9px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
 /* An open game whose live board has not mounted (or has no live renderer). */
 .current-game-hidden {
   display: flex;

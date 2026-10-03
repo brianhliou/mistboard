@@ -16,6 +16,8 @@ import {
   listChallengesForUser,
   listOpenCorrespondenceSeeks,
   listOutgoingSeeksForUser,
+  markSeekExpiryNoticesSeen,
+  unseenSeekExpiryNotices,
   updateUserAccountPreference,
   userExists,
 } from './persistence.js';
@@ -23,6 +25,7 @@ import { getPool } from './persistence-db.js';
 import { assert, definePersistenceTests, sha256, test } from './persistence-test-support.js';
 import { tryHandle as tryHandleSeekRoute } from './routes/correspondence-seeks.js';
 import type { HttpApiContext } from './routes/lib.js';
+import { tryHandle as tryHandleNotificationsRoute } from './routes/notifications.js';
 
 definePersistenceTests('correspondence seeks', () => {
   const at = new Date('2026-06-13T12:00:00Z');
@@ -523,7 +526,178 @@ definePersistenceTests('correspondence seeks', () => {
       assert.equal((dup.json.seek as { id: string }).id, firstId);
     });
   });
+
+  // Board seeks used to lapse silently: the sweep deleted them and the creator
+  // was never told (two month-old seeks from a real player vanished on
+  // 2026-10-02). The sweep now leaves exactly one bell notice per lapsed public
+  // board seek, written by the same statement as the delete.
+  test('sweeping a lapsed board seek leaves its creator exactly one notice', async () => {
+    const ivy = await seedUser('exp-note-ivy', 'expnoteivy', 'Ivy');
+    const jon = await seedUser('exp-note-jon', 'expnotejon', 'Jon');
+    const past = new Date(Date.now() - 60_000);
+    const board = (id: string, gameSpecId = 'xiangqi') =>
+      createCorrespondenceSeek({
+        id,
+        creatorUserId: ivy.id,
+        gameSpecId,
+        daysPerMove: 3,
+        preferredColor: 'second',
+        targetUserId: null,
+        visibility: 'public',
+        expiresAt: null,
+      });
+    await board('note-board-old');
+    await board('note-board-live', 'dark-chess');
+    await createCorrespondenceSeek({
+      id: 'note-link-lapsed',
+      creatorUserId: ivy.id,
+      gameSpecId: 'xiangqi',
+      daysPerMove: 3,
+      preferredColor: 'random',
+      targetUserId: null,
+      visibility: 'private',
+      expiresAt: past,
+    });
+    await createCorrespondenceSeek({
+      id: 'note-direct-lapsed',
+      creatorUserId: ivy.id,
+      gameSpecId: 'xiangqi',
+      daysPerMove: 3,
+      preferredColor: 'random',
+      targetUserId: jon.id,
+      visibility: 'private',
+      expiresAt: past,
+    });
+    await backdateSeek('note-board-old', 15);
+    await backdateSeek('note-board-live', 13);
+
+    assert.equal(await deleteExpiredCorrespondenceSeeks(new Date()), 3);
+    assert.deepEqual(await noticeRows(), [
+      {
+        seek_id: 'note-board-old',
+        user_id: ivy.id,
+        game_spec_id: 'xiangqi',
+        days_per_move: 3,
+        preferred_color: 'second',
+      },
+    ]);
+    assert.notEqual(await getCorrespondenceSeek('note-board-live'), null);
+
+    // A second sweep finds nothing to delete and writes nothing more.
+    assert.equal(await deleteExpiredCorrespondenceSeeks(new Date()), 0);
+    assert.equal((await noticeRows()).length, 1, 'no duplicate notice');
+  });
+
+  test('a closed or play-locked creator gets no expiry notice', async () => {
+    const kim = await seedUser('exp-note-kim', 'expnotekim', 'Kim');
+    const lou = await seedUser('exp-note-lou', 'expnotelou', 'Lou');
+    for (const [id, creatorUserId] of [
+      ['note-closed', kim.id],
+      ['note-locked', lou.id],
+    ] as const) {
+      await createCorrespondenceSeek({
+        id,
+        creatorUserId,
+        gameSpecId: 'xiangqi',
+        daysPerMove: 7,
+        preferredColor: 'random',
+        targetUserId: null,
+        visibility: 'public',
+        expiresAt: null,
+      });
+      await backdateSeek(id, 15);
+    }
+    // closeUserAccount already withdraws the account's seeks; stamp closed_at
+    // directly so the sweep's own filter is what this exercises.
+    await getPool().query('UPDATE users SET closed_at = now() WHERE id = $1', [kim.id]);
+    await getPool().query('UPDATE users SET play_disabled_at = now() WHERE id = $1', [lou.id]);
+
+    assert.equal(await deleteExpiredCorrespondenceSeeks(new Date()), 2, 'both seeks still go');
+    assert.deepEqual(await noticeRows(), []);
+  });
+
+  test('the bell lists an unseen expiry notice with its terms until it is opened', async () => {
+    const mia = await seedUser('exp-note-mia', 'expnotemia', 'Mia');
+    await createCorrespondenceSeek({
+      id: 'note-bell',
+      creatorUserId: mia.id,
+      gameSpecId: 'xiangqi',
+      daysPerMove: 7,
+      preferredColor: 'first',
+      targetUserId: null,
+      visibility: 'public',
+      expiresAt: null,
+    });
+    await backdateSeek('note-bell', 15);
+    assert.equal(await deleteExpiredCorrespondenceSeeks(new Date()), 1);
+
+    const unseen = await unseenSeekExpiryNotices(mia.id);
+    assert.equal(unseen.total, 1);
+    assert.equal(unseen.notices[0]?.seekId, 'note-bell');
+    assert.equal(unseen.notices[0]?.daysPerMove, 7);
+    assert.equal(unseen.notices[0]?.preferredColor, 'first');
+
+    const cookie = await makeSessionCookie(mia.id);
+    const bell = await callNotificationsRoute('GET', '/api/notifications', cookie);
+    assert.equal(bell.status, 200);
+    assert.equal(bell.json.seekExpiries, 1);
+    const rows = bell.json.seekExpired as Array<Record<string, unknown>>;
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0]?.gameSpecId, 'xiangqi');
+    assert.equal(rows[0]?.ttlDays, 14);
+
+    // Opening the bell is the read receipt: the notice leaves and stays gone.
+    const seen = await callNotificationsRoute('POST', '/api/notifications/seen', cookie, {
+      kind: 'seek-expiries',
+    });
+    assert.equal(seen.status, 200);
+    const after = await callNotificationsRoute('GET', '/api/notifications', cookie);
+    assert.equal(after.json.seekExpiries, 0);
+    assert.deepEqual(after.json.seekExpired, []);
+    await markSeekExpiryNoticesSeen(mia.id);
+    assert.equal((await unseenSeekExpiryNotices(mia.id)).total, 0);
+  });
 });
+
+async function noticeRows(): Promise<Array<Record<string, unknown>>> {
+  const { rows } = await getPool().query(
+    `SELECT seek_id, user_id, game_spec_id, days_per_move, preferred_color
+     FROM correspondence_seek_expiry_notices ORDER BY seek_id`,
+  );
+  return rows;
+}
+
+async function callNotificationsRoute(
+  method: string,
+  path: string,
+  cookie: string,
+  body?: Record<string, unknown>,
+): Promise<{ status: number | null; json: Record<string, unknown> }> {
+  const request = Object.assign(Readable.from(body ? [Buffer.from(JSON.stringify(body))] : []), {
+    method,
+    headers: { cookie },
+  }) as unknown as IncomingMessage;
+  const capture = {
+    body: '',
+    status: null as number | null,
+    writeHead(status: number) {
+      capture.status = status;
+      return capture;
+    },
+    end(chunk?: string) {
+      capture.body += chunk ?? '';
+      return capture;
+    },
+  };
+  const handled = await tryHandleNotificationsRoute(
+    notDraining,
+    request,
+    capture as unknown as ServerResponse,
+    path,
+  );
+  assert.equal(handled, true, `${method} ${path} should be claimed`);
+  return { status: capture.status, json: JSON.parse(capture.body || '{}') };
+}
 
 async function backdateSeek(id: string, days: number): Promise<void> {
   await getPool().query(

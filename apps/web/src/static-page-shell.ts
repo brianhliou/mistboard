@@ -23,6 +23,7 @@ export type StaticPageKey =
   | 'title'
   | 'source'
   | 'contribute'
+  | 'creators'
   | 'developers'
   | 'apiDocs'
   | 'thanks'
@@ -55,6 +56,7 @@ const STATIC_RAIL_GROUPS: ReadonlyArray<ReadonlyArray<StaticRailLink>> = [
   [
     { key: 'source', href: '/source', labelKey: 'source.heading' },
     { key: 'contribute', href: '/contribute', labelKey: 'contribute.heading' },
+    { key: 'creators', href: '/creators', labelKey: 'creators.heading' },
     { key: 'developers', href: '/developers', labelKey: 'developers.heading' },
     { href: '/data', labelKey: 'data.heading' },
     { key: 'apiDocs', href: '/api-docs', labelKey: 'apiDocs.heading' },

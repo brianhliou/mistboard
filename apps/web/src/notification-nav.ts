@@ -1,5 +1,7 @@
 import './notification-nav.css';
 import { readAccountPreferences } from './account-preferences.js';
+import { startFormPrefillHref } from './correspondence-model.js';
+import { variantDisplayLabel } from './game-display.js';
 
 // A reusable nav notification button: a bell + count badge that aggregates every
 // registered source. account-nav owns signed-in detection and the nav
@@ -26,6 +28,17 @@ export type ForumWatchNotification = {
   quote: { postId: string; by: string | null } | null;
 };
 
+// One public board seek of yours that lapsed with no taker, with its terms so
+// the row can offer to post it again prefilled.
+export type SeekExpiryNotification = {
+  seekId: string;
+  gameSpecId: string;
+  daysPerMove: number;
+  preferredColor: 'first' | 'second' | 'random';
+  rated: boolean;
+  ttlDays: number;
+};
+
 // Mirrors the payload of GET /api/notifications (apps/server/src/routes/notifications.ts).
 export type NotificationCounts = {
   inboxUnread: number;
@@ -37,6 +50,9 @@ export type NotificationCounts = {
   // The rows behind forumTopics, capped server-side, most recent first.
   forumWatched: ForumWatchNotification[];
   incomingChallenges: number;
+  // Lapsed board seeks not yet seen, and the newest of them (capped server-side).
+  seekExpiries: number;
+  seekExpired: SeekExpiryNotification[];
 };
 
 const EMPTY_COUNTS: NotificationCounts = {
@@ -46,6 +62,8 @@ const EMPTY_COUNTS: NotificationCounts = {
   forumTopics: 0,
   forumWatched: [],
   incomingChallenges: 0,
+  seekExpiries: 0,
+  seekExpired: [],
 };
 
 export type NotificationSource = {
@@ -82,7 +100,7 @@ function plural(count: number, one: string, many: string): string {
   return count === 1 ? one : many;
 }
 
-async function markKindSeen(kind: 'followers' | 'forum-replies'): Promise<void> {
+async function markKindSeen(kind: 'followers' | 'forum-replies' | 'seek-expiries'): Promise<void> {
   await fetch('/api/notifications/seen', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -179,6 +197,31 @@ export const challengesNotificationSource: NotificationSource = {
       ],
     };
   },
+};
+
+// Public board seeks that lapsed with no taker. One row per seek (the server
+// caps them), each linking to /correspondence with the start form prefilled so
+// posting it again is one click. Seen on open like the other feeds, so a lapsed
+// seek is told once and never nags.
+export const seekExpiryNotificationSource: NotificationSource = {
+  read: (counts) => {
+    if (!readAccountPreferences().correspondenceBell) return { count: 0, entries: [] };
+    const count = counts.seekExpiries;
+    if (count === 0) return { count: 0, entries: [] };
+    const entries: NotificationEntry[] = counts.seekExpired.map((notice) => ({
+      label: `Your open ${variantDisplayLabel(notice.gameSpecId)} correspondence game expired after ${notice.ttlDays} days with no taker. Post it again`,
+      href: startFormPrefillHref(notice),
+    }));
+    const more = count - entries.length;
+    if (more > 0) {
+      entries.push({
+        label: `${more} more open ${plural(more, 'game', 'games')} expired with no taker`,
+        href: '/correspondence',
+      });
+    }
+    return { count, entries };
+  },
+  markSeen: () => markKindSeen('seek-expiries'),
 };
 
 export function mountNotificationBell(nav: HTMLElement): void {
@@ -287,7 +330,39 @@ async function fetchNotificationCounts(): Promise<NotificationCounts> {
     forumTopics: read(data.forumTopics),
     forumWatched: readForumWatched(data.forumWatched),
     incomingChallenges: read(data.incomingChallenges),
+    seekExpiries: read(data.seekExpiries),
+    seekExpired: readSeekExpired(data.seekExpired),
   };
+}
+
+// Defensive parse of the expired-seek rows, same posture as readForumWatched.
+function readSeekExpired(value: unknown): SeekExpiryNotification[] {
+  if (!Array.isArray(value)) return [];
+  const rows: SeekExpiryNotification[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as Record<string, unknown>;
+    if (
+      typeof row.seekId !== 'string' ||
+      typeof row.gameSpecId !== 'string' ||
+      typeof row.daysPerMove !== 'number' ||
+      !Number.isFinite(row.daysPerMove) ||
+      typeof row.ttlDays !== 'number' ||
+      !Number.isFinite(row.ttlDays)
+    ) {
+      continue;
+    }
+    const side = row.preferredColor;
+    rows.push({
+      seekId: row.seekId,
+      gameSpecId: row.gameSpecId,
+      daysPerMove: row.daysPerMove,
+      preferredColor: side === 'first' || side === 'second' ? side : 'random',
+      rated: row.rated === true,
+      ttlDays: row.ttlDays,
+    });
+  }
+  return rows;
 }
 
 // Defensive parse of the per-topic rows: a malformed row is dropped rather

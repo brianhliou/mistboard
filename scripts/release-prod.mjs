@@ -189,7 +189,7 @@ try {
   }
 
   if (options.localCi) {
-    const gate = localGateFor(ciPlan.changedFiles, options.fullCi);
+    const gate = localGateFor(ciPlan.changedFiles, release.targetRevision, options.fullCi);
     release.gate = { kind: gate.kind, reason: gate.reason };
     console.log(`local gate: ${gate.kind} (${gate.reason})`);
     for (const command of gate.commands) {
@@ -559,21 +559,35 @@ function planChangedFiles() {
  * path, because the push goes out with --no-verify.
  *
  * Falls back to ci:quick whenever the classifier cannot be trusted: --full-ci,
- * an unreadable diff, or a change set large enough that argv is the wrong
- * channel for it.
+ * an unreadable diff or base, or a change set large enough that argv is the
+ * wrong channel for it.
+ *
+ * The base revision goes with the file list: the targeted plan ends in
+ * `verify --since <base>`, and without a base it fell back to `verify --changed`,
+ * which reads the working tree. A release tree is clean, so that verified 0 files
+ * and ran no tests (2026-10-02, b40cb193 shipped a red web test to hosted CI).
  */
-function localGateFor(changedFiles, fullCi) {
+function localGateFor(changedFiles, baseRevision, fullCi) {
   const FULL = { kind: 'full', reason: 'ci:quick', commands: [['npm', 'run', 'ci:quick']] };
   if (fullCi) return { ...FULL, reason: '--full-ci' };
   if (!Array.isArray(changedFiles) || changedFiles.length === 0) {
     return { ...FULL, reason: 'no readable change set' };
   }
+  if (!baseRevision) return { ...FULL, reason: 'no base revision for the change set' };
   if (changedFiles.length > 400) {
     return { ...FULL, reason: `${changedFiles.length} changed files` };
   }
   const result = spawnSync(
     'node',
-    ['scripts/pre-push-check.mjs', '--plan', '--json', '--files', ...changedFiles],
+    [
+      'scripts/pre-push-check.mjs',
+      '--plan',
+      '--json',
+      '--base',
+      baseRevision,
+      '--files',
+      ...changedFiles,
+    ],
     { encoding: 'utf8' },
   );
   if (result.status !== 0 || !result.stdout) {
@@ -936,7 +950,7 @@ function catchUpWithMain() {
   release.targetRevision = remote;
   release.adopted = [];
   const changed = readChangedFiles({ base: remote, head: release.headRevision });
-  const gate = localGateFor(changed, false);
+  const gate = localGateFor(changed, remote, false);
   const commands =
     gate.kind === 'full' || gate.kind === 'broad'
       ? [

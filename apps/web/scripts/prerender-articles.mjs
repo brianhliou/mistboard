@@ -801,31 +801,83 @@ try {
   }
   win.happyDOM.setURL(host);
 
-  // /blog: the post index. Authored data only, so the baked DOM is the page a
-  // reader gets. It has been in the sitemap all along while answering with the
-  // empty shell, which is worse than not being listed.
-  const { renderArticlesIndexShellForPrerender } =
-    await server.ssrLoadModule('/src/pages-static.ts');
-  const blogIndexInner = await renderArticlesIndexShellForPrerender();
-  let blogIndexHtml = shell.replace(
-    '<div id="app"></div>',
-    `<div id="app" class="landing-page articles-route">${blogIndexInner}</div>`,
-  );
-  // Full meta, not a title-only replace: servePrerenderedPage returns this file
-  // as-is and never runs the server's own injection, so anything left alone
-  // here ships the homepage's copy. Same strings as ARTICLES_INDEX_META.en in
-  // apps/server/src/server-static-pages.ts, which covers the fallback path.
-  blogIndexHtml = injectPageMeta(blogIndexHtml, {
-    title: 'Articles | Mistboard',
-    description: 'Long-form writing on original strategy games, rules, and engine research.',
-    url: `${host}/blog`,
-  });
-  blogIndexHtml = blogIndexHtml.replace(
-    '</head>',
-    `<link rel="canonical" href="${host}/blog" />${BLOG_RSS_LINK}${articleAssetLinks}</head>`,
-  );
-  await fs.writeFile(resolve(distDir, 'blog.html'), blogIndexHtml, 'utf-8');
-  console.log('prerendered /blog (blog.html)');
+  // /blog, /zh-hans/blog, /zh-hant/blog: the post index, once per interface
+  // language. Authored data only, so the baked DOM is the page a reader gets.
+  // Each was in the sitemap while answering with the empty shell, which is
+  // worse than not being listed. The DOM points at the URL the page is served
+  // from while it bakes, as the homepage does, so a widget that reads
+  // currentLocale() itself gets the right language.
+  const {
+    renderArticlesIndexShellForPrerender,
+    articlesIndexPrerenderHead,
+    renderRulesIndexShellForPrerender,
+    rulesIndexPrerenderHead,
+  } = await server.ssrLoadModule('/src/pages-static.ts');
+  for (const v of baseVariants) {
+    const head = articlesIndexPrerenderHead(host, v.lang);
+    win.happyDOM.setURL(head.url);
+    const blogIndexInner = await renderArticlesIndexShellForPrerender(v.lang);
+    let blogIndexHtml = shell
+      .replace('<html lang="en">', `<html lang="${v.htmlLang}">`)
+      .replace(
+        '<div id="app"></div>',
+        `<div id="app" class="landing-page articles-route">${blogIndexInner}</div>`,
+      );
+    // Full meta, not a title-only replace: the server returns this file as-is
+    // and never runs its own injection, so anything left alone here ships the
+    // homepage's copy.
+    blogIndexHtml = injectPageMeta(blogIndexHtml, {
+      title: head.title,
+      description: head.description,
+      url: head.url,
+    });
+    const localeLinks = v.lang ? (localePreloadLinks[v.lang] ?? '') : '';
+    blogIndexHtml = blogIndexHtml.replace(
+      '</head>',
+      `${head.headLinks}${BLOG_RSS_LINK}${articleAssetLinks}${localeLinks}</head>`,
+    );
+    const file = v.langDir
+      ? resolve(distDir, v.langDir, 'blog.html')
+      : resolve(distDir, 'blog.html');
+    await fs.mkdir(dirname(file), { recursive: true });
+    await fs.writeFile(file, blogIndexHtml, 'utf-8');
+    console.log(`prerendered ${v.urlPrefix}/blog (${v.langDir ? `${v.langDir}/` : ''}blog.html)`);
+  }
+
+  // /rules, /zh-hans/rules, /zh-hant/rules: the rules landing, once per
+  // interface language, same shape as the blog indexes above. All three were in
+  // the sitemap answering with the 4.9KB shell (no canonical, no hreflang, no
+  // text) until 2026-10-02. rules.html sits beside the rules/ directory of
+  // docs; the server routes /rules before the static handler, so the two never
+  // collide.
+  for (const v of baseVariants) {
+    const head = rulesIndexPrerenderHead(host, v.lang);
+    win.happyDOM.setURL(head.url);
+    const rulesIndexInner = await renderRulesIndexShellForPrerender(v.lang);
+    let rulesIndexHtml = shell
+      .replace('<html lang="en">', `<html lang="${v.htmlLang}">`)
+      .replace(
+        '<div id="app"></div>',
+        `<div id="app" class="landing-page articles-route rules-route">${rulesIndexInner}</div>`,
+      );
+    rulesIndexHtml = injectPageMeta(rulesIndexHtml, {
+      title: head.title,
+      description: head.description,
+      url: head.url,
+    });
+    const localeLinks = v.lang ? (localePreloadLinks[v.lang] ?? '') : '';
+    rulesIndexHtml = rulesIndexHtml.replace(
+      '</head>',
+      `${head.headLinks}${articleAssetLinks}${localeLinks}</head>`,
+    );
+    const file = v.langDir
+      ? resolve(distDir, v.langDir, 'rules.html')
+      : resolve(distDir, 'rules.html');
+    await fs.mkdir(dirname(file), { recursive: true });
+    await fs.writeFile(file, rulesIndexHtml, 'utf-8');
+    console.log(`prerendered ${v.urlPrefix}/rules (${v.langDir ? `${v.langDir}/` : ''}rules.html)`);
+  }
+  win.happyDOM.setURL(host);
 
   // blog/feed.xml: the posts as RSS, alongside the announcement feed at
   // /feed.xml. Published blog posts only, newest first; rules docs are
