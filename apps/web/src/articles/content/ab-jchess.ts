@@ -102,7 +102,7 @@ export const abJchessArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'While writing this post we found a bug in how our Pikafish bot scores reveals. We are fixing it, and a follow-up post will cover what it was and what it cost.',
+          text: 'While writing this post we found a bug in how our Pikafish bot scored reveals. It is fixed; [a follow-up post](/blog/pikafish-reveal-bug) covers what it was and what it cost.',
         },
       ],
     },

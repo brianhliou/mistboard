@@ -213,7 +213,7 @@
     "title": "Our Pikafish jieqi bot misjudged its reveals",
     "kind": "article",
     "description": "Our Pikafish jieqi bot rated some reveals far better than they were. Two bugs caused it. Both are fixed, at little or no cost in strength.",
-    "status": "draft"
+    "status": "published"
   },
   "puzzles-with-more-than-one-solution": {
     "title": "Puzzles with more than one solution",

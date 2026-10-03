@@ -1,5 +1,7 @@
-import type { ArticleBlock } from '../types.js';
-import type { Article } from '../types.js';
+import type { XiangqiPlayerView } from '@mistboard/game';
+import { parseJieqiFen, type XiangqiSquare } from '@mistboard/game';
+import { XQ_CELL, xqBoardSvg, xqPoint, xqStaticView, xqVisionDemoState } from '../diagrams.js';
+import type { Article, ArticleBlock } from '../types.js';
 
 // The follow-up the AB-JChess post promised (#497). Numbers and positions:
 // - game 108 (run7, AB-JChess vs PikaJieQi): ply 23, Black's d9e8 (d10-e9); in-game
@@ -15,6 +17,48 @@ import type { Article } from '../types.js';
 //   (the post quotes the 4M result as "plays about as well").
 // - AB-JChess: worst move in each of its 136 run7 losses, 60 reveals, 2 over-rated by
 //   15+ win points. Rigs: mistboard-engine lab, issue #497.
+
+// Card art: match game 108 after 23 plies, Black (Pikafish) to move, as Black saw
+// it. It turned the piece on d10 over to e9 and was mated on f10 by the chariot on
+// f9; the fixed bot plays h10-g8. pikafish-reveal-bug-thumbnail.test.ts asserts
+// both moves are legal here.
+export const REVEAL_BUG_FEN =
+  'xxxxkxxxx/5R3/9/2x1x3x/6a2/2P1P1A1B/X5r2/4P1C2/3A1K3/c2b1X2X b R1C1B1r1a1c1p5n2b1 3 12';
+
+// 16:10 to match the card media box (.articles-index-card-media, 16/10).
+const THUMB_ASPECT = 16 / 10;
+
+const REVEAL_BUG_THUMBNAIL = (): string => {
+  const parsed = parseJieqiFen(REVEAL_BUG_FEN);
+  if (!parsed.ok) throw new Error(`pikafish-reveal-bug thumbnail: ${parsed.error}`);
+  const board: XiangqiPlayerView['board'] = {};
+  for (const [square, piece] of Object.entries(parsed.state.board)) {
+    if (!piece) continue;
+    board[square as XiangqiSquare] = {
+      piece: { color: piece.color, role: piece.role },
+      shrouded: piece.faceDown,
+    };
+  }
+  const boardY = 28; // xqBoardSvg draws the grid 28 below its y, under the title row.
+  // Black's camp from Black's side: ranks 10 (bottom) up to 5.
+  const top = xqPoint(4, 5, 'black', 0, boardY).y - XQ_CELL * 0.5;
+  const bottom = xqPoint(4, 10, 'black', 0, boardY).y + XQ_CELL * 0.8;
+  const h = bottom - top;
+  const w = h * THUMB_ASPECT;
+  const left = xqPoint(4, 10, 'black', 0, boardY).x - w / 2;
+  const svg = xqBoardSvg({
+    state: xqVisionDemoState('pikafish-reveal-bug-thumb', {}),
+    view: xqStaticView('pikafish-reveal-bug-thumb', board),
+    x: 0,
+    y: 0,
+    label: '',
+    perspective: 'black',
+    shroudedStyle: 'back',
+    arrows: [{ from: 'h10' as XiangqiSquare, to: 'g8' as XiangqiSquare }],
+    dots: [{ square: 'e9' as XiangqiSquare, blocked: true }],
+  });
+  return `<svg class="xq-article-svg" viewBox="${left} ${top} ${w} ${h}" role="img" aria-label="Pikafish turns over the piece on d10 and moves it to e9, and is mated on f10; the fixed bot plays h10-g8" xmlns="http://www.w3.org/2000/svg"><rect class="xq-diagram-bg" x="${left}" y="${top}" width="${w}" height="${h}"/>${svg}</svg>`;
+};
 
 const FORK = 'https://github.com/brianhliou/pikafish-jieqi-wasm';
 // The served commit before the fix, so the line links keep pointing at the bug.
@@ -64,8 +108,9 @@ export const pikafishRevealBugArticle: Article = {
   summary:
     'Our Pikafish jieqi bot rated some reveals far better than they were. Two bugs caused it. Both are fixed, at little or no cost in strength.',
   showSummaryOnPage: false,
-  status: 'draft',
+  status: 'published',
   publishedAt: '2026-10-03',
+  thumbnail: { kind: 'svg', svg: REVEAL_BUG_THUMBNAIL },
   boardFamily: 'xiangqi',
   audience: 'People who play jieqi against the bot on Mistboard, and people who build jieqi engines.',
   intro: [
@@ -111,7 +156,7 @@ export const pikafishRevealBugArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'In the first game of the AB-JChess post, the bot, as Red, turned over the piece on b3 and moved it to d3. Searched again with the old bot, the move rates more than eight pawns in Red\'s favour. Six times in ten that piece is a soldier or an elephant, and Black mates at once with the cannon on h1. Averaged honestly, the move is worth about three pawns to Black. The fixed bot sees the mate and plays the advisor from e2 to f3, the move AB-JChess recommends.',
+          text: 'In the first game of the AB-JChess post, the bot, as Red, turned over the piece on b3 and moved it to d3. Searched again with the old bot, the move rates more than eight pawns in Red\'s favour. Six times in ten that piece is a soldier or an elephant, and Black\'s cannon mates at once on h1. Averaged honestly, the move is worth about three pawns to Black. The fixed bot sees the mate and plays the advisor from e2 to f3, the move AB-JChess recommends.',
         },
         gameEmbed('jq_23d2a761-b37d-4bf0-a786-3ce7edf7e0fd', 26, 'Jieqi: the bot is about to reveal on b3'),
       ],
