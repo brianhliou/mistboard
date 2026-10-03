@@ -478,19 +478,73 @@ a.correspondence-row:focus-visible {
   display: none;
 }
 
-/* ---- Signed out ------------------------------------------------------------------- */
+/* ---- Your own Fog Chess board (the seat's PlayerView) --------------------------- */
 
-.correspondence-signedout {
+.correspondence-seat-board {
+  width: 100%;
+  height: 100%;
   display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 18px;
+  align-items: center;
+  justify-content: center;
 }
 
-.correspondence-signedout p {
+.correspondence-seat-board svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- Signed out: the pitch --------------------------------------------------------- */
+
+.correspondence-shell.is-signed-out {
+  gap: 48px;
+}
+
+.correspondence-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 32px 56px;
+  padding: 36px;
+  border: 1px solid var(--site-border);
+  border-radius: 14px;
+  background:
+    radial-gradient(120% 90% at 0% 0%, var(--site-accent-soft) 0%, transparent 55%),
+    var(--site-panel);
+}
+
+.correspondence-hero-copy {
+  flex: 1 1 380px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.correspondence-eyebrow {
   margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--site-accent-strong);
+}
+
+.correspondence-hero-title {
+  margin: 0;
+  font-size: clamp(2.1rem, 5vw, 3.4rem);
+  line-height: 1.05;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--site-heading);
+}
+
+.correspondence-hero-pitch {
+  margin: 0;
+  max-width: 46ch;
+  font-size: 1.08rem;
+  line-height: 1.55;
   color: var(--site-text);
-  line-height: 1.5;
 }
 
 .correspondence-signedout-actions {
@@ -499,8 +553,209 @@ a.correspondence-row:focus-visible {
   gap: 10px;
 }
 
+.correspondence-signedout-actions .correspondence-btn,
 .correspondence-signedout-actions .correspondence-ghost {
-  min-height: 40px;
+  min-height: 46px;
+  padding: 0 22px;
+  font-size: 0.95rem;
+}
+
+.correspondence-hero-facts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.correspondence-hero-facts li {
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--site-border);
+  color: var(--site-muted);
+  font-size: 0.82rem;
+}
+
+.correspondence-hero-note {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--site-muted);
+}
+
+.correspondence-hero-board {
+  flex: 0 1 340px;
+  min-width: 0;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.correspondence-hero-board-host {
+  aspect-ratio: 9 / 10;
+  border-radius: 10px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+}
+
+.correspondence-static-board {
+  width: 100%;
+  height: 100%;
+}
+
+.correspondence-static-board svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.correspondence-hero-caption {
+  font-size: 0.82rem;
+  color: var(--site-muted);
+  text-align: center;
+}
+
+.correspondence-hero-caption a {
+  color: var(--site-link);
+  text-decoration: none;
+}
+
+.correspondence-hero-caption a:hover {
+  text-decoration: underline;
+}
+
+/* Every correspondence game in play, as a board grid like /games. */
+.correspondence-showcase-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
+  gap: 18px;
+}
+
+.correspondence-showcase-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--site-border);
+  border-radius: 8px;
+  background: var(--site-panel);
+  color: inherit;
+  text-decoration: none;
+}
+
+.correspondence-showcase-card:hover,
+.correspondence-showcase-card:focus-visible {
+  border-color: var(--site-accent);
+}
+
+.correspondence-showcase-names {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--site-heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.correspondence-showcase-due {
+  font-size: 0.8rem;
+  color: var(--site-accent-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.correspondence-showcase-seeks {
+  max-width: 720px;
+}
+
+/* How it works: three numbered steps. */
+.correspondence-how {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.correspondence-how h2,
+.correspondence-first h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--site-heading);
+}
+
+.correspondence-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  gap: 16px;
+}
+
+.correspondence-step {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  border: 1px solid var(--site-border);
+  border-radius: 10px;
+  background: var(--site-panel);
+}
+
+.correspondence-step-number {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--site-accent-soft);
+  color: var(--site-accent-strong);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.correspondence-step h3 {
+  margin: 4px 0 0;
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: var(--site-heading);
+}
+
+.correspondence-step p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--site-muted);
+}
+
+/* Nothing in play: an invitation, not an empty box. */
+.correspondence-first {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 24px;
+  padding: 24px;
+}
+
+.correspondence-first > div {
+  flex: 1 1 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.correspondence-first p {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--site-muted);
+  line-height: 1.5;
+}
+
+.correspondence-first .correspondence-btn {
+  align-self: center;
+  min-height: 46px;
+  padding: 0 22px;
 }
 
 @media (max-width: 520px) {
@@ -515,6 +770,35 @@ a.correspondence-row:focus-visible {
   .correspondence-card-board {
     width: 100%;
     max-width: 360px;
+  }
+
+  .correspondence-hero {
+    padding: 22px 18px;
+  }
+
+  .correspondence-signedout-actions > * {
+    flex: 1 1 140px;
+  }
+
+  .correspondence-signedout-actions .correspondence-btn,
+  .correspondence-signedout-actions .correspondence-ghost {
+    padding: 0 12px;
+    white-space: nowrap;
+  }
+
+  .correspondence-hero-board {
+    flex-basis: 100%;
+    max-width: 300px;
+  }
+
+  /* Two boards a row on a phone, so the wall stays a wall. */
+  .correspondence-showcase-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .correspondence-showcase-card {
+    padding: 8px;
   }
 
   .correspondence-btn {

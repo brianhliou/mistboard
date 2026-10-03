@@ -16,6 +16,10 @@ export type CorrespondenceGame = {
   isYourMove: boolean;
   opponentName: string | null;
   dueAt: string;
+  // The board THIS player's seat sees, exactly the state of that seat's own
+  // room snapshot (server: correspondenceSeatBoard). Present only for tenants
+  // that opt in (Fog Chess today); read through seatBoardView, never trusted.
+  seatBoard?: unknown;
 };
 
 export type CorrespondenceGamesResponse = {
@@ -121,6 +125,31 @@ export function indexByRoom<T extends Pick<CurrentGame, 'roomId'>>(
   return new Map(games.map((game) => [game.roomId, game]));
 }
 
+// The specs whose per-seat board the inbox knows how to draw (the dark-chess
+// SVG board, fed a PlayerView). A seatBoard on any other spec is ignored.
+export const SEAT_BOARD_SPECS: ReadonlySet<string> = new Set(['dark-chess']);
+
+export type SeatBoardView = {
+  board: Record<string, { color: string; role: string } | undefined>;
+  visibleSquares: string[];
+  perspective: 'white' | 'black';
+  lastMove?: { from: string; to: string };
+};
+
+// The seat's own board when it is one the inbox can draw, else null. Shape
+// checked so a malformed payload falls back to the mist instead of throwing.
+export function seatBoardView(
+  game: Pick<CorrespondenceGame, 'gameSpecId' | 'seatBoard'>,
+): SeatBoardView | null {
+  if (!SEAT_BOARD_SPECS.has(game.gameSpecId)) return null;
+  const view = game.seatBoard as Partial<SeatBoardView> | null | undefined;
+  if (!view || typeof view !== 'object') return null;
+  if (!view.board || typeof view.board !== 'object') return null;
+  if (!Array.isArray(view.visibleSquares)) return null;
+  if (view.perspective !== 'white' && view.perspective !== 'black') return null;
+  return view as SeatBoardView;
+}
+
 // What a card draws where the board goes. A board only when the public feed
 // sent one for an 'open' game (the same position anyone watching sees, and for
 // an open-information variant the same one either seat sees). Fail-closed: a
@@ -178,4 +207,24 @@ export function seekRequestBody(
     return { ok: true, body: { ...base, targetHandle: handle } };
   }
   return { ok: true, body: base };
+}
+
+// ---- Signed-out showcase ------------------------------------------------------
+
+// Every correspondence game in progress, from the public current-games feed, in
+// the feed's order (soonest deadline first).
+export function correspondenceInProgress<T extends Pick<CurrentGame, 'timeClass'>>(
+  games: readonly T[],
+): T[] {
+  return games.filter((game) => game.timeClass === 'correspondence');
+}
+
+// The game the hero draws: the first one the public feed sent an open board
+// for. Null means the hero shows a starting position instead.
+export function heroBoardGame<T extends Pick<CurrentGame, 'observe' | 'payload' | 'gameSpecId'>>(
+  games: readonly T[],
+): T | null {
+  return (
+    games.find((game) => inboxTileKind(game.gameSpecId, game) === 'board' && !!game.payload) ?? null
+  );
 }

@@ -27,28 +27,44 @@
 
 import './current-games.css';
 import './correspondence.css';
-import { CORRESPONDENCE_ELIGIBLE_SPEC_IDS, DAYS_PER_MOVE_OPTIONS } from '@mistboard/game';
+import {
+  CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+  createInitialXiangqiState,
+  DAYS_PER_MOVE_OPTIONS,
+  getStandardXiangqiPlayerView,
+} from '@mistboard/game';
 import { trackCorrespondenceSeekAccepted, trackCorrespondenceSeekPosted } from './analytics.js';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import {
   type CorrespondenceGame,
   type CorrespondenceGamesResponse,
+  correspondenceInProgress,
   deadlineFraction,
   deadlineRemainingMs,
   deadlineUrgency,
+  heroBoardGame,
   inboxTileKind,
   indexByRoom,
   type OpenSeek,
   type OutgoingSeek,
   othersSeeks,
   SEEK_KINDS,
+  type SeatBoardView,
   type SeekKind,
   type SeekPreferredColor,
+  seatBoardView,
   seekRequestBody,
   splitInbox,
 } from './correspondence-model.js';
 import type { CurrentGame, CurrentGamesResponse } from './current-games-model.js';
-import { firstMoverColorName, secondMoverColorName, variantDisplayLabel } from './game-display.js';
+import type { DarkChessBoardView } from './dark-chess-render.js';
+import {
+  displayLiveName,
+  firstMoverColorName,
+  namesMatchupLabel,
+  secondMoverColorName,
+  variantDisplayLabel,
+} from './game-display.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, localizedHref } from './i18n/locale.js';
 import { timeAgo } from './relative-time.js';
@@ -85,7 +101,9 @@ export async function mountCorrespondence(root: HTMLElement): Promise<void> {
   };
 
   if (gamesResp?.status === 401) {
-    root.replaceChildren(buildNav(), buildSignedOut(ctx, seeksFeed));
+    const inPlay = correspondenceInProgress(await fetchCurrentList());
+    root.replaceChildren(buildNav(), buildSignedOut(ctx, seeksFeed, inPlay));
+    startTicking(ctx);
     return;
   }
   if (!gamesResp?.ok) {
@@ -348,9 +366,11 @@ function buildWaitingRow(
 
 // ---- Boards -------------------------------------------------------------------------
 
-// The board, the mist, or the variant placeholder (inboxTileKind decides). A
-// board mounts the same compact live renderer the /games wall uses, fed the
-// public feed's payload.
+// The board, the mist, or the variant placeholder. Your own Fog Chess game
+// draws your seat's fog view (the server's seatBoard, the same PlayerView the
+// game room gives your seat) on the site's dark-chess SVG board. Otherwise an
+// open game mounts the same compact live renderer the /games wall uses, fed
+// the public feed's payload, and anything hidden keeps the misty tile.
 function buildBoardHost(
   ctx: PageContext,
   game: CorrespondenceGame,
@@ -358,6 +378,12 @@ function buildBoardHost(
 ): HTMLElement {
   const host = document.createElement('div');
   host.className = 'current-game-board correspondence-board';
+  const seatView = seatBoardView(game);
+  if (seatView) {
+    host.append(buildFogTile(game.gameSpecId));
+    void mountSeatBoard(ctx, host, seatView);
+    return host;
+  }
   const kind = inboxTileKind(game.gameSpecId, current);
   if (kind === 'fog') {
     host.append(buildFogTile(game.gameSpecId));
@@ -365,15 +391,35 @@ function buildBoardHost(
   }
   host.append(buildPlaceholderTile(game.gameSpecId));
   if (kind === 'board' && current?.payload) {
-    void mountBoard(ctx, host, game, current, current.payload);
+    void mountBoard(ctx, host, game.gameSpecId, game.roomId, current, current.payload);
   }
   return host;
+}
+
+async function mountSeatBoard(
+  ctx: PageContext,
+  host: HTMLElement,
+  view: SeatBoardView,
+): Promise<void> {
+  try {
+    const { renderDarkChessBoardSvg } = await import('./dark-chess-render.js');
+    if (!ctx.isConnected()) return;
+    const board = document.createElement('div');
+    board.className = 'correspondence-seat-board';
+    board.innerHTML = renderDarkChessBoardSvg(view as unknown as DarkChessBoardView, {
+      perspective: view.perspective,
+    });
+    host.replaceChildren(board);
+  } catch (err) {
+    console.warn('[correspondence] seat board render failed', err);
+  }
 }
 
 async function mountBoard(
   ctx: PageContext,
   host: HTMLElement,
-  game: CorrespondenceGame,
+  gameSpecId: string,
+  roomId: string,
   current: CurrentGame,
   payload: Record<string, unknown>,
 ): Promise<void> {
@@ -381,15 +427,15 @@ async function mountBoard(
     const { mountShowcaseBoard } = await import('./showcase-board.js');
     if (!ctx.isConnected()) return;
     host.replaceChildren();
-    const handle = await mountShowcaseBoard(host, game.gameSpecId, game.roomId, {
+    const handle = await mountShowcaseBoard(host, gameSpecId, roomId, {
       autoplay: false,
       hideReserve: true,
       live: true,
-      loadPostgameOverride: async (roomId) =>
-        roomId === game.roomId ? { ok: true, postgame: payload } : { ok: false },
+      loadPostgameOverride: async (id) =>
+        id === roomId ? { ok: true, postgame: payload } : { ok: false },
       loaderForId: async () => [],
       metadataByRoomId: {},
-      namesByRoomId: { [game.roomId]: seatNames(current) },
+      namesByRoomId: { [roomId]: seatNames(current) },
       onLoadError: () => true,
       pov: 'white',
     });
@@ -401,7 +447,7 @@ async function mountBoard(
     handle.jumpToPly?.(handle.plyCount?.() ?? 0);
   } catch (err) {
     console.warn('[correspondence] board mount failed', err);
-    host.replaceChildren(buildPlaceholderTile(game.gameSpecId));
+    host.replaceChildren(buildPlaceholderTile(gameSpecId));
   }
 }
 
@@ -416,6 +462,10 @@ const FOG_WAVES =
 // The /games misty tile (same classes, same tokens), with a note for the seat:
 // the game page is where your own side of the fog is.
 function buildFogTile(gameSpecId: string): HTMLElement {
+  return buildFogTileWithNote(gameSpecId, t('correspondence.fogNote'));
+}
+
+function buildFogTileWithNote(gameSpecId: string, noteText: string): HTMLElement {
   const tile = document.createElement('div');
   tile.className = 'current-game-fog';
   const waves = document.createElement('span');
@@ -426,7 +476,7 @@ function buildFogTile(gameSpecId: string): HTMLElement {
   name.textContent = variantDisplayLabel(gameSpecId);
   const note = document.createElement('span');
   note.className = 'current-game-fog-note';
-  note.textContent = t('correspondence.fogNote');
+  note.textContent = noteText;
   tile.append(waves, name, note);
   return tile;
 }
@@ -772,11 +822,15 @@ async function fetchOpenSeeks(): Promise<OpenSeeksFeed> {
   return { status: 'ok', seeks: Array.isArray(body?.seeks) ? body.seeks : [] };
 }
 
-async function fetchCurrentGames(): Promise<Map<string, CurrentGame>> {
+async function fetchCurrentList(): Promise<CurrentGame[]> {
   const response = await fetch('/api/games/current').catch(() => null);
-  if (!response?.ok) return new Map();
+  if (!response?.ok) return [];
   const body = (await response.json().catch(() => null)) as CurrentGamesResponse | null;
-  return indexByRoom(body?.games ?? []);
+  return body?.games ?? [];
+}
+
+async function fetchCurrentGames(): Promise<Map<string, CurrentGame>> {
+  return indexByRoom(await fetchCurrentList());
 }
 
 function renderOpenSeeks(ctx: PageContext, host: HTMLElement, feed: OpenSeeksFeed): void {
@@ -1017,47 +1071,239 @@ function seekColorLabel(gameSpecId: string, color: SeekPreferredColor): string {
 // Signed out
 // ---------------------------------------------------------------------------
 
-function buildSignedOut(ctx: PageContext, seeksFeed: OpenSeeksFeed): HTMLElement {
-  const shell = buildShell(t('correspondence.signedOutLead'));
-  const layout = document.createElement('div');
-  layout.className = 'correspondence-layout';
-  const main = document.createElement('div');
-  main.className = 'correspondence-main';
-  const side = document.createElement('aside');
-  side.className = 'correspondence-side';
+// Built to sell correspondence: a hero (headline, pitch, Create an account /
+// Sign in, a board), then everything in play right now (every correspondence
+// game from the public current-games feed, fog games as misty tiles, then the
+// open seeks with Accept through sign-in), then how it works. With nothing in
+// play the page leads with how it works and an invitation to start the first
+// game, never an empty box.
+function buildSignedOut(
+  ctx: PageContext,
+  seeksFeed: OpenSeeksFeed,
+  inPlay: CurrentGame[],
+): HTMLElement {
+  const shell = document.createElement('main');
+  shell.className = 'correspondence-shell is-signed-out';
+  shell.append(buildHero(ctx, inPlay));
 
-  const cta = document.createElement('section');
-  cta.className = 'correspondence-panel correspondence-signedout';
-  const line = document.createElement('p');
-  line.textContent = t('correspondence.signedOutAccount');
-  const actions = document.createElement('div');
-  actions.className = 'correspondence-signedout-actions';
-  const signIn = document.createElement('a');
-  signIn.className = 'correspondence-btn';
-  signIn.href = loginHrefForCurrentPage();
-  signIn.textContent = t('correspondence.signIn');
-  const register = document.createElement('a');
-  register.className = 'correspondence-ghost';
-  const params = new URLSearchParams({ tab: 'register', referrer: '/correspondence' });
-  register.href = localizedHref(`/account?${params.toString()}`);
-  register.textContent = t('correspondence.register');
-  actions.append(signIn, register);
-  cta.append(line, actions);
-  main.append(cta);
-
+  const seeks = seeksFeed.status === 'ok' ? othersSeeks(seeksFeed.seeks) : [];
+  if (inPlay.length > 0) shell.append(buildInPlaySection(ctx, inPlay));
   if (seeksFeed.status === 'disabled') {
     const soon = document.createElement('p');
     soon.className = 'correspondence-panel correspondence-quiet-panel';
     soon.textContent = t('lobby.corrComingSoon');
-    side.append(soon);
-  } else {
+    shell.append(soon);
+  } else if (seeks.length > 0) {
     const seekHost = document.createElement('section');
-    seekHost.className = 'correspondence-section';
+    seekHost.className = 'correspondence-section correspondence-showcase-seeks';
     renderOpenSeeks(ctx, seekHost, seeksFeed);
-    side.append(seekHost);
+    shell.append(seekHost);
   }
-
-  layout.append(main, side);
-  shell.append(layout);
+  shell.append(buildHowItWorks());
+  if (inPlay.length === 0 && seeks.length === 0 && seeksFeed.status !== 'disabled') {
+    shell.append(buildFirstGameInvite());
+  }
   return shell;
+}
+
+function registerHref(): string {
+  const params = new URLSearchParams({ tab: 'register', referrer: '/correspondence' });
+  return localizedHref(`/account?${params.toString()}`);
+}
+
+function buildAccountActions(): HTMLElement {
+  const actions = document.createElement('div');
+  actions.className = 'correspondence-signedout-actions';
+  const register = document.createElement('a');
+  register.className = 'correspondence-btn';
+  register.href = registerHref();
+  register.textContent = t('correspondence.register');
+  const signIn = document.createElement('a');
+  signIn.className = 'correspondence-ghost';
+  signIn.href = loginHrefForCurrentPage();
+  signIn.textContent = t('correspondence.signIn');
+  actions.append(register, signIn);
+  return actions;
+}
+
+function buildHero(ctx: PageContext, inPlay: CurrentGame[]): HTMLElement {
+  const hero = document.createElement('section');
+  hero.className = 'correspondence-hero';
+
+  const copy = document.createElement('div');
+  copy.className = 'correspondence-hero-copy';
+  const eyebrow = document.createElement('p');
+  eyebrow.className = 'correspondence-eyebrow';
+  eyebrow.textContent = t('correspondence.heading');
+  const title = document.createElement('h1');
+  title.className = 'correspondence-hero-title';
+  title.textContent = t('correspondence.heroTitle');
+  const pitch = document.createElement('p');
+  pitch.className = 'correspondence-hero-pitch';
+  pitch.textContent = t('correspondence.heroPitch');
+  const facts = document.createElement('ul');
+  facts.className = 'correspondence-hero-facts';
+  for (const text of [
+    t('correspondence.factDays', { list: DAYS_PER_MOVE_OPTIONS.join(' / ') }),
+    CORRESPONDENCE_ELIGIBLE_SPEC_IDS.map((specId) => variantDisplayLabel(specId)).join(' · '),
+    t('correspondence.factReminders'),
+  ]) {
+    const item = document.createElement('li');
+    item.textContent = text;
+    facts.append(item);
+  }
+  const note = document.createElement('p');
+  note.className = 'correspondence-hero-note';
+  note.textContent = t('correspondence.heroNote');
+  copy.append(eyebrow, title, pitch, buildAccountActions(), facts, note);
+
+  const figure = document.createElement('figure');
+  figure.className = 'correspondence-hero-board';
+  const host = document.createElement('div');
+  host.className = 'current-game-board correspondence-hero-board-host';
+  const caption = document.createElement('figcaption');
+  caption.className = 'correspondence-hero-caption';
+  const live = heroBoardGame(inPlay);
+  if (live?.payload) {
+    host.append(buildPlaceholderTile(live.gameSpecId));
+    void mountBoard(ctx, host, live.gameSpecId, live.roomId, live, live.payload);
+    const link = document.createElement('a');
+    link.href = live.url;
+    link.textContent = t('correspondence.heroLive', { matchup: showcaseMatchup(live) });
+    caption.append(link);
+  } else {
+    host.append(buildStartingBoard());
+    caption.textContent = t('correspondence.heroStart');
+  }
+  figure.append(host, caption);
+
+  hero.append(copy, figure);
+  return hero;
+}
+
+// A static xiangqi starting position, drawn by the site's own xiangqi board
+// renderer from the kernel's initial state, for when nothing is in play.
+function buildStartingBoard(): HTMLElement {
+  const board = document.createElement('div');
+  board.className = 'correspondence-static-board';
+  void Promise.all([import('./xiangqi-board.js'), import('./live-xiangqi.css')])
+    .then(([{ renderXiangqiBoardSvg }]) => {
+      const view = getStandardXiangqiPlayerView(createInitialXiangqiState('hero'), 'red');
+      board.innerHTML = renderXiangqiBoardSvg(view, 'red', { coordinates: false });
+      board.querySelector('svg')?.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    })
+    .catch((err) => console.warn('[correspondence] hero board failed', err));
+  return board;
+}
+
+function showcaseMatchup(game: CurrentGame): string {
+  const [first, second] = game.players;
+  return namesMatchupLabel(
+    displayLiveName(first?.name, t('games.guest')),
+    displayLiveName(second?.name, t('games.guest')),
+  );
+}
+
+function buildInPlaySection(ctx: PageContext, games: CurrentGame[]): HTMLElement {
+  const section = buildSection(t('correspondence.gamesInProgress'), games.length);
+  section.classList.add('correspondence-showcase');
+  const grid = document.createElement('div');
+  grid.className = 'correspondence-showcase-grid';
+  for (const game of games) grid.append(buildShowcaseCard(ctx, game));
+  section.append(grid);
+  return section;
+}
+
+function buildShowcaseCard(ctx: PageContext, game: CurrentGame): HTMLElement {
+  const card = document.createElement('a');
+  card.className = 'correspondence-showcase-card';
+  card.href = game.url;
+  card.dataset.roomId = game.roomId;
+  const host = document.createElement('div');
+  host.className = 'current-game-board';
+  const kind = inboxTileKind(game.gameSpecId, game);
+  if (kind === 'fog') {
+    host.append(buildFogTileWithNote(game.gameSpecId, t('games.inTheFog')));
+  } else {
+    host.append(buildPlaceholderTile(game.gameSpecId));
+    if (kind === 'board' && game.payload) {
+      void mountBoard(ctx, host, game.gameSpecId, game.roomId, game, game.payload);
+    }
+  }
+  const names = document.createElement('span');
+  names.className = 'correspondence-showcase-names';
+  names.textContent = showcaseMatchup(game);
+  const meta = document.createElement('span');
+  meta.className = 'correspondence-card-meta';
+  const chip = document.createElement('span');
+  chip.className = 'current-game-chip';
+  chip.textContent = variantDisplayLabel(game.gameSpecId);
+  meta.append(chip);
+  const days = game.timeControl?.daysPerMove;
+  if (days) meta.append(document.createTextNode(cadenceLabel(days)));
+  const due = document.createElement('span');
+  due.className = 'correspondence-showcase-due';
+  const deadline = game.deadline;
+  if (deadline) {
+    const onMove = game.players.find((player) => player.color === deadline.seat);
+    const name = displayLiveName(onMove?.name, t('games.guest'));
+    const tick = (now: number): void => {
+      const remaining = deadlineRemainingMs(deadline.dueAt, now);
+      due.textContent =
+        remaining === null || remaining <= 0
+          ? t('correspondence.dueNow')
+          : t('correspondence.toMoveLeft', { name, time: formatDayClock(remaining) });
+    };
+    tick(Date.now());
+    ctx.tickers.push(tick);
+  }
+  card.append(host, names, meta, due);
+  return card;
+}
+
+function buildHowItWorks(): HTMLElement {
+  const section = document.createElement('section');
+  section.className = 'correspondence-how';
+  const heading = document.createElement('h2');
+  heading.textContent = t('correspondence.howHeading');
+  const list = document.createElement('ol');
+  list.className = 'correspondence-steps';
+  const steps: Array<[I18nKey, I18nKey]> = [
+    ['correspondence.step1Title', 'correspondence.step1Body'],
+    ['correspondence.step2Title', 'correspondence.step2Body'],
+    ['correspondence.step3Title', 'correspondence.step3Body'],
+  ];
+  steps.forEach(([titleKey, bodyKey], index) => {
+    const item = document.createElement('li');
+    item.className = 'correspondence-step';
+    const number = document.createElement('span');
+    number.className = 'correspondence-step-number';
+    number.setAttribute('aria-hidden', 'true');
+    number.textContent = String(index + 1);
+    const title = document.createElement('h3');
+    title.textContent = t(titleKey);
+    const body = document.createElement('p');
+    body.textContent = t(bodyKey);
+    item.append(number, title, body);
+    list.append(item);
+  });
+  section.append(heading, list);
+  return section;
+}
+
+function buildFirstGameInvite(): HTMLElement {
+  const section = document.createElement('section');
+  section.className = 'correspondence-panel correspondence-first';
+  const copy = document.createElement('div');
+  const title = document.createElement('h2');
+  title.textContent = t('correspondence.firstTitle');
+  const body = document.createElement('p');
+  body.textContent = t('correspondence.firstBody');
+  copy.append(title, body);
+  const register = document.createElement('a');
+  register.className = 'correspondence-btn';
+  register.href = registerHref();
+  register.textContent = t('correspondence.register');
+  section.append(copy, register);
+  return section;
 }

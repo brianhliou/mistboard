@@ -245,6 +245,13 @@ export type VariantTenantRegistration = {
   activeGameCount(): number;
   // Hydrate a persisted room into the live map (null = unknown/invalid room).
   getOrLoadRoom(roomId: string): Promise<TenantManagedRoom | null>;
+  // The board the given seat sees in the room, exactly the `state` half of
+  // that seat's own snapshot (tenantSeatStateView), for the account-only
+  // /correspondence inbox. The caller must already have proven the requester
+  // holds `seat`. Absent, or null for anything that is not one of the tenant's
+  // colors, means no board: fail-closed, so a tenant that never opts in can
+  // never leak a position through the inbox.
+  seatBoard?: (room: TenantManagedRoom, seat: string) => unknown | null;
   // Hand a resolved live room its WebSocket connection.
   attachWebSocket(
     ctx: TenantWsAttachContext,

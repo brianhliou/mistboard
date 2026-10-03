@@ -260,10 +260,6 @@ export const EN_PLAY = {
   'correspondence.eitherColor': 'Either color',
   'correspondence.subtitle':
     'Days per move, not minutes. Your games follow your account to any device.',
-  'correspondence.signedOutLead':
-    'Correspondence games run at days per move, so you play when it suits you and the game waits for you.',
-  'correspondence.signedOutAccount':
-    'They live on your account, so sign in to post a seek or accept one.',
   'correspondence.register': 'Create an account',
   'correspondence.signInToAccept': 'Sign in to accept',
   'correspondence.playYourMove': 'Play your move',
@@ -304,6 +300,30 @@ export const EN_PLAY = {
   'correspondence.linkChallenge': 'Link challenge',
   'correspondence.openSeek': 'Open seek',
   'correspondence.expiresIn': 'expires in {time}',
+  'correspondence.heroTitle': 'Games that wait for you',
+  'correspondence.heroPitch':
+    'We give every move days, not minutes. Play from any device, move when it suits you, and we keep the clock.',
+  'correspondence.heroNote':
+    'Correspondence needs an account, so your games follow you to any device.',
+  'correspondence.factDays': '{list} days per move',
+  'correspondence.factReminders': 'Reminders before a deadline',
+  'correspondence.heroLive': 'In play now: {matchup}',
+  'correspondence.heroStart': 'Every game starts here',
+  'correspondence.gamesInProgress': 'Games in progress',
+  'correspondence.toMoveLeft': '{name} to move, {time} left',
+  'correspondence.howHeading': 'How it works',
+  'correspondence.step1Title': 'Post or accept a game',
+  'correspondence.step1Body':
+    'Pick a variant and how many days each move gets, then post a seek or take one that is open.',
+  'correspondence.step2Title': 'Move whenever you like',
+  'correspondence.step2Body':
+    'Think it over on the train or with your coffee. Each move gets the days you chose.',
+  'correspondence.step3Title': 'We keep the clock',
+  'correspondence.step3Body':
+    'We track every deadline, flag your turn in the notification bell and email you before time runs out.',
+  'correspondence.firstTitle': 'Start the first game',
+  'correspondence.firstBody':
+    'Nobody has a seek up right now. Create an account, post one, and it is the first thing the next visitor sees here.',
   'puzzle.heading': 'Puzzles',
   'puzzle.loading': 'Loading',
   'puzzle.none': 'No puzzles',

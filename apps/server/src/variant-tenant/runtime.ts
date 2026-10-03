@@ -827,6 +827,31 @@ export function tenantSeatProfiles<
   return profiles;
 }
 
+// The board a client is shown: the `state` half of its snapshot. One function
+// so every surface that shows a seat its board (the room snapshot, the
+// /correspondence inbox card) runs the same redaction for that seat.
+export function tenantSeatStateView<
+  Kind extends string,
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  View,
+  Spec extends string,
+>(
+  tenant: VariantTenant<Kind, C, M, State, View, Spec>,
+  room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
+  client: TenantSnapshotClient<C>,
+): View {
+  // Board half of the finished-game reveal, paired with the event half in
+  // tenantClientEvents. Both consult the same roomViewPolicy so a finished room
+  // can never hand out a full move list beside an empty board, which is what a
+  // one-sided change produces.
+  const reveal = tenantRoomRevealsTruth(tenant, room, client);
+  return reveal && tenant.visibility.truthView
+    ? tenant.visibility.truthView(room.projection.state, room.events)
+    : tenant.visibility.viewForClient(room.projection.state, client, room.events);
+}
+
 export function tenantSnapshotPayload<
   Kind extends string,
   C extends string,
@@ -839,15 +864,7 @@ export function tenantSnapshotPayload<
   room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
   client: TenantSnapshotClient<C>,
 ): TenantSnapshotPayload<C, M, View, Spec> & Record<string, unknown> {
-  // Board half of the finished-game reveal, paired with the event half in
-  // tenantClientEvents. Both consult the same roomViewPolicy so a finished room
-  // can never hand out a full move list beside an empty board, which is what a
-  // one-sided change produces.
-  const reveal = tenantRoomRevealsTruth(tenant, room, client);
-  const state =
-    reveal && tenant.visibility.truthView
-      ? tenant.visibility.truthView(room.projection.state, room.events)
-      : tenant.visibility.viewForClient(room.projection.state, client, room.events);
+  const state = tenantSeatStateView(tenant, room, client);
   return {
     type: 'snapshot' as const,
     roomId: room.id,
