@@ -32,6 +32,9 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Machine-drafted 2026-10-02, not native-reviewed, locked with its English
+  // copy, which publishes in the same release (the AB-JChess post's pattern).
+  'katago-jungle',
   // Machine-drafted 2026-10-01, not native-reviewed, locked the day after the
   // English copy published (2026-09-30); its News entry was already in zh.
   'one-thousand-games',
@@ -152,6 +155,31 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // katago-jungle: machine-drafted 2026-10-02, not native-reviewed.
+  'KataGo, a stronger Jungle Chess bot': 'KataGo：更强的斗兽棋电脑',
+  'KataGo for Jungle Chess: the self-play engine that beat Misty 82 to 0':
+    'KataGo 斗兽棋：自我对弈练成、以 82 比 0 战胜 Misty 的引擎',
+  'A Jungle Chess engine that learned by playing itself now sits above Misty. In 200 games against Misty it won 82, lost none and drew 118.':
+    '一个靠自我对弈学会斗兽棋的引擎，现在排在 Misty 之上。它和 Misty 下了 200 盘，赢 82 盘，一盘未输，和 118 盘。',
+  "[Jungle Chess](/rules/jungle) on Mistboard has a new top bot. It is KataGo-AnimalChess, hzyhhzy's [KataGomo](https://github.com/hzyhhzy/KataGomo/tree/AnimalChess2025) built on lightvector's [KataGo](https://github.com/lightvector/KataGo), playing with the b10c384 network from Dandelion 4 by Kouza ([lxsgx23](https://github.com/lxsgx23)). We play it here with [hzyhhzy's permission](https://github.com/hzyhhzy/KataGomo/issues/12), under the name KataGo.":
+    '[斗兽棋](/rules/jungle)在 Mistboard 上有了新的最强电脑。它就是 KataGo-AnimalChess：hzyhhzy 在 lightvector 的 [KataGo](https://github.com/lightvector/KataGo) 基础上开发的 [KataGomo](https://github.com/hzyhhzy/KataGomo/tree/AnimalChess2025)，使用 Kouza（[lxsgx23](https://github.com/lxsgx23)）Dandelion 4 的 b10c384 神经网络。我们经 [hzyhhzy 许可](https://github.com/hzyhhzy/KataGomo/issues/12)在这里使用它，名字就叫 KataGo。',
+  'KataGo learned Jungle Chess by playing itself, the way AlphaZero learned chess. A neural network proposes moves and judges positions, and a search checks its ideas. No other engine taught it.':
+    'KataGo 和 AlphaZero 学国际象棋一样，靠自己和自己下棋学会了斗兽棋。神经网络提出着法、评估局面，搜索再去检验它的想法。没有任何别的引擎教过它。',
+  'Play KataGo': '挑战 KataGo',
+  'See all bots': '查看所有电脑',
+  '82 wins and no losses against Misty': '对 Misty 82 胜 0 负',
+  "Before putting it on the site, we played it against Misty, our own Jungle Chess bot, in an open challenge of 200 games at 1,000 visits a move. hzyhhzy's engine won 82, lost none and drew 118, a score of 0.705. Every win came from walking into Misty's den, and every draw was a repetition.":
+    '上线之前，我们让它和我们自己的斗兽棋电脑 Misty 进行了一场公开挑战赛：200 盘，每步 1,000 次访问。hzyhhzy 的引擎赢 82 盘、输 0 盘、和 118 盘，得分率 0.705。每一盘胜局都是走进 Misty 的兽穴取胜，每一盘和棋都是重复局面。',
+  'All 200 games are in [one study](/study/0t8xpyv6), and the [match write-up](https://brianhliou.com/posts/katago-beats-misty-jungle/) has the details.':
+    '全部 200 盘都收在[一个研究](/study/0t8xpyv6)里，详情见[比赛记录](https://brianhliou.com/posts/katago-beats-misty-jungle/)。',
+  'Misty is still where you start': '入门仍从 Misty 开始',
+  'KataGo is at the top of the Jungle Chess bot list, above Misty. Misty stays the default and the easier opponent; pick KataGo when you want the stronger game. Game review and analysis for Jungle Chess still run on Misty.':
+    'KataGo 排在斗兽棋电脑列表的最上面，在 Misty 之上。Misty 仍是默认对手，也是较容易的那一个；想下更难的棋就选 KataGo。斗兽棋的复盘和分析仍由 Misty 负责。',
+  'On the site KataGo searches 150 visits a move, which takes about 1.5 to 3.5 seconds. At that setting it scored 19 wins, no losses and 31 draws in 50 games against Misty, 0.690, which cannot be told apart from the 1,000-visit result. The strength is in the network.':
+    '在网站上，KataGo 每步搜索 150 次访问，大约用时 1.5 到 3.5 秒。在这个设置下，它和 Misty 下了 50 盘，19 胜 0 负 31 和，得分率 0.690，与 1,000 次访问的结果分不出差别。它的棋力来自神经网络。',
+  'KataGomo is open source at [github.com/hzyhhzy/KataGomo](https://github.com/hzyhhzy/KataGomo). Thank you, hzyhhzy, for the engine and for letting us use it; lightvector, for KataGo; and Kouza, for the Dandelion 4 network.':
+    'KataGomo 是开源项目，地址是 [github.com/hzyhhzy/KataGomo](https://github.com/hzyhhzy/KataGomo)。感谢 hzyhhzy 提供引擎并允许我们使用，感谢 lightvector 的 KataGo，也感谢 Kouza 的 Dandelion 4 神经网络。',
+  'Jungle Chess rules': '斗兽棋规则',
   // one-thousand-games: machine-drafted 2026-10-01, not native-reviewed.
   '1,000 games played': '已下完 1,000 盘棋',
   'Mistboard passes 1,000 games': 'Mistboard 突破 1,000 盘对局',
@@ -3423,6 +3451,31 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // katago-jungle: machine-drafted 2026-10-02, not native-reviewed.
+  'KataGo, a stronger Jungle Chess bot': 'KataGo：更強的鬥獸棋電腦',
+  'KataGo for Jungle Chess: the self-play engine that beat Misty 82 to 0':
+    'KataGo 鬥獸棋：自我對弈練成、以 82 比 0 戰勝 Misty 的引擎',
+  'A Jungle Chess engine that learned by playing itself now sits above Misty. In 200 games against Misty it won 82, lost none and drew 118.':
+    '一個靠自我對弈學會鬥獸棋的引擎，現在排在 Misty 之上。它和 Misty 下了 200 盤，贏 82 盤，一盤未輸，和 118 盤。',
+  "[Jungle Chess](/rules/jungle) on Mistboard has a new top bot. It is KataGo-AnimalChess, hzyhhzy's [KataGomo](https://github.com/hzyhhzy/KataGomo/tree/AnimalChess2025) built on lightvector's [KataGo](https://github.com/lightvector/KataGo), playing with the b10c384 network from Dandelion 4 by Kouza ([lxsgx23](https://github.com/lxsgx23)). We play it here with [hzyhhzy's permission](https://github.com/hzyhhzy/KataGomo/issues/12), under the name KataGo.":
+    '[鬥獸棋](/rules/jungle)在 Mistboard 上有了新的最強電腦。它就是 KataGo-AnimalChess：hzyhhzy 在 lightvector 的 [KataGo](https://github.com/lightvector/KataGo) 基礎上開發的 [KataGomo](https://github.com/hzyhhzy/KataGomo/tree/AnimalChess2025)，使用 Kouza（[lxsgx23](https://github.com/lxsgx23)）Dandelion 4 的 b10c384 神經網路。我們經 [hzyhhzy 許可](https://github.com/hzyhhzy/KataGomo/issues/12)在這裡使用它，名字就叫 KataGo。',
+  'KataGo learned Jungle Chess by playing itself, the way AlphaZero learned chess. A neural network proposes moves and judges positions, and a search checks its ideas. No other engine taught it.':
+    'KataGo 和 AlphaZero 學西洋棋一樣，靠自己和自己下棋學會了鬥獸棋。神經網路提出著法、評估局面，搜尋再去檢驗它的想法。沒有任何別的引擎教過它。',
+  'Play KataGo': '挑戰 KataGo',
+  'See all bots': '查看所有電腦',
+  '82 wins and no losses against Misty': '對 Misty 82 勝 0 負',
+  "Before putting it on the site, we played it against Misty, our own Jungle Chess bot, in an open challenge of 200 games at 1,000 visits a move. hzyhhzy's engine won 82, lost none and drew 118, a score of 0.705. Every win came from walking into Misty's den, and every draw was a repetition.":
+    '上線之前，我們讓它和我們自己的鬥獸棋電腦 Misty 進行了一場公開挑戰賽：200 盤，每步 1,000 次訪問。hzyhhzy 的引擎贏 82 盤、輸 0 盤、和 118 盤，得分率 0.705。每一盤勝局都是走進 Misty 的獸穴取勝，每一盤和棋都是重複局面。',
+  'All 200 games are in [one study](/study/0t8xpyv6), and the [match write-up](https://brianhliou.com/posts/katago-beats-misty-jungle/) has the details.':
+    '全部 200 盤都收在[一個研究](/study/0t8xpyv6)裡，詳情見[比賽記錄](https://brianhliou.com/posts/katago-beats-misty-jungle/)。',
+  'Misty is still where you start': '入門仍從 Misty 開始',
+  'KataGo is at the top of the Jungle Chess bot list, above Misty. Misty stays the default and the easier opponent; pick KataGo when you want the stronger game. Game review and analysis for Jungle Chess still run on Misty.':
+    'KataGo 排在鬥獸棋電腦列表的最上面，在 Misty 之上。Misty 仍是預設對手，也是較容易的那一個；想下更難的棋就選 KataGo。鬥獸棋的復盤和分析仍由 Misty 負責。',
+  'On the site KataGo searches 150 visits a move, which takes about 1.5 to 3.5 seconds. At that setting it scored 19 wins, no losses and 31 draws in 50 games against Misty, 0.690, which cannot be told apart from the 1,000-visit result. The strength is in the network.':
+    '在網站上，KataGo 每步搜尋 150 次訪問，大約用時 1.5 到 3.5 秒。在這個設定下，它和 Misty 下了 50 盤，19 勝 0 負 31 和，得分率 0.690，與 1,000 次訪問的結果分不出差別。它的棋力來自神經網路。',
+  'KataGomo is open source at [github.com/hzyhhzy/KataGomo](https://github.com/hzyhhzy/KataGomo). Thank you, hzyhhzy, for the engine and for letting us use it; lightvector, for KataGo; and Kouza, for the Dandelion 4 network.':
+    'KataGomo 是開源專案，網址是 [github.com/hzyhhzy/KataGomo](https://github.com/hzyhhzy/KataGomo)。感謝 hzyhhzy 提供引擎並允許我們使用，感謝 lightvector 的 KataGo，也感謝 Kouza 的 Dandelion 4 神經網路。',
+  'Jungle Chess rules': '鬥獸棋規則',
   '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
     '[MistyBanqi](/blog/mistybanqi) 自我對弈，每步搜尋一千萬個節點，是本站機器人的三倍棋力。用箭頭一步步看。[配套研究](/study/FsA5sowX)收了這批棋的全部二十盤，一盤一章，附上每盤怎麼走完的註記。同一批棋裡的兩百盤被整理成數字，放在[用數字看暗棋](/blog/banqi-statistics)：領先多少才算安全，一盤棋什麼時候就定了。',
   "There's an upshot for you here. If you're losing on material, you're not necessarily lost: herd one of its strong pieces into a perpetual chase, and MistyBanqi may walk into the draw it can't see it should decline. It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":

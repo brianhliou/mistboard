@@ -19,6 +19,7 @@ import { luatCoUpArticle } from './articles/content/luat-co-up.js';
 import { jieqiPlatformArticle } from './articles/content/jieqi-platform.js';
 import { pikafishArticle } from './articles/content/pikafish.js';
 import { abJchessArticle } from './articles/content/ab-jchess.js';
+import { katagoJungleArticle } from './articles/content/katago-jungle.js';
 import { jieqiBotWinsArticle } from './articles/content/jieqi-bot-wins.js';
 import { oneThousandGamesArticle } from './articles/content/one-thousand-games.js';
 import { darkChessArticle } from './articles/content/dark-chess.js';
@@ -57,6 +58,7 @@ import { laiLyHuynhCoTuongArticle } from './articles/content/lai-ly-huynh-co-tuo
 import articleSnapshotFog from './article-snapshot-fog.json' with { type: 'json' };
 
 export const articles: Article[] = [
+  katagoJungleArticle,
   abJchessArticle,
   jieqiBotWinsArticle,
   oneThousandGamesArticle,

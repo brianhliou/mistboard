@@ -43,6 +43,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-10-03',
+    kind: 'release',
+    headline: 'KataGo is the new top Jungle Chess bot.',
+    body: "hzyhhzy's KataGomo, built on KataGo with Kouza's Dandelion 4 network, learned Jungle Chess by playing itself and now sits above Misty. It beat Misty 82 to 0 in 200 games, with 118 draws. Misty stays the default; KataGo is the stronger pick.",
+    href: '/blog/katago-jungle',
+    cta: 'Read the post',
+  },
+  {
     date: '2026-10-02',
     kind: 'release',
     headline: 'Crazyhouse Xiangqi has launched.',

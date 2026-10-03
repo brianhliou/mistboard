@@ -155,6 +155,12 @@
     "description": "The 4×4 flip version of Jungle Chess, also called flip Dou Shou Qi or flip animal chess. Every animal starts face-down. Each turn you flip one or move one, and equal ranks trade off the board.",
     "status": "published"
   },
+  "katago-jungle": {
+    "title": "KataGo, a stronger Jungle Chess bot",
+    "kind": "article",
+    "description": "A Jungle Chess engine that learned by playing itself now sits above Misty. In 200 games against Misty it won 82, lost none and drew 118.",
+    "status": "published"
+  },
   "khai-cuoc-co-up": {
     "title": "Người chơi cờ úp giỏi tin gì về khai cuộc",
     "kind": "article",
