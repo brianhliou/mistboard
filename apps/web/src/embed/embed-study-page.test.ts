@@ -349,11 +349,14 @@ describe('mountEmbedStudy', () => {
               children: [
                 {
                   uci: 'a9b9',
+                  annotations: {
+                    shapes: [{ kind: 'arrow', brush: 'green', orig: 'b1', dest: 'c1' }],
+                  },
                   children: [
                     {
                       uci: 'g1g2',
                       annotations: {
-                        glyphs: [4],
+                        glyphs: [4, 19],
                         comments: [{ text: '?? The turning point, by KataGo.' }],
                       },
                       children: [{ uci: 'g9g8' }],
@@ -361,7 +364,7 @@ describe('mountEmbedStudy', () => {
                     {
                       uci: 'b1c1',
                       annotations: { comments: [{ text: "KataGo's line." }] },
-                      children: [{ uci: 'b9c9' }],
+                      children: [{ uci: 'b9c9', annotations: { glyphs: [17] } }],
                     },
                   ],
                 },
@@ -376,8 +379,13 @@ describe('mountEmbedStudy', () => {
     document.body.append(root);
     await mountEmbedStudy(root, { studyId: 's', chapterId: 'Jngl5678' }, { startPly: 3 });
 
-    // Opens on the turning ply, the move marked and its comment under it.
+    // Opens on the turning ply, the move marked and its comment under it, and
+    // the glyph pinned on the board where the move landed, as the review board
+    // pins it.
     expect(root.querySelector('.embed-card-status')?.textContent).toBe('3 / 4');
+    const badge = root.querySelector('.jungle-replay-board .xq-marker--blunder');
+    expect(badge?.textContent).toContain('??');
+    expect(root.querySelector('.jungle-replay-board')?.innerHTML).toContain('g2');
     const moves = Array.from(root.querySelectorAll('button.review-move-list__move'));
     expect(
       moves.map((m) => m.querySelector('.review-move-list__san')?.textContent?.trim()),
@@ -390,6 +398,13 @@ describe('mountEmbedStudy', () => {
     expect(branch?.querySelector('.review-move-list__note--line')?.textContent).toBe(
       "KataGo's line.",
     );
+    // The position verdict after the played move, and the line's closing verdict.
+    expect(
+      Array.from(
+        root.querySelectorAll('button.review-move-list__move .review-move-list__eval'),
+      ).map((e) => e.textContent),
+    ).toEqual(['', '', '−+', '']);
+    expect(branch?.querySelector('.review-move-list__line-verdict')?.textContent).toBe('∓');
     // KataGo's line beside the played move, steppable on the board and back.
     const line = Array.from(branch?.querySelectorAll('.review-move-list__line-move') ?? []);
     expect(line.map((m) => m.textContent)).toEqual(['b1-c1', 'b9-c9']);
@@ -399,8 +414,10 @@ describe('mountEmbedStudy', () => {
     root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')?.click();
     root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')?.click();
     expect(root.querySelector('.embed-card-status')?.textContent).toBe('2 / 4');
-    // The position the line leaves from draws its first move as an arrow.
-    expect(root.querySelector('.jungle-board-arrows')?.innerHTML).not.toBe('');
+    // The chapter's arrow on the position the line leaves from, in the review's
+    // brush class; none on the next position, which has no shapes.
+    expect(root.querySelector('.jungle-board-arrows .xq-shape--green')).not.toBeNull();
+    expect(root.querySelector('.jungle-replay-board .xq-marker--blunder')).toBeNull();
     // The chapter's orientation: KataGo (black) at the bottom.
     const seats = Array.from(root.querySelectorAll('.embed-card-seat'));
     expect(seats.at(-1)?.querySelector('.embed-card-seat-name')?.textContent).toBe(

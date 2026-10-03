@@ -2,10 +2,13 @@
 // replayed through the kernel, drawn by the same renderer the room, watch and
 // review pages use. The card owns the seat rows, the score sheet and the
 // stepper; this owns the board and the ply cursor, like mountBanqiReplayBoard.
-// A chapter's comments, move glyphs and first sideline per move ride along the
-// same way the chess study board carries them (chess-study-replay.ts): the
-// sheet shows the glyph and the comment under the move and lists the sideline
-// under it, and the board steps into the sideline when the sheet asks.
+// A chapter's annotations ride along as the study page shows them: move glyphs
+// on the sheet and as a badge on the square the move landed on, position
+// verdicts in the sheet's eval slot, comments under their moves, the first
+// sideline per move under it with its closing verdict (steppable on the board),
+// and the chapter's drawn arrows and rings. The sheet side is the chess study
+// board's shape (chess-study-replay.ts); the board side is the review board's
+// own renderers (jungle-review.ts moveGlyphMarker / shapeToArrow).
 import {
   applyJungleMove,
   type JungleColor,
@@ -14,9 +17,21 @@ import {
   type JungleSquare,
   parseJungleFen,
 } from '@mistboard/game';
-import { animateJungleBoardMove, renderJungleBoardSvg } from './jungle-render.js';
-import { type ChapterSideline, GLYPH_SUFFIX_CLASS } from './study-chapter-annotations.js';
+import {
+  animateJungleBoardMove,
+  type JungleBoardArrow,
+  type JungleBoardMarker,
+  renderJungleBoardSvg,
+} from './jungle-render.js';
+import { moveGlyphTone } from './review/move-glyph.js';
+import {
+  type ChapterShape,
+  type ChapterSideline,
+  GLYPH_SUFFIX_CLASS,
+} from './study-chapter-annotations.js';
+import './board-glyph-marker.css';
 import './live-xiangqi.css';
+import './variant-tenant/board-annotations.css';
 
 export type JungleReplayBoardSpec = {
   /** The chapter's root FEN (jungleStateToEngineFen), the start position for a match game. */
@@ -30,11 +45,13 @@ export type JungleReplayBoardSpec = {
   notes?: Record<number, string>;
   /** A sideline hung off the position mainline move `ply` was played in. */
   lines?: Record<number, ChapterSideline>;
+  /** A verdict on a mainline move's own position, by ply (the sheet's eval slot). */
+  assessments?: Record<number, string>;
+  /** Shapes drawn on the position after `ply` mainline moves (0 = the root). */
+  shapes?: Record<number, ChapterShape[]>;
 };
 
 const TOKEN = /^([a-g][1-9])([a-g][1-9])$/;
-// The green of a study's suggestion arrows, on the position a sideline leaves from.
-const LINE_ARROW = { color: '#15781b', opacity: 0.8 } as const;
 
 function tokenToMove(token: string): JungleMove | null {
   const m = TOKEN.exec(token);
@@ -64,6 +81,42 @@ function replayLine(
 
 const label = (move: JungleMove): string => `${move.from}-${move.to}`;
 
+/** A study shape as the review board draws it (jungle-review.ts shapeToArrow /
+ *  shapeToMarker): the same classes, so the brush colours match. */
+function shapeOverlay(shapes: readonly ChapterShape[]): {
+  arrows: JungleBoardArrow[];
+  markers: JungleBoardMarker[];
+} {
+  const arrows: JungleBoardArrow[] = [];
+  const markers: JungleBoardMarker[] = [];
+  for (const s of shapes) {
+    if (s.dest && s.dest !== s.orig) {
+      arrows.push({
+        from: s.orig as JungleSquare,
+        to: s.dest as JungleSquare,
+        className: `xq-arrow--draw xq-shape--${s.brush}`,
+      });
+    } else {
+      markers.push({
+        square: s.orig as JungleSquare,
+        kind: 'circle',
+        className: `xq-shape--${s.brush}`,
+      });
+    }
+  }
+  return { arrows, markers };
+}
+
+/** The judgment badge on the square a move landed on, as the review board pins
+ *  it (jungle-review.ts moveGlyphMarker, the same tone function). */
+function glyphMarker(move: JungleMove, glyph: string | undefined): JungleBoardMarker[] {
+  if (!glyph) return [];
+  const tone = moveGlyphTone(glyph, GLYPH_SUFFIX_CLASS[glyph]);
+  return tone
+    ? [{ square: move.to, kind: 'glyph', text: glyph, className: `xq-marker--${tone}` }]
+    : [];
+}
+
 export function mountJungleReplayBoard(
   host: HTMLElement,
   spec: JungleReplayBoardSpec,
@@ -79,7 +132,8 @@ export function mountJungleReplayBoard(
     suffix?: string;
     suffixClass?: string;
     note?: string;
-    line?: { moves: string[]; note?: string };
+    assessment?: string;
+    line?: { moves: string[]; verdict?: string; note?: string };
   }>;
   bottomSeat: () => 'first' | 'second';
 } {
@@ -113,13 +167,15 @@ export function mountJungleReplayBoard(
       });
       return;
     }
-    // The position a sideline leaves from shows the sideline's first move as
-    // an arrow, so the alternative is on the board before it is clicked.
-    const next = lines.get(index + 1)?.played[0];
+    // The chapter's own shapes on this position, and the move's glyph on the
+    // square it landed on: what the study page's board shows.
+    const drawn = shapeOverlay(spec.shapes?.[index] ?? []);
+    const last = index > 0 ? (played[index - 1] ?? null) : null;
     frame.innerHTML = renderJungleBoardSvg(states[index]!.board, {
       perspective,
-      lastMove: index > 0 ? (played[index - 1] ?? null) : null,
-      ...(next ? { arrows: [{ from: next.from, to: next.to, ...LINE_ARROW }] } : {}),
+      lastMove: last,
+      arrows: drawn.arrows,
+      markers: [...drawn.markers, ...(last ? glyphMarker(last, spec.glyphs?.[index]) : [])],
     });
   };
   const render = (glide?: { move: JungleMove; reverse: boolean }): void => {
@@ -163,14 +219,22 @@ export function mountJungleReplayBoard(
         const glyph = spec.glyphs?.[ply];
         const note = spec.notes?.[ply];
         const line = lines.get(ply);
-        const lineNote = spec.lines?.[ply]?.note;
+        const meta = spec.lines?.[ply];
+        const assessment = spec.assessments?.[ply];
         return {
           ply,
           label: label(move),
           ...(glyph ? { suffix: glyph, suffixClass: GLYPH_SUFFIX_CLASS[glyph] } : {}),
           ...(note ? { note } : {}),
+          ...(assessment ? { assessment } : {}),
           ...(line
-            ? { line: { moves: line.played.map(label), ...(lineNote ? { note: lineNote } : {}) } }
+            ? {
+                line: {
+                  moves: line.played.map(label),
+                  ...(meta?.verdict ? { verdict: meta.verdict } : {}),
+                  ...(meta?.note ? { note: meta.note } : {}),
+                },
+              }
             : {}),
         };
       }),

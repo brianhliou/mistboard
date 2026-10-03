@@ -1,11 +1,10 @@
 // The KataGo post's annotated games as a study:edit plan (apps/server/src/
 // study-edit-cli.ts): one new @mistboard study, one chapter per game in
-// apps/web/src/articles/content/katago-jungle-evals.json. Each chapter tells
-// the game's story in comments at its turning points (NARRATIVE below; every
-// number comes from the data), marks Misty's weak moves as KataGo judges them
-// (katago-jungle-analysis.ts mistyMoveMarks, the site's review cutoffs), and
-// plays KataGo's own line from content/katago-jungle-lines.json as a sideline
-// where the game went another way, with a green arrow on its first move.
+// apps/web/src/articles/content/katago-jungle-evals.json. The annotation itself
+// (move glyphs, position verdicts, sidelines, arrows) is scripts/study-annotate.ts
+// reading KataGo's numbers; this file adds the game's story at its turning
+// points (NARRATIVE below; every number from the data) and KataGo's own lines
+// from content/katago-jungle-lines.json.
 //
 //   npx tsx scripts/variant-lab/jungle-katago-annotated-study.ts --out <plan.json>
 //   npm run study:edit -- --plan <plan.json>            # dry run
@@ -29,6 +28,13 @@ import {
   MARK_GLYPH,
   mistyMoveMarks,
 } from '../../apps/web/src/articles/katago-jungle-analysis.js';
+import {
+  annotateFromEngine,
+  type EngineAnnotationInput,
+  type EngineSideline,
+  type JudgedMove,
+  judgedMoves,
+} from '../study-annotate.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CONTENT = resolve(HERE, '../../apps/web/src/articles/content');
@@ -41,19 +47,8 @@ const DATA = resolve(arg('--data', resolve(CONTENT, 'katago-jungle-evals.json'))
 const LINES = resolve(arg('--lines', resolve(CONTENT, 'katago-jungle-lines.json')));
 const OUT = resolve(arg('--out', 'katago-jungle-study-plan.json'));
 
-const NAG = { '?!': 6, '?': 2, '??': 4 } as const;
 const NAME = { katago: 'KataGo-AnimalChess', misty: 'MistyJungle 0.0.6' } as const;
 const pct = (x: number): string => `${Math.round(x * 100)}%`;
-
-type Node = {
-  uci?: string;
-  annotations?: {
-    comments?: { text: string }[];
-    glyphs?: number[];
-    shapes?: { kind: 'arrow'; brush: string; orig: string; dest: string }[];
-  };
-  children: Node[];
-};
 
 const role = (state: JungleGameState, uci: string): string =>
   state.board[uci.slice(0, 2) as JungleSquare]?.role ?? 'piece';
@@ -120,105 +115,80 @@ const NARRATIVE: Record<number, Array<{ ply: number; text: (r: Reading) => strin
   ],
 };
 
-// The study shows one comment per move, so a second note joins the first.
-function comment(node: Node, text: string): void {
-  node.annotations ??= {};
-  const prior = node.annotations.comments?.[0]?.text;
-  node.annotations.comments = [{ text: prior ? `${prior} ${text}` : text }];
-}
-
-/** KataGo's line as a sideline tree, every move checked by the kernel. */
-function sidelineTree(start: JungleGameState, line: KatagoLine, game: EvaluatedGame): Node {
-  const kataSide = (black: number): number => (game.red === 'katago' ? 1 - black : black);
-  const after =
-    line.kataBlackStart == null
-      ? ''
-      : ` KataGo has itself at ${pct(kataSide(line.kataBlackStart))} after this move`;
-  const end =
-    line.kataBlackEnd == null
-      ? ''
-      : `, and ${pct(kataSide(line.kataBlackEnd))} at the end of the line`;
+/** Every move of KataGo's line is legal from where it starts. */
+function checkLine(start: JungleGameState, line: KatagoLine, game: EvaluatedGame): void {
   let state = start;
-  let head: Node | null = null;
-  let cursor: Node | null = null;
   for (const uci of line.line) {
     const next = applyJungleMove(state, engineUciToJungleMove(uci)!);
     if (!next) throw new Error(`game ${game.game}: KataGo's line move ${uci} is illegal`);
-    const node: Node = { uci, children: [] };
-    if (cursor) cursor.children.push(node);
-    else head = node;
-    cursor = node;
     state = next;
   }
-  if (!head) throw new Error(`game ${game.game}: empty line at ply ${line.ply}`);
-  comment(
-    head,
-    `KataGo's line: its own choice for both sides, every position searched at ${line.visits.toLocaleString('en-US')} visits.${after}${end}.`,
-  );
-  return head;
 }
 
 function chapter(game: EvaluatedGame, lines: readonly KatagoLine[]) {
   const mistyColor = game.red === 'misty' ? 'red' : 'black';
-  const marks = new Map(mistyMoveMarks(game).map((m) => [m.ply, m]));
-  const notes = new Map((NARRATIVE[game.game] ?? []).map((n) => [n.ply, n]));
-  for (const ply of notes.keys()) {
+  const notes = NARRATIVE[game.game] ?? [];
+  for (const { ply } of notes) {
     if (ply < 1 || ply > game.plies)
       throw new Error(`game ${game.game}: narrative ply ${ply} out of range`);
   }
-  const linesAt = new Map(lines.filter((l) => l.game === game.game).map((l) => [l.ply, l]));
-  const intro =
-    `Game ${game.game} of the 2026-09-21 match: ${NAME[game.red]} red, ` +
-    `${NAME[game.red === 'misty' ? 'katago' : 'misty']} black. ` +
-    "Comments give KataGo's expected score for itself (a draw counts half, 1,000 visits) and Misty's own score in centipawns. " +
-    "Marks are Misty's moves as KataGo judges them, on the site's review cutoffs (?! 5 points, ? 10, ?? 15). " +
-    "Sidelines are KataGo's own line where the game went another way.";
-  const root: Node = { annotations: { comments: [{ text: intro }] }, children: [] };
-  let cursor = root;
-  let state = createInitialJungleState(`katago-study-${game.game}`);
-  const rootFen = jungleStateToEngineFen(state);
-  game.moves.forEach((uci, ply) => {
-    const node: Node = { uci, children: [] };
-    const mark = marks.get(ply);
-    if (mark) {
-      const glyph = MARK_GLYPH[mark.mark];
-      node.annotations = { glyphs: [NAG[glyph]] };
-      comment(
-        node,
-        `${glyph} By KataGo's count this move takes Misty (${mistyColor}) from ${pct(mark.before)} to ${pct(mark.after)}. KataGo's choice was ${said(state, mark.kataBest)}, the line beside this move.`,
-      );
-    }
-    const note = notes.get(ply + 1);
-    if (note) comment(node, note.text(reading(game, ply + 1)));
-    cursor.children.push(node);
-    const line = linesAt.get(ply);
-    if (line) {
-      if (line.line[0] === uci)
-        throw new Error(`game ${game.game}: line at ${ply} repeats the game move`);
-      cursor.children.push(sidelineTree(state, line, game));
-      cursor.annotations = {
-        ...(cursor.annotations ?? {}),
-        shapes: [
-          {
-            kind: 'arrow',
-            brush: 'green',
-            orig: line.line[0]!.slice(0, 2),
-            dest: line.line[0]!.slice(2, 4),
-          },
-        ],
-      };
-    }
-    const next = applyJungleMove(state, engineUciToJungleMove(uci)!);
+  // Every position the game reached, for piece names and the legality checks.
+  const states: JungleGameState[] = [createInitialJungleState(`katago-study-${game.game}`)];
+  for (const [ply, uci] of game.moves.entries()) {
+    const next = applyJungleMove(states[ply]!, engineUciToJungleMove(uci)!);
     if (!next) throw new Error(`game ${game.game}: illegal ${uci} at ply ${ply}`);
-    state = next;
-    cursor = node;
-  });
+    states.push(next);
+  }
+  const kataSide = (black: number): number => (game.red === 'katago' ? 1 - black : black);
+  const sidelines: EngineSideline[] = lines
+    .filter((l) => l.game === game.game)
+    .map((line) => {
+      checkLine(states[line.ply]!, line, game);
+      const after =
+        line.kataBlackStart == null
+          ? ''
+          : ` KataGo has itself at ${pct(kataSide(line.kataBlackStart))} after this move`;
+      const end =
+        line.kataBlackEnd == null
+          ? ''
+          : `, and ${pct(kataSide(line.kataBlackEnd))} at the end of the line`;
+      return {
+        ply: line.ply,
+        moves: line.line,
+        redScoreEnd: line.kataBlackEnd == null ? null : 1 - line.kataBlackEnd,
+        comment: `KataGo's line: its own choice for both sides, every position searched at ${line.visits.toLocaleString('en-US')} visits.${after}${end}.`,
+      };
+    });
+  const input = {
+    rootFen: jungleStateToEngineFen(states[0]!),
+    moves: game.moves,
+    redScore: game.kata.map((black) => 1 - black),
+    best: game.kataBest,
+    judge: mistyColor,
+    sidelines,
+    comments: Object.fromEntries(notes.map((n) => [n.ply, n.text(reading(game, n.ply))] as const)),
+    judgedComment: (m: JudgedMove) =>
+      `${m.glyph} By KataGo's count this move takes Misty (${mistyColor}) from ${pct(m.before)} to ${pct(m.after)}. KataGo's choice was ${said(states[m.ply - 1]!, m.best!)}, the line beside this move.`,
+    intro:
+      `Game ${game.game} of the 2026-09-21 match: ${NAME[game.red]} red, ` +
+      `${NAME[game.red === 'misty' ? 'katago' : 'misty']} black. ` +
+      "Comments give KataGo's expected score for itself (a draw counts half, 1,000 visits) and Misty's own score in centipawns. " +
+      "Marks are Misty's moves as KataGo judges them, on the site's review cutoffs (?! 5 points, ? 10, ?? 15); " +
+      'the symbol after a marked or commented move, and at the end of each line, is the position by KataGo (=, ⩲, ±, +− for red; ⩱, ∓, −+ for blue). ' +
+      "Sidelines are KataGo's own line where the game went another way.",
+  } satisfies EngineAnnotationInput;
+  // The study and the post's chart must mark the same moves.
+  const studyMarks = judgedMoves(input).map((m) => `${m.ply}${m.glyph}`);
+  const chartMarks = mistyMoveMarks(game).map((m) => `${m.ply + 1}${MARK_GLYPH[m.mark]}`);
+  if (studyMarks.join() !== chartMarks.join()) {
+    throw new Error(`game ${game.game}: study marks ${studyMarks} != chart marks ${chartMarks}`);
+  }
   const result = game.result === 'draw' ? '1/2-1/2' : game.result === 'red' ? '1-0' : '0-1';
   return {
     name: `Game ${game.game}: ${NAME[game.red]} vs ${NAME[game.red === 'katago' ? 'misty' : 'katago']}, read by KataGo`,
     variant: 'jungle',
     orientation: game.red === 'katago' ? 'red' : 'black',
-    tree: { version: 1, rootFen, root },
+    tree: annotateFromEngine(input),
     tags: {
       red: NAME[game.red],
       black: NAME[game.red === 'katago' ? 'misty' : 'katago'],

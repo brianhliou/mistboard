@@ -341,9 +341,9 @@ async function mountJungleEmbed(
     return;
   }
   // Jungle is perfect information, so the chapter's whole argument rides
-  // along: comments and glyphs on the sheet, and each move's first sideline
-  // under it, steppable on the board (the chess embed's shape).
-  const { moves, glyphs, notes, lines } = chapterAnnotations(chapter);
+  // along, as on the study page: glyphs on the sheet and the board, verdicts,
+  // comments, each move's first sideline (steppable), and the drawn shapes.
+  const { moves, glyphs, notes, lines, assessments, shapes } = chapterAnnotations(chapter);
   const tags = chapter.tags ?? {};
   const event = tags.event ?? chapter.name ?? 'Study';
   const result =
@@ -378,6 +378,8 @@ async function mountJungleEmbed(
           glyphs,
           notes,
           lines,
+          assessments,
+          shapes,
         },
         hooks,
       ),

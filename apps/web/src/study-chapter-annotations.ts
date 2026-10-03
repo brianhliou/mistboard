@@ -22,6 +22,9 @@ export const GLYPH_SUFFIX_CLASS: Record<string, string> = {
 
 export type ChapterSideline = { moves: string[]; verdict?: string; note?: string };
 
+/** A drawn shape on a position: an arrow (orig → dest) or a ringed square. */
+export type ChapterShape = { orig: string; dest?: string; brush: string };
+
 export type ChapterAnnotations = {
   /** Mainline moves, in the chapter's own token spelling. */
   moves: string[];
@@ -35,7 +38,17 @@ export type ChapterAnnotations = {
    *  by that move's ply: its tokens, its verdict (the assessment NAG on its
    *  last node) and its own comment (on its first move). */
   lines: Record<number, ChapterSideline>;
+  /** The shapes drawn on the position after `ply` mainline moves (0 = the root). */
+  shapes: Record<number, ChapterShape[]>;
 };
+
+type NodeShape = { orig?: string; dest?: string; brush?: string };
+function shapesOf(node: StudyTreeNode | undefined): ChapterShape[] {
+  const raw = (node?.annotations as { shapes?: NodeShape[] } | undefined)?.shapes ?? [];
+  return raw
+    .filter((s): s is NodeShape & { orig: string } => typeof s.orig === 'string')
+    .map((s) => ({ orig: s.orig, ...(s.dest ? { dest: s.dest } : {}), brush: s.brush ?? 'green' }));
+}
 
 export function chapterAnnotations(chapter: StudyChapterPayload): ChapterAnnotations {
   const moves: string[] = [];
@@ -43,7 +56,10 @@ export function chapterAnnotations(chapter: StudyChapterPayload): ChapterAnnotat
   const notes: Record<number, string> = {};
   const assessments: Record<number, string> = {};
   const lines: Record<number, ChapterSideline> = {};
+  const shapes: Record<number, ChapterShape[]> = {};
   let node: StudyTreeNode | undefined = chapter.root?.root;
+  const rootShapes = shapesOf(node);
+  if (rootShapes.length) shapes[0] = rootShapes;
   while (node?.children?.length) {
     const played = node.children[0];
     if (!played?.uci) break;
@@ -57,6 +73,8 @@ export function chapterAnnotations(chapter: StudyChapterPayload): ChapterAnnotat
       (code) => ASSESSMENT_GLYPH[code] !== undefined,
     );
     if (assessedCode !== undefined) assessments[ply] = ASSESSMENT_GLYPH[assessedCode];
+    const drawn = shapesOf(played);
+    if (drawn.length) shapes[ply] = drawn;
     const sibling = node.children[1];
     if (sibling?.uci) {
       const line: string[] = [];
@@ -79,5 +97,5 @@ export function chapterAnnotations(chapter: StudyChapterPayload): ChapterAnnotat
     }
     node = played;
   }
-  return { moves, glyphs, notes, assessments, lines };
+  return { moves, glyphs, notes, assessments, lines, shapes };
 }

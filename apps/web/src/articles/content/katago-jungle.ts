@@ -93,8 +93,8 @@ export function katagoScoreSeries(game: EvaluatedGame) {
 // study:edit. THESE IDS ARE A LOCAL DEV DATABASE'S (2026-10-02): the prod study
 // is created from the same plan on Brian's go, and its ids replace these.
 export const KATAGO_STUDY = {
-  id: 'ZVXAyBai',
-  chapters: { 67: 'ae4qGLXC', 94: 'GQOlYPTt' },
+  id: 'CilnYd5e',
+  chapters: { 67: 'egAIBGOs', 94: 'YBsDa5At' },
 } as const;
 
 function gameChart(game: number, heading: string, ariaLabel: string): ArticleBlock {
