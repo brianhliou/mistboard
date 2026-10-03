@@ -15,6 +15,8 @@ import {
 } from './live-banqi-postgame.js';
 import {
   animateBanqiBoardMove,
+  type BanqiBoardArrow,
+  type BanqiBoardMarker,
   installBanqiBoardStyles,
   renderBanqiBoardSvg,
 } from './live-banqi-render.js';
@@ -54,7 +56,11 @@ export function mountBanqiWatchReplay(
       viewAtPly: postgameViewAtPly,
       paneKind,
       // Symmetric board: no fog/perspective to apply.
-      renderBoard: (view, orientation) => renderBanqiBoardSvg(view, orientation),
+      renderBoard: (view, orientation, _key, overlay) =>
+        renderBanqiBoardSvg(view, orientation, {
+          arrows: overlay.arrows as readonly BanqiBoardArrow[],
+          markers: overlay.glyphs as readonly BanqiBoardMarker[],
+        }),
       // One-ply steps glide: forward animates the newly rendered view's lastMove,
       // a back step reverse-animates the move the previous ply carried.
       animateMove: (boardEl, view, prevView, direction) => {

@@ -13,7 +13,25 @@
  * The public board is exactly visibility='public' AND targetUserId IS NULL.
  */
 
+import { DAY_MS } from '@mistboard/game';
 import { getPool } from './persistence-db.js';
+
+/**
+ * How long a public board seek stays live, counted from created_at. Board seeks
+ * store no expires_at; the lapse is computed at read time (seekExpirySql), so it
+ * covers rows posted before the rule existed and moves with this one constant.
+ * Before it, prod's board was two identical month-old posts from one player.
+ */
+export const CORRESPONDENCE_SEEK_TTL_MS = 14 * DAY_MS;
+
+// The instant a seek stops being live, as SQL: a challenge's own expires_at, or
+// for a board seek (expires_at NULL) created_at plus the board TTL. Every read,
+// the cap, the accept gate (through getCorrespondenceSeek) and the sweep use
+// this one expression, so "expired" cannot mean different things in different
+// places. The interpolated value is a numeric constant, never request input.
+function seekExpirySql(alias = ''): string {
+  return `COALESCE(${alias}expires_at, ${alias}created_at + interval '${CORRESPONDENCE_SEEK_TTL_MS} milliseconds')`;
+}
 
 /**
  * Which side the creator wants, expressed as MOVE ORDER rather than a color, so one seek
@@ -36,8 +54,9 @@ export type CorrespondenceSeekRecord = {
   // null → open seek / link challenge; set → direct challenge to that account.
   targetUserId: string | null;
   visibility: SeekVisibility;
-  // null → never expires (public board seek); a timestamp → a challenge that is
-  // swept away and refused once past.
+  // On create: null → a public board seek, which lapses CORRESPONDENCE_SEEK_TTL_MS
+  // after created_at; a timestamp → a challenge's own expiry. On read: always the
+  // effective expiry (seekExpirySql), refused and swept once past.
   expiresAt: Date | null;
 };
 
@@ -75,14 +94,14 @@ export async function countOpenSeeksForUser(userId: string): Promise<number> {
     // and the player had no way to see or clear the row blocking them.
     `SELECT COUNT(*)::text AS count FROM correspondence_seeks
       WHERE creator_user_id = $1
-        AND (expires_at IS NULL OR expires_at > now())`,
+        AND ${seekExpirySql()} > now()`,
     [userId],
   );
   return Number(rows[0]?.count ?? '0');
 }
 
 const SEEK_COLUMNS = `s.id, s.creator_user_id, s.game_spec_id, s.days_per_move, s.preferred_color,
-            s.target_user_id, s.visibility, s.expires_at,
+            s.target_user_id, s.visibility, ${seekExpirySql('s.')} AS expires_at,
             COALESCE(u.display_name, u.handle) AS creator_name, s.created_at`;
 
 type SeekListingRow = {
@@ -127,11 +146,40 @@ export async function listOpenCorrespondenceSeeks(
      FROM correspondence_seeks s
      JOIN users u ON u.id = s.creator_user_id
      WHERE s.visibility = 'public' AND s.target_user_id IS NULL
+       AND ${seekExpirySql('s.')} > now()
      ORDER BY s.created_at DESC
      LIMIT $1`,
     [limit],
   );
   return rows.map(toListing);
+}
+
+// The creator's own still-live board seek with exactly these terms, if any.
+// Posting the same offer twice used to stack identical rows on the board; the
+// create route returns this one instead. Same liveness rule as the cap, so a
+// lapsed duplicate never blocks a fresh post.
+export async function findOpenDuplicatePublicSeek(seek: {
+  creatorUserId: string;
+  gameSpecId: string;
+  daysPerMove: number;
+  preferredColor: SeekColorPreference;
+}): Promise<CorrespondenceSeekListing | null> {
+  const { rows } = await getPool().query<SeekListingRow>(
+    `SELECT ${SEEK_COLUMNS}
+     FROM correspondence_seeks s
+     JOIN users u ON u.id = s.creator_user_id
+     WHERE s.creator_user_id = $1
+       AND s.game_spec_id = $2
+       AND s.days_per_move = $3
+       AND s.preferred_color = $4
+       AND s.visibility = 'public' AND s.target_user_id IS NULL
+       AND ${seekExpirySql('s.')} > now()
+     ORDER BY s.created_at DESC
+     LIMIT 1`,
+    [seek.creatorUserId, seek.gameSpecId, seek.daysPerMove, seek.preferredColor],
+  );
+  const row = rows[0];
+  return row ? toListing(row) : null;
 }
 
 // "Challenges to me" — the directed challenges awaiting a specific user, newest
@@ -145,7 +193,7 @@ export async function listChallengesForUser(
      FROM correspondence_seeks s
      JOIN users u ON u.id = s.creator_user_id
      WHERE s.target_user_id = $1
-       AND (s.expires_at IS NULL OR s.expires_at > now())
+       AND ${seekExpirySql('s.')} > now()
      ORDER BY s.created_at DESC
      LIMIT $2`,
     [targetUserId, limit],
@@ -172,7 +220,7 @@ export async function listOutgoingSeeksForUser(
      JOIN users u ON u.id = s.creator_user_id
      LEFT JOIN users t ON t.id = s.target_user_id
      WHERE s.creator_user_id = $1
-       AND (s.expires_at IS NULL OR s.expires_at > now())
+       AND ${seekExpirySql('s.')} > now()
      ORDER BY s.created_at DESC
      LIMIT $2`,
     [creatorUserId, limit],
@@ -180,13 +228,13 @@ export async function listOutgoingSeeksForUser(
   return rows.map((row) => ({ ...toListing(row), targetName: row.target_name }));
 }
 
-// Housekeeping: drop challenges whose expiry has passed. Correctness never
+// Housekeeping: drop seeks and challenges whose expiry has passed. Correctness never
 // depends on this running (accept refuses an expired seek and lists filter it
 // out); it just keeps the table from accreting dead links. Returns the count
 // removed. Runs on the deadline sweeper's interval.
 export async function deleteExpiredCorrespondenceSeeks(now: Date = new Date()): Promise<number> {
   const result = await getPool().query(
-    `DELETE FROM correspondence_seeks WHERE expires_at IS NOT NULL AND expires_at <= $1`,
+    `DELETE FROM correspondence_seeks WHERE ${seekExpirySql()} <= $1`,
     [now],
   );
   return result.rowCount ?? 0;
@@ -220,7 +268,7 @@ export async function getCorrespondenceSeek(id: string): Promise<CorrespondenceS
     expires_at: Date | null;
   }>(
     `SELECT id, creator_user_id, game_spec_id, days_per_move, preferred_color,
-            target_user_id, visibility, expires_at
+            target_user_id, visibility, ${seekExpirySql()} AS expires_at
      FROM correspondence_seeks WHERE id = $1`,
     [id],
   );

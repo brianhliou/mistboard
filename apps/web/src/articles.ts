@@ -468,7 +468,7 @@ export function buildHomeArticleCards(
   // articles →" link are dropped to match lichess's blog strip (cards only) and
   // to reclaim vertical space for the taller 8:5 thumbnails. The whole /blog
   // index stays reachable from the primary nav. The deep-dives row does carry a
-  // one-word label (trial, 2026-10-01): without it the two strips look the same
+  // short label (trial, 2026-10-01; "Xiangqi deep dives" since 10-02): without it the two strips look the same
   // and the split means nothing to a reader.
   if (row === 'deep-dives') {
     const label = document.createElement('h2');

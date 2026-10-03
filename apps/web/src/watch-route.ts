@@ -1,9 +1,8 @@
 import { type GameEvent, maybeGameSpecForId } from '@mistboard/game';
-import { banqiResultLabel } from './banqi-result-label.js';
+import { resultLabel, watchQueueResultLabel } from './finished-result-label.js';
 import { seatInkForVariant } from './flip-seat-ink.js';
 import { createGameTable } from './game-table.js';
 import { t } from './i18n/catalog.js';
-import { jungleFlipResultLabel } from './jungle-flip-result-label.js';
 import { renderVariantMarker } from './variant-markers.js';
 import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
 import { variantMiniIdForRawVariant } from './variants.js';
@@ -11,7 +10,6 @@ import { boardAspectForSpec } from './watch-board-aspect.js';
 import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
 import './watch-route.css';
 import {
-  colorWinsLabel,
   displayLiveName,
   displayParticipantName,
   type FeaturedGame,
@@ -2058,25 +2056,6 @@ export function formatWatchScope(
     : `latest ${feed.unlockLimit}`;
 }
 
-export function resultLabel(result: string): string {
-  if (result === 'white-wins') return t('watch.whiteWins');
-  if (result === 'black-wins') return t('watch.blackWins');
-  if (result === 'red-wins') return t('watch.redWins');
-  return t('watch.draw');
-}
-
-// Flip variants (Banqi, Flip Jungle) decouple seat from ink, so their seat-keyed
-// result needs the game's firstColor to read by ink ("Black wins" / "Blue wins").
-// Every other variant has seat == ink; route the winning-side word through
-// seatColorWord so the Jungle family reads "Blue wins" (its canonical second-seat
-// color) instead of "Black wins".
-export function watchQueueResultLabel(game: FeaturedGame): string {
-  if (game.variant === 'banqi') return banqiResultLabel(game.result, game.firstColor ?? null);
-  if (game.variant === 'jungle-flip')
-    return jungleFlipResultLabel(game.result, game.firstColor ?? null);
-  const result = game.result;
-  if (result === 'red-wins') return colorWinsLabel(seatColorWord(game.variant, 'red'));
-  if (result === 'black-wins') return colorWinsLabel(seatColorWord(game.variant, 'black'));
-  if (result === 'white-wins') return colorWinsLabel(seatColorWord(game.variant, 'white'));
-  return resultLabel(result);
-}
+// resultLabel / watchQueueResultLabel live in finished-result-label.ts (shared
+// with /games); re-exported here for existing importers.
+export { resultLabel, watchQueueResultLabel };

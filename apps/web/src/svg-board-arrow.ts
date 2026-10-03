@@ -16,6 +16,22 @@ export type SvgBoardArrowStyle = {
   width?: number;
 };
 
+/** A styled arrow between two board squares, named in the board's own notation. Every
+ *  variant's arrow type (XiangqiBoardArrow, JieqiBoardArrow, …) is this shape with its
+ *  square type narrowed; a surface that carries arrows for whichever variant is mounted
+ *  (the game embed's replay board) speaks this one and the variant's renderer reads it. */
+export type SvgBoardSquareArrow = SvgBoardArrowStyle & { from: string; to: string };
+
+/** A judgment badge on a board square, in the shape every variant's marker type takes
+ *  for `kind: 'glyph'` (svg-board-marker.ts draws it; board-glyph-marker.css colours it
+ *  by `className`, e.g. `xq-marker--blunder`). */
+export type SvgBoardSquareGlyph = {
+  square: string;
+  kind: 'glyph';
+  text: string;
+  className: string;
+};
+
 export type SvgBoardArrowOptions = {
   /** Base class shared by every arrow on this board family. */
   baseClassName?: string;

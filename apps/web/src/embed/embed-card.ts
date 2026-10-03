@@ -98,7 +98,14 @@ export type EmbedSeat = {
  *  a superset; the study board returns exactly this. */
 export type EmbedBoardHandle = Pick<
   ReplayHandle,
-  'destroy' | 'jumpToPly' | 'plyCount' | 'moveEntries' | 'clockAtPly' | 'bottomSeat'
+  | 'destroy'
+  | 'jumpToPly'
+  | 'plyCount'
+  | 'moveEntries'
+  | 'clockAtPly'
+  | 'bottomSeat'
+  | 'setBoardOverlay'
+  | 'playedMoves'
 > & {
   /** How the score sheet numbers the line: who moves first from the root and
    *  the root's move number. A board rooted mid-game (a study composition)
@@ -140,7 +147,31 @@ export type EmbedCard = {
   /** Mount the board again in place and return to the ply it was on: how a
    *  board that fixes its view at mount (a game's fog panes) changes view. */
   remountBoard: () => Promise<void>;
+  /** Mark moves on the score sheet: a glyph after the move and a note under it (the
+   *  stored analysis's "?? … was best."), keyed by ply. Kept across sheet rebuilds. */
+  setAnnotations: (byPly: ReadonlyMap<number, EmbedSheetAnnotation>) => void;
 };
+
+/** One move's mark on the score sheet. */
+export type EmbedSheetAnnotation = { suffix?: string; suffixClass?: string; note?: string };
+
+/** The sheet's entries with any marks folded in. An entry's own note (a study's comment)
+ *  comes first; the analysis note follows it. */
+export function annotateEntries(
+  entries: readonly MoveListEntry[],
+  byPly: ReadonlyMap<number, EmbedSheetAnnotation>,
+): MoveListEntry[] {
+  return entries.map((entry) => {
+    const mark = byPly.get(entry.ply);
+    if (!mark) return entry;
+    const note = [entry.note, mark.note].filter(Boolean).join(' ');
+    return {
+      ...entry,
+      ...(mark.suffix ? { suffix: mark.suffix, suffixClass: mark.suffixClass } : {}),
+      ...(note ? { note } : {}),
+    };
+  });
+}
 
 /** The segmented first-seat / Truth / second-seat control for a fog game,
  *  truth in the middle as on the review and watch pages. Sits in the header
@@ -396,23 +427,35 @@ export async function mountEmbedCard(
 
   handle = await options.mountBoard(boardHost, { onPlyChange });
 
-  const entries: MoveListEntry[] = handle.moveEntries?.() ?? [];
+  // Marks from the stored analysis (setAnnotations), folded into every build of the sheet.
+  let annotations: ReadonlyMap<number, EmbedSheetAnnotation> = new Map();
+  const sheetEntries = (): MoveListEntry[] =>
+    annotateEntries(handle?.moveEntries?.() ?? [], annotations);
+  const entries: MoveListEntry[] = sheetEntries();
   maxPly = handle.plyCount?.() ?? entries.length;
   moveList = createMoveList(entries, handle.moveNumbering?.() ?? {});
   if (handle.jumpToLine) moveList.bindLine(jumpLine);
   movesRoot.append(moveList.el);
-  // The board relabels itself when the notation changes; the sheet is built
-  // from entries read once, so rebuild it from fresh ones (a xiangqi study's
-  // entries are formatted in the current notation when read).
-  window.addEventListener(xiangqiNotationChangedEvent, () => {
+  // The sheet is built from entries read once, so a change to what it shows (the
+  // notation, or marks arriving) rebuilds it from fresh ones in place.
+  const rebuildSheet = (): void => {
     if (!handle) return;
-    const fresh = createMoveList(handle.moveEntries?.() ?? [], handle.moveNumbering?.() ?? {});
+    const fresh = createMoveList(sheetEntries(), handle.moveNumbering?.() ?? {});
     if (handle.jumpToLine) fresh.bindLine(jumpLine);
     moveList?.el.replaceWith(fresh.el);
     moveList = fresh;
     moveList.update(currentPly, jump);
     if (line) moveList.highlightLine(line);
-  });
+    // The fresh sheet has no scroll position yet: bring the current move back into
+    // view once it has been laid out (marks add notes, so the rows moved).
+    requestAnimationFrame(() => {
+      if (line) moveList?.highlightLine(line);
+      else moveList?.update(currentPly, jump);
+    });
+  };
+  // The board relabels itself when the notation changes (a xiangqi study's
+  // entries are formatted in the current notation when read).
+  window.addEventListener(xiangqiNotationChangedEvent, rebuildSheet);
 
   // The article replay's bar (xiangqi-replay.ts), so a framed board and a board
   // in a Mistboard post step the same way: back, a menu, forward. The two jumps
@@ -503,5 +546,9 @@ export async function mountEmbedCard(
       return handle as EmbedBoardHandle;
     },
     remountBoard,
+    setAnnotations: (byPly) => {
+      annotations = byPly;
+      rebuildSheet();
+    },
   };
 }

@@ -426,11 +426,8 @@ export function buildPlayPanel(
         source: 'panel-bot',
         onCreated: rememberStart,
       });
-      // The whole row starts the game; the steppers stop their own clicks.
-      row.addEventListener('click', (event) => {
-        if ((event.target as HTMLElement).closest('button')) return;
-        play.click();
-      });
+      // Only Play starts the game (Brian, 2026-10-02): a whole-row click turned
+      // a near miss on a stepper into a game nobody asked for.
 
       row.append(marker(gameSpecId, label), name, levelStep, clockStep, play);
       botRows.append(row);
@@ -844,9 +841,9 @@ export function buildPlayPanel(
           },
         );
       });
-      // No whole-row click here, unlike the computer rows: a stray click on a
-      // person row posted a public seek nobody meant to make, and 15 s later
-      // the bot offer appeared out of nowhere. Only Find searches.
+      // No whole-row click here either: a stray click on a person row posted a
+      // public seek nobody meant to make, and 15 s later the bot offer appeared
+      // out of nowhere. Only Find searches.
       paint();
       row.append(marker(gameSpecId, label), name, clockStep, waiting, act);
       personRows.append(row);

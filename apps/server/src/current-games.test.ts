@@ -304,6 +304,64 @@ test('a dormant correspondence game IS listed, with its class and deadline', () 
   assert.equal(listed[0]?.timeControl?.daysPerMove, 1);
 });
 
+// A dormant correspondence game (hydrated from room_deadlines, nobody
+// connected) is an in-progress game like any other: an open one carries its
+// builder board, so /games draws it instead of the grey placeholder. Verified
+// live on 2026-10-02 against a real 3-days-per-move xiangqi game after a
+// server restart.
+test('a dormant open correspondence game carries its builder board', async () => {
+  openRooms.set(
+    'fko_corr',
+    tenantRoom({ id: 'fko_corr', lastEventAt: NOW - 2 * 86_400_000, timeControl: CORR_TC }),
+  );
+  const [game] = collectCurrentGames(context(), NOW);
+  assert.equal(game?.timeClass, 'correspondence');
+  assert.equal(game?.observe, 'open');
+  assert.ok(await currentGameBoardPayload(game!), 'the builder payload is served');
+  const { payload } = await getCurrent();
+  assert.equal(payload.games[0]?.timeClass, 'correspondence');
+  assert.ok(payload.games[0]?.payload, 'the route attaches it');
+});
+
+// The correspondence path must not open a side door around the fog: a
+// days-per-move fog game is sealed and carries nothing, through the route too.
+test('a dormant fog correspondence game stays a card with no board', async () => {
+  fogRooms.set(
+    'fkf_corr',
+    tenantRoom({ id: 'fkf_corr', lastEventAt: NOW - 2 * 86_400_000, timeControl: CORR_TC }),
+  );
+  const [game] = collectCurrentGames(context(), NOW);
+  assert.equal(game?.timeClass, 'correspondence');
+  assert.equal(game?.observe, 'sealed');
+  assert.equal(await currentGameBoardPayload(game!), null);
+  const { payload } = await getCurrent();
+  assert.equal('payload' in payload.games[0]!, false);
+  assert.equal(JSON.stringify(payload).includes(BOARD_MARKER), false);
+});
+
+test('a Fog Chess correspondence game never gets a board, even mislabelled open', async () => {
+  const fogChess: CurrentGame = {
+    channelId: 'dark-xiangqi',
+    clock: null,
+    composition: 'pvp',
+    deadline: { dueAt: new Date(NOW + 86_400_000).toISOString(), seat: 'white' },
+    gameSpecId: 'dark-chess',
+    lastActivityAt: NOW - 86_400_000,
+    observe: 'sealed',
+    players: [],
+    ply: 9,
+    rated: false,
+    roomId: 'fog-corr',
+    startedAt: NOW - 3 * 86_400_000,
+    timeClass: 'correspondence',
+    timeControl: { daysPerMove: 7, incrementMs: 0, initialMs: 7 * 86_400_000 },
+    url: '/room/fog-corr',
+  };
+  assert.equal(await currentGameBoardPayload(fogChess), null);
+  // canServeLiveBoard re-checks the spec, so a wrong observe label still serves nothing.
+  assert.equal(await currentGameBoardPayload({ ...fogChess, observe: 'open' }), null);
+});
+
 test('engine seats are labelled through the tenant display name, PvE composition', () => {
   openRooms.set(
     'fko_pve',

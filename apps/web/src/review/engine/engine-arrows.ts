@@ -14,10 +14,17 @@
 // Opacity deliberately does NOT vary: two overlapping translucent arrows stack
 // into a third apparent weight, which would read as a strength no line has.
 
-import { fsfUciToXiangqiSquares, winPercent } from '@mistboard/game';
+import {
+  fsfUciToFortressXiangqiMove,
+  fsfUciToXiangqiSquares,
+  isFortressXiangqiDropMove,
+  winPercent,
+} from '@mistboard/game';
+import type { FortressXiangqiBoardArrow } from '../../fortress-xiangqi-render.js';
 import type { SvgBoardArrowStyle } from '../../svg-board-arrow.js';
 import type { SvgBoardMarkerStyle } from '../../svg-board-marker.js';
 import type { XiangqiBoardArrow } from '../../xiangqi-board.js';
+import type { MarkArrowMove, MarkBetter } from '../analysis-marks.js';
 import type { CevalLine } from './ceval.js';
 
 export type EngineBoardArrow<Square extends string> = SvgBoardArrowStyle & {
@@ -219,4 +226,67 @@ export function bestMoveOverlaysWithParser<Square extends string>(
 
 export function bestMoveArrow(uci: string | null | undefined): XiangqiBoardArrow[] {
   return bestMoveArrowWithParser(uci, fsfUciToXiangqiSquares);
+}
+
+/**
+ * A chance ply's ranked alternatives (a reveal's or a flip's), as arrows: one move
+ * each, never a line, because past a reveal there is no line to draw. The board-arrow
+ * renderer has no labels, so rank reads the way the live engine's MultiPV arrows read:
+ * the best is the fixed blue arrow, the others share one grey and thin out with the
+ * win% they concede to it (same ramp and cutoff as engineOverlaysFromLinesWithParser),
+ * so two near-equal choices look near-equal. Weakest first, so the best paints on top.
+ * Moves that do not parse, or have no travel, are skipped.
+ */
+export function candidateArrowsWithParser<Square extends string>(
+  moves: readonly MarkArrowMove[],
+  parseMove: ParseEngineMove<Square>,
+): EngineBoardArrow<Square>[] {
+  const parsed = moves.flatMap((move) => {
+    const squares = parseMove(move.uci);
+    return squares?.from && squares.from !== squares.to
+      ? [{ from: squares.from, to: squares.to, win: move.win }]
+      : [];
+  });
+  const best = parsed[0];
+  if (!best) return [];
+  const arrows: EngineBoardArrow<Square>[] = [];
+  for (let rank = parsed.length - 1; rank >= 1; rank -= 1) {
+    const alt = parsed[rank];
+    if (!alt) continue;
+    const shift = best.win === undefined || alt.win === undefined ? 0 : (best.win - alt.win) / 100;
+    if (shift < 0 || shift >= ALT_CUTOFF_SHIFT) continue;
+    arrows.push({
+      from: alt.from,
+      to: alt.to,
+      opacity: ALT_OPACITY,
+      width: Math.max(2, Math.round(ALT_WIDTH_MAX - shift * ALT_WIDTH_SLOPE)),
+      className: 'xq-arrow--alt',
+    });
+  }
+  arrows.push({ from: best.from, to: best.to, ...BEST_STYLE, className: 'xq-arrow--best' });
+  return arrows;
+}
+
+/** The arrows for a judged move's better move(s), whatever kind the mark carries: the
+ *  eval track's single best move, or a chance ply's weighted ranked set. Moves without
+ *  travel (a flip, a drop) draw nothing here; the review rings them instead. */
+export function betterMoveArrowsWithParser<Square extends string>(
+  better: MarkBetter | null | undefined,
+  parseMove: ParseEngineMove<Square>,
+): EngineBoardArrow<Square>[] {
+  if (!better) return [];
+  return better.kind === 'move'
+    ? bestMoveArrowWithParser(better.uci, parseMove)
+    : candidateArrowsWithParser(better.moves, parseMove);
+}
+
+/** Fortress Xiangqi engine UCI -> board squares: a board move travels, a reserve drop
+ *  ('Q@e5') has only its destination (so it rings instead of pointing). Shared by the
+ *  review's overlays and the game embed's stored best-move arrows. */
+export function parseFortressEngineMove(
+  uci: string,
+): { from?: FortressXiangqiBoardArrow['from']; to: FortressXiangqiBoardArrow['to'] } | null {
+  const move = fsfUciToFortressXiangqiMove(uci);
+  if (!move) return null;
+  return isFortressXiangqiDropMove(move) ? { to: move.to } : move;
 }

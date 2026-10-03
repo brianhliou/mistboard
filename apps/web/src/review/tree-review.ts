@@ -19,7 +19,7 @@
 
 import '../seat-disc-ink.css';
 import './seat-labels.css';
-import { type MoveJudgment, winPercent, winPercentK } from '@mistboard/game';
+import { winPercent, winPercentK } from '@mistboard/game';
 import { ASSESSMENT_GLYPH } from '../assessment-glyphs.js';
 import { t } from '../i18n/catalog.js';
 import { type ProfileTarget, playerNameEl } from '../profile-link.js';
@@ -30,6 +30,14 @@ import {
   type AdvantageChartMark,
   createAdvantageChart,
 } from './advantage-chart.js';
+import {
+  type AnalysisMark,
+  analysisMarks,
+  betterFromPly,
+  type DecisionOverlay,
+  type MarkArrowMove,
+  type MarkBetter,
+} from './analysis-marks.js';
 import { createAnalysisSummary, type SummaryJudgment } from './analysis-summary.js';
 import { createAnnotationEditor } from './annotations-editor.js';
 // Brush colours for the node's user-drawn shapes. Imported here, not only
@@ -49,10 +57,8 @@ import { advantageSymbol, formatEval } from './engine/eval-format.js';
 import {
   type GameAnalysis,
   type GamePhases,
-  judgmentGlyph,
   type MovePraise,
   mergeDecisionAnalysis,
-  praiseGlyph,
   regradeBestPlayed,
   withPraise,
 } from './game-analysis.js';
@@ -65,7 +71,7 @@ import {
   type TreePath,
   type VariantTreeAdapter,
 } from './game-tree.js';
-import { ADVICE_LABEL, defaultFormatBestMove, PRAISE_COMMENT } from './move-advice.js';
+import { defaultFormatBestMove } from './move-advice.js';
 import { type MoveGlyphTone, moveGlyphTone } from './move-glyph.js';
 import { createMoveTree, type MoveTree, type MoveTreeAnnotation, pathKey } from './move-tree.js';
 import { createRetro, type RetroController, type RetroHost, type RetroSide } from './retro.js';
@@ -82,9 +88,9 @@ import { createStudyFromTree, studyExportMessage } from './study-export.js';
 import { deserializeTree, type SerializedTree, serializeTree } from './tree-serialize.js';
 import { underboardPanel } from './underboard-tabs.js';
 
-/** With the live engine off, a completed whole-game analysis still knows the
- *  best move at every mainline ply — draw it as a single arrow. Flip to false
- *  to keep arrows strictly live-engine. */
+/** With the live engine ON but before its first lines arrive, a completed
+ *  whole-game analysis still knows the best move at every mainline ply — draw
+ *  it as a single arrow. Flip to false to keep that state arrow-free. */
 const SHOW_ANALYSIS_BEST_ARROW = true;
 
 /** NAG code → move-list suffix for user-authored glyphs (annotations-editor set). */
@@ -200,6 +206,10 @@ export interface EnginePresentation<Move, Truth, Arrow, Marker> {
   bestMoveArrow?(best: string | null | undefined): Arrow[];
   /** Single best-action marker from a whole-game analysis ply. */
   bestMoveMarker?(best: string | null | undefined): Marker[];
+  /** A chance ply's ranked alternatives (engine UCI, best first, mover-POV win%) as arrows,
+   *  weighted by how much each concedes to the best. Omit and a judged chance ply draws
+   *  only its top alternative, through bestMoveArrow. Never a line: one move each. */
+  candidateArrows?(moves: readonly MarkArrowMove[]): Arrow[];
 }
 
 export interface TreePresentation<Move, Truth, View, Color, Arrow, Marker> {
@@ -317,69 +327,16 @@ export type AnalysisSource = {
   ): Promise<GameAnalysis>;
 };
 
-/** Per-reveal decision-vs-luck info the review overlays onto a chance-move game (jieqi). A
- *  reveal's eval swing splits into a DECISION (graded) and LUCK (shown, ungraded); this carries
- *  both per reveal ply plus per-player rollups. Variant-agnostic: the caller adapts its own
- *  decomposition shape (e.g. review/jieqi-decisions) to this. */
-export type DecisionMoveInfo = {
-  /** Decision-quality glyph for the reveal (null = a fine choice, or within engine noise). */
-  judgment: MoveJudgment;
-  /** Luck-free accuracy of the CHOICE in [0, 100] (best-vs-played pool means). Feeds the headline
-   *  accuracy so a reveal ply is graded on skill, not the dice. */
-  accuracy: number;
-  /** Signed win% swing the reveal produced vs its own expectation (+ lucky, - unlucky).
-   *  OPTIONAL: a variant whose luck axis is not a scalar omits it rather than sending 0, which
-   *  would render as "average luck" instead of "no such number". Fog is the case — its error
-   *  classes (belief_lost_truth / sample_error / decision_error) are categorical. */
-  luck?: number;
-  /** The played reveal's rank among the alternatives (1 = best), or null when off the table. */
-  playedRank: number | null;
-  /** Ranked alternatives for this chance ply, best first, ALREADY formatted by the variant
-   *  (the move text is board notation, not engine UCI — this layer is variant-agnostic).
-   *  Absent when the analysis predates candidate capture, or the variant cannot produce one. */
-  candidates?: DecisionCandidate[];
-};
-
-/** " e8-a8 was best." for a judged chance ply whose top-ranked alternative is
- *  not the move played; empty when the table is missing or the played move led it. */
-export function decisionBestQuote(info: DecisionMoveInfo): string {
-  // Best first; a table that is a subset carries ranks, and its first row is
-  // only the best move when it says rank 1.
-  const top = info.candidates?.[0];
-  if (!top || top.played || (top.rank !== undefined && top.rank !== 1)) return '';
-  return ` ${top.label} was best.`;
-}
-
-/** One ranked alternative, display-ready. */
-export type DecisionCandidate = {
-  /** Board-notation move text, e.g. "e8-a8". */
-  label: string;
-  /**
-   * The engine's OWN rank for this move, 1-based. Optional: where a variant's
-   * candidate list is exactly the set it ranked (jieqi), row position already is
-   * the rank and this can be omitted. Supply it wherever the displayed rows are a
-   * SUBSET of what was ranked — otherwise the row index silently reads as a rank
-   * and tells the reader their 21st-choice move was second best.
-   */
-  rank?: number;
-  /** Luck-free win% for this choice, already rounded for display. */
-  win: number;
-  /** True when this is the move actually played. */
-  played?: boolean;
-};
-
-export type DecisionPlayerSummary = {
-  reveals: number;
-  /** Mean decision accuracy in [0, 100] (grades only the choice, not the outcome). */
-  decisionAccuracy: number;
-};
-
-export type DecisionOverlay = {
-  /** Per-reveal info keyed by ply, for move-list glyphs + the advice line. */
-  byPly: Map<number, DecisionMoveInfo>;
-  red: DecisionPlayerSummary;
-  black: DecisionPlayerSummary;
-};
+// The decision-overlay types and the per-move marks now live in analysis-marks.ts, the
+// one place both this review and the game embed read their glyphs and advice from.
+// Re-exported so existing importers keep their path.
+export type {
+  DecisionCandidate,
+  DecisionMoveInfo,
+  DecisionOverlay,
+  DecisionPlayerSummary,
+} from './analysis-marks.js';
+export { decisionBestQuote } from './analysis-marks.js';
 
 /** The heavier, opt-in decision-vs-luck tier (jieqi). Fetched/computed alongside the basic
  *  analysis; `run` is triggered right after the basic analysis compute (the decomposition needs
@@ -963,10 +920,15 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // synchronously, and that callback reads it.
   let retro: RetroController<Node> | null = null;
   let retroPanel: RetroPanel | null = null;
-  // Whether the local engine is switched on. The whole-game analysis best-move
-  // arrow is PAIRED with it: the server already judged the game, but its arrow is
-  // engine ink, so it shows only while the reader has the local engine on — an
-  // engine-off board carries no derived arrows, only what the reader drew.
+  // Whether the local engine is switched on. Two arrow sources key off it:
+  //  - engine ON: the local engine's lines (or, until they arrive, the stored best
+  //    move for the position on the board). The local engine wins outright.
+  //  - engine OFF: on the position a JUDGED mainline move was played from, the
+  //    better move the stored analysis named (the eval track's best move, or a
+  //    reveal's ranked alternatives), so "?? h5-h0 was best." is also on the board
+  //    where h5-h0 could have been played. The judged move's own position carries
+  //    its glyph badge instead. Positions whose next move was fine, sidelines, and
+  //    variants that will not quote their eval's best move draw nothing.
   let engineOn = false;
   const engineOverlaysSupported = Boolean(
     (presentation.engine?.engineArrowsFromLines || presentation.engine?.engineMarkersFromLines) &&
@@ -991,7 +953,27 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         return engine.bestMoveArrow(best);
       }
     }
+    if (!engineOn) {
+      const better = markedBetter();
+      if (!better) return [];
+      // A chance ply's ranked set, weighted; without that hook, its top move alone.
+      if (better.kind === 'candidates' && engine.candidateArrows) {
+        return engine.candidateArrows(better.moves);
+      }
+      const top = better.kind === 'move' ? better.uci : better.moves[0]?.uci;
+      return engine.bestMoveArrow ? engine.bestMoveArrow(top) : [];
+    }
     return [];
+  }
+  /** The better move(s) the stored analysis names FROM the current position: the
+   *  alternatives to the next mainline move, when that move was judged and retro is not
+   *  hiding the answer. Null otherwise (lichess: the arrow is the best move from the
+   *  position on the board, so the marked move's own position carries only its badge). */
+  function markedBetter(): MarkBetter | null {
+    const node = currentNode();
+    if (mainlineNodes()[node.ply] !== node) return null;
+    if (retro?.hidesPly(node.ply + 1)) return null;
+    return betterFromPly(analysisMarkByPly, node.ply);
   }
   function engineMarkers(): Marker[] {
     const engine = presentation.engine;
@@ -1007,12 +989,21 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         return engine.bestMoveMarker(best);
       }
     }
+    // Engine off: a judged move whose better move has no travel (a flip, a drop) gets
+    // the ring. Only a single best move: a chance ply's ranked set is drawn as arrows.
+    if (!engineOn && engine.bestMoveMarker) {
+      const better = markedBetter();
+      if (better?.kind === 'move') return engine.bestMoveMarker(better.uci);
+    }
     return [];
   }
   // The move-list annotation map (glyph suffix / eval / advice per node), kept so
   // the board badge can read the SAME entry the list renders instead of deriving
   // its own judgment. Rebuilt by refreshMoveTreeAnnotations.
   let annotationByPathKey = new Map<string, MoveTreeAnnotation>();
+  // Per-ply marks from the stored analysis (analysis-marks.ts), rebuilt with the map
+  // above; the engine-off better-move arrows read it.
+  let analysisMarkByPly = new Map<number, AnalysisMark>();
 
   /** Badge for the glyph on the move that LED to the current node (so it sits on
    *  the piece that just moved). Empty at the root, for variants without the
@@ -2062,86 +2053,61 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // node where both exist (R6 — the two glyph sources are kept distinct).
   function refreshMoveTreeAnnotations(): void {
     const byPathKey = new Map<string, MoveTreeAnnotation>();
+    // The glyph, the advice and the better move per ply come from analysisMarks, the same
+    // function the game embed reads, so a "??" here is a "??" in a frame. This layer adds
+    // only what is review-only: the per-move eval, retro hiding, luck badges, the
+    // alternatives block, and the mapping from ply to tree node.
+    analysisMarkByPly = gameAnalysis
+      ? analysisMarks({
+          analysis: gameAnalysis,
+          decisions: decisionOverlay,
+          quoteEvalBestMove: presentation.quoteEvalBestMove !== false,
+          formatBestMove: formatBestForAdvice,
+        })
+      : new Map();
     if (gameAnalysis) {
       const nodes = mainlineNodes();
       const evalByPly = new Map(gameAnalysis.evals.map((entry) => [entry.ply, entry]));
-      for (const move of gameAnalysis.moves) {
-        const node = nodes[move.ply];
+      for (const [ply, mark] of analysisMarkByPly) {
+        const node = nodes[ply];
         if (!node) continue;
-        const glyph = judgmentGlyph(move.judgment) ?? praiseGlyph(move.praise);
-        const entry = evalByPly.get(move.ply);
+        const entry = evalByPly.get(ply);
         // Retro mode: a mistake the reader has not solved yet keeps its glyph but
         // loses the "… was best" text and its refutation line, or the move list
         // would hand them the answer (lichess hideComputerLine).
-        const hidden = retro?.hidesPly(move.ply) ?? false;
+        const hidden = retro?.hidesPly(ply) ?? false;
         // Judged moves carry their advice INLINE in the move list (lichess:
         // "Blunder. h3-e3 was best." right under the move, ahead of the grafted
-        // refutation line).
-        const quoteBest = presentation.quoteEvalBestMove !== false;
-        const best = move.judgment && quoteBest ? evalByPly.get(move.ply - 1)?.best : null;
+        // refutation line). A reveal ply's glyph and word come from the DECISION
+        // layer (it is a chance move), and its LUCK shows inline as a badge: every
+        // reveal gets a luck readout, never graded. Chance plies get the ranked
+        // alternatives instead of a refutation line: past a reveal nothing is
+        // knowable, so a LINE would be a fiction while a ranked SET is exactly what
+        // the server scored.
+        const luck = mark.luck;
         byPathKey.set(pathKey(tree.pathTo(node)), {
-          suffix: glyph?.suffix,
-          suffixClass: glyph?.suffixClass,
+          suffix: mark.suffix,
+          suffixClass: mark.suffixClass,
           eval: entry ? formatEval(entry.cp, entry.mate) : undefined,
-          comment: hidden
-            ? undefined
-            : move.judgment
-              ? `${ADVICE_LABEL[move.judgment]}.${best ? ` ${formatBestForAdvice(best)} was best.` : ''}`
-              : move.praise
-                ? PRAISE_COMMENT[move.praise]
-                : undefined,
-          commentClass: move.judgment ?? move.praise ?? undefined,
+          comment: hidden ? undefined : mark.comment,
+          commentClass: mark.commentClass,
+          ...(luck === undefined
+            ? {}
+            : {
+                luck: `🎲 ${luck > 0 ? '+' : ''}${luck}%`,
+                luckTone: luck > 0 ? 'lucky' : luck < 0 ? 'unlucky' : 'even',
+              }),
+          ...(showAlternatives && mark.candidates?.length
+            ? { candidates: trimAlternatives(mark.candidates) }
+            : {}),
         });
         if (hidden) {
-          const parent = nodes[move.ply - 1];
+          const parent = nodes[ply - 1];
           const line = parent?.children.find((child) => compKeys.has(pathKey(tree.pathTo(child))));
           if (line) {
             const key = pathKey(tree.pathTo(line));
             byPathKey.set(key, { ...byPathKey.get(key), hideLine: true });
           }
-        }
-      }
-      // Decision overlay (jieqi): a reveal ply carries no eval-swing judgment (it is a chance
-      // move), so its glyph comes from the DECISION quality, and its LUCK shows inline as a badge
-      // next to the move — every reveal gets a luck readout, right where the move is. A fine
-      // decision has no glyph (lichess-consistent); luck is always shown, never graded.
-      if (decisionOverlay) {
-        for (const [ply, info] of decisionOverlay.byPly) {
-          const node = nodes[ply];
-          if (!node) continue;
-          const key = pathKey(tree.pathTo(node));
-          const glyph = judgmentGlyph(info.judgment);
-          const luck = info.luck === undefined ? null : Math.round(info.luck);
-          byPathKey.set(key, {
-            ...byPathKey.get(key),
-            suffix: glyph?.suffix,
-            suffixClass: glyph?.suffixClass,
-            ...(luck === null
-              ? {}
-              : {
-                  luck: `🎲 ${luck > 0 ? '+' : ''}${luck}%`,
-                  luckTone: luck > 0 ? 'lucky' : luck < 0 ? 'unlucky' : 'even',
-                }),
-            // Chance plies get the ranked alternatives instead of a refutation line: past a
-            // reveal nothing is knowable, so a LINE would be a fiction while a ranked SET is
-            // exactly what the server scored.
-            // The judge supplies the word too. With the eval track no longer
-            // grading these plies there is no comment to inherit, and a bare
-            // glyph makes the reader guess at severity.
-            // The word, then the move the decision layer ranked first ("Mistake.
-            // i5-i0 was best."), as the eval track writes it for quiet plies.
-            // This names a move the mover could have chosen from what they saw,
-            // so it is advice, not hindsight.
-            ...(info.judgment
-              ? {
-                  comment: `${ADVICE_LABEL[info.judgment]}.${decisionBestQuote(info)}`,
-                  commentClass: info.judgment,
-                }
-              : {}),
-            ...(showAlternatives && info.candidates?.length
-              ? { candidates: trimAlternatives(info.candidates) }
-              : {}),
-          });
         }
       }
     }

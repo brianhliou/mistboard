@@ -143,7 +143,7 @@ describe('landing shell', () => {
         ':scope > .landing-articles-row:not(.landing-dives-row) .landing-article-card[href="/blog/yin-sheng"]',
       ),
     ).toBeNull();
-    expect(deepDives?.querySelector('.landing-row-label')?.textContent).toBe('Deep dives');
+    expect(deepDives?.querySelector('.landing-row-label')?.textContent).toBe('Xiangqi deep dives');
     expect(demo?.querySelector('.landing-learn-row')).toBeNull();
     expect(demo?.querySelector('.landing-left-column .landing-board-column')).not.toBeNull();
     // The support/store pair left the homepage (patronage stays in the nav).

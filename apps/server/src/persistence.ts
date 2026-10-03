@@ -115,11 +115,13 @@ export type {
   SeekVisibility,
 } from './persistence-correspondence-seeks.js';
 export {
+  CORRESPONDENCE_SEEK_TTL_MS,
   correspondenceStartRecipient,
   countOpenSeeksForUser,
   createCorrespondenceSeek,
   deleteCorrespondenceSeek,
   deleteExpiredCorrespondenceSeeks,
+  findOpenDuplicatePublicSeek,
   getCorrespondenceSeek,
   getCorrespondenceSeekListing,
   listChallengesForUser,

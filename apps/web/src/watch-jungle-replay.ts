@@ -6,7 +6,12 @@ import { t } from './i18n/catalog.js';
 import { reviewResultLabel } from './review/game-review-meta.js';
 import './live-xiangqi.css';
 import type { JungleBoard, JunglePlayerView } from '@mistboard/game';
-import { animateJungleBoardMove, renderJungleBoardSvg } from './jungle-render.js';
+import {
+  animateJungleBoardMove,
+  type JungleBoardArrow,
+  type JungleBoardMarker,
+  renderJungleBoardSvg,
+} from './jungle-render.js';
 import {
   type JunglePostgameResponse,
   junglePostgameMaxPly,
@@ -40,10 +45,12 @@ export function mountJungleWatchReplay(
       // the result — branded "Blue" for the dark side (see variant-seat-label.ts)
       // so the TV result line matches the postgame + rail.
       resultLabel: (result) => reviewResultLabel(result, 'jungle'),
-      renderBoard: (view, orientation) =>
+      renderBoard: (view, orientation, _key, overlay) =>
         renderJungleBoardSvg(view.board as JungleBoard, {
           perspective: orientation,
           lastMove: view.lastMove ?? null,
+          arrows: overlay.arrows as readonly JungleBoardArrow[],
+          markers: overlay.glyphs as readonly JungleBoardMarker[],
         }),
       // One-ply steps glide: forward animates the newly rendered view's lastMove,
       // a back step reverse-animates the move the previous ply carried.

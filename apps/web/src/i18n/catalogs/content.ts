@@ -46,7 +46,7 @@ export const EN_CONTENT = {
   'videos.previousVideos': 'Previous videos',
   'videos.moreVideos': 'More videos',
   'articles.heading': 'Articles',
-  'articles.deepDives': 'Deep dives',
+  'articles.deepDives': 'Xiangqi deep dives',
   'articles.read': 'Read',
   'articles.intro': 'Essays, rules notes, and engine work for original strategy games.',
   'articles.allArticles': 'All articles',
