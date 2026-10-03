@@ -50,6 +50,8 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      // The Pikafish reveal bug (#497), the AB-JChess post's follow-up, 2026-10-03.
+      '/blog/pikafish-reveal-bug',
       // AB-JChess, the new top jieqi bot, scheduled for 2026-10-02.
       '/blog/ab-jchess',
       // The third player page, the world champion Lại Lý Huynh, 2026-10-02.
@@ -262,6 +264,7 @@ describe('article public listing gates', () => {
     // (blog/concept) article without a homeRow appears, newest first, with no
     // curated list. Deep dives have their own row (next test).
     expect(hrefs).toEqual([
+      '/blog/pikafish-reveal-bug',
       '/blog/ab-jchess',
       '/blog/jieqi-bot-wins',
       '/blog/one-thousand-games',
