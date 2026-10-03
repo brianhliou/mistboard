@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- Correspondence is now an inbox with boards and deadlines, your own fog view on Fog Chess games, a start-a-game panel, open seeks, and a page for visitors showing every game in progress ([e14e36b0](https://github.com/brianhliou/mistboard/commit/e14e36b0))
 - The Flip Jungle room has a larger board with the face-down pieces under it, laid out like the banqi room ([574656cf](https://github.com/brianhliou/mistboard/commit/574656cf))
 - The banqi room is laid out around its wide board, with the face-down pieces under the board and the table level with it ([6ffe2f45](https://github.com/brianhliou/mistboard/commit/6ffe2f45))
 - Crazyhouse Xiangqi is open to everyone: captured pieces join your hand, advisors and elephants start in hand and roam their own half, and a drop may give check; rated in the lobby ([e463a334](https://github.com/brianhliou/mistboard/commit/e463a334))
