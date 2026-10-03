@@ -125,7 +125,10 @@ export type TenantChromeContext<C extends string> = {
   // sentence; everything else falls back to the tenant's rejectedBody line.
   closeReason(): string;
   clock(): TenantWebClock<C> | null | undefined;
-  timeControl(): { initialMs: number; incrementMs: number } | null | undefined;
+  timeControl():
+    | { initialMs: number; incrementMs: number; daysPerMove?: number }
+    | null
+    | undefined;
   connectedSeats(): Partial<Record<C, boolean>>;
   // Who holds each seat (client id), empty for an unfilled seat.
   seats(): Partial<Record<C, string>>;
@@ -149,6 +152,8 @@ export type TenantChromeContext<C extends string> = {
   // waiting, so there is no invite link to share. An absent opponent is shown as
   // still connecting, and the server aborts if they never do.
   lobbyMatch(): boolean;
+  // Whether the room is rated (snapshot `rated`); optional so a test ctx may omit it.
+  rated?(): boolean;
   // Optional suffix on the meta panel's Variant row (e.g. a time-control
   // label: "Jieqi · 5+5").
   variantDetail?(): string | null;
@@ -479,9 +484,15 @@ export function createTenantRoomChrome<C extends string>(
     const view = ctx.view();
     const status = view?.status ?? null;
     const tc = ctx.timeControl();
-    const tcLabel = tc
-      ? `${Math.max(1, Math.round(tc.initialMs / 60_000))}+${Math.round(tc.incrementMs / 1_000)}`
-      : null;
+    // A correspondence room names its allowance; "1440+0" read as a broken clock.
+    const days = tc?.daysPerMove;
+    const tcLabel = !tc
+      ? null
+      : typeof days === 'number' && days > 0
+        ? days === 1
+          ? t('live.oneDayPerMoveNote')
+          : t('live.daysPerMoveNote', { count: days })
+        : `${Math.max(1, Math.round(tc.initialMs / 60_000))}+${Math.round(tc.incrementMs / 1_000)}`;
 
     let subline: string | null = null;
     let statusLine: string | null = null;
@@ -506,7 +517,7 @@ export function createTenantRoomChrome<C extends string>(
     const card = createGameMetaCard({
       markerId: tenant.metaMarkerId,
       glyph: tenant.metaGlyph,
-      headline: [tcLabel, t('live.modeCasual')],
+      headline: [tcLabel, ctx.rated?.() ? t('live.modeRated') : t('live.modeCasual')],
       variantName: detail ? `${variantName()} · ${detail}` : variantName(),
       subline,
       players: tenant.colors.map((color, index) => {

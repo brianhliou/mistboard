@@ -354,3 +354,74 @@ test('the seek game seats exactly the colors it is handed (creator-chose-black c
     darkChessTenantRooms.clear();
   }
 });
+
+test('ratedSeekError: the one rated gate for correspondence create and accept', async () => {
+  const { ratedSeekError } = await import('./routes/correspondence-seeks.js');
+  const threeDays = correspondenceTimeControl(3);
+  assert.equal(ratedSeekError('xiangqi', threeDays, true), null);
+  assert.equal(ratedSeekError('dark-chess', threeDays, true), null);
+  // The server-wide rated switch, as the live lobby.
+  assert.equal(ratedSeekError('xiangqi', threeDays, false), 'rated_disabled');
+  // Not correspondence-rated (casual-only or not eligible): refused, never downgraded.
+  assert.equal(ratedSeekError('mahjong', threeDays, true), 'rated_unsupported_spec');
+  assert.equal(ratedSeekError('nope', threeDays, true), 'rated_unsupported_spec');
+  // A compressed dev allowance has no pool, so it cannot be called rated.
+  const devPace: RoomTimeControl = { initialMs: 900, incrementMs: 0, daysPerMove: 900 / DAY_MS };
+  assert.equal(ratedSeekError('xiangqi', devPace, true), 'rated_unsupported_time_control');
+});
+
+test('a rated seek accept creates a rated room that stays rated through hydration', async () => {
+  const created = await createDarkChessCorrespondenceGameForSeek({
+    timeControl: correspondenceTimeControl(3),
+    first: { userId: 'creator-r' },
+    second: { userId: 'accepter-r' },
+    rated: true,
+  });
+  assert.ok(created.ok);
+  assert.equal(created.room.rated, true);
+  const room = darkChessTenantRooms.get(created.room.id);
+  assert.ok(room);
+  try {
+    assert.equal(room.rated, true);
+    // Durable: the flag rides the room-created event, so a server restart keeps it.
+    const hydrated = createTenantRuntimeRoomFromEvents(darkChessTenant, room.events);
+    assert.ok(hydrated.ok);
+    assert.equal(hydrated.room.rated, true);
+    // And the casual default is unchanged.
+    const casual = await createDarkChessCorrespondenceGameForSeek({
+      timeControl: correspondenceTimeControl(3),
+      first: { userId: 'creator-c' },
+      second: { userId: 'accepter-c' },
+    });
+    assert.ok(casual.ok);
+    assert.equal(casual.room.rated, false);
+  } finally {
+    darkChessTenantRooms.clear();
+  }
+});
+
+test('rated correspondence is held by default: the flag off refuses every rated seek', async () => {
+  const { ratedSeekError } = await import('./routes/correspondence-seeks.js');
+  const prior = {
+    rated: process.env.MISTBOARD_RATED_ENABLED,
+    corr: process.env.MISTBOARD_CORRESPONDENCE_RATED_ENABLED,
+  };
+  process.env.MISTBOARD_RATED_ENABLED = 'true';
+  try {
+    delete process.env.MISTBOARD_CORRESPONDENCE_RATED_ENABLED;
+    assert.equal(ratedSeekError('xiangqi', correspondenceTimeControl(3)), 'rated_disabled');
+    process.env.MISTBOARD_CORRESPONDENCE_RATED_ENABLED = 'true';
+    assert.equal(ratedSeekError('xiangqi', correspondenceTimeControl(3)), null);
+    // The correspondence switch alone is not enough: live rated must be on too.
+    process.env.MISTBOARD_RATED_ENABLED = 'false';
+    assert.equal(ratedSeekError('xiangqi', correspondenceTimeControl(3)), 'rated_disabled');
+  } finally {
+    for (const [key, value] of [
+      ['MISTBOARD_RATED_ENABLED', prior.rated],
+      ['MISTBOARD_CORRESPONDENCE_RATED_ENABLED', prior.corr],
+    ] as const) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});

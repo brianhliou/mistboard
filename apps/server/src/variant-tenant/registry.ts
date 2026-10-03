@@ -310,15 +310,21 @@ export type VariantTenantRegistration = {
   // CORRESPONDENCE_ELIGIBLE_SPECS must supply BOTH.
   // `seats` reports the concrete colors first/second landed on, so the route can name the
   // accepter's seat without knowing any variant's colors itself.
+  //
+  // `rated` (rated correspondence, 2026-10-02) asks for a rated room; the route sends true
+  // only for isCorrespondenceRatedSpec. `room.rated` reports what the room actually is, so
+  // the route can refuse to call a casual room rated; correspondence-eligibility.test.ts
+  // proves every rated-eligible spec's factory honours it.
   createCorrespondenceGameForSeek:
     | ((args: {
         timeControl: RoomTimeControl;
         first: { userId: string };
         second: { userId: string };
+        rated?: boolean;
       }) => Promise<
         | {
             ok: true;
-            room: { id: string; gameSpecId: string };
+            room: { id: string; gameSpecId: string; rated?: boolean };
             seats: { first: string; second: string };
           }
         | { ok: false; error: 'disabled' | 'persistence_failure' | 'room_id_collision' }

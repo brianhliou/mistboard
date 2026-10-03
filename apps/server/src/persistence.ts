@@ -22,6 +22,7 @@ export {
   isPieceAnimationPreference,
   isPlayDisabled,
   isProfileVisibility,
+  isUserIdPlayDisabled,
   userExists,
   userIdForHandle,
 } from './persistence-accounts.js';

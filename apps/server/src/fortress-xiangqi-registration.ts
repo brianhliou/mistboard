@@ -27,6 +27,7 @@ import {
 } from './routes/fortress-xiangqi-rooms.js';
 import { isAllowedFullTimeControl } from './routes/lib.js';
 import { scheduleFortressXiangqiEngineMove } from './server-fortress-xiangqi-engine.js';
+import { tenantCorrespondenceBinding } from './variant-tenant/correspondence.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
 import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
@@ -108,6 +109,22 @@ export function getOrLoadFortressXiangqiRoom(
   return getOrLoadTenantRoom(fortressXiangqiTenant, fortressXiangqiRooms, roomId);
 }
 
+// Correspondence (days-per-move): seek accept seats both accounts, the sweeper
+// enforces the durable deadline through the ws runtime (variant-tenant/correspondence.ts).
+const fortressXiangqiCorrespondence = tenantCorrespondenceBinding(fortressXiangqiTenant, {
+  factoryContext: () => ({
+    rooms: fortressXiangqiRooms,
+    isRoomIdTaken: (roomId) => variantTenantRoomIdTaken(roomId, fortressXiangqiTenant.kind),
+    appendRoomEvent: persistence.appendRoomEvent,
+    isPersistenceEnabled: persistence.isInitialized,
+    recordPersistenceError: (roomId, seq, eventType, err) =>
+      recordTenantPersistenceError(fortressXiangqiTenant, roomId, seq, eventType, err),
+  }),
+  getOrLoadRoom: (roomId) =>
+    getOrLoadTenantRoom(fortressXiangqiTenant, fortressXiangqiRooms, roomId),
+  lifecycleCtx: fortressXiangqiWs.lifecycleCtx,
+});
+
 registerVariantTenant({
   kind: fortressXiangqiTenant.kind,
   gameSpecId: fortressXiangqiTenant.gameSpecId,
@@ -183,6 +200,5 @@ registerVariantTenant({
     },
     fen: fortressXiangqiEngineFen,
   }),
-  sweepDueDeadline: null,
-  createCorrespondenceGameForSeek: null,
+  ...fortressXiangqiCorrespondence,
 });

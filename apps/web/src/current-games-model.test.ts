@@ -172,26 +172,26 @@ describe('liveTileKind', () => {
 });
 
 describe('finishedTileKind', () => {
-  it('draws open variants and the public-view jieqi and banqi boards', () => {
+  it('draws open variants and the public-view jieqi, banqi and Flip Jungle boards', () => {
     expect(finishedTileKind('xiangqi')).toBe('board');
     expect(finishedTileKind('jieqi')).toBe('board');
     expect(finishedTileKind('banqi')).toBe('board');
+    expect(finishedTileKind('jungle-flip')).toBe('board');
   });
 
-  it('keeps Fog Chess, Fog Xiangqi and every other hidden or unknown variant in the mist', () => {
+  it('keeps Fog Chess, Fog Xiangqi and every unknown variant in the mist', () => {
     expect(finishedTileKind('fog')).toBe('fog');
     expect(finishedTileKind('dark-chess')).toBe('fog');
     expect(finishedTileKind('dark-xiangqi')).toBe('fog');
-    expect(finishedTileKind('jungle-flip')).toBe('fog');
     expect(finishedTileKind('no-such-variant')).toBe('fog');
   });
 
-  it('draws exactly the open specs plus jieqi and banqi', () => {
+  it('draws exactly the open specs plus jieqi, banqi and Flip Jungle', () => {
     const drawn = GAME_SPECS.filter((spec) => finishedTileKind(spec.id) === 'board').map(
       (spec) => spec.id,
     );
     const open = GAME_SPECS.filter((spec) => spec.visibility === 'open').map((spec) => spec.id);
-    expect(drawn.sort()).toEqual([...open, 'banqi', 'jieqi'].sort());
+    expect(drawn.sort()).toEqual([...open, 'banqi', 'jieqi', 'jungle-flip'].sort());
   });
 
   // Hidden-info guard: the client never decides on its own to draw a board the

@@ -68,6 +68,7 @@ export async function correspondenceGamesForUser(
         isYourMove: game.isYourMove,
         opponentName: game.opponentName,
         dueAt: game.dueAt.toISOString(),
+        rated: game.rated === true,
         ...(board !== null && board !== undefined ? { seatBoard: board } : {}),
       };
     }),

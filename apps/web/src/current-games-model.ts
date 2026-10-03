@@ -194,10 +194,11 @@ export function liveTileKind(
 
 // Hidden-identity variants whose finished board /watch already shows publicly,
 // drawn here through the same compact showcase renderer and its default view:
-// jieqi's as-played board (a piece nobody moved stays face-down) and banqi's
-// board (unflipped pieces stay face-down). Both are 'open' to spectators in the
-// server's liveObservePolicy. Any other hidden variant fails closed to the mist.
-const FINISHED_PUBLIC_VIEW_SPECS: ReadonlySet<string> = new Set(['jieqi', 'banqi']);
+// jieqi's as-played board (a piece nobody moved stays face-down), and banqi's
+// and Flip Jungle's boards (unflipped pieces stay face-down). All three are
+// 'open' to spectators in the server's liveObservePolicy and have a /watch
+// channel. Any other hidden variant fails closed to the mist.
+const FINISHED_PUBLIC_VIEW_SPECS: ReadonlySet<string> = new Set(['jieqi', 'banqi', 'jungle-flip']);
 
 // Whether a finished game's tile draws its final position or the misty tile.
 // Open-information variants and the public-view list above draw a board; fog

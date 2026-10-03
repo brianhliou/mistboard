@@ -28,9 +28,9 @@ import type { PlayerTitle } from './persistence-titles.js';
 import {
   bucketForGame,
   PUBLIC_RATING_TIME_CLASS,
-  PUBLIC_RATING_TIME_CLASSES,
   type RatingTimeClass,
   type RatingVariant,
+  visibleRatingTimeClasses,
 } from './rating-buckets.js';
 
 // Maps a stored `games.variant` to its rating pool, IN SQL. Extracted so the
@@ -612,7 +612,9 @@ export async function getUserProfileByHandle(
   for (const variant of variantKeys) {
     const totalGames = variantGameCounts.get(variant) ?? 0;
     const byClass = ratingsByVariant.get(variant);
-    const ratedClasses = PUBLIC_RATING_TIME_CLASSES.filter(
+    // visibleRatingTimeClasses: a correspondence rating stays off the profile while
+    // rated correspondence is held (MISTBOARD_CORRESPONDENCE_RATED_ENABLED off).
+    const ratedClasses = visibleRatingTimeClasses().filter(
       (timeClass) => (byClass?.get(timeClass)?.gamesPlayed ?? 0) > 0,
     );
     if (ratedClasses.length === 0) {

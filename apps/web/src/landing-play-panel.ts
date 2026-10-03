@@ -11,6 +11,7 @@ import {
 import { track } from './analytics.js';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { type BotPlayRequest, bindBotPlayControl } from './bot-play.js';
+import { correspondenceRatedAvailable } from './correspondence-model.js';
 import { correspondenceEnabled } from './feature-flags.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
@@ -37,7 +38,7 @@ import {
 } from './landing-play.js';
 import './landing-play-panel.css';
 import { rememberedPveEngine } from './pve-memory.js';
-import { isRatedModeEnabled } from './rated-flag.js';
+import { isCorrespondenceRatedModeEnabled, isRatedModeEnabled } from './rated-flag.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { renderVariantMarker } from './variant-markers.js';
 import { variantMiniIdForGameSpec } from './variants.js';
@@ -192,7 +193,8 @@ export function panelBotPaces(gameSpecId: LandingGameSpecId): {
 }
 
 /** Paces a person can be sought at: the live clocks (rated narrows them), then
- *  days per move for the correspondence variants, casual only. */
+ *  days per move for the correspondence variants: casual, or rated where the
+ *  variant can be rated by correspondence (correspondenceRatedAvailable). */
 export function panelPersonPaces(gameSpecId: LandingGameSpecId, mode: PersonMode): PersonPace[] {
   // A casual-only variant has no rated seek, so its row drops out of Rated
   // rather than offering a Find the lobby would refuse.
@@ -203,7 +205,8 @@ export function panelPersonPaces(gameSpecId: LandingGameSpecId, mode: PersonMode
     id: tc.id,
   }));
   const days: PersonPace[] =
-    mode === 'casual' &&
+    (mode === 'casual' ||
+      correspondenceRatedAvailable(gameSpecId, isCorrespondenceRatedModeEnabled())) &&
     correspondenceEnabled() &&
     (CORRESPONDENCE_ELIGIBLE_SPEC_IDS as readonly string[]).includes(gameSpecId)
       ? DAYS_PER_MOVE_OPTIONS.map((d) => ({ kind: 'days', days: d }))
@@ -672,31 +675,30 @@ export function buildPlayPanel(
         ),
       );
     }
-    if (mode === 'casual') {
-      for (const seek of corrSeeks) {
-        const label = t('lobby.daysPerMove', { days: seek.daysPerMove }, locale);
-        let action: HTMLElement;
-        if (seek.isMine) {
-          action = document.createElement('span');
-          action.className = 'pp-yours';
-          action.textContent = t('lobby.panelYours', {}, locale);
-        } else {
-          const link = document.createElement('a');
-          link.className = 'pp-act';
-          link.href = `/challenge/${encodeURIComponent(seek.id)}`;
-          link.textContent = t('play.join', {}, locale);
-          action = link;
-        }
-        rows.push(
-          offerRow(
-            seek.gameSpecId,
-            seek.creatorName ?? t('lobby.panelAnonymous', {}, locale),
-            label,
-            action,
-            true,
-          ),
-        );
+    // Each mode lists the correspondence seeks of its own kind, like the live rows.
+    for (const seek of corrSeeks.filter((s) => (s.rated === true) === (mode === 'rated'))) {
+      const label = t('lobby.daysPerMove', { days: seek.daysPerMove }, locale);
+      let action: HTMLElement;
+      if (seek.isMine) {
+        action = document.createElement('span');
+        action.className = 'pp-yours';
+        action.textContent = t('lobby.panelYours', {}, locale);
+      } else {
+        const link = document.createElement('a');
+        link.className = 'pp-act';
+        link.href = `/challenge/${encodeURIComponent(seek.id)}`;
+        link.textContent = t('play.join', {}, locale);
+        action = link;
       }
+      rows.push(
+        offerRow(
+          seek.gameSpecId,
+          seek.creatorName ?? t('lobby.panelAnonymous', {}, locale),
+          label,
+          action,
+          true,
+        ),
+      );
     }
     if (rows.length === 0) {
       offersSlot.replaceChildren();
@@ -801,7 +803,7 @@ export function buildPlayPanel(
             initialTimeMode: 'correspondence',
             initialCorrespondenceDays: pace.days,
             source: 'correspondence',
-            ratedDisabled: true,
+            initialRated: mode === 'rated',
           });
           return;
         }

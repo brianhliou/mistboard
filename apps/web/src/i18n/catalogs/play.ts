@@ -307,6 +307,7 @@ export const EN_PLAY = {
     'Correspondence needs an account, so your games follow you to any device.',
   'correspondence.factDays': '{list} days per move',
   'correspondence.factReminders': 'Reminders before a deadline',
+  'correspondence.factVariantsMore': '{list} and {count} more',
   'correspondence.heroLive': 'In play now: {matchup}',
   'correspondence.heroStart': 'Every game starts here',
   'correspondence.gamesInProgress': 'Games in progress',

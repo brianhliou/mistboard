@@ -145,5 +145,9 @@ test('openSeekPayload: an anonymous reader owns nothing on the public board', ()
     'id',
     'isMine',
     'preferredColor',
+    // Rated correspondence (2026-10-02): a seek-level fact, the same for every reader.
+    'rated',
   ]);
+  assert.equal(openSeekPayload(seek, null).rated, false);
+  assert.equal(openSeekPayload({ ...seek, rated: true }, null).rated, true);
 });

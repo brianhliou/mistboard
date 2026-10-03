@@ -458,6 +458,53 @@ a.correspondence-row:focus-visible {
   font-size: 0.9rem;
 }
 
+.correspondence-select-wrap {
+  position: relative;
+  display: flex;
+}
+
+/* The native arrow differs per browser; one drawn chevron matches the
+   segmented rows beside it. */
+.correspondence-select-wrap::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 13px;
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--site-muted);
+  border-bottom: 1.5px solid var(--site-muted);
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
+}
+
+.correspondence-select {
+  flex: 1;
+  min-width: 0;
+  padding-right: 34px;
+  appearance: none;
+  -webkit-appearance: none;
+  color: var(--site-heading);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.correspondence-select:hover {
+  border-color: var(--site-accent-strong);
+}
+
+.correspondence-select:focus-visible {
+  outline: 2px solid var(--site-accent-strong);
+  outline-offset: 2px;
+}
+
+/* 16px keeps iOS from zooming the page when the picker opens. */
+@media (max-width: 640px) {
+  .correspondence-select {
+    font-size: 1rem;
+  }
+}
+
 .correspondence-hint {
   margin: 0;
   font-size: 0.8rem;

@@ -35,6 +35,9 @@ export type CorrespondenceGameSummary = {
   isYourMove: boolean;
   opponentName: string | null;
   dueAt: Date;
+  // Rated correspondence: read off the room's own room-created event (seq 0), the
+  // durable home of the flag, so the index needs no copy of it.
+  rated?: boolean;
 };
 
 export async function upsertRoomDeadline(record: RoomDeadlineRecord): Promise<void> {
@@ -78,11 +81,14 @@ export async function listCorrespondenceGamesForUser(
     on_move_seat: string;
     due_at: Date;
     opponent_name: string | null;
+    rated: boolean;
   }>(
     `SELECT rd.room_id, rd.game_spec_id, mine.seat AS my_seat, rd.seat AS on_move_seat,
-            rd.due_at, COALESCE(opp_user.display_name, opp_user.handle) AS opponent_name
+            rd.due_at, COALESCE(opp_user.display_name, opp_user.handle) AS opponent_name,
+            COALESCE((created.payload->>'rated')::boolean, false) AS rated
      FROM room_seat_tokens mine
      JOIN room_deadlines rd ON rd.room_id = mine.room_id
+     LEFT JOIN events created ON created.room_id = rd.room_id AND created.seq = 0
      LEFT JOIN room_seat_tokens opp
        ON opp.room_id = mine.room_id AND opp.seat <> mine.seat AND opp.revoked_at IS NULL
      LEFT JOIN users opp_user ON opp_user.id = opp.user_id
@@ -97,6 +103,7 @@ export async function listCorrespondenceGamesForUser(
     isYourMove: row.on_move_seat === row.my_seat,
     opponentName: row.opponent_name,
     dueAt: row.due_at,
+    rated: row.rated,
   }));
 }
 

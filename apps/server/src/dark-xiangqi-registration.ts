@@ -28,6 +28,7 @@ import {
   darkXiangqiWs,
   handleDarkXiangqiWebSocketConnection,
 } from './server-ws-dark-xiangqi.js';
+import { tenantCorrespondenceBinding } from './variant-tenant/correspondence.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
 import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
@@ -76,6 +77,29 @@ export async function getOrLoadDarkXiangqiRoom(
   );
   return room as DarkXiangqiLiveRoom | null;
 }
+
+// Correspondence (days-per-move): seek accept seats both accounts, the sweeper
+// enforces the durable deadline through the ws runtime (variant-tenant/correspondence.ts).
+// The /games feed seals fog, so the inbox draws a player their own fog view:
+// the seat redaction the room snapshot runs for that seat, nothing wider.
+const darkXiangqiCorrespondence = tenantCorrespondenceBinding(darkXiangqiTenant, {
+  factoryContext: () => ({
+    rooms: darkXiangqiRooms as unknown as Map<string, DarkXiangqiRuntimeRoom>,
+    isRoomIdTaken: (roomId) => variantTenantRoomIdTaken(roomId, darkXiangqiTenant.kind),
+    appendRoomEvent: persistence.appendRoomEvent,
+    isPersistenceEnabled: persistence.isInitialized,
+    recordPersistenceError: (roomId, seq, eventType, err) =>
+      recordTenantPersistenceError(darkXiangqiTenant, roomId, seq, eventType, err),
+  }),
+  getOrLoadRoom: (roomId) =>
+    getOrLoadTenantRoom(
+      darkXiangqiTenant,
+      darkXiangqiRooms as unknown as Map<string, DarkXiangqiRuntimeRoom>,
+      roomId,
+    ),
+  lifecycleCtx: darkXiangqiWs.lifecycleCtx,
+  seatBoard: true,
+});
 
 registerVariantTenant({
   kind: darkXiangqiTenant.kind,
@@ -144,6 +168,5 @@ registerVariantTenant({
     analysis: null,
     fen: standardXiangqiFen,
   }),
-  sweepDueDeadline: null,
-  createCorrespondenceGameForSeek: null,
+  ...darkXiangqiCorrespondence,
 });

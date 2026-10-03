@@ -57,7 +57,8 @@ type CtxOverrides = Partial<{
     remainingMs: Record<Color, number>;
     runningSince: number | null;
   } | null;
-  timeControl: { initialMs: number; incrementMs: number } | null;
+  timeControl: { initialMs: number; incrementMs: number; daysPerMove?: number } | null;
+  rated: boolean;
   isReplayLive: boolean;
   variantDetail: string | null;
   lobbyMatch: boolean;
@@ -91,6 +92,7 @@ function chromeHarness(
     playAgainRequestBody: () => overrides.playAgainRequestBody ?? {},
     rematchControls: () => null,
     lobbyMatch: () => overrides.lobbyMatch ?? false,
+    rated: () => overrides.rated ?? false,
     ...(overrides.variantDetail !== undefined
       ? { variantDetail: () => overrides.variantDetail ?? null }
       : {}),
@@ -300,6 +302,31 @@ describe('tenant room chrome player names', () => {
     // language as the picker, watch rail, and review page rather than a CJK
     // glyph shared by every variant in the family.
     expect(icon?.querySelector('[data-variant-marker-id="jungle-flip"]')).not.toBeNull();
+  });
+
+  it('heads the meta card Rated for a rated room and Casual otherwise', () => {
+    // Until 2026-10-02 the headline was hard-coded Casual, so a rated lobby game
+    // and a rated correspondence game both read Casual in the room.
+    const rated = chromeHarness({
+      rated: true,
+      timeControl: { initialMs: 180_000, incrementMs: 2_000 },
+    });
+    rated.chrome.renderMeta();
+    expect(rated.refs.gameInfo.textContent).toContain('Rated');
+    expect(rated.refs.gameInfo.textContent).not.toContain('Casual');
+    const casual = chromeHarness({ timeControl: { initialMs: 180_000, incrementMs: 2_000 } });
+    casual.chrome.renderMeta();
+    expect(casual.refs.gameInfo.textContent).toContain('Casual');
+  });
+
+  it('names a correspondence allowance instead of a minutes clock', () => {
+    const { chrome, refs } = chromeHarness({
+      rated: true,
+      timeControl: { initialMs: 3 * 86_400_000, incrementMs: 0, daysPerMove: 3 },
+    });
+    chrome.renderMeta();
+    expect(refs.gameInfo.textContent).toContain('3 days per move');
+    expect(refs.gameInfo.textContent).not.toContain('4320+0');
   });
 
   it('uses server names in the meta card player rows', () => {

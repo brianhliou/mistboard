@@ -120,6 +120,7 @@ if (!isEmbedDocument)
           restartAt: number | null;
           restartPhase?: 'pending' | 'restarting' | null;
           ratedEnabled?: boolean;
+          correspondenceRatedEnabled?: boolean;
         } | null,
       ) => {
         if (data) {
@@ -131,7 +132,9 @@ if (!isEmbedDocument)
                 : null;
           setRestartBanner(phase);
         }
-        if (data) setRatedModeEnabled(data.ratedEnabled === true);
+        if (data) {
+          setRatedModeEnabled(data.ratedEnabled === true, data.correspondenceRatedEnabled === true);
+        }
       },
     )
     .catch(() => {

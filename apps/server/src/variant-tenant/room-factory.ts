@@ -201,9 +201,15 @@ export async function createTenantCorrespondenceGameForSeek<
     first: { userId: string };
     /** The account taking the second seat (tenant.colors[1]). */
     second: { userId: string };
+    /** A rated correspondence seek (the route admits it only for isCorrespondenceRatedSpec).
+     *  Durable in the room-created event, so a hydrated room stays rated. */
+    rated?: boolean;
   },
 ): Promise<TenantLiveRoomCreation<Kind, C, M, State, Spec>> {
-  const created = await createTenantLiveRoom(tenant, ctx, { timeControl: args.timeControl });
+  const created = await createTenantLiveRoom(tenant, ctx, {
+    timeControl: args.timeControl,
+    rated: args.rated === true,
+  });
   if (!created.ok) return created;
   const room = created.room;
   const at = Date.now();

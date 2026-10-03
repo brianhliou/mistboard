@@ -34,6 +34,7 @@ import * as persistence from './persistence.js';
 import { handleAtomicXiangqiCreate, requestsAtomicXiangqi } from './routes/atomic-xiangqi-rooms.js';
 import { isAllowedFullTimeControl } from './routes/lib.js';
 import { scheduleAtomicXiangqiEngineMove } from './server-atomic-xiangqi-engine.js';
+import { tenantCorrespondenceBinding } from './variant-tenant/correspondence.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
 import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
@@ -114,6 +115,21 @@ export function getOrLoadAtomicXiangqiRoom(
 ): Promise<AtomicXiangqiRuntimeRoom | null> {
   return getOrLoadTenantRoom(atomicXiangqiTenant, atomicXiangqiRooms, roomId);
 }
+
+// Correspondence (days-per-move): seek accept seats both accounts, the sweeper
+// enforces the durable deadline through the ws runtime (variant-tenant/correspondence.ts).
+const atomicXiangqiCorrespondence = tenantCorrespondenceBinding(atomicXiangqiTenant, {
+  factoryContext: () => ({
+    rooms: atomicXiangqiRooms,
+    isRoomIdTaken: (roomId) => variantTenantRoomIdTaken(roomId, atomicXiangqiTenant.kind),
+    appendRoomEvent: persistence.appendRoomEvent,
+    isPersistenceEnabled: persistence.isInitialized,
+    recordPersistenceError: (roomId, seq, eventType, err) =>
+      recordTenantPersistenceError(atomicXiangqiTenant, roomId, seq, eventType, err),
+  }),
+  getOrLoadRoom: (roomId) => getOrLoadTenantRoom(atomicXiangqiTenant, atomicXiangqiRooms, roomId),
+  lifecycleCtx: atomicXiangqiWs.lifecycleCtx,
+});
 
 registerVariantTenant({
   kind: atomicXiangqiTenant.kind,
@@ -204,6 +220,5 @@ registerVariantTenant({
     },
     fen: atomicXiangqiFen,
   }),
-  sweepDueDeadline: null,
-  createCorrespondenceGameForSeek: null,
+  ...atomicXiangqiCorrespondence,
 });

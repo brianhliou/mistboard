@@ -30,6 +30,7 @@ import * as persistence from './persistence.js';
 import { handleDuckXiangqiCreate, requestsDuckXiangqi } from './routes/duck-xiangqi-rooms.js';
 import { isAllowedFullTimeControl } from './routes/lib.js';
 import { scheduleDuckXiangqiEngineMove } from './server-duck-xiangqi-engine.js';
+import { tenantCorrespondenceBinding } from './variant-tenant/correspondence.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
 import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
@@ -109,6 +110,21 @@ export function getOrLoadDuckXiangqiRoom(roomId: string): Promise<DuckXiangqiRun
   return getOrLoadTenantRoom(duckXiangqiTenant, duckXiangqiRooms, roomId);
 }
 
+// Correspondence (days-per-move): seek accept seats both accounts, the sweeper
+// enforces the durable deadline through the ws runtime (variant-tenant/correspondence.ts).
+const duckXiangqiCorrespondence = tenantCorrespondenceBinding(duckXiangqiTenant, {
+  factoryContext: () => ({
+    rooms: duckXiangqiRooms,
+    isRoomIdTaken: (roomId) => variantTenantRoomIdTaken(roomId, duckXiangqiTenant.kind),
+    appendRoomEvent: persistence.appendRoomEvent,
+    isPersistenceEnabled: persistence.isInitialized,
+    recordPersistenceError: (roomId, seq, eventType, err) =>
+      recordTenantPersistenceError(duckXiangqiTenant, roomId, seq, eventType, err),
+  }),
+  getOrLoadRoom: (roomId) => getOrLoadTenantRoom(duckXiangqiTenant, duckXiangqiRooms, roomId),
+  lifecycleCtx: duckXiangqiWs.lifecycleCtx,
+});
+
 registerVariantTenant({
   kind: duckXiangqiTenant.kind,
   gameSpecId: duckXiangqiTenant.gameSpecId,
@@ -186,6 +202,5 @@ registerVariantTenant({
     analysis: null,
     fen: duckXiangqiFen,
   }),
-  sweepDueDeadline: null,
-  createCorrespondenceGameForSeek: null,
+  ...duckXiangqiCorrespondence,
 });

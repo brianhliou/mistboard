@@ -171,6 +171,9 @@ const RATING_TIME_CLASS_ORDER: Record<RatingTimeClass, number> = {
   bullet: 0,
   blitz: 1,
   rapid: 2,
+  // No bot plays correspondence (bot_rating_snapshots' CHECK stays live-only);
+  // present only so the order is total over the user pool's time classes.
+  correspondence: 3,
 };
 
 export async function getPublicBotForPlay(botId: string): Promise<BotPlayProfile | null> {

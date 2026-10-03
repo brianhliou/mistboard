@@ -4,6 +4,7 @@ import {
   ATOMIC_XIANGQI_SPEC_ID,
   BANQI_SPEC_ID,
   CANONICAL_VARIANT_ORDER,
+  CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
   CRAZYHOUSE_XIANGQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
@@ -12,6 +13,7 @@ import {
   GAME_SPECS,
   gameSpecForId,
   gameSpecForLegacyLiveRoom,
+  isCorrespondenceRatedSpec,
   isGameSpecId,
   isRatedPoolBase,
   isRetiredGameSpec,
@@ -229,4 +231,25 @@ test('no spec is retired: every variant the plan named has been deleted', () => 
     assert.equal(isRetiredGameSpec(id), false, id);
   }
   assert.equal(isRetiredGameSpec('no-such-spec'), false);
+});
+
+test('isCorrespondenceRatedSpec is exactly correspondence-eligible AND an active rating pool', () => {
+  // The one predicate the seek route, the rating bucket and the web Rated toggle share.
+  // Derived, not listed: a spec another change makes correspondence-eligible is rated
+  // exactly when it has a pool, and a casual-only spec is cleanly excluded.
+  for (const spec of GAME_SPECS) {
+    const expected =
+      CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(spec.id) && ratingPoolForSpec(spec.id) !== null;
+    assert.equal(isCorrespondenceRatedSpec(spec.id), expected, spec.id);
+  }
+  // Today's eligible set is rated in full: xiangqi and Fog chess both have pools.
+  assert.equal(isCorrespondenceRatedSpec(XIANGQI_SPEC_ID), true);
+  assert.equal(isCorrespondenceRatedSpec(DARK_CHESS_SPEC_ID), true);
+  // A live-rated spec that is not correspondence-eligible is not rated by correspondence.
+  if (!CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(JIEQI_SPEC_ID)) {
+    assert.equal(isCorrespondenceRatedSpec(JIEQI_SPEC_ID), false);
+  }
+  assert.equal(isCorrespondenceRatedSpec('not-a-spec'), false);
+  assert.equal(isCorrespondenceRatedSpec(null), false);
+  assert.equal(isCorrespondenceRatedSpec(undefined), false);
 });

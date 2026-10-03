@@ -13,6 +13,16 @@ export function ratedEnabled(): boolean {
   return process.env.MISTBOARD_RATED_ENABLED === 'true';
 }
 
+// Rated CORRESPONDENCE, on top of the switch above. Off by default (Brian,
+// 2026-10-02: held until integrity tooling exists: a report button, an
+// engine-match summary and a cheater mark that refunds opponents). Off means a
+// rated correspondence seek is refused (never stored casual), no correspondence
+// room is created rated, the client hides its Casual/Rated control, and no
+// surface shows a correspondence rating. Live rated play does not read it.
+export function correspondenceRatedEnabled(): boolean {
+  return ratedEnabled() && process.env.MISTBOARD_CORRESPONDENCE_RATED_ENABLED === 'true';
+}
+
 // Dark Xiangqi is a rules spike, not a public/live mode. Keep every future
 // server-side entry point behind this explicit opt-in so adding integration
 // code cannot accidentally expose rooms in production.

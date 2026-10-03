@@ -31,6 +31,7 @@ import {
   type JieqiLiveRoom,
   jieqiWs,
 } from './server-ws-jieqi.js';
+import { tenantCorrespondenceBinding } from './variant-tenant/correspondence.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
 import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
@@ -75,6 +76,26 @@ export async function getOrLoadJieqiRoom(roomId: string): Promise<JieqiLiveRoom 
   );
   return room as JieqiLiveRoom | null;
 }
+
+// Correspondence (days-per-move): seek accept seats both accounts, the sweeper
+// enforces the durable deadline through the ws runtime (variant-tenant/correspondence.ts).
+const jieqiCorrespondence = tenantCorrespondenceBinding(jieqiTenant, {
+  factoryContext: () => ({
+    rooms: jieqiRooms as unknown as Map<string, JieqiRuntimeRoom>,
+    isRoomIdTaken: (roomId) => variantTenantRoomIdTaken(roomId, jieqiTenant.kind),
+    appendRoomEvent: persistence.appendRoomEvent,
+    isPersistenceEnabled: persistence.isInitialized,
+    recordPersistenceError: (roomId, seq, eventType, err) =>
+      recordTenantPersistenceError(jieqiTenant, roomId, seq, eventType, err),
+  }),
+  getOrLoadRoom: (roomId) =>
+    getOrLoadTenantRoom(
+      jieqiTenant,
+      jieqiRooms as unknown as Map<string, JieqiRuntimeRoom>,
+      roomId,
+    ),
+  lifecycleCtx: jieqiWs.lifecycleCtx,
+});
 
 registerVariantTenant({
   kind: jieqiTenant.kind,
@@ -158,6 +179,5 @@ registerVariantTenant({
     analysis: null,
     fen: jieqiStateToPikafishFen,
   }),
-  sweepDueDeadline: null,
-  createCorrespondenceGameForSeek: null,
+  ...jieqiCorrespondence,
 });

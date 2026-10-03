@@ -38,6 +38,7 @@ import {
   profileGameSpecLabel,
   profileResultTone,
 } from './profile-ui.js';
+import { isCorrespondenceRatedModeEnabled, onRatedModeChange } from './rated-flag.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { attachUserCard } from './user-card.js';
 import { renderVariantMarker } from './variant-markers.js';
@@ -50,7 +51,9 @@ import {
 } from './variants.js';
 
 type ProfileRatingVariant = RatingVariant;
-type ProfileRatingTimeClass = 'bullet' | 'blitz' | 'rapid';
+// 'correspondence' is its own pool per variant (rated correspondence, 2026-10-02),
+// listed after the live paces; it never shares a ladder with them.
+type ProfileRatingTimeClass = 'bullet' | 'blitz' | 'rapid' | 'correspondence';
 // The pace a rating surface opens on when the URL/user has not picked one.
 // Mirrors the server's PUBLIC_RATING_TIME_CLASS.
 const DEFAULT_LEADERBOARD_TIME_CLASS: ProfileRatingTimeClass = 'blitz';
@@ -317,6 +320,7 @@ const LEADERBOARD_TIME_CLASSES: readonly { id: ProfileRatingTimeClass; label: I1
   { id: 'bullet', label: 'live.timeClassBullet' },
   { id: 'blitz', label: 'live.timeClassBlitz' },
   { id: 'rapid', label: 'live.timeClassRapid' },
+  { id: 'correspondence', label: 'setup.correspondence' },
 ];
 
 function buildLeaderboardFrame(locale: Locale): {
@@ -370,6 +374,14 @@ function buildLeaderboardFrame(locale: Locale): {
     const selected = pace.id === DEFAULT_LEADERBOARD_TIME_CLASS;
     button.classList.toggle('selected', selected);
     button.setAttribute('aria-selected', selected ? 'true' : 'false');
+    // No correspondence ladder while rated correspondence is held (server flag off).
+    if (pace.id === 'correspondence') {
+      const sync = (): void => {
+        button.style.display = isCorrespondenceRatedModeEnabled() ? '' : 'none';
+      };
+      sync();
+      onRatedModeChange(sync);
+    }
     paceTabs.append(button);
   }
 
@@ -2211,9 +2223,14 @@ function preferredBucketForVariant(
   variant: ProfileRatingVariant,
 ): ProfileBucketRating | undefined {
   const forVariant = ratings.filter((rating) => rating.variant === variant);
-  const rated = forVariant.filter(
+  const ratedAny = forVariant.filter(
     (rating) => rating.eloRating != null && rating.ratedGamesPlayed > 0,
   );
+  // A live pace leads whenever the player has one; the correspondence rating then rides
+  // the row as a second figure (correspondenceRailBucket). Correspondence leads only for
+  // a player with no live rating in the variant.
+  const live = ratedAny.filter((rating) => rating.timeClass !== 'correspondence');
+  const rated = live.length > 0 ? live : ratedAny;
   const preferred = rated.find((rating) => rating.timeClass === DEFAULT_LEADERBOARD_TIME_CLASS);
   if (preferred) return preferred;
   const mostPlayed = [...rated].sort(
@@ -2339,6 +2356,23 @@ function streakDays(days: number, locale: Locale): string {
     : t('profile.streakDays', { count: days }, locale);
 }
 
+// The variant's correspondence rating when the rail row leads with a live pace, so a
+// player rated both ways shows both figures (rated correspondence, 2026-10-02).
+function correspondenceRailBucket(
+  ratings: ProfileBucketRating[],
+  variant: ProfileRatingVariant,
+  shown: ProfileBucketRating | undefined,
+): ProfileBucketRating | undefined {
+  if (shown?.timeClass === 'correspondence') return undefined;
+  return ratings.find(
+    (rating) =>
+      rating.variant === variant &&
+      rating.timeClass === 'correspondence' &&
+      rating.eloRating != null &&
+      rating.ratedGamesPlayed > 0,
+  );
+}
+
 // One variant row in the ratings rail: compact mini-board beside its name,
 // rating, and games count.
 // Never-played / unrated variants dim back so the rail reads as intentional.
@@ -2450,6 +2484,17 @@ function buildRatingRailRow(
   }
 
   meta.append(figures);
+  const corr = isCorrespondenceRatedModeEnabled()
+    ? correspondenceRailBucket(ratings, variant, bucket)
+    : undefined;
+  if (corr?.eloRating != null) {
+    const line = document.createElement('span');
+    line.className = 'profile-rating-games profile-rating-corr';
+    line.textContent = `${timeClassLabel('correspondence')} ${corr.eloRating}${
+      corr.provisional ? '?' : ''
+    }`;
+    meta.append(line);
+  }
   row.append(meta);
 
   // Trailing chevron (lichess rail affordance: the row opens that variant's

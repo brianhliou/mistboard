@@ -21,7 +21,7 @@ import {
 
 type ProfileBucketRating = {
   variant: RatingVariant;
-  timeClass: 'bullet' | 'blitz' | 'rapid';
+  timeClass: 'bullet' | 'blitz' | 'rapid' | 'correspondence';
   eloRating: number | null;
   ratedGamesPlayed: number;
   totalGamesPlayed: number;
@@ -261,10 +261,11 @@ function buildBotSingleRating(profile: BotSummaryProfile, gameSpecId: string): H
   return line;
 }
 
-const TIME_CLASS_LABELS: Record<'bullet' | 'blitz' | 'rapid', I18nKey> = {
+const TIME_CLASS_LABELS: Record<'bullet' | 'blitz' | 'rapid' | 'correspondence', I18nKey> = {
   bullet: 'live.timeClassBullet',
   blitz: 'live.timeClassBlitz',
   rapid: 'live.timeClassRapid',
+  correspondence: 'setup.correspondence',
 };
 
 // Compact rating grid: rated variants only (a "?"-provisional or settled Elo),

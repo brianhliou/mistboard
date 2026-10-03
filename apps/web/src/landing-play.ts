@@ -29,6 +29,7 @@ import {
   trackCorrespondenceSeekPosted,
 } from './analytics.js';
 import { type BotPlayRequest, bindBotPlayControl, createBotGame } from './bot-play.js';
+import { correspondenceRatedAvailable } from './correspondence-model.js';
 import { correspondenceEnabled } from './feature-flags.js';
 import { variantNameKeyForSpecId } from './game-display.js';
 import { type GameStartSource, rememberGameStartSource } from './game-start-source.js';
@@ -44,7 +45,7 @@ import {
   pveEngineIdForRememberedPick,
 } from './landing-bot-policy.js';
 import { rememberedPveEngine } from './pve-memory.js';
-import { isRatedModeEnabled } from './rated-flag.js';
+import { isCorrespondenceRatedModeEnabled, isRatedModeEnabled } from './rated-flag.js';
 import { postThroughRestart } from './room-create-retry.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildUiIcon, type UiIconName } from './ui-icon.js';
@@ -88,6 +89,8 @@ export type LandingPlayChoice = {
   initialTimeMode?: 'realtime' | 'correspondence';
   /** Preselects this days-per-move chip when opening on correspondence. */
   initialCorrespondenceDays?: number;
+  /** Opens a correspondence seek on Rated (the panel's Rated mode). Casual otherwise. */
+  initialRated?: boolean;
   /**
    * Opens on this side instead of the stored pick. The postgame "Challenge a
    * friend" link passes 'random' (`&side=random`): a friend game started from a
@@ -1300,8 +1303,8 @@ function correspondenceCreateButton(locale: Locale): HTMLButtonElement {
       initialGameSpecId: defaultCorrespondenceGameSpecId(locale),
       initialTimeMode: 'correspondence',
       source: 'correspondence',
-      // Correspondence is casual-only, so the rated toggle never applies here.
-      ratedDisabled: true,
+      // Opens casual; Rated is offered where correspondence can be rated
+      // (correspondenceRatedAvailable), since 2026-10-02.
     });
   });
   return create;
@@ -1408,6 +1411,7 @@ export type LobbyCorrespondenceSeek = {
   daysPerMove: number;
   creatorName: string | null;
   isMine: boolean;
+  rated?: boolean;
 };
 
 // What the tab knows after one poll. `disabled` is the server's own answer
@@ -1444,7 +1448,9 @@ function corrSeekRow(seek: LobbyCorrespondenceSeek, locale: Locale): HTMLElement
   game.textContent = variantLabelForGameSpec(parseLandingGameSpecId(seek.gameSpecId), locale);
   const time = document.createElement('span');
   time.className = 'landing-lobby-td';
-  time.textContent = t('lobby.daysPerMove', { days: seek.daysPerMove }, locale);
+  const pace = t('lobby.daysPerMove', { days: seek.daysPerMove }, locale);
+  // Rated reads on the pace cell, the way the live rows pair pace and mode.
+  time.textContent = seek.rated === true ? `${pace} · ${t('play.rated', {}, locale)}` : pace;
   if (seek.isMine) {
     const mine = document.createElement('span');
     mine.className = 'landing-lobby-join is-mine';
@@ -1649,11 +1655,14 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
 
   const storedPreference = loadSetupPreference(choice.mode);
   const wantsCorrespondence = choice.initialTimeMode === 'correspondence';
-  // Correspondence is casual-only, so opening on that segment implies casual.
+  // Opening on the correspondence segment starts casual; Rated stays one click away
+  // where the variant can be rated by correspondence.
   let rated =
-    choice.mode === 'pve' || choice.ratedDisabled || wantsCorrespondence
+    choice.mode === 'pve' || choice.ratedDisabled
       ? false
-      : (storedPreference.rated ?? true);
+      : wantsCorrespondence
+        ? choice.initialRated === true
+        : (storedPreference.rated ?? true);
   const publicVariantOptions = enabledLandingVariantGameSpecs(choice.mode, locale);
   const softLinkedHiddenVariant =
     choice.initialGameSpecId &&
@@ -1968,11 +1977,20 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   // This used to hard-code dark chess, which silently drifted when xiangqi
   // joined the list on 2026-07-04: the Correspondence tab's own "Create a game"
   // opened on a non-eligible variant and offered nothing but real-time clocks.
+  // Rated correspondence (2026-10-02) is an open seek only (Find opponent): a rated
+  // pick keeps the segment only where correspondence can be rated, and Challenge a
+  // friend's direct room stays casual.
+  const correspondenceRatedOffered = () =>
+    choice.mode === 'lobby' &&
+    correspondenceRatedAvailable(selectedGameSpecId, isCorrespondenceRatedModeEnabled());
   const correspondenceAvailable = () =>
     (choice.mode === 'pvp' || choice.mode === 'lobby') &&
     (CORRESPONDENCE_ELIGIBLE_SPEC_IDS as readonly string[]).includes(selectedGameSpecId) &&
-    !rated &&
+    (!rated || correspondenceRatedOffered()) &&
     correspondenceEnabled();
+  // Assigned once the rated toggle exists (it is built after the time section), so a
+  // time-mode switch re-scopes Rated for the segment it lands on.
+  let syncRatedToggle: () => void = () => undefined;
 
   // Re-scope the picker to the current variant/rated/mode. Hides the segmented
   // toggle (and forces real time) when correspondence isn't offered; shows exactly
@@ -2021,6 +2039,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       button.classList.toggle('selected', selected);
       button.setAttribute('aria-checked', selected ? 'true' : 'false');
     }
+    syncRatedToggle();
     syncSetupAccordion();
   };
   syncTimeControls();
@@ -2053,6 +2072,8 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
           startButton,
           status,
           selectedCorrespondenceDays,
+          selectedGameSpecId,
+          rated && correspondenceRatedOffered(),
           locale,
         );
       } else {
@@ -2105,13 +2126,24 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     () =>
       choice.mode === 'pve' ||
       Boolean(choice.ratedDisabled) ||
-      !landingGameSpecCapabilities(selectedGameSpecId).supportsRated,
+      (selectedTimeMode === 'correspondence'
+        ? !correspondenceRatedOffered()
+        : !landingGameSpecCapabilities(selectedGameSpecId).supportsRated),
     () => {
       syncTimeControls();
       openNextSetupSection('gameType');
     },
     locale,
   );
+  syncRatedToggle = () => {
+    ratingSection.sync();
+    // A correspondence game shows no Casual/Rated choice at all while rated
+    // correspondence is held (server flag off). Inline display: the section's own
+    // `display: grid` would defeat the hidden attribute.
+    const hide = selectedTimeMode === 'correspondence' && !isCorrespondenceRatedModeEnabled();
+    ratingSection.section.style.display = hide ? 'none' : '';
+  };
+  syncRatedToggle();
 
   // Color picker shows for PvE and Challenge-a-friend. Hidden for casual/rated
   // lobby matchmaking — color is server-assigned there so the pool stays unified.
@@ -2448,6 +2480,8 @@ async function postCorrespondenceSeekFromPlay(
   button: HTMLButtonElement,
   status: HTMLElement,
   daysPerMove: number,
+  gameSpecId: string,
+  rated: boolean,
   locale: Locale,
 ): Promise<void> {
   button.disabled = true;
@@ -2457,7 +2491,14 @@ async function postCorrespondenceSeekFromPlay(
     const response = await postThroughRestart('/api/correspondence/seeks', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ daysPerMove, preferredColor: 'random' }),
+      // The picked variant, not the server's dark-chess default: before 2026-10-02 this
+      // body carried no gameSpecId, so a xiangqi seek from the lobby posted Fog Chess.
+      body: JSON.stringify({
+        gameSpecId,
+        daysPerMove,
+        preferredColor: 'random',
+        ...(rated ? { rated: true } : {}),
+      }),
     });
     if (response.ok) {
       if (response.status === 201) {
@@ -2466,7 +2507,7 @@ async function postCorrespondenceSeekFromPlay(
           .json()
           .catch(() => null)) as { seek?: { gameSpecId?: string } } | null;
         trackCorrespondenceSeekPosted({
-          gameSpecId: posted?.seek?.gameSpecId ?? DARK_CHESS_SPEC_ID,
+          gameSpecId: posted?.seek?.gameSpecId ?? gameSpecId,
           daysPerMove,
           kind: 'public',
           surface: 'lobby',
