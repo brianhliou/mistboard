@@ -11,8 +11,9 @@
 //     two searches differ by a few points of noise. `!` is not emitted; it needs
 //     the gap to the engine's second choice, which per-ply evals do not carry.
 //   - a position assessment (=, ⩲, ±, +−, and the mirror for the second mover)
-//     after every judged move, every commented move and the last move of every
-//     sideline, from red's expected score through the site's own maps: the
+//     on the last move of every sideline, where a line's verdict goes. A
+//     mainline move carries its move glyph only, as on every other variant's
+//     study (Brian, 2026-10-02). From red's expected score through the site's own maps: the
 //     score is turned back into centipawns on the analysis board's win curve
 //     (winPercent, WIN_PCT_K) and read by advantageSymbol, the bands the
 //     review's engine lines close on (60 / 180 / 450 cp: 55.5%, 66.0% and 84.0%
@@ -156,9 +157,6 @@ export function annotateFromEngine(input: EngineAnnotationInput): {
     }
     const note = input.comments?.[ply];
     if (note) comment(node, note);
-    // A verdict on the position after every judged or commented move.
-    const after = input.redScore[ply];
-    if ((mark || note) && after !== undefined) glyph(node, assessmentForRedScore(after).nag);
     cursor.children.push(node);
     const side = sidelines.get(i);
     if (side?.moves.length) {

@@ -174,7 +174,7 @@ function chapter(game: EvaluatedGame, lines: readonly KatagoLine[]) {
       `${NAME[game.red === 'misty' ? 'katago' : 'misty']} black. ` +
       "Comments give KataGo's expected score for itself (a draw counts half, 1,000 visits) and Misty's own score in centipawns. " +
       "Marks are Misty's moves as KataGo judges them, on the site's review cutoffs (?! 5 points, ? 10, ?? 15); " +
-      'the symbol after a marked or commented move, and at the end of each line, is the position by KataGo (=, ⩲, ±, +− for red; ⩱, ∓, −+ for blue). ' +
+      'the symbol at the end of each line is the position there by KataGo (=, ⩲, ±, +− for red; ⩱, ∓, −+ for blue). ' +
       "Sidelines are KataGo's own line where the game went another way.",
   } satisfies EngineAnnotationInput;
   // The study and the post's chart must mark the same moves.

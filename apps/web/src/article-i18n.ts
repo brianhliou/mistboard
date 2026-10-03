@@ -162,12 +162,10 @@ const ZH_HANS: Record<string, string> = {
     'Misty 执红，第 21 步吃掉一只狼，大半盘都认为自己领先；而 KataGo 的得分先停在 50%，随后一路上升。',
   "On ply 57 Misty moved its cornered tiger from g8 to g9, and KataGo's score for itself went from 61% to 92% while Misty still read +111. KataGo's line for red starts with lion b1-b2 and keeps red at 37%. KataGo stayed above 80% from that ply; Misty got there on ply 72, 15 plies later.":
     '第 57 步 Misty 把困在角落的虎从 g8 走到 g9，KataGo 对自己的得分从 61% 升到 92%，而 Misty 仍认为自己 +111。KataGo 为红方给出的变化从狮 b1-b2 开始，能让红方保持 37%。KataGo 从这一步起一直在 80% 以上；Misty 到第 72 步才达到，晚了 15 步。',
-  'Full annotated game 67': '第 67 盘完整注释',
   "Misty, playing black, won a wolf on ply 38 and read itself ahead for most of the next 60 plies, while KataGo's score crept from 50% to 63%.":
     'Misty 执黑，第 38 步吃掉一只狼，此后 60 步里大部分时间都认为自己领先；而 KataGo 的得分从 50% 慢慢升到 63%。',
   "On ply 100 Misty moved its cat from c8 to c7, and KataGo went from 63% to 98%. Misty read +80 and found the forced loss four plies later. KataGo's line for black, elephant d6-d7, keeps black at 38%.":
     '第 100 步 Misty 把猫从 c8 走到 c7，KataGo 从 63% 升到 98%。Misty 仍认为自己 +80，四步之后才算出必输。KataGo 为黑方给出的变化是象 d6-d7，能让黑方保持 38%。',
-  'Full annotated game 94': '第 94 盘完整注释',
   'In these two games, KataGo settled on the result 15 and 4 plies before Misty did.':
     '在这两盘棋中，KataGo 分别比 Misty 早 15 步和 4 步看准了结果。',
   'KataGo, a stronger Jungle Chess bot': 'KataGo：更强的斗兽棋电脑',
@@ -3486,12 +3484,10 @@ const ZH_HANT: Record<string, string> = {
     'Misty 執紅，第 21 步吃掉一隻狼，大半盤都認為自己領先；而 KataGo 的得分先停在 50%，隨後一路上升。',
   "On ply 57 Misty moved its cornered tiger from g8 to g9, and KataGo's score for itself went from 61% to 92% while Misty still read +111. KataGo's line for red starts with lion b1-b2 and keeps red at 37%. KataGo stayed above 80% from that ply; Misty got there on ply 72, 15 plies later.":
     '第 57 步 Misty 把困在角落的虎從 g8 走到 g9，KataGo 對自己的得分從 61% 升到 92%，而 Misty 仍認為自己 +111。KataGo 為紅方給出的變化從獅 b1-b2 開始，能讓紅方保持 37%。KataGo 從這一步起一直在 80% 以上；Misty 到第 72 步才達到，晚了 15 步。',
-  'Full annotated game 67': '第 67 盤完整註釋',
   "Misty, playing black, won a wolf on ply 38 and read itself ahead for most of the next 60 plies, while KataGo's score crept from 50% to 63%.":
     'Misty 執黑，第 38 步吃掉一隻狼，此後 60 步裡大部分時間都認為自己領先；而 KataGo 的得分從 50% 慢慢升到 63%。',
   "On ply 100 Misty moved its cat from c8 to c7, and KataGo went from 63% to 98%. Misty read +80 and found the forced loss four plies later. KataGo's line for black, elephant d6-d7, keeps black at 38%.":
     '第 100 步 Misty 把貓從 c8 走到 c7，KataGo 從 63% 升到 98%。Misty 仍認為自己 +80，四步之後才算出必輸。KataGo 為黑方給出的變化是象 d6-d7，能讓黑方保持 38%。',
-  'Full annotated game 94': '第 94 盤完整註釋',
   'In these two games, KataGo settled on the result 15 and 4 plies before Misty did.':
     '在這兩盤棋中，KataGo 分別比 Misty 早 15 步和 4 步看準了結果。',
   'KataGo, a stronger Jungle Chess bot': 'KataGo：更強的鬥獸棋電腦',

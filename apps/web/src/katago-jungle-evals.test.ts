@@ -14,7 +14,6 @@ import {
   katagoJungleArticle,
   katagoScoreSeries,
   lineStart,
-  studyChapterHref,
 } from './articles/content/katago-jungle.js';
 import { evalCompareChartSvg } from './articles/eval-compare-chart.js';
 import {
@@ -79,7 +78,7 @@ describe('katago-jungle lines', () => {
     }
   });
 
-  it('embeds one annotated study chapter per game, and links each chapter', () => {
+  it('embeds one annotated study chapter per game', () => {
     const embeds = katagoJungleArticle.sections
       .flatMap((s) => s.blocks)
       .filter((b): b is Extract<typeof b, { kind: 'embed' }> => b?.kind === 'embed');
@@ -87,7 +86,8 @@ describe('katago-jungle lines', () => {
       `/embed/study/${KATAGO_STUDY.id}/${KATAGO_STUDY.chapters[67]}?ply=57`,
       `/embed/study/${KATAGO_STUDY.id}/${KATAGO_STUDY.chapters[94]}?ply=100`,
     ]);
-    expect(studyChapterHref(94)).toBe(`/study/${KATAGO_STUDY.id}/${KATAGO_STUDY.chapters[94]}`);
+    // The embed's own credit line links the chapter; the post adds no button.
+    expect(JSON.stringify(katagoJungleArticle)).not.toContain('Full annotated game');
   });
 });
 

@@ -93,8 +93,8 @@ export function katagoScoreSeries(game: EvaluatedGame) {
 // study:edit. THESE IDS ARE A LOCAL DEV DATABASE'S (2026-10-02): the prod study
 // is created from the same plan on Brian's go, and its ids replace these.
 export const KATAGO_STUDY = {
-  id: 'CilnYd5e',
-  chapters: { 67: 'egAIBGOs', 94: 'YBsDa5At' },
+  id: '7CsdUkBj',
+  chapters: { 67: 'MhVt0b2S', 94: 'D42CBYlZ' },
 } as const;
 
 function gameChart(game: number, heading: string, ariaLabel: string): ArticleBlock {
@@ -129,9 +129,6 @@ function gameEmbed(game: 67 | 94, ply: number, title: string): ArticleBlock {
     aspect: [702, 780],
   };
 }
-
-export const studyChapterHref = (game: 67 | 94): string =>
-  `/study/${KATAGO_STUDY.id}/${KATAGO_STUDY.chapters[game]}`;
 
 // KataGo's own lines where the games went another way (the study's sidelines,
 // which the study embed lets a reader step into),
@@ -217,13 +214,6 @@ export const katagoJungleArticle: Article = {
           kind: 'paragraph',
           text: "On ply 57 Misty moved its cornered tiger from g8 to g9, and KataGo's score for itself went from 61% to 92% while Misty still read +111. KataGo's line for red starts with lion b1-b2 and keeps red at 37%. KataGo stayed above 80% from that ply; Misty got there on ply 72, 15 plies later.",
         },
-        {
-          kind: 'cta',
-          layout: 'single-row',
-          buttons: [
-            { label: 'Full annotated game 67', href: studyChapterHref(67), emphasis: 'secondary' },
-          ],
-        },
         { kind: 'sub-heading', text: 'Game 94: the slow squeeze' },
         {
           kind: 'paragraph',
@@ -238,13 +228,6 @@ export const katagoJungleArticle: Article = {
         {
           kind: 'paragraph',
           text: "On ply 100 Misty moved its cat from c8 to c7, and KataGo went from 63% to 98%. Misty read +80 and found the forced loss four plies later. KataGo's line for black, elephant d6-d7, keeps black at 38%.",
-        },
-        {
-          kind: 'cta',
-          layout: 'single-row',
-          buttons: [
-            { label: 'Full annotated game 94', href: studyChapterHref(94), emphasis: 'secondary' },
-          ],
         },
         {
           kind: 'paragraph',

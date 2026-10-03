@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import { ASSESSMENT_GLYPH } from '../apps/web/src/assessment-glyphs.ts';
 import {
@@ -41,7 +42,7 @@ describe('study-annotate', () => {
     assert.equal(moveGlyphFor(0.39, 0.08), '??');
   });
 
-  it('builds the tree: glyph + verdict on judged and commented moves, a verdict at each line end', () => {
+  it('builds the tree: move glyphs on the mainline, a verdict only at each line end', () => {
     // Red's move at ply 3 drops red from 60% to 20%, a move the engine did not choose.
     const input = {
       rootFen: 'root',
@@ -61,10 +62,10 @@ describe('study-annotate', () => {
     const main: StudyNode[] = [];
     for (let n = tree.root.children[0]; n; n = n.children[0]!) main.push(n);
     assert.equal(tree.root.annotations?.comments?.[0]?.text, 'Intro.');
-    // ply 1: a note, so a verdict (red 60%: ⩲).
-    assert.deepEqual(main[0]!.annotations?.glyphs, [14]);
-    // ply 3: ?? then its verdict (red 20% is about -376 cp: ∓), one joined comment.
-    assert.deepEqual(main[2]!.annotations?.glyphs, [4, 17]);
+    // ply 1: a note and nothing else; a mainline move never carries a verdict.
+    assert.equal(main[0]!.annotations?.glyphs, undefined);
+    // ply 3: its move glyph alone, one joined comment.
+    assert.deepEqual(main[2]!.annotations?.glyphs, [4]);
     assert.equal(main[2]!.annotations?.comments?.length, 1);
     // The sideline hangs off the position before ply 3, beside the played move,
     // with a green arrow on that position and a verdict on its last move.
@@ -75,5 +76,24 @@ describe('study-annotate', () => {
     assert.deepEqual(parent.annotations?.shapes, [
       { kind: 'arrow', brush: 'green', orig: 'e1', dest: 'e2' },
     ]);
+  });
+
+  it("closes the KataGo post's lines with the verdict for the right side", () => {
+    // KataGo's score is black's; the verdict is red's. Game 94's line for black
+    // (KataGo red) leaves black at 40%, red at 60%: red slightly better, ⩲.
+    const lines = JSON.parse(
+      readFileSync(
+        new URL('../apps/web/src/articles/content/katago-jungle-lines.json', import.meta.url),
+        'utf8',
+      ),
+    ) as Array<{ game: number; ply: number; kataBlackEnd: number }>;
+    const verdict = (game: number, ply: number): string =>
+      assessmentForRedScore(1 - lines.find((l) => l.game === game && l.ply === ply)!.kataBlackEnd)
+        .symbol;
+    assert.equal(verdict(94, 99), '⩲');
+    // Game 67 (KataGo black): lion b1-b2 holds red at 37%, black slightly better.
+    assert.equal(verdict(67, 56), '⩱');
+    // Wolf d2-e2 instead of taking the tiger: black winning either way.
+    assert.equal(verdict(67, 68), '−+');
   });
 });
