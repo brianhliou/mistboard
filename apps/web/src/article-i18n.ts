@@ -2070,6 +2070,33 @@ const ZH_HANS: Record<string, string> = {
     '本页的每一局棋都是一份研究里的一章，你可以在那里从头到尾走一遍：完整的着法树、引擎的变化作为可以走进去的分支、每位冠军一章且顺序相同，末尾还有2025年的世界赛决赛。',
   'Learn how the pieces move': '学习各子的走法',
   'Play through the whole study': '走一遍完整研究',
+  // Merged from the brianhliou.com champions post (2026-10-03): provenance, scale of the case, the annotation pipeline and its totals.
+  'The record was assembled from Chinese sources and cross-checked: title counts, every year won, and the shared title marked as shared. The figure and the table both render from that one dataset, so the picture and the table cannot disagree with each other.':
+    '这份纪录依据中文资料整理并交叉核对：夺冠次数、每一个夺冠年份，并列的那一届也标作并列。图和表都由同一份数据生成，所以两者不会互相矛盾。',
+  'The association sanctioned 49 people over buying and selling games, and a court in Hangzhou convicted six grandmasters of bribery.':
+    '中国象棋协会因买棋卖棋处罚了49人，杭州一家法院以行贿受贿判决六名特级大师有罪。',
+  'How the games were annotated': '这些棋局讲解是怎样做出来的',
+  'Every annotation on this page comes out of one analysis pipeline. Give it a game and it returns a finished study: every move judged, the engine’s preferred alternative hung as a branch you can play into, a verdict closing each branch, and a note saying what the move cost. It runs in four stages.':
+    '本页的每一条讲解都出自同一条分析流程。输入一局棋，它返回一份完成的研究：每一着都有评判，引擎偏好的替代着法挂成可以走进去的分支，每条分支以一个结论收尾，另附一段说明，指出这一着付出了什么代价。它分四个阶段运行。',
+  '**Harvest and verify.** The games come out of the public archives, and every one is replayed through the rules engine before it is kept. A record that does not replay legally is reported as broken rather than published. That matters more than it sounds: the archives contain transcription errors, and a game nobody checked is a game that will eventually show a reader an illegal move.':
+    '**采集与校验。** 棋局来自公开棋谱库，每一局在保留之前都会用规则引擎重放一遍。无法合法重放的棋谱会被报告为损坏，而不是发布出去。这比听起来更重要：棋谱库里有抄录错误，而没人校验过的棋局，终有一天会给读者展示一着违规着法。',
+  '**Analyse.** Pikafish at a million nodes a position, once per ply, at MultiPV 2, so every position yields a best move and a runner-up. The runner-up is the expensive part and it earns its keep: without it you can say a move was bad, but you cannot say a move was the only one, so ! and !! could not be marked. Plies where a piece was offered get a second search, to find out whether the engine’s own line takes it.':
+    '**分析。** Pikafish，每个局面一百万个节点，每步一次，MultiPV 2，因此每个局面都给出一个最佳着法和一个次优着法。次优着法是花费最大的部分，但物有所值：没有它，你可以说某一着很差，却不能说某一着是唯一的一着，于是 ! 和 !! 就无法标注。有子力送吃的那些步还会再做一次搜索，看引擎自己的变化会不会吃。',
+  '**Judge.** Win probability before and after each move decides whether it was an inaccuracy, a mistake or a blunder. A separate pass looks for the moves worth praising. The engine’s own line becomes a sibling branch on the move it should have replaced.':
+    '**评判。** 每一着前后的胜率决定它是失准、错着还是漏着。另有一遍专门寻找值得称赞的着法。引擎自己的变化会挂成同级分支，接在它本该取代的那一着上。',
+  '**Score.** Each branch closes with an assessment symbol in the notation chess players already read: ± a clear advantage, ⩲ a slight one, = level, and the same signs reversed when Black is better.':
+    '**打分。** 每条分支以国际象棋棋手已经熟悉的评估符号收尾：± 明显优势，⩲ 略优，= 均势，黑方占优时符号反过来。',
+  'None of it is specific to these games. The same machinery produces the alternative lines and annotations everywhere else on Mistboard, and pointing it at a new game costs an afternoon of engine time rather than a month of annotating by hand.':
+    '这一切都不是只为这些棋局定制的。Mistboard 其他各处的替代变化和讲解都由同一套机制生成，把它指向一局新棋，花掉的是一个下午的引擎时间，而不是一个月的手工注解。',
+  'Across this page and its companion on [the world title](/blog/xiangqi-world-championship), that comes to 25 games. Of the 201 moves judged, 108 are inaccuracies, 82 are mistakes or blunders, and 11 are moves the engine wanted to praise, three of them marked brilliant.':
+    '把本页和讲[世界冠军](/blog/xiangqi-world-championship)的姊妹篇合起来，一共是25局棋。在被评判的201步中，108步是失准，82步是错着或漏着，11步是引擎想要称赞的着法，其中三步被标为妙手。',
+  'Both champion pages': '两个冠军页面合计',
+  'games annotated': '已讲解棋局',
+  'mainline moves': '主线着法',
+  'moves judged worth marking': '被判定值得标注的着法',
+  'engine sidelines': '引擎副线',
+  'moves inside those sidelines': '这些副线中的着法',
+  'moves in the published trees': '已发布着法树中的着法',
   'Yang Guanlin 杨官璘': '杨官璘',
   'Li Yiting 李义庭': '李义庭',
   'Hu Ronghua 胡荣华': '胡荣华',
@@ -5504,6 +5531,33 @@ const ZH_HANT: Record<string, string> = {
   'Every game on this page is a chapter in a study you can work through properly: the full move tree, the engine’s lines as branches you can walk, one chapter per champion in the same order, and the 2025 world final at the end.':
     '本頁的每一局棋都是一份研究裡的一章，你可以在那裡從頭到尾走一遍：完整的著法樹、引擎的變化作為可以走進去的分支、每位冠軍一章且順序相同，末尾還有2025年的世界賽決賽。',
   'Learn how the pieces move': '學習各子的走法',
+  // Merged from the brianhliou.com champions post (2026-10-03): provenance, scale of the case, the annotation pipeline and its totals.
+  'The record was assembled from Chinese sources and cross-checked: title counts, every year won, and the shared title marked as shared. The figure and the table both render from that one dataset, so the picture and the table cannot disagree with each other.':
+    '這份紀錄依據中文資料整理並交叉核對：奪冠次數、每一個奪冠年份，並列的那一屆也標作並列。圖和表都由同一份資料生成，所以兩者不會互相矛盾。',
+  'The association sanctioned 49 people over buying and selling games, and a court in Hangzhou convicted six grandmasters of bribery.':
+    '中國象棋協會因買棋賣棋處罰了49人，杭州一家法院以行賄受賄判決六名特級大師有罪。',
+  'How the games were annotated': '這些棋局講解是怎樣做出來的',
+  'Every annotation on this page comes out of one analysis pipeline. Give it a game and it returns a finished study: every move judged, the engine’s preferred alternative hung as a branch you can play into, a verdict closing each branch, and a note saying what the move cost. It runs in four stages.':
+    '本頁的每一條講解都出自同一條分析流程。輸入一局棋，它回傳一份完成的研究：每一著都有評判，引擎偏好的替代著法掛成可以走進去的分支，每條分支以一個結論收尾，另附一段說明，指出這一著付出了什麼代價。它分四個階段執行。',
+  '**Harvest and verify.** The games come out of the public archives, and every one is replayed through the rules engine before it is kept. A record that does not replay legally is reported as broken rather than published. That matters more than it sounds: the archives contain transcription errors, and a game nobody checked is a game that will eventually show a reader an illegal move.':
+    '**擷取與驗證。** 棋局來自公開棋譜庫，每一局在保留之前都會透過規則引擎重播一遍。無法合法重播的棋譜會被回報為損壞，而不會發佈。這比聽起來更重要：棋譜庫中含有抄錄錯誤，而沒有人查核過的棋局，遲早會讓讀者看到一著不合法的著法。',
+  '**Analyse.** Pikafish at a million nodes a position, once per ply, at MultiPV 2, so every position yields a best move and a runner-up. The runner-up is the expensive part and it earns its keep: without it you can say a move was bad, but you cannot say a move was the only one, so ! and !! could not be marked. Plies where a piece was offered get a second search, to find out whether the engine’s own line takes it.':
+    '**分析。** Pikafish，每個局面一百萬個節點，每步一次，MultiPV 2，因此每個局面都給出一個最佳著法和一個次佳著法。次佳著法是花費最大的部分，但物有所值：沒有它，你可以說某一著很差，卻不能說某一著是唯一的一著，於是 ! 和 !! 就無從標記。有子力送吃的那些步還會再做一次搜尋，看引擎自己的變化會不會吃。',
+  '**Judge.** Win probability before and after each move decides whether it was an inaccuracy, a mistake or a blunder. A separate pass looks for the moves worth praising. The engine’s own line becomes a sibling branch on the move it should have replaced.':
+    '**評判。** 每一著前後的勝率決定它是失準、錯著還是漏著。另有一輪專門尋找值得稱讚的著法。引擎自己的變化會掛成同級分支，接在它本該取代的那一著上。',
+  '**Score.** Each branch closes with an assessment symbol in the notation chess players already read: ± a clear advantage, ⩲ a slight one, = level, and the same signs reversed when Black is better.':
+    '**評分。** 每條分支以國際象棋棋手已經熟悉的評估符號收尾：± 明顯優勢，⩲ 略優，= 均勢，黑方佔優時符號反過來。',
+  'None of it is specific to these games. The same machinery produces the alternative lines and annotations everywhere else on Mistboard, and pointing it at a new game costs an afternoon of engine time rather than a month of annotating by hand.':
+    '這一切都不是只為這些棋局訂製的。Mistboard 其他各處的替代變化和講解都由同一套機制產生，把它指向一局新棋，花掉的是一個下午的引擎時間，而不是一個月的手工註解。',
+  'Across this page and its companion on [the world title](/blog/xiangqi-world-championship), that comes to 25 games. Of the 201 moves judged, 108 are inaccuracies, 82 are mistakes or blunders, and 11 are moves the engine wanted to praise, three of them marked brilliant.':
+    '把本頁和講[世界冠軍](/blog/xiangqi-world-championship)的姊妹篇合起來，一共是25局棋。在被評判的201步中，108步是失準，82步是錯著或漏著，11步是引擎想要稱讚的著法，其中三步被標為妙手。',
+  'Both champion pages': '兩個冠軍頁面合計',
+  'games annotated': '已講解棋局',
+  'mainline moves': '主線著法',
+  'moves judged worth marking': '被判定值得標註的著法',
+  'engine sidelines': '引擎副線',
+  'moves inside those sidelines': '這些副線中的著法',
+  'moves in the published trees': '已發佈著法樹中的著法',
   title: '冠軍',
   'shared title': '並列冠軍',
   'title, champion later banned': '冠軍，其後被禁賽',
