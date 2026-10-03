@@ -32,6 +32,9 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Machine-drafted 2026-10-02, not native-reviewed, locked with its English
+  // copy, which publishes in the same release (the AB-JChess post's pattern).
+  'katago-jungle',
   // Machine-drafted 2026-10-01, not native-reviewed, locked the day after the
   // English copy published (2026-09-30); its News entry was already in zh.
   'one-thousand-games',
@@ -152,6 +155,57 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // katago-jungle: machine-drafted 2026-10-02, not native-reviewed.
+  "We scored every position of two of those wins again with both engines, at the match settings. Each chart shows both engines' estimate of KataGo's score, where a win is 100% and a draw 50%. KataGo's own number counts a draw as half a point; Misty's centipawns become a score through the curve our analysis board uses, 1 / (1 + e^(−0.00368 × cp)). The dashed line is 80%, each dotted line marks the ply from which that engine stayed above it to the end, and ?? marks the move KataGo calls the losing one. A ply is one side's move.":
+    '我们用两个引擎按比赛设置，把其中两盘胜局的每个局面重新评估了一遍。每张图显示两个引擎对 KataGo 得分的估计：赢为 100%，和为 50%。KataGo 自己的数字把和棋算作半分；Misty 的分数（厘兵）按我们分析棋盘使用的曲线 1 / (1 + e^(−0.00368 × cp)) 换算成得分。虚线是 80%，每条点线标出该引擎从哪一步起一直保持在 80% 以上直到终局，?? 标出 KataGo 认为输棋的那一步。一步（ply）指一方走一着。',
+  "Misty, playing red, won a wolf on ply 21 and read itself ahead for most of the game, while KataGo's score stayed at 50% and then climbed.":
+    'Misty 执红，第 21 步吃掉一只狼，大半盘都认为自己领先；而 KataGo 的得分先停在 50%，随后一路上升。',
+  "On ply 57 Misty moved its cornered tiger from g8 to g9, and KataGo's score for itself went from 61% to 92% while Misty still read +111. KataGo's line for red starts with lion b1-b2 and keeps red at 37%. KataGo stayed above 80% from that ply; Misty got there on ply 72, 15 plies later.":
+    '第 57 步 Misty 把困在角落的虎从 g8 走到 g9，KataGo 对自己的得分从 61% 升到 92%，而 Misty 仍认为自己 +111。KataGo 为红方给出的变化从狮 b1-b2 开始，能让红方保持 37%。KataGo 从这一步起一直在 80% 以上；Misty 到第 72 步才达到，晚了 15 步。',
+  "Misty, playing black, won a wolf on ply 38 and read itself ahead for most of the next 60 plies, while KataGo's score crept from 50% to 63%.":
+    'Misty 执黑，第 38 步吃掉一只狼，此后 60 步里大部分时间都认为自己领先；而 KataGo 的得分从 50% 慢慢升到 63%。',
+  "On ply 100 Misty moved its cat from c8 to c7, and KataGo went from 63% to 98%. Misty read +80 and found the forced loss four plies later. KataGo's line for black, elephant d6-d7, keeps black at 38%.":
+    '第 100 步 Misty 把猫从 c8 走到 c7，KataGo 从 63% 升到 98%。Misty 仍认为自己 +80，四步之后才算出必输。KataGo 为黑方给出的变化是象 d6-d7，能让黑方保持 38%。',
+  'In these two games, KataGo settled on the result 15 and 4 plies before Misty did.':
+    '在这两盘棋中，KataGo 分别比 Misty 早 15 步和 4 步看准了结果。',
+  'KataGo, a stronger Jungle Chess bot': 'KataGo：更强的斗兽棋电脑',
+  'KataGo for Jungle Chess: 82 wins, 118 draws and no losses against Misty':
+    'KataGo 斗兽棋：对 Misty 82 胜 118 和 0 负',
+  'Two wins, read by both engines': '两盘胜局，两个引擎各自怎么看',
+  'Game 67: a wolf up, and lost': '第 67 盘：多一只狼，却输了',
+  "Game 67: KataGo's score, as each engine saw it": '第 67 盘：两个引擎眼中 KataGo 的得分',
+  "Game 67, KataGo's expected score by ply as KataGo and Misty saw it. KataGo stays above 80% from ply 57, Misty from ply 72.":
+    '第 67 盘，KataGo 和 Misty 各自估计的 KataGo 期望得分，按步数。KataGo 从第 57 步起保持在 80% 以上，Misty 从第 72 步起。',
+  "Jungle Chess, game 67: Misty's moves marked by KataGo":
+    '斗兽棋第 67 盘：KataGo 标注的 Misty 着法',
+  'Game 94: the slow squeeze': '第 94 盘：慢慢收紧',
+  "Game 94: KataGo's score, as each engine saw it": '第 94 盘：两个引擎眼中 KataGo 的得分',
+  "Game 94, KataGo's expected score by ply as KataGo and Misty saw it. KataGo stays above 80% from ply 100, Misty from ply 104.":
+    '第 94 盘，KataGo 和 Misty 各自估计的 KataGo 期望得分，按步数。KataGo 从第 100 步起保持在 80% 以上，Misty 从第 104 步起。',
+  "Jungle Chess, game 94: Misty's moves marked by KataGo":
+    '斗兽棋第 94 盘：KataGo 标注的 Misty 着法',
+  Ply: '步数',
+  'A Jungle Chess engine that learned by playing itself now sits above Misty. In 200 games against Misty it won 82, lost none and drew 118.':
+    '一个靠自我对弈学会斗兽棋的引擎，现在排在 Misty 之上。它和 Misty 下了 200 盘，赢 82 盘，一盘未输，和 118 盘。',
+  "[Jungle Chess](/rules/jungle) on Mistboard has a new top bot. It is KataGo-AnimalChess, hzyhhzy's [KataGomo](https://github.com/hzyhhzy/KataGomo/tree/AnimalChess2025) built on lightvector's [KataGo](https://github.com/lightvector/KataGo), playing with the b10c384 network from Dandelion 4 by Kouza ([lxsgx23](https://github.com/lxsgx23)). We play it here with [hzyhhzy's permission](https://github.com/hzyhhzy/KataGomo/issues/12), under the name KataGo.":
+    '[斗兽棋](/rules/jungle)在 Mistboard 上有了新的最强电脑。它就是 KataGo-AnimalChess：hzyhhzy 在 lightvector 的 [KataGo](https://github.com/lightvector/KataGo) 基础上开发的 [KataGomo](https://github.com/hzyhhzy/KataGomo/tree/AnimalChess2025)，使用 Kouza（[lxsgx23](https://github.com/lxsgx23)）Dandelion 4 的 b10c384 神经网络。我们经 [hzyhhzy 许可](https://github.com/hzyhhzy/KataGomo/issues/12)在这里使用它，名字就叫 KataGo。',
+  'KataGo learned Jungle Chess by playing itself, the way AlphaZero learned chess. A neural network proposes moves and judges positions, and a search checks its ideas. No other engine taught it.':
+    'KataGo 和 AlphaZero 学国际象棋一样，靠自己和自己下棋学会了斗兽棋。神经网络提出着法、评估局面，搜索再去检验它的想法。没有任何别的引擎教过它。',
+  'Play KataGo': '挑战 KataGo',
+  'See all bots': '查看所有电脑',
+  '82 wins and no losses against Misty': '对 Misty 82 胜 0 负',
+  "Before putting it on the site, we played it against Misty, our own Jungle Chess bot, in an open challenge of 200 games at 1,000 visits a move. hzyhhzy's engine won 82, lost none and drew 118, a score of 0.705. Every win came from walking into Misty's den, and every draw was a repetition.":
+    '上线之前，我们让它和我们自己的斗兽棋电脑 Misty 进行了一场公开挑战赛：200 盘，每步 1,000 次访问。hzyhhzy 的引擎赢 82 盘、输 0 盘、和 118 盘，得分率 0.705。每一盘胜局都是走进 Misty 的兽穴取胜，每一盘和棋都是重复局面。',
+  'All 200 games are in [one study](/study/0t8xpyv6), and the [match write-up](https://brianhliou.com/posts/katago-beats-misty-jungle/) has the details.':
+    '全部 200 盘都收在[一个研究](/study/0t8xpyv6)里，详情见[比赛记录](https://brianhliou.com/posts/katago-beats-misty-jungle/)。',
+  'Misty is still where you start': '入门仍从 Misty 开始',
+  'KataGo is at the top of the Jungle Chess bot list, above Misty. Misty stays the default and the easier opponent; pick KataGo when you want the stronger game. Game review and analysis for Jungle Chess still run on Misty.':
+    'KataGo 排在斗兽棋电脑列表的最上面，在 Misty 之上。Misty 仍是默认对手，也是较容易的那一个；想下更难的棋就选 KataGo。斗兽棋的复盘和分析仍由 Misty 负责。',
+  'On the site KataGo searches 150 visits a move, which takes about 1.5 to 3.5 seconds. At that setting it scored 19 wins, no losses and 31 draws in 50 games against Misty, 0.690, which cannot be told apart from the 1,000-visit result. The strength is in the network.':
+    '在网站上，KataGo 每步搜索 150 次访问，大约用时 1.5 到 3.5 秒。在这个设置下，它和 Misty 下了 50 盘，19 胜 0 负 31 和，得分率 0.690，与 1,000 次访问的结果分不出差别。它的棋力来自神经网络。',
+  'KataGomo is open source at [github.com/hzyhhzy/KataGomo](https://github.com/hzyhhzy/KataGomo). Thank you, hzyhhzy, for the engine and for letting us use it; lightvector, for KataGo; and Kouza, for the Dandelion 4 network.':
+    'KataGomo 是开源项目，地址是 [github.com/hzyhhzy/KataGomo](https://github.com/hzyhhzy/KataGomo)。感谢 hzyhhzy 提供引擎并允许我们使用，感谢 lightvector 的 KataGo，也感谢 Kouza 的 Dandelion 4 神经网络。',
+  'Jungle Chess rules': '斗兽棋规则',
   // one-thousand-games: machine-drafted 2026-10-01, not native-reviewed.
   '1,000 games played': '已下完 1,000 盘棋',
   'Mistboard passes 1,000 games': 'Mistboard 突破 1,000 盘对局',
@@ -3423,6 +3477,57 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // katago-jungle: machine-drafted 2026-10-02, not native-reviewed.
+  "We scored every position of two of those wins again with both engines, at the match settings. Each chart shows both engines' estimate of KataGo's score, where a win is 100% and a draw 50%. KataGo's own number counts a draw as half a point; Misty's centipawns become a score through the curve our analysis board uses, 1 / (1 + e^(−0.00368 × cp)). The dashed line is 80%, each dotted line marks the ply from which that engine stayed above it to the end, and ?? marks the move KataGo calls the losing one. A ply is one side's move.":
+    '我們用兩個引擎按比賽設定，把其中兩盤勝局的每個局面重新評估了一遍。每張圖顯示兩個引擎對 KataGo 得分的估計：贏為 100%，和為 50%。KataGo 自己的數字把和棋算作半分；Misty 的分數（釐兵）按我們分析棋盤使用的曲線 1 / (1 + e^(−0.00368 × cp)) 換算成得分。虛線是 80%，每條點線標出該引擎從哪一步起一直保持在 80% 以上直到終局，?? 標出 KataGo 認為輸棋的那一步。一步（ply）指一方走一著。',
+  "Misty, playing red, won a wolf on ply 21 and read itself ahead for most of the game, while KataGo's score stayed at 50% and then climbed.":
+    'Misty 執紅，第 21 步吃掉一隻狼，大半盤都認為自己領先；而 KataGo 的得分先停在 50%，隨後一路上升。',
+  "On ply 57 Misty moved its cornered tiger from g8 to g9, and KataGo's score for itself went from 61% to 92% while Misty still read +111. KataGo's line for red starts with lion b1-b2 and keeps red at 37%. KataGo stayed above 80% from that ply; Misty got there on ply 72, 15 plies later.":
+    '第 57 步 Misty 把困在角落的虎從 g8 走到 g9，KataGo 對自己的得分從 61% 升到 92%，而 Misty 仍認為自己 +111。KataGo 為紅方給出的變化從獅 b1-b2 開始，能讓紅方保持 37%。KataGo 從這一步起一直在 80% 以上；Misty 到第 72 步才達到，晚了 15 步。',
+  "Misty, playing black, won a wolf on ply 38 and read itself ahead for most of the next 60 plies, while KataGo's score crept from 50% to 63%.":
+    'Misty 執黑，第 38 步吃掉一隻狼，此後 60 步裡大部分時間都認為自己領先；而 KataGo 的得分從 50% 慢慢升到 63%。',
+  "On ply 100 Misty moved its cat from c8 to c7, and KataGo went from 63% to 98%. Misty read +80 and found the forced loss four plies later. KataGo's line for black, elephant d6-d7, keeps black at 38%.":
+    '第 100 步 Misty 把貓從 c8 走到 c7，KataGo 從 63% 升到 98%。Misty 仍認為自己 +80，四步之後才算出必輸。KataGo 為黑方給出的變化是象 d6-d7，能讓黑方保持 38%。',
+  'In these two games, KataGo settled on the result 15 and 4 plies before Misty did.':
+    '在這兩盤棋中，KataGo 分別比 Misty 早 15 步和 4 步看準了結果。',
+  'KataGo, a stronger Jungle Chess bot': 'KataGo：更強的鬥獸棋電腦',
+  'KataGo for Jungle Chess: 82 wins, 118 draws and no losses against Misty':
+    'KataGo 鬥獸棋：對 Misty 82 勝 118 和 0 負',
+  'Two wins, read by both engines': '兩盤勝局，兩個引擎各自怎麼看',
+  'Game 67: a wolf up, and lost': '第 67 盤：多一隻狼，卻輸了',
+  "Game 67: KataGo's score, as each engine saw it": '第 67 盤：兩個引擎眼中 KataGo 的得分',
+  "Game 67, KataGo's expected score by ply as KataGo and Misty saw it. KataGo stays above 80% from ply 57, Misty from ply 72.":
+    '第 67 盤，KataGo 和 Misty 各自估計的 KataGo 期望得分，按步數。KataGo 從第 57 步起保持在 80% 以上，Misty 從第 72 步起。',
+  "Jungle Chess, game 67: Misty's moves marked by KataGo":
+    '鬥獸棋第 67 盤：KataGo 標註的 Misty 著法',
+  'Game 94: the slow squeeze': '第 94 盤：慢慢收緊',
+  "Game 94: KataGo's score, as each engine saw it": '第 94 盤：兩個引擎眼中 KataGo 的得分',
+  "Game 94, KataGo's expected score by ply as KataGo and Misty saw it. KataGo stays above 80% from ply 100, Misty from ply 104.":
+    '第 94 盤，KataGo 和 Misty 各自估計的 KataGo 期望得分，按步數。KataGo 從第 100 步起保持在 80% 以上，Misty 從第 104 步起。',
+  "Jungle Chess, game 94: Misty's moves marked by KataGo":
+    '鬥獸棋第 94 盤：KataGo 標註的 Misty 著法',
+  Ply: '步數',
+  'A Jungle Chess engine that learned by playing itself now sits above Misty. In 200 games against Misty it won 82, lost none and drew 118.':
+    '一個靠自我對弈學會鬥獸棋的引擎，現在排在 Misty 之上。它和 Misty 下了 200 盤，贏 82 盤，一盤未輸，和 118 盤。',
+  "[Jungle Chess](/rules/jungle) on Mistboard has a new top bot. It is KataGo-AnimalChess, hzyhhzy's [KataGomo](https://github.com/hzyhhzy/KataGomo/tree/AnimalChess2025) built on lightvector's [KataGo](https://github.com/lightvector/KataGo), playing with the b10c384 network from Dandelion 4 by Kouza ([lxsgx23](https://github.com/lxsgx23)). We play it here with [hzyhhzy's permission](https://github.com/hzyhhzy/KataGomo/issues/12), under the name KataGo.":
+    '[鬥獸棋](/rules/jungle)在 Mistboard 上有了新的最強電腦。它就是 KataGo-AnimalChess：hzyhhzy 在 lightvector 的 [KataGo](https://github.com/lightvector/KataGo) 基礎上開發的 [KataGomo](https://github.com/hzyhhzy/KataGomo/tree/AnimalChess2025)，使用 Kouza（[lxsgx23](https://github.com/lxsgx23)）Dandelion 4 的 b10c384 神經網路。我們經 [hzyhhzy 許可](https://github.com/hzyhhzy/KataGomo/issues/12)在這裡使用它，名字就叫 KataGo。',
+  'KataGo learned Jungle Chess by playing itself, the way AlphaZero learned chess. A neural network proposes moves and judges positions, and a search checks its ideas. No other engine taught it.':
+    'KataGo 和 AlphaZero 學西洋棋一樣，靠自己和自己下棋學會了鬥獸棋。神經網路提出著法、評估局面，搜尋再去檢驗它的想法。沒有任何別的引擎教過它。',
+  'Play KataGo': '挑戰 KataGo',
+  'See all bots': '查看所有電腦',
+  '82 wins and no losses against Misty': '對 Misty 82 勝 0 負',
+  "Before putting it on the site, we played it against Misty, our own Jungle Chess bot, in an open challenge of 200 games at 1,000 visits a move. hzyhhzy's engine won 82, lost none and drew 118, a score of 0.705. Every win came from walking into Misty's den, and every draw was a repetition.":
+    '上線之前，我們讓它和我們自己的鬥獸棋電腦 Misty 進行了一場公開挑戰賽：200 盤，每步 1,000 次訪問。hzyhhzy 的引擎贏 82 盤、輸 0 盤、和 118 盤，得分率 0.705。每一盤勝局都是走進 Misty 的獸穴取勝，每一盤和棋都是重複局面。',
+  'All 200 games are in [one study](/study/0t8xpyv6), and the [match write-up](https://brianhliou.com/posts/katago-beats-misty-jungle/) has the details.':
+    '全部 200 盤都收在[一個研究](/study/0t8xpyv6)裡，詳情見[比賽記錄](https://brianhliou.com/posts/katago-beats-misty-jungle/)。',
+  'Misty is still where you start': '入門仍從 Misty 開始',
+  'KataGo is at the top of the Jungle Chess bot list, above Misty. Misty stays the default and the easier opponent; pick KataGo when you want the stronger game. Game review and analysis for Jungle Chess still run on Misty.':
+    'KataGo 排在鬥獸棋電腦列表的最上面，在 Misty 之上。Misty 仍是預設對手，也是較容易的那一個；想下更難的棋就選 KataGo。鬥獸棋的復盤和分析仍由 Misty 負責。',
+  'On the site KataGo searches 150 visits a move, which takes about 1.5 to 3.5 seconds. At that setting it scored 19 wins, no losses and 31 draws in 50 games against Misty, 0.690, which cannot be told apart from the 1,000-visit result. The strength is in the network.':
+    '在網站上，KataGo 每步搜尋 150 次訪問，大約用時 1.5 到 3.5 秒。在這個設定下，它和 Misty 下了 50 盤，19 勝 0 負 31 和，得分率 0.690，與 1,000 次訪問的結果分不出差別。它的棋力來自神經網路。',
+  'KataGomo is open source at [github.com/hzyhhzy/KataGomo](https://github.com/hzyhhzy/KataGomo). Thank you, hzyhhzy, for the engine and for letting us use it; lightvector, for KataGo; and Kouza, for the Dandelion 4 network.':
+    'KataGomo 是開源專案，網址是 [github.com/hzyhhzy/KataGomo](https://github.com/hzyhhzy/KataGomo)。感謝 hzyhhzy 提供引擎並允許我們使用，感謝 lightvector 的 KataGo，也感謝 Kouza 的 Dandelion 4 神經網路。',
+  'Jungle Chess rules': '鬥獸棋規則',
   '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
     '[MistyBanqi](/blog/mistybanqi) 自我對弈，每步搜尋一千萬個節點，是本站機器人的三倍棋力。用箭頭一步步看。[配套研究](/study/FsA5sowX)收了這批棋的全部二十盤，一盤一章，附上每盤怎麼走完的註記。同一批棋裡的兩百盤被整理成數字，放在[用數字看暗棋](/blog/banqi-statistics)：領先多少才算安全，一盤棋什麼時候就定了。',
   "There's an upshot for you here. If you're losing on material, you're not necessarily lost: herd one of its strong pieces into a perpetual chase, and MistyBanqi may walk into the draw it can't see it should decline. It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":

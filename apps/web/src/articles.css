@@ -2879,3 +2879,21 @@ a.article-meta-author:hover .article-meta-author-name {
   padding-right: 18px;
   font-variant-numeric: tabular-nums;
 }
+
+/* Two engines' evaluations of one game (articles/eval-compare-chart.ts). The
+   lighter teal and orange keep both lines readable on the dark page. */
+.article-figure-eval-compare {
+  align-items: stretch;
+}
+.article-figure-eval-compare > .eval-compare-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 702px;
+  margin: 0 auto;
+}
+:root[data-effective-theme="dark"] .article-figure-eval-compare {
+  --eval-compare-a: #4fb3c8;
+  --eval-compare-b: #f0a25a;
+  --eval-compare-gap: rgba(240, 162, 90, 0.18);
+}

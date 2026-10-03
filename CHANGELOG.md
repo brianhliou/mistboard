@@ -43,6 +43,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- New post: KataGo, a stronger Jungle Chess bot, reading two of its wins over Misty with both engines' evaluations ([fa06feca](https://github.com/brianhliou/mistboard/commit/fa06feca))
 - A Crazyhouse Xiangqi study of six engine games, with notes on the drops that decided them, embedded on the rules page ([95b57417](https://github.com/brianhliou/mistboard/commit/95b57417))
 - Crazyhouse Xiangqi games, studies and lines can be embedded, with both hands shown ([0bc99f1f](https://github.com/brianhliou/mistboard/commit/0bc99f1f))
 - the Crazyhouse Xiangqi rules page is rebuilt around boards with both hands drawn: drop zones, drop check and mate, and an engine game to play through ([d2170ca3](https://github.com/brianhliou/mistboard/commit/d2170ca3))
@@ -51,6 +52,7 @@ Conventions:
 
 ### Watching and review
 
+- Embedded Jungle studies show comments, move marks and side lines, like the study page ([fa06feca](https://github.com/brianhliou/mistboard/commit/fa06feca))
 - Live Crazyhouse Xiangqi games show their board with both hands on Current games and correspondence cards, instead of a variant icon ([c44741d5](https://github.com/brianhliou/mistboard/commit/c44741d5))
 - Atomic Xiangqi games in progress now show their board on Current games, Watch live and the correspondence inbox ([58b0ac0d](https://github.com/brianhliou/mistboard/commit/58b0ac0d))
 - The note box under a study board shows only on a move with a note, with no empty gap on the others ([95b57417](https://github.com/brianhliou/mistboard/commit/95b57417))

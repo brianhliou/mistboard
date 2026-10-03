@@ -38,6 +38,7 @@ import { jungleFlipResultLabel } from '../jungle-flip-result-label.js';
 import { mountJungleReplayBoard } from '../jungle-replay-board.js';
 import { replayStepperCopy } from '../replay-stepper-copy.js';
 import { reviewResultLabel } from '../review/game-review-meta.js';
+import { chapterAnnotations } from '../study-chapter-annotations.js';
 import { type StudyChapterPayload, studyChapterToReplaySpec } from '../study-chapter-spec.js';
 import { seatInkFamily } from '../variant-seat-label.js';
 import { boardAspectForSpec } from '../watch-board-aspect.js';
@@ -339,7 +340,10 @@ async function mountJungleEmbed(
     note(root, 'This chapter has no position to show.');
     return;
   }
-  const moves = mainlineTokens(chapter);
+  // Jungle is perfect information, so the chapter's whole argument rides
+  // along, as on the study page: glyphs on the sheet and the board, verdicts,
+  // comments, each move's first sideline (steppable), and the drawn shapes.
+  const { moves, glyphs, notes, lines, assessments, shapes } = chapterAnnotations(chapter);
   const tags = chapter.tags ?? {};
   const event = tags.event ?? chapter.name ?? 'Study';
   const result =
@@ -365,7 +369,20 @@ async function mountJungleEmbed(
     railWidthPx: embedRailWidthPx('jungle'),
     startPly: options.startPly ?? 0,
     mountBoard: async (host, hooks) =>
-      mountJungleReplayBoard(host, { rootFen, moves, perspective: 'red' }, hooks),
+      mountJungleReplayBoard(
+        host,
+        {
+          rootFen,
+          moves,
+          perspective: chapter.orientation === 'black' ? 'black' : 'red',
+          glyphs,
+          notes,
+          lines,
+          assessments,
+          shapes,
+        },
+        hooks,
+      ),
   });
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;
 }
