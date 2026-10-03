@@ -10,7 +10,6 @@ import {
   CRAZYHOUSE_XIANGQI_TURN_PAIR,
   CRAZYHOUSE_XIANGQI_ZONE_ANYWHERE,
   CRAZYHOUSE_XIANGQI_ZONE_OWN_HALF,
-  CRAZYHOUSE_XIANGQI_ZONE_SOLDIER,
 } from './crazyhouse-xiangqi-rules-diagrams.js';
 
 // The figures are drawn from the kernel and throw when it no longer supports
@@ -35,7 +34,6 @@ describe('crazyhouse xiangqi rules diagrams', () => {
     CAPTURE_PAIR: CRAZYHOUSE_XIANGQI_CAPTURE_PAIR,
     ZONE_OWN_HALF: CRAZYHOUSE_XIANGQI_ZONE_OWN_HALF,
     ZONE_ANYWHERE: CRAZYHOUSE_XIANGQI_ZONE_ANYWHERE,
-    ZONE_SOLDIER: CRAZYHOUSE_XIANGQI_ZONE_SOLDIER,
     DROP_CHECK_PAIR: CRAZYHOUSE_XIANGQI_DROP_CHECK_PAIR,
     DROP_MATE_PAIR: CRAZYHOUSE_XIANGQI_DROP_MATE_PAIR,
     ADVISOR_PAIR: CRAZYHOUSE_XIANGQI_ADVISOR_PAIR,
@@ -76,12 +74,11 @@ describe('crazyhouse xiangqi rules diagrams', () => {
     expect(held(svg, 'black')).toEqual(['cannon1', 'cannon1']);
   });
 
-  it('marks the drop zones on an empty board: 45, 90 and 10 + 45 points', () => {
+  it('marks the drop zones on an empty board: 45 and 90 points', () => {
     expect(dots(CRAZYHOUSE_XIANGQI_ZONE_OWN_HALF())).toBe(45);
     expect(dots(CRAZYHOUSE_XIANGQI_ZONE_ANYWHERE())).toBe(90);
-    expect(dots(CRAZYHOUSE_XIANGQI_ZONE_SOLDIER())).toBe(55);
     // No board pieces, only the region's pieces in the strip above it.
-    expect(count(CRAZYHOUSE_XIANGQI_ZONE_SOLDIER(), /data-piece-square/g)).toBe(0);
+    expect(count(CRAZYHOUSE_XIANGQI_ZONE_ANYWHERE(), /data-piece-square/g)).toBe(0);
   });
 
   it('gives check with a dropped horse and with a dropped cannon screen', () => {
@@ -111,7 +108,7 @@ describe('crazyhouse xiangqi rules diagrams', () => {
     const start = sizes(CRAZYHOUSE_XIANGQI_START_BOARD());
     const zone = sizes(CRAZYHOUSE_XIANGQI_ZONE_ANYWHERE());
     expect(start.length).toBe(4);
-    expect(zone.length).toBe(3);
+    expect(zone.length).toBe(4);
     expect(Math.min(...zone)).toBeGreaterThan(Math.max(...start));
   });
 

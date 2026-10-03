@@ -79,9 +79,8 @@ export type DropPolicyId =
   // parachute anywhere incl. the enemy half; defenders (advisor/elephant) drop
   // only where they may legally stand (palace / own half).
   | 'attacker-anywhere-defender-home'
-  // Crazyhouse Xiangqi: a piece drops on any empty point where it could stand
-  // (advisors and elephants anywhere on their own half, soldiers on their
-  // files' home ranks or across the river, the rest anywhere), check and mate
+  // Crazyhouse Xiangqi: a piece drops on any empty point (advisors and
+  // elephants on their own half, everything else anywhere), check and mate
   // allowed.
   | 'standing-point'
   | 'seen-squares-only';
@@ -531,7 +530,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
   {
     // Crazyhouse Xiangqi: xiangqi, plus a captured piece goes to the
     // capturer's hand, and on your turn you may instead drop a piece from hand
-    // onto any empty point where it could stand. Advisors and elephants start
+    // onto any empty point (advisors and elephants: own half). They start
     // in hand and move anywhere on their own half; a drop may check and mate.
     // Checkmate, stalemate and the perpetual-check law are xiangqi's;
     // repetition counts the hands.

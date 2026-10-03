@@ -8,12 +8,11 @@
 //     empty, empty, horse, chariot; every other piece stands where it does in
 //     xiangqi;
 //   - a captured piece goes to the capturer's hand, and on your turn you may
-//     instead drop a piece from your hand onto any empty point where that
-//     piece could stand:
+//     instead drop a piece from your hand onto an empty point:
 //       - advisors and elephants: any point of your own half;
-//       - soldiers: the soldier files' two home ranks on your own half (red
-//         a4 a5 c4 c5 e4 e5 g4 g5 i4 i5), or anywhere across the river;
-//       - chariots, horses and cannons: any empty point;
+//       - chariots, horses, cannons and soldiers: any empty point (a soldier
+//         dropped on its own half steps forward from there, as if it had
+//         walked; 2026-10-03, replacing the soldier files' home ranks);
 //       - the general is never in hand (it is mated, never taken);
 //   - advisors move one diagonal step and elephants two (the eye blocks, as in
 //     xiangqi), anywhere on their own half; neither ever crosses the river;
@@ -223,8 +222,6 @@ const HORSE: readonly (readonly [number, number, number, number])[] = [
   [-2, -1, -1, 0],
 ];
 
-const SOLDIER_FILES: ReadonlySet<number> = new Set([0, 2, 4, 6, 8]);
-
 // ── Colours, moves, regions ────────────────────────────────────────────────
 
 export function oppositeCrazyhouseXiangqiColor(
@@ -258,12 +255,6 @@ export function crazyhouseXiangqiCanStand(
     case 'advisor':
     case 'elephant':
       return inOwnHalf(color, coordOf(square).rank);
-    case 'soldier': {
-      const { file, rank } = coordOf(square);
-      if (color === 'red')
-        return rank >= 6 || ((rank === 4 || rank === 5) && SOLDIER_FILES.has(file));
-      return rank <= 5 || ((rank === 6 || rank === 7) && SOLDIER_FILES.has(file));
-    }
     default:
       return true;
   }

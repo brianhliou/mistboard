@@ -9,7 +9,7 @@
 // a fixture to edit.
 //
 // The games are the variant lab's (docs-private/drop-game-lab/fullboard/games/,
-// s9-hand-free-check, the rule set the .ini flattens): the 16 strong games
+// s12-hand-free-check-pany, the rule set the .ini flattens): the 16 strong games
 // (5 s/move) and the 30 depth-12 games. Positions kept: the start, every 5th
 // ply of the strong games, every 30th of the depth-12 games, and, from every
 // ply of every game, a capped sample of the cases a sampled ply can miss: the
@@ -44,8 +44,8 @@ const VARIANT_NO_DROP_CHECKS = 'crazyhousexiangqinodropchecks';
 const VARIANT_CROSSING = 'crazyhousexiangqicrossing';
 
 const SOURCES = [
-  { name: 'strong', file: 's9-hand-free-check-strong.json', every: 5 },
-  { name: 'd12', file: 's9-hand-free-check.json', every: 30 },
+  { name: 'strong', file: 's12-hand-free-check-pany-strong.json', every: 5 },
+  { name: 'd12', file: 's12-hand-free-check-pany.json', every: 30 },
 ];
 const EXTRA_IN_CHECK_WITH_HAND = 25;
 const EXTRA_SCREEN_CHECK = 25;

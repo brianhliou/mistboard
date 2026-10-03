@@ -9,7 +9,6 @@ import {
   CRAZYHOUSE_XIANGQI_TURN_PAIR,
   CRAZYHOUSE_XIANGQI_ZONE_ANYWHERE,
   CRAZYHOUSE_XIANGQI_ZONE_OWN_HALF,
-  CRAZYHOUSE_XIANGQI_ZONE_SOLDIER,
 } from '../../crazyhouse-xiangqi-rules-diagrams.js';
 import { playClosing } from '../diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
@@ -31,7 +30,7 @@ export const crazyhouseXiangqiArticle: Article = {
   kind: 'rules',
   title: 'Crazyhouse Xiangqi Rules',
   summary:
-    'Xiangqi where a captured piece joins your hand and the advisors and elephants start there: drop a piece on any empty point where it could stand, check and mate included.',
+    'Xiangqi where a captured piece joins your hand and the advisors and elephants start there: drop a piece on any empty point, advisors and elephants on their own half, check and mate included.',
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-10-01',
@@ -146,21 +145,20 @@ export const crazyhouseXiangqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'A piece may be dropped only on an empty point where it could stand, which leaves three zones. Chariots, horses and cannons may go anywhere. Advisors and elephants stay on your own half of the board. A soldier may go on any of its ten home points (the five soldier files, on the rank where soldiers start and the rank in front of it) or anywhere across the river.',
+          text: 'A piece may be dropped on any empty point, with one limit: advisors and elephants stay on your own half of the board. Chariots, horses, cannons and soldiers may go anywhere, the enemy palace and your own back rank included.',
         },
         {
           kind: 'svg-row',
           items: [
             { svg: CRAZYHOUSE_XIANGQI_ZONE_OWN_HALF },
             { svg: CRAZYHOUSE_XIANGQI_ZONE_ANYWHERE },
-            { svg: CRAZYHOUSE_XIANGQI_ZONE_SOLDIER },
           ],
           caption:
-            'Red’s drop zones on an empty board: 45 points for an advisor or elephant, all 90 for a chariot, horse or cannon, and 10 plus 45 for a soldier. Black’s are the mirror image.',
+            'Red’s drop zones on an empty board: 45 points for an advisor or elephant, all 90 for a chariot, horse, cannon or soldier. Black’s are the mirror image.',
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: 'Any number of soldiers may share a file. A soldier dropped across the river already moves sideways, as a soldier that walked there would.',
+          text: 'Any number of soldiers may share a file. A soldier moves from wherever it lands as if it had walked there: one step forward on your own half, even from your back rank, and forward or sideways once across the river.',
         },
       ],
     },

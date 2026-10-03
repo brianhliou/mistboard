@@ -318,24 +318,15 @@ export const CRAZYHOUSE_XIANGQI_ZONE_OWN_HALF = () => {
 /** Chariot, horse and cannon: all 90 points. */
 export const CRAZYHOUSE_XIANGQI_ZONE_ANYWHERE = () => {
   const points = dropZone('chariot');
-  if (!sameSquares(points, dropZone('horse')) || !sameSquares(points, dropZone('cannon'))) {
-    fail('chariot, horse and cannon regions differ');
+  if (
+    !sameSquares(points, dropZone('horse')) ||
+    !sameSquares(points, dropZone('cannon')) ||
+    !sameSquares(points, dropZone('soldier'))
+  ) {
+    fail('chariot, horse, cannon and soldier regions differ');
   }
   if (points.length !== 90) fail(`free region is ${points.length} points`);
-  return zoneBoard(['chariot', 'horse', 'cannon'], 'ANY EMPTY POINT', points);
-};
-
-/** Soldier: its ten home points (five files, two ranks) and all 45 across the river. */
-export const CRAZYHOUSE_XIANGQI_ZONE_SOLDIER = () => {
-  const points = dropZone('soldier');
-  const home = points.filter((sq) => rankOf(sq) <= 5);
-  const across = points.filter((sq) => rankOf(sq) >= 6);
-  const homeFiles = [...new Set(home.map((sq) => sq[0]))].sort().join('');
-  const homeRanks = [...new Set(home.map(rankOf))].sort().join();
-  if (home.length !== 10 || across.length !== 45 || homeFiles !== 'acegi' || homeRanks !== '4,5') {
-    fail(`soldier region is ${home.length} home + ${across.length} across`);
-  }
-  return zoneBoard(['soldier'], 'HOME POINTS AND OVER THE RIVER', points);
+  return zoneBoard(['chariot', 'horse', 'cannon', 'soldier'], 'ANY EMPTY POINT', points);
 };
 
 // ── A drop may give check ───────────────────────────────────────────────────
