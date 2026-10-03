@@ -37,7 +37,9 @@ export const JIEQI_DEFAULT_ENGINE_ID = 'pikafish-jieqi-strongest';
 // 8 s deadline covers only the search), `ucinewgame` at a game's first engine move.
 // 0.3.2 (2026-09-03): new binary (pikafish-jieqi.ref e75cee3a): qsearch honours
 // `go movetime` via a Threads.stop check and a main-thread check_time() at its entry.
-export const JIEQI_ENGINE_VERSION = '0.3.2';
+// 0.3.3 (2026-10-02): new binary (pikafish-jieqi.ref bcc83f88, #497): reveals scored
+// honestly (no Black-side flip; root fail-lows re-searched instead of averaged as exact).
+export const JIEQI_ENGINE_VERSION = '0.3.3';
 
 // AB-JChess (github.com/lxsgx23/AB-JChess, GPL-3, by Huorongrong and Laoxu (Kouza)): the
 // top jieqi slot since 2026-10, a Pikafish-derived engine with its own NNUE. The slot is
@@ -69,7 +71,8 @@ export const ABJCHESS_ENGINE_REF = '1ae95ca6';
 // 0.4.0 (2026-08-31): new binary. The ScoreCalc flip-node fix changes evals at any node
 // where a dark piece moves, so every cached sweep predates the engine that would produce
 // it now. The ref below moves in the same commit; this bump is belt-and-braces.
-export const JIEQI_ANALYSIS_ENGINE_VERSION = '0.4.0';
+// 0.5.0 (2026-10-02): new binary (#497); every reveal eval can change. Ref moves too.
+export const JIEQI_ANALYSIS_ENGINE_VERSION = '0.5.0';
 
 // Short form of the commit the prod image builds (pikafish-jieqi.ref). Since 2026-08-31
 // that is OUR fork's `jieqi_old-mistboard` branch, not upstream: upstream 23b9466c plus a
@@ -83,7 +86,8 @@ export const JIEQI_ANALYSIS_ENGINE_VERSION = '0.4.0';
 // e75cee3a (2026-09-03): qsearch honours Threads.stop / movetime. A node- or
 // depth-limited analysis search now stops on the exact node it should, so evals can
 // differ from 4f857757 by the tail it used to overrun; hence the key moves.
-export const PIKAFISH_JIEQI_ENGINE_REF = 'e75cee3a';
+// bcc83f88 (2026-10-02, #497): reveal scoring fixed; most reveal evals change.
+export const PIKAFISH_JIEQI_ENGINE_REF = 'bcc83f88';
 
 export type JieqiEngineTier = {
   id: string;
