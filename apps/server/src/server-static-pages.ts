@@ -165,6 +165,11 @@ const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     title: 'Contribute | Mistboard',
     description: 'Mistboard is free and open source. Ways to help, whether or not you write code.',
   },
+  '/creators': {
+    title: 'Work With Us | Mistboard',
+    description:
+      'Work with Mistboard: titled players and coaches, creators and streamers, event organizers and clubs, writers and composers, and engine authors.',
+  },
   '/changelog': {
     title: 'Changelog | Mistboard',
     description:
@@ -897,6 +902,7 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/faq',
   '/patron',
   '/contribute',
+  '/creators',
   '/changelog',
   '/developers',
   '/api-docs',

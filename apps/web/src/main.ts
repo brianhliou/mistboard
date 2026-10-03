@@ -211,6 +211,7 @@ const wantsFaq = path === '/faq' || page === 'faq';
 const wantsTerms = path === '/terms' || page === 'terms';
 const wantsPrivacy = path === '/privacy' || page === 'privacy';
 const wantsContribute = path === '/contribute' || page === 'contribute';
+const wantsCreators = path === '/creators' || page === 'creators';
 const wantsChangelog =
   path === '/changelog' || /^\/changelog\/\d{4}-\d{2}$/.exec(path) !== null || page === 'changelog';
 const wantsDevelopers = path === '/developers' || page === 'developers';
@@ -955,6 +956,11 @@ if (replaySample) {
   setTitleKey('contribute.heading');
   void mountOrReport(() =>
     import('./contribute-page.js').then(({ mountContribute }) => mountContribute(appRoot)),
+  );
+} else if (wantsCreators) {
+  setTitleKey('creators.heading');
+  void mountOrReport(() =>
+    import('./creators-page.js').then(({ mountCreators }) => mountCreators(appRoot)),
   );
 } else if (wantsChangelog) {
   setTitleKey('changelog.heading');
