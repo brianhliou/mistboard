@@ -1,5 +1,6 @@
 import {
   BANQI_SPEC_ID,
+  CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
   XIANGQI_SPEC_ID,
@@ -9,9 +10,11 @@ import {
   brandedEngineName,
   displayParticipantName,
   type FeaturedGame,
+  firstMoverColorName,
   type GameParticipant,
   matchupLabel,
   matchupSeats,
+  secondMoverColorName,
   terminationLabel,
 } from './game-display.js';
 import { ensureLocaleCatalog } from './i18n/catalog.js';
@@ -230,3 +233,30 @@ function participant(color: GameParticipant['color'], displayName: string): Game
     visibility: 'public',
   };
 }
+
+// The correspondence side picker names move order in each variant's own words.
+// Fog Xiangqi read "White" before every variant joined (2026-10-02).
+describe('correspondence side names', () => {
+  it('names the sides of every eligible variant', () => {
+    const sides = Object.fromEntries(
+      CORRESPONDENCE_ELIGIBLE_SPEC_IDS.map((id) => [
+        id,
+        `${firstMoverColorName(id)}/${secondMoverColorName(id)}`,
+      ]),
+    );
+    expect(sides).toEqual({
+      xiangqi: 'Red/Black',
+      'dark-chess': 'White/Black',
+      jieqi: 'Red/Black',
+      banqi: 'First/Second',
+      'duck-xiangqi': 'Red/Black',
+      'crazyhouse-xiangqi': 'Red/Black',
+      'fortress-xiangqi': 'Red/Black',
+      'atomic-xiangqi': 'Red/Black',
+      'dark-xiangqi': 'Red/Black',
+      jungle: 'Red/Black',
+      'jungle-flip': 'First/Second',
+    });
+    expect(firstMoverColorName('no-such-spec')).toBe('White');
+  });
+});

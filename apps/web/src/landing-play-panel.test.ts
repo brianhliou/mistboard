@@ -273,21 +273,24 @@ describe('homepage play panel', () => {
     expect(window.location.href).toContain('/account?tab=login');
   });
 
-  it('narrows rated to the rated clocks; days per move are rated only where correspondence rates', () => {
+  it('narrows rated to the rated clocks; days per move are rated where correspondence rates', () => {
     // Rated switch off: rated is live clocks only.
     const rated = panelPersonPaces('xiangqi', 'rated');
     const ratedIds = new Set(RATED_TIME_CONTROLS.map((tc) => tc.id));
     expect(rated.every((p) => p.kind === 'live' && ratedIds.has(p.id))).toBe(true);
     const casual = panelPersonPaces('xiangqi', 'casual');
     expect(casual.some((p) => p.kind === 'days')).toBe(true);
-    expect(panelPersonPaces('jieqi', 'casual').some((p) => p.kind === 'days')).toBe(false);
+    // Every variant plays by correspondence since 2026-10-02.
+    expect(panelPersonPaces('jieqi', 'casual').some((p) => p.kind === 'days')).toBe(true);
+    // Rated switch off: no rated days anywhere.
+    expect(panelPersonPaces('jieqi', 'rated').some((p) => p.kind === 'days')).toBe(false);
     // Rated switch on (2026-10-02): a correspondence-rated variant offers days in Rated
-    // too; a variant correspondence cannot rate still offers none.
+    // too, live clocks still narrowed to the rated ones.
     setRatedModeEnabled(true);
     const ratedOn = panelPersonPaces('xiangqi', 'rated');
     expect(ratedOn.filter((p) => p.kind === 'live').every((p) => ratedIds.has(p.id))).toBe(true);
     expect(ratedOn.some((p) => p.kind === 'days')).toBe(true);
-    expect(panelPersonPaces('jieqi', 'rated').some((p) => p.kind === 'days')).toBe(false);
+    expect(panelPersonPaces('jieqi', 'rated').some((p) => p.kind === 'days')).toBe(true);
   });
 
   it('orders rows in canonical order', () => {

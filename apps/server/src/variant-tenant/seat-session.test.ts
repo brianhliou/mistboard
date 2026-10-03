@@ -98,3 +98,18 @@ test('assignTenantSeat: no device id leaves the seat anonymous', () => {
   assert.ok(assignment.ok);
   assert.equal(assignment.tokenState.deviceId, null);
 });
+
+test('assignTenantSeat: a seat pre-issued without a name learns it from the reclaiming account', () => {
+  // Correspondence seek accept mints both seats by user id only; until this, the
+  // room and the /games card called the opponent "Guest" until a server restart.
+  const room = emptyRoom();
+  room.seatTokens.white = { ...seatToken('user-1'), userHandle: null, userDisplayName: null };
+  const assignment = assignTenantSeat(tenant, room, 'new-client', undefined, account());
+  assert.ok(assignment.ok);
+  assert.equal(room.seatTokens.white?.userHandle, 'tester');
+  assert.equal(room.seatTokens.white?.userDisplayName, 'Tester');
+  // A name already on the seat is kept, never overwritten by the connection.
+  room.seatTokens.black = { ...seatToken('user-2'), seat: 'black', userDisplayName: 'Kept' };
+  assignTenantSeat(tenant, room, 'c2', undefined, account({ id: 'user-2', displayName: 'New' }));
+  assert.equal(room.seatTokens.black?.userDisplayName, 'Kept');
+});

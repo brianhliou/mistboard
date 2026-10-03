@@ -16,6 +16,7 @@ import {
   seekRequestBody,
   splitInbox,
   URGENT_DEADLINE_MS,
+  variantFact,
 } from './correspondence-model.js';
 
 const NOW = Date.parse('2026-10-02T12:00:00Z');
@@ -102,6 +103,23 @@ describe('inboxTileKind', () => {
     expect(inboxTileKind('dark-chess', { observe: 'open', payload: { events: [] } })).toBe('fog');
     expect(inboxTileKind('xiangqi', { observe: 'masked', payload: { events: [] } })).toBe('fog');
     expect(inboxTileKind('no-such-spec', null)).toBe('fog');
+  });
+
+  it("draws the public board of a hidden-identity game only on the feed's own open verdict", () => {
+    // jieqi, banqi and Flip Jungle: the feed's payload is the public view (the
+    // shared mask), the board /games and TV already show.
+    for (const specId of ['jieqi', 'banqi', 'jungle-flip']) {
+      expect(inboxTileKind(specId, { observe: 'open', payload: { events: [] } })).toBe('board');
+      expect(inboxTileKind(specId, { observe: 'open' })).toBe('placeholder');
+      expect(inboxTileKind(specId, { observe: 'masked', payload: { events: [] } })).toBe('fog');
+      // Not in the feed: no verdict, so no board and no placeholder either.
+      expect(inboxTileKind(specId, null)).toBe('fog');
+    }
+  });
+
+  it('keeps Fog Xiangqi in the mist whatever the feed says', () => {
+    expect(inboxTileKind('dark-xiangqi', null)).toBe('fog');
+    expect(inboxTileKind('dark-xiangqi', { observe: 'open', payload: { events: [] } })).toBe('fog');
   });
 
   it('never draws a board for an eligible spec the server would not show a spectator', () => {
@@ -197,7 +215,45 @@ describe('seatBoardView', () => {
   };
 
   it('accepts a Fog Chess seat board', () => {
-    expect(seatBoardView({ gameSpecId: 'dark-chess', seatBoard: view })).toBe(view);
+    expect(seatBoardView({ gameSpecId: 'dark-chess', seatBoard: view })).toEqual({
+      kind: 'dark-chess',
+      view,
+    });
+  });
+
+  const xiangqiView = {
+    id: 'seat-red',
+    board: { e1: { piece: { color: 'red', role: 'king' }, shrouded: false } },
+    visibleSquares: ['e1', 'e2'],
+    perspective: 'red',
+    legalMoves: [{ from: 'e1', to: 'e2' }],
+    status: { type: 'playing', turn: 'red' },
+    moveNumber: 3,
+    captures: { red: [], black: ['soldier'] },
+  };
+
+  it('accepts a Fog Xiangqi seat board, without the legal-move list', () => {
+    const seat = seatBoardView({ gameSpecId: 'dark-xiangqi', seatBoard: xiangqiView });
+    expect(seat?.kind).toBe('dark-xiangqi');
+    expect(seat?.view).toEqual({ ...xiangqiView, legalMoves: [] });
+  });
+
+  it('defaults what the Fog Xiangqi renderer reads and refuses the wrong perspective', () => {
+    const { id: _id, captures: _captures, ...bare } = xiangqiView;
+    const seat = seatBoardView({ gameSpecId: 'dark-xiangqi', seatBoard: bare, roomId: 'dxq_1' });
+    expect(seat?.kind === 'dark-xiangqi' && seat.view.id).toBe('dxq_1');
+    expect(seat?.kind === 'dark-xiangqi' && seat.view.captures).toEqual({ red: [], black: [] });
+    expect(
+      seatBoardView({
+        gameSpecId: 'dark-xiangqi',
+        seatBoard: { ...xiangqiView, perspective: 'white' },
+      }),
+    ).toBeNull();
+    expect(
+      seatBoardView({ gameSpecId: 'dark-xiangqi', seatBoard: { ...xiangqiView, status: null } }),
+    ).toBeNull();
+    // A Fog Chess board on a Fog Xiangqi card is malformed, not a chess board.
+    expect(seatBoardView({ gameSpecId: 'dark-xiangqi', seatBoard: view })).toBeNull();
   });
 
   it('ignores a seat board on a spec the inbox does not draw that way', () => {
@@ -214,6 +270,20 @@ describe('seatBoardView', () => {
     expect(
       seatBoardView({ gameSpecId: 'dark-chess', seatBoard: { ...view, visibleSquares: null } }),
     ).toBeNull();
+  });
+});
+
+describe('variantFact', () => {
+  it('names a short list in full and counts the rest of a long one', () => {
+    expect(variantFact(['Xiangqi', 'Fog Chess'])).toEqual({
+      kind: 'all',
+      text: 'Xiangqi · Fog Chess',
+    });
+    expect(variantFact(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.map((id) => id))).toEqual({
+      kind: 'more',
+      shown: `${CORRESPONDENCE_ELIGIBLE_SPEC_IDS[0]}, ${CORRESPONDENCE_ELIGIBLE_SPEC_IDS[1]}`,
+      more: CORRESPONDENCE_ELIGIBLE_SPEC_IDS.length - 2,
+    });
   });
 });
 

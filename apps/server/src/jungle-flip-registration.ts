@@ -30,6 +30,7 @@ import {
   type JungleFlipLiveRoom,
   jungleFlipWs,
 } from './server-ws-jungle-flip.js';
+import { tenantCorrespondenceBinding } from './variant-tenant/correspondence.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
 import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
@@ -73,6 +74,26 @@ export async function getOrLoadJungleFlipRoom(roomId: string): Promise<JungleFli
   );
   return room as JungleFlipLiveRoom | null;
 }
+
+// Correspondence (days-per-move): seek accept seats both accounts, the sweeper
+// enforces the durable deadline through the ws runtime (variant-tenant/correspondence.ts).
+const jungleFlipCorrespondence = tenantCorrespondenceBinding(jungleFlipTenant, {
+  factoryContext: () => ({
+    rooms: jungleFlipRooms as unknown as Map<string, JungleFlipRuntimeRoom>,
+    isRoomIdTaken: (roomId) => variantTenantRoomIdTaken(roomId, jungleFlipTenant.kind),
+    appendRoomEvent: persistence.appendRoomEvent,
+    isPersistenceEnabled: persistence.isInitialized,
+    recordPersistenceError: (roomId, seq, eventType, err) =>
+      recordTenantPersistenceError(jungleFlipTenant, roomId, seq, eventType, err),
+  }),
+  getOrLoadRoom: (roomId) =>
+    getOrLoadTenantRoom(
+      jungleFlipTenant,
+      jungleFlipRooms as unknown as Map<string, JungleFlipRuntimeRoom>,
+      roomId,
+    ),
+  lifecycleCtx: jungleFlipWs.lifecycleCtx,
+});
 
 registerVariantTenant({
   kind: jungleFlipTenant.kind,
@@ -150,6 +171,5 @@ registerVariantTenant({
     fen: jungleFlipStateToEngineFen,
     seatInk: jungleFlipInkForSeat,
   }),
-  sweepDueDeadline: null,
-  createCorrespondenceGameForSeek: null,
+  ...jungleFlipCorrespondence,
 });

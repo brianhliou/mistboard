@@ -338,6 +338,12 @@ async function createSeek(
     writeJson(response, 501, { error: 'correspondence_unsupported_spec' });
     return true;
   }
+  // A variant whose server flag is off cannot back a game: refuse the seek now,
+  // not at accept time after the row is gone.
+  if (correspondenceTenantForSpecId(gameSpecId)?.enabled() === false) {
+    writeJson(response, 404, { error: 'variant_disabled' });
+    return true;
+  }
   const timeControl = parseCorrespondenceTimeControl(body.daysPerMove);
   const daysPerMove = timeControl?.daysPerMove;
   if (!timeControl || daysPerMove === undefined) {
@@ -532,6 +538,12 @@ async function acceptSeek(
   const timeControl = parseCorrespondenceTimeControl(seek.daysPerMove);
   if (!timeControl) {
     writeJson(response, 500, { error: 'invalid_seek' });
+    return true;
+  }
+  // Variant switched off since the seek was posted: keep the row (it accepts
+  // again once the flag is back) instead of consuming it for a 404.
+  if (correspondenceTenantForSpecId(seek.gameSpecId)?.enabled() === false) {
+    writeJson(response, 404, { error: 'variant_disabled' });
     return true;
   }
   // A rated seek re-passes the rated gate at accept (the terms may have stopped

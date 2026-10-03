@@ -31,6 +31,7 @@ import {
   clearBanqiRuntimeTimers,
   handleBanqiWebSocketConnection,
 } from './server-ws-banqi.js';
+import { tenantCorrespondenceBinding } from './variant-tenant/correspondence.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
 import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
@@ -74,6 +75,26 @@ export async function getOrLoadBanqiRoom(roomId: string): Promise<BanqiLiveRoom 
   );
   return room as BanqiLiveRoom | null;
 }
+
+// Correspondence (days-per-move): seek accept seats both accounts, the sweeper
+// enforces the durable deadline through the ws runtime (variant-tenant/correspondence.ts).
+const banqiCorrespondence = tenantCorrespondenceBinding(banqiTenant, {
+  factoryContext: () => ({
+    rooms: banqiRooms as unknown as Map<string, BanqiRuntimeRoom>,
+    isRoomIdTaken: (roomId) => variantTenantRoomIdTaken(roomId, banqiTenant.kind),
+    appendRoomEvent: persistence.appendRoomEvent,
+    isPersistenceEnabled: persistence.isInitialized,
+    recordPersistenceError: (roomId, seq, eventType, err) =>
+      recordTenantPersistenceError(banqiTenant, roomId, seq, eventType, err),
+  }),
+  getOrLoadRoom: (roomId) =>
+    getOrLoadTenantRoom(
+      banqiTenant,
+      banqiRooms as unknown as Map<string, BanqiRuntimeRoom>,
+      roomId,
+    ),
+  lifecycleCtx: banqiWs.lifecycleCtx,
+});
 
 registerVariantTenant({
   kind: banqiTenant.kind,
@@ -144,6 +165,5 @@ registerVariantTenant({
     fen: banqiStateToEngineFen,
     seatInk: banqiInkForSeat,
   }),
-  sweepDueDeadline: null,
-  createCorrespondenceGameForSeek: null,
+  ...banqiCorrespondence,
 });

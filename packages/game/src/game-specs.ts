@@ -197,9 +197,23 @@ export const CHESS_SPEC_ID = 'chess' satisfies GameSpecId;
 // needs a tenant that supplies both a seek factory and a deadline sweeper
 // (correspondence-eligibility.test.ts). Whether a member may also be RATED by
 // correspondence is isCorrespondenceRatedSpec below.
+//
+// Every launched two-player variant since 2026-10-02 (Brian: "all of them should
+// support it"). Xiangqi and Fog Chess keep the first two places (the original
+// pair, and the pickers' default); the rest follow CANONICAL_VARIANT_ORDER.
+// Mahjong (four seats, account-allowlisted) and study-only chess stay out.
 export const CORRESPONDENCE_ELIGIBLE_SPEC_IDS: readonly GameSpecId[] = [
   XIANGQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
+  JIEQI_SPEC_ID,
+  BANQI_SPEC_ID,
+  DUCK_XIANGQI_SPEC_ID,
+  CRAZYHOUSE_XIANGQI_SPEC_ID,
+  FORTRESS_XIANGQI_SPEC_ID,
+  ATOMIC_XIANGQI_SPEC_ID,
+  DARK_XIANGQI_SPEC_ID,
+  JUNGLE_SPEC_ID,
+  JUNGLE_FLIP_SPEC_ID,
 ];
 
 // Specs a study chapter may hold, in display order. The SINGLE source of truth

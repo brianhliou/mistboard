@@ -26,11 +26,8 @@ import { startTenantDeadlineSweeper } from './variant-tenant/deadline-sweeper.js
 import { appendTenantEvent } from './variant-tenant/events.js';
 // Side-effect import: registers every tenant, so the accept route finds the xiangqi factory.
 import './variant-tenant/register-tenants.js';
-import {
-  createXiangqiCorrespondenceGameForSeek,
-  getOrLoadXiangqiRoom,
-  xiangqiRooms,
-} from './xiangqi-registration.js';
+import { correspondenceTenantForSpecId } from './variant-tenant/registry.js';
+import { getOrLoadXiangqiRoom, xiangqiRooms } from './xiangqi-registration.js';
 import type { XiangqiEvent } from './xiangqi-runtime.js';
 import { xiangqiTenant } from './xiangqi-tenant.js';
 
@@ -192,7 +189,7 @@ definePersistenceTests('rated correspondence', () => {
   test('a casual correspondence game rates nobody', async () => {
     const eve = await seedUser('rc-eve');
     const fay = await seedUser('rc-fay');
-    const created = await createXiangqiCorrespondenceGameForSeek({
+    const created = await createXiangqiSeekGame({
       timeControl: correspondenceTimeControl(3),
       first: { userId: eve },
       second: { userId: fay },
@@ -224,13 +221,13 @@ definePersistenceTests('rated correspondence', () => {
     const hal = await seedUser('rc-hal');
     const ida = await seedUser('rc-ida');
     const jon = await seedUser('rc-jon');
-    const forfeit = await createXiangqiCorrespondenceGameForSeek({
+    const forfeit = await createXiangqiSeekGame({
       timeControl: correspondenceTimeControl(1),
       first: { userId: gil },
       second: { userId: hal },
       rated: true,
     });
-    const noShow = await createXiangqiCorrespondenceGameForSeek({
+    const noShow = await createXiangqiSeekGame({
       timeControl: correspondenceTimeControl(1),
       first: { userId: ida },
       second: { userId: jon },
@@ -327,6 +324,22 @@ definePersistenceTests('rated correspondence', () => {
 
 function move(roomId: string, color: 'red' | 'black', from: string, to: string): XiangqiEvent {
   return { type: 'move-played', at: Date.now(), roomId, color, move: { from, to } } as XiangqiEvent;
+}
+
+// The registered seek factory (the shared tenantCorrespondenceBinding), exactly what the
+// accept route calls.
+function createXiangqiSeekGame(
+  args: Parameters<
+    NonNullable<
+      NonNullable<
+        ReturnType<typeof correspondenceTenantForSpecId>
+      >['createCorrespondenceGameForSeek']
+    >
+  >[0],
+) {
+  const create = correspondenceTenantForSpecId(XIANGQI_SPEC_ID)?.createCorrespondenceGameForSeek;
+  if (!create) throw new Error('xiangqi has no correspondence seek factory');
+  return create(args);
 }
 
 async function seedUser(handle: string): Promise<string> {

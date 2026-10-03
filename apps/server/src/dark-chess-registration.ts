@@ -28,23 +28,20 @@ import {
   handleCorrespondenceCreate,
   requestsCorrespondence,
 } from './routes/correspondence-rooms.js';
+import { tenantCorrespondenceBinding, tenantSeatBoard } from './variant-tenant/correspondence.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
 import {
   clearTenantRuntimeTimers,
   pauseTenantRoomsOnShutdown,
-  sweepTenantRoomDeadline,
 } from './variant-tenant/lifecycle.js';
 import {
   registerVariantTenant,
   type TenantManagedRoom,
   variantTenantRoomIdTaken,
 } from './variant-tenant/registry.js';
-import {
-  createTenantCorrespondenceGameForSeek,
-  createTenantLiveRoom,
-} from './variant-tenant/room-factory.js';
-import { tenantReplayCheck, tenantSeatStateView } from './variant-tenant/runtime.js';
+import { createTenantLiveRoom } from './variant-tenant/room-factory.js';
+import { tenantReplayCheck } from './variant-tenant/runtime.js';
 import type { TenantRuntimeRoom } from './variant-tenant/tenant.js';
 import { createTenantWsRuntime, type TenantLiveRoom } from './variant-tenant/ws.js';
 
@@ -82,38 +79,22 @@ export async function createDarkChessCorrespondenceRoom(
 
 // Accept an open correspondence seek: create a room and pre-seat BOTH accounts
 // (the seek's creator and the accepter) up front, so the game is live the
-// instant the seek is taken — before either player connects. Each seat-assigned
-// event is durable in the log and persists the seat token; the second fills the
-// board, which arms the clock and writes the first room_deadlines row. Players
-// reclaim their seat by account on connect (assignTenantSeat's user-id path), so
-// no raw token needs to be handed back here.
-export async function createDarkChessCorrespondenceGameForSeek(args: {
-  timeControl: RoomTimeControl;
-  first: { userId: string };
-  second: { userId: string };
-  rated?: boolean;
-}): Promise<
-  | {
-      ok: true;
-      room: { id: string; gameSpecId: string; rated: boolean };
-      seats: { first: string; second: string };
-    }
-  | { ok: false; error: 'disabled' | 'persistence_failure' | 'room_id_collision' }
-> {
-  // The body of this hoisted to room-factory once a second variant needed it; darkChessTenant
-  // declares colors ['white','black'], so `first` still lands on white exactly as before.
-  const created = await createTenantCorrespondenceGameForSeek(
-    darkChessTenant,
-    factoryContext(),
-    args,
-  );
-  if (!created.ok) return created;
-  return {
-    ok: true,
-    room: { id: created.room.id, gameSpecId: created.room.gameSpecId, rated: created.room.rated },
-    seats: { first: darkChessTenant.colors[0], second: darkChessTenant.colors[1] },
-  };
-}
+// instant the seek is taken, before either player connects. The second seat
+// fills the board, which arms the clock and writes the first room_deadlines row.
+// The sweeper hook hydrates, then re-derives and acts through the ws runtime's
+// lifecycle context so timeout/abort appends persist, maintain the deadline
+// row, and broadcast exactly like a live flag. Both, and the inbox seat board,
+// come from the shared binding every correspondence tenant uses.
+const darkChessCorrespondence = tenantCorrespondenceBinding(darkChessTenant, {
+  factoryContext,
+  getOrLoadRoom: getOrLoadDarkChessTenantRoom,
+  lifecycleCtx: darkChessWs.lifecycleCtx,
+  seatBoard: true,
+});
+
+export const createDarkChessCorrespondenceGameForSeek =
+  darkChessCorrespondence.createCorrespondenceGameForSeek;
+export const sweepDarkChessDueDeadline = darkChessCorrespondence.sweepDueDeadline;
 
 function factoryContext() {
   return {
@@ -131,31 +112,11 @@ export function getOrLoadDarkChessTenantRoom(roomId: string): Promise<DarkChessR
   return getOrLoadTenantRoom(darkChessTenant, darkChessTenantRooms, roomId);
 }
 
-// The seat's own fog view for the /correspondence inbox card: the same
-// redaction the room snapshot runs for that seat (tenantSeatStateView), keyed
-// to the seat's own client id. Anything that is not white or black (a
-// spectator seat, a typo, another tenant's color) gets null.
+// The seat's own fog view for the /correspondence inbox card (tenantSeatBoard:
+// the same redaction the room snapshot runs for that seat). Anything that is not
+// white or black gets null.
 export function darkChessSeatBoard(room: DarkChessRuntimeRoom, seat: string): unknown | null {
-  if (!darkChessTenant.rules.isColor(seat)) return null;
-  return tenantSeatStateView(darkChessTenant, room, {
-    id: room.seatTokens[seat]?.clientId ?? `seat-board:${seat}`,
-    seat,
-    solo: false,
-  });
-}
-
-// Durable-deadline enforcement (the sweeper's per-room hook): hydrate, then
-// re-derive and act through the ws runtime's lifecycle context so the
-// timeout/abort appends persist, maintain the deadline row, and broadcast to
-// any connected clients exactly like a live flag.
-export async function sweepDarkChessDueDeadline(roomId: string): Promise<void> {
-  const room = await getOrLoadDarkChessTenantRoom(roomId);
-  if (!room) return;
-  await sweepTenantRoomDeadline(
-    darkChessTenant,
-    room as DarkChessLiveRoom,
-    darkChessWs.lifecycleCtx,
-  );
+  return tenantSeatBoard(darkChessTenant, room, seat);
 }
 
 registerVariantTenant({
@@ -175,7 +136,7 @@ registerVariantTenant({
   activeGameCount: () => countDeployGatingRooms(darkChessTenantRooms.values()),
   getOrLoadRoom: (roomId) =>
     getOrLoadDarkChessTenantRoom(roomId) as Promise<TenantManagedRoom | null>,
-  seatBoard: (room, seat) => darkChessSeatBoard(room as unknown as DarkChessRuntimeRoom, seat),
+  seatBoard: darkChessCorrespondence.seatBoard,
   attachWebSocket: (ctx, socket, request, room) =>
     darkChessWs.handleConnection(
       {
@@ -217,6 +178,6 @@ registerVariantTenant({
       ),
   },
   lobby: null,
-  sweepDueDeadline: sweepDarkChessDueDeadline,
-  createCorrespondenceGameForSeek: createDarkChessCorrespondenceGameForSeek,
+  sweepDueDeadline: darkChessCorrespondence.sweepDueDeadline,
+  createCorrespondenceGameForSeek: darkChessCorrespondence.createCorrespondenceGameForSeek,
 });

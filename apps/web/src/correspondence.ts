@@ -56,6 +56,7 @@ import {
   seatBoardView,
   seekRequestBody,
   splitInbox,
+  variantFact,
 } from './correspondence-model.js';
 import type { CurrentGame, CurrentGamesResponse } from './current-games-model.js';
 import type { DarkChessBoardView } from './dark-chess-render.js';
@@ -68,6 +69,7 @@ import {
 } from './game-display.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, localizedHref } from './i18n/locale.js';
+import type { DarkXiangqiWireView } from './live-dark-xiangqi.js';
 import { isRatedModeEnabled, onRatedModeChange } from './rated-flag.js';
 import { timeAgo } from './relative-time.js';
 import type { ReplayHandle } from './replay.js';
@@ -368,9 +370,9 @@ function buildWaitingRow(
 
 // ---- Boards -------------------------------------------------------------------------
 
-// The board, the mist, or the variant placeholder. Your own Fog Chess game
-// draws your seat's fog view (the server's seatBoard, the same PlayerView the
-// game room gives your seat) on the site's dark-chess SVG board. Otherwise an
+// The board, the mist, or the variant placeholder. Your own Fog Chess or Fog
+// Xiangqi game draws your seat's fog view (the server's seatBoard, the same
+// PlayerView the game room gives your seat) on that variant's board. Otherwise an
 // open game mounts the same compact live renderer the /games wall uses, fed
 // the public feed's payload, and anything hidden keeps the misty tile.
 function buildBoardHost(
@@ -401,16 +403,27 @@ function buildBoardHost(
 async function mountSeatBoard(
   ctx: PageContext,
   host: HTMLElement,
-  view: SeatBoardView,
+  seat: SeatBoardView,
 ): Promise<void> {
   try {
-    const { renderDarkChessBoardSvg } = await import('./dark-chess-render.js');
+    let svg: string;
+    if (seat.kind === 'dark-chess') {
+      const { renderDarkChessBoardSvg } = await import('./dark-chess-render.js');
+      svg = renderDarkChessBoardSvg(seat.view as unknown as DarkChessBoardView, {
+        perspective: seat.view.perspective,
+      });
+    } else {
+      const { renderDarkXiangqiBoardSvg } = await import('./live-dark-xiangqi.js');
+      svg = renderDarkXiangqiBoardSvg(
+        seat.view as unknown as DarkXiangqiWireView,
+        seat.view.perspective,
+      );
+    }
     if (!ctx.isConnected()) return;
     const board = document.createElement('div');
-    board.className = 'correspondence-seat-board';
-    board.innerHTML = renderDarkChessBoardSvg(view as unknown as DarkChessBoardView, {
-      perspective: view.perspective,
-    });
+    board.className = `correspondence-seat-board correspondence-seat-board-${seat.kind}`;
+    board.innerHTML = svg;
+    board.querySelector('svg')?.setAttribute('preserveAspectRatio', 'xMidYMid meet');
     host.replaceChildren(board);
   } catch (err) {
     console.warn('[correspondence] seat board render failed', err);
@@ -636,6 +649,36 @@ function buildSegmented<T extends string>(
   };
 }
 
+// A labelled native select, for a choice too long for a segmented row (the
+// variant list). Native on purpose: a phone gets its own picker sheet.
+function buildSelect(
+  label: string,
+  options: readonly { value: string; label: string }[],
+  initial: string,
+  onChange?: (value: string) => void,
+): { root: HTMLElement; value: () => string } {
+  const field = document.createElement('label');
+  field.className = 'correspondence-field';
+  const caption = document.createElement('span');
+  caption.className = 'correspondence-field-label';
+  caption.textContent = label;
+  const wrap = document.createElement('span');
+  wrap.className = 'correspondence-select-wrap';
+  const select = document.createElement('select');
+  select.className = 'correspondence-input correspondence-select';
+  for (const option of options) {
+    const element = document.createElement('option');
+    element.value = option.value;
+    element.textContent = option.label;
+    select.append(element);
+  }
+  select.value = initial;
+  select.addEventListener('change', () => onChange?.(select.value));
+  wrap.append(select);
+  field.append(caption, wrap);
+  return { root: field, value: () => select.value };
+}
+
 function buildStartForm(onChanged: () => void): HTMLElement {
   const panel = document.createElement('section');
   panel.className = 'correspondence-panel correspondence-start';
@@ -646,7 +689,7 @@ function buildStartForm(onChanged: () => void): HTMLElement {
   form.noValidate = true;
 
   const defaultVariant = CORRESPONDENCE_ELIGIBLE_SPEC_IDS[0] ?? 'xiangqi';
-  const variant = buildSegmented<string>(
+  const variant = buildSelect(
     t('correspondence.variantLabel'),
     CORRESPONDENCE_ELIGIBLE_SPEC_IDS.map((specId) => ({
       value: specId,
@@ -1186,6 +1229,13 @@ function buildAccountActions(): HTMLElement {
   return actions;
 }
 
+function variantFactText(labels: readonly string[]): string {
+  const fact = variantFact(labels);
+  return fact.kind === 'all'
+    ? fact.text
+    : t('correspondence.factVariantsMore', { list: fact.shown, count: fact.more });
+}
+
 function buildHero(ctx: PageContext, inPlay: CurrentGame[]): HTMLElement {
   const hero = document.createElement('section');
   hero.className = 'correspondence-hero';
@@ -1205,7 +1255,7 @@ function buildHero(ctx: PageContext, inPlay: CurrentGame[]): HTMLElement {
   facts.className = 'correspondence-hero-facts';
   for (const text of [
     t('correspondence.factDays', { list: DAYS_PER_MOVE_OPTIONS.join(' / ') }),
-    CORRESPONDENCE_ELIGIBLE_SPEC_IDS.map((specId) => variantDisplayLabel(specId)).join(' · '),
+    variantFactText(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.map((specId) => variantDisplayLabel(specId))),
     t('correspondence.factReminders'),
   ]) {
     const item = document.createElement('li');
