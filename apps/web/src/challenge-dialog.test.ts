@@ -1,3 +1,4 @@
+import { CORRESPONDENCE_ELIGIBLE_SPEC_IDS } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { openChallengeDialog } from './challenge-dialog.js';
 
@@ -17,7 +18,9 @@ describe('openChallengeDialog', () => {
     expect(dialog?.querySelectorAll('select')).toHaveLength(3);
     expect(dialog?.textContent).toContain('alice');
     const variant = dialog?.querySelector<HTMLSelectElement>('select[aria-label="Variant"]');
-    expect([...variant!.options].map((option) => option.value)).toEqual(['xiangqi', 'dark-chess']);
+    expect([...variant!.options].map((option) => option.value)).toEqual([
+      ...CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+    ]);
     expect(variant?.value).toBe('xiangqi');
   });
 

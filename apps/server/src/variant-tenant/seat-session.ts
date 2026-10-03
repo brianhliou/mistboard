@@ -111,6 +111,11 @@ export function assignTenantSeat<
           ...state,
           clientId,
           deviceId: state.deviceId ?? deviceId,
+          // A seat pre-issued without a name (correspondence seek accept mints
+          // by user id alone) learns it from the account that reclaims it, so
+          // the room and /games stop calling a signed-in player "Guest".
+          userHandle: state.userHandle ?? accountUser.handle ?? null,
+          userDisplayName: state.userDisplayName ?? accountUser.displayName ?? null,
           lastSeenAt: new Date(),
         };
         room.seatTokens[color] = tokenState;

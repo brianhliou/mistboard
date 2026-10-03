@@ -279,7 +279,9 @@ describe('homepage play panel', () => {
     expect(rated.every((p) => p.kind === 'live' && ratedIds.has(p.id))).toBe(true);
     const casual = panelPersonPaces('xiangqi', 'casual');
     expect(casual.some((p) => p.kind === 'days')).toBe(true);
-    expect(panelPersonPaces('jieqi', 'casual').some((p) => p.kind === 'days')).toBe(false);
+    // Every variant plays by correspondence since 2026-10-02, still casual-only.
+    expect(panelPersonPaces('jieqi', 'casual').some((p) => p.kind === 'days')).toBe(true);
+    expect(panelPersonPaces('jieqi', 'rated').some((p) => p.kind === 'days')).toBe(false);
   });
 
   it('orders rows in canonical order', () => {

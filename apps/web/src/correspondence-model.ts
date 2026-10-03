@@ -125,45 +125,107 @@ export function indexByRoom<T extends Pick<CurrentGame, 'roomId'>>(
   return new Map(games.map((game) => [game.roomId, game]));
 }
 
-// The specs whose per-seat board the inbox knows how to draw (the dark-chess
-// SVG board, fed a PlayerView). A seatBoard on any other spec is ignored.
-export const SEAT_BOARD_SPECS: ReadonlySet<string> = new Set(['dark-chess']);
+// The specs whose per-seat board the inbox knows how to draw, and with what:
+// the fog games, whose public feed carries no board. Fog Chess draws on the
+// dark-chess SVG board, Fog Xiangqi on the fog xiangqi board, each fed the
+// seat's own PlayerView. A seatBoard on any other spec is ignored.
+export const SEAT_BOARD_SPECS: ReadonlySet<string> = new Set(['dark-chess', 'dark-xiangqi']);
 
-export type SeatBoardView = {
+type SeatBoardSquare = Record<string, unknown> | undefined;
+
+export type DarkChessSeatBoardView = {
   board: Record<string, { color: string; role: string } | undefined>;
   visibleSquares: string[];
   perspective: 'white' | 'black';
   lastMove?: { from: string; to: string };
 };
 
+export type DarkXiangqiSeatBoardView = {
+  id: string;
+  board: Record<string, SeatBoardSquare>;
+  visibleSquares: string[];
+  perspective: 'red' | 'black';
+  legalMoves: unknown[];
+  status: { type: string };
+  moveNumber: number;
+  lastMove?: { from: string; to: string };
+  captures: { red: string[]; black: string[] };
+};
+
+export type SeatBoardView =
+  | { kind: 'dark-chess'; view: DarkChessSeatBoardView }
+  | { kind: 'dark-xiangqi'; view: DarkXiangqiSeatBoardView };
+
 // The seat's own board when it is one the inbox can draw, else null. Shape
 // checked so a malformed payload falls back to the mist instead of throwing.
 export function seatBoardView(
-  game: Pick<CorrespondenceGame, 'gameSpecId' | 'seatBoard'>,
+  game: Pick<CorrespondenceGame, 'gameSpecId' | 'seatBoard'> & { roomId?: string },
 ): SeatBoardView | null {
   if (!SEAT_BOARD_SPECS.has(game.gameSpecId)) return null;
-  const view = game.seatBoard as Partial<SeatBoardView> | null | undefined;
+  const view = game.seatBoard as Record<string, unknown> | null | undefined;
   if (!view || typeof view !== 'object') return null;
   if (!view.board || typeof view.board !== 'object') return null;
   if (!Array.isArray(view.visibleSquares)) return null;
-  if (view.perspective !== 'white' && view.perspective !== 'black') return null;
-  return view as SeatBoardView;
+  if (game.gameSpecId === 'dark-chess') {
+    if (view.perspective !== 'white' && view.perspective !== 'black') return null;
+    return { kind: 'dark-chess', view: view as unknown as DarkChessSeatBoardView };
+  }
+  // Fog Xiangqi: the renderer also reads status, the capture ledger and an id
+  // for its fog mask; anything missing gets a harmless default, never a throw.
+  if (view.perspective !== 'red' && view.perspective !== 'black') return null;
+  const status =
+    view.status && typeof view.status === 'object' ? (view.status as { type: string }) : null;
+  if (!status || typeof status.type !== 'string') return null;
+  const captures = view.captures as { red?: unknown; black?: unknown } | undefined;
+  return {
+    kind: 'dark-xiangqi',
+    view: {
+      ...(view as unknown as DarkXiangqiSeatBoardView),
+      id: typeof view.id === 'string' && view.id ? view.id : (game.roomId ?? 'seat-board'),
+      legalMoves: [],
+      moveNumber: typeof view.moveNumber === 'number' ? view.moveNumber : 1,
+      captures: {
+        red: Array.isArray(captures?.red) ? (captures.red as string[]) : [],
+        black: Array.isArray(captures?.black) ? (captures.black as string[]) : [],
+      },
+    },
+  };
 }
 
+// The visibility classes whose public board the inbox may draw. 'open' hides
+// nothing. 'hidden-identity' (jieqi, banqi, Flip Jungle) hides which piece a
+// face-down tile is, from both players; the server's watch policy serves those
+// live through a public view (the shared mask, never a seat's private
+// knowledge), the same board /games and TV already show. Fog ('dark') and
+// concealed hands are never drawn from the feed.
+const FEED_BOARD_VISIBILITIES: ReadonlySet<string> = new Set(['open', 'hidden-identity']);
+
 // What a card draws where the board goes. A board only when the public feed
-// sent one for an 'open' game (the same position anyone watching sees, and for
-// an open-information variant the same one either seat sees). Fail-closed: a
-// spec that is not open-information gets the mist whether or not the feed knows
-// the game, and so does an unknown spec id. An open game with no payload yet
+// sent one for a game it calls 'open' (the same position anyone watching sees).
+// Fail-closed twice: the spec's visibility class must be one the feed may draw
+// (fog never is, whatever the feed says), and a hidden-identity game needs the
+// feed's own 'open' verdict before it gets a board, so an unclassified one stays
+// misty. An unknown spec id gets the mist. A drawable game with no payload yet
 // gets the variant placeholder.
 export function inboxTileKind(
   gameSpecId: string,
   current: Pick<CurrentGame, 'observe' | 'payload'> | null | undefined,
 ): 'board' | 'fog' | 'placeholder' {
   const spec = maybeGameSpecForId(gameSpecId);
-  if (!spec || spec.visibility !== 'open') return 'fog';
+  if (!spec || !FEED_BOARD_VISIBILITIES.has(spec.visibility)) return 'fog';
   if (current && current.observe !== 'open') return 'fog';
+  if (spec.visibility !== 'open' && current?.observe !== 'open') return 'fog';
   return current?.payload ? 'board' : 'placeholder';
+}
+
+// The hero's variant fact: every eligible variant by name while the list is
+// short, otherwise the first two and a count, so the chip never wraps into a
+// paragraph. Derived from the list, never written out.
+export function variantFact(
+  labels: readonly string[],
+): { kind: 'all'; text: string } | { kind: 'more'; shown: string; more: number } {
+  if (labels.length <= 3) return { kind: 'all', text: labels.join(' · ') };
+  return { kind: 'more', shown: labels.slice(0, 2).join(', '), more: labels.length - 2 };
 }
 
 // ---- Open seeks -------------------------------------------------------------------

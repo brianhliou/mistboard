@@ -214,17 +214,24 @@ export function displayLiveName(name: string | null | undefined, fallback: strin
 }
 
 // Correspondence seeks store a side as MOVE ORDER ('first'/'second'), variant-neutral, so
-// one seek board serves every eligible variant. These map that axis back to the colors a
-// player recognises: chess is White/Black, xiangqi Red/Black. Both eligible specs share
-// Black as the second mover, so only the first-mover name varies. Fail-safe: an unmapped
-// spec falls back to White/Black rather than throwing (worst case a wrong color WORD on the
+// one seek board serves every eligible variant. These map that axis back to the words a
+// player recognises: chess is White/Black, the xiangqi family and Jungle Red/Black. Banqi
+// and Flip Jungle seat 'red'/'black' but a player's colour is decided by the first flip,
+// so their sides are First/Second, as the play menu labels them. Fail-safe: an unknown spec
+// falls back to White/Black rather than throwing (worst case a wrong color WORD on the
 // label; the seat itself is always assigned by the tenant's own colors).
+const WHITE_FIRST_SPECS: ReadonlySet<string> = new Set(['dark-chess', 'chess']);
+
 export function firstMoverColorName(gameSpecId: string): string {
-  return gameSpecId === 'xiangqi' ? t('setup.red') : t('setup.white');
+  if (isFlipSeatVariant(gameSpecId)) return t('setup.first');
+  if (WHITE_FIRST_SPECS.has(gameSpecId) || !maybeGameSpecForId(gameSpecId)) {
+    return t('setup.white');
+  }
+  return t('setup.red');
 }
 
-export function secondMoverColorName(_gameSpecId: string): string {
-  return t('setup.black');
+export function secondMoverColorName(gameSpecId: string): string {
+  return isFlipSeatVariant(gameSpecId) ? t('setup.second') : t('setup.black');
 }
 
 // Catalog name key per spec. Exhaustive over GameSpecId on purpose: a new

@@ -35,6 +35,7 @@ import {
 } from './routes/crazyhouse-xiangqi-rooms.js';
 import { isAllowedFullTimeControl } from './routes/lib.js';
 import { scheduleCrazyhouseXiangqiEngineMove } from './server-crazyhouse-xiangqi-engine.js';
+import { tenantCorrespondenceBinding } from './variant-tenant/correspondence.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
 import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
@@ -115,6 +116,22 @@ export function getOrLoadCrazyhouseXiangqiRoom(
 ): Promise<CrazyhouseXiangqiRuntimeRoom | null> {
   return getOrLoadTenantRoom(crazyhouseXiangqiTenant, crazyhouseXiangqiRooms, roomId);
 }
+
+// Correspondence (days-per-move): seek accept seats both accounts, the sweeper
+// enforces the durable deadline through the ws runtime (variant-tenant/correspondence.ts).
+const crazyhouseXiangqiCorrespondence = tenantCorrespondenceBinding(crazyhouseXiangqiTenant, {
+  factoryContext: () => ({
+    rooms: crazyhouseXiangqiRooms,
+    isRoomIdTaken: (roomId) => variantTenantRoomIdTaken(roomId, crazyhouseXiangqiTenant.kind),
+    appendRoomEvent: persistence.appendRoomEvent,
+    isPersistenceEnabled: persistence.isInitialized,
+    recordPersistenceError: (roomId, seq, eventType, err) =>
+      recordTenantPersistenceError(crazyhouseXiangqiTenant, roomId, seq, eventType, err),
+  }),
+  getOrLoadRoom: (roomId) =>
+    getOrLoadTenantRoom(crazyhouseXiangqiTenant, crazyhouseXiangqiRooms, roomId),
+  lifecycleCtx: crazyhouseXiangqiWs.lifecycleCtx,
+});
 
 registerVariantTenant({
   kind: crazyhouseXiangqiTenant.kind,
@@ -200,6 +217,5 @@ registerVariantTenant({
     },
     fen: crazyhouseXiangqiFen,
   }),
-  sweepDueDeadline: null,
-  createCorrespondenceGameForSeek: null,
+  ...crazyhouseXiangqiCorrespondence,
 });

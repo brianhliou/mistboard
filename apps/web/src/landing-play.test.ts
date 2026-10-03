@@ -734,11 +734,11 @@ describe('landing play panel', () => {
     clickModalButton('Correspondence');
     expect(visibleCorrespondenceOptions()).toEqual(['1 day', '3 days', '7 days']);
 
-    // Other fog variants (Dark Xiangqi) don't carry correspondence yet — dark
-    // chess only — so the toggle disappears and the picker falls back to real time.
+    // Every variant carries correspondence since 2026-10-02: switching to Fog
+    // Xiangqi keeps the toggle and the chosen segment.
     selectModalVariant('dark-xiangqi');
-    expect(correspondenceToggleVisible()).toBe(false);
-    expect(visibleCorrespondenceOptions()).toEqual([]);
+    expect(correspondenceToggleVisible()).toBe(true);
+    expect(visibleCorrespondenceOptions()).toEqual(['1 day', '3 days', '7 days']);
 
     // Find opponent offers it too (submitting posts an open seek to the board).
     openPlaySetup(panel, 'Find opponent');

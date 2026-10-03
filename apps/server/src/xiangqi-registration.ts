@@ -23,15 +23,15 @@ import {
   type XiangqiLiveRoomCreation,
   type XiangqiRoomEngineSeat,
 } from './server-xiangqi-room-factory.js';
+import { tenantCorrespondenceBinding } from './variant-tenant/correspondence.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
-import { pauseTenantRoomsOnShutdown, sweepTenantRoomDeadline } from './variant-tenant/lifecycle.js';
+import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
 import {
   registerVariantTenant,
   type TenantManagedRoom,
   variantTenantRoomIdTaken,
 } from './variant-tenant/registry.js';
-import { createTenantCorrespondenceGameForSeek } from './variant-tenant/room-factory.js';
 import { countActiveTenantGames, tenantReplayCheck } from './variant-tenant/runtime.js';
 import { XIANGQI_ANALYSIS_ENGINE_ID, XIANGQI_ANALYSIS_REQUEST_DEPTH } from './xiangqi-analysis.js';
 import {
@@ -78,53 +78,27 @@ export async function getOrLoadXiangqiRoom(roomId: string): Promise<XiangqiLiveR
   return room as XiangqiLiveRoom | null;
 }
 
-// Accept a correspondence seek: create the room and pre-seat BOTH accounts, so the game is
-// live the instant the seek is taken. `first` lands on red (xiangqiTenant.colors[0]) — the
-// seek names move order, never a color. recordGameStart stays omitted here to match
+// Correspondence: seek accept seats both accounts (`first` lands on red,
+// xiangqiTenant.colors[0]), and the sweeper enforces the durable deadline through
+// the ws runtime's lifecycle context. recordGameStart stays omitted to match
 // createXiangqiRoom: xiangqi deliberately keeps no running-game record at creation.
-export async function createXiangqiCorrespondenceGameForSeek(args: {
-  timeControl: RoomTimeControl;
-  first: { userId: string };
-  second: { userId: string };
-}): Promise<
-  | {
-      ok: true;
-      room: { id: string; gameSpecId: string };
-      seats: { first: string; second: string };
-    }
-  | { ok: false; error: 'disabled' | 'persistence_failure' | 'room_id_collision' }
-> {
-  const created = await createTenantCorrespondenceGameForSeek(
-    xiangqiTenant,
-    {
-      rooms: xiangqiRooms as unknown as Map<string, XiangqiRuntimeRoom>,
-      isRoomIdTaken: (roomId) => variantTenantRoomIdTaken(roomId, xiangqiTenant.kind),
-      appendRoomEvent: persistence.appendRoomEvent,
-      isPersistenceEnabled: persistence.isInitialized,
-      recordPersistenceError: (roomId, seq, eventType, err) =>
-        recordTenantPersistenceError(xiangqiTenant, roomId, seq, eventType, err),
-    },
-    args,
-  );
-  if (!created.ok) return created;
-  return {
-    ok: true,
-    room: { id: created.room.id, gameSpecId: created.room.gameSpecId },
-    seats: { first: xiangqiTenant.colors[0], second: xiangqiTenant.colors[1] },
-  };
-}
-
-// Durable-deadline enforcement (the sweeper's per-room hook): hydrate, then re-derive and
-// act through the ws runtime's lifecycle context so the timeout/abort appends persist,
-// maintain the deadline row, and broadcast to any connected clients exactly like a live
-// flag. Without this a correspondence game would never time out — which is why the
-// eligibility allowlist and this hook have to land together (see
-// correspondence-eligibility.test.ts).
-export async function sweepXiangqiDueDeadline(roomId: string): Promise<void> {
-  const room = await getOrLoadXiangqiRoom(roomId);
-  if (!room) return;
-  await sweepTenantRoomDeadline(xiangqiTenant, room, xiangqiWs.lifecycleCtx);
-}
+const xiangqiCorrespondence = tenantCorrespondenceBinding(xiangqiTenant, {
+  factoryContext: () => ({
+    rooms: xiangqiRooms as unknown as Map<string, XiangqiRuntimeRoom>,
+    isRoomIdTaken: (roomId) => variantTenantRoomIdTaken(roomId, xiangqiTenant.kind),
+    appendRoomEvent: persistence.appendRoomEvent,
+    isPersistenceEnabled: persistence.isInitialized,
+    recordPersistenceError: (roomId, seq, eventType, err) =>
+      recordTenantPersistenceError(xiangqiTenant, roomId, seq, eventType, err),
+  }),
+  getOrLoadRoom: (roomId) =>
+    getOrLoadTenantRoom(
+      xiangqiTenant,
+      xiangqiRooms as unknown as Map<string, XiangqiRuntimeRoom>,
+      roomId,
+    ),
+  lifecycleCtx: xiangqiWs.lifecycleCtx,
+});
 
 registerVariantTenant({
   kind: xiangqiTenant.kind,
@@ -191,6 +165,5 @@ registerVariantTenant({
     analysis: { engineId: XIANGQI_ANALYSIS_ENGINE_ID, depth: XIANGQI_ANALYSIS_REQUEST_DEPTH },
     fen: standardXiangqiFen,
   }),
-  sweepDueDeadline: sweepXiangqiDueDeadline,
-  createCorrespondenceGameForSeek: createXiangqiCorrespondenceGameForSeek,
+  ...xiangqiCorrespondence,
 });

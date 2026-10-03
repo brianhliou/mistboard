@@ -25,6 +25,7 @@ import {
   type JungleLiveRoom,
   jungleWs,
 } from './server-ws-jungle.js';
+import { tenantCorrespondenceBinding } from './variant-tenant/correspondence.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
 import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
@@ -68,6 +69,26 @@ export async function getOrLoadJungleRoom(roomId: string): Promise<JungleLiveRoo
   );
   return room as JungleLiveRoom | null;
 }
+
+// Correspondence (days-per-move): seek accept seats both accounts, the sweeper
+// enforces the durable deadline through the ws runtime (variant-tenant/correspondence.ts).
+const jungleCorrespondence = tenantCorrespondenceBinding(jungleTenant, {
+  factoryContext: () => ({
+    rooms: jungleRooms as unknown as Map<string, JungleRuntimeRoom>,
+    isRoomIdTaken: (roomId) => variantTenantRoomIdTaken(roomId, jungleTenant.kind),
+    appendRoomEvent: persistence.appendRoomEvent,
+    isPersistenceEnabled: persistence.isInitialized,
+    recordPersistenceError: (roomId, seq, eventType, err) =>
+      recordTenantPersistenceError(jungleTenant, roomId, seq, eventType, err),
+  }),
+  getOrLoadRoom: (roomId) =>
+    getOrLoadTenantRoom(
+      jungleTenant,
+      jungleRooms as unknown as Map<string, JungleRuntimeRoom>,
+      roomId,
+    ),
+  lifecycleCtx: jungleWs.lifecycleCtx,
+});
 
 registerVariantTenant({
   kind: jungleTenant.kind,
@@ -127,6 +148,5 @@ registerVariantTenant({
     analysis: { engineId: JUNGLE_ANALYSIS_ENGINE_ID, depth: JUNGLE_ANALYSIS_DEPTH },
     fen: jungleStateToEngineFen,
   }),
-  sweepDueDeadline: null,
-  createCorrespondenceGameForSeek: null,
+  ...jungleCorrespondence,
 });

@@ -10,7 +10,14 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { GAME_SPECS, isOfficialTimeControl, XIANGQI_SPEC_ID } from '@mistboard/game';
+import {
+  CANONICAL_VARIANT_ORDER,
+  CHESS_SPEC_ID,
+  GAME_SPECS,
+  isOfficialTimeControl,
+  MAHJONG_SPEC_ID,
+  XIANGQI_SPEC_ID,
+} from '@mistboard/game';
 import { CORRESPONDENCE_ELIGIBLE_SPECS } from './routes/correspondence-rooms.js';
 // Side-effect import: registers every tenant, so this sees the set the server boots with.
 import './variant-tenant/register-tenants.js';
@@ -43,6 +50,16 @@ test('every correspondence-eligible spec is a real game spec', () => {
       `${specId} is correspondence-eligible but is not a known game spec`,
     );
   }
+});
+
+test('every variant on the public shelf is eligible, and nothing else (2026-10-02)', () => {
+  // Brian: "all of them should support it". The shelf is CANONICAL_VARIANT_ORDER,
+  // the one list every picker reads; mahjong and study-only chess are not on it.
+  // A variant added to the shelf without correspondence fails here, not in a
+  // player's start panel.
+  assert.deepEqual([...CORRESPONDENCE_ELIGIBLE_SPECS].sort(), [...CANONICAL_VARIANT_ORDER].sort());
+  assert.ok(!CORRESPONDENCE_ELIGIBLE_SPECS.has(MAHJONG_SPEC_ID));
+  assert.ok(!CORRESPONDENCE_ELIGIBLE_SPECS.has(CHESS_SPEC_ID));
 });
 
 test('standard xiangqi is eligible — the 2026-07-04 fork-6 partial reversal', () => {
