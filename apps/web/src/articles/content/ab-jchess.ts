@@ -1,5 +1,4 @@
-import type { XiangqiPlayerView } from '@mistboard/game';
-import { parseJieqiFen, type XiangqiSquare } from '@mistboard/game';
+import type { Locale } from '../../i18n/locale.js';
 import {
   type AbExamplesData,
   type AbMatchGame,
@@ -7,56 +6,39 @@ import {
   pikaMoveMarks,
   settledFrom,
 } from '../ab-jchess-examples.js';
-import { XQ_CELL, xqBoardSvg, xqPoint, xqStaticView, xqVisionDemoState } from '../diagrams.js';
 import { evalCompareChartSvg } from '../eval-compare-chart.js';
 import { MARK_GLYPH } from '../katago-jungle-analysis.js';
 import type { Article, ArticleBlock } from '../types.js';
 import examplesJson from './ab-jchess-examples.json' with { type: 'json' };
 
-// Card art and the post's first example: jq_23d2a761 after 26 plies, Red (the
-// bot, full-strength Pikafish) to move, as the bot saw it. Pikafish turned over
-// the piece on b3 and moved it to d3, rating the game above +10; three of the
-// five identities it could have been lose at once to the cannon's mate on h1, and
-// Black mated next move. AB-JChess plays the advisor e2-f3 and rates it about
-// +1. Rebuilt from the game's own records (api/jieqi/games, the red seat's view);
-// ab-jchess-thumbnail.test.ts asserts both moves are legal here.
-export const AB_JCHESS_TRAP_FEN =
-  'x2k1xxA1/9/px2c4/x1x1C1B2/7c1/2P3n2/9/1X2N3P/4Ab3/XXX1KX3 w R2A0C0P2N0B1r0a2c0p2n1b1 3 14';
-
-// 16:10 to match the card media box (.articles-index-card-media, 16/10).
-const THUMB_ASPECT = 16 / 10;
-
-const AB_JCHESS_THUMBNAIL = (): string => {
-  const parsed = parseJieqiFen(AB_JCHESS_TRAP_FEN);
-  if (!parsed.ok) throw new Error(`ab-jchess thumbnail: ${parsed.error}`);
-  const board: XiangqiPlayerView['board'] = {};
-  for (const [square, piece] of Object.entries(parsed.state.board)) {
-    if (!piece) continue;
-    board[square as XiangqiSquare] = {
-      piece: { color: piece.color, role: piece.role },
-      shrouded: piece.faceDown,
-    };
-  }
-  const boardY = 28; // xqBoardSvg draws the grid 28 below its y, under the title row.
-  // Ranks 1 to 6: Red's camp and the black cannon on h6 that mates on h1.
-  // Half a cell above rank 6, so the rank-7 pieces stay out of frame.
-  const top = xqPoint(4, 6, 'red', 0, boardY).y - XQ_CELL * 0.5;
-  const bottom = xqPoint(4, 1, 'red', 0, boardY).y + XQ_CELL * 0.8;
-  const h = bottom - top;
-  const w = h * THUMB_ASPECT;
-  const left = xqPoint(4, 1, 'red', 0, boardY).x - w / 2;
-  const svg = xqBoardSvg({
-    state: xqVisionDemoState('ab-jchess-thumb', {}),
-    view: xqStaticView('ab-jchess-thumb', board),
-    x: 0,
-    y: 0,
-    label: '',
-    perspective: 'red',
-    shroudedStyle: 'back',
-    arrows: [{ from: 'e2' as XiangqiSquare, to: 'f3' as XiangqiSquare }],
-    dots: [{ square: 'd3' as XiangqiSquare, blocked: true }],
-  });
-  return `<svg class="xq-article-svg" viewBox="${left} ${top} ${w} ${h}" role="img" aria-label="AB-JChess moves the advisor to f3; the bot's reveal to d3 lost to mate in one" xmlns="http://www.w3.org/2000/svg"><rect class="xq-diagram-bg" x="${left}" y="${top}" width="${w}" height="${h}"/>${svg}</svg>`;
+// Text card in the Pikafish card's family, on the xiangqi board's palette since
+// jieqi is played on that board. The engine has no Chinese name, so AB-JCHESS
+// leads in every locale; 揭棋 sits above it and the tagline follows the page.
+const AB_JCHESS_THUMBNAIL = (locale: Locale): string => {
+  const zh = locale === 'zh-Hans' || locale === 'zh-Hant';
+  const tagline = zh
+    ? locale === 'zh-Hant'
+      ? '更強的揭棋電腦'
+      : '更强的揭棋电脑'
+    : 'A STRONGER JIEQI BOT';
+  const hanziFont =
+    "'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif";
+  const latinFont = 'Roboto, system-ui, sans-serif';
+  return [
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" ',
+    'preserveAspectRatio="xMidYMid slice" width="320" height="200" role="img" ',
+    'aria-label="A card reading AB-JChess, a stronger jieqi bot">',
+    '<rect x="0" y="0" width="320" height="200" fill="var(--xq-diagram-bg, #d9bd82)"/>',
+    `<text x="160" y="62" text-anchor="middle" font-family="${hanziFont}" `,
+    'font-size="26" font-weight="700" letter-spacing="10" fill="#b9832f" opacity="0.5">揭棋</text>',
+    `<text x="160" y="118" text-anchor="middle" font-family="${latinFont}" `,
+    'font-size="40" font-weight="700" fill="#b9832f" translate="no">AB-JCHESS</text>',
+    `<text x="160" y="150" text-anchor="middle" font-family="${zh ? hanziFont : latinFont}" `,
+    `font-size="${zh ? 16 : 15}" font-weight="600" letter-spacing="${zh ? 3 : 1.4}" `,
+    'fill="#b9832f" opacity="0.62">',
+    `${tagline}</text>`,
+    '</svg>',
+  ].join('');
 };
 
 const REPO = 'https://github.com/lxsgx23/AB-JChess';

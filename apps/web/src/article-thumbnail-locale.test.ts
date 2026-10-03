@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { abJchessArticle } from './articles/content/ab-jchess.js';
 import { pikafishArticle } from './articles/content/pikafish.js';
 import { renderArticleThumbnail } from './articles.js';
 import type { Locale } from './i18n/locale.js';
@@ -39,5 +40,25 @@ describe('locale-aware article thumbnails', () => {
 
     expect(hant.textContent).toContain('皮卡魚');
     expect(hant.textContent).not.toContain('PLAY IT IN YOUR BROWSER');
+  });
+});
+
+describe('AB-JChess card', () => {
+  const render = (locale: Locale): string => {
+    const thumb = abJchessArticle.thumbnail;
+    if (thumb?.kind !== 'svg' || typeof thumb.svg !== 'function') {
+      throw new Error('the AB-JChess thumbnail is expected to be a render thunk');
+    }
+    return thumb.svg(locale);
+  };
+
+  it('is a text card in the Pikafish family, with the tagline in the page language', () => {
+    for (const locale of ['en', 'zh-Hans', 'zh-Hant'] as Locale[]) {
+      expect(render(locale)).toMatch(/font-size="40"[^>]*>AB-JCHESS</);
+      expect(render(locale)).toContain('揭棋');
+    }
+    expect(render('en')).toContain('A STRONGER JIEQI BOT');
+    expect(render('zh-Hans')).toContain('更强的揭棋电脑');
+    expect(render('zh-Hant')).toContain('更強的揭棋電腦');
   });
 });
