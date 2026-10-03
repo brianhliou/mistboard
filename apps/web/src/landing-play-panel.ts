@@ -61,7 +61,6 @@ type StoredPanel = {
   bots?: Record<string, { botId?: string; tc?: TimeControlId }>;
   people?: Record<string, string>;
   last?: { gameSpecId: string; botId: string; tc: TimeControlId };
-  order?: string[];
 };
 
 const STORAGE_KEY = 'mistboard.playPanel.v1';
@@ -170,22 +169,15 @@ function stepper(opts: {
   return wrap;
 }
 
-/** Game spec ids in the panel's row order: the server's 28-day order when it
- *  has one (cached from the last visit, so rows never jump under the cursor),
- *  then anything it did not rank in canonical order. */
-export function orderPanelSpecs(
-  specs: readonly string[],
-  serverOrder: readonly string[] | undefined,
-): string[] {
-  const rank = new Map((serverOrder ?? []).map((id, index) => [id, index]));
-  return [...specs].sort((a, b) => {
-    const ra = rank.get(a) ?? Number.POSITIVE_INFINITY;
-    const rb = rank.get(b) ?? Number.POSITIVE_INFINITY;
-    if (ra !== rb) return ra - rb;
-    return (
-      canonicalVariantOrderIndex(a as GameSpecId) - canonicalVariantOrderIndex(b as GameSpecId)
-    );
-  });
+/** Game spec ids in the panel's row order: the canonical shelf order, the
+ *  same as every other variant list. (Until 2026-10-02 the panel sorted by
+ *  28-day play, which put every new launch last and kept it there; Brian moved
+ *  it to the editorial order so Crazyhouse and Fortress sit side by side.) */
+export function orderPanelSpecs(specs: readonly string[]): string[] {
+  return [...specs].sort(
+    (a, b) =>
+      canonicalVariantOrderIndex(a as GameSpecId) - canonicalVariantOrderIndex(b as GameSpecId),
+  );
 }
 
 /** Bot paces a variant can start, slowest last, plus its default. */
@@ -261,10 +253,7 @@ export function buildPlayPanel(
     variants.find((v) => v.gameSpecId === id)?.label ??
     variantLabelForGameSpec(id as LandingGameSpecId, locale);
   const ordered = (): LandingGameSpecId[] =>
-    orderPanelSpecs(
-      variants.map((v) => v.gameSpecId),
-      stored.order,
-    ) as LandingGameSpecId[];
+    orderPanelSpecs(variants.map((v) => v.gameSpecId)) as LandingGameSpecId[];
 
   const board = document.createElement('section');
   board.className = 'landing-lobby-board pp-board';
@@ -915,24 +904,6 @@ export function buildPlayPanel(
         })
         .catch(() => {});
     };
-    // Row order for the NEXT visit: reordering rows already on screen would move
-    // them under the cursor, so a fresh order is cached, and only applied now
-    // when this is the first visit (nothing cached yet).
-    void fetch('/api/play/variant-order', { headers: { accept: 'application/json' } })
-      .then((r) => (r.ok ? (r.json() as Promise<{ order?: string[] }>) : null))
-      .then((data) => {
-        if (!data?.order?.length) return;
-        const firstVisit = !stored.order;
-        writeStored((s) => {
-          s.order = data.order;
-        });
-        if (firstVisit) {
-          stored.order = data.order;
-          renderBotRows();
-          if (!searching) renderPersonRows();
-        }
-      })
-      .catch(() => {});
     void refreshLobby();
     refreshCorrespondence();
     refreshPlaying();
