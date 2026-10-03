@@ -1,6 +1,5 @@
-/* /games — current games grid (lichess "Current games" anatomy: channel rail on
-   the left, a responsive grid of game cards, each a board framed by two seat
-   rows with ticking clocks). */
+/* /games (current games) plus the variant rail and header shared with
+   /games/search and /data. */
 
 .current-games-shell {
   display: flex;
@@ -148,49 +147,374 @@
   }
 }
 
-/* Cards */
-.current-games-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 18px;
+@media (max-width: 720px) {
+  .current-games-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .current-games-rail {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .current-games-rail-link {
+    grid-template-columns: 24px minmax(0, 1fr);
+    gap: 6px;
+    padding: 4px 8px;
+    border: 1px solid var(--site-border, rgba(0, 0, 0, 0.1));
+    border-radius: 8px;
+  }
+
+  /* Chips mark the current entry by colour and border, not the side bar. */
+  .current-games-rail-link::after {
+    display: none;
+  }
+
+  .current-games-rail-link.active {
+    border-color: var(--site-accent-strong);
+  }
+
+  .current-games-rail-thumb,
+  .current-games-rail-thumb svg,
+  .current-games-rail-thumb .variant-marker {
+    width: 24px;
+    height: 24px;
+  }
 }
 
-.current-game-card {
+/* ---------------------------------------------------------------------------
+   /games board wall (current-games.ts). Everything below is the page's own;
+   the rules above are shared with /games/search and /data.
+   --------------------------------------------------------------------------- */
+
+.current-games-page {
+  /* The misty tile for hidden-information games (fog, sealed, masked). */
+  --current-games-fog-ink: hsl(140, 14%, 34%);
+  --current-games-fog-strong: hsl(140, 20%, 22%);
+  --current-games-fog-bg: hsl(140, 16%, 88%);
+  --current-games-fog-glow-a: hsl(140, 22%, 80%);
+  --current-games-fog-glow-b: hsl(140, 18%, 84%);
+  --current-games-fog-stripe: rgba(255, 255, 255, 0.35);
+}
+
+:root[data-effective-theme="dark"] .current-games-page {
+  --current-games-fog-ink: #b7cbbd;
+  --current-games-fog-strong: #d6e3da;
+  --current-games-fog-bg: #17261a;
+  --current-games-fog-glow-a: #2f4a38;
+  --current-games-fog-glow-b: #24392b;
+  --current-games-fog-stripe: rgba(255, 255, 255, 0.03);
+}
+
+.current-games-page .current-games-shell {
+  /* A board wall wants the room: wider than the 760px text column. */
+  max-width: 1180px;
+  gap: 32px;
+}
+
+/* Header: title + pill + subtitle on the left, the two actions on the right. */
+.current-games-hero {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px 20px;
+}
+
+.current-games-titleblock {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
 }
 
-.current-game-link {
+.current-games-titlerow {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  color: inherit;
-  text-decoration: none;
-  border-radius: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
 }
 
-.current-game-link:hover .current-game-seat-name,
-.current-game-link:focus-visible .current-game-seat-name {
+.current-games-titlerow h1 {
+  margin: 0;
+}
+
+.current-games-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--site-accent-soft);
+  color: var(--site-accent-strong);
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.current-games-pill[hidden] {
+  display: none;
+}
+
+.current-games-pill-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--site-accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--site-accent) 25%, transparent);
+}
+
+.current-games-pill.is-quiet {
+  background: var(--site-panel-soft);
+  color: var(--site-muted);
+}
+
+.current-games-pill.is-quiet .current-games-pill-dot {
+  background: var(--site-muted);
+  box-shadow: none;
+}
+
+.current-games-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.current-games-cta {
+  display: inline-flex;
+  align-items: center;
+  padding: 9px 16px;
+  border-radius: 7px;
+  border: 1px solid var(--site-accent);
+  background: var(--site-accent);
+  color: var(--site-on-accent, #fff);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.current-games-cta:hover,
+.current-games-cta:focus-visible {
+  background: var(--site-accent-strong);
+  border-color: var(--site-accent-strong);
+}
+
+.current-games-cta.is-secondary {
+  background: transparent;
   color: var(--site-accent-strong);
 }
 
-.current-game-link:focus-visible {
+.current-games-cta.is-secondary:hover,
+.current-games-cta.is-secondary:focus-visible {
+  background: var(--site-accent-soft);
+  color: var(--site-accent-strong);
+}
+
+/* Toolbar: variant chips (wrap) and the Everyone / People only / Bots control. */
+.current-games-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+}
+
+.current-games-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.current-games-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--site-border);
+  color: var(--site-text);
+  font-size: 0.85rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.current-games-chip:hover,
+.current-games-chip:focus-visible {
+  border-color: var(--site-accent);
+  color: var(--site-heading);
+}
+
+.current-games-chip.is-selected {
+  background: var(--site-accent-soft);
+  border-color: var(--site-accent);
+  color: var(--site-accent-strong);
+}
+
+.current-games-chip-count {
+  color: var(--site-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.current-games-chip.is-selected .current-games-chip-count {
+  color: inherit;
+  opacity: 0.8;
+}
+
+.current-games-segmented {
+  display: inline-flex;
+  border: 1px solid var(--site-border);
+  border-radius: 7px;
+  overflow: hidden;
+  flex: none;
+}
+
+.current-games-segment {
+  padding: 6px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--site-muted);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.current-games-segment + .current-games-segment {
+  border-left: 1px solid var(--site-border);
+}
+
+.current-games-segment:hover {
+  color: var(--site-heading);
+}
+
+.current-games-segment.is-selected {
+  background: var(--site-panel-soft);
+  color: var(--site-heading);
+  font-weight: 600;
+}
+
+.current-games-segment:focus-visible {
   outline: 2px solid var(--site-accent-strong);
-  outline-offset: 4px;
+  outline-offset: -2px;
+}
+
+/* Sections */
+.current-games-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.current-games-section[hidden] {
+  display: none;
+}
+
+.current-games-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 16px;
+}
+
+.current-games-section-head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--site-heading);
+}
+
+.current-games-section-aside {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  font-size: 0.85rem;
+}
+
+.current-games-section-note {
+  color: var(--site-muted);
+}
+
+.current-games-more-link {
+  color: var(--site-link);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.current-games-more-link:hover,
+.current-games-more-link:focus-visible {
+  text-decoration: underline;
+}
+
+.current-games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr));
+  gap: 18px;
+}
+
+/* Board card: seat row, board, seat row, meta. The whole card is clickable
+   through the stretched .current-game-open; profile links sit above it. */
+.current-game-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--site-border);
+  background: var(--site-panel);
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease;
+}
+
+.current-game-card:hover,
+.current-game-card:focus-within {
+  border-color: var(--site-accent);
+}
+
+.current-game-open {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+}
+
+.current-game-open:focus-visible {
+  outline: 2px solid var(--site-accent-strong);
+  outline-offset: 2px;
+}
+
+.current-game-card a.player-name-link {
+  position: relative;
+  z-index: 2;
 }
 
 .current-game-seat {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 28px;
+  font-size: 0.85rem;
+}
+
+.current-game-seat-who {
+  display: flex;
+  align-items: center;
   gap: 6px;
-  min-height: 22px;
-  font-size: 0.92rem;
+  min-width: 0;
 }
 
 .current-game-seat-name {
   font-weight: 600;
+  color: var(--site-heading);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -198,33 +522,54 @@
 }
 
 .current-game-bot {
+  flex: none;
   font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   padding: 1px 5px;
   border-radius: 4px;
-  background: var(--site-accent-soft, rgba(0, 0, 0, 0.08));
+  background: var(--site-accent-soft);
   color: var(--site-accent-strong);
 }
 
 .current-game-seat-clock {
-  margin-left: auto;
-  font-variant-numeric: tabular-nums;
+  flex: none;
+  padding: 3px 9px;
+  border-radius: 5px;
+  background: var(--site-panel-soft);
   color: var(--site-muted);
-  font-size: 0.9rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
-.current-game-seat-clock.is-active {
-  color: var(--site-fg);
-  font-weight: 600;
+.current-game-seat-clock[hidden] {
+  display: none;
+}
+
+.current-game-seat-clock.is-active,
+.current-game-seat-clock.is-deadline {
+  background: var(--site-accent-soft);
+  color: var(--site-accent-strong);
+  box-shadow: inset 0 0 0 1px var(--site-accent);
+}
+
+.current-game-seat-clock.is-deadline {
+  font-size: 0.78rem;
+}
+
+/* Low time: the room clock's own emergency colours (game-shell.css .emerg). */
+.current-game-seat-clock.is-low {
+  background: var(--clock-emerg-bg);
+  color: var(--clock-emerg-text);
+  box-shadow: inset 0 0 0 1px var(--clock-emerg-border);
 }
 
 .current-game-board {
   width: 100%;
   aspect-ratio: 1;
-  border-radius: 8px;
+  border-radius: 4px;
   overflow: hidden;
-  background: var(--site-surface-2, rgba(0, 0, 0, 0.04));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -275,6 +620,7 @@
   display: block;
 }
 
+/* An open game whose live board has not mounted (or has no live renderer). */
 .current-game-hidden {
   display: flex;
   flex-direction: column;
@@ -286,6 +632,7 @@
   padding: 16px;
   text-align: center;
   color: var(--site-muted);
+  background: var(--site-panel-soft);
   --variant-marker-color: var(--site-muted);
 }
 
@@ -306,66 +653,169 @@
   font-size: 0.85rem;
 }
 
+/* The misty tile: hidden-information games never show a board here. */
+.current-game-fog {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  padding: 16px;
+  box-sizing: border-box;
+  text-align: center;
+  color: var(--current-games-fog-ink);
+  background:
+    radial-gradient(120% 60% at 20% 25%, var(--current-games-fog-glow-a) 0%, transparent 60%),
+    radial-gradient(90% 70% at 85% 80%, var(--current-games-fog-glow-b) 0%, transparent 65%),
+    repeating-linear-gradient(135deg, var(--current-games-fog-stripe) 0 2px, transparent 2px 14px),
+    var(--current-games-fog-bg);
+}
+
+.current-game-fog-waves svg {
+  display: block;
+  width: 44px;
+  height: 30px;
+}
+
+.current-game-fog-variant {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--current-games-fog-strong);
+}
+
+.current-game-fog-note {
+  max-width: 180px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+/* Correspondence: share of the move's allowance left. */
+.current-game-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--site-panel-soft);
+  overflow: hidden;
+}
+
+.current-game-bar span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--site-accent);
+}
+
 .current-game-meta {
-  font-size: 0.8rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 0.78rem;
   color: var(--site-muted);
+  min-width: 0;
+}
+
+.current-game-chip,
+.current-game-result {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--site-panel-soft);
+  color: var(--site-text);
+  white-space: nowrap;
+}
+
+/* Just finished: a smaller grid of final positions. */
+.current-games-finished-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(160px, 100%), 1fr));
+  gap: 14px;
+}
+
+.current-game-finished {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--site-border);
+  background: var(--site-panel);
+  color: var(--site-text);
+  text-decoration: none;
+  font-size: 0.78rem;
+}
+
+.current-game-finished:hover,
+.current-game-finished:focus-visible {
+  border-color: var(--site-accent);
+}
+
+.current-game-finished .current-game-fog {
+  padding: 10px;
+}
+
+.current-game-finished-players {
+  font-weight: 600;
+  color: var(--site-heading);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* Empty state */
-.current-games-empty {
+.current-game-finished-line {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 20px;
-  border: 1px solid var(--site-border, rgba(0, 0, 0, 0.1));
-  border-radius: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
 }
 
-.current-games-empty h2,
-.current-games-seeks h2,
-.current-games-recent h2 {
-  margin: 0;
-  font-size: 1.1rem;
+.current-game-result {
+  border-radius: 5px;
+  font-weight: 600;
+  color: var(--site-heading);
 }
 
-.current-games-empty p,
-.current-games-muted {
-  margin: 0;
+.current-game-finished-when {
   color: var(--site-muted);
 }
 
-.current-games-actions {
+/* Empty state: a quiet line, then open seeks when there are any. */
+.current-games-empty-host {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 6px;
+  flex-direction: column;
+  gap: 18px;
 }
 
-.current-games-cta {
-  display: inline-flex;
-  align-items: center;
-  padding: 8px 14px;
+.current-games-empty-host[hidden] {
+  display: none;
+}
+
+.current-games-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 20px;
+  border: 1px dashed var(--site-border);
   border-radius: 8px;
-  background: var(--site-accent-strong);
-  color: var(--site-on-accent, #fff);
-  font-weight: 600;
-  text-decoration: none;
 }
 
-.current-games-cta.is-secondary {
-  background: transparent;
-  color: var(--site-accent-strong);
-  border: 1px solid var(--site-accent-strong);
+.current-games-empty h2,
+.current-games-seeks h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--site-heading);
+}
+
+.current-games-empty p {
+  margin: 0;
+  color: var(--site-muted);
 }
 
 .current-games-seeks {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 20px;
 }
 
 .current-games-seek-list {
@@ -379,17 +829,18 @@
 
 .current-games-seek {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 12px;
+  gap: 4px 12px;
   padding: 8px 12px;
   border-radius: 8px;
-  border: 1px solid var(--site-border, rgba(0, 0, 0, 0.1));
+  border: 1px solid var(--site-border);
   color: inherit;
   text-decoration: none;
 }
 
 .current-games-seek:hover {
-  border-color: var(--site-accent-strong);
+  border-color: var(--site-accent);
 }
 
 .current-games-seek-name {
@@ -400,68 +851,23 @@
   color: var(--site-muted);
 }
 
-.current-games-recent {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 28px;
-}
-
-.current-games-recent:empty {
-  display: none;
-}
-
-.current-games-more-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 20px;
-}
-
-.current-games-search-link {
-  align-self: flex-start;
-  color: var(--site-accent-strong);
-  font-weight: 600;
-  text-decoration: none;
+@media (prefers-reduced-motion: reduce) {
+  .current-game-card {
+    transition: none;
+  }
 }
 
 @media (max-width: 720px) {
-  .current-games-layout {
-    grid-template-columns: minmax(0, 1fr);
+  .current-games-page .current-games-shell {
+    gap: 24px;
   }
 
-  .current-games-rail {
-    position: static;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 6px;
+  .current-games-hero {
+    align-items: flex-start;
   }
 
-  .current-games-rail-link {
-    grid-template-columns: 24px minmax(0, 1fr);
-    gap: 6px;
-    padding: 4px 8px;
-    border: 1px solid var(--site-border, rgba(0, 0, 0, 0.1));
-    border-radius: 8px;
-  }
-
-  /* Chips mark the current entry by colour and border, not the side bar. */
-  .current-games-rail-link::after {
-    display: none;
-  }
-
-  .current-games-rail-link.active {
-    border-color: var(--site-accent-strong);
-  }
-
-  .current-games-rail-thumb,
-  .current-games-rail-thumb svg,
-  .current-games-rail-thumb .variant-marker {
-    width: 24px;
-    height: 24px;
-  }
-
-  .current-games-grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 12px;
+  .current-games-finished-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(140px, 100%), 1fr));
+    gap: 10px;
   }
 }

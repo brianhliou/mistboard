@@ -386,7 +386,7 @@ function formatGameDate(value: string | undefined, locale: Locale): string {
 
 // Time-only label for the date-grouped activity feed, where the day header
 // already carries the date.
-function formatGameTime(value: string | undefined, locale: Locale): string {
+export function formatGameTime(value: string | undefined, locale: Locale): string {
   if (!value) return '';
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return '';
@@ -427,7 +427,7 @@ function opponentColor(
 // legacy aliases) instead of a hand-maintained switch that silently drifts as
 // variants ship. Tenants without their own postgame (dark-chess correspondence)
 // and plain dark chess carry no gameRouteBase and fall through to /game/:id.
-function profileGameHref(game: FeaturedGame): string {
+export function profileGameHref(game: FeaturedGame): string {
   const tenant = webVariantTenantForRoomId(game.roomId) ?? webVariantTenantForSpecId(game.variant);
   if (tenant?.gameRouteBase) {
     return `${tenant.gameRouteBase}/${encodeURIComponent(game.roomId)}`;
