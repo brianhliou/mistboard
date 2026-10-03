@@ -88,6 +88,7 @@ Conventions:
 
 ### Fixed
 
+- The jieqi Pikafish bot and its analysis no longer overrate turning over a piece: Black's reveals were scored by their best possible outcome, and outcomes the search cut short were averaged in as if exact ([d00a1b82](https://github.com/brianhliou/mistboard/commit/d00a1b82))
 - On the homepage, only the Play button starts a bot game; a click elsewhere on the row no longer does ([5edb33f3](https://github.com/brianhliou/mistboard/commit/5edb33f3))
 - Open correspondence games now leave the board after 14 days, and posting the same open game twice keeps just one ([5edb33f3](https://github.com/brianhliou/mistboard/commit/5edb33f3))
 - Banqi and Flip Jungle rooms show Resign, the move list and your own seat row again, after two days hidden on short boards ([6ffe2f45](https://github.com/brianhliou/mistboard/commit/6ffe2f45))
