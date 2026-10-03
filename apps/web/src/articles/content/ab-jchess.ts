@@ -186,7 +186,7 @@ export const abJchessArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: "Here are two of AB-JChess's wins where its score climbed while Pikafish's stayed level, both with AB-JChess as Red. We scored every position again with both engines: AB-JChess searching 1 million positions, and the fixed Pikafish searching 64 million. A score is an expected result, where a win is 100% and a draw 50%. The two engines' centipawns are on different scales, so each becomes a score through a curve fitted on the 400 games' results: +112 for AB-JChess and +709 for Pikafish both mean 75%. Each chart shows AB-JChess's score as each engine saw it. The dashed line is 80%, each dotted line marks the ply from which that engine stayed above it, and ?! marks a Pikafish move that cost it 5 to 10 points by AB-JChess's count. Neither game has a Pikafish move worse than that. A ply is one side's move.",
+          text: "Here are two of AB-JChess's wins, both as Red, where its score climbed while Pikafish's stayed level. We scored every position again with both engines, AB-JChess searching 1 million positions and the fixed Pikafish 64 million, and turned each engine's numbers into an expected score with a curve fitted on the match. Each chart shows AB-JChess's score as each engine saw it. A dotted line marks the ply from which that engine kept it above the dashed 80% line, and ?! marks a Pikafish move that cost 5 to 10 points by AB-JChess's count; neither game has a worse one. A ply is one side's move.",
         },
         { kind: 'sub-heading', text: 'Game 68: two advisors and an elephant, for an attack' },
         {

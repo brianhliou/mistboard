@@ -164,12 +164,24 @@ const NARRATIVE: Record<number, Array<{ ply: number; text: (r: Reading) => strin
   ],
 };
 
-function deepCheck(game: AbMatchGame, line: AbLine, budgets: AbExamplesData['budgets']): string {
+/** The longer search's verdict on the game move against AB-JChess's choice, both
+ *  engines, in Pikafish's expected score (budgets are in the chapter intro). */
+function deepCheck(game: AbMatchGame, line: AbLine): string {
   const pikaSide = (red: number): string => pct(game.abColor === 'red' ? 1 - red : red);
   const color = game.abColor === 'red' ? 'Black' : 'Red';
+  const pick = (alt: number, played: number, keeps: string, flips: string): string => {
+    const a = pikaSide(alt);
+    const p = pikaSide(played);
+    if (a === p) return `${keeps.split(' ')[0]} rates them the same (${color} ${a})`;
+    // Higher for Pikafish's side means the better move for the side that moved.
+    const altBetter = Number.parseFloat(a) > Number.parseFloat(p);
+    return altBetter
+      ? `${keeps} (${color} ${a} against ${p})`
+      : `${flips} (${color} ${p} against ${a})`;
+  };
   return (
-    `Searched longer, each move on its own: ${AB} (${nodes(budgets.lineAbNodes)} nodes) gives ${color} ${pikaSide(line.abAlt)} after its choice and ${pikaSide(line.abPlayed)} after the game move; ` +
-    `${PIKA} (fixed build, ${nodes(budgets.deepPkNodes)} nodes) gives ${pikaSide(line.pkAlt)} and ${pikaSide(line.pkPlayed)}.`
+    `Searched longer, ${pick(line.abAlt, line.abPlayed, `${AB} keeps its choice`, `${AB} switches to the game move`)}; ` +
+    `${pick(line.pkAlt, line.pkPlayed, `${PIKA} agrees`, `${PIKA} prefers the game move`)}.`
   );
 }
 
@@ -215,9 +227,9 @@ function chapter(game: AbMatchGame, budgets: AbExamplesData['budgets']) {
         moves: line.moves,
         redScoreEnd: line.abAlt,
         comment:
-          `${AB}'s choice, searched at ${nodes(budgets.lineAbNodes)} nodes.` +
+          `${AB}'s choice.` +
           (endsOnReveal
-            ? ' It turns over a face-down piece, so the line stops there: the score is the average over what the piece could be.'
+            ? ' It turns over a face-down piece, so the line stops there; its score averages what the piece could be.'
             : ''),
       };
     });
@@ -229,7 +241,7 @@ function chapter(game: AbMatchGame, budgets: AbExamplesData['budgets']) {
     const ply = line.ply + 1;
     const prior = comments[ply] ? `${comments[ply]} ` : '';
     comments[ply] =
-      `${prior}${AB}'s choice here was ${said(states[line.ply]!, line.moves[0]!)}; by its count the game move cost ${PIKA} under 5 points, so it is not marked. ${deepCheck(game, line, budgets)}`;
+      `${prior}${AB} preferred ${said(states[line.ply]!, line.moves[0]!)}, but by its count the game move cost under 5 points. ${deepCheck(game, line)}`;
   }
   const input = {
     rootFen: game.rootFen,
@@ -246,17 +258,15 @@ function chapter(game: AbMatchGame, budgets: AbExamplesData['budgets']) {
     judgedComment: (m: JudgedMove) => {
       const line = deep.get(m.ply - 1);
       return (
-        `${m.glyph} By ${AB}'s count this move takes ${PIKA} (${pikaColor}) from ${pct(m.before)} to ${pct(m.after)}. ` +
-        `${AB}'s choice was ${said(states[m.ply - 1]!, m.best!)}` +
-        (line ? `, the line beside this move. ${deepCheck(game, line, budgets)}` : '.')
+        `${m.glyph} By ${AB}'s count this drops ${PIKA} from ${pct(m.before)} to ${pct(m.after)}; it preferred ${said(states[m.ply - 1]!, m.best!)}` +
+        (line ? `, the line beside this move. ${deepCheck(game, line)}` : '.')
       );
     },
     intro:
       `Game ${game.game} of the 2026-09-29 match, 400 games at 4 seconds a move: ${game.abColor === 'red' ? `${AB} red, ${PIKA} black` : `${PIKA} red, ${AB} black`}. ` +
-      `Every position was scored again by both engines: ${AB} at ${nodes(budgets.abNodes)} nodes, ${PIKA} (the fixed build) at ${nodes(budgets.pkNodes)}. ` +
-      `Scores are expected scores, where a draw counts half; each engine's centipawns become one through a curve fitted on the 400 games (+112 for ${AB} and +709 for ${PIKA} are both 75%). ` +
-      `Marks are ${PIKA}'s moves as ${AB} judges them, on the site's review cutoffs (?! 5 points, ? 10, ?? 15); a reveal is judged on its own search, before the piece comes up. ` +
-      `The symbol at the end of each line is the position there by ${AB} (=, ⩲, ±, +− for red; ⩱, ∓, −+ for black).`,
+      `Both engines scored every position again: ${AB} at ${nodes(budgets.abNodes)} nodes, the fixed ${PIKA} at ${nodes(budgets.pkNodes)}; scores are expected results, a draw counting half. ` +
+      `Marks are ${PIKA}'s moves as ${AB} judges them (?! loses 5 points, ? 10, ?? 15); a reveal is judged before the piece comes up. ` +
+      `Longer searches of a marked move: ${AB} at ${nodes(budgets.lineAbNodes)} nodes, ${PIKA} at ${nodes(budgets.deepPkNodes)}. Each line ends with ${AB}'s verdict on the position.`,
   } satisfies EngineAnnotationInput;
   // The study's marks are the chart's marks.
   const studyMarks = judgedMoves(input).map((m) => `${m.ply}${m.glyph}`);
@@ -310,7 +320,7 @@ if (UPDATE) {
       owner: 'mistboard',
       name: 'AB-JChess vs Pikafish: two wins, read by both engines',
       description:
-        'Two of AB-JChess\'s wins from the 2026-09-29 match against Pikafish, every position scored again by both engines, Pikafish\'s moves marked by AB-JChess and its own choices as sidelines. From the post "AB-JChess, a stronger jieqi bot".',
+        "Two of AB-JChess's wins from the 2026-09-29 match against Pikafish, every position scored again by both engines, Pikafish's moves marked by AB-JChess and its own choices as sidelines. From the post on AB-JChess at mistboard.com/blog/ab-jchess.",
       visibility: 'public',
       chapter: first,
     },
