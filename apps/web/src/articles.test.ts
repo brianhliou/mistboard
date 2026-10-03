@@ -544,23 +544,21 @@ describe('rules variant sidebar', () => {
     }
   });
 
-  // Brian, 2026-10-02: Crazyhouse's page is held back for polish (unlisted and
-  // unindexed, HIDDEN_RULES_SLUGS) while the game stays public. It shows in
-  // neither the rail nor the /rules index, and still renders.
-  it('keeps the Crazyhouse Xiangqi rules page out of the rail and index', () => {
+  // Brian, 2026-10-02: Crazyhouse's page was held back for polish that morning
+  // and went public the same day. It is in the rail and the /rules index.
+  it('lists the Crazyhouse Xiangqi rules page in the rail and index', () => {
     for (const slug of ['xiangqi', 'crazyhouse-xiangqi']) {
       const sidebar = buildArticlePage(slug).querySelector('.article-variant-sidebar');
       expect(sidebar, slug).not.toBeNull();
-      expect(sidebar?.querySelector('a[href="/rules/crazyhouse-xiangqi"]'), slug).toBeNull();
+      expect(sidebar?.querySelector('a[href="/rules/crazyhouse-xiangqi"]'), slug).not.toBeNull();
     }
     const index = buildRulesIndex();
-    expect(index.querySelector('a[href="/rules/crazyhouse-xiangqi"]')).toBeNull();
-    expect(rulesSlugPublicSurfaceEnabled('crazyhouse-xiangqi')).toBe(false);
+    expect(index.querySelector('a[href="/rules/crazyhouse-xiangqi"]')).not.toBeNull();
+    expect(rulesSlugPublicSurfaceEnabled('crazyhouse-xiangqi')).toBe(true);
   });
 
-  // The page is unlisted, the game is not: a reader who reaches it from a game
-  // still gets the play row, gated on the variant's switch rather than the page's.
-  it('still offers the board on the unlisted Crazyhouse Xiangqi rules page', () => {
+  // The play row is gated on the variant's switch, not the page's.
+  it('offers the board on the Crazyhouse Xiangqi rules page', () => {
     const page = buildArticlePage('crazyhouse-xiangqi');
     expect(page.querySelector('h1')?.textContent).toContain('Crazyhouse Xiangqi');
     const playRow = page.querySelector('.article-cta-row.article-play-cta');

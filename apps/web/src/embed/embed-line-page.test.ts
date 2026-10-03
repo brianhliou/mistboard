@@ -32,6 +32,25 @@ describe('mountEmbedLine', () => {
     root.remove();
   });
 
+  it('draws a crazyhouse line with drops on the board with both pockets', async () => {
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedLine(
+      root,
+      { variant: 'crazyhouse-xiangqi' },
+      embedLineFromSearch('?moves=h3h10,i10h10,N@e5&red=A&black=B'),
+      { startPly: 3 },
+    );
+    expect(root.querySelectorAll('.chx-embed-hand')).toHaveLength(2);
+    expect(root.innerHTML).toContain('data-piece-square="e5"');
+    const moves = Array.from(root.querySelectorAll('.review-move-list__move')).map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(moves).toEqual(['h3-h10', 'i10-h10', 'N@e5']);
+    expect(root.querySelector('a[href="/analysis/crazyhouse-xiangqi"]')).not.toBeNull();
+    root.remove();
+  });
+
   it('says so when there are no moves rather than showing an empty board', async () => {
     const root = document.createElement('div');
     document.body.append(root);

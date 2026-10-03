@@ -38,6 +38,7 @@ import {
   type HiddenPieceReveal,
   type HiddenPieceVariant,
   isFortressXiangqiDropMove,
+  maybeGameSpecForId,
   writeHiddenPiecePgn,
 } from '@mistboard/game';
 import { buildGamePgn, buildGamePublicationJson } from './game-export.js';
@@ -391,14 +392,11 @@ export function buildTenantGamePublicationJson(
 
 // --- PGN -----------------------------------------------------------------------
 
-function pgnVariantName(variant: string): string {
-  if (variant === 'xiangqi') return 'Xiangqi';
-  if (variant === 'dark-xiangqi') return 'Fog Xiangqi';
-  if (variant === 'atomic-xiangqi') return 'Atomic Xiangqi';
-  if (variant === 'jieqi') return 'Jieqi';
-  if (variant === 'banqi') return 'Banqi';
-  if (variant === 'jungle-flip') return 'Flip Jungle';
-  return variant;
+// The PGN Variant tag is the variant's public name from the game-spec registry,
+// so a newly launched variant's tag cannot be missed (a hand-kept list fell back
+// to the raw id for four of them). The raw id only for a string that is no spec.
+export function pgnVariantName(variant: string): string {
+  return maybeGameSpecForId(variant)?.publicName ?? variant;
 }
 
 // PGN player tags are the color words capitalized: Red / Black.

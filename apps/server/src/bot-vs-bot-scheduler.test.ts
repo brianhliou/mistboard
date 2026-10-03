@@ -282,7 +282,7 @@ test('a skipped variant is logged once, not every tick', async () => {
   );
 });
 
-test('the default plan: five variants, modest caps (fortress and atomic cut, 2026-10-01)', () => {
+test('the default plan: six variants, modest caps (fortress and atomic cut 2026-10-01, crazyhouse in 2026-10-02)', () => {
   const config = botVsBotConfigFromEnv({} as NodeJS.ProcessEnv);
   assert.deepEqual(
     config.plans.map((plan) => [plan.variant, plan.dailyMax, plan.targetActive]),
@@ -292,6 +292,7 @@ test('the default plan: five variants, modest caps (fortress and atomic cut, 202
       ['duck-xiangqi', 1, 1],
       ['jungle', 1, 1],
       ['banqi', 1, 1],
+      ['crazyhouse-xiangqi', 1, 1],
     ],
   );
   assert.deepEqual(config.skipped, []);
@@ -327,9 +328,11 @@ test('fail closed: an admin-only, adapterless or unknown variant is skipped, nev
       'mahjong, crazyhouse-xiangqi, jungle-flip, dark-xiangqi, nope, jieqi, jieqi, fortress-xiangqi',
   } as NodeJS.ProcessEnv);
   // Cut from the defaults, fortress still runs when named: its adapter stays.
+  // Crazyhouse (public 2026-10-02) has no default either, so it runs when named.
   assert.deepEqual(
     config.plans.map((plan) => [plan.variant, plan.dailyMax]),
     [
+      ['crazyhouse-xiangqi', 1],
       ['jieqi', 2],
       ['fortress-xiangqi', 1],
     ],
@@ -337,12 +340,30 @@ test('fail closed: an admin-only, adapterless or unknown variant is skipped, nev
   assert.deepEqual(config.skipped, [
     // Built, but hidden (publicSurface 'hidden'): never scheduled.
     { variant: 'mahjong', reason: 'not-public' },
-    // Public with an EvE adapter, but no scheduled ladder in BOT_LADDERS.
-    { variant: 'crazyhouse-xiangqi', reason: 'no-ladder' },
     { variant: 'jungle-flip', reason: 'no-eve-adapter' },
     { variant: 'dark-xiangqi', reason: 'no-eve-adapter' },
     { variant: 'nope', reason: 'unknown-variant' },
   ]);
+});
+
+test('crazyhouse xiangqi, when named, plays its own FSF ladder anchored on its own random mover', () => {
+  const config = botVsBotConfigFromEnv({
+    MISTBOARD_BOT_VS_BOT_VARIANTS: 'crazyhouse-xiangqi',
+  } as NodeJS.ProcessEnv);
+  assert.deepEqual(config.skipped, []);
+  const plan = config.plans[0]!;
+  assert.equal(plan.variant, 'crazyhouse-xiangqi');
+  assert.deepEqual(
+    plan.ladder,
+    Array.from({ length: 8 }, (_, i) => `fairy-stockfish-crazyhouse-xiangqi-level-${i + 1}`),
+  );
+  for (const engineId of plan.ladder) {
+    assert.equal(loadEngine(engineId).gameSpecId, 'crazyhouse-xiangqi', engineId);
+  }
+  assert.equal(plan.anchorEngineId, 'random-legal-crazyhouse-xiangqi');
+  assert.equal(plan.requiredCapability, null);
+  assert.equal(plan.dailyMax, 1);
+  assert.equal(plan.targetActive, 1);
 });
 
 test('banqi plays itself for data, jungle pairs its tiers, and neither can be rated', () => {

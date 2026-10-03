@@ -14,6 +14,7 @@ import type {
 } from '@mistboard/game';
 import type { AtomicXiangqiReplaySpec } from '../atomic-xiangqi-replay.js';
 import type { ChessReplaySpec } from '../chess-replay.js';
+import type { CrazyhouseXiangqiReplaySpec } from '../crazyhouse-xiangqi-replay.js';
 import type { DuckXiangqiReplaySpec } from '../duck-xiangqi-replay.js';
 import type { FortressXiangqiReplaySpec } from '../fortress-xiangqi-replay.js';
 import type { HordeXiangqiReplaySpec } from '../horde-xiangqi-replay.js';
@@ -169,6 +170,14 @@ export type JungleFlipReplayBlock = {
 export type FortressXiangqiReplayBlock = {
   kind: 'fortress-xiangqi-replay';
   spec: FortressXiangqiReplaySpec;
+  caption?: string;
+};
+
+// Crazyhouse Xiangqi analogue: the 9x10 board plus both hands, stepped through
+// board moves and drops (Fairy-Stockfish tokens) against the real kernel.
+export type CrazyhouseXiangqiReplayBlock = {
+  kind: 'crazyhouse-xiangqi-replay';
+  spec: CrazyhouseXiangqiReplaySpec;
   caption?: string;
 };
 
@@ -365,6 +374,7 @@ export type ArticleBlock =
   | XiangqiReplayBlock
   | ChessReplayBlock
   | FortressXiangqiReplayBlock
+  | CrazyhouseXiangqiReplayBlock
   | DuckXiangqiReplayBlock
   | HordeXiangqiReplayBlock
   | AtomicXiangqiReplayBlock

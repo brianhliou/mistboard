@@ -9,8 +9,6 @@ import { CHAPTER_EMBED_VARIANTS, mountEmbedStudy } from './embed-study-page.js';
 const EMBED_REFUSED_STUDY_VARIANTS: Readonly<Record<string, string>> = {
   'dark-xiangqi':
     'no embed board yet (found missing 2026-09-29); a fog xiangqi chapter shows the named refusal',
-  'crazyhouse-xiangqi':
-    'no replay board with pockets yet (studies opened at launch, 2026-10-01); a crazyhouse chapter shows the named refusal',
 };
 
 const CHAPTER = {
@@ -396,6 +394,88 @@ describe('mountEmbedStudy', () => {
     expect(root.querySelector('.embed-card-status')?.textContent).toBe('4 / 4');
     // A tag, when the chapter has one, is the result.
     expect(root.querySelector('.embed-card-result')?.textContent).toBe('Red wins');
+    root.remove();
+  });
+
+  it('draws a crazyhouse chapter on the xiangqi board with both pockets, drops included', async () => {
+    // As the analysis board stores one: no rootFen (the standard start, the
+    // advisors and elephants in hand), FSF UCI with drops as `N@e5`.
+    const tokens = ['h3h10', 'i10h10', 'N@e5', 'A@e9', 'e5f7', 'B@c8'];
+    stubFetch(200, {
+      study: { id: 's' },
+      chapters: [
+        {
+          id: 'Chx00001',
+          name: 'A drop line',
+          orientation: 'red',
+          variant: 'crazyhouse-xiangqi',
+          tags: {},
+          root: { root: chainTree(tokens) },
+        },
+      ],
+    });
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'Chx00001' });
+
+    // Both hands as the game room's pockets, top is the far side's.
+    const hands = Array.from(root.querySelectorAll<HTMLElement>('.chx-embed-hand'));
+    expect(hands.map((h) => h.dataset.owner)).toEqual(['black', 'red']);
+    expect(hands.every((h) => h.classList.contains('drop-pocket'))).toBe(true);
+    const held = (hand: HTMLElement | undefined) =>
+      Array.from(hand?.querySelectorAll<HTMLElement>('.drop-mini-reserve-piece') ?? [])
+        .filter((tile) => !tile.classList.contains('is-empty'))
+        .map(
+          (tile) =>
+            `${tile.dataset.role}${tile.querySelector('.captures-count-badge')?.textContent ?? ''}`,
+        );
+    // The start: every role a slot, two advisors and two elephants held a side.
+    expect(hands[0]?.querySelectorAll('.drop-mini-reserve-piece')).toHaveLength(6);
+    expect(held(hands[1])).toEqual(['elephant2', 'advisor2']);
+    expect(root.querySelector('.embed-board svg')).not.toBeNull();
+    expect(root.querySelector('.embed-board')?.innerHTML).not.toContain('data-piece-square="e5"');
+
+    const moves = Array.from(root.querySelectorAll('.review-move-list__move')).map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(moves).toEqual(['h3-h10', 'i10-h10', 'N@e5', 'A@e9', 'e5-f7', 'B@c8']);
+
+    // Step to the drop: the horse leaves red's hand and stands on e5.
+    const next = root.querySelector<HTMLButtonElement>('[aria-label="Next move"]');
+    next?.click();
+    next?.click();
+    expect(held(hands[1])).toEqual(['horse', 'elephant2', 'advisor2']);
+    expect(held(hands[0])).toEqual(['cannon', 'elephant2', 'advisor2']);
+    next?.click();
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('3 / 6');
+    expect(root.querySelector('.embed-board')?.innerHTML).toContain('data-piece-square="e5"');
+    expect(held(hands[1])).toEqual(['elephant2', 'advisor2']);
+    // No result tag and the line stops mid-game: no result.
+    expect(root.querySelector('.embed-card-result')?.textContent).toBe('');
+    root.remove();
+  });
+
+  it('stops a crazyhouse line at the first token the kernel refuses', async () => {
+    // A horse dropped while none is held, then legal moves after it.
+    const tokens = ['h3h10', 'i10h10', 'R@e5', 'h10h1'];
+    stubFetch(200, {
+      study: { id: 's' },
+      chapters: [
+        {
+          id: 'ChxBad01',
+          name: 'broken',
+          variant: 'crazyhouse-xiangqi',
+          tags: { result: '0-1' },
+          root: { root: chainTree(tokens) },
+        },
+      ],
+    });
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'ChxBad01' }, { startPly: 999 });
+    expect(root.querySelectorAll('.review-move-list__move')).toHaveLength(2);
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('2 / 2');
+    expect(root.querySelector('.embed-card-result')?.textContent).toBe('Black wins');
     root.remove();
   });
 

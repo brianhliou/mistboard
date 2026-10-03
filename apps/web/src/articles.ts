@@ -38,6 +38,7 @@ import {
   type BanqiReplayBlock,
   type ChessReplayBlock,
   type CodeBlock,
+  type CrazyhouseXiangqiReplayBlock,
   type CtaBlock,
   type DuckXiangqiReplayBlock,
   type EmbedBlock,
@@ -67,6 +68,10 @@ import {
 } from './atomic-xiangqi-replay.js';
 import { type BanqiReplayController, mountBanqiReplay } from './banqi-replay.js';
 import { type ChessReplayController, mountChessReplay } from './chess-replay.js';
+import {
+  type CrazyhouseXiangqiReplayController,
+  mountCrazyhouseXiangqiReplay,
+} from './crazyhouse-xiangqi-replay.js';
 import { type DuckXiangqiReplayController, mountDuckXiangqiReplay } from './duck-xiangqi-replay.js';
 import {
   type FortressXiangqiReplayController,
@@ -463,7 +468,7 @@ export function buildHomeArticleCards(
   // articles →" link are dropped to match lichess's blog strip (cards only) and
   // to reclaim vertical space for the taller 8:5 thumbnails. The whole /blog
   // index stays reachable from the primary nav. The deep-dives row does carry a
-  // one-word label (trial, 2026-10-01): without it the two strips look the same
+  // short label (trial, 2026-10-01; "Xiangqi deep dives" since 10-02): without it the two strips look the same
   // and the split means nothing to a reader.
   if (row === 'deep-dives') {
     const label = document.createElement('h2');
@@ -1279,6 +1284,7 @@ type PendingBlock =
   | XiangqiReplayBlock
   | ChessReplayBlock
   | FortressXiangqiReplayBlock
+  | CrazyhouseXiangqiReplayBlock
   | DuckXiangqiReplayBlock
   | HordeXiangqiReplayBlock
   | AtomicXiangqiReplayBlock
@@ -1313,6 +1319,8 @@ function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElement {
   if (block.kind === 'xq-replay') return renderXiangqiReplayBlock(block, lang);
   if (block.kind === 'fortress-xiangqi-replay')
     return renderFortressXiangqiReplayBlock(block, lang);
+  if (block.kind === 'crazyhouse-xiangqi-replay')
+    return renderCrazyhouseXiangqiReplayBlock(block, lang);
   if (block.kind === 'duck-xiangqi-replay') return renderDuckXiangqiReplayBlock(block, lang);
   if (block.kind === 'horde-xiangqi-replay') return renderHordeXiangqiReplayBlock(block, lang);
   if (block.kind === 'atomic-xiangqi-replay') return renderAtomicXiangqiReplayBlock(block, lang);
@@ -1500,6 +1508,30 @@ function renderDuckXiangqiReplayBlock(
   // rather than the shared reserve ones the fortress replay borrows.
   figure.className = 'article-figure article-figure-interactive article-figure-xq';
   figure.dataset.pendingWidget = 'duck-xiangqi-replay';
+
+  const mountTarget = document.createElement('div');
+  mountTarget.className = 'article-interactive-target';
+  figure.append(mountTarget);
+
+  if (block.caption) {
+    const cap = document.createElement('figcaption');
+    cap.className = 'article-figure-caption';
+    cap.textContent = block.caption;
+    figure.append(cap);
+  }
+  rememberPendingMount(figure, block, lang);
+  return figure;
+}
+
+// Same figure as the Fortress replay: the shared reserve frame, hands above
+// and below the board.
+function renderCrazyhouseXiangqiReplayBlock(
+  block: CrazyhouseXiangqiReplayBlock,
+  lang?: ArticleLang,
+): HTMLElement {
+  const figure = document.createElement('figure');
+  figure.className = 'article-figure article-figure-interactive article-figure-xq';
+  figure.dataset.pendingWidget = 'crazyhouse-xiangqi-replay';
 
   const mountTarget = document.createElement('div');
   mountTarget.className = 'article-interactive-target';
@@ -2048,8 +2080,8 @@ function buildRulesPlayCta(slug: string, title: string, locale: Locale): HTMLEle
   const gameSpecId = gameSpecIdFromRulesSlug(slug);
   if (!gameSpecId) return null;
   // The variant's switch, not the page's: an unlisted rules page for a public
-  // variant (crazyhouse-xiangqi while its page is held back) still offers the
-  // board, and a hidden variant (mahjong) still does not.
+  // variant (crazyhouse-xiangqi's, while it was held back for polish) still
+  // offers the board, and a hidden variant (mahjong) still does not.
   if (!variantPublicSurfaceEnabled(gameSpecId)) return null;
 
   const game = variantNavLabel(title);
@@ -2211,6 +2243,7 @@ export function mountPendingWidgets(
   | XiangqiReplayController
   | ChessReplayController
   | FortressXiangqiReplayController
+  | CrazyhouseXiangqiReplayController
   | DuckXiangqiReplayController
   | HordeXiangqiReplayController
   | AtomicXiangqiReplayController
@@ -2244,6 +2277,8 @@ export function mountPendingWidgets(
       controllers.push(mountXiangqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'fortress-xiangqi-replay') {
       controllers.push(mountFortressXiangqiReplay(target, block.spec, { lang }));
+    } else if (block.kind === 'crazyhouse-xiangqi-replay') {
+      controllers.push(mountCrazyhouseXiangqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'duck-xiangqi-replay') {
       controllers.push(mountDuckXiangqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'horde-xiangqi-replay') {

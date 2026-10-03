@@ -30,6 +30,9 @@ describe('the TV, puzzle and analysis embed routes', () => {
   it('frame a bare line for the variants with a board on the card, and refuse the rest', () => {
     expect(embedLineRouteFromPath('/embed/line/jungle')).toEqual({ variant: 'jungle' });
     expect(embedLineRouteFromPath('/embed/line/banqi/')).toEqual({ variant: 'banqi' });
+    expect(embedLineRouteFromPath('/embed/line/crazyhouse-xiangqi')).toEqual({
+      variant: 'crazyhouse-xiangqi',
+    });
     // fortress has no replay board on the card; refused at the route, not drawn as xiangqi
     expect(embedLineRouteFromPath('/embed/line/fortress-xiangqi')).toBeNull();
     expect(embedLineRouteFromPath('/embed/line')).toBeNull();

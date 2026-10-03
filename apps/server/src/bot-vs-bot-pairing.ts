@@ -16,6 +16,7 @@
 
 import { ATOMIC_XIANGQI_PLAYABLE_ENGINES } from './atomic-xiangqi-fsf-engine.js';
 import { BANQI_PLAYABLE_ENGINES } from './banqi-engine.js';
+import { CRAZYHOUSE_XIANGQI_PLAYABLE_ENGINES } from './crazyhouse-xiangqi-fsf-engine.js';
 import { DUCK_XIANGQI_PLAYABLE_ENGINES } from './duck-xiangqi-fsf-engine.js';
 import { FORTRESS_XIANGQI_PLAYABLE_ENGINES } from './fortress-xiangqi-fsf-engine.js';
 import { JIEQI_PLAYABLE_ENGINES } from './jieqi-engine.js';
@@ -45,6 +46,7 @@ const BOT_LADDERS: Readonly<Record<string, () => string[]>> = {
   'fortress-xiangqi': () => FORTRESS_XIANGQI_PLAYABLE_ENGINES.map((engine) => engine.id),
   'duck-xiangqi': () => DUCK_XIANGQI_PLAYABLE_ENGINES.map((engine) => engine.id),
   'atomic-xiangqi': () => ATOMIC_XIANGQI_PLAYABLE_ENGINES.map((engine) => engine.id),
+  'crazyhouse-xiangqi': () => CRAZYHOUSE_XIANGQI_PLAYABLE_ENGINES.map((engine) => engine.id),
   banqi: () => BANQI_PLAYABLE_ENGINES.map((engine) => engine.id),
   jungle: () => [...JUNGLE_RUST_TIER_LIST].sort((a, b) => a.nodes - b.nodes).map((tier) => tier.id),
 };

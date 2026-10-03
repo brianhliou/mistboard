@@ -19,6 +19,7 @@ import {
   resolveFsfVariantIniPath,
   splitFairyStockfishCommands,
   UciEnginePool,
+  UciEngineSession,
   type UciEval,
   UciWarmSessionCache,
 } from './uci-engine-harness.js';
@@ -130,6 +131,19 @@ const fsfPool = new UciEnginePool({
 
 const warmSessions = new UciWarmSessionCache({ name: 'crazyhouse-xiangqi-fsf' });
 
+// Dedicated ANALYSIS pool (the xiangqi #168 pattern): a whole-game sweep holds
+// one persistent engine process for its full duration, so it must not pin a
+// live-move slot. One slot by default and a generous queue timeout so queued
+// sweep jobs wait instead of shedding.
+const analysisPool = new UciEnginePool({
+  name: 'crazyhouse-xiangqi-fsf-analysis',
+  maxProcessesEnvVar: 'MISTBOARD_CRAZYHOUSE_XIANGQI_FSF_ANALYSIS_MAX_PROCESSES',
+  queueTimeoutEnvVar: 'MISTBOARD_CRAZYHOUSE_XIANGQI_FSF_ANALYSIS_QUEUE_TIMEOUT_MS',
+  defaultMaxProcesses: 1,
+  defaultQueueTimeoutMs: 30_000,
+  queueTimeoutMessage: 'crazyhouse-xiangqi analysis queue timed out',
+});
+
 export function crazyhouseXiangqiFsfWarmSessionStats() {
   return warmSessions.stats();
 }
@@ -199,6 +213,97 @@ export async function crazyhouseXiangqiLiveEngineMove(
         }),
     );
   } finally {
+    release();
+  }
+}
+
+// ── Whole-game analysis (fixed-depth eval, NOT the playable tier) ─────────────
+
+/** Fixed-depth analysis eval, Red POV. Distinct from the playable move provider:
+ *  full strength (no Skill Level / node cap), `go depth N`, and read the score.
+ *  Classical eval, forced, for the same reason as the ladder: the only xiangqi
+ *  net describes a game without hands. */
+export const CRAZYHOUSE_XIANGQI_ANALYSIS_DEPTH = 12;
+
+// The cache engine_id for the analysis sweep. Deliberately NOT a playable tier
+// id (those key on strength, irrelevant to a fixed-depth eval); version-suffixed
+// so an engine/.ini change invalidates the cached evals.
+export const CRAZYHOUSE_XIANGQI_ANALYSIS_ENGINE_ID = `fairy-stockfish-crazyhouse-xiangqi-analysis@${CRAZYHOUSE_XIANGQI_FSF_ENGINE_VERSION}`;
+
+export type CrazyhouseXiangqiPositionEval = {
+  /** Centipawns from RED's POV (positive = Red better); null when mate is set. */
+  cp: number | null;
+  /** Signed moves-to-mate from RED's POV; null otherwise. */
+  mate: number | null;
+  /** Best move in FSF UCI, the kernel's own spelling (`h3h10`, drops `N@e5`). */
+  best: string | null;
+  depth: number;
+};
+
+// Normalize a side-to-move UCI eval to RED's POV. Red moves first, so Black is
+// to move after an odd number of plies; flip the sign then. `mate 0` (side-to-
+// move already mated or stalemated, a loss here) cannot carry a sign, so encode
+// it as a decisive cp for the other side.
+function redPovEval(evaluation: UciEval, plyCount: number): CrazyhouseXiangqiPositionEval {
+  const sign = plyCount % 2 === 0 ? 1 : -1;
+  if (evaluation.mate === 0) {
+    return { cp: sign * -30000, mate: null, best: evaluation.best, depth: evaluation.depth };
+  }
+  return {
+    cp: evaluation.cp == null ? null : evaluation.cp * sign,
+    mate: evaluation.mate == null ? null : evaluation.mate * sign,
+    best: evaluation.best,
+    depth: evaluation.depth,
+  };
+}
+
+/** The UCI position command for the game after `moves`. The hands ride in the
+ *  move list: the .ini's startFen carries both starting pockets and FSF moves
+ *  every capture into the capturer's hand, so `startpos moves …` reaches the
+ *  same pockets the kernel holds without a FEN. */
+export function crazyhouseXiangqiAnalysisPositionCommand(moves: readonly string[]): string {
+  return moves.length > 0 ? `position startpos moves ${moves.join(' ')}` : 'position startpos';
+}
+
+/**
+ * Run `fn` with a position evaluator backed by ONE persistent stock
+ * Fairy-Stockfish process: binary spawn + variant setup happen once for the
+ * whole sweep, then each position is an incremental `position startpos moves
+ * …` + `go depth N` round-trip. The evaluator normalises to RED's POV. Holds
+ * one DEDICATED analysis-pool slot for the duration, so a sweep never competes
+ * with live PvE moves; the session is always killed on the way out.
+ */
+export async function withCrazyhouseXiangqiAnalysisSession<T>(
+  fn: (evaluate: (moves: string[]) => Promise<CrazyhouseXiangqiPositionEval>) => Promise<T>,
+  opts: { depth?: number } = {},
+): Promise<T> {
+  const depth = Math.max(1, Math.floor(opts.depth ?? CRAZYHOUSE_XIANGQI_ANALYSIS_DEPTH));
+  const release = await analysisPool.acquire();
+  const session = new UciEngineSession({
+    bin: fairyStockfishPath(),
+    name: 'crazyhouse-xiangqi-fsf-analysis',
+    initCommands: [
+      'uci',
+      `setoption name VariantPath value ${crazyhouseXiangqiVariantIniPath()}`,
+      `setoption name UCI_Variant value ${CRAZYHOUSE_XIANGQI_FSF_VARIANT}`,
+      'setoption name Use NNUE value false',
+      'ucinewgame',
+      'isready',
+    ],
+  });
+  try {
+    await session.ready();
+    return await fn(async (moves) => {
+      const evaluation = await session.evalPosition({
+        positionCommand: crazyhouseXiangqiAnalysisPositionCommand(moves),
+        goCommand: `go depth ${depth}`,
+        timeoutMs: 20_000,
+        timeoutMessage: 'crazyhouse-xiangqi analysis eval timed out',
+      });
+      return redPovEval(evaluation, moves.length);
+    });
+  } finally {
+    session.close();
     release();
   }
 }

@@ -103,6 +103,7 @@ export const EMBED_LINE_VARIANTS = [
   'xiangqi',
   'duck-xiangqi',
   'atomic-xiangqi',
+  'crazyhouse-xiangqi',
   'banqi',
   'jungle',
   'chess',

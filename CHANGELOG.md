@@ -38,11 +38,14 @@ Conventions:
 
 ### Learning and puzzles
 
+- Crazyhouse Xiangqi games, studies and lines can be embedded, with both hands shown ([0bc99f1f](https://github.com/brianhliou/mistboard/commit/0bc99f1f))
+- the Crazyhouse Xiangqi rules page is rebuilt around boards with both hands drawn: drop zones, drop check and mate, and an engine game to play through ([d2170ca3](https://github.com/brianhliou/mistboard/commit/d2170ca3))
 - The jieqi bot wins post shows each game from the winner's side ([e2800c4d](https://github.com/brianhliou/mistboard/commit/e2800c4d))
 - the 1,000 games played post reads in Simplified and Traditional Chinese ([/zh-hans/blog/one-thousand-games](/zh-hans/blog/one-thousand-games)) ([85975f14](https://github.com/brianhliou/mistboard/commit/85975f14))
 
 ### Watching and review
 
+- Crazyhouse Xiangqi games get computer analysis, and its bot games appear on Watch ([0bc99f1f](https://github.com/brianhliou/mistboard/commit/0bc99f1f))
 - upcoming events on the broadcasts page are listed soonest first ([95b11226](https://github.com/brianhliou/mistboard/commit/95b11226))
 - The third player page, Lại Lý Huynh 赖理兄 (/blog/lai-ly-huynh), the world champion: his unbeaten 2025 title run and the final he won with black, the year since, five wins on the board and a 38-chapter study; in English, Chinese and, a first for a player page, Vietnamese (/blog/lai-ly-huynh-co-tuong) ([dc9614b2](https://github.com/brianhliou/mistboard/commit/dc9614b2))
 - an event stays under Upcoming until its first games are posted, and the top card on the broadcasts page says why it leads ([a6b33f1e](https://github.com/brianhliou/mistboard/commit/a6b33f1e))
@@ -62,6 +65,7 @@ Conventions:
 
 ### Site
 
+- The homepage deep-dives row is now labelled Xiangqi deep dives ([5edb33f3](https://github.com/brianhliou/mistboard/commit/5edb33f3))
 - the Crazyhouse Xiangqi rules page is unlisted while it is revised, and its News entry links to the game ([ce818f36](https://github.com/brianhliou/mistboard/commit/ce818f36))
 - the privacy page now names PostHog and what it records ([3ec676b4](https://github.com/brianhliou/mistboard/commit/3ec676b4))
 - less empty space above and below the footer on the homepage ([774f9cff](https://github.com/brianhliou/mistboard/commit/774f9cff))
@@ -77,6 +81,8 @@ Conventions:
 
 ### Fixed
 
+- On the homepage, only the Play button starts a bot game; a click elsewhere on the row no longer does ([5edb33f3](https://github.com/brianhliou/mistboard/commit/5edb33f3))
+- Open correspondence games now leave the board after 14 days, and posting the same open game twice keeps just one ([5edb33f3](https://github.com/brianhliou/mistboard/commit/5edb33f3))
 - Banqi and Flip Jungle rooms show Resign, the move list and your own seat row again, after two days hidden on short boards ([6ffe2f45](https://github.com/brianhliou/mistboard/commit/6ffe2f45))
 - a game whose stored moves no longer replay now reads as not found and stays out of TV and game lists ([e463a334](https://github.com/brianhliou/mistboard/commit/e463a334))
 - The banqi rules page names the cannon house rule it does not play, instead of listing its own rules as rejected ones ([1a95e357](https://github.com/brianhliou/mistboard/commit/1a95e357))
