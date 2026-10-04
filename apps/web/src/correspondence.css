@@ -112,37 +112,13 @@
   line-height: 1.5;
 }
 
-/* ---- Your move: big cards ---------------------------------------------------- */
+/* ---- Card grids (your seeks, your move, waiting, open seeks) --------------------
+   Every list is the site's game card (current-games.css .current-game-card);
+   these rules only size the grids and add the inbox's own lines. */
 
-.correspondence-cards {
-  display: flex;
-  flex-direction: column;
+.correspondence-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(210px, 100%), 1fr));
   gap: 14px;
-}
-
-.correspondence-card {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  padding: 14px;
-}
-
-.correspondence-card-board {
-  flex: none;
-  width: 210px;
-  max-width: 100%;
-  display: block;
-  color: inherit;
-  text-decoration: none;
-}
-
-.correspondence-card-body {
-  flex: 1 1 240px;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 4px 0;
 }
 
 .correspondence-card-meta {
@@ -154,141 +130,56 @@
   color: var(--site-muted);
 }
 
-.correspondence-card-vs {
-  margin: 0;
-  font-size: 1.35rem;
-  font-weight: 400;
-  color: var(--site-heading);
-  overflow-wrap: anywhere;
-}
-
-.correspondence-card-updated {
-  margin: 0;
-  font-size: 0.82rem;
+.correspondence-card-when {
+  margin: -2px 0 0;
+  font-size: 0.75rem;
   color: var(--site-muted);
 }
 
-.correspondence-deadline {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: auto;
-}
-
-.correspondence-deadline-labels {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 4px 12px;
-  font-size: 0.85rem;
-}
-
-.correspondence-deadline-left {
-  font-weight: 600;
-  color: var(--site-accent-strong);
-  font-variant-numeric: tabular-nums;
-}
-
-.correspondence-deadline-due {
-  color: var(--site-muted);
-}
-
-.correspondence-bar {
-  height: 6px;
-  border-radius: 3px;
-  background: var(--site-panel-soft);
-  overflow: hidden;
-}
-
-.correspondence-bar span {
-  display: block;
-  height: 100%;
-  width: 0;
-  background: var(--site-accent);
+/* Play your move sits above the card-wide link, like the seat's profile link. */
+.correspondence-card-play {
+  position: relative;
+  z-index: 2;
+  align-self: stretch;
+  min-height: 36px;
 }
 
 /* Under a day left: the site's warning tokens (amber), not the clock's red. */
-.correspondence-card[data-urgency="urgent"] .correspondence-deadline-left,
-.correspondence-card[data-urgency="due"] .correspondence-deadline-left {
+.correspondence-game-card[data-urgency="urgent"] .current-game-seat-clock.is-deadline,
+.correspondence-game-card[data-urgency="due"] .current-game-seat-clock.is-deadline {
+  background: var(--site-warning-bg);
   color: var(--site-warning-text);
+  box-shadow: inset 0 0 0 1px var(--site-warning-border);
 }
 
-.correspondence-card[data-urgency="urgent"] .correspondence-bar span,
-.correspondence-card[data-urgency="due"] .correspondence-bar span {
+.correspondence-game-card[data-urgency="urgent"] .current-game-bar span,
+.correspondence-game-card[data-urgency="due"] .current-game-bar span {
   background: var(--site-warning-border);
 }
 
-/* ---- Rows (waiting, open seeks, your challenges) ----------------------------------- */
-
-.correspondence-rows {
+/* Your own seek: Copy link and Cancel share the seat row with "You". */
+.correspondence-own-actions {
   display: flex;
-  flex-direction: column;
+  gap: 6px;
 }
 
-.correspondence-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border-top: 1px solid var(--site-border);
-  color: inherit;
-  text-decoration: none;
+.correspondence-own-actions .correspondence-ghost {
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 0.78rem;
+}
+
+.correspondence-own-target {
   min-width: 0;
-}
-
-.correspondence-row:first-child {
-  border-top: 0;
-}
-
-a.correspondence-row:hover,
-a.correspondence-row:focus-visible {
-  background: var(--site-panel-soft);
-}
-
-.correspondence-row-board {
-  flex: none;
-  width: 64px;
-}
-
-/* At thumbnail size the tiles keep only their shape. */
-.correspondence-row-board .current-game-fog,
-.correspondence-row-board .current-game-hidden {
-  padding: 4px;
-  gap: 2px;
-}
-
-.correspondence-row-board .current-game-fog-note,
-.correspondence-row-board .current-game-fog-variant,
-.correspondence-row-board .current-game-hidden-label {
-  display: none;
-}
-
-.correspondence-row-board .current-game-fog-waves svg {
-  width: 28px;
-  height: 20px;
-}
-
-.correspondence-row-text {
-  flex: 1 1 150px;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.correspondence-row-name {
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--site-heading);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.correspondence-row-detail {
-  font-size: 0.78rem;
-  color: var(--site-muted);
+.correspondence-own-target-name {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--site-heading);
 }
 
 .correspondence-row-error {
@@ -298,22 +189,6 @@ a.correspondence-row:focus-visible {
 
 .correspondence-row-error[hidden] {
   display: none;
-}
-
-.correspondence-row-left {
-  flex: none;
-  margin-left: auto;
-  font-size: 0.82rem;
-  color: var(--site-muted);
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-.correspondence-row-actions {
-  flex: none;
-  display: flex;
-  gap: 6px;
-  margin-left: auto;
 }
 
 /* ---- Buttons ----------------------------------------------------------------------- */
@@ -717,12 +592,6 @@ a.correspondence-row:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
-/* Open seeks: start-position cards, a little narrower than the games in
-   progress so a few sit side by side. */
-.correspondence-seek-grid {
-  grid-template-columns: repeat(auto-fill, minmax(min(210px, 100%), 1fr));
-}
-
 .correspondence-seek-error {
   margin: 0;
   font-size: 0.78rem;
@@ -827,13 +696,64 @@ a.correspondence-row:focus-visible {
     font-size: 1.6rem;
   }
 
-  .correspondence-card {
-    gap: 14px;
+  /* Two cards a row on a phone in every list, like the signed-out showcase
+     wall: one full-width board per game made the page a long scroll. The
+     seat rows wrap and the buttons go full width so they still fit. */
+  .correspondence-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
   }
 
-  .correspondence-card-board {
-    width: 100%;
-    max-width: 360px;
+  .correspondence-grid .current-game-card {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .correspondence-grid .current-game-seat {
+    flex-wrap: wrap;
+    gap: 4px 6px;
+    min-height: 0;
+    font-size: 0.78rem;
+  }
+
+  .correspondence-grid .current-game-seat-clock.is-deadline {
+    padding: 2px 6px;
+    font-size: 0.7rem;
+  }
+
+  .correspondence-grid .current-game-seat.is-empty-seat {
+    padding: 2px 4px;
+    text-align: center;
+  }
+
+  .correspondence-grid .current-game-seat-waiting {
+    font-size: 0.72rem;
+  }
+
+  .correspondence-grid .current-game-meta {
+    font-size: 0.72rem;
+  }
+
+  .correspondence-grid .current-game-seek-action {
+    flex: 1 1 100%;
+  }
+
+  .correspondence-grid .correspondence-ghost {
+    min-height: 30px;
+    padding: 0 6px;
+    font-size: 0.75rem;
+  }
+
+  .correspondence-own-actions .correspondence-ghost {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .correspondence-grid .correspondence-card-play {
+    min-height: 34px;
+    padding: 0 6px;
+    font-size: 0.8rem;
+    white-space: nowrap;
   }
 
   .correspondence-hero {

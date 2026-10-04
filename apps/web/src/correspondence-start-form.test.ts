@@ -61,3 +61,30 @@ describe('correspondence Start a game: prefill', () => {
     vi.unstubAllGlobals();
   });
 });
+
+describe('correspondence Start a game: opponent', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('offers Anyone and A link only; a player is challenged from their profile', () => {
+    const panel = buildStartForm(() => {});
+    const field = [...panel.querySelectorAll<HTMLElement>('.correspondence-field')].find(
+      (el) => el.querySelector('.correspondence-field-label')?.textContent === 'Opponent',
+    );
+    const labels = [...(field?.querySelectorAll('button') ?? [])].map((b) => b.textContent);
+    expect(labels).toEqual(['Anyone', 'A link']);
+    expect(panel.textContent).not.toContain('A player');
+    expect(panel.querySelector('input[type="text"]')).toBeNull();
+  });
+
+  it('posts a link seek as private with no target', () => {
+    const panel = buildStartForm(() => {});
+    [...panel.querySelectorAll('button')].find((b) => b.textContent === 'A link')?.click();
+    const fetchMock = vi.fn(() => new Promise<Response>(() => {}));
+    vi.stubGlobal('fetch', fetchMock);
+    const body = postedBody(panel, fetchMock) as Record<string, unknown>;
+    expect(body.visibility).toBe('private');
+    expect('targetHandle' in body).toBe(false);
+  });
+});

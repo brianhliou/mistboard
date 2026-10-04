@@ -27,6 +27,14 @@ export type SeekCardOptions = {
   action?: HTMLElement | null;
   // A line under the meta (an accept error); hidden until it has text.
   status?: HTMLElement | null;
+  // Your own seek (/correspondence "Waiting for an opponent"): what the empty
+  // seat says (a directed challenge names its recipient), the overlay link's
+  // label, extra meta parts (side, expiry), and no "Open seek" tag, since a
+  // link or directed challenge is not on the open board.
+  waiting?: Node | null;
+  ariaLabel?: string;
+  details?: readonly string[];
+  badge?: boolean;
 };
 
 export function buildSeekCard(seek: SeekCardSeek, options: SeekCardOptions): HTMLElement {
@@ -41,7 +49,10 @@ export function buildSeekCard(seek: SeekCardSeek, options: SeekCardOptions): HTM
     const open = document.createElement('a');
     open.className = 'current-game-open';
     open.href = options.href;
-    open.setAttribute('aria-label', t('games.seekOpen', { name: creator, variant }));
+    open.setAttribute(
+      'aria-label',
+      options.ariaLabel ?? t('games.seekOpen', { name: creator, variant }),
+    );
     article.append(open);
   }
 
@@ -49,7 +60,8 @@ export function buildSeekCard(seek: SeekCardSeek, options: SeekCardOptions): HTM
   waiting.className = 'current-game-seat is-empty-seat';
   const waitingText = document.createElement('span');
   waitingText.className = 'current-game-seat-who current-game-seat-waiting';
-  waitingText.textContent = t('games.seekWaiting');
+  if (options.waiting) waitingText.append(options.waiting);
+  else waitingText.textContent = t('games.seekWaiting');
   waiting.append(waitingText);
 
   const board = document.createElement('div');
@@ -104,8 +116,13 @@ export function buildSeekCard(seek: SeekCardSeek, options: SeekCardOptions): HTM
     seek.daysPerMove === 1
       ? t('games.oneDayPerMove')
       : t('games.daysPerMove', { count: seek.daysPerMove });
-  text.textContent = `${cadence} · ${seek.rated ? t('games.rated') : t('games.casual')}`;
-  meta.append(buildKindBadge('seek'), chip, text);
+  text.textContent = [
+    cadence,
+    seek.rated ? t('games.rated') : t('games.casual'),
+    ...(options.details ?? []),
+  ].join(' · ');
+  if (options.badge !== false) meta.append(buildKindBadge('seek'));
+  meta.append(chip, text);
 
   article.append(waiting, board, seat, meta);
   if (options.status) article.append(options.status);

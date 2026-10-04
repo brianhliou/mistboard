@@ -34,6 +34,15 @@ export type CorrespondenceDigestQuery = {
 // One row per waiting game, grouped by account in code. Due rows are left to
 // the timeout pass; the opt-out lives in the query like the other two
 // correspondence emails so the module never re-derives an unset preference.
+//
+// "Waiting since" is the turn start: due_at minus the per-move allowance (a
+// days-per-move clock resets to the full allowance on every move, so the
+// deadline is always turn start + allowance), with the allowance read off the
+// room-created event like the deadline warning does. Never rd.updated_at: the
+// event writer re-upserts the row on every event, and a reconnect appends a
+// seat-assigned event, so each visit by the player NOT on the move bumped it
+// and pushed the absent player's digest back (prod, 2026-10-04). updated_at
+// stays only as the fallback for a row whose room-created carries no allowance.
 export async function listCorrespondenceDigestCandidates(
   query: CorrespondenceDigestQuery,
 ): Promise<CorrespondenceDigestCandidate[]> {
@@ -53,9 +62,13 @@ export async function listCorrespondenceDigestCandidates(
      LEFT JOIN room_seat_tokens opp
        ON opp.room_id = rd.room_id AND opp.seat <> rd.seat AND opp.revoked_at IS NULL
      LEFT JOIN users opp_user ON opp_user.id = opp.user_id
+     LEFT JOIN events rc ON rc.room_id = rd.room_id AND rc.seq = 0
      WHERE rd.seat_user_id IS NOT NULL
        AND rd.due_at > $1
-       AND rd.updated_at <= $3
+       AND COALESCE(
+         rd.due_at - (rc.payload->'timeControl'->>'initialMs')::double precision * interval '1 millisecond',
+         rd.updated_at
+       ) <= $3
        AND COALESCE((u.account_preferences->>'correspondenceTurnDigest')::boolean, true)
        AND (u.correspondence_digest_sent_at IS NULL OR u.correspondence_digest_sent_at < $2)
        AND (u.last_seen_at IS NULL OR u.last_seen_at <= $3)

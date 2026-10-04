@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildChallengeCard, type ChallengeView } from './challenge-accept.js';
-import { appendVsLabel, renderChallenges } from './correspondence.js';
+import { buildInboxCard, type PageContext, renderChallenges } from './correspondence.js';
 import type { CorrespondenceGame } from './correspondence-model.js';
 import { corrSeekRow } from './landing-play.js';
 import { buildSeekCard } from './seek-card.js';
@@ -25,26 +25,33 @@ const game: CorrespondenceGame = {
   dueAt: new Date(Date.now() + 86_400_000).toISOString(),
 };
 
-describe('correspondence game card: vs <opponent>', () => {
-  it('links the opponent to /@/<handle>', () => {
-    const host = document.createElement('h3');
-    appendVsLabel(host, game);
-    expect(host.textContent).toBe('vs Bob');
-    const link = host.querySelector('a.player-name-link');
+function pageCtx(): PageContext {
+  return { signedIn: true, isConnected: () => true, handles: [], tickers: [] };
+}
+
+describe('correspondence game card: the opponent seat', () => {
+  it('links the opponent to /@/<handle>, beside (not inside) the card-wide link', () => {
+    const card = buildInboxCard(pageCtx(), game, undefined, true);
+    const link = card.querySelector('a.player-name-link');
     expect(link?.getAttribute('href')).toBe('/@/bob_h');
     expect(link?.textContent).toBe('Bob');
+    expect(card.querySelector('a.current-game-open')?.getAttribute('href')).toBe('/room/xq_1');
+    expect(nestedAnchors(card)).toBe(0);
   });
 
   it('keeps the name plain without a handle, and never builds one from the name', () => {
-    const host = document.createElement('h3');
-    appendVsLabel(host, { ...game, opponentHandle: null });
-    expect(host.textContent).toBe('vs Bob');
-    expect(host.querySelector('a')).toBeNull();
+    const card = buildInboxCard(pageCtx(), { ...game, opponentHandle: null }, undefined, false);
+    expect(card.querySelector('a.player-name-link')).toBeNull();
+    expect(card.textContent).toContain('Bob');
 
-    const fallback = document.createElement('h3');
-    appendVsLabel(fallback, { ...game, opponentName: null, opponentHandle: undefined });
-    expect(fallback.textContent).toBe('vs Opponent');
-    expect(fallback.querySelector('a')).toBeNull();
+    const fallback = buildInboxCard(
+      pageCtx(),
+      { ...game, opponentName: null, opponentHandle: undefined },
+      undefined,
+      false,
+    );
+    expect(fallback.querySelector('a.player-name-link')).toBeNull();
+    expect(fallback.textContent).toContain('Opponent');
   });
 });
 
@@ -123,14 +130,16 @@ describe('outgoing directed challenge row', () => {
 
   it('links the recipient by handle', async () => {
     const host = await render([{ ...directed, targetHandle: 'finn' }]);
-    const name = host.querySelector('[data-seek-id="seek_3"] .correspondence-row-name');
+    const card = host.querySelector('[data-seek-id="seek_3"]');
+    const name = card?.querySelector('.correspondence-own-target');
     expect(name?.textContent).toBe('Challenge to Finn');
     expect(name?.querySelector('a.player-name-link')?.getAttribute('href')).toBe('/@/finn');
+    expect(card && nestedAnchors(card)).toBe(0);
   });
 
   it('keeps a recipient with no handle plain', async () => {
     const host = await render([{ ...directed, targetHandle: null }]);
-    const name = host.querySelector('[data-seek-id="seek_3"] .correspondence-row-name');
+    const name = host.querySelector('[data-seek-id="seek_3"] .correspondence-own-target');
     expect(name?.textContent).toBe('Challenge to Finn');
     expect(name?.querySelector('a')).toBeNull();
   });

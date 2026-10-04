@@ -1,12 +1,13 @@
 // /correspondence: the correspondence inbox.
 //
 // Signed in, two columns (stacked on a phone):
-//   main  "Your move" big cards (board, variant, days per move, move number,
-//         opponent, time left with a deadline bar, Play your move) and
-//         "Waiting on opponent" compact rows (small board, how long THEY have).
-//   side  "Start a game" (variant, days per move, opponent: anyone / a link /
-//         a player, your side), then "Open seeks" (other players' public seeks,
-//         each with Accept) and "Your challenges" (Copy link / Cancel).
+//   main  "Your move" cards (board, seats, time left on the seat to move, a
+//         deadline bar, Play your move) and "Waiting on opponent" cards.
+//   side  "Start a game" (variant, days per move, opponent: anyone / a link,
+//         your side). A challenge to one player starts on their profile.
+//   main  also leads with "Waiting for an opponent" (your own seeks, Copy link
+//         / Cancel) and ends with "Open seeks" (other players', with Accept).
+// Every list is a grid of the site's game cards (current-games.css).
 // Signed out: one line on what correspondence is, the open seeks read-only
 // (Accept goes through sign-in to the seek's /challenge page), and sign in /
 // create an account. Correspondence needs an account; that stays.
@@ -50,11 +51,11 @@ import {
   type OutgoingSeek,
   othersSeeks,
   parseStartFormPrefill,
-  SEEK_KINDS,
   type SeatBoardView,
-  type SeekKind,
   type SeekPreferredColor,
+  START_FORM_SEEK_KINDS,
   type StartFormPrefill,
+  type StartFormSeekKind,
   seatBoardView,
   seekRequestBody,
   splitInbox,
@@ -88,7 +89,7 @@ const TICK_MS = 30_000;
 
 type OpenSeeksFeed = { status: 'ok'; seeks: OpenSeek[] } | { status: 'disabled' | 'error' };
 
-type PageContext = {
+export type PageContext = {
   signedIn: boolean;
   isConnected: () => boolean;
   handles: ReplayHandle[];
@@ -178,18 +179,20 @@ function buildSignedIn(
       line.textContent = t('correspondence.allCaughtUp');
       moveSection.append(line);
     } else {
-      const list = document.createElement('div');
-      list.className = 'correspondence-cards';
-      for (const game of yourMove) list.append(buildMoveCard(ctx, game, current.get(game.roomId)));
-      moveSection.append(list);
+      const grid = buildGrid('correspondence-move-grid');
+      for (const game of yourMove) {
+        grid.append(buildInboxCard(ctx, game, current.get(game.roomId), true));
+      }
+      moveSection.append(grid);
     }
     main.append(moveSection);
     if (waiting.length > 0) {
       const waitSection = buildSection(t('correspondence.waitingOnOpponent'), waiting.length);
-      const list = document.createElement('div');
-      list.className = 'correspondence-panel correspondence-rows';
-      for (const game of waiting) list.append(buildWaitingRow(ctx, game, current.get(game.roomId)));
-      waitSection.append(list);
+      const grid = buildGrid('correspondence-waiting-grid');
+      for (const game of waiting) {
+        grid.append(buildInboxCard(ctx, game, current.get(game.roomId), false));
+      }
+      waitSection.append(grid);
       main.append(waitSection);
     }
   }
@@ -264,77 +267,122 @@ function buildSection(label: string, count: number | null): HTMLElement {
   return section;
 }
 
-// ---- Your move ------------------------------------------------------------------
+// ---- Your move / Waiting on opponent ------------------------------------------------
 
-function buildMoveCard(
+// Every list on the page is a grid of the site's game cards (current-games.css
+// .current-game-card, the /games wall and the homepage), so a correspondence
+// game looks the same here as everywhere else.
+function buildGrid(modifier: string): HTMLElement {
+  const grid = document.createElement('div');
+  grid.className = `current-games-grid correspondence-grid ${modifier}`;
+  return grid;
+}
+
+// One of your games as a /games card: opponent and you in the seat rows (first
+// mover at the bottom, matching the board), the time left on the seat that is
+// to move, the share of the move's allowance left as the bar, and the variant
+// and cadence in the meta. A "Your move" card adds Play your move. The whole
+// card opens the game through the stretched .current-game-open; the
+// opponent's profile link sits above it, a sibling, so anchors never nest.
+export function buildInboxCard(
   ctx: PageContext,
   game: CorrespondenceGame,
   current: CurrentGame | undefined,
+  yourMove: boolean,
 ): HTMLElement {
   const card = document.createElement('article');
-  card.className = 'correspondence-panel correspondence-card';
+  card.className = 'current-game-card correspondence-game-card';
+  card.classList.toggle('is-your-move', yourMove);
+  card.dataset.kind = 'correspondence';
   card.dataset.roomId = game.roomId;
 
-  const boardLink = document.createElement('a');
-  boardLink.className = 'correspondence-card-board';
-  boardLink.href = game.url;
-  boardLink.tabIndex = -1;
-  boardLink.setAttribute('aria-hidden', 'true');
-  boardLink.append(buildBoardHost(ctx, game, current));
+  const opponentName = game.opponentName ?? t('correspondence.opponentFallback');
+  const variant = variantDisplayLabel(game.gameSpecId);
+  const open = document.createElement('a');
+  open.className = 'current-game-open';
+  open.href = game.url;
+  open.setAttribute(
+    'aria-label',
+    `${variant}, ${t('correspondence.vsOpponent', { name: opponentName })}`,
+  );
 
-  const body = document.createElement('div');
-  body.className = 'correspondence-card-body';
-  body.append(buildMetaLine(game, current));
+  const opponentSeat = buildInboxSeat(
+    playerNameEl(
+      opponentName,
+      profileTargetFor({ handle: game.opponentHandle }),
+      'current-game-seat-name',
+    ),
+  );
+  const you = document.createElement('span');
+  you.className = 'current-game-seat-name';
+  you.textContent = t('live.you');
+  const mySeat = buildInboxSeat(you);
+  const onMove = yourMove ? mySeat : opponentSeat;
+  onMove.clock.hidden = false;
 
-  const vs = document.createElement('h3');
-  vs.className = 'correspondence-card-vs';
-  appendVsLabel(vs, game);
-  body.append(vs);
+  const board = buildBoardHost(ctx, game, current);
+  const youAtBottom = seatBoardView(game) !== null || isFirstMoverSeat(game, current);
+  const [top, bottom] = youAtBottom ? [opponentSeat, mySeat] : [mySeat, opponentSeat];
+  card.append(open, top.row, board, bottom.row);
 
-  // When the position last changed, from the feed's newest event. The payload
-  // has no move text we can name here, so the card says when, not what.
-  if (current?.lastActivityAt) {
-    const updated = document.createElement('p');
-    updated.className = 'correspondence-card-updated';
-    updated.textContent = t('correspondence.updatedAgo', {
-      ago: timeAgo(new Date(current.lastActivityAt).toISOString()),
-    });
-    body.append(updated);
-  }
-
-  const deadline = document.createElement('div');
-  deadline.className = 'correspondence-deadline';
-  const labels = document.createElement('div');
-  labels.className = 'correspondence-deadline-labels';
-  const left = document.createElement('span');
-  left.className = 'correspondence-deadline-left';
-  const due = document.createElement('span');
-  due.className = 'correspondence-deadline-due';
-  due.textContent = t('correspondence.dueAt', { when: formatDue(game.dueAt) });
-  labels.append(left, due);
-  deadline.append(labels);
   const days = current?.timeControl?.daysPerMove ?? null;
   let fill: HTMLElement | null = null;
   if (days) {
     const track = document.createElement('div');
-    track.className = 'correspondence-bar';
+    track.className = 'current-game-bar';
     track.setAttribute('aria-hidden', 'true');
     fill = document.createElement('span');
     track.append(fill);
-    deadline.append(track);
+    card.append(track);
   }
-  body.append(deadline);
 
-  const play = document.createElement('a');
-  play.className = 'correspondence-btn';
-  play.href = game.url;
-  play.textContent = t('correspondence.playYourMove');
-  body.append(play);
+  const meta = document.createElement('div');
+  meta.className = 'current-game-meta';
+  const chip = document.createElement('span');
+  chip.className = 'current-game-chip';
+  chip.textContent = variant;
+  const parts: string[] = [];
+  if (days) parts.push(cadenceLabel(days));
+  parts.push(game.rated === true ? t('games.rated') : t('games.casual'));
+  if (current && current.ply > 0) parts.push(t('games.moveCount', { count: current.ply }));
+  const text = document.createElement('span');
+  text.textContent = parts.join(' · ');
+  meta.append(chip, text);
+  card.append(meta);
+
+  // When the position last changed (the feed's newest event; the payload has no
+  // move text to name), and on your move, when the move is due.
+  const when: string[] = [];
+  if (current?.lastActivityAt) {
+    when.push(
+      t('correspondence.updatedAgo', {
+        ago: timeAgo(new Date(current.lastActivityAt).toISOString(), 'narrow'),
+      }),
+    );
+  }
+  if (yourMove) {
+    const due = formatDue(game.dueAt);
+    if (due) when.push(t('correspondence.dueAt', { when: due }));
+  }
+  if (when.length > 0) {
+    const line = document.createElement('p');
+    line.className = 'correspondence-card-when';
+    line.textContent = when.join(' · ');
+    card.append(line);
+  }
+
+  if (yourMove) {
+    const play = document.createElement('a');
+    play.className = 'correspondence-btn correspondence-card-play';
+    play.href = game.url;
+    play.textContent = t('correspondence.playYourMove');
+    card.append(play);
+  }
 
   const tick = (now: number): void => {
     const urgency = deadlineUrgency(game.dueAt, now);
     card.dataset.urgency = urgency;
-    left.textContent = timeLeftLabel(game.dueAt, now);
+    onMove.clock.textContent = timeLeftLabel(game.dueAt, now);
     if (fill) {
       const fraction = deadlineFraction(game.dueAt, days, now) ?? 0;
       fill.style.width = `${Math.round(fraction * 1000) / 10}%`;
@@ -342,62 +390,32 @@ function buildMoveCard(
   };
   tick(Date.now());
   ctx.tickers.push(tick);
-
-  card.append(boardLink, body);
   return card;
 }
 
-// ---- Waiting on opponent ----------------------------------------------------------
+function buildInboxSeat(name: HTMLElement): { row: HTMLElement; clock: HTMLElement } {
+  const row = document.createElement('div');
+  row.className = 'current-game-seat';
+  const who = document.createElement('span');
+  who.className = 'current-game-seat-who';
+  who.append(name);
+  const clock = document.createElement('span');
+  clock.className = 'current-game-seat-clock is-deadline';
+  clock.hidden = true;
+  row.append(who, clock);
+  return { row, clock };
+}
 
-function buildWaitingRow(
-  ctx: PageContext,
-  game: CorrespondenceGame,
-  current: CurrentGame | undefined,
-): HTMLElement {
-  const row = document.createElement('a');
-  row.className = 'correspondence-row correspondence-waiting-row';
-  row.href = game.url;
-  row.dataset.roomId = game.roomId;
-
-  const board = document.createElement('div');
-  board.className = 'correspondence-row-board';
-  board.append(buildBoardHost(ctx, game, current));
-
-  const text = document.createElement('div');
-  text.className = 'correspondence-row-text';
-  const name = document.createElement('span');
-  name.className = 'correspondence-row-name';
-  name.textContent = game.opponentName ?? t('correspondence.opponentFallback');
-  const detail = document.createElement('span');
-  detail.className = 'correspondence-row-detail';
-  const parts = [variantDisplayLabel(game.gameSpecId)];
-  const days = current?.timeControl?.daysPerMove;
-  if (days) parts.push(cadenceLabel(days));
-  if (game.rated === true) parts.push(t('play.rated'));
-  if (current?.lastActivityAt) {
-    parts.push(
-      t('correspondence.updatedAgo', {
-        ago: timeAgo(new Date(current.lastActivityAt).toISOString(), 'narrow'),
-      }),
-    );
-  }
-  detail.textContent = parts.join(' · ');
-  text.append(name, detail);
-
-  const left = document.createElement('span');
-  left.className = 'correspondence-row-left';
-  const tick = (now: number): void => {
-    const remaining = deadlineRemainingMs(game.dueAt, now);
-    left.textContent =
-      remaining === null || remaining <= 0
-        ? t('correspondence.dueNow')
-        : t('correspondence.theyHaveLeft', { time: formatDayClock(remaining) });
-  };
-  tick(Date.now());
-  ctx.tickers.push(tick);
-
-  row.append(board, text, left);
-  return row;
+// Whether your seat moves first, which the board draws at the bottom (the
+// compact renderer's white point of view; /games orders its seats the same
+// way). The feed's players say which colour moves first; without the feed,
+// red and white do.
+function isFirstMoverSeat(game: CorrespondenceGame, current: CurrentGame | undefined): boolean {
+  const players = current?.players ?? [];
+  const first =
+    players.find((player) => player.color === 'red' || player.color === 'white') ?? players[0];
+  if (first) return first.color === game.mySeat;
+  return game.mySeat === 'red' || game.mySeat === 'white';
 }
 
 // ---- Boards -------------------------------------------------------------------------
@@ -539,41 +557,6 @@ function buildPlaceholderTile(gameSpecId: string): HTMLElement {
 }
 
 // ---- Shared labels ------------------------------------------------------------------
-
-function buildMetaLine(game: CorrespondenceGame, current: CurrentGame | undefined): HTMLElement {
-  const meta = document.createElement('div');
-  meta.className = 'correspondence-card-meta';
-  const chip = document.createElement('span');
-  chip.className = 'current-game-chip';
-  chip.textContent = variantDisplayLabel(game.gameSpecId);
-  meta.append(chip);
-  const parts: string[] = [];
-  const days = current?.timeControl?.daysPerMove;
-  if (days) parts.push(cadenceLabel(days));
-  if (game.rated === true) parts.push(t('play.rated'));
-  if (current && current.ply > 0) parts.push(t('games.moveCount', { count: current.ply }));
-  if (parts.length > 0) {
-    const text = document.createElement('span');
-    text.textContent = parts.join(' · ');
-    meta.append(text);
-  }
-  return meta;
-}
-
-// "vs <name>", the name linked to the opponent's profile when the server sent a
-// handle. Only the Your move card uses it: a Waiting row is one whole <a> to
-// the room, and a profile link cannot nest inside it.
-export function appendVsLabel(host: HTMLElement, game: CorrespondenceGame): void {
-  appendWithNameNode(
-    host,
-    (token) => t('correspondence.vsOpponent', { name: token }),
-    playerNameEl(
-      game.opponentName ?? t('correspondence.opponentFallback'),
-      profileTargetFor({ handle: game.opponentHandle }),
-      'correspondence-card-vs-name',
-    ),
-  );
-}
 
 function cadenceLabel(days: number): string {
   return days === 1 ? t('games.oneDayPerMove') : t('games.daysPerMove', { count: days });
@@ -772,30 +755,19 @@ export function buildStartForm(
   syncRated();
   onRatedModeChange(syncRated);
 
-  const kindLabels: Record<SeekKind, I18nKey> = {
-    direct: 'correspondence.opponentPlayer',
+  // Anyone or A link. A challenge to one player starts from that player's
+  // profile (its Challenge button, challenge-dialog.ts), not from a typed
+  // handle here: typing a handle was a dead end (Brian, 2026-10-04).
+  const kindLabels: Record<StartFormSeekKind, I18nKey> = {
     link: 'correspondence.opponentLink',
     public: 'correspondence.opponentAnyone',
   };
-  const kind = buildSegmented<SeekKind>(
+  const kind = buildSegmented<StartFormSeekKind>(
     t('correspondence.opponentLabel'),
-    SEEK_KINDS.map((value) => ({ value, label: t(kindLabels[value]) })),
+    START_FORM_SEEK_KINDS.map((value) => ({ value, label: t(kindLabels[value]) })),
     'public',
     () => syncKind(),
   );
-
-  const handleField = document.createElement('label');
-  handleField.className = 'correspondence-field';
-  const handleCaption = document.createElement('span');
-  handleCaption.className = 'correspondence-field-label';
-  handleCaption.textContent = t('correspondence.playerHandleLabel');
-  const handle = document.createElement('input');
-  handle.type = 'text';
-  handle.className = 'correspondence-input';
-  handle.placeholder = '@handle';
-  handle.autocomplete = 'off';
-  handle.spellcheck = false;
-  handleField.append(handleCaption, handle);
 
   const side = buildSegmented<SeekPreferredColor>(
     t('correspondence.yourSideLabel'),
@@ -823,23 +795,19 @@ export function buildStartForm(
   status.setAttribute('role', 'status');
   status.hidden = true;
 
-  const hints: Record<SeekKind, I18nKey> = {
-    direct: 'correspondence.kindHintDirect',
+  const hints: Record<StartFormSeekKind, I18nKey> = {
     link: 'correspondence.kindHintLink',
     public: 'correspondence.kindHintPublic',
   };
-  const submits: Record<SeekKind, I18nKey> = {
-    direct: 'correspondence.sendChallenge',
+  const submits: Record<StartFormSeekKind, I18nKey> = {
     link: 'correspondence.createLink',
     public: 'correspondence.postSeek',
   };
   const syncKind = (): void => {
     const value = kind.value();
-    handleField.hidden = value !== 'direct';
     hint.textContent = t(hints[value]);
     submit.textContent = t(submits[value]);
     status.hidden = true;
-    if (value === 'direct') handle.focus();
   };
   syncKind();
 
@@ -855,18 +823,13 @@ export function buildStartForm(
     const request = seekRequestBody({
       daysPerMove: Number(days.value()),
       gameSpecId: variant.value(),
-      handle: handle.value,
       kind: seekKind,
       preferredColor: side.value(),
       rated:
         rated.value() === 'rated' &&
         correspondenceRatedAvailable(variant.value(), isCorrespondenceRatedModeEnabled()),
     });
-    if (!request.ok) {
-      showStatus(t('correspondence.handleRequired'), true);
-      handle.focus();
-      return;
-    }
+    if (!request.ok) return;
     submit.disabled = true;
     status.hidden = true;
     void fetch('/api/correspondence/seeks', {
@@ -882,7 +845,7 @@ export function buildStartForm(
         } | null;
         submit.disabled = false;
         if (!res.ok) {
-          showStatus(postErrorText(body?.error, body?.limit, handle.value.trim()), true);
+          showStatus(postErrorText(body?.error, body?.limit), true);
           return;
         }
         if (res.status === 201) {
@@ -899,15 +862,7 @@ export function buildStartForm(
           location.href = body.challengeUrl;
           return;
         }
-        if (seekKind === 'direct') {
-          showStatus(
-            t('correspondence.challengeSent', { name: handle.value.trim().replace(/^@+/, '') }),
-            false,
-          );
-          handle.value = '';
-        } else {
-          showStatus(t('correspondence.seekPosted'), false);
-        }
+        showStatus(t('correspondence.seekPosted'), false);
         onChanged();
       })
       .catch(() => {
@@ -916,31 +871,15 @@ export function buildStartForm(
       });
   });
 
-  form.append(
-    variant.root,
-    days.root,
-    rated.root,
-    kind.root,
-    handleField,
-    side.root,
-    hint,
-    submit,
-    status,
-  );
+  form.append(variant.root, days.root, rated.root, kind.root, side.root, hint, submit, status);
   panel.append(heading, form);
   return panel;
 }
 
-function postErrorText(code: string | undefined, limit: number | undefined, name: string): string {
+function postErrorText(code: string | undefined, limit: number | undefined): string {
   switch (code) {
     case 'seek_limit_reached':
       return t('correspondence.seekLimitReached', { limit: limit ?? 6 });
-    case 'target_not_found':
-      return t('correspondence.playerNotFound');
-    case 'cannot_challenge_self':
-      return t('correspondence.cannotChallengeSelf');
-    case 'challenge_blocked':
-      return t('challenge.errorBlocked', { name: name.replace(/^@+/, '') });
     case 'server_draining':
       return t('setup.serverRestartTimeout');
     default:
@@ -1001,8 +940,7 @@ function renderOpenSeeks(ctx: PageContext, host: HTMLElement, feed: OpenSeeksFee
   }
   // Each seek is a game card at its starting position (seek-card.ts), the
   // same frame as the games in progress, rather than a text row.
-  const grid = document.createElement('div');
-  grid.className = 'current-games-grid correspondence-seek-grid';
+  const grid = buildGrid('correspondence-seek-grid');
   for (const seek of seeks) grid.append(buildOpenSeekCard(ctx, host, seek));
   host.append(grid);
 }
@@ -1102,13 +1040,12 @@ export async function renderChallenges(
   const section = buildSection(t('correspondence.waitingForOpponent'), seeks.length);
   const children: Node[] = [...section.childNodes];
   {
-    const list = document.createElement('div');
-    list.className = 'correspondence-panel correspondence-rows';
+    const grid = buildGrid('correspondence-own-grid');
     const refresh = (): void => {
       void renderChallenges(host, onCount);
     };
-    for (const seek of seeks) list.append(buildChallengeRow(seek, refresh));
-    children.push(list);
+    for (const seek of seeks) grid.append(buildOwnSeekCard(seek, refresh));
+    children.push(grid);
     // Standing invitations are capped, and hitting it refuses every new game
     // with a 409. Say so before that happens rather than after.
     if (seeks.length >= limit) {
@@ -1121,50 +1058,41 @@ export async function renderChallenges(
   host.replaceChildren(...children);
 }
 
-function buildChallengeRow(seek: OutgoingSeek, onChange: () => void): HTMLElement {
-  const row = document.createElement('div');
-  row.className = 'correspondence-row';
-  row.dataset.seekId = seek.id;
-  const text = document.createElement('div');
-  text.className = 'correspondence-row-text';
-  const who = document.createElement('span');
-  who.className = 'correspondence-row-name';
+// Your own seek as a seek card (seek-card.ts, the same card as Open seeks):
+// the empty seat says who it is waiting for (a directed challenge links its
+// recipient by handle, fail-closed), your seat carries Copy link and Cancel.
+export function buildOwnSeekCard(seek: OutgoingSeek, onChange: () => void): HTMLElement {
+  const variant = variantDisplayLabel(seek.gameSpecId);
+  let waiting: Node;
+  let ariaLabel: string;
   if (seek.targetName) {
+    const who = document.createElement('span');
+    who.className = 'correspondence-own-target';
     appendWithNameNode(
       who,
       (token) => t('correspondence.challengeTo', { name: token }),
       playerNameEl(
         seek.targetName,
         profileTargetFor({ handle: seek.targetHandle }),
-        'correspondence-row-target',
+        'correspondence-own-target-name',
       ),
     );
+    waiting = who;
+    ariaLabel = `${variant}, ${t('correspondence.challengeTo', { name: seek.targetName })}`;
   } else {
-    who.textContent =
-      seek.visibility === 'private'
-        ? t('correspondence.linkChallenge')
-        : t('correspondence.openSeek');
+    const label =
+      seek.visibility === 'private' ? t('correspondence.linkChallenge') : t('games.seekWaiting');
+    waiting = document.createTextNode(label);
+    ariaLabel = `${variant}, ${label}`;
   }
-  const detail = document.createElement('span');
-  detail.className = 'correspondence-row-detail';
-  const parts = [
-    t('correspondence.seekDetail', {
-      cadence: cadenceLabel(seek.daysPerMove),
-      color: seekColorLabel(seek.gameSpecId, seek.preferredColor),
-      variant: variantDisplayLabel(seek.gameSpecId),
-    }),
-  ];
-  if (seek.rated === true) parts.push(t('play.rated'));
+  const details = [seekColorLabel(seek.gameSpecId, seek.preferredColor)];
   const remaining = seek.expiresAt ? deadlineRemainingMs(seek.expiresAt, Date.now()) : null;
   if (remaining !== null && remaining > 0) {
-    parts.push(t('correspondence.expiresIn', { time: formatDayClock(remaining) }));
+    details.push(t('correspondence.expiresIn', { time: formatDayClock(remaining) }));
   }
-  detail.textContent = parts.join(' · ');
-  text.append(who, detail);
-  row.append(text);
 
   const actions = document.createElement('div');
-  actions.className = 'correspondence-row-actions';
+  actions.className = 'correspondence-own-actions';
   // A link challenge is useless without its link, and the creator may well have
   // lost the tab they copied it from.
   if (seek.challengeUrl) {
@@ -1199,8 +1127,26 @@ function buildChallengeRow(seek: OutgoingSeek, onChange: () => void): HTMLElemen
       });
   });
   actions.append(cancel);
-  row.append(actions);
-  return row;
+  return buildSeekCard(
+    {
+      creatorHandle: null,
+      creatorName: t('live.you'),
+      daysPerMove: seek.daysPerMove,
+      gameSpecId: seek.gameSpecId,
+      id: seek.id,
+      rated: seek.rated === true,
+    },
+    {
+      action: actions,
+      ariaLabel,
+      badge: false,
+      details,
+      // A link or directed challenge opens its /challenge page (where the share
+      // link lives); a public seek has no page of its own.
+      href: seek.challengeUrl,
+      waiting,
+    },
+  );
 }
 
 function seekColorLabel(gameSpecId: string, color: SeekPreferredColor): string {

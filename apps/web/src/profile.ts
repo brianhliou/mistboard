@@ -999,7 +999,12 @@ function buildProfileActions(
   locale: Locale = currentLocale(),
 ): HTMLElement | null {
   if (profile.relation) {
-    return buildRelationActions(profile.user.handle, profile.relation, locale);
+    return buildRelationActions(
+      profile.user.handle,
+      profile.relation,
+      locale,
+      profile.user.displayName,
+    );
   }
   if (profile.isViewer) return buildOwnerActions(locale, profile.user.title);
   return null;
@@ -1055,9 +1060,12 @@ function buildRelationActions(
   handle: string,
   relation: ProfileRelation,
   locale: Locale = currentLocale(),
+  displayName?: string,
 ): HTMLElement {
   const row = document.createElement('div');
   row.className = 'profile-relation-actions';
+  // Kept on the row so a re-render after Follow/Block still names the player.
+  if (displayName) row.dataset.displayName = displayName;
   renderRelationActions(row, handle, relation, locale);
   return row;
 }
@@ -1079,14 +1087,21 @@ function renderRelationActions(
     message.textContent = t('profile.message', {}, locale);
     row.append(message);
 
-    // Directed correspondence challenge (async-loop). Gated on the correspondence
-    // flag so it only appears where the challenge system is live.
+    // Directed correspondence challenge (async-loop): the one way to challenge a
+    // particular player since the /correspondence form dropped "A player"
+    // (2026-10-04). Gated on the correspondence flag so it only appears where
+    // the challenge system is live. The row exists only for a signed-in viewer
+    // on someone else's profile (relation is null otherwise), and a private
+    // profile is a 404 to everyone but its owner.
     if (correspondenceEnabled()) {
       const challenge = document.createElement('button');
       challenge.type = 'button';
       challenge.className = 'landing-setup-start';
       challenge.textContent = t('challenge.button', {}, locale);
-      challenge.addEventListener('click', () => openChallengeDialog({ handle, locale }));
+      challenge.dataset.action = 'challenge';
+      challenge.addEventListener('click', () =>
+        openChallengeDialog({ displayName: row.dataset.displayName, handle, locale }),
+      );
       row.append(challenge);
     }
 

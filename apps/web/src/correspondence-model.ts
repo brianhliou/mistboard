@@ -260,7 +260,11 @@ export function othersSeeks<T extends Pick<OpenSeek, 'isMine'>>(seeks: readonly 
 // board (anyone), a private share link, or a directed challenge to one player.
 export type SeekKind = 'public' | 'link' | 'direct';
 
-export const SEEK_KINDS: readonly SeekKind[] = ['public', 'link', 'direct'];
+// The kinds the /correspondence Start a game form offers. A directed challenge
+// starts from the player's profile (challenge-dialog.ts) instead.
+export type StartFormSeekKind = Exclude<SeekKind, 'direct'>;
+
+export const START_FORM_SEEK_KINDS: readonly StartFormSeekKind[] = ['public', 'link'];
 
 export type StartGameInput = {
   gameSpecId: string;

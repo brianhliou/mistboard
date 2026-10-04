@@ -42,6 +42,56 @@ describe('correspondence: your open seeks', () => {
     expect(counts).toEqual([1]);
   });
 
+  it('draws each seek as the site seek card, Cancel above the card link', async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) =>
+      init?.method === 'DELETE' ? new Response(null, { status: 204 }) : mineResponse([jieqiSeek]),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const host = document.createElement('section');
+    await renderChallenges(host);
+    const card = host.querySelector<HTMLElement>('[data-seek-id="seek-1"]');
+    expect(card?.classList.contains('current-game-card')).toBe(true);
+    expect(card?.closest('.current-games-grid')).not.toBeNull();
+    expect(card?.querySelector('.current-game-board')).not.toBeNull();
+    expect(card?.querySelector('.current-game-seat.is-empty-seat')?.textContent).toBe(
+      'Waiting for an opponent',
+    );
+    expect(card?.querySelector('.current-game-seat-name')?.textContent).toBe('You');
+    // A public seek has no page of its own, so no card-wide link to cover Cancel.
+    expect(card?.querySelector('a.current-game-open')).toBeNull();
+    const cancel = card?.querySelector<HTMLButtonElement>('.current-game-seek-action button');
+    expect(cancel?.textContent).toBe('Cancel');
+    cancel?.click();
+    await vi.waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith('/api/correspondence/seeks/seek-1', {
+        method: 'DELETE',
+      }),
+    );
+  });
+
+  it('gives a link challenge Copy link and Cancel, and opens its challenge page', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        mineResponse([{ ...jieqiSeek, visibility: 'private', challengeUrl: '/challenge/seek-1' }]),
+      ),
+    );
+    const host = document.createElement('section');
+    await renderChallenges(host);
+    const card = host.querySelector<HTMLElement>('[data-seek-id="seek-1"]');
+    expect(card?.querySelector('.current-game-seat.is-empty-seat')?.textContent).toBe(
+      'Link challenge',
+    );
+    expect(card?.querySelector('a.current-game-open')?.getAttribute('href')).toBe(
+      '/challenge/seek-1',
+    );
+    const labels = [...(card?.querySelectorAll('.current-game-seek-action button') ?? [])].map(
+      (button) => button.textContent,
+    );
+    expect(labels).toEqual(['Copy link', 'Cancel']);
+    expect(card?.querySelectorAll('a a')).toHaveLength(0);
+  });
+
   it('hides itself when nothing is out', async () => {
     vi.stubGlobal(
       'fetch',
