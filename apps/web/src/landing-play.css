@@ -839,8 +839,10 @@
      pushed under the fold on a laptop, which is the one control that must never
      move. Three rows is 12 variants; the fourth row scrolls into view.
      `overflow-y` rather than `overflow` so the horizontal clip that squares off
-     the cell borders is unchanged. */
-  max-height: calc(3 * 102px);
+     the cell borders is unchanged. The + 2px is the grid's own top and bottom
+     border: box-sizing is border-box, so without it three full rows overflow by
+     2px and the picker shows a scrollbar with nothing to scroll to. */
+  max-height: calc(3 * 102px + 2px);
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
