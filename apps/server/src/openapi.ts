@@ -278,6 +278,15 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
                   'Live games in play per game spec id with at least one person seated; zero entries are omitted.',
                 additionalProperties: { type: 'integer' },
               },
+              totalCompletedGames: {
+                type: ['integer', 'null'],
+                description:
+                  'Counted completed games, as on /api/stats/public; refreshed at most every 30 seconds. Null without a database.',
+              },
+              last30dCompletedGames: {
+                type: ['integer', 'null'],
+                description: 'Counted games completed in the last 30 days; same cache.',
+              },
             },
           }),
         },

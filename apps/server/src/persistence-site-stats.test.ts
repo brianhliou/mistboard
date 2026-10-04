@@ -2,6 +2,7 @@ import {
   createUser,
   getPublicSiteStats,
   getRecentCountedGamesByVariant,
+  getSiteGameTotals,
   getSiteStats,
 } from './persistence.js';
 import {
@@ -73,6 +74,11 @@ definePersistenceTests('site stats', () => {
     }
 
     const stats = await getPublicSiteStats({ now });
+    // The homepage's two-count read agrees with /stats on the same data.
+    assert.deepEqual(await getSiteGameTotals({ now }), {
+      totalCompletedGames: stats.totalCompletedGames,
+      last30dCompletedGames: stats.last30dCompletedGames,
+    });
 
     assert.equal(stats.generatedAt, now.toISOString());
     // The excluded operator is not a registered account here.

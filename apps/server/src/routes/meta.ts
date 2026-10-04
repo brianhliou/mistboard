@@ -8,6 +8,7 @@ import { onlinePresence, refreshPresence } from '../presence.js';
 import { PUBLIC_RATING_TIME_CLASS } from '../rating-buckets.js';
 import { readEventLoopLagMs } from '../server-event-loop-lag.js';
 import { getProxyTrustWarning } from '../server-policy.js';
+import { getCachedSiteTotals } from '../site-counters.js';
 import { aggregateEnginePoolStats } from '../uci-engine-harness.js';
 import {
   getVariantOrder,
@@ -114,10 +115,16 @@ export async function tryHandle(
     // playingBySpec stays live-only: a correspondence game nobody has open is
     // in play but has no one at the board, which is what the per-variant
     // "N playing" on the homepage claims.
+    // The homepage counters poll this endpoint, so the durable totals ride
+    // along from a shared cache (site-counters.ts) instead of a second fetch.
+    // Null without a database or before the first read succeeds.
+    const totals = persistence.isInitialized() ? await getCachedSiteTotals() : null;
     writeJson(response, 200, {
       playing,
       online: stats.onlineIdentities.size,
       playingBySpec: stats.playingBySpec,
+      totalCompletedGames: totals?.totalCompletedGames ?? null,
+      last30dCompletedGames: totals?.last30dCompletedGames ?? null,
     });
     return true;
   }
