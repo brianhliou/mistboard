@@ -1,6 +1,7 @@
 import { DARK_CHESS_SPEC_ID, gameSpecForId } from '@mistboard/game';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  analyticsTimeClass,
   applyInternalTag,
   classifyTimeControl,
   createGameLifecycleTracker,
@@ -14,6 +15,7 @@ import {
   roomModeAnalyticsProps,
   setPostHogInstance,
 } from './analytics.js';
+import { rememberCorrespondenceStartSource, rememberGameStartSource } from './game-start-source.js';
 
 describe('classifyTimeControl', () => {
   it('classifies bullet (1+0)', () => {
@@ -123,6 +125,94 @@ describe('createGameLifecycleTracker', () => {
     // Both fire independently; one tracker reaching 'playing' must not suppress
     // the other's game_started.
     expect(named('game_started')).toHaveLength(2);
+  });
+});
+
+describe('analyticsTimeClass', () => {
+  it('reports a days-per-move control as correspondence, not the classical its ms fall in', () => {
+    // 1 day = 86,400,000 ms with no increment; the pace formula says classical.
+    expect(classifyTimeControl(86_400_000, 0)).toBe('classical');
+    expect(analyticsTimeClass({ initialMs: 86_400_000, incrementMs: 0, daysPerMove: 1 })).toBe(
+      'correspondence',
+    );
+  });
+
+  it('trusts the room mode when the clock carries no daysPerMove (chess stack)', () => {
+    expect(
+      analyticsTimeClass({ initialMs: 86_400_000, incrementMs: 0 }, { correspondence: true }),
+    ).toBe('correspondence');
+  });
+
+  it('keeps the live classes and null for a room with no clock', () => {
+    expect(analyticsTimeClass({ initialMs: 5 * 60_000, incrementMs: 5_000 })).toBe('rapid');
+    expect(analyticsTimeClass(null)).toBeNull();
+  });
+});
+
+describe('correspondence game_started', () => {
+  const capture = vi.fn();
+  const started = () =>
+    (capture.mock.calls as Array<[string, Record<string, unknown>]>).filter(
+      ([name]) => name === 'game_started',
+    );
+  const corr = { gameId: 'jq_1', game_spec: 'jieqi', time_class: 'correspondence' };
+
+  beforeEach(() => {
+    capture.mockReset();
+    Object.defineProperty(window, 'localStorage', { configurable: true, value: memoryStorage() });
+    sessionStorage.clear();
+    setPostHogInstance({ capture, identify: vi.fn(), reset: vi.fn() });
+  });
+
+  it('fires once per game across page loads, not on every daily visit', () => {
+    createGameLifecycleTracker().update({ statusType: 'playing', baseProps: corr });
+    // The next day's visit is a fresh page with a fresh tracker.
+    createGameLifecycleTracker().update({ statusType: 'playing', baseProps: corr });
+    expect(started()).toHaveLength(1);
+    createGameLifecycleTracker().update({
+      statusType: 'playing',
+      baseProps: { ...corr, gameId: 'jq_2' },
+    });
+    expect(started()).toHaveLength(2);
+  });
+
+  it('labels the accepter from the session source and the poster from the long-lived one', () => {
+    rememberGameStartSource('home-correspondence');
+    createGameLifecycleTracker().update({ statusType: 'playing', baseProps: corr });
+    expect(started()[0]?.[1].entry_source).toBe('home-correspondence');
+
+    // The poster: no session source (they came from an email days later).
+    rememberCorrespondenceStartSource('home-correspondence', 'jieqi');
+    createGameLifecycleTracker().update({
+      statusType: 'playing',
+      baseProps: { ...corr, gameId: 'jq_3' },
+    });
+    expect(started()[1]?.[1].entry_source).toBe('home-correspondence');
+    // Consumed: a later correspondence game is unlabeled.
+    createGameLifecycleTracker().update({
+      statusType: 'playing',
+      baseProps: { ...corr, gameId: 'jq_4' },
+    });
+    expect(started()[2]?.[1].entry_source).toBe('none');
+  });
+
+  it('does not hand the long-lived source to another variant or to a live game', () => {
+    rememberCorrespondenceStartSource('home-correspondence', 'jieqi');
+    createGameLifecycleTracker().update({
+      statusType: 'playing',
+      baseProps: { ...corr, gameId: 'xq_1', game_spec: 'xiangqi' },
+    });
+    createGameLifecycleTracker().update({
+      statusType: 'playing',
+      baseProps: { gameId: 'live_1', game_spec: 'jieqi', time_class: 'blitz' },
+    });
+    expect(started().map(([, props]) => props.entry_source)).toEqual(['none', 'none']);
+    // Live games still fire on every fresh tracker, as before.
+    createGameLifecycleTracker().update({
+      statusType: 'playing',
+      baseProps: { gameId: 'live_1', game_spec: 'jieqi', time_class: 'blitz' },
+    });
+    expect(started()).toHaveLength(3);
   });
 });
 
@@ -257,3 +347,21 @@ describe('internal browser tag', () => {
     expect(calls).toEqual(['reset', 'register']);
   });
 });
+
+function memoryStorage(): Storage {
+  const values = new Map<string, string>();
+  return {
+    get length() {
+      return values.size;
+    },
+    clear: () => values.clear(),
+    getItem: (key) => values.get(key) ?? null,
+    key: (index) => [...values.keys()][index] ?? null,
+    removeItem: (key) => {
+      values.delete(key);
+    },
+    setItem: (key, value) => {
+      values.set(key, String(value));
+    },
+  };
+}

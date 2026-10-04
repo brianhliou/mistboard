@@ -20,7 +20,7 @@
  */
 
 import {
-  classifyTimeControl,
+  analyticsTimeClass,
   createGameLifecycleTracker,
   type GameLifecycleStatusType,
   maybeGameSpecAnalyticsProps,
@@ -93,7 +93,7 @@ export type TenantLiveFrame<C extends string, V> = {
   connectedSeats?: Record<C, boolean>;
   abortDeadline?: number | null;
   forfeitDeadline?: number | null;
-  timeControl?: { initialMs: number; incrementMs: number } | null;
+  timeControl?: { initialMs: number; incrementMs: number; daysPerMove?: number } | null;
   events?: TenantLiveEvent[];
   event?: TenantLiveEvent;
   seq?: number;
@@ -107,7 +107,7 @@ export type TenantLiveState<C extends string, V> = {
   seat: C | 'spectator' | null;
   view: V | null;
   clock: TenantLiveClock<C> | null;
-  timeControl: { initialMs: number; incrementMs: number } | null;
+  timeControl: { initialMs: number; incrementMs: number; daysPerMove?: number } | null;
   seats: Partial<Record<C, string>>;
   seatDisplayNames: Partial<Record<C, string>>;
   // Where each seat name links, parallel to seatDisplayNames. A seat with no
@@ -754,9 +754,10 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       ...roomModeAnalyticsProps(config.chrome?.roomMode?.() ?? 'pvp', opponentSeatName()),
       initialMs: timeControl?.initialMs ?? null,
       incrementMs: timeControl?.incrementMs ?? null,
-      time_class: timeControl
-        ? classifyTimeControl(timeControl.initialMs, timeControl.incrementMs)
-        : null,
+      // A correspondence room's time control carries daysPerMove (the server
+      // sends the full RoomTimeControl); that, not the pace, makes it one.
+      time_class: analyticsTimeClass(timeControl),
+      days_per_move: state.timeControl?.daysPerMove ?? null,
     };
     const status = view.status;
     lifecycleTracker.update({

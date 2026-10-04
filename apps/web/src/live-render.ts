@@ -6,6 +6,7 @@ import type { DrawShape } from 'chessground/draw';
 import type * as cg from 'chessground/types';
 import { readAccountPreferences } from './account-preferences.js';
 import {
+  analyticsTimeClass,
   classifyTimeControl,
   createGameLifecycleTracker,
   gameSpecAnalyticsProps,
@@ -212,8 +213,9 @@ function trackGameLifecycle(view: PlayerView | null): void {
     ...roomModeAnalyticsProps(liveState.roomMode),
     initialMs: view.clock?.initialMs ?? null,
     incrementMs: view.clock?.incrementMs ?? null,
-    time_class:
-      view.clock != null ? classifyTimeControl(view.clock.initialMs, view.clock.incrementMs) : null,
+    time_class: analyticsTimeClass(view.clock, {
+      correspondence: liveState.roomMode === 'correspondence',
+    }),
   };
   const outcome =
     statusType === 'finished'
