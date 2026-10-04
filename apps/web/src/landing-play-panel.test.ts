@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { RATED_TIME_CONTROLS } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -116,6 +117,17 @@ describe('homepage play panel', () => {
     expect(jieqi.querySelector('.pp-step-level .pp-step-tag')).toBeNull();
     // No name is gold: gold in this panel means a person.
     expect(board.querySelector('.pp-step-level .is-named')).toBeNull();
+  });
+
+  it('sizes the marker with a rule that outranks the shared 24px seed thumb', () => {
+    // The production bundle loads landing.css after this panel's CSS, so an
+    // equal-specificity .pp-thumb lost to .landing-lobby-seed-thumb (24px) in
+    // prod while dev, loading them the other way round, showed 40px.
+    const panelCss = readFileSync('src/landing-play-panel.css', 'utf8');
+    const landingCss = readFileSync('src/landing.css', 'utf8');
+    expect(landingCss).toMatch(/^\.landing-lobby-seed-thumb \{[^}]*width: 24px/m);
+    expect(panelCss).toMatch(/^\.pp-board \.pp-thumb \{[^}]*width: var\(--pp-icon\)/m);
+    expect(panelCss).not.toMatch(/^\.pp-thumb \{/m);
   });
 
   it('covers the bot list on the person tab instead of removing it', () => {

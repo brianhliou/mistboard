@@ -100,7 +100,11 @@
   overflow-y: auto;
 }
 
-.pp-thumb {
+/* Scoped to the board so it outranks landing.css's 24px
+   .landing-lobby-seed-thumb, which the production bundle loads after this file
+   (the dev server loads them the other way round, so dev showed the right size
+   while prod showed 24px). */
+.pp-board .pp-thumb {
   width: var(--pp-icon);
   height: var(--pp-icon);
 }
