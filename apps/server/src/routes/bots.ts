@@ -6,6 +6,8 @@ import { abJchessAvailable, JIEQI_ABJCHESS_ENGINE_ID } from '../jieqi-engine.js'
 import { KATAGO_JUNGLE_ENGINE_ID, katagoJungleAvailable } from '../jungle-katago-engine.js';
 import * as persistence from '../persistence.js';
 import type { BotProfile, BotProfilePage } from '../persistence-bots.js';
+import type { ProfileGameRecord } from '../persistence-games.js';
+import { markUnavailableGames } from '../replayable-games.js';
 import { requireMethod, requirePersistence, writeJson } from './lib.js';
 
 // Per-variant play descriptor for a bot. `playable` reflects the variant's
@@ -70,6 +72,32 @@ function withPlayOptions<T extends BotProfile>(bot: T): T & { playOptions: BotPl
   return { ...visible, playOptions: botPlayOptions(visible) };
 }
 
+// A bot's record is that bot's history: a game it cannot open (old rules, a
+// variant with no game page) stays listed, marked (replayable-games.ts).
+async function withUnavailableGamesMarked<T extends BotProfilePage>(bot: T): Promise<T> {
+  // One pass over every row the page carries (the flat list and the
+  // per-variant lists overlap), so each game is checked once.
+  const all = [bot.games, ...Object.values(bot.gamesByGameSpecId)].flat();
+  const unique = [...new Map(all.map((game) => [game.roomId, game])).values()];
+  const reasons = new Map(
+    (await markUnavailableGames(unique)).flatMap((game) =>
+      game.unavailable ? [[game.roomId, game.unavailable] as const] : [],
+    ),
+  );
+  const mark = (rows: readonly ProfileGameRecord[]): ProfileGameRecord[] =>
+    rows.map((game) => {
+      const unavailable = reasons.get(game.roomId);
+      return unavailable ? { ...game, unavailable } : game;
+    });
+  return {
+    ...bot,
+    games: mark(bot.games),
+    gamesByGameSpecId: Object.fromEntries(
+      Object.entries(bot.gamesByGameSpecId).map(([id, rows]) => [id, mark(rows)]),
+    ),
+  };
+}
+
 function isAnySpecPlayable(bot: BotProfile): boolean {
   return botPlayOptions(bot).some((option) => option.playable);
 }
@@ -106,7 +134,7 @@ export async function tryHandle(
       writeJson(response, 404, { error: 'not_found' });
       return true;
     }
-    writeJson(response, 200, { bot: withPlayOptions(bot) });
+    writeJson(response, 200, { bot: await withUnavailableGamesMarked(withPlayOptions(bot)) });
     return true;
   }
 

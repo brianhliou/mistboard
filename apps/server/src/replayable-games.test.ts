@@ -13,7 +13,11 @@ import {
 } from './crazyhouse-xiangqi-tenant.js';
 import { logger } from './obs.js';
 import type { RecentEveGameRecord } from './persistence.js';
-import { filterReplayableGames, type ReplayableGameDeps } from './replayable-games.js';
+import {
+  filterReplayableGames,
+  markUnavailableGames,
+  type ReplayableGameDeps,
+} from './replayable-games.js';
 import { crazyhouseXiangqiPostgameForApi } from './routes/crazyhouse-xiangqi-games.js';
 import { answerApiFailure } from './server-http.js';
 import {
@@ -106,7 +110,7 @@ function fakeResponse() {
 
 beforeEach(() => resetTenantReplayGuardForTests());
 
-test('a stored game the current rules refuse is a 404 from the postgame route, not a 500', async () => {
+test('a stored game the current rules refuse is a 410 from the postgame route, not a 404 or 500', async () => {
   const loadLegacy = async () => {
     try {
       await crazyhouseXiangqiPostgameForApi(LEGACY_ID, {
@@ -136,11 +140,12 @@ test('a stored game the current rules refuse is a 404 from the postgame route, n
   assert.match(thrown.message, /illegal move/);
   assert.equal(isKnownUnreplayableGame(LEGACY_ID), true);
 
-  // The API catch-all answers it as a missing game.
+  // The API catch-all answers it as a game that is gone for good, and says
+  // why, so the postgame page can tell the reader rather than "not found".
   const { sent, response } = fakeResponse();
   answerApiFailure(response, `/api/crazyhouse-xiangqi/games/${LEGACY_ID}`, thrown);
-  assert.equal(sent.status, 404);
-  assert.deepEqual(JSON.parse(sent.body ?? 'null'), { error: 'not_found' });
+  assert.equal(sent.status, 410);
+  assert.deepEqual(JSON.parse(sent.body ?? 'null'), { error: 'retired_rules' });
 
   // Any other failure is still a 500.
   const other = fakeResponse();
@@ -191,6 +196,87 @@ test('the TV picker skips a game whose stored log no longer replays, and checks 
     [GOOD_ID, 'chess-room'],
   );
   assert.equal(loads.length, 1, 'both verdicts are cached; nothing is reloaded');
+});
+
+test("a person's list keeps a game it cannot open and says why", async () => {
+  const eventsByRoom = new Map<string, readonly unknown[]>([
+    [GOOD_ID, goodEvents()],
+    [LEGACY_ID, legacyEvents()],
+  ]);
+  const loads: string[][] = [];
+  const deps: ReplayableGameDeps = {
+    registrationForRoomId: (roomId) =>
+      roomId.startsWith('chx_') || roomId.startsWith('mj_')
+        ? { replays: tenantReplayCheck(crazyhouseXiangqiTenant) }
+        : null,
+    loadRoomsEvents: async (roomIds) => {
+      loads.push([...roomIds]);
+      return new Map(
+        roomIds.flatMap((id) => (eventsByRoom.has(id) ? [[id, eventsByRoom.get(id)!]] : [])),
+      );
+    },
+    // Mahjong has no game page; everything else here does.
+    gamePageUrl: (roomId, variant) => (variant === 'mahjong' ? null : `/x/${roomId}`),
+  };
+  const history = [
+    record(GOOD_ID),
+    record(LEGACY_ID),
+    { ...record('mj_table'), variant: 'mahjong' },
+    { ...record('chess-room'), variant: 'dark-chess' },
+  ];
+
+  const marked = await markUnavailableGames(history, deps);
+  assert.deepEqual(
+    marked.map((row) => [row.roomId, row.unavailable ?? null]),
+    [
+      [GOOD_ID, null],
+      [LEGACY_ID, 'old-rules'],
+      ['mj_table', 'unsupported-variant'],
+      ['chess-room', null],
+    ],
+    'every row stays, in order; only the ones that cannot open are marked',
+  );
+  assert.ok(!('unavailable' in marked[0]!), 'an openable row carries no key at all');
+  assert.deepEqual(
+    loads,
+    [[GOOD_ID, LEGACY_ID]],
+    'a variant with no game page is not replayed to find out',
+  );
+
+  // The discovery filter agrees on the old-rules game and still drops it.
+  assert.deepEqual(
+    (await filterReplayableGames(history, deps)).map((row) => row.roomId),
+    [GOOD_ID, 'mj_table', 'chess-room'],
+  );
+});
+
+test('the live game-page check reads the tenant registry', async () => {
+  // Side-effect import, as index.ts does: every tenant registers itself.
+  await import('./variant-tenant/register-tenants.js');
+  const noLoads: ReplayableGameDeps = {
+    registrationForRoomId: () => null,
+    loadRoomsEvents: async () => new Map(),
+  };
+  const marked = await markUnavailableGames(
+    [
+      { ...record('chx_live'), variant: CRAZYHOUSE_XIANGQI_SPEC_ID },
+      { ...record('mj_841ccc75'), variant: 'mahjong' },
+      { ...record('dchx_corr'), variant: 'dark-chess' },
+      { ...record('3745d020'), variant: 'dark-chess' },
+      { ...record('mxq_gone'), variant: 'mini-xiangqi' },
+    ],
+    noLoads,
+  );
+  assert.deepEqual(
+    marked.map((row) => [row.roomId, row.unavailable ?? null]),
+    [
+      ['chx_live', null],
+      ['mj_841ccc75', 'unsupported-variant'],
+      ['dchx_corr', null],
+      ['3745d020', null],
+      ['mxq_gone', 'unsupported-variant'],
+    ],
+  );
 });
 
 test('a failed event load lists the games as before rather than hiding them', async () => {

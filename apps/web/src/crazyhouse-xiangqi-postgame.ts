@@ -103,7 +103,7 @@ export function mountCrazyhouseXiangqiPostgame(root: HTMLElement, roomId: string
         renderPostgame(root, result.postgame);
         return;
       }
-      renderError(root, errorTitle(result.status), errorBody(result));
+      renderError(root, errorTitle(result), errorBody(result));
     })
     .catch(() => {
       renderError(root, t('replay.postgameUnavailable'), t('replay.gameCouldNotBeLoaded'));
@@ -227,12 +227,23 @@ function renderError(root: HTMLElement, titleText: string, bodyText: string): vo
   root.replaceChildren(buildNav(), shell);
 }
 
-function errorTitle(status: number): string {
-  if (status === 404) return t('replay.gameNotFound');
+// A game played under the rules before the 10-02 change no longer replays; the
+// server answers 410 retired_rules (server-http.ts answerApiFailure).
+function isRetiredRules(result: Extract<LoadResult, { ok: false }>): boolean {
+  return result.status === 410 && result.error === 'retired_rules';
+}
+
+function errorTitle(result: Extract<LoadResult, { ok: false }>): string {
+  if (isRetiredRules(result)) return t('replay.retiredRulesTitle');
+  if (result.status === 404) return t('replay.gameNotFound');
   return t('replay.postgameUnavailable');
 }
 
 function errorBody(result: Extract<LoadResult, { ok: false }>): string {
+  if (isRetiredRules(result))
+    return t('replay.retiredRulesBody', {
+      variant: variantDisplayLabel(CRAZYHOUSE_XIANGQI_SPEC_ID),
+    });
   if (result.status === 404)
     return t('replay.variantGameUnavailable', {
       variant: variantDisplayLabel(CRAZYHOUSE_XIANGQI_SPEC_ID),

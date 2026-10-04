@@ -6,7 +6,7 @@ import {
   parseRatingVariant,
   parseVisibleRatingTimeClass,
 } from './../rating-buckets.js';
-import { filterReplayableGames } from './../replayable-games.js';
+import { markUnavailableGames } from './../replayable-games.js';
 import { requireMethod, requirePersistence, writeJson } from './lib.js';
 
 const HANDLE_PATTERN = /^[a-zA-Z0-9_-]{1,40}$/;
@@ -48,6 +48,8 @@ export async function tryHandle(
     writeJson(response, 200, {
       profile: {
         ...profile,
+        // The first page of the Games tab: same marking as the pager below.
+        games: await markUnavailableGames(profile.games),
         isViewer,
         relation: relation ? { following: relation.following, blocked: relation.blocked } : null,
       },
@@ -93,12 +95,10 @@ export async function tryHandle(
       writeJson(response, 404, { error: 'not_found' });
       return true;
     }
-    // Skip games whose stored log no longer replays (replayable-games.ts).
-    const games = await filterReplayableGames(page.games);
-    writeJson(response, 200, {
-      games,
-      total: Math.max(0, page.total - (page.games.length - games.length)),
-    });
+    // A game that cannot be opened (old rules, a variant with no game page)
+    // stays in the owner's history, marked, rather than vanishing from it
+    // (replayable-games.ts markUnavailableGames).
+    writeJson(response, 200, { games: await markUnavailableGames(page.games), total: page.total });
     return true;
   }
 

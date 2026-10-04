@@ -174,6 +174,9 @@ export const EN_REVIEW = {
   'replay.postgameServiceUnavailable': 'The postgame service is not available.',
   'replay.variantUnavailable': '{variant} unavailable',
   'replay.variantGameUnavailable': 'This {variant} game is not available.',
+  'replay.retiredRulesTitle': 'Played under earlier rules',
+  'replay.retiredRulesBody':
+    'This {variant} game was played under rules that have since changed, so it can no longer be replayed.',
   'replay.routeNotEnabled': 'This route is not enabled in this build.',
   'replay.gameCouldNotBeLoaded': 'The game could not be loaded.',
   'replay.requestComputerAnalysis': 'Request computer analysis',

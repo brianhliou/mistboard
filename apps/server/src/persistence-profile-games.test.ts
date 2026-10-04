@@ -11,6 +11,12 @@ import {
   test,
 } from './persistence-test-support.js';
 import { tryHandle as tryHandleUsers } from './routes/users.js';
+// Side-effect import, as index.ts does: the game-page check reads the registry.
+import './variant-tenant/register-tenants.js';
+import {
+  noteUnreplayableTenantGame,
+  resetTenantReplayGuardForTests,
+} from './variant-tenant/replay-guard.js';
 
 const NOW = new Date('2026-09-01T00:00:00Z');
 
@@ -122,6 +128,26 @@ function fakeRequest(pathname: string): IncomingMessage {
   } as unknown as IncomingMessage;
 }
 
+async function callUsersRoute(pathname: string, query = ''): Promise<Captured> {
+  const captured: Captured = { status: 0, headers: {}, body: Buffer.alloc(0) };
+  const response = {
+    writeHead(status: number) {
+      captured.status = status;
+      return this;
+    },
+    end(chunk?: string) {
+      if (chunk) captured.body = Buffer.from(chunk);
+    },
+  } as unknown as ServerResponse;
+  const url = query ? `${pathname}?${query}` : pathname;
+  await tryHandleUsers({}, fakeRequest(url), response, pathname, new URL(`http://localhost${url}`));
+  return captured;
+}
+
+type MarkedRow = { roomId: string; unavailable?: string };
+const marks = (rows: MarkedRow[]) =>
+  Object.fromEntries(rows.map((row) => [row.roomId, row.unavailable ?? null]));
+
 definePersistenceTests('profile games filters', () => {
   test('the result filter reads the owner seat, as the row paints it', async () => {
     await seedList();
@@ -198,5 +224,52 @@ definePersistenceTests('profile games filters', () => {
     );
     assert.equal((await call('result=won')).status, 400);
     assert.equal((await call('vs=not%20a%20handle')).status, 400);
+  });
+
+  test('a game that cannot be opened stays in the history, marked, on both profile routes', async () => {
+    await seedList();
+    // A Crazyhouse Xiangqi game from before the 10-02 rules change, and a
+    // mahjong table: mahjong has no game page on the site.
+    await seedRow('chx_old_rules', 'crazyhouse-xiangqi', 'black-wins', '2026-08-06T10:00:00Z', [
+      alice('red'),
+      guest('black'),
+    ]);
+    await seedRow('mj_table', 'mahjong', 'red-wins', '2026-08-07T10:00:00Z', [
+      alice('red'),
+      guest('black'),
+    ]);
+    resetTenantReplayGuardForTests();
+    noteUnreplayableTenantGame('crazyhouse-xiangqi', 'chx_old_rules', new Error('illegal move'));
+    try {
+      const expected = {
+        chx_old_rules: 'old-rules',
+        mj_table: 'unsupported-variant',
+        pg_draw: null,
+        pg_loss_bob: null,
+        pg_win_bob: null,
+        pg_win_carol: null,
+      };
+
+      // The profile payload carries the Games tab's first page itself; this is
+      // the list that linked the dead game before (it was never filtered).
+      const profile = await callUsersRoute('/api/users/alice/profile');
+      assert.equal(profile.status, 200);
+      const { profile: body } = JSON.parse(profile.body.toString('utf8')) as {
+        profile: { games: MarkedRow[]; gamesTotal: number };
+      };
+      assert.deepEqual(marks(body.games), expected);
+
+      // The pager agrees, and counts every row it lists.
+      const page = await callUsersRoute('/api/users/alice/games', 'limit=50');
+      assert.equal(page.status, 200);
+      const pageBody = JSON.parse(page.body.toString('utf8')) as {
+        games: MarkedRow[];
+        total: number;
+      };
+      assert.deepEqual(marks(pageBody.games), expected);
+      assert.equal(pageBody.total, pageBody.games.length);
+    } finally {
+      resetTenantReplayGuardForTests();
+    }
   });
 });
