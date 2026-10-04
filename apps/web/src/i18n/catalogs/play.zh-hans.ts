@@ -399,6 +399,8 @@ export const ZH_HANS_PLAY = {
   'live.yourMovePill': '轮到你',
   'live.oneDayPerMoveNote': '每步 1 天',
   'live.daysPerMoveNote': '每步 {count} 天',
+  'live.oneDayShort': '每步 1 天',
+  'live.daysShort': '每步 {count} 天',
   'live.copyInvite': '复制邀请',
   'live.playAgain': '再下一局',
   'live.newOpponent': '换个对手',

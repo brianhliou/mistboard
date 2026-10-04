@@ -50,16 +50,14 @@ describe('localizedRulesHrefForRoom', () => {
 describe('correspondence time-control label', () => {
   const DAY_MS = 86_400_000;
   it('names the allowance in days on every card', () => {
-    expect(correspondenceLabelFromMs(3 * DAY_MS, 0)).toBe('3 days per move');
-    expect(correspondenceLabelFromMs(DAY_MS, 0)).toBe('1 day per move');
-    expect(reviewTimeControlLabel({ initialMs: 7 * DAY_MS, incrementMs: 0 })).toBe(
-      '7 days per move',
-    );
+    expect(correspondenceLabelFromMs(3 * DAY_MS, 0)).toBe('3 days');
+    expect(correspondenceLabelFromMs(DAY_MS, 0)).toBe('1 day');
+    expect(reviewTimeControlLabel({ initialMs: 7 * DAY_MS, incrementMs: 0 })).toBe('7 days');
     expect(
       timeControlLabelForGame({ initialMs: 3 * DAY_MS, incrementMs: 0 } as Parameters<
         typeof timeControlLabelForGame
       >[0]),
-    ).toBe('3 days per move');
+    ).toBe('3 days');
   });
 
   it('leaves live clocks and unofficial allowances alone', () => {

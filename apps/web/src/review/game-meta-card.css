@@ -18,6 +18,11 @@
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+/* Room for the corner favourite star, only when the card has one; reserving it
+   on every card wrapped the live room's headline onto a second line. */
+.game-meta-card:has(> .game-favorite-action--compact) .game-meta-card__head {
   padding-inline-end: 28px;
 }
 
@@ -87,11 +92,11 @@
 
 .game-meta-card__icon {
   flex: 0 0 auto;
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   display: grid;
   place-items: center;
-  font-size: 30px;
+  font-size: 34px;
   line-height: 1;
   color: var(--site-muted);
 }
@@ -102,14 +107,31 @@
   --variant-marker-color: currentColor;
 }
 
+/* The marker renders at 40px; let it fill the box, which spans the three head
+   lines (title, time control, when). */
+.game-meta-card__icon .variant-marker,
+.game-meta-card__icon svg {
+  width: 100%;
+  height: 100%;
+}
+
 .game-meta-card__head-text {
   min-width: 0;
 }
 
-.game-meta-card__headline {
+.game-meta-card__title {
   margin: 0;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
+  line-height: 1.25;
+  color: var(--site-text);
+}
+
+.game-meta-card__headline {
+  margin: 2px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
   color: var(--site-text);
 }
 
