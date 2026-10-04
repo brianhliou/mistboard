@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- The homepage has a Jieqi by correspondence button: one move a day, an email when it is your turn, and a guest who signs up from it is paired straight away ([b123338b](https://github.com/brianhliou/mistboard/commit/b123338b))
 - Game room clocks are a compact tab again, like lichess ([ca833e03](https://github.com/brianhliou/mistboard/commit/ca833e03))
 - Crazyhouse Xiangqi soldiers now drop on any empty point, like chariots, horses and cannons; advisors and elephants still drop on their own half ([17e145f5](https://github.com/brianhliou/mistboard/commit/17e145f5))
 - The homepage Jungle Chess row steps from Misty up to KataGo, the new top Jungle Chess bot ([c44741d5](https://github.com/brianhliou/mistboard/commit/c44741d5))
@@ -89,6 +90,8 @@ Conventions:
 
 ### Site
 
+- The homepage bot picker shows the NNUE tag beside the level, uses bigger variant markers, and lists every game without scrolling ([b123338b](https://github.com/brianhliou/mistboard/commit/b123338b))
+- The homepage's first article row is labelled Latest and links to the blog, and every card title fits on one line ([b123338b](https://github.com/brianhliou/mistboard/commit/b123338b))
 - About and FAQ are up to date: they lead with Chinese chess, name Crazyhouse Xiangqi among our own games, and say jieqi and banqi can be watched live; Traditional Chinese pages say 象棋 rather than 中國象棋 ([af26781b](https://github.com/brianhliou/mistboard/commit/af26781b))
 - Contribute and Work with us now link to each other; play-testing and translation help live on Contribute ([efc0c7c2](https://github.com/brianhliou/mistboard/commit/efc0c7c2))
 - New Work with us page for titled players and coaches, creators and streamers, event organizers, writers and engine authors ([c44741d5](https://github.com/brianhliou/mistboard/commit/c44741d5))
