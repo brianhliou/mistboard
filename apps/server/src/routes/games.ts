@@ -85,8 +85,12 @@ function pickHeadlineSeat(seats: ChannelSeat[]): WatchChannelTopPlayer | null {
   return best ?? fallback;
 }
 
-// The headline seat for a channel's rail row (lichess shows the featured game's
-// top player under the channel name).
+// The headline seat for a channel's rail row: the top player of the channel's
+// head game, the one the board opens on (lichess shows the featured game's top
+// player under the channel name). It used to rank seats across the whole
+// 64-game feed, so the rail named a rated player from hours earlier while the
+// board showed a guest-vs-bot game (prod, 2026-10-04: "scene-1174 1662" over
+// Guest vs Pikafish L4).
 //
 // People come first. Ranking purely by rating put the BOT on most PvE channels'
 // rail rows, because a bot carries a calibrated rating while its human opponent
@@ -96,10 +100,10 @@ function pickHeadlineSeat(seats: ChannelSeat[]): WatchChannelTopPlayer | null {
 // to naming the machine.
 //
 // Within the chosen pool the old rule stands: highest-rated seat, else the
-// freshest named one. null for an empty channel, so the row renders name-only.
+// first named one. null for an empty channel, so the row renders name-only.
 export function channelTopPlayer(games: RecentEveGameRecord[]): WatchChannelTopPlayer | null {
   const seats: ChannelSeat[] = [];
-  for (const game of games) {
+  for (const game of games.slice(0, 1)) {
     const gameSeats: ChannelSeat[] =
       game.participants.length > 0
         ? game.participants.map((participant) => ({
