@@ -316,6 +316,34 @@ test('arrow keys keep working after clicking a move in the list', () => {
   c.destroy();
 });
 
+test('arrow keys keep stepping, not just once, after clicking a move', () => {
+  // The click handed focus to the new current move button, but the first arrow
+  // press rebuilt the list again and detached it: one step, then the keys went
+  // to <body> and scrolled the page. Press where a real key lands, the focused
+  // element, so the test sees what the reader's keyboard sees.
+  const c = mountXiangqiReplay(el, { ...base, annotations: { byPly: {} } });
+  const label = () =>
+    el.querySelector('.xq-replay-move-button.is-current')?.textContent?.trim() ?? '';
+  const press = (key: string) =>
+    (document.activeElement ?? document.body).dispatchEvent(
+      new KeyboardEvent('keydown', { key, bubbles: true }),
+    );
+
+  (mainButtons(el)[0] as HTMLButtonElement | undefined)?.click();
+  const seen = [label()];
+  for (let i = 0; i < 3; i++) {
+    press('ArrowRight');
+    expect(el.contains(document.activeElement), `focus left the widget after press ${i + 1}`).toBe(
+      true,
+    );
+    seen.push(label());
+  }
+  expect(new Set(seen).size, 'each press should step to a new move').toBe(4);
+  press('ArrowLeft');
+  expect(label()).toBe(seen[2]);
+  c.destroy();
+});
+
 test('the study bar is back / menu / forward, and the menu keeps what it replaced', () => {
   const c = mountXiangqiReplay(el, { ...base, annotations: { byPly: {} } });
   const labels = [...el.querySelectorAll('.stepper-button')].map((b) =>

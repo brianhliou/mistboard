@@ -968,6 +968,10 @@ export function mountXiangqiReplay(
     // when someone clicks their way to the last move and then wants to step
     // back. Remember what was focused, and catch it below if it just went away.
     const wasFocused = document.activeElement;
+    // The move list is rebuilt below, so a focused move button is about to be
+    // detached: the first arrow press after clicking a move worked and every
+    // later one scrolled the page.
+    const focusInMoveList = wasFocused !== null && moveList.contains(wasFocused);
     if (line) {
       first.disabled = false;
       prev.disabled = false;
@@ -1006,7 +1010,7 @@ export function mountXiangqiReplay(
     // narrative line is the plain stepper's job.
     resultFoot.textContent = xiangqiResultLabel(spec.resultText, copy) || spec.resultText;
     renderMoveList();
-    if (takeFocusAfterRender) {
+    if (takeFocusAfterRender || (focusInMoveList && !wasFocused?.isConnected)) {
       takeFocusAfterRender = false;
       // Prefer the move now being shown, so the reader keeps a visible anchor;
       // `host` is the fallback at ply zero, where no move is current. Either
