@@ -18,7 +18,7 @@
 // read "A guest beat Pikafish Level 4 at Jieqi"). Counted-game rules (excluded accounts, ply floor, launch date) come
 // from persistence-counted-games.ts like every other aggregate.
 
-import { crosstableReviewUrl } from './crosstable.js';
+import { crosstableReviewUrl } from './crosstable-review-url.js';
 import { countedHumanGame } from './persistence-counted-games.js';
 import { getPool, isInitialized } from './persistence-db.js';
 
