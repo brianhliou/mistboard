@@ -114,7 +114,7 @@ const WORLD_TITLE_THUMBNAIL = (locale?: Locale): string =>
       palette: 'xiangqi',
       eyebrow: 'XIANGQI',
       lead: 'WORLD TITLE',
-      tagline: 'AND WHY IT IS NOT THE HARDER ONE',
+      tagline: 'THE EASIER OF THE TWO',
       footer: 'SINCE 1990',
       ariaLabel: 'A card reading World, the xiangqi world title, since 1990',
     },
