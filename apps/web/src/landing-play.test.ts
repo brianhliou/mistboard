@@ -139,7 +139,7 @@ describe('landing play panel', () => {
     );
     expect(
       [...document.querySelectorAll<HTMLButtonElement>('.landing-start-option')].find(
-        (button) => button.textContent === 'Ratedcoming soon',
+        (button) => button.textContent === 'Ratedvs people only',
       )?.disabled,
     ).toBe(true);
     selectModalVariant('xiangqi');
@@ -811,9 +811,44 @@ describe('landing play panel', () => {
 
     openPlaySetup(panel, 'Find opponent');
 
-    expect(document.body.textContent).toContain('Ratedcoming soon');
+    expect(document.body.textContent).toContain('Ratedsign in');
+    expect(document.body.textContent).not.toContain('coming soon');
     // Signed out is casual, so xiangqi's casual-only 10+5 rung shows here.
     expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
+  });
+
+  it('says friend games are casual instead of calling live rated "coming soon"', () => {
+    setRatedModeEnabled(true);
+    setResolvedSignedIn(true);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
+    );
+    const panel = buildLandingPlayPanel([]);
+    document.body.append(panel);
+
+    openPlaySetup(panel, 'Challenge a friend');
+
+    const rated = [...document.querySelectorAll<HTMLButtonElement>('.landing-start-option')].find(
+      (button) => button.textContent?.startsWith('Rated'),
+    );
+    expect(rated?.textContent).toBe('RatedFind opponent only');
+    expect(rated?.disabled).toBe(true);
+  });
+
+  it('keeps "coming soon" only while the rated switch is off', () => {
+    setRatedModeEnabled(false);
+    setResolvedSignedIn(true);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
+    );
+    const panel = buildLandingPlayPanel([]);
+    document.body.append(panel);
+
+    openPlaySetup(panel, 'Find opponent');
+
+    expect(document.body.textContent).toContain('Ratedcoming soon');
   });
 
   it('hides Dark Mini Xiangqi from the browse picker even with its flags on', () => {

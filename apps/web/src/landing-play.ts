@@ -2118,17 +2118,28 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   // Keep game type visible in the bot flow too. Bot games are always
   // casual, so Rated is present but unavailable; human modes retain their
   // existing launch and sign-in gates.
+  // Each unavailable case names its own reason: Rated is live, so a blanket
+  // "coming soon" on a friend or bot game read as if it had never launched.
   const ratingSection = buildRatedToggleSection(
     () => rated,
     (v) => {
       rated = v;
     },
-    () =>
-      choice.mode === 'pve' ||
-      Boolean(choice.ratedDisabled) ||
-      (selectedTimeMode === 'correspondence'
-        ? !correspondenceRatedOffered()
-        : !landingGameSpecCapabilities(selectedGameSpecId).supportsRated),
+    () => {
+      if (choice.mode === 'pve') return t('setup.ratedPeopleOnly', {}, locale);
+      if (choice.mode === 'pvp') return t('setup.ratedFriendOnly', {}, locale);
+      if (choice.ratedDisabled) {
+        return isRatedModeEnabled()
+          ? t('setup.ratedSignIn', {}, locale)
+          : t('setup.ratedComingSoon', {}, locale);
+      }
+      if (selectedTimeMode === 'correspondence') {
+        return correspondenceRatedOffered() ? null : t('setup.ratedComingSoon', {}, locale);
+      }
+      return landingGameSpecCapabilities(selectedGameSpecId).supportsRated
+        ? null
+        : t('setup.ratedUnavailable', {}, locale);
+    },
     () => {
       syncTimeControls();
       openNextSetupSection('gameType');
@@ -2623,7 +2634,8 @@ function defaultEngineIdForGameSpec(
 function buildRatedToggleSection(
   get: () => boolean,
   set: (v: boolean) => void,
-  isRatedDisabled: () => boolean = () => false,
+  // The disabled Rated label (its reason in parentheses), or null when Rated is selectable.
+  ratedUnavailableLabel: () => string | null = () => null,
   onChange: () => void = () => undefined,
   locale: Locale = currentLocale(),
 ): { section: HTMLElement; sync(): void } {
@@ -2640,12 +2652,10 @@ function buildRatedToggleSection(
   const casualButton = startOptionButton(t('play.casual', {}, locale), false);
 
   const sync = () => {
-    const ratedDisabled = isRatedDisabled();
+    const unavailableLabel = ratedUnavailableLabel();
+    const ratedDisabled = unavailableLabel !== null;
     const isRated = get();
-    updateStartOptionButtonLabel(
-      ratedButton,
-      ratedDisabled ? t('setup.ratedComingSoon', {}, locale) : t('play.rated', {}, locale),
-    );
+    updateStartOptionButtonLabel(ratedButton, unavailableLabel ?? t('play.rated', {}, locale));
     ratedButton.disabled = ratedDisabled;
     ratedButton.classList.toggle('disabled', ratedDisabled);
     ratedButton.classList.toggle('selected', isRated && !ratedDisabled);
@@ -2654,7 +2664,7 @@ function buildRatedToggleSection(
     casualButton.setAttribute('aria-checked', !isRated || ratedDisabled ? 'true' : 'false');
   };
   ratedButton.addEventListener('click', () => {
-    if (isRatedDisabled()) return;
+    if (ratedUnavailableLabel() !== null) return;
     set(true);
     sync();
     onChange();
@@ -2667,8 +2677,8 @@ function buildRatedToggleSection(
   sync();
   group.append(ratedButton, casualButton);
 
-  // The Rated segment's own "COMING SOON" badge already signals the beta state,
-  // so the explanatory helper paragraph is dropped to keep the dialog compact.
+  // The Rated segment's own badge already says why it is unavailable, so there
+  // is no explanatory helper paragraph; the dialog stays compact.
   section.append(group);
   return { section, sync };
 }
