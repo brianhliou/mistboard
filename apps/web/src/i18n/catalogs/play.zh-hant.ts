@@ -128,6 +128,8 @@ export const ZH_HANT_PLAY = {
   'live.makeFirstMoveAbortingIn': '請走第一步，否則 {seconds} 秒後中止',
   'live.waitingFirstMoveAbortingIn': '等待第一步，{seconds} 秒後中止',
   'live.opponentNotConnectedAbortingIn': '對手尚未連線，{seconds} 秒後中止',
+  'live.makeFirstMoveAbortingInTime': '請走第一步，否則 {time} 後中止',
+  'live.waitingFirstMoveAbortingInTime': '等待第一步，{time} 後中止',
   'live.opponentLeftWinIn': '對手已離開，{seconds} 秒後你獲勝',
   'live.resignTitle': '要認輸這盤棋嗎？',
   'live.resignBody': '你的對手將獲勝。此操作無法復原。',

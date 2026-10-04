@@ -76,9 +76,9 @@ export async function liveWatchPayloadForFeatured(
   return builder(featured.roomId);
 }
 
-// A live game with no event in this window is dormant (an idle correspondence
-// game, an abandoned room the sweeps have not reaped yet) and does not belong
-// on the hero board. A live clock still ticking toward its flag overrides it
+// A live game with no event in this window is dormant (an abandoned room the
+// sweeps have not reaped yet) and does not belong on the hero board.
+// Correspondence never does, fresh or not (see isCorrespondence). A live clock still ticking toward its flag overrides it
 // (see clockStillRunning).
 export const LIVE_TV_FRESH_WINDOW_MS = 10 * 60 * 1000;
 
@@ -89,7 +89,7 @@ export const LIVE_TV_FRESH_WINDOW_MS = 10 * 60 * 1000;
 // feed at last-move + 10:00, 8 s before the flag, the homepage board's load
 // of the finished record 404'd, and it hard-swapped to a 2-hour-old game.
 function clockStillRunning(clock: unknown, timeControl: unknown, now: number): boolean {
-  if ((timeControl as { daysPerMove?: number } | null)?.daysPerMove) return false;
+  if (isCorrespondence(timeControl)) return false;
   const live = clock as {
     activeColor?: string | null;
     remainingMs?: Record<string, number>;
@@ -282,6 +282,7 @@ function finishCandidate(args: {
   // code path this module has not vetted, so refuse rather than mislabel.
   if (args.players.every((player) => player.isEngine)) return null;
   if (args.moveNumber < LIVE_TV_MIN_MOVE_NUMBER) return null;
+  if (isCorrespondence(args.timeControl)) return null;
   const lastActivityAt = latestEventAt(args.events);
   if (lastActivityAt === null) return null;
   if (
@@ -303,6 +304,12 @@ function finishCandidate(args: {
     startedAt: firstEventAt(args.events),
     timeControl: args.timeControl,
   };
+}
+
+// The hero board is a live TV (lichess parity): a correspondence game moves
+// once a day, so it reads as a frozen board even right after a move.
+function isCorrespondence(timeControl: unknown): boolean {
+  return Boolean((timeControl as { daysPerMove?: number } | null)?.daysPerMove);
 }
 
 function latestEventAt(events: readonly { at?: number }[]): number | null {

@@ -359,6 +359,22 @@ test('a quiet room with a live clock that has not flagged stays a candidate', ()
   );
 });
 
+test('a correspondence room is never a candidate, even right after a move', () => {
+  openRooms.set(
+    'fko_corr_fresh',
+    tenantRoom({
+      id: 'fko_corr_fresh',
+      lastEventAt: NOW - 5_000,
+      timeControl: { daysPerMove: 1, initialMs: 86_400_000, incrementMs: 0 },
+    }),
+  );
+  openRooms.set('fko_live', tenantRoom({ id: 'fko_live', lastEventAt: NOW - 5_000 }));
+  assert.deepEqual(
+    collectLiveTvCandidates(context(), NOW).map((candidate) => candidate.roomId),
+    ['fko_live'],
+  );
+});
+
 // The hero board is not a lobby: a room nobody has answered yet can be
 // abandoned a move later, which leaves the homepage frozen on an untouched
 // board. moveNumber 2 is the first position both players have moved in.

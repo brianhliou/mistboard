@@ -30,7 +30,7 @@ import { type ProfileIdentity, playerNameEl, profileTargetFor } from '../profile
 import { createGameMetaCard, seatResultScores } from '../review/game-meta-card.js';
 import type { VariantMiniId } from '../variant-mini-boards.js';
 import { localizedRulesHref } from '../variant-public-surfaces.js';
-import { formatClock } from '../web-utils.js';
+import { formatClock, formatDayClock } from '../web-utils.js';
 import { capitalize, noticeBody, noticeTitle, presenceDot } from './chrome-dom.js';
 
 // Structural slice of a variant PlayerView the chrome reads (same status shape
@@ -542,6 +542,8 @@ export function createTenantRoomChrome<C extends string>(
           // left on the row — a raw seat here is silently wrong for half of all flip
           // games rather than merely inconsistent.
           color: tenant.seatInk ? tenant.seatInk(color) : color,
+          // Same rule as the clock rows: only a server-supplied name links.
+          profile: serverName ? profileTargetFor(ctx.seatProfiles()[color]) : null,
           name:
             serverName ??
             (color === seat
@@ -569,7 +571,12 @@ export function createTenantRoomChrome<C extends string>(
     if (ctx.connectionState() !== 'connected') return false;
     const seat = seatColor();
     if (seat === null) return false;
-    return ctx.connectedSeats()[tenant.oppositeColor(seat)] !== true;
+    const opponent = tenant.oppositeColor(seat);
+    // A correspondence opponent is away between moves by design: only an
+    // empty seat is waiting. Keyed on the connection, a seated opponent who
+    // had already moved read "Waiting for opponent" with an invite link.
+    if (ctx.roomMode() === 'correspondence') return !ctx.seats()[opponent];
+    return ctx.connectedSeats()[opponent] !== true;
   }
 
   function renderRoomActions(): void {
@@ -955,6 +962,13 @@ export function createTenantRoomChrome<C extends string>(
     // no-show window: nobody owes a move yet, they have not arrived.
     if (ctx.lobbyMatch() && waitingForOpponent()) {
       return t('live.opponentNotConnectedAbortingIn', { seconds });
+    }
+    // A correspondence window is the day allowance: "61640s" read as noise.
+    if (ctx.roomMode() === 'correspondence') {
+      const time = formatDayClock(remaining);
+      return isSideToMove
+        ? t('live.makeFirstMoveAbortingInTime', { time })
+        : t('live.waitingFirstMoveAbortingInTime', { time });
     }
     return isSideToMove
       ? t('live.makeFirstMoveAbortingIn', { seconds })

@@ -564,6 +564,51 @@ describe('tenant room chrome lobby rooms', () => {
     expect(refs.actionStatus.textContent).toContain('Copy the invite link');
     expect(refs.roomActions.textContent).toContain('Copy invite');
   });
+
+  // A correspondence opponent is offline between moves; a seated one is not
+  // missing (2026-10-04: a jieqi game read "Waiting for opponent" with an
+  // invite link after the opponent had already moved).
+  it('treats a seated, offline correspondence opponent as present', () => {
+    const { chrome, refs } = chromeHarness({ ...absentOpponent, roomMode: 'correspondence' });
+    chrome.renderMeta();
+    chrome.renderActionStatus();
+    chrome.renderRoomActions();
+    expect(refs.gameInfo.textContent).not.toContain('Waiting for opponent');
+    expect(refs.actionStatus.textContent).not.toContain('Copy the invite link');
+    expect(refs.roomActions.textContent).not.toContain('Copy invite');
+  });
+
+  it('still offers the invite while a correspondence seat is empty', () => {
+    const { chrome, refs } = chromeHarness({
+      ...absentOpponent,
+      roomMode: 'correspondence',
+      seats: { white: 'c-white' },
+    });
+    chrome.renderRoomActions();
+    expect(refs.roomActions.textContent).toContain('Copy invite');
+  });
+
+  it('counts a correspondence first-move window in hours, not seconds', () => {
+    const { chrome, refs } = chromeHarness({
+      roomMode: 'correspondence',
+      abortDeadline: Date.now() + (17 * 60 + 7) * 60_000 + 30_000,
+    });
+    chrome.renderGameControls();
+    expect(refs.gameControls.textContent).toContain('Make your first move, aborting in 17h 7m');
+  });
+});
+
+describe('tenant room chrome meta card names', () => {
+  it('links a server-named seat to its profile and leaves fallbacks plain', () => {
+    const { chrome, refs } = chromeHarness({
+      seatDisplayNames: { red: 'scene-1174' },
+      seatProfiles: { red: { handle: 'scene-1174' }, white: { handle: 'ignored' } },
+    });
+    chrome.renderMeta();
+    const links = [...refs.gameInfo.querySelectorAll('a.player-name-link')];
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/@/scene-1174']);
+    expect(links[0]?.textContent).toBe('scene-1174');
+  });
 });
 
 // #427: the room was English end to end for zh visitors with every suite green.
