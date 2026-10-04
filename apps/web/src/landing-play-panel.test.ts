@@ -93,7 +93,7 @@ describe('homepage play panel', () => {
     expect(banqi.querySelector('.pp-step-level .pp-step-tag')).toBeNull();
   });
 
-  it('puts the engine on top, NNUE beside it, and the level under it', () => {
+  it('puts the engine on top and the level with its NNUE tag under it', () => {
     const board = buildPlayPanel('en', { hydrate: false });
     const xiangqi = row(board, 'xiangqi');
     const main = () =>
@@ -103,8 +103,12 @@ describe('homepage play panel', () => {
     expect([main(), tag(), sub()]).toEqual(['Fairy-Stockfish', null, 'Level 2']);
     clickNext(xiangqi, 'level', 6);
     expect([main(), tag(), sub()]).toEqual(['Fairy-Stockfish', 'NNUE', 'Level 8']);
+    // The tag rides the second line, never the engine name's.
+    expect(xiangqi.querySelector('.pp-step-level .pp-step-main .pp-step-tag')).toBeNull();
+    expect(xiangqi.querySelector('.pp-step-level .pp-step-meta .pp-step-tag')).not.toBeNull();
     clickNext(xiangqi, 'level');
     expect([main(), tag(), sub()]).toEqual(['Pikafish', 'NNUE', null]);
+    expect(xiangqi.querySelector('.pp-step-level .pp-step-main')?.textContent).toBe('Pikafish');
     const jieqi = row(board, 'jieqi');
     expect(jieqi.querySelector('.pp-step-level .pp-step-main')?.firstChild?.textContent).toBe(
       'Pikafish',

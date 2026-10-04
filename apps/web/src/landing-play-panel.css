@@ -217,8 +217,16 @@
   font-size: 10.5px;
 }
 
+.pp-step-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+}
+
 .pp-step-tag {
-  margin-left: 5px;
+  flex-shrink: 0;
   padding: 0 4px;
   border: 1px solid var(--site-border-soft);
   border-radius: 3px;
@@ -226,7 +234,7 @@
   font-size: 9.5px;
   font-weight: 600;
   letter-spacing: 0.04em;
-  vertical-align: 1px;
+  line-height: 1.3;
 }
 
 .pp-row-person .pp-step-value.is-named .pp-step-main {
@@ -452,7 +460,7 @@
   }
 
   /* Phones: the clock rides the first line beside the game; the engine
-     stepper gets the whole second line so "Fairy-Stockfish NNUE" fits. */
+     stepper gets the whole second line so the engine name fits. */
   .pp-row,
   .pp-row-person {
     grid-template-columns: 28px minmax(0, 1fr) 82px 54px;

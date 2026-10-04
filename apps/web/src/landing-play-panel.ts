@@ -140,18 +140,25 @@ function stepper(opts: {
     const main = document.createElement('span');
     main.className = 'pp-step-main';
     main.textContent = text;
-    if (tag) {
-      const tagEl = document.createElement('span');
-      tagEl.className = 'pp-step-tag';
-      tagEl.textContent = tag;
-      main.append(tagEl);
-    }
     value.replaceChildren(main);
-    if (sub) {
-      const small = document.createElement('small');
-      small.className = 'pp-step-sub';
-      small.textContent = sub;
-      value.append(small);
+    // The second line carries the level and the NNUE tag together, so the
+    // engine name keeps the whole top line (Brian, 2026-10-03).
+    if (sub || tag) {
+      const meta = document.createElement('span');
+      meta.className = 'pp-step-meta';
+      if (sub) {
+        const small = document.createElement('small');
+        small.className = 'pp-step-sub';
+        small.textContent = sub;
+        meta.append(small);
+      }
+      if (tag) {
+        const tagEl = document.createElement('span');
+        tagEl.className = 'pp-step-tag';
+        tagEl.textContent = tag;
+        meta.append(tagEl);
+      }
+      value.append(meta);
     }
     value.classList.toggle('is-named', Boolean(named));
     prev.disabled = index <= 0;
@@ -401,9 +408,9 @@ export function buildPlayPanel(
         render: (i) => {
           const rung = ladder[i]!;
           // One grammar on every row (Brian, 2026-10-02): the top line is
-          // always the engine, with an NNUE tag on the rungs that play on a
-          // net; the second line is the level, only for an engine that has
-          // levels. Names stay plain: gold in this panel means a person.
+          // always the engine; the second line is the level (only for an
+          // engine that has levels) and an NNUE tag on the rungs that play on
+          // a net. Names stay plain: gold in this panel means a person.
           const tag = rung.nnue ? 'NNUE' : undefined;
           return rung.level === null
             ? { text: rung.name, ...(tag ? { tag } : {}) }
