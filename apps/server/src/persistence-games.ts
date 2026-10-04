@@ -841,25 +841,27 @@ export async function listWatchUnlockedGames(
     values.push(CURATED_MIN_PLY);
     curatedClause = `AND games.ply_count >= $${values.length}`;
   }
+  // The last event is looked up per candidate game (a LATERAL walk down the
+  // events primary key), so Postgres reads games newest-first and stops at
+  // the limit. A DISTINCT ON over every completed game's events read the whole
+  // events table on each call and grew with every game played (1.1 s cold on
+  // prod, 2026-10-03).
   const { rows } = await getPool().query<RecentEveGameRow>(
-    `WITH last_events AS (
-       SELECT DISTINCT ON (events.room_id)
-              events.room_id,
-              events.type
+    `SELECT ${RECENT_EVE_SELECT_COLUMNS}
+     FROM games
+     LEFT JOIN eve_games ON eve_games.game_id = games.room_id
+     JOIN LATERAL (
+       SELECT events.type
        FROM events
-       JOIN games ON games.room_id = events.room_id
-       WHERE games.status = 'completed'
+       WHERE events.room_id = games.room_id
          -- Match the last GAMEPLAY-terminal event, ignoring post-game noise such
          -- as seat-assigned from a reconnect (DMX appends these after the final
          -- move, which otherwise fails the termination/last-event consistency
          -- check below and hides the game from watch).
          AND events.type IN ('move-played', 'clock-expired', 'seat-resigned', 'seat-forfeited')
-       ORDER BY events.room_id, events.seq DESC
-     )
-     SELECT ${RECENT_EVE_SELECT_COLUMNS}
-     FROM games
-     LEFT JOIN eve_games ON eve_games.game_id = games.room_id
-     JOIN last_events ON last_events.room_id = games.room_id
+       ORDER BY events.seq DESC
+       LIMIT 1
+     ) last_events ON true
      WHERE games.status = 'completed'
        ${variantClause}
        ${modeClause}
@@ -903,19 +905,15 @@ export async function countWatchSealedGames(options: WatchSealedGameOptions = {}
   values.push(watchModeFilter(options.modes));
   const modeClause = `AND games.mode = ANY($${values.length}::text[])`;
   const { rows } = await getPool().query<{ count: number }>(
-    `WITH last_events AS (
-       SELECT DISTINCT ON (events.room_id)
-              events.room_id,
-              events.type,
-              events.payload
-       FROM events
-       JOIN games ON games.room_id = events.room_id
-       WHERE games.status = 'running'
-       ORDER BY events.room_id, events.seq DESC
-     )
-     SELECT count(*)::int AS count
+    `SELECT count(*)::int AS count
      FROM games
-     JOIN last_events ON last_events.room_id = games.room_id
+     JOIN LATERAL (
+       SELECT events.type, events.payload
+       FROM events
+       WHERE events.room_id = games.room_id
+       ORDER BY events.seq DESC
+       LIMIT 1
+     ) last_events ON true
      WHERE games.status = 'running'
        ${variantClause}
        ${modeClause}
