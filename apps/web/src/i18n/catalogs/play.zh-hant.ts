@@ -488,6 +488,7 @@ export const ZH_HANT_PLAY = {
   'lobby.panelFind': '配對',
   'lobby.panelPost': '發布',
   'lobby.panelLevel': '{level} 級',
+  'lobby.panelNeuralNet': '神經網路',
   'lobby.panelPlayingCount': '{count} 人在下',
   'lobby.panelEasier': '更弱的對手',
   'lobby.panelHarder': '更強的對手',

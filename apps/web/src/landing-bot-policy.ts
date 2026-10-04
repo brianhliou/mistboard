@@ -302,10 +302,12 @@ export type LandingBotRung = {
   name: string;
   /** The engine family behind the rung, shown under the level. */
   engine: 'Fairy-Stockfish' | 'Pikafish' | 'AB-JChess' | 'KataGo' | 'Misty';
-  /** Evaluates with a trained net. Only xiangqi Fairy-Stockfish Level 8 (the
-   *  official xiangqi net), xiangqi Pikafish and AB-JChess do: the jieqi
-   *  Pikafish levels run classical, its jieqi branch has never had weights. */
-  nnue: boolean;
+  /** The trained net it evaluates with, shown as a tag under the name. NNUE:
+   *  xiangqi Fairy-Stockfish Level 8 (the official xiangqi net), xiangqi
+   *  Pikafish and AB-JChess; the jieqi Pikafish levels run classical, its jieqi
+   *  branch has never had weights. KataGo plays a ResNet under MCTS, which is a
+   *  neural net but not an NNUE, so it gets the general tag. */
+  net: 'nnue' | 'neural' | null;
   /** The engine needs a binary and net the server box may lack (KataGo), so the
    *  rung is offered only where GET /api/bots reports it playable. */
   gated?: boolean;
@@ -337,7 +339,7 @@ export function landingBotLadder(
       level: i + 1,
       name: `Fairy-Stockfish Level ${i + 1}`,
       engine: 'Fairy-Stockfish',
-      nnue: gameSpecId === XIANGQI_SPEC_ID && i + 1 === 8,
+      net: gameSpecId === XIANGQI_SPEC_ID && i + 1 === 8 ? 'nnue' : null,
     }));
     if (gameSpecId === XIANGQI_SPEC_ID) {
       levels.push({
@@ -345,7 +347,7 @@ export function landingBotLadder(
         level: null,
         name: 'Pikafish',
         engine: 'Pikafish',
-        nnue: true,
+        net: 'nnue',
       });
     }
     return levels;
@@ -357,7 +359,7 @@ export function landingBotLadder(
         level: i + 1,
         name: `Pikafish Level ${i + 1}`,
         engine: 'Pikafish' as const,
-        nnue: false,
+        net: null,
       })),
       // The jieqi ladder's top numbered rung is the `pikafish` bot itself
       // (pikafish-jieqi-strongest on the server), shown as Level 8.
@@ -366,9 +368,9 @@ export function landingBotLadder(
         level: JIEQI_LADDER_TOP_LEVEL + 1,
         name: 'Pikafish Level 8',
         engine: 'Pikafish',
-        nnue: false,
+        net: null,
       },
-      { botId: 'ab-jchess', level: null, name: 'AB-JChess', engine: 'AB-JChess', nnue: true },
+      { botId: 'ab-jchess', level: null, name: 'AB-JChess', engine: 'AB-JChess', net: 'nnue' },
     ];
   }
   const misty: LandingBotRung = {
@@ -376,17 +378,17 @@ export function landingBotLadder(
     level: null,
     name: 'Misty',
     engine: 'Misty',
-    nnue: false,
+    net: null,
   };
   if (gameSpecId === JUNGLE_SPEC_ID) {
     // Misty stays the starter (the canonical offer); KataGo (#434) is the
-    // stronger rung above it. Its net is a ResNet, not an NNUE, so no tag.
+    // stronger rung above it. Its net is a ResNet, not an NNUE (see net).
     const katago: LandingBotRung = {
       botId: 'katago',
       level: null,
       name: 'KataGo',
       engine: 'KataGo',
-      nnue: false,
+      net: 'neural',
       gated: true,
     };
     return [misty, katago].filter((rung) => !rung.gated || playable.has(rung.botId));

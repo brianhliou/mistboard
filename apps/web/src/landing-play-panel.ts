@@ -414,9 +414,15 @@ export function buildPlayPanel(
           const rung = ladder[i]!;
           // One grammar on every row (Brian, 2026-10-02): the top line is
           // always the engine; the second line is the level (only for an
-          // engine that has levels) and an NNUE tag on the rungs that play on
-          // a net. Names stay plain: gold in this panel means a person.
-          const tag = rung.nnue ? 'NNUE' : undefined;
+          // engine that has levels) and a net tag on the rungs that play on
+          // one (NNUE, or the general tag for KataGo's ResNet). Names stay
+          // plain: gold in this panel means a person.
+          const tag =
+            rung.net === 'nnue'
+              ? 'NNUE'
+              : rung.net === 'neural'
+                ? t('lobby.panelNeuralNet', {}, locale)
+                : undefined;
           return rung.level === null
             ? { text: rung.name, ...(tag ? { tag } : {}) }
             : {

@@ -237,7 +237,7 @@ describe('landing bot ladder (homepage play panel)', () => {
   it('marks only the rungs that play on a trained net as NNUE', () => {
     const nnue = (spec: string) =>
       landingBotLadder(spec)
-        .filter((rung) => rung.nnue)
+        .filter((rung) => rung.net === 'nnue')
         .map((rung) => rung.botId);
     expect(nnue('xiangqi')).toEqual(['fairy-stockfish-level-8', 'pikafish']);
     expect(nnue('jieqi')).toEqual(['ab-jchess']);
@@ -263,7 +263,7 @@ describe('landing bot ladder (homepage play panel)', () => {
       landingBotLadder('jungle-flip', new Set(['misty', 'katago'])).map((r) => r.botId),
     ).toEqual(['misty']);
     const top = landingBotLadder('jungle', new Set(['katago']))[1];
-    expect(top).toMatchObject({ name: 'KataGo', engine: 'KataGo', level: null, nnue: false });
+    expect(top).toMatchObject({ name: 'KataGo', engine: 'KataGo', level: null, net: 'neural' });
   });
 
   it('keeps Misty as the jungle starter when KataGo is offered', () => {

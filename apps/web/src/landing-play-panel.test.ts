@@ -200,7 +200,10 @@ describe('homepage play panel', () => {
     clickNext(jungle, 'level');
     expect(stepValue(jungle, 'level')).toBe('KataGo');
     expect(stronger?.disabled).toBe(true);
-    expect(jungle.querySelector('.pp-step-level .pp-step-tag')).toBeNull();
+    // A ResNet, not an NNUE: the general net tag (Brian, 2026-10-04).
+    expect(jungle.querySelector('.pp-step-level .pp-step-meta .pp-step-tag')?.textContent).toBe(
+      'Neural net',
+    );
     // Flip Jungle keeps its single Misty.
     expect(row(board, 'jungle-flip').querySelector('.pp-step-level.is-fixed')).not.toBeNull();
 

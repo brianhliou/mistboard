@@ -488,6 +488,7 @@ export const ZH_HANS_PLAY = {
   'lobby.panelFind': '匹配',
   'lobby.panelPost': '发布',
   'lobby.panelLevel': '{level} 级',
+  'lobby.panelNeuralNet': '神经网络',
   'lobby.panelPlayingCount': '{count} 人在下',
   'lobby.panelEasier': '更弱的对手',
   'lobby.panelHarder': '更强的对手',

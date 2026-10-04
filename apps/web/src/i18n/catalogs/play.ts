@@ -510,6 +510,7 @@ export const EN_PLAY = {
   'lobby.panelFind': 'Find',
   'lobby.panelPost': 'Post',
   'lobby.panelLevel': 'Level {level}',
+  'lobby.panelNeuralNet': 'Neural net',
   'lobby.panelPlayingCount': '{count} playing',
   'lobby.panelEasier': 'Easier opponent',
   'lobby.panelHarder': 'Stronger opponent',
