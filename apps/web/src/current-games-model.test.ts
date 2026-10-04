@@ -1,19 +1,13 @@
 import { GAME_SPECS } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
-import { liveObservePolicy } from '../../server/src/server-policy.js';
+import { roomViewPolicy } from '../../server/src/server-policy.js';
 import {
-  CHANNEL_ALL,
   type CurrentGame,
   deadlineFractionLeft,
-  emptyHeadline,
-  filterByPlayers,
-  finishedMatchesFilter,
   finishedTileKind,
   isLowClock,
   liveTileKind,
-  parsePlayerFilter,
   splitSections,
-  variantChips,
 } from './current-games-model.js';
 
 function game(overrides: Partial<CurrentGame>): CurrentGame {
@@ -37,72 +31,6 @@ function game(overrides: Partial<CurrentGame>): CurrentGame {
   };
 }
 
-describe('variantChips', () => {
-  const channels = [
-    { count: 3, id: 'xiangqi' },
-    { count: 0, id: 'jieqi' },
-    { count: 2, id: 'dark-chess' },
-    { count: 0, id: 'banqi' },
-  ];
-
-  it('lists All plus only the channels with games, in rail order', () => {
-    expect(variantChips(channels, 5, CHANNEL_ALL)).toEqual([
-      { count: 5, id: CHANNEL_ALL, selected: true },
-      { count: 3, id: 'xiangqi', selected: false },
-      { count: 2, id: 'dark-chess', selected: false },
-    ]);
-  });
-
-  it('keeps a URL-selected channel at zero games, selected, in its place', () => {
-    expect(variantChips(channels, 5, 'banqi').map((chip) => [chip.id, chip.selected])).toEqual([
-      [CHANNEL_ALL, false],
-      ['xiangqi', false],
-      ['dark-chess', false],
-      ['banqi', true],
-    ]);
-  });
-
-  it('is just All when nothing is in play', () => {
-    expect(
-      variantChips(
-        channels.map((channel) => ({ ...channel, count: 0 })),
-        0,
-        CHANNEL_ALL,
-      ),
-    ).toEqual([{ count: 0, id: CHANNEL_ALL, selected: true }]);
-  });
-});
-
-describe('players filter', () => {
-  const games = [
-    game({ composition: 'pvp', roomId: 'a' }),
-    game({ composition: 'pve', roomId: 'b' }),
-    game({ composition: 'pvp', roomId: 'c' }),
-  ];
-
-  it('parses the URL param, defaulting unknown values to everyone', () => {
-    expect(parsePlayerFilter(null)).toBe('everyone');
-    expect(parsePlayerFilter('people')).toBe('people');
-    expect(parsePlayerFilter('bots')).toBe('bots');
-    expect(parsePlayerFilter('robots')).toBe('everyone');
-  });
-
-  it('filters on the server composition flag, keeping order', () => {
-    expect(filterByPlayers(games, 'everyone').map((g) => g.roomId)).toEqual(['a', 'b', 'c']);
-    expect(filterByPlayers(games, 'people').map((g) => g.roomId)).toEqual(['a', 'c']);
-    expect(filterByPlayers(games, 'bots').map((g) => g.roomId)).toEqual(['b']);
-  });
-
-  it('maps finished-game modes: pvp is people, pve and eve are bots', () => {
-    expect(finishedMatchesFilter('pvp', 'people')).toBe(true);
-    expect(finishedMatchesFilter('pve', 'people')).toBe(false);
-    expect(finishedMatchesFilter('pve', 'bots')).toBe(true);
-    expect(finishedMatchesFilter('eve', 'bots')).toBe(true);
-    expect(finishedMatchesFilter('pvp', 'bots')).toBe(false);
-    expect(finishedMatchesFilter(undefined, 'everyone')).toBe(true);
-  });
-});
-
 describe('splitSections', () => {
   it('puts correspondence in its own section and keeps server order in each', () => {
     const sections = splitSections([
@@ -113,19 +41,6 @@ describe('splitSections', () => {
     ]);
     expect(sections.live.map((g) => g.roomId)).toEqual(['live-1', 'live-2']);
     expect(sections.correspondence.map((g) => g.roomId)).toEqual(['corr-1', 'corr-2']);
-  });
-});
-
-describe('emptyHeadline', () => {
-  it('is null while anything is shown', () => {
-    expect(emptyHeadline(2, CHANNEL_ALL, 'everyone')).toBeNull();
-  });
-
-  it('names the narrowest filter in force', () => {
-    expect(emptyHeadline(0, CHANNEL_ALL, 'everyone')).toEqual({ kind: 'none' });
-    expect(emptyHeadline(0, CHANNEL_ALL, 'people')).toEqual({ kind: 'people' });
-    expect(emptyHeadline(0, CHANNEL_ALL, 'bots')).toEqual({ kind: 'bots' });
-    expect(emptyHeadline(0, 'jieqi', 'bots')).toEqual({ channelId: 'jieqi', kind: 'channel' });
   });
 });
 
@@ -172,35 +87,40 @@ describe('liveTileKind', () => {
 });
 
 describe('finishedTileKind', () => {
-  it('draws open variants and the public-view jieqi, banqi and Flip Jungle boards', () => {
+  it('draws open variants, the fog variants and the public-view jieqi, banqi and Flip Jungle boards', () => {
     expect(finishedTileKind('xiangqi')).toBe('board');
+    expect(finishedTileKind('fog')).toBe('board');
+    expect(finishedTileKind('dark-chess')).toBe('board');
+    expect(finishedTileKind('dark-xiangqi')).toBe('board');
     expect(finishedTileKind('jieqi')).toBe('board');
     expect(finishedTileKind('banqi')).toBe('board');
     expect(finishedTileKind('jungle-flip')).toBe('board');
   });
 
-  it('keeps Fog Chess, Fog Xiangqi and every unknown variant in the mist', () => {
-    expect(finishedTileKind('fog')).toBe('fog');
-    expect(finishedTileKind('dark-chess')).toBe('fog');
-    expect(finishedTileKind('dark-xiangqi')).toBe('fog');
+  it('keeps every unknown variant in the mist', () => {
     expect(finishedTileKind('no-such-variant')).toBe('fog');
   });
 
-  it('draws exactly the open specs plus jieqi, banqi and Flip Jungle', () => {
+  it('draws exactly the open and fog specs plus jieqi, banqi and Flip Jungle', () => {
     const drawn = GAME_SPECS.filter((spec) => finishedTileKind(spec.id) === 'board').map(
       (spec) => spec.id,
     );
-    const open = GAME_SPECS.filter((spec) => spec.visibility === 'open').map((spec) => spec.id);
+    const open = GAME_SPECS.filter(
+      (spec) => spec.visibility === 'open' || spec.visibility === 'dark',
+    ).map((spec) => spec.id);
     expect(drawn.sort()).toEqual([...open, 'banqi', 'jieqi', 'jungle-flip'].sort());
   });
 
   // Hidden-info guard: the client never decides on its own to draw a board the
-  // server would not draw live. Every spec this page draws must be one the
-  // server's own spectator policy calls open.
-  it('never draws a spec the server would not show a spectator live', () => {
+  // server would not show. Every finished board this page draws must be one the
+  // server's own room policy opens in full to a spectator once the game is over.
+  it('never draws a finished board the server would not show a spectator', () => {
     for (const spec of GAME_SPECS) {
       if (finishedTileKind(spec.id) !== 'board') continue;
-      expect([spec.id, liveObservePolicy(spec.visibility, spec.id)]).toEqual([spec.id, 'open']);
+      expect([spec.id, roomViewPolicy(spec.visibility, true, 'spectator')]).toEqual([
+        spec.id,
+        'truth',
+      ]);
     }
   });
 });

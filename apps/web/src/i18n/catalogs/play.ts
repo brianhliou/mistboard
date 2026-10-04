@@ -294,7 +294,6 @@ export const EN_PLAY = {
   'correspondence.cannotChallengeSelf': 'You cannot challenge yourself.',
   'correspondence.openSeeks': 'Open seeks',
   'correspondence.accept': 'Accept',
-  'correspondence.seekRowDetail': '{variant} · {cadence} · posted {ago}',
   'correspondence.noOpenSeeks':
     'No open seeks right now. Post one and it is the first thing other players see here.',
   'correspondence.noOpenSeeksSignedOut': 'No open seeks right now. Sign in and post the first one.',

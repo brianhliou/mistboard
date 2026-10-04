@@ -354,7 +354,6 @@ export const ZH_HANS_PLAY = {
   'correspondence.cannotChallengeSelf': '不能挑战自己。',
   'correspondence.openSeeks': '公开求战',
   'correspondence.accept': '接受',
-  'correspondence.seekRowDetail': '{variant} · {cadence} · {ago}发布',
   'correspondence.noOpenSeeks': '目前没有公开求战。发布一个，其他玩家来这里第一眼就能看到。',
   'correspondence.noOpenSeeksSignedOut': '目前没有公开求战。登录后发布第一个吧。',
   'correspondence.waitingForOpponent': '等待对手',

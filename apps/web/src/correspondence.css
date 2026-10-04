@@ -717,8 +717,19 @@ a.correspondence-row:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
-.correspondence-showcase-seeks {
-  max-width: 720px;
+/* Open seeks: start-position cards, a little narrower than the games in
+   progress so a few sit side by side. */
+.correspondence-seek-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(210px, 100%), 1fr));
+}
+
+.correspondence-seek-error {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.correspondence-seek-error[hidden] {
+  display: none;
 }
 
 /* How it works: three numbered steps. */

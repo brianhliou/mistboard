@@ -1,7 +1,10 @@
 // /games — current games (lichess's "Current games"), laid out as a board wall:
 // every game in progress right now, live and correspondence, across every
-// variant, as board cards in two sections, with the most recent finished games
-// below so the page never reads as dead.
+// variant, plus the open correspondence seeks, as board cards in one "Playing
+// now" wall, with the most recent finished games below so the page never reads
+// as dead. Built for low liquidity: no variant or player filters, since a
+// handful of games needs no narrowing; each card's kind (live, correspondence,
+// open seek) is its coloured top edge and tag (current-games.css [data-kind]).
 //
 // Data: GET /api/games/current (see apps/server/src/current-games.ts). Open
 // specs arrive with a board payload and mount the same live tenant renderer
@@ -9,44 +12,34 @@
 // masked and sealed specs arrive as cards only and get the misty tile, so
 // nothing about a hidden position is ever on this page. Clocks tick
 // client-side from the server snapshot; correspondence cards count down to the
-// seat-on-move's deadline with a thin bar of the move's allowance left.
-//
-// Filters: the variant chips are the server's `channel` param (only channels
-// with a game right now, plus a URL-selected one at zero); Everyone / People
-// only / Bots is client-side over the list, on the `players` param.
+// seat-on-move's deadline with a thin bar of the move's allowance left. Open
+// seeks draw the variant's starting position (seek-card.ts).
 //
 // Just finished: /api/watch's public replay pool (the same games /watch plays),
 // final positions drawn by the same showcase renderer /watch's queue preview
-// uses, in its default compact view. Open-information variants plus jieqi and
-// banqi (whose finished boards /watch already shows publicly, face-down pieces
-// face-down) draw a board (finishedTileKind); fog and every other hidden variant
-// keep the misty tile.
+// uses, in its default compact view. Open-information variants, the fog
+// variants (a finished room is open to spectators, so the final board is
+// revealed) and jieqi and banqi (face-down pieces face-down) draw a board
+// (finishedTileKind); concealed hands keep the misty tile. Two rows first, "Show more" adds rows from the pool
+// already loaded, and a board mounts only when its tile nears the viewport.
 //
-// Pure logic (chips, filter, sections, empty state, urgency) lives in
-// current-games-model.ts.
+// Load order: the seeks, the current games, the finished pool and the board
+// renderer's code are all requested at once; none waits on another.
+//
+// Pure logic (sections, urgency, tile kinds) lives in current-games-model.ts.
 
 import './current-games.css';
-import type { GameEvent } from '@mistboard/game';
+import { type GameEvent, maybeGameSpecForId } from '@mistboard/game';
 import {
-  CHANNEL_ALL,
   type CurrentGame,
   type CurrentGamePlayer,
   type CurrentGamesResponse,
   deadlineFractionLeft,
-  type EmptyHeadline,
-  emptyHeadline,
-  filterByPlayers,
-  finishedMatchesFilter,
   finishedTileKind,
   isLowClock,
   liveCardShowsHands,
   liveTileKind,
-  PLAYER_FILTER_PARAM,
-  PLAYER_FILTERS,
-  type PlayerFilter,
-  parsePlayerFilter,
   splitSections,
-  variantChips,
 } from './current-games-model.js';
 import { watchQueueResultLabel } from './finished-result-label.js';
 import {
@@ -57,14 +50,14 @@ import {
   namesMatchupLabel,
   terminationLabel,
   variantDisplayLabel,
-  watchChannelLabel,
 } from './game-display.js';
 import { gameMetaForGame, timeControlLabelForGame } from './game-meta.js';
-import { type I18nKey, t } from './i18n/catalog.js';
+import { t } from './i18n/catalog.js';
 import { currentLocale } from './i18n/locale.js';
 import { playerNameEl, profileTargetFor } from './profile-link.js';
 import { formatGameTime, profileGameHref } from './profile-ui.js';
 import type { ReplayHandle } from './replay.js';
+import { buildKindBadge, buildSeekCard } from './seek-card.js';
 import { specIdForShowcaseVariant } from './showcase-dispatch.js';
 import { buildNav, buildNotice } from './site-shell.js';
 import { renderVariantMarker } from './variant-markers.js';
@@ -74,16 +67,20 @@ import { formatClock, formatDayClock } from './web-utils.js';
 const POLL_MS = 5_000;
 const HIDDEN_POLL_MS = 30_000;
 const CLOCK_TICK_MS = 250;
-// One row of final positions at desktop width; "Search all games" has the rest.
-const FINISHED_LIMIT = 6;
+// Two rows of final positions at desktop width; "Show more" adds this many again.
+const FINISHED_PAGE = 12;
 // The finished feed is re-read at most this often; the 5 s poll re-renders from cache.
 const FINISHED_TTL_MS = 60_000;
+// Start a finished board's fetch a little before its tile scrolls into view.
+const FINISHED_MOUNT_MARGIN = '300px';
 
 type CorrespondenceSeek = {
   id: string;
   gameSpecId: string;
   daysPerMove: number;
   creatorName: string | null;
+  rated?: boolean;
+  isMine?: boolean;
 };
 
 type CardState = {
@@ -106,6 +103,12 @@ type SectionEls = { root: HTMLElement; grid: HTMLElement; aside: HTMLElement };
 export async function mountCurrentGames(root: HTMLElement): Promise<void> {
   root.classList.add('landing-page', 'current-games-page');
   root.replaceChildren(buildNav());
+
+  // Everything the page needs, requested together: the seeks and the finished
+  // pool used to wait on the current-games fetch, and the board code on all three.
+  const seeksRequest = fetchSeeks();
+  const finishedRequest = fetchFinished();
+  void import('./showcase-board.js').catch(() => undefined);
 
   const shell = document.createElement('main');
   shell.className = 'site-section current-games-shell';
@@ -131,41 +134,12 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
   titleBlock.append(titleRow, subtitle);
   header.append(titleBlock, buildActions());
 
-  // ---- toolbar: variant chips + who is playing --------------------------------
-  const toolbar = document.createElement('div');
-  toolbar.className = 'current-games-toolbar';
-  const chipRow = document.createElement('nav');
-  chipRow.className = 'current-games-chips';
-  chipRow.setAttribute('aria-label', t('games.variantFilter'));
-  const segmented = document.createElement('div');
-  segmented.className = 'current-games-segmented';
-  segmented.setAttribute('role', 'group');
-  segmented.setAttribute('aria-label', t('games.playerFilter'));
-  const filterLabels: Record<PlayerFilter, I18nKey> = {
-    bots: 'games.filterBots',
-    everyone: 'games.filterEveryone',
-    people: 'games.filterPeople',
-  };
-  for (const value of PLAYER_FILTERS) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'current-games-segment';
-    button.dataset.players = value;
-    button.textContent = t(filterLabels[value]);
-    segmented.append(button);
-  }
-  toolbar.append(chipRow, segmented);
-
   // ---- sections -------------------------------------------------------------
   const emptyHost = document.createElement('section');
   emptyHost.className = 'current-games-empty-host';
   emptyHost.hidden = true;
-  const live = buildSection('live', t('games.liveNow'));
-  const sortNote = document.createElement('span');
-  sortNote.className = 'current-games-section-note';
-  sortNote.textContent = t('games.sortedPeopleFirst');
-  live.aside.append(sortNote);
-  const corr = buildSection('correspondence', t('games.byCorrespondence'));
+  const playing = buildSection('playing', t('games.playingNow'));
+  playing.root.hidden = true;
   const finished = buildSection('finished', t('games.justFinished'));
   finished.root.hidden = true;
   finished.grid.className = 'current-games-finished-grid';
@@ -173,23 +147,47 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
     moreLink('/games/search', t('games.searchAll')),
     moreLink('/data', t('games.downloadData')),
   );
+  const showMore = document.createElement('button');
+  showMore.type = 'button';
+  showMore.className = 'current-games-show-more';
+  showMore.textContent = t('games.showMore');
+  showMore.hidden = true;
+  finished.root.append(showMore);
 
-  shell.append(header, toolbar, emptyHost, live.root, corr.root, finished.root);
+  shell.append(header, emptyHost, playing.root, finished.root);
   root.append(shell);
 
   const cards = new Map<string, CardState>();
-  let channel = readChannel();
-  let players = readPlayers();
+  const seekCards = new Map<string, HTMLElement>();
   let destroyed = false;
   let pollTimer: number | null = null;
   let lastResponse: CurrentGamesResponse | null = null;
   let seeks: CorrespondenceSeek[] | null = null;
-  const finishedByChannel = new Map<
-    string,
-    { at: number; games: FeaturedGame[]; pending: Promise<FeaturedGame[]> | null }
-  >();
+  let finishedCache: {
+    at: number;
+    games: FeaturedGame[];
+    pending: Promise<FeaturedGame[]> | null;
+  } = { at: Date.now(), games: [], pending: finishedRequest };
+  let finishedShown = FINISHED_PAGE;
   let finishedHandles: ReplayHandle[] = [];
   let finishedKey = '';
+  const boardObserver =
+    typeof IntersectionObserver === 'function'
+      ? new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              if (!entry.isIntersecting) continue;
+              boardObserver?.unobserve(entry.target);
+              const host = entry.target as HTMLElement;
+              const game = pendingBoards.get(host);
+              pendingBoards.delete(host);
+              if (game) void mountFinishedBoard(host, game);
+            }
+          },
+          { rootMargin: FINISHED_MOUNT_MARGIN },
+        )
+      : null;
+  const pendingBoards = new Map<HTMLElement, FeaturedGame>();
 
   const abort = new AbortController();
   const isConnected = (): boolean => !destroyed && root.isConnected;
@@ -203,12 +201,9 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
       .join(',');
 
   async function fetchCurrent(): Promise<CurrentGamesResponse | null> {
-    const params = new URLSearchParams();
-    if (channel !== CHANNEL_ALL) params.set('channel', channel);
     const known = knownParam();
-    if (known) params.set('known', known);
-    const query = params.toString();
-    const response = await fetch(`/api/games/current${query ? `?${query}` : ''}`).catch(() => null);
+    const query = known ? `?${new URLSearchParams({ known }).toString()}` : '';
+    const response = await fetch(`/api/games/current${query}`).catch(() => null);
     if (!response?.ok) return null;
     return (await response.json().catch(() => null)) as CurrentGamesResponse | null;
   }
@@ -219,8 +214,8 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
     if (!isConnected()) return;
     if (!data) {
       if (!lastResponse) {
-        live.root.hidden = false;
-        live.grid.replaceChildren(buildNotice(t('games.feedUnavailable'), t('games.subtitle')));
+        playing.root.hidden = false;
+        playing.grid.replaceChildren(buildNotice(t('games.feedUnavailable'), t('games.subtitle')));
       }
       schedulePoll();
       return;
@@ -236,17 +231,12 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
     pollTimer = window.setTimeout(() => void refresh(), document.hidden ? HIDDEN_POLL_MS : POLL_MS);
   }
 
-  // Everything that depends on the response, the channel or the players filter.
   function render(): void {
     const data = lastResponse;
     if (!data) return;
     renderPill(pill, data.total);
-    renderChips(chipRow, data, channel);
-    renderSegmented(segmented, players);
-    const shown = filterByPlayers(data.games, players);
-    reconcile(shown);
-    renderEmpty(emptyHeadline(shown.length, channel, players));
-    renderSeeksLink();
+    reconcile(data.games);
+    renderEmpty(data.games.length === 0);
     void renderFinished();
   }
 
@@ -266,14 +256,20 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
       card.root.remove();
       cards.delete(roomId);
     }
-    // Keep server order inside each section.
+    // Live first (people, then bots), then correspondence by deadline, then the
+    // seeks waiting for a second player. A card already in place is moved only
+    // when the order changed, so a live board is not detached on every poll.
     const sections = splitSections(games);
-    live.grid.replaceChildren(...sections.live.map((game) => cards.get(game.roomId)!.root));
-    corr.grid.replaceChildren(
+    const order = [
+      ...sections.live.map((game) => cards.get(game.roomId)!.root),
       ...sections.correspondence.map((game) => cards.get(game.roomId)!.root),
-    );
-    live.root.hidden = sections.live.length === 0;
-    corr.root.hidden = sections.correspondence.length === 0;
+      ...seekCardList(),
+    ];
+    const current = [...playing.grid.children];
+    if (current.length !== order.length || current.some((el, i) => el !== order[i])) {
+      playing.grid.replaceChildren(...order);
+    }
+    playing.root.hidden = order.length === 0;
     // Board mounts happen after the cards are on screen so a slow renderer
     // import never blocks the cards' text from appearing.
     for (const game of games) {
@@ -284,12 +280,31 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
     }
   }
 
+  // One card per open seek, built once: its start board is drawn on creation
+  // and must not be redrawn on every poll.
+  function seekCardList(): HTMLElement[] {
+    const list = seeks ?? [];
+    const live = new Set(list.map((seek) => seek.id));
+    for (const id of [...seekCards.keys()]) if (!live.has(id)) seekCards.delete(id);
+    return list.map((seek) => {
+      let card = seekCards.get(seek.id);
+      if (!card) {
+        card = buildSeekCard(seek, {
+          href: seek.isMine ? '/correspondence' : `/challenge/${encodeURIComponent(seek.id)}`,
+        });
+        seekCards.set(seek.id, card);
+      }
+      return card;
+    });
+  }
+
   function createCard(game: CurrentGame): CardState {
     const correspondence = game.timeClass === 'correspondence';
     const article = document.createElement('article');
     article.className = 'current-game-card';
     article.dataset.roomId = game.roomId;
     article.dataset.observe = game.observe;
+    article.dataset.kind = correspondence ? 'correspondence' : 'live';
 
     // The card is a box with a stretched overlay link rather than one big <a>:
     // the player names inside are profile links, and an <a> inside an <a> is
@@ -395,82 +410,86 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
 
   // ---- empty state ---------------------------------------------------------
 
-  function renderEmpty(headline: EmptyHeadline | null): void {
-    if (!headline) {
+  // A quiet line when nothing is in play; open seeks still fill the wall below.
+  function renderEmpty(nothingInPlay: boolean): void {
+    if (!nothingInPlay) {
       emptyHost.hidden = true;
       return;
     }
-    emptyHost.replaceChildren();
     const notice = document.createElement('div');
     notice.className = 'current-games-empty';
     const title = document.createElement('h2');
-    title.textContent = emptyHeadlineText(headline, lastResponse);
+    title.textContent = t('games.none');
     const body = document.createElement('p');
     body.textContent = t('games.noneBody');
     notice.append(title, body);
-    emptyHost.append(notice);
-    // Open seeks are how a correspondence game comes to exist; shown only when
-    // there are some, so the quiet state stays quiet.
-    if (seeks && seeks.length > 0) emptyHost.append(buildSeekList(seeks));
+    emptyHost.replaceChildren(notice);
     emptyHost.hidden = false;
-  }
-
-  function renderSeeksLink(): void {
-    corr.aside.replaceChildren();
-    if (!seeks || seeks.length === 0) return;
-    corr.aside.append(
-      moreLink('/correspondence', t('games.openSeeksCount', { count: seeks.length })),
-    );
   }
 
   // ---- just finished -------------------------------------------------------
 
   async function renderFinished(): Promise<void> {
-    const feedChannel = channel === CHANNEL_ALL ? 'top' : channel;
-    let cached = finishedByChannel.get(feedChannel);
-    if (!cached || Date.now() - cached.at > FINISHED_TTL_MS) {
-      const at = Date.now();
-      const pending = cached?.pending ?? fetchFinished(feedChannel);
-      finishedByChannel.set(feedChannel, {
-        at: cached?.at ?? 0,
-        games: cached?.games ?? [],
-        pending,
-      });
-      const fetched = await pending;
+    if (finishedCache.pending) {
+      const fetched = await finishedCache.pending;
       if (!isConnected()) return;
-      cached = { at, games: fetched, pending: null };
-      finishedByChannel.set(feedChannel, cached);
-      // A channel switch while this fetch was in flight renders its own feed.
-      if (feedChannel !== (channel === CHANNEL_ALL ? 'top' : channel)) return;
+      finishedCache = { at: Date.now(), games: fetched, pending: null };
+    } else if (Date.now() - finishedCache.at > FINISHED_TTL_MS) {
+      // Re-read in the background; this render keeps the cached pool.
+      const pending = fetchFinished();
+      finishedCache = { ...finishedCache, pending };
+      void pending.then((games) => {
+        finishedCache = { at: Date.now(), games, pending: null };
+        if (isConnected()) void renderFinished();
+      });
     }
-    const games = cached.games;
-    const shown = games
-      .filter((game) => finishedMatchesFilter(game.mode, players))
-      .slice(0, FINISHED_LIMIT);
-    const key = `${feedChannel}|${players}|${shown.map((game) => game.roomId).join(',')}`;
+    const pool = finishedCache.games;
+    const shown = pool.slice(0, finishedShown);
+    showMore.hidden = shown.length >= pool.length;
+    const key = shown.map((game) => game.roomId).join(',');
     if (key === finishedKey) return;
+    const previous = new Set(finishedKey ? finishedKey.split(',') : []);
+    const appendOnly = previous.size > 0 && [...previous].every((id, i) => shown[i]?.roomId === id);
     finishedKey = key;
-    for (const handle of finishedHandles) handle.destroy();
-    finishedHandles = [];
     finished.root.hidden = shown.length === 0;
-    finished.grid.replaceChildren(...shown.map((game) => buildFinishedTile(game)));
-    for (const game of shown) {
+    if (!appendOnly) {
+      for (const handle of finishedHandles) handle.destroy();
+      finishedHandles = [];
+      for (const host of pendingBoards.keys()) boardObserver?.unobserve(host);
+      pendingBoards.clear();
+      finished.grid.replaceChildren();
+    }
+    // "Show more" only appends: the tiles already drawn keep their boards.
+    for (const game of appendOnly ? shown.slice(previous.size) : shown) {
+      const tile = buildFinishedTile(game);
+      finished.grid.append(tile);
       if (finishedTileKind(game.variant) !== 'board') continue;
-      const host = finished.grid.querySelector<HTMLElement>(
-        `[data-room-id="${CSS.escape(game.roomId)}"] .current-game-board`,
-      );
-      if (host) void mountFinishedBoard(host, game, key);
+      const host = tile.querySelector<HTMLElement>('.current-game-board');
+      if (!host) continue;
+      if (boardObserver) {
+        pendingBoards.set(host, game);
+        boardObserver.observe(host);
+      } else {
+        void mountFinishedBoard(host, game);
+      }
     }
   }
 
-  async function mountFinishedBoard(
-    host: HTMLElement,
-    game: FeaturedGame,
-    key: string,
-  ): Promise<void> {
+  showMore.addEventListener(
+    'click',
+    () => {
+      finishedShown += FINISHED_PAGE;
+      void renderFinished();
+    },
+    { signal: abort.signal },
+  );
+
+  // A tile replaced while its board loaded (a pool refresh) is off the page by
+  // the time the mount resolves; its handle is destroyed rather than kept.
+  async function mountFinishedBoard(host: HTMLElement, game: FeaturedGame): Promise<void> {
     try {
       const { mountShowcaseBoard } = await import('./showcase-board.js');
-      if (!isConnected() || key !== finishedKey) return;
+      if (!isConnected() || !host.isConnected) return;
       const [first, second] = matchupSeats(game);
       host.replaceChildren();
       const handle = await mountShowcaseBoard(
@@ -491,9 +510,12 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
           onLoadError: () => true,
           pov: 'white',
           revealOnFinish: true,
+          // A finished fog game is open to spectators: draw it with the fog off
+          // (Fog Xiangqi; Fog Chess reveals through revealOnFinish).
+          ...(isFogSpec(game.variant) ? { tenantPov: 'truth' as const } : {}),
         },
       );
-      if (!isConnected() || key !== finishedKey) {
+      if (!isConnected() || !host.isConnected) {
         handle.destroy();
         return;
       }
@@ -514,50 +536,6 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
 
   // ---- lifecycle --------------------------------------------------------
 
-  chipRow.addEventListener(
-    'click',
-    (event) => {
-      const link = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[data-channel]');
-      if (!link) return;
-      event.preventDefault();
-      const next = link.dataset.channel ?? CHANNEL_ALL;
-      if (next === channel) return;
-      channel = next;
-      writeParams(channel, players);
-      if (lastResponse) renderChips(chipRow, lastResponse, channel);
-      void refresh();
-    },
-    { signal: abort.signal },
-  );
-  segmented.addEventListener(
-    'click',
-    (event) => {
-      const button = (event.target as HTMLElement).closest<HTMLButtonElement>(
-        'button[data-players]',
-      );
-      if (!button) return;
-      const next = parsePlayerFilter(button.dataset.players ?? null);
-      if (next === players) return;
-      players = next;
-      writeParams(channel, players);
-      render();
-    },
-    { signal: abort.signal },
-  );
-  window.addEventListener(
-    'popstate',
-    () => {
-      const nextChannel = readChannel();
-      players = readPlayers();
-      if (nextChannel !== channel) {
-        channel = nextChannel;
-        void refresh();
-      } else {
-        render();
-      }
-    },
-    { signal: abort.signal },
-  );
   document.addEventListener(
     'visibilitychange',
     () => {
@@ -574,34 +552,23 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
     if (pollTimer !== null) window.clearTimeout(pollTimer);
     for (const card of cards.values()) card.handle?.destroy();
     for (const handle of finishedHandles) handle.destroy();
+    boardObserver?.disconnect();
     observer.disconnect();
   });
   observer.observe(document.body, { childList: true, subtree: true });
 
-  seeks = await fetchSeeks();
+  // The current games render as soon as they land; the seeks join the wall when
+  // theirs does (usually first: it is the smaller read).
+  void seeksRequest.then((list) => {
+    seeks = list;
+    if (isConnected() && lastResponse) render();
+  });
   await refresh();
 }
 
 // ---------------------------------------------------------------------------
 // Rendering helpers
 // ---------------------------------------------------------------------------
-
-function readChannel(): string {
-  return new URLSearchParams(window.location.search).get('channel') ?? CHANNEL_ALL;
-}
-
-function readPlayers(): PlayerFilter {
-  return parsePlayerFilter(new URLSearchParams(window.location.search).get(PLAYER_FILTER_PARAM));
-}
-
-function writeParams(channel: string, players: PlayerFilter): void {
-  const url = new URL(window.location.href);
-  if (channel === CHANNEL_ALL) url.searchParams.delete('channel');
-  else url.searchParams.set('channel', channel);
-  if (players === 'everyone') url.searchParams.delete(PLAYER_FILTER_PARAM);
-  else url.searchParams.set(PLAYER_FILTER_PARAM, players);
-  window.history.pushState(null, '', url);
-}
 
 function buildActions(): HTMLElement {
   const actions = document.createElement('div');
@@ -651,51 +618,6 @@ function renderPill(el: HTMLElement, total: number): void {
   el.append(dot, document.createTextNode(t('games.inPlay', { count: total })));
   el.classList.toggle('is-quiet', total === 0);
   el.hidden = false;
-}
-
-function renderChips(root: HTMLElement, data: CurrentGamesResponse, active: string): void {
-  const byId = new Map(data.channels.map((entry) => [entry.id, entry]));
-  root.replaceChildren();
-  for (const chip of variantChips(data.channels, data.total, active)) {
-    const entry = byId.get(chip.id);
-    const label =
-      chip.id === CHANNEL_ALL ? t('games.allChip') : entry ? watchChannelLabel(entry) : chip.id;
-    const link = document.createElement('a');
-    link.className = 'current-games-chip';
-    link.dataset.channel = chip.id;
-    link.href =
-      chip.id === CHANNEL_ALL ? '/games' : `/games?channel=${encodeURIComponent(chip.id)}`;
-    const name = document.createElement('span');
-    name.className = 'current-games-chip-name';
-    name.textContent = label;
-    const count = document.createElement('span');
-    count.className = 'current-games-chip-count';
-    count.textContent = String(chip.count);
-    link.append(name, count);
-    if (chip.selected) {
-      link.classList.add('is-selected');
-      link.setAttribute('aria-current', 'page');
-    }
-    root.append(link);
-  }
-}
-
-function renderSegmented(root: HTMLElement, active: PlayerFilter): void {
-  for (const button of root.querySelectorAll<HTMLButtonElement>('button[data-players]')) {
-    const on = button.dataset.players === active;
-    button.classList.toggle('is-selected', on);
-    button.setAttribute('aria-pressed', on ? 'true' : 'false');
-  }
-}
-
-function emptyHeadlineText(headline: EmptyHeadline, data: CurrentGamesResponse | null): string {
-  if (headline.kind === 'people') return t('games.nonePeople');
-  if (headline.kind === 'bots') return t('games.noneBots');
-  if (headline.kind === 'channel') {
-    const entry = data?.channels.find((candidate) => candidate.id === headline.channelId);
-    if (entry) return t('games.noneInChannel', { label: watchChannelLabel(entry) });
-  }
-  return t('games.none');
 }
 
 // First mover (red / white) sits at the bottom, the way the player's own room
@@ -847,7 +769,11 @@ function renderMeta(root: HTMLElement, game: CurrentGame): void {
   parts.push(t('games.moveCount', { count: game.ply }));
   const text = document.createElement('span');
   text.textContent = parts.join(' · ');
-  root.replaceChildren(chip, text);
+  root.replaceChildren(
+    buildKindBadge(game.timeClass === 'correspondence' ? 'correspondence' : 'live'),
+    chip,
+    text,
+  );
 }
 
 function matchupLabel(game: CurrentGame): string {
@@ -882,36 +808,6 @@ function asFeaturedGame(game: CurrentGame): FeaturedGame {
 // Seeks + finished games
 // ---------------------------------------------------------------------------
 
-function buildSeekList(seeks: CorrespondenceSeek[]): HTMLElement {
-  const section = document.createElement('section');
-  section.className = 'current-games-seeks';
-  const heading = document.createElement('h2');
-  heading.textContent = t('games.openSeeks');
-  const list = document.createElement('ol');
-  list.className = 'current-games-seek-list';
-  for (const seek of seeks) {
-    const item = document.createElement('li');
-    const link = document.createElement('a');
-    link.className = 'current-games-seek';
-    link.href = '/correspondence';
-    const who = document.createElement('span');
-    who.className = 'current-games-seek-name';
-    who.textContent = displayLiveName(seek.creatorName, t('games.anonymous'));
-    const what = document.createElement('span');
-    what.className = 'current-games-seek-detail';
-    what.textContent = `${variantDisplayLabel(seek.gameSpecId)} · ${
-      seek.daysPerMove === 1
-        ? t('games.oneDayPerMove')
-        : t('games.daysPerMove', { count: seek.daysPerMove })
-    }`;
-    link.append(who, what);
-    item.append(link);
-    list.append(item);
-  }
-  section.append(heading, list);
-  return section;
-}
-
 // null = the seek board is unavailable (correspondence disabled, or an error).
 async function fetchSeeks(): Promise<CorrespondenceSeek[] | null> {
   const response = await fetch('/api/correspondence/seeks').catch(() => null);
@@ -920,13 +816,15 @@ async function fetchSeeks(): Promise<CorrespondenceSeek[] | null> {
   return body?.seeks ?? null;
 }
 
-async function fetchFinished(channel: string): Promise<FeaturedGame[]> {
-  const response = await fetch(`/api/watch?channel=${encodeURIComponent(channel)}`).catch(
-    () => null,
-  );
+async function fetchFinished(): Promise<FeaturedGame[]> {
+  const response = await fetch('/api/watch?channel=top').catch(() => null);
   if (!response?.ok) return [];
   const body = (await response.json().catch(() => null)) as { unlocked?: FeaturedGame[] } | null;
   return body?.unlocked ?? [];
+}
+
+function isFogSpec(variant: string): boolean {
+  return maybeGameSpecForId(variant === 'fog' ? 'dark-chess' : variant)?.visibility === 'dark';
 }
 
 async function apiEventLoader(roomId: string): Promise<GameEvent[]> {

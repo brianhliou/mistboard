@@ -200,6 +200,11 @@
   --current-games-fog-glow-a: hsl(140, 22%, 80%);
   --current-games-fog-glow-b: hsl(140, 18%, 84%);
   --current-games-fog-stripe: rgba(255, 255, 255, 0.35);
+  /* Card kinds: each card's top edge and tag. Live is the site's green; the
+     two waiting kinds sit apart from it and from each other. */
+  --current-games-kind-live: var(--site-accent);
+  --current-games-kind-correspondence: hsl(212, 62%, 46%);
+  --current-games-kind-seek: hsl(34, 86%, 40%);
 }
 
 :root[data-effective-theme="dark"] .current-games-page,
@@ -210,6 +215,8 @@
   --current-games-fog-glow-a: #2f4a38;
   --current-games-fog-glow-b: #24392b;
   --current-games-fog-stripe: rgba(255, 255, 255, 0.03);
+  --current-games-kind-correspondence: hsl(212, 70%, 66%);
+  --current-games-kind-seek: hsl(38, 88%, 60%);
 }
 
 .current-games-page .current-games-shell {
@@ -317,95 +324,6 @@
   color: var(--site-accent-strong);
 }
 
-/* Toolbar: variant chips (wrap) and the Everyone / People only / Bots control. */
-.current-games-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px 16px;
-}
-
-.current-games-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  min-width: 0;
-}
-
-.current-games-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--site-border);
-  color: var(--site-text);
-  font-size: 0.85rem;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.current-games-chip:hover,
-.current-games-chip:focus-visible {
-  border-color: var(--site-accent);
-  color: var(--site-heading);
-}
-
-.current-games-chip.is-selected {
-  background: var(--site-accent-soft);
-  border-color: var(--site-accent);
-  color: var(--site-accent-strong);
-}
-
-.current-games-chip-count {
-  color: var(--site-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.current-games-chip.is-selected .current-games-chip-count {
-  color: inherit;
-  opacity: 0.8;
-}
-
-.current-games-segmented {
-  display: inline-flex;
-  border: 1px solid var(--site-border);
-  border-radius: 7px;
-  overflow: hidden;
-  flex: none;
-}
-
-.current-games-segment {
-  padding: 6px 14px;
-  border: 0;
-  background: transparent;
-  color: var(--site-muted);
-  font: inherit;
-  font-size: 0.85rem;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.current-games-segment + .current-games-segment {
-  border-left: 1px solid var(--site-border);
-}
-
-.current-games-segment:hover {
-  color: var(--site-heading);
-}
-
-.current-games-segment.is-selected {
-  background: var(--site-panel-soft);
-  color: var(--site-heading);
-  font-weight: 600;
-}
-
-.current-games-segment:focus-visible {
-  outline: 2px solid var(--site-accent-strong);
-  outline-offset: -2px;
-}
-
 /* Sections */
 .current-games-section {
   display: flex;
@@ -438,10 +356,6 @@
   flex-wrap: wrap;
   gap: 6px 18px;
   font-size: 0.85rem;
-}
-
-.current-games-section-note {
-  color: var(--site-muted);
 }
 
 .current-games-more-link {
@@ -480,7 +394,72 @@
 
 .current-game-card:hover,
 .current-game-card:focus-within {
-  border-color: var(--site-accent);
+  border-color: var(--current-games-kind, var(--site-accent));
+}
+
+/* The card's kind is its top edge and the tag in its meta line. */
+.current-game-card[data-kind="live"] {
+  --current-games-kind: var(--current-games-kind-live);
+}
+
+.current-game-card[data-kind="correspondence"] {
+  --current-games-kind: var(--current-games-kind-correspondence);
+}
+
+.current-game-card[data-kind="seek"] {
+  --current-games-kind: var(--current-games-kind-seek);
+}
+
+.current-game-card[data-kind] {
+  border-top: 3px solid var(--current-games-kind);
+}
+
+.current-game-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--current-games-kind, var(--site-muted)) 16%, transparent);
+  color: var(--current-games-kind, var(--site-muted));
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.current-game-card[data-kind="live"] .current-game-kind::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* An open seek: the empty seat is a dashed slot waiting for its player. */
+.current-game-seat.is-empty-seat {
+  justify-content: center;
+  border: 1px dashed color-mix(in srgb, var(--current-games-kind-seek) 55%, var(--site-border));
+  border-radius: 6px;
+}
+
+.current-game-seat-waiting {
+  color: var(--site-muted);
+  font-style: italic;
+  font-size: 0.8rem;
+}
+
+.current-game-board.is-start .current-game-start-board,
+.current-game-board.is-start .current-game-start-board svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.current-game-seek-action {
+  position: relative;
+  z-index: 2;
+  flex: none;
 }
 
 .current-game-open {
@@ -819,7 +798,7 @@
   display: block;
   height: 100%;
   width: 0;
-  background: var(--site-accent);
+  background: var(--current-games-kind, var(--site-accent));
 }
 
 .current-game-meta {
@@ -896,7 +875,30 @@
   color: var(--site-muted);
 }
 
-/* Empty state: a quiet line, then open seeks when there are any. */
+/* Adds two more rows from the finished pool already loaded. */
+.current-games-show-more {
+  align-self: center;
+  padding: 7px 18px;
+  border-radius: 7px;
+  border: 1px solid var(--site-border);
+  background: var(--site-panel);
+  color: var(--site-heading);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.current-games-show-more:hover,
+.current-games-show-more:focus-visible {
+  border-color: var(--site-accent);
+}
+
+.current-games-show-more[hidden] {
+  display: none;
+}
+
+/* Empty state: a quiet line when nothing is in play. */
 .current-games-empty-host {
   display: flex;
   flex-direction: column;
@@ -916,8 +918,7 @@
   border-radius: 8px;
 }
 
-.current-games-empty h2,
-.current-games-seeks h2 {
+.current-games-empty h2 {
   margin: 0;
   font-size: 1.05rem;
   color: var(--site-heading);
@@ -925,45 +926,6 @@
 
 .current-games-empty p {
   margin: 0;
-  color: var(--site-muted);
-}
-
-.current-games-seeks {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.current-games-seek-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.current-games-seek {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 4px 12px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--site-border);
-  color: inherit;
-  text-decoration: none;
-}
-
-.current-games-seek:hover {
-  border-color: var(--site-accent);
-}
-
-.current-games-seek-name {
-  font-weight: 600;
-}
-
-.current-games-seek-detail {
   color: var(--site-muted);
 }
 

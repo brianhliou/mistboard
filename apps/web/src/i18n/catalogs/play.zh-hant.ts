@@ -354,7 +354,6 @@ export const ZH_HANT_PLAY = {
   'correspondence.cannotChallengeSelf': '不能挑戰自己。',
   'correspondence.openSeeks': '公開求戰',
   'correspondence.accept': '接受',
-  'correspondence.seekRowDetail': '{variant} · {cadence} · {ago}發布',
   'correspondence.noOpenSeeks': '目前沒有公開求戰。發布一個，其他玩家來這裡第一眼就能看到。',
   'correspondence.noOpenSeeksSignedOut': '目前沒有公開求戰。登入後發布第一個吧。',
   'correspondence.waitingForOpponent': '等待對手',

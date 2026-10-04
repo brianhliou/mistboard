@@ -33,6 +33,10 @@ export type ShowcaseBoardOptions = {
   // Completed-game grids can reveal the final chess position. The homepage keeps
   // the fogged POV throughout by default so its showcase still demonstrates fog.
   revealOnFinish?: boolean;
+  // Tenant path only: the compact board's side (watch-tenant-replay.ts `pov`).
+  // `truth` draws a fog tenant's finished game with the fog off; omitted, the
+  // tenant picks its own showcase side.
+  tenantPov?: 'white' | 'truth' | 'black';
   // Chess event loader (static bundled samples vs the games API). Tenants load
   // their own postgame payloads internally and ignore this.
   loaderForId: (roomId: string) => Promise<GameEvent[]>;
@@ -83,6 +87,7 @@ export async function mountShowcaseBoard(
       ...(options.onLoadError ? { onLoadError: options.onLoadError } : {}),
       ...(options.airStartMs !== undefined ? { airStartMs: options.airStartMs } : {}),
       ...(options.seatDiscs ? { seatDiscs: true } : {}),
+      ...(options.tenantPov ? { pov: options.tenantPov } : {}),
     });
   }
 

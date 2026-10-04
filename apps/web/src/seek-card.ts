@@ -1,0 +1,121 @@
+// An open correspondence seek drawn as a game card (/games, /correspondence):
+// the same frame as an in-progress card (seat, board, seat, meta) so a seek
+// reads as a game waiting for its second player. The board is the variant's
+// starting position (start-position-board.ts); the empty seat says who is
+// missing. Styles live in current-games.css, which both pages load.
+
+import { displayLiveName, variantDisplayLabel } from './game-display.js';
+import { t } from './i18n/catalog.js';
+import { renderStartPositionSvg } from './start-position-board.js';
+
+export type SeekCardSeek = {
+  id: string;
+  gameSpecId: string;
+  daysPerMove: number;
+  creatorName: string | null;
+  rated?: boolean;
+};
+
+export type SeekCardOptions = {
+  // Where the whole card leads; null when an action button is the only way in.
+  href: string | null;
+  // The bottom-right control (Accept, a sign-in link); omitted on /games.
+  action?: HTMLElement | null;
+  // A line under the meta (an accept error); hidden until it has text.
+  status?: HTMLElement | null;
+};
+
+export function buildSeekCard(seek: SeekCardSeek, options: SeekCardOptions): HTMLElement {
+  const article = document.createElement('article');
+  article.className = 'current-game-card is-seek';
+  article.dataset.kind = 'seek';
+  article.dataset.seekId = seek.id;
+  const variant = variantDisplayLabel(seek.gameSpecId);
+  const creator = displayLiveName(seek.creatorName, t('games.anonymous'));
+
+  if (options.href) {
+    const open = document.createElement('a');
+    open.className = 'current-game-open';
+    open.href = options.href;
+    open.setAttribute('aria-label', t('games.seekOpen', { name: creator, variant }));
+    article.append(open);
+  }
+
+  const waiting = document.createElement('div');
+  waiting.className = 'current-game-seat is-empty-seat';
+  const waitingText = document.createElement('span');
+  waitingText.className = 'current-game-seat-who current-game-seat-waiting';
+  waitingText.textContent = t('games.seekWaiting');
+  waiting.append(waitingText);
+
+  const board = document.createElement('div');
+  board.className = 'current-game-board is-start';
+  const placeholder = document.createElement('div');
+  placeholder.className = 'current-game-hidden';
+  const label = document.createElement('span');
+  label.className = 'current-game-hidden-label';
+  label.textContent = variant;
+  placeholder.append(label);
+  board.append(placeholder);
+  void renderStartPositionSvg(seek.gameSpecId)
+    .then((svg) => {
+      if (!svg || !board.isConnected) return;
+      const frame = document.createElement('div');
+      frame.className = 'current-game-start-board notranslate';
+      frame.setAttribute('translate', 'no');
+      frame.setAttribute('aria-hidden', 'true');
+      frame.innerHTML = svg;
+      frame.querySelector('svg')?.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+      board.replaceChildren(frame);
+    })
+    .catch((err) => console.warn('[seek-card] start board failed', err));
+
+  const seat = document.createElement('div');
+  seat.className = 'current-game-seat';
+  const who = document.createElement('span');
+  who.className = 'current-game-seat-who';
+  const name = document.createElement('span');
+  name.className = 'current-game-seat-name';
+  name.textContent = creator;
+  name.title = creator;
+  who.append(name);
+  seat.append(who);
+  if (options.action) {
+    options.action.classList.add('current-game-seek-action');
+    seat.append(options.action);
+  }
+
+  const meta = document.createElement('div');
+  meta.className = 'current-game-meta';
+  const chip = document.createElement('span');
+  chip.className = 'current-game-chip';
+  chip.textContent = variant;
+  const text = document.createElement('span');
+  const cadence =
+    seek.daysPerMove === 1
+      ? t('games.oneDayPerMove')
+      : t('games.daysPerMove', { count: seek.daysPerMove });
+  text.textContent = `${cadence} · ${seek.rated ? t('games.rated') : t('games.casual')}`;
+  meta.append(buildKindBadge('seek'), chip, text);
+
+  article.append(waiting, board, seat, meta);
+  if (options.status) article.append(options.status);
+  return article;
+}
+
+export type CardKind = 'live' | 'correspondence' | 'seek';
+
+const KIND_LABEL = {
+  correspondence: 'games.kindCorrespondence',
+  live: 'games.kindLive',
+  seek: 'games.kindSeek',
+} as const;
+
+// The small coloured tag that names what a card is; its colour is the card's
+// top edge (current-games.css [data-kind]).
+export function buildKindBadge(kind: CardKind): HTMLElement {
+  const badge = document.createElement('span');
+  badge.className = 'current-game-kind';
+  badge.textContent = t(KIND_LABEL[kind]);
+  return badge;
+}

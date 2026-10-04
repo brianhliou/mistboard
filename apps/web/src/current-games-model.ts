@@ -1,13 +1,10 @@
-// Pure logic for /games (current-games.ts): the payload types, the variant chip
-// list, the Everyone / People only / Bots filter, the Live / Correspondence
-// split, the empty-state headline, clock urgency and the correspondence
-// time-left bar. DOM-free so it is unit-tested directly
+// Pure logic for /games (current-games.ts): the payload types, the Live /
+// Correspondence split, clock urgency, the correspondence time-left bar and
+// the tile kinds. DOM-free so it is unit-tested directly
 // (current-games-model.test.ts).
 
 import { CRAZYHOUSE_XIANGQI_SPEC_ID, maybeGameSpecForId } from '@mistboard/game';
 import { clockEmergencyMs } from './clock-emphasis.js';
-
-export const CHANNEL_ALL = 'all';
 
 export type CurrentGamePlayer = {
   color: string;
@@ -63,60 +60,6 @@ export type CurrentGamesResponse = {
   total: number;
 };
 
-// ---- Variant chips ----------------------------------------------------------
-
-export type VariantChip = { id: string; count: number; selected: boolean };
-
-// "All N" first, then only the channels that have a game right now, in the
-// server's rail order. A channel selected through the URL stays on the row even
-// at zero, so the reader can see what is filtered and step back out of it.
-export function variantChips(
-  channels: readonly Pick<CurrentGamesChannel, 'id' | 'count'>[],
-  total: number,
-  active: string,
-): VariantChip[] {
-  const chips: VariantChip[] = [
-    { id: CHANNEL_ALL, count: total, selected: active === CHANNEL_ALL },
-  ];
-  for (const channel of channels) {
-    const selected = channel.id === active;
-    if (channel.count > 0 || selected) {
-      chips.push({ id: channel.id, count: channel.count, selected });
-    }
-  }
-  return chips;
-}
-
-// ---- Everyone / People only / Bots ------------------------------------------
-
-export type PlayerFilter = 'everyone' | 'people' | 'bots';
-
-export const PLAYER_FILTERS: readonly PlayerFilter[] = ['everyone', 'people', 'bots'];
-
-export const PLAYER_FILTER_PARAM = 'players';
-
-// Unknown values read as the default, so a hand-edited URL never empties the page.
-export function parsePlayerFilter(value: string | null): PlayerFilter {
-  return value === 'people' || value === 'bots' ? value : 'everyone';
-}
-
-export function filterByPlayers<T extends Pick<CurrentGame, 'composition'>>(
-  games: readonly T[],
-  filter: PlayerFilter,
-): T[] {
-  if (filter === 'people') return games.filter((game) => game.composition === 'pvp');
-  if (filter === 'bots') return games.filter((game) => game.composition === 'pve');
-  return [...games];
-}
-
-// The finished-game feed carries `mode` instead of `composition`: a pvp row is
-// people only; anything with an engine seat (pve, eve) is a bot game.
-export function finishedMatchesFilter(mode: string | undefined, filter: PlayerFilter): boolean {
-  if (filter === 'people') return mode === 'pvp';
-  if (filter === 'bots') return mode === 'pve' || mode === 'eve';
-  return true;
-}
-
 // ---- Sections ---------------------------------------------------------------
 
 export type CurrentGameSections<T> = { live: T[]; correspondence: T[] };
@@ -133,28 +76,6 @@ export function splitSections<T extends Pick<CurrentGame, 'timeClass'>>(
     else live.push(game);
   }
   return { live, correspondence };
-}
-
-// ---- Empty state --------------------------------------------------------------
-
-export type EmptyHeadline =
-  | { kind: 'none' }
-  | { kind: 'channel'; channelId: string }
-  | { kind: 'people' }
-  | { kind: 'bots' };
-
-// null while there is something to show. Otherwise which quiet line to print:
-// the narrowest filter in force names what is empty.
-export function emptyHeadline(
-  shownCount: number,
-  channel: string,
-  filter: PlayerFilter,
-): EmptyHeadline | null {
-  if (shownCount > 0) return null;
-  if (channel !== CHANNEL_ALL) return { kind: 'channel', channelId: channel };
-  if (filter === 'people') return { kind: 'people' };
-  if (filter === 'bots') return { kind: 'bots' };
-  return { kind: 'none' };
 }
 
 // ---- Clocks -------------------------------------------------------------------
@@ -177,8 +98,6 @@ export function deadlineFractionLeft(
   if (!Number.isFinite(due)) return null;
   return Math.max(0, Math.min(1, (due - now) / (days * 86_400_000)));
 }
-
-// ---- Finished boards ----------------------------------------------------------
 
 // ---- In-progress tiles ----------------------------------------------------------
 
@@ -207,17 +126,20 @@ export function liveCardShowsHands(gameSpecId: string): boolean {
 // jieqi's as-played board (a piece nobody moved stays face-down), and banqi's
 // and Flip Jungle's boards (unflipped pieces stay face-down). All three are
 // 'open' to spectators in the server's liveObservePolicy and have a /watch
-// channel. Any other hidden variant fails closed to the mist.
+// channel.
 const FINISHED_PUBLIC_VIEW_SPECS: ReadonlySet<string> = new Set(['jieqi', 'banqi', 'jungle-flip']);
 
 // Whether a finished game's tile draws its final position or the misty tile.
-// Open-information variants and the public-view list above draw a board; fog
-// (dark), other hidden-identity specs, concealed hands and unknown ids keep the
-// mist, so this page never decides on its own what a hidden game may reveal.
+// Open-information variants and the public-view list above draw a board, and so
+// do the fog variants (Fog Chess, Fog Xiangqi): the server opens every finished
+// room in full to spectators (roomViewPolicy, 2026-09-06), and the showcase
+// renderer reveals the board at the end (revealOnFinish). Concealed hands and
+// unknown ids keep the mist, so this page never decides on its own what a
+// hidden game may reveal.
 export function finishedTileKind(variant: string): 'board' | 'fog' {
   const spec = maybeGameSpecForId(variant === 'fog' ? 'dark-chess' : variant);
   if (!spec) return 'fog';
-  if (spec.visibility === 'open') return 'board';
+  if (spec.visibility === 'open' || spec.visibility === 'dark') return 'board';
   if (spec.visibility === 'hidden-identity' && FINISHED_PUBLIC_VIEW_SPECS.has(spec.id)) {
     return 'board';
   }

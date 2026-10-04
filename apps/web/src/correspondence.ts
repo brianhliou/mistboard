@@ -79,6 +79,7 @@ import type { DarkXiangqiWireView } from './live-dark-xiangqi.js';
 import { isCorrespondenceRatedModeEnabled, onRatedModeChange } from './rated-flag.js';
 import { timeAgo } from './relative-time.js';
 import type { ReplayHandle } from './replay.js';
+import { buildSeekCard } from './seek-card.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { formatDayClock } from './web-utils.js';
 
@@ -212,7 +213,10 @@ function buildSignedIn(
     // lapsed seek); the form opens set to them and scrolls into view.
     const prefill = parseStartFormPrefill(location.search);
     const startForm = buildStartForm(refreshChallenges, prefill);
-    side.append(startForm, seekHost);
+    side.append(startForm);
+    // Open seeks are board cards now, too wide for the side column: they
+    // follow your own games in the main one.
+    main.append(seekHost);
     refreshChallenges();
     if (prefill) {
       requestAnimationFrame(() => {
@@ -553,12 +557,6 @@ function buildMetaLine(game: CorrespondenceGame, current: CurrentGame | undefine
     meta.append(text);
   }
   return meta;
-}
-
-// A rated seek or challenge says so on its row, the way a live rated game does; a
-// casual one stays as it always read.
-function withRatedMark(text: string, rated: boolean | undefined): string {
-  return rated === true ? `${text} · ${t('play.rated')}` : text;
 }
 
 function vsLabel(game: CorrespondenceGame): string {
@@ -991,37 +989,18 @@ function renderOpenSeeks(ctx: PageContext, host: HTMLElement, feed: OpenSeeksFee
     host.append(line);
     return;
   }
-  const list = document.createElement('div');
-  list.className = 'correspondence-panel correspondence-rows';
-  for (const seek of seeks) list.append(buildOpenSeekRow(ctx, host, seek));
-  host.append(list);
+  // Each seek is a game card at its starting position (seek-card.ts), the
+  // same frame as the games in progress, rather than a text row.
+  const grid = document.createElement('div');
+  grid.className = 'current-games-grid correspondence-seek-grid';
+  for (const seek of seeks) grid.append(buildOpenSeekCard(ctx, host, seek));
+  host.append(grid);
 }
 
-function buildOpenSeekRow(ctx: PageContext, host: HTMLElement, seek: OpenSeek): HTMLElement {
-  const row = document.createElement('div');
-  row.className = 'correspondence-row';
-  row.dataset.seekId = seek.id;
-  const text = document.createElement('div');
-  text.className = 'correspondence-row-text';
-  const name = document.createElement('span');
-  name.className = 'correspondence-row-name';
-  name.textContent = seek.creatorName ?? t('lobby.anonymous');
-  const detail = document.createElement('span');
-  detail.className = 'correspondence-row-detail';
-  detail.textContent = withRatedMark(
-    t('correspondence.seekRowDetail', {
-      ago: timeAgo(seek.createdAt, 'narrow'),
-      cadence: cadenceLabel(seek.daysPerMove),
-      variant: variantDisplayLabel(seek.gameSpecId),
-    }),
-    seek.rated,
-  );
-  const error = document.createElement('span');
-  error.className = 'correspondence-row-error';
+function buildOpenSeekCard(ctx: PageContext, host: HTMLElement, seek: OpenSeek): HTMLElement {
+  const error = document.createElement('p');
+  error.className = 'correspondence-row-error correspondence-seek-error';
   error.hidden = true;
-  text.append(name, detail, error);
-  row.append(text);
-
   const challengePath = `/challenge/${encodeURIComponent(seek.id)}`;
   if (!ctx.signedIn) {
     // Correspondence needs an account: Accept signs in, then lands on this
@@ -1032,8 +1011,7 @@ function buildOpenSeekRow(ctx: PageContext, host: HTMLElement, seek: OpenSeek): 
     accept.href = localizedHref(`/account?${params.toString()}`);
     accept.title = t('correspondence.signInToAccept');
     accept.textContent = t('correspondence.accept');
-    row.append(accept);
-    return row;
+    return buildSeekCard(seek, { action: accept, href: challengePath, status: error });
   }
 
   const accept = document.createElement('button');
@@ -1081,8 +1059,7 @@ function buildOpenSeekRow(ctx: PageContext, host: HTMLElement, seek: OpenSeek): 
         accept.disabled = false;
       });
   });
-  row.append(accept);
-  return row;
+  return buildSeekCard(seek, { action: accept, href: challengePath, status: error });
 }
 
 // ---------------------------------------------------------------------------
