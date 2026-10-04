@@ -157,6 +157,20 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // Homepage card titles (`cardTitle`), 2026-10-03: the article's own zh
+  // title cut to fit the card, machine-drafted, not native-reviewed.
+  'Pikafish misjudged its reveals': '皮卡鱼误判了翻子',
+  'KataGo, a stronger Jungle bot': 'KataGo：更强的斗兽棋电脑',
+  '14 wins against our jieqi bot': '战胜我们揭棋电脑的 14 盘棋',
+  'How Strong Players Open Jieqi': '高手眼中的揭棋开局',
+  'Multi-solution puzzles': '有不止一个答案的题目',
+  'Skill vs. Luck in Flip Games': '把翻子棋的实力和运气分开',
+  'Duck Xiangqi Strategy': '鸭子象棋攻略',
+  'Xiangqi Antichess Is a Draw': '象棋棋盘上的反棋是和棋',
+  'Horde on the Xiangqi Board': '象棋棋盘上的部落棋',
+  'Atomic Xiangqi Is Live': '原子象棋上线了',
+  'Server-Side Fog Chess': '用服务器实现迷雾国际象棋',
+  'Play Pikafish online': '在线与皮卡鱼对弈',
   // ab-jchess (match link): machine-drafted 2026-10-02, not native-reviewed.
   'All 400 games are on the site, each with its own review page: [browse the match](/games/search?variant=jieqi&source=engine-match).':
     '全部 400 盘对局都在网站上，每盘都有自己的复盘页面：[查看这场对抗赛](/games/search?variant=jieqi&source=engine-match)。',
@@ -3606,6 +3620,20 @@ const ZH_HANT: Record<string, string> = {
   // authored Taiwan lexical or glyph fork below overrides that shared value.
   // Keep this spread first so new Traditional entries cannot be overwritten.
   ...ZH_HANS,
+  // Homepage card titles (`cardTitle`), 2026-10-03: the article's own zh
+  // title cut to fit the card, machine-drafted, not native-reviewed.
+  'Pikafish misjudged its reveals': '皮卡魚誤判了翻子',
+  'KataGo, a stronger Jungle bot': 'KataGo：更強的鬥獸棋電腦',
+  '14 wins against our jieqi bot': '戰勝我們揭棋電腦的 14 盤棋',
+  'How Strong Players Open Jieqi': '高手眼中的揭棋開局',
+  'Multi-solution puzzles': '有不止一個答案的題目',
+  'Skill vs. Luck in Flip Games': '把翻子棋的實力和運氣分開',
+  'Duck Xiangqi Strategy': '鴨子象棋攻略',
+  'Xiangqi Antichess Is a Draw': '象棋棋盤上的反棋是和棋',
+  'Horde on the Xiangqi Board': '象棋棋盤上的部落棋',
+  'Atomic Xiangqi Is Live': '原子象棋上線了',
+  'Server-Side Fog Chess': '用伺服器實現迷霧國際象棋',
+  'Play Pikafish online': '線上與皮卡魚對弈',
   // ab-jchess (match link): machine-drafted 2026-10-02, not native-reviewed.
   'All 400 games are on the site, each with its own review page: [browse the match](/games/search?variant=jieqi&source=engine-match).':
     '全部 400 盤對局都在網站上，每盤都有自己的覆盤頁面：[查看這場對抗賽](/games/search?variant=jieqi&source=engine-match)。',

@@ -20,6 +20,7 @@ export const antiXiangqiArticle: Article = {
   publisher: 'mistboard',
   boardFamily: 'xiangqi',
   title: 'Antichess on the Xiangqi Board Is a Draw',
+  cardTitle: 'Xiangqi Antichess Is a Draw',
   seoTitle: 'Anti Xiangqi: Antichess on the Xiangqi Board Is a Draw',
   summary:
     'We put antichess on the xiangqi board and measured it before designing anything. Black has two moves to find in the opening, Red cannot go wrong, and then the palace keeps five pieces a side out of reach. Every other opening loses, 63 of them provably. We are publishing the measurement, not the variant.',

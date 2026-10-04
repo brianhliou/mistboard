@@ -18,6 +18,7 @@ export const serverEnforcedFogArticle: Article = {
     kind: 'article',
     publisher: 'mistboard',
     title: 'Programming Fog Chess with Server-Side Truth',
+    cardTitle: 'Server-Side Fog Chess',
     summary:
       'How Mistboard keeps hidden information on the server: canonical state, seat-scoped views, private live rooms, and public postgame review.',
     status: 'published',

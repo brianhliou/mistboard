@@ -462,21 +462,30 @@ export function buildHomeArticleCards(
   section.className = 'landing-articles';
   section.setAttribute(
     'aria-label',
-    t(row === 'deep-dives' ? 'articles.deepDives' : 'articles.heading', {}, locale),
+    t(row === 'deep-dives' ? 'articles.deepDives' : 'articles.latest', {}, locale),
   );
 
-  // No header row on the general strip: the label ("Read") and the "All
-  // articles →" link are dropped to match lichess's blog strip (cards only) and
-  // to reclaim vertical space for the taller 8:5 thumbnails. The whole /blog
-  // index stays reachable from the primary nav. The deep-dives row does carry a
-  // short label (trial, 2026-10-01; "Xiangqi deep dives" since 10-02): without it the two strips look the same
-  // and the split means nothing to a reader.
-  if (row === 'deep-dives') {
-    const label = document.createElement('h2');
-    label.className = 'landing-row-label';
-    label.textContent = t('articles.deepDives', {}, locale);
-    section.append(label);
+  // Both rows carry a short label (Brian, 2026-10-03: the unlabelled first
+  // row read as nothing next to "Xiangqi deep dives"), and the first row's
+  // label line links to the blog index, which the strip had no way to reach.
+  const header = document.createElement('div');
+  header.className = 'landing-row-header';
+  const label = document.createElement('h2');
+  label.className = 'landing-row-label';
+  label.textContent = t(
+    row === 'deep-dives' ? 'articles.deepDives' : 'articles.latest',
+    {},
+    locale,
+  );
+  header.append(label);
+  if (row === 'latest') {
+    const more = document.createElement('a');
+    more.className = 'landing-row-more';
+    more.href = localizedHref('/blog', locale);
+    more.textContent = t('site.more', {}, locale);
+    header.append(more);
   }
+  section.append(header);
   const carousel = document.createElement('div');
   carousel.className = 'landing-carousel';
 
@@ -562,7 +571,7 @@ function landingArticleCard(article: Article, locale: Locale): HTMLElement {
 
   const title = document.createElement('strong');
   title.className = 'landing-article-card-title';
-  title.textContent = localized.title;
+  title.textContent = localized.cardTitle ?? localized.title;
 
   link.append(thumb, title);
   return link;

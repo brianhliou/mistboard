@@ -12,6 +12,7 @@ export const jieqiOpeningsArticle: Article = {
   publisher: 'mistboard',
   boardFamily: 'xiangqi',
   title: 'What Strong Jieqi Players Believe About the Opening',
+  cardTitle: 'How Strong Players Open Jieqi',
   seoTitle: 'Jieqi Opening Theory: The First Move, Ranked',
   summary:
     'Jieqi has no opening book. It has an argument about the first move, running on Chinese forums among players with thousands of games, never written down in English. Why a face-down piece is a one-shot option you can waste, five openings ranked, and the pawn push weighed against the crossed cannon on all six reveals.',

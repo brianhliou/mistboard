@@ -170,6 +170,7 @@ export const katagoJungleArticle: Article = {
   kind: 'article',
   publisher: 'mistboard',
   title: 'KataGo, a stronger Jungle Chess bot',
+  cardTitle: 'KataGo, a stronger Jungle bot',
   seoTitle: 'KataGo for Jungle Chess: 82 wins, 118 draws and no losses against Misty',
   summary:
     'A Jungle Chess engine that learned by playing itself now sits above Misty. In 200 games against Misty it won 82, lost none and drew 118.',

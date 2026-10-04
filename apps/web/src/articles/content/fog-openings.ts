@@ -50,6 +50,7 @@ export const fogOpeningsArticle: Article = {
   kind: 'article',
   publisher: 'mistboard',
   title: 'An Opening System for Fog Chess',
+  cardTitle: 'Fog Chess Opening System',
   // "Fog Chess" is our name; "fog of war chess" is what players search.
   seoTitle: 'Fog of War Chess Openings: The Qa4 System',
   summary:

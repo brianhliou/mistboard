@@ -46,6 +46,7 @@ export const EN_CONTENT = {
   'videos.previousVideos': 'Previous videos',
   'videos.moreVideos': 'More videos',
   'articles.heading': 'Articles',
+  'articles.latest': 'Latest',
   'articles.deepDives': 'Xiangqi deep dives',
   'articles.read': 'Read',
   'articles.intro': 'Essays, rules notes, and engine work for original strategy games.',
@@ -541,6 +542,7 @@ export type ContentI18nKey = keyof typeof EN_CONTENT;
 export const CRITICAL_CONTENT_I18N_KEYS = [
   'articles.heading',
   'articles.deepDives',
+  'articles.latest',
   'articles.read',
   'articles.intro',
   'articles.allArticles',

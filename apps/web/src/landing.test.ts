@@ -144,6 +144,13 @@ describe('landing shell', () => {
       ),
     ).toBeNull();
     expect(deepDives?.querySelector('.landing-row-label')?.textContent).toBe('Xiangqi deep dives');
+    // The first row is labelled too, and its label line links to the blog index.
+    const latest = demo?.querySelector(':scope > .landing-articles-row:not(.landing-dives-row)');
+    expect(latest?.querySelector('.landing-row-label')?.textContent).toBe('Latest');
+    expect(
+      latest?.querySelector('.landing-row-header a.landing-row-more')?.getAttribute('href'),
+    ).toBe('/blog');
+    expect(deepDives?.querySelector('.landing-row-more')).toBeNull();
     expect(demo?.querySelector('.landing-learn-row')).toBeNull();
     expect(demo?.querySelector('.landing-left-column .landing-board-column')).not.toBeNull();
     // The support/store pair left the homepage (patronage stays in the nav).

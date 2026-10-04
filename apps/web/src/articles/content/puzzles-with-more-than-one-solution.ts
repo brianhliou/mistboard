@@ -38,6 +38,7 @@ export const puzzleTwoAnswersArticle: Article = {
   kind: 'article',
   publisher: 'mistboard',
   title: 'Puzzles with more than one solution',
+  cardTitle: 'Multi-solution puzzles',
   seoTitle: 'Handling xiangqi puzzles with multiple solutions: why 382 were pulled',
   summary:
     'A solver found a real mate and was told to try again. 382 served puzzles could do that. How the miner admitted them, the patch that half-fixed it, the rule lichess uses instead, and what came out of the corpus.',

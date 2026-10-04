@@ -440,6 +440,13 @@ type ArticleBase = {
   playableOnMistboard?: boolean;
   title: string;
   /**
+   * The homepage card's title when `title` does not fit there on one line
+   * (about 186px of 12.5px Roboto, the card's width on a wide desktop).
+   * `home-card-titles.test.ts` measures every card and fails on a title that
+   * would wrap. A translated article needs this string in both zh dictionaries.
+   */
+  cardTitle?: string;
+  /**
    * Document <title> when it should differ from the on-page h1, which `title`
    * still drives. Exists because a variant's brand name and its search name can
    * be different words: Fog Chess is what we call it, "fog of war chess" is what

@@ -21,6 +21,7 @@ export const hordeXiangqiArticle: Article = {
   publisher: 'mistboard',
   boardFamily: 'xiangqi',
   title: 'Horde on the Xiangqi Board: The River Is a Cliff',
+  cardTitle: 'Horde on the Xiangqi Board',
   seoTitle: 'Horde Xiangqi: Horde Chess on the Xiangqi Board, Measured',
   summary:
     'We put Horde on the xiangqi board and measured it before building anything: twelve start arrays, two soldier rules, each played four times by an engine against itself. With xiangqi’s own soldier the army wins every game by one trick; give the soldier the crossed move from the start and the game becomes a siege that draws three times in four. We are publishing the measurement, not the variant.',

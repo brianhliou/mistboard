@@ -13,6 +13,7 @@ export const duckXiangqiStrategyArticle: Article = {
   publisher: 'mistboard',
   boardFamily: 'xiangqi',
   title: 'Duck Xiangqi Strategy for Your First Game',
+  cardTitle: 'Duck Xiangqi Strategy',
   summary:
     'Chinese chess with one duck both players share. The rules take a minute to read. What decides your first game takes longer, starting with the fact that the duck you place is a cannon platform for your opponent and never for you.',
   showSummaryOnPage: false,
