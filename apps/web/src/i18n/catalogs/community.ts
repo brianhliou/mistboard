@@ -68,6 +68,7 @@ export const EN_COMMUNITY = {
   'chat.reportedShort': 'reported',
   'chat.reportFailed': 'Could not report. Try again.',
   'chat.eventBotWin': '{who} beat {bot} at {variant}',
+  'chat.eventBotWinRepeat': '{who} beat {bot} at {variant} {count} times',
   'chat.eventStudy': 'New study: {title}',
   'chat.eventGuest': 'A guest',
   'profile.loading': 'Loading profile',

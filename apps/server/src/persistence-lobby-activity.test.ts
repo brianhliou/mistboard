@@ -11,6 +11,56 @@ import {
 } from './persistence-test-support.js';
 
 definePersistenceTests('lobby activity', () => {
+  test('listLobbyActivity collapses back-to-back wins by one seat over one bot', async () => {
+    const now = new Date('2026-10-03T12:00:00.000Z');
+    const minutesAgo = (m: number) => new Date(now.getTime() - m * 60 * 1000);
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      // [room, guest device, bot, minutesAgo]: device-a wins three in a row and
+      // collapses; device-b's win, then a different bot, each end a run.
+      const wins: [string, string, string, number][] = [
+        ['run-a1', 'device-a', 'Pikafish Level 4', 10],
+        ['run-a2', 'device-a', 'Pikafish Level 4', 20],
+        ['run-a3', 'device-a', 'Pikafish Level 4', 30],
+        ['run-b1', 'device-b', 'Pikafish Level 4', 40],
+        ['run-a4', 'device-a', 'Pikafish Level 5', 50],
+        ['run-a5', 'device-a', 'Pikafish Level 4', 60],
+      ];
+      for (const [room, device, bot, ago] of wins) {
+        await client.query(
+          `INSERT INTO games
+             (room_id, variant, result, termination, ply_count, started_at, ended_at,
+              white_client, black_client, mode, status, visibility)
+           VALUES ($1, 'jieqi', 'red-wins', 'checkmate', 60, $2, $2, 'red', 'black', 'pve',
+                   'completed', 'public')`,
+          [room, minutesAgo(ago)],
+        );
+        await client.query(
+          `INSERT INTO game_participants (game_id, color, subject_type, subject_id, display_name)
+           VALUES ($1, 'red', 'guest', $2, 'Guest'), ($1, 'black', 'bot', 'pikafish', $3)`,
+          [room, device, bot],
+        );
+      }
+    } finally {
+      await client.end();
+    }
+
+    const events = await listLobbyActivity(now);
+
+    assert.deepEqual(
+      events.map((e) => [e.id, e.opponent, e.count ?? 1]),
+      [
+        ['act_game_run-a1', 'Pikafish Level 4', 3],
+        ['act_game_run-b1', 'Pikafish Level 4', 1],
+        ['act_game_run-a4', 'Pikafish Level 5', 1],
+        ['act_game_run-a5', 'Pikafish Level 4', 1],
+      ],
+    );
+    // Device ids stay on the server.
+    assert.ok(!JSON.stringify(events).includes('device-'));
+  });
+
   test('listLobbyActivity shows earned human wins and new public studies, nothing else', async () => {
     const now = new Date('2026-10-03T12:00:00.000Z');
     const hoursAgo = (hours: number) => new Date(now.getTime() - hours * 60 * 60 * 1000);

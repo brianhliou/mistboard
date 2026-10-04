@@ -67,6 +67,7 @@ export const ZH_HANS_COMMUNITY = {
   'chat.reportedShort': '已举报',
   'chat.reportFailed': '举报失败。请重试。',
   'chat.eventBotWin': '{who} 在{variant}中战胜了 {bot}',
+  'chat.eventBotWinRepeat': '{who} 在{variant}中连续 {count} 次战胜了 {bot}',
   'chat.eventStudy': '新研究：{title}',
   'chat.eventGuest': '一位访客',
   'profile.loading': '正在加载资料',

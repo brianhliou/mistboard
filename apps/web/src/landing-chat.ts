@@ -34,6 +34,8 @@ export type ActivityEvent = {
   opponent?: string;
   gameSpecId?: string;
   title?: string;
+  /** Consecutive wins this row stands for (same winner, bot, variant). */
+  count?: number;
 };
 export type FeedItem = ChatLine | ActivityEvent;
 type ChatState = {
@@ -436,7 +438,10 @@ export function appendEventSentence(
   };
   // The template is read raw (no params) so each placeholder can become its
   // own node; translations reorder them freely.
-  const template = t(EVENT_TEMPLATE_KEYS[event.kind], {}, locale);
+  const repeated = event.kind === 'bot-win' && (event.count ?? 1) > 1;
+  const template = repeated
+    ? t('chat.eventBotWinRepeat', { count: event.count ?? 1 }, locale)
+    : t(EVENT_TEMPLATE_KEYS[event.kind], {}, locale);
   let cursor = 0;
   for (const match of template.matchAll(/\{([a-z]+)\}/g)) {
     const index = match.index ?? cursor;

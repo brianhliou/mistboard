@@ -453,6 +453,10 @@ describe('activity rows', () => {
       'Fairy-Stockfish Level 4',
     ]);
 
+    const streak = document.createElement('a');
+    appendEventSentence(streak, activity('st', 0, { handle: null, count: 3 }), 'en');
+    expect(streak.textContent).toBe('A guest beat Pikafish Level 6 at Xiangqi 3 times');
+
     const study = document.createElement('a');
     appendEventSentence(
       study,

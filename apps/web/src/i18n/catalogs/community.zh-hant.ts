@@ -67,6 +67,7 @@ export const ZH_HANT_COMMUNITY = {
   'chat.reportedShort': '已檢舉',
   'chat.reportFailed': '檢舉失敗。請重試。',
   'chat.eventBotWin': '{who} 在{variant}中戰勝了 {bot}',
+  'chat.eventBotWinRepeat': '{who} 在{variant}中連續 {count} 次戰勝了 {bot}',
   'chat.eventStudy': '新研究：{title}',
   'chat.eventGuest': '一位訪客',
   'profile.loading': '正在載入個人資料',

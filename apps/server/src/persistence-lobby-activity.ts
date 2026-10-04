@@ -13,7 +13,9 @@
 // win names the person who lost (Brian, 2026-10-03). A bot is the only
 // opponent the feed may name. A seat whose account is closed or
 // private has no public handle, so its game is skipped rather than shown as a
-// guest. Counted-game rules (excluded accounts, ply floor, launch date) come
+// guest. Back-to-back wins by the same seat over the same bot in the same
+// variant collapse into one row with a `count` (on 2026-10-03, 16 of 20 rows
+// read "A guest beat Pikafish Level 4 at Jieqi"). Counted-game rules (excluded accounts, ply floor, launch date) come
 // from persistence-counted-games.ts like every other aggregate.
 
 import { crosstableReviewUrl } from './crosstable.js';
@@ -22,6 +24,8 @@ import { getPool, isInitialized } from './persistence-db.js';
 
 export const ACTIVITY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 const GAME_EVENT_LIMIT = 20;
+// Rows read before collapsing repeats, so a streak does not starve the window.
+const GAME_ROW_LIMIT = 80;
 const STUDY_EVENT_LIMIT = 3;
 export const MIN_BOT_LEVEL = 4;
 
@@ -34,6 +38,8 @@ export type LobbyActivityEvent = {
   opponent?: string;
   gameSpecId?: string;
   title?: string;
+  /** Wins this row stands for when consecutive repeats collapsed; absent = 1. */
+  count?: number;
 };
 
 type GameEventRow = {
@@ -41,6 +47,7 @@ type GameEventRow = {
   variant: string;
   ended_at: Date;
   winner_type: string;
+  winner_id: string | null;
   winner_handle: string | null;
   loser_type: string;
   loser_name: string;
@@ -73,7 +80,8 @@ export async function listLobbyActivity(now = new Date()): Promise<LobbyActivity
   const [games, studies] = await Promise.all([
     pool.query<GameEventRow>(
       `SELECT g.room_id, g.variant, g.ended_at,
-              w.subject_type AS winner_type, wu.handle AS winner_handle,
+              w.subject_type AS winner_type, w.subject_id AS winner_id,
+              wu.handle AS winner_handle,
               l.subject_type AS loser_type, l.display_name AS loser_name
          FROM games g
          JOIN game_participants w
@@ -92,7 +100,7 @@ export async function listLobbyActivity(now = new Date()): Promise<LobbyActivity
           AND (w.subject_type = 'guest' OR wu.handle IS NOT NULL)
         ORDER BY g.ended_at DESC, g.room_id
         LIMIT $2`,
-      [since, GAME_EVENT_LIMIT],
+      [since, GAME_ROW_LIMIT],
     ),
     pool.query<StudyEventRow>(
       `SELECT s.id, s.name, s.created_at, u.handle AS owner_handle
@@ -106,11 +114,7 @@ export async function listLobbyActivity(now = new Date()): Promise<LobbyActivity
       [since, STUDY_EVENT_LIMIT],
     ),
   ]);
-  const events: LobbyActivityEvent[] = [];
-  for (const row of games.rows) {
-    const event = gameEvent(row);
-    if (event) events.push(event);
-  }
+  const events: LobbyActivityEvent[] = collapseRepeats(games.rows).slice(0, GAME_EVENT_LIMIT);
   for (const row of studies.rows) {
     events.push({
       id: `act_study_${row.id}`,
@@ -122,6 +126,30 @@ export async function listLobbyActivity(now = new Date()): Promise<LobbyActivity
     });
   }
   return events.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+
+// Rows arrive newest first. A run of wins by one seat (account id or guest
+// device id, which never leaves the server) over one bot in one variant becomes
+// the newest win's row with the run's length. A different winner, bot or
+// variant in between ends the run.
+function collapseRepeats(rows: GameEventRow[]): LobbyActivityEvent[] {
+  const events: LobbyActivityEvent[] = [];
+  let runKey: string | null = null;
+  for (const row of rows) {
+    const event = gameEvent(row);
+    if (!event) continue;
+    const key = row.winner_id
+      ? `${row.winner_type}:${row.winner_id}|${row.loser_name}|${row.variant}`
+      : null;
+    const last = events[events.length - 1];
+    if (key && key === runKey && last) {
+      last.count = (last.count ?? 1) + 1;
+      continue;
+    }
+    events.push(event);
+    runKey = key;
+  }
+  return events;
 }
 
 export function gameEvent(row: GameEventRow): LobbyActivityEvent | null {
