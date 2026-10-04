@@ -65,7 +65,8 @@ export type BroadcastTourSummary = {
   };
   boardCount: number;
   liveBoardCount: number;
-  completeBoardCount: number;
+  /** Finished games with moves. Results alone are not something to watch. */
+  recordedBoardCount: number;
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -180,7 +181,7 @@ export function broadcastBanners(
       tour: first.tour,
       boardCount: sum((entry) => entry.boardCount),
       liveBoardCount: sum((entry) => entry.liveBoardCount),
-      completeBoardCount: sum((entry) => entry.completeBoardCount),
+      recordedBoardCount: sum((entry) => entry.recordedBoardCount),
     };
     const state = bannerState(merged, words, locale, now);
     if (!state) continue;
@@ -234,19 +235,19 @@ function bannerState(
     };
   }
   if (!Number.isNaN(endsAt) && endsAt < now) {
-    if (now - endsAt > FINISHED_WINDOW_MS || entry.completeBoardCount === 0) return null;
+    if (now - endsAt > FINISHED_WINDOW_MS || entry.recordedBoardCount === 0) return null;
     return {
-      subtitle: `${words.finished} ${shortDate(tour.endsAt!, locale)} · ${games(entry.completeBoardCount, locale)}`,
+      subtitle: `${words.finished} ${shortDate(tour.endsAt!, locale)} · ${games(entry.recordedBoardCount, locale)}`,
       rank: 3,
       order: -endsAt,
     };
   }
-  if (!Number.isNaN(startsAt) && !Number.isNaN(endsAt) && entry.completeBoardCount > 0) {
+  if (!Number.isNaN(startsAt) && !Number.isNaN(endsAt) && entry.recordedBoardCount > 0) {
     // Between rounds of a tour that is under way by its dates. A tour with no
     // dates and nothing live is a record, not an event (the Team
     // Championship's 14 boards showed as a second row on 2026-09-20).
     return {
-      subtitle: `${words.inProgress} · ${games(entry.completeBoardCount, locale)}`,
+      subtitle: `${words.inProgress} · ${games(entry.recordedBoardCount, locale)}`,
       rank: 1,
       order: -startsAt,
     };

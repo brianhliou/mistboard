@@ -154,6 +154,12 @@ export async function xiangqiBroadcastIndexForApi(
         boardCount: boards.length,
         liveBoardCount: boards.filter((board) => board.status === 'live').length,
         completeBoardCount: boards.filter((board) => board.status === 'complete').length,
+        // Finished games someone can replay. A source can publish results and
+        // never the moves (dpxq's 2026 women's league: six results, zero
+        // plies), and the homepage must not count those as games to watch.
+        recordedBoardCount: boards.filter(
+          (board) => board.status === 'complete' && board.plyCount > 0,
+        ).length,
         scheduledBoardCount: boards.filter((board) => board.status === 'scheduled').length,
         totalPlies: boards.reduce((sum, board) => sum + board.plyCount, 0),
         updatedAt: latestDate([

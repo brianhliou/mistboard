@@ -63,7 +63,7 @@ const LEAGUE: BroadcastTourSummary = {
   },
   boardCount: 174,
   liveBoardCount: 0,
-  completeBoardCount: 174,
+  recordedBoardCount: 174,
 };
 
 describe('broadcastBanners', () => {
@@ -80,6 +80,14 @@ describe('broadcastBanners', () => {
       href: '/broadcast/xiangqi/2026-xiangqi-league',
     });
     expect(rows[0]?.subtitle).toMatch(/^Finished Sep 1[89] · 174 games$/);
+  });
+
+  it('gives a tour no row when its results came without moves', () => {
+    // The 2026 women's league: six results on the source, no game records.
+    const resultsOnly = { ...LEAGUE, recordedBoardCount: 0 };
+    expect(broadcastBanners([resultsOnly], 'en', endsAt + 2 * day)).toEqual([]);
+    const startsAt = Date.parse(LEAGUE.tour.startsAt!);
+    expect(broadcastBanners([resultsOnly], 'en', startsAt + day)).toEqual([]);
   });
 
   it('drops a tour a week after it ended', () => {
@@ -109,7 +117,7 @@ describe('broadcastBanners', () => {
       },
       boardCount: 14,
       liveBoardCount: 0,
-      completeBoardCount: 14,
+      recordedBoardCount: 14,
     };
     expect(broadcastBanners([undated], 'en', endsAt)).toEqual([]);
     expect(broadcastBanners([{ ...undated, liveBoardCount: 2 }], 'en', endsAt)[0]?.subtitle).toBe(
@@ -146,7 +154,7 @@ describe('the two-row spotlight', () => {
     },
     boardCount: 0,
     liveBoardCount: 0,
-    completeBoardCount: 0,
+    recordedBoardCount: 0,
   });
   const beforeAsian = Date.parse('2026-09-25T12:00:00Z');
 
@@ -186,7 +194,7 @@ describe('the two-row spotlight', () => {
     const running = { ...LEAGUE, tour: { ...LEAGUE.tour, slug: 'running', name: '进行' } };
     const soon = {
       ...LEAGUE,
-      completeBoardCount: 0,
+      recordedBoardCount: 0,
       tour: {
         ...LEAGUE.tour,
         slug: 'soon',

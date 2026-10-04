@@ -114,12 +114,27 @@ test('broadcast index API summarizes tournaments and sync status', async () => {
   assert.equal(entry.boardCount, 1);
   assert.equal(entry.liveBoardCount, 0);
   assert.equal(entry.completeBoardCount, 1);
+  assert.equal(entry.recordedBoardCount, 1);
   assert.equal(entry.scheduledBoardCount, 0);
   assert.equal(entry.totalPlies, board.moves.length);
   assert.deepEqual(entry.updatedAt, new Date(2_000));
   assert.equal(entry.lastSyncLog?.kind, 'poll_ok');
   assert.equal(Object.hasOwn(entry.lastSyncLog ?? {}, 'payload'), false);
   assert.equal(Object.hasOwn(entry.lastSyncLog ?? {}, 'message'), false);
+});
+
+test('broadcast index does not count a result without moves as a recorded game', async () => {
+  // dpxq's 2026 women's league published six results and no moves; the
+  // homepage spotlit it as "6 games" and opened on empty boards.
+  const payload = await xiangqiBroadcastIndexForApi(
+    deps({
+      listXiangqiBroadcastBoards: async (roundId) =>
+        roundId === board.roundId ? [{ ...storedBoard, plyCount: 0 }] : [],
+    }),
+  );
+  const entry = payload.tours[0]!;
+  assert.equal(entry.completeBoardCount, 1);
+  assert.equal(entry.recordedBoardCount, 0);
 });
 
 test('broadcast ops API exposes source and operator sync log detail', async () => {
