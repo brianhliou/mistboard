@@ -56,7 +56,10 @@ function openingFamily(wxf) {
   if (/^P[37]\+1$/.test(wxf)) return 'soldier (仙人指路)';
   if (/^E[37]\+5$/.test(wxf)) return 'elephant (飞相)';
   if (/^H[28]\+[37]$/.test(wxf)) return 'horse (起马)';
-  if (/^C[28]\.[46]$/.test(wxf)) return 'palace-crossing cannon (过宫炮)';
+  // Red counts files from its own right: 炮二平六 / 炮八平四 cross the palace,
+  // 炮二平四 / 炮八平六 stop at the advisor's corner. One regex had both as 过宫炮.
+  if (/^C(2\.6|8\.4)$/.test(wxf)) return 'palace-crossing cannon (过宫炮)';
+  if (/^C(2\.4|8\.6)$/.test(wxf)) return 'palcorner cannon (仕角炮)';
   return `other (${wxf})`;
 }
 
