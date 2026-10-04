@@ -1,12 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setPostHogInstance } from './analytics.js';
 import {
+  type ActivityEvent,
   appendChatText,
+  appendEventSentence,
   buildLandingChat,
   CHAT_VISIBLE_LINES,
   CHAT_WINDOW_MS,
   type ChatLine,
   chatTokenElement,
   createLandingChatFeed,
+  feedItems,
   readStoredChatMuted,
   visibleChatWindow,
 } from './landing-chat.js';
@@ -420,5 +424,95 @@ describe('landing chat mute persistence (live)', () => {
     await vi.waitFor(() => {
       expect(mount.querySelectorAll('.landing-chat-line').length).toBeGreaterThan(0);
     });
+  });
+});
+
+function activity(id: string, ageMs: number, extra: Partial<ActivityEvent> = {}): ActivityEvent {
+  return {
+    id,
+    kind: 'bot-win',
+    createdAt: new Date(T0 - ageMs).toISOString(),
+    href: `/xiangqi/game/${id}`,
+    handle: 'fox',
+    opponent: 'Pikafish Level 6',
+    gameSpecId: 'xiangqi',
+    ...extra,
+  };
+}
+
+describe('activity rows', () => {
+  it('writes each kind as a sentence with the bot in bold', () => {
+    const guestWin = document.createElement('a');
+    appendEventSentence(
+      guestWin,
+      activity('g', 0, { handle: null, opponent: 'Fairy-Stockfish Level 4' }),
+      'en',
+    );
+    expect(guestWin.textContent).toBe('A guest beat Fairy-Stockfish Level 4 at Xiangqi');
+    expect([...guestWin.querySelectorAll('strong')].map((el) => el.textContent)).toEqual([
+      'Fairy-Stockfish Level 4',
+    ]);
+
+    const streak = document.createElement('a');
+    appendEventSentence(streak, activity('st', 0, { handle: null, count: 3 }), 'en');
+    expect(streak.textContent).toBe('A guest beat Pikafish Level 6 at Xiangqi 3 times');
+
+    const study = document.createElement('a');
+    appendEventSentence(
+      study,
+      activity('s', 0, { kind: 'study', title: 'Opening traps', gameSpecId: undefined }),
+      'en',
+    );
+    expect(study.textContent).toBe('New study: Opening traps');
+  });
+
+  it('interleaves activity with human lines by time; activity links to the game, never reportable', () => {
+    const feed = createLandingChatFeed({
+      state: { canReport: true, isAdmin: false, viewerHandle: 'me' },
+      locale: 'en',
+      mode: 'live',
+      now: () => T0,
+    });
+    feed.ingest(
+      feedItems({
+        lines: [line('hello', 30_000)],
+        events: [activity('win1', 60_000), activity('win2', 1000)],
+      }),
+    );
+    const rows = [...feed.element.querySelectorAll<HTMLElement>('.landing-chat-line')];
+    expect(rows.map((row) => row.classList.contains('landing-chat-event'))).toEqual([
+      true,
+      false,
+      true,
+    ]);
+    const eventLink = rows[0]?.querySelector<HTMLAnchorElement>('.landing-chat-event-text');
+    expect(eventLink?.getAttribute('href')).toBe('/xiangqi/game/win1');
+    expect(rows[0]?.querySelector('.landing-chat-report-action')).toBeNull();
+    const capture = vi.fn();
+    setPostHogInstance({ capture } as unknown as Parameters<typeof setPostHogInstance>[0]);
+    eventLink?.addEventListener('click', (e) => e.preventDefault());
+    eventLink?.click();
+    expect(capture).toHaveBeenCalledWith('chat_activity_clicked', {
+      kind: 'bot-win',
+      variant: 'xiangqi',
+    });
+    expect(rows[1]?.querySelector('.landing-chat-report-action')).not.toBeNull();
+  });
+
+  it('keeps activity inside the same seven-day window as chat', () => {
+    expect(
+      visibleChatWindow(
+        feedItems({ lines: [], events: [activity('old', CHAT_WINDOW_MS + 1), activity('new', 1)] }),
+        T0,
+      ).map((item) => item.id),
+    ).toEqual(['new']);
+  });
+
+  it('drops an activity row whose variant has no catalog name (fail closed)', () => {
+    const items = feedItems({
+      lines: [],
+      events: [activity('known', 1), activity('unknown', 1, { gameSpecId: 'retired-variant' })],
+    });
+    expect(items.map((item) => item.id)).toEqual(['known']);
   });
 });

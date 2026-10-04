@@ -237,6 +237,9 @@ export async function tryHandle(
     const timeoutUntil = viewer
       ? await persistence.activeChatTimeout(target.room, viewer.id)
       : null;
+    // Activity rows (wins, new studies) fill the homepage room between human
+    // lines; game rooms and studies have their own context and get none.
+    const events = target.kind === 'lobby' ? await persistence.cachedLobbyActivity() : undefined;
     writeJson(response, 200, {
       lines: lines.map((line) => ({
         id: line.id,
@@ -249,6 +252,7 @@ export async function tryHandle(
       viewerHandle: viewer?.handle ?? null,
       ...(timeoutUntil ? { timeoutUntil: timeoutUntil.toISOString() } : {}),
       isAdmin: viewer?.accountRole === 'admin',
+      ...(events ? { events } : {}),
     });
     return true;
   }
