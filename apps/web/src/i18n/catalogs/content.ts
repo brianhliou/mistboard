@@ -170,7 +170,7 @@ export const EN_CONTENT = {
     'Chinese chess here means xiangqi and its traditional relatives, jieqi and banqi. Most people who play them read Chinese, and most of what is written about them is in Chinese. Mistboard is one board for both sides of that line. The site runs in English, Simplified and Traditional Chinese on the same games, puzzles and lobby, so a player in Shanghai and a player in Toronto sit down at the same table. For English speakers, pieces render as icons you can identify before you can read 車 or 砲, rules and articles are written in English rather than translated into it, and a beginner course explains each piece against the chess piece it resembles. Past the basics: engines, tactics puzzles mined from real games, an analysis board, a games database, and tournament broadcasts.',
   'about.darkChessHeading': 'What Mistboard builds',
   'about.darkChessBody':
-    'Beside the traditional games sit the ones Mistboard invents. Duck Xiangqi puts a duck on the board that belongs to neither side. Fog Xiangqi hides every point your pieces cannot reach. Fortress plays on a smaller board where captured pieces return as drops, with one new piece, the Treasure. Each starts from a board people already know and changes one thing, and each gets a clear rules page and server-enforced play. More are in design. Jungle Chess, Flip Jungle, and Fog Chess are live too.',
+    "Beside the traditional games sit the ones we design. Duck Xiangqi puts a duck on the board that belongs to neither side. Fog Xiangqi hides every point your pieces cannot reach. Crazyhouse Xiangqi puts every captured piece into the capturer's hand to drop back in, and advisors and elephants start the game in hand. Each starts from a board people already know and changes as little as it can, and each gets a clear rules page and server-enforced play. More are in design. Jungle Chess, Flip Jungle, and Fog Chess are live too.",
   'about.playStudyHeading': 'Play and study',
   'about.playStudyBody':
     "Start a game over a link, join the lobby, or play an engine where one is available. Afterward, review the game from either player's perspective or with the full board revealed when the rules allow it. Rules and articles cover both how to play and why the variants work.",
@@ -339,13 +339,13 @@ export const EN_CONTENT = {
     'Start a game, choose a friend as the opponent, and send them the link. They open it and take the other seat.',
   'faq.playOtherQuestion': 'What else can I play?',
   'faq.playOtherAnswer':
-    'Jieqi and banqi, Jungle Chess and Flip Jungle, Atomic Xiangqi, and the games we invent: Duck Xiangqi, Fog Xiangqi and Fortress.',
+    'Jieqi and banqi, Jungle Chess and Flip Jungle, Atomic Xiangqi, and the games we design: Crazyhouse Xiangqi, Duck Xiangqi and Fog Xiangqi.',
   'faq.playReviewQuestion': 'Can I review a game afterwards?',
   'faq.playReviewAnswer':
     'Yes. A finished xiangqi game opens in review, where the engine marks the moves that decided it.',
   'faq.darkChessQuestion': 'What games are on Mistboard?',
   'faq.darkChessPrefix':
-    'Chinese chess first: xiangqi and its traditional relatives, jieqi and banqi. Beside them sit the games we invent, such as Duck Xiangqi, Fog Xiangqi and Fortress, plus Jungle Chess and Fog Chess. Some are open-information; some hide pieces under fog or face down. The ',
+    'Chinese chess first: xiangqi and its traditional relatives, jieqi and banqi. Beside them sit the games we design, such as Crazyhouse Xiangqi, Duck Xiangqi and Fog Xiangqi, plus Jungle Chess and Fog Chess. Some are open-information; some hide pieces under fog or face down. The ',
   'faq.rulesReference': 'rules reference',
   'faq.darkChessSuffix': ' lists the current games.',
   'faq.accountQuestion': 'Do I need an account?',
@@ -493,7 +493,7 @@ export const EN_CONTENT = {
   'data.fieldOrigin':
     'Engine match downloads only: the event, the credit, and any squares whose piece was never revealed.',
   'data.formatMoves':
-    'A uci move is coordinates: h2e2 moves a piece, @c3 turns over a face-down piece, R@d4 drops a piece from hand (Fortress Xiangqi), and b3e3@e6 is a Duck Xiangqi turn with the duck square last.',
+    'A uci move is coordinates: h2e2 moves a piece, @c3 turns over a face-down piece, R@d4 drops a piece from hand (Crazyhouse Xiangqi), and b3e3@e6 is a Duck Xiangqi turn with the duck square last.',
   'data.formatPgn':
     'PGN, for the variants whose moves can be written so the text replays on its own: SAN for Fog Chess, WXF for Xiangqi and Atomic Xiangqi, ICCS coordinates for Fog Xiangqi and Jieqi, ICGA notation for Banqi, and coordinates for Flip Jungle. Games are separated by a blank line and carry Site (the game page), MistboardVariant, MistboardTermination and License tags. The other variants are JSONL only.',
   'data.licenseHeading': 'License',
