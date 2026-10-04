@@ -419,6 +419,37 @@ test('a scheduled article 404s before its moment and the blog index goes stale a
   assert.doesNotMatch(later.body, /baked index/, 'a post went live after the build: shell instead');
 });
 
+// The home pages keep their baked file after an announcement goes live: the
+// fallback shell is English, and /zh-hans served it (English title, lang="en")
+// until the next release. The feed still gives way to the shell.
+test('a live scheduled entry leaves the baked home pages in place but not the feed', async () => {
+  resetArticleScheduleCache();
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  for (const file of ['home.html', 'zh-hans-home.html', 'zh-hant-home.html', 'feed.html']) {
+    await writeFile(join(staticDir, file), `<html><body>baked ${file}</body></html>`, 'utf-8');
+  }
+  await writeFile(
+    join(staticDir, 'article-schedule.json'),
+    JSON.stringify({
+      builtAt: new Date(Date.now() - 3_600_000).toISOString(),
+      scheduled: [],
+      announcements: [{ slug: 'news', liveAt: new Date(Date.now() - 60_000).toISOString() }],
+    }),
+    'utf-8',
+  );
+  for (const file of ['home.html', 'zh-hans-home.html', 'zh-hant-home.html'] as const) {
+    const response = captureResponse();
+    await servePrerenderedPage({ response, staticDir, file });
+    assert.equal(response.status, 200);
+    assert.match(response.body, new RegExp(`baked ${file}`), file);
+  }
+  await assert.rejects(
+    servePrerenderedPage({ response: captureResponse(), staticDir, file: 'feed.html' }),
+    /predates a scheduled entry/,
+  );
+});
+
 test('serveArticlePage 301s legacy /articles/<rules-slug> to /rules/<clean>', async () => {
   const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
   await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');

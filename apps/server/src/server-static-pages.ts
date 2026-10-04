@@ -822,16 +822,18 @@ function gamePageParticipantName(game: persistence.GameRecord, color: Color): st
 // crawlers, no-JS clients, and first
 // paint get real content instead of the empty SPA shell. Throws when the file
 // is absent (e.g. an older build) so the caller can fall back to serving
-// index.html (the bare shell), and for the pages that list dated entries
-// (home.html, feed.html) once a scheduled post or announcement has gone live
-// since the build: the baked page predates it, and the shell renders a
-// current one client-side until the next deploy (article-schedule.ts).
-const SCHEDULE_DATED_PAGES: ReadonlySet<string> = new Set([
-  'home.html',
-  'zh-hans-home.html',
-  'zh-hant-home.html',
-  'feed.html',
-]);
+// index.html (the bare shell), and for the feed once a scheduled post or
+// announcement has gone live since the build: the baked list predates it, and
+// the shell renders a current one client-side until the next deploy
+// (article-schedule.ts).
+//
+// The three home pages are not on the list (2026-10-03). Their only dated part
+// is the News box, which the client redraws current anyway, and the shell they
+// used to fall back to is the English one: /zh-hans answered with an English
+// title, lang="en" and no content from 09:00 PT on any announcement day until
+// the next release, while it ranks on Bing for 象棋在线. One stale News line
+// in the baked page is the better trade.
+const SCHEDULE_DATED_PAGES: ReadonlySet<string> = new Set(['feed.html']);
 
 export async function servePrerenderedPage(params: {
   response: ServerResponse;
