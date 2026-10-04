@@ -3740,7 +3740,7 @@ const ZH_HANT: Record<string, string> = {
     '[揭棋](/rules/jieqi)，也就是棋子背面朝下開局的象棋，在前 1,000 盤裡占了 608 盤。其次是[暗棋](/rules/banqi)和[象棋](/rules/xiangqi)，分別是 96 盤和 82 盤，然後是迷霧國際象棋、鬥獸棋、迷霧象棋、鴨子象棋、翻翻棋和堡壘象棋。這些對局裡只有 7 盤是兩個人對下，其餘都是和電腦下的。',
   'Thank you': '感謝',
   'Thank you to everyone who played a game, reported a bug, or supports the site as a [patron](/patron). We are building the best place to play Chinese chess and original board games, free and [open source](https://github.com/brianhliou/mistboard).':
-    '感謝每一位來下過棋、回報過問題，或者成為[贊助會員](/patron)支持網站的朋友。我們要把這裡做成下中國象棋和原創棋類遊戲最好的地方，免費並且[開源](https://github.com/brianhliou/mistboard)。',
+    '感謝每一位來下過棋、回報過問題，或者成為[贊助會員](/patron)支持網站的朋友。我們要把這裡做成下象棋和原創棋類遊戲最好的地方，免費並且[開源](https://github.com/brianhliou/mistboard)。',
   'Ideas and questions go on the [forum](/forum), where other players can add to them. Anything private, like a bug with your account or billing trouble, goes through [Contact](/contact). What you tell us decides what comes next.':
     '想法和問題請發到[論壇](/forum)，其他棋友也能在下面補充。私人的事情，比如帳號出了問題或付款遇到麻煩，請透過[聯絡](/contact)頁面告訴我們。你們的意見決定我們接下來做什麼。',
   'Play a game': '開始對局',
@@ -4772,7 +4772,7 @@ const ZH_HANT: Record<string, string> = {
   'Is perpetual check allowed in xiangqi?': '象棋允許長將嗎？',
   'No. A player who repeats the position by giving check on every move loses. On Mistboard the side that checked on every move of a threefold repetition loses; if both sides checked throughout, or neither did, it is a draw.':
     '不允許。靠每步將軍來重複局面的一方判負。在 Mistboard 上，同一局面出現三次時，若其中一方在這一循環的每一步都在將軍，這一方判負；若雙方都一直在將軍，或都沒有將軍，則判和。',
-  'Xiangqi Rules: How to Play Chinese Chess': '象棋規則：中國象棋怎麼下',
+  'Xiangqi Rules: How to Play Chinese Chess': '象棋規則：象棋怎麼下',
   'Red and Black alternate moves, with Red first. Each side begins with 16 pieces: one general, two advisors, two elephants, two horses, two chariots, two cannons, and five soldiers. The goal is to checkmate the opposing general.':
     '紅黑雙方輪流走子，紅方先行。每一方開局有 16 枚棋子：一個將（帥）、兩個士（仕）、兩個象（相）、兩個馬、兩個車、兩個炮（砲）和五個兵（卒）。目標是將死對方的將帥。',
   'The board has 9 files and 10 ranks. In the traditional presentation, pieces sit on the intersections of the lines rather than inside squares.':
@@ -5412,10 +5412,10 @@ const ZH_HANT: Record<string, string> = {
   // Champion names were masked through the conversion, so 杨官璘 stays 杨官璘.
   // Only values that actually fork appear here; the rest inherit via the spread.
   'Every Xiangqi Champion: Chinese Chess Title Holders and Their Games':
-    '歷屆全國象棋冠軍：中國象棋冠軍名錄與對局講解',
+    '歷屆中國全國象棋冠軍：冠軍名錄與對局講解',
   'Every Xiangqi Champion': '歷屆全國象棋冠軍',
   'Every winner of the Chinese national xiangqi championship since 1956, and an annotated game for thirteen of them. Plus the nine hundred years before the title existed, and the decade that has been struck from the record.':
-    '1956年以來中國象棋全國個人賽的每一位冠軍，其中十三位各配一局講解棋譜。另有這個頭銜出現之前的九百年，以及被從紀錄裡抹去的十年。',
+    '1956年以來中國全國象棋個人賽的每一位冠軍，其中十三位各配一局講解棋譜。另有這個頭銜出現之前的九百年，以及被從紀錄裡抹去的十年。',
   'Ask who the greatest chess player was and you get an argument with a shape to it: Fischer or Kasparov or Carlsen, measured against a title that has passed hand to hand since 1886. Ask the same about xiangqi and most English answers stop at the question.':
     '問國際象棋史上誰最強，你會得到一場有章法的爭論：菲舍爾、卡斯帕羅夫還是卡爾森，衡量的標尺是一個自1886年起代代相傳的頭銜。同樣的問題放到象棋上，多數英文的回答止步於提問本身。',
   'There is an answer, and almost nobody disputes it. Hu Ronghua won fourteen national championships, took the first at fifteen and the last at fifty-five, and won or shared every one of the ten championships held between 1960 and 1979. What is harder to explain is why the title he dominated is only sixty-nine years old, in a game that was already being played in its modern form when the Song dynasty fell. What follows is every winner, and a game for thirteen of them in the order they first took the title. Our own engine annotates the boards; the analysis is Pikafish at a million nodes a position.':
@@ -5641,7 +5641,7 @@ const ZH_HANT: Record<string, string> = {
   'Xu Yinchuan vs Nguyễn Vũ Quân, 2007, from the last of his three titles. Our engine grades him 98.5, the cleanest game on this page.':
     '许银川對阮武君，2007年，出自他三個冠軍中的最後一個。我們的引擎給他打出98.5分，是本頁最乾淨的一局。',
   'From Taizhou in Zhejiang, national champion at nineteen in 2007, and world champion at twenty-one in 2009 with fifteen points from nine games. He is still the youngest man to have won this title, and taking it completed the set of national, Asian and world championships that Chinese xiangqi calls a grand slam.':
-    '浙江台州人，2007年十九歲奪得全國冠軍，2009年二十一歲奪得世界冠軍，九局拿下十五分。他至今仍是拿下這個頭銜最年輕的棋手，而這一冠也讓他集齊全國、亞洲與世界三項冠軍，中國象棋界稱之為大滿貫。',
+    '浙江台州人，2007年十九歲奪得全國冠軍，2009年二十一歲奪得世界冠軍，九局拿下十五分。他至今仍是拿下這個頭銜最年輕的棋手，而這一冠也讓他集齊全國、亞洲與世界三項冠軍，象棋界稱之為大滿貫。',
   'He was banned for life on 12 January 2025, in the ruling that sanctioned forty-one people at once.':
     '2025年1月12日，他在一次處罰四十一人的決定中被終身禁賽。',
   'Zhao Xinxin vs Nguyễn Thành Bảo, 2009, from the championship he won.':
@@ -5730,7 +5730,7 @@ const ZH_HANT: Record<string, string> = {
   'Jieqi has no opening book. It has an argument about the first move, running on Chinese forums among players with thousands of games, never written down in English. Why a face-down piece is a one-shot option you can waste, five openings ranked, and the pawn push weighed against the crossed cannon on all six reveals.':
     '揭棋沒有開局譜。它有的是一場關於第一步的爭論，在中文論壇上持續多年，參與者都是對局上千盤的棋手，卻從未有人用英文寫下來。為什麼一枚暗子是隻能用一次的權利、五種開局的排序，以及仙人指路與過河炮在六種翻出結果下的逐一比較。',
   'Jieqi has no opening book. No catalog of variations, no agreed piece-value table, nothing to memorize. One of the strongest players who writes about the game, a level-two Chinese xiangqi player claiming 90% over three thousand games, started the missing book and got one chapter in.':
-    '揭棋沒有開局譜。沒有變例目錄，沒有公認的子力價值表，沒有需要背的東西。寫這個遊戲寫得最好的棋手之一，一位自稱三千盤勝率九成的中國象棋二級棋士，動手寫了那本缺失的書，寫完第一章就停了。',
+    '揭棋沒有開局譜。沒有變例目錄，沒有公認的子力價值表，沒有需要背的東西。寫這個遊戲寫得最好的棋手之一，一位自稱三千盤勝率九成的象棋二級棋士，動手寫了那本缺失的書，寫完第一章就停了。',
   'What exists is an argument about the first move, running on Chinese forums for years, never written down in English. Here it is, with the sources at the bottom. Treat it as what strong players believe: none of it has been measured.':
     '真正存在的是一場關於第一步的爭論，在中文論壇上持續多年，從未有人用英文寫下來。以下就是這場爭論，出處列在文末。請把它當作高手們的看法：其中沒有一條經過實測。',
   'Every piece but the two generals starts face-down and shuffled. Neither player knows their own.':
@@ -6291,9 +6291,9 @@ const ZH_HANT: Record<string, string> = {
   'Atomic Xiangqi Is Live: What Decides Your First Game':
     '原子象棋上線了：第一盤棋的勝負由什麼決定',
   'Chinese chess where a capture is an explosion. The rules take a minute. What decides your first game is the three points beside your general, the cannon that no longer clears a rank, and a chariot on your advisor file counting as check.':
-    '每次吃子都會爆炸的中國象棋。規則一分鐘就能讀完。決定你第一盤棋勝負的，是將帥旁邊的三個點、不再掃清橫線的炮，以及站在你士線上的車算作將軍。',
+    '每次吃子都會爆炸的象棋。規則一分鐘就能讀完。決定你第一盤棋勝負的，是將帥旁邊的三個點、不再掃清橫線的炮，以及站在你士線上的車算作將軍。',
   'Atomic Xiangqi is live today, against a bot at eight strengths or a friend by invite link. It is Chinese chess where a capture is an explosion: the piece that captures, the piece it takes and everything on the four points next to it are removed, soldiers survive, and a general does not. Same set, same array, three lines of rules.':
-    '原子象棋今天上線，可以和八個強度檔位的電腦對弈，也可以用邀請連結約朋友。它是每次吃子都會爆炸的中國象棋：吃子的棋子、被吃的棋子以及相鄰四個點上的一切都被移除，兵卒倖存，將帥不能。同樣的棋子，同樣的開局擺法，三行規則。',
+    '原子象棋今天上線，可以和八個強度檔位的電腦對弈，也可以用邀請連結約朋友。它是每次吃子都會爆炸的象棋：吃子的棋子、被吃的棋子以及相鄰四個點上的一切都被移除，兵卒倖存，將帥不能。同樣的棋子，同樣的開局擺法，三行規則。',
   'What follows is not the rules. It is what decides a first game, taken from the twelve engine games behind this launch and the few hundred it took to find rules that hold.':
     '下面寫的不是規則，而是第一盤棋的勝負由什麼決定，取自這次釋出背後的十二盤引擎對局，以及為找到站得住的規則而下的幾百盤。',
   'Nothing next to a general is safe to take': '將帥旁邊的任何棋子都吃不得',
