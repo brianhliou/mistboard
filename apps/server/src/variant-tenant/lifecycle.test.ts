@@ -20,7 +20,7 @@ import {
   tenantAbortAnchorAt,
   tenantForfeitingSeat,
 } from './lifecycle.js';
-import { createTenantRuntimeRoomFromEvents } from './runtime.js';
+import { appendTenantRuntimeEvent, createTenantRuntimeRoomFromEvents } from './runtime.js';
 
 // Lifecycle behavior under the days-per-move clock policy, pinned through the
 // dark-chess tenant (the correspondence launch tenant). The live policy's
@@ -81,7 +81,7 @@ test('days-per-move pregame abort window is the allowance anchored to the seat f
   scheduleTenantLifecycleTimers(darkChessTenant, room, ctx);
 
   assert.equal(room.abortPhase, 'white-1');
-  // Anchored to the last seat-assigned (5_000), not ctx.now() — a restart
+  // Anchored to the seat fill that seated the room (5_000), not ctx.now() — a restart
   // re-derives the same deadline instead of extending the window.
   assert.equal(room.abortDeadline, 5_000 + 3 * DAY_MS);
   assert.equal(room.abortTimer, null);
@@ -108,6 +108,51 @@ test('days-per-move second-mover abort window anchors to the first move', () => 
   assert.equal(room.abortTimer, null);
   assert.equal(tenantAbortAnchorAt(darkChessTenant, room, 'black-1'), 10_000);
   clearTenantRuntimeTimers(room);
+});
+
+test('a reconnect before the first move does not extend the correspondence abort window', () => {
+  const roomId = 'dchx_corr_reconnect';
+  const room = hydrate([
+    ...roomEvents(roomId, CORRESPONDENCE_TC),
+    { type: 'seat-assigned', at: 40_000, roomId, clientId: 'white-client', seat: 'white' },
+  ]);
+  try {
+    scheduleTenantLifecycleTimers(darkChessTenant, room, lifecycleContext());
+    assert.equal(room.abortPhase, 'white-1');
+    assert.equal(room.abortDeadline, 5_000 + 3 * DAY_MS);
+    assert.equal(tenantAbortAnchorAt(darkChessTenant, room, 'white-1'), 5_000);
+  } finally {
+    clearTenantRuntimeTimers(room);
+  }
+});
+
+test('a reconnect before the first move does not extend the live abort window', () => {
+  const roomId = 'dchx_live_reconnect';
+  const room = hydrate(roomEvents(roomId, LIVE_TC));
+  let now = 1_000_000;
+  const ctx = { ...lifecycleContext(), now: () => now };
+  try {
+    scheduleTenantLifecycleTimers(darkChessTenant, room, ctx);
+    assert.equal(room.abortPhase, 'white-1');
+    assert.equal(room.abortDeadline, 1_000_000 + ABORT_WINDOW_MS);
+    // White reconnects 20 s in: ws.ts appends seat-assigned, then reschedules.
+    now = 1_020_000;
+    assert.notEqual(
+      appendTenantRuntimeEvent(darkChessTenant, room, {
+        type: 'seat-assigned',
+        at: now,
+        roomId,
+        clientId: 'white-client',
+        seat: 'white',
+      }),
+      -1,
+    );
+    scheduleTenantLifecycleTimers(darkChessTenant, room, ctx);
+    assert.equal(room.abortPhase, 'white-1');
+    assert.equal(room.abortDeadline, 1_000_000 + ABORT_WINDOW_MS);
+  } finally {
+    clearTenantRuntimeTimers(room);
+  }
 });
 
 test('days-per-move arms no clock timer and never forfeits a disconnected seat', () => {

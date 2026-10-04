@@ -191,6 +191,72 @@ test('the event writer maintains the room_deadlines row across the game', async 
   assert.deepEqual(persistence.deadlineOps.at(-1), { op: 'delete', roomId });
 });
 
+test('a reconnect before the first move does not move the first-move deadline', () => {
+  const roomId = 'dchx_reconnect_derive';
+  // Both seats filled at 5_000; then each player reconnects (a new device
+  // reclaims the seat, so the clientId differs too). Neither re-assignment is a
+  // new occupant, so white's window still runs from the seat fill.
+  const reconnected = hydrate([
+    ...roomEvents(roomId),
+    { type: 'seat-assigned', at: 50_000, roomId, clientId: 'white-phone', seat: 'white' },
+    { type: 'seat-assigned', at: 60_000, roomId, clientId: 'black-client', seat: 'black' },
+  ]);
+  assert.deepEqual(tenantDurableDeadlineFor(darkChessTenant, reconnected), {
+    seat: 'white',
+    dueAt: 5_000 + ALLOWANCE_MS,
+  });
+});
+
+test('a seat vacated and refilled before the first move restarts the window at the refill', () => {
+  // Legacy live-stack logs (acceptsSeatVacated) can empty a seat pregame. The
+  // room drops back to waiting, so the game starts again when it refills.
+  const roomId = 'dchx_vacate_refill';
+  const refilled = hydrate([
+    ...roomEvents(roomId),
+    { type: 'seat-vacated', at: 7_000, roomId, clientId: 'black-client', seat: 'black' },
+    { type: 'seat-assigned', at: 9_000, roomId, clientId: 'new-black', seat: 'black' },
+    { type: 'seat-assigned', at: 70_000, roomId, clientId: 'new-black', seat: 'black' },
+  ]);
+  assert.deepEqual(tenantDurableDeadlineFor(darkChessTenant, refilled), {
+    seat: 'white',
+    dueAt: 9_000 + ALLOWANCE_MS,
+  });
+});
+
+test('a reconnect before the first move re-writes the same deadline row (warned_at survives)', async () => {
+  const roomId = 'dchx_reconnect_row';
+  const room = hydrate(roomEvents(roomId));
+  room.seatTokens.white = seatTokenState('white', 'white-user');
+  room.seatTokens.black = seatTokenState('black', 'black-user');
+  const persistence = recordingPersistence();
+
+  // White reconnects two days into the window. The upsert keeps warned_at only
+  // when due_at is unchanged (persistence-room-deadlines.ts), so an extended
+  // due_at would both stall the game and re-arm the warning email.
+  await appendTenantSeatAssigned(
+    darkChessTenant,
+    room,
+    {
+      event: {
+        type: 'seat-assigned',
+        at: 5_000 + 2 * DAY_MS,
+        roomId,
+        clientId: 'white-client',
+        seat: 'white',
+      },
+      tokenState: seatTokenState('white', 'white-user'),
+    },
+    { persistence },
+  );
+  assert.deepEqual(persistence.deadlineOps.at(-1), {
+    op: 'upsert',
+    roomId,
+    seat: 'white',
+    seatUserId: 'white-user',
+    dueAt: 5_000 + ALLOWANCE_MS,
+  });
+});
+
 test('live rooms never touch the room_deadlines table', async () => {
   const roomId = 'dchx_live_rows';
   const room = hydrate(roomEvents(roomId, { initialMs: 180_000, incrementMs: 2_000 }));

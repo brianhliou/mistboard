@@ -496,8 +496,14 @@ export async function sweepTenantRoomDeadline<
 }
 
 // Event-log anchor for a correspondence pregame abort window. The first
-// mover's window starts when the room became fully seated (the latest
-// seat-assigned, falling back to room-created); the second mover's window
+// mover's window starts when the room became fully seated: the seat-assigned
+// that filled the last empty seat, falling back to room-created. A
+// seat-assigned on a seat that is already occupied is a reconnect (a reclaim by
+// token or account, possibly from a new device and clientId) and must not move
+// it, or a player could stall the game forever by reconnecting. Tenant rooms
+// never hand an occupied seat to someone else; only a legacy seat-vacated
+// (acceptsSeatVacated) empties one, and then the room is waiting again, so the
+// refill starts the game, and the window, afresh. The second mover's window
 // starts at the first move. Deterministic over the event log, so hydration
 // recomputes the same deadline a restart interrupted.
 export function tenantAbortAnchorAt<
@@ -512,9 +518,19 @@ export function tenantAbortAnchorAt<
 ): number {
   const firstMoverPhase = phase === `${firstSeat(tenant)}-1`;
   let anchor = 0;
+  // Mirrors the projection's seat bookkeeping (applyTenantEvent).
+  const seats: Partial<Record<C, string>> = {};
   for (const event of room.events) {
     if (event.type === 'room-created') anchor = Math.max(anchor, event.at);
-    if (firstMoverPhase && event.type === 'seat-assigned') anchor = Math.max(anchor, event.at);
+    if (event.type === 'seat-vacated' && seats[event.seat] === event.clientId) {
+      delete seats[event.seat];
+    }
+    if (event.type === 'seat-assigned') {
+      const wasEmpty = seats[event.seat] === undefined;
+      seats[event.seat] = event.clientId;
+      const fullySeated = tenant.colors.every((color) => seats[color] !== undefined);
+      if (firstMoverPhase && wasEmpty && fullySeated) anchor = Math.max(anchor, event.at);
+    }
     if (!firstMoverPhase && event.type === 'move-played') anchor = Math.max(anchor, event.at);
   }
   return anchor;
