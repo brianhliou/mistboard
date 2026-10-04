@@ -109,6 +109,7 @@ Conventions:
 
 ### Fixed
 
+- Games that can no longer be opened (Crazyhouse Xiangqi games from before the rules change, mahjong tables) stay in your history with an Old rules or Unsupported tag instead of linking to a missing page ([67ffa88b](https://github.com/brianhliou/mistboard/commit/67ffa88b))
 - The homepage live board no longer jumps to an old game when a player stops moving with time still on their clock ([ca833e03](https://github.com/brianhliou/mistboard/commit/ca833e03))
 - The face-down pieces under Flip Jungle and Banqi boards line up for both sides ([ca833e03](https://github.com/brianhliou/mistboard/commit/ca833e03))
 - The Traditional Chinese versions of the Pikafish reveal-bug and KataGo posts show in Traditional characters again ([13bc87a1](https://github.com/brianhliou/mistboard/commit/13bc87a1))
