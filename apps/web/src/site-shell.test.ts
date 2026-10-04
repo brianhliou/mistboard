@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { setResolvedAdmin } from './signed-in-state.js';
 import {
   buildHomeFooter,
   buildNav,
   fitNavBrand,
   navTabletMediaQuery,
   placeNavAccount,
+  syncAdminNavMenus,
 } from './site-shell.js';
 
 describe('site shell nav', () => {
@@ -39,24 +41,9 @@ describe('site shell nav', () => {
       'true',
     );
 
-    // The consolidated Admin menu stays hidden until account-nav resolves an
-    // admin (no admin hint in a fresh test DOM).
-    const adminMenu = nav.querySelector<HTMLElement>('.site-nav-menu[data-admin-only]');
-    expect(adminMenu?.querySelector('.site-nav-menu-toggle')?.textContent).toBe('Admin');
-    expect(
-      [...(adminMenu?.querySelectorAll<HTMLAnchorElement>('.site-nav-menu-panel a') ?? [])].map(
-        (link) => link.textContent,
-      ),
-    ).toEqual([
-      'Database',
-      'Engines',
-      'Accounts',
-      'Titles',
-      'Readouts',
-      'Metrics',
-      'Broadcast ops',
-    ]);
-    expect(adminMenu?.hidden).toBe(true);
+    // No admin hint in a fresh test DOM, so the admin menu is not in the DOM at
+    // all: a hidden menu still put its labels in the prerendered HTML.
+    expect(nav.querySelector('[data-admin-only]')).toBeNull();
 
     const puzzleLink = nav.querySelector<HTMLAnchorElement>('a[href="/puzzles"]');
     expect(puzzleLink?.textContent).toBe('Puzzles');
@@ -155,6 +142,54 @@ describe('site shell nav', () => {
     expect(
       learnMenu?.querySelector<HTMLAnchorElement>('.site-nav-menu-toggle')?.getAttribute('href'),
     ).toBe('/rules');
+  });
+
+  it('renders the admin menu only for a likely admin, and syncs it in and out', () => {
+    setResolvedAdmin(true);
+    try {
+      const nav = buildNav();
+      document.body.append(nav);
+      const adminMenu = () => nav.querySelector<HTMLElement>('.site-nav-menu[data-admin-only]');
+      expect(adminMenu()?.querySelector('.site-nav-menu-toggle')?.textContent).toBe('Admin');
+      expect(
+        [...(adminMenu()?.querySelectorAll<HTMLAnchorElement>('.site-nav-menu-panel a') ?? [])].map(
+          (link) => link.textContent,
+        ),
+      ).toEqual([
+        'Database',
+        'Engines',
+        'Accounts',
+        'Titles',
+        'Readouts',
+        'Metrics',
+        'Broadcast ops',
+      ]);
+      // Last on the bar, right after Donate.
+      expect(adminMenu()?.previousElementSibling?.classList.contains('site-nav-link-donate')).toBe(
+        true,
+      );
+
+      syncAdminNavMenus(false);
+      expect(adminMenu()).toBeNull();
+      syncAdminNavMenus(true);
+      syncAdminNavMenus(true);
+      expect(nav.querySelectorAll('[data-admin-only]')).toHaveLength(1);
+      expect(adminMenu()?.previousElementSibling?.classList.contains('site-nav-link-donate')).toBe(
+        true,
+      );
+    } finally {
+      setResolvedAdmin(undefined);
+    }
+  });
+
+  it('keeps admin labels out of a signed-out zh nav entirely', () => {
+    window.history.replaceState(null, '', '/zh-hans');
+    const nav = buildNav('zh-Hans');
+    document.body.append(nav);
+    const html = nav.outerHTML;
+    for (const label of ['管理', '数据库', '运营简报', '转播运维', '/database', '/readouts']) {
+      expect(html, label).not.toContain(label);
+    }
   });
 
   it('localizes launch nav labels and translated content links', () => {

@@ -2626,7 +2626,7 @@ const ZH_HANS: Record<string, string> = {
   // read that is not coming. Locked the same day its English copy published, so
   // any later English edit orphans a key here and fails the coverage test.
   'Play jieqi against the engine or a friend, free and without an account, then review the game with analysis that separates your choices from your luck.':
-    '免费和引擎或朋友下揭棋，不用注册，下完还能复盘，分析会把你的选择和你的运气分开算。',
+    '免费和揭棋AI（皮卡鱼、AB-JChess）或朋友下揭棋，不用注册，下完还能复盘，分析会把你的选择和你的运气分开算。',
   'Jieqi is [xiangqi](/rules/xiangqi) with every piece face-down. A piece moves as whatever normally starts on its square, then flips and keeps that identity for the rest of the game. You begin without knowing what anything is, including your own pieces. The [rules page](/rules/jieqi) has the details.':
     '揭棋就是把每个子都翻扣过去的[象棋](/rules/xiangqi)。暗子按它所在那个点原本摆的子走，走完就翻开，之后一直是翻出来的那个子。开局时你不知道任何一个子是什么，连自己的也不知道。[规则页](/rules/jieqi)有详细说明。',
   'It is a young game, out of Hong Kong and Guangdong, and it has spread over the last couple of decades mostly among Chinese and Vietnamese players. For what to actually open with, see [what strong players believe about the opening](/blog/jieqi-openings).':
@@ -2640,7 +2640,7 @@ const ZH_HANS: Record<string, string> = {
   'That is [a real game on this site](/jieqi/game/jq_96f40ebb-1347-4c31-babe-d777c4a88ddf), not a demo, and every screenshot below comes from it.':
     '那是[本站的一盘真实对局](/jieqi/game/jq_96f40ebb-1347-4c31-babe-d777c4a88ddf)，不是演示，下面每一张截图都来自这盘棋。',
   'Play the engine at 1+1, 3+2 or 5+5, or send a friend a link.':
-    '用 1+1、3+2 或 5+5 和引擎下，或者把链接发给朋友。',
+    '在[象棋在线对弈](/zh-hans)首页用 1+1、3+2 或 5+5 和引擎下，或者把链接发给朋友。',
   'Review your games': '复盘你的对局',
   'Ask for analysis on a finished game and the review separates what you chose from what you drew, which is the part a chess site has no reason to do. You also get the usual: a graph of the whole game, an accuracy score for each player, and every inaccuracy, mistake and blunder marked with the move that was better. It runs on our servers and takes a few minutes.':
     '对下完的棋点一次分析，复盘会把你选的和你揭到的分开来讲，这一块是国际象棋网站没有理由去做的。常规的东西也都有：整盘棋的优势曲线、双方各自的准确率，以及每一个不准确、失误和严重失误，都标出更好的着法。分析在我们的服务器上跑，要几分钟。',
@@ -3202,7 +3202,7 @@ const ZH_HANS: Record<string, string> = {
   // pikafish (2026-09-21, machine-drafted, not native-reviewed). Mainland wording on purpose: 在线, 网页版, 人机, 账号, 服务器 are the words the Bing corpus uses.
   'Pikafish on Mistboard': '皮卡鱼在线：在 Mistboard 上与皮卡鱼对弈',
   'Play Pikafish Online: Free Xiangqi Engine, No Download':
-    '皮卡鱼在线对弈：免费象棋引擎，网页版，无需下载',
+    '皮卡鱼象棋在线对弈：象棋和揭棋，免费网页版',
   'Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':
     '在浏览器里直接与开源象棋引擎皮卡鱼对弈，它由 Stockfish 改造而来。免费、不用注册、不用下载。可选难度等级，可下揭棋，还能用它复盘你的对局。',
   'Xiangqi players looking for somewhere to play or analyze with Pikafish.':
@@ -3210,7 +3210,7 @@ const ZH_HANS: Record<string, string> = {
   '[Pikafish](https://github.com/official-pikafish/Pikafish) is the strongest open-source xiangqi engine, built from Stockfish for the Chinese board. Most people run it from a download and a separate interface. Here it runs in the page.':
     '[皮卡鱼（Pikafish）](https://github.com/official-pikafish/Pikafish) 是目前最强的开源象棋引擎，由 Stockfish 改造而来。多数人要先下载引擎，再配一个界面才能用。在这里，它直接在网页里运行。',
   'Play it as it comes or start lower on an eight-level ladder, play it at jieqi, or hand it a finished game to review. Free, no sign-up, nothing to install, and it works on a phone.':
-    '可以直接挑战皮卡鱼本尊，也可以从八级人机阶梯的低级别开始；可以和它下揭棋；也可以把下完的棋交给它复盘。免费，不用注册，不用安装，手机浏览器也能玩。',
+    '可以直接挑战皮卡鱼本尊，也可以从八级人机阶梯的低级别开始；可以和它下揭棋；也可以把下完的棋交给它复盘。[中国象棋在线对弈](/zh-hans)免费，不用注册，不用安装，手机浏览器也能玩。',
   'Play Pikafish': '与皮卡鱼对弈',
   'Play Pikafish at jieqi': '与皮卡鱼下揭棋',
   'Play against Pikafish': '人机对弈：挑战皮卡鱼',
@@ -5899,7 +5899,7 @@ const ZH_HANT: Record<string, string> = {
   // read that is not coming. Locked the same day its English copy published, so
   // any later English edit orphans a key here and fails the coverage test.
   'Play jieqi against the engine or a friend, free and without an account, then review the game with analysis that separates your choices from your luck.':
-    '免費和引擎或朋友下揭棋，不用註冊，下完還能複盤，分析會把你的選擇和你的運氣分開算。',
+    '免費和揭棋AI（皮卡魚、AB-JChess）或朋友下揭棋，不用註冊，下完還能複盤，分析會把你的選擇和你的運氣分開算。',
   'Jieqi is [xiangqi](/rules/xiangqi) with every piece face-down. A piece moves as whatever normally starts on its square, then flips and keeps that identity for the rest of the game. You begin without knowing what anything is, including your own pieces. The [rules page](/rules/jieqi) has the details.':
     '揭棋就是把每個子都翻扣過去的[象棋](/rules/xiangqi)。暗子按它所在那個點原本擺的子走，走完就翻開，之後一直是翻出來的那個子。開局時你不知道任何一個子是什麼，連自己的也不知道。[規則頁](/rules/jieqi)有詳細說明。',
   'It is a young game, out of Hong Kong and Guangdong, and it has spread over the last couple of decades mostly among Chinese and Vietnamese players. For what to actually open with, see [what strong players believe about the opening](/blog/jieqi-openings).':
@@ -5913,7 +5913,7 @@ const ZH_HANT: Record<string, string> = {
   'That is [a real game on this site](/jieqi/game/jq_96f40ebb-1347-4c31-babe-d777c4a88ddf), not a demo, and every screenshot below comes from it.':
     '那是[本站的一盤真實對局](/jieqi/game/jq_96f40ebb-1347-4c31-babe-d777c4a88ddf)，不是演示，下面每一張截圖都來自這盤棋。',
   'Play the engine at 1+1, 3+2 or 5+5, or send a friend a link.':
-    '用 1+1、3+2 或 5+5 和引擎下，或者把連結發給朋友。',
+    '在[象棋線上對弈](/zh-hant)首頁用 1+1、3+2 或 5+5 和引擎下，或者把連結發給朋友。',
   'Review your games': '複盤你的對局',
   'Ask for analysis on a finished game and the review separates what you chose from what you drew, which is the part a chess site has no reason to do. You also get the usual: a graph of the whole game, an accuracy score for each player, and every inaccuracy, mistake and blunder marked with the move that was better. It runs on our servers and takes a few minutes.':
     '對下完的棋點一次分析，複盤會把你選的和你揭到的分開來講，這一塊是西洋棋網站沒有理由去做的。常規的東西也都有：整盤棋的優勢曲線、雙方各自的準確率，以及每一個不準確、失誤和嚴重失誤，都標出更好的著法。分析在我們的伺服器上跑，要幾分鐘。',
@@ -6541,7 +6541,7 @@ const ZH_HANT: Record<string, string> = {
   // pikafish: Taiwan forms (線上, 網頁, 帳號, 伺服器, 等級, 選單, 資料, 西洋棋, 建置).
   'Pikafish on Mistboard': '皮卡魚線上：在 Mistboard 上與皮卡魚對弈',
   'Play Pikafish Online: Free Xiangqi Engine, No Download':
-    '皮卡魚線上對弈：免費象棋引擎，網頁版，免下載',
+    '皮卡魚象棋線上對弈：象棋和揭棋，免費網頁版',
   'Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':
     '在瀏覽器裡直接與開源象棋引擎皮卡魚對弈，它由 Stockfish 改造而來。免費、不用註冊、不用下載。可選難度等級，可下揭棋，還能用它復盤你的對局。',
   'Xiangqi players looking for somewhere to play or analyze with Pikafish.':
@@ -6549,7 +6549,7 @@ const ZH_HANT: Record<string, string> = {
   '[Pikafish](https://github.com/official-pikafish/Pikafish) is the strongest open-source xiangqi engine, built from Stockfish for the Chinese board. Most people run it from a download and a separate interface. Here it runs in the page.':
     '[皮卡魚（Pikafish）](https://github.com/official-pikafish/Pikafish) 是目前最強的開源象棋引擎，由 Stockfish 改造而來。多數人要先下載引擎，再搭配一個介面才能用。在這裡，它直接在網頁裡運行。',
   'Play it as it comes or start lower on an eight-level ladder, play it at jieqi, or hand it a finished game to review. Free, no sign-up, nothing to install, and it works on a phone.':
-    '可以直接挑戰皮卡魚本尊，也可以從八級人機階梯的低等級開始；可以和它下揭棋；也可以把下完的棋交給它復盤。免費，不用註冊，不用安裝，手機瀏覽器也能玩。',
+    '可以直接挑戰皮卡魚本尊，也可以從八級人機階梯的低等級開始；可以和它下揭棋；也可以把下完的棋交給它復盤。[象棋線上對弈](/zh-hant)免費，不用註冊，不用安裝，手機瀏覽器也能玩。',
   'Play Pikafish': '與皮卡魚對弈',
   'Play Pikafish at jieqi': '與皮卡魚下揭棋',
   'Play against Pikafish': '人機對弈：挑戰皮卡魚',
