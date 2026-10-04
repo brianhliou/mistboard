@@ -61,7 +61,7 @@ describe('article translation coverage', () => {
 
   // The index card is the same gap one step earlier: a zh reader met "GAMES
   // PLAYED" and "SINCE 1956" before opening the article. Read as each script
-  // renders it, so a card that sets its own zh lead (cardMark) is checked as such.
+  // renders it, so a card that translates its own lines (textCard) is checked as such.
   it('every locked article translates its index card in all zh scripts', () => {
     const missing: string[] = [];
     for (const slug of TRANSLATED_ARTICLE_SLUGS) {

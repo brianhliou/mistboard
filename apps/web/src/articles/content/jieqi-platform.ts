@@ -1,5 +1,5 @@
 import type { Locale } from '../../i18n/locale.js';
-import { cardMark } from '../text-card.js';
+import { textCard } from '../text-card.js';
 import { JIEQI_PLATFORM_GAME } from '../../jieqi-platform-game.js';
 import type { Article, ArticleBlock } from '../types.js';
 
@@ -26,48 +26,38 @@ import type { Article, ArticleBlock } from '../types.js';
 // a change to JIEQI_ANALYSIS_DEPTH invalidates them (the cache key carries depth)
 // and they have to be re-shot. That has already bitten once.
 
-// Text card in the family TITLED_PLAYERS_THUMBNAIL started and CHAMPIONS carried
-// on: CJK eyebrow, one English mark, a quieter line under it. Same geometry,
-// palette and type colours on purpose.
-//
-// The mark is English for the reason recorded on the champions card: the reader
-// is a chess player who does not read hanzi, and at 158px in the index row a
-// second line falls to about 8px, so the one legible thing must be a word they
-// can decode. 揭棋 rides above as an eyebrow, saying "Chinese" without needing
-// to be read.
-//
-// The disc row is the departure, and it earns its place: it is the only element
-// that says what jieqi IS. Four cards of pure type in one index read as one
-// card, and a face-down disc is this game's whole premise. Discs use the board
-// renderer's own shrouded fills (#a95f4a red, #2f7d62 black) rather than
-// approximations, so the card and the boards inside the article agree.
+// Text card (text-card.ts) with one departure: the disc row, the only element
+// that says what jieqi IS. Four cards of pure type in one index read as one card,
+// and a face-down disc is this game's whole premise. Discs use the board
+// renderer's own shrouded fills (#a95f4a red, #2f7d62 black) so the card and the
+// boards inside the article agree.
 //
 // Not a board: the openings article next to it in the index already shows the
 // jieqi start position, and two boards of face-down discs side by side are one
 // card twice.
+const JIEQI_DISC_ROW = [0, 1, 2, 3, 4, 5, 6]
+  .map((i) => {
+    const red = i % 2 === 0;
+    return [
+      `<circle cx="${64 + i * 32}" cy="172" r="12" `,
+      `fill="${red ? '#a95f4a' : '#2f7d62'}" `,
+      `stroke="${red ? '#6f342c' : '#174536'}" stroke-width="2"/>`,
+    ].join('');
+  })
+  .join('');
+
 const JIEQI_PLATFORM_THUMBNAIL = (locale?: Locale): string =>
-  [
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" ',
-    'preserveAspectRatio="xMidYMid slice" width="320" height="200" role="img" ',
-    'aria-label="A card reading Jieqi, every piece face down, over a row of face-down pieces">',
-    '<rect x="0" y="0" width="320" height="200" fill="var(--xq-diagram-bg, #d9bd82)"/>',
-    cardMark(
-      { eyebrowY: 52, leadY: 108, latin: 'JIEQI', hanzi: '\u63ed\u68cb', zhHans: '揭棋', zhHant: '揭棋' },
-      locale,
-    ),
-    '<text x="160" y="138" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" ',
-    'font-size="15" font-weight="600" letter-spacing="1.4" fill="#b9832f" opacity="0.62">',
-    'EVERY PIECE FACE DOWN</text>',
-    ...[0, 1, 2, 3, 4, 5, 6].map((i) => {
-      const red = i % 2 === 0;
-      return [
-        `<circle cx="${64 + i * 32}" cy="172" r="12" `,
-        `fill="${red ? '#a95f4a' : '#2f7d62'}" `,
-        `stroke="${red ? '#6f342c' : '#174536'}" stroke-width="2"/>`,
-      ].join('');
-    }),
-    '</svg>',
-  ].join('');
+  textCard(
+    {
+      palette: 'xiangqi',
+      eyebrow: 'XIANGQI',
+      lead: 'JIEQI',
+      tagline: 'EVERY PIECE FACE DOWN',
+      art: JIEQI_DISC_ROW,
+      ariaLabel: 'A card reading Jieqi, every piece face down, over a row of face-down pieces',
+    },
+    locale,
+  );
 
 export const jieqiPlatformArticle: Article = {
   slug: 'jieqi-platform',

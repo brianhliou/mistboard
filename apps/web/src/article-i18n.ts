@@ -3599,12 +3599,20 @@ const ZH_HANS: Record<string, string> = {
   Wolf: '狼',
   Dog: '狗',
   Cat: '猫',
-  // -- Index card words (renderArticleThumbnail swaps them on zh pages), 2026-10-01. --
-  // The big hanzi lead on the champions, world-title and jieqi cards is set by cardMark,
-  // not here; the English eyebrow it leaves is translate="no".
+  // -- Index card words, 2026-10-01. textCard (articles/text-card.ts) looks its
+  // lines up here; renderArticleThumbnail swaps any other card's words. --
   'GAMES PLAYED': '盘棋已下完',
   'EVERY PIECE FACE DOWN': '每枚棋子都背面朝下',
-  'EVERY XIANGQI TITLE': '每一届全国个人赛',
+  XIANGQI: '象棋',
+  JIEQI: '揭棋',
+  'JUNGLE CHESS': '斗兽棋',
+  CHAMPIONS: '冠军',
+  'WORLD TITLE': '世界冠军',
+  PIKAFISH: '皮卡鱼',
+  'PLAY IT IN YOUR BROWSER': '在浏览器里直接对弈',
+  'THE NEW TOP BOT': '新的最强电脑',
+  'A STRONGER BOT': '更强的电脑',
+  'EVERY NATIONAL TITLE': '每一届全国个人赛',
   'SINCE 1956': '1956 年至今',
   'AND WHY IT IS NOT THE HARDER ONE': '以及它为何不是更难的那个',
   'SINCE 1990': '1990 年至今',
@@ -6938,12 +6946,20 @@ const ZH_HANT: Record<string, string> = {
   Wolf: '狼',
   Dog: '狗',
   Cat: '貓',
-  // -- Index card words (renderArticleThumbnail swaps them on zh pages), 2026-10-01. --
-  // The big hanzi lead on the champions, world-title and jieqi cards is set by cardMark,
-  // not here; the English eyebrow it leaves is translate="no".
+  // -- Index card words, 2026-10-01. textCard (articles/text-card.ts) looks its
+  // lines up here; renderArticleThumbnail swaps any other card's words. --
   'GAMES PLAYED': '盤棋已下完',
   'EVERY PIECE FACE DOWN': '每枚棋子都背面朝下',
-  'EVERY XIANGQI TITLE': '每一屆全國個人賽',
+  XIANGQI: '象棋',
+  JIEQI: '揭棋',
+  'JUNGLE CHESS': '鬥獸棋',
+  CHAMPIONS: '冠軍',
+  'WORLD TITLE': '世界冠軍',
+  PIKAFISH: '皮卡魚',
+  'PLAY IT IN YOUR BROWSER': '在瀏覽器裡直接對弈',
+  'THE NEW TOP BOT': '新的最強電腦',
+  'A STRONGER BOT': '更強的電腦',
+  'EVERY NATIONAL TITLE': '每一屆全國個人賽',
   'SINCE 1956': '1956 年至今',
   'AND WHY IT IS NOT THE HARDER ONE': '以及它為何不是更難的那個',
   'SINCE 1990': '1990 年至今',
