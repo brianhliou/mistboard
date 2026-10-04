@@ -287,10 +287,10 @@ export function buildPlayPanel(
   const card = document.createElement('div');
   card.className = 'landing-lobby-card pp-card';
   const computerView = document.createElement('div');
-  computerView.className = 'pp-view';
+  computerView.className = 'pp-view pp-view-computer';
   computerView.setAttribute('role', 'tabpanel');
   const personView = document.createElement('div');
-  personView.className = 'pp-view';
+  personView.className = 'pp-view pp-view-person';
   personView.setAttribute('role', 'tabpanel');
   card.append(computerView, personView);
   board.append(tabBar, card);
@@ -301,7 +301,11 @@ export function buildPlayPanel(
     personTab.classList.toggle('is-active', next === 'person');
     computerTab.setAttribute('aria-selected', String(next === 'computer'));
     personTab.setAttribute('aria-selected', String(next === 'person'));
-    computerView.hidden = next !== 'computer';
+    // The computer view is covered, not hidden: it stays in flow so the person
+    // tab gets its exact height (the site's [hidden] rule is display:none
+    // !important). inert keeps the covered rows out of focus and the a11y tree.
+    computerView.classList.toggle('is-covered', next !== 'computer');
+    computerView.inert = next !== 'computer';
     personView.hidden = next !== 'person';
     if (user) {
       writeStored((s) => {

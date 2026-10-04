@@ -1,15 +1,20 @@
 /* Homepage play panel (#491). Sits in the same grid slot and card as the old
-   lobby board (.landing-lobby-board / .landing-lobby-card in landing.css), so
-   band 1 keeps its height; rows that overflow scroll inside the card. */
+   lobby board (.landing-lobby-board / .landing-lobby-card in landing.css).
+
+   The computer list never scrolls (Brian, 2026-10-03): the panel keeps
+   landing.css's min-height and grows to fit every bot row, so a window under
+   ~925px tall no longer hides Flip Jungle below a scrollbar. The person tab
+   takes exactly that height and scrolls inside it: the computer view stays in
+   flow (invisible) while the person view is laid over it, so switching tabs
+   never moves the page and a long seek list never grows band 1. */
 
 .pp-board {
-  /* A fixed height, not landing.css's min-height: the person tab's search bar
-     and the computer tab's top rows must scroll the list, not grow band 1. */
-  height: clamp(460px, 60vh, 680px);
   --pp-gold: #d6a03c;
   --pp-gold-text: #b07a17;
   --pp-gold-soft: color-mix(in srgb, var(--pp-gold) 14%, transparent);
   --pp-pad: 14px;
+  /* The variant marker fills most of a row's height (Brian, 2026-10-03). */
+  --pp-icon: 40px;
 }
 
 :root[data-effective-theme="dark"] .pp-board {
@@ -64,8 +69,8 @@
 }
 
 .pp-card {
-  flex: 1 1 0;
-  min-height: 0;
+  position: relative;
+  flex: 1 0 auto;
 }
 
 .pp-view {
@@ -79,6 +84,16 @@
   display: none;
 }
 
+/* Covered, the computer view still sets the card's height for the person tab. */
+.pp-view-computer.is-covered {
+  visibility: hidden;
+}
+
+.pp-view-person {
+  position: absolute;
+  inset: 0;
+}
+
 .pp-scroll {
   flex: 1;
   min-height: 0;
@@ -86,14 +101,14 @@
 }
 
 .pp-thumb {
-  width: 30px;
-  height: 30px;
+  width: var(--pp-icon);
+  height: var(--pp-icon);
 }
 
 /* ── Rows ── */
 .pp-row {
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) 190px 92px 78px;
+  grid-template-columns: var(--pp-icon) minmax(0, 1fr) 190px 92px 78px;
   grid-template-areas: "icon name level clock act";
   align-items: center;
   column-gap: 14px;
@@ -103,7 +118,7 @@
 }
 
 .pp-row-person {
-  grid-template-columns: 30px minmax(0, 1fr) 118px 74px 78px;
+  grid-template-columns: var(--pp-icon) minmax(0, 1fr) 118px 74px 78px;
   grid-template-areas: "icon name clock wait act";
 }
 
@@ -291,7 +306,7 @@
 /* ── Rows that exist only when true ── */
 .pp-feature {
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) auto;
+  grid-template-columns: var(--pp-icon) minmax(0, 1fr) auto;
   align-items: center;
   column-gap: 12px;
   padding: 7px var(--pp-pad);
@@ -392,7 +407,7 @@
 
 .pp-offer {
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) auto auto;
+  grid-template-columns: var(--pp-icon) minmax(0, 1fr) auto auto;
   align-items: center;
   column-gap: 12px;
   min-height: 46px;
@@ -463,10 +478,10 @@
      stepper gets the whole second line so the engine name fits. */
   .pp-row,
   .pp-row-person {
-    grid-template-columns: 28px minmax(0, 1fr) 82px 54px;
+    grid-template-columns: var(--pp-icon) minmax(0, 1fr) 82px 54px;
     grid-template-areas:
       "icon name clock act"
-      ". level level act";
+      "icon level level act";
     column-gap: 8px;
     row-gap: 6px;
     padding-top: 7px;
@@ -476,7 +491,7 @@
   .pp-row-person {
     grid-template-areas:
       "icon name clock act"
-      ". wait wait act";
+      "icon wait wait act";
   }
 
   .pp-step-btn {

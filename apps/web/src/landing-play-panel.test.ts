@@ -118,6 +118,24 @@ describe('homepage play panel', () => {
     expect(board.querySelector('.pp-step-level .is-named')).toBeNull();
   });
 
+  it('covers the bot list on the person tab instead of removing it', () => {
+    // The bot list sets the panel's height for both tabs, so it must stay in
+    // flow: [hidden] is display:none !important site-wide.
+    const board = buildPlayPanel('en', { hydrate: false });
+    const computer = board.querySelector<HTMLElement>('.pp-view-computer')!;
+    const person = board.querySelector<HTMLElement>('.pp-view-person')!;
+    const [computerTab, personTab] = board.querySelectorAll<HTMLButtonElement>('.pp-tab');
+    personTab!.click();
+    expect(computer.hidden).toBe(false);
+    expect(computer.classList.contains('is-covered')).toBe(true);
+    expect(computer.inert).toBe(true);
+    expect(person.hidden).toBe(false);
+    computerTab!.click();
+    expect(computer.classList.contains('is-covered')).toBe(false);
+    expect(computer.inert).toBe(false);
+    expect(person.hidden).toBe(true);
+  });
+
   it('only searches for a person from Find, never from a stray row click', () => {
     const fetchSpy = vi.fn(async () => Response.json({}));
     vi.stubGlobal('fetch', fetchSpy);
