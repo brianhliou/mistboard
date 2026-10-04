@@ -295,8 +295,8 @@ export const EN_PLAY = {
   'correspondence.noOpenSeeks':
     'No open seeks right now. Post one and it is the first thing other players see here.',
   'correspondence.noOpenSeeksSignedOut': 'No open seeks right now. Sign in and post the first one.',
+  'correspondence.waitingForOpponent': 'Waiting for an opponent',
   'correspondence.yourChallenges': 'Your challenges',
-  'correspondence.noChallenges': 'Nothing out right now.',
   'correspondence.linkChallenge': 'Link challenge',
   'correspondence.openSeek': 'Open seek',
   'correspondence.expiresIn': 'expires in {time}',

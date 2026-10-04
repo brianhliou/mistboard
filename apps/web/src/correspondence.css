@@ -65,6 +65,12 @@
   min-width: 0;
 }
 
+/* A display rule on the section would otherwise beat the hidden attribute. */
+.correspondence-section[hidden],
+.correspondence-empty[hidden] {
+  display: none;
+}
+
 .correspondence-section-head {
   display: flex;
   align-items: baseline;
