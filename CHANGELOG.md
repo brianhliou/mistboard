@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- Your open correspondence seeks lead the Correspondence page, under Waiting for an opponent ([dfa9549e](https://github.com/brianhliou/mistboard/commit/dfa9549e))
 - The homepage has a Jieqi by correspondence button: one move a day, an email when it is your turn, and a guest who signs up from it is paired straight away ([b123338b](https://github.com/brianhliou/mistboard/commit/b123338b))
 - Game room clocks are a compact tab again, like lichess ([ca833e03](https://github.com/brianhliou/mistboard/commit/ca833e03))
 - Crazyhouse Xiangqi soldiers now drop on any empty point, like chariots, horses and cannons; advisors and elephants still drop on their own half ([17e145f5](https://github.com/brianhliou/mistboard/commit/17e145f5))
@@ -90,6 +91,7 @@ Conventions:
 
 ### Site
 
+- The homepage chat shows recent wins against bots (Level 4 and up) and new studies between messages ([dfa9549e](https://github.com/brianhliou/mistboard/commit/dfa9549e))
 - The homepage bot picker shows the NNUE tag beside the level, uses bigger variant markers, and lists every game without scrolling ([b123338b](https://github.com/brianhliou/mistboard/commit/b123338b))
 - The homepage's first article row is labelled Latest and links to the blog, and every card title fits on one line ([b123338b](https://github.com/brianhliou/mistboard/commit/b123338b))
 - About and FAQ are up to date: they lead with Chinese chess, name Crazyhouse Xiangqi among our own games, and say jieqi and banqi can be watched live; Traditional Chinese pages say 象棋 rather than 中國象棋 ([af26781b](https://github.com/brianhliou/mistboard/commit/af26781b))
@@ -113,6 +115,7 @@ Conventions:
 
 ### Fixed
 
+- Homepage variant markers show at their full size ([dfa9549e](https://github.com/brianhliou/mistboard/commit/dfa9549e))
 - Games that can no longer be opened (Crazyhouse Xiangqi games from before the rules change, mahjong tables) stay in your history with an Old rules or Unsupported tag instead of linking to a missing page ([67ffa88b](https://github.com/brianhliou/mistboard/commit/67ffa88b))
 - The homepage live board no longer jumps to an old game when a player stops moving with time still on their clock ([ca833e03](https://github.com/brianhliou/mistboard/commit/ca833e03))
 - The face-down pieces under Flip Jungle and Banqi boards line up for both sides ([ca833e03](https://github.com/brianhliou/mistboard/commit/ca833e03))
