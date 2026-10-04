@@ -1458,5 +1458,115 @@
     "cp": 624,
     "mate": null,
     "symbol": "+−"
+  },
+  "tony-fung-ga-zen:0:26": {
+    "cp": 57,
+    "mate": null,
+    "symbol": "⩲"
+  },
+  "tony-fung-ga-zen:1:32": {
+    "cp": 42,
+    "mate": null,
+    "symbol": "⩲"
+  },
+  "tony-fung-ga-zen:1:33": {
+    "cp": 317,
+    "mate": null,
+    "symbol": "+−"
+  },
+  "tony-fung-ga-zen:1:34": {
+    "cp": 339,
+    "mate": null,
+    "symbol": "+−"
+  },
+  "tony-fung-ga-zen:1:40": {
+    "cp": 307,
+    "mate": null,
+    "symbol": "+−"
+  },
+  "tony-fung-ga-zen:1:72": {
+    "cp": 435,
+    "mate": null,
+    "symbol": "+−"
+  },
+  "tony-fung-ga-zen:1:76": {
+    "cp": 576,
+    "mate": null,
+    "symbol": "+−"
+  },
+  "tony-fung-ga-zen:2:79": {
+    "cp": -18,
+    "mate": null,
+    "symbol": "="
+  },
+  "tony-fung-ga-zen:2:83": {
+    "cp": -85,
+    "mate": null,
+    "symbol": "⩱"
+  },
+  "tony-fung-ga-zen:2:93": {
+    "cp": -234,
+    "mate": null,
+    "symbol": "∓"
+  },
+  "tony-fung-ga-zen:2:132": {
+    "cp": -342,
+    "mate": null,
+    "symbol": "−+"
+  },
+  "tony-fung-ga-zen:2:141": {
+    "cp": -327,
+    "mate": null,
+    "symbol": "−+"
+  },
+  "tony-fung-ga-zen:3:15": {
+    "cp": 45,
+    "mate": null,
+    "symbol": "⩲"
+  },
+  "tony-fung-ga-zen:4:29": {
+    "cp": -23,
+    "mate": null,
+    "symbol": "="
+  },
+  "tony-fung-ga-zen:4:30": {
+    "cp": -111,
+    "mate": null,
+    "symbol": "∓"
+  },
+  "tony-fung-ga-zen:4:35": {
+    "cp": -12,
+    "mate": null,
+    "symbol": "="
+  },
+  "tony-fung-ga-zen:4:38": {
+    "cp": -122,
+    "mate": null,
+    "symbol": "∓"
+  },
+  "tony-fung-ga-zen:4:45": {
+    "cp": 17,
+    "mate": null,
+    "symbol": "="
+  },
+  "tony-fung-ga-zen:4:49": {
+    "cp": 28,
+    "mate": null,
+    "symbol": "="
+  },
+  "tony-fung-ga-zen:4:55": {
+    "cp": -220,
+    "mate": null,
+    "symbol": "∓"
+  },
+  "tony-fung-ga-zen:4:56": {
+    "cp": -293,
+    "mate": null,
+    "symbol": "−+"
+  },
+  "tony-fung-ga-zen:4:61": {
+    "cp": -245,
+    "mate": null,
+    "symbol": "∓"
   }
 }

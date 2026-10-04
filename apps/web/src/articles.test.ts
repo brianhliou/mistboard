@@ -54,6 +54,8 @@ describe('article public listing gates', () => {
       '/blog/katago-jungle',
       // The Pikafish reveal bug (#497), the AB-JChess post's follow-up, 2026-10-03.
       '/blog/pikafish-reveal-bug',
+      // The fourth player page, Hong Kong's Tony Fung, 2026-10-03.
+      '/blog/tony-fung-ga-zen',
       // AB-JChess, the new top jieqi bot, scheduled for 2026-10-02.
       '/blog/ab-jchess',
       // The third player page, the world champion Lại Lý Huynh, 2026-10-02.
@@ -302,6 +304,7 @@ describe('article public listing gates', () => {
 
     // No age cut on this row, so this holds whatever the date.
     expect(hrefs).toEqual([
+      '/blog/tony-fung-ga-zen',
       '/blog/lai-ly-huynh',
       '/blog/cao-yanlei',
       '/blog/yin-sheng',

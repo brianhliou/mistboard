@@ -56,6 +56,7 @@ import { yinShengArticle } from './articles/content/yin-sheng.js';
 import { caoYanleiArticle } from './articles/content/cao-yanlei.js';
 import { laiLyHuynhArticle } from './articles/content/lai-ly-huynh.js';
 import { laiLyHuynhCoTuongArticle } from './articles/content/lai-ly-huynh-co-tuong.js';
+import { tonyFungGaZenArticle } from './articles/content/tony-fung-ga-zen.js';
 import articleSnapshotFog from './article-snapshot-fog.json' with { type: 'json' };
 
 export const articles: Article[] = [
@@ -82,6 +83,7 @@ export const articles: Article[] = [
   caoYanleiArticle,
   laiLyHuynhArticle,
   laiLyHuynhCoTuongArticle,
+  tonyFungGaZenArticle,
   xiangqiMatchFixingArticle,
   xiangqiWorldChampionshipArticle,
   darkXiangqiArticle,
