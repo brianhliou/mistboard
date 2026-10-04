@@ -573,6 +573,23 @@
   display: none;
 }
 
+/* No per-piece drop-shadow on card thumbnails, same reason as the broadcast
+   round grid (xiangqi-broadcast.css .xqb-card-board): every CSS filter gets
+   its own offscreen surface and a blur re-run per raster tile. /games draws
+   14 boards, about 310 live filters; measured 2026-10-04 on prod at 1280x800,
+   4x CPU, five seconds of scroll: 85 dropped frames and 1,008 ms of GPU,
+   against 0 and 162 ms without them. The jieqi, banqi and fortress rules are
+   injected by their renderers (live-*-render.ts), so a grep of the .css files
+   misses them; two classes out-specify each. Full-size boards keep theirs. */
+.current-game-board .xq-piece,
+.current-game-board .jieqi-piece,
+.current-game-board .banqi-piece,
+.current-game-board .banqi-back,
+.current-game-board .fxq-piece,
+.current-game-board .xq-live-lastmove-ring {
+  filter: none;
+}
+
 .current-game-board.replay-page,
 .current-game-board .replay-page {
   align-items: stretch;
