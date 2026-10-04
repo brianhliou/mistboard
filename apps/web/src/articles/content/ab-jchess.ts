@@ -8,38 +8,23 @@ import {
 } from '../ab-jchess-examples.js';
 import { evalCompareChartSvg } from '../eval-compare-chart.js';
 import { MARK_GLYPH } from '../katago-jungle-analysis.js';
+import { textCard } from '../text-card.js';
 import type { Article, ArticleBlock } from '../types.js';
 import examplesJson from './ab-jchess-examples.json' with { type: 'json' };
 
-// Text card in the Pikafish card's family, on the xiangqi board's palette since
-// jieqi is played on that board. The engine has no Chinese name, so AB-JCHESS
-// leads in every locale; 揭棋 sits above it and the tagline follows the page.
-const AB_JCHESS_THUMBNAIL = (locale: Locale): string => {
-  const zh = locale === 'zh-Hans' || locale === 'zh-Hant';
-  const tagline = zh
-    ? locale === 'zh-Hant'
-      ? '更強的揭棋電腦'
-      : '更强的揭棋电脑'
-    : 'A STRONGER JIEQI BOT';
-  const hanziFont =
-    "'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif";
-  const latinFont = 'Roboto, system-ui, sans-serif';
-  return [
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" ',
-    'preserveAspectRatio="xMidYMid slice" width="320" height="200" role="img" ',
-    'aria-label="A card reading AB-JChess, a stronger jieqi bot">',
-    '<rect x="0" y="0" width="320" height="200" fill="var(--xq-diagram-bg, #d9bd82)"/>',
-    `<text x="160" y="62" text-anchor="middle" font-family="${hanziFont}" `,
-    'font-size="26" font-weight="700" letter-spacing="10" fill="#b9832f" opacity="0.5">揭棋</text>',
-    `<text x="160" y="118" text-anchor="middle" font-family="${latinFont}" `,
-    'font-size="40" font-weight="700" fill="#b9832f" translate="no">AB-JCHESS</text>',
-    `<text x="160" y="150" text-anchor="middle" font-family="${zh ? hanziFont : latinFont}" `,
-    `font-size="${zh ? 16 : 15}" font-weight="600" letter-spacing="${zh ? 3 : 1.4}" `,
-    'fill="#b9832f" opacity="0.62">',
-    `${tagline}</text>`,
-    '</svg>',
-  ].join('');
-};
+// Text card (text-card.ts). The engine has no Chinese name, so AB-JCHESS stays
+// as written in every language.
+const AB_JCHESS_THUMBNAIL = (locale: Locale): string =>
+  textCard(
+    {
+      palette: 'xiangqi',
+      eyebrow: 'JIEQI',
+      lead: { text: 'AB-JCHESS', name: true },
+      tagline: 'A STRONGER BOT',
+      ariaLabel: 'A card reading AB-JChess, a stronger jieqi bot',
+    },
+    locale,
+  );
 
 const REPO = 'https://github.com/lxsgx23/AB-JChess';
 

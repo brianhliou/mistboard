@@ -7,8 +7,8 @@
 // Both paths look a label up by its trimmed visible text, which is what this
 // module extracts, so the coverage gates check the exact key the render uses.
 //
-// A node carrying translate="no" is deliberate source-language text (the Latin
-// eyebrow on a zh card, a title abbreviation) and is neither swapped nor counted.
+// A node carrying translate="no" is deliberate source-language text (an engine name
+// on a zh card, a title abbreviation) and is neither swapped nor counted.
 // Card thumbnails render per locale, so articleCardLabels reads them separately.
 
 import { hasOwnKey } from '@mistboard/game';

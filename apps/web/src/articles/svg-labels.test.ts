@@ -49,14 +49,13 @@ describe('index cards carry translated words', () => {
       keep: n.getAttribute('translate') === 'no',
     }));
 
-  it('a zh card leads with hanzi and keeps the English word as a marked eyebrow', () => {
+  it('a card is in the page language, every line', () => {
     const champions = articles.find((a) => a.slug === 'xiangqi-champions');
     if (!champions?.thumbnail) throw new Error('champions card missing');
-    const zh = cardText(renderArticleThumbnail(champions.thumbnail, 'zh-Hant'));
-    expect(zh).toContainEqual({ text: 'CHAMPIONS', keep: true });
-    expect(zh.map((t) => t.text)).toEqual(['CHAMPIONS', '冠軍', '每一屆全國個人賽', '1956 年至今']);
+    const zh = cardText(renderArticleThumbnail(champions.thumbnail, 'zh-Hant')).map((t) => t.text);
+    expect(zh).toEqual(['象棋', '冠軍', '每一屆全國個人賽', '1956 年至今']);
     const en = cardText(renderArticleThumbnail(champions.thumbnail, 'en')).map((t) => t.text);
-    expect(en).toEqual(['冠军', 'CHAMPIONS', 'EVERY XIANGQI TITLE', 'SINCE 1956']);
+    expect(en).toEqual(['XIANGQI', 'CHAMPIONS', 'EVERY NATIONAL TITLE', 'SINCE 1956']);
   });
 
   it('a Vietnamese derived card swaps its words inside the SVG', () => {
@@ -64,7 +63,7 @@ describe('index cards carry translated words', () => {
     // Whatever interface the reader saved: a zh one must not flip the layout.
     for (const locale of ['en', 'zh-Hant'] as const) {
       const markup = typeof svg === 'function' ? svg(locale) : svg;
-      expect(svgTextLabels(markup), locale).toEqual(['揭棋', 'CỜ ÚP', 'MỌI QUÂN ĐỀU ÚP']);
+      expect(svgTextLabels(markup), locale).toEqual(['CỜ TƯỚNG', 'CỜ ÚP', 'MỌI QUÂN ĐỀU ÚP']);
     }
   });
 });

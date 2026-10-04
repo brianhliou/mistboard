@@ -1,35 +1,70 @@
 import { describe, expect, it } from 'vitest';
 import { abJchessArticle } from './articles/content/ab-jchess.js';
+import { katagoJungleArticle } from './articles/content/katago-jungle.js';
 import { pikafishArticle } from './articles/content/pikafish.js';
+import {
+  CARD_TEXT_MAX_WIDTH,
+  estimateLineWidth,
+  type TextCardSpec,
+  textCardLines,
+} from './articles/text-card.js';
 import { renderArticleThumbnail } from './articles.js';
+import { type Article, articles } from './articles-data.js';
 import type { Locale } from './i18n/locale.js';
 
-// A thumbnail thunk is handed the locale of the page the card sits on, so art
-// that carries words can set them in the reader's language rather than baking
-// one language into every index.
-describe('locale-aware article thumbnails', () => {
-  const render = (locale: Locale): string => {
-    const thumb = pikafishArticle.thumbnail;
-    if (thumb?.kind !== 'svg' || typeof thumb.svg !== 'function') {
-      throw new Error('the Pikafish thumbnail is expected to be a render thunk');
-    }
-    return thumb.svg(locale);
-  };
+const LOCALES: Locale[] = ['en', 'zh-Hans', 'zh-Hant'];
+const HAN = /\p{Script=Han}/u;
+const LATIN = /\p{Script=Latin}/u;
 
-  it("leads with the reader's script and keeps the other name above it", () => {
-    expect(render('en')).toMatch(/font-size="40"[^>]*>\s*PIKAFISH/);
-    expect(render('zh-Hans')).toMatch(/font-size="46"[^>]*>\s*皮卡鱼/);
-    expect(render('zh-Hant')).toMatch(/font-size="46"[^>]*>\s*皮卡魚/);
-    for (const locale of ['en', 'zh-Hans', 'zh-Hant'] as Locale[]) {
-      expect(render(locale)).toContain('PIKAFISH');
+const cardSvg = (article: Article, locale: Locale): string | null => {
+  const thumb = article.thumbnail;
+  if (thumb?.kind !== 'svg') return null;
+  return typeof thumb.svg === 'function' ? thumb.svg(locale) : thumb.svg;
+};
+
+const cardWords = (markup: string) =>
+  [...markup.matchAll(/<text\b([^>]*)>([\s\S]*?)<\/text>/g)].map((m) => ({
+    text: m[2].replace(/<[^>]+>/g, '').trim(),
+    keep: /translate="no"/.test(m[1]),
+  }));
+
+// A thumbnail thunk is handed the locale of the page the card sits on, and a
+// text card is set wholly in that language (2026-10-03): an English reader saw
+// a hanzi eyebrow on every text card and read it as a bug.
+describe('text cards are in the page language', () => {
+  // The river inscription (楚河 漢界) is board art, drawn on every xiangqi board.
+  const RIVER = /^[楚漢汉][\s\S]*[河界]$/u;
+
+  it('no English index card carries hanzi', () => {
+    const offenders: string[] = [];
+    for (const article of articles) {
+      const svg = cardSvg(article, 'en');
+      if (!svg) continue;
+      for (const { text } of cardWords(svg)) {
+        if (HAN.test(text) && !RIVER.test(text)) offenders.push(`${article.slug}: ${text}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('a zh card keeps Latin only for a name marked as one', () => {
+    for (const article of [pikafishArticle, abJchessArticle, katagoJungleArticle]) {
+      for (const locale of ['zh-Hans', 'zh-Hant'] as Locale[]) {
+        const stray = cardWords(cardSvg(article, locale) ?? '').filter(
+          (w) => LATIN.test(w.text) && !w.keep,
+        );
+        expect(stray, `${article.slug} ${locale}`).toEqual([]);
+      }
     }
   });
 
-  it('sets the tagline and the traditional-script name per locale', () => {
-    expect(render('en')).toContain('PLAY IT IN YOUR BROWSER');
-    expect(render('zh-Hans')).toContain('在浏览器里直接对弈');
-    expect(render('zh-Hant')).toContain('在瀏覽器裡直接對弈');
-    expect(render('zh-Hant')).not.toContain('皮卡鱼');
+  it('names stay as written; translatable leads follow the script', () => {
+    const lead = (article: Article, locale: Locale) => cardWords(cardSvg(article, locale) ?? '')[1];
+    expect(lead(katagoJungleArticle, 'zh-Hans')).toEqual({ text: 'KATAGO', keep: true });
+    expect(lead(abJchessArticle, 'zh-Hant')).toEqual({ text: 'AB-JCHESS', keep: true });
+    expect(lead(pikafishArticle, 'en').text).toBe('PIKAFISH');
+    expect(lead(pikafishArticle, 'zh-Hans').text).toBe('皮卡鱼');
+    expect(lead(pikafishArticle, 'zh-Hant').text).toBe('皮卡魚');
   });
 
   it('renders the card the locale asks for, not the ambient one', () => {
@@ -37,28 +72,36 @@ describe('locale-aware article thumbnails', () => {
       pikafishArticle.thumbnail as { kind: 'svg'; svg: (locale: Locale) => string },
       'zh-Hant',
     );
-
     expect(hant.textContent).toContain('皮卡魚');
     expect(hant.textContent).not.toContain('PLAY IT IN YOUR BROWSER');
   });
 });
 
-describe('AB-JChess card', () => {
-  const render = (locale: Locale): string => {
-    const thumb = abJchessArticle.thumbnail;
-    if (thumb?.kind !== 'svg' || typeof thumb.svg !== 'function') {
-      throw new Error('the AB-JChess thumbnail is expected to be a render thunk');
-    }
-    return thumb.svg(locale);
+describe('textCard fitting', () => {
+  const spec: TextCardSpec = {
+    palette: 'xiangqi',
+    eyebrow: 'XIANGQI',
+    lead: 'WORLD TITLE',
+    tagline: 'AND WHY IT IS NOT THE HARDER ONE',
+    footer: 'SINCE 1990',
+    ariaLabel: 'test',
   };
 
-  it('is a text card in the Pikafish family, with the tagline in the page language', () => {
-    for (const locale of ['en', 'zh-Hans', 'zh-Hant'] as Locale[]) {
-      expect(render(locale)).toMatch(/font-size="40"[^>]*>AB-JCHESS</);
-      expect(render(locale)).toContain('揭棋');
+  it('shrinks a line that would run off the card, in every locale', () => {
+    for (const locale of LOCALES) {
+      for (const line of textCardLines(spec, locale)) {
+        expect(
+          estimateLineWidth(line.text, line.style),
+          `${locale} ${line.text}`,
+        ).toBeLessThanOrEqual(CARD_TEXT_MAX_WIDTH);
+      }
     }
-    expect(render('en')).toContain('A STRONGER JIEQI BOT');
-    expect(render('zh-Hans')).toContain('更强的揭棋电脑');
-    expect(render('zh-Hant')).toContain('更強的揭棋電腦');
+    const tagline = textCardLines(spec, 'en').find((l) => l.role === 'tagline');
+    expect(tagline?.style.size).toBeLessThan(15);
+  });
+
+  it('leaves a line that fits at its design size', () => {
+    const eyebrow = textCardLines(spec, 'en').find((l) => l.role === 'eyebrow');
+    expect(eyebrow?.style.size).toBe(20);
   });
 });

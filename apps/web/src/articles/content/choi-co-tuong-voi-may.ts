@@ -82,7 +82,9 @@ export const CHOI_CO_TUONG_VOI_MAY_VI: Record<string, string> = {
   'No. It receives the same face-down board you see, and the deal is known to nobody, not you, not the engine, not your opponent.':
     'Không. Nó nhận đúng bàn cờ đã úp như bạn thấy, và lần xáo quân không ai biết: không phải bạn, không phải engine, không phải đối thủ.',
 
-  // Index card tagline (inside its SVG). PIKAFISH is a name and stays.
+  // Index card words (inside its SVG). PIKAFISH is a name and stays.
+  XIANGQI: 'CỜ TƯỚNG',
+  PIKAFISH: 'PIKAFISH',
   'PLAY IT IN YOUR BROWSER': 'CHƠI NGAY TRÊN TRÌNH DUYỆT',
 };
 

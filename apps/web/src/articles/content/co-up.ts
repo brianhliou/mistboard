@@ -73,8 +73,9 @@ export const CO_UP_VI: Record<string, string> = {
   "Read the rules": "Xem luật cờ úp",
   "/rules/jieqi": "/blog/luat-co-up",
 
-  // Index card (deriveTranslation swaps the words inside its SVG). Same shape as
-  // luat-co-up's card: the phrase the reader typed, big, under the 揭棋 eyebrow.
+  // Index card (deriveTranslation swaps the words inside its SVG): the phrase the
+  // reader typed, big, under the game it belongs to.
+  XIANGQI: 'CỜ TƯỚNG',
   JIEQI: 'CỜ ÚP',
   'EVERY PIECE FACE DOWN': 'MỌI QUÂN ĐỀU ÚP',
 };
