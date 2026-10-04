@@ -18,6 +18,7 @@ import {
   defaultEngineTimeControl,
   ENGINE_FLOORED_GAME_SPEC_IDS,
   isAllowedEngineTimeControl,
+  maybeGameSpecForId,
   TIME_CONTROLS,
   VARIANT_DEFAULT_GAME_SPEC_IDS,
   variantDefaultTimeControl,
@@ -226,6 +227,29 @@ describe('web tenant registry <-> server tenant registry parity', () => {
       if (server !== web) drift.push(`${gameSpecId}: server ${server} != web ${web}`);
     }
     expect(drift, drift.join('\n')).toEqual([]);
+  });
+
+  it('the server marks a game unsupported exactly when the web has no page for it', () => {
+    // Profile rows for a variant with no game page are drawn without a link
+    // (server replayable-games.ts markUnavailableGames, which asks
+    // crosstableReviewUrl). The web is where a page actually mounts: its own
+    // postgame (gameRouteBase + mountPostgame), or the chess stack's /game/:id
+    // for a spec with a legacy live room. The two must agree for every
+    // registered tenant, or a playable game is greyed out or a dead link ships.
+    const drift: string[] = [];
+    for (const registration of serverTenants) {
+      const roomId = `${registration.roomIdPrefix}${SAMPLE_ROOM_SUFFIX}`;
+      const serverHasPage = crosstableReviewUrl(roomId, registration.gameSpecId) !== null;
+      const web = webTenants.find((tenant) => roomId.startsWith(tenant.roomIdPrefix));
+      const webHasPage =
+        Boolean(web?.gameRouteBase && web.mountPostgame) ||
+        Boolean(maybeGameSpecForId(registration.gameSpecId)?.legacyLiveRoom);
+      if (serverHasPage !== webHasPage)
+        drift.push(`${registration.gameSpecId}: server ${serverHasPage} != web ${webHasPage}`);
+    }
+    expect(drift, drift.join('\n')).toEqual([]);
+    // Mahjong is the live case: playable, with no page for a finished table.
+    expect(crosstableReviewUrl(`mj_${SAMPLE_ROOM_SUFFIX}`, 'mahjong')).toBeNull();
   });
 
   it('web tenant roomIdPrefixes are unique', () => {

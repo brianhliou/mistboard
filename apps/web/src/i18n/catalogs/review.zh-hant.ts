@@ -348,6 +348,8 @@ export const ZH_HANT_REVIEW = {
   'replay.postgameServiceUnavailable': '賽後覆盤服務不可用。',
   'replay.variantUnavailable': '無法取得{variant}對局',
   'replay.variantGameUnavailable': '這盤{variant}對局不可用。',
+  'replay.retiredRulesTitle': '按舊規則對弈',
+  'replay.retiredRulesBody': '這盤{variant}對局是按之後已修改的規則下的，因此無法再回放。',
   'replay.routeNotEnabled': '此版本未啟用該頁面。',
   'replay.gameCouldNotBeLoaded': '無法載入這盤對局。',
   'replay.requestComputerAnalysis': '請求引擎分析',

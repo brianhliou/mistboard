@@ -178,12 +178,23 @@ export function buildProfileGameRow(
   // opponent link, which is lifted above it (see .profile-game-row-open CSS).
   const link = document.createElement('div');
   link.className = 'profile-game-row';
-  const open = document.createElement('a');
-  open.className = 'profile-game-row-open';
-  open.href = profileGameHref(game);
-  // The overlay carries no text of its own, so it needs an explicit accessible
-  // name; before the split the row's own content supplied one.
-  open.setAttribute('aria-label', t('profile.finishedGame', {}, locale));
+  // A game that cannot be opened (old rules, a variant with no game page) keeps
+  // its row but gets no overlay link at all: no anchor, no href, nothing to
+  // click or tab to. The tag in the details line says why.
+  const unavailable = profileGameUnavailableTag(game, locale);
+  let open: HTMLAnchorElement | null = null;
+  if (unavailable) {
+    link.classList.add('profile-game-row-unavailable');
+    link.setAttribute('aria-disabled', 'true');
+    link.title = unavailable.title;
+  } else {
+    open = document.createElement('a');
+    open.className = 'profile-game-row-open';
+    open.href = profileGameHref(game);
+    // The overlay carries no text of its own, so it needs an explicit accessible
+    // name; before the split the row's own content supplied one.
+    open.setAttribute('aria-label', t('profile.finishedGame', {}, locale));
+  }
   const tone = neutral ? 'neutral' : profileResultTone(game);
   link.classList.add(`profile-game-row-${tone}`);
 
@@ -257,6 +268,11 @@ export function buildProfileGameRow(
     variantPill.prepend(thumb);
   }
   details.append(variantPill);
+  if (unavailable) {
+    const tag = buildGameDetail(unavailable.label, 'profile-game-unavailable');
+    tag.title = unavailable.title;
+    details.append(tag);
+  }
   if (!neutral)
     details.append(buildGameDetail(profileSideLabel(game, locale), 'profile-game-side'));
   // Only rated games get a badge; casual (the default, and every game while
@@ -274,7 +290,8 @@ export function buildProfileGameRow(
   body.append(topLine, details);
   // The overlay goes in FIRST so it sits under the row content in paint order;
   // the opponent link then only needs a z-index to come back out on top.
-  link.append(open, outcome, body, date);
+  if (open) link.append(open);
+  link.append(outcome, body, date);
   item.append(link);
   return item;
 }
@@ -427,6 +444,28 @@ function opponentColor(
 // legacy aliases) instead of a hand-maintained switch that silently drifts as
 // variants ship. Tenants without their own postgame (dark-chess correspondence)
 // and plain dark chess carry no gameRouteBase and fall through to /game/:id.
+// The short tag and tooltip for a game the server marked unopenable, or null
+// for a game that opens.
+export function profileGameUnavailableTag(
+  game: FeaturedGame,
+  locale: Locale = currentLocale(),
+): { label: string; title: string } | null {
+  switch (game.unavailable) {
+    case undefined:
+      return null;
+    case 'old-rules':
+      return {
+        label: t('profile.gameOldRules', {}, locale),
+        title: t('profile.gameOldRulesTitle', {}, locale),
+      };
+    case 'unsupported-variant':
+      return {
+        label: t('profile.gameUnsupported', {}, locale),
+        title: t('profile.gameUnsupportedTitle', {}, locale),
+      };
+  }
+}
+
 export function profileGameHref(game: FeaturedGame): string {
   const tenant = webVariantTenantForRoomId(game.roomId) ?? webVariantTenantForSpecId(game.variant);
   if (tenant?.gameRouteBase) {

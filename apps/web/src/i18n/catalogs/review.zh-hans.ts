@@ -348,6 +348,8 @@ export const ZH_HANS_REVIEW = {
   'replay.postgameServiceUnavailable': '赛后复盘服务不可用。',
   'replay.variantUnavailable': '无法获取{variant}对局',
   'replay.variantGameUnavailable': '这盘{variant}对局不可用。',
+  'replay.retiredRulesTitle': '按旧规则对弈',
+  'replay.retiredRulesBody': '这盘{variant}对局是按之后已修改的规则下的，因此无法再回放。',
   'replay.routeNotEnabled': '此版本未启用该页面。',
   'replay.gameCouldNotBeLoaded': '无法加载这盘对局。',
   'replay.requestComputerAnalysis': '请求引擎分析',

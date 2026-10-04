@@ -155,12 +155,21 @@ export type GameRecord = {
   participants: GameParticipant[];
 };
 
+// Why a listed game cannot be opened (replayable-games.ts markUnavailableGames):
+// 'old-rules' = its variant's rules changed under it and the stored log no
+// longer replays; 'unsupported-variant' = no page on the site mounts the
+// variant's finished games. The profile lists keep such a game and say so;
+// discovery surfaces drop it.
+export type GameUnavailableReason = 'old-rules' | 'unsupported-variant';
+
 export type ProfileGameRecord = GameRecord & {
   playerColor: GameParticipantColor;
   // Clock for this game (PvP/PvE store it on games.initial_ms / increment_ms;
   // null for clockless games). Drives the time-control badge on the profile row.
   initialMs: number | null;
   incrementMs: number | null;
+  // Set by the route, never by the query: absent means the game opens.
+  unavailable?: GameUnavailableReason;
 };
 
 export type RecentEveGameRecord = GameRecord & {

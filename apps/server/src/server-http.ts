@@ -733,9 +733,11 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
  * The API's catch-all: what a handler that threw answers.
  *
  * - A stored game the current rules no longer replay (a variant's rules
- *   changed under it) is a game that no longer exists: 404 not_found, not 500.
- *   The replay guard already warned once for the room
- *   (variant-tenant/replay-guard.ts), so nothing is logged here.
+ *   changed under it) is gone for good, not missing: 410 retired_rules, not
+ *   404 or 500, so its page can say why (the profile row says the same, see
+ *   replayable-games.ts markUnavailableGames). The replay guard already warned
+ *   once for the room (variant-tenant/replay-guard.ts), so nothing is logged
+ *   here.
  * - An oversized body is a client error, not a server fault: answering 500
  *   sends the caller hunting a nonexistent bug (it cost a real debugging
  *   session on the studies API), so it maps to 413 and skips the error log.
@@ -748,8 +750,8 @@ export function answerApiFailure(
 ): void {
   if (err instanceof UnreplayableTenantGameError) {
     if (!response.headersSent) {
-      response.writeHead(404, { 'content-type': 'application/json' });
-      response.end(JSON.stringify({ error: 'not_found' }));
+      response.writeHead(410, { 'content-type': 'application/json' });
+      response.end(JSON.stringify({ error: 'retired_rules' }));
     }
     return;
   }

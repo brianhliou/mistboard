@@ -19,7 +19,11 @@ import { internalEngineAnalysisConfigured } from './../internal-engine-client.js
 import * as persistence from './../persistence.js';
 import { LIVE_ENGINE_DECISION_ARTIFACT_TYPE } from './../persistence-game-lifecycle.js';
 import type { RecentEveGameRecord } from './../persistence-games.js';
-import { filterReplayableGames, isReplayableGame } from '../replayable-games.js';
+import {
+  filterReplayableGames,
+  isReplayableGame,
+  markUnavailableGames,
+} from '../replayable-games.js';
 import { eventReplayResponse, parsePositiveInteger, withDelayedAir } from './../server-policy.js';
 import { listWatchChannels, type WatchChannel, watchChannelForId } from './../watch-channels.js';
 import {
@@ -227,11 +231,8 @@ export async function tryHandle(
     const offset = boundedInt(parsedUrl.searchParams.get('offset'), 0, 0, Number.MAX_SAFE_INTEGER);
     const limit = boundedInt(parsedUrl.searchParams.get('limit'), 15, 1, 50);
     const page = await persistence.listFavoriteGames(user.id, offset, limit);
-    const games = await filterReplayableGames(page.games);
-    writeJson(response, 200, {
-      games,
-      total: Math.max(0, page.total - (page.games.length - games.length)),
-    });
+    // Your own list: a game that cannot be opened stays, marked.
+    writeJson(response, 200, { games: await markUnavailableGames(page.games), total: page.total });
     return true;
   }
 

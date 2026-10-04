@@ -49,6 +49,10 @@ export type PostgamePlayerRow = {
   botId?: string | null;
 };
 
+// 'old-rules': played under rules the variant has since changed, so the stored
+// game no longer replays. 'unsupported-variant': no page mounts the variant.
+export type GameUnavailableReason = 'old-rules' | 'unsupported-variant';
+
 export type FeaturedGame = {
   roomId: string;
   variant: string;
@@ -80,6 +84,10 @@ export type FeaturedGame = {
   incrementMs?: number | null;
   participants?: GameParticipant[];
   players?: PostgamePlayerRow[];
+  // Profile, favorites and bot lists only: why this game cannot be opened
+  // (server replayable-games.ts markUnavailableGames). The row is drawn without
+  // a link. Absent means the game opens.
+  unavailable?: GameUnavailableReason;
   playerColor?: GameParticipant['color'];
   // Banqi only: the ink bound to the first-mover seat on the opening flip, so list
   // surfaces can show the result by ink ("Black wins") rather than the seat token.

@@ -2037,6 +2037,31 @@
   outline: none;
 }
 
+/* A game that cannot be opened (old rules, a variant with no game page): no
+   overlay link, so no hover lift and no pointer; muted so it reads as history
+   rather than a destination. The opponent link inside still works. */
+.profile-game-row.profile-game-row-unavailable {
+  cursor: default;
+}
+
+.profile-game-row.profile-game-row-unavailable:hover {
+  background: var(--site-panel);
+  box-shadow: none;
+}
+
+.profile-game-row-unavailable .profile-game-outcome,
+.profile-game-row-unavailable .profile-game-body,
+.profile-game-row-unavailable .profile-game-date {
+  opacity: 0.6;
+}
+
+.profile-game-detail.profile-game-unavailable {
+  border-color: var(--site-border);
+  background: transparent;
+  color: var(--site-heading);
+  cursor: help;
+}
+
 .profile-game-row-win {
   --profile-game-tone: var(--site-accent);
 }

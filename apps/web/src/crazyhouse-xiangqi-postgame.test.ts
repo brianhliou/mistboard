@@ -57,6 +57,25 @@ describe('Crazyhouse Xiangqi postgame review', () => {
     return root;
   }
 
+  it('says a game from before the rules change can no longer be replayed', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json({ error: 'retired_rules' }, { status: 410 })),
+    );
+    const root = document.createElement('div');
+    document.body.append(root);
+    mountCrazyhouseXiangqiPostgame(root, 'chx_old_rules');
+    for (let i = 0; i < 12; i += 1) await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(root.textContent).toContain('Played under earlier rules');
+    expect(root.textContent).toContain(
+      'This Crazyhouse Xiangqi game was played under rules that have since changed, so it can no longer be replayed.',
+    );
+    expect(root.textContent).not.toContain('retired_rules');
+    expect(root.textContent).not.toContain('Game not found');
+    expect(root.innerHTML).not.toContain('\u2014');
+  });
+
   it('mounts the shared review shell with the move tree, not the old step-through page', async () => {
     const root = await mounted();
     expect(root.querySelector('.review-shell')).not.toBeNull();

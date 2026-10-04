@@ -213,6 +213,50 @@ describe('profile game rows', () => {
     expect(row.textContent).toContain('White');
   });
 
+  it('draws a game played under earlier rules as a tagged row with no link', () => {
+    const base = game();
+    const row = buildProfileGameRow(
+      game({
+        roomId: 'chx_old',
+        variant: 'crazyhouse-xiangqi',
+        unavailable: 'old-rules',
+        participants: base.participants?.map((seat) =>
+          seat.color === 'black' ? { ...seat, handle: 'bob' } : seat,
+        ),
+      }),
+    );
+    const shell = row.querySelector('.profile-game-row');
+    expect(row.querySelector('.profile-game-row-open')).toBeNull();
+    expect(row.querySelector('[href*="chx_old"]')).toBeNull();
+    expect(shell?.getAttribute('aria-disabled')).toBe('true');
+    expect(shell?.classList.contains('profile-game-row-unavailable')).toBe(true);
+    const tag = row.querySelector('.profile-game-unavailable');
+    expect(tag?.textContent).toBe('Old rules');
+    expect(tag?.getAttribute('title')).toBe(
+      'Played under earlier rules; can no longer be replayed',
+    );
+    // The opponent link is the opponent's page, not the game's, and stays.
+    expect(row.querySelector('a.profile-game-opponent-name')?.getAttribute('href')).toBe('/@/bob');
+    // No em dash in user-facing copy.
+    expect(row.innerHTML).not.toContain('—');
+  });
+
+  it('draws a variant with no game page as an Unsupported row with no link', () => {
+    const row = buildProfileGameRow(
+      game({ roomId: 'mj_table', variant: 'mahjong', unavailable: 'unsupported-variant' }),
+    );
+    expect(row.querySelector('.profile-game-row-open')).toBeNull();
+    expect(row.querySelector('.profile-game-row')?.getAttribute('aria-disabled')).toBe('true');
+    expect(row.querySelector('.profile-game-unavailable')?.textContent).toBe('Unsupported');
+  });
+
+  it('leaves an openable row linked and untagged', () => {
+    const row = buildProfileGameRow(game());
+    expect(row.querySelector('.profile-game-row-open')?.getAttribute('href')).toBe('/game/room_1');
+    expect(row.querySelector('.profile-game-row')?.hasAttribute('aria-disabled')).toBe(false);
+    expect(row.querySelector('.profile-game-unavailable')).toBeNull();
+  });
+
   // Registry-driven conformance: every variant tenant that owns a postgame
   // surface must route its profile rows there, never to the dark-chess
   // /game/:id (whose chess-family replay reducer 403s on a non-chess event
