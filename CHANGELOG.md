@@ -60,6 +60,7 @@ Conventions:
 
 ### Watching and review
 
+- /games puts live games, correspondence games and open seeks in one colour-coded wall, open seeks show their starting board, and Just finished shows more games and loads faster ([dbe84a24](https://github.com/brianhliou/mistboard/commit/dbe84a24))
 - Correspondence games show their time control as days per move, and every game card links its variant name to the rules ([3c98c885](https://github.com/brianhliou/mistboard/commit/3c98c885))
 - Mistboard TV's game card links to the variant's rules and shows when the game finished, and its clocks match the game room ([ca833e03](https://github.com/brianhliou/mistboard/commit/ca833e03))
 - The AB-JChess post shows where its edge comes from, with two of its wins, each with a chart of both engines' scores and an annotated board ([f30597b2](https://github.com/brianhliou/mistboard/commit/f30597b2))
@@ -93,6 +94,7 @@ Conventions:
 
 ### Site
 
+- Homepage game counts now refresh while the page is open ([dbe84a24](https://github.com/brianhliou/mistboard/commit/dbe84a24))
 - The homepage chat shows recent wins against bots (Level 4 and up) and new studies between messages ([dfa9549e](https://github.com/brianhliou/mistboard/commit/dfa9549e))
 - The homepage bot picker shows the NNUE tag beside the level, uses bigger variant markers, and lists every game without scrolling ([b123338b](https://github.com/brianhliou/mistboard/commit/b123338b))
 - The homepage's first article row is labelled Latest and links to the blog, and every card title fits on one line ([b123338b](https://github.com/brianhliou/mistboard/commit/b123338b))
@@ -117,6 +119,7 @@ Conventions:
 
 ### Fixed
 
+- The homepage chat opens scrolled to the newest message ([dbe84a24](https://github.com/brianhliou/mistboard/commit/dbe84a24))
 - Rated games in jieqi, banqi, Jungle, Flip Jungle and Fog Xiangqi now say Rated in the game header ([79547fd9](https://github.com/brianhliou/mistboard/commit/79547fd9))
 - The Rated option says why it is unavailable instead of "coming soon" ([79547fd9](https://github.com/brianhliou/mistboard/commit/79547fd9))
 - The variant picker no longer shows a scrollbar when every variant fits ([79547fd9](https://github.com/brianhliou/mistboard/commit/79547fd9))
