@@ -296,6 +296,18 @@ export function createLandingChatFeed(options: {
     if (store.length === 0) options.onEmpty?.();
   }
 
+  // render() pins to the newest line, but the first render runs before the
+  // feed is laid out (the box, and on page load the homepage tree, attach
+  // after it), when there is no height to scroll. Pin once it gets a size.
+  if (typeof ResizeObserver !== 'undefined') {
+    const pinOnLayout = new ResizeObserver(() => {
+      if (feed.clientHeight === 0) return;
+      feed.scrollTop = feed.scrollHeight;
+      pinOnLayout.disconnect();
+    });
+    pinOnLayout.observe(feed);
+  }
+
   return handle;
 }
 

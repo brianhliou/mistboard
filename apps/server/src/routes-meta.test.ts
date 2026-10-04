@@ -238,6 +238,18 @@ test('live-stats playingBySpec leaves out paused rooms and omits zero entries', 
 
 // ── /api/play/variant-order ─────────────────────────────────────────────────
 
+test('live-stats reports null game totals without a database', async () => {
+  // The homepage counters read the totals from this endpoint; without
+  // persistence they are null (the client then keeps its last values) rather
+  // than a misleading zero.
+  const body = (await liveStats(new Map())) as LiveStats & {
+    totalCompletedGames: number | null;
+    last30dCompletedGames: number | null;
+  };
+  assert.equal(body.totalCompletedGames, null);
+  assert.equal(body.last30dCompletedGames, null);
+});
+
 test('play/variant-order returns an empty order without a database', async () => {
   const response = captureResponse();
   const handled = await tryHandle(

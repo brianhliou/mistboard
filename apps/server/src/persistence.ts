@@ -498,11 +498,13 @@ export type {
   PublicStatsDay,
   PublicStatsMode,
   PublicStatsWeek,
+  SiteGameTotals,
   SiteStats,
 } from './persistence-site-stats.js';
 export {
   getPublicSiteStats,
   getRecentCountedGamesByVariant,
+  getSiteGameTotals,
   getSiteStats,
 } from './persistence-site-stats.js';
 export { rememberStatsExcludedDevice } from './persistence-stats-excluded-devices.js';

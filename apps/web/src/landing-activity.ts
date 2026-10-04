@@ -1,12 +1,16 @@
-// Homepage activity stats: durable game totals from /api/stats/public are the
-// primary read because early live counts can legitimately sit at zero. Live
-// presence still hydrates as a smaller now-line below the archive links, but
-// only when it is nonzero: at Mistboard's liquidity "0 games in play" is true
-// most hours of the day and reads as "nobody is here" to a visitor deciding
-// whether to play. Absence is neutral; the 30-day count carries recency.
-// Either source can be missing (stats/public needs persistence; live-stats
-// needs the API up): rows render only for data we actually have, and the block
-// removes itself when nothing is left to show.
+// Homepage activity stats: durable game totals are the primary read because
+// early live counts can legitimately sit at zero. Live presence still shows as
+// a smaller now-line below the archive links, but only when it is nonzero: at
+// Mistboard's liquidity "0 games in play" is true most hours of the day and
+// reads as "nobody is here" to a visitor deciding whether to play. Absence is
+// neutral; the 30-day count carries recency.
+//
+// Both come from /api/live-stats, which carries the totals from a 30-second
+// server cache (site-counters.ts), and the block re-polls it every
+// ACTIVITY_POLL_MS while the tab is visible, updating the numbers in place.
+// A hidden tab stops polling and refreshes the moment it is shown again.
+// Rows render only for data we actually have; a failed poll keeps the last
+// values, and the block removes itself when the first read has nothing to show.
 
 import { t } from './i18n/catalog.js';
 
@@ -16,10 +20,14 @@ import { t } from './i18n/catalog.js';
 // exactly that set.
 const CURRENT_GAMES_HREF = '/games';
 
-type LiveStats = { playing: number; online: number };
-type PublicStats = { totalCompletedGames: number; last30dCompletedGames: number };
+export const ACTIVITY_POLL_MS = 15_000;
 
-export function buildLandingActivity(options: { hydrate?: boolean } = {}): HTMLElement {
+type Totals = { totalCompletedGames: number; last30dCompletedGames: number };
+type Counters = { playing: number; totals: Totals | null };
+
+export function buildLandingActivity(
+  options: { hydrate?: boolean; pollMs?: number } = {},
+): HTMLElement {
   const box = document.createElement('section');
   box.className = 'landing-activity';
   box.setAttribute('aria-label', t('home.activityAria'));
@@ -27,9 +35,12 @@ export function buildLandingActivity(options: { hydrate?: boolean } = {}): HTMLE
   body.className = 'landing-activity-body';
   // No live-line placeholder: it would flash before hydrate on the (common)
   // zero case and then vanish.
-  body.append(activityPrimary([activityMetric('–', t('home.gamesPlayed'), '/stats')]));
+  const primary = activityPrimary([activityMetric('–', t('home.gamesPlayed'), '/stats')]);
+  body.append(primary);
   box.append(body);
-  if (options.hydrate !== false) void hydrateLandingActivity(box, body);
+  if (options.hydrate !== false) {
+    void hydrateLandingActivity(box, body, primary, options.pollMs ?? ACTIVITY_POLL_MS);
+  }
   return box;
 }
 
@@ -41,38 +52,99 @@ function gamesPlayedLabel(monthCount: number): string {
   return t('home.gamesPlayedMonth', { count: formatCount(monthCount) });
 }
 
-async function hydrateLandingActivity(box: HTMLElement, body: HTMLElement): Promise<void> {
-  const [live, totals] = await Promise.all([fetchLiveStats(), fetchPublicStats()]);
+async function hydrateLandingActivity(
+  box: HTMLElement,
+  body: HTMLElement,
+  primary: HTMLElement,
+  pollMs: number,
+): Promise<void> {
+  let hasTotals = false;
+  let live: HTMLElement | null = null;
 
-  const parts: HTMLElement[] = [];
-  if (totals) {
-    parts.push(
-      activityPrimary([
-        activityMetric(
-          formatCount(totals.totalCompletedGames),
-          gamesPlayedLabel(totals.last30dCompletedGames),
-          '/stats',
-          t('home.gamesPlayedMonthTitle'),
-        ),
-      ]),
-    );
-  }
-  if (live && live.playing > 0) {
-    parts.push(
-      activityLiveLine([
+  const render = (counters: Counters | null): void => {
+    if (counters?.totals) {
+      const { totalCompletedGames, last30dCompletedGames } = counters.totals;
+      const value = primary.querySelector('.landing-activity-value');
+      const label = primary.querySelector('.landing-activity-label');
+      if (value) value.textContent = formatCount(totalCompletedGames);
+      if (label) {
+        label.textContent = gamesPlayedLabel(last30dCompletedGames);
+        label.setAttribute('title', t('home.gamesPlayedMonthTitle'));
+      }
+      if (!primary.isConnected) body.prepend(primary);
+      hasTotals = true;
+    } else if (!hasTotals) {
+      // Never a placeholder dash beside a real live line.
+      primary.remove();
+    }
+    if (!counters) return; // a failed poll keeps the live line it had
+    if (counters.playing > 0) {
+      const next = activityLiveLine([
         activityInlineStat(
-          formatCount(live.playing),
-          t(live.playing === 1 ? 'home.gameInPlay' : 'home.gamesInPlay'),
+          formatCount(counters.playing),
+          t(counters.playing === 1 ? 'home.gameInPlay' : 'home.gamesInPlay'),
           CURRENT_GAMES_HREF,
         ),
-      ]),
-    );
-  }
-  if (parts.length === 0) {
+      ]);
+      if (live) live.replaceWith(next);
+      else body.append(next);
+      live = next;
+    } else {
+      live?.remove();
+      live = null;
+    }
+  };
+
+  render(await fetchCounters());
+  if (!hasTotals && !live) {
     box.remove();
     return;
   }
-  body.replaceChildren(...parts);
+  pollWhileVisible(box, async () => render(await fetchCounters()), pollMs);
+}
+
+// Re-run `tick` every `pollMs` while `box` is on the page and the tab is
+// visible. A hidden tab schedules nothing; showing it again ticks at once.
+// Everything tears down the first time a tick or a visibility change finds
+// the block gone (the landing unmounted).
+function pollWhileVisible(box: HTMLElement, tick: () => Promise<void>, pollMs: number): void {
+  // A call, not an inline read: TypeScript would otherwise carry the narrowing
+  // from the check before the await to the one after it.
+  const hidden = (): boolean => document.visibilityState === 'hidden';
+  let timer: number | null = null;
+  let running = false;
+  const stop = (): void => {
+    if (timer !== null) window.clearTimeout(timer);
+    timer = null;
+    document.removeEventListener('visibilitychange', onVisibility);
+  };
+  const run = async (): Promise<void> => {
+    timer = null;
+    if (!box.isConnected) return stop();
+    if (hidden() || running) return;
+    running = true;
+    try {
+      await tick();
+    } finally {
+      running = false;
+    }
+    if (!box.isConnected) return stop();
+    if (!hidden()) timer = window.setTimeout(() => void run(), pollMs);
+  };
+  const onVisibility = (): void => {
+    if (!box.isConnected) {
+      stop();
+      return;
+    }
+    if (hidden()) {
+      if (timer !== null) window.clearTimeout(timer);
+      timer = null;
+    } else if (timer === null && !running) {
+      void run();
+    }
+  };
+  document.addEventListener('visibilitychange', onVisibility);
+  timer = window.setTimeout(() => void run(), pollMs);
 }
 
 function activityPrimary(metrics: HTMLElement[]): HTMLElement {
@@ -125,33 +197,24 @@ function formatCount(n: number): string {
   return new Intl.NumberFormat('en-US').format(n);
 }
 
-async function fetchLiveStats(): Promise<LiveStats | null> {
+async function fetchCounters(): Promise<Counters | null> {
   try {
     const resp = await fetch('/api/live-stats');
     if (!resp.ok) return null;
-    const data = (await resp.json()) as Partial<LiveStats>;
-    if (typeof data.playing !== 'number' || typeof data.online !== 'number') return null;
-    return { playing: data.playing, online: data.online };
-  } catch {
-    return null;
-  }
-}
-
-async function fetchPublicStats(): Promise<PublicStats | null> {
-  try {
-    const resp = await fetch('/api/stats/public');
-    if (!resp.ok) return null;
-    const data = (await resp.json()) as Partial<PublicStats>;
-    if (
-      typeof data.totalCompletedGames !== 'number' ||
-      typeof data.last30dCompletedGames !== 'number'
-    ) {
-      return null;
-    }
-    return {
-      totalCompletedGames: data.totalCompletedGames,
-      last30dCompletedGames: data.last30dCompletedGames,
+    const data = (await resp.json()) as {
+      playing?: unknown;
+      totalCompletedGames?: unknown;
+      last30dCompletedGames?: unknown;
     };
+    if (typeof data.playing !== 'number') return null;
+    const totals =
+      typeof data.totalCompletedGames === 'number' && typeof data.last30dCompletedGames === 'number'
+        ? {
+            totalCompletedGames: data.totalCompletedGames,
+            last30dCompletedGames: data.last30dCompletedGames,
+          }
+        : null;
+    return { playing: data.playing, totals };
   } catch {
     return null;
   }

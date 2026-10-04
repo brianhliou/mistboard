@@ -324,6 +324,72 @@ describe('buildLandingChat (live, stubbed fetch)', () => {
     const texts = [...mount.querySelectorAll('.landing-chat-text')].map((el) => el.textContent);
     expect(texts).toEqual(['hello there']);
   });
+
+  it('opens scrolled to the newest line once the page lays it out', async () => {
+    // jsdom has no layout: attached elements get a size and a writable
+    // scrollTop, and "layout" is firing the stubbed ResizeObservers.
+    const scrollTops = new WeakMap<Element, number>();
+    const spies = [
+      vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        return this.isConnected ? 480 : 0;
+      }),
+      vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        return this.isConnected ? 120 : 0;
+      }),
+      vi.spyOn(Element.prototype, 'scrollTop', 'get').mockImplementation(function (this: Element) {
+        return scrollTops.get(this) ?? 0;
+      }),
+      vi.spyOn(Element.prototype, 'scrollTop', 'set').mockImplementation(function (
+        this: Element,
+        value: number,
+      ) {
+        scrollTops.set(this, value);
+      }),
+    ];
+    const observers: Array<() => void> = [];
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(private readonly callback: () => void) {}
+        observe(): void {
+          observers.push(() => this.callback());
+        }
+        disconnect(): void {}
+      },
+    );
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse({
+          lines: [line('a', 60_000, Date.now()), line('b', 1000, Date.now())],
+          canPost: false,
+          canReport: false,
+          viewerHandle: null,
+          isAdmin: false,
+        }),
+      ),
+    );
+
+    try {
+      // The homepage attaches its tree after the chat has hydrated.
+      const mount = buildLandingChat();
+      await vi.waitFor(() => {
+        expect(mount.querySelectorAll('.landing-chat-line')).toHaveLength(2);
+      });
+      const feed = mount.querySelector<HTMLElement>('.landing-chat-feed');
+      expect(feed?.scrollTop).toBe(0);
+
+      document.body.append(mount);
+      for (const fire of observers) fire();
+      expect(feed?.scrollTop).toBe(480);
+    } finally {
+      for (const spy of spies) spy.mockRestore();
+    }
+  });
 });
 
 describe('landing chat mute persistence (live)', () => {

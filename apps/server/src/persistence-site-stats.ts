@@ -124,6 +124,33 @@ export async function getSiteStats(): Promise<SiteStats> {
 // the same seat exclusion to the human rows.
 const COUNTED = countedHumanGame('g');
 
+export interface SiteGameTotals {
+  totalCompletedGames: number;
+  last30dCompletedGames: number;
+}
+
+// The two headline counts alone, for the homepage poll (site-counters.ts):
+// getPublicSiteStats runs a dozen aggregates for /stats, which a per-view
+// read on the homepage does not need. Same filter and window, so the numbers
+// agree with /stats.
+export async function getSiteGameTotals(
+  options: PublicSiteStatsOptions = {},
+): Promise<SiteGameTotals> {
+  const now = options.now ?? new Date();
+  const result = await getPool().query<{ total: number; last30d: number }>(
+    `SELECT
+       count(*)::int AS total,
+       count(*) FILTER (
+         WHERE g.ended_at > $1::timestamptz - INTERVAL '30 days'
+       )::int AS last30d
+     FROM games g
+     WHERE ${COUNTED}`,
+    [now],
+  );
+  const row = result.rows[0];
+  return { totalCompletedGames: row?.total ?? 0, last30dCompletedGames: row?.last30d ?? 0 };
+}
+
 export async function getPublicSiteStats(
   options: PublicSiteStatsOptions = {},
 ): Promise<PublicSiteStats> {
