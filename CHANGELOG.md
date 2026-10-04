@@ -90,11 +90,13 @@ Conventions:
 
 ### Community
 
+- The leaderboard shows every speed that has rated players, provisional ratings marked with ? ([99752abc](https://github.com/brianhliou/mistboard/commit/99752abc))
 - Player names on correspondence seeks, games and challenges link to their profiles ([11790cc8](https://github.com/brianhliou/mistboard/commit/11790cc8))
 - Profile game lists filter by result and by opponent ([cce12ac5](https://github.com/brianhliou/mistboard/commit/cce12ac5))
 
 ### Site
 
+- Game cards show the variant as the title, with the time control on its own line ([99752abc](https://github.com/brianhliou/mistboard/commit/99752abc))
 - Correspondence lists use game cards, and challenging a specific player moves to their profile ([c3243b74](https://github.com/brianhliou/mistboard/commit/c3243b74))
 - KataGo on the homepage carries a Neural net tag ([11790cc8](https://github.com/brianhliou/mistboard/commit/11790cc8))
 - Homepage game counts now refresh while the page is open ([dbe84a24](https://github.com/brianhliou/mistboard/commit/dbe84a24))
