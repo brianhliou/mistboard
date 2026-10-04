@@ -1,5 +1,5 @@
 import type { Locale } from '../../i18n/locale.js';
-import { cardMark } from '../text-card.js';
+import { textCard } from '../text-card.js';
 import type { Article } from '../types.js';
 import type { XiangqiReplaySpec } from '../../xiangqi-replay.js';
 import {
@@ -1004,42 +1004,22 @@ const C_aHRbltmz: XiangqiReplaySpec = {
   },
 };
 
-// A text card, in the shape the titled-players thumbnail proved: one token big
-// enough to be a mark, then quieter lines under it.
-//
-// The chart was tried here first and does not survive the size. At 158px in the
-// homepage row its 22 rows are scratches, and the one thing it has to say (green
-// thinning out, then turning red) needs the row labels and the axis it cannot
-// afford at that scale.
-//
-// The mark is ENGLISH, and that is the whole decision. A version with 冠军 at
-// 66px was better looking and worse at the job: the audience here is chess
-// players who do not read Chinese, the card is 158px in the homepage row, and at
-// that size the English line falls to about 8px. The only legible thing on the
-// card would have been two characters the intended reader cannot decode. 冠军
-// stays as an eyebrow, where it says "Chinese chess" without needing to be read.
-//
-// Geometry, palette and type colours are copied from TITLED_PLAYERS_THUMBNAIL on
-// purpose: two cards in one row that are almost alike read as a mistake. The CJK
-// stack is explicit because Roboto carries no hanzi and the platform fallback
-// differs.
+// Text card (text-card.ts). The chart was tried here first and does not survive
+// the size: at 158px in the homepage row its 22 rows are scratches, and the one
+// thing it has to say (green thinning out, then turning red) needs the row labels
+// and the axis it cannot afford at that scale.
 const CHAMPIONS_THUMBNAIL = (locale?: Locale): string =>
-  [
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" ',
-    'preserveAspectRatio="xMidYMid slice" width="320" height="200" role="img" ',
-    'aria-label="A card reading Champions, every xiangqi title, 1956 to 2025">',
-    '<rect x="0" y="0" width="320" height="200" fill="var(--xq-diagram-bg, #d9bd82)"/>',
-    cardMark(
-      { eyebrowY: 60, leadY: 116, latin: 'CHAMPIONS', hanzi: '\u51a0\u519b', zhHans: '冠军', zhHant: '冠軍' },
-      locale,
-    ),
-    '<text x="160" y="150" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" ',
-    'font-size="15" font-weight="600" letter-spacing="1.4" fill="#b9832f" opacity="0.62">',
-    'EVERY XIANGQI TITLE</text>',
-    '<text x="160" y="176" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" ',
-    'font-size="12" letter-spacing="2.4" fill="#5a4626" opacity="0.72">SINCE 1956</text>',
-    '</svg>',
-  ].join('');
+  textCard(
+    {
+      palette: 'xiangqi',
+      eyebrow: 'XIANGQI',
+      lead: 'CHAMPIONS',
+      tagline: 'EVERY NATIONAL TITLE',
+      footer: 'SINCE 1956',
+      ariaLabel: 'A card reading Champions, every xiangqi title, 1956 to 2025',
+    },
+    locale,
+  );
 
 export const xiangqiChampionsArticle: Article = {
   slug: 'xiangqi-champions',

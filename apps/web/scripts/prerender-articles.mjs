@@ -748,6 +748,11 @@ try {
   // before this the path served a directory listing of dist/, and the site had
   // no Chinese URL for the page that matters most to a Chinese search.
   const { renderLandingShellForPrerender } = await server.ssrLoadModule('/src/landing.ts');
+  const { homeStructuredDataScripts } = await server.ssrLoadModule('/src/home-structured-data.ts');
+  // The English home keeps the description index.html already carries; the
+  // JSON-LD repeats each page's own description rather than a second copy.
+  const shellDescription = shell.match(/<meta\s+name="description"\s+content="([^"]*)"/)?.[1];
+  if (!shellDescription) throw new Error('shell index.html has no meta description');
   const homeVariants = [
     { path: '/', file: 'home.html', htmlLang: 'en', meta: null },
     {
@@ -792,9 +797,14 @@ try {
         url,
       });
     }
+    const homeLd = homeStructuredDataScripts({
+      inLanguage: variant.htmlLang,
+      url,
+      description: variant.meta?.description ?? shellDescription,
+    });
     homeHtml = homeHtml.replace(
       '</head>',
-      `<link rel="canonical" href="${url}" />${homeHreflang}${landingAssetLinks}</head>`,
+      `<link rel="canonical" href="${url}" />${homeHreflang}${homeLd}${landingAssetLinks}</head>`,
     );
     await fs.writeFile(resolve(distDir, variant.file), homeHtml, 'utf-8');
     console.log(`prerendered ${variant.path} (${variant.file}, lang=${variant.htmlLang})`);

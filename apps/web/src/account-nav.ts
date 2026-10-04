@@ -22,6 +22,7 @@ import {
   writeSignedInHint,
   writeVariantGrantsHint,
 } from './signed-in-state.js';
+import { syncAdminNavMenus } from './site-shell.js';
 import {
   buildAppearanceMenu,
   gearIconSvg,
@@ -140,15 +141,13 @@ function mountAccountNavs(): void {
 // initial visibility in site-shell's navLink; this is the authoritative
 // reconcile once auth resolves (and on every observer pass, so navs rebuilt by
 // SPA mounts stay in sync). Idempotent by construction. The admin-only tools
-// menu reconciles the same way off the resolved account role.
+// menu reconciles the same way off the resolved account role, except that it is
+// added or removed rather than hidden, so a non-admin's DOM never carries it.
 function applySignedInOnlyNav(signedIn: boolean): void {
   for (const el of document.querySelectorAll<HTMLElement>('[data-signed-in-only]')) {
     el.hidden = !signedIn;
   }
-  const isAdmin = signedIn && cachedUser?.accountRole === 'admin';
-  for (const el of document.querySelectorAll<HTMLElement>('[data-admin-only]')) {
-    el.hidden = !isAdmin;
-  }
+  syncAdminNavMenus(signedIn && cachedUser?.accountRole === 'admin');
 }
 
 // Persisted user object. Lets surfaces that need handle/email render the real

@@ -106,14 +106,13 @@ export function buildNav(locale: Locale = currentLocale()): HTMLElement {
   donateIcon.setAttribute('aria-hidden', 'true');
   donate.prepend(donateIcon);
   links.append(donate);
-  // Consolidate internal tools under one admin-only menu. Initial visibility
-  // comes from the persisted admin hint; account-nav reconciles it once auth
-  // resolves. This is cosmetic only: both pages are admin-gated server-side.
-  const adminMenu = navMenu('nav.admin', adminNavItems(), locale);
-  adminMenu.classList.add('site-nav-menu-admin');
-  adminMenu.dataset.adminOnly = '';
-  adminMenu.hidden = !isLikelyAdmin();
-  links.append(adminMenu);
+  // Internal tools sit under one admin-only menu, rendered from the persisted
+  // admin hint and reconciled by account-nav once auth resolves. Absent, not
+  // hidden, for everyone else: the signed-out nav is what the prerender bakes,
+  // and a hidden menu still put 管理 / 数据库 / 运营简报 in the HTML a crawler
+  // indexes. The pages themselves are admin-gated server-side.
+  navLinksLocale.set(links, locale);
+  if (isLikelyAdmin()) links.append(buildAdminNavMenu(locale));
 
   const utilities = document.createElement('div');
   utilities.className = 'site-nav-utilities';
@@ -153,6 +152,29 @@ export function buildNav(locale: Locale = currentLocale()): HTMLElement {
   ensureNavAccountPlacement();
   observeNavBrandFit(nav);
   return nav;
+}
+
+// The locale each bar was built in, so a menu added after auth resolves speaks
+// the same language as the rest of its bar.
+const navLinksLocale = new WeakMap<HTMLElement, Locale>();
+
+function buildAdminNavMenu(locale: Locale): HTMLElement {
+  const adminMenu = navMenu('nav.admin', adminNavItems(), locale);
+  adminMenu.classList.add('site-nav-menu-admin');
+  adminMenu.dataset.adminOnly = '';
+  return adminMenu;
+}
+
+// Adds or removes the admin menu on every nav bar so it exists only for an
+// admin. Idempotent: account-nav calls it on each DOM-observer pass. The menu
+// is the last item on the bar, right after Donate.
+export function syncAdminNavMenus(isAdmin: boolean): void {
+  for (const links of document.querySelectorAll<HTMLElement>('.site-nav .site-nav-links')) {
+    const existing = links.querySelector<HTMLElement>(':scope > [data-admin-only]');
+    if (isAdmin && !existing)
+      links.append(buildAdminNavMenu(navLinksLocale.get(links) ?? currentLocale()));
+    else if (!isAdmin && existing) existing.remove();
+  }
 }
 
 // The wordmark stays on the bar whenever it fits and drops to the logo alone

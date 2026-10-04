@@ -47,6 +47,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- Tony Fung 冯家俊, Hong Kong's 2022 world championship finalist, gets the fourth player page, in English and Chinese, with all 47 of his games in a study ([7af55c21](https://github.com/brianhliou/mistboard/commit/7af55c21))
 - The champions article explains how its games were annotated, with totals across both champion pages ([ca833e03](https://github.com/brianhliou/mistboard/commit/ca833e03))
 - the KataGo post's charts count moves and mark the move Misty lost and the move it saw it ([f30597b2](https://github.com/brianhliou/mistboard/commit/f30597b2))
 - New post: KataGo, a stronger Jungle Chess bot, reading two of its wins over Misty with both engines' evaluations ([fa06feca](https://github.com/brianhliou/mistboard/commit/fa06feca))
@@ -115,6 +116,9 @@ Conventions:
 
 ### Fixed
 
+- The Chinese home pages stay in Chinese on days a scheduled post goes live ([7af55c21](https://github.com/brianhliou/mistboard/commit/7af55c21))
+- Blog cards for KataGo, AB-JChess, Pikafish, jieqi and the champions pages are now written in the page's language, with no Chinese on English cards ([7af55c21](https://github.com/brianhliou/mistboard/commit/7af55c21))
+- Arrow keys keep stepping through a game after you click a move on an article board ([7af55c21](https://github.com/brianhliou/mistboard/commit/7af55c21))
 - The homepage no longer spotlights a broadcast whose source published results but no moves ([a92561fb](https://github.com/brianhliou/mistboard/commit/a92561fb))
 - Homepage variant markers show at their full size ([dfa9549e](https://github.com/brianhliou/mistboard/commit/dfa9549e))
 - Games that can no longer be opened (Crazyhouse Xiangqi games from before the rules change, mahjong tables) stay in your history with an Old rules or Unsupported tag instead of linking to a missing page ([67ffa88b](https://github.com/brianhliou/mistboard/commit/67ffa88b))

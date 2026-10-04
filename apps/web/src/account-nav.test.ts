@@ -174,13 +174,14 @@ describe('account nav', () => {
     const adminLinks = () =>
       Array.from(adminMenu()?.querySelectorAll<HTMLAnchorElement>('.site-nav-menu-panel a') ?? []);
 
-    // The bar always carries the menu; visibility reconciles off the account
-    // role. The old dropdown admin group is gone for everyone.
-    expect(adminMenu()).not.toBeNull();
-    expect(adminLinks()).toHaveLength(7);
+    // The menu exists only for an admin: added when the account role resolves
+    // to admin, removed otherwise, never merely hidden (a hidden menu still put
+    // its labels in the prerendered HTML crawlers read). The old dropdown admin
+    // group is gone for everyone.
+    expect(adminMenu()).toBeNull();
 
     setAccountNavUser(testUser('misty'));
-    expect(adminMenu()?.hidden).toBe(true);
+    expect(adminMenu()).toBeNull();
     expect(document.querySelector('.account-nav-admin')).toBeNull();
 
     setAccountNavUser({ ...testUser('boss'), accountRole: 'admin' });
@@ -196,9 +197,9 @@ describe('account nav', () => {
     ]);
     expect(document.querySelector('.account-nav-admin')).toBeNull();
 
-    // Signing out hides them again.
+    // Signing out removes them again.
     setAccountNavUser(null);
-    expect(adminMenu()?.hidden).toBe(true);
+    expect(adminMenu()).toBeNull();
 
     // Settle the appearance-menu chunk loads the dropdowns above kicked off, so
     // no dynamic import is still in flight when the next test resets modules

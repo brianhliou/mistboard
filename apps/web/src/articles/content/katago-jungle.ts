@@ -15,6 +15,7 @@ import {
   settledPly,
   winnerSeries,
 } from '../katago-jungle-analysis.js';
+import { textCard } from '../text-card.js';
 import type { Article, ArticleBlock } from '../types.js';
 import evalsJson from './katago-jungle-evals.json' with { type: 'json' };
 import linesJson from './katago-jungle-lines.json' with { type: 'json' };
@@ -23,42 +24,19 @@ import linesJson from './katago-jungle-lines.json' with { type: 'json' };
 // below: 200 games against MistyJungle at 1,000 visits a move (82-0-118, 0.705,
 // study 0t8xpyv6), then 50 at the site's 150 visits (19-0-31, 0.690).
 //
-// Text card in the Pikafish card's family, set in the page's language: the
-// reader's script leads and the other name sits above it, small. The palette is
-// the jungle diagrams' green.
-const KATAGO_JUNGLE_THUMBNAIL = (locale: Locale): string => {
-  const zh = locale === 'zh-Hans' || locale === 'zh-Hant';
-  const hanzi = locale === 'zh-Hant' ? '鬥獸棋' : '斗兽棋';
-  const above = zh ? 'KATAGO' : hanzi;
-  const lead = zh ? hanzi : 'KATAGO';
-  const tagline = zh
-    ? locale === 'zh-Hant'
-      ? '新的最強電腦'
-      : '新的最强电脑'
-    : 'THE TOP JUNGLE CHESS BOT';
-  const hanziFont =
-    "'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif";
-  const latinFont = 'Roboto, system-ui, sans-serif';
-  const ink = '#1f6f5b';
-  return [
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" ',
-    'preserveAspectRatio="xMidYMid slice" width="320" height="200" role="img" ',
-    `aria-label="A card reading ${zh ? hanzi : 'KataGo'}, the top Jungle Chess bot">`,
-    '<rect x="0" y="0" width="320" height="200" fill="#dfe8cf"/>',
-    `<text x="160" y="62" text-anchor="middle" font-family="${zh ? latinFont : hanziFont}" `,
-    `font-size="${zh ? 22 : 26}" font-weight="700" letter-spacing="${zh ? 6 : 10}" fill="${ink}" `,
-    `opacity="0.5"${zh ? ' translate="no"' : ''}>${above}</text>`,
-    `<text x="160" y="118" text-anchor="middle" font-family="${zh ? hanziFont : latinFont}" `,
-    `font-size="${zh ? 46 : 40}" font-weight="700" letter-spacing="${zh ? 8 : 0}" fill="${ink}"`,
-    `${zh ? '' : ' translate="no"'}>`,
-    `${lead}</text>`,
-    `<text x="160" y="150" text-anchor="middle" font-family="${zh ? hanziFont : latinFont}" `,
-    `font-size="${zh ? 16 : 15}" font-weight="600" letter-spacing="${zh ? 3 : 1.4}" `,
-    `fill="${ink}" opacity="0.62">`,
-    `${tagline}</text>`,
-    '</svg>',
-  ].join('');
-};
+// Text card (text-card.ts) on the jungle diagrams' green. KataGo has no Chinese
+// name, so it stays as written in every language.
+const KATAGO_JUNGLE_THUMBNAIL = (locale: Locale): string =>
+  textCard(
+    {
+      palette: 'jungle',
+      eyebrow: 'JUNGLE CHESS',
+      lead: { text: 'KATAGO', name: true },
+      tagline: 'THE NEW TOP BOT',
+      ariaLabel: 'A card reading KataGo, the top Jungle Chess bot',
+    },
+    locale,
+  );
 
 const KATAGOMO = 'https://github.com/hzyhhzy/KataGomo';
 

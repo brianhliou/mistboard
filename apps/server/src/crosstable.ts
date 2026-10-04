@@ -11,7 +11,11 @@
 // a's side, so the client never re-derives who won from a variant result
 // vocabulary it does not know.
 
-import { DARK_CHESS_SPEC_ID } from '@mistboard/game';
+import {
+  type CrosstableTenantLookup,
+  crosstableReviewUrl,
+  REGISTRY_LOOKUP,
+} from './crosstable-review-url.js';
 import type {
   GameParticipant,
   GameParticipantColor,
@@ -21,11 +25,8 @@ import type {
   HeadToHeadTally,
 } from './persistence-games.js';
 import { postgamePlayers } from './routes/lib.js';
-import {
-  type VariantTenantRegistration,
-  variantTenantForRoomId,
-  variantTenantForSpecId,
-} from './variant-tenant/registry.js';
+
+export { type CrosstableTenantLookup, crosstableReviewUrl } from './crosstable-review-url.js';
 
 export const CROSSTABLE_GAME_LIMIT = 20;
 
@@ -72,39 +73,16 @@ export type CrosstableRoom = {
 
 // The registry seam, injectable so the pure functions are testable without
 // loading every tenant registration module.
-export type CrosstableTenantLookup = {
-  forRoomId: (roomId: string) => Pick<VariantTenantRegistration, 'export'> | null;
-  forSpecId: (gameSpecId: string) => Pick<VariantTenantRegistration, 'export'> | null;
-};
-
-const REGISTRY_LOOKUP: CrosstableTenantLookup = {
-  forRoomId: variantTenantForRoomId,
-  forSpecId: variantTenantForSpecId,
-};
 
 // The legacy chess stack (fog chess) reviews at /game/:id. It has
 // no tenant registration of its own (the dark-chess `dchx_` correspondence
 // registration exists but binds no export/route base), so its persisted variant
 // strings are listed here explicitly, legacy spellings included. Deliberately an
 // allowlist: an unknown variant gets NO review URL, never a guessed one.
-const CHESS_STACK_VARIANTS: ReadonlySet<string> = new Set([DARK_CHESS_SPEC_ID, 'fog']);
 
 // The review URL for a finished game, or null when neither a tenant route base
 // nor the chess stack claims it. Room-id prefix first (the room's own tenant),
 // then the spec's routing owner (legacy room ids), then the chess allowlist.
-export function crosstableReviewUrl(
-  roomId: string,
-  variant: string,
-  lookup: CrosstableTenantLookup = REGISTRY_LOOKUP,
-): string | null {
-  const routeBase =
-    lookup.forRoomId(roomId)?.export?.gameRouteBase ??
-    lookup.forSpecId(variant)?.export?.gameRouteBase ??
-    null;
-  if (routeBase) return `${routeBase}/${encodeURIComponent(roomId)}`;
-  if (CHESS_STACK_VARIANTS.has(variant)) return `/game/${encodeURIComponent(roomId)}`;
-  return null;
-}
 
 type SeatResult = 'white-wins' | 'black-wins' | 'draw';
 

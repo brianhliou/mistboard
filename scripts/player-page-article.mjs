@@ -22,13 +22,18 @@
 //                                    thumbnailAlt, audience, readNext (comma list),
 //                                    homeRow (deep-dives for a player page),
 //                                    player (his name as the specs spell it: every
-//                                    board opens from his side)
+//                                    board opens from his side), short (the name
+//                                    captions use, e.g. Fung), captions (hand: a
+//                                    pre-2026-10-03 page keeps written captions)
 //   <!-- a note -->                  dropped
 //   ## Heading                       starts a section; anything above the first
 //                                    one is the intro
 //   [figure src=/a.jpg alt="…"] Caption
-//   [board key=m_139844 ply=24] Caption        const name defaults to G_<key>;
-//                                    perspective=red|black overrides `player:`
+//   [board key=m_139844 ply=24]      const name defaults to G_<key>;
+//                                    perspective=red|black overrides `player:`;
+//                                    the caption is generated from the record
+//                                    (players, event, date, result, length, the
+//                                    opening position); a written one refuses
 //   [cta] Label -> /href (primary) | Label -> /href (secondary)
 //   [cta single-row] …
 //   [table highlight=2 wrap|compact] Caption, followed on the next lines by a pipe table,
@@ -215,7 +220,15 @@ for (const [boardIndex, { key, constName }] of boards.entries()) {
   );
   spec.annotations = { ...(spec.annotations ?? {}), byPly: ordered };
   specConsts.push(`const ${constName}: XiangqiReplaySpec = ${JSON.stringify(spec, null, 2)};`);
-  seatsByKey.set(key, { red: spec.red, black: spec.black });
+  seatsByKey.set(key, {
+    red: spec.red,
+    black: spec.black,
+    event: spec.event,
+    resultText: spec.resultText,
+    plies: String(spec.iccs ?? '')
+      .split(/\s+/)
+      .filter(Boolean).length,
+  });
 }
 
 // Every board opens from the page's player's side (front matter `player:`, his
@@ -231,6 +244,62 @@ for (const block of [...intro, ...sections.flatMap((s) => s.blocks)]) {
     fail(
       `${block.key}: neither seat is "${meta.player}" (red ${seats?.red}, black ${seats?.black})`,
     );
+}
+
+// Board captions are generated from the game record, never written (Brian,
+// 2026-10-03: "how do we know we're not hallucinating commentary on xiangqi
+// games?"). On page 4, two of five hand-written board paragraphs said something
+// the engine contradicted, and the check that caught them was a model too. The
+// caption states only what the record proves; the engine's marks, lines and
+// verdicts on the board, and the study, carry the game. Pages 1-3 predate this
+// and keep their hand captions: `captions: hand` in the front matter.
+const MONTHS =
+  'January February March April May June July August September October November December'.split(
+    ' ',
+  );
+function gameDate(key) {
+  for (const dir of ['annot10m', 'annot1m', 'site']) {
+    const p = join(playerDir, dir, `${key}.json`);
+    if (!existsSync(p)) continue;
+    const date = JSON.parse(readFileSync(p, 'utf8')).game?.date;
+    if (date) return date.slice(0, 10);
+  }
+  return null;
+}
+function boardCaption(block) {
+  const s = seatsByKey.get(block.key);
+  const date = gameDate(block.key);
+  if (!date) fail(`${block.key}: no game date in annot10m/, annot1m/ or site/`);
+  const [y, m, d] = date.split('-').map(Number);
+  if (y > new Date().getFullYear())
+    fail(`${block.key}: dated ${date}, a source mis-date (README step 1)`);
+  const who = meta.short ?? meta.player;
+  const side = s.red === meta.player ? 'red' : 'black';
+  const moves = Math.ceil(s.plies / 2);
+  const won = (s.resultText === '1-0') === (side === 'red');
+  const result = /1\/2|½/.test(s.resultText)
+    ? `Drawn in ${moves} moves.`
+    : won
+      ? `${who} won with ${side} in ${moves} moves.`
+      : fail(`${block.key}: a loss on the board (README step 0b)`);
+  const p = block.startPly ?? 0;
+  const opens =
+    p === 0
+      ? 'The board opens at the start.'
+      : `The board opens after ${p % 2 ? 'red' : 'black'}'s move ${Math.ceil(p / 2)}, with ${
+          (p % 2 ? 'black' : 'red') === side ? who : 'his opponent'
+        } to move.`;
+  return `${s.red} vs ${s.black}, ${s.event}, ${d} ${MONTHS[m - 1]} ${y}. ${result} ${opens}`;
+}
+for (const block of [...intro, ...sections.flatMap((s) => s.blocks)]) {
+  if (block.kind !== 'xq-replay') continue;
+  if (meta.captions === 'hand') continue;
+  if (block.caption) {
+    fail(
+      `${block.key}: board captions are generated from the record; delete the caption (or set captions: hand for a pre-2026-10-03 page)`,
+    );
+  }
+  block.caption = boardCaption(block);
 }
 
 // ---- emit --------------------------------------------------------------------
@@ -300,7 +369,10 @@ ${sections
 if (out) {
   writeFileSync(out, ts);
   console.error(`${boards.length} boards, ${sections.length} sections -> ${out}`);
-  if (unmeasured.length && !PREVIEW) {
+  // A preview measures too: it is what gets shown for review, and a page shown
+  // without its verdicts reads as broken (2026-10-03, page 4). Only a preview
+  // run with --no-measure renders the lines bare.
+  if (unmeasured.length && !(PREVIEW && NO_MEASURE)) {
     if (NO_MEASURE) {
       fail(
         `${unmeasured.length} engine lines have no verdict (${unmeasured.slice(0, 3).join(', ')}…): ` +

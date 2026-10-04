@@ -29,6 +29,7 @@ import {
   JIEQI_REVEALED_FREEDOMS,
   JIEQI_START_BOARD,
 } from '../diagrams.js';
+import { textCard } from '../text-card.js';
 import type { Article, ArticleBlock } from '../types.js';
 
 // Text card in the family TITLED_PLAYERS_THUMBNAIL started and the jieqi platform
@@ -39,7 +40,8 @@ import type { Article, ArticleBlock } from '../types.js';
 // The mark is Vietnamese, not English. The champions card argues for an English
 // mark because its reader is a chess player who does not read hanzi; this page's
 // reader arrived from a search for `luat co up`, so the one legible thing at 158px
-// has to be the phrase they typed. 揭棋 rides above as an eyebrow the same way.
+// has to be the phrase they typed, under the game it belongs to (CỜ TƯỚNG), in the
+// page's language like every text card (text-card.ts).
 //
 // The bottom row is the departure from co-up's card, which sits beside this one in
 // the footer ring and is otherwise the same object: one piece turned over and four
@@ -51,20 +53,7 @@ import type { Article, ArticleBlock } from '../types.js';
 // The turned-over piece leads the row rather than ending it. The index card stamps
 // its DRAFT badge over the bottom-right corner, which landed squarely on the one
 // element that tells this card apart from co-up's.
-const LUAT_CO_UP_THUMBNAIL = [
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" ',
-  'preserveAspectRatio="xMidYMid slice" width="320" height="200" role="img" ',
-  'aria-label="Thẻ đề Cờ úp, luật chơi, trên một hàng quân úp và một quân đã lật">',
-  '<rect x="0" y="0" width="320" height="200" fill="var(--xq-diagram-bg, #d9bd82)"/>',
-  '<text x="160" y="52" text-anchor="middle" font-family="\'Noto Sans SC\', ',
-  "'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif\" ",
-  'font-size="26" font-weight="700" letter-spacing="10" fill="#b9832f" ',
-  'opacity="0.5">\u63ed\u68cb</text>',
-  '<text x="160" y="108" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" ',
-  'font-size="40" font-weight="700" fill="#b9832f">C\u1edc \u00daP</text>',
-  '<text x="160" y="138" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" ',
-  'font-size="15" font-weight="600" letter-spacing="1.4" fill="#b9832f" opacity="0.62">',
-  'LU\u1eacT CH\u01a0I</text>',
+const LUAT_CO_UP_FLIP_ROW = [
   '<circle cx="96" cy="172" r="12" fill="#f3e6c4" stroke="#b91c1c" stroke-width="2"/>',
   ...[0, 1, 2, 3].map((i) => {
     const red = i % 2 === 1;
@@ -77,8 +66,16 @@ const LUAT_CO_UP_THUMBNAIL = [
   '<g transform="translate(84 160) scale(0.24)">',
   cjkGlyphMark(xiangqiGlyph('traditional', 'red', 'chariot'), '#b91c1c'),
   '</g>',
-  '</svg>',
 ].join('');
+
+const LUAT_CO_UP_THUMBNAIL = textCard({
+  palette: 'xiangqi',
+  eyebrow: 'C\u1edc T\u01af\u1edaNG',
+  lead: 'C\u1edc \u00daP',
+  tagline: 'LU\u1eacT CH\u01a0I',
+  art: LUAT_CO_UP_FLIP_ROW,
+  ariaLabel: 'Thẻ đề Cờ úp, luật chơi, trên một hàng quân úp và một quân đã lật',
+});
 
 export const luatCoUpArticle: Article = {
   slug: 'luat-co-up',

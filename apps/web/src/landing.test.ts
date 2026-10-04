@@ -111,6 +111,38 @@ describe('landing shell', () => {
     expect(shouldUseBundledShowcaseDemos('?demo=engine-v2-g0000')).toBe(true);
   });
 
+  it('bakes no admin menu into the signed-out prerender, in any language', async () => {
+    // The prerender is what crawlers index; a hidden admin menu still put
+    // 管理 / 数据库 / 运营简报 / 转播运维 into the Chinese home page's HTML.
+    const { ensureLocaleCatalog } = await import('./i18n/catalog.js');
+    try {
+      for (const path of ['/', '/zh-hans', '/zh-hant']) {
+        window.history.replaceState(null, '', path);
+        if (path !== '/') await ensureLocaleCatalog(path === '/zh-hans' ? 'zh-Hans' : 'zh-Hant');
+        const html = renderLandingShellForPrerender();
+        expect(html).toContain('site-nav-links');
+        expect(html, path).not.toContain('data-admin-only');
+        for (const label of [
+          'Admin',
+          'Readouts',
+          'Broadcast ops',
+          '管理',
+          '运营简报',
+          '營運簡報',
+          '转播运维',
+          '轉播運維',
+          'href="/database"',
+          'href="/readouts"',
+          'href="/broadcast/xiangqi/ops"',
+        ]) {
+          expect(html, `${path}: ${label}`).not.toContain(label);
+        }
+      }
+    } finally {
+      window.history.replaceState(null, '', '/');
+    }
+  });
+
   it('keeps the grid-area hooks the homepage band CSS keys on', () => {
     // landing.css places the bands via these class names (grid-areas
     // left/panel/play, puzzle/forum/chat, news/blogs+learn/studies); renaming
