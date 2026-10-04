@@ -17,7 +17,6 @@ import type {
   RoomTimeControl,
 } from '@mistboard/game';
 import { crazyhouseXiangqiFen, crazyhouseXiangqiMoveToUci } from '@mistboard/game';
-import { currentAccountUser } from './account-session.js';
 import {
   CRAZYHOUSE_XIANGQI_ANALYSIS_DEPTH,
   CRAZYHOUSE_XIANGQI_ANALYSIS_ENGINE_ID,
@@ -178,15 +177,14 @@ registerVariantTenant({
   clearRooms: () => crazyhouseXiangqiRooms.clear(),
   http: {
     matchesCreateRequest: requestsCrazyhouseXiangqi,
-    handleCreate: async (ctx, request, response, body) => {
-      const accountUser = body.rated === true ? await currentAccountUser(request) : null;
-      await handleCrazyhouseXiangqiCreate(
+    // POST /api/rooms resolves the account for a rated request (registry.ts).
+    handleCreate: (ctx, _request, response, body, accountUser) =>
+      handleCrazyhouseXiangqiCreate(
         { ...ctx, createCrazyhouseXiangqiRoom },
         response,
         body,
         accountUser,
-      );
-    },
+      ),
   },
   // Find-opponent seek, rated on request: the crazyhouse_xiangqi pool is in
   // the user_ratings CHECK since migration 158.

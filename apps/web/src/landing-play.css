@@ -996,6 +996,16 @@
   display: none;
 }
 
+/* Why the dialog changed under the player (a bot dialog's Rated click). */
+.landing-setup-notice {
+  margin: 0;
+  padding: 0 20px 10px;
+  color: var(--site-muted);
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+}
+
 .landing-engine-offer {
   display: flex;
   flex-direction: column;

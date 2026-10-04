@@ -28,6 +28,7 @@ import {
   track,
   trackCorrespondenceSeekPosted,
 } from './analytics.js';
+import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { type BotPlayRequest, bindBotPlayControl, createBotGame } from './bot-play.js';
 import { correspondenceRatedAvailable } from './correspondence-model.js';
 import { correspondenceEnabled } from './feature-flags.js';
@@ -89,8 +90,12 @@ export type LandingPlayChoice = {
   initialTimeMode?: 'realtime' | 'correspondence';
   /** Preselects this days-per-move chip when opening on correspondence. */
   initialCorrespondenceDays?: number;
-  /** Opens a correspondence seek on Rated (the panel's Rated mode). Casual otherwise. */
+  /** Opens on Rated (true) or Casual (false) instead of the stored pick. The panel's
+   *  Rated mode passes it for a correspondence seek; a bot dialog's Rated click passes
+   *  true when it switches the player to Find opponent. */
   initialRated?: boolean;
+  /** A one-line note shown at the top of the dialog (why it switched mode). */
+  notice?: string;
   /**
    * Opens on this side instead of the stored pick. The postgame "Challenge a
    * friend" link passes 'random' (`&side=random`): a friend game started from a
@@ -1585,7 +1590,8 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
         source: 'deep-link',
         mode: 'pvp',
         modeSwitcher: true,
-        ratedDisabled: true,
+        // Friend games rate like Find opponent (lichess-style challenges).
+        ratedDisabled: !isRatedModeEnabled() || !isLikelySignedIn(),
         ...(side ? { initialColor: side } : {}),
       });
       break;
@@ -1662,7 +1668,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       ? false
       : wantsCorrespondence
         ? choice.initialRated === true
-        : (storedPreference.rated ?? true);
+        : (choice.initialRated ?? storedPreference.rated ?? true);
   const publicVariantOptions = enabledLandingVariantGameSpecs(choice.mode, locale);
   const softLinkedHiddenVariant =
     choice.initialGameSpecId &&
@@ -2115,19 +2121,23 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   });
   document.addEventListener('keydown', onKeyDown);
 
-  // Keep game type visible in the bot flow too. Bot games are always
-  // casual, so Rated is present but unavailable; human modes retain their
-  // existing launch and sign-in gates.
-  // Each unavailable case names its own reason: Rated is live, so a blanket
-  // "coming soon" on a friend or bot game read as if it had never launched.
+  // Keep game type visible in the bot flow too. Bot games are always casual,
+  // but Rated stays clickable there: it switches the player to Find opponent
+  // with Rated on (or to sign-in for a guest), since rated games are against
+  // people. Friend games rate like Find opponent (lichess-style challenges).
+  // Each unavailable case names its own reason.
   const ratingSection = buildRatedToggleSection(
     () => rated,
     (v) => {
       rated = v;
     },
     () => {
-      if (choice.mode === 'pve') return t('setup.ratedPeopleOnly', {}, locale);
-      if (choice.mode === 'pvp') return t('setup.ratedFriendOnly', {}, locale);
+      if (choice.mode === 'pve') {
+        if (!isRatedModeEnabled()) return t('setup.ratedComingSoon', {}, locale);
+        return landingGameSpecCapabilities(selectedGameSpecId).supportsRated
+          ? null
+          : t('setup.ratedUnavailable', {}, locale);
+      }
       if (choice.ratedDisabled) {
         return isRatedModeEnabled()
           ? t('setup.ratedSignIn', {}, locale)
@@ -2145,6 +2155,19 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       openNextSetupSection('gameType');
     },
     locale,
+    // Bot games never rate: Rated means a person, so take the player there.
+    choice.mode === 'pve'
+      ? () => {
+          if (!isLikelySignedIn()) {
+            window.location.href = loginHrefForCurrentPage(locale);
+            return;
+          }
+          reopenSetupDialogInMode(choice, 'lobby', selectedGameSpecId, {
+            initialRated: true,
+            notice: t('setup.ratedSwitchedToLobby', {}, locale),
+          });
+        }
+      : undefined,
   );
   syncRatedToggle = () => {
     ratingSection.sync();
@@ -2352,6 +2375,13 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   accordion.append(...setupSections.map((section) => section.wrapper));
   actions.append(startButton);
   dialog.append(header);
+  if (choice.notice) {
+    const notice = document.createElement('p');
+    notice.className = 'landing-setup-notice';
+    notice.setAttribute('role', 'status');
+    notice.textContent = choice.notice;
+    dialog.append(notice);
+  }
   dialog.append(accordion);
   dialog.append(status, actions);
   overlay.append(dialog);
@@ -2367,6 +2397,7 @@ function reopenSetupDialogInMode(
   choice: LandingPlayChoice,
   mode: LandingPlayMode,
   gameSpecId: LandingGameSpecId,
+  extra: Pick<LandingPlayChoice, 'initialRated' | 'notice'> = {},
 ): void {
   const locale = choice.locale ?? currentLocale();
   closeActiveLandingDialog();
@@ -2378,12 +2409,9 @@ function reopenSetupDialogInMode(
     mode,
     modeSwitcher: true,
     source: 'mode-switch',
-    ratedDisabled:
-      mode === 'pvp'
-        ? true
-        : mode === 'lobby'
-          ? !isRatedModeEnabled() || !isLikelySignedIn()
-          : undefined,
+    // Friend and Find opponent rate alike; bot games never do.
+    ratedDisabled: mode === 'pve' ? undefined : !isRatedModeEnabled() || !isLikelySignedIn(),
+    ...extra,
   });
 }
 
@@ -2638,6 +2666,9 @@ function buildRatedToggleSection(
   ratedUnavailableLabel: () => string | null = () => null,
   onChange: () => void = () => undefined,
   locale: Locale = currentLocale(),
+  // Takes over a Rated click instead of selecting it (the bot dialog sends the
+  // player to Find opponent or to sign-in).
+  onRatedRedirect?: () => void,
 ): { section: HTMLElement; sync(): void } {
   const section = document.createElement('div');
   section.className = 'landing-setup-section';
@@ -2665,6 +2696,10 @@ function buildRatedToggleSection(
   };
   ratedButton.addEventListener('click', () => {
     if (ratedUnavailableLabel() !== null) return;
+    if (onRatedRedirect) {
+      onRatedRedirect();
+      return;
+    }
     set(true);
     sync();
     onChange();
@@ -3183,14 +3218,18 @@ export function roomCreationRequestBody(
   engineId?: string,
 ): Record<string, unknown> {
   const gameSpecId = roomCreationGameSpecId(setup);
+  // One rule for every variant: a friend room is rated exactly where Find
+  // opponent is (the variant's supportsRated capability, which the server's
+  // lobby.supportsRated mirrors); a bot game never is.
+  const rated = mode === 'pvp' && setup.rated && landingVariantSupportsRated(setup.gameSpecId);
   if (setup.gameSpecId === JUNGLE_SPEC_ID) {
-    // Jungle is perfect-info red/black Dou Shou Qi; PvP + in-process PvE bot,
-    // casual-only. PvE sends the picked Misty Jungle engine id.
+    // Jungle is perfect-info red/black Dou Shou Qi; PvP + in-process PvE bot.
+    // PvE sends the picked Misty Jungle engine id.
     return {
       mode,
       gameSpecId,
       timeControl: setup.timeControl,
-      rated: false,
+      rated,
       preferredColor:
         setup.preferredColor === 'white'
           ? 'red'
@@ -3202,13 +3241,13 @@ export function roomCreationRequestBody(
   }
   if (setup.gameSpecId === JUNGLE_FLIP_SPEC_ID) {
     // Flip Jungle is symmetric hidden-identity 4×4 flip animal chess; move-order
-    // seats (ink binds on the first flip), casual-only. PvP + in-process-spawned
+    // seats (ink binds on the first flip). PvP + in-process-spawned
     // PvE bot (MistyJungleFlip); PvE sends the picked engine id.
     return {
       mode,
       gameSpecId,
       timeControl: setup.timeControl,
-      rated: false,
+      rated,
       preferredColor:
         setup.preferredColor === 'white'
           ? 'red'
@@ -3220,11 +3259,12 @@ export function roomCreationRequestBody(
   }
   if (setup.gameSpecId === JIEQI_SPEC_ID) {
     // Jieqi PvE sends the picked engine id (unlike Dark Xiangqi, which defaults it
-    // server-side); colors are xiangqi red/black, never rated.
+    // server-side); colors are xiangqi red/black.
     return {
       mode,
       gameSpecId,
       timeControl: setup.timeControl,
+      rated,
       preferredColor:
         setup.preferredColor === 'white'
           ? 'red'
@@ -3236,11 +3276,12 @@ export function roomCreationRequestBody(
   }
   if (setup.gameSpecId === BANQI_SPEC_ID) {
     // Banqi PvE sends the picked MistyBanqi id; seats are red/black move-order
-    // (ink binds on the first flip), never rated.
+    // (ink binds on the first flip).
     return {
       mode,
       gameSpecId,
       timeControl: setup.timeControl,
+      rated,
       preferredColor:
         setup.preferredColor === 'white'
           ? 'red'
@@ -3252,13 +3293,12 @@ export function roomCreationRequestBody(
   }
   if (setup.gameSpecId === FORTRESS_XIANGQI_SPEC_ID) {
     // Fortress Xiangqi is open-info red/black 7x8 xiangqi with reserves + the
-    // Treasure. Rating-ready (rated flag off until launch); PvE sends the picked
-    // Fairy-Stockfish engine id.
+    // Treasure. PvE sends the picked Fairy-Stockfish engine id.
     return {
       mode,
       gameSpecId,
       timeControl: setup.timeControl,
-      ...(mode === 'pvp' ? { rated: setup.rated } : {}),
+      rated,
       preferredColor:
         setup.preferredColor === 'white'
           ? 'red'
@@ -3270,14 +3310,12 @@ export function roomCreationRequestBody(
   }
   if (setup.gameSpecId === DUCK_XIANGQI_SPEC_ID) {
     // Duck Xiangqi is open-info red/black 9x10 xiangqi plus the shared duck.
-    // Casual-only: there is no `duck_xiangqi` rating pool, so `rated` is pinned
-    // false here rather than read from the setup, matching the tenant's own
-    // `supportsRated: false`. PvE sends the picked Fairy-Stockfish engine id.
+    // PvE sends the picked Fairy-Stockfish engine id.
     return {
       mode,
       gameSpecId,
       timeControl: setup.timeControl,
-      rated: false,
+      rated,
       preferredColor:
         setup.preferredColor === 'white'
           ? 'red'
@@ -3288,14 +3326,13 @@ export function roomCreationRequestBody(
     };
   }
   if (setup.gameSpecId === CRAZYHOUSE_XIANGQI_SPEC_ID) {
-    // Crazyhouse Xiangqi: red/black 9x10 xiangqi with hands, casual only (no
-    // rating pool), so `rated` is pinned false. PvE sends the picked
-    // Fairy-Stockfish engine id.
+    // Crazyhouse Xiangqi: red/black 9x10 xiangqi with hands. PvE sends the
+    // picked Fairy-Stockfish engine id.
     return {
       mode,
       gameSpecId,
       timeControl: setup.timeControl,
-      rated: false,
+      rated,
       preferredColor:
         setup.preferredColor === 'white'
           ? 'red'
@@ -3306,14 +3343,13 @@ export function roomCreationRequestBody(
     };
   }
   if (setup.gameSpecId === ATOMIC_XIANGQI_SPEC_ID) {
-    // Atomic Xiangqi: red/black 9x10 xiangqi, casual only (no rating pool), so
-    // `rated` is pinned false like duck. PvE sends the picked Fairy-Stockfish
-    // engine id.
+    // Atomic Xiangqi: red/black 9x10 xiangqi. PvE sends the picked
+    // Fairy-Stockfish engine id.
     return {
       mode,
       gameSpecId,
       timeControl: setup.timeControl,
-      rated: false,
+      rated,
       preferredColor:
         setup.preferredColor === 'white'
           ? 'red'
@@ -3329,7 +3365,7 @@ export function roomCreationRequestBody(
       mode,
       gameSpecId,
       timeControl: setup.timeControl,
-      ...(mode === 'pvp' ? { rated: setup.rated } : {}),
+      rated,
       preferredColor:
         setup.preferredColor === 'white'
           ? 'red'
@@ -3342,7 +3378,7 @@ export function roomCreationRequestBody(
     mode,
     gameSpecId,
     timeControl: setup.timeControl,
-    rated: setup.rated,
+    rated,
     preferredColor: setup.preferredColor,
     ...(mode === 'pve' && engineId ? { engineId } : {}),
   };

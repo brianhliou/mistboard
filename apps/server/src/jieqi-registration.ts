@@ -49,7 +49,7 @@ export async function createJieqiRoom(
   timeControl?: RoomTimeControl,
   creatorPreference?: JieqiCreatorPreference,
   engine?: JieqiRoomEngineSeat,
-  // Lobby matchmaking only: POST /api/rooms (friend links, PvE) never forwards it.
+  // Lobby seeks and rated friend rooms (POST /api/rooms PvP); PvE never rates.
   rated = false,
 ): Promise<JieqiLiveRoomCreation> {
   return createJieqiLiveRoom(
@@ -137,8 +137,9 @@ registerVariantTenant({
   clearRooms: () => jieqiRooms.clear(),
   http: {
     matchesCreateRequest: requestsJieqi,
-    handleCreate: (ctx, _request, response, body) =>
-      handleJieqiCreate({ ...ctx, createJieqiRoom }, response, body),
+    // POST /api/rooms resolves the account for a rated request (registry.ts).
+    handleCreate: (ctx, _request, response, body, accountUser) =>
+      handleJieqiCreate({ ...ctx, createJieqiRoom }, response, body, accountUser),
   },
   lobby: {
     // Rated opened 2026-08-28, in step with the web tenant's capability flag;

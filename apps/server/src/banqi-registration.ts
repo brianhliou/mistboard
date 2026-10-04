@@ -48,7 +48,7 @@ export async function createBanqiRoom(
   timeControl?: RoomTimeControl,
   creatorPreference?: BanqiCreatorPreference,
   engine?: BanqiRoomEngineSeat,
-  // Lobby matchmaking only: POST /api/rooms (friend links, PvE) never forwards it.
+  // Lobby seeks and rated friend rooms (POST /api/rooms PvP); PvE never rates.
   rated = false,
 ): Promise<BanqiLiveRoomCreation> {
   return createBanqiLiveRoom(
@@ -136,8 +136,9 @@ registerVariantTenant({
   clearRooms: () => banqiRooms.clear(),
   http: {
     matchesCreateRequest: requestsBanqi,
-    handleCreate: (ctx, _request, response, body) =>
-      handleBanqiCreate({ ...ctx, createBanqiRoom }, response, body),
+    // POST /api/rooms resolves the account for a rated request (registry.ts).
+    handleCreate: (ctx, _request, response, body, accountUser) =>
+      handleBanqiCreate({ ...ctx, createBanqiRoom }, response, body, accountUser),
   },
   lobby: {
     supportsRated: true,

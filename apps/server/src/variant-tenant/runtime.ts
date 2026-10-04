@@ -885,6 +885,12 @@ export function tenantSnapshotPayload<
     // Only on lobby rooms, so every invite room's wire (and golden fixture) is
     // unchanged. Tells the client there is no invite link to share.
     ...(tenantRoomIsLobbyMatch(room) ? { lobbyMatch: true } : {}),
+    // A room fact for every tenant, so the header reads Rated on each of them.
+    // It used to ride only in the snapshotExtras of the tenants that had rated
+    // friend rooms first (xiangqi, fortress, duck, atomic, crazyhouse); jieqi,
+    // banqi, jungle, flip jungle and Fog Xiangqi rated games, lobby-paired ones
+    // included, showed "Casual". Only on rated rooms, so casual wire is unchanged.
+    ...(room.rated ? { rated: true } : {}),
     ...(tenant.wire?.snapshotExtras?.(room, client) ?? {}),
   };
 }

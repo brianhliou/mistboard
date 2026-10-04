@@ -79,12 +79,12 @@ test('jungle create is gated off by default', async () => {
   }
 });
 
-test('jungle create rejects rated (still unsupported) but accepts PvE vs the bot', async () => {
+test('jungle create rejects a rated bot game but accepts PvE vs the bot', async () => {
   await withJungleFlag(async () => {
     const rated = captureResponse();
     await handleJungleCreate(createContext(), rated, {
       gameSpecId: JUNGLE_SPEC_ID,
-      mode: 'pvp',
+      mode: 'pve',
       rated: true,
     });
     assert.equal(rated.status, 501);

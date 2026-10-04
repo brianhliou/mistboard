@@ -11,7 +11,10 @@ import {
   isDarkXiangqiEngineClientId,
 } from './../engines/registry.js';
 import { gateGameSpecRequest } from './../game-spec-request-gate.js';
+import type { UserAccount } from './../persistence.js';
 import * as persistence from './../persistence.js';
+import { lobbyOffersRated } from './../variant-tenant/registry.js';
+import { gateRatedRoomRequest } from './../variant-tenant/rooms-route.js';
 import { parseRoomTimeControl, writeJson } from './lib.js';
 
 // The slice of server context this route needs; the registry entry binds the
@@ -26,8 +29,9 @@ export type DarkXiangqiCreateContext = {
     timeControl?: RoomTimeControl,
     creatorPreference?: 'red' | 'black' | 'random',
     engine?: { engineId: string; seat: 'red' | 'black'; reservationId: string; botId?: string },
+    rated?: boolean,
   ): Promise<
-    | { ok: true; room: { id: string; gameSpecId: string } }
+    | { ok: true; room: { id: string; gameSpecId: string; rated?: boolean } }
     | { ok: false; error: 'dark_xiangqi_disabled' | 'persistence_failure' | 'room_id_collision' }
   >;
 };
@@ -40,6 +44,7 @@ export async function handleDarkXiangqiCreate(
   ctx: DarkXiangqiCreateContext,
   response: ServerResponse,
   body: Record<string, unknown>,
+  accountUser: UserAccount | null = null,
 ): Promise<void> {
   const gameSpecGate = gateGameSpecRequest({
     gameSpecId: body.gameSpecId,
@@ -65,10 +70,24 @@ export async function handleDarkXiangqiCreate(
     writeJson(response, 400, { error: 'invalid_time_control' });
     return;
   }
-  if (mode === null || body.rated === true || (mode === 'pvp' && body.engineId !== undefined)) {
+  if (mode === null || (mode === 'pvp' && body.engineId !== undefined)) {
     writeJson(response, 501, { error: 'dark_xiangqi_unsupported_surface' });
     return;
   }
+  // Rated friend rooms follow the lobby, exactly as on the factory-built routes.
+  const ratedGate = gateRatedRoomRequest({
+    requested: body.rated,
+    mode,
+    offered: lobbyOffersRated(DARK_XIANGQI_SPEC_ID),
+    accountUser,
+    timeControl: timeControl ?? undefined,
+    unsupportedSurfaceError: 'dark_xiangqi_unsupported_surface',
+  });
+  if (!ratedGate.ok) {
+    writeJson(response, ratedGate.status, { error: ratedGate.error });
+    return;
+  }
+  const { rated } = ratedGate;
   // An engine that cannot honor a pace must not be handed one (#283). Checked
   // before the seat reservation below, so a rejected request never holds one.
   // Human games are untouched: the floor belongs to the engine, not the variant.
@@ -137,6 +156,7 @@ export async function handleDarkXiangqiCreate(
       effectiveTimeControl ?? undefined,
       preferredColor,
       engine,
+      rated,
     );
   } catch (err) {
     if (engine) ctx.releaseLiveEngineReservation(engine.reservationId, 'room-create-failed');
@@ -158,6 +178,7 @@ export async function handleDarkXiangqiCreate(
     url: `/room/${encodeURIComponent(created.room.id)}`,
     mode,
     gameSpecId: created.room.gameSpecId,
+    rated: created.room.rated === true,
     region: 'global',
     // The EFFECTIVE pace, so a caller that named none learns what the pin gave
     // it rather than reading back silence and assuming the house default.

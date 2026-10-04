@@ -22,7 +22,6 @@ import type {
   RoomTimeControl,
 } from '@mistboard/game';
 import { duckXiangqiFen } from '@mistboard/game';
-import { currentAccountUser } from './account-session.js';
 import { type DuckXiangqiEvent, duckXiangqiTenant } from './duck-xiangqi-tenant.js';
 import { tenantCardBinding } from './game-card-tenant.js';
 import { duckXiangqiExportUci, tenantExportBinding } from './game-export-tenant.js';
@@ -170,10 +169,9 @@ registerVariantTenant({
   clearRooms: () => duckXiangqiRooms.clear(),
   http: {
     matchesCreateRequest: requestsDuckXiangqi,
-    handleCreate: async (ctx, request, response, body) => {
-      const accountUser = body.rated === true ? await currentAccountUser(request) : null;
-      await handleDuckXiangqiCreate({ ...ctx, createDuckXiangqiRoom }, response, body, accountUser);
-    },
+    // POST /api/rooms resolves the account for a rated request (registry.ts).
+    handleCreate: (ctx, _request, response, body, accountUser) =>
+      handleDuckXiangqiCreate({ ...ctx, createDuckXiangqiRoom }, response, body, accountUser),
   },
   // Lobby seek, at parity with every other tenant. It was deliberately absent
   // while the variant was dark, because a public seek would have advertised a

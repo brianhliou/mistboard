@@ -29,6 +29,7 @@ import {
   emptyDeployGateCensus,
   mergeDeployGateCensus,
 } from '../deploy-gate.js';
+import type { UserAccount } from '../persistence.js';
 
 // The structural slice of a live tenant room the dispatch layer touches.
 // Registration closures cast back to their concrete room type internally.
@@ -272,12 +273,16 @@ export type VariantTenantRegistration = {
     // Claim a POST /api/rooms body (matchers are disjoint across tenants).
     matchesCreateRequest(body: Record<string, unknown>): boolean;
     // Full create flow including the tenant's own flag/rated/engine gates and
-    // error strings; writes the response itself.
+    // error strings; writes the response itself. `accountUser` is the signed-in
+    // requester, resolved once by POST /api/rooms whenever the body asks for a
+    // rated room (null otherwise), so no registration can forget to look it up;
+    // lobby-rated.test.ts holds every rated tenant to forwarding it.
     handleCreate(
       ctx: TenantCreateHttpContext,
       request: IncomingMessage,
       response: ServerResponse,
       body: Record<string, unknown>,
+      accountUser: UserAccount | null,
     ): Promise<void>;
   };
   // Matchmaking capability; null = no lobby surface (the lobby route answers
@@ -390,6 +395,22 @@ export function correspondenceTenantForSpecId(
     if (registration.createCorrespondenceGameForSeek) return registration;
   }
   return null;
+}
+
+/**
+ * Whether this spec's live games may be rated: its lobby offers rated seeks.
+ *
+ * The single source of truth for live rated play on a tenant. A friend room
+ * (POST /api/rooms, mode 'pvp') is rated on exactly the variants where Find
+ * opponent is (lichess-style challenges), so the create route reads this rather
+ * than keeping its own per-variant policy. Until 2026-10-03 each route file
+ * carried a hand-set rated policy, and when rated lobby play widened on
+ * 2026-10-02 only `lobby.supportsRated` moved: seven variants rated their seeks
+ * while their friend rooms still refused rated. lobby-rated.test.ts drives every
+ * registration's real create handler against this.
+ */
+export function lobbyOffersRated(gameSpecId: string): boolean {
+  return variantTenantForSpecId(gameSpecId)?.lobby?.supportsRated === true;
 }
 
 export function registeredVariantTenants(): VariantTenantRegistration[] {

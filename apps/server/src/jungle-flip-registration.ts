@@ -47,7 +47,7 @@ export async function createJungleFlipRoom(
   timeControl?: RoomTimeControl,
   creatorPreference?: JungleFlipCreatorPreference,
   engine?: JungleFlipRoomEngineSeat,
-  // Lobby matchmaking only: POST /api/rooms (friend links, PvE) never forwards it.
+  // Lobby seeks and rated friend rooms (POST /api/rooms PvP); PvE never rates.
   rated = false,
 ): Promise<JungleFlipLiveRoomCreation> {
   return createJungleFlipLiveRoom(
@@ -140,8 +140,9 @@ registerVariantTenant({
   clearRooms: () => jungleFlipRooms.clear(),
   http: {
     matchesCreateRequest: requestsJungleFlip,
-    handleCreate: (ctx, _request, response, body) =>
-      handleJungleFlipCreate({ ...ctx, createJungleFlipRoom }, response, body),
+    // POST /api/rooms resolves the account for a rated request (registry.ts).
+    handleCreate: (ctx, _request, response, body, accountUser) =>
+      handleJungleFlipCreate({ ...ctx, createJungleFlipRoom }, response, body, accountUser),
   },
   lobby: {
     supportsRated: true,

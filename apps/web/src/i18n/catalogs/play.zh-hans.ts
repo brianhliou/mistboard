@@ -89,8 +89,7 @@ export const ZH_HANS_PLAY = {
   'setup.soon': '即将推出',
   'setup.noComputerOpponentYet': '{variant} 暂时没有机器人对手',
   'setup.ratedComingSoon': '计分（即将推出）',
-  'setup.ratedFriendOnly': '计分（仅限寻找对手）',
-  'setup.ratedPeopleOnly': '计分（仅限真人对局）',
+  'setup.ratedSwitchedToLobby': '计分对局只与真人对弈，已为你切换到寻找对手。',
   'setup.ratedSignIn': '计分（需登录）',
   'setup.ratedUnavailable': '计分（此变体不支持）',
   'setup.createRoom': '创建房间',
@@ -239,7 +238,7 @@ export const ZH_HANS_PLAY = {
   'live.rejectedPrivateRoom':
     '本局正在进行中。除就座的双方外，Mistboard 从不向任何人透露实时对局状态。对局结束后，完整的复盘会出现在这里。',
   'live.rejectedRatedAccount':
-    '这是一盘计分对局。计分对局会计入迷雾国际象棋等级分榜，因此双方都需要账号。登录后你会回到这里就座。',
+    '这是一盘计分对局。计分对局会计入双方的等级分，因此双方都需要账号。登录后你会回到这里就座。',
   'live.rejectedCorrespondenceAccount':
     '这是一盘通信对局。双方都需要账号，这样对局才能在不同设备上找到你，并在轮到你走棋时提醒你。登录后你会回到这里就座。',
   'live.rejectedOrigin': '不允许该浏览器来源打开此房间。',
@@ -415,6 +414,7 @@ export const ZH_HANS_PLAY = {
   'live.newGame': '新对局',
   'live.tryPlayAgain': '重试再下一局',
   'live.titlePlayingOff': '无法对局',
+  'live.titleRatedGame': '计分对局',
   'live.titleRoomUnavailable': '房间不可用',
   'live.titleViewingReplay': '正在查看回放',
   'live.titleInviteOpponent': '邀请对手',

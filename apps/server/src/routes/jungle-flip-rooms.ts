@@ -19,8 +19,9 @@ export type JungleFlipCreateContext = {
     timeControl?: RoomTimeControl,
     creatorPreference?: 'red' | 'black' | 'random',
     engine?: { engineId: string; seat: 'red' | 'black'; botId?: string },
+    rated?: boolean,
   ): Promise<
-    | { ok: true; room: { id: string; gameSpecId: string } }
+    | { ok: true; room: { id: string; gameSpecId: string; rated: boolean } }
     | { ok: false; error: 'jungle_flip_disabled' | 'persistence_failure' | 'room_id_collision' }
   >;
 };
@@ -42,10 +43,10 @@ const jungleFlipRoute = createTenantRoomsRoute<
     isEngineClientId: isJungleFlipEngineClientId,
     seats: JUNGLE_FLIP_SEATS,
   },
-  // PvP + PvE (the Tier-B MistyJungleFlip UCI engine). Rated is still unsupported.
-  rated: { kind: 'reject-as-surface' },
-  createRoom: (ctx, { timeControl, preferredColor, engine }) =>
-    ctx.createJungleFlipRoom(timeControl, preferredColor, engine),
+  // Rated friend rooms follow the lobby (rooms-route.ts gateRatedRoomRequest):
+  // PvP may be rated wherever Find opponent is; PvE never is.
+  createRoom: (ctx, { timeControl, preferredColor, rated, engine }) =>
+    ctx.createJungleFlipRoom(timeControl, preferredColor, engine, rated),
 });
 
 export const requestsJungleFlip = jungleFlipRoute.matchesCreateRequest;

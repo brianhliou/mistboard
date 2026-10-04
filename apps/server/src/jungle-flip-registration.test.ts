@@ -82,12 +82,13 @@ test('flip jungle create is gated off by default', async () => {
   }
 });
 
-test('flip jungle create still rejects rated (rated play not yet on)', async () => {
+test('flip jungle create rejects a rated bot game', async () => {
   await withFlag(async () => {
+    // Rated friend rooms are covered for every tenant in variant-tenant/lobby-rated.test.ts.
     const response = captureResponse();
     await handleJungleFlipCreate(createContext(), response, {
       gameSpecId: JUNGLE_FLIP_SPEC_ID,
-      mode: 'pvp',
+      mode: 'pve',
       rated: true,
     });
     assert.equal(response.status, 501);

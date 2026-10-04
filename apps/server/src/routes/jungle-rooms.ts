@@ -19,8 +19,9 @@ export type JungleCreateContext = {
     timeControl?: RoomTimeControl,
     creatorPreference?: 'red' | 'black' | 'random',
     engine?: { engineId: string; seat: 'red' | 'black'; botId?: string },
+    rated?: boolean,
   ): Promise<
-    | { ok: true; room: { id: string; gameSpecId: string } }
+    | { ok: true; room: { id: string; gameSpecId: string; rated: boolean } }
     | { ok: false; error: 'jungle_disabled' | 'persistence_failure' | 'room_id_collision' }
   >;
 };
@@ -46,10 +47,10 @@ const jungleRoute = createTenantRoomsRoute<
     isEngineClientId: isJunglePlayableEngineClientId,
     seats: JUNGLE_SEATS,
   },
-  // PvP + PvE (the in-process Misty Jungle engine). Rated is still unsupported.
-  rated: { kind: 'reject-as-surface' },
-  createRoom: (ctx, { timeControl, preferredColor, engine }) =>
-    ctx.createJungleRoom(timeControl, preferredColor, engine),
+  // Rated friend rooms follow the lobby (rooms-route.ts gateRatedRoomRequest):
+  // PvP may be rated wherever Find opponent is; PvE never is.
+  createRoom: (ctx, { timeControl, preferredColor, rated, engine }) =>
+    ctx.createJungleRoom(timeControl, preferredColor, engine, rated),
 });
 
 export const requestsJungle = jungleRoute.matchesCreateRequest;

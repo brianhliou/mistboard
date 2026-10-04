@@ -12,7 +12,6 @@ import type {
   RoomTimeControl,
 } from '@mistboard/game';
 import { fortressXiangqiEngineFen } from '@mistboard/game';
-import { currentAccountUser } from './account-session.js';
 import {
   FORTRESS_XIANGQI_ANALYSIS_DEPTH,
   FORTRESS_XIANGQI_ANALYSIS_ENGINE_ID,
@@ -168,15 +167,14 @@ registerVariantTenant({
   clearRooms: () => fortressXiangqiRooms.clear(),
   http: {
     matchesCreateRequest: requestsFortressXiangqi,
-    handleCreate: async (ctx, request, response, body) => {
-      const accountUser = body.rated === true ? await currentAccountUser(request) : null;
-      await handleFortressXiangqiCreate(
+    // POST /api/rooms resolves the account for a rated request (registry.ts).
+    handleCreate: (ctx, _request, response, body, accountUser) =>
+      handleFortressXiangqiCreate(
         { ...ctx, createFortressXiangqiRoom },
         response,
         body,
         accountUser,
-      );
-    },
+      ),
   },
   lobby: {
     supportsRated: true,

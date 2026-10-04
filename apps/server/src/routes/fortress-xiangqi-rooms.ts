@@ -43,7 +43,8 @@ const fortressXiangqiRoute = createTenantRoomsRoute<
     isEngineClientId: isFortressXiangqiEngineClientId,
     seats: FORTRESS_XIANGQI_SEATS,
   },
-  rated: { kind: 'account-gated' },
+  // Rated friend rooms follow the lobby (rooms-route.ts gateRatedRoomRequest):
+  // PvP may be rated wherever Find opponent is; PvE never is.
   createRoom: (ctx, { timeControl, preferredColor, rated, engine }) =>
     ctx.createFortressXiangqiRoom(timeControl, preferredColor, rated, engine),
 });

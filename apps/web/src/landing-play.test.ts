@@ -139,7 +139,7 @@ describe('landing play panel', () => {
     );
     expect(
       [...document.querySelectorAll<HTMLButtonElement>('.landing-start-option')].find(
-        (button) => button.textContent === 'Ratedvs people only',
+        (button) => button.textContent === 'Ratedcoming soon',
       )?.disabled,
     ).toBe(true);
     selectModalVariant('xiangqi');
@@ -462,6 +462,26 @@ describe('landing play panel', () => {
     expect(window.location.search).toBe('');
   });
 
+  it('a friend link offers Rated to a signed-in player and asks a guest to sign in', () => {
+    setRatedModeEnabled(true);
+    setResolvedSignedIn(true);
+    window.history.replaceState(null, '', '/?play=friend&variant=xiangqi');
+    maybeOpenPlayDeepLink([]);
+    const ratedOption = () =>
+      [...document.querySelectorAll<HTMLButtonElement>('.landing-start-option')].find((button) =>
+        button.textContent?.startsWith('Rated'),
+      );
+    expect(ratedOption()?.textContent).toBe('Rated');
+    expect(ratedOption()?.disabled).toBe(false);
+    document.querySelector('.landing-setup-overlay')?.remove();
+
+    setResolvedSignedIn(false);
+    window.history.replaceState(null, '', '/?play=friend&variant=xiangqi');
+    maybeOpenPlayDeepLink([]);
+    expect(ratedOption()?.textContent).toBe('Ratedsign in');
+    expect(ratedOption()?.disabled).toBe(true);
+  });
+
   // Sides are variant-declared, so an untouched default must not persist as if it
   // were a pick: xiangqi's 'red' coerces to the SECOND seat in any variant whose
   // first mover is not red, which would seat a player who never chose anything.
@@ -557,6 +577,7 @@ describe('landing play panel', () => {
       mode: 'pvp',
       gameSpecId: 'banqi',
       timeControl: { initialMs: 180_000, incrementMs: 2_000 },
+      rated: false,
       preferredColor: 'black',
     });
     expect(window.location.pathname).toBe('/room/bq_home');
@@ -817,9 +838,77 @@ describe('landing play panel', () => {
     expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
   });
 
-  it('says friend games are casual instead of calling live rated "coming soon"', () => {
+  it('offers Rated on a friend game and creates the room rated', async () => {
     setRatedModeEnabled(true);
     setResolvedSignedIn(true);
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+      if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
+      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/jq_friend' });
+      return jsonResponse({}, { status: 404 });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    setRoomNavigator(() => {});
+    const panel = buildLandingPlayPanel([]);
+    document.body.append(panel);
+
+    openPlaySetup(panel, 'Challenge a friend');
+    selectModalVariant('jieqi');
+
+    const rated = [...document.querySelectorAll<HTMLButtonElement>('.landing-start-option')].find(
+      (button) => button.textContent?.startsWith('Rated'),
+    );
+    expect(rated?.textContent).toBe('Rated');
+    expect(rated?.disabled).toBe(false);
+    // Like Find opponent (and lichess challenges): a signed-in player starts on Rated,
+    // and Rated narrows the clocks to the rated ones.
+    expect(rated?.getAttribute('aria-checked')).toBe('true');
+    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5']);
+
+    clickModalTimeControl('3 + 2');
+    [...document.querySelectorAll('button')]
+      .find((candidate) => candidate.textContent === 'Create room')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushPromises();
+
+    expect(roomPostBody(fetchSpy)).toMatchObject({
+      mode: 'pvp',
+      gameSpecId: 'jieqi',
+      rated: true,
+      timeControl: { initialMs: 180_000, incrementMs: 2_000 },
+    });
+  });
+
+  it('sends a casual friend game as casual', async () => {
+    setRatedModeEnabled(true);
+    setResolvedSignedIn(true);
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+      if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
+      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/bq_friend' });
+      return jsonResponse({}, { status: 404 });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    setRoomNavigator(() => {});
+    const panel = buildLandingPlayPanel([]);
+    document.body.append(panel);
+
+    openPlaySetup(panel, 'Challenge a friend');
+    selectModalVariant('banqi');
+    clickModalButton('Casual');
+    [...document.querySelectorAll('button')]
+      .find((candidate) => candidate.textContent === 'Create room')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushPromises();
+
+    expect(roomPostBody(fetchSpy)).toMatchObject({
+      mode: 'pvp',
+      gameSpecId: 'banqi',
+      rated: false,
+    });
+  });
+
+  it('asks a signed-out player to sign in for a rated friend game', () => {
+    setRatedModeEnabled(true);
+    setResolvedSignedIn(false);
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
@@ -832,8 +921,62 @@ describe('landing play panel', () => {
     const rated = [...document.querySelectorAll<HTMLButtonElement>('.landing-start-option')].find(
       (button) => button.textContent?.startsWith('Rated'),
     );
-    expect(rated?.textContent).toBe('RatedFind opponent only');
+    expect(rated?.textContent).toBe('Ratedsign in');
     expect(rated?.disabled).toBe(true);
+  });
+
+  it("a bot dialog's Rated switches the player to Find opponent, rated, with a note", () => {
+    setRatedModeEnabled(true);
+    setResolvedSignedIn(true);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ playing: 0, online: 0, requests: [] })),
+    );
+    const panel = buildLandingPlayPanel([]);
+    document.body.append(panel);
+
+    openPlaySetup(panel, 'Play a bot');
+    selectModalVariant('jieqi');
+    expect(document.querySelector('.landing-setup-notice')).toBeNull();
+    const rated = [...document.querySelectorAll<HTMLButtonElement>('.landing-start-option')].find(
+      (button) => button.textContent?.startsWith('Rated'),
+    );
+    // Shown plainly and clickable; the bot game itself stays casual.
+    expect(rated?.textContent).toBe('Rated');
+    expect(rated?.disabled).toBe(false);
+    expect(rated?.getAttribute('aria-checked')).toBe('false');
+
+    rated?.click();
+
+    expect(document.querySelectorAll('.landing-setup-overlay')).toHaveLength(1);
+    expect(document.querySelector('.landing-setup-start')?.textContent).toBe('Find opponent');
+    expect(selectedVariantSpec()).toBe('jieqi');
+    expect(document.querySelector('.landing-setup-notice')?.textContent).toBe(
+      'Rated games are against people, so we switched to Find opponent.',
+    );
+    const ratedAfter = [
+      ...document.querySelectorAll<HTMLButtonElement>('.landing-start-option'),
+    ].find((button) => button.textContent === 'Rated');
+    expect(ratedAfter?.getAttribute('aria-checked')).toBe('true');
+    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5']);
+  });
+
+  it('a signed-out player who picks Rated in a bot dialog is sent to sign in', () => {
+    setRatedModeEnabled(true);
+    setResolvedSignedIn(false);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
+    );
+    const panel = buildLandingPlayPanel([]);
+    document.body.append(panel);
+
+    openPlaySetup(panel, 'Play a bot');
+    [...document.querySelectorAll<HTMLButtonElement>('.landing-start-option')]
+      .find((button) => button.textContent === 'Rated')
+      ?.click();
+
+    expect(window.location.href).toContain('/account?tab=login');
   });
 
   it('keeps "coming soon" only while the rated switch is off', () => {

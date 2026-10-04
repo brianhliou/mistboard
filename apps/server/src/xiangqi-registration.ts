@@ -6,7 +6,6 @@
  */
 
 import { type RoomTimeControl, standardXiangqiFen } from '@mistboard/game';
-import { currentAccountUser } from './account-session.js';
 import { tenantCardBinding } from './game-card-tenant.js';
 import { tenantExportBinding } from './game-export-tenant.js';
 import * as persistence from './persistence.js';
@@ -136,12 +135,9 @@ registerVariantTenant({
   clearRooms: () => xiangqiRooms.clear(),
   http: {
     matchesCreateRequest: requestsXiangqi,
-    handleCreate: async (ctx, request, response, body) => {
-      // Rated is account-gated: resolve the requester only when the request
-      // asks for a rated game (the route factory 401s without it).
-      const accountUser = body.rated === true ? await currentAccountUser(request) : null;
-      await handleXiangqiCreate({ ...ctx, createXiangqiRoom }, response, body, accountUser);
-    },
+    // POST /api/rooms resolves the account for a rated request (registry.ts).
+    handleCreate: (ctx, _request, response, body, accountUser) =>
+      handleXiangqiCreate({ ...ctx, createXiangqiRoom }, response, body, accountUser),
   },
   lobby: {
     supportsRated: true,

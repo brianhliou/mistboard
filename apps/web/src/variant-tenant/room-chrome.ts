@@ -19,6 +19,7 @@ import {
   shouldShowClockTenths,
   shouldShowFinalClockTenths,
 } from '../account-preferences.js';
+import { loginHrefForCurrentPage } from '../auth-redirect.js';
 import { applyClockEmphasis, setClockFace } from '../clock-emphasis.js';
 import { openConfirmDialog } from '../confirm-dialog.js';
 import { type I18nKey, t } from '../i18n/catalog.js';
@@ -520,7 +521,14 @@ export function createTenantRoomChrome<C extends string>(
     const card = createGameMetaCard({
       markerId: tenant.metaMarkerId,
       glyph: tenant.metaGlyph,
-      headline: [tcLabel, ctx.rated?.() ? t('live.modeRated') : t('live.modeCasual')],
+      // A guest refused a rated seat never receives a snapshot, so the refusal
+      // itself is what says the room is rated.
+      headline: [
+        tcLabel,
+        ctx.rated?.() || ctx.closeReason() === 'rated requires account'
+          ? t('live.modeRated')
+          : t('live.modeCasual'),
+      ],
       variantName: detail ? `${variantName()} · ${detail}` : variantName(),
       variantHref: localizedRulesHref(ctx.gameSpecId),
       variantHrefNewTab: true,
@@ -753,6 +761,15 @@ export function createTenantRoomChrome<C extends string>(
 
     notice.className = `action-notice ${actionTone(view)}`;
     notice.append(noticeTitle(actionTitle(view)), noticeBody(actionBody(view)));
+    // An account-gated seat (rated, correspondence): the guest gets a way in.
+    // The login href carries this room as the auth referrer, so signing in
+    // brings them straight back here and the reconnect seats them.
+    if (ctx.connectionState() === 'rejected' && accountGatedRejection()) {
+      const signIn = document.createElement('a');
+      signIn.href = loginHrefForCurrentPage();
+      signIn.textContent = t('live.signInTakeSeat');
+      notice.append(signIn);
+    }
     if (ctx.connectionState() === 'disconnected' || ctx.connectionState() === 'reconnecting') {
       const reconnect = document.createElement('button');
       reconnect.type = 'button';
@@ -773,8 +790,19 @@ export function createTenantRoomChrome<C extends string>(
     return 'default';
   }
 
+  // Seat refusals that a sign-in fixes (seat-session.ts); the same pair the
+  // Fog Chess room answers with a sign-in link (live-status rejectedSignInHref).
+  function accountGatedRejection(): 'rated' | 'correspondence' | null {
+    if (ctx.closeReason() === 'rated requires account') return 'rated';
+    if (ctx.closeReason() === 'correspondence requires account') return 'correspondence';
+    return null;
+  }
+
   function actionTitle(view: TenantWebView<C> | null): string {
     if (ctx.connectionState() === 'rejected') {
+      const gated = accountGatedRejection();
+      if (gated === 'rated') return t('live.titleRatedGame');
+      if (gated === 'correspondence') return t('correspondence.heading');
       return ctx.closeReason() === 'play disabled'
         ? t('live.titlePlayingOff')
         : t('live.titleRoomUnavailable');
@@ -795,7 +823,11 @@ export function createTenantRoomChrome<C extends string>(
     if (ctx.connectionState() === 'rejected') {
       // The per-account play lock is not a property of the room, so the tenant's
       // "this room is not active" line would send the player off to create
-      // another invite that will be refused the same way.
+      // another invite that will be refused the same way. Nor is an account
+      // gate: the room is fine, the guest just needs to sign in.
+      const gated = accountGatedRejection();
+      if (gated === 'rated') return t('live.rejectedRatedAccount');
+      if (gated === 'correspondence') return t('live.rejectedCorrespondenceAccount');
       return ctx.closeReason() === 'play disabled'
         ? t('live.roomPlayDisabled')
         : t(tenant.rejectedBody ?? 'live.roomNotActive', { variant: variantName() });

@@ -73,10 +73,11 @@ test('jieqi create works when the launch flag is enabled', async () => {
 
 test('jieqi create rejects unsupported surfaces before creating a room', async () => {
   await withJieqiFlag(async () => {
+    // A bot game is never rated (rated friend rooms: variant-tenant/lobby-rated.test.ts).
     const response = captureResponse();
     await handleJieqiCreate(createContext(), response, {
       gameSpecId: JIEQI_SPEC_ID,
-      mode: 'pvp',
+      mode: 'pve',
       rated: true,
     });
     assert.equal(response.status, 501);

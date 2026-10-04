@@ -42,7 +42,7 @@ export async function createJungleRoom(
   timeControl?: RoomTimeControl,
   creatorPreference?: JungleCreatorPreference,
   engine?: JungleRoomEngineSeat,
-  // Lobby matchmaking only: POST /api/rooms (friend links, PvE) never forwards it.
+  // Lobby seeks and rated friend rooms (POST /api/rooms PvP); PvE never rates.
   rated = false,
 ): Promise<JungleLiveRoomCreation> {
   return createJungleLiveRoom(
@@ -126,8 +126,9 @@ registerVariantTenant({
   clearRooms: () => jungleRooms.clear(),
   http: {
     matchesCreateRequest: requestsJungle,
-    handleCreate: (ctx, _request, response, body) =>
-      handleJungleCreate({ ...ctx, createJungleRoom }, response, body),
+    // POST /api/rooms resolves the account for a rated request (registry.ts).
+    handleCreate: (ctx, _request, response, body, accountUser) =>
+      handleJungleCreate({ ...ctx, createJungleRoom }, response, body, accountUser),
   },
   lobby: {
     supportsRated: true,

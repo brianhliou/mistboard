@@ -6,7 +6,7 @@
  * one person to sit down against three bots and tell us whether the scoring is
  * right. A PvP room would need three other humans to arrive at the same URL.
  *
- * So there is no engine policy here and no rated policy worth having. The three
+ * So there is no engine choice here and no rated play. The three
  * bot seats are filled by the factory, not requested by the client, which is
  * why `rejectEngineId` is on: a client naming an engine is asking for something
  * this surface does not offer.
@@ -44,8 +44,9 @@ const mahjongRoute = createTenantRoomsRoute<
   engine: { kind: 'always-seated' },
   // Unrated, and not close to being otherwise: the faan values have never been
   // checked by anybody who plays the game, so a rating built on them would be
-  // measuring the wrong thing precisely.
-  rated: { kind: 'reject-as-surface' },
+  // measuring the wrong thing precisely. The route needs no rated policy for
+  // that: an 'always-seated' table is never rated (rooms-route.ts), and the
+  // tenant has no lobby to rate seeks in.
   createRoom: (ctx, { timeControl, preferredColor }) =>
     ctx.createMahjongRoom(timeControl, preferredColor),
 });

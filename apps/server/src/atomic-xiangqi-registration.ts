@@ -17,7 +17,6 @@ import type {
   RoomTimeControl,
 } from '@mistboard/game';
 import { atomicXiangqiFen } from '@mistboard/game';
-import { currentAccountUser } from './account-session.js';
 import {
   ATOMIC_XIANGQI_ANALYSIS_DEPTH,
   ATOMIC_XIANGQI_ANALYSIS_ENGINE_ID,
@@ -176,15 +175,9 @@ registerVariantTenant({
   clearRooms: () => atomicXiangqiRooms.clear(),
   http: {
     matchesCreateRequest: requestsAtomicXiangqi,
-    handleCreate: async (ctx, request, response, body) => {
-      const accountUser = body.rated === true ? await currentAccountUser(request) : null;
-      await handleAtomicXiangqiCreate(
-        { ...ctx, createAtomicXiangqiRoom },
-        response,
-        body,
-        accountUser,
-      );
-    },
+    // POST /api/rooms resolves the account for a rated request (registry.ts).
+    handleCreate: (ctx, _request, response, body, accountUser) =>
+      handleAtomicXiangqiCreate({ ...ctx, createAtomicXiangqiRoom }, response, body, accountUser),
   },
   // Find-opponent seek, rated on request: the atomic_xiangqi pool is in the
   // user_ratings CHECK since migration 147.

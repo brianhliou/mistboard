@@ -65,7 +65,7 @@ test('Dark Xiangqi room route rejects unsupported create surfaces before room cr
   try {
     for (const body of [
       { gameSpecId: DARK_XIANGQI_SPEC_ID, mode: 'bogus' },
-      { gameSpecId: DARK_XIANGQI_SPEC_ID, mode: 'pvp', rated: true },
+      { gameSpecId: DARK_XIANGQI_SPEC_ID, mode: 'pve', rated: true },
       { engineId: 'engine', gameSpecId: DARK_XIANGQI_SPEC_ID, mode: 'pvp' },
     ]) {
       let createCalls = 0;
@@ -132,6 +132,7 @@ test('Dark Xiangqi PvE route seats the default engine opposite the human', async
       url: '/room/dxq_pve',
       mode: 'pve',
       gameSpecId: DARK_XIANGQI_SPEC_ID,
+      rated: false,
       region: 'global',
       // The request named no pace, so the bot default supplied one and the
       // response reports it instead of staying silent about the clock.
@@ -371,6 +372,7 @@ test('Dark Xiangqi room route accepts valid PvP time controls', async () => {
       url: '/room/dxq_clocked',
       mode: 'pvp',
       gameSpecId: DARK_XIANGQI_SPEC_ID,
+      rated: false,
       region: 'global',
       timeControl: { initialMs: 180_000, incrementMs: 2_000 },
     });
@@ -420,6 +422,7 @@ test('Dark Xiangqi room route creates a direct PvP room response', async () => {
       url: '/room/dxq_route',
       mode: 'pvp',
       gameSpecId: DARK_XIANGQI_SPEC_ID,
+      rated: false,
       region: 'global',
     });
   } finally {

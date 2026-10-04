@@ -89,8 +89,7 @@ export const ZH_HANT_PLAY = {
   'setup.soon': '即將推出',
   'setup.noComputerOpponentYet': '{variant} 暫時沒有機器人對手',
   'setup.ratedComingSoon': '計分（即將推出）',
-  'setup.ratedFriendOnly': '計分（僅限尋找對手）',
-  'setup.ratedPeopleOnly': '計分（僅限真人對局）',
+  'setup.ratedSwitchedToLobby': '計分對局只與真人對弈，已為你切換到尋找對手。',
   'setup.ratedSignIn': '計分（需登入）',
   'setup.ratedUnavailable': '計分（此變體不支援）',
   'setup.createRoom': '建立房間',
@@ -239,7 +238,7 @@ export const ZH_HANT_PLAY = {
   'live.rejectedPrivateRoom':
     '本局正在進行中。除就座的雙方外，Mistboard 從不向任何人透露即時對局狀態。對局結束後，完整的覆盤會出現在這裡。',
   'live.rejectedRatedAccount':
-    '這是一盤計分對局。計分對局會計入迷霧國際象棋等級分榜，因此雙方都需要帳號。登入後你會回到這裡就座。',
+    '這是一盤計分對局。計分對局會計入雙方的等級分，因此雙方都需要帳號。登入後你會回到這裡就座。',
   'live.rejectedCorrespondenceAccount':
     '這是一盤通信對局。雙方都需要帳號，這樣對局才能在不同裝置上找到你，並在輪到你走棋時提醒你。登入後你會回到這裡就座。',
   'live.rejectedOrigin': '不允許該瀏覽器來源開啟此房間。',
@@ -415,6 +414,7 @@ export const ZH_HANT_PLAY = {
   'live.newGame': '新對局',
   'live.tryPlayAgain': '重試再下一局',
   'live.titlePlayingOff': '無法對局',
+  'live.titleRatedGame': '計分對局',
   'live.titleRoomUnavailable': '房間無法使用',
   'live.titleViewingReplay': '正在查看回放',
   'live.titleInviteOpponent': '邀請對手',

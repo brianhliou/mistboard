@@ -347,7 +347,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     landing: {
       capabilities: {
         ...XIANGQI_CAPABILITIES_BASE,
-        // Rated lobby seeks (2026-10-02, every lobby variant); friend links and PvE stay casual.
+        // Rated lobby seeks (2026-10-02) and rated friend rooms (2026-10-03); PvE stays casual.
         supportsRated: true,
         supportsTimeControl: true,
       },
@@ -401,9 +401,8 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         // Rated opened 2026-08-28. Everything it needs was already in place: the
         // `jieqi` rating pool exists, the leaderboard serves that bucket, and the
         // server's rated switch is on in prod. This flag was the only thing shut.
-        // PvE and private challenges stay unrated regardless of it, since the
-        // setup dialog excludes mode === 'pve' and friend links set ratedDisabled,
-        // so this opens rated MATCHMAKING for signed-in players and nothing else.
+        // It opens rated Find opponent and rated friend rooms for signed-in
+        // players; PvE stays unrated regardless (bot games never rate).
         supportsRated: true,
         supportsTimeControl: true,
       },
@@ -522,7 +521,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         secondColor: 'black',
         secondGlyph: '2',
         secondLabel: 'Second',
-        // Rated lobby seeks (2026-10-02, every lobby variant); friend links and PvE stay casual.
+        // Rated lobby seeks (2026-10-02) and rated friend rooms (2026-10-03); PvE stays casual.
         supportsRated: true,
         supportsTimeControl: true,
       },
@@ -582,7 +581,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         secondColor: 'black',
         secondGlyph: '象',
         secondLabel: 'Blue',
-        // Rated lobby seeks (2026-10-02, every lobby variant); friend links and PvE stay casual.
+        // Rated lobby seeks (2026-10-02) and rated friend rooms (2026-10-03); PvE stays casual.
         supportsRated: true,
         supportsTimeControl: true,
       },
@@ -653,7 +652,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         secondColor: 'black',
         secondGlyph: '2',
         secondLabel: 'Second',
-        // Rated lobby seeks (2026-10-02, every lobby variant); friend links and PvE stay casual.
+        // Rated lobby seeks (2026-10-02) and rated friend rooms (2026-10-03); PvE stays casual.
         supportsRated: true,
         supportsTimeControl: true,
       },
@@ -708,7 +707,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     landing: {
       capabilities: {
         ...XIANGQI_CAPABILITIES_BASE,
-        // Rated lobby seeks (2026-10-02, every lobby variant); friend links and PvE stay casual.
+        // Rated lobby seeks (2026-10-02) and rated friend rooms (2026-10-03); PvE stays casual.
         supportsRated: true,
         supportsTimeControl: true,
       },
@@ -763,7 +762,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     landing: {
       capabilities: {
         ...XIANGQI_CAPABILITIES_BASE,
-        // Rated lobby seeks (2026-10-02, every lobby variant); friend links and PvE stay casual.
+        // Rated lobby seeks (2026-10-02) and rated friend rooms (2026-10-03); PvE stays casual.
         supportsRated: true,
         supportsTimeControl: true,
       },
@@ -837,9 +836,8 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         ...XIANGQI_CAPABILITIES_BASE,
         // Rated matchmaking for signed-in players, the jieqi terms: the
         // atomic_xiangqi pool is in the user_ratings CHECK (migration 147) and
-        // the lobby seek forwards the flag. PvE and friend links stay unrated
-        // regardless (the setup dialog excludes mode === 'pve' and friend links
-        // set ratedDisabled).
+        // the lobby seek and friend rooms forward the flag. PvE stays unrated
+        // regardless (bot games never rate).
         supportsRated: true,
         supportsTimeControl: true,
       },
@@ -892,7 +890,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     landing: {
       capabilities: {
         ...XIANGQI_CAPABILITIES_BASE,
-        // Rated lobby seeks (2026-10-02, every lobby variant); friend links and PvE stay casual.
+        // Rated lobby seeks (2026-10-02) and rated friend rooms (2026-10-03); PvE stays casual.
         supportsRated: true,
         supportsTimeControl: true,
       },

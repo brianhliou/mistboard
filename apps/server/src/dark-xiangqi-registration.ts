@@ -46,7 +46,7 @@ export async function createDarkXiangqiRoom(
   timeControl?: RoomTimeControl,
   creatorPreference?: DarkXiangqiCreatorPreference,
   engine?: DarkXiangqiRoomEngineSeat,
-  // Lobby matchmaking only: POST /api/rooms (friend links, PvE) never forwards it.
+  // Lobby seeks and rated friend rooms (POST /api/rooms PvP); PvE never rates.
   rated = false,
 ): Promise<DarkXiangqiLiveRoomCreation> {
   return createDarkXiangqiLiveRoom(
@@ -141,8 +141,9 @@ registerVariantTenant({
   clearRooms: () => darkXiangqiRooms.clear(),
   http: {
     matchesCreateRequest: requestsDarkXiangqi,
-    handleCreate: (ctx, _request, response, body) =>
-      handleDarkXiangqiCreate({ ...ctx, createDarkXiangqiRoom }, response, body),
+    // POST /api/rooms resolves the account for a rated request (registry.ts).
+    handleCreate: (ctx, _request, response, body, accountUser) =>
+      handleDarkXiangqiCreate({ ...ctx, createDarkXiangqiRoom }, response, body, accountUser),
   },
   lobby: {
     supportsRated: true,

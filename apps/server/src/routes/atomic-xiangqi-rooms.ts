@@ -45,11 +45,8 @@ const atomicXiangqiRoute = createTenantRoomsRoute<
     isEngineClientId: isAtomicXiangqiEngineClientId,
     seats: ATOMIC_XIANGQI_SEATS,
   },
-  // Rated only through Find opponent (the lobby seek, registration.ts), the
-  // jieqi shape: a friend link or a PvE request asking for rated is turned
-  // away as unsupported by this surface. The atomic_xiangqi pool itself is in
-  // the user_ratings CHECK since migration 147.
-  rated: { kind: 'reject-as-surface' },
+  // Rated friend rooms follow the lobby (rooms-route.ts gateRatedRoomRequest):
+  // PvP may be rated wherever Find opponent is; PvE never is.
   createRoom: (ctx, { timeControl, preferredColor, rated, engine }) =>
     ctx.createAtomicXiangqiRoom(timeControl, preferredColor, rated, engine),
 });

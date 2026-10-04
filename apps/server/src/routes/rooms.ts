@@ -40,10 +40,13 @@ export async function tryHandle(
     if (!body) return true;
     // Variant tenants claim their create requests via the registry; each
     // tenant's handler owns its flag/rated/engine gates and error strings.
-    // A registry miss falls through to the chess path below.
+    // A registry miss falls through to the chess path below. The requester's
+    // account is resolved here, once, for any rated request, so a tenant cannot
+    // forget it and turn every rated friend room into a 401.
     for (const registration of registeredVariantTenants()) {
       if (registration.http.matchesCreateRequest(body)) {
-        await registration.http.handleCreate(ctx, request, response, body);
+        const accountUser = body.rated === true ? await currentAccountUser(request) : null;
+        await registration.http.handleCreate(ctx, request, response, body, accountUser);
         return true;
       }
     }

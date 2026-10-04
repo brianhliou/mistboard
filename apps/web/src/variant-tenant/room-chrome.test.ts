@@ -140,6 +140,35 @@ describe('tenant room chrome action status', () => {
     expect(refs.actionStatus.textContent).toContain('This Xiangqi room is not active.');
   });
 
+  it('tells a guest on a rated room it is a rated game and offers a sign-in back here', () => {
+    window.history.replaceState(null, '', '/room/jq_rated');
+    const { chrome, refs } = chromeHarness({
+      connectionState: 'rejected',
+      closeReason: 'rated requires account',
+    });
+    chrome.renderActionStatus();
+    const text = refs.actionStatus.textContent ?? '';
+    expect(text).toContain('Rated game');
+    expect(text).toContain('This is a rated game.');
+    expect(text).not.toContain('Room unavailable');
+    expect(text).not.toContain('room is not active.');
+    const signIn = refs.actionStatus.querySelector<HTMLAnchorElement>('a');
+    expect(signIn?.textContent).toBe('Sign in to take your seat');
+    // The login page returns the player to this room after sign-in.
+    expect(signIn?.getAttribute('href')).toContain('/account?tab=login');
+    expect(decodeURIComponent(signIn?.getAttribute('href') ?? '')).toContain('/room/jq_rated');
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('offers no sign-in on a refusal that signing in would not fix', () => {
+    const { chrome, refs } = chromeHarness({
+      connectionState: 'rejected',
+      closeReason: 'private room',
+    });
+    chrome.renderActionStatus();
+    expect(refs.actionStatus.querySelector('a')).toBeNull();
+  });
+
   it('keeps the notice hidden while a seated player scrubs a live game', () => {
     // The scrubbed state must not insert a row into the rail: the replay
     // controls and the board carry it without moving the layout.
@@ -317,6 +346,18 @@ describe('tenant room chrome player names', () => {
     const casual = chromeHarness({ timeControl: { initialMs: 180_000, incrementMs: 2_000 } });
     casual.chrome.renderMeta();
     expect(casual.refs.gameInfo.textContent).toContain('Casual');
+  });
+
+  it('heads the meta card Rated for a guest refused a rated seat', () => {
+    // The refused guest never gets a snapshot, so rated() stays false; the
+    // close reason is the only thing that knows the room is rated.
+    const refused = chromeHarness({
+      closeReason: 'rated requires account',
+      timeControl: { initialMs: 180_000, incrementMs: 2_000 },
+    });
+    refused.chrome.renderMeta();
+    expect(refused.refs.gameInfo.textContent).toContain('Rated');
+    expect(refused.refs.gameInfo.textContent).not.toContain('Casual');
   });
 
   it('names a correspondence allowance instead of a minutes clock', () => {

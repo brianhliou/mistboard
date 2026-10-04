@@ -50,11 +50,8 @@ const crazyhouseXiangqiRoute = createTenantRoomsRoute<
     isEngineClientId: isCrazyhouseXiangqiEngineClientId,
     seats: CRAZYHOUSE_XIANGQI_SEATS,
   },
-  // Rated only through Find opponent (the lobby seek, registration.ts), the
-  // shape every variant but xiangqi and fortress uses: a friend link or a PvE
-  // request asking for rated is turned away as unsupported by this surface.
-  // The crazyhouse_xiangqi pool is in the user_ratings CHECK since migration 158.
-  rated: { kind: 'reject-as-surface' },
+  // Rated friend rooms follow the lobby (rooms-route.ts gateRatedRoomRequest):
+  // PvP may be rated wherever Find opponent is; PvE never is.
   createRoom: (ctx, { timeControl, preferredColor, rated, engine }) =>
     ctx.createCrazyhouseXiangqiRoom(timeControl, preferredColor, rated, engine),
 });

@@ -33,6 +33,7 @@ import { gateGameSpecRequest } from '../game-spec-request-gate.js';
 import type { UserAccount } from '../persistence.js';
 import * as persistence from '../persistence.js';
 import { isAllowedRatedTimeControl, parseRoomTimeControl, writeJson } from '../routes/lib.js';
+import { lobbyOffersRated } from './registry.js';
 
 // The HTTP-context slice every tenant create handler reads. Each tenant's
 // concrete `<Variant>CreateContext` (which also carries its bound
@@ -60,20 +61,42 @@ export type TenantRoomCreateParams<Pref extends string, Seat extends string> = {
   engine: { engineId: string; seat: Seat; botId?: string } | undefined;
 };
 
-// Rated policy. Governs the rejection error string AND the surface-gate order:
-// `reject-as-surface` tenants check the invalid-time-control guard first
-// (banqi/jieqi/jungle/PvP-only); `reject-as-rated` and `account-gated` tenants
-// check the mode surface first (fortress/drop-mini/mini).
-export type TenantRatedPolicy =
-  // rated → `${errorPrefix}_unsupported_surface`, folded into the surface gate.
-  // The rated flag is never forwarded to the factory.
-  | { kind: 'reject-as-surface' }
-  // rated → `rated_unsupported_surface` (casual-only, e.g. Mini Xiangqi). The
-  // rated flag is never forwarded (always casual).
-  | { kind: 'reject-as-rated' }
-  // Full account-gated rated: PvE+rated rejected at the surface gate; PvP+rated
-  // runs the flag/account/time-control gates and the resolved flag forwards.
-  | { kind: 'account-gated' };
+// The outcome of a create request's `rated` field: the flag to forward to the
+// room factory, or the refusal to write.
+export type RatedRoomGate =
+  | { ok: true; rated: boolean }
+  | { ok: false; status: number; error: string };
+
+/**
+ * Rated friend rooms, lichess-style: a PvP room may be rated wherever the
+ * variant's lobby rates its seeks (`offered`, from registry lobbyOffersRated),
+ * when the rated switch is on, the creator is signed in and the pace is a rated
+ * one. Bot games never rate. The second seat's account requirement is enforced
+ * where seats are handed out (seat-session.ts: 'rated requires account').
+ *
+ * Shared by the route factory below and the bespoke Fog Xiangqi route so the
+ * two cannot disagree on what a rated request needs.
+ */
+export function gateRatedRoomRequest(args: {
+  requested: unknown;
+  mode: 'pvp' | 'pve' | null;
+  offered: boolean;
+  accountUser: UserAccount | null;
+  timeControl: RoomTimeControl | undefined;
+  unsupportedSurfaceError: string;
+}): RatedRoomGate {
+  if (args.requested !== true) return { ok: true, rated: false };
+  if (args.mode !== 'pvp' || !args.offered) {
+    return { ok: false, status: 501, error: args.unsupportedSurfaceError };
+  }
+  if (!ratedEnabled()) return { ok: false, status: 403, error: 'rated_disabled' };
+  if (!args.accountUser) return { ok: false, status: 401, error: 'rated_requires_account' };
+  // Fail CLOSED on a missing time control too: a rated room needs a real clock.
+  if (!args.timeControl || !isAllowedRatedTimeControl(args.timeControl)) {
+    return { ok: false, status: 400, error: 'rated_time_control_unsupported' };
+  }
+  return { ok: true, rated: true };
+}
 
 // Engine policy for the PvE branch.
 export type TenantEnginePolicy<Seat extends string> =
@@ -110,7 +133,10 @@ export type TenantRoomsRouteConfig<
   // to the factory as-is.
   preferredColors: readonly Pref[];
   engine: TenantEnginePolicy<Seat>;
-  rated: TenantRatedPolicy;
+  // No rated policy here on purpose: whether a room may be rated is derived
+  // from the tenant's lobby (lobbyOffersRated) plus the engine policy (an
+  // 'always-seated' table is never rated), so a route cannot disagree with Find
+  // opponent about which variants rate.
   // Bind the tenant's concrete `create<Variant>Room` off the per-call context.
   createRoom(ctx: Ctx, params: TenantRoomCreateParams<Pref, Seat>): Promise<TenantRoomCreateResult>;
   // Optional matcher override; defaults to `body.gameSpecId === gameSpecId`.
@@ -150,6 +176,10 @@ export function createTenantRoomsRoute<
   const disabledError = `${config.errorPrefix}_disabled`;
   const unsupportedSurfaceError = `${config.errorPrefix}_unsupported_surface`;
   const acceptedColors = config.preferredColors as readonly string[];
+  // Read per request, not at construction: route modules load before the
+  // registrations that own the lobby capability.
+  const ratedOffered = (): boolean =>
+    config.engine.kind !== 'always-seated' && lobbyOffersRated(config.gameSpecId);
 
   const matchesCreateRequest =
     config.matchesCreateRequest ??
@@ -230,70 +260,29 @@ export function createTenantRoomsRoute<
         writeJson(response, 501, { error: unsupportedSurfaceError });
         return true;
       }
-      switch (config.rated.kind) {
-        case 'reject-as-surface':
-          if (body.rated === true) {
-            writeJson(response, 501, { error: unsupportedSurfaceError });
-            return true;
-          }
-          break;
-        case 'reject-as-rated':
-          if (body.rated === true) {
-            writeJson(response, 501, { error: 'rated_unsupported_surface' });
-            return true;
-          }
-          break;
-        case 'account-gated':
-          if (mode === 'pve' && body.rated === true) {
-            writeJson(response, 501, { error: unsupportedSurfaceError });
-            return true;
-          }
-          break;
-      }
       return false;
     };
 
-    const runInvalidTimeControlGate = (): boolean => {
-      if (invalidTimeControl) {
-        writeJson(response, 400, { error: 'invalid_time_control' });
-        return true;
-      }
-      return false;
-    };
-
-    // `reject-as-surface` tenants check invalid-time-control BEFORE the surface
-    // gate; the others check the mode surface first (see TenantRatedPolicy).
-    if (config.rated.kind === 'reject-as-surface') {
-      if (runInvalidTimeControlGate()) return;
-      if (runSurfaceGate()) return;
-    } else {
-      if (runSurfaceGate()) return;
-      if (runInvalidTimeControlGate()) return;
+    // A malformed pace is a 400 before any surface question.
+    if (invalidTimeControl) {
+      writeJson(response, 400, { error: 'invalid_time_control' });
+      return;
     }
+    if (runSurfaceGate()) return;
 
-    // Account-gated rated flow (PvP + rated only), after the surface + tc guards.
-    let rated = false;
-    if (config.rated.kind === 'account-gated') {
-      const wantsRated = mode === 'pvp' && body.rated === true;
-      if (wantsRated && !ratedEnabled()) {
-        writeJson(response, 403, { error: 'rated_disabled' });
-        return;
-      }
-      if (wantsRated && !accountUser) {
-        writeJson(response, 401, { error: 'rated_requires_account' });
-        return;
-      }
-      // Fail CLOSED on a missing time control too. This used to read
-      // `wantsRated && timeControl && !isAllowed...`, so omitting timeControl
-      // skipped the check and produced a RATED room with no clock -- which is
-      // incoherent (rated requires a real time control) and, until the
-      // 'unjoined' window landed, unreapable as well.
-      if (wantsRated && (!timeControl || !isAllowedRatedTimeControl(timeControl))) {
-        writeJson(response, 400, { error: 'rated_time_control_unsupported' });
-        return;
-      }
-      rated = wantsRated;
+    const ratedGate = gateRatedRoomRequest({
+      requested: body.rated,
+      mode,
+      offered: ratedOffered(),
+      accountUser,
+      timeControl: timeControl ?? undefined,
+      unsupportedSurfaceError,
+    });
+    if (!ratedGate.ok) {
+      writeJson(response, ratedGate.status, { error: ratedGate.error });
+      return;
     }
+    const { rated } = ratedGate;
 
     if (ctx.databaseRequired && !persistence.isInitialized()) {
       writeJson(response, 503, { error: 'persistence_disabled' });
@@ -338,13 +327,13 @@ export function createTenantRoomsRoute<
       writeJson(response, status, { error: created.error });
       return;
     }
-    const includeRated = config.rated.kind !== 'reject-as-surface';
     writeJson(response, 201, {
       roomId: created.room.id,
       url: `/room/${encodeURIComponent(created.room.id)}`,
       mode,
       gameSpecId: created.room.gameSpecId,
-      ...(includeRated ? { rated: created.room.rated } : {}),
+      // What the room actually is, not what was asked for.
+      rated: created.room.rated === true,
       region: 'global',
       ...(timeControl ? { timeControl } : {}),
     });
