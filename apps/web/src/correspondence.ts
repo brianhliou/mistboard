@@ -150,9 +150,19 @@ function buildSignedIn(
   const side = document.createElement('aside');
   side.className = 'correspondence-side';
 
+  // Your own open seeks and challenges lead the main column: right after the
+  // homepage button posts one, it is the only thing on the page that is yours,
+  // and in the side column under the form it read as a footnote (Brian,
+  // 2026-10-03). Hidden while you have none.
+  const challenges = document.createElement('section');
+  challenges.className = 'correspondence-section correspondence-own-seeks';
+  challenges.hidden = true;
+  main.append(challenges);
+
   const { yourMove, waiting } = splitInbox(data.games);
+  let empty: HTMLElement | null = null;
   if (data.games.length === 0) {
-    const empty = document.createElement('section');
+    empty = document.createElement('section');
     empty.className = 'correspondence-panel correspondence-empty';
     const line = document.createElement('p');
     line.textContent = t('correspondence.noGamesYet');
@@ -182,10 +192,11 @@ function buildSignedIn(
     }
   }
 
-  const challenges = document.createElement('section');
-  challenges.className = 'correspondence-section';
   const refreshChallenges = (): void => {
-    void renderChallenges(challenges);
+    void renderChallenges(challenges, (count) => {
+      // "No games yet" says nothing new under a seek that is waiting.
+      if (empty) empty.hidden = count > 0;
+    });
   };
   const seekHost = document.createElement('section');
   seekHost.className = 'correspondence-section';
@@ -201,7 +212,7 @@ function buildSignedIn(
     // lapsed seek); the form opens set to them and scrolls into view.
     const prefill = parseStartFormPrefill(location.search);
     const startForm = buildStartForm(refreshChallenges, prefill);
-    side.append(startForm, seekHost, challenges);
+    side.append(startForm, seekHost);
     refreshChallenges();
     if (prefill) {
       requestAnimationFrame(() => {
@@ -1078,7 +1089,10 @@ function buildOpenSeekRow(ctx: PageContext, host: HTMLElement, seek: OpenSeek): 
 // Your challenges
 // ---------------------------------------------------------------------------
 
-async function renderChallenges(host: HTMLElement): Promise<void> {
+export async function renderChallenges(
+  host: HTMLElement,
+  onCount?: (count: number) => void,
+): Promise<void> {
   const resp = await fetch('/api/correspondence/seeks/mine').catch(() => null);
   if (!resp?.ok) {
     const section = buildSection(t('correspondence.yourChallenges'), null);
@@ -1086,21 +1100,25 @@ async function renderChallenges(host: HTMLElement): Promise<void> {
     line.className = 'correspondence-quiet';
     line.textContent = t('correspondence.openGamesUnavailableBody');
     host.replaceChildren(...section.childNodes, line);
+    host.hidden = false;
     return;
   }
   const { seeks, limit } = (await resp.json()) as { limit: number; seeks: OutgoingSeek[] };
-  const section = buildSection(t('correspondence.yourChallenges'), seeks.length);
-  const children: Node[] = [...section.childNodes];
+  onCount?.(seeks.length);
+  // Nothing out: the section disappears rather than saying so, since it now
+  // sits at the top of the page.
+  host.hidden = seeks.length === 0;
   if (seeks.length === 0) {
-    const line = document.createElement('p');
-    line.className = 'correspondence-quiet';
-    line.textContent = t('correspondence.noChallenges');
-    children.push(line);
-  } else {
+    host.replaceChildren();
+    return;
+  }
+  const section = buildSection(t('correspondence.waitingForOpponent'), seeks.length);
+  const children: Node[] = [...section.childNodes];
+  {
     const list = document.createElement('div');
     list.className = 'correspondence-panel correspondence-rows';
     const refresh = (): void => {
-      void renderChallenges(host);
+      void renderChallenges(host, onCount);
     };
     for (const seek of seeks) list.append(buildChallengeRow(seek, refresh));
     children.push(list);
