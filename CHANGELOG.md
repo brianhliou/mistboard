@@ -122,6 +122,8 @@ Conventions:
 
 ### Fixed
 
+- Scrolling /games no longer stutters when many boards are on screen ([136e3284](https://github.com/brianhliou/mistboard/commit/136e3284))
+- The watch page's channel list names a player from the game shown, not one from hours earlier ([136e3284](https://github.com/brianhliou/mistboard/commit/136e3284))
 - Correspondence turn emails and first-move deadlines no longer reset when a player reconnects ([c3243b74](https://github.com/brianhliou/mistboard/commit/c3243b74))
 - Correspondence games no longer say "Waiting for opponent" once both players are seated, the first-move countdown reads in hours, and correspondence games stay off the homepage TV ([11790cc8](https://github.com/brianhliou/mistboard/commit/11790cc8))
 - The homepage chat opens scrolled to the newest message ([dbe84a24](https://github.com/brianhliou/mistboard/commit/dbe84a24))
