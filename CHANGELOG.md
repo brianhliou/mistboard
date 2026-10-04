@@ -90,10 +90,12 @@ Conventions:
 
 ### Community
 
+- Player names on correspondence seeks, games and challenges link to their profiles ([11790cc8](https://github.com/brianhliou/mistboard/commit/11790cc8))
 - Profile game lists filter by result and by opponent ([cce12ac5](https://github.com/brianhliou/mistboard/commit/cce12ac5))
 
 ### Site
 
+- KataGo on the homepage carries a Neural net tag ([11790cc8](https://github.com/brianhliou/mistboard/commit/11790cc8))
 - Homepage game counts now refresh while the page is open ([dbe84a24](https://github.com/brianhliou/mistboard/commit/dbe84a24))
 - The homepage chat shows recent wins against bots (Level 4 and up) and new studies between messages ([dfa9549e](https://github.com/brianhliou/mistboard/commit/dfa9549e))
 - The homepage bot picker shows the NNUE tag beside the level, uses bigger variant markers, and lists every game without scrolling ([b123338b](https://github.com/brianhliou/mistboard/commit/b123338b))
@@ -119,6 +121,7 @@ Conventions:
 
 ### Fixed
 
+- Correspondence games no longer say "Waiting for opponent" once both players are seated, the first-move countdown reads in hours, and correspondence games stay off the homepage TV ([11790cc8](https://github.com/brianhliou/mistboard/commit/11790cc8))
 - The homepage chat opens scrolled to the newest message ([dbe84a24](https://github.com/brianhliou/mistboard/commit/dbe84a24))
 - Rated games in jieqi, banqi, Jungle, Flip Jungle and Fog Xiangqi now say Rated in the game header ([79547fd9](https://github.com/brianhliou/mistboard/commit/79547fd9))
 - The Rated option says why it is unavailable instead of "coming soon" ([79547fd9](https://github.com/brianhliou/mistboard/commit/79547fd9))
