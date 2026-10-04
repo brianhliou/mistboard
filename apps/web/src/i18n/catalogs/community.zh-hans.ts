@@ -77,7 +77,8 @@ export const ZH_HANS_COMMUNITY = {
   'profile.loadFailedBody': '暂时无法加载这个资料页。',
   'profile.loadingRatings': '正在加载评分...',
   'profile.leaderboard': '排行榜',
-  'profile.leaderboardIntro': 'Mistboard 公开变体的人类快棋排行榜。',
+  'profile.leaderboardIntro':
+    'Mistboard 各变体的等级分排行榜。带 ? 的是暂定等级分，前几局后才会稳定。',
   'profile.ratingStats': '评分统计',
   'profile.ratingStatsPeriod': '每周',
   'profile.ratingStatsSuffix': '评分分布',

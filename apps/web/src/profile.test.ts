@@ -485,8 +485,11 @@ describe('profile ratings rail', () => {
 
   // Summary + online-players fetch stub for the leaderboard page. Ladders are
   // keyed by rating-pool name (the summary endpoint's vocabulary).
+  // `ladders` answers the blitz summary; `byTimeClass` sets any pace. The other
+  // paces come back empty.
   function stubLeaderboardFetch(options?: {
     ladders?: { variant: string; leaderboard: unknown[] }[];
+    byTimeClass?: Record<string, { variant: string; leaderboard: unknown[] }[]>;
     activePlayers?: unknown[];
     players?: {
       handle: string;
@@ -505,11 +508,15 @@ describe('profile ratings rail', () => {
             count: options?.players?.length ?? 0,
             anonymousOnline: options?.anonymousOnline ?? 0,
           }
-        : {
-            timeClass: 'blitz',
-            ladders: options?.ladders ?? [],
-            activePlayers: options?.activePlayers ?? [],
-          };
+        : (() => {
+            const timeClass = new URL(url, 'https://mistboard.test').searchParams.get('timeClass');
+            const byPace = options?.byTimeClass ?? { blitz: options?.ladders ?? [] };
+            return {
+              timeClass,
+              ladders: byPace[timeClass ?? ''] ?? [],
+              activePlayers: options?.activePlayers ?? [],
+            };
+          })();
       return new Response(JSON.stringify(body), {
         headers: { 'content-type': 'application/json' },
         status: 200,
@@ -517,8 +524,7 @@ describe('profile ratings rail', () => {
     });
   }
 
-  // One populated ladder, so the all-empty collapse doesn't swallow the grid
-  // that these gating assertions count panels in.
+  // One ladder with a player.
   const ONE_POPULATED_LADDER = [
     {
       variant: 'fog',
@@ -527,24 +533,55 @@ describe('profile ratings rail', () => {
       ],
     },
   ];
+  // Every rated ladder in the test registry populated, so the gating and order
+  // assertions see a panel per ladder (empty ladders get none).
+  const EVERY_LADDER = [
+    'fog',
+    'jungle',
+    'jungle_flip',
+    'fortress_xiangqi',
+    'duck_xiangqi',
+    'atomic_xiangqi',
+    'crazyhouse_xiangqi',
+    'drop_mini',
+  ].map((variant) => ({
+    variant,
+    leaderboard: [
+      {
+        rank: 1,
+        handle: `p-${variant}`,
+        displayName: `P ${variant}`,
+        eloRating: 1500,
+        provisional: true,
+      },
+    ],
+  }));
 
   it('keeps Drop Mini off the leaderboard panels', async () => {
     vi.stubEnv('DEV', false);
-    const fetchSpy = stubLeaderboardFetch({ ladders: ONE_POPULATED_LADDER });
+    const fetchSpy = stubLeaderboardFetch({ ladders: EVERY_LADDER });
     const root = document.createElement('div');
     const { mountLeaderboard } = await import('./profile.js');
 
     await mountLeaderboard(root);
 
-    // Xiangqi pivot: Drop Mini is off the grids; Fortress is an always-on ladder.
+    // Xiangqi pivot: Drop Mini is off the grids even with a ladder row;
+    // Fortress is an always-on ladder.
     expect(root.textContent).not.toContain('Drop Mini Xiangqi');
     expect(root.textContent).toContain('Fortress Xiangqi');
-    expect(root.textContent).toContain('Human blitz ladders');
+    expect(root.textContent).toContain('Rated ladders across Mistboard variants.');
     // 7 rated ladders (Dark Chess + always-on Jungle, Flip Jungle, Fortress,
     // Duck, Atomic, Crazyhouse).
     expect(root.querySelectorAll('.leaderboard-panel')).toHaveLength(7);
     expect(root.textContent).not.toContain('Active players');
-    expect(fetchSpy).toHaveBeenCalledWith('/api/leaderboard/summary?limit=10&timeClass=blitz');
+    // One summary per live pace; correspondence stays off while its rated
+    // switch is off.
+    for (const pace of ['bullet', 'blitz', 'rapid']) {
+      expect(fetchSpy).toHaveBeenCalledWith(`/api/leaderboard/summary?limit=10&timeClass=${pace}`);
+    }
+    expect(fetchSpy).not.toHaveBeenCalledWith(
+      '/api/leaderboard/summary?limit=10&timeClass=correspondence',
+    );
     expect(fetchSpy).toHaveBeenCalledWith('/api/players/online');
   });
 
@@ -646,15 +683,13 @@ describe('profile ratings rail', () => {
     expect(root.querySelector('.leaderboard-online-empty')?.textContent).toBe('No players online.');
   });
 
-  it('renders ladders in canonical variant order regardless of which are populated', async () => {
+  it('renders ladders in canonical variant order within a pace', async () => {
     vi.stubEnv('DEV', false);
-    // Populate Dark Chess ('fog') to prove a populated ladder no longer floats
-    // to the front (#137):
-    // the leaderboard keys off CANONICAL_VARIANT_ORDER like the picker/profile/
-    // rail, so Duck still leads with no data and Dark Chess keeps its slot
-    // between Atomic and the Jungle pair.
+    // The leaderboard keys off CANONICAL_VARIANT_ORDER like the picker/profile/
+    // rail (#137), not the order the summary happens to list ladders in.
     stubLeaderboardFetch({
       ladders: [
+        ...EVERY_LADDER.filter((ladder) => ladder.variant !== 'fog').reverse(),
         {
           variant: 'fog',
           leaderboard: [
@@ -676,16 +711,6 @@ describe('profile ratings rail', () => {
 
     await mountLeaderboard(root);
 
-    const row = root.querySelector('.leaderboard-table tbody tr');
-    expect(row?.textContent).toContain('Misty');
-    expect(row?.querySelector('a')?.getAttribute('href')).toBe('/@/misty');
-    // Presence circle fills for players in the online set.
-    expect(row?.querySelector('.leaderboard-presence-online')).not.toBeNull();
-    // Ladders absent from the summary render the no-rated-games state.
-    expect(root.textContent).toContain('No rated games yet.');
-
-    // Canonical filtered order: Duck, Crazyhouse, Fortress, Atomic, Fog Chess,
-    // Jungle, Flip Jungle.
     const titles = [...root.querySelectorAll('.leaderboard-panel-title')].map(
       (el) => el.textContent,
     );
@@ -698,17 +723,44 @@ describe('profile ratings rail', () => {
       'Jungle Chess',
       'Flip Jungle',
     ]);
-    const panels = [...root.querySelectorAll('.leaderboard-panel')];
-    // Fog Chess is the one ladder the summary populates. Found BY NAME, not by
-    // index: this used to be panels[1], which silently became a different
-    // ladder the moment a variant was inserted ahead of it.
-    const fogPanel = panels.find((panel) =>
+    const fogPanel = [...root.querySelectorAll('.leaderboard-panel')].find((panel) =>
       panel.querySelector('.leaderboard-panel-title')?.textContent?.includes('Fog Chess'),
     );
-    expect(fogPanel?.textContent).toContain('1520');
-    for (const panel of panels.filter((panel) => panel !== fogPanel)) {
-      expect(panel.textContent).toContain('No rated games yet.');
-    }
+    const row = fogPanel?.querySelector('.leaderboard-table tbody tr');
+    expect(row?.textContent).toContain('1520');
+    expect(row?.querySelector('a')?.getAttribute('href')).toBe('/@/misty');
+    // Presence circle fills for players in the online set.
+    expect(row?.querySelector('.leaderboard-presence-online')).not.toBeNull();
+  });
+
+  it('shows only ladders with players, grouped under a heading per pace', async () => {
+    vi.stubEnv('DEV', false);
+    // Prod, 2026-10-04: the only rated games were jieqi bullet, and the page
+    // opened on an empty Blitz tab.
+    stubLeaderboardFetch({
+      byTimeClass: {
+        bullet: ONE_POPULATED_LADDER,
+        rapid: [EVERY_LADDER.find((ladder) => ladder.variant === 'jungle')!],
+      },
+    });
+    const root = document.createElement('div');
+    const { mountLeaderboard } = await import('./profile.js');
+
+    await mountLeaderboard(root);
+
+    const sections = [...root.querySelectorAll<HTMLElement>('.leaderboard-pace-section')];
+    expect(
+      sections.map((section) => [
+        section.querySelector('.leaderboard-pace-heading')?.textContent,
+        [...section.querySelectorAll('.leaderboard-panel-title')].map((el) => el.textContent),
+      ]),
+    ).toEqual([
+      ['Bullet', ['Fog Chess']],
+      ['Rapid', ['Jungle Chess']],
+    ]);
+    // No pace pills, and no "No rated games yet" panel per empty ladder.
+    expect(root.querySelector('.leaderboard-paces')).toBeNull();
+    expect(root.textContent).not.toContain('No rated games yet.');
   });
 
   it('localizes Traditional Chinese leaderboard chrome', async () => {
@@ -738,9 +790,9 @@ describe('profile ratings rail', () => {
     await mountLeaderboard(root);
 
     expect(root.querySelector('h1')?.textContent).toBe('排行榜');
-    expect(root.textContent).toContain('Mistboard 公開變體的人類快棋排行榜。');
+    expect(root.textContent).toContain('Mistboard 各變體的等級分排行榜。');
     expect(root.textContent).toContain('堡壘象棋');
-    expect(root.textContent).toContain('還沒有計分對局。');
+    expect(root.querySelector('.leaderboard-pace-heading')?.textContent).toBeTruthy();
     expect(root.textContent).not.toContain('活躍玩家');
     expect(root.querySelector('.leaderboard-online-heading')?.textContent).toBe('線上玩家');
     expect(root.textContent).toContain('目前沒有玩家在線上。');
@@ -762,21 +814,6 @@ describe('profile ratings rail', () => {
     expect(root.querySelector('.leaderboard-awaiting a')?.getAttribute('href')).toBe('/play');
     // The online-players column still renders beside it.
     expect(root.textContent).toContain('Online players');
-  });
-
-  it('keeps every ladder panel when at least one ladder has a rated game', async () => {
-    vi.stubEnv('DEV', false);
-    stubLeaderboardFetch({ ladders: ONE_POPULATED_LADDER });
-    const root = document.createElement('div');
-    const { mountLeaderboard } = await import('./profile.js');
-
-    await mountLeaderboard(root);
-
-    expect(root.querySelectorAll('.leaderboard-panel').length).toBeGreaterThan(1);
-    // Partial emptiness keeps the per-variant line: it is legible next to a
-    // ladder that has rows.
-    expect(root.textContent).toContain('No rated games yet.');
-    expect(root.textContent).toContain('Misty');
   });
 
   it('renders rating stats from leaderboard data', async () => {

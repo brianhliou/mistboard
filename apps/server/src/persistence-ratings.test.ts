@@ -474,6 +474,48 @@ definePersistenceTests('ratings', () => {
     assert.equal(board[0]!.rank, 1);
   });
 
+  test('ladders leave out stats-excluded accounts (operator and QA test games)', async () => {
+    const now = new Date();
+    for (const [id, handle] of [
+      ['lx_real', 'lx-real'],
+      ['lx_test', 'lx-test'],
+    ] as const) {
+      await createUser({
+        id,
+        email: `${id}@lx.com`,
+        emailVerifiedAt: now,
+        handle,
+        displayName: handle,
+        profileVisibility: 'public',
+        now,
+      });
+    }
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      await client.query(`UPDATE users SET stats_excluded_at = now() WHERE id = 'lx_test'`);
+      await client.query(
+        `INSERT INTO user_ratings (user_id, variant, time_class, elo_rating, rating_deviation, volatility, games_played)
+         VALUES
+          ('lx_real','jieqi','bullet',1500,200,0.06,1),
+          ('lx_test','jieqi','bullet',1900,60,0.06,40)`,
+      );
+    } finally {
+      await client.end();
+    }
+
+    const board = await getLeaderboard({ variant: 'jieqi', timeClass: 'bullet', limit: 100 });
+    assert.deepEqual(
+      board.map((entry) => entry.handle),
+      ['lx-real'],
+    );
+    const summary = await getLeaderboardSummary({ timeClass: 'bullet' });
+    assert.deepEqual(
+      summary.find((ladder) => ladder.variant === 'jieqi')?.leaderboard.map((e) => e.handle),
+      ['lx-real'],
+    );
+  });
+
   test('leaderboard summary groups top-N per variant and hides private profiles', async () => {
     const now = new Date();
     const mk = (id: string, handle: string, visibility?: 'public' | 'private') =>

@@ -77,7 +77,8 @@ export const ZH_HANT_COMMUNITY = {
   'profile.loadFailedBody': '暫時無法載入這個個人資料。',
   'profile.loadingRatings': '正在載入評分...',
   'profile.leaderboard': '排行榜',
-  'profile.leaderboardIntro': 'Mistboard 公開變體的人類快棋排行榜。',
+  'profile.leaderboardIntro':
+    'Mistboard 各變體的等級分排行榜。帶 ? 的是暫定等級分，前幾局後才會穩定。',
   'profile.ratingStats': '評分統計',
   'profile.ratingStatsPeriod': '每週',
   'profile.ratingStatsSuffix': '評分分布',

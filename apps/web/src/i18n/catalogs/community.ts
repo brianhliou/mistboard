@@ -78,7 +78,8 @@ export const EN_COMMUNITY = {
   'profile.loadFailedBody': 'This profile could not be loaded right now.',
   'profile.loadingRatings': 'Loading ratings...',
   'profile.leaderboard': 'Leaderboard',
-  'profile.leaderboardIntro': 'Human blitz ladders across public Mistboard variants.',
+  'profile.leaderboardIntro':
+    'Rated ladders across Mistboard variants. A ? marks a provisional rating, still settling after its first games.',
   'profile.ratingStats': 'Rating stats',
   'profile.ratingStatsPeriod': 'Weekly',
   'profile.ratingStatsSuffix': 'rating distribution',

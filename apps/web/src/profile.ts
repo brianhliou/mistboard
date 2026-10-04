@@ -311,11 +311,11 @@ export async function mountProfile(root: HTMLElement, handle: string): Promise<v
 }
 
 // Static frame of the players page: community rail, twin headings (Online
-// players | Leaderboard), online column, and one loading panel per ladder.
-// Everything derives from the build-time variant registry, so both the client
-// mount and the build-time prerender can render it without data.
-// Each rated pace has its own ladder, so the players page is a grid per pace.
-// Same keys as the live room's time-class line (live-render.ts).
+// players | Leaderboard), online column, and the ladder area, which holds one
+// loading line until the summaries land. Everything derives from build-time
+// data, so both the client mount and the build-time prerender can render it.
+// Each rated pace is its own Glicko pool. Same keys as the live room's
+// time-class line (live-render.ts).
 const LEADERBOARD_TIME_CLASSES: readonly { id: ProfileRatingTimeClass; label: I18nKey }[] = [
   { id: 'bullet', label: 'live.timeClassBullet' },
   { id: 'blitz', label: 'live.timeClassBlitz' },
@@ -326,12 +326,7 @@ const LEADERBOARD_TIME_CLASSES: readonly { id: ProfileRatingTimeClass; label: I1
 function buildLeaderboardFrame(locale: Locale): {
   shell: HTMLElement;
   onlineBody: HTMLElement;
-  grid: HTMLElement;
-  paceTabs: HTMLElement;
-  ladderPanels: {
-    bucket: (typeof LEADERBOARD_BUCKETS)[number];
-    shell: { panel: HTMLElement; body: HTMLElement };
-  }[];
+  ladders: HTMLElement;
 } {
   const onlineHeading = document.createElement('h2');
   onlineHeading.className = 'site-section-heading leaderboard-online-heading';
@@ -348,56 +343,25 @@ function buildLeaderboardFrame(locale: Locale): {
   const onlineBody = document.createElement('div');
   onlineBody.className = 'leaderboard-online-body';
 
-  const grid = document.createElement('div');
-  grid.className = 'leaderboard-grid';
-  const ladderPanels = LEADERBOARD_BUCKETS.map((bucket) => ({
-    bucket,
-    shell: buildLeaderboardPanelShell(
-      profileVariantLabel(bucket.variant, locale),
-      bucket.miniId,
-      locale,
-    ),
-  }));
-  grid.append(...ladderPanels.map((p) => p.shell.panel));
-
-  const paceTabs = document.createElement('div');
-  paceTabs.className = 'leaderboard-paces';
-  paceTabs.setAttribute('role', 'tablist');
-  paceTabs.setAttribute('aria-label', t('profile.leaderboard', {}, locale));
-  for (const pace of LEADERBOARD_TIME_CLASSES) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'leaderboard-pace';
-    button.dataset.timeClass = pace.id;
-    button.textContent = t(pace.label);
-    button.setAttribute('role', 'tab');
-    const selected = pace.id === DEFAULT_LEADERBOARD_TIME_CLASS;
-    button.classList.toggle('selected', selected);
-    button.setAttribute('aria-selected', selected ? 'true' : 'false');
-    // No correspondence ladder while rated correspondence is held (server flag off).
-    if (pace.id === 'correspondence') {
-      const sync = (): void => {
-        button.style.display = isCorrespondenceRatedModeEnabled() ? '' : 'none';
-      };
-      sync();
-      onRatedModeChange(sync);
-    }
-    paceTabs.append(button);
-  }
+  const ladders = document.createElement('div');
+  ladders.className = 'leaderboard-ladders';
+  const loading = document.createElement('p');
+  loading.className = 'leaderboard-awaiting';
+  loading.textContent = t('profile.loadingRatings', {}, locale);
+  ladders.append(loading);
 
   const body = document.createElement('div');
   body.className = 'leaderboard-body';
-  body.append(onlineHeading, heading, sub, onlineBody, paceTabs, grid);
+  body.append(onlineHeading, heading, sub, onlineBody, ladders);
 
   const shell = document.createElement('main');
   shell.className = 'site-section community-shell leaderboard-shell';
   shell.append(buildCommunityLayout('/player', body, locale));
-  return { shell, onlineBody, grid, paceTabs, ladderPanels };
+  return { shell, onlineBody, ladders };
 }
 
-// Stands in for the whole ladder grid while no ladder has a rated game. Points
-// at the thing a visitor can actually do about it instead of restating the
-// absence eight times.
+// Stands in for every ladder while none has a rated game. Points at the thing
+// a visitor can actually do about it instead of restating the absence.
 function buildLeaderboardAwaitingRatedGames(locale: Locale): HTMLElement {
   const empty = document.createElement('p');
   empty.className = 'leaderboard-awaiting';
@@ -410,7 +374,7 @@ function buildLeaderboardAwaitingRatedGames(locale: Locale): HTMLElement {
 }
 
 // Build-time static render of the players page frame (nav + rail + headings +
-// loading panels), baked by the prerender so first paint gets the full layout
+// loading line), baked by the prerender so first paint gets the full layout
 // instead of the empty SPA shell. Live data (ladder rows, online list) stays a
 // client fetch. Returns the inner HTML for `#app`.
 export function renderLeaderboardShellForPrerender(): string {
@@ -419,19 +383,107 @@ export function renderLeaderboardShellForPrerender(): string {
   return `${nav.outerHTML}${frame.shell.outerHTML}`;
 }
 
+type PaceLadders = { timeClass: ProfileRatingTimeClass; summary: LeaderboardSummary };
+
+// The ladders that have players, grouped under one heading per pace, lichess
+// /player style: no pace pills to click through, and no "No rated games yet"
+// panel for every variant x pace that nobody has played. Inside a pace the
+// panels keep the canonical variant order (#137).
+function renderPaceSections(
+  container: HTMLElement,
+  paces: readonly PaceLadders[],
+  onlineHandles: Set<string>,
+  locale: Locale,
+): void {
+  const sections: HTMLElement[] = [];
+  let anyFailed = false;
+  for (const { timeClass, summary } of paces) {
+    if (!summary) {
+      anyFailed = true;
+      continue;
+    }
+    const byVariant = new Map(
+      summary.ladders.map((ladder) => [ladder.variant, ladder.leaderboard]),
+    );
+    const grid = document.createElement('div');
+    grid.className = 'leaderboard-grid';
+    for (const bucket of LEADERBOARD_BUCKETS) {
+      const entries = byVariant.get(bucket.variant) ?? [];
+      if (entries.length === 0) continue;
+      const panelShell = buildLeaderboardPanelShell(
+        profileVariantLabel(bucket.variant, locale),
+        bucket.miniId,
+        locale,
+      );
+      renderLeaderboardPanelBody(
+        panelShell.body,
+        entries.map((entry) => ({
+          rank: entry.rank,
+          handle: entry.handle,
+          displayName: entry.displayName,
+          title: entry.title,
+          value: entry.eloRating,
+          provisional: entry.provisional,
+        })),
+        onlineHandles,
+        'profile.noRatedGames',
+        locale,
+      );
+      grid.append(panelShell.panel);
+    }
+    if (grid.childElementCount === 0) continue;
+    const section = document.createElement('section');
+    section.className = 'leaderboard-pace-section';
+    section.dataset.timeClass = timeClass;
+    const heading = document.createElement('h2');
+    heading.className = 'leaderboard-pace-heading';
+    const label = LEADERBOARD_TIME_CLASSES.find((pace) => pace.id === timeClass)?.label;
+    heading.textContent = label ? t(label, {}, locale) : timeClass;
+    section.append(heading, grid);
+    sections.push(section);
+  }
+  if (sections.length > 0) {
+    container.replaceChildren(...sections);
+    return;
+  }
+  if (anyFailed) {
+    const failed = document.createElement('p');
+    failed.className = 'leaderboard-awaiting';
+    failed.textContent = t('profile.ratingsLoadFailed', {}, locale);
+    container.replaceChildren(failed);
+    return;
+  }
+  container.replaceChildren(buildLeaderboardAwaitingRatedGames(locale));
+}
+
+// The paces with a public ladder: the live three, plus correspondence once
+// rated correspondence is switched on (its own pool per variant).
+function leaderboardPaces(): ProfileRatingTimeClass[] {
+  return LEADERBOARD_TIME_CLASSES.map((pace) => pace.id).filter(
+    (id) => id !== 'correspondence' || isCorrespondenceRatedModeEnabled(),
+  );
+}
+
 export async function mountLeaderboard(root: HTMLElement): Promise<void> {
   const locale = currentLocale();
   root.replaceChildren();
   root.classList.add('landing-page');
 
-  // Playstrategy-style players page: the frame renders immediately from the
-  // build-time variant registry; the two fetches below only fill in rows, so
-  // no layout waits on the network.
-  const { shell, onlineBody, grid, paceTabs, ladderPanels } = buildLeaderboardFrame(locale);
+  // Playstrategy-style players page: the frame renders immediately; the
+  // fetches below only fill in the ladders, so no layout waits on the network.
+  const { shell, onlineBody, ladders } = buildLeaderboardFrame(locale);
   root.append(buildNav(locale), shell);
 
-  const [summary, onlinePlayers] = await Promise.all([
-    fetchLeaderboardSummary(DEFAULT_LEADERBOARD_TIME_CLASS),
+  const loadPaces = (paces: ProfileRatingTimeClass[]): Promise<PaceLadders[]> =>
+    Promise.all(
+      paces.map(async (timeClass) => ({
+        timeClass,
+        summary: await fetchLeaderboardSummary(timeClass),
+      })),
+    );
+
+  const [paceLadders, onlinePlayers] = await Promise.all([
+    loadPaces(leaderboardPaces()),
     fetchOnlinePlayers(),
   ]);
 
@@ -440,75 +492,21 @@ export async function mountLeaderboard(root: HTMLElement): Promise<void> {
     (onlinePlayers?.players ?? []).map((player) => player.handle.toLowerCase()),
   );
 
-  // Render every ladder in the shared canonical variant order (issue #137). The
-  // panels are already appended to the grid in registry order by
-  // buildLeaderboardFrame, and CANONICAL_VARIANT_ORDER is what the picker,
-  // profile grid, and watch rail all key off — so the leaderboard must not
-  // reorder by which ladders happen to have rated games yet.
-  const renderLadders = (ladderSummary: LeaderboardSummary): void => {
-    const ladders = new Map(
-      (ladderSummary?.ladders ?? []).map((ladder) => [ladder.variant, ladder.leaderboard]),
-    );
-    // Before rated liquidity exists, every panel renders the same "no rated
-    // games yet" line, so the page reads as eight repetitions of "nobody is
-    // here". Collapse that whole state to one sentence: the grid only earns its
-    // space once at least one ladder has a player. Partial emptiness keeps the
-    // full grid, because the canonical order is what makes a missing ladder
-    // legible against the ones that have rows.
-    if (ladderSummary && !ladderSummary.ladders.some((l) => l.leaderboard.length > 0)) {
-      grid.replaceChildren(buildLeaderboardAwaitingRatedGames(locale));
-      return;
-    }
-    // A pace switch can arrive after the empty-state collapsed the grid, so put
-    // the panels back before filling them.
-    grid.replaceChildren(...ladderPanels.map((panel) => panel.shell.panel));
-    for (const { bucket, shell: panelShell } of ladderPanels) {
-      // A ladder missing from the summary just has no rated games yet; a null
-      // summary means the fetch itself failed.
-      const entries = ladderSummary ? (ladders.get(bucket.variant) ?? []) : null;
-      const rows: LeaderboardTableRow[] | null = entries
-        ? entries.map((entry) => ({
-            rank: entry.rank,
-            handle: entry.handle,
-            displayName: entry.displayName,
-            title: entry.title,
-            value: entry.eloRating,
-            provisional: entry.provisional,
-          }))
-        : null;
-      renderLeaderboardPanelBody(
-        panelShell.body,
-        rows,
-        onlineHandles,
-        'profile.noRatedGames',
-        locale,
-      );
-    }
-  };
-
-  // Pace tabs refetch rather than filter: the summary endpoint returns one
-  // time class at a time, and the ladders are independent Glicko pools.
-  let selectedTimeClass: ProfileRatingTimeClass = DEFAULT_LEADERBOARD_TIME_CLASS;
-  paceTabs.addEventListener('click', (event) => {
-    const button = (event.target as HTMLElement | null)?.closest<HTMLElement>('.leaderboard-pace');
-    const timeClass = button?.dataset.timeClass as ProfileRatingTimeClass | undefined;
-    if (!timeClass || timeClass === selectedTimeClass) return;
-    selectedTimeClass = timeClass;
-    for (const tab of paceTabs.querySelectorAll<HTMLElement>('.leaderboard-pace')) {
-      const selected = tab.dataset.timeClass === timeClass;
-      tab.classList.toggle('selected', selected);
-      tab.setAttribute('aria-selected', selected ? 'true' : 'false');
-    }
-    void (async () => {
-      const next = await fetchLeaderboardSummary(timeClass);
-      // Drop a slow response the user has already navigated past.
-      if (selectedTimeClass !== timeClass) return;
-      renderLadders(next);
-    })();
-  });
-
-  renderLadders(summary);
+  renderPaceSections(ladders, paceLadders, onlineHandles, locale);
   renderOnlinePlayers(onlineBody, onlinePlayers, locale);
+
+  // The rated switch lands with /api/server-status, possibly after the first
+  // render: re-render when it adds (or removes) the correspondence pace.
+  let renderedPaces = paceLadders.map((pace) => pace.timeClass).join(',');
+  onRatedModeChange(() => {
+    const paces = leaderboardPaces();
+    if (paces.join(',') === renderedPaces) return;
+    renderedPaces = paces.join(',');
+    void loadPaces(paces).then((next) => {
+      if (renderedPaces !== paces.join(',')) return;
+      renderPaceSections(ladders, next, onlineHandles, locale);
+    });
+  });
 }
 
 export async function mountRatingStats(root: HTMLElement): Promise<void> {

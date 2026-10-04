@@ -2432,51 +2432,25 @@
   grid-template-areas:
     "online-heading heading"
     ". sub"
-    "online paces"
     "online grid";
   gap: 4px 28px;
   align-items: start;
 }
 
-/* Pace tabs above the ladder wall: each rated time control is its own Glicko
-   pool, so the grid below always shows exactly one pace. */
-.leaderboard-paces {
-  grid-area: paces;
-  display: flex;
-  gap: 6px;
-  margin-bottom: 10px;
+/* One section per rated pace that has a player (lichess /player): a quiet
+   pace heading over that pace's ladder wall. */
+.leaderboard-ladders {
+  grid-area: grid;
+  display: grid;
+  gap: 22px;
+  padding-top: 12px;
 }
 
-.leaderboard-pace {
-  appearance: none;
-  border: 1px solid var(--site-border);
-  border-radius: 4px;
-  background: transparent;
-  color: var(--site-muted);
-  cursor: pointer;
-  font: inherit;
-  font-size: 13px;
-  padding: 4px 12px;
-}
-
-/* Touch floor: the pace chips switch which ladder you are reading, so they are
-   a real control on the phone leaderboard, not decoration. */
-@media (pointer: coarse) {
-  .leaderboard-pace {
-    min-height: 44px;
-    padding: 4px 16px;
-  }
-}
-
-.leaderboard-pace:hover {
+.leaderboard-pace-heading {
+  margin: 0 0 8px;
   color: var(--site-heading);
-}
-
-.leaderboard-pace.selected {
-  background: var(--site-surface-raised, transparent);
-  border-color: var(--site-heading);
-  color: var(--site-heading);
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 400;
 }
 
 .rating-stats-body {
@@ -2714,13 +2688,11 @@
 
 /* Ladder wall: as many top-10 tables per row as fit the shell. Tight gaps and
    stretched cells (no align-items) fuse the panels into one dense surface;
-   empty ladders are re-ordered to the tail by mountLeaderboard. */
+   only ladders with a player get a panel. */
 .leaderboard-grid {
-  grid-area: grid;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
-  padding-top: 12px;
 }
 
 .leaderboard-panel {
@@ -2859,7 +2831,6 @@
       "sub"
       "online-heading"
       "online"
-      "paces"
       "grid";
   }
 
