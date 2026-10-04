@@ -494,8 +494,8 @@ export function createTenantRoomChrome<C extends string>(
       ? null
       : typeof days === 'number' && days > 0
         ? days === 1
-          ? t('live.oneDayPerMoveNote')
-          : t('live.daysPerMoveNote', { count: days })
+          ? t('live.oneDayShort')
+          : t('live.daysShort', { count: days })
         : `${Math.max(1, Math.round(tc.initialMs / 60_000))}+${Math.round(tc.incrementMs / 1_000)}`;
 
     let subline: string | null = null;

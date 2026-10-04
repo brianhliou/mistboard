@@ -366,7 +366,9 @@ describe('tenant room chrome player names', () => {
       timeControl: { initialMs: 3 * 86_400_000, incrementMs: 0, daysPerMove: 3 },
     });
     chrome.renderMeta();
-    expect(refs.gameInfo.textContent).toContain('3 days per move');
+    // Short form, so the headline fits one line in the room rail.
+    expect(refs.gameInfo.textContent).toContain('3 days • Rated');
+    expect(refs.gameInfo.textContent).not.toContain('per move');
     expect(refs.gameInfo.textContent).not.toContain('4320+0');
   });
 

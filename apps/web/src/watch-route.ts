@@ -20,7 +20,6 @@ import {
   matchupSeats,
   namesMatchupLabel,
   participantForColor,
-  sourceLabel,
   terminationLabel,
   variantDisplayLabel,
   watchChannelLabel,
@@ -1779,7 +1778,9 @@ function renderWatchMetaCard(root: HTMLElement, game: FeaturedGame | null): void
     game.rated === true ? t('watch.rated') : game.rated === false ? t('watch.casual') : null;
   const card = createGameMetaCard({
     markerId: variantMiniIdForRawVariant(game.variant) ?? undefined,
-    headline: [timeControlLabelForGame(game), ratedSegment, sourceLabel(game.mode)],
+    // No "Human vs engine" segment: the BOT tag on the player row already says
+    // it, and the extra words wrapped the headline onto two lines.
+    headline: [timeControlLabelForGame(game), ratedSegment],
     variantName: variantDisplayLabel(game.variant),
     variantHref: localizedRulesHref(game.variant),
     subline: timeAgoLabel(game.endedAt) || null,

@@ -418,6 +418,10 @@ export const EN_PLAY = {
   'live.yourMovePill': 'your move',
   'live.oneDayPerMoveNote': '1 day per move',
   'live.daysPerMoveNote': '{count} days per move',
+  // The game card's headline: "1 day per move • Casual • Jieqi" wrapped in the
+  // room rail; the clock note beside the board still spells out "per move".
+  'live.oneDayShort': '1 day',
+  'live.daysShort': '{count} days',
   'live.copyInvite': 'Copy invite',
   'live.playAgain': 'Play again',
   'live.newOpponent': 'New opponent',
@@ -715,6 +719,8 @@ export const CRITICAL_PLAY_I18N_KEYS = [
   'live.yourMovePill',
   'live.oneDayPerMoveNote',
   'live.daysPerMoveNote',
+  'live.oneDayShort',
+  'live.daysShort',
   'live.copyInvite',
   'live.playAgain',
   'live.newOpponent',

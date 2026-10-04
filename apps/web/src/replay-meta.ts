@@ -228,16 +228,17 @@ export function renderGameMetaPanel(
   }
 }
 
-/** "3 days per move" for a finished correspondence game, which a games row
- *  stores as days * 24h with no increment (the room card's wording); null for
- *  any live clock. Without it a 3-day game read "72:00:00". */
+/** "3 days" for a finished correspondence game, which a games row stores as
+ *  days * 24h with no increment (the room card's wording, short so the card
+ *  headline fits one line); null for any live clock. Without it a 3-day game
+ *  read "72:00:00". */
 export function correspondenceLabelFromMs(
   initialMs: number | null | undefined,
   incrementMs: number | null | undefined,
 ): string | null {
   const days = officialCorrespondenceDays(initialMs, incrementMs);
   if (days === null) return null;
-  return days === 1 ? t('live.oneDayPerMoveNote') : t('live.daysPerMoveNote', { count: days });
+  return days === 1 ? t('live.oneDayShort') : t('live.daysShort', { count: days });
 }
 
 export function timeControlLabelFromMeta(

@@ -399,6 +399,8 @@ export const ZH_HANT_PLAY = {
   'live.yourMovePill': '輪到你',
   'live.oneDayPerMoveNote': '每步 1 天',
   'live.daysPerMoveNote': '每步 {count} 天',
+  'live.oneDayShort': '每步 1 天',
+  'live.daysShort': '每步 {count} 天',
   'live.copyInvite': '複製邀請',
   'live.playAgain': '再下一局',
   'live.newOpponent': '換個對手',

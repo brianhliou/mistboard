@@ -1,7 +1,8 @@
 // Shared game meta card (lichess/playstrategy-style), used by the live room's
 // left rail AND the review pages' left rail so both surfaces read identically:
 //
-//   [glyph]  5+0 • Casual • Xiangqi
+//   [glyph]  Xiangqi
+//            5+0 • Casual
 //            3 days ago
 //   ● red player (2203)            1
 //   ○ black player (2166)          0
@@ -135,20 +136,26 @@ export function createGameMetaCard(config: GameMetaCardConfig): GameMetaCard {
   }
   const headText = document.createElement('div');
   headText.className = 'game-meta-card__head-text';
+  // The variant is the title line; the time control and mode sit under it.
+  // Run together on one line ("1 day per move • Casual • Jieqi") the headline
+  // wrapped in a ~190px rail, and long names ("Crazyhouse Xiangqi") always did.
+  const title = document.createElement('p');
+  title.className = 'game-meta-card__title';
   const headline = document.createElement('p');
   headline.className = 'game-meta-card__headline';
   const segments = config.headline.filter((segment): segment is string => Boolean(segment));
+  // With no variant name the headline itself is the title.
+  const segmentsHost = config.variantName ? headline : title;
   if (config.headlineHref && segments.length > 0) {
     const link = document.createElement('a');
     link.className = 'game-meta-card__headline-link';
     link.href = config.headlineHref;
     link.textContent = segments.join(' • ');
-    headline.append(link);
-  } else {
-    headline.append(document.createTextNode(segments.join(' • ')));
+    segmentsHost.append(link);
+  } else if (segments.length > 0) {
+    segmentsHost.append(document.createTextNode(segments.join(' • ')));
   }
   if (config.variantName) {
-    if (segments.length > 0) headline.append(document.createTextNode(' • '));
     const variant = document.createElement(config.variantHref ? 'a' : 'span');
     variant.className = 'game-meta-card__variant';
     if (variant instanceof HTMLAnchorElement && config.variantHref) {
@@ -160,11 +167,13 @@ export function createGameMetaCard(config: GameMetaCardConfig): GameMetaCard {
       }
     }
     variant.textContent = config.variantName;
-    headline.append(variant);
+    title.append(variant);
   }
   const subline = document.createElement('p');
   subline.className = 'game-meta-card__subline';
-  headText.append(headline, subline);
+  headText.append(title);
+  if (headline.childNodes.length > 0) headText.append(headline);
+  headText.append(subline);
   head.append(headText);
 
   const playersEl = document.createElement('div');
