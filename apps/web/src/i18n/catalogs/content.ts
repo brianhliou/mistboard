@@ -164,7 +164,7 @@ export const EN_CONTENT = {
   'contact.networkError': 'Network error. Try again.',
   'about.heading': 'About Mistboard',
   'about.lede':
-    'Mistboard is a free, open-source place to play and study Chinese chess, and home to the original strategy games we build.',
+    "Mistboard is a free, open-source place to play and study Chinese chess, one board for players who read Chinese and players who don't. It is also home to the original strategy games we build.",
   'about.whyHeading': 'Why this site exists',
   'about.whyBody':
     'Chinese chess here means xiangqi and its traditional relatives, jieqi and banqi. Most people who play them read Chinese, and most of what is written about them is in Chinese. Mistboard is one board for both sides of that line. The site runs in English, Simplified and Traditional Chinese on the same games, puzzles and lobby, so a player in Shanghai and a player in Toronto sit down at the same table. For English speakers, pieces render as icons you can identify before you can read 車 or 砲, rules and articles are written in English rather than translated into it, and a beginner course explains each piece against the chess piece it resembles. Past the basics: engines, tactics puzzles mined from real games, an analysis board, a games database, and tournament broadcasts.',
@@ -339,13 +339,13 @@ export const EN_CONTENT = {
     'Start a game, choose a friend as the opponent, and send them the link. They open it and take the other seat.',
   'faq.playOtherQuestion': 'What else can I play?',
   'faq.playOtherAnswer':
-    'Jieqi, banqi and jungle chess, and original variants such as atomic xiangqi and duck xiangqi.',
+    'Jieqi and banqi, Jungle Chess and Flip Jungle, Atomic Xiangqi, and the games we invent: Duck Xiangqi, Fog Xiangqi and Fortress.',
   'faq.playReviewQuestion': 'Can I review a game afterwards?',
   'faq.playReviewAnswer':
     'Yes. A finished xiangqi game opens in review, where the engine marks the moves that decided it.',
   'faq.darkChessQuestion': 'What games are on Mistboard?',
   'faq.darkChessPrefix':
-    'Mistboard hosts original strategy games and serious variants across chess, xiangqi, Jungle, and related families. Some are open-information; some use fog or hidden identities. The ',
+    'Chinese chess first: xiangqi and its traditional relatives, jieqi and banqi. Beside them sit the games we invent, such as Duck Xiangqi, Fog Xiangqi and Fortress, plus Jungle Chess and Fog Chess. Some are open-information; some hide pieces under fog or face down. The ',
   'faq.rulesReference': 'rules reference',
   'faq.darkChessSuffix': ' lists the current games.',
   'faq.accountQuestion': 'Do I need an account?',
@@ -358,16 +358,15 @@ export const EN_CONTENT = {
   'faq.contactSuffix': ". Include the room link if it's about a specific game.",
   'faq.cheatingQuestion': 'How does Mistboard prevent cheating?',
   'faq.cheatingPrefix':
-    "The hidden pieces never reach your opponent's browser. The server keeps the full board and sends each player only what they're allowed to see, so there is nothing to dig out of the page. The code is ",
+    "Getting help from an engine or another person, or abusing accounts, breaks the fair-play rules in every game, rated or casual. In hidden-piece games the server also keeps the full board and sends each player only what they're allowed to see, so there is nothing to dig out of the page. The code is ",
   'faq.openSource': 'open source',
-  'faq.cheatingSuffix':
-    ', so anyone can check. Getting outside help, abusing accounts or trying to get around the fog still breaks the fair-play rules.',
+  'faq.cheatingSuffix': ', so anyone can check.',
   'faq.enginesQuestion': 'Do Mistboard engines see the full board?',
   'faq.enginesAnswer':
     'No. In a hidden-piece game the engine sees what a human in its seat would see. The full board stays on the server, which uses it to judge moves and results.',
   'faq.liveWatchQuestion': 'Can I watch a live game?',
   'faq.liveWatchAnswer':
-    'Open-information games, xiangqi included, can be watched live from Watch. Hidden-information games are not spectatable while they are in progress, so no one can feed a player the full board mid-game. Once any game finishes, anyone can replay it from either side or with the full board revealed.',
+    'Most games can be watched live from Watch. In jieqi and banqi, spectators see the board as it lies, face-down pieces and all. Fog games cannot be watched while they are in progress, so no one can feed a player the full board mid-game. Once any game finishes, anyone can replay it from either side or with the full board revealed.',
   'faq.libraryQuestion': 'Where do the games in the library come from?',
   'faq.libraryAnswer':
     "Four places: public-domain classical manuals we re-encode ourselves, tournaments we broadcast with the organizer's agreement, single events whose records we take from a public archive and credit on the page, and games played here. We do not republish another site's archive. Large xiangqi databases exist elsewhere, and copying one would be easy. They belong to the operators who built them, so we ask first. That keeps the library smaller than it could be, and keeps every game in it accounted for.",

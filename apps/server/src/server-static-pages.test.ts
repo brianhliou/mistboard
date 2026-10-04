@@ -225,7 +225,7 @@ test('the Chinese home pages and blog indexes are routed, advertised and titled'
   const staticDir = await staticDirWithPreloadManifest();
   for (const [file, marker] of [
     ['zh-hans-home.html', '中国象棋在线'],
-    ['zh-hant-home.html', '中國象棋線上'],
+    ['zh-hant-home.html', '象棋線上'],
   ] as const) {
     await writeFile(join(staticDir, file), `<title>${marker} | Mistboard</title>`, 'utf-8');
     const response = captureResponse();

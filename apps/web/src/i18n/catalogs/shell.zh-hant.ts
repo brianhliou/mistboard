@@ -55,7 +55,7 @@ export const ZH_HANT_SHELL = {
   'nav.signIn': '登入',
   'nav.register': '註冊',
   'nav.language': '語言',
-  'home.tagline': '中國象棋、揭棋、暗棋，以及原創策略遊戲。免費且開源。關於 Mistboard...',
+  'home.tagline': '象棋、揭棋、暗棋，以及原創策略遊戲。免費且開源。關於 Mistboard...',
   'home.playSummary': '免費網頁版 · 無需下載和註冊 · 人機對戰八個等級 · 和朋友對弈',
   'home.activityAria': '活躍度',
   'home.gamesPlayed': '局已下完',
