@@ -89,6 +89,7 @@ Conventions:
 
 ### Site
 
+- About and FAQ are up to date: they lead with Chinese chess, name Crazyhouse Xiangqi among our own games, and say jieqi and banqi can be watched live; Traditional Chinese pages say 象棋 rather than 中國象棋 ([af26781b](https://github.com/brianhliou/mistboard/commit/af26781b))
 - Contribute and Work with us now link to each other; play-testing and translation help live on Contribute ([efc0c7c2](https://github.com/brianhliou/mistboard/commit/efc0c7c2))
 - New Work with us page for titled players and coaches, creators and streamers, event organizers, writers and engine authors ([c44741d5](https://github.com/brianhliou/mistboard/commit/c44741d5))
 - the homepage play panel lists variants in the same order as the menus, not by recent play ([5e2e44d1](https://github.com/brianhliou/mistboard/commit/5e2e44d1))
