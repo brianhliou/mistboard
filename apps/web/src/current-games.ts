@@ -79,6 +79,7 @@ type CorrespondenceSeek = {
   gameSpecId: string;
   daysPerMove: number;
   creatorName: string | null;
+  creatorHandle?: string | null;
   rated?: boolean;
   isMine?: boolean;
 };

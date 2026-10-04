@@ -38,6 +38,7 @@ import {
   openLandingSetupDialog,
   variantLabelForGameSpec,
 } from './landing-play.js';
+import { type ProfileTarget, playerNameEl, profileTargetFor } from './profile-link.js';
 import './landing-play-panel.css';
 import { rememberedPveEngine } from './pve-memory.js';
 import { isCorrespondenceRatedModeEnabled, isRatedModeEnabled } from './rated-flag.js';
@@ -720,6 +721,7 @@ export function buildPlayPanel(
           label,
           action,
           true,
+          profileTargetFor({ handle: seek.creatorHandle }),
         ),
       );
     }
@@ -742,6 +744,8 @@ export function buildPlayPanel(
     pace: string,
     action: HTMLElement,
     slow = false,
+    // A correspondence seek's creator profile; live offers are anonymous.
+    whoTarget: ProfileTarget | null = null,
   ): HTMLElement => {
     const row = document.createElement('div');
     row.className = 'pp-offer';
@@ -750,7 +754,7 @@ export function buildPlayPanel(
     text.className = 'pp-name';
     text.textContent = label;
     const whoEl = document.createElement('small');
-    whoEl.textContent = ` · ${who}`;
+    whoEl.append(' · ', playerNameEl(who, whoTarget, 'pp-offer-who'));
     text.append(whoEl);
     const paceEl = document.createElement('span');
     paceEl.className = `pp-offer-pace${slow ? ' is-slow' : ''}`;

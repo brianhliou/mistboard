@@ -66,6 +66,10 @@ export type CorrespondenceSeekRecord = {
 
 export type CorrespondenceSeekListing = CorrespondenceSeekRecord & {
   creatorName: string | null;
+  // The creator's handle, so a client can link the name to /@/<handle>. Null when
+  // the account is closed or its profile is private (linkableHandleSql), so
+  // "handle present => link" stays fail-closed on every surface that reads it.
+  creatorHandle: string | null;
   createdAt: Date;
 };
 
@@ -105,9 +109,22 @@ export async function countOpenSeeksForUser(userId: string): Promise<number> {
   return Number(rows[0]?.count ?? '0');
 }
 
+/**
+ * A user's handle only when their profile may be linked: an open account whose
+ * profile is not private. The same rule the postgame participant rows and the
+ * lobby activity feed apply (persistence-games.ts, persistence-lobby-activity.ts),
+ * so a name links on the correspondence pages exactly when it links elsewhere.
+ * The display name is unaffected; only the link is withheld.
+ */
+export function linkableHandleSql(alias: string): string {
+  return `CASE WHEN ${alias}.closed_at IS NULL AND ${alias}.profile_visibility <> 'private'
+               THEN ${alias}.handle END`;
+}
+
 const SEEK_COLUMNS = `s.id, s.creator_user_id, s.game_spec_id, s.days_per_move, s.preferred_color,
             s.target_user_id, s.visibility, ${seekExpirySql('s.')} AS expires_at, s.rated,
-            COALESCE(u.display_name, u.handle) AS creator_name, s.created_at`;
+            COALESCE(u.display_name, u.handle) AS creator_name,
+            ${linkableHandleSql('u')} AS creator_handle, s.created_at`;
 
 type SeekListingRow = {
   id: string;
@@ -120,12 +137,15 @@ type SeekListingRow = {
   expires_at: Date | null;
   rated: boolean;
   creator_name: string | null;
+  creator_handle: string | null;
   created_at: Date;
 };
 
 /** A seek the caller created, plus the recipient's name for a directed one. */
 export type OutgoingCorrespondenceSeek = CorrespondenceSeekListing & {
   targetName: string | null;
+  // Linkable handle of a directed challenge's recipient (linkableHandleSql).
+  targetHandle: string | null;
 };
 
 function toListing(row: SeekListingRow): CorrespondenceSeekListing {
@@ -140,6 +160,7 @@ function toListing(row: SeekListingRow): CorrespondenceSeekListing {
     expiresAt: row.expires_at,
     rated: row.rated,
     creatorName: row.creator_name,
+    creatorHandle: row.creator_handle,
     createdAt: row.created_at,
   };
 }
@@ -228,9 +249,12 @@ export async function listOutgoingSeeksForUser(
   creatorUserId: string,
   limit = 100,
 ): Promise<OutgoingCorrespondenceSeek[]> {
-  const { rows } = await getPool().query<SeekListingRow & { target_name: string | null }>(
+  const { rows } = await getPool().query<
+    SeekListingRow & { target_name: string | null; target_handle: string | null }
+  >(
     `SELECT ${SEEK_COLUMNS},
-            COALESCE(t.display_name, t.handle) AS target_name
+            COALESCE(t.display_name, t.handle) AS target_name,
+            ${linkableHandleSql('t')} AS target_handle
      FROM correspondence_seeks s
      JOIN users u ON u.id = s.creator_user_id
      LEFT JOIN users t ON t.id = s.target_user_id
@@ -240,7 +264,11 @@ export async function listOutgoingSeeksForUser(
      LIMIT $2`,
     [creatorUserId, limit],
   );
-  return rows.map((row) => ({ ...toListing(row), targetName: row.target_name }));
+  return rows.map((row) => ({
+    ...toListing(row),
+    targetName: row.target_name,
+    targetHandle: row.target_handle,
+  }));
 }
 
 // Housekeeping: drop seeks and challenges whose expiry has passed. Correctness never

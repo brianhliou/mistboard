@@ -76,6 +76,7 @@ import {
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, localizedHref } from './i18n/locale.js';
 import type { DarkXiangqiWireView } from './live-dark-xiangqi.js';
+import { appendWithNameNode, playerNameEl, profileTargetFor } from './profile-link.js';
 import { isCorrespondenceRatedModeEnabled, onRatedModeChange } from './rated-flag.js';
 import { timeAgo } from './relative-time.js';
 import type { ReplayHandle } from './replay.js';
@@ -287,7 +288,7 @@ function buildMoveCard(
 
   const vs = document.createElement('h3');
   vs.className = 'correspondence-card-vs';
-  vs.textContent = vsLabel(game);
+  appendVsLabel(vs, game);
   body.append(vs);
 
   // When the position last changed, from the feed's newest event. The payload
@@ -559,10 +560,19 @@ function buildMetaLine(game: CorrespondenceGame, current: CurrentGame | undefine
   return meta;
 }
 
-function vsLabel(game: CorrespondenceGame): string {
-  return t('correspondence.vsOpponent', {
-    name: game.opponentName ?? t('correspondence.opponentFallback'),
-  });
+// "vs <name>", the name linked to the opponent's profile when the server sent a
+// handle. Only the Your move card uses it: a Waiting row is one whole <a> to
+// the room, and a profile link cannot nest inside it.
+export function appendVsLabel(host: HTMLElement, game: CorrespondenceGame): void {
+  appendWithNameNode(
+    host,
+    (token) => t('correspondence.vsOpponent', { name: token }),
+    playerNameEl(
+      game.opponentName ?? t('correspondence.opponentFallback'),
+      profileTargetFor({ handle: game.opponentHandle }),
+      'correspondence-card-vs-name',
+    ),
+  );
 }
 
 function cadenceLabel(days: number): string {
@@ -1119,11 +1129,22 @@ function buildChallengeRow(seek: OutgoingSeek, onChange: () => void): HTMLElemen
   text.className = 'correspondence-row-text';
   const who = document.createElement('span');
   who.className = 'correspondence-row-name';
-  who.textContent = seek.targetName
-    ? t('correspondence.challengeTo', { name: seek.targetName })
-    : seek.visibility === 'private'
-      ? t('correspondence.linkChallenge')
-      : t('correspondence.openSeek');
+  if (seek.targetName) {
+    appendWithNameNode(
+      who,
+      (token) => t('correspondence.challengeTo', { name: token }),
+      playerNameEl(
+        seek.targetName,
+        profileTargetFor({ handle: seek.targetHandle }),
+        'correspondence-row-target',
+      ),
+    );
+  } else {
+    who.textContent =
+      seek.visibility === 'private'
+        ? t('correspondence.linkChallenge')
+        : t('correspondence.openSeek');
+  }
   const detail = document.createElement('span');
   detail.className = 'correspondence-row-detail';
   const parts = [

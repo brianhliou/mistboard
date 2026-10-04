@@ -7,6 +7,7 @@
  * stays the source of truth; this table only decides which rooms to look at.
  */
 
+import { linkableHandleSql } from './persistence-correspondence-seeks.js';
 import { getPool } from './persistence-db.js';
 
 export type RoomDeadlineRecord = {
@@ -34,6 +35,9 @@ export type CorrespondenceGameSummary = {
   mySeat: string;
   isYourMove: boolean;
   opponentName: string | null;
+  // The opponent's handle for a /@/<handle> link; null for a closed or private
+  // account (linkableHandleSql) and for a seat with no account behind it.
+  opponentHandle?: string | null;
   dueAt: Date;
   // Rated correspondence: read off the room's own room-created event (seq 0), the
   // durable home of the flag, so the index needs no copy of it.
@@ -81,10 +85,12 @@ export async function listCorrespondenceGamesForUser(
     on_move_seat: string;
     due_at: Date;
     opponent_name: string | null;
+    opponent_handle: string | null;
     rated: boolean;
   }>(
     `SELECT rd.room_id, rd.game_spec_id, mine.seat AS my_seat, rd.seat AS on_move_seat,
             rd.due_at, COALESCE(opp_user.display_name, opp_user.handle) AS opponent_name,
+            ${linkableHandleSql('opp_user')} AS opponent_handle,
             COALESCE((created.payload->>'rated')::boolean, false) AS rated
      FROM room_seat_tokens mine
      JOIN room_deadlines rd ON rd.room_id = mine.room_id
@@ -102,6 +108,7 @@ export async function listCorrespondenceGamesForUser(
     mySeat: row.my_seat,
     isYourMove: row.on_move_seat === row.my_seat,
     opponentName: row.opponent_name,
+    opponentHandle: row.opponent_handle,
     dueAt: row.due_at,
     rated: row.rated,
   }));

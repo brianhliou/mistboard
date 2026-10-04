@@ -6,6 +6,7 @@
 
 import { displayLiveName, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
+import { playerNameEl, profileTargetFor } from './profile-link.js';
 import { renderStartPositionSvg } from './start-position-board.js';
 
 export type SeekCardSeek = {
@@ -13,6 +14,9 @@ export type SeekCardSeek = {
   gameSpecId: string;
   daysPerMove: number;
   creatorName: string | null;
+  // Profile handle, sent only for an open, non-private account; absent/null
+  // means the name renders as plain text (profile-link.ts, fail-closed).
+  creatorHandle?: string | null;
   rated?: boolean;
 };
 
@@ -74,11 +78,16 @@ export function buildSeekCard(seek: SeekCardSeek, options: SeekCardOptions): HTM
   seat.className = 'current-game-seat';
   const who = document.createElement('span');
   who.className = 'current-game-seat-who';
-  const name = document.createElement('span');
-  name.className = 'current-game-seat-name';
-  name.textContent = creator;
-  name.title = creator;
-  who.append(name);
+  // The creator's profile link sits above the card-wide .current-game-open
+  // overlay (current-games.css), a sibling rather than a child of it, so the two
+  // anchors never nest.
+  who.append(
+    playerNameEl(
+      creator,
+      profileTargetFor({ handle: seek.creatorHandle }),
+      'current-game-seat-name',
+    ),
+  );
   seat.append(who);
   if (options.action) {
     options.action.classList.add('current-game-seek-action');

@@ -14,7 +14,7 @@ import {
 import { timeControlLabelForGame } from './game-meta.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale } from './i18n/locale.js';
-import { participantProfileTarget, playerNameEl } from './profile-link.js';
+import { appendWithNameNode, participantProfileTarget, playerNameEl } from './profile-link.js';
 import { attachBotCard } from './profile-summary-card.js';
 import { renderVariantMarker } from './variant-markers.js';
 import { webVariantTenantForRoomId, webVariantTenantForSpecId } from './variant-tenant/registry.js';
@@ -310,38 +310,6 @@ function matchupNameEl(game: FeaturedGame, seat: GameParticipant['color']): HTML
     attachBotCard(el, participant.subjectId);
   }
   return el;
-}
-
-// A sentinel no display name can contain, used to find where a translated
-// template puts its name placeholder.
-const NAME_SLOT = '\u0000';
-
-/**
- * Render a translated one-placeholder template with a real ELEMENT in the
- * placeholder's position, so the name can be a link while the words around it
- * stay localized and in the locale's own order ('vs {opponent}' in English,
- * '对 {opponent}' in Chinese).
- *
- * `render` is the t() call with the placeholder left as the caller's token, so
- * this helper never has to reach into the catalog. If the template drops the
- * placeholder entirely, the node is appended bare rather than lost.
- */
-function appendWithNameNode(
-  host: HTMLElement,
-  render: (token: string) => string,
-  node: HTMLElement,
-): void {
-  const template = render(NAME_SLOT);
-  const at = template.indexOf(NAME_SLOT);
-  if (at < 0) {
-    host.append(node);
-    return;
-  }
-  const before = template.slice(0, at);
-  const after = template.slice(at + NAME_SLOT.length);
-  if (before) host.append(document.createTextNode(before));
-  host.append(node);
-  if (after) host.append(document.createTextNode(after));
 }
 
 function buildGameDetail(label: string, extraClass?: string): HTMLElement {

@@ -184,6 +184,61 @@ definePersistenceTests('correspondence seeks', () => {
     assert.equal(await countOpenSeeksForUser(alice.id), 1);
   });
 
+  // Names on the correspondence pages link to /@/<handle>. The handle is carried
+  // only for an open, non-private account, the same rule as postgame rows; the
+  // display name is never withheld.
+  test('seek reads carry a linkable handle, withheld for a private profile', async () => {
+    const erin = await seedUser('hdl-erin', 'erin', 'Erin');
+    const finn = await seedUser('hdl-finn', 'finn', 'Finn');
+    await getPool().query(`UPDATE users SET profile_visibility = 'private' WHERE id = $1`, [
+      finn.id,
+    ]);
+    const base = {
+      gameSpecId: 'xiangqi',
+      daysPerMove: 3,
+      preferredColor: 'random' as const,
+      expiresAt: null,
+    };
+    await createCorrespondenceSeek({
+      ...base,
+      id: 'hdl-erin-public',
+      creatorUserId: erin.id,
+      targetUserId: null,
+      visibility: 'public',
+    });
+    await createCorrespondenceSeek({
+      ...base,
+      id: 'hdl-finn-public',
+      creatorUserId: finn.id,
+      targetUserId: null,
+      visibility: 'public',
+    });
+    await createCorrespondenceSeek({
+      ...base,
+      id: 'hdl-erin-to-finn',
+      creatorUserId: erin.id,
+      targetUserId: finn.id,
+      visibility: 'private',
+    });
+
+    const board = await listOpenCorrespondenceSeeks();
+    const byId = new Map(board.map((seek) => [seek.id, seek]));
+    assert.equal(byId.get('hdl-erin-public')?.creatorHandle, 'erin');
+    assert.equal(byId.get('hdl-finn-public')?.creatorName, 'Finn');
+    assert.equal(byId.get('hdl-finn-public')?.creatorHandle, null);
+
+    const incoming = await listChallengesForUser(finn.id);
+    assert.equal(incoming[0]?.creatorHandle, 'erin');
+
+    const outgoing = await listOutgoingSeeksForUser(erin.id);
+    const directed = outgoing.find((seek) => seek.id === 'hdl-erin-to-finn');
+    assert.equal(directed?.targetName, 'Finn');
+    assert.equal(directed?.targetHandle, null);
+    // A board post has no target: no name, no handle.
+    const posted = outgoing.find((seek) => seek.id === 'hdl-erin-public');
+    assert.equal(posted?.targetHandle, null);
+  });
+
   test('owner-scoped cancel removes only the creator-owned seek', async () => {
     const alice = await seedUser('cancel-alice', 'calice', 'Alice');
     const bob = await seedUser('cancel-bob', 'cbob', 'Bob');

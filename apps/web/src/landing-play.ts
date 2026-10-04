@@ -45,6 +45,7 @@ import {
   landingXiangqiBotOffers,
   pveEngineIdForRememberedPick,
 } from './landing-bot-policy.js';
+import { playerNameEl, profileTargetFor } from './profile-link.js';
 import { rememberedPveEngine } from './pve-memory.js';
 import { isCorrespondenceRatedModeEnabled, isRatedModeEnabled } from './rated-flag.js';
 import { postThroughRestart } from './room-create-retry.js';
@@ -1415,6 +1416,9 @@ export type LobbyCorrespondenceSeek = {
   gameSpecId: string;
   daysPerMove: number;
   creatorName: string | null;
+  // Profile handle, sent only for an open, non-private account; absent/null
+  // means the name renders as plain text (profile-link.ts, fail-closed).
+  creatorHandle?: string | null;
   isMine: boolean;
   rated?: boolean;
 };
@@ -1439,15 +1443,17 @@ export async function fetchCorrespondenceSeeks(): Promise<LobbyCorrespondenceFee
   return { status: 'ok', seeks: Array.isArray(data.seeks) ? data.seeks : [] };
 }
 
-function corrSeekRow(seek: LobbyCorrespondenceSeek, locale: Locale): HTMLElement {
+export function corrSeekRow(seek: LobbyCorrespondenceSeek, locale: Locale): HTMLElement {
   // Correspondence seeks carry a creator name and no rating, so they keep their
   // own four-column grammar (player / game / pace / action) rather than the
   // real-time table's five.
   const row = document.createElement('div');
   row.className = 'landing-lobby-trow landing-lobby-trow-corr';
-  const who = document.createElement('span');
-  who.className = 'landing-lobby-td landing-lobby-td-game';
-  who.textContent = seek.creatorName ?? t('lobby.anonymous', {}, locale);
+  const who = playerNameEl(
+    seek.creatorName ?? t('lobby.anonymous', {}, locale),
+    profileTargetFor({ handle: seek.creatorHandle }),
+    'landing-lobby-td landing-lobby-td-game',
+  );
   const game = document.createElement('span');
   game.className = 'landing-lobby-td';
   game.textContent = variantLabelForGameSpec(parseLandingGameSpecId(seek.gameSpecId), locale);

@@ -139,6 +139,8 @@ test('openSeekPayload: an anonymous reader owns nothing on the public board', ()
   // The row carries no viewer-specific field beyond isMine, and no user id.
   assert.deepEqual(Object.keys(openSeekPayload(seek, null)).sort(), [
     'createdAt',
+    // The linkable profile handle (null when the account is closed or private).
+    'creatorHandle',
     'creatorName',
     'daysPerMove',
     'gameSpecId',
@@ -150,4 +152,10 @@ test('openSeekPayload: an anonymous reader owns nothing on the public board', ()
   ]);
   assert.equal(openSeekPayload(seek, null).rated, false);
   assert.equal(openSeekPayload({ ...seek, rated: true }, null).rated, true);
+  // No handle from the read means no link: null, never the display name.
+  assert.equal(openSeekPayload(seek, null).creatorHandle, null);
+  assert.equal(
+    openSeekPayload({ ...seek, creatorHandle: 'someone_h' }, null).creatorHandle,
+    'someone_h',
+  );
 });

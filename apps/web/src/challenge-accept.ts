@@ -2,6 +2,7 @@ import './challenge.css';
 import { trackCorrespondenceSeekAccepted } from './analytics.js';
 import { firstMoverColorName, secondMoverColorName, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
+import { appendWithNameNode, playerNameEl, profileTargetFor } from './profile-link.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 
 // The challenge landing page (/challenge/:id): where a shared "play me" link or
@@ -9,7 +10,7 @@ import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 // renders the right action — accept, decline, or (for the creator) the share
 // link — from the server's canAccept / canDecline / isMine flags.
 
-type ChallengeView = {
+export type ChallengeView = {
   id: string;
   gameSpecId: string;
   daysPerMove: number;
@@ -17,6 +18,9 @@ type ChallengeView = {
   preferredColor: 'first' | 'second' | 'random';
   visibility: 'public' | 'private';
   challengerName: string | null;
+  // Profile handle, sent only for an open, non-private account; absent/null
+  // means the name renders as plain text (profile-link.ts, fail-closed).
+  challengerHandle?: string | null;
   isMine: boolean;
   canAccept: boolean;
   canDecline: boolean;
@@ -79,7 +83,7 @@ export async function mountChallengeAccept(root: HTMLElement, challengeId: strin
   shell(buildChallengeCard(view));
 }
 
-function buildChallengeCard(view: ChallengeView): HTMLElement {
+export function buildChallengeCard(view: ChallengeView): HTMLElement {
   const card = document.createElement('section');
   card.className = 'challenge-card';
 
@@ -87,7 +91,15 @@ function buildChallengeCard(view: ChallengeView): HTMLElement {
   heading.className = 'challenge-heading';
   if (view.isMine) heading.textContent = t('challenge.yourChallenge');
   else if (view.challengerName)
-    heading.textContent = t('challenge.nameChallengedYou', { name: view.challengerName });
+    appendWithNameNode(
+      heading,
+      (token) => t('challenge.nameChallengedYou', { name: token }),
+      playerNameEl(
+        view.challengerName,
+        profileTargetFor({ handle: view.challengerHandle }),
+        'challenge-heading-name',
+      ),
+    );
   else heading.textContent = t('challenge.youHaveBeenChallenged');
   card.append(heading);
 

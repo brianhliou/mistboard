@@ -20,6 +20,9 @@ export type CorrespondenceGame = {
   mySeat: string;
   isYourMove: boolean;
   opponentName: string | null;
+  // Profile handle, sent only for an open, non-private account; absent/null
+  // means the name renders as plain text (profile-link.ts, fail-closed).
+  opponentHandle?: string | null;
   dueAt: string;
   // Rated correspondence (2026-10-02); absent from an older server reads as casual.
   rated?: boolean;
@@ -45,6 +48,9 @@ export type OpenSeek = {
   daysPerMove: number;
   preferredColor: SeekPreferredColor;
   creatorName: string | null;
+  // Profile handle, sent only for an open, non-private account; absent/null
+  // means the name renders as plain text (profile-link.ts, fail-closed).
+  creatorHandle?: string | null;
   createdAt: string;
   isMine: boolean;
   rated?: boolean;
@@ -61,6 +67,9 @@ export type OutgoingSeek = {
   preferredColor: SeekPreferredColor;
   visibility: 'public' | 'private';
   targetName: string | null;
+  // Profile handle, sent only for an open, non-private account; absent/null
+  // means the name renders as plain text (profile-link.ts, fail-closed).
+  targetHandle?: string | null;
   challengeUrl: string | null;
   expiresAt: string | null;
   createdAt: string;

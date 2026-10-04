@@ -67,6 +67,9 @@ export async function correspondenceGamesForUser(
         mySeat: game.mySeat,
         isYourMove: game.isYourMove,
         opponentName: game.opponentName,
+        // Linkable handle or null (closed/private account, no account): the
+        // client links the name only from this, never from the display name.
+        opponentHandle: game.opponentHandle ?? null,
         dueAt: game.dueAt.toISOString(),
         rated: game.rated === true,
         ...(board !== null && board !== undefined ? { seatBoard: board } : {}),

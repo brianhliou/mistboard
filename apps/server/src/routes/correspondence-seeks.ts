@@ -256,6 +256,7 @@ export function openSeekPayload(
     daysPerMove: number;
     preferredColor: string;
     creatorName: string | null;
+    creatorHandle?: string | null;
     createdAt: Date;
     creatorUserId: string;
     rated?: boolean;
@@ -269,6 +270,9 @@ export function openSeekPayload(
     preferredColor: seek.preferredColor,
     rated: seek.rated === true,
     creatorName: seek.creatorName,
+    // Linkable handle (null for a closed/private account): the client links the
+    // name only when this is present, never from the display name.
+    creatorHandle: seek.creatorHandle ?? null,
     createdAt: seek.createdAt.toISOString(),
     isMine: viewerUserId !== null && seek.creatorUserId === viewerUserId,
   };
@@ -295,6 +299,7 @@ async function listIncomingChallenges(
       preferredColor: seek.preferredColor,
       rated: seek.rated === true,
       challengerName: seek.creatorName,
+      challengerHandle: seek.creatorHandle ?? null,
       createdAt: seek.createdAt.toISOString(),
     })),
   });
@@ -320,6 +325,7 @@ async function listOutgoingChallenges(
       visibility: seek.visibility,
       // Present only for a directed challenge; a link challenge has no target.
       targetName: seek.targetName,
+      targetHandle: seek.targetHandle ?? null,
       // The share URL for a link challenge, so a creator can re-copy a link they
       // already sent. Public board posts have no private URL.
       challengeUrl:
@@ -829,6 +835,7 @@ async function viewSeek(
     rated: seek.rated === true,
     visibility: seek.visibility,
     challengerName: seek.creatorName,
+    challengerHandle: seek.creatorHandle ?? null,
     isMine: view.isMine,
     canAccept: view.canAccept,
     canDecline: view.canDecline,

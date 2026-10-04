@@ -217,3 +217,28 @@ test('the seat board fails closed for unknown rooms, spec mismatches and tenants
     darkChessTenantRooms.clear();
   }
 });
+
+// The inbox links the opponent's name to /@/<handle>. The payload carries the
+// handle only as the read gave it, and null (never the display name) otherwise,
+// so a private or closed account, or a seat with no account, stays plain text.
+test('opponentHandle passes through, null when the read has none', async () => {
+  const dueAt = new Date('2026-10-04T12:00:00Z');
+  const base = { gameSpecId: 'xiangqi', mySeat: 'red', isYourMove: true, dueAt };
+  const deps: CorrespondenceGamesDeps = {
+    list: async () => [
+      { ...base, roomId: 'xq_a', opponentName: 'Bob', opponentHandle: 'bob' },
+      { ...base, roomId: 'xq_b', opponentName: 'Private Pat', opponentHandle: null },
+      { ...base, roomId: 'xq_c', opponentName: null },
+    ],
+    seatBoard: async () => null,
+  };
+  const { games } = await correspondenceGamesForUser(ALICE, deps);
+  assert.deepEqual(
+    games.map((game) => [game.opponentName, game.opponentHandle]),
+    [
+      ['Bob', 'bob'],
+      ['Private Pat', null],
+      [null, null],
+    ],
+  );
+});

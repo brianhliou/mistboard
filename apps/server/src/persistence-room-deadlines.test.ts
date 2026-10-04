@@ -257,6 +257,28 @@ definePersistenceTests('room deadlines', () => {
       now,
     });
     assert.deepEqual(await listCorrespondenceGamesForUser(carol.id), []);
+
+    // The opponent's handle rides along so the inbox can link the name, and is
+    // withheld (name kept) once that account's profile goes private.
+    assert.deepEqual(
+      forAlice.map((g) => g.opponentHandle),
+      ['bob', 'bob'],
+    );
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      await client.query(`UPDATE users SET profile_visibility = 'private' WHERE id = $1`, [bob.id]);
+    } finally {
+      await client.end();
+    }
+    const privateBob = await listCorrespondenceGamesForUser(alice.id);
+    assert.deepEqual(
+      privateBob.map((g) => ({ name: g.opponentName, handle: g.opponentHandle })),
+      [
+        { name: 'Bob', handle: null },
+        { name: 'Bob', handle: null },
+      ],
+    );
   });
 
   test('active correspondence room ids: every deadline row, gone after delete', async () => {
