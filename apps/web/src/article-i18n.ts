@@ -57,6 +57,9 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   // Machine-drafted 2026-10-01, not native-reviewed. The third player page; locked
   // with its English copy, which publishes in the same release.
   'lai-ly-huynh',
+  // Machine-drafted 2026-10-03. The fourth player page; locked with its English
+  // copy, which publishes in the same release.
+  'tony-fung-ga-zen',
   // Machine-drafted 2026-09-03, not native-reviewed, locked the day the English
   // copy published. The openings article's dictionary was already complete and
   // waiting: the lock requires a PUBLISHED article, so it could not be listed
@@ -649,6 +652,101 @@ const ZH_HANS: Record<string, string> = {
   'His games in the archive': '他在档案里的对局',
   'Mingjian Li': '李铭坚',
   'Chong Heung Ming': '庄宏明',
+  // tony-fung-ga-zen (zh-Hans), machine-drafted 2026-10-03. Mainland players' names
+  // stay in one form in both scripts, as on the cao-yanlei and lai-ly-huynh pages, so
+  // theirs live only here and reach zh-Hant through the spread. Titles follow the
+  // HKCCA's own list (香港特级大师); the opening list uses the site's terms (中炮,
+  // 士角炮). Shared keys (Round, Opponent, Colour, Result, Red, Black, Win, Draw,
+  // Event, Dates, W, D, L, League qualifier, Five Rams Cup, Guangzhou, How he plays,
+  // Meng Fanrui, Open the study, His games in the archive) already exist above.
+  "Tony Fung 冯家俊, Hong Kong's world championship finalist: games and analysis":
+    '冯家俊，打进世锦赛决赛的香港棋手：对局与分析',
+  'Tony Fung 冯家俊': '冯家俊',
+  "Hong Kong's 2022 world championship finalist, with nine points from ten in this year's qualifier for China's top league. His last fourteen months and the 2022 run, five games on the board, 47 games analysed.":
+    '打进 2022 年世锦赛决赛的香港棋手，今年象甲预选赛十分拿下九分。他最近十四个月和 2022 年的决赛之路，盘面上五盘对局，47 局附引擎分析。',
+  'Tony Fung in a white Hong Kong team shirt.': '身穿白色香港队服的冯家俊。',
+  'English-speaking xiangqi players, and Hong Kong players who follow him through the Hong Kong association and the local sports press.':
+    '说英语的象棋棋友，以及通过香港象棋总会和本地体育媒体关注他的香港棋友。',
+  'Tony Fung in a white Hong Kong team shirt, one hand resting on the edge of a xiangqi board, smiling at the camera.':
+    '冯家俊身穿白色香港队服，一只手搭在棋盘边上，对着镜头微笑。',
+  'Tony Fung in September 2023, before the Asian Games. Photo: Mr.C / Sportsoho.':
+    '2023 年 9 月亚运会前的冯家俊。图片：Mr.C / Sportsoho 运动版图。',
+  "Tony Fung 冯家俊 is a world championship finalist for Hong Kong. In 2022 he went through eight rounds of the World Xiangqi Championship with one loss and reached the final, and second place equalled Hong Kong's best result at the event. In August 2026 he scored nine points out of ten in the qualifier for China's top league, four wins and a draw, the best individual score there, shared with Cao Yanlei.":
+    '冯家俊是打进过世锦赛决赛的香港棋手。2022 年世界象棋锦标赛，他八轮只输一盘，打进决赛，拿到的亚军追平了香港在这项赛事的最好成绩。2026 年 8 月，他在中国象甲联赛的预选赛十分拿下九分，四胜一和，是那里最好的个人成绩，与曹岩磊并列。',
+  "He was born in 1998 and has played for Hong Kong since he was 18. At the 2023 Asian Games in Hangzhou he was in the team that won bronze in the mixed team event, Hong Kong's first xiangqi medal at the Games. In April 2025 he won the Hong Kong Open for the first time, beating Cheng Yin Lung in the final. The WXF lists him as an International Master, and Hong Kong's own association lists him among its Hong Kong Grandmasters.":
+    '他生于 1998 年，18 岁起代表香港出赛。2023 年杭州亚运会，他所在的香港队拿下象棋混合团体铜牌，这是香港在亚运会上的第一枚象棋奖牌。2025 年 4 月他首次夺得全港个人赛冠军，决赛击败郑彦隆。世界象棋联合会把他列为国际大师，香港本地的象棋总会则把他列入香港特级大师名册。',
+  'This page is his last fourteen months and the 2022 run to the final, with five of his games on the board. I ran the 47 games we hold through the same engine analysis Mistboard gives your own games.':
+    '这一页写的是他最近十四个月，以及 2022 年打进决赛的那一路，盘面上有他的五盘对局。我们收录的 47 盘对局，我都用 Mistboard 给你的对局做的同一套引擎分析跑过一遍。',
+  '**He is hardest to beat with red.** Since July 2025 he has lost two of his twenty-one red games, both on one day of an open qualifier in Shanghai.':
+    '**执红他最难被击败。** 2025 年 7 月以来，他二十一盘执红只输了两盘，都是在上海一项海选赛的同一天输的。',
+  '**He has no single opening.** His 25 red games here start four different ways, with the central cannon, the Palcorner Cannon, a horse or a soldier, and each of them comes up at least five times.':
+    '**他没有固定的开局。** 这里他的 25 盘执红对局有四种开法：中炮、士角炮、起马或进兵，每一种都至少出现五次。',
+  '**He plays the long game.** Talking to Sportsoho in 2023, he said that neither he nor his senior Wong Hok Him is the kind of player who goes for the kill from the opening; both like to draw a game out and keep the threat hidden, a needle in the cotton. His longest win here ran 81 moves.':
+    '**他下长棋。** 2023 年接受 Sportsoho 运动版图采访时，他说自己和师兄黄学谦都不是一开局就搏杀的类型，两人都喜欢把战线拉长，把威胁藏起来，绵里藏针。他在这里最长的一盘胜局走了 81 回合。',
+  'Asian Individual Championship, Manila': '亚洲象棋个人锦标赛，马尼拉',
+  'He is in Manila this week for the [21st Asian Individual Championship](/broadcast/xiangqi/2026-asian-individual-men), which runs to 8 October. His games there will be added to this page when it ends.':
+    '这周他在马尼拉参加[第 21 届亚洲象棋个人锦标赛](/broadcast/xiangqi/2026-asian-individual-men)，比赛到 10 月 8 日结束。赛事结束后，他在那里的对局会补进这一页。',
+  'China league qualifier, Hangzhou': '象甲预选赛，杭州',
+  "Teams outside China's top league play a qualifier to get in. Hong Kong sent a team to Hangzhou from 17 to 19 August, and Fung played all five rounds. He won four and drew the other, on the first day. Zhejiang Mintai and Cao Yanlei's Shanghai Jiahong went through.":
+    '不在象甲联赛的队伍要打预选赛才能进入联赛。8 月 17 日至 19 日，香港派队到杭州参赛，冯家俊五轮全部上场，赢了四盘，另一盘是第一天的和棋。最后晋级的是浙江民泰和曹岩磊所在的上海嘉弘。',
+  'Wang Dayu': '王大禹',
+  'Zheng Yichen': '郑奕宸',
+  'Lu Hao': '吕皓',
+  'Liu Zehao': '刘泽昊',
+  'Zhang Rui': '张瑞',
+  'His league qualifier, round by round.': '他的象甲预选赛，逐轮战绩。',
+  "Tony Fung Ga Zen vs Wang Dayu, 2026 China league qualifier, round 1, 17 August 2026. Fung won with red in 28 moves. The board opens after black's move 13, with Fung to move.":
+    '冯家俊对王大禹，2026 象甲预选赛第 1 轮，2026 年 8 月 17 日。冯家俊执红 28 回合取胜。棋盘从黑方第 13 回合之后开始，轮到冯家俊走。',
+  '2026 China league qualifier, round 1': '2026 象甲预选赛，第 1 轮',
+  "Tony Fung Ga Zen vs Lu Hao, 2026 China league qualifier, round 3, 18 August 2026. Fung won with red in 40 moves. The board opens after black's move 16, with Fung to move.":
+    '冯家俊对吕皓，2026 象甲预选赛第 3 轮，2026 年 8 月 18 日。冯家俊执红 40 回合取胜。棋盘从黑方第 16 回合之后开始，轮到冯家俊走。',
+  '2026 China league qualifier, round 3': '2026 象甲预选赛，第 3 轮',
+  'Cao Yanlei, who shared the top score and took Shanghai Jiahong into the league, has [his own page](/blog/cao-yanlei). The [qualifier](/broadcast/xiangqi/2026-league-qualifier) is in the broadcast archive.':
+    '与他并列最高分、并把上海嘉弘带进联赛的曹岩磊，也有[自己的专页](/blog/cao-yanlei)。[这次预选赛](/broadcast/xiangqi/2026-league-qualifier)收在直播档案里。',
+  "The Five Rams Cup in Guangzhou (五羊杯) invites China's national champions and runs a qualifying group for players from Hong Kong, Macau and Taiwan. Fung won it in January. He beat Chao Yi-fan of Chinese Taipei with a win and a draw, then drew two slow games with his Hong Kong teammate Wong Hok Him and went through when Wong ran out of time in the rapid playoff.":
+    '广州的五羊杯邀请中国的全国冠军参赛，另设一个港澳台组，给香港、澳门和台湾的棋手争取名额。一月冯家俊拿下了这个组。他先以一胜一和击败中华台北的赵奕帆，再和香港队友黄学谦下了两盘慢棋，都是和棋，快棋加赛中黄学谦超时，冯家俊晋级。',
+  "Chao Yi-fan vs Tony Fung Ga Zen, 2026 Five Rams Cup, Hong Kong, Macau and Taiwan qualifier, 29 January 2026. Fung won with black in 81 moves. The board opens after red's move 40, with Fung to move.":
+    '赵奕帆对冯家俊，2026 五羊杯港澳台组选拔赛，2026 年 1 月 29 日。冯家俊执黑 81 回合取胜。棋盘从红方第 40 回合之后开始，轮到冯家俊走。',
+  '2026 Five Rams Cup, Hong Kong, Macau and Taiwan qualifier': '2026 五羊杯，港澳台组选拔赛',
+  "In the final stage in February he drew with black against China's Meng Fanrui, whom he had also held to a draw at the world championship in Shanghai. Wang Yubo then beat him twice, and the cup went to Cheng Yudong. The [whole event](/broadcast/xiangqi/2026-wuyang-cup) is in the broadcast archive.":
+    '二月的决赛阶段，他执黑和了中国的孟繁睿，在上海世锦赛上他也和孟繁睿下成和棋。随后王禹博两次击败他，五羊杯最后由程宇东夺得。[整项赛事](/broadcast/xiangqi/2026-wuyang-cup)都在直播档案里。',
+  "Meng Fanrui vs Tony Fung Ga Zen, 2026 Five Rams Cup, final stage, 25 February 2026. Drawn in 28 moves. The board opens after red's move 12, with Fung to move.":
+    '孟繁睿对冯家俊，2026 五羊杯决赛阶段，2026 年 2 月 25 日。28 回合弈和。棋盘从红方第 12 回合之后开始，轮到冯家俊走。',
+  '2026 Five Rams Cup, final stage': '2026 五羊杯，决赛阶段',
+  'Every event since July 2025': '2025 年 7 月以来的每项赛事',
+  'At the 2025 World Championship in Shanghai he finished eighth. The table has every event since July 2025 for which we hold his full record.':
+    '2025 年上海世锦赛他排名第八。下表列出 2025 年 7 月以来我们有他完整战绩的每一项赛事。',
+  'Shanghai Cup': '上海杯',
+  'Sep 9, 2026': '2026年9月9日',
+  'League qualifier, Hangzhou': '象甲预选赛，杭州',
+  'Aug 17–19, 2026': '2026年8月17–19日',
+  'World Championship, Shanghai': '世锦赛，上海',
+  'Sep 22–27, 2025': '2025年9月22–27日',
+  'National Games, mass-participation final, Shenzhen': '全运会群众比赛决赛，深圳',
+  'Sep 5–7, 2025': '2025年9月5–7日',
+  'Shanghai Cup, open qualifier': '上海杯海选赛',
+  'Aug 9–10, 2025': '2025年8月9–10日',
+  'Jul 30–Aug 2, 2025': '2025年7月30日–8月2日',
+  'The Five Rams Cup and the September 2025 World Rapid Open are left out: some of his games there are missing from our sources.':
+    '五羊杯和 2025 年 9 月的世界快棋公开赛没有列入：我们的资料来源缺了他在这两项赛事的部分对局。',
+  '2022 World Championship, Kuching': '2022 年世锦赛，古晋',
+  "The championship ran in Kuching, in Sarawak, from 24 to 28 October 2022, eight rounds and then a final between the top two. Fung won five, drew two and lost one, and finished level with Vietnam's Nguyễn Thành Bảo on 12 points, ahead on tiebreak. He lost the final to China's Wang Tianyi. Second place equalled Hong Kong's best result at a world championship, Wong Hok Him's in 2019.":
+    '这届世锦赛 2022 年 10 月 24 日至 28 日在砂拉越的古晋举行，先赛八轮，再由前两名下决赛。冯家俊五胜两和一负，与越南的阮成保同积 12 分，凭小分领先。决赛他负于中国的王天一。这个亚军追平了香港在世锦赛的最好成绩，也就是黄学谦 2019 年的成绩。',
+  'The win that put him in the final came in round eight, with black, against Cheng Yin Lung, his Hong Kong teammate and the man he would beat again in the Hong Kong Open final two and a half years later.':
+    '把他送进决赛的那盘胜局在第八轮，他执黑对郑彦隆。郑彦隆是他的香港队友，两年半后他在全港个人赛决赛又一次击败了对方。',
+  "Cheng Yin Lung vs Tony Fung Ga Zen, 2022 World Xiangqi Championship, round 8, 27 October 2022. Fung won with black in 35 moves. The board opens after red's move 25, with Fung to move.":
+    '郑彦隆对冯家俊，2022 世界象棋锦标赛第 8 轮，2022 年 10 月 27 日。冯家俊执黑 35 回合取胜。棋盘从红方第 25 回合之后开始，轮到冯家俊走。',
+  '2022 World Xiangqi Championship, round 8': '2022 世界象棋锦标赛，第 8 轮',
+  'Lại Lý Huynh, who won the title in 2025 and has [his own page](/blog/lai-ly-huynh), drew with Fung in round six, and again at the Asian Games a year later.':
+    '2025 年夺冠的赖理兄也有[自己的专页](/blog/lai-ly-huynh)，他在第六轮与冯家俊弈和，一年后在亚运会上两人又下成和棋。',
+  'All 47 games': '全部 47 局',
+  "Every game on this page is in a Mistboard study with the engine's judgments and lines, and 10 of them are in the broadcast archive with the site's analysis.":
+    '本页的每一盘都在 Mistboard 的一个研究里，附引擎的判断和变化；其中 10 盘也在直播档案里，附网站的分析。',
+  "Sources: game records from dpxq.com, which may not hold every game of an event; the 2022 results from the Chinese Xiangqi Association's report on Sina and from China News Service; the Five Rams Cup qualifier from Yangcheng Evening News; the Asian Games from Sing Tao; the Hong Kong Open from HK01 and Sportsroad; analysis by Pikafish through Mistboard's review pipeline, October 2026.":
+    '资料来源：棋谱来自 dpxq.com，该数据库不一定收齐每项赛事的全部对局；2022 年的成绩来自新浪刊发的中国象棋协会报道和中新网；五羊杯选拔赛来自《羊城晚报》；亚运会来自《星岛》；全港个人赛来自 HK01 和体路 Sportsroad；分析由 Pikafish 经 Mistboard 的复盘流程完成，2026 年 10 月。',
+  'Tony Fung Ga Zen': '冯家俊',
+  'Chao Yi-fan': '赵奕帆',
+  'Cheng Yin Lung': '郑彦隆',
   // yin-sheng (zh-Hans), machine-drafted 2026-09-21, not native-reviewed. Mainland
   // players' names stay in one form in both scripts.
   'Yin Sheng 尹昇: games, results, and analysis': '尹昇：对局、战绩与分析',
@@ -4121,6 +4219,86 @@ const ZH_HANT: Record<string, string> = {
   'His games in the archive': '他在檔案裡的對局',
   'Mingjian Li': '李銘堅',
   'Chong Heung Ming': '莊宏明',
+  // tony-fung-ga-zen (zh-Hant), machine-drafted 2026-10-03. After the spread, like
+  // lai-ly-huynh's. Mainland players' names stay simplified and come from the spread
+  // (王大禹, 吕皓, 王禹博, 程宇东); Hong Kong and Taiwan players convert (馮家俊, 黃學謙,
+  // 鄭彥隆, 趙奕帆), as do 賴理兄 and the place names. Cup is 盃, as on the other pages.
+  "Tony Fung 冯家俊, Hong Kong's world championship finalist: games and analysis":
+    '馮家俊，打進世錦賽決賽的香港棋手：對局與分析',
+  'Tony Fung 冯家俊': '馮家俊',
+  "Hong Kong's 2022 world championship finalist, with nine points from ten in this year's qualifier for China's top league. His last fourteen months and the 2022 run, five games on the board, 47 games analysed.":
+    '打進 2022 年世錦賽決賽的香港棋手，今年象甲預選賽十分拿下九分。他最近十四個月和 2022 年的決賽之路，盤面上五盤對局，47 局附引擎分析。',
+  'Tony Fung in a white Hong Kong team shirt.': '身穿白色香港隊服的馮家俊。',
+  'English-speaking xiangqi players, and Hong Kong players who follow him through the Hong Kong association and the local sports press.':
+    '說英語的象棋棋友，以及透過香港象棋總會和本地體育媒體關注他的香港棋友。',
+  'Tony Fung in a white Hong Kong team shirt, one hand resting on the edge of a xiangqi board, smiling at the camera.':
+    '馮家俊身穿白色香港隊服，一隻手搭在棋盤邊上，對著鏡頭微笑。',
+  'Tony Fung in September 2023, before the Asian Games. Photo: Mr.C / Sportsoho.':
+    '2023 年 9 月亞運會前的馮家俊。圖片：Mr.C / Sportsoho 運動版圖。',
+  "Tony Fung 冯家俊 is a world championship finalist for Hong Kong. In 2022 he went through eight rounds of the World Xiangqi Championship with one loss and reached the final, and second place equalled Hong Kong's best result at the event. In August 2026 he scored nine points out of ten in the qualifier for China's top league, four wins and a draw, the best individual score there, shared with Cao Yanlei.":
+    '馮家俊是打進過世錦賽決賽的香港棋手。2022 年世界象棋錦標賽，他八輪只輸一盤，打進決賽，拿到的亞軍追平了香港在這項賽事的最好成績。2026 年 8 月，他在中國象甲聯賽的預選賽十分拿下九分，四勝一和，是那裡最好的個人成績，與曹岩磊並列。',
+  "He was born in 1998 and has played for Hong Kong since he was 18. At the 2023 Asian Games in Hangzhou he was in the team that won bronze in the mixed team event, Hong Kong's first xiangqi medal at the Games. In April 2025 he won the Hong Kong Open for the first time, beating Cheng Yin Lung in the final. The WXF lists him as an International Master, and Hong Kong's own association lists him among its Hong Kong Grandmasters.":
+    '他生於 1998 年，18 歲起代表香港出賽。2023 年杭州亞運會，他所在的香港隊拿下象棋混合團體銅牌，這是香港在亞運會上的第一枚象棋獎牌。2025 年 4 月他首次奪得全港個人賽冠軍，決賽擊敗鄭彥隆。世界象棋聯合會把他列為國際大師，香港本地的象棋總會則把他列入香港特級大師名冊。',
+  'This page is his last fourteen months and the 2022 run to the final, with five of his games on the board. I ran the 47 games we hold through the same engine analysis Mistboard gives your own games.':
+    '這一頁寫的是他最近十四個月，以及 2022 年打進決賽的那一路，盤面上有他的五盤對局。我們收錄的 47 盤對局，我都用 Mistboard 給你的對局做的同一套引擎分析跑過一遍。',
+  '**He is hardest to beat with red.** Since July 2025 he has lost two of his twenty-one red games, both on one day of an open qualifier in Shanghai.':
+    '**執紅他最難被擊敗。** 2025 年 7 月以來，他二十一盤執紅只輸了兩盤，都是在上海一項海選賽的同一天輸的。',
+  '**He has no single opening.** His 25 red games here start four different ways, with the central cannon, the Palcorner Cannon, a horse or a soldier, and each of them comes up at least five times.':
+    '**他沒有固定的開局。** 這裡他的 25 盤執紅對局有四種開法：中炮、士角炮、起馬或進兵，每一種都至少出現五次。',
+  '**He plays the long game.** Talking to Sportsoho in 2023, he said that neither he nor his senior Wong Hok Him is the kind of player who goes for the kill from the opening; both like to draw a game out and keep the threat hidden, a needle in the cotton. His longest win here ran 81 moves.':
+    '**他下長棋。** 2023 年接受 Sportsoho 運動版圖採訪時，他說自己和師兄黃學謙都不是一開局就搏殺的類型，兩人都喜歡把戰線拉長，把威脅藏起來，綿裡藏針。他在這裡最長的一盤勝局走了 81 回合。',
+  'Asian Individual Championship, Manila': '亞洲象棋個人錦標賽，馬尼拉',
+  'He is in Manila this week for the [21st Asian Individual Championship](/broadcast/xiangqi/2026-asian-individual-men), which runs to 8 October. His games there will be added to this page when it ends.':
+    '這週他在馬尼拉參加[第 21 屆亞洲象棋個人錦標賽](/broadcast/xiangqi/2026-asian-individual-men)，比賽到 10 月 8 日結束。賽事結束後，他在那裡的對局會補進這一頁。',
+  'China league qualifier, Hangzhou': '象甲預選賽，杭州',
+  "Teams outside China's top league play a qualifier to get in. Hong Kong sent a team to Hangzhou from 17 to 19 August, and Fung played all five rounds. He won four and drew the other, on the first day. Zhejiang Mintai and Cao Yanlei's Shanghai Jiahong went through.":
+    '不在象甲聯賽的隊伍要打預選賽才能進入聯賽。8 月 17 日至 19 日，香港派隊到杭州參賽，馮家俊五輪全部上場，贏了四盤，另一盤是第一天的和棋。最後晉級的是浙江民泰和曹岩磊所在的上海嘉弘。',
+  'His league qualifier, round by round.': '他的象甲預選賽，逐輪戰績。',
+  "Tony Fung Ga Zen vs Wang Dayu, 2026 China league qualifier, round 1, 17 August 2026. Fung won with red in 28 moves. The board opens after black's move 13, with Fung to move.":
+    '馮家俊對王大禹，2026 象甲預選賽第 1 輪，2026 年 8 月 17 日。馮家俊執紅 28 回合取勝。棋盤從黑方第 13 回合之後開始，輪到馮家俊走。',
+  '2026 China league qualifier, round 1': '2026 象甲預選賽，第 1 輪',
+  "Tony Fung Ga Zen vs Lu Hao, 2026 China league qualifier, round 3, 18 August 2026. Fung won with red in 40 moves. The board opens after black's move 16, with Fung to move.":
+    '馮家俊對吕皓，2026 象甲預選賽第 3 輪，2026 年 8 月 18 日。馮家俊執紅 40 回合取勝。棋盤從黑方第 16 回合之後開始，輪到馮家俊走。',
+  '2026 China league qualifier, round 3': '2026 象甲預選賽，第 3 輪',
+  'Cao Yanlei, who shared the top score and took Shanghai Jiahong into the league, has [his own page](/blog/cao-yanlei). The [qualifier](/broadcast/xiangqi/2026-league-qualifier) is in the broadcast archive.':
+    '與他並列最高分、並把上海嘉弘帶進聯賽的曹岩磊，也有[自己的專頁](/blog/cao-yanlei)。[這次預選賽](/broadcast/xiangqi/2026-league-qualifier)收在直播檔案裡。',
+  "The Five Rams Cup in Guangzhou (五羊杯) invites China's national champions and runs a qualifying group for players from Hong Kong, Macau and Taiwan. Fung won it in January. He beat Chao Yi-fan of Chinese Taipei with a win and a draw, then drew two slow games with his Hong Kong teammate Wong Hok Him and went through when Wong ran out of time in the rapid playoff.":
+    '廣州的五羊盃邀請中國的全國冠軍參賽，另設一個港澳台組，給香港、澳門和台灣的棋手爭取名額。一月馮家俊拿下了這個組。他先以一勝一和擊敗中華台北的趙奕帆，再和香港隊友黃學謙下了兩盤慢棋，都是和棋，快棋加賽中黃學謙超時，馮家俊晉級。',
+  "Chao Yi-fan vs Tony Fung Ga Zen, 2026 Five Rams Cup, Hong Kong, Macau and Taiwan qualifier, 29 January 2026. Fung won with black in 81 moves. The board opens after red's move 40, with Fung to move.":
+    '趙奕帆對馮家俊，2026 五羊盃港澳台組選拔賽，2026 年 1 月 29 日。馮家俊執黑 81 回合取勝。棋盤從紅方第 40 回合之後開始，輪到馮家俊走。',
+  '2026 Five Rams Cup, Hong Kong, Macau and Taiwan qualifier': '2026 五羊盃，港澳台組選拔賽',
+  "In the final stage in February he drew with black against China's Meng Fanrui, whom he had also held to a draw at the world championship in Shanghai. Wang Yubo then beat him twice, and the cup went to Cheng Yudong. The [whole event](/broadcast/xiangqi/2026-wuyang-cup) is in the broadcast archive.":
+    '二月的決賽階段，他執黑和了中國的孟繁睿，在上海世錦賽上他也和孟繁睿下成和棋。隨後王禹博兩次擊敗他，五羊盃最後由程宇东奪得。[整項賽事](/broadcast/xiangqi/2026-wuyang-cup)都在直播檔案裡。',
+  "Meng Fanrui vs Tony Fung Ga Zen, 2026 Five Rams Cup, final stage, 25 February 2026. Drawn in 28 moves. The board opens after red's move 12, with Fung to move.":
+    '孟繁睿對馮家俊，2026 五羊盃決賽階段，2026 年 2 月 25 日。28 回合弈和。棋盤從紅方第 12 回合之後開始，輪到馮家俊走。',
+  '2026 Five Rams Cup, final stage': '2026 五羊盃，決賽階段',
+  'Every event since July 2025': '2025 年 7 月以來的每項賽事',
+  'At the 2025 World Championship in Shanghai he finished eighth. The table has every event since July 2025 for which we hold his full record.':
+    '2025 年上海世錦賽他排名第八。下表列出 2025 年 7 月以來我們有他完整戰績的每一項賽事。',
+  'Shanghai Cup': '上海盃',
+  'League qualifier, Hangzhou': '象甲預選賽，杭州',
+  'World Championship, Shanghai': '世錦賽，上海',
+  'National Games, mass-participation final, Shenzhen': '全運會群眾比賽決賽，深圳',
+  'Shanghai Cup, open qualifier': '上海盃海選賽',
+  'The Five Rams Cup and the September 2025 World Rapid Open are left out: some of his games there are missing from our sources.':
+    '五羊盃和 2025 年 9 月的世界快棋公開賽沒有列入：我們的資料來源缺了他在這兩項賽事的部分對局。',
+  '2022 World Championship, Kuching': '2022 年世錦賽，古晉',
+  "The championship ran in Kuching, in Sarawak, from 24 to 28 October 2022, eight rounds and then a final between the top two. Fung won five, drew two and lost one, and finished level with Vietnam's Nguyễn Thành Bảo on 12 points, ahead on tiebreak. He lost the final to China's Wang Tianyi. Second place equalled Hong Kong's best result at a world championship, Wong Hok Him's in 2019.":
+    '這屆世錦賽 2022 年 10 月 24 日至 28 日在砂拉越的古晉舉行，先賽八輪，再由前兩名下決賽。馮家俊五勝兩和一負，與越南的阮成保同積 12 分，憑小分領先。決賽他負於中國的王天一。這個亞軍追平了香港在世錦賽的最好成績，也就是黃學謙 2019 年的成績。',
+  'The win that put him in the final came in round eight, with black, against Cheng Yin Lung, his Hong Kong teammate and the man he would beat again in the Hong Kong Open final two and a half years later.':
+    '把他送進決賽的那盤勝局在第八輪，他執黑對鄭彥隆。鄭彥隆是他的香港隊友，兩年半後他在全港個人賽決賽又一次擊敗了對方。',
+  "Cheng Yin Lung vs Tony Fung Ga Zen, 2022 World Xiangqi Championship, round 8, 27 October 2022. Fung won with black in 35 moves. The board opens after red's move 25, with Fung to move.":
+    '鄭彥隆對馮家俊，2022 世界象棋錦標賽第 8 輪，2022 年 10 月 27 日。馮家俊執黑 35 回合取勝。棋盤從紅方第 25 回合之後開始，輪到馮家俊走。',
+  '2022 World Xiangqi Championship, round 8': '2022 世界象棋錦標賽，第 8 輪',
+  'Lại Lý Huynh, who won the title in 2025 and has [his own page](/blog/lai-ly-huynh), drew with Fung in round six, and again at the Asian Games a year later.':
+    '2025 年奪冠的賴理兄也有[自己的專頁](/blog/lai-ly-huynh)，他在第六輪與馮家俊弈和，一年後在亞運會上兩人又下成和棋。',
+  "Every game on this page is in a Mistboard study with the engine's judgments and lines, and 10 of them are in the broadcast archive with the site's analysis.":
+    '本頁的每一盤都在 Mistboard 的一個研究裡，附引擎的判斷和變化；其中 10 盤也在直播檔案裡，附網站的分析。',
+  "Sources: game records from dpxq.com, which may not hold every game of an event; the 2022 results from the Chinese Xiangqi Association's report on Sina and from China News Service; the Five Rams Cup qualifier from Yangcheng Evening News; the Asian Games from Sing Tao; the Hong Kong Open from HK01 and Sportsroad; analysis by Pikafish through Mistboard's review pipeline, October 2026.":
+    '資料來源：棋譜來自 dpxq.com，該資料庫不一定收齊每項賽事的全部對局；2022 年的成績來自新浪刊發的中國象棋協會報導和中新網；五羊盃選拔賽來自《羊城晚報》；亞運會來自《星島》；全港個人賽來自 HK01 和體路 Sportsroad；分析由 Pikafish 經 Mistboard 的復盤流程完成，2026 年 10 月。',
+  'Tony Fung Ga Zen': '馮家俊',
+  'Chao Yi-fan': '趙奕帆',
+  'Cheng Yin Lung': '鄭彥隆',
   // yin-sheng (zh-Hant), machine-drafted 2026-09-21, not native-reviewed. After the
   // spread, or the Simplified entries win (they did, for one deploy).
   'Yin Sheng 尹昇: games, results, and analysis': '尹昇：對局、戰績與分析',

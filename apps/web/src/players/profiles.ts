@@ -52,4 +52,13 @@ export const PLAYER_PROFILES: Readonly<Record<string, PlayerProfile>> = {
     title: 'GM',
     profileHref: '/blog/lai-ly-huynh',
   },
+  'tony-fung-ga-zen': {
+    photo: '/article-thumbs/tony-fung-2023-face.jpg',
+    photoCredit: 'Mr.C / Sportsoho',
+    born: '1998',
+    // WXF International Master IM0140 (title lists 2022-11-24 and 2022-12-09);
+    // the HKCCA's own grandmaster titles are Hong Kong titles, not on this tag.
+    title: 'IM',
+    profileHref: '/blog/tony-fung-ga-zen',
+  },
 };
