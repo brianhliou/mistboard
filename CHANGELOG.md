@@ -115,6 +115,7 @@ Conventions:
 
 ### Fixed
 
+- The homepage no longer spotlights a broadcast whose source published results but no moves ([a92561fb](https://github.com/brianhliou/mistboard/commit/a92561fb))
 - Homepage variant markers show at their full size ([dfa9549e](https://github.com/brianhliou/mistboard/commit/dfa9549e))
 - Games that can no longer be opened (Crazyhouse Xiangqi games from before the rules change, mahjong tables) stay in your history with an Old rules or Unsupported tag instead of linking to a missing page ([67ffa88b](https://github.com/brianhliou/mistboard/commit/67ffa88b))
 - The homepage live board no longer jumps to an old game when a player stops moving with time still on their clock ([ca833e03](https://github.com/brianhliou/mistboard/commit/ca833e03))
