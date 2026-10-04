@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GAME_SPECS } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
+import { variantDisplayLabel } from './game-display.js';
 import {
   FINAL_VARIANT_MARKERS,
   isVariantMarkerId,
@@ -69,5 +70,17 @@ describe('variant markers', () => {
     expect(() => renderVariantMarker('chess' as VariantMiniId)).toThrow(/No variant marker/);
     expect(isVariantMarkerId('mahjong')).toBe(false);
     expect(isVariantMarkerId('toString')).toBe(false);
+  });
+});
+
+// A marker's fallback aria-label and title read `${label} marker`, so a mini's
+// label is the variant's public name. A bulk rename once gave the jieqi marker
+// the label "Banqi" and the banqi marker "Jieqi" (fixed 2026-10-03).
+describe('variant mini labels', () => {
+  it('name each game spec the way the rest of the site does', () => {
+    for (const mini of VARIANT_MINIS) {
+      if (!GAME_SPECS.some((spec) => spec.id === mini.id)) continue;
+      expect(mini.label, mini.id).toBe(variantDisplayLabel(mini.id));
+    }
   });
 });

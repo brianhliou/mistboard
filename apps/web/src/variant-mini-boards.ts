@@ -93,7 +93,7 @@ export const VARIANT_MINIS: readonly VariantMiniDef[] = [
   },
   {
     id: 'jieqi',
-    label: 'Banqi',
+    label: 'Jieqi',
     shortLabel: 'JQ',
     accent: '#6d4aa0',
     blurb: 'The xiangqi opening with every piece flipped face-down but the general.',
@@ -101,10 +101,10 @@ export const VARIANT_MINIS: readonly VariantMiniDef[] = [
   },
   {
     id: 'banqi',
-    label: 'Jieqi',
+    label: 'Banqi',
     shortLabel: 'BQ',
     accent: '#2563a6',
-    blurb: 'Face-down pieces in cells; both generals flipped up.',
+    blurb: 'All 32 pieces face-down on a half board; flip one or move a revealed piece.',
     family: 'xiangqi',
   },
   {
