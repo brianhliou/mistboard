@@ -13,6 +13,7 @@ import {
   Heart,
   type IconNode,
   Info,
+  Mail,
   Megaphone,
   MessagesSquare,
   Newspaper,
@@ -34,6 +35,7 @@ export type UiIconName =
   | 'announcement-status'
   | 'announcement-update'
   | 'challenge-friend'
+  | 'correspondence'
   | 'create-topic'
   | 'event-broadcast'
   | 'event-tournament'
@@ -56,6 +58,7 @@ const UI_ICON_NODES: Record<UiIconName, IconNode> = {
   'announcement-status': Info,
   'announcement-update': Sparkles,
   'challenge-friend': Swords,
+  correspondence: Mail,
   'create-topic': SquarePen,
   'event-broadcast': RadioTower,
   'event-tournament': Trophy,

@@ -20,6 +20,7 @@ export const atomicXiangqiBuildArticle: Article = {
   boardFamily: 'xiangqi',
   gameSpecId: 'atomic-xiangqi',
   title: 'Atomic Xiangqi Is Live: What Decides Your First Game',
+  cardTitle: 'Atomic Xiangqi Is Live',
   seoTitle: 'Atomic Xiangqi: What Decides Your First Game',
   summary:
     'Chinese chess where a capture is an explosion. The rules take a minute. What decides your first game is the three points beside your general, the cannon that no longer clears a rank, and a chariot on your advisor file counting as check.',

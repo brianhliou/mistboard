@@ -144,6 +144,13 @@ describe('landing shell', () => {
       ),
     ).toBeNull();
     expect(deepDives?.querySelector('.landing-row-label')?.textContent).toBe('Xiangqi deep dives');
+    // The first row is labelled too, and its label line links to the blog index.
+    const latest = demo?.querySelector(':scope > .landing-articles-row:not(.landing-dives-row)');
+    expect(latest?.querySelector('.landing-row-label')?.textContent).toBe('Latest');
+    expect(
+      latest?.querySelector('.landing-row-header a.landing-row-more')?.getAttribute('href'),
+    ).toBe('/blog');
+    expect(deepDives?.querySelector('.landing-row-more')).toBeNull();
     expect(demo?.querySelector('.landing-learn-row')).toBeNull();
     expect(demo?.querySelector('.landing-left-column .landing-board-column')).not.toBeNull();
     // The support/store pair left the homepage (patronage stays in the nav).
@@ -178,10 +185,16 @@ describe('landing shell', () => {
     expect(wrap.querySelector('.landing-forum-column .landing-forum')).not.toBeNull();
     // Top studies moved down to the bands-3/4 right rail; chat took its band-2 slot.
     expect(wrap.querySelector('.landing-studies-column .landing-study-widget')).not.toBeNull();
-    // One play action only, and it is the primary unified entry.
+    // One primary action, the unified Play button; the only other tile is the
+    // correspondence card (2026-10-03), which the prerendered shell carries in
+    // its offer state so the rail reserves its space before hydration.
     const actions = wrap.querySelectorAll('.landing-play-column .landing-play-action');
-    expect(actions.length).toBe(1);
+    expect(actions.length).toBe(2);
     expect(actions[0]?.classList.contains('landing-play-action-primary')).toBe(true);
+    const card = wrap.querySelector('.landing-play-stack > .landing-corr-card');
+    expect(card).toBe(actions[1]);
+    expect(card?.getAttribute('data-state')).toBe('start');
+    expect(card?.previousElementSibling?.classList.contains('landing-activity')).toBe(true);
   });
 
   it('links only the About Mistboard tagline tail', () => {

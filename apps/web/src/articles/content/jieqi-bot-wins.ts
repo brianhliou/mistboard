@@ -98,6 +98,7 @@ export const jieqiBotWinsArticle: Article = {
   kind: 'article',
   publisher: 'mistboard',
   title: 'Fourteen wins against our jieqi bot',
+  cardTitle: '14 wins against our jieqi bot',
   seoTitle: 'Beating the Pikafish jieqi bot: 14 wins in 596 games',
   summary:
     'Since August 23, people have played our jieqi bot 596 times and beaten it 14 times. Here is how those games were won, and seven new levels for everyone else.',

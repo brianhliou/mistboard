@@ -69,6 +69,7 @@ export const pikafishArticle: Article = {
   publisher: 'mistboard',
   boardFamily: 'xiangqi',
   title: 'Pikafish on Mistboard',
+  cardTitle: 'Play Pikafish online',
   seoTitle: 'Play Pikafish Online: Free Xiangqi Engine, No Download',
   summary:
     'Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.',

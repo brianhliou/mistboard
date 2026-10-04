@@ -124,6 +124,48 @@
   background: var(--site-accent-strong);
 }
 
+/* Homepage correspondence card (2026-10-03): the secondary tile under the stats,
+   in the flat tile family the Play button belongs to. Two lines in every state
+   (title + subline), so the prerendered offer and a hydrated "Your move" or
+   "Waiting" occupy the same height and the rail does not jump. */
+.landing-play-action.landing-corr-card {
+  min-height: 64px;
+  padding-block: 9px;
+}
+
+.landing-corr-text {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.landing-corr-title {
+  overflow: hidden;
+  font-weight: 620;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.landing-corr-subline {
+  color: var(--site-muted);
+  font-size: 13px;
+  font-weight: 450;
+  line-height: 1.3;
+}
+
+.landing-corr-card:hover .landing-corr-subline,
+.landing-corr-card:focus-visible .landing-corr-subline {
+  color: inherit;
+}
+
+.landing-corr-card[data-state="your-move"] .landing-play-icon {
+  color: var(--site-accent);
+}
+
+.landing-corr-card[aria-busy="true"] {
+  cursor: progress;
+}
+
 /* Opponent picker (Computer / A friend / Anyone) in the setup row sequence. */
 .landing-setup-mode-switcher > .landing-start-option {
   padding-block: 9px;

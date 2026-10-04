@@ -27,6 +27,7 @@ import { buildLandingActivity } from './landing-activity.js';
 import { buildLandingAnnouncements } from './landing-announcements.js';
 import { buildLandingChat } from './landing-chat.js';
 import { buildTopStudiesWidget } from './landing-community-widgets.js';
+import { buildLandingCorrespondenceCard } from './landing-correspondence.js';
 import { buildLandingEventBanners, loadBroadcastBanners } from './landing-event-banners.js';
 import { buildLandingForumPreview } from './landing-forum-preview.js';
 import {
@@ -665,7 +666,15 @@ function buildLandingStage(
   // Button then the activity box render their frame synchronously (placeholder /
   // skeleton rows) so the column reserves its footprint from first paint; the
   // prerendered shell carries the same frames, hydration skipped.
-  playStack.append(playPanel, buildLandingActivity({ hydrate: !opts.skipLiveWidgets }));
+  // The correspondence card (2026-10-03 jieqi test) sits under the stats as the
+  // secondary entry: same tile family as the Play button, two fixed lines in
+  // every state, so the prerendered offer reserves the space a signed-in
+  // "Your move" or "Waiting" swaps into.
+  playStack.append(
+    playPanel,
+    buildLandingActivity({ hydrate: !opts.skipLiveWidgets }),
+    buildLandingCorrespondenceCard({ hydrate: !opts.skipLiveWidgets, locale }),
+  );
   // The page's single (small) h1: the about tagline at the top of the right rail.
   const about = document.createElement('h1');
   about.className = 'landing-about';

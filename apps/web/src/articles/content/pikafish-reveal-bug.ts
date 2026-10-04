@@ -108,6 +108,7 @@ export const pikafishRevealBugArticle: Article = {
   kind: 'article',
   publisher: 'mistboard',
   title: 'Our Pikafish jieqi bot misjudged its reveals',
+  cardTitle: 'Pikafish misjudged its reveals',
   seoTitle: 'A bug in the Pikafish jieqi bot: how it misjudged turning over a piece',
   summary:
     'Our Pikafish jieqi bot rated some reveals far better than they were. Two bugs caused it. Both are fixed, at little or no cost in strength.',

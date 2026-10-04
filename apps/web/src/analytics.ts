@@ -8,7 +8,12 @@ import {
   timeClassForPace,
   type VariantId,
 } from '@mistboard/game';
-import { takeGameStartSource } from './game-start-source.js';
+import {
+  hasTrackedCorrespondenceStart,
+  markCorrespondenceStartTracked,
+  takeCorrespondenceStartSource,
+  takeGameStartSource,
+} from './game-start-source.js';
 import type { Locale, LocaleResolution } from './i18n/locale.js';
 import { inferredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 
@@ -28,6 +33,29 @@ export type GameSpecAnalyticsProps = {
  */
 export function classifyTimeControl(initialMs: number, incrementMs: number): TimeClass {
   return timeClassForPace(initialMs, incrementMs);
+}
+
+/** time_class as the funnel reports it: the live classes plus 'correspondence'. */
+export type AnalyticsTimeClass = TimeClass | 'correspondence';
+
+/**
+ * The time_class a game event carries. A correspondence game is 'correspondence',
+ * never the live class its millisecond allowance happens to fall in: a 1-day
+ * allowance is 86,400,000 ms, which the pace formula calls 'classical', so until
+ * 2026-10-03 every correspondence start reported as a classical game and a
+ * PostHog filter on time_class='correspondence' found nothing. Known either from
+ * the room's time control (daysPerMove, the tenant stack) or its room mode (the
+ * chess stack).
+ */
+export function analyticsTimeClass(
+  timeControl: { initialMs: number; incrementMs: number; daysPerMove?: number } | null | undefined,
+  options: { correspondence?: boolean } = {},
+): AnalyticsTimeClass | null {
+  if (options.correspondence || typeof timeControl?.daysPerMove === 'number') {
+    return 'correspondence';
+  }
+  if (!timeControl) return null;
+  return classifyTimeControl(timeControl.initialMs, timeControl.incrementMs);
 }
 
 function analyticsPropsFromSpec(spec: GameSpec): GameSpecAnalyticsProps {
@@ -303,7 +331,7 @@ export function createGameLifecycleTracker(): GameLifecycleTracker {
       if (statusType === lastStatusType) return;
       if (statusType === 'playing' && lastStatusType !== 'playing') {
         playingSinceMs = Date.now();
-        track('game_started', { ...baseProps, entry_source: takeGameStartSource() });
+        trackGameStarted(baseProps);
       }
       if (statusType === 'finished' && input.outcome) {
         track('game_finished', {
@@ -318,6 +346,27 @@ export function createGameLifecycleTracker(): GameLifecycleTracker {
       lastStatusType = statusType;
     },
   };
+}
+
+// A live game is opened once, so the first `playing` render on a page is its
+// start. A correspondence game is reopened every day for weeks, and each visit
+// is a fresh page whose first render is `playing` again: counted naively, one
+// game would start thirty times. So a correspondence start fires once per game
+// per browser (remembered by game id), and its entry source can come from the
+// long-lived correspondence slot: the player who posted the seek arrives days
+// later from an email, long after the ten-minute live source has expired.
+function trackGameStarted(baseProps: Record<string, unknown>): void {
+  if (baseProps.time_class !== 'correspondence') {
+    track('game_started', { ...baseProps, entry_source: takeGameStartSource() });
+    return;
+  }
+  const gameId = typeof baseProps.gameId === 'string' ? baseProps.gameId : null;
+  if (gameId && hasTrackedCorrespondenceStart(gameId)) return;
+  const liveSource = takeGameStartSource();
+  const gameSpec = typeof baseProps.game_spec === 'string' ? baseProps.game_spec : null;
+  const entrySource = liveSource !== 'none' ? liveSource : takeCorrespondenceStartSource(gameSpec);
+  if (gameId) markCorrespondenceStartTracked(gameId);
+  track('game_started', { ...baseProps, entry_source: entrySource });
 }
 
 // Tie subsequent events to a known account. Idempotent: safe to call on every
@@ -392,7 +441,7 @@ export function trackCorrespondenceSeekPosted(props: {
   gameSpecId: string;
   daysPerMove: number;
   kind: CorrespondenceSeekKind;
-  surface: 'correspondence' | 'lobby' | 'profile';
+  surface: 'correspondence' | 'lobby' | 'profile' | 'home-button';
 }): void {
   track('correspondence_seek_posted', props);
 }
@@ -400,7 +449,48 @@ export function trackCorrespondenceSeekPosted(props: {
 export function trackCorrespondenceSeekAccepted(props: {
   gameSpecId: string;
   daysPerMove: number;
-  surface: 'correspondence' | 'challenge';
+  surface: 'correspondence' | 'challenge' | 'home-button';
 }): void {
   track('correspondence_seek_accepted', props);
+}
+
+// The homepage correspondence button (2026-10-03 jieqi test). `button_state` is
+// what the visitor saw when they clicked: 'start' (the offer; every guest),
+// 'your-move' or 'waiting'. A guest click leads to sign-up, and the quick pair
+// then runs on return with `after_auth` true, so clicks -> accounts -> games is
+// one funnel on these two events plus the server's signup_completed.
+export type CorrespondenceButtonState = 'start' | 'your-move' | 'waiting';
+
+export function trackCorrespondenceButtonClicked(props: {
+  buttonState: CorrespondenceButtonState;
+  signedIn: boolean;
+  locale: Locale;
+  gameSpecId: string;
+  daysPerMove: number;
+}): void {
+  track('correspondence_button_clicked', {
+    button_state: props.buttonState,
+    signed_in: props.signedIn,
+    locale: props.locale,
+    game_spec: props.gameSpecId,
+    days_per_move: props.daysPerMove,
+  });
+}
+
+export function trackCorrespondenceQuickPair(props: {
+  outcome: 'game' | 'seek-posted' | 'seek-existing' | 'error';
+  afterAuth: boolean;
+  locale: Locale;
+  gameSpecId: string;
+  daysPerMove: number;
+  error?: string | null;
+}): void {
+  track('correspondence_quick_pair', {
+    outcome: props.outcome,
+    after_auth: props.afterAuth,
+    locale: props.locale,
+    game_spec: props.gameSpecId,
+    days_per_move: props.daysPerMove,
+    error: props.error ?? null,
+  });
 }
