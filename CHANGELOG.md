@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- Challenge a friend can be rated when both players are signed in, on every variant with rated play ([79547fd9](https://github.com/brianhliou/mistboard/commit/79547fd9))
 - Your open correspondence seeks lead the Correspondence page, under Waiting for an opponent ([dfa9549e](https://github.com/brianhliou/mistboard/commit/dfa9549e))
 - The homepage has a Jieqi by correspondence button: one move a day, an email when it is your turn, and a guest who signs up from it is paired straight away ([b123338b](https://github.com/brianhliou/mistboard/commit/b123338b))
 - Game room clocks are a compact tab again, like lichess ([ca833e03](https://github.com/brianhliou/mistboard/commit/ca833e03))
@@ -116,6 +117,10 @@ Conventions:
 
 ### Fixed
 
+- Rated games in jieqi, banqi, Jungle, Flip Jungle and Fog Xiangqi now say Rated in the game header ([79547fd9](https://github.com/brianhliou/mistboard/commit/79547fd9))
+- The Rated option says why it is unavailable instead of "coming soon" ([79547fd9](https://github.com/brianhliou/mistboard/commit/79547fd9))
+- The variant picker no longer shows a scrollbar when every variant fits ([79547fd9](https://github.com/brianhliou/mistboard/commit/79547fd9))
+- The world title blog card's subtitle is shorter and no longer shrinks to fit ([79547fd9](https://github.com/brianhliou/mistboard/commit/79547fd9))
 - The Chinese home pages stay in Chinese on days a scheduled post goes live ([7af55c21](https://github.com/brianhliou/mistboard/commit/7af55c21))
 - Blog cards for KataGo, AB-JChess, Pikafish, jieqi and the champions pages are now written in the page's language, with no Chinese on English cards ([7af55c21](https://github.com/brianhliou/mistboard/commit/7af55c21))
 - Arrow keys keep stepping through a game after you click a move on an article board ([7af55c21](https://github.com/brianhliou/mistboard/commit/7af55c21))
