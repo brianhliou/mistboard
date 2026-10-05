@@ -124,6 +124,7 @@ Conventions:
 
 ### Fixed
 
+- Correspondence games show both players’ names immediately after a seek is accepted ([87b7a263](https://github.com/brianhliou/mistboard/commit/87b7a263))
 - Scrolling /games no longer stutters when many boards are on screen ([136e3284](https://github.com/brianhliou/mistboard/commit/136e3284))
 - The watch page's channel list names a player from the game shown, not one from hours earlier ([136e3284](https://github.com/brianhliou/mistboard/commit/136e3284))
 - Correspondence turn emails and first-move deadlines no longer reset when a player reconnects ([c3243b74](https://github.com/brianhliou/mistboard/commit/c3243b74))
