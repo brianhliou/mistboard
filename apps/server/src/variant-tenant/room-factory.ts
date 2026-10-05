@@ -8,7 +8,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
 import type { RoomTimeControl } from '@mistboard/game';
-import type * as persistence from '../persistence.js';
+import * as persistence from '../persistence.js';
 import { appendTenantSeatAssigned } from './events.js';
 import { appendTenantRuntimeEvent, createTenantRuntimeRoom } from './runtime.js';
 import { mintTenantSeatToken } from './seat-session.js';
@@ -218,8 +218,8 @@ export async function createTenantCorrespondenceGameForSeek<
     [tenant.colors[1], args.second],
   ];
   for (const [seat, identity] of seats) {
-    // handle/display resolve via the users join everywhere they're shown; the seat-token
-    // row persists only user_id, so null here is exact, not lossy.
+    // The durable token stores only user_id. Resolve public names below once
+    // both tokens are persisted, before either account needs to connect.
     const { state } = mintTenantSeatToken(room, seat, {
       userId: identity.userId,
       userHandle: null,
@@ -229,6 +229,18 @@ export async function createTenantCorrespondenceGameForSeek<
       event: { type: 'seat-assigned', at, roomId: room.id, clientId: state.clientId, seat },
       tokenState: state,
     });
+  }
+  if (ctx.isPersistenceEnabled()) {
+    const tokens = await persistence.loadRoomSeatTokens<persistence.RoomSeatTokenSeat>(room.id);
+    for (const token of Object.values(tokens)) {
+      if (!token) continue;
+      const state = room.seatTokens[token.seat as C];
+      // A reconnect can run while the lookup is pending. Fill only the public
+      // identity of the same account, preserving its current connection/token.
+      if (!state || state.userId !== token.userId) continue;
+      state.userHandle = token.userHandle;
+      state.userDisplayName = token.userDisplayName;
+    }
   }
   return { ok: true, room };
 }

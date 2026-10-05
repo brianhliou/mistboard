@@ -14,6 +14,7 @@ import {
   enableCorrespondenceVariantFlags,
   legalMoveFor,
 } from './correspondence-test-support.js';
+import { collectCurrentGames } from './current-games.js';
 import { createUser, getGameSummary, loadRoom } from './persistence.js';
 import {
   assert,
@@ -22,6 +23,7 @@ import {
   TEST_DATABASE_URL,
   test,
 } from './persistence-test-support.js';
+import type { HttpApiContext } from './routes/lib.js';
 // Side-effect import: every tenant registers, as the server boots.
 import './variant-tenant/register-tenants.js';
 import { startTenantDeadlineSweeper } from './variant-tenant/deadline-sweeper.js';
@@ -43,6 +45,37 @@ const COMPRESSED_TC: RoomTimeControl = {
 type AnyRoom = TenantRuntimeRoom<string, string, unknown, TenantGameStateLike<string>, string>;
 
 definePersistenceTests('correspondence variants e2e', () => {
+  test('accepted correspondence seats show both account names before either player connects', async () => {
+    enableCorrespondenceVariantFlags();
+    for (const specId of CORRESPONDENCE_ELIGIBLE_SPEC_IDS) {
+      const registration = correspondenceTenantForSpecId(specId);
+      assert.ok(registration?.createCorrespondenceGameForSeek, `${specId} registration`);
+      const first = await makeUser(`${specId}-a`);
+      const second = await makeUser(`${specId}-b`);
+      const created = await registration.createCorrespondenceGameForSeek({
+        timeControl: { initialMs: DAY_MS, incrementMs: 0, daysPerMove: 1 },
+        first: { userId: first },
+        second: { userId: second },
+      });
+      assert.ok(created.ok, `${specId}: accept`);
+      try {
+        const room = registration.rooms.get(created.room.id) as unknown as AnyRoom;
+        assert.equal(room.clients.size, 0, `${specId}: neither account connected`);
+        const game = collectCurrentGames({ rooms: new Map() } as HttpApiContext).find(
+          (game) => game.roomId === created.room.id,
+        );
+        assert.ok(game, `${specId}: listed on /games`);
+        assert.deepEqual(
+          game.players.map(({ name, handle }) => ({ name, handle })),
+          [first, second].map((id) => ({ name: id.slice(5), handle: id.slice(5) })),
+          `${specId}: both reserved accounts have public identities`,
+        );
+      } finally {
+        registration.clearRooms();
+      }
+    }
+  });
+
   test('every variant: accept indexes the deadline, a lapsed clock forfeits on a cold sweep', async () => {
     enableCorrespondenceVariantFlags();
     const specs = CORRESPONDENCE_ELIGIBLE_SPEC_IDS.filter((id) => id !== 'dark-chess');
