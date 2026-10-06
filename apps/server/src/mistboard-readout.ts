@@ -122,8 +122,22 @@ export type MistboardReadoutUntrackedEvent = {
   hasGameList: boolean;
 };
 
+// /contact submissions (feedback_submissions). Counts and page paths only: the
+// readout reaches a public issue, so a message body or a reply address never
+// enters it. Optional so snapshots from before 2026-10-06 still parse.
+export type MistboardReadoutFeedback = {
+  // Every submission ever stored: only grows, so the day-over-day difference
+  // is what arrived since the last readout.
+  received: number;
+  // triage_status = 'new' (migration 162): nobody has decided on it yet.
+  untriaged: number;
+  // Paths of the newest few submissions, newest first, as the client sent
+  // them. The action text filters them to plain page paths.
+  recentPaths: Array<string | null>;
+};
+
 export type MistboardReadoutCollectorError = {
-  section: 'product' | 'puzzles' | 'mining' | 'engines' | 'broadcasts';
+  section: 'product' | 'puzzles' | 'mining' | 'engines' | 'broadcasts' | 'feedback';
   code: 'collector_failed';
 };
 
@@ -156,6 +170,7 @@ export type MistboardReadoutV1 = {
   mining: MistboardReadoutMining | null;
   engines: MistboardReadoutEngines | null;
   broadcasts?: MistboardReadoutBroadcasts | null;
+  feedback?: MistboardReadoutFeedback | null;
   actions: MistboardReadoutAction[];
   collectorErrors: MistboardReadoutCollectorError[];
   trend: MistboardReadoutTrendPoint[];
@@ -172,6 +187,7 @@ export type MistboardReadoutFacts = {
   mining: MistboardReadoutMining | null;
   engines: MistboardReadoutEngines | null;
   broadcasts?: MistboardReadoutBroadcasts | null;
+  feedback?: MistboardReadoutFeedback | null;
   collectorErrors?: MistboardReadoutCollectorError[];
   trend?: MistboardReadoutTrendPoint[];
 };
@@ -235,6 +251,7 @@ export function buildMistboardReadout(input: {
     mining: input.facts.mining,
     engines: input.facts.engines,
     broadcasts: input.facts.broadcasts ?? null,
+    feedback: input.facts.feedback ?? null,
     actions,
     collectorErrors,
     trend: input.facts.trend ?? [],
@@ -253,6 +270,7 @@ function buildActions(
   const actions: MistboardReadoutAction[] = [
     ...productActions(facts.product, previousReport),
     ...operationsActions(facts, previousReport),
+    ...feedbackActions(facts.feedback ?? null, previousReport),
   ];
   const quality = facts.puzzles;
   // A checkpoint is a level that never falls back: sessions only go up, so
@@ -528,6 +546,48 @@ function operationsActions(
   return actions;
 }
 
+// Feedback sat unread in the table until someone happened to look (2026-10-06).
+// Arrivals are an edge, judged on the received counter, so a backlog nobody has
+// triaged yet is printed as a level in Operations and does not re-fire daily.
+// With no baseline (the first readout to count it, or a failed collector last
+// time) the backlog itself is reported once: a quiet first day would hide
+// exactly the messages this was added to surface.
+const FEEDBACK_PATHS_SHOWN = 3;
+
+function feedbackActions(
+  feedback: MistboardReadoutFeedback | null,
+  previousReport: MistboardReadoutV1 | null,
+): MistboardReadoutAction[] {
+  if (!feedback) return [];
+  const previous = previousReport?.feedback;
+  const hasBaseline = typeof previous?.received === 'number';
+  const count = hasBaseline ? feedback.received - (previous?.received ?? 0) : feedback.untriaged;
+  if (count <= 0) return [];
+  const shown = feedback.recentPaths.slice(0, Math.min(count, FEEDBACK_PATHS_SHOWN));
+  const paths = `${shown.map(feedbackPathLabel).join(', ')}${count > shown.length ? ', …' : ''}`;
+  const plural = count === 1 ? '' : 's';
+  return [
+    {
+      code: 'feedback-new',
+      severity: 'action',
+      dedupeKey: `feedback-new:${feedback.received}`,
+      ownerIssue: null,
+      text: hasBaseline
+        ? `${count} new feedback message${plural} since the last readout (${paths}); ${feedback.untriaged} untriaged in all. Triage with npm run feedback:inbox.`
+        : `${count} untriaged feedback message${plural} ${count === 1 ? 'is' : 'are'} waiting (newest: ${paths}). Triage with npm run feedback:inbox.`,
+    },
+  ];
+}
+
+// The path is whatever the client posted, and this text lands on a public
+// GitHub issue: echo a plain page path in a code span (never a link), and
+// nothing else.
+function feedbackPathLabel(path: string | null): string {
+  if (!path) return 'no page given';
+  const bare = path.split(/[?#]/, 1)[0] ?? '';
+  return /^\/[A-Za-z0-9/_.%-]{0,96}$/.test(bare) ? `\`${bare}\`` : 'an unlisted page';
+}
+
 // A schema-v1 snapshot carries no player count at all, so the runtime check is
 // load-bearing even though the type says otherwise.
 function previousPlayerCount(previousReport: MistboardReadoutV1 | null): number {
@@ -706,6 +766,11 @@ export function renderMistboardReadoutMarkdown(report: MistboardReadoutV1): stri
           : untracked === null
             ? ', dpxq index unreadable'
             : `, ${untracked.length} top event${untracked.length === 1 ? '' : 's'} on dpxq not relayed`),
+    );
+  }
+  if (report.feedback) {
+    lines.push(
+      `- Feedback: ${report.feedback.untriaged} untriaged of ${report.feedback.received} received (npm run feedback:inbox)`,
     );
   }
   if (report.collectorErrors.length > 0) {

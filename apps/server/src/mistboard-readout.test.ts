@@ -432,6 +432,69 @@ test('a top event dpxq lists and we do not relay alerts the day it appears, not 
   assert.match(renderMistboardReadoutMarkdown(unreadable), /dpxq index unreadable/);
 });
 
+test('new feedback alerts on arrival with paths only, and a standing backlog stays quiet', () => {
+  const feedback = (
+    received: number,
+    untriaged: number,
+    recentPaths: Array<string | null>,
+  ): MistboardReadoutFacts => ({ ...emptyFacts, feedback: { received, untriaged, recentPaths } });
+
+  // No baseline (the first readout to count feedback): report the backlog once.
+  const first = reportWith(feedback(7, 3, ['/zh-hans/blog/cao-yanlei', '/contact', null]));
+  assert.equal(first.verdict, 'action');
+  assert.equal(first.actions[0]!.code, 'feedback-new');
+  assert.equal(first.actions[0]!.ownerIssue, null);
+  assert.match(first.actions[0]!.text, /^3 untriaged feedback messages are waiting/);
+  assert.match(first.actions[0]!.text, /`\/zh-hans\/blog\/cao-yanlei`/);
+  assert.match(
+    renderMistboardReadoutMarkdown(first),
+    /- Feedback: 3 untriaged of 7 received \(npm run feedback:inbox\)/,
+  );
+
+  // The same backlog the next day: the level is printed, nothing fires.
+  const second = reportWith(feedback(7, 3, ['/zh-hans/blog/cao-yanlei', '/contact', null]), first);
+  assert.equal(second.actions.length, 0);
+  assert.equal(second.verdict, 'healthy');
+  assert.match(renderMistboardReadoutMarkdown(second), /- Feedback: 3 untriaged of 7 received/);
+
+  // Two arrive: the line names the two newest pages and never a body or address.
+  const third = reportWith(
+    feedback(9, 5, ['/play?ref=x', '/zh-hans/blog/cao-yanlei', '/contact']),
+    second,
+  );
+  assert.equal(third.actions.length, 1);
+  assert.equal(
+    third.actions[0]!.text,
+    '2 new feedback messages since the last readout (`/play`, `/zh-hans/blog/cao-yanlei`); 5 untriaged in all. Triage with npm run feedback:inbox.',
+  );
+  assert.equal(third.alertKey, first.alertKey, 'one problem shape, one alert key');
+
+  // Triaged down with nothing new: quiet.
+  const fourth = reportWith(feedback(9, 0, ['/play', '/zh-hans/blog/cao-yanlei']), third);
+  assert.equal(fourth.actions.length, 0);
+
+  // The readout lands on a public issue, and the path is whatever the client
+  // sent: anything that is not a plain page path is not echoed.
+  const hostile = reportWith(
+    feedback(10, 1, ['/x [buy now](https://spam.example) `tick`']),
+    fourth,
+  );
+  assert.match(
+    hostile.actions[0]!.text,
+    /^1 new feedback message since the last readout \(an unlisted page\)/,
+  );
+  assert.doesNotMatch(hostile.actions[0]!.text, /spam\.example/);
+
+  // A failed feedback collector last time is no baseline: report the backlog.
+  const afterFailure = reportWith(feedback(11, 2, ['/learn']), {
+    ...fourth,
+    feedback: null,
+  });
+  assert.match(afterFailure.actions[0]!.text, /^2 untriaged feedback messages are waiting/);
+  // An empty inbox with no baseline says nothing.
+  assert.equal(reportWith(feedback(4, 0, ['/learn'])).actions.length, 0);
+});
+
 test('the alert key holds steady while counters move under an unchanged problem', () => {
   const first = reportWith(
     factsWithProduct({ completedGames: 22, previousCompletedGames: 46, humanPlayers: 9 }),
