@@ -42,6 +42,16 @@ describe('article public listing gates', () => {
     ]);
   });
 
+  it('gives every published article a publish date', () => {
+    // The byline, JSON-LD datePublished and the sitemap lastmod all read it;
+    // without one the page prints no date at all.
+    const undated = articles
+      .filter((article) => article.status !== 'draft' && !article.publishedAt)
+      .map((article) => article.slug);
+
+    expect(undated).toEqual([]);
+  });
+
   it('orders the articles page by publish date newest first', () => {
     vi.stubEnv('DEV', true);
 

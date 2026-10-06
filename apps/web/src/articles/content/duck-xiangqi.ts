@@ -22,6 +22,7 @@ export const duckXiangqiArticle: Article = {
     'Duck Chess on the xiangqi board. Every turn is a move and then a duck placement, the duck blocks and screens like a piece, and you win by capturing the general.',
   showSummaryOnPage: false,
   status: 'published',
+  publishedAt: '2026-09-09',
   updatedAt: '2026-09-09',
   audience:
     'Xiangqi players, and Duck Chess players who want the xiangqi version stated precisely.',
