@@ -32,6 +32,7 @@ import { type ReplayStepperCopy, replayStepperCopy } from './replay-stepper-copy
 import { seatDiscEl } from './seat-disc.js';
 import { GLYPH_SUFFIX_CLASS } from './study-chapter-annotations.js';
 import { readStoredXiangqiPieceSet, xiangqiAppearanceChangedEvent } from './theme.js';
+import { type XiangqiBoardGeometry, xiangqiBoardPoint } from './xiangqi-board-geometry.js';
 import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle, xiangqiNotationChangedEvent } from './xiangqi-notation.js';
 import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
@@ -169,9 +170,23 @@ export type XiangqiReplaySpec = {
 
 export type XiangqiReplayController = { destroy: () => void };
 
+const GEOMETRY: XiangqiBoardGeometry = {
+  fileCount: 9,
+  rankCount: 10,
+  cell: CELL,
+  margin: MARGIN,
+  riverGap: 0,
+};
+
+/**
+ * Every point on this board goes through the shared geometry, so flipping is the
+ * same 180 degree rotation the live, study and broadcast boards draw. This file
+ * kept its own copy of the maths, which mirrored only the rank: the shared one
+ * got the file fix on 2026-08-27 and this copy did not, so a flipped article
+ * board left a1 on the reader's left, against the Chinese notation beside it.
+ */
 function pointXY(file: number, rank: number, perspective: XiangqiColor): { x: number; y: number } {
-  const row = perspective === 'red' ? 10 - rank : rank - 1;
-  return { x: MARGIN + file * CELL, y: MARGIN + row * CELL };
+  return xiangqiBoardPoint(file, rank, perspective, 'intersection', GEOMETRY);
 }
 
 function coord(square: XiangqiSquare): { file: number; rank: number } {
