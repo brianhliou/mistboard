@@ -22,6 +22,7 @@ import { track } from './analytics.js';
 import type { ArticleLang } from './article-i18n.js';
 import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
 import './board-glyph-marker.css';
+import './embed/embed-credit.css';
 import {
   BOARD_LASTMOVE_MARKER_SELECTOR,
   boardLastMoveMarkersSvg,
@@ -166,7 +167,23 @@ export type XiangqiReplaySpec = {
    * whole game from there in either direction.
    */
   startPly?: number;
+  /**
+   * The game's board in the broadcast archive (`/broadcast/xiangqi/board/<id>`),
+   * when it has one. Set, a "Full game analysis" link sits under the card: an
+   * article board carries only the moves the page is about, and the board page
+   * has the advantage chart and every move's verdict. Absent, no link.
+   */
+  boardId?: string;
 };
+
+/** Where an article board's analysis link points. */
+export function broadcastBoardHref(boardId: string): string {
+  return `/broadcast/xiangqi/board/${encodeURIComponent(boardId)}`;
+}
+
+/** Board ids as the broadcast archive mints them: lowercase words joined by
+ *  single hyphens. A spec's `boardId` is checked against this in tests. */
+export const BROADCAST_BOARD_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export type XiangqiReplayController = { destroy: () => void };
 
@@ -660,6 +677,16 @@ export function mountXiangqiReplay(
     host.append(header, grid);
   } else {
     host.append(header, frame, controls, slider, narrative);
+  }
+
+  // The embed card's credit line, in the same place and the same type: under
+  // the card, centred, muted until hovered (embed/embed-credit.css).
+  if (spec.boardId) {
+    const analysisLink = document.createElement('a');
+    analysisLink.className = 'embed-credit xq-replay-analysis-link';
+    analysisLink.href = broadcastBoardHref(spec.boardId);
+    analysisLink.textContent = copy.fullAnalysis;
+    host.append(analysisLink);
   }
 
   let index = Math.max(0, Math.min(total, Math.floor(spec.startPly ?? 0)));

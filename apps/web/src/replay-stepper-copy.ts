@@ -49,6 +49,8 @@ export type ReplayStepperCopy = {
   /** Suffix for the hand/reserve strip label ("Red reserve", "Sente hand"). */
   pocket: string;
   noPieces: string;
+  /** The link under an article board whose game is in the broadcast archive. */
+  fullAnalysis: string;
 };
 
 type FamilyStrings = {
@@ -87,6 +89,7 @@ const COMMON: Record<
     evalPrefix: 'eval',
     wins: (side) => `${side} wins`,
     draw: 'Draw',
+    fullAnalysis: 'Full game analysis',
   },
   'zh-Hans': {
     firstMove: '第一步',
@@ -111,6 +114,7 @@ const COMMON: Record<
     evalPrefix: '评估',
     wins: (side) => `${side}胜`,
     draw: '和棋',
+    fullAnalysis: '全局引擎分析',
   },
   'zh-Hant': {
     firstMove: '第一步',
@@ -135,6 +139,7 @@ const COMMON: Record<
     evalPrefix: '評估',
     wins: (side) => `${side}勝`,
     draw: '和棋',
+    fullAnalysis: '全局引擎分析',
   },
 };
 

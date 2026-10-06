@@ -12,7 +12,10 @@
 // `specs/<key>.json` (annotated-game-to-spec.mjs output, one per board) and an
 // optional `positives.json` of reviewed positive glyphs. Line verdicts come from
 // scripts/data/article-line-evals.json (article-line-evals.mjs), keyed by the
-// board's position on the page, so they survive a regenerate.
+// board's position on the page, so they survive a regenerate. A game that is in
+// the broadcast archive gets its board id from scripts/data/
+// article-broadcast-boards.json (dpxq key -> board id), which puts a "Full game
+// analysis" link under the board; a key with no entry gets no link.
 //
 // The draft dialect, one construct per paragraph (blank-line separated):
 //
@@ -189,6 +192,10 @@ const positivesPath = join(playerDir, 'positives.json');
 const positives = existsSync(positivesPath) ? JSON.parse(readFileSync(positivesPath, 'utf8')) : {};
 const lineEvalsPath = join(repoRoot, 'scripts/data/article-line-evals.json');
 const lineEvals = existsSync(lineEvalsPath) ? JSON.parse(readFileSync(lineEvalsPath, 'utf8')) : {};
+const broadcastBoardsPath = join(repoRoot, 'scripts/data/article-broadcast-boards.json');
+const broadcastBoards = existsSync(broadcastBoardsPath)
+  ? JSON.parse(readFileSync(broadcastBoardsPath, 'utf8'))
+  : {};
 
 const seen = new Set();
 const unmeasured = [];
@@ -203,7 +210,15 @@ for (const [boardIndex, { key, constName }] of boards.entries()) {
       `no spec for ${key}: run annotated-game-to-spec.mjs on its deep annotation --out ${specPath}`,
     );
   }
-  const spec = JSON.parse(readFileSync(specPath, 'utf8'));
+  const record = JSON.parse(readFileSync(specPath, 'utf8'));
+  // The board id sits with the game's own fields, ahead of the annotations.
+  const boardId = broadcastBoards[key];
+  const { annotations: recordAnnotations, ...recordHead } = record;
+  const spec = {
+    ...recordHead,
+    ...(boardId ? { boardId } : {}),
+    ...(recordAnnotations ? { annotations: recordAnnotations } : {}),
+  };
   const byPly = spec.annotations?.byPly ?? {};
   for (const [ply, glyph] of Object.entries(positives[key] ?? {})) {
     if (ply === '_' || byPly[ply]) continue; // a judged negative keeps the ply

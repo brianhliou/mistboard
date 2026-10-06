@@ -181,6 +181,7 @@ const G_M_139842: XiangqiReplaySpec = {
   "black": "Lại Lý Huynh",
   "event": "2026 ten-game match, game 8",
   "resultText": "0-1",
+  "boardId": "2026-chunqiu-dayie-ten-game-match-2026-chunqiu-dayie-ten-game-match-r42-bxt2z0k",
   "annotations": {
     "byPly": {
       "17": {
@@ -225,6 +226,7 @@ const G_M_140313: XiangqiReplaySpec = {
   "black": "Zhao Panwei",
   "event": "2026 Five Rams Cup, semi-final",
   "resultText": "1-0",
+  "boardId": "2026-wuyang-cup-2026-wuyang-cup-r-i3kdk3-b1wj3vjn",
   "annotations": {
     "byPly": {
       "19": {
