@@ -476,7 +476,9 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
           kind: 'container',
         },
       ],
-      defaultEngineId: 'pikafish-jieqi-level-4',
+      // A device with no remembered jieqi engine is a newcomer: the bottom of
+      // the landing policy's ladder (JIEQI_FIRST_GAME_LEVEL), not the middle.
+      defaultEngineId: 'pikafish-jieqi-level-2',
     },
   },
   {

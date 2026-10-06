@@ -511,7 +511,7 @@ export const EN_COMMUNITY = {
   'bots.ladderTitle': 'Xiangqi, level by level',
   'bots.ladderIntro': 'New to xiangqi? Start at level 2. Win a few games, then move up a level.',
   'bots.jieqiLadderTitle': 'Jieqi, level by level',
-  'bots.jieqiLadderIntro': 'New to jieqi? Start at level 4. Win a few games, then move up a level.',
+  'bots.jieqiLadderIntro': 'New to jieqi? Start at level 2. Win a few games, then move up a level.',
   'bots.otherTitle': 'Other games',
   'bots.otherIntro': "Bots for Mistboard's other games.",
   'bots.pikafishBio':

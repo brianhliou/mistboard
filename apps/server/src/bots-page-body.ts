@@ -53,7 +53,7 @@ const COPY: Record<
     pikafish:
       'Open source, built from Stockfish, and searching three million positions a move. It plays jieqi too.',
     jieqiTitle: 'Jieqi, level by level',
-    jieqiIntro: 'New to jieqi? Start at level 4. Win a few games, then move up a level.',
+    jieqiIntro: 'New to jieqi? Start at level 2. Win a few games, then move up a level.',
     otherTitle: 'Other games',
     misty:
       "Mistboard's own engine for Fog Chess, Fog Xiangqi, banqi, Jungle Chess and Flip Jungle.",
@@ -71,7 +71,7 @@ const COPY: Record<
     strongest: '最强',
     pikafish: '开源，由 Stockfish 改造而来，每步搜索三百万个局面。也可以下揭棋。',
     jieqiTitle: '揭棋：按等级挑选',
-    jieqiIntro: '刚开始下揭棋？从第 4 级开始。赢几盘之后，再往上挑战一级。',
+    jieqiIntro: '刚开始下揭棋？从第 2 级开始。赢几盘之后，再往上挑战一级。',
     otherTitle: '其他棋类',
     misty: 'Mistboard 自研引擎，下迷雾国际象棋、迷雾象棋、暗棋、斗兽棋和翻翻棋。',
     katago:
@@ -88,7 +88,7 @@ const COPY: Record<
     strongest: '最強',
     pikafish: '開源，由 Stockfish 改造而來，每步搜尋三百萬個局面。也可以下揭棋。',
     jieqiTitle: '揭棋：按等級挑選',
-    jieqiIntro: '剛開始下揭棋？從第 4 級開始。贏幾盤之後，再往上挑戰一級。',
+    jieqiIntro: '剛開始下揭棋？從第 2 級開始。贏幾盤之後，再往上挑戰一級。',
     otherTitle: '其他棋類',
     misty: 'Mistboard 自研引擎，下迷霧國際象棋、迷霧象棋、暗棋、鬥獸棋和翻翻棋。',
     katago:
@@ -102,7 +102,7 @@ const LADDER_PREFIX = 'fairy-stockfish-level-';
 const JIEQI_LADDER_PREFIX = 'pikafish-level-';
 // The top jieqi slot above Pikafish (level 8); first-party-bots.ts.
 const JIEQI_TOP_BOT_ID = 'ab-jchess';
-const JIEQI_FIRST_GAME_LEVEL = 4;
+const JIEQI_FIRST_GAME_LEVEL = 2;
 // The level a first-timer is given (web landing-bot-policy XIANGQI_FIRST_GAME_LEVEL).
 const FIRST_GAME_LEVEL = 2;
 

@@ -379,6 +379,7 @@ export function buildPlayPanel(
           ladder,
           landingBotOffer(gameSpecId, {
             rememberedXiangqiBotId: rememberedPveEngine(gameSpecId),
+            rememberedJieqiBotId: rememberedPveEngine(gameSpecId),
           })?.botId,
         );
         const at = [fromPanel, fromMemory, policy, 0].find((i) => i >= 0) ?? 0;

@@ -597,12 +597,13 @@ describe('landing play panel', () => {
     // Pick the strongest xiangqi engine (the default is level 4)...
     selectModalVariant('xiangqi');
     selectModalEngine('fairy-stockfish-xiangqi-level-8');
-    // ...then visit Jieqi and pick its level 2 (its own ladder, default level 4)...
+    // ...then visit Jieqi and pick its level 5 (its own ladder; a newcomer's
+    // default is level 2)...
     selectModalVariant('jieqi');
     expect(document.querySelector<HTMLSelectElement>('select[aria-label="Bot"]')!.value).toBe(
-      'pikafish-jieqi-level-4',
+      'pikafish-jieqi-level-2',
     );
-    selectModalEngine('pikafish-jieqi-level-2');
+    selectModalEngine('pikafish-jieqi-level-5');
     // ...and back to xiangqi: the earlier pick must survive the round-trip.
     selectModalVariant('xiangqi');
     expect(document.querySelector<HTMLElement>('[data-setup-section="engine"]')?.hidden).toBe(
@@ -614,7 +615,7 @@ describe('landing play panel', () => {
     // ...and jieqi keeps its own pick too.
     selectModalVariant('jieqi');
     expect(document.querySelector<HTMLSelectElement>('select[aria-label="Bot"]')!.value).toBe(
-      'pikafish-jieqi-level-2',
+      'pikafish-jieqi-level-5',
     );
   });
 

@@ -168,7 +168,7 @@ describe('web tenant registry <-> server tenant registry parity', () => {
         name: tier.id === JIEQI_DEFAULT_ENGINE_ID ? 'Pikafish Level 8' : tier.name,
       })),
     );
-    expect(tenant?.landing?.defaultEngineId).toBe('pikafish-jieqi-level-4');
+    expect(tenant?.landing?.defaultEngineId).toBe('pikafish-jieqi-level-2');
   });
 
   it('jungle picker engine options mirror the server seats', () => {

@@ -74,6 +74,25 @@ test('the bots body carries the heading and the ladder in each locale', async ()
   assert.match((await botsDirectoryBody('/zh-hant/bots', roster)) ?? '', /<h1>和電腦下象棋<\/h1>/);
 });
 
+// A jieqi newcomer starts on Level 2, like xiangqi (web JIEQI_FIRST_GAME_LEVEL).
+test('the bots body marks jieqi level 2 as the place to start', async () => {
+  const jieqiBot = (level: number) =>
+    bot({
+      id: `pikafish-level-${level}`,
+      displayName: `Pikafish Level ${level}`,
+      defaultGameSpecId: 'jieqi',
+      supportedGameSpecIds: ['jieqi'],
+    });
+  const body = await botsDirectoryBody('/bots', async () => [
+    ...(await roster()),
+    jieqiBot(2),
+    jieqiBot(4),
+  ]);
+  assert.match(body ?? '', /New to jieqi\? Start at level 2\./);
+  assert.match(body ?? '', /<a href="\/bot\/pikafish-level-2">Level 2<\/a> · start here<\/li>/);
+  assert.match(body ?? '', /<a href="\/bot\/pikafish-level-4">Level 4<\/a><\/li>/);
+});
+
 test('the bots body is absent for other routes and when no bot loads', async () => {
   assert.equal(await botsDirectoryBody('/player', roster), null);
   assert.equal(await botsDirectoryBody('/bots', async () => []), null);

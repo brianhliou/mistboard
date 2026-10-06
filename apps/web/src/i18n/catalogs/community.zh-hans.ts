@@ -485,7 +485,7 @@ export const ZH_HANS_COMMUNITY = {
   'bots.ladderTitle': '象棋：按等级挑选',
   'bots.ladderIntro': '刚开始下象棋？从第 2 级开始。赢几盘之后，再往上挑战一级。',
   'bots.jieqiLadderTitle': '揭棋：按等级挑选',
-  'bots.jieqiLadderIntro': '刚开始下揭棋？从第 4 级开始。赢几盘之后，再往上挑战一级。',
+  'bots.jieqiLadderIntro': '刚开始下揭棋？从第 2 级开始。赢几盘之后，再往上挑战一级。',
   'bots.otherTitle': '其他棋类',
   'bots.otherIntro': 'Mistboard 其他棋类的机器人。',
   'bots.pikafishBio': '开源，由 Stockfish 改造而来，每步搜索三百万个局面。也可以下揭棋。',
