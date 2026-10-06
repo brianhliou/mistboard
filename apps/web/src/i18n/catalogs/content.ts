@@ -76,6 +76,8 @@ export const EN_CONTENT = {
   'rules.allRules': 'All rules',
   'rules.kind': 'Rules',
   'rules.navigation': 'Rules navigation',
+  'rules.translateIssue': 'See a translation problem?',
+  'rules.translateIssueLink': 'Help us review a page',
   'news.heading': 'News',
   'news.feedHeading': 'Mistboard updates',
   'news.intro': 'Releases, status updates, and announcements from Mistboard.',
@@ -262,7 +264,12 @@ export const EN_CONTENT = {
     '. Pick up an open issue, or open a pull request. See the source code page for the repository and the libraries Mistboard builds on.',
   'contribute.translateHeading': 'Help with translations',
   'contribute.translateBody':
-    'Mistboard runs in English, Simplified Chinese and Traditional Chinese. The Chinese is machine-translated, so a native reader will find lines to fix. If you can improve one or start a new language, open an issue or a pull request.',
+    "Mistboard runs in English, Simplified Chinese and Traditional Chinese. The Chinese is machine-translated, and no native reader has checked it yet. If you play and read Chinese, review one page for us, a rules page or a lesson, and mark anything a player wouldn't say: a term, an opening name, a sentence that sounds translated. A page takes under an hour, with no commitment after it.",
+  'contribute.translateStartPrefix': 'To start, email ',
+  'contribute.translateStartMiddle':
+    " with one line on how you play and whether you'd like a rules page or a lesson first. If you want credit, we add your name to the ",
+  'contribute.translateThanksLink': 'thanks page',
+  'contribute.translateStartSuffix': '.',
   'contribute.supportHeading': 'Support the project',
   'contribute.supportPrefix':
     'Servers and development cost money. If you want to help keep Mistboard free and ad-free, you can ',

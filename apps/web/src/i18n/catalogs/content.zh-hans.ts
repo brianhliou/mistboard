@@ -77,6 +77,8 @@ export const ZH_HANS_CONTENT = {
   'rules.allRules': '全部规则',
   'rules.kind': '规则',
   'rules.navigation': '规则导航',
+  'rules.translateIssue': '看到翻译问题？',
+  'rules.translateIssueLink': '帮我们审阅一页',
   'news.heading': '新闻',
   'news.feedHeading': 'Mistboard 更新',
   'news.intro': 'Mistboard 的发布、状态更新和公告。',
@@ -361,7 +363,12 @@ export const ZH_HANS_CONTENT = {
     ' 上。你可以认领一个开放的 issue，或者直接提交 pull request。源码页面列出了代码仓库，以及 Mistboard 所依赖的库。',
   'contribute.translateHeading': '帮忙翻译',
   'contribute.translateBody':
-    'Mistboard 提供英文、简体中文和繁体中文。中文是机器翻译的，母语读者一定能找到需要修改的地方。如果你能改进某条翻译，或者想开启一门新语言，欢迎提交 issue 或 pull request。',
+    'Mistboard 提供英文、简体中文和繁体中文。中文是机器翻译的，还没有母语读者校对过。如果你会下棋、能读中文，欢迎帮我们审阅一页，规则页或者一节课都可以，把棋手不会这样说的地方标出来：一个术语、一个开局名称、一句读起来像翻译的话。一页不到一小时，之后没有任何义务。',
+  'contribute.translateStartPrefix': '想开始的话，请发邮件到 ',
+  'contribute.translateStartMiddle':
+    '，用一句话说说你怎么下棋，以及想先看规则页还是课程。如果你愿意署名，我们会把你的名字加到',
+  'contribute.translateThanksLink': '致谢页面',
+  'contribute.translateStartSuffix': '。',
   'contribute.supportHeading': '支持这个项目',
   'contribute.supportPrefix': '服务器和开发都要花钱。如果你想帮 Mistboard 保持免费、无广告，可以',
   'contribute.supportLink': '赞助 Mistboard',
