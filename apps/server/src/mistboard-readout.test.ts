@@ -432,67 +432,58 @@ test('a top event dpxq lists and we do not relay alerts the day it appears, not 
   assert.match(renderMistboardReadoutMarkdown(unreadable), /dpxq index unreadable/);
 });
 
-test('new feedback alerts on arrival with paths only, and a standing backlog stays quiet', () => {
+test('new feedback alerts on arrival with paths only, and nothing else does', () => {
   const feedback = (
     received: number,
-    untriaged: number,
     recentPaths: Array<string | null>,
-  ): MistboardReadoutFacts => ({ ...emptyFacts, feedback: { received, untriaged, recentPaths } });
+  ): MistboardReadoutFacts => ({
+    ...emptyFacts,
+    feedback: { received, recentPaths },
+  });
 
-  // No baseline (the first readout to count feedback): report the backlog once.
-  const first = reportWith(feedback(7, 3, ['/zh-hans/blog/cao-yanlei', '/contact', null]));
-  assert.equal(first.verdict, 'action');
-  assert.equal(first.actions[0]!.code, 'feedback-new');
-  assert.equal(first.actions[0]!.ownerIssue, null);
-  assert.match(first.actions[0]!.text, /^3 untriaged feedback messages are waiting/);
-  assert.match(first.actions[0]!.text, /`\/zh-hans\/blog\/cao-yanlei`/);
-  assert.match(
-    renderMistboardReadoutMarkdown(first),
-    /- Feedback: 3 untriaged of 7 received \(npm run feedback:inbox\)/,
-  );
+  // No baseline (the first readout to count feedback): nothing to call new.
+  const first = reportWith(feedback(7, ['/zh-hans/blog/cao-yanlei', '/contact', null]));
+  assert.equal(first.actions.length, 0);
+  assert.equal(first.verdict, 'healthy');
+  assert.doesNotMatch(renderMistboardReadoutMarkdown(first), /Feedback/);
 
-  // The same backlog the next day: the level is printed, nothing fires.
-  const second = reportWith(feedback(7, 3, ['/zh-hans/blog/cao-yanlei', '/contact', null]), first);
+  // Nothing new the next day: quiet.
+  const second = reportWith(feedback(7, ['/zh-hans/blog/cao-yanlei', '/contact', null]), first);
   assert.equal(second.actions.length, 0);
-  assert.equal(second.verdict, 'healthy');
-  assert.match(renderMistboardReadoutMarkdown(second), /- Feedback: 3 untriaged of 7 received/);
 
   // Two arrive: the line names the two newest pages and never a body or address.
   const third = reportWith(
-    feedback(9, 5, ['/play?ref=x', '/zh-hans/blog/cao-yanlei', '/contact']),
+    feedback(9, ['/play?ref=x', '/zh-hans/blog/cao-yanlei', '/contact']),
     second,
   );
+  assert.equal(third.verdict, 'action');
   assert.equal(third.actions.length, 1);
+  assert.equal(third.actions[0]!.code, 'feedback-new');
+  assert.equal(third.actions[0]!.ownerIssue, null);
   assert.equal(
     third.actions[0]!.text,
-    '2 new feedback messages since the last readout (`/play`, `/zh-hans/blog/cao-yanlei`); 5 untriaged in all. Triage with npm run feedback:inbox.',
+    '2 new feedback messages since the last readout (`/play`, `/zh-hans/blog/cao-yanlei`). Read with npm run feedback:inbox.',
   );
-  assert.notEqual(third.alertKey, first.alertKey, 'a new arrival is a new alert');
 
-  // Triaged down with nothing new: quiet.
-  const fourth = reportWith(feedback(9, 0, ['/play', '/zh-hans/blog/cao-yanlei']), third);
-  assert.equal(fourth.actions.length, 0);
+  // More than three: three paths and an ellipsis.
+  const many = reportWith(feedback(14, ['/a', '/b', '/c', '/d', '/e']), third);
+  assert.match(
+    many.actions[0]!.text,
+    /^5 new feedback messages since the last readout \(`\/a`, `\/b`, `\/c`, …\)/,
+  );
 
   // The readout lands on a public issue, and the path is whatever the client
   // sent: anything that is not a plain page path is not echoed.
-  const hostile = reportWith(
-    feedback(10, 1, ['/x [buy now](https://spam.example) `tick`']),
-    fourth,
-  );
+  const hostile = reportWith(feedback(15, ['/x [buy now](https://spam.example) `tick`']), many);
   assert.match(
     hostile.actions[0]!.text,
     /^1 new feedback message since the last readout \(an unlisted page\)/,
   );
   assert.doesNotMatch(hostile.actions[0]!.text, /spam\.example/);
 
-  // A failed feedback collector last time is no baseline: report the backlog.
-  const afterFailure = reportWith(feedback(11, 2, ['/learn']), {
-    ...fourth,
-    feedback: null,
-  });
-  assert.match(afterFailure.actions[0]!.text, /^2 untriaged feedback messages are waiting/);
-  // An empty inbox with no baseline says nothing.
-  assert.equal(reportWith(feedback(4, 0, ['/learn'])).actions.length, 0);
+  // A failed feedback collector last time is no baseline either.
+  const afterFailure = reportWith(feedback(16, ['/learn']), { ...hostile, feedback: null });
+  assert.equal(afterFailure.actions.length, 0);
 });
 
 test('new feedback on consecutive days alerts both days; a standing backlog does not', () => {
@@ -501,7 +492,7 @@ test('new feedback on consecutive days alerts both days; a standing backlog does
   // so its key has to differ, or the second day's message is never surfaced.
   const feedback = (received: number): MistboardReadoutFacts => ({
     ...emptyFacts,
-    feedback: { received, untriaged: received, recentPaths: ['/contact'] },
+    feedback: { received, recentPaths: ['/contact'] },
   });
   const baseline = reportWith(feedback(2), reportWith(feedback(2)));
   assert.equal(baseline.actions.length, 0);

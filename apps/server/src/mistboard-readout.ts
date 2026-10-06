@@ -129,8 +129,6 @@ export type MistboardReadoutFeedback = {
   // Every submission ever stored: only grows, so the day-over-day difference
   // is what arrived since the last readout.
   received: number;
-  // triage_status = 'new' (migration 162): nobody has decided on it yet.
-  untriaged: number;
   // Paths of the newest few submissions, newest first, as the client sent
   // them. The action text filters them to plain page paths.
   recentPaths: Array<string | null>;
@@ -547,11 +545,10 @@ function operationsActions(
 }
 
 // Feedback sat unread in the table until someone happened to look (2026-10-06).
-// Arrivals are an edge, judged on the received counter, so a backlog nobody has
-// triaged yet is printed as a level in Operations and does not re-fire daily.
-// With no baseline (the first readout to count it, or a failed collector last
-// time) the backlog itself is reported once: a quiet first day would hide
-// exactly the messages this was added to surface.
+// This is awareness only: arrivals are an edge on the received counter, so the
+// line fires the day messages land and never for what was already there. With
+// no baseline (the first readout to count it, or a failed collector last time,
+// which already reads unknown) there is no telling what is new, so it is quiet.
 const FEEDBACK_PATHS_SHOWN = 3;
 
 function feedbackActions(
@@ -559,9 +556,9 @@ function feedbackActions(
   previousReport: MistboardReadoutV1 | null,
 ): MistboardReadoutAction[] {
   if (!feedback) return [];
-  const previous = previousReport?.feedback;
-  const hasBaseline = typeof previous?.received === 'number';
-  const count = hasBaseline ? feedback.received - (previous?.received ?? 0) : feedback.untriaged;
+  const previous = previousReport?.feedback?.received;
+  if (typeof previous !== 'number') return [];
+  const count = feedback.received - previous;
   if (count <= 0) return [];
   const shown = feedback.recentPaths.slice(0, Math.min(count, FEEDBACK_PATHS_SHOWN));
   const paths = `${shown.map(feedbackPathLabel).join(', ')}${count > shown.length ? ', …' : ''}`;
@@ -572,9 +569,7 @@ function feedbackActions(
       severity: 'action',
       dedupeKey: `feedback-new:${feedback.received}`,
       ownerIssue: null,
-      text: hasBaseline
-        ? `${count} new feedback message${plural} since the last readout (${paths}); ${feedback.untriaged} untriaged in all. Triage with npm run feedback:inbox.`
-        : `${count} untriaged feedback message${plural} ${count === 1 ? 'is' : 'are'} waiting (newest: ${paths}). Triage with npm run feedback:inbox.`,
+      text: `${count} new feedback message${plural} since the last readout (${paths}). Read with npm run feedback:inbox.`,
     },
   ];
 }
@@ -777,11 +772,6 @@ export function renderMistboardReadoutMarkdown(report: MistboardReadoutV1): stri
           : untracked === null
             ? ', dpxq index unreadable'
             : `, ${untracked.length} top event${untracked.length === 1 ? '' : 's'} on dpxq not relayed`),
-    );
-  }
-  if (report.feedback) {
-    lines.push(
-      `- Feedback: ${report.feedback.untriaged} untriaged of ${report.feedback.received} received (npm run feedback:inbox)`,
     );
   }
   if (report.collectorErrors.length > 0) {

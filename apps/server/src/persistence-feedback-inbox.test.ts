@@ -10,9 +10,9 @@ import {
   test,
 } from './persistence-test-support.js';
 
-// The triage commands are repo-root scripts (scripts/feedback-{inbox,mark}.mjs),
-// so the test runs them the way a session does: a child process with
-// DATABASE_URL pointed at the test database. Compiled to apps/server/dist.
+// The inbox is a repo-root script (scripts/feedback-inbox.mjs), so the test
+// runs it the way a session does: a child process with DATABASE_URL pointed
+// at the test database. Compiled to apps/server/dist.
 const repoRoot = fileURLToPath(new URL('../../../', import.meta.url));
 
 function runScript(script: string, args: string[]) {
@@ -56,19 +56,8 @@ async function seed(): Promise<void> {
   ]);
 }
 
-definePersistenceTests('feedback triage', () => {
-  test('migration 162 backfills every row to new', async () => {
-    await seed();
-    const rows = await getPool().query<{ triage_status: string }>(
-      `SELECT triage_status FROM feedback_submissions`,
-    );
-    assert.deepEqual(
-      rows.rows.map((row) => row.triage_status),
-      ['new', 'new'],
-    );
-  });
-
-  test('the inbox lists untriaged rows newest first with the address masked', async () => {
+definePersistenceTests('feedback inbox', () => {
+  test('the inbox lists submissions newest first with the address masked', async () => {
     await seed();
     const listed = runScript('feedback-inbox.mjs', ['--json']);
     assert.equal(listed.status, 0, listed.stderr);
@@ -82,6 +71,9 @@ definePersistenceTests('feedback triage', () => {
     assert.equal(rows[1]!.emailLeft, false);
     assert.doesNotMatch(listed.stdout, /jane\.doe/);
 
+    const shown = JSON.parse(runScript('feedback-inbox.mjs', ['--json', '--show-email']).stdout);
+    assert.equal(shown[0].email, 'jane.doe@protonmail.com');
+
     const since = JSON.parse(
       runScript('feedback-inbox.mjs', ['--json', '--since', '2026-10-01']).stdout,
     );
@@ -90,73 +82,8 @@ definePersistenceTests('feedback triage', () => {
       [NEWER],
     );
     const text = runScript('feedback-inbox.mjs', ['--limit', '1']);
-    assert.match(
-      text.stdout,
-      /1 feedback submission \(untriaged, newest first, capped at --limit 1\)/,
-    );
+    assert.match(text.stdout, /1 feedback submission \(newest first, capped at --limit 1\)/);
     assert.match(text.stdout, /\| The board flips when I open the game\./);
-  });
-
-  test('mark is the one write: it records the decision and prints the row', async () => {
-    await seed();
-    const marked = runScript('feedback-mark.mjs', [
-      NEWER,
-      '--status',
-      'triaged',
-      '--class',
-      'bug',
-      '--note',
-      'board flip fixed in f529d184, parked for ship',
-    ]);
-    assert.equal(marked.status, 0, marked.stderr);
-    assert.match(marked.stdout, /status triaged, class bug, triaged 20\d\d-/);
-    assert.match(marked.stdout, /note: board flip fixed in f529d184/);
-    assert.doesNotMatch(marked.stdout, /jane\.doe/);
-
-    // A second mark keeps the class and note it was not given.
-    assert.equal(runScript('feedback-mark.mjs', [NEWER, '--status', 'done']).status, 0);
-    const stored = await getPool().query<{
-      triage_status: string;
-      triage_class: string;
-      triage_note: string;
-      triaged_at: Date | null;
-    }>(
-      `SELECT triage_status, triage_class, triage_note, triaged_at FROM feedback_submissions WHERE id = $1`,
-      [NEWER],
-    );
-    assert.equal(stored.rows[0]!.triage_status, 'done');
-    assert.equal(stored.rows[0]!.triage_class, 'bug');
-    assert.match(stored.rows[0]!.triage_note, /f529d184/);
-    assert.ok(stored.rows[0]!.triaged_at);
-
-    const untriaged = JSON.parse(runScript('feedback-inbox.mjs', ['--json']).stdout);
-    assert.deepEqual(
-      untriaged.map((row: { id: string }) => row.id),
-      [OLDER],
-    );
-    const all = JSON.parse(runScript('feedback-inbox.mjs', ['--json', '--all']).stdout);
-    assert.equal(all.length, 2);
-
-    const missing = runScript('feedback-mark.mjs', [
-      '22222222-2222-4222-8222-222222222222',
-      '--status',
-      'spam',
-    ]);
-    assert.equal(missing.status, 1);
-    assert.match(missing.stderr, /No feedback submission/);
-    const withAddress = runScript('feedback-mark.mjs', [
-      OLDER,
-      '--status',
-      'triaged',
-      '--note',
-      'reply to jane.doe@protonmail.com',
-    ]);
-    assert.equal(withAddress.status, 1);
-    const unchanged = await getPool().query<{ triage_status: string }>(
-      `SELECT triage_status FROM feedback_submissions WHERE id = $1`,
-      [OLDER],
-    );
-    assert.equal(unchanged.rows[0]!.triage_status, 'new');
   });
 
   test('the readout counts feedback and names new arrivals by path only', async () => {
@@ -176,10 +103,13 @@ definePersistenceTests('feedback triage', () => {
     });
     assert.deepEqual(first.report.feedback, {
       received: 2,
-      untriaged: 2,
       recentPaths: ['/zh-hans/blog/cao-yanlei', '/play'],
     });
-    assert.equal(first.report.actions[0]?.code, 'feedback-new');
+    // No earlier snapshot: nothing to call new.
+    assert.equal(
+      first.report.actions.some((entry) => entry.code === 'feedback-new'),
+      false,
+    );
 
     await insertFeedbackSubmission({
       id: '33333333-3333-4333-8333-333333333333',
@@ -199,7 +129,7 @@ definePersistenceTests('feedback triage', () => {
     const action = second.report.actions.find((entry) => entry.code === 'feedback-new');
     assert.equal(
       action?.text,
-      '1 new feedback message since the last readout (`/contact`); 3 untriaged in all. Triage with npm run feedback:inbox.',
+      '1 new feedback message since the last readout (`/contact`). Read with npm run feedback:inbox.',
     );
     const serialized = JSON.stringify(second.report);
     assert.doesNotMatch(serialized, /Partnership\?|someone@example\.com|jane\.doe/);

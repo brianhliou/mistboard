@@ -538,16 +538,12 @@ async function collectUntrackedDpxqEvents(
 }
 
 // Counts and paths only; the bodies and reply addresses stay in the table,
-// where `npm run feedback:inbox` reads them for a triage session.
+// where `npm run feedback:inbox` reads them.
 const FEEDBACK_RECENT_PATHS = 5;
 
 async function collectFeedback(db: Queryable): Promise<MistboardReadoutFeedback> {
   const [counts, recent] = await Promise.all([
-    db.query<{ received: number; untriaged: number }>(
-      `SELECT count(*)::int AS received,
-              count(*) FILTER (WHERE triage_status = 'new')::int AS untriaged
-       FROM feedback_submissions`,
-    ),
+    db.query<{ received: number }>(`SELECT count(*)::int AS received FROM feedback_submissions`),
     db.query<{ path: string | null }>(
       `SELECT path FROM feedback_submissions ORDER BY created_at DESC, id LIMIT $1`,
       [FEEDBACK_RECENT_PATHS],
@@ -555,7 +551,6 @@ async function collectFeedback(db: Queryable): Promise<MistboardReadoutFeedback>
   ]);
   return {
     received: counts.rows[0]?.received ?? 0,
-    untriaged: counts.rows[0]?.untriaged ?? 0,
     recentPaths: recent.rows.map((row) => row.path),
   };
 }

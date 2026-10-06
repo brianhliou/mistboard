@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // Lists /contact feedback, newest first. Read only (a READ ONLY transaction).
-// Untriaged rows by default; the triage loop is docs-private/runbooks/feedback-triage.md.
+// The daily readout says when new messages arrived; this is how a session
+// reads them (docs-private/runbooks/feedback-triage.md).
 //
-//   node scripts/feedback-inbox.mjs                      # status 'new', newest 50
-//   node scripts/feedback-inbox.mjs --all                # every status
+//   node scripts/feedback-inbox.mjs                      # newest 50
 //   node scripts/feedback-inbox.mjs --since 2026-10-01 --limit 20
 //   node scripts/feedback-inbox.mjs --json               # machine-readable
 //   node scripts/feedback-inbox.mjs --show-email         # unmask reply addresses
@@ -19,10 +19,10 @@
 //     'DATABASE_URL="$DATABASE_PUBLIC_URL" node scripts/feedback-inbox.mjs'
 
 import pg from 'pg';
-import { formatInbox, listFeedback, parseInboxArgs } from './lib/feedback-triage.mjs';
+import { formatInbox, listFeedback, parseInboxArgs } from './lib/feedback-inbox.mjs';
 
 const USAGE =
-  'Usage: node scripts/feedback-inbox.mjs [--all] [--since YYYY-MM-DD] [--limit N] [--json] [--show-email]';
+  'Usage: node scripts/feedback-inbox.mjs [--since YYYY-MM-DD] [--limit N] [--json] [--show-email]';
 
 let options;
 try {

@@ -106,7 +106,6 @@
     "pilot:elephantchess-quality": "npm run pilot:elephantchess-quality --workspace @mistboard/server --",
     "readout:mistboard": "npm run readout:mistboard --workspace @mistboard/server --",
     "feedback:inbox": "node scripts/feedback-inbox.mjs",
-    "feedback:mark": "node scripts/feedback-mark.mjs",
     "curate:studies": "npm run curate:studies --workspace @mistboard/server --",
     "pilot:elephantchess-review:export": "npm run pilot:elephantchess-review:export --workspace @mistboard/server --",
     "pilot:elephantchess-publish": "npm run pilot:elephantchess-publish --workspace @mistboard/server --",
