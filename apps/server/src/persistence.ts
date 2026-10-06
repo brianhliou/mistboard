@@ -553,6 +553,14 @@ export {
   updateChapterTree,
   updateStudyMeta,
 } from './persistence-studies.js';
+export type { StudyChapterAnalysisRecord } from './persistence-study-analysis.js';
+export {
+  analysedBroadcastBoards,
+  analysedStudyChapterIds,
+  getStudyChapterAnalysis,
+  getStudyChapterAnalysisForRead,
+  saveStudyChapterAnalysis,
+} from './persistence-study-analysis.js';
 export type { VariantGrant, VariantPlayer } from './persistence-variant-access.js';
 export {
   ALLOWLISTED_GAME_SPEC_IDS,

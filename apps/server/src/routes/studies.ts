@@ -14,6 +14,7 @@
 //   PATCH  /api/studies/:id/chapters/:cid     save tree (version-guarded), rename, retag (owner)
 //   DELETE /api/studies/:id/chapters/:cid     delete a chapter (owner; refuses the last)
 //   POST   /api/studies/:id/clone             copy a readable study to the signed-in user (private)
+//   GET    /api/studies/:id/chapters/:cid/analysis  stored engine analysis of the chapter (readers)
 //   PUT    /api/admin/studies/:id/featured    feature/unfeature a public study (admin)
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -38,6 +39,7 @@ const ID = '[A-Za-z0-9]+';
 const STUDY_PATH = new RegExp(`^/api/studies/(${ID})$`);
 const CHAPTERS_PATH = new RegExp(`^/api/studies/(${ID})/chapters$`);
 const CHAPTER_PATH = new RegExp(`^/api/studies/(${ID})/chapters/(${ID})$`);
+const CHAPTER_ANALYSIS_PATH = new RegExp(`^/api/studies/(${ID})/chapters/(${ID})/analysis$`);
 const LIKE_PATH = new RegExp(`^/api/studies/(${ID})/like$`);
 const CLONE_PATH = new RegExp(`^/api/studies/(${ID})/clone$`);
 const FEATURED_PATH = new RegExp(`^/api/admin/studies/(${ID})/featured$`);
@@ -362,6 +364,14 @@ export async function tryHandle(
     return true;
   }
 
+  // ── A chapter's stored engine analysis ──
+  const analysisMatch = CHAPTER_ANALYSIS_PATH.exec(pathname);
+  if (analysisMatch) {
+    if (!requireMethod(request, response, 'GET')) return true;
+    if (!requirePersistence(response)) return true;
+    return readChapterAnalysis(request, response, analysisMatch[1]!, analysisMatch[2]!);
+  }
+
   // ── Add a chapter ──
   const chaptersMatch = CHAPTERS_PATH.exec(pathname);
   if (chaptersMatch) {
@@ -517,6 +527,11 @@ async function readStudy(
     user && practiceChapterIds.length > 0
       ? await persistence.solvedChapterIds(user.id, practiceChapterIds)
       : new Set<string>();
+  // Which chapters have a stored engine analysis, so the page fetches one only
+  // where there is one to show (one indexed read for the whole study).
+  const analysed = await persistence.analysedStudyChapterIds(
+    study.chapters.map((chapter) => chapter.id),
+  );
   writeJson(response, 200, {
     study: {
       ...studyView(study, isOwner),
@@ -526,7 +541,47 @@ async function readStudy(
     chapters: study.chapters.map((chapter) => ({
       ...chapterView(chapter),
       ...(solved.has(chapter.id) ? { solved: true } : {}),
+      ...(analysed.has(chapter.id) ? { hasAnalysis: true } : {}),
     })),
+  });
+  return true;
+}
+
+/**
+ * The chapter's stored whole-game analysis, readable by anyone who can read the
+ * study. It is served as stored, with the line it ran on: the reader compares
+ * that line with the chapter it has open and charts only the prefix they share
+ * (studyAnalysisCoveredPlies), so an edit after the run, saved or not, leaves
+ * later moves uncovered rather than showing evals for positions no longer
+ * there. 204 when the chapter has none. Who can CREATE analysis is decided
+ * elsewhere (study:analyse today, #510 later); this path serves whatever exists.
+ */
+async function readChapterAnalysis(
+  request: IncomingMessage,
+  response: ServerResponse,
+  studyId: string,
+  chapterId: string,
+): Promise<boolean> {
+  const found = await persistence.getStudyChapterAnalysisForRead(studyId, chapterId);
+  // A private study's analysis is its owner's, with the same 404-on-miss shape
+  // as the study read so existence is not leaked.
+  const user = found?.visibility === 'private' ? await currentAccountUser(request) : null;
+  if (!found || (found.visibility === 'private' && user?.id !== found.ownerId)) {
+    writeJson(response, 404, { error: 'not_found' });
+    return true;
+  }
+  const analysis = found.analysis;
+  if (!analysis) {
+    response.writeHead(204);
+    response.end();
+    return true;
+  }
+  writeJson(response, 200, {
+    engineId: analysis.engineId,
+    depth: analysis.depth,
+    rootFen: analysis.rootFen,
+    moves: analysis.moves,
+    plies: analysis.plies,
   });
   return true;
 }

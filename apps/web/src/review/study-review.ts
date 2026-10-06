@@ -13,10 +13,13 @@
 import type { StudyVariantId } from '../study-catalog.js';
 import './../game-route.css';
 import './../dark-xiangqi-postgame.css';
+import type { GameAnalysis } from './game-analysis.js';
+import { storedStudyAnalysisSource } from './study-analysis.js';
 import type { TreeReviewConfig, TreeReviewHandle } from './tree-review.js';
 
 /** The study page's slice of TreeReviewConfig: no `moves` (a study always seeds
- *  from `initialTree`), no whole-game `analysis` source, and a composition start
+ *  from `initialTree`), no whole-game `analysis` request (a chapter's analysis
+ *  is produced server-side and arrives as `storedAnalysis`), and a composition start
  *  given as a FEN string — resolving it to a truth state is the variant branch's
  *  job, since each variant's state type is its own and a shared one would have to
  *  be `unknown`. A FEN that no longer parses degrades to the standard start
@@ -44,6 +47,11 @@ export type StudyReviewConfig = Omit<
 > & {
   /** SerializedTree.rootFen — the chapter's hand-set start, if it has one. */
   rootFen?: string;
+  /** The chapter's stored engine analysis, already cut to the mainline prefix
+   *  it covers (review/study-analysis.ts). Awaited alongside the board chunk;
+   *  null or absent leaves the page exactly as it is without one: no analysis
+   *  tab, no request button. */
+  storedAnalysis?: Promise<GameAnalysis | null> | null;
 };
 
 export async function mountStudyReview(
@@ -51,8 +59,14 @@ export async function mountStudyReview(
   root: HTMLElement,
   config: StudyReviewConfig,
 ): Promise<TreeReviewHandle> {
-  const { rootFen, ...rest } = config;
-  const base = { ...rest, moves: [], analysis: null };
+  const { rootFen, storedAnalysis, ...rest } = config;
+  // Each case awaits this only after its own chunk import has started, so the
+  // analysis fetch and the board chunk load side by side.
+  const baseReady = Promise.resolve(storedAnalysis ?? null).then((analysis) => ({
+    ...rest,
+    moves: [],
+    analysis: analysis ? storedStudyAnalysisSource(analysis) : null,
+  }));
   // Stand-in game id for the dealt adapters, which key their deal recovery on
   // one. A study chapter has no game behind it: the deal comes from rootFen.
   const STUDY_GAME_ID = 'study';
@@ -65,7 +79,7 @@ export async function mountStudyReview(
         await Promise.all([import('./xiangqi-review.js'), import('@mistboard/game')]);
       const parsed = rootFen ? parseStandardXiangqiFen(rootFen) : null;
       return mountXiangqiReview(root, {
-        ...base,
+        ...(await baseReady),
         // The opening explorer IS on here (default). It was off until 2026-08-26
         // to leave the hand-specced study layout untouched; the call was made
         // when a study author reported the site had no game database, while the
@@ -83,7 +97,7 @@ export async function mountStudyReview(
       );
       const parsed = rootFen ? parseJungleFen(rootFen) : null;
       return mountJungleReview(root, {
-        ...base,
+        ...(await baseReady),
         root: parsed?.ok
           ? { truth: parsed.state, fen: jungleStateToEngineFen(parsed.state) }
           : undefined,
@@ -104,7 +118,7 @@ export async function mountStudyReview(
       installFortressXiangqiBoardStyles();
       const parsed = rootFen ? parseFortressXiangqiFen(rootFen) : null;
       return mountFortressXiangqiReview(root, {
-        ...base,
+        ...(await baseReady),
         root: parsed?.ok
           ? { truth: parsed.state, fen: fortressXiangqiEngineFen(parsed.state) }
           : undefined,
@@ -119,7 +133,7 @@ export async function mountStudyReview(
         ? parseStandardXiangqiFen(rootFen, 'fen-import', { allowExposedGeneral: true })
         : null;
       return mountDarkXiangqiReview(root, {
-        ...base,
+        ...(await baseReady),
         root: parsed?.ok
           ? { truth: parsed.state, fen: standardXiangqiFen(parsed.state) }
           : undefined,
@@ -136,7 +150,7 @@ export async function mountStudyReview(
         await Promise.all([import('./duck-xiangqi-review.js'), import('@mistboard/game')]);
       const parsed = rootFen ? parseDuckXiangqiFen(rootFen) : null;
       return mountDuckXiangqiReview(root, {
-        ...base,
+        ...(await baseReady),
         root: parsed?.ok ? { truth: parsed.state, fen: duckXiangqiFen(parsed.state) } : undefined,
       });
     }
@@ -146,7 +160,7 @@ export async function mountStudyReview(
       // Standard board and spelling: a xiangqi FEN is an atomic position.
       const parsed = rootFen ? atomicXiangqiStateFromFen(rootFen, STUDY_GAME_ID) : null;
       return mountAtomicXiangqiReview(root, {
-        ...base,
+        ...(await baseReady),
         root: parsed ? { truth: parsed, fen: atomicXiangqiFen(parsed) } : undefined,
       });
     }
@@ -158,7 +172,7 @@ export async function mountStudyReview(
       // Fairy-Stockfish's spelling, both hands in the pocket brackets.
       const parsed = rootFen ? parseCrazyhouseXiangqiFen(rootFen, STUDY_GAME_ID) : null;
       return mountCrazyhouseXiangqiReview(root, {
-        ...base,
+        ...(await baseReady),
         root: parsed?.ok
           ? { truth: parsed.state, fen: crazyhouseXiangqiFen(parsed.state) }
           : undefined,
@@ -171,7 +185,7 @@ export async function mountStudyReview(
       ]);
       const parsed = rootFen ? parseDarkChessFen(rootFen) : null;
       return mountDarkChessReview(root, {
-        ...base,
+        ...(await baseReady),
         root: parsed?.ok ? { truth: parsed.state, fen: darkChessFen(parsed.state) } : undefined,
       });
     }
@@ -182,7 +196,7 @@ export async function mountStudyReview(
       ]);
       const parsed = rootFen ? parseStandardChessFen(rootFen) : null;
       return mountChessReview(root, {
-        ...base,
+        ...(await baseReady),
         root: parsed?.ok ? { truth: parsed.state, fen: darkChessFen(parsed.state) } : undefined,
       });
     }
@@ -207,7 +221,7 @@ export async function mountStudyReview(
       const parsed = rootFen ? parseBanqiFen(rootFen) : null;
       if (!parsed?.ok) throw new Error('banqi study chapter needs a dealt root position');
       return mountBanqiReview(root, STUDY_GAME_ID, null, {
-        ...base,
+        ...(await baseReady),
         root: { truth: parsed.state, fen: banqiStateToDealtFen(parsed.state) },
       });
     }
@@ -225,7 +239,7 @@ export async function mountStudyReview(
       const parsed = rootFen ? parseJieqiFen(rootFen) : null;
       if (!parsed?.ok) throw new Error('jieqi study chapter needs a dealt root position');
       return mountJieqiReview(root, STUDY_GAME_ID, null, {
-        ...base,
+        ...(await baseReady),
         root: { truth: parsed.state, fen: jieqiStateToDealtFen(parsed.state) },
       });
     }
@@ -235,7 +249,7 @@ export async function mountStudyReview(
       const parsed = rootFen ? parseJungleFlipFen(rootFen) : null;
       if (!parsed?.ok) throw new Error('flip jungle study chapter needs a dealt root position');
       return mountJungleFlipReview(root, STUDY_GAME_ID, null, {
-        ...base,
+        ...(await baseReady),
         root: { truth: parsed.state, fen: jungleFlipStateToDealtFen(parsed.state) },
       });
     }
