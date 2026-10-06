@@ -152,7 +152,14 @@ describe('web tenant registry <-> server tenant registry parity', () => {
     expect(options.map((option) => ({ id: option.id, name: option.name }))).toEqual(
       [...XIANGQI_PUBLIC_ENGINES].reverse().map((tier) => ({ id: tier.id, name: tier.name })),
     );
-    expect(tenant?.landing?.defaultEngineId).toBe(XIANGQI_DEFAULT_ENGINE_ID);
+    // The picker's newcomer default is the homepage first-game rung
+    // (landing-bot-policy), not the server's fallback for a create request that
+    // omits the engine (XIANGQI_DEFAULT_ENGINE_ID, the middle rung). Both must
+    // be seats the server can fill.
+    expect(tenant?.landing?.defaultEngineId).toBe('fairy-stockfish-xiangqi-level-2');
+    const serverIds = XIANGQI_PUBLIC_ENGINES.map((tier) => tier.id);
+    expect(serverIds).toContain(tenant?.landing?.defaultEngineId);
+    expect(serverIds).toContain(XIANGQI_DEFAULT_ENGINE_ID);
   });
 
   it('jieqi picker engine options mirror the server ladder', () => {

@@ -110,6 +110,7 @@ const CRAZYHOUSE_XIANGQI_LEVEL = 4;
 export const JIEQI_FIRST_GAME_LEVEL = 2;
 const JIEQI_RETURNING_LEVEL = 4;
 const LADDER_BOT_ID_PREFIX = 'fairy-stockfish-level-';
+const XIANGQI_ENGINE_ID_PREFIX = 'fairy-stockfish-xiangqi-level-';
 
 // The Lobby rows rotate their rung and clock by bucket; Quick Pairing's chip
 // does not (landingBotOffer), because the chip shows neither a name nor, for
@@ -127,9 +128,18 @@ const LOBBY_LEVEL_OFFSETS = [0, -1, 1] as const;
 // and an engine id after a setup-dialog pick. The dialog lists engines, so a
 // remembered jieqi bot is mapped back to its engine here; otherwise it misses the
 // menu and a player who last played Pikafish reopens the dialog on the default. Same
-// for the jungle top seat: its bot is 'katago', its engine 'katago-jungle'.
+// for the jungle top seat: its bot is 'katago', its engine 'katago-jungle'. And
+// for xiangqi: a one-click start remembers 'fairy-stockfish-level-N' or
+// 'pikafish', which the dialog lists as 'fairy-stockfish-xiangqi-level-N' and
+// 'pikafish-xiangqi-level-8'; unmapped, a homepage Level 5 player reopened the
+// dialog on the newcomer default.
 export function pveEngineIdForRememberedPick(gameSpecId: string, id: string): string {
   if (gameSpecId === JUNGLE_SPEC_ID) return id === 'katago' ? 'katago-jungle' : id;
+  if (gameSpecId === XIANGQI_SPEC_ID) {
+    if (id === 'pikafish') return 'pikafish-xiangqi-level-8';
+    const level = fairyStockfishLevel(id);
+    return level === null ? id : `${XIANGQI_ENGINE_ID_PREFIX}${level}`;
+  }
   if (gameSpecId !== JIEQI_SPEC_ID) return id;
   if (id === 'pikafish') return 'pikafish-jieqi-strongest';
   if (id === 'ab-jchess') return 'ab-jchess-jieqi';
@@ -150,10 +160,22 @@ export function fairyStockfishLevel(botId: string | null | undefined): number | 
   return Number.isInteger(level) && level >= 1 && level <= 8 ? level : null;
 }
 
+// The setup dialog remembers the engine id ('fairy-stockfish-xiangqi-level-N'),
+// a one-click start the bot id ('fairy-stockfish-level-N'); both are the rung.
 export function xiangqiPrimaryLevel(rememberedBotId: string | null | undefined): number {
   if (!rememberedBotId) return XIANGQI_FIRST_GAME_LEVEL;
-  return fairyStockfishLevel(rememberedBotId) ?? XIANGQI_RETURNING_LEVEL;
+  const engineLevel = rememberedBotId.startsWith(XIANGQI_ENGINE_ID_PREFIX)
+    ? fairyStockfishLevel(
+        `${LADDER_BOT_ID_PREFIX}${rememberedBotId.slice(XIANGQI_ENGINE_ID_PREFIX.length)}`,
+      )
+    : null;
+  return fairyStockfishLevel(rememberedBotId) ?? engineLevel ?? XIANGQI_RETURNING_LEVEL;
 }
+
+// The /play setup dialog's default engine for a device with nothing remembered:
+// the same first-game rung the homepage offers, so the two cannot drift.
+export const XIANGQI_FIRST_GAME_ENGINE_ID = `fairy-stockfish-xiangqi-level-${XIANGQI_FIRST_GAME_LEVEL}`;
+export const JIEQI_FIRST_GAME_ENGINE_ID = `pikafish-jieqi-level-${JIEQI_FIRST_GAME_LEVEL}`;
 
 // The jieqi memory holds a bot id after a one-click start (`pikafish-level-N`)
 // and an engine id after a setup-dialog pick (`pikafish-jieqi-level-N`); both

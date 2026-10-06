@@ -594,7 +594,7 @@ describe('landing play panel', () => {
     document.body.append(panel);
 
     openPlaySetup(panel, 'Play a bot');
-    // Pick the strongest xiangqi engine (the default is level 4)...
+    // Pick the strongest xiangqi engine (a newcomer's default is level 2)...
     selectModalVariant('xiangqi');
     selectModalEngine('fairy-stockfish-xiangqi-level-8');
     // ...then visit Jieqi and pick its level 5 (its own ladder; a newcomer's
@@ -617,6 +617,42 @@ describe('landing play panel', () => {
     expect(document.querySelector<HTMLSelectElement>('select[aria-label="Bot"]')!.value).toBe(
       'pikafish-jieqi-level-5',
     );
+  });
+
+  // The setup dialog opens a newcomer on the same rung the homepage offers
+  // (landing-bot-policy first-game levels), and a level remembered from a
+  // homepage one-click start (stored as the bot id) is kept.
+  it('opens a newcomer on the homepage first-game level and keeps a remembered one', () => {
+    vi.stubEnv('VITE_XIANGQI_ENABLED', 'true');
+    vi.stubEnv('VITE_JIEQI_ENABLED', 'true');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
+    );
+    const botSelect = () => document.querySelector<HTMLSelectElement>('select[aria-label="Bot"]')!;
+    const panel = buildLandingPlayPanel([]);
+    document.body.append(panel);
+
+    openPlaySetup(panel, 'Play a bot');
+    selectModalVariant('xiangqi');
+    expect(botSelect().value).toBe('fairy-stockfish-xiangqi-level-2');
+    selectModalVariant('jieqi');
+    expect(botSelect().value).toBe('pikafish-jieqi-level-2');
+
+    document.body.replaceChildren();
+    window.localStorage.setItem(
+      'mistboard:setup:pve',
+      JSON.stringify({
+        engineIdByGameSpec: { xiangqi: 'fairy-stockfish-level-6', jieqi: 'pikafish-level-5' },
+      }),
+    );
+    const returning = buildLandingPlayPanel([]);
+    document.body.append(returning);
+    openPlaySetup(returning, 'Play a bot');
+    selectModalVariant('xiangqi');
+    expect(botSelect().value).toBe('fairy-stockfish-xiangqi-level-6');
+    selectModalVariant('jieqi');
+    expect(botSelect().value).toBe('pikafish-jieqi-level-5');
   });
 
   it('makes the last-played engine sticky across reopening the setup dialog', async () => {

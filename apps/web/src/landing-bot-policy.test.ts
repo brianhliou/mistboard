@@ -141,9 +141,12 @@ describe('landing bot policy', () => {
     });
   });
 
-  it('opens the jieqi setup dialog on the newcomer level when nothing is remembered', () => {
+  it('opens the setup dialog on the homepage first-game level when nothing is remembered', () => {
     expect(webVariantTenantForSpecId('jieqi')?.landing?.defaultEngineId).toBe(
       `pikafish-jieqi-level-${JIEQI_FIRST_GAME_LEVEL}`,
+    );
+    expect(webVariantTenantForSpecId('xiangqi')?.landing?.defaultEngineId).toBe(
+      `fairy-stockfish-xiangqi-level-${xiangqiPrimaryLevel(null)}`,
     );
   });
 
@@ -231,7 +234,28 @@ describe('landing bot policy', () => {
     expect(pveEngineIdForRememberedPick('jieqi', 'pikafish-jieqi-level-3')).toBe(
       'pikafish-jieqi-level-3',
     );
-    expect(pveEngineIdForRememberedPick('xiangqi', 'pikafish')).toBe('pikafish');
+    expect(pveEngineIdForRememberedPick('xiangqi', 'pikafish')).toBe('pikafish-xiangqi-level-8');
+  });
+
+  it('maps a remembered xiangqi bot to the engine the setup menu lists', () => {
+    const menu =
+      webVariantTenantForSpecId('xiangqi')?.landing?.engineOptions?.map((e) => e.id) ?? [];
+    for (const botId of ['pikafish', 'fairy-stockfish-level-1', 'fairy-stockfish-level-8']) {
+      expect(menu).toContain(pveEngineIdForRememberedPick('xiangqi', botId));
+    }
+    expect(pveEngineIdForRememberedPick('xiangqi', 'fairy-stockfish-level-5')).toBe(
+      'fairy-stockfish-xiangqi-level-5',
+    );
+    expect(pveEngineIdForRememberedPick('xiangqi', 'fairy-stockfish-xiangqi-level-3')).toBe(
+      'fairy-stockfish-xiangqi-level-3',
+    );
+    // The dialog's engine id reads back as the same rung on the homepage.
+    expect(xiangqiPrimaryLevel('fairy-stockfish-xiangqi-level-7')).toBe(7);
+    expect(xiangqiPrimaryLevel('fairy-stockfish-xiangqi-level-9')).toBe(5);
+    // Other variants keep their ids untouched.
+    expect(pveEngineIdForRememberedPick('fortress-xiangqi', 'fairy-stockfish-level-5')).toBe(
+      'fairy-stockfish-level-5',
+    );
   });
 
   it('maps a remembered KataGo bot to the jungle engine the setup menu lists', () => {
