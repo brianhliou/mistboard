@@ -509,6 +509,11 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
             { type: 'string', enum: [...WATCH_CHANNEL_IDS], default: 'top' },
             'Which channel. The set is what /watch offers and can change as variants launch.',
           ),
+          query(
+            'curated',
+            { type: 'string', enum: ['0'] },
+            '`0` lists the full feed without the 20-ply bar the Featured channel applies (what /games "Just finished" shows).',
+          ),
         ],
         responses: {
           '200': OK({

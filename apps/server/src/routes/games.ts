@@ -369,7 +369,12 @@ export async function tryHandle(
     // pattern this surface is for.
     // The active channel's list is what the client opens: drop games whose
     // stored log no longer replays (replayable-games.ts) before anything reads it.
-    const loadedActive = await loadChannel(channel);
+    // `curated=0` lists the channel's full feed without the curation bar: /games
+    // "Just finished", where a game that leaves the live wall has to land
+    // however short it was. That list is not the channel's rail row, so it never
+    // writes the rail; the rail is then built (or read) as for any other channel.
+    const uncurated = parsedUrl.searchParams.get('curated') === '0';
+    const loadedActive = await loadChannel(uncurated ? { ...channel, curated: false } : channel);
     const activeUnlocked = await filterReplayableGames(loadedActive.unlocked);
     const active = {
       ...loadedActive,
@@ -379,15 +384,17 @@ export async function tryHandle(
     const cachedRail = cachedWatchRail(now.getTime());
     let rail: readonly WatchRailRow[];
     if (cachedRail) {
-      rail = withFreshRow(cachedRail, railRow(active));
+      rail = uncurated ? cachedRail : withFreshRow(cachedRail, railRow(active));
     } else {
       const others = await Promise.all(
         listWatchChannels()
-          .filter((candidate) => candidate.id !== channel.id)
+          .filter((candidate) => uncurated || candidate.id !== channel.id)
           .map(loadChannel),
       );
       // Rebuilt in canonical rail order, not completion order.
-      const byId = new Map([active, ...others].map((result) => [result.channel.id, result]));
+      const byId = new Map(
+        [...(uncurated ? [] : [active]), ...others].map((result) => [result.channel.id, result]),
+      );
       rail = listWatchChannels().map((candidate) => railRow(byId.get(candidate.id)!));
       storeWatchRail(rail, now.getTime());
     }
