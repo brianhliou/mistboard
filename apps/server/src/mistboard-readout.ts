@@ -623,11 +623,22 @@ function readoutVerdict(
   return 'healthy';
 }
 
+// Codes whose every firing is a new event rather than a persisting problem key
+// on their dedupeKey. New feedback is one: two days of arrivals are two
+// different messages, and collapsing the second into "same problem" would skip
+// the email and issue comment that are the whole point of the line.
+const ALERT_PER_EVENT_CODES: ReadonlySet<string> = new Set(['feedback-new']);
+
 function alertKey(
   verdict: MistboardReadoutVerdict,
   actions: readonly MistboardReadoutAction[],
 ): string {
-  const shape = [verdict, ...actions.map((action) => action.code).sort()].join('|');
+  const shape = [
+    verdict,
+    ...actions
+      .map((action) => (ALERT_PER_EVENT_CODES.has(action.code) ? action.dedupeKey : action.code))
+      .sort(),
+  ].join('|');
   return createHash('sha256').update(shape).digest('hex').slice(0, 16);
 }
 

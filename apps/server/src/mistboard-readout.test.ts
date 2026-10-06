@@ -467,7 +467,7 @@ test('new feedback alerts on arrival with paths only, and a standing backlog sta
     third.actions[0]!.text,
     '2 new feedback messages since the last readout (`/play`, `/zh-hans/blog/cao-yanlei`); 5 untriaged in all. Triage with npm run feedback:inbox.',
   );
-  assert.equal(third.alertKey, first.alertKey, 'one problem shape, one alert key');
+  assert.notEqual(third.alertKey, first.alertKey, 'a new arrival is a new alert');
 
   // Triaged down with nothing new: quiet.
   const fourth = reportWith(feedback(9, 0, ['/play', '/zh-hans/blog/cao-yanlei']), third);
@@ -493,6 +493,30 @@ test('new feedback alerts on arrival with paths only, and a standing backlog sta
   assert.match(afterFailure.actions[0]!.text, /^2 untriaged feedback messages are waiting/);
   // An empty inbox with no baseline says nothing.
   assert.equal(reportWith(feedback(4, 0, ['/learn'])).actions.length, 0);
+});
+
+test('new feedback on consecutive days alerts both days; a standing backlog does not', () => {
+  // The daily email and issue comment skip a report whose alert key matches
+  // the previous one ("same problem"). Each arrival is a different message,
+  // so its key has to differ, or the second day's message is never surfaced.
+  const feedback = (received: number): MistboardReadoutFacts => ({
+    ...emptyFacts,
+    feedback: { received, untriaged: received, recentPaths: ['/contact'] },
+  });
+  const baseline = reportWith(feedback(2), reportWith(feedback(2)));
+  assert.equal(baseline.actions.length, 0);
+
+  const a = reportWith(feedback(3), baseline);
+  assert.equal(a.actions[0]?.code, 'feedback-new');
+  assert.notEqual(a.alertKey, baseline.alertKey);
+
+  const b = reportWith(feedback(4), a);
+  assert.equal(b.actions[0]?.code, 'feedback-new');
+  assert.notEqual(b.alertKey, a.alertKey, 'a second day of new feedback is not the same problem');
+
+  const c = reportWith(feedback(4), b);
+  assert.equal(c.actions.length, 0);
+  assert.equal(c.verdict, 'healthy');
 });
 
 test('the alert key holds steady while counters move under an unchanged problem', () => {
