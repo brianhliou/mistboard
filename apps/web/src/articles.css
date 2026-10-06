@@ -1537,6 +1537,27 @@
   padding-inline: 12px;
 }
 
+/* The game's advantage chart under the board (xiangqi-replay-chart.ts): the
+   review chart itself, shorter than its 162px underboard size so it reads as
+   a strip under the board rather than a second figure. The slot is this exact
+   height from the first paint and the chart arrives into it, so loading moves
+   nothing. Three classes so the height wins over advantage-chart.css whichever
+   chunk loads last (feedback_css_chunk_order_cascade). */
+.xq-replay .xq-replay-chart {
+  box-sizing: border-box;
+  width: 100%;
+  height: 116px;
+  padding: 6px 12px;
+}
+
+.xq-replay .xq-replay-chart .advantage-chart__svg {
+  height: 104px;
+}
+
+.xq-replay:not(.xq-replay-annotated) .xq-replay-chart {
+  max-width: 316px;
+}
+
 .xq-replay-annotated .raw-svg-stepper-frame-xq > .xq-article-svg[data-xq-layout="single"] {
   display: block;
   width: 100%;

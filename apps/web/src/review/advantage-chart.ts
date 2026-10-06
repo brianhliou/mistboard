@@ -60,6 +60,9 @@ export function createAdvantageChart(
     /** Phase boundaries → vertical dividers + rotated Opening/Middlegame/Endgame
      *  labels (lichess). Omitted or empty = no phase chrome. */
     phases?: GamePhases;
+    /** The three phase labels in the page's language (an article in Chinese).
+     *  Omitted = English, which is what every review surface shows. */
+    phaseLabels?: { opening: string; middlegame: string; endgame: string };
     /** Move text for the position at `ply` (e.g. "12... h10-i10"), shown in the
      *  hover readout above the eval. Omitted = the readout shows the eval alone. */
     moveLabel?: (ply: number) => string | null;
@@ -181,10 +184,15 @@ export function createAdvantageChart(
   // non-uniformly (preserveAspectRatio none), so rotated SVG text would distort.
   // A game with no detected middlegame gets no phase chrome at all.
   if (opts.phases?.middle && opts.phases.middle <= maxPly) {
-    const marks: { ply: number; label: string }[] = [{ ply: 0, label: 'Opening' }];
-    marks.push({ ply: opts.phases.middle, label: 'Middlegame' });
+    const names = opts.phaseLabels ?? {
+      opening: 'Opening',
+      middlegame: 'Middlegame',
+      endgame: 'Endgame',
+    };
+    const marks: { ply: number; label: string }[] = [{ ply: 0, label: names.opening }];
+    marks.push({ ply: opts.phases.middle, label: names.middlegame });
     if (opts.phases.end && opts.phases.end <= maxPly) {
-      marks.push({ ply: opts.phases.end, label: 'Endgame' });
+      marks.push({ ply: opts.phases.end, label: names.endgame });
     }
     for (const mark of marks) {
       if (mark.ply > 0) {

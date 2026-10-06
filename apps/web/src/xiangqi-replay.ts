@@ -595,6 +595,17 @@ export function mountXiangqiReplay(
   const resultFoot = document.createElement('div');
   resultFoot.className = 'xq-replay-result';
 
+  // The game's advantage chart, for a board whose game is in the broadcast
+  // archive (see xiangqi-replay-chart.ts). The slot is placed now at the chart's
+  // full height, so a chart arriving later moves nothing on the page; it is
+  // dropped again if the game turns out to have no stored analysis. Without
+  // IntersectionObserver there is no lazy load, so there is no slot either.
+  let chartSlot: HTMLElement | null = null;
+  if (spec.boardId && typeof IntersectionObserver === 'function') {
+    chartSlot = document.createElement('div');
+    chartSlot.className = 'xq-replay-chart';
+  }
+
   if (annotated) {
     // Study layout, built as ONE card rather than a board next to a bordered
     // box: seat bars top and bottom of the board the way a game page shows
@@ -636,7 +647,11 @@ export function mountXiangqiReplay(
     controlWrap.append(controls, menu);
     const seatTop = seat(nameOf(topSide), topSide);
     const seatBottom = seat(nameOf(bottomSide), bottomSide);
-    boardCol.append(seatTop, frame, seatBottom, controlWrap);
+    // The chart sits between the board and the control bar, so the bar stays
+    // the card's bottom edge, level with the result foot beside it.
+    const boardColParts = (top: HTMLElement, bottom: HTMLElement): HTMLElement[] =>
+      chartSlot ? [top, frame, bottom, chartSlot, controlWrap] : [top, frame, bottom, controlWrap];
+    boardCol.append(...boardColParts(seatTop, seatBottom));
 
     // Registered here, where the column's parts are in scope. The callbacks run
     // later, and goto/render are hoisted function declarations, so referring to
@@ -648,10 +663,7 @@ export function mountXiangqiReplay(
       // An explicit re-order of the whole column. Shuffling two nodes around
       // each other left the control bar above the board.
       boardCol.replaceChildren(
-        flipped ? seatBottom : seatTop,
-        frame,
-        flipped ? seatTop : seatBottom,
-        controlWrap,
+        ...boardColParts(flipped ? seatBottom : seatTop, flipped ? seatTop : seatBottom),
       );
       render();
     });
@@ -676,7 +688,7 @@ export function mountXiangqiReplay(
     grid.append(boardCol, moveCol);
     host.append(header, grid);
   } else {
-    host.append(header, frame, controls, slider, narrative);
+    host.append(header, frame, ...(chartSlot ? [chartSlot] : []), controls, slider, narrative);
   }
 
   // The embed card's credit line, in the same place and the same type: under
@@ -1051,6 +1063,8 @@ export function mountXiangqiReplay(
     // The card always shows the result, the way a game page does; the running
     // narrative line is the plain stepper's job.
     resultFoot.textContent = xiangqiResultLabel(spec.resultText, copy) || spec.resultText;
+    // Inside an engine line the cursor stays on the game move the line hangs off.
+    chart?.setPly(index);
     renderMoveList();
     if (takeFocusAfterRender || (focusInMoveList && !wasFocused?.isConnected)) {
       takeFocusAfterRender = false;
@@ -1202,11 +1216,93 @@ export function mountXiangqiReplay(
   };
   window.addEventListener(xiangqiNotationChangedEvent, onNotation);
 
+  // --- Advantage chart (lazy) ----------------------------------------------
+  let chart: { setPly(ply: number): void } | null = null;
+  let chartJumpReported = false;
+  let destroyed = false;
+  let chartObserver: IntersectionObserver | null = null;
+
+  /** "12. h2e2" / "12\u2026 h9g7", numbered the way the move list numbers its rows. */
+  // The annotated card already holds the mainline in the reader's notation; the
+  // plain stepper does not, so the chart formats its own, per notation style.
+  let chartLabels: { style: string; labels: string[] } | null = null;
+  const chartMoveLabel = (ply: number): string | null => {
+    if (ply < 1 || ply > total) return null;
+    let labels = mainlineLabels;
+    if (labels.length === 0) {
+      const style = currentXiangqiNotationStyle();
+      if (chartLabels?.style !== style) {
+        chartLabels = { style, labels: formatXiangqiMoves(moves, style, startState) };
+      }
+      labels = chartLabels.labels;
+    }
+    const isFirst = (ply % 2 === 1) === (firstMover === 'red');
+    const n = Math.ceil((ply + plyOffset) / 2);
+    return `${n}${isFirst ? '.' : '\u2026'} ${labels[ply - 1] ?? ''}`;
+  };
+
+  async function loadChart(boardId: string, slot: HTMLElement): Promise<void> {
+    const mod = await import('./xiangqi-replay-chart.js');
+    const analysis = await mod.loadReplayChartAnalysis(boardId, total);
+    if (destroyed) return;
+    if (!analysis) {
+      // No stored analysis: give the reserved height back, and keep the slot
+      // out of the flip menu's re-order.
+      slot.remove();
+      chartSlot = null;
+      return;
+    }
+    const drawn = mod.createReplayAdvantageChart(analysis, {
+      states,
+      moveLabel: chartMoveLabel,
+      ariaLabel: copy.advantageChart,
+      phaseLabels: copy.phases,
+      onJump: (ply) => {
+        if (!chartJumpReported) {
+          chartJumpReported = true;
+          track('article_replay_chart_jump', {
+            slug:
+              document.querySelector('[data-article-slug]')?.getAttribute('data-article-slug') ??
+              '',
+            event: spec.event,
+          });
+        }
+        gotoMainline(ply);
+      },
+    });
+    slot.replaceChildren(drawn.el);
+    slot.classList.add('is-loaded');
+    chart = drawn;
+    drawn.setPly(index);
+  }
+
+  if (chartSlot && spec.boardId) {
+    const slot = chartSlot;
+    const boardId = spec.boardId;
+    // Fetched when the board comes within a screen of the viewport, once.
+    chartObserver = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        chartObserver?.disconnect();
+        chartObserver = null;
+        loadChart(boardId, slot).catch(() => {
+          if (destroyed) return;
+          slot.remove();
+          chartSlot = null;
+        });
+      },
+      { rootMargin: '600px 0px' },
+    );
+    chartObserver.observe(host);
+  }
+
   relabel();
   render();
 
   return {
     destroy(): void {
+      destroyed = true;
+      chartObserver?.disconnect();
       first.removeEventListener('click', onFirst);
       prev.removeEventListener('click', onPrev);
       next.removeEventListener('click', onNext);

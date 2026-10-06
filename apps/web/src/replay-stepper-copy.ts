@@ -51,6 +51,10 @@ export type ReplayStepperCopy = {
   noPieces: string;
   /** The link under an article board whose game is in the broadcast archive. */
   fullAnalysis: string;
+  /** Accessible name of the advantage chart under an article board. */
+  advantageChart: string;
+  /** The chart's phase dividers, in the page's language. */
+  phases: { opening: string; middlegame: string; endgame: string };
 };
 
 type FamilyStrings = {
@@ -90,6 +94,8 @@ const COMMON: Record<
     wins: (side) => `${side} wins`,
     draw: 'Draw',
     fullAnalysis: 'Full game analysis',
+    advantageChart: 'Engine evaluation over the game. Click to jump to a move.',
+    phases: { opening: 'Opening', middlegame: 'Middlegame', endgame: 'Endgame' },
   },
   'zh-Hans': {
     firstMove: '第一步',
@@ -115,6 +121,8 @@ const COMMON: Record<
     wins: (side) => `${side}胜`,
     draw: '和棋',
     fullAnalysis: '全局引擎分析',
+    advantageChart: '全局形势图，点击可跳到该步',
+    phases: { opening: '开局', middlegame: '中局', endgame: '残局' },
   },
   'zh-Hant': {
     firstMove: '第一步',
@@ -140,6 +148,8 @@ const COMMON: Record<
     wins: (side) => `${side}勝`,
     draw: '和棋',
     fullAnalysis: '全局引擎分析',
+    advantageChart: '全局形勢圖，點擊可跳到該步',
+    phases: { opening: '開局', middlegame: '中局', endgame: '殘局' },
   },
 };
 
