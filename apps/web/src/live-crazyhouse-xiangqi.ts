@@ -31,14 +31,14 @@ import {
   isCrazyhouseXiangqiDropRole,
 } from './crazyhouse-xiangqi-view.js';
 import { crazyhouseXiangqiEnabled } from './feature-flags.js';
+import { soundForOwnCrazyhouseXiangqiMove } from './live-crazyhouse-xiangqi-sound.js';
 import { finishBadgesForResult, generalSquareIn } from './live-finish-badges.js';
 import { playSound } from './live-sound.js';
-import type { LiveRefs, SoundKind } from './live-state.js';
+import type { LiveRefs } from './live-state.js';
 import {
   classifyXiangqiOpponentSound,
   maybePlayXiangqiSnapshotSound,
   resetXiangqiSoundState,
-  soundForOwnXiangqiMove,
   type XiangqiSeatOrSpectator,
   type XiangqiSoundView,
 } from './live-xiangqi-sound.js';
@@ -259,14 +259,6 @@ function playSnapshotSound(): void {
   );
 }
 
-function soundForOwnMove(
-  view: CrazyhouseXiangqiPlayerView,
-  move: CrazyhouseXiangqiMove,
-): SoundKind {
-  if (isCrazyhouseXiangqiDropMove(move)) return 'drop';
-  return soundForOwnXiangqiMove(view as XiangqiSoundView, move);
-}
-
 // ── Rendering ────────────────────────────────────────────────────────────────
 
 // The core calls this once per renderAll, before the hand strips read the
@@ -407,7 +399,7 @@ function sendMove(view: CrazyhouseXiangqiPlayerView, move: CrazyhouseXiangqiMove
   const message = isCrazyhouseXiangqiDropMove(move)
     ? { type: 'move', drop: move.drop, to: move.to }
     : { type: 'move', from: move.from, to: move.to };
-  if (core?.send(message)) playSound(soundForOwnMove(view, move));
+  if (core?.send(message)) playSound(soundForOwnCrazyhouseXiangqiMove(view, move));
   core?.renderAll();
 }
 

@@ -22,7 +22,6 @@ import {
   resultLabel,
   seedWatchRail,
   setWatchSeatInkFamily,
-  shouldPlayWatchMoveSound,
   WATCH_FEED_CACHE_MS,
   wantsInitialLive,
   watchFeedCacheIsFresh,
@@ -64,17 +63,6 @@ describe('watchRailAnchor', () => {
     expect(watchRailAnchor(0, 0)).toBe('board');
     expect(watchRailAnchor(0, 480)).toBe('board');
     expect(watchRailAnchor(308, 0)).toBe('board');
-  });
-});
-
-describe('watch move sounds', () => {
-  it('sounds only a single forward ply, not initial paint, jumps, or loop resets', () => {
-    expect(shouldPlayWatchMoveSound(null, 0)).toBe(false);
-    expect(shouldPlayWatchMoveSound(0, 1)).toBe(true);
-    expect(shouldPlayWatchMoveSound(1, 2)).toBe(true);
-    expect(shouldPlayWatchMoveSound(2, 2)).toBe(false);
-    expect(shouldPlayWatchMoveSound(2, 8)).toBe(false);
-    expect(shouldPlayWatchMoveSound(8, 0)).toBe(false);
   });
 });
 

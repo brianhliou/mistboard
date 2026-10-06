@@ -23,6 +23,7 @@ import {
   viewAtPly,
 } from './live-jungle-flip-postgame.js';
 import type { ReplayHandle } from './replay.js';
+import { watchJungleFlipMoveSound } from './watch-move-sound.js';
 import { mountTenantWatchReplay, type TenantWatchReplayOptions } from './watch-tenant-replay.js';
 
 export type JungleFlipWatchReplayOptions = TenantWatchReplayOptions;
@@ -63,6 +64,8 @@ export function mountJungleFlipWatchReplay(
       if (!move) return;
       animateJungleFlipBoardMove(boardEl, move, { reverse: direction === 'back' });
     },
+    // Spectator cue: the mover's own-move sound (watch-move-sound.ts).
+    moveSound: watchJungleFlipMoveSound,
     fillCaptures: () => {},
     reveal: { hiddenKey: 'truth', truthKey: 'revealed' },
     resultLabel: (result, postgame) => jungleFlipResultLabel(result, postgame.view.firstColor),

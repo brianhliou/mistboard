@@ -13,6 +13,7 @@
 import { terminationLabel as sharedTerminationLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
+import type { SoundKind } from './live-state.js';
 import {
   anchorForPly,
   offsetsFromDurations,
@@ -170,6 +171,11 @@ export type TenantWatchAdapter<Postgame extends WatchPostgameMeta, View, ViewKey
     orientation: 'red' | 'black',
     key: ViewKey,
   ): void;
+  // OPTIONAL spectator move cue for the step from `prevView` (ply N-1) to `view`
+  // (ply N), both read from the track the board is drawing. Tenants pass a
+  // watch-move-sound.ts function, which hands the variant's own live-room
+  // classifier the mover's side of the board. Omitted: every ply is a plain move.
+  moveSound?(prevView: View, view: View): SoundKind;
 };
 
 export type TenantWatchReplayOptions = {
@@ -1289,6 +1295,22 @@ export async function mountTenantWatchReplay<
       sync();
     },
     playedMoves: () => (activePostgame ? tenantPlayedMoves(activePostgame) : []),
+    // The cue for the move that produced `ply`, read from the track the board is
+    // drawing (the reveal toggle's choice, else the pane's own key), so it can
+    // only say what the board shows. Null outside 1..maxPly.
+    moveSoundAtPly: (ply: number) => {
+      if (!activePostgame || ply < 1 || ply > maxPly) return null;
+      const target = boardTargets[0];
+      if (!target) return null;
+      const key = adapter.reveal
+        ? ((revealed ? adapter.reveal.truthKey : adapter.reveal.hiddenKey) as ViewKey)
+        : target.key;
+      const prev = adapter.viewAtPly(activePostgame, key, ply - 1);
+      const next = adapter.viewAtPly(activePostgame, key, ply);
+      if (!adapter.moveSound || !prev || !next) return 'move';
+      return adapter.moveSound(prev, next);
+    },
+    gameResult: () => activePostgame?.game.result ?? null,
     availablePovs: () => {
       if (!activePostgame) return [];
       const kinds = new Set<'white' | 'truth' | 'black'>();

@@ -17,6 +17,7 @@ import {
 import { type DarkXiangqiWireView, renderDarkXiangqiBoardSvg } from './live-dark-xiangqi.js';
 import type { ReplayHandle } from './replay.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
+import { watchDarkXiangqiMoveSound } from './watch-move-sound.js';
 import { mountTenantWatchReplay, type TenantWatchReplayOptions } from './watch-tenant-replay.js';
 
 export type DarkXiangqiWatchReplayOptions = TenantWatchReplayOptions;
@@ -54,6 +55,8 @@ export function mountDarkXiangqiWatchReplay(
       renderDarkXiangqiBoardSvg(view, orientation, { showFog: key !== 'truth' }),
     // Dark Xiangqi's wire view carries no captured-pool, so there is nothing to
     // render in the per-pane capture strips.
+    // Spectator cue: the mover's own-move sound (watch-move-sound.ts).
+    moveSound: watchDarkXiangqiMoveSound,
     fillCaptures: () => {},
   });
 }

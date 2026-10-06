@@ -10,6 +10,11 @@ import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
 import { variantMiniIdForRawVariant } from './variants.js';
 import { boardAspectForSpec } from './watch-board-aspect.js';
 import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
+import {
+  playWatchSoundPlan,
+  watchLiveEndSoundPlan,
+  watchLiveMoveSoundPlan,
+} from './watch-sound.js';
 import './watch-route.css';
 import {
   displayLiveName,
@@ -25,7 +30,7 @@ import {
   watchChannelLabel,
 } from './game-display.js';
 import { gameMetaForGame, reviewUrlForGame, timeControlLabelForGame } from './game-meta.js';
-import { initLiveSound, playSound } from './live-sound.js';
+import { initLiveSound } from './live-sound.js';
 import { participantProfileTarget, playerNameEl, profileTargetFor } from './profile-link.js';
 import type { GameMeta, ReplayHandle } from './replay.js';
 import { renderWatchReplaySkeleton } from './replay-skeleton.js';
@@ -154,10 +159,6 @@ function liveFirstColor(featured: LiveFeatured): 'red' | 'black' | null {
   const view = (featured.payload as { view?: { firstColor?: unknown } } | undefined)?.view;
   const firstColor = view?.firstColor;
   return firstColor === 'red' || firstColor === 'black' ? firstColor : null;
-}
-
-export function shouldPlayWatchMoveSound(previousPly: number | null, nextPly: number): boolean {
-  return previousPly !== null && nextPly === previousPly + 1;
 }
 
 // Ordering guard for user-initiated channel/game switches.
@@ -302,7 +303,12 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   let clockTicker: number | null = null;
   let watchPly = 0;
   let watchMaxPly = 0;
+  // The live board's last ply that was heard (or seeded, silently). Only the
+  // live follow moves it: one ply past it sounds, anything else re-seeds. Null
+  // when no live game is on the board, so the next one seeds rather than sounds.
   let lastSoundPly: number | null = null;
+  // The live game whose end tone has played, so it plays once.
+  let endSoundRoomId: string | null = null;
   let queuePreviewHandles: ReplayHandle[] = [];
   let queuePreviewKey = '';
   let queueRenderVersion = 0;
@@ -345,6 +351,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     livePayload = null;
     liveHandle?.destroy();
     liveHandle = null;
+    lastSoundPly = null;
     // The rail was drawn from the live handle; stop its ticker before the
     // completed-feed render seeds the rail again (or nothing does).
     clearMoveList();
@@ -532,9 +539,9 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
 
   // Re-highlight the current move + refresh the scrubber bounds/status. Driven by
   // the handle's onPlyChange on every autoplay tick or manual jump.
+  // Silent by design: plies also change on seeds, scrubs, jumps and replay
+  // playback. Live sound is driven from updateLive, which knows a frame is new.
   const syncMoveList = (ply: number, maxPly: number): void => {
-    if (shouldPlayWatchMoveSound(lastSoundPly, ply)) playSound('move');
-    lastSoundPly = ply;
     watchPly = ply;
     watchMaxPly = maxPly;
     moveList?.update(ply, jumpBoardToPly);
@@ -549,9 +556,6 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     moveList = null;
     watchPly = 0;
     watchMaxPly = 0;
-    // A different game's plies are not a continuation of this one's, so the
-    // next seed must not read as "one move later" and fire the move sound.
-    lastSoundPly = null;
     moveScrubber.setBounds(0, 0);
     stopClockTicker();
     clearClocks();
@@ -971,6 +975,8 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     liveShownPly = featured.ply;
     watch.el.classList.add('watch-live-mode');
     followLiveRail(liveHandle);
+    // A new game on the board is a seed, never "one move later".
+    lastSoundPly = liveHandle.plyCount?.() ?? featured.ply;
     renderLiveMeta(featured);
     renderQueue(currentFeed, null, null);
     // Top always follows the CURRENT top game, so the shareable URL is
@@ -981,11 +987,20 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   const updateLive = async (featured: LiveFeatured): Promise<void> => {
     registerLiveNames(featured);
     if (featured.payload) livePayload = { roomId: featured.roomId, payload: featured.payload };
-    if (featured.ply > liveShownPly && featured.payload && liveHandle) {
-      await liveHandle.loadGame(featured.roomId);
+    const handle = liveHandle;
+    if (featured.ply > liveShownPly && featured.payload && handle) {
+      await handle.loadGame(featured.roomId);
+      if (handle !== liveHandle) return; // dropped or replaced while loading
       liveShownPly = featured.ply;
-      followLiveRail(liveHandle);
+      followLiveRail(handle);
       renderLiveMeta(featured);
+      // Live forward progress: each new ply sounds as its mover heard it when the
+      // frame carries one or two; a bigger jump (a tab catching up) re-seeds
+      // silently.
+      const ply = handle.plyCount?.() ?? featured.ply;
+      const plan = watchLiveMoveSoundPlan(lastSoundPly, ply, (p) => handle.moveSoundAtPly?.(p));
+      lastSoundPly = ply;
+      playWatchSoundPlan(plan);
     }
   };
 
@@ -1001,8 +1016,40 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
 
   // The live game ended (or vanished): drop the live board and fall back to the
   // completed cross-variant feed for the Top channel.
+  // The followed game left the live feed. Ask its finished record whether it
+  // actually ended (a live payload never carries the end: the server stops
+  // serving the room once it finishes), through the live handle itself: with the
+  // live payload withdrawn, its loader falls back to the finished-game endpoint
+  // (the same live-to-finished handoff the homepage board uses), and a game that
+  // merely went quiet has no finished record, so it stays silent. When it did
+  // end: the moves no live frame carried, then one neutral end tone, once per
+  // game. The TV feed cannot answer this: it is a curated cut that may never
+  // list the game (a short PvE game, for one).
+  const soundLiveGameEnd = async (): Promise<void> => {
+    const handle = liveHandle;
+    const roomId = liveRoomId;
+    const lastLivePly = lastSoundPly;
+    if (!handle || !roomId || endSoundRoomId === roomId || !handle.gameResult) return;
+    livePayload = null;
+    try {
+      await handle.loadGame(roomId);
+    } catch (err) {
+      console.warn(err);
+      return;
+    }
+    const result = handle.gameResult();
+    if (!result || result === 'in-progress' || endSoundRoomId === roomId) return;
+    endSoundRoomId = roomId;
+    playWatchSoundPlan(
+      watchLiveEndSoundPlan(lastLivePly, handle.plyCount?.() ?? null, (p) =>
+        handle.moveSoundAtPly?.(p),
+      ),
+    );
+  };
+
   const exitLive = async (): Promise<void> => {
     const endedRoomId = liveRoomId;
+    await soundLiveGameEnd();
     dropLiveBoard();
     // The feed in hand was fetched while this game was still live, so it cannot
     // hold it: repainting from it put the PREVIOUS finished game on the board
@@ -1035,7 +1082,11 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
       if (data) {
         if (data.featured) {
           if (liveActive && data.featured.roomId === liveRoomId) await updateLive(data.featured);
-          else await enterLive(data.featured);
+          else {
+            // Another game took the board; the one leaving may have just ended.
+            if (liveActive) await soundLiveGameEnd();
+            await enterLive(data.featured);
+          }
         } else if (liveActive) {
           await exitLive();
         }
@@ -1160,7 +1211,11 @@ async function mountWatchReplay(
       namesByRoomId,
       onGameEnd: holdAtEnd,
       onPlyChange,
-      ...(live ? { live: true, loadPostgameOverride: live.loadPostgameOverride } : {}),
+      // A followed game whose finished record is not there (it went quiet, or
+      // has not persisted yet) keeps its last frame instead of the error notice.
+      ...(live
+        ? { live: true, loadPostgameOverride: live.loadPostgameOverride, onLoadError: () => true }
+        : {}),
     });
   }
   // Chess (chessground): the fog channel (dark-chess). Watch only ever serves COMPLETED games, so the middle

@@ -16,6 +16,7 @@ import {
 import { fillFortressXiangqiReserve } from './fortress-xiangqi-view.js';
 import type { ReplayHandle } from './replay.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
+import { watchFortressXiangqiMoveSound } from './watch-move-sound.js';
 import { mountTenantWatchReplay, type TenantWatchReplayOptions } from './watch-tenant-replay.js';
 
 export type FortressXiangqiWatchReplayOptions = TenantWatchReplayOptions;
@@ -51,6 +52,8 @@ export function mountFortressXiangqiWatchReplay(
     // held none of, the way lichess draws a crazyhouse pocket. Held-only rows
     // render the common empty pocket as a blank band, and shift the pieces
     // already in hand every time a new one arrives.
+    // Spectator cue: the mover's own-move sound (watch-move-sound.ts).
+    moveSound: watchFortressXiangqiMoveSound,
     fillCaptures: (host, view, owner) =>
       fillFortressXiangqiReserve(host, view, owner, { allRoles: true }),
     sidedCaptures: true,

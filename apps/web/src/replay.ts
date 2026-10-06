@@ -32,6 +32,7 @@ import type { BeliefConfig, BeliefPanelHandle } from './belief-panel.js';
 import { chessgroundAnimation } from './board-anim.js';
 import { computeCaptures } from './captures.js';
 import { t } from './i18n/catalog.js';
+import type { SoundKind } from './live-state.js';
 import { anchorForPly, positionAt } from './recorded-playback.js';
 import {
   type AnnotationConfig,
@@ -287,6 +288,14 @@ export type ReplayHandle = {
    *  has from === to). OPTIONAL; lets a caller match a stored best move against the
    *  move played without decoding the variant's rules. */
   playedMoves?: () => Array<{ ply: number; from?: string; to?: string }>;
+  /** The spectator sound for the move that produced `ply` (move, capture, flip,
+   *  drop, ...), derived only from the views the board draws. OPTIONAL; null
+   *  outside the game's plies. Mistboard TV's live follow is the only caller. */
+  moveSoundAtPly?: (ply: number) => SoundKind | null;
+  /** The loaded game's recorded result ('in-progress' for a live frame), or null
+   *  before anything loaded. OPTIONAL; TV's live follow reads it to tell a game
+   *  that ended from one that went quiet. */
+  gameResult?: () => string | null;
 };
 
 /** What a caller draws over a replay board at one ply. */
