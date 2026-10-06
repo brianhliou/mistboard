@@ -34,7 +34,12 @@ import { BANQI_CONVERSION_GAME } from '../banqi-engine-game.js';
 import { BANQI_SAMPLE_GAME } from '../banqi-sample-game.js';
 import { tokenPieceSize } from '../board-metrics.js';
 import type { XiangqiBoardLayout } from '../xiangqi-appearance-storage.js';
-import { type XiangqiBoardGeometry, xiangqiBoardPoint } from '../xiangqi-board-geometry.js';
+import {
+  type XiangqiBoardGeometry,
+  xiangqiBoardPoint,
+  xiangqiDisplayFile,
+  xiangqiDisplayRow,
+} from '../xiangqi-board-geometry.js';
 import { drawsCrossedSoldier, drawsVeteranSoldier } from '../xiangqi-crossed-soldier.js';
 import {
   DEFAULT_XIANGQI_PIECE_SET,
@@ -1257,7 +1262,7 @@ export function xqSvgIdPart(value: string): string {
 }
 
 export function xqVisualRow(rank: number, perspective: XiangqiColor): number {
-  return perspective === 'red' ? 10 - rank : rank - 1;
+  return xiangqiDisplayRow(rank, perspective, 10);
 }
 
 // Render context for the xiangqi piece set. The diagram SVGs are produced by
@@ -1386,11 +1391,15 @@ export function xqFogLayer(
       if (visible.has(sq)) continue;
       const { x, y } = xqPoint(file, rank, perspective, x0, y0);
       const visualRow = xqVisualRow(rank, perspective);
+      // The edge test is on the DISPLAY column: black sees the board rotated, so
+      // file a sits on the right. Testing the logical file stretched a fogged a-
+      // or i-file square across the whole row on a black-side diagram.
+      const visualCol = xiangqiDisplayFile(file, perspective, 9);
       const half = xqHalfCell();
       // Outer edges clamp to the board box (fog is clipped to it either way); the
       // interior half-cell tracks the active layout's cell size.
-      const left = file === 0 ? x0 : x - half - XQ_FOG_OVERLAP;
-      const right = file === 8 ? x0 + XQ_BOARD_W : x + half + XQ_FOG_OVERLAP;
+      const left = visualCol === 0 ? x0 : x - half - XQ_FOG_OVERLAP;
+      const right = visualCol === 8 ? x0 + XQ_BOARD_W : x + half + XQ_FOG_OVERLAP;
       const top = visualRow === 0 ? y0 : y - half - XQ_FOG_OVERLAP;
       const bottom = visualRow === 9 ? y0 + XQ_BOARD_H : y + half + XQ_FOG_OVERLAP;
       parts.push(`M ${left} ${top} H ${right} V ${bottom} H ${left} Z`);
@@ -1527,8 +1536,13 @@ export function xqZoneHighlights(x0: number, y0: number, perspective: XiangqiCol
     );
   }
   const half = xqHalfCell();
-  const left = xqPoint(0, 5, perspective, x0, y0).x - half;
-  const right = xqPoint(8, 5, perspective, x0, y0).x + half;
+  // The band runs from the reader's left column to the right one. Those are the
+  // DISPLAY columns: for black, file a is on the right, and taking the logical
+  // files gave the band a negative width.
+  const leftFile = xiangqiDisplayFile(0, perspective, 9);
+  const rightFile = xiangqiDisplayFile(8, perspective, 9);
+  const left = xqPoint(leftFile, 5, perspective, x0, y0).x - half;
+  const right = xqPoint(rightFile, 5, perspective, x0, y0).x + half;
   const ya = xqPoint(0, 5, perspective, x0, y0).y;
   const yb = xqPoint(0, 6, perspective, x0, y0).y;
   parts.push(
