@@ -913,8 +913,11 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
 // social proof we don't have yet.
 //
 // Rules docs already carry the variant rail as their onward path, so they keep
-// their current shape and only /blog gets this.
+// their current shape and only /blog gets this. The one exception is the zh
+// rules pages, which end in a single line inviting a reader to review the
+// machine translation (buildRulesTranslateNote).
 function buildArticleFooter(article: Article, lang?: ArticleLang): HTMLElement | null {
+  if (article.kind === 'rules') return buildRulesTranslateNote(lang);
   if (article.kind !== 'article') return null;
   const related = relatedArticles(article);
   if (related.length === 0) return null;
@@ -934,6 +937,24 @@ function buildArticleFooter(article: Article, lang?: ArticleLang): HTMLElement |
   }
 
   footer.append(heading, list);
+  return footer;
+}
+
+// zh rules pages ship on machine translation; this line points a native reader
+// at the volunteer review role on /contribute. English pages have nothing to
+// review, so they get no line. The anchor is the id contribute-page.ts sets on
+// its translate heading.
+function buildRulesTranslateNote(lang?: ArticleLang): HTMLElement | null {
+  if (!lang) return null;
+  const locale = articleLocale(lang);
+  const footer = document.createElement('footer');
+  footer.className = 'article-translate-note';
+  const line = document.createElement('p');
+  const link = document.createElement('a');
+  link.href = '/contribute#translate';
+  link.textContent = t('rules.translateIssueLink', {}, locale);
+  line.append(t('rules.translateIssue', {}, locale), link);
+  footer.append(line);
   return footer;
 }
 

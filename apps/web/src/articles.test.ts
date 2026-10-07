@@ -872,6 +872,18 @@ describe('blog post read-next footer', () => {
     expect(buildArticlePage('fog-xiangqi').querySelector('.article-footer')).toBeNull();
   });
 
+  // The zh rules pages are machine-translated; each ends in one line pointing a
+  // native reader at the review role on /contribute. English has nothing to review.
+  it('ends zh rules pages with a review invitation and leaves English without one', () => {
+    expect(buildArticlePage('banqi').querySelector('.article-translate-note')).toBeNull();
+    const hant = buildArticlePage('banqi', 'zh-Hant').querySelector('.article-translate-note');
+    expect(hant?.textContent).toContain('看到翻譯問題？');
+    expect(hant?.querySelector('a')?.getAttribute('href')).toBe('/contribute#translate');
+    const hans = buildArticlePage('banqi', 'zh-Hans').querySelector('.article-translate-note');
+    expect(hans?.textContent).toContain('看到翻译问题？');
+    expect(hans?.querySelector('a')?.getAttribute('href')).toBe('/contribute#translate');
+  });
+
   // One star per card is texture in a long index grid. Three in a row under an
   // article read as a rating, so the footer drops the badge outright rather
   // than shipping DOM it then hides.

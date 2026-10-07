@@ -1,5 +1,5 @@
 // /contribute: how to help Mistboard, lichess's /help/contribute equivalent.
-// Play + feedback, bug reports, code, translations, and support. Renders inside
+// Play + feedback, bug reports, code, zh page reviews, and support. Renders inside
 // the shared /about rail + panel shell.
 
 import { t } from './i18n/catalog.js';
@@ -23,6 +23,19 @@ export function mountContribute(root: HTMLElement): void {
     buildNav(locale),
     buildStaticPageLayout('contribute', buildContribute(locale), locale),
   );
+  scrollToTranslateAnchor(root);
+}
+
+// The page is built after load, so the browser's own fragment scroll finds
+// nothing for #translate (seen on a phone-height viewport); scroll it
+// explicitly, like /changelog's month hash.
+function scrollToTranslateAnchor(root: HTMLElement): void {
+  if (globalThis.location?.hash !== `#${CONTRIBUTE_TRANSLATE_ANCHOR}`) return;
+  const target = root.querySelector<HTMLElement>(`#${CONTRIBUTE_TRANSLATE_ANCHOR}`);
+  if (!target) return;
+  requestAnimationFrame(() => {
+    target.scrollIntoView({ block: 'start', behavior: 'auto' });
+  });
 }
 
 function buildContribute(locale: Locale = currentLocale()): HTMLElement {
@@ -50,8 +63,15 @@ function buildContribute(locale: Locale = currentLocale()): HTMLElement {
       t('contribute.codeSuffix', {}, locale),
     ]),
 
-    proseSubheading(t('contribute.translateHeading', {}, locale)),
+    translateHeading(locale),
     proseParagraph([t('contribute.translateBody', {}, locale)]),
+    proseParagraph([
+      t('contribute.translateStartPrefix', {}, locale),
+      proseLink(CONTACT_EMAIL, `mailto:${CONTACT_EMAIL}`),
+      t('contribute.translateStartMiddle', {}, locale),
+      proseLink(t('contribute.translateThanksLink', {}, locale), '/thanks'),
+      t('contribute.translateStartSuffix', {}, locale),
+    ]),
 
     proseSubheading(t('contribute.supportHeading', {}, locale)),
     proseParagraph([
@@ -67,4 +87,17 @@ function buildContribute(locale: Locale = currentLocale()): HTMLElement {
     ]),
   );
   return section;
+}
+
+const CONTACT_EMAIL = 'contact@mistboard.com';
+
+// Anchored so the zh rules pages' "see a translation problem?" line can land
+// the reader on this section rather than the top of the page (articles.ts
+// links to `/contribute#translate`; keep the two in step).
+const CONTRIBUTE_TRANSLATE_ANCHOR = 'translate';
+
+function translateHeading(locale: Locale): HTMLElement {
+  const heading = proseSubheading(t('contribute.translateHeading', {}, locale));
+  heading.id = CONTRIBUTE_TRANSLATE_ANCHOR;
+  return heading;
 }

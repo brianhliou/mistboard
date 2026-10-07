@@ -331,6 +331,20 @@
   border-top: 1px solid var(--site-border-soft);
 }
 
+/* zh rules pages only: one quiet line inviting a native reader to review the
+   machine translation (buildRulesTranslateNote in articles.ts). */
+.article-translate-note {
+  margin: 40px 0 0;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--site-border-soft);
+  font-size: 14px;
+  color: var(--site-muted);
+}
+
+.article-translate-note p {
+  margin: 0;
+}
+
 .article-footer-heading {
   margin: 0 0 20px;
   font-family: Roboto, ui-sans-serif, system-ui, sans-serif;
