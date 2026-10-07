@@ -43,6 +43,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-10-07',
+    kind: 'update',
+    headline: 'Jieqi now has a repetition rule: perpetual check loses.',
+    body: 'Jieqi used to draw only after 120 plies without a capture, so a losing player could check forever and wait. Now the third repetition of a position ends the game. A player who gave check on every move of the cycle loses, as in xiangqi; any other repetition is a draw. Games started before the change keep the old rules.',
+    href: '/rules/jieqi',
+    cta: 'Read the rules',
+  },
+  {
     date: '2026-10-03',
     kind: 'release',
     headline: 'KataGo is the new top Jungle Chess bot.',
