@@ -620,11 +620,26 @@ function materialCell(row: EndgameTableRow, lang: keyof EndgameText): string {
 
 /** One group's table rows in English (the dictionaries carry zh): linked material, result, key idea. */
 export function endgameTableRows(group: EndgameTableGroup): string[][] {
-  return ENDGAME_TABLE.filter((row) => row.group === group).map((row) => [
+  return endgameTableGroupRows(group).map((row) => [
     materialCell(row, 'en'),
     RESULT_TEXT[endgameTableResult(row.id)].en,
     endgameTableIdea(row).en,
   ]);
+}
+
+/** A row's board diagram's accessible name: the material and its result. */
+export function endgameDiagramLabel(row: EndgameTableRow): EndgameText {
+  const result = RESULT_TEXT[endgameTableResult(row.id)];
+  return tri(
+    `${row.material.en}: ${result.en}`,
+    `${row.material['zh-Hans']}：${result['zh-Hans']}`,
+    `${row.material['zh-Hant']}：${result['zh-Hant']}`,
+  );
+}
+
+/** One group's rows, in table order (the diagrams pair with endgameTableRows by index). */
+export function endgameTableGroupRows(group: EndgameTableGroup): EndgameTableRow[] {
+  return ENDGAME_TABLE.filter((row) => row.group === group);
 }
 
 /** Every string the page shows, as triples. */
@@ -632,6 +647,7 @@ export function endgamePageTexts(): EndgameText[] {
   const cells = ENDGAME_TABLE.flatMap((row) => [
     tri(materialCell(row, 'en'), materialCell(row, 'zh-Hans'), materialCell(row, 'zh-Hant')),
     endgameTableIdea(row),
+    endgameDiagramLabel(row),
   ]);
   return [...Object.values(ENDGAME_PAGE_TEXT), ...cells];
 }

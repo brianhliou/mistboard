@@ -58,6 +58,7 @@ import {
   type SubHeadingBlock,
   type SvgRowBlock,
   type TableBlock,
+  type TableRowDiagram,
   withXiangqiBoardLayout,
   withXiangqiPieceSet,
   type XiangqiReplayBlock,
@@ -2025,8 +2026,11 @@ function renderTableBlock(block: TableBlock): HTMLElement {
   if (block.keyColumn) table.classList.add('article-table-key-column');
   if (block.wrap) table.classList.add('article-table-wrap');
   if (block.compact) table.classList.add('article-table-compact');
+  const diagrams = block.rowDiagrams;
+  if (diagrams) table.classList.add('article-table-diagrams');
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
+  if (diagrams) headRow.append(document.createElement('th'));
   for (const h of block.headers) {
     const th = document.createElement('th');
     appendRichText(th, h);
@@ -2038,6 +2042,7 @@ function renderTableBlock(block: TableBlock): HTMLElement {
   block.rows.forEach((row, i) => {
     const tr = document.createElement('tr');
     if (highlight.has(i)) tr.className = 'article-table-row-emphasis';
+    if (diagrams) tr.append(renderTableRowDiagram(diagrams[i]));
     for (const cell of row) {
       const td = document.createElement('td');
       // Cells take the same inline markdown as paragraphs. They rendered as raw
@@ -2057,6 +2062,22 @@ function renderTableBlock(block: TableBlock): HTMLElement {
     figure.append(cap);
   }
   return figure;
+}
+
+// A table row's leading board. The cell is the diagram holder, so the board
+// repaints with the reader's piece set and layout like any raw-svg figure; the
+// label goes on the <svg> itself (role="img"), inside the thunk, so a repaint
+// keeps it.
+function renderTableRowDiagram(diagram: TableRowDiagram | undefined): HTMLElement {
+  const td = document.createElement('td');
+  td.className = 'article-table-diagram';
+  if (!diagram) return td;
+  const label = diagram.label.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  const thunk = () => diagram.svg().replace(/^<svg /, `<svg aria-label="${label}" `);
+  td.innerHTML = thunk();
+  trackXqDiagram(td, thunk);
+  paintXqDiagram(td, readStoredXiangqiPieceSet());
+  return td;
 }
 
 function renderCodeBlock(block: CodeBlock): HTMLElement {

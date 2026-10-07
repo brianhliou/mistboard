@@ -1,10 +1,13 @@
 import { endgameEntryState, endgameHubEntry } from '@mistboard/game';
 import { XQ_BOARD_H, XQ_BOARD_W, xqBoardGrid, xqBoardSvg, xqPiecesLayer, xqSvg } from '../diagrams.js';
-import type { Article, ArticleBlock } from '../types.js';
+import type { Article, ArticleBlock, TableRowDiagram } from '../types.js';
 import {
   ENDGAME_TABLE_GROUP_HEADING,
   ENDGAME_TABLE_GROUPS,
+  type EndgameTableGroup,
+  endgameDiagramLabel,
   endgameStudyHref,
+  endgameTableGroupRows,
   endgameTableRows,
   ENDGAME_PAGE_TEXT as T,
 } from '../xiangqi-endgames-text.js';
@@ -51,6 +54,25 @@ export const XIANGQI_ENDGAMES_THUMBNAIL = () => {
   return `<svg class="xq-article-svg" viewBox="0 0 320 200" role="img" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto"><g transform="translate(${tx.toFixed(1)} 4) scale(${scale.toFixed(4)})">${body}</g></svg>`;
 };
 
+// A table row's board: the same kernel state, board and pieces only (no label
+// row), drawn small beside the row so the position reads at a glance.
+export function xiangqiEndgameRowBoard(id: string): () => string {
+  const state = endgameEntryState(endgameHubEntry(id));
+  return () =>
+    xqSvg(
+      XQ_BOARD_W,
+      XQ_BOARD_H,
+      xqBoardGrid(0, 0, 'red') + xqPiecesLayer(state, null, 0, 0, 'red'),
+      'xq-table-row-board',
+    );
+}
+
+function rowDiagrams(group: EndgameTableGroup): TableRowDiagram[] {
+  return endgameTableGroupRows(group).map((row) => ({
+    svg: xiangqiEndgameRowBoard(row.id),
+    label: endgameDiagramLabel(row).en,
+  }));
+}
 
 // One sub-heading and one table per attacking piece.
 const tableBlocks: ArticleBlock[] = ENDGAME_TABLE_GROUPS.flatMap((group): ArticleBlock[] => [
@@ -59,6 +81,7 @@ const tableBlocks: ArticleBlock[] = ENDGAME_TABLE_GROUPS.flatMap((group): Articl
     kind: 'table',
     headers: [T.headerMaterial.en, T.headerResult.en, T.headerIdea.en],
     rows: endgameTableRows(group),
+    rowDiagrams: rowDiagrams(group),
     wrap: true,
   },
 ]);

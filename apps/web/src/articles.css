@@ -2165,6 +2165,79 @@
   font-weight: 600;
 }
 
+/* A table whose rows each lead with a small board (TableBlock.rowDiagrams, the
+   endgames table). The board is the full diagram scaled down, so it keeps the
+   site's board theme and piece set; at 120px a piece disc is ~12px. */
+.article-table-diagrams td.article-table-diagram {
+  width: 120px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  line-height: 0;
+}
+
+.article-table-diagram > .xq-article-svg {
+  display: block;
+  width: 120px;
+  height: auto;
+}
+
+/* On a phone four columns do not fit, so each row becomes a card: the board on
+   the left, the material, result and idea stacked beside it. */
+@media (max-width: 600px) {
+  .article-table-diagrams {
+    white-space: normal;
+  }
+
+  .article-table-diagrams thead {
+    display: none;
+  }
+
+  .article-table-diagrams tbody {
+    display: block;
+  }
+
+  .article-table-diagrams tbody tr {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    /* Three text rows at their own height; the fourth takes the slack, so a
+       short card keeps its lines together at the top beside the board. */
+    grid-template-rows: auto auto auto 1fr;
+    column-gap: 12px;
+    row-gap: 2px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--site-border-soft, rgba(0, 0, 0, 0.07));
+  }
+
+  .article-table-diagrams tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  .article-table-diagrams td,
+  .article-table-diagrams td + td {
+    padding: 0;
+    border-bottom: none;
+  }
+
+  .article-table-diagrams td.article-table-diagram {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    width: 96px;
+  }
+
+  .article-table-diagram > .xq-article-svg {
+    width: 96px;
+  }
+
+  .article-table-diagrams td:nth-child(2) {
+    font-weight: 600;
+  }
+
+  .article-table-diagrams td:nth-child(3) {
+    font-size: 13px;
+    opacity: 0.75;
+  }
+}
+
 .article-code-block {
   margin: 0;
   padding: 16px 18px;

@@ -1,5 +1,6 @@
 import {
   endgameEntryFen,
+  endgameEntryState,
   endgameHubEntry,
   XIANGQI_ENDGAME_HUB,
   XIANGQI_ENDGAME_HUB_CHECKS,
@@ -11,12 +12,14 @@ import {
   xiangqiEndgamesArticle,
 } from './content/xiangqi-endgames.js';
 import type { TableBlock } from './types.js';
+import { XQ_ALL_SQUARES } from './diagrams.js';
 import {
   ENDGAME_PAGE_TEXT,
   ENDGAME_PROD_CHAPTERS,
   ENDGAME_SET_STUDY_IDS,
   ENDGAME_TABLE,
   ENDGAME_TABLE_EXTRA_CHECKS,
+  endgameDiagramLabel,
   endgamePracticeSetOf,
   endgameStudyHref,
   endgameTableResult,
@@ -98,6 +101,50 @@ describe('xiangqi endgames table', () => {
           expect(row[0]?.replace(/\]\([^)]*\)$/, ''), row[0]).not.toMatch(/[A-Za-z]{3,}/);
           expect(row[1], row[1]).not.toMatch(/[A-Za-z]/);
         }
+      }
+    }
+  });
+
+  it("leads every row with a board drawn from that row's own position", () => {
+    for (const lang of ['en', 'zh-Hans', 'zh-Hant'] as const) {
+      const shown = tables(lang).flatMap((table) => {
+        expect(table.rowDiagrams?.length, `${lang}: one board per row`).toBe(table.rows.length);
+        return table.rowDiagrams ?? [];
+      });
+      expect(shown).toHaveLength(ENDGAME_TABLE.length);
+      shown.forEach((diagram, i) => {
+        const row = ENDGAME_TABLE[i]!;
+        // Its accessible name is the row's material and result, in the page's script.
+        expect(diagram.label, row.id).toBe(endgameDiagramLabel(row)[lang]);
+        if (lang !== 'en') expect(diagram.label, row.id).not.toMatch(/[A-Za-z]{3,}/);
+        // Every piece on the board is a piece of the position, on its square,
+        // and nothing else is drawn as a piece.
+        const svg = diagram.svg();
+        const state = endgameEntryState(endgameHubEntry(row.id));
+        const drawn = [...svg.matchAll(/data-piece-square="([a-i]\d+)"/g)].map((m) => m[1]).sort();
+        const expected = XQ_ALL_SQUARES.filter((sq) => state.board[sq]).sort();
+        expect(drawn, row.id).toEqual(expected);
+        // And those are the squares the row's FEN occupies (its first field,
+        // rank 10 first, digits for empty points).
+        const placement = endgameEntryFen(endgameHubEntry(row.id)).split(' ')[0] ?? '';
+        const fenSquares = placement.split('/').flatMap((rank, r) => {
+          const squares: string[] = [];
+          let file = 0;
+          for (const ch of rank) {
+            if (/\d/.test(ch)) file += Number(ch);
+            else squares.push(`${'abcdefghi'[file++]}${10 - r}`);
+          }
+          return squares;
+        });
+        expect(drawn, row.id).toEqual(fenSquares.sort());
+      });
+    }
+  });
+
+  it('keeps each board lean (under 9 KB of markup)', () => {
+    for (const table of tables('en')) {
+      for (const diagram of table.rowDiagrams ?? []) {
+        expect(diagram.svg().length).toBeLessThan(9000);
       }
     }
   });
