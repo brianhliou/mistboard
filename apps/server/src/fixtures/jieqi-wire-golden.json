@@ -7956,7 +7956,19 @@
                 "initialMs": 180000,
                 "incrementMs": 2000
               },
-              "roomMode": "pvp"
+              "roomMode": "pvp",
+              "checkMarks": [
+                "",
+                "",
+                "",
+                "",
+                "+",
+                "",
+                "",
+                "",
+                "",
+                "+"
+              ]
             },
             "black": {
               "type": "snapshot",
@@ -8256,7 +8268,19 @@
                 "initialMs": 180000,
                 "incrementMs": 2000
               },
-              "roomMode": "pvp"
+              "roomMode": "pvp",
+              "checkMarks": [
+                "",
+                "",
+                "",
+                "",
+                "+",
+                "",
+                "",
+                "",
+                "",
+                "+"
+              ]
             },
             "spectator": {
               "type": "snapshot",
@@ -8539,7 +8563,19 @@
                 "initialMs": 180000,
                 "incrementMs": 2000
               },
-              "roomMode": "pvp"
+              "roomMode": "pvp",
+              "checkMarks": [
+                "",
+                "",
+                "",
+                "",
+                "+",
+                "",
+                "",
+                "",
+                "",
+                "+"
+              ]
             }
           },
           "eventForSeat": {
@@ -9027,7 +9063,19 @@
                 "initialMs": 180000,
                 "incrementMs": 2000
               },
-              "roomMode": "pvp"
+              "roomMode": "pvp",
+              "checkMarks": [
+                "",
+                "",
+                "",
+                "",
+                "+",
+                "",
+                "",
+                "",
+                "",
+                "+"
+              ]
             },
             "black": {
               "type": "snapshot",
@@ -9419,7 +9467,19 @@
                 "initialMs": 180000,
                 "incrementMs": 2000
               },
-              "roomMode": "pvp"
+              "roomMode": "pvp",
+              "checkMarks": [
+                "",
+                "",
+                "",
+                "",
+                "+",
+                "",
+                "",
+                "",
+                "",
+                "+"
+              ]
             },
             "spectator": {
               "type": "snapshot",
@@ -9714,7 +9774,19 @@
                 "initialMs": 180000,
                 "incrementMs": 2000
               },
-              "roomMode": "pvp"
+              "roomMode": "pvp",
+              "checkMarks": [
+                "",
+                "",
+                "",
+                "",
+                "+",
+                "",
+                "",
+                "",
+                "",
+                "+"
+              ]
             }
           },
           "eventForSeat": {
@@ -10217,7 +10289,19 @@
                 "initialMs": 180000,
                 "incrementMs": 2000
               },
-              "roomMode": "pvp"
+              "roomMode": "pvp",
+              "checkMarks": [
+                "",
+                "",
+                "",
+                "",
+                "+",
+                "",
+                "",
+                "",
+                "",
+                "+"
+              ]
             },
             "black": {
               "type": "snapshot",
@@ -10656,7 +10740,19 @@
                 "initialMs": 180000,
                 "incrementMs": 2000
               },
-              "roomMode": "pvp"
+              "roomMode": "pvp",
+              "checkMarks": [
+                "",
+                "",
+                "",
+                "",
+                "+",
+                "",
+                "",
+                "",
+                "",
+                "+"
+              ]
             },
             "spectator": {
               "type": "snapshot",
@@ -10962,7 +11058,19 @@
                 "initialMs": 180000,
                 "incrementMs": 2000
               },
-              "roomMode": "pvp"
+              "roomMode": "pvp",
+              "checkMarks": [
+                "",
+                "",
+                "",
+                "",
+                "+",
+                "",
+                "",
+                "",
+                "",
+                "+"
+              ]
             }
           },
           "eventForSeat": {
@@ -11476,7 +11584,19 @@
                 "initialMs": 180000,
                 "incrementMs": 2000
               },
-              "roomMode": "pvp"
+              "roomMode": "pvp",
+              "checkMarks": [
+                "",
+                "",
+                "",
+                "",
+                "+",
+                "",
+                "",
+                "",
+                "",
+                "+"
+              ]
             },
             "black": {
               "type": "snapshot",
@@ -11926,7 +12046,19 @@
                 "initialMs": 180000,
                 "incrementMs": 2000
               },
-              "roomMode": "pvp"
+              "roomMode": "pvp",
+              "checkMarks": [
+                "",
+                "",
+                "",
+                "",
+                "+",
+                "",
+                "",
+                "",
+                "",
+                "+"
+              ]
             },
             "spectator": {
               "type": "snapshot",
@@ -12243,7 +12375,19 @@
                 "initialMs": 180000,
                 "incrementMs": 2000
               },
-              "roomMode": "pvp"
+              "roomMode": "pvp",
+              "checkMarks": [
+                "",
+                "",
+                "",
+                "",
+                "+",
+                "",
+                "",
+                "",
+                "",
+                "+"
+              ]
             }
           },
           "eventForSeat": {
@@ -12796,7 +12940,19 @@
                 "initialMs": 180000,
                 "incrementMs": 2000
               },
-              "roomMode": "pvp"
+              "roomMode": "pvp",
+              "checkMarks": [
+                "",
+                "",
+                "",
+                "",
+                "+",
+                "",
+                "",
+                "",
+                "",
+                "+"
+              ]
             },
             "black": {
               "type": "snapshot",
@@ -13273,7 +13429,19 @@
                 "initialMs": 180000,
                 "incrementMs": 2000
               },
-              "roomMode": "pvp"
+              "roomMode": "pvp",
+              "checkMarks": [
+                "",
+                "",
+                "",
+                "",
+                "+",
+                "",
+                "",
+                "",
+                "",
+                "+"
+              ]
             },
             "spectator": {
               "type": "snapshot",
@@ -13601,7 +13769,19 @@
                 "initialMs": 180000,
                 "incrementMs": 2000
               },
-              "roomMode": "pvp"
+              "roomMode": "pvp",
+              "checkMarks": [
+                "",
+                "",
+                "",
+                "",
+                "+",
+                "",
+                "",
+                "",
+                "",
+                "+"
+              ]
             }
           },
           "eventForSeat": {
@@ -13997,7 +14177,19 @@
                 "initialMs": 180000,
                 "incrementMs": 2000
               },
-              "roomMode": "pvp"
+              "roomMode": "pvp",
+              "checkMarks": [
+                "",
+                "",
+                "",
+                "",
+                "+",
+                "",
+                "",
+                "",
+                "",
+                "+"
+              ]
             },
             "black": {
               "type": "snapshot",
@@ -14477,7 +14669,19 @@
                 "initialMs": 180000,
                 "incrementMs": 2000
               },
-              "roomMode": "pvp"
+              "roomMode": "pvp",
+              "checkMarks": [
+                "",
+                "",
+                "",
+                "",
+                "+",
+                "",
+                "",
+                "",
+                "",
+                "+"
+              ]
             },
             "spectator": {
               "type": "snapshot",
@@ -14816,7 +15020,19 @@
                 "initialMs": 180000,
                 "incrementMs": 2000
               },
-              "roomMode": "pvp"
+              "roomMode": "pvp",
+              "checkMarks": [
+                "",
+                "",
+                "",
+                "",
+                "+",
+                "",
+                "",
+                "",
+                "",
+                "+"
+              ]
             }
           },
           "eventForSeat": {
@@ -15220,7 +15436,19 @@
                 "initialMs": 180000,
                 "incrementMs": 2000
               },
-              "roomMode": "pvp"
+              "roomMode": "pvp",
+              "checkMarks": [
+                "",
+                "",
+                "",
+                "",
+                "+",
+                "",
+                "",
+                "",
+                "",
+                "+"
+              ]
             },
             "black": {
               "type": "snapshot",
@@ -15584,7 +15812,19 @@
                 "initialMs": 180000,
                 "incrementMs": 2000
               },
-              "roomMode": "pvp"
+              "roomMode": "pvp",
+              "checkMarks": [
+                "",
+                "",
+                "",
+                "",
+                "+",
+                "",
+                "",
+                "",
+                "",
+                "+"
+              ]
             },
             "spectator": {
               "type": "snapshot",
@@ -15948,7 +16188,19 @@
                 "initialMs": 180000,
                 "incrementMs": 2000
               },
-              "roomMode": "pvp"
+              "roomMode": "pvp",
+              "checkMarks": [
+                "",
+                "",
+                "",
+                "",
+                "+",
+                "",
+                "",
+                "",
+                "",
+                "+"
+              ]
             }
           },
           "eventForSeat": {

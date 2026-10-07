@@ -30,6 +30,7 @@
 // masking lives entirely in getJieqiPlayerView; the server renders that view and
 // never ships the canonical board to a client.
 
+import { checkSubjectColor } from './check-subject.js';
 import type { AbortReason } from './types.js';
 import {
   coordOf,
@@ -629,6 +630,55 @@ export function isJieqiSideToMoveInCheck(state: JieqiGameState): boolean {
   if (!toMove) return false;
   const general = findJieqiGeneral(state.board, toMove);
   return general ? isAttacked(state.board, oppositeJieqiColor(toMove), general) : false;
+}
+
+/**
+ * The general the board should show in check, or null, from a board any viewer
+ * holds: a masked seat or spectator board works, since a face-down piece
+ * attacks as the role of its home square and its true role never matters. The
+ * side is the one facing the move (checkSubjectColor).
+ */
+export function jieqiCheckedGeneral(
+  board: JieqiBoard | JieqiPlayerBoard,
+  status: JieqiGameStatus,
+): JieqiSquare | null {
+  const color = checkSubjectColor(status);
+  if (!color) return null;
+  const attackBoard: JieqiBoard = {};
+  for (const [square, entry] of Object.entries(board)) {
+    if (!entry) continue;
+    // A face-down piece's role is never read for attacks (effectiveRole uses
+    // the home square), so a placeholder stands in for a hidden one.
+    attackBoard[square as JieqiSquare] =
+      'role' in entry && entry.role
+        ? { color: entry.color, role: entry.role, faceDown: entry.faceDown }
+        : { color: entry.color, role: 'soldier', faceDown: true };
+  }
+  const general = findJieqiGeneral(attackBoard, color);
+  if (!general) return null;
+  return isAttacked(attackBoard, oppositeJieqiColor(color), general) ? general : null;
+}
+
+/**
+ * The check suffix for the move that produced this position: `#` when it
+ * checkmated, `+` when it left the side to move in check, '' otherwise. Check
+ * is public in jieqi, so a masked view's board and status are enough.
+ */
+export function jieqiCheckMark(after: {
+  board: JieqiBoard | JieqiPlayerBoard;
+  status: JieqiGameStatus;
+}): '' | '+' | '#' {
+  if (after.status.type === 'finished' && after.status.reason === 'checkmate') return '#';
+  if (after.status.type !== 'playing') return '';
+  return jieqiCheckedGeneral(after.board, after.status) ? '+' : '';
+}
+
+/** A jieqi move label: from-to, then its check mark (jieqiCheckMark). */
+export function jieqiMoveLabel(
+  move: JieqiMove,
+  after: { board: JieqiBoard | JieqiPlayerBoard; status: JieqiGameStatus },
+): string {
+  return `${move.from}-${move.to}${jieqiCheckMark(after)}`;
 }
 
 function jieqiSideToMove(state: JieqiGameState): JieqiColor | null {

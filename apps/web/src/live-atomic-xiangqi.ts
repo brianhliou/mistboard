@@ -13,6 +13,7 @@ import {
   type AtomicXiangqiPlayerView,
   type AtomicXiangqiSquare,
   applyAtomicXiangqiMove,
+  atomicXiangqiCheckedGeneral,
   coordOf,
   createInitialAtomicXiangqiState,
   formatAtomicXiangqiMoves,
@@ -261,6 +262,7 @@ function renderBoard(liveRefs: LiveRefs, view: AtomicXiangqiPlayerView | null): 
     draggingFrom,
     arrows: drawn.arrows,
     markers: [...atomicXiangqiBlastMarkers(view, { fresh }), ...drawn.markers],
+    checkSquare: atomicXiangqiCheckedGeneral(view.board, view.status),
   });
   if (fresh && atomicXiangqiCaptureAnimates(view)) {
     cancelCapture = animateAtomicXiangqiCapture(liveRefs.board, view, perspective);

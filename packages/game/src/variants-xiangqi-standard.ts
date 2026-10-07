@@ -26,6 +26,7 @@
 import type { Square as EoSquare } from 'elephantops';
 import { makeSquare as eoMakeSquare, parseSquare as eoParseSquare } from 'elephantops/util';
 import { Xiangqi as EoXiangqi } from 'elephantops/xiangqi';
+import { checkSubjectColor } from './check-subject.js';
 import {
   boardToEoBoard,
   createInitialXiangqiState,
@@ -280,7 +281,10 @@ export function xiangqiPerpetualCheckLoser(
 function isStandardXiangqiGeneralInCheckOnBoard(
   board: XiangqiBoard,
   color: XiangqiColor,
-  reference: XiangqiGameState,
+  reference: Pick<XiangqiGameState, 'progressClock' | 'moveNumber'> = {
+    progressClock: 0,
+    moveNumber: 1,
+  },
 ): boolean {
   const position = EoXiangqi.fromSetup({
     board: boardToEoBoard(board),
@@ -289,6 +293,29 @@ function isStandardXiangqiGeneralInCheckOnBoard(
     fullmoves: reference.moveNumber,
   });
   return position.isOk ? position.unwrap().isCheck() : false;
+}
+
+/**
+ * The point of the general the board should show in check, or null: the side
+ * facing the move (checkSubjectColor) when the standard rules say its general
+ * is attacked. Reads only the board, so a client view is enough.
+ */
+export function standardXiangqiCheckedGeneral(
+  board: XiangqiBoard,
+  status: XiangqiGameStatus,
+): XiangqiSquare | null {
+  const color = checkSubjectColor(status);
+  if (!color) return null;
+  const general = generalSquareOf(board, color);
+  if (!general) return null;
+  return isStandardXiangqiGeneralInCheckOnBoard(board, color) ? general : null;
+}
+
+function generalSquareOf(board: XiangqiBoard, color: XiangqiColor): XiangqiSquare | null {
+  for (const [square, piece] of Object.entries(board)) {
+    if (piece?.color === color && piece.role === 'general') return square as XiangqiSquare;
+  }
+  return null;
 }
 
 // ── Open-information player view ─────────────────────────────────────────────

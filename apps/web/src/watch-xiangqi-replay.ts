@@ -8,6 +8,7 @@ import './live-xiangqi.css';
 import {
   formatXiangqiMoves,
   type StandardXiangqiPlayerView,
+  standardXiangqiCheckedGeneral,
   type XiangqiMove,
 } from '@mistboard/game';
 import { renderXiangqiBoardSvg } from './live-xiangqi.js';
@@ -58,6 +59,7 @@ export function mountXiangqiWatchReplay(
       renderXiangqiBoardSvg(view, orientation, {
         arrows: overlay.arrows as readonly XiangqiBoardArrow[],
         markers: overlay.glyphs as readonly XiangqiBoardMarker[],
+        checkSquare: standardXiangqiCheckedGeneral(view.board, view.status),
       }),
     // Standard Xiangqi's wire view carries no captured-pool, so there is nothing
     // to render in the per-pane capture strips.

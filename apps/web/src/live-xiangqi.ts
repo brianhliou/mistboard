@@ -19,6 +19,7 @@ import {
   formatXiangqiMoves,
   getStandardXiangqiPlayerView,
   type StandardXiangqiPlayerView,
+  standardXiangqiCheckedGeneral,
   XIANGQI_SPEC_ID,
   type XiangqiColor,
   type XiangqiMove,
@@ -281,6 +282,7 @@ function renderBoard(liveRefs: LiveRefs, view: StandardXiangqiPlayerView | null)
     draggingFrom,
     arrows: drawn.arrows,
     markers: drawn.markers,
+    checkSquare: standardXiangqiCheckedGeneral(view.board, view.status),
   });
   // Click + drag are delegated to the persistent board container once at mount
   // (installXiangqiBoardInteraction), so they survive these innerHTML re-renders.

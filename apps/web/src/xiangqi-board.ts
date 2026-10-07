@@ -21,6 +21,7 @@ import type {
   XiangqiSquare,
 } from '@mistboard/game';
 import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import { boardCheckGlowSvg } from './board-check.js';
 import { BOARD_LASTMOVE_MARKER_SELECTOR, boardLastMoveMarkersSvg } from './board-lastmove.js';
 import { tokenPieceSize } from './board-metrics.js';
 import { readDisplayPreferences } from './display-preferences.js';
@@ -104,7 +105,10 @@ const NON_SELECTABLE_RIVER_ATTRS =
 export function renderXiangqiBoardSvg(
   view: StandardXiangqiPlayerView,
   perspective: XiangqiColor = view.perspective,
-  options: Pick<XiangqiBoardSvgState, 'layout' | 'coordinates' | 'arrows' | 'markers'> = {},
+  options: Pick<
+    XiangqiBoardSvgState,
+    'layout' | 'coordinates' | 'arrows' | 'markers' | 'checkSquare'
+  > = {},
 ): string {
   return xiangqiBoardSvg(view, perspective, {
     interactive: false,
@@ -153,6 +157,10 @@ export interface XiangqiBoardSvgState {
    *  gets the destination ring alone (the token-board grammar for drops); the
    *  view's lastMove then carries only board moves. */
   lastDropSquare?: XiangqiSquare | null;
+  /** The general to glow as in check (board-check.ts), decided by the caller
+   *  with its variant's rule. Absent or null = no glow, which is what every
+   *  surface without check (Fog Xiangqi, diagrams) gets by default. */
+  checkSquare?: XiangqiSquare | null;
 }
 
 /** A decoration pinned to one intersection: 'star' = a collectible item
@@ -216,6 +224,7 @@ export function xiangqiBoardSvg(
       <g class="xq-live-river" ${NON_SELECTABLE_RIVER_ATTRS}>${xiangqiSurfaceRiver(surface, perspective, layout)}</g>
       <g class="xq-live-coords" aria-hidden="true" pointer-events="none">${coords}</g>
       <g class="xq-live-lastmove">${state.lastDropSquare ? lastDropLayer(state.lastDropSquare, perspective, layout) : lastMoveLayer(view, perspective, layout)}</g>
+      <g class="xq-live-check">${state.checkSquare ? checkLayer(state.checkSquare, perspective, layout) : ''}</g>
       <g class="xq-live-selection">${selectionLayer(state.selectedSquare, perspective, layout)}</g>
       <g class="xq-live-hints">${state.interactive ? '' : hintLayer(view, perspective, state.selectedSquare, layout)}</g>
       <g class="xq-live-pieces">${pieceLayer(view, perspective, state.draggingFrom, layout, state.pieceSet)}</g>
@@ -254,6 +263,15 @@ function lastMoveLayer(
   // 2026-08-30; this board is the one the proportions were tuned on, so it
   // passes its own PIECE_SIZE and gets the canonical radii straight back.
   return boardLastMoveMarkersSvg({ from: fromCenter, to: toCenter }, PIECE_SIZE);
+}
+
+function checkLayer(
+  square: XiangqiSquare,
+  perspective: XiangqiColor,
+  layout: XiangqiBoardLayout,
+): string {
+  const { file, rank } = coordOf(square);
+  return boardCheckGlowSvg(intersection(file, rank, perspective, layout), PIECE_SIZE);
 }
 
 function lastDropLayer(
@@ -597,6 +615,9 @@ export interface XiangqiInteractiveBoardOptions {
    *  in place of the from/to pair a drop does not have (crazyhouse review).
    *  Read on every render; null or absent = the view's own lastMove. */
   lastDropSquare?: () => XiangqiSquare | null;
+  /** Optional: the general to glow as in check for a display view, by the
+   *  variant's own rule. Absent = never (the board has no notion of check). */
+  checkSquare?: (view: StandardXiangqiPlayerView) => XiangqiSquare | null;
 }
 
 export interface XiangqiInteractiveBoard {
@@ -633,6 +654,7 @@ export function createXiangqiInteractiveBoard(
       arrows,
       markers,
       lastDropSquare: opts.lastDropSquare?.() ?? null,
+      checkSquare: opts.checkSquare?.(view) ?? null,
       ...(opts.coordinates === undefined ? {} : { coordinates: opts.coordinates }),
       ...(opts.coordinateStyle === undefined ? {} : { coordinateStyle: opts.coordinateStyle }),
     });

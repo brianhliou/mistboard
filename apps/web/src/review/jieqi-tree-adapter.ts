@@ -20,6 +20,7 @@ import {
   type JieqiPlayerView,
   type JieqiSquare,
   jieqiHomeSquares,
+  jieqiMoveLabel,
   jieqiTruthView,
   STANDARD_JIEQI_DEAL,
 } from '@mistboard/game';
@@ -132,8 +133,12 @@ export function makeJieqiTreeAdapter(
         view: projectJieqiView(truth, opts.revealAll?.() === true),
       },
     ],
-    // Jieqi has no flip move — every move is a board move; label as from-to.
-    moveLabel: (move) => `${move.from}-${move.to}`,
+    // Jieqi has no flip move — every move is a board move; label as from-to,
+    // with + / # read off the position it leaves (check is public in jieqi).
+    moveLabel: (move, parentTruth) => {
+      const after = applyJieqiMove(parentTruth, move);
+      return after === parentTruth ? `${move.from}-${move.to}` : jieqiMoveLabel(move, after);
+    },
     moveKey: (move) => `${move.from}${move.to}`,
     toEngineUci: (move) => `${move.from}${move.to}`,
     fromUci: (uci) => {

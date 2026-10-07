@@ -16,6 +16,7 @@
 // live in the tenant, not here; keeping this kernel a pure sync function is what
 // makes it testable.
 
+import { checkSubjectColor } from './check-subject.js';
 import type { AbortReason } from './types.js';
 
 export type FortressXiangqiColor = 'red' | 'black';
@@ -906,6 +907,21 @@ function findFortressXiangqiGeneral(
     if (piece?.color === color && piece.role === 'general') return sq as FortressXiangqiSquare;
   }
   return null;
+}
+
+/**
+ * The general the board should show in check, or null: the side facing the
+ * move (checkSubjectColor) when its general is attacked. Reads only the board.
+ */
+export function fortressXiangqiCheckedGeneral(
+  board: FortressXiangqiBoard,
+  status: FortressXiangqiGameStatus,
+): FortressXiangqiSquare | null {
+  const color = checkSubjectColor(status);
+  if (!color) return null;
+  const general = findFortressXiangqiGeneral(board, color);
+  if (!general) return null;
+  return isSquareAttacked(board, oppositeFortressXiangqiColor(color), general) ? general : null;
 }
 
 // ── Apply move ──────────────────────────────────────────────────────────────

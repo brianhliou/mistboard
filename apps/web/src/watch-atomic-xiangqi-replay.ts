@@ -8,7 +8,7 @@
 // chunk extracted from the live shell has to import them itself.
 import './live-xiangqi.css';
 import './atomic-xiangqi.css';
-import type { AtomicXiangqiPlayerView } from '@mistboard/game';
+import { type AtomicXiangqiPlayerView, atomicXiangqiCheckedGeneral } from '@mistboard/game';
 import {
   animateAtomicXiangqiCapture,
   atomicXiangqiBlastMarkers,
@@ -50,6 +50,7 @@ function boardSvg(
       ...atomicXiangqiBlastMarkers(view, { fresh }),
       ...(overlay.glyphs as readonly XiangqiBoardMarker[]),
     ],
+    checkSquare: atomicXiangqiCheckedGeneral(view.board, view.status),
   });
 }
 

@@ -19,7 +19,12 @@ import {
 } from '@mistboard/game';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
 import { JIEQI_DEFAULT_ENGINE_ID } from './jieqi-engine.js';
-import { getJieqiClientView, jieqiClientEventFor, jieqiTenant } from './jieqi-tenant.js';
+import {
+  getJieqiClientView,
+  jieqiClientEventFor,
+  jieqiLiveCheckMarks,
+  jieqiTenant,
+} from './jieqi-tenant.js';
 import { createTenantRuntimeRoom, replayTenantEvents } from './variant-tenant/runtime.js';
 import type { TenantRoomEvent } from './variant-tenant/tenant.js';
 
@@ -146,6 +151,55 @@ test('jieqi snapshot marks a PvE room (engine seat) as roomMode:pve with the eng
 
 test('jieqi snapshot marks a human-vs-human room as roomMode:pvp (no engine id)', () => {
   assert.deepEqual(jieqiSnapshotExtrasFor('human-1', 'human-2'), { roomMode: 'pvp' });
+});
+
+// The live move list's + / # come from the server (a move event carries no
+// reveal, so the client cannot replay check). 3.Cxb10 lands a cannon behind
+// the d10 advisor with the c10 elephant gone: check.
+function checkingLineEvents(): TenantRoomEvent<'red' | 'black', JieqiMove, typeof JIEQI_SPEC_ID>[] {
+  const roomId = 'jq_check';
+  const line: Array<['red' | 'black', JieqiMove]> = [
+    ['red', { from: 'e1', to: 'e2' }],
+    ['black', { from: 'c10', to: 'e8' }],
+    ['red', { from: 'b3', to: 'b10' }],
+  ];
+  return [
+    { type: 'room-created', at: 1, roomId, gameSpecId: JIEQI_SPEC_ID, setup: STANDARD_JIEQI_DEAL },
+    { type: 'seat-assigned', at: 2, roomId, clientId: 'h1', seat: 'red' },
+    { type: 'seat-assigned', at: 3, roomId, clientId: 'h2', seat: 'black' },
+    ...line.map(([color, move], i) => ({
+      type: 'move-played' as const,
+      at: 4 + i,
+      roomId,
+      color,
+      move,
+    })),
+  ];
+}
+
+test('jieqi live check marks name each checking ply, extending as the room grows', () => {
+  const events = checkingLineEvents();
+  const room = { events: events.slice(0, 5) };
+  assert.deepEqual(jieqiLiveCheckMarks(room), ['', '']);
+  room.events = events;
+  assert.deepEqual(jieqiLiveCheckMarks(room), ['', '', '+']);
+});
+
+test('jieqi snapshot carries checkMarks only once a move has given check', () => {
+  const snapshotExtras = jieqiTenant.wire?.snapshotExtras;
+  assert.ok(snapshotExtras);
+  const events = checkingLineEvents();
+  const quiet = events.slice(0, 5);
+  const before = snapshotExtras(
+    { events: quiet, projection: replayTenantEvents(jieqiTenant, quiet) } as never,
+    { seat: 'spectator' } as never,
+  );
+  assert.equal('checkMarks' in before, false);
+  const after = snapshotExtras(
+    { events, projection: replayTenantEvents(jieqiTenant, events) } as never,
+    { seat: 'spectator' } as never,
+  );
+  assert.deepEqual(after.checkMarks, ['', '', '+']);
 });
 
 // The valid GameTermination values, kept in sync with the games_termination_check

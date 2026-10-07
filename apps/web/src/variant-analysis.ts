@@ -68,9 +68,11 @@ function seedRoot<Truth>(
   return parsed?.ok ? { truth: parsed.state, custom: true } : { truth: fallback(), custom: false };
 }
 
-/** `?moves=` tokens to moves. The dash is cosmetic (`a1-b1` is the UCI `a1b1`),
- *  so it is stripped before the adapter's own parser runs. */
-function movesFromParam<Move, Truth>(
+/** `?moves=` tokens to moves. The dash and a check mark are cosmetic (`a1-b1+`
+ *  is the UCI `a1b1`), so they are stripped before the adapter's own parser
+ *  runs: the import box is filled from the move labels, which carry + and #.
+ *  Exported for tests. */
+export function movesFromParam<Move, Truth>(
   raw: string | null,
   codec: MoveCodec<Move, Truth>,
   rootTruth: Truth,
@@ -80,7 +82,7 @@ function movesFromParam<Move, Truth>(
   let truth = rootTruth;
   let legalSoFar = true;
   for (const token of raw.split(/[\s,]+/).filter(Boolean)) {
-    const move = codec.fromUci(token.replace(/-/g, ''), truth);
+    const move = codec.fromUci(token.replace(/[-+#]/g, ''), truth);
     if (!move) continue;
     moves.push(move);
     // Keep parsing in context while the line is legal; after the first illegal
