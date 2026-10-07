@@ -15,6 +15,7 @@ const G_M_142503: XiangqiReplaySpec = {
   "black": "Wang Dayu",
   "event": "2026 China league qualifier, round 1",
   "resultText": "1-0",
+  "boardId": "2026-league-qualifier-2026-league-qualifier-r01-b73nzo2",
   "annotations": {
     "byPly": {
       "26": {
@@ -33,6 +34,7 @@ const G_M_142542: XiangqiReplaySpec = {
   "black": "Lu Hao",
   "event": "2026 China league qualifier, round 3",
   "resultText": "1-0",
+  "boardId": "2026-league-qualifier-2026-league-qualifier-r03-b8682if",
   "annotations": {
     "byPly": {
       "32": {
@@ -81,6 +83,7 @@ const G_M_140266: XiangqiReplaySpec = {
   "black": "Tony Fung Ga Zen",
   "event": "2026 Five Rams Cup, Hong Kong, Macau and Taiwan qualifier",
   "resultText": "0-1",
+  "boardId": "2026-wuyang-cup-2026-wuyang-cup-r01-bmh5kes",
   "annotations": {
     "byPly": {
       "79": {
@@ -123,6 +126,7 @@ const G_M_140287: XiangqiReplaySpec = {
   "black": "Tony Fung Ga Zen",
   "event": "2026 Five Rams Cup, final stage",
   "resultText": "1/2-1/2",
+  "boardId": "2026-wuyang-cup-2026-wuyang-cup-r01-b9d8nro",
   "annotations": {
     "byPly": {
       "15": {

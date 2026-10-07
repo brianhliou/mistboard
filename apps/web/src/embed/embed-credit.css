@@ -1,0 +1,14 @@
+/* The quiet link under a framed board: "<chapter> · mistboard.com" under an
+   embed, "Full game analysis" under an article replay board. One rule for
+   both, so the two read as the same object. */
+.embed-credit {
+  color: var(--site-muted);
+  font-size: 12px;
+  text-align: center;
+  text-decoration: none;
+}
+
+.embed-credit:hover {
+  color: var(--site-link);
+  text-decoration: underline;
+}

@@ -15,6 +15,7 @@ const G_M_139841: XiangqiReplaySpec = {
   "black": "Cao Yanlei",
   "event": "2026 Chunqiu Daye Cup ten-game match",
   "resultText": "0-1",
+  "boardId": "2026-chunqiu-dayie-ten-game-match-2026-chunqiu-dayie-ten-game-match-r51-b1oq7gay",
   "annotations": {
     "byPly": {
       "27": {
@@ -79,6 +80,7 @@ const G_M_139844: XiangqiReplaySpec = {
   "black": "Lại Lý Huynh",
   "event": "2026 Chunqiu Daye Cup ten-game match",
   "resultText": "1-0",
+  "boardId": "2026-chunqiu-dayie-ten-game-match-2026-chunqiu-dayie-ten-game-match-r29-b1j6p6np",
   "annotations": {
     "byPly": {
       "22": {
@@ -103,6 +105,7 @@ const G_M_139982: XiangqiReplaySpec = {
   "black": "Wang Yongqiang",
   "event": "2026 Baizuishan Cup",
   "resultText": "1-0",
+  "boardId": "2026-baizuishan-cup-2026-baizuishan-cup-r01-bmrm001",
   "annotations": {
     "byPly": {
       "22": {
@@ -133,6 +136,7 @@ const G_M_140450: XiangqiReplaySpec = {
   "black": "Cao Yanlei",
   "event": "2026 Chunqiu Daye Cup arena",
   "resultText": "0-1",
+  "boardId": "2026-chunqiu-dayie-challenge-2026-chunqiu-dayie-challenge-r51-b13x7uhj",
   "annotations": {
     "byPly": {
       "35": {
@@ -163,6 +167,7 @@ const G_M_140455: XiangqiReplaySpec = {
   "black": "He Wenzhe",
   "event": "2026 Chunqiu Daye Cup arena",
   "resultText": "1-0",
+  "boardId": "2026-chunqiu-dayie-challenge-2026-chunqiu-dayie-challenge-r42-b1kl77f5",
   "annotations": {
     "byPly": {
       "29": {
@@ -197,6 +202,7 @@ const G_M_143937: XiangqiReplaySpec = {
   "black": "Meng Chen",
   "event": "2026 League, stage one",
   "resultText": "1-0",
+  "boardId": "2026-xiangqi-league-2026-xiangqi-league-r07-b16mlqhe",
   "annotations": {
     "byPly": {
       "24": {

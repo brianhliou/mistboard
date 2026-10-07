@@ -7,6 +7,8 @@ import type { XiangqiReplaySpec } from '../../xiangqi-replay.js';
 // scripts/annotate-game.mjs over dpxq records m_143859, m_143732, m_143688,
 // m_143740, m_142516. Baked, not fetched: the page must not depend on the
 // study still existing. Regenerate the specs, never hand-edit a mainline.
+// Each boardId is that record's board in the broadcast archive (matched on the
+// full move list), which puts a "Full game analysis" link under the board.
 
 const G_STAGE_ONE: XiangqiReplaySpec = {
   "iccs": "b0c2 c6c5 b2a2 b9c7 a0b0 a9b9 b0b4 h9g7 h0g2 h7h5 g3g4 g9e7 g0e2 c7b5 b4f4 b5c3 a2a6 b7c7 a6c6 b9b6 c6c3 c7c3 f4d4 f9e8 c2e1 e6e5 g2f4 h5f5 h2h5 g6g5 g4g5 e7g5 h5f5 g7f5 d4d5 g5e7 e1g2 f5h6 d5e5 h6f7 e5f5 i9g9 f0e1 c3b3 f5d5 f7g5 g2h4 b6h6 f4g2 g5h3 i0g0 c5c4 h4f5 g9g5 e3e4 c4c3 d5d6 h6h9 e4e5 b3b2 f5e3 g5e5 e3g4 e5g5 g2e3 h3f4 e3c4 f4d3 c4b6 h9h8 b6c8 e9f9 e1d2 h8f8 g0h0 f8f3 d6d4 e7g9 i3i4 g5g7 c8d6 b2b0 d6b5 g7e7 h0h2 f3f0 e0e1 e7f7 h2h1 b0b1 g4e5 c3c2 b5c3 f7f5",
@@ -14,6 +16,7 @@ const G_STAGE_ONE: XiangqiReplaySpec = {
   "black": "Yin Sheng",
   "event": "2026 League, stage one",
   "resultText": "0-1",
+  "boardId": "2026-xiangqi-league-2026-xiangqi-league-r03-b1w5kd3w",
   "annotations": {
     "byPly": {
       "30": {
@@ -92,6 +95,7 @@ const G_MENG: XiangqiReplaySpec = {
   "black": "Meng Fanrui",
   "event": "2026 Shanghai Cup",
   "resultText": "1-0",
+  "boardId": "2026-shanghai-cup-2026-shanghai-cup-r03-btlwr19",
   "annotations": {
     "byPly": {
       "39": {
@@ -137,6 +141,7 @@ const G_JIN: XiangqiReplaySpec = {
   "black": "Jin Bo",
   "event": "2026 Shanghai Cup",
   "resultText": "1-0",
+  "boardId": "2026-shanghai-cup-2026-shanghai-cup-r04-bngvgl6",
   "annotations": {
     "byPly": {
       "59": {
@@ -188,6 +193,7 @@ const G_FINAL: XiangqiReplaySpec = {
   "black": "Chen Shaobo",
   "event": "2026 Shanghai Cup, final",
   "resultText": "1-0",
+  "boardId": "2026-shanghai-cup-2026-shanghai-cup-r05-b4jg13s",
   "annotations": {
     "byPly": {
       "44": {
@@ -241,6 +247,7 @@ const G_QUALIFIER: XiangqiReplaySpec = {
   "black": "Yin Sheng",
   "event": "2026 League qualifier, Hangzhou",
   "resultText": "0-1",
+  "boardId": "2026-league-qualifier-2026-league-qualifier-r01-b1059sq0",
   "annotations": {
     "byPly": {
       "25": {

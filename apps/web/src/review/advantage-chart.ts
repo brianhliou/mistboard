@@ -25,6 +25,11 @@ const PAD_Y = 4;
  *  half its stroke to the edge. */
 const EDGE_INSET = 0.6;
 
+/** Han, kana and hangul: scripts that stand upright in vertical writing. */
+const CJK = /[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/;
+/** A one-line phase label's 4px left margin plus 2px clear of the next divider. */
+const PHASE_LABEL_INSET = 6;
+
 /** Unique clip-path ids per mounted chart (re-mounts must not collide). */
 let chartInstance = 0;
 
@@ -60,6 +65,9 @@ export function createAdvantageChart(
     /** Phase boundaries → vertical dividers + rotated Opening/Middlegame/Endgame
      *  labels (lichess). Omitted or empty = no phase chrome. */
     phases?: GamePhases;
+    /** The three phase labels in the page's language (an article in Chinese).
+     *  Omitted = English, which is what every review surface shows. */
+    phaseLabels?: { opening: string; middlegame: string; endgame: string };
     /** Move text for the position at `ply` (e.g. "12... h10-i10"), shown in the
      *  hover readout above the eval. Omitted = the readout shows the eval alone. */
     moveLabel?: (ply: number) => string | null;
@@ -181,12 +189,23 @@ export function createAdvantageChart(
   // non-uniformly (preserveAspectRatio none), so rotated SVG text would distort.
   // A game with no detected middlegame gets no phase chrome at all.
   if (opts.phases?.middle && opts.phases.middle <= maxPly) {
-    const marks: { ply: number; label: string }[] = [{ ply: 0, label: 'Opening' }];
-    marks.push({ ply: opts.phases.middle, label: 'Middlegame' });
+    const names = opts.phaseLabels ?? {
+      opening: 'Opening',
+      middlegame: 'Middlegame',
+      endgame: 'Endgame',
+    };
+    const marks: { ply: number; label: string }[] = [{ ply: 0, label: names.opening }];
+    marks.push({ ply: opts.phases.middle, label: names.middlegame });
     if (opts.phases.end && opts.phases.end <= maxPly) {
-      marks.push({ ply: opts.phases.end, label: 'Endgame' });
+      marks.push({ ply: opts.phases.end, label: names.endgame });
     }
-    for (const mark of marks) {
+    // Chinese stands upright in vertical-rl and stacks one character per line
+    // (開 over 局), so a CJK label is set horizontally on one line instead. A
+    // horizontal label can be wider than its phase's span; it is hidden then
+    // (fitPhaseLabels), never wrapped. The rotated English labels are unchanged.
+    const oneLine = marks.some((mark) => CJK.test(mark.label));
+    const lineLabels: { label: HTMLElement; from: number; to: number }[] = [];
+    for (const [i, mark] of marks.entries()) {
       if (mark.ply > 0) {
         axis.append(
           svg('line', {
@@ -202,7 +221,26 @@ export function createAdvantageChart(
       label.className = 'advantage-chart__phase-label';
       label.style.left = `${((mark.ply / maxPly) * 100).toFixed(2)}%`;
       label.textContent = mark.label;
+      if (oneLine) {
+        label.classList.add('advantage-chart__phase-label--line');
+        lineLabels.push({
+          label,
+          from: mark.ply / maxPly,
+          to: (marks[i + 1]?.ply ?? maxPly) / maxPly,
+        });
+      }
       plot.append(label);
+    }
+    if (lineLabels.length > 0 && typeof ResizeObserver === 'function') {
+      const fitPhaseLabels = (): void => {
+        const width = plot.getBoundingClientRect().width;
+        if (width === 0) return; // not laid out yet (offscreen, a test)
+        for (const { label, from, to } of lineLabels) {
+          const need = label.getBoundingClientRect().width + PHASE_LABEL_INSET;
+          label.style.visibility = need <= (to - from) * width ? '' : 'hidden';
+        }
+      };
+      new ResizeObserver(fitPhaseLabels).observe(plot);
     }
   }
 

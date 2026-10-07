@@ -49,6 +49,20 @@ export type ReplayStepperCopy = {
   /** Suffix for the hand/reserve strip label ("Red reserve", "Sente hand"). */
   pocket: string;
   noPieces: string;
+  /** The link under an article board whose game is in the broadcast archive. */
+  fullAnalysis: string;
+  /** Accessible name of the advantage chart under an article board. */
+  advantageChart: string;
+  /** The board menu's switch for the graph, one setting for every board. */
+  hideEvalGraph: string;
+  showEvalGraph: string;
+  /** The chart's phase dividers, in the page's language. */
+  phases: { opening: string; middlegame: string; endgame: string };
+  /** The annotated board's ⋮ menu: its accessible name and its three items. */
+  moreActions: string;
+  flipBoard: string;
+  backToStart: string;
+  jumpToEnd: string;
 };
 
 type FamilyStrings = {
@@ -87,6 +101,15 @@ const COMMON: Record<
     evalPrefix: 'eval',
     wins: (side) => `${side} wins`,
     draw: 'Draw',
+    fullAnalysis: 'Full game analysis',
+    advantageChart: 'Engine evaluation over the game. Click to jump to a move.',
+    hideEvalGraph: 'Hide eval graph',
+    showEvalGraph: 'Show eval graph',
+    moreActions: 'More',
+    flipBoard: 'Flip the board',
+    backToStart: 'Back to the start',
+    jumpToEnd: 'Jump to the end',
+    phases: { opening: 'Opening', middlegame: 'Middlegame', endgame: 'Endgame' },
   },
   'zh-Hans': {
     firstMove: '第一步',
@@ -111,6 +134,15 @@ const COMMON: Record<
     evalPrefix: '评估',
     wins: (side) => `${side}胜`,
     draw: '和棋',
+    fullAnalysis: '全局引擎分析',
+    advantageChart: '优势图，点击可跳到该步',
+    hideEvalGraph: '隐藏优势图',
+    showEvalGraph: '显示优势图',
+    moreActions: '更多',
+    flipBoard: '翻转棋盘',
+    backToStart: '回到开始',
+    jumpToEnd: '跳到最后一步',
+    phases: { opening: '开局', middlegame: '中局', endgame: '残局' },
   },
   'zh-Hant': {
     firstMove: '第一步',
@@ -135,6 +167,15 @@ const COMMON: Record<
     evalPrefix: '評估',
     wins: (side) => `${side}勝`,
     draw: '和棋',
+    fullAnalysis: '全局引擎分析',
+    advantageChart: '優勢圖，點擊可跳到該步',
+    hideEvalGraph: '隱藏優勢圖',
+    showEvalGraph: '顯示優勢圖',
+    moreActions: '更多',
+    flipBoard: '翻轉棋盤',
+    backToStart: '回到開始',
+    jumpToEnd: '跳到最後一步',
+    phases: { opening: '開局', middlegame: '中局', endgame: '殘局' },
   },
 };
 

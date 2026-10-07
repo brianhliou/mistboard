@@ -12,6 +12,11 @@
    legible on any host. What sits outside the panel (the chapter title and the
    credit line) takes the host's ground, which is why ?theme= exists: an
    embedder on a dark page pins dark and both halves agree. */
+
+/* The credit line under the card. Its own file because an article replay board
+   draws the same link outside any embed (xiangqi-replay.ts). */
+@import "./embed-credit.css";
+
 .embed-body {
   margin: 0;
   padding: 0;
@@ -33,18 +38,6 @@
      only on a small VIEWPORT then never stacks at all. */
   container-type: inline-size;
   container-name: embed-frame;
-}
-
-.embed-credit {
-  color: var(--site-muted);
-  font-size: 12px;
-  text-align: center;
-  text-decoration: none;
-}
-
-.embed-credit:hover {
-  color: var(--site-link);
-  text-decoration: underline;
 }
 
 .embed-note {

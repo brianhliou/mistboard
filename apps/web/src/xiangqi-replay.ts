@@ -22,6 +22,7 @@ import { track } from './analytics.js';
 import type { ArticleLang } from './article-i18n.js';
 import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
 import './board-glyph-marker.css';
+import './embed/embed-credit.css';
 import {
   BOARD_LASTMOVE_MARKER_SELECTOR,
   boardLastMoveMarkersSvg,
@@ -32,6 +33,7 @@ import { type ReplayStepperCopy, replayStepperCopy } from './replay-stepper-copy
 import { seatDiscEl } from './seat-disc.js';
 import { GLYPH_SUFFIX_CLASS } from './study-chapter-annotations.js';
 import { readStoredXiangqiPieceSet, xiangqiAppearanceChangedEvent } from './theme.js';
+import { type XiangqiBoardGeometry, xiangqiBoardPoint } from './xiangqi-board-geometry.js';
 import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle, xiangqiNotationChangedEvent } from './xiangqi-notation.js';
 import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
@@ -165,13 +167,71 @@ export type XiangqiReplaySpec = {
    * whole game from there in either direction.
    */
   startPly?: number;
+  /**
+   * The game's board in the broadcast archive (`/broadcast/xiangqi/board/<id>`),
+   * when it has one. Set, a "Full game analysis" link sits under the card: an
+   * article board carries only the moves the page is about, and the board page
+   * has the advantage chart and every move's verdict. Absent, no link.
+   */
+  boardId?: string;
 };
+
+/** Where an article board's analysis link points. */
+export function broadcastBoardHref(boardId: string): string {
+  return `/broadcast/xiangqi/board/${encodeURIComponent(boardId)}`;
+}
+
+/** Board ids as the broadcast archive mints them: lowercase words joined by
+ *  single hyphens. A spec's `boardId` is checked against this in tests. */
+export const BROADCAST_BOARD_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export type XiangqiReplayController = { destroy: () => void };
 
+/** One setting for every article board's eval graph, kept across visits.
+ *  Absent means shown, the default; only "hidden" is ever written. */
+export const EVAL_GRAPH_STORAGE_KEY = 'mistboard.articleEvalGraph';
+/** Fired on window when the setting changes; detail `{ hidden: boolean }`. */
+export const evalGraphChangedEvent = 'mistboard:eval-graph-changed';
+
+/** Whether the reader hid the eval graph. Storage that throws (private mode,
+ *  blocked site data) reads as the default: shown. */
+export function readEvalGraphHidden(): boolean {
+  try {
+    return window.localStorage.getItem(EVAL_GRAPH_STORAGE_KEY) === 'hidden';
+  } catch {
+    return false;
+  }
+}
+
+/** Save the setting and tell every board on the page. The boards follow even
+ *  when storage refuses the write; only the next visit forgets it then. */
+export function writeEvalGraphHidden(hidden: boolean): void {
+  try {
+    if (hidden) window.localStorage.setItem(EVAL_GRAPH_STORAGE_KEY, 'hidden');
+    else window.localStorage.removeItem(EVAL_GRAPH_STORAGE_KEY);
+  } catch {
+    // Not persisted; the page still follows.
+  }
+  window.dispatchEvent(new CustomEvent(evalGraphChangedEvent, { detail: { hidden } }));
+}
+
+const GEOMETRY: XiangqiBoardGeometry = {
+  fileCount: 9,
+  rankCount: 10,
+  cell: CELL,
+  margin: MARGIN,
+  riverGap: 0,
+};
+
+/**
+ * Every point on this board goes through the shared geometry, so flipping is the
+ * same 180 degree rotation the live, study and broadcast boards draw. This file
+ * kept its own copy of the maths, which mirrored only the rank: the shared one
+ * got the file fix on 2026-08-27 and this copy did not, so a flipped article
+ * board left a1 on the reader's left, against the Chinese notation beside it.
+ */
 function pointXY(file: number, rank: number, perspective: XiangqiColor): { x: number; y: number } {
-  const row = perspective === 'red' ? 10 - rank : rank - 1;
-  return { x: MARGIN + file * CELL, y: MARGIN + row * CELL };
+  return xiangqiBoardPoint(file, rank, perspective, 'intersection', GEOMETRY);
 }
 
 function coord(square: XiangqiSquare): { file: number; rank: number } {
@@ -499,7 +559,7 @@ export function mountXiangqiReplay(
   menuButton.className = 'stepper-button stepper-button-menu';
   menuButton.setAttribute('aria-haspopup', 'true');
   menuButton.setAttribute('aria-expanded', 'false');
-  menuButton.setAttribute('aria-label', 'More');
+  menuButton.setAttribute('aria-label', copy.moreActions);
   menuButton.innerHTML =
     '<svg class="stepper-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" ' +
     'focusable="false" fill="currentColor"><circle cx="8" cy="3.2" r="1.5"/>' +
@@ -563,6 +623,26 @@ export function mountXiangqiReplay(
   const resultFoot = document.createElement('div');
   resultFoot.className = 'xq-replay-result';
 
+  // The game's advantage chart, for a board whose game is in the broadcast
+  // archive (see xiangqi-replay-chart.ts). The slot is placed now at the chart's
+  // full height, so a chart arriving later moves nothing on the page; it is
+  // dropped again if the game turns out to have no stored analysis. Without
+  // IntersectionObserver there is no lazy load, so there is no slot either.
+  // A reader who hid the graph (the menu's "Hide eval graph", one setting for
+  // every article board) gets no slot and no fetch: the card is its old height.
+  let chartSlot: HTMLElement | null = null;
+  if (spec.boardId && typeof IntersectionObserver === 'function') {
+    chartSlot = document.createElement('div');
+    chartSlot.className = 'xq-replay-chart';
+  }
+  /** The game has no stored analysis (or it did not match): never shown again. */
+  let chartGone = false;
+  let graphHidden = readEvalGraphHidden();
+  const chartShown = (): boolean => chartSlot !== null && !chartGone && !graphHidden;
+  /** Put the slot in the card, or take it out, to match chartShown(). */
+  let placeChartSlot: () => void = () => {};
+  let graphToggle: HTMLButtonElement | null = null;
+
   if (annotated) {
     // Study layout, built as ONE card rather than a board next to a bordered
     // box: seat bars top and bottom of the board the way a game page shows
@@ -604,27 +684,42 @@ export function mountXiangqiReplay(
     controlWrap.append(controls, menu);
     const seatTop = seat(nameOf(topSide), topSide);
     const seatBottom = seat(nameOf(bottomSide), bottomSide);
-    boardCol.append(seatTop, frame, seatBottom, controlWrap);
-
-    // Registered here, where the column's parts are in scope. The callbacks run
-    // later, and goto/render are hoisted function declarations, so referring to
-    // them before their definitions is fine.
+    // The chart sits between the board and the control bar, so the bar stays
+    // the card's bottom edge, level with the result foot beside it.
     let flipped = false;
-    menuItem('Flip the board', () => {
-      perspective = perspective === 'red' ? 'black' : 'red';
-      flipped = !flipped;
-      // An explicit re-order of the whole column. Shuffling two nodes around
-      // each other left the control bar above the board.
+    // An explicit re-order of the whole column, for a flip and for the graph
+    // coming or going. Shuffling two nodes around each other left the control
+    // bar above the board.
+    placeChartSlot = () => {
+      const slot = chartShown() && chartSlot ? [chartSlot] : [];
       boardCol.replaceChildren(
         flipped ? seatBottom : seatTop,
         frame,
         flipped ? seatTop : seatBottom,
+        ...slot,
         controlWrap,
       );
+    };
+    placeChartSlot();
+
+    // Registered here, where the column's parts are in scope. The callbacks run
+    // later, and goto/render are hoisted function declarations, so referring to
+    // them before their definitions is fine.
+    menuItem(copy.flipBoard, () => {
+      perspective = perspective === 'red' ? 'black' : 'red';
+      flipped = !flipped;
+      placeChartSlot();
       render();
     });
-    menuItem('Back to the start', () => gotoMainline(0));
-    menuItem('Jump to the end', () => gotoMainline(total));
+    menuItem(copy.backToStart, () => gotoMainline(0));
+    menuItem(copy.jumpToEnd, () => gotoMainline(total));
+    if (chartSlot) {
+      // Writes the one shared setting; every board on the page (this one
+      // included) follows through the change event, so the label is set there.
+      graphToggle = menuItem('', () => writeEvalGraphHidden(!graphHidden));
+      graphToggle.classList.add('xq-replay-menu-item--graph');
+      graphToggle.textContent = graphHidden ? copy.showEvalGraph : copy.hideEvalGraph;
+    }
     const moveCol = document.createElement('div');
     moveCol.className = 'xq-replay-move-col';
     // The move panel is taken out of flow (see the CSS) so a 180-ply list
@@ -645,6 +740,25 @@ export function mountXiangqiReplay(
     host.append(header, grid);
   } else {
     host.append(header, frame, controls, slider, narrative);
+    placeChartSlot = () => {
+      if (!chartSlot) return;
+      if (chartShown()) {
+        if (!chartSlot.isConnected) frame.after(chartSlot);
+      } else {
+        chartSlot.remove();
+      }
+    };
+    placeChartSlot();
+  }
+
+  // The embed card's credit line, in the same place and the same type: under
+  // the card, centred, muted until hovered (embed/embed-credit.css).
+  if (spec.boardId) {
+    const analysisLink = document.createElement('a');
+    analysisLink.className = 'embed-credit xq-replay-analysis-link';
+    analysisLink.href = broadcastBoardHref(spec.boardId);
+    analysisLink.textContent = copy.fullAnalysis;
+    host.append(analysisLink);
   }
 
   let index = Math.max(0, Math.min(total, Math.floor(spec.startPly ?? 0)));
@@ -1009,6 +1123,8 @@ export function mountXiangqiReplay(
     // The card always shows the result, the way a game page does; the running
     // narrative line is the plain stepper's job.
     resultFoot.textContent = xiangqiResultLabel(spec.resultText, copy) || spec.resultText;
+    // Inside an engine line the cursor stays on the game move the line hangs off.
+    chart?.setPly(index);
     renderMoveList();
     if (takeFocusAfterRender || (focusInMoveList && !wasFocused?.isConnected)) {
       takeFocusAfterRender = false;
@@ -1160,11 +1276,121 @@ export function mountXiangqiReplay(
   };
   window.addEventListener(xiangqiNotationChangedEvent, onNotation);
 
+  // --- Advantage chart (lazy) ----------------------------------------------
+  let chart: { setPly(ply: number): void } | null = null;
+  let chartJumpReported = false;
+  let destroyed = false;
+  let chartObserver: IntersectionObserver | null = null;
+
+  /** "12. h2e2" / "12\u2026 h9g7", numbered the way the move list numbers its rows. */
+  // The annotated card already holds the mainline in the reader's notation; the
+  // plain stepper does not, so the chart formats its own, per notation style.
+  let chartLabels: { style: string; labels: string[] } | null = null;
+  const chartMoveLabel = (ply: number): string | null => {
+    if (ply < 1 || ply > total) return null;
+    let labels = mainlineLabels;
+    if (labels.length === 0) {
+      const style = currentXiangqiNotationStyle();
+      if (chartLabels?.style !== style) {
+        chartLabels = { style, labels: formatXiangqiMoves(moves, style, startState) };
+      }
+      labels = chartLabels.labels;
+    }
+    const isFirst = (ply % 2 === 1) === (firstMover === 'red');
+    const n = Math.ceil((ply + plyOffset) / 2);
+    return `${n}${isFirst ? '.' : '\u2026'} ${labels[ply - 1] ?? ''}`;
+  };
+
+  async function loadChart(boardId: string, slot: HTMLElement): Promise<void> {
+    const mod = await import('./xiangqi-replay-chart.js');
+    const analysis = await mod.loadReplayChartAnalysis(boardId, total);
+    if (destroyed) return;
+    if (!analysis) {
+      // No stored analysis: give the reserved height back, for good.
+      dropChart();
+      return;
+    }
+    const drawn = mod.createReplayAdvantageChart(analysis, {
+      states,
+      moveLabel: chartMoveLabel,
+      ariaLabel: copy.advantageChart,
+      phaseLabels: copy.phases,
+      onJump: (ply) => {
+        if (!chartJumpReported) {
+          chartJumpReported = true;
+          track('article_replay_chart_jump', {
+            slug:
+              document.querySelector('[data-article-slug]')?.getAttribute('data-article-slug') ??
+              '',
+            event: spec.event,
+          });
+        }
+        gotoMainline(ply);
+      },
+    });
+    slot.replaceChildren(drawn.el);
+    slot.classList.add('is-loaded');
+    chart = drawn;
+    drawn.setPly(index);
+  }
+
+  /** No chart for this game: the slot leaves the card and never comes back. */
+  function dropChart(): void {
+    chartGone = true;
+    placeChartSlot();
+  }
+
+  /** Watch for the board nearing the viewport, if the graph is wanted and has
+   *  not been fetched yet. Fetched once, within 600px of the screen. */
+  let chartRequested = false;
+  function watchChart(): void {
+    const slot = chartSlot;
+    const boardId = spec.boardId;
+    if (!slot || !boardId || chartRequested || chartObserver || !chartShown()) return;
+    chartObserver = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        chartObserver?.disconnect();
+        chartObserver = null;
+        chartRequested = true;
+        loadChart(boardId, slot).catch(() => {
+          if (!destroyed) dropChart();
+        });
+      },
+      { rootMargin: '600px 0px' },
+    );
+    chartObserver.observe(host);
+  }
+
+  // The shared show/hide setting. Every board on the page hears the change,
+  // including the one whose menu made it.
+  const onEvalGraphChanged = (event: Event): void => {
+    const hidden = (event as CustomEvent<{ hidden: boolean }>).detail?.hidden;
+    if (typeof hidden !== 'boolean' || hidden === graphHidden) return;
+    graphHidden = hidden;
+    if (graphToggle) graphToggle.textContent = hidden ? copy.showEvalGraph : copy.hideEvalGraph;
+    if (hidden) {
+      // Not fetched yet: stop watching, so a hidden graph is never fetched.
+      chartObserver?.disconnect();
+      chartObserver = null;
+    }
+    placeChartSlot();
+    if (!hidden) {
+      chart?.setPly(index);
+      watchChart();
+    }
+  };
+  if (chartSlot) window.addEventListener(evalGraphChangedEvent, onEvalGraphChanged);
+  watchChart();
+
   relabel();
   render();
 
   return {
     destroy(): void {
+      destroyed = true;
+      chartObserver?.disconnect();
+      window.removeEventListener(evalGraphChangedEvent, onEvalGraphChanged);
       first.removeEventListener('click', onFirst);
       prev.removeEventListener('click', onPrev);
       next.removeEventListener('click', onNext);

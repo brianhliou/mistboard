@@ -753,6 +753,10 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
   main.className = 'site-section article-shell article-page';
   main.dataset.articleSlug = article.slug;
   if (articleLang) main.dataset.articleLang = articleLang;
+  // The chrome follows the UI language (articleLocale), so <html lang> can say
+  // zh-Hant over an English article. The article's own text says what it is,
+  // for screen readers, browser translate and hyphenation.
+  const contentLang: Locale = articleLang ?? 'en';
 
   // The sheet is the page's single anchoring panel; both rails sit beside
   // it directly on the page background (pychess grammar).
@@ -766,6 +770,7 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
 
   const heading = document.createElement('h1');
   heading.className = 'article-title';
+  heading.lang = contentLang;
   heading.textContent = article.title;
   header.append(heading);
 
@@ -819,6 +824,7 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
   if (showSummaryOnPage) {
     const lede = document.createElement('p');
     lede.className = 'article-lede';
+    lede.lang = contentLang;
     lede.textContent = article.summary;
     header.append(lede);
   }
@@ -868,6 +874,7 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
 
   const body = document.createElement('div');
   body.className = 'article-body';
+  body.lang = contentLang;
 
   const usedIds = new Set<string>();
   let headingIndex = 0;
