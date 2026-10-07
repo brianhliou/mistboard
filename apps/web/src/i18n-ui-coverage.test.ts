@@ -41,6 +41,8 @@ const ALLOWED: Record<string, Reason> = {
   'xiangqi-broadcast-ops.ts': 'admin',
   // content with its own gate, or English by design
   'announcements.ts': 'content', // announcement-i18n.coverage.test.ts
+  'anti-xiangqi-article-diagrams.ts': 'content', // generated step notes; article-i18n.coverage.test.ts
+  'horde-xiangqi-article-diagrams.ts': 'content', // generated table cells and step notes; article-i18n.coverage.test.ts
   'players/ecco-english.ts': 'content', // the English opening-name table itself
   'study-thumbnails.ts': 'content', // archive cover credits
   'videos-data.ts': 'content', // third-party video titles
