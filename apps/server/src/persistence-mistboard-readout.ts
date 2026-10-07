@@ -9,6 +9,7 @@ import {
   type MistboardReadoutCollectorError,
   type MistboardReadoutEngines,
   type MistboardReadoutFacts,
+  type MistboardReadoutFeedback,
   type MistboardReadoutMining,
   type MistboardReadoutProduct,
   type MistboardReadoutRuntime,
@@ -257,6 +258,7 @@ export async function collectMistboardReadoutFacts(
       collectMining(db),
       collectEngines(db, now),
       collectBroadcasts(db, extra.untrackedEvents),
+      collectFeedback(db),
     ] as const),
     // Context, not a graded section: losing the trend line must not turn a
     // healthy readout into an unknown one.
@@ -268,6 +270,7 @@ export async function collectMistboardReadoutFacts(
     'mining',
     'engines',
     'broadcasts',
+    'feedback',
   ];
   const collectorErrors = collectors.flatMap((result, index) =>
     result.status === 'rejected'
@@ -280,6 +283,7 @@ export async function collectMistboardReadoutFacts(
     mining: settledValue(collectors[2]),
     engines: settledValue(collectors[3]),
     broadcasts: settledValue(collectors[4]),
+    feedback: settledValue(collectors[5]),
     collectorErrors,
     trend,
   };
@@ -531,6 +535,24 @@ async function collectUntrackedDpxqEvents(
       hasGameList: row.hasGameList,
     }),
   );
+}
+
+// Counts and paths only; the bodies and reply addresses stay in the table,
+// where `npm run feedback:inbox` reads them.
+const FEEDBACK_RECENT_PATHS = 5;
+
+async function collectFeedback(db: Queryable): Promise<MistboardReadoutFeedback> {
+  const [counts, recent] = await Promise.all([
+    db.query<{ received: number }>(`SELECT count(*)::int AS received FROM feedback_submissions`),
+    db.query<{ path: string | null }>(
+      `SELECT path FROM feedback_submissions ORDER BY created_at DESC, id LIMIT $1`,
+      [FEEDBACK_RECENT_PATHS],
+    ),
+  ]);
+  return {
+    received: counts.rows[0]?.received ?? 0,
+    recentPaths: recent.rows.map((row) => row.path),
+  };
 }
 
 async function collectEngines(db: Queryable, now: Date): Promise<MistboardReadoutEngines> {

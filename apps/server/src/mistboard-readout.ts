@@ -124,8 +124,20 @@ export type MistboardReadoutUntrackedEvent = {
 
 export type MistboardReadoutMissingEngine = { variant: string; binary: string };
 
+// /contact submissions (feedback_submissions). Counts and page paths only: the
+// readout reaches a public issue, so a message body or a reply address never
+// enters it. Optional so snapshots from before 2026-10-06 still parse.
+export type MistboardReadoutFeedback = {
+  // Every submission ever stored: only grows, so the day-over-day difference
+  // is what arrived since the last readout.
+  received: number;
+  // Paths of the newest few submissions, newest first, as the client sent
+  // them. The action text filters them to plain page paths.
+  recentPaths: Array<string | null>;
+};
+
 export type MistboardReadoutCollectorError = {
-  section: 'product' | 'puzzles' | 'mining' | 'engines' | 'broadcasts';
+  section: 'product' | 'puzzles' | 'mining' | 'engines' | 'broadcasts' | 'feedback';
   code: 'collector_failed';
 };
 
@@ -163,6 +175,7 @@ export type MistboardReadoutV1 = {
   mining: MistboardReadoutMining | null;
   engines: MistboardReadoutEngines | null;
   broadcasts?: MistboardReadoutBroadcasts | null;
+  feedback?: MistboardReadoutFeedback | null;
   actions: MistboardReadoutAction[];
   collectorErrors: MistboardReadoutCollectorError[];
   trend: MistboardReadoutTrendPoint[];
@@ -179,6 +192,7 @@ export type MistboardReadoutFacts = {
   mining: MistboardReadoutMining | null;
   engines: MistboardReadoutEngines | null;
   broadcasts?: MistboardReadoutBroadcasts | null;
+  feedback?: MistboardReadoutFeedback | null;
   collectorErrors?: MistboardReadoutCollectorError[];
   trend?: MistboardReadoutTrendPoint[];
 };
@@ -242,6 +256,7 @@ export function buildMistboardReadout(input: {
     mining: input.facts.mining,
     engines: input.facts.engines,
     broadcasts: input.facts.broadcasts ?? null,
+    feedback: input.facts.feedback ?? null,
     actions,
     collectorErrors,
     trend: input.facts.trend ?? [],
@@ -262,6 +277,7 @@ function buildActions(
     ...productActions(facts.product, previousReport),
     ...operationsActions(facts, previousReport),
     ...missingEngineActions(runtime, previousReport),
+    ...feedbackActions(facts.feedback ?? null, previousReport),
   ];
   const quality = facts.puzzles;
   // A checkpoint is a level that never falls back: sessions only go up, so
@@ -574,6 +590,45 @@ function renderMissingEngine(engine: MistboardReadoutMissingEngine): string {
   return `${engine.binary} (${engine.variant})`;
 }
 
+// Feedback sat unread in the table until someone happened to look (2026-10-06).
+// This is awareness only: arrivals are an edge on the received counter, so the
+// line fires the day messages land and never for what was already there. With
+// no baseline (the first readout to count it, or a failed collector last time,
+// which already reads unknown) there is no telling what is new, so it is quiet.
+const FEEDBACK_PATHS_SHOWN = 3;
+
+function feedbackActions(
+  feedback: MistboardReadoutFeedback | null,
+  previousReport: MistboardReadoutV1 | null,
+): MistboardReadoutAction[] {
+  if (!feedback) return [];
+  const previous = previousReport?.feedback?.received;
+  if (typeof previous !== 'number') return [];
+  const count = feedback.received - previous;
+  if (count <= 0) return [];
+  const shown = feedback.recentPaths.slice(0, Math.min(count, FEEDBACK_PATHS_SHOWN));
+  const paths = `${shown.map(feedbackPathLabel).join(', ')}${count > shown.length ? ', …' : ''}`;
+  const plural = count === 1 ? '' : 's';
+  return [
+    {
+      code: 'feedback-new',
+      severity: 'action',
+      dedupeKey: `feedback-new:${feedback.received}`,
+      ownerIssue: null,
+      text: `${count} new feedback message${plural} since the last readout (${paths}). Read with npm run feedback:inbox.`,
+    },
+  ];
+}
+
+// The path is whatever the client posted, and this text lands on a public
+// GitHub issue: echo a plain page path in a code span (never a link), and
+// nothing else.
+function feedbackPathLabel(path: string | null): string {
+  if (!path) return 'no page given';
+  const bare = path.split(/[?#]/, 1)[0] ?? '';
+  return /^\/[A-Za-z0-9/_.%-]{0,96}$/.test(bare) ? `\`${bare}\`` : 'an unlisted page';
+}
+
 // A schema-v1 snapshot carries no player count at all, so the runtime check is
 // load-bearing even though the type says otherwise.
 function previousPlayerCount(previousReport: MistboardReadoutV1 | null): number {
@@ -609,11 +664,22 @@ function readoutVerdict(
   return 'healthy';
 }
 
+// Codes whose every firing is a new event rather than a persisting problem key
+// on their dedupeKey. New feedback is one: two days of arrivals are two
+// different messages, and collapsing the second into "same problem" would skip
+// the email and issue comment that are the whole point of the line.
+const ALERT_PER_EVENT_CODES: ReadonlySet<string> = new Set(['feedback-new']);
+
 function alertKey(
   verdict: MistboardReadoutVerdict,
   actions: readonly MistboardReadoutAction[],
 ): string {
-  const shape = [verdict, ...actions.map((action) => action.code).sort()].join('|');
+  const shape = [
+    verdict,
+    ...actions
+      .map((action) => (ALERT_PER_EVENT_CODES.has(action.code) ? action.dedupeKey : action.code))
+      .sort(),
+  ].join('|');
   return createHash('sha256').update(shape).digest('hex').slice(0, 16);
 }
 

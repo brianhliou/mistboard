@@ -77,6 +77,7 @@ export function definePersistenceTests(area: string, registerTests: () => void):
            puzzle_attempts,
            puzzle_quality_sessions,
            ops_readout_snapshots,
+           feedback_submissions,
            user_puzzle_ratings,
            puzzle_ratings,
            puzzle_daily_selections,

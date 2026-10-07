@@ -487,6 +487,84 @@ test('an engine missing on the serving box emails the day it appears, then stays
   assert.doesNotMatch(renderMistboardReadoutMarkdown(healthy), /Engines missing/);
 });
 
+test('new feedback alerts on arrival with paths only, and nothing else does', () => {
+  const feedback = (
+    received: number,
+    recentPaths: Array<string | null>,
+  ): MistboardReadoutFacts => ({
+    ...emptyFacts,
+    feedback: { received, recentPaths },
+  });
+
+  // No baseline (the first readout to count feedback): nothing to call new.
+  const first = reportWith(feedback(7, ['/zh-hans/blog/cao-yanlei', '/contact', null]));
+  assert.equal(first.actions.length, 0);
+  assert.equal(first.verdict, 'healthy');
+  assert.doesNotMatch(renderMistboardReadoutMarkdown(first), /Feedback/);
+
+  // Nothing new the next day: quiet.
+  const second = reportWith(feedback(7, ['/zh-hans/blog/cao-yanlei', '/contact', null]), first);
+  assert.equal(second.actions.length, 0);
+
+  // Two arrive: the line names the two newest pages and never a body or address.
+  const third = reportWith(
+    feedback(9, ['/play?ref=x', '/zh-hans/blog/cao-yanlei', '/contact']),
+    second,
+  );
+  assert.equal(third.verdict, 'action');
+  assert.equal(third.actions.length, 1);
+  assert.equal(third.actions[0]!.code, 'feedback-new');
+  assert.equal(third.actions[0]!.ownerIssue, null);
+  assert.equal(
+    third.actions[0]!.text,
+    '2 new feedback messages since the last readout (`/play`, `/zh-hans/blog/cao-yanlei`). Read with npm run feedback:inbox.',
+  );
+
+  // More than three: three paths and an ellipsis.
+  const many = reportWith(feedback(14, ['/a', '/b', '/c', '/d', '/e']), third);
+  assert.match(
+    many.actions[0]!.text,
+    /^5 new feedback messages since the last readout \(`\/a`, `\/b`, `\/c`, …\)/,
+  );
+
+  // The readout lands on a public issue, and the path is whatever the client
+  // sent: anything that is not a plain page path is not echoed.
+  const hostile = reportWith(feedback(15, ['/x [buy now](https://spam.example) `tick`']), many);
+  assert.match(
+    hostile.actions[0]!.text,
+    /^1 new feedback message since the last readout \(an unlisted page\)/,
+  );
+  assert.doesNotMatch(hostile.actions[0]!.text, /spam\.example/);
+
+  // A failed feedback collector last time is no baseline either.
+  const afterFailure = reportWith(feedback(16, ['/learn']), { ...hostile, feedback: null });
+  assert.equal(afterFailure.actions.length, 0);
+});
+
+test('new feedback on consecutive days alerts both days; a standing backlog does not', () => {
+  // The daily email and issue comment skip a report whose alert key matches
+  // the previous one ("same problem"). Each arrival is a different message,
+  // so its key has to differ, or the second day's message is never surfaced.
+  const feedback = (received: number): MistboardReadoutFacts => ({
+    ...emptyFacts,
+    feedback: { received, recentPaths: ['/contact'] },
+  });
+  const baseline = reportWith(feedback(2), reportWith(feedback(2)));
+  assert.equal(baseline.actions.length, 0);
+
+  const a = reportWith(feedback(3), baseline);
+  assert.equal(a.actions[0]?.code, 'feedback-new');
+  assert.notEqual(a.alertKey, baseline.alertKey);
+
+  const b = reportWith(feedback(4), a);
+  assert.equal(b.actions[0]?.code, 'feedback-new');
+  assert.notEqual(b.alertKey, a.alertKey, 'a second day of new feedback is not the same problem');
+
+  const c = reportWith(feedback(4), b);
+  assert.equal(c.actions.length, 0);
+  assert.equal(c.verdict, 'healthy');
+});
+
 test('the alert key holds steady while counters move under an unchanged problem', () => {
   const first = reportWith(
     factsWithProduct({ completedGames: 22, previousCompletedGames: 46, humanPlayers: 9 }),
