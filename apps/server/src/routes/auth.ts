@@ -17,7 +17,7 @@ import {
   randomEmailLoginCode,
   sendEmailLoginCode,
 } from './../account-session.js';
-import { captureServerEvent } from './../analytics-server.js';
+import { captureServerEvent, clientIpForAnalytics } from './../analytics-server.js';
 import { clientIpForRateLimit, createAuthRateLimiter } from './../auth-rate-limit.js';
 import { authCounters } from './../obs.js';
 import * as persistence from './../persistence.js';
@@ -223,7 +223,7 @@ export async function tryHandle(
         event: 'signup_completed',
         distinctId: user.id,
         properties: { handle: user.handle, method: 'email_code' },
-        ip: clientIp,
+        ip: clientIpForAnalytics(request),
       });
     }
     writeJson(
