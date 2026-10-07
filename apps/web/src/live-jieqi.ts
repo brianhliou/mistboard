@@ -33,6 +33,7 @@ import {
   jieqiPieceGhostSvg,
   renderJieqiBoardSvg,
 } from './live-jieqi-render.js';
+import { rebuildFinishedJieqiHistory } from './live-jieqi-replay-history.js';
 import {
   maybePlayJieqiSnapshotSound,
   resetJieqiSoundState,
@@ -210,7 +211,25 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
   },
   replayCapture: {
     positionKey: replayPositionKey,
-    plyForView: (view, ctx) => replayPlyForView(view, ctx.positionChanged, ctx.latestPly),
+    plyForView: (view, ctx) =>
+      replayPlyForView(
+        view,
+        ctx.positionChanged,
+        ctx.latestPly,
+        ctx.events.filter(isJieqiMoveEvent).length,
+      ),
+  },
+  // A FINISHED room only: its truth view plus the public move log recover the
+  // deal, so a cold join or reload gets every ply back (live-jieqi-replay-history).
+  // A live room returns null here and keeps incremental capture: its deal is a
+  // server secret and its views stay masked.
+  replayHistory: {
+    rebuild: ({ events, view, state }) =>
+      rebuildFinishedJieqiHistory(
+        events.filter(isJieqiMoveEvent).map((event) => event.move),
+        view,
+        isJieqiColor(state.seat) ? state.seat : view.perspective,
+      ),
   },
 });
 
@@ -404,11 +423,16 @@ function replayPlyForView(
   view: JieqiWireView,
   positionChanged: boolean,
   latestPly: number,
+  moveEvents: number,
 ): number {
   if (view.status.type === 'playing') {
     const completedFullMoves = Math.max(0, view.moveNumber - 1);
     return completedFullMoves * 2 + (view.status.turn === 'black' ? 1 : 0);
   }
+  // A game that is over sits at its move count. Counting from what this client
+  // happened to capture filed a cold join's final position as ply 1 (it had
+  // captured nothing), and a resignation's reveal as a ply past the last move.
+  if (moveEvents > 0) return moveEvents;
   if (positionChanged && view.lastMove) return latestPly + 1;
   return latestPly;
 }
