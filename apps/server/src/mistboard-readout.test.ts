@@ -13,6 +13,7 @@ import {
   scheduledReadoutTrigger,
 } from './mistboard-readout.js';
 import type { PuzzleQualityAggregate } from './persistence-puzzle-quality.js';
+import { decideReadoutEmail } from './readout-email.js';
 
 const runtime: MistboardReadoutRuntime = {
   revision: 'abc123',
@@ -430,6 +431,60 @@ test('a top event dpxq lists and we do not relay alerts the day it appears, not 
   const unreadable = reportWith(withEvents(null), third);
   assert.equal(unreadable.actions.length, 0);
   assert.match(renderMistboardReadoutMarkdown(unreadable), /dpxq index unreadable/);
+});
+
+// The build ships without the AB-JChess net when the authors' release does not
+// answer (scripts/fetch-abjchess-net.sh soft-fails), which hides the top jieqi
+// bot. That has to reach a person: the daily check emails the day it appears.
+test('an engine missing on the serving box emails the day it appears, then stays in the report', () => {
+  const abj = { variant: 'jieqi', binary: 'ab-jchess' };
+  const daily = (
+    missingEngines: MistboardReadoutRuntime['missingEngines'],
+    previousReport?: ReturnType<typeof buildMistboardReadout>,
+  ) =>
+    buildMistboardReadout({
+      snapshotId: 'readout_engines',
+      trigger: 'daily',
+      now: new Date('2026-10-06T17:23:00Z'),
+      runtime: { ...runtime, missingEngines },
+      facts: emptyFacts,
+      previousReport,
+    });
+
+  const healthy = daily([]);
+  assert.equal(healthy.actions.length, 0);
+
+  const first = daily([abj], healthy);
+  assert.equal(first.verdict, 'action');
+  assert.equal(first.actions[0]!.code, 'engines-missing');
+  assert.match(first.actions[0]!.text, /ab-jchess \(jieqi\)/);
+  assert.match(first.actions[0]!.text, /abjchess-net: WARNING/);
+  assert.deepEqual(
+    decideReadoutEmail({
+      report: first,
+      reused: false,
+      previousAlertKey: healthy.alertKey,
+      enabled: true,
+    }),
+    { send: true, reason: 'daily-alert' },
+  );
+
+  // The gap latches until a build fetches the net: no second email, but every
+  // report keeps naming it.
+  const second = daily([abj], first);
+  assert.equal(second.actions.length, 0);
+  assert.match(
+    renderMistboardReadoutMarkdown(second),
+    /Engines missing on the serving box: ab-jchess \(jieqi\)/,
+  );
+
+  // Fixed, then lost again: a new gap, a new email.
+  const again = daily([abj], daily([], second));
+  assert.equal(again.actions[0]!.code, 'engines-missing');
+
+  // A runtime that cannot see the box (the local CLI) says nothing.
+  assert.equal(daily(undefined).actions.length, 0);
+  assert.doesNotMatch(renderMistboardReadoutMarkdown(healthy), /Engines missing/);
 });
 
 test('the alert key holds steady while counters move under an unchanged problem', () => {

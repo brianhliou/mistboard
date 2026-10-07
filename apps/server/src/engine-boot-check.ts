@@ -132,6 +132,27 @@ export type EngineBootCheckResult = {
   missing: Array<{ variant: string; binary: string; error: string }>;
 };
 
+/**
+ * The enabled engines this box cannot run right now, with no logging or alerting:
+ * the daily readout's view of the same probes the boot check alerts on. An upstream
+ * net download that soft-failed at build time (scripts/fetch-abjchess-net.sh) shows
+ * up here as the AB-JChess probe for as long as the image lacks it.
+ */
+export function missingEngineBinaries(
+  probes: readonly EngineProbe[] = ENGINE_PROBES,
+): Array<{ variant: string; binary: string }> {
+  const missing: Array<{ variant: string; binary: string }> = [];
+  for (const probe of probes) {
+    if (!probe.enabled()) continue;
+    try {
+      probe.resolvePath();
+    } catch {
+      missing.push({ variant: probe.variant, binary: probe.binary });
+    }
+  }
+  return missing;
+}
+
 type BootLogger = {
   info: (obj: object, msg?: string) => void;
   error: (obj: object, msg?: string) => void;

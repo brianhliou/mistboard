@@ -122,6 +122,8 @@ export type MistboardReadoutUntrackedEvent = {
   hasGameList: boolean;
 };
 
+export type MistboardReadoutMissingEngine = { variant: string; binary: string };
+
 export type MistboardReadoutCollectorError = {
   section: 'product' | 'puzzles' | 'mining' | 'engines' | 'broadcasts';
   code: 'collector_failed';
@@ -150,6 +152,11 @@ export type MistboardReadoutV1 = {
     // census. Runtime-only: absent on snapshots from before it existed, and
     // it restarts from whoever is connected when the server restarts.
     broadcastViewersPeak?: number;
+    // Enabled engines the serving box cannot run (engine-boot-check.ts), such as
+    // AB-JChess when its net's build-time download soft-failed and the top jieqi
+    // slot is hidden. Absent where the caller cannot see the serving box (the
+    // local CLI) and on snapshots from before 2026-10-06.
+    missingEngines?: MistboardReadoutMissingEngine[];
   };
   product: MistboardReadoutProduct | null;
   puzzles: ElephantChessPuzzleQualityReport | null;
@@ -214,8 +221,8 @@ export function buildMistboardReadout(input: {
   const collectorErrors = [...(input.facts.collectorErrors ?? [])].sort((a, b) =>
     a.section.localeCompare(b.section),
   );
-  const actions = buildActions(input.facts, input.previousReport ?? null).sort((a, b) =>
-    a.dedupeKey.localeCompare(b.dedupeKey),
+  const actions = buildActions(input.facts, input.previousReport ?? null, input.runtime).sort(
+    (a, b) => a.dedupeKey.localeCompare(b.dedupeKey),
   );
   const verdict = readoutVerdict(actions, collectorErrors, input.runtime);
   const reportWithoutFingerprint = {
@@ -249,10 +256,12 @@ export function buildMistboardReadout(input: {
 function buildActions(
   facts: MistboardReadoutFacts,
   previousReport: MistboardReadoutV1 | null,
+  runtime: MistboardReadoutRuntime,
 ): MistboardReadoutAction[] {
   const actions: MistboardReadoutAction[] = [
     ...productActions(facts.product, previousReport),
     ...operationsActions(facts, previousReport),
+    ...missingEngineActions(runtime, previousReport),
   ];
   const quality = facts.puzzles;
   // A checkpoint is a level that never falls back: sessions only go up, so
@@ -528,6 +537,43 @@ function operationsActions(
   return actions;
 }
 
+// An enabled engine missing from the serving box latches until a build puts it
+// back, so fire on the day an engine joins the missing set, not on the level:
+// the daily email goes out once per new gap, and the Operations line keeps
+// naming it in every report after. The AB-JChess net is the expected case: the
+// build fetches it from the authors' release and builds without it when that
+// fails (scripts/fetch-abjchess-net.sh), which hides the top jieqi slot.
+function missingEngineActions(
+  runtime: MistboardReadoutRuntime,
+  previousReport: MistboardReadoutV1 | null,
+): MistboardReadoutAction[] {
+  const missing = runtime.missingEngines;
+  if (!missing || missing.length === 0) return [];
+  const before = new Set((previousReport?.production.missingEngines ?? []).map(missingEngineKey));
+  const fresh = missing.filter((engine) => !before.has(missingEngineKey(engine)));
+  if (fresh.length === 0) return [];
+  const hints = fresh.some((engine) => engine.binary === 'ab-jchess')
+    ? ` AB-JChess: the build skips its net when the download from the authors' release fails or does not match its checksum (build log: "abjchess-net: WARNING"), so the top jieqi bot is hidden. Redeploy once their release answers.`
+    : '';
+  return [
+    {
+      code: 'engines-missing',
+      severity: 'action',
+      dedupeKey: `engines-missing:${missing.map(missingEngineKey).sort().join(',')}`,
+      ownerIssue: null,
+      text: `Enabled engine${fresh.length === 1 ? '' : 's'} missing on the serving box: ${fresh.map(renderMissingEngine).join(', ')}.${hints}`,
+    },
+  ];
+}
+
+function missingEngineKey(engine: MistboardReadoutMissingEngine): string {
+  return `${engine.variant}:${engine.binary}`;
+}
+
+function renderMissingEngine(engine: MistboardReadoutMissingEngine): string {
+  return `${engine.binary} (${engine.variant})`;
+}
+
 // A schema-v1 snapshot carries no player count at all, so the runtime check is
 // load-bearing even though the type says otherwise.
 function previousPlayerCount(previousReport: MistboardReadoutV1 | null): number {
@@ -676,6 +722,12 @@ export function renderMistboardReadoutMarkdown(report: MistboardReadoutV1): stri
   if (report.production.broadcastViewersPeak !== undefined) {
     lines.push(
       `- Broadcast viewers: peak ${report.production.broadcastViewersPeak} open streams today (UTC day, runtime counter)`,
+    );
+  }
+  const missingEngines = report.production.missingEngines;
+  if (missingEngines && missingEngines.length > 0) {
+    lines.push(
+      `- Engines missing on the serving box: ${missingEngines.map(renderMissingEngine).join(', ')}`,
     );
   }
   if (!report.mining) lines.push('- Mining status unavailable.');

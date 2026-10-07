@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { EngineAlertEmailPayload } from './engine-alert-email.js';
-import { verifyEngineBinariesAtBoot } from './engine-boot-check.js';
+import { missingEngineBinaries, verifyEngineBinariesAtBoot } from './engine-boot-check.js';
 
 function harness() {
   const errors: Array<Record<string, unknown>> = [];
@@ -100,4 +100,37 @@ test('a disabled variant is skipped entirely (never probed, never alerts)', () =
   assert.equal(result.missing.length, 0);
   assert.equal(alerts.length, 0);
   assert.equal(errors.length, 0);
+});
+
+test('missingEngineBinaries lists enabled-but-missing engines without alerting', () => {
+  assert.deepEqual(
+    missingEngineBinaries([
+      presentEngine('jungle'),
+      missingEngine('jieqi'),
+      disabledEngine('banqi'),
+    ]),
+    [{ variant: 'jieqi', binary: 'jieqi-engine' }],
+  );
+});
+
+// The build soft-fails when the AB-JChess net cannot be fetched from its authors
+// (scripts/fetch-abjchess-net.sh), so the image can ship with the binary and no
+// net. The real probe must call that missing, which is what the readout reads.
+test('the AB-JChess probe reports a binary without its net as missing', (t) => {
+  const keys = ['MISTBOARD_JIEQI_ENABLED', 'MISTBOARD_ABJCHESS_PATH', 'MISTBOARD_ABJCHESS_NET'];
+  const saved = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+  t.after(() => {
+    for (const key of keys) {
+      if (saved[key] === undefined) delete process.env[key];
+      else process.env[key] = saved[key];
+    }
+  });
+  const isAbJchess = (entry: { binary: string }) => entry.binary === 'ab-jchess';
+  process.env.MISTBOARD_JIEQI_ENABLED = 'true';
+  process.env.MISTBOARD_ABJCHESS_PATH = process.execPath;
+  process.env.MISTBOARD_ABJCHESS_NET = '/nonexistent/abjchess.nnue';
+  assert.ok(missingEngineBinaries().some(isAbJchess));
+
+  process.env.MISTBOARD_ABJCHESS_NET = process.execPath;
+  assert.ok(!missingEngineBinaries().some(isAbJchess));
 });

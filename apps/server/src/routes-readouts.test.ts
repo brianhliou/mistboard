@@ -101,6 +101,7 @@ test('readout generation parses auto cadence and returns rendered aggregate data
       latest: async () => report,
       list: async () => [],
       email: async () => ({ send: false as const, reason: 'dry-run' as const }),
+      missingEngines: () => [],
     },
   );
   assert.equal(result.status, 200);
@@ -118,6 +119,7 @@ test('readout generation rejects network-supplied targets and malformed dry-run 
     latest: async () => null,
     list: async () => [],
     email: async () => ({ send: false as const, reason: 'disabled' as const }),
+    missingEngines: () => [],
   };
   assert.deepEqual(await readoutGenerateForApi(ctx, { trigger: 'pilot-run-override' }, deps), {
     status: 400,
@@ -159,7 +161,40 @@ test('readout generation fills the broadcast viewer peak from the context census
       latest: async () => null,
       list: async () => [],
       email: async () => ({ send: false as const, reason: 'dry-run' as const }),
+      missingEngines: () => [],
     },
   );
   assert.equal(seen, 7);
+});
+
+test('readout generation carries the serving box missing engines into the runtime', async () => {
+  const now = new Date('2026-10-06T17:23:00Z');
+  let seen: unknown;
+  await readoutGenerateForApi(
+    ctx,
+    { trigger: 'daily', dryRun: true },
+    {
+      now: () => now,
+      verifyToken: async () => ({}),
+      generate: async (input) => {
+        seen = input.runtime.missingEngines;
+        return {
+          report: buildMistboardReadout({
+            snapshotId: 'readout_engines',
+            trigger: 'daily',
+            now,
+            runtime: input.runtime,
+            facts: { product: null, puzzles: null, mining: null, engines: null },
+          }),
+          reused: false,
+          previousAlertKey: null,
+        };
+      },
+      latest: async () => null,
+      list: async () => [],
+      email: async () => ({ send: false as const, reason: 'dry-run' as const }),
+      missingEngines: () => [{ variant: 'jieqi', binary: 'ab-jchess' }],
+    },
+  );
+  assert.deepEqual(seen, [{ variant: 'jieqi', binary: 'ab-jchess' }]);
 });
