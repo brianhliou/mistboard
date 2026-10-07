@@ -1,14 +1,29 @@
-/* Xiangqi tablebase panel (review/xiangqi-tablebase-panel.ts): sits in the
-   analyse box under the engine head, only when chessdb.cn has an exact answer.
-   Row grammar: [move] [mate distance] [result badge]. Colours follow lichess's
-   tablebase table: win green, draw grey, loss red. */
+/* Xiangqi tablebase panel (review/xiangqi-tablebase-panel.ts): shown inside the
+   opening-explorer pane, in place of the book, when chessdb.cn has an exact
+   answer. Row grammar: [move] [mate distance] [result badge].
+
+   Results are from the side to move's view, so the colours are the site's good /
+   bad for the mover grammar, the same teal and violet as the jieqi luck die
+   (board-luck-mark.css): win teal, draw grey, loss violet. Never red or green: red
+   is the Red player, and a Black-to-move table full of red "Loss" badges read as
+   Red losing. Step 5 on the light panel, step 2 (dark text) on the dark one. */
 .xq-tablebase {
+  --xq-tb-win: #016f53;
+  --xq-tb-win-text: #fff;
+  --xq-tb-draw: #7a7771;
+  --xq-tb-draw-text: #fff;
+  --xq-tb-loss: #692db6;
+  --xq-tb-loss-text: #fff;
   display: flex;
   flex: none;
   flex-direction: column;
   min-height: 0;
-  max-height: 40%;
-  border-bottom: 1px solid var(--site-border);
+}
+:root[data-effective-theme="dark"] .xq-tablebase {
+  --xq-tb-win: #8cd6ba;
+  --xq-tb-win-text: #00523d;
+  --xq-tb-loss: #c4b2ee;
+  --xq-tb-loss-text: #4f148f;
 }
 /* `display: flex` beats the UA `[hidden]` rule (see opening-explorer.css). */
 .xq-tablebase[hidden] {
@@ -18,9 +33,8 @@
 .xq-tablebase__head {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
   gap: 8px;
-  padding: 6px 10px 4px;
+  padding: 8px 10px 4px;
   border-bottom: 1px solid var(--site-border-soft);
 }
 
@@ -31,14 +45,30 @@
 }
 
 .xq-tablebase__summary {
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: 11px;
-  color: var(--site-muted);
+  font-weight: 600;
+  color: var(--site-text);
   font-variant-numeric: tabular-nums;
+}
+
+/* Provider credit: quiet, so it reads as a source line rather than an action. */
+.xq-tablebase__credit {
+  flex: none;
+  font-size: 10px;
+  color: var(--site-muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.xq-tablebase__credit:hover,
+.xq-tablebase__credit:focus-visible {
+  color: var(--site-text);
+  text-decoration: underline;
 }
 
 .xq-tablebase__table {
   min-height: 0;
-  overflow-y: auto;
 }
 
 .xq-tablebase__row {
@@ -85,24 +115,19 @@
   font-size: 11px;
   font-weight: 700;
   text-align: center;
-  color: #fff;
 }
 
 .xq-tablebase__badge--win {
-  background: var(--site-success, #4f9f74);
+  background: var(--xq-tb-win);
+  color: var(--xq-tb-win-text);
 }
 
 .xq-tablebase__badge--draw {
-  background: var(--site-muted);
+  background: var(--xq-tb-draw);
+  color: var(--xq-tb-draw-text);
 }
 
 .xq-tablebase__badge--loss {
-  background: var(--site-danger, #c0392b);
-}
-
-/* The analyse box strips its children's borders with `.review-rail-main > *`,
-   which ties the rule above and wins or loses on bundle order; restate the
-   separator at higher specificity (the engine head does the same). */
-.review-rail-main > .xq-tablebase {
-  border-bottom: 1px solid var(--site-border);
+  background: var(--xq-tb-loss);
+  color: var(--xq-tb-loss-text);
 }

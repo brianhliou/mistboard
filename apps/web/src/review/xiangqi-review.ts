@@ -32,6 +32,7 @@ import { xiangqiBoardAspect } from '../xiangqi-board-aspect.js';
 import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
 import { bestMoveArrow, engineArrowsFromLines } from './engine/engine-arrows.js';
 import type { NodeShape } from './game-tree.js';
+import { type HoverArrowTone, hoverArrowStyle } from './hover-arrow.js';
 import { createOpeningExplorer } from './opening-explorer.js';
 import {
   mountTreeReview,
@@ -54,9 +55,10 @@ export type XiangqiReviewConfig = TreeReviewConfig<
 > & {
   /** Attach the opening-explorer underboard tab. Defaults to true. */
   openingExplorer?: boolean;
-  /** Attach the exact endgame table (chessdb.cn, via our server). Defaults to
-   *  on for the analysis board only, where the reader is asking "what is this
-   *  position worth"; a played game's review can opt in. */
+  /** Show the exact endgame table (chessdb.cn, via our server) inside the
+   *  opening-explorer pane for covered positions. Defaults to on for the
+   *  analysis board only, where the reader is asking "what is this position
+   *  worth"; a played game's review can opt in. Needs the explorer. */
   tablebasePanel?: boolean;
   /** The moves are a played record (a broadcast or archive game): replay past
    *  the draws an arbiter decides instead of stopping at the kernel's call. */
@@ -180,51 +182,42 @@ export function mountXiangqiReview(
   // surface does today (the study board did until 2026-08-26). The panel is
   // closed until the reader opens it from the book tool, so this costs nothing
   // on a surface where nobody looks.
+  // The tablebase rides inside the explorer pane (lichess): same book button,
+  // and a covered position shows the exact table instead of the book.
+  const withTablebase = config.tablebasePanel ?? config.reviewSurface === 'analysis';
   const explorer =
-    config.openingExplorer === false ? undefined : (config.explorer ?? xiangqiOpeningExplorer());
+    config.openingExplorer === false
+      ? undefined
+      : (config.explorer ?? xiangqiOpeningExplorer(withTablebase));
   const presentation = config.record
     ? { ...xiangqiPresentation, adapter: xiangqiRecordTreeAdapter }
     : xiangqiPresentation;
-  const tablebase =
-    config.tablebase ??
-    ((config.tablebasePanel ?? config.reviewSurface === 'analysis')
-      ? xiangqiTablebase()
-      : undefined);
-  return mountTreeReview(root, presentation, { ...config, explorer, tablebase });
+  return mountTreeReview(root, presentation, { ...config, explorer });
 }
 
-/** Hover ink shared by the explorer and the tablebase table: "the move under
- *  your cursor" (violet, dashed), never the engine's blue suggestion. */
-function previewArrow(move: XiangqiMove | null, className: string): XiangqiBoardArrow | null {
-  return move
-    ? { from: move.from, to: move.to, className, color: '#8a63d2', dashed: true, opacity: 0.85 }
-    : null;
-}
-
-/** The tablebase panel, typed to the xiangqi kernel state. */
-function xiangqiTablebase(): NonNullable<XiangqiReviewConfig['tablebase']> {
-  const panel = createXiangqiTablebasePanel();
-  return {
-    el: panel.el,
-    setTruth: (truth) => panel.setState(truth),
-    onPlayMove: (handler) => panel.onPlayMove(handler),
-    onHoverMove: (handler) =>
-      panel.onHoverMove((move) => handler(previewArrow(move, 'xq-arrow--tablebase'))),
-  };
+/** The board preview for a hovered book or tablebase row: the standard hover
+ *  arrow (review/hover-arrow.ts), inked by where the move came from. */
+export function xiangqiHoverArrow(
+  move: XiangqiMove | null,
+  tone: HoverArrowTone | null,
+): XiangqiBoardArrow | null {
+  return move ? { from: move.from, to: move.to, ...hoverArrowStyle(tone ?? 'book') } : null;
 }
 
 /** The shared explorer panel, typed to the xiangqi kernel state. */
-function xiangqiOpeningExplorer(): NonNullable<XiangqiReviewConfig['explorer']> {
-  const explorer = createOpeningExplorer();
+function xiangqiOpeningExplorer(
+  withTablebase: boolean,
+): NonNullable<XiangqiReviewConfig['explorer']> {
+  const explorer = createOpeningExplorer(
+    withTablebase ? { tablebase: createXiangqiTablebasePanel() } : {},
+  );
   return {
     el: explorer.el,
     setTruth: (truth) => explorer.setState(truth),
     setActive: (isActive) => explorer.setActive(isActive),
     onPlayMove: (handler) => explorer.onPlayMove(handler),
-    // Hover hint in a distinct ink (teal, dashed) so it never reads as an engine
-    // suggestion — it is "the move under your cursor", not "the best move".
     onHoverMove: (handler) =>
-      explorer.onHoverMove((move) => handler(previewArrow(move, 'xq-arrow--explorer'))),
+      explorer.onHoverMove((move, tone) => handler(xiangqiHoverArrow(move, tone))),
   };
 }
 

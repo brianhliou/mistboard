@@ -514,6 +514,7 @@ export const EN_REVIEW = {
   'analysis.tablebase.loss': 'Loss',
   'analysis.tablebase.mateIn': 'Mate in {moves}',
   'analysis.tablebase.matedIn': 'Mated in {moves}',
+  'analysis.tablebase.credit': 'chessdb.cn',
   'practice.tablebase.keepsWin': 'Good. The tablebase says this keeps the win.',
   'practice.tablebase.holdsDraw': 'Good. The tablebase says this holds the draw.',
   'practice.tablebase.throwsWin':

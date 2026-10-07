@@ -191,6 +191,7 @@ export const ZH_HANT_CONTENT = {
   'source.katago': 'KataGo，作者 lightvector：KataGomo 所基於的引擎，MIT。',
   'source.dandelion':
     'Dandelion 4，作者 Kouza（lxsgx23）：本站最強鬥獸棋機器人的神經網路來源，從其發布頁取得，不在本站轉存。',
+  'source.chessdb': '象棋雲庫（chessdb.cn）：象棋分析棋盤和練習中的殘局精確結果。',
   'source.pikafish':
     '皮卡魚（Pikafish），作者皮卡魚開發團隊：本站象棋最高等級的皮卡魚機器人，也是象棋對局、研習和直播分析以及瀏覽器內分析棋盤所用的引擎，GPL-3.0。其神經網路權重另有授權協議。',
   'source.pikafishSite': 'pikafish.com',

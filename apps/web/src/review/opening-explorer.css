@@ -18,6 +18,16 @@
   display: none;
 }
 
+/* The book's own parts, wrapped so an endgame table can stand in for them
+   (xiangqi-tablebase-panel.ts). `display: contents` keeps the wrapper out of
+   layout, so the sticky column header still sticks to the pane. */
+.opening-explorer__book {
+  display: contents;
+}
+.opening-explorer__book[hidden] {
+  display: none;
+}
+
 .opening-explorer__head {
   display: flex;
   align-items: baseline;

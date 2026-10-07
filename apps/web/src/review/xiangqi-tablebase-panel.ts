@@ -2,12 +2,17 @@
 // covered endgame with its exact result and mate distance, best first. Clicking
 // a row plays the move, the same as the opening explorer.
 //
-// It sits in the analyse box under the engine head and is INVISIBLE unless the
-// position has an exact answer. There is no loading state, no "unavailable" line
-// and no error: chessdb.cn being down, slow, rate-limited or simply not knowing
-// the position all read the same as a middlegame, where the panel never shows.
-// The engine keeps working either way, so a missing table costs the reader
-// nothing they had before.
+// It lives INSIDE the opening-explorer pane (lichess's model): the book button
+// opens one pane, and when the position is covered that pane shows this table
+// instead of the opening book (opening-explorer.ts decides). The panel itself is
+// INVISIBLE unless the position has an exact answer. There is no loading state,
+// no "unavailable" line and no error: chessdb.cn being down, slow, rate-limited
+// or simply not knowing the position all read as "no table", and the pane falls
+// back to the book.
+//
+// Results are from the side to move's view, so the row colours are the site's
+// good / bad for the mover grammar (teal / grey / violet), never red or green,
+// and the header names the winning side outright ("Red wins · Mate in 11").
 //
 // Results come from xiangqi-tablebase-client.ts, which only ever hands back an
 // exact answer or `none`; this file never turns anything into a draw.
@@ -19,6 +24,7 @@ import {
   type XiangqiGameState,
   type XiangqiMove,
   type XiangqiTablebaseMove,
+  type XiangqiTablebaseOutcome,
   type XiangqiTablebaseResponse,
   xiangqiTablebaseMateMoves,
 } from '@mistboard/game';
@@ -37,13 +43,23 @@ export type XiangqiTablebasePanel = {
   el: HTMLElement;
   /** Point the panel at a position; null hides it. Safe on every navigation:
    *  the previous lookup is aborted, and a late answer for an old position is
-   *  dropped. */
-  setState(state: XiangqiGameState | null): void;
+   *  dropped. Resolves true once THIS position's exact table is showing, false
+   *  for no data, an error, or a position the reader already left. Re-pointing
+   *  at the position already shown hands back the same answer without a new
+   *  lookup. */
+  setState(state: XiangqiGameState | null): Promise<boolean>;
   /** Play a move the reader clicked in the table. */
   onPlayMove(handler: (move: XiangqiMove) => void): void;
-  /** Fires as the reader hovers a row (the move, or null on leave). */
-  onHoverMove(handler: (move: XiangqiMove | null) => void): void;
+  /** Fires as the reader hovers a row: the move and its result for the side to
+   *  move (which colours the preview arrow), or null on leave. */
+  onHoverMove(
+    handler: (move: XiangqiMove | null, result: XiangqiTablebaseOutcome | null) => void,
+  ): void;
 };
+
+/** The provider credit in the header (chessdb.cn asks nothing, but the answers
+ *  are theirs). */
+export const CHESSDB_URL = 'https://www.chessdb.cn/';
 
 export function createXiangqiTablebasePanel(
   lookup: XiangqiTablebaseLookup = fetchXiangqiTablebase,
@@ -60,7 +76,13 @@ export function createXiangqiTablebasePanel(
   title.textContent = t('analysis.tablebase.title');
   const summary = document.createElement('span');
   summary.className = 'xq-tablebase__summary';
-  head.append(title, summary);
+  const credit = document.createElement('a');
+  credit.className = 'xq-tablebase__credit';
+  credit.href = CHESSDB_URL;
+  credit.target = '_blank';
+  credit.rel = 'noopener';
+  credit.textContent = t('analysis.tablebase.credit');
+  head.append(title, summary, credit);
 
   const table = document.createElement('div');
   table.className = 'xq-tablebase__table';
@@ -71,18 +93,21 @@ export function createXiangqiTablebasePanel(
   let shown: Exact | null = null;
   let inFlight: AbortController | null = null;
   let playMove: ((move: XiangqiMove) => void) | null = null;
-  let hoverMove: ((move: XiangqiMove | null) => void) | null = null;
+  let hoverMove:
+    | ((move: XiangqiMove | null, result: XiangqiTablebaseOutcome | null) => void)
+    | null = null;
+  let answer: Promise<boolean> = Promise.resolve(false);
 
   function hide(): void {
-    if (!el.hidden) hoverMove?.(null); // a hidden table must not strand its arrow
+    if (!el.hidden) hoverMove?.(null, null); // a hidden table must not strand its arrow
     el.hidden = true;
     shown = null;
     table.replaceChildren();
   }
 
-  function setState(state: XiangqiGameState | null): void {
+  function setState(state: XiangqiGameState | null): Promise<boolean> {
     const key = state ? standardXiangqiPositionKey(state) : null;
-    if (key !== null && key === currentKey) return;
+    if (key !== null && key === currentKey) return answer;
     currentKey = key;
     currentState = state;
     inFlight?.abort();
@@ -90,17 +115,22 @@ export function createXiangqiTablebasePanel(
     // Hide at once: the previous position's table is wrong for this one, and a
     // stale table that a click would play from is worse than a blank moment.
     hide();
-    if (state?.status.type !== 'playing') return;
+    if (state?.status.type !== 'playing') {
+      answer = Promise.resolve(false);
+      return answer;
+    }
     const controller = new AbortController();
     inFlight = controller;
-    void lookup(state, controller.signal)
+    answer = lookup(state, controller.signal)
       .catch((): XiangqiTablebaseResponse => ({ status: 'none' }))
       .then((response) => {
-        if (controller.signal.aborted || currentKey !== key) return;
+        if (controller.signal.aborted || currentKey !== key) return false;
         inFlight = null;
-        if (response.status !== 'exact') return;
+        if (response.status !== 'exact') return false;
         render(response);
+        return true;
       });
+    return answer;
   }
 
   function render(data: Exact): void {
@@ -113,7 +143,7 @@ export function createXiangqiTablebasePanel(
       ...data.moves.map((row) =>
         moveRow(row, formatXiangqiMove(state, { from: row.from, to: row.to }, style), {
           play: (move) => playMove?.(move),
-          hover: (move) => hoverMove?.(move),
+          hover: (move, result) => hoverMove?.(move, result),
         }),
       ),
     );
@@ -151,7 +181,10 @@ function positionSummary(data: Exact, turn: 'red' | 'black'): string {
 function moveRow(
   row: XiangqiTablebaseMove,
   label: string,
-  handlers: { play: (move: XiangqiMove) => void; hover: (move: XiangqiMove | null) => void },
+  handlers: {
+    play: (move: XiangqiMove) => void;
+    hover: (move: XiangqiMove | null, result: XiangqiTablebaseOutcome | null) => void;
+  },
 ): HTMLElement {
   const move: XiangqiMove = { from: row.from, to: row.to };
   const el = document.createElement('button');
@@ -182,7 +215,7 @@ function moveRow(
 
   el.append(name, distance, badge);
   el.addEventListener('click', () => handlers.play(move));
-  el.addEventListener('mouseenter', () => handlers.hover(move));
-  el.addEventListener('mouseleave', () => handlers.hover(null));
+  el.addEventListener('mouseenter', () => handlers.hover(move, row.result));
+  el.addEventListener('mouseleave', () => handlers.hover(null, null));
   return el;
 }

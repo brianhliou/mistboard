@@ -66,6 +66,44 @@ describe('xiangqi tablebase panel', () => {
     expect(panel.el.querySelector('.xq-tablebase__summary')?.textContent).toBe(
       'Red wins · Mate in 5',
     );
+    // The provider is credited in the header, opening in a new tab.
+    const credit = panel.el.querySelector<HTMLAnchorElement>('.xq-tablebase__credit');
+    expect(credit?.textContent).toBe('chessdb.cn');
+    expect(credit?.href).toBe('https://www.chessdb.cn/');
+    expect(credit?.target).toBe('_blank');
+    expect(credit?.rel).toBe('noopener');
+  });
+
+  it("names the winning side when Black is to move and every row is Black's loss", async () => {
+    const lost: XiangqiTablebaseResponse = {
+      status: 'exact',
+      result: 'loss',
+      dtm: 20,
+      moves: [
+        { from: 'd10', to: 'e10', result: 'loss', dtm: 20 },
+        { from: 'd10', to: 'd9', result: 'loss', dtm: 18 },
+      ],
+    };
+    const panel = createXiangqiTablebasePanel(async () => lost);
+    expect(await panel.setState(position('3k5/9/5N3/9/2b6/9/9/9/4K4/9 b'))).toBe(true);
+    // Rows read Loss (Black's view), the header says whose win it is.
+    const rows = [...panel.el.querySelectorAll<HTMLElement>('.xq-tablebase__row')];
+    expect(rows.map((row) => row.dataset.result)).toEqual(['loss', 'loss']);
+    expect(rows[0]?.querySelector('.xq-tablebase__badge')?.className).toContain(
+      'xq-tablebase__badge--loss',
+    );
+    expect(panel.el.querySelector('.xq-tablebase__summary')?.textContent).toBe(
+      'Red wins · Mate in 10',
+    );
+  });
+
+  it('answers whether the position is covered, and re-answers without a new lookup', async () => {
+    const lookup = vi.fn(async () => EXACT);
+    const panel = createXiangqiTablebasePanel(lookup);
+    expect(await panel.setState(position(ZUGZWANG))).toBe(true);
+    expect(await panel.setState(position(ZUGZWANG))).toBe(true);
+    expect(lookup).toHaveBeenCalledTimes(1);
+    expect(await panel.setState(null)).toBe(false);
   });
 
   it('stays hidden when there is no exact answer, and when the lookup throws', async () => {
@@ -86,17 +124,25 @@ describe('xiangqi tablebase panel', () => {
   it('plays the clicked move and previews the hovered one', async () => {
     const panel = createXiangqiTablebasePanel(async () => EXACT);
     const played: XiangqiMove[] = [];
-    const hovered: (XiangqiMove | null)[] = [];
+    const hovered: [XiangqiMove | null, string | null][] = [];
     panel.onPlayMove((move) => played.push(move));
-    panel.onHoverMove((move) => hovered.push(move));
+    panel.onHoverMove((move, result) => hovered.push([move, result]));
     panel.setState(position(ZUGZWANG));
     await flushPromises();
 
     const first = panel.el.querySelector<HTMLElement>('.xq-tablebase__row');
+    const rows = [...panel.el.querySelectorAll<HTMLElement>('.xq-tablebase__row')];
     first?.dispatchEvent(new MouseEvent('mouseenter'));
     first?.click();
+    rows[2]?.dispatchEvent(new MouseEvent('mouseenter'));
+    rows[2]?.dispatchEvent(new MouseEvent('mouseleave'));
     expect(played).toEqual([{ from: 'f8', to: 'd7' }]);
-    expect(hovered).toEqual([{ from: 'f8', to: 'd7' }]);
+    // Each hover carries the row's result, which inks the preview arrow.
+    expect(hovered).toEqual([
+      [{ from: 'f8', to: 'd7' }, 'win'],
+      [{ from: 'e2', to: 'e1' }, 'loss'],
+      [null, null],
+    ]);
   });
 
   it('drops a late answer for a position the reader already left', async () => {
@@ -108,11 +154,12 @@ describe('xiangqi tablebase panel', () => {
       state.board.f8 ? slow : ({ status: 'none' } as const),
     );
     const panel = createXiangqiTablebasePanel(lookup);
-    panel.setState(position(ZUGZWANG));
+    const first = panel.setState(position(ZUGZWANG));
     panel.setState(createInitialXiangqiState('t'));
     release(EXACT);
     await flushPromises();
     expect(panel.el.hidden).toBe(true);
+    expect(await first).toBe(false);
   });
 });
 

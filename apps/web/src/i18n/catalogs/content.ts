@@ -239,6 +239,8 @@ export const EN_CONTENT = {
   'source.katago': 'KataGo by lightvector: the engine KataGomo is built on, MIT.',
   'source.dandelion':
     "Dandelion 4 by Kouza (lxsgx23): the source of the top jungle bot's neural network, fetched from its release and never re-hosted.",
+  'source.chessdb':
+    'chessdb.cn, the Chinese Chess Cloud Database: exact endgame results in the xiangqi analysis board and practice.',
   'source.pikafish':
     'Pikafish by the Pikafish developers: the Pikafish bot at the top of the xiangqi levels, and the engine behind xiangqi game, study and broadcast analysis and the in-browser analysis board, GPL-3.0. Its neural network weights carry their own license.',
   'source.pikafishSite': 'pikafish.com',
@@ -671,6 +673,7 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'source.katagomo',
   'source.katago',
   'source.dandelion',
+  'source.chessdb',
   'source.pikafish',
   'source.pikafishSite',
   'source.pikafishWeightsLicense',
