@@ -1,7 +1,7 @@
 // Figures for the article "What the duck does to xiangqi's game tree"
 // (apps/web/src/articles/content/duck-xiangqi-game-tree.ts).
 //
-//   node scripts/duck-tree-figures.mjs                 write the 4 chart SVGs
+//   node scripts/duck-tree-figures.mjs                 write the 12 chart SVGs
 //   node scripts/duck-tree-figures.mjs --extract <dir> refresh the branching data
 //                                                      from <dir>/per-ply.csv
 //
@@ -16,9 +16,8 @@
 // one row [ply, p25, median, p75] of legal moves at that ply across 64
 // Fairy-Stockfish self-play games (100k nodes a move, NNUE off).
 //
-// Output: apps/web/public/article-thumbs/duck-tree-{counts,branching}{,-dark}.svg
-// (zh variants once the English is final). Text uses a system font stack because web
-// fonts do not load inside an <img>.
+// Output: apps/web/public/article-thumbs/duck-tree-{counts,branching}{,-dark}{,.zh-hans,.zh-hant}.svg.
+// Text uses a system font stack because web fonts do not load inside an <img>.
 
 import { readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -201,20 +200,10 @@ const svgDoc = (w, h, label, body) =>
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-label="${esc(label)}" font-family="${esc(FONT)}">${body}</svg>\n`;
 
 // ---------- in-figure text ----------
+// zh machine-translated 2026-10-07, in the terms the zh article uses (落点, 应着,
+// 半回合). Every locale must carry every key: the check below throws otherwise.
 const L = {
   en: {
-    a: 'Xiangqi, red and black each move once',
-    aN: '1,920 positions',
-    b: 'Duck Xiangqi, red moves once',
-    bN: '2,554 positions',
-    c: 'Placements that change nothing, merged',
-    cN: '1,310 left to search',
-    d: 'The duck taken away',
-    dN: '44 positions, as in xiangqi',
-    kX: 'A xiangqi position',
-    kNone: 'The duck changes nothing for black',
-    kRm: 'The duck takes black replies away',
-    kAdd: 'The duck gives black a new reply',
     cX1: 'Xiangqi, after red moves',
     cX2: 'Xiangqi, after red and black have both moved',
     cD1: 'Duck Xiangqi, after red moves and places the duck',
@@ -227,18 +216,10 @@ const L = {
     times: (n) => `about ${n}×`,
   },
   'zh-hans': {
-    a: '象棋：红黑各走一步',
-    aN: '1,920 个局面',
-    b: '鸭子象棋：红方走一步',
-    bN: '2,554 个局面',
-    c: '同一步，合并毫无影响的落点',
-    cN: '1,310 种不同局面',
-    d: '同一步，去掉鸭子',
-    dN: '44 个局面',
-    kX: '一个象棋局面',
-    kNone: '鸭子对黑方毫无影响',
-    kRm: '鸭子减少黑方应着',
-    kAdd: '鸭子给黑方新增应着',
+    cX1: '象棋：红方走一步后',
+    cX2: '象棋：红黑双方各走一步后',
+    cD1: '鸭子象棋：红方走棋并放好鸭子后',
+    cD2: '鸭子象棋：给黑方留下相同应着的落点只算一次',
     yAxis: '该半回合的合法着法数（对数刻度）',
     xAxis: '半回合',
     lineX: '象棋',
@@ -247,18 +228,10 @@ const L = {
     times: (n) => `约 ${n} 倍`,
   },
   'zh-hant': {
-    a: '象棋：紅黑各走一步',
-    aN: '1,920 個局面',
-    b: '鴨子象棋：紅方走一步',
-    bN: '2,554 個局面',
-    c: '同一步，合併毫無影響的落點',
-    cN: '1,310 種不同局面',
-    d: '同一步，去掉鴨子',
-    dN: '44 個局面',
-    kX: '一個象棋局面',
-    kNone: '鴨子對黑方毫無影響',
-    kRm: '鴨子減少黑方應著',
-    kAdd: '鴨子給黑方新增應著',
+    cX1: '象棋：紅方走一步後',
+    cX2: '象棋：紅黑雙方各走一步後',
+    cD1: '鴨子象棋：紅方走棋並放好鴨子後',
+    cD2: '鴨子象棋：給黑方留下相同應著的落點只算一次',
     yAxis: '該半回合的合法著法數（對數刻度）',
     xAxis: '半回合',
     lineX: '象棋',
@@ -378,8 +351,13 @@ const FIGS = {
   counts: figureCounts,
   branching: figureBranching,
 };
-// English only until the English is final; zh labels stay in L for then.
-const LOCALES = ['en'];
+// The zh files are swapped in on the zh pages through the article dictionaries
+// (apps/web/src/article-i18n.ts, src/darkSrc keys).
+const LOCALES = ['en', 'zh-hans', 'zh-hant'];
+for (const locale of LOCALES) {
+  const missing = Object.keys(L.en).filter((k) => !(k in L[locale]));
+  if (missing.length) throw new Error(`L['${locale}'] is missing ${missing.join(', ')}`);
+}
 for (const [name, fig] of Object.entries(FIGS)) {
   for (const locale of LOCALES) {
     for (const theme of ['light', 'dark']) {

@@ -1,5 +1,5 @@
-// The two board figures in "How much the duck adds to xiangqi's game tree"
-// (articles/content/duck-xiangqi-game-tree.ts).
+// The two board figures in "One Duck Xiangqi move is worth two xiangqi moves"
+// (articles/content/duck-xiangqi-game-tree.ts), and its index card.
 //
 // Drawn with the shared xiangqi diagram toolkit (articles/diagrams.ts), so they
 // follow the reader's piece set, board layout and board theme the way every
@@ -27,9 +27,11 @@ import {
 import {
   XQ_BOARD_H,
   XQ_BOARD_W,
-  xqBoardSvg,
+  xqArrowLayer,
+  xqBoardGrid,
   xqCoord,
   xqPieceSize,
+  xqPiecesLayer,
   xqPoint,
   xqSvg,
   xqVisionDemoState,
@@ -190,13 +192,38 @@ function legendSvg(mode: Mode, top: number): { svg: string; height: number } {
   return { svg: `<g class="duck-tree-legend">${parts.join('')}</g>`, height: y - top };
 }
 
+// The board, its pieces, the h3-e3 arrow and the point marks, with the board's
+// top edge at `boardY`. Both the article figures and the index card draw this;
+// only the figures add a heading and a legend around it.
+function boardLayers(mode: Mode, boardY: number): string {
+  const { board } = duckTreeH3e3Marks();
+  const state = xqVisionDemoState(
+    `duck-tree-${mode}`,
+    board as unknown as Partial<Record<XiangqiSquare, XiangqiPiece>>,
+  );
+  return [
+    xqBoardGrid(0, boardY, 'red'),
+    xqPiecesLayer(state, null, 0, boardY, 'red'),
+    xqArrowLayer(
+      [{ from: MOVE.from as XiangqiSquare, to: MOVE.to as XiangqiSquare }],
+      0,
+      boardY,
+      'red',
+    ),
+    pointMarks(mode, 0, boardY),
+  ].join('');
+}
+
 /**
  * One of the two figures: the board after h3-e3 with a mark on every point the
  * duck can land on. `all` gives every point the duck's yellow; `matter` numbers
  * the points that change black's replies and greys the rest.
+ *
+ * `alt` is the figure's <title>, not an aria-label: the zh pages swap SVG
+ * <text> and <title> nodes by their English text (localizeSvgMarkup in
+ * articles.ts), and an attribute would stay English.
  */
 export function duckTreeBoardSvg(mode: Mode, alt: string): string {
-  const { board } = duckTreeH3e3Marks();
   const copy = COPY[mode];
   const headHeight = HEAD_TOP + copy.heading.length * HEAD_LINE - 4;
   const boardY = headHeight;
@@ -207,26 +234,25 @@ export function duckTreeBoardSvg(mode: Mode, alt: string): string {
     )
     .join('');
   const legend = legendSvg(mode, boardY + XQ_BOARD_H + LEGEND_GAP);
-  const body = [
-    heading,
-    xqBoardSvg({
-      state: xqVisionDemoState(
-        `duck-tree-${mode}`,
-        board as unknown as Partial<Record<XiangqiSquare, XiangqiPiece>>,
-      ),
-      x: 0,
-      y: 0,
-      label: '',
-      perspective: 'red',
-      boardOffset: boardY,
-      arrows: [{ from: MOVE.from as XiangqiSquare, to: MOVE.to as XiangqiSquare }],
-      overlay: pointMarks(mode, 0, boardY),
-    }),
-    legend.svg,
-  ].join('');
+  const body = [heading, boardLayers(mode, boardY), legend.svg].join('');
   const height = boardY + XQ_BOARD_H + LEGEND_GAP + legend.height - 4;
   return xqSvg(XQ_BOARD_W, height, body).replace(
+    /^<svg\b[^>]*>/,
+    (open) => `${open}<title>${escapeXml(alt)}</title>`,
+  );
+}
+
+/**
+ * The index card: the `matter` board alone, with no heading, legend or title,
+ * framed like the other full-board xiangqi cards (XQ_RULES_PRIMER_THUMBNAIL).
+ * The only text is the disc numerals. A render thunk on the card re-runs this
+ * on a piece-set change, so the card follows the reader's pieces.
+ */
+export function duckTreeThumbnailSvg(): string {
+  // aria-hidden: the card's title names it, and its 30 numerals would
+  // otherwise be read out as part of the card link ("1 1 2 2 3 ...").
+  return xqSvg(XQ_BOARD_W, XQ_BOARD_H, boardLayers('matter', 0)).replace(
     'role="img"',
-    `role="img" aria-label="${escapeXml(alt)}"`,
+    'aria-hidden="true"',
   );
 }

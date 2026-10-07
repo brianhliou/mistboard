@@ -32,6 +32,10 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Machine-translated 2026-10-07, locked with its English copy, which
+  // publishes in the same release. Board headings and legends are SVG text,
+  // swapped by localizeSvgMarkup; the two charts have per-locale files.
+  'duck-xiangqi-game-tree',
   // Machine-drafted 2026-10-06, not native-reviewed, locked with its English
   // copy, which publishes in the same release. Terms follow the 2026-10-01
   // brianhliou.com write-up of the same audit (排局, 连将杀, 双解, 错谱, 困毙).
@@ -164,6 +168,87 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // duck-xiangqi-game-tree (2026-10-07). Machine-translated 2026-10-07. Terms
+  // follow the duck-xiangqi rules page (回合, 落点, 炮架, 应着, 将帅) plus 博弈树
+  // and 半回合; square names (h3, e8) and Fairy-Stockfish stay Latin.
+  'One Duck Xiangqi move is worth two xiangqi moves': '鸭子象棋走一步，抵得上象棋走两步',
+  'Duck Xiangqi’s game tree': '鸭子象棋的博弈树',
+  'Duck Xiangqi’s Game Tree, Measured Against Xiangqi': '鸭子象棋的博弈树：与象棋对比实测',
+  'Red’s first Duck Xiangqi turn reaches more positions than a full xiangqi move by each side. About half of them leave the opponent exactly the same choices, so a search can skip them. What is left still cuts how far an engine sees almost in half.':
+    '鸭子象棋里红方的第一个回合，能走出的局面比象棋里双方各走一步还多。其中大约一半给对手留下完全相同的选择，所以搜索可以跳过它们。剩下的部分仍让引擎能看到的深度几乎减半。',
+  'A turn in [Duck Xiangqi](/rules/duck-xiangqi) has two parts. You move a piece, then you put the duck on any empty point, where it blocks everything until your opponent moves it. We counted what that second choice does to the game tree, the map of every position the game can reach.':
+    '[鸭子象棋](/rules/duck-xiangqi)的一个回合分两半。你先走一个子，再把鸭子放到任意一个空点上；在对手把它挪走之前，它挡住一切。我们统计了这第二个选择对博弈树的影响。博弈树就是对局所能到达的每一个局面的总图。',
+  'Red’s first turn alone makes 2,554 positions': '光是红方的第一个回合，就有 2,554 个局面',
+  'Red has 44 moves from the starting position in both games. In xiangqi, black’s replies to them make 1,920 positions. In Duck Xiangqi, red’s turn is not over until the duck lands on one of the empty points, about 58 of them, so red’s first turn alone makes 2,554.':
+    '两种棋里，红方在初始局面都有 44 种走法。在象棋里，黑方对这些走法的应着共构成 1,920 个局面。在鸭子象棋里，要等鸭子落到某个空点上（空点大约有 58 个），红方的回合才算走完，所以光是红方的第一个回合就有 2,554 个局面。',
+  'A xiangqi board after red plays cannon h3 to e3, with a yellow dot on each of the 58 empty points where the duck could land.':
+    '红炮从 h3 走到 e3 之后的象棋棋盘，鸭子可以落下的 58 个空点上各有一个黄点。',
+  'One of red’s 44 first moves. In xiangqi, black would reply next. In Duck Xiangqi, red first puts the duck on one of these points, and each choice is a different position.':
+    '红方 44 种第一步走法中的一种。在象棋里，接下来轮到黑方应着。在鸭子象棋里，红方要先把鸭子放到这些点中的一个上，每一种选择都是一个不同的局面。',
+  'The gap compounds with every turn. After one turn each, Duck Xiangqi already has more positions than xiangqi has after two turns each.':
+    '这个差距每走一个回合都会成倍放大。双方各走一个回合之后，鸭子象棋的局面数就已经超过象棋双方各走两个回合之后的局面数。',
+  'Positions after': '走完以下回合后的局面数',
+  Xiangqi: '象棋',
+  'Duck Xiangqi': '鸭子象棋',
+  'Red’s first turn': '红方第一个回合',
+  'One turn each': '双方各一个回合',
+  'Two turns each': '双方各两个回合',
+  'Not counted': '未统计',
+  'Every legal sequence from the starting position, counted by Fairy-Stockfish.':
+    '从初始局面出发的每一条合法着法序列，由 Fairy-Stockfish 统计。',
+  'Half of those positions are the same position': '这些局面里，有一半其实是同一个局面',
+  'The duck matters when it lands where black’s next move goes: a point a black piece moves to, slides through, or jumps over. Anywhere else, black has exactly the replies it would have with no duck on the board.':
+    '鸭子只有落在黑方下一步要经过的地方才有作用：黑方棋子要走到的点、要滑过的点，或者要跳过的点。落在别处，黑方的应着和盘上没有鸭子时完全一样。',
+  'The same board. 30 points carry an orange disc with the number of black replies a duck there takes away, up to 8 on e8 in front of black’s palace. The other 28 points are small grey dots.':
+    '同一张棋盘。30 个点上有橙色圆片，上面的数字是鸭子落在那里会让黑方少掉的应着数，最多的是黑方九宫前沿的 e8，少 8 种。其余 28 个点是灰色小点。',
+  'Most of the points that matter sit on black’s side, in the paths of black’s pieces. On some of them the duck also gives a black cannon something to jump over, which adds a reply.':
+    '有作用的点大多在黑方一侧，位于黑方棋子的路线上。其中有些点上，鸭子还给黑方的炮当了炮架，因而多出一种应着。',
+  'The busiest point is e8, in front of black’s palace: a duck there takes 8 replies away whatever red played first. The 28 grey points change nothing. Put the duck on any of them and black faces the same choices, then moves the duck somewhere new, so the game that follows is the same game. Two small things differ: black cannot leave the duck where it is, and repetitions count the duck’s square.':
+    '最要紧的点是黑方九宫前沿的 e8：无论红方第一步走什么，鸭子落在那里都会让黑方少掉 8 种应着。那 28 个灰点什么也不改变。把鸭子放在其中任何一点上，黑方面对的选择都一样，然后再把鸭子挪到新的地方，所以接下来的对局还是同一盘棋。只有两处小差别：黑方不能把鸭子留在原地，而判定重复局面时要算上鸭子所在的点。',
+  'So a search can look at one of them and skip the rest. Count every duck placement that leaves black the same replies once, and at the first move red’s 2,554 turns come down to 1,310.':
+    '所以搜索只需看其中一个，其余的都可以跳过。凡是给黑方留下相同应着的落点都只算一次，第一步时红方的 2,554 种回合就降到 1,310 种。',
+  'Four bars. Xiangqi after red moves: 44. Xiangqi after red and black have both moved: 1,920. Duck Xiangqi after red moves and places the duck: 2,554. Duck Xiangqi counting placements that leave black the same replies once: 1,310.':
+    '四根横条。象棋，红方走一步后：44。象棋，红黑双方各走一步后：1,920。鸭子象棋，红方走棋并放好鸭子后：2,554。鸭子象棋，给黑方留下相同应着的落点只算一次：1,310。',
+  'Positions from the start, counted by the site’s own rules engine.':
+    '从初始局面出发的局面数，由本站自己的规则引擎统计。',
+  'A duck away from your opponent’s pieces wastes half your turn':
+    '鸭子离对手的棋子太远，等于浪费半个回合',
+  'The same board is a rule of thumb for players. Put the duck on a grey point and your opponent’s choices are exactly what they would be without it, so you have played a xiangqi move and passed on the rest of your turn. The duck earns its place in the paths of your opponent’s pieces: on the files their chariots and cannons use, and in front of their horses and elephants. At the start, the points that take the most away are on your opponent’s cannon row, where one duck cuts across both cannons at once.':
+    '同一张棋盘对棋手来说也是一条经验法则。把鸭子放在灰点上，对手的选择和没有鸭子时完全一样，等于你只走了一步象棋，回合的另一半白白放弃了。鸭子要放在对手棋子的路线上才有价值：放在对方车和炮所走的路上，或者挡在对方的马和象前面。开局时，作用最大的点在对手炮所在的那一行，一只鸭子能同时截断两门炮。',
+  'The duck’s share of the tree grows as pieces come off': '子力越少，鸭子在博弈树里的分量越大',
+  'To see past the opening, we had Fairy-Stockfish play 64 games of each against itself and counted the choices at every move. Xiangqi’s choices shrink as pieces come off the board. In Duck Xiangqi each capture also frees a point for the duck, so a turn stays nearly as wide as it was in the opening, and 200 half-moves in it has about 100 times the choices of a xiangqi move.':
+    '为了看到开局以后的情况，我们让 Fairy-Stockfish 在两种棋里各自战 64 局，并统计每一步的选择数。象棋的选择随着棋子离盘而减少。在鸭子象棋里，每吃掉一个子也会给鸭子空出一个点，所以一个回合几乎和开局时一样宽；走到第 200 个半回合时，它的选择数约是象棋一步的 100 倍。',
+  'A line chart on a log scale. Duck Xiangqi stays between about 1,500 and 2,500 legal turns from ply 0 to ply 220. Xiangqi starts at 44 legal moves and falls to around 20 after ply 120. The gap is marked as about 50 times at ply 10 and about 100 times at ply 200.':
+    '一张对数刻度的折线图。从第 0 个到第 220 个半回合，鸭子象棋的合法回合数一直在大约 1,500 到 2,500 之间。象棋从 44 种合法着法开始，第 120 个半回合之后降到 20 种左右。图中标出了差距：第 10 个半回合约 50 倍，第 200 个半回合约 100 倍。',
+  'Legal turns at each ply in 64 games per variant that Fairy-Stockfish played against itself, on a log scale. Games end at different lengths, so fewer games feed the right side of the chart.':
+    'Fairy-Stockfish 在每种棋里各自战 64 局，图中是每个半回合的合法回合数，采用对数刻度。各局长短不一，所以图的右侧来自较少的对局。',
+  'The same search sees 25 turns ahead in xiangqi and 14 in Duck Xiangqi':
+    '同样的搜索，在象棋里能向前看 25 个回合，在鸭子象棋里只有 14 个',
+  'That width costs search depth. Given the same number of positions to look at, Fairy-Stockfish sees a little over half as far ahead in Duck Xiangqi. We counted depth in turns in both games, and a Duck Xiangqi turn includes the duck. A search that counted each set of equivalent duck placements once would win some of that depth back. We have not measured how much.':
+    '这种宽度要拿搜索深度来换。搜索同样数量的局面，Fairy-Stockfish 在鸭子象棋里看到的深度只比象棋的一半多一点。两种棋的深度我们都按回合计算，鸭子象棋的一个回合包括放鸭子。如果搜索把每组等价的鸭子落点只算一次，就能赢回一部分深度。能赢回多少，我们还没有测过。',
+  'Positions searched': '搜索局面数',
+  'Xiangqi depth': '象棋深度',
+  'Duck Xiangqi depth': '鸭子象棋深度',
+  'Median of three positions: the start, and two and four turns in.':
+    '三个局面的中位数：初始局面，以及走了两个回合和四个回合之后的局面。',
+  'How we counted': '我们是怎么统计的',
+  'The site’s own rules engine, the code that checks every move played here, counted the first move’s positions, and Fairy-Stockfish counted the deeper ones. Fairy-Stockfish also played the 64 games per variant, at 100,000 positions a move, with its neural network off. Xiangqi counts are strictly legal, so a move that leaves your own general capturable does not count. Duck Xiangqi has no check rule (you win by capturing the general), so every piece move counts.':
+    '第一步的局面由本站自己的规则引擎统计，也就是检查这里每一步棋的那段代码；更深的局面由 Fairy-Stockfish 统计。每种棋的 64 局也是 Fairy-Stockfish 下的，每步搜索 100,000 个局面，并关闭了神经网络。象棋的计数严格按合法着法，所以让自己的将帅可被吃掉的着法不算。鸭子象棋没有将军规则（吃掉将帅即获胜），所以每一步走子都算。',
+  'After cannon h3 to e3, the duck can land': '红炮从 h3 走到 e3 后，鸭子可以落在',
+  'on any of these 58 points': '这 58 个点中的任意一点上',
+  'A point the duck can land on. Each one': '鸭子可以落下的点。每一个',
+  'is a different position.': '都是一个不同的局面。',
+  'Only 30 of those 58 points change': '这 58 个点里只有 30 个',
+  'what black can play': '会改变黑方能走的棋',
+  'A duck here takes this many of black’s': '鸭子落在这里，黑方的 45 种应着',
+  '45 replies away': '会少掉圆片上这么多种',
+  'A duck here changes nothing for black': '鸭子落在这里，对黑方毫无影响',
+  // Its two charts, written per locale by scripts/duck-tree-figures.mjs.
+  '/article-thumbs/duck-tree-counts.svg': '/article-thumbs/duck-tree-counts.zh-hans.svg',
+  '/article-thumbs/duck-tree-counts-dark.svg': '/article-thumbs/duck-tree-counts-dark.zh-hans.svg',
+  '/article-thumbs/duck-tree-branching.svg': '/article-thumbs/duck-tree-branching.zh-hans.svg',
+  '/article-thumbs/duck-tree-branching-dark.svg':
+    '/article-thumbs/duck-tree-branching-dark.zh-hans.svg',
   // solver-audit (2026-10-06): machine-drafted, not native-reviewed. Terms follow
   // the 2026-10-01 brianhliou.com write-up (排局, 连将杀, 双解, 第二首着, 错谱).
   'Auditing the Old Manuals': '求解器审校古谱',
@@ -3816,6 +3901,86 @@ const ZH_HANT: Record<string, string> = {
   // authored Taiwan lexical or glyph fork below overrides that shared value.
   // Keep this spread first so new Traditional entries cannot be overwritten.
   ...ZH_HANS,
+  // duck-xiangqi-game-tree (2026-10-07). Machine-translated 2026-10-07; Taiwan
+  // forms where the site already uses them (搜尋, 著法, 程式碼, 神經網路).
+  'One Duck Xiangqi move is worth two xiangqi moves': '鴨子象棋走一步，抵得上象棋走兩步',
+  'Duck Xiangqi’s game tree': '鴨子象棋的博弈樹',
+  'Duck Xiangqi’s Game Tree, Measured Against Xiangqi': '鴨子象棋的博弈樹：與象棋對比實測',
+  'Red’s first Duck Xiangqi turn reaches more positions than a full xiangqi move by each side. About half of them leave the opponent exactly the same choices, so a search can skip them. What is left still cuts how far an engine sees almost in half.':
+    '鴨子象棋裡紅方的第一個回合，能走出的局面比象棋裡雙方各走一步還多。其中大約一半給對手留下完全相同的選擇，所以搜尋可以跳過它們。剩下的部分仍讓引擎能看到的深度幾乎減半。',
+  'A turn in [Duck Xiangqi](/rules/duck-xiangqi) has two parts. You move a piece, then you put the duck on any empty point, where it blocks everything until your opponent moves it. We counted what that second choice does to the game tree, the map of every position the game can reach.':
+    '[鴨子象棋](/rules/duck-xiangqi)的一個回合分兩半。你先走一個子，再把鴨子放到任意一個空點上；在對手把它挪走之前，它擋住一切。我們統計了這第二個選擇對博弈樹的影響。博弈樹就是對局所能到達的每一個局面的總圖。',
+  'Red’s first turn alone makes 2,554 positions': '光是紅方的第一個回合，就有 2,554 個局面',
+  'Red has 44 moves from the starting position in both games. In xiangqi, black’s replies to them make 1,920 positions. In Duck Xiangqi, red’s turn is not over until the duck lands on one of the empty points, about 58 of them, so red’s first turn alone makes 2,554.':
+    '兩種棋裡，紅方在初始局面都有 44 種走法。在象棋裡，黑方對這些走法的應著共構成 1,920 個局面。在鴨子象棋裡，要等鴨子落到某個空點上（空點大約有 58 個），紅方的回合才算走完，所以光是紅方的第一個回合就有 2,554 個局面。',
+  'A xiangqi board after red plays cannon h3 to e3, with a yellow dot on each of the 58 empty points where the duck could land.':
+    '紅炮從 h3 走到 e3 之後的象棋棋盤，鴨子可以落下的 58 個空點上各有一個黃點。',
+  'One of red’s 44 first moves. In xiangqi, black would reply next. In Duck Xiangqi, red first puts the duck on one of these points, and each choice is a different position.':
+    '紅方 44 種第一步走法中的一種。在象棋裡，接下來輪到黑方應著。在鴨子象棋裡，紅方要先把鴨子放到這些點中的一個上，每一種選擇都是一個不同的局面。',
+  'The gap compounds with every turn. After one turn each, Duck Xiangqi already has more positions than xiangqi has after two turns each.':
+    '這個差距每走一個回合都會成倍放大。雙方各走一個回合之後，鴨子象棋的局面數就已經超過象棋雙方各走兩個回合之後的局面數。',
+  'Positions after': '走完以下回合後的局面數',
+  Xiangqi: '象棋',
+  'Duck Xiangqi': '鴨子象棋',
+  'Red’s first turn': '紅方第一個回合',
+  'One turn each': '雙方各一個回合',
+  'Two turns each': '雙方各兩個回合',
+  'Not counted': '未統計',
+  'Every legal sequence from the starting position, counted by Fairy-Stockfish.':
+    '從初始局面出發的每一條合法著法序列，由 Fairy-Stockfish 統計。',
+  'Half of those positions are the same position': '這些局面裡，有一半其實是同一個局面',
+  'The duck matters when it lands where black’s next move goes: a point a black piece moves to, slides through, or jumps over. Anywhere else, black has exactly the replies it would have with no duck on the board.':
+    '鴨子只有落在黑方下一步要經過的地方才有作用：黑方棋子要走到的點、要滑過的點，或者要跳過的點。落在別處，黑方的應著和盤上沒有鴨子時完全一樣。',
+  'The same board. 30 points carry an orange disc with the number of black replies a duck there takes away, up to 8 on e8 in front of black’s palace. The other 28 points are small grey dots.':
+    '同一張棋盤。30 個點上有橙色圓片，上面的數字是鴨子落在那裡會讓黑方少掉的應著數，最多的是黑方九宮前沿的 e8，少 8 種。其餘 28 個點是灰色小點。',
+  'Most of the points that matter sit on black’s side, in the paths of black’s pieces. On some of them the duck also gives a black cannon something to jump over, which adds a reply.':
+    '有作用的點大多在黑方一側，位於黑方棋子的路線上。其中有些點上，鴨子還給黑方的炮當了炮架，因而多出一種應著。',
+  'The busiest point is e8, in front of black’s palace: a duck there takes 8 replies away whatever red played first. The 28 grey points change nothing. Put the duck on any of them and black faces the same choices, then moves the duck somewhere new, so the game that follows is the same game. Two small things differ: black cannot leave the duck where it is, and repetitions count the duck’s square.':
+    '最要緊的點是黑方九宮前沿的 e8：無論紅方第一步走什麼，鴨子落在那裡都會讓黑方少掉 8 種應著。那 28 個灰點什麼也不改變。把鴨子放在其中任何一點上，黑方面對的選擇都一樣，然後再把鴨子挪到新的地方，所以接下來的對局還是同一盤棋。只有兩處小差別：黑方不能把鴨子留在原地，而判定重複局面時要算上鴨子所在的點。',
+  'So a search can look at one of them and skip the rest. Count every duck placement that leaves black the same replies once, and at the first move red’s 2,554 turns come down to 1,310.':
+    '所以搜尋只需看其中一個，其餘的都可以跳過。凡是給黑方留下相同應著的落點都只算一次，第一步時紅方的 2,554 種回合就降到 1,310 種。',
+  'Four bars. Xiangqi after red moves: 44. Xiangqi after red and black have both moved: 1,920. Duck Xiangqi after red moves and places the duck: 2,554. Duck Xiangqi counting placements that leave black the same replies once: 1,310.':
+    '四根橫條。象棋，紅方走一步後：44。象棋，紅黑雙方各走一步後：1,920。鴨子象棋，紅方走棋並放好鴨子後：2,554。鴨子象棋，給黑方留下相同應著的落點只算一次：1,310。',
+  'Positions from the start, counted by the site’s own rules engine.':
+    '從初始局面出發的局面數，由本站自己的規則引擎統計。',
+  'A duck away from your opponent’s pieces wastes half your turn':
+    '鴨子離對手的棋子太遠，等於浪費半個回合',
+  'The same board is a rule of thumb for players. Put the duck on a grey point and your opponent’s choices are exactly what they would be without it, so you have played a xiangqi move and passed on the rest of your turn. The duck earns its place in the paths of your opponent’s pieces: on the files their chariots and cannons use, and in front of their horses and elephants. At the start, the points that take the most away are on your opponent’s cannon row, where one duck cuts across both cannons at once.':
+    '同一張棋盤對棋手來說也是一條經驗法則。把鴨子放在灰點上，對手的選擇和沒有鴨子時完全一樣，等於你只走了一步象棋，回合的另一半白白放棄了。鴨子要放在對手棋子的路線上才有價值：放在對方車和炮所走的路上，或者擋在對方的馬和象前面。開局時，作用最大的點在對手炮所在的那一行，一隻鴨子能同時截斷兩門炮。',
+  'The duck’s share of the tree grows as pieces come off': '子力越少，鴨子在博弈樹裡的分量越大',
+  'To see past the opening, we had Fairy-Stockfish play 64 games of each against itself and counted the choices at every move. Xiangqi’s choices shrink as pieces come off the board. In Duck Xiangqi each capture also frees a point for the duck, so a turn stays nearly as wide as it was in the opening, and 200 half-moves in it has about 100 times the choices of a xiangqi move.':
+    '為了看到開局以後的情況，我們讓 Fairy-Stockfish 在兩種棋裡各自戰 64 局，並統計每一步的選擇數。象棋的選擇隨著棋子離盤而減少。在鴨子象棋裡，每吃掉一個子也會給鴨子空出一個點，所以一個回合幾乎和開局時一樣寬；走到第 200 個半回合時，它的選擇數約是象棋一步的 100 倍。',
+  'A line chart on a log scale. Duck Xiangqi stays between about 1,500 and 2,500 legal turns from ply 0 to ply 220. Xiangqi starts at 44 legal moves and falls to around 20 after ply 120. The gap is marked as about 50 times at ply 10 and about 100 times at ply 200.':
+    '一張對數刻度的折線圖。從第 0 個到第 220 個半回合，鴨子象棋的合法回合數一直在大約 1,500 到 2,500 之間。象棋從 44 種合法著法開始，第 120 個半回合之後降到 20 種左右。圖中標出了差距：第 10 個半回合約 50 倍，第 200 個半回合約 100 倍。',
+  'Legal turns at each ply in 64 games per variant that Fairy-Stockfish played against itself, on a log scale. Games end at different lengths, so fewer games feed the right side of the chart.':
+    'Fairy-Stockfish 在每種棋裡各自戰 64 局，圖中是每個半回合的合法回合數，採用對數刻度。各局長短不一，所以圖的右側來自較少的對局。',
+  'The same search sees 25 turns ahead in xiangqi and 14 in Duck Xiangqi':
+    '同樣的搜尋，在象棋裡能向前看 25 個回合，在鴨子象棋裡只有 14 個',
+  'That width costs search depth. Given the same number of positions to look at, Fairy-Stockfish sees a little over half as far ahead in Duck Xiangqi. We counted depth in turns in both games, and a Duck Xiangqi turn includes the duck. A search that counted each set of equivalent duck placements once would win some of that depth back. We have not measured how much.':
+    '這種寬度要拿搜尋深度來換。搜尋同樣數量的局面，Fairy-Stockfish 在鴨子象棋裡看到的深度只比象棋的一半多一點。兩種棋的深度我們都按回合計算，鴨子象棋的一個回合包括放鴨子。如果搜尋把每組等價的鴨子落點只算一次，就能贏回一部分深度。能贏回多少，我們還沒有測過。',
+  'Positions searched': '搜尋局面數',
+  'Xiangqi depth': '象棋深度',
+  'Duck Xiangqi depth': '鴨子象棋深度',
+  'Median of three positions: the start, and two and four turns in.':
+    '三個局面的中位數：初始局面，以及走了兩個回合和四個回合之後的局面。',
+  'How we counted': '我們是怎麼統計的',
+  'The site’s own rules engine, the code that checks every move played here, counted the first move’s positions, and Fairy-Stockfish counted the deeper ones. Fairy-Stockfish also played the 64 games per variant, at 100,000 positions a move, with its neural network off. Xiangqi counts are strictly legal, so a move that leaves your own general capturable does not count. Duck Xiangqi has no check rule (you win by capturing the general), so every piece move counts.':
+    '第一步的局面由本站自己的規則引擎統計，也就是檢查這裡每一步棋的那段程式碼；更深的局面由 Fairy-Stockfish 統計。每種棋的 64 局也是 Fairy-Stockfish 下的，每步搜尋 100,000 個局面，並關閉了神經網路。象棋的計數嚴格按合法著法，所以讓自己的將帥可被吃掉的著法不算。鴨子象棋沒有將軍規則（吃掉將帥即獲勝），所以每一步走子都算。',
+  'After cannon h3 to e3, the duck can land': '紅炮從 h3 走到 e3 後，鴨子可以落在',
+  'on any of these 58 points': '這 58 個點中的任意一點上',
+  'A point the duck can land on. Each one': '鴨子可以落下的點。每一個',
+  'is a different position.': '都是一個不同的局面。',
+  'Only 30 of those 58 points change': '這 58 個點裡只有 30 個',
+  'what black can play': '會改變黑方能走的棋',
+  'A duck here takes this many of black’s': '鴨子落在這裡，黑方的 45 種應著',
+  '45 replies away': '會少掉圓片上這麼多種',
+  'A duck here changes nothing for black': '鴨子落在這裡，對黑方毫無影響',
+  // Its two charts, written per locale by scripts/duck-tree-figures.mjs.
+  '/article-thumbs/duck-tree-counts.svg': '/article-thumbs/duck-tree-counts.zh-hant.svg',
+  '/article-thumbs/duck-tree-counts-dark.svg': '/article-thumbs/duck-tree-counts-dark.zh-hant.svg',
+  '/article-thumbs/duck-tree-branching.svg': '/article-thumbs/duck-tree-branching.zh-hant.svg',
+  '/article-thumbs/duck-tree-branching-dark.svg':
+    '/article-thumbs/duck-tree-branching-dark.zh-hant.svg',
   // solver-audit (2026-10-06): machine-drafted Traditional, not native-reviewed;
   // terms follow the zh-hant brianhliou.com twin (搜尋, 著法, 首著, 錯譜).
   'Auditing the Old Manuals': '求解器審校古譜',

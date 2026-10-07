@@ -1,7 +1,12 @@
 import { allDuckXiangqiSquares } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import { XQ_BOARD_W } from './articles/diagrams.js';
-import { duckTreeBoardSvg, duckTreeH3e3Marks } from './duck-xiangqi-tree-diagrams.js';
+import { svgTextLabels } from './articles/svg-labels.js';
+import {
+  duckTreeBoardSvg,
+  duckTreeH3e3Marks,
+  duckTreeThumbnailSvg,
+} from './duck-xiangqi-tree-diagrams.js';
 
 // The article's prose quotes these numbers beside the two boards. The boards
 // are computed from the kernel, so this is where the claim is checked: if the
@@ -87,8 +92,9 @@ describe('duck tree board figures', () => {
       expect(svg).toContain('class="xq-article-svg"');
       expect(svg).toContain('data-xq-layout="single"');
     }
-    expect(all).toContain('aria-label="ALT ALL"');
-    expect(matter).toContain('aria-label="ALT MATTER"');
+    // The alt is a <title>, so the zh pages' SVG text swap reaches it.
+    expect(all).toMatch(/^<svg\b[^>]*><title>ALT ALL<\/title>/);
+    expect(matter).toMatch(/^<svg\b[^>]*><title>ALT MATTER<\/title>/);
   });
 
   it('every mark lands inside the board', () => {
@@ -108,5 +114,37 @@ describe('duck tree board figures', () => {
     expect(matter).toContain('Only 30 of those 58 points change');
     expect(matter).toContain('45 replies away');
     expect(matter).toContain('A duck here changes nothing for black');
+  });
+});
+
+describe('duck tree index card', () => {
+  const card = duckTreeThumbnailSvg();
+  const matter = duckTreeBoardSvg('matter', 'ALT MATTER');
+
+  it('is the matter board with no words: only disc numerals and piece glyphs are text', () => {
+    const labels = svgTextLabels(card);
+    // No Latin letters anywhere, so the card has nothing to translate.
+    expect(labels.filter((label) => /\p{Script=Latin}/u.test(label))).toEqual([]);
+    expect(labels.filter((label) => /^\d+$/.test(label))).toHaveLength(30);
+    expect(card).not.toContain('<title>');
+    const open = /^<svg\b[^>]*>/.exec(card)?.[0];
+    expect(open).not.toContain('aria-label');
+    // Decorative on the card: the numerals must not become the link's name.
+    expect(open).toContain('aria-hidden="true"');
+    expect(card).not.toContain('duck-tree-legend');
+    expect(card).not.toContain('xq-diagram-title');
+  });
+
+  it('carries the same marks as the article board', () => {
+    const marks = pointMarks(card);
+    expect(marks).toEqual(pointMarks(matter));
+    expect(marks.filter((m) => m.mark === 'removed')).toHaveLength(30);
+    expect(marks.filter((m) => m.mark === 'none')).toHaveLength(28);
+    expect(card).toContain('xq-arrow-h3-e3');
+  });
+
+  it('is framed like the other full-board xiangqi cards', () => {
+    expect(card).toContain('class="xq-article-svg"');
+    expect(card).toContain('data-xq-layout="single"');
   });
 });

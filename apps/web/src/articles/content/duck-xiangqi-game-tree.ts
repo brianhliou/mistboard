@@ -1,6 +1,4 @@
-import type { Locale } from '../../i18n/locale.js';
-import { duckTreeBoardSvg } from '../../duck-xiangqi-tree-diagrams.js';
-import { textCard } from '../text-card.js';
+import { duckTreeBoardSvg, duckTreeThumbnailSvg } from '../../duck-xiangqi-tree-diagrams.js';
 import type { Article } from '../types.js';
 
 // How much wider the duck makes xiangqi's game tree, how much of that width is
@@ -14,19 +12,8 @@ import type { Article } from '../types.js';
 // Fairy-Stockfish self-play games per variant at 100k nodes a move, NNUE off,
 // and depth at fixed node budgets over three positions (median); the per-ply
 // medians behind the chart are committed in scripts/data/duck-tree-figures.json.
-// English only until the wording is final; zh follows in one pass.
-const DUCK_TREE_THUMBNAIL = (locale: Locale): string =>
-  textCard(
-    {
-      palette: 'xiangqi',
-      eyebrow: 'DUCK XIANGQI',
-      lead: { text: '2,554', name: true },
-      tagline: 'POSITIONS AFTER ONE MOVE',
-      footer: 'XIANGQI HAS 44',
-      ariaLabel: 'A card reading 2,554 positions after one Duck Xiangqi move, against 44 in xiangqi',
-    },
-    locale,
-  );
+// The card is the second board alone (duckTreeThumbnailSvg), so it follows the
+// reader's piece set like the figures do.
 
 const fig = (name: string) => ({
   src: `/article-thumbs/duck-tree-${name}.svg`,
@@ -48,7 +35,7 @@ export const duckXiangqiGameTreeArticle: Article = {
   status: 'published',
   publishedAt: '2026-10-07',
   audience: 'Xiangqi and Duck Xiangqi players curious how much the duck adds, and anyone who writes game engines.',
-  thumbnail: { kind: 'svg', svg: DUCK_TREE_THUMBNAIL },
+  thumbnail: { kind: 'svg', svg: duckTreeThumbnailSvg },
   readNext: ['duck-xiangqi-strategy', 'duck-xiangqi'],
   intro: [
     {
