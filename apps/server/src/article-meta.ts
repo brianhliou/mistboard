@@ -29,8 +29,10 @@ const GENERATED = generated as Record<string, GeneratedArticleMeta>;
 // this set the day the variant goes public, and articles-meta-sync.test.ts
 // fails if the two disagree. A public variant's rules page held back for
 // polish goes here and in HIDDEN_RULES_SLUGS on the web side, and leaves both
-// sets together (/rules/crazyhouse-xiangqi did, 2026-10-02).
-const NON_INDEXED_ARTICLE_SLUGS = new Set(['shogi4', 'mahjong']);
+// sets together (/rules/crazyhouse-xiangqi did, 2026-10-02). /rules/atomic-
+// xiangqi is here while that variant is unlisted for its rules rework
+// (2026-10-06; web side `'atomic-xiangqi': false`).
+const NON_INDEXED_ARTICLE_SLUGS = new Set(['shogi4', 'mahjong', 'atomic-xiangqi']);
 
 // Rules pages for retired variants (docs-private/variant-retirement-plan.md,
 // #396; the spec side is runtimeStatus 'retired' in packages/game, the web

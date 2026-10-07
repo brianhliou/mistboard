@@ -55,21 +55,33 @@ describe('analysis page', () => {
 // at its own URL but is not OFFERED, so nothing advertises it before it
 // launches.
 //
-// That branch is real and still in analysis-catalog.ts, but it is currently
-// UNREACHABLE from a test: duck xiangqi was the last unlaunched analysis
-// variant, and it launched. Asserting "some variant is absent" would now pass
-// by naming any string at all. What is left is the half that does hold, across
-// every variant in the catalog. When the next unlaunched variant lands, restore
-// a case that pins it by name.
+// Atomic Xiangqi pins the hidden half by name: unlisted 2026-10-06 while its
+// rules are reworked, so it is absent from the picker on any other board and
+// present on its own.
 describe('analysis variant picker', () => {
-  it('offers every launched variant, from any board', async () => {
+  it('offers every listed variant, from any board, and not the unlisted one', async () => {
     const root = document.createElement('div');
     document.body.append(root);
     try {
       await mountAnalysisPage(root, 'xiangqi');
       const select = root.querySelector<HTMLSelectElement>('.analysis-variant-picker select');
       const offered = [...(select?.options ?? [])].map((option) => option.value);
-      expect(offered).toEqual(ANALYSIS_VARIANTS.map((variant) => variant.id));
+      expect(offered).not.toContain('atomic-xiangqi');
+      expect(offered).toEqual(
+        ANALYSIS_VARIANTS.map((variant) => variant.id).filter((id) => id !== 'atomic-xiangqi'),
+      );
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('keeps an unlisted variant selected on its own board', async () => {
+    const root = document.createElement('div');
+    document.body.append(root);
+    try {
+      await mountAnalysisPage(root, 'atomic-xiangqi');
+      const select = root.querySelector<HTMLSelectElement>('.analysis-variant-picker select');
+      expect(select?.value).toBe('atomic-xiangqi');
     } finally {
       root.remove();
     }

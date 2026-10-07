@@ -612,11 +612,10 @@ describe('rules variant sidebar', () => {
       hrefs.indexOf('/rules/fortress-xiangqi'),
     );
     expect(hrefs.indexOf('/rules/fortress-xiangqi')).toBeLessThan(
-      hrefs.indexOf('/rules/atomic-xiangqi'),
-    );
-    expect(hrefs.indexOf('/rules/atomic-xiangqi')).toBeLessThan(
       hrefs.indexOf('/rules/fog-xiangqi'),
     );
+    // Unlisted 2026-10-06 while its rules are reworked.
+    expect(nav?.querySelector('a[href="/rules/atomic-xiangqi"]')).toBeNull();
     expect(hrefs.indexOf('/rules/fog-xiangqi')).toBeLessThan(hrefs.indexOf('/rules/fog-chess'));
     expect(hrefs.indexOf('/rules/fog-chess')).toBeLessThan(hrefs.indexOf('/rules/jungle'));
     expect(hrefs.indexOf('/rules/jungle')).toBeLessThan(hrefs.indexOf('/rules/jungle-flip'));

@@ -19,7 +19,6 @@ const BASELINE_PICKER_SPECS = [
   'duck-xiangqi',
   'crazyhouse-xiangqi',
   'fortress-xiangqi',
-  'atomic-xiangqi',
   'dark-xiangqi',
   'dark-chess',
   'jungle',
@@ -429,6 +428,28 @@ describe('landing play panel', () => {
       });
     });
   }
+
+  // Atomic Xiangqi is off the play menu while its rules are reworked
+  // (2026-10-06), but the brianhliou.com post's "play the computer" link still
+  // opens setup on it and starts a bot game.
+  it('opens an unlisted variant from its deep link and starts the bot game', async () => {
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+      if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
+      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/atomic_link' });
+      return jsonResponse({}, { status: 404 });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    setRoomNavigator(() => {});
+    window.history.replaceState(null, '', '/?play=computer&gameSpecId=atomic-xiangqi');
+
+    maybeOpenPlayDeepLink([]);
+    expect(document.querySelector('.landing-setup-overlay')).not.toBeNull();
+
+    clickModalButton('Start game');
+    await flushPromises();
+
+    expect(roomPostBody(fetchSpy)).toMatchObject({ mode: 'pve', gameSpecId: 'atomic-xiangqi' });
+  });
 
   it('keeps the coin flip on Challenge a friend, where it is the fairness rule', () => {
     vi.stubGlobal(
