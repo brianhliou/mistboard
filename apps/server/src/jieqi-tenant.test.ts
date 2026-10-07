@@ -171,6 +171,7 @@ const VALID_GAME_TERMINATIONS = new Set([
   'progress-clock',
   'truncated',
   'race',
+  'chasing',
 ]);
 
 test('every jieqi kernel end reason maps to a persistable GameTermination', () => {
@@ -183,6 +184,8 @@ test('every jieqi kernel end reason maps to a persistable GameTermination', () =
     'timeout',
     'resignation',
     'abandonment',
+    'repetition',
+    'chasing',
   ];
   for (const reason of jieqiEndReasons) {
     const mapped = jieqiTenant.persistence.termination(reason);

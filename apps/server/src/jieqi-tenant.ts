@@ -33,6 +33,7 @@ import {
   type JieqiPieceRole,
   type JieqiPlayerView,
   type JieqiSquare,
+  jieqiPerpetualCheckLoser,
   jieqiTruthBoard,
   jieqiTruthCaptures,
   oppositeJieqiColor,
@@ -112,6 +113,19 @@ function asJieqiDeal(setup: unknown): JieqiDeal | undefined {
   return deal;
 }
 
+// The room-created setup: the deal, plus `repetition: true` on every room
+// created since the threefold rule shipped (2026-10). A room created before it
+// (or an imported lab game, whose referee adjudicated repetition itself) has no
+// marker and replays under the rules it was played under, so a position that
+// recurred three times mid-game does not cut an old game short. A missing setup
+// (tests, the standard deal) gets the current rule.
+export type JieqiSetup = JieqiDeal & { repetition?: true };
+
+export function enforcesRepetition(setup: unknown): boolean {
+  if (setup === undefined || setup === null) return true;
+  return typeof setup === 'object' && (setup as { repetition?: unknown }).repetition === true;
+}
+
 // Identity is hidden, position is not: moves are public to both seats and to a
 // spectator (a move event is a {from,to} the board already shows; the identity
 // it reveals reaches each viewer through their own view, not the event). The
@@ -175,9 +189,28 @@ export const jieqiTenant: JieqiTenant = {
   enabled: jieqiEnabled,
   oppositeColor: oppositeJieqiColor,
   rules: {
-    createInitialState: (roomId, setup) => createInitialJieqiState(roomId, asJieqiDeal(setup)),
-    createSetup: () => createJieqiDeal(cryptoRng),
-    applyMove: (state, move) => applyJieqiMove(state, move),
+    createInitialState: (roomId, setup) =>
+      createInitialJieqiState(roomId, asJieqiDeal(setup), {
+        repetition: enforcesRepetition(setup),
+      }),
+    createSetup: (): JieqiSetup => ({ ...createJieqiDeal(cryptoRng), repetition: true }),
+    // Apply the move, then the xiangqi chasing rule: a threefold repetition one
+    // side reached by checking on every one of its moves is a LOSS for that
+    // side, not a draw (jieqi wins and losses follow xiangqi). The history the
+    // verdict needs rides on the state, so event replay reruns it identically.
+    applyMove: (state, move) => {
+      const next = applyJieqiMove(state, move);
+      if (next.status.type === 'finished' && next.status.reason === 'repetition') {
+        const loser = jieqiPerpetualCheckLoser(next);
+        if (loser) {
+          return {
+            ...next,
+            status: { type: 'finished', winner: oppositeJieqiColor(loser), reason: 'chasing' },
+          };
+        }
+      }
+      return next;
+    },
     isLegalMove: isJieqiLegalMove,
     finish: (state, winner, reason) => ({
       ...state,

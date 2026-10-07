@@ -1572,8 +1572,10 @@ const ZH_HANS: Record<string, string> = {
     '每个被占据的交叉点都是可见的，因此双方都能看出将帅何时受到攻击。尚未走动的暗子按其起始位置对应的兵种发动攻击。一旦走动，它立即翻明；任何来自落点的攻击都按翻明后的真实身份计算。',
   'Normal check rules apply: a move may not leave your own general attacked, and a player in check must answer the threat. You win by checkmate or by leaving the opponent with no legal move. The facing-generals rule still applies, and dark pieces block the file like any other piece.':
     '通常的将军规则依然适用：走子后不能让己方将帅受到攻击，被将军时必须应对。将死对方，或让对方无合法走法，即可获胜。将帅对脸规则仍然有效，暗子也和其他棋子一样会挡住纵线。',
-  'Mistboard automatically draws after 120 plies, or 60 moves by each player, without a capture. Repeated positions do not trigger a separate automatic draw.':
-    '连续 120 个半回合，也就是双方各走 60 步而没有吃子时，Mistboard 自动判和。重复局面不会另外触发自动和棋。',
+  'Mistboard automatically draws after 120 plies, or 60 moves by each player, without a capture.':
+    '连续 120 个半回合，也就是双方各走 60 步而没有吃子时，Mistboard 自动判和。',
+  'Repetition follows xiangqi. On the third occurrence of the same position, a player who gave check on every one of their moves in the repeating cycle loses, so perpetual check cannot save a lost game. If both players checked throughout, or the cycle had no checks, the game is drawn. Perpetual chase without check is not ruled on and stays a draw.':
+    '重复局面按象棋规则处理。同一局面第三次出现时，若一方在重复循环中的每一步都将军，该方判负，长将不能挽救败局。若双方都一直将军，或循环中没有将军，则判和。不将军的长捉不作裁决，按和棋处理。',
   Turns: '回合',
   'Capture by rank': '按等级吃子',
   'The cannon': '炮',
@@ -5202,8 +5204,10 @@ const ZH_HANT: Record<string, string> = {
     '每個被佔據的交叉點都是可見的，因此雙方都能看出將帥何時受到攻擊。尚未走動的暗子按其起始位置對應的兵種發動攻擊。一旦走動，牠立即翻明；任何來自落點的攻擊都按翻明後的真實身份計算。',
   'Normal check rules apply: a move may not leave your own general attacked, and a player in check must answer the threat. You win by checkmate or by leaving the opponent with no legal move. The facing-generals rule still applies, and dark pieces block the file like any other piece.':
     '通常的將軍規則依然適用：走子後不能讓己方將帥受到攻擊，被將軍時必須應對。將死對方，或讓對方無合法走法，即可獲勝。將帥對臉規則仍然有效，暗子也和其他棋子一樣會擋住縱線。',
-  'Mistboard automatically draws after 120 plies, or 60 moves by each player, without a capture. Repeated positions do not trigger a separate automatic draw.':
-    '連續 120 個半回合，也就是雙方各走 60 步而沒有吃子時，Mistboard 自動判和。重複局面不會另外觸發自動和棋。',
+  'Mistboard automatically draws after 120 plies, or 60 moves by each player, without a capture.':
+    '連續 120 個半回合，也就是雙方各走 60 步而沒有吃子時，Mistboard 自動判和。',
+  'Repetition follows xiangqi. On the third occurrence of the same position, a player who gave check on every one of their moves in the repeating cycle loses, so perpetual check cannot save a lost game. If both players checked throughout, or the cycle had no checks, the game is drawn. Perpetual chase without check is not ruled on and stays a draw.':
+    '重複局面按象棋規則處理。同一局面第三次出現時，若一方在重複循環中的每一步都將軍，該方判負，長將不能挽救敗局。若雙方都一直將軍，或循環中沒有將軍，則判和。不將軍的長捉不作裁決，按和棋處理。',
   Turns: '回合',
   'Capture by rank': '按等級吃子',
   'The cannon': '砲',
