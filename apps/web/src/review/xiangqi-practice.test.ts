@@ -15,8 +15,13 @@ import {
   xiangqiMoveToFsfUci,
 } from '@mistboard/game';
 import { expect, test } from 'vitest';
+import type { CevalHandle } from './engine/ceval-types.js';
 import { createPracticeSession, type PracticeEval } from './practice-play.js';
-import { xiangqiPracticeConfig, xiangqiPracticeTermination } from './xiangqi-practice.js';
+import {
+  evaluateXiangqiForPractice,
+  xiangqiPracticeConfig,
+  xiangqiPracticeTermination,
+} from './xiangqi-practice.js';
 
 const entry = (id: string) => {
   const found = XIANGQI_ENDGAME_CORPUS.find((row) => row.id === id);
@@ -172,4 +177,35 @@ test('xiangqiPracticeTermination maps a finished game onto the learner result', 
   };
   expect(xiangqiPracticeTermination(drawn, 'red')).toBe('drawn');
   expect(xiangqiPracticeTermination(drawn, 'black')).toBe('drawn');
+});
+
+// The tablebase rides beside the engine search. A fake ceval answers with one
+// line; the lookup is injected, so no network is involved.
+const fakeCeval = (scoreCp: number): CevalHandle =>
+  ({
+    evaluate: async () => ({ lines: [{ scoreCp, mate: null, pvUci: ['e1e2'] }] }),
+  }) as unknown as CevalHandle;
+
+test('practice eval carries an exact tablebase result beside the engine score', async () => {
+  const truth = createInitialXiangqiState('t');
+  const evaluation = await evaluateXiangqiForPractice(fakeCeval(120), truth, async () => ({
+    status: 'exact',
+    result: 'win',
+    dtm: 9,
+    moves: [{ from: 'e1', to: 'e2', result: 'win', dtm: 9 }],
+  }));
+  expect(evaluation).toEqual({ cp: 120, mate: null, bestUci: 'e1e2', exact: { result: 'win' } });
+});
+
+test('practice eval: no tablebase answer, or a failing lookup, is null and never a draw', async () => {
+  const truth = createInitialXiangqiState('t');
+  const none = await evaluateXiangqiForPractice(fakeCeval(40), truth, async () => ({
+    status: 'none',
+  }));
+  expect(none.exact).toBeNull();
+  const thrown = await evaluateXiangqiForPractice(fakeCeval(40), truth, async () => {
+    throw new Error('offline');
+  });
+  expect(thrown.exact).toBeNull();
+  expect(thrown.cp).toBe(40);
 });

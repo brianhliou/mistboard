@@ -41,6 +41,7 @@ export type StudyReviewConfig = Omit<
   | 'analysis'
   | 'decisions'
   | 'explorer'
+  | 'tablebase'
   | 'analyseFromHere'
   | 'boardEditorHref'
   | 'onLineChange'

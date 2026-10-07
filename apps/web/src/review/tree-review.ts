@@ -498,6 +498,18 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
      *  look so it reads as distinct from the engine's blue. */
     onHoverMove(handler: (arrow: Arrow | null) => void): void;
   };
+  /** Exact endgame table (the lichess tablebase panel) under the engine head.
+   *  Opaque like `explorer`: the caller owns the lookup and hides the element
+   *  itself whenever there is no exact answer, so the controller only places it
+   *  and keeps it pointed at the current node. */
+  tablebase?: {
+    el: HTMLElement;
+    setTruth(truth: Truth): void;
+    /** Register the handler that plays a move the reader clicked in the table. */
+    onPlayMove(handler: (move: Move) => void): void;
+    /** Hover preview, the explorer's contract: a built arrow, or null on leave. */
+    onHoverMove(handler: (arrow: Arrow | null) => void): void;
+  };
   /** Game result appended to the move list as a terminal block (lichess: "0-1"
    *  over the termination line). Postgame surfaces supply it; the analysis board
    *  (no finished game) omits it. */
@@ -647,12 +659,17 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // Clicking a move in the opening explorer plays it, same as playing it on the
   // board: the explorer is a navigation surface, not a readout.
   config.explorer?.onPlayMove(handleMove);
+  config.tablebase?.onPlayMove(handleMove);
   // Hovering a move previews it as a distinct arrow (the caller built its look).
+  // The explorer and the tablebase table share the one preview slot: the cursor
+  // is only ever over one row.
   let explorerHoverArrow: Arrow | null = null;
-  config.explorer?.onHoverMove((arrow) => {
+  const previewArrow = (arrow: Arrow | null): void => {
     explorerHoverArrow = arrow;
     paintOverlays();
-  });
+  };
+  config.explorer?.onHoverMove(previewArrow);
+  config.tablebase?.onHoverMove(previewArrow);
 
   // Right-drag draws an annotation shape on the CURRENT node (toggle: re-drawing
   // the same shape removes it). Green by default, red with a modifier held.
@@ -1683,6 +1700,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     ),
     underboardOverflows: true,
     enginePanel: enginePanel?.el,
+    tablebasePanel: config.tablebase?.el,
     moves: moveTree.el,
     railPanel: config.explorer?.el,
     navigation: controls.el,
@@ -1889,6 +1907,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     controls.setBounds({ atStart: currentPath.length === 0, atEnd: node.children.length === 0 });
     // Opening statistics follow the board like every other per-node panel.
     config.explorer?.setTruth(node.truth);
+    config.tablebase?.setTruth(node.truth);
     // Live-refresh the Share tab's FEN + move export for the current node/line.
     const fenOf = presentation.fen ?? presentation.engine?.fen;
     if (fenOf) shareFenInput.value = fenOf(node.truth);

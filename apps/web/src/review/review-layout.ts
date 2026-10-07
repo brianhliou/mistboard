@@ -149,6 +149,9 @@ export type ReviewScaffoldConfig = SizingInput & {
   metaCard?: HTMLElement;
   underboard?: HTMLElement;
   enginePanel?: HTMLElement;
+  /** Exact endgame table (xiangqi tablebase) between the engine head and the
+   *  move list; it hides itself when the position has no exact answer. */
+  tablebasePanel?: HTMLElement;
   moves: HTMLElement;
   moveComment?: HTMLElement;
   /** Study annotation controls (glyph picker + comment editor), below the move
@@ -298,6 +301,7 @@ export function createReviewScaffold(
   railMain.append(
     ...[
       config.enginePanel,
+      config.tablebasePanel,
       config.moves,
       config.moveComment,
       config.annotations,

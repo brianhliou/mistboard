@@ -1,0 +1,108 @@
+/* Xiangqi tablebase panel (review/xiangqi-tablebase-panel.ts): sits in the
+   analyse box under the engine head, only when chessdb.cn has an exact answer.
+   Row grammar: [move] [mate distance] [result badge]. Colours follow lichess's
+   tablebase table: win green, draw grey, loss red. */
+.xq-tablebase {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 40%;
+  border-bottom: 1px solid var(--site-border);
+}
+/* `display: flex` beats the UA `[hidden]` rule (see opening-explorer.css). */
+.xq-tablebase[hidden] {
+  display: none;
+}
+
+.xq-tablebase__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px 4px;
+  border-bottom: 1px solid var(--site-border-soft);
+}
+
+.xq-tablebase__title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--site-text);
+}
+
+.xq-tablebase__summary {
+  font-size: 11px;
+  color: var(--site-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.xq-tablebase__table {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.xq-tablebase__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 52px;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  padding: 3px 10px;
+  border: 0;
+  border-bottom: 1px solid var(--site-border-soft);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.xq-tablebase__row:hover,
+.xq-tablebase__row:focus-visible {
+  background: var(--site-zebra);
+}
+
+.xq-tablebase__move {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.xq-tablebase__dtm {
+  font-size: 11px;
+  color: var(--site-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.xq-tablebase__badge {
+  justify-self: end;
+  min-width: 44px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  color: #fff;
+}
+
+.xq-tablebase__badge--win {
+  background: var(--site-success, #4f9f74);
+}
+
+.xq-tablebase__badge--draw {
+  background: var(--site-muted);
+}
+
+.xq-tablebase__badge--loss {
+  background: var(--site-danger, #c0392b);
+}
+
+/* The analyse box strips its children's borders with `.review-rail-main > *`,
+   which ties the rule above and wins or loses on bundle order; restate the
+   separator at higher specificity (the engine head does the same). */
+.review-rail-main > .xq-tablebase {
+  border-bottom: 1px solid var(--site-border);
+}
