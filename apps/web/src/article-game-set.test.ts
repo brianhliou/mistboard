@@ -7,6 +7,7 @@ import {
   type StepGameSet,
   splitGameSetMove,
 } from './article-game-set.js';
+import { HORDE_GAME_SET_STRINGS } from './horde-xiangqi-article-diagrams.js';
 
 function keysOf(text: GameSetText): string[] {
   return [text.k, ...text.a.flatMap((a) => (Array.isArray(a) ? [a[1]] : []))];
@@ -28,6 +29,10 @@ function checkSet(set: StepGameSet, strings: Record<string, string>, count: numb
       ...(record.extra ? [record.extra] : []),
     ];
     for (const key of keys) expect(strings[key], `${record.id}: template ${key}`).toBeDefined();
+    // A nested ['k', key] argument is filled without arguments of its own,
+    // so no rendered line may keep a hole.
+    for (const text of [record.label, record.result, record.verdict, record.red, record.black])
+      expect(gameSetText(text, strings), `${record.id}: ${text.k}`).not.toMatch(/%\d/);
     const { moves, boards } = gameSetLine(set, record);
     expect(moves.length).toBeGreaterThan(0);
     if (record.san) expect(record.san.split(' ')).toHaveLength(moves.length);
@@ -58,4 +63,11 @@ describe('article game set', () => {
     const { GAME_SET } = await import('./anti-xiangqi-games.js');
     checkSet(GAME_SET, ANTI_GAME_SET_STRINGS, 169);
   });
+
+  it('horde xiangqi: 58 games replay through the kernel and every template resolves', async () => {
+    const { GAME_SET } = await import('./horde-xiangqi-games.js');
+    checkSet(GAME_SET, HORDE_GAME_SET_STRINGS, 58);
+    expect(GAME_SET.records.filter((r) => r.veteran)).toHaveLength(28);
+    // About 10 s: every ply resolves against the kernel's legal moves.
+  }, 60_000);
 });

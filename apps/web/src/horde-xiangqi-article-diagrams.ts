@@ -1075,3 +1075,39 @@ export const HORDE_XIANGQI_THUMBNAIL = () => {
   });
   return `<svg class="xq-article-svg" viewBox="${left} ${top} ${w} ${h}" role="img" aria-label="Horde Xiangqi" xmlns="http://www.w3.org/2000/svg"><rect class="xq-diagram-bg" x="${left}" y="${top}" width="${w}" height="${h}"/>${board}</svg>`;
 };
+
+/** The English templates the games card's records name (horde-xiangqi-games.ts). */
+export const HORDE_GAME_SET_STRINGS: Record<string, string> = {
+  game: 'Game',
+  'grp-ladder': 'Ladder: 100k against 10k nodes',
+  'grp-standard': 'Standard soldiers, engine against itself',
+  'grp-veteran': 'Veteran soldiers, engine against itself',
+  'lab-game': '%1: %2 nodes, %3-ply clock. %4',
+  'lab-ladder': 'Horde at %1, army at %2 nodes. %3',
+  'name-across27': '27, ranks 4-6',
+  'name-across36': '36, ranks 3-6',
+  'name-array32': '32, xiangqi’s five points',
+  'name-forward18': '18, ranks 3-4',
+  'name-forward27': '27, ranks 2-4',
+  'name-forward36': '36, ranks 2-5',
+  'name-lichess31': '31, parent shape',
+  'name-lichess40': '40, parent shape',
+  'name-solid18': '18, ranks 1-2',
+  'name-solid27': '27, ranks 1-3',
+  'name-solid36': '36, ranks 1-4',
+  'name-solid45': '45, ranks 1-5',
+  'res-capped':
+    'Stopped by the harness at its 1,000-ply cap. Played on from there with the clock in force, it was drawn on the clock at ply %1. Both sides %2 nodes a move, %3-ply no-capture clock.',
+  'res-game': '%1 after %2 plies. Both sides %3 nodes a move, %4-ply no-capture clock.',
+  'res-ladder': '%1 after %2 plies. The horde searched %3 nodes a move, the army %4.',
+  'res-unfinished':
+    'Unfinished: the harness stopped it at its %1-ply cap. Both sides %2 nodes a move, %3-ply no-capture clock.',
+  'seat-fsf': 'Fairy-Stockfish, %1 nodes',
+  unfinished: 'Unfinished at %1 plies',
+  'v-army-extinction': 'Army wins by extinction',
+  'v-capped': 'Unfinished at the ply cap',
+  'v-draw-progress-clock': 'Draw by the clock',
+  'v-draw-repetition': 'Draw by repetition',
+  'v-horde-checkmate': 'Horde wins by checkmate',
+  'v-horde-stalemate': 'Horde wins by smother',
+};

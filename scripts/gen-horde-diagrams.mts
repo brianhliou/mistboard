@@ -861,7 +861,7 @@ if (BLOG_WRITE || process.argv.includes('--site')) {
       [DROP]:
         'The chariot drops to the first rank through the f-file, which the horde emptied by advancing. No soldier attacks backward, so nothing can touch it there.',
       [DROP + 2]:
-        `It takes a soldier from behind and goes on at about one a move: fifteen moves after the drop, ${['ten', 'eleven', 'twelve'][eatenBy15 - 10]} soldiers are gone for a horse and two of the army’s soldiers.`,
+        `It takes a soldier from behind and goes on at about one a move: fifteen moves after the drop, ${eatenBy15} soldiers are gone for a horse and two of the army’s soldiers.`,
       [G1.moves.length]:
         'The last soldier falls. The whole horde cost the army four soldiers and two horses.',
     };
@@ -1271,14 +1271,320 @@ export const HORDE_XIANGQI_THUMBNAIL = () => {
   return \`<svg class="xq-article-svg" viewBox="\${left} \${top} \${w} \${h}" role="img" aria-label="Horde Xiangqi" xmlns="http://www.w3.org/2000/svg"><rect class="xq-diagram-bg" x="\${left}" y="\${top}" width="\${w}" height="\${h}"/>\${board}</svg>\`;
 };
 `;
-    writeFileSync(SITE_MODULE, module);
+    // ── The games viewer: every lab game the post let a reader open ─────────
+    // The engine against itself on every array, standard and veteran, at
+    // every budget, plus the two ladder games the post names (the set
+    // build-blog-games.mjs gave the blog). Records go to a module the article
+    // loads on demand (horde-xiangqi-games.ts): keys and arguments only. The
+    // browser replays them with replayHordeXiangqiRecord, which resolves each
+    // move against the kernel's legal moves; that exact function runs here on
+    // every record, and its final board must match the lab kernel's.
+    const { replayHordeXiangqiRecord } = await import('../apps/web/src/horde-xiangqi-replay.js');
+    const NAME: Record<string, string> = {
+      solid18: '18, ranks 1-2',
+      forward18: '18, ranks 3-4',
+      solid27: '27, ranks 1-3',
+      forward27: '27, ranks 2-4',
+      across27: '27, ranks 4-6',
+      solid36: '36, ranks 1-4',
+      forward36: '36, ranks 2-5',
+      across36: '36, ranks 3-6',
+      solid45: '45, ranks 1-5',
+      array32: '32, xiangqi’s five points',
+      lichess31: '31, parent shape',
+      lichess40: '40, parent shape',
+    };
+    const SET_STR: Record<string, string> = {
+      game: 'Game',
+      'grp-standard': 'Standard soldiers, engine against itself',
+      'grp-veteran': 'Veteran soldiers, engine against itself',
+      'grp-ladder': 'Ladder: 100k against 10k nodes',
+      'lab-game': '%1: %2 nodes, %3-ply clock. %4',
+      'lab-ladder': 'Horde at %1, army at %2 nodes. %3',
+      'res-game': '%1 after %2 plies. Both sides %3 nodes a move, %4-ply no-capture clock.',
+      'res-ladder': '%1 after %2 plies. The horde searched %3 nodes a move, the army %4.',
+      'res-capped':
+        'Stopped by the harness at its 1,000-ply cap. Played on from there with the clock in force, it was drawn on the clock at ply %1. Both sides %2 nodes a move, %3-ply no-capture clock.',
+      'res-unfinished':
+        'Unfinished: the harness stopped it at its %1-ply cap. Both sides %2 nodes a move, %3-ply no-capture clock.',
+      'v-capped': 'Unfinished at the ply cap',
+      unfinished: 'Unfinished at %1 plies',
+      'seat-fsf': 'Fairy-Stockfish, %1 nodes',
+    };
+    // A verdict is a whole sentence with no arguments, because the labels
+    // and result lines take it as a ['k', key] argument, which the page
+    // resolves without arguments of its own.
+    const WINNER_TEXT: Record<string, string> = {
+      horde: 'Horde wins by',
+      army: 'Army wins by',
+      draw: 'Draw by',
+    };
+    const REASON_TEXT: Record<string, string> = {
+      stalemate: 'smother',
+      checkmate: 'checkmate',
+      extinction: 'extinction',
+      'progress-clock': 'the clock',
+      repetition: 'repetition',
+    };
+    for (const [w, wt] of Object.entries(WINNER_TEXT))
+      for (const [r, rt] of Object.entries(REASON_TEXT)) SET_STR[`v-${w}-${r}`] = `${wt} ${rt}`;
+    for (const [k, v] of Object.entries(NAME)) SET_STR[`name-${k}`] = v;
+    const nodesText = (n: number) => (n >= 1e6 ? `${n / 1e6}M` : `${n / 1e3}k`);
+    // Ply counts in the thousands print as the article prints them (1,058).
+    const pl = (n: number) => (n >= 1000 ? n.toLocaleString('en-US') : n);
+    type SetArg = number | string | ['k', string];
+    type SetText = { k: string; a: SetArg[] };
+    const verdictOf = (winner: string | null, reason: string, plies: number): SetText => {
+      if (reason === 'ply-cap') {
+        return { k: 'unfinished', a: [pl(plies)] };
+      }
+      const side = winner === 'red' ? 'horde' : winner === 'black' ? 'army' : 'draw';
+      const k = `v-${side}-${reason}`;
+      if (!SET_STR[k]) throw new Error(`games set: no template for ${side} by ${reason}`);
+      return { k, a: [] };
+    };
+    type SetRec = {
+      id: string;
+      family: 'standard' | 'veteran' | 'ladder';
+      formation: string;
+      nodes: number;
+      clock: number;
+      veteran: boolean;
+      rules: Record<string, unknown>;
+      moves: string[];
+      winner: string | null;
+      reason: string;
+      hiSeat?: string;
+      lo?: number;
+    };
+    const found: SetRec[] = [];
+    for (const f of readdirSync(ARTIFACTS).sort()) {
+      if (!f.endsWith('.json')) continue;
+      const a = JSON.parse(readFileSync(path.join(ARTIFACTS, f), 'utf8'));
+      const formation = a.rules?.formation as string;
+      if (a.command === 'bestplay') {
+        const veteran = a.rules.soldiers === 'veteran';
+        const clock = Number(a.rules.progressClock);
+        for (const g of a.result.games) {
+          const id = `${veteran ? 'veteran' : 'standard'}/${formation}/${g.nodes}/${clock}`;
+          if (found.some((r) => r.id === id)) continue;
+          found.push({
+            id,
+            family: veteran ? 'veteran' : 'standard',
+            formation,
+            nodes: g.nodes,
+            clock,
+            veteran,
+            rules: a.rules,
+            moves: g.moves,
+            winner: g.winner,
+            reason: g.reason,
+          });
+        }
+      }
+      // The two ladder games the post names: the horde's fastest win (151
+      // plies) and the progress-clock draw, both on forward36.
+      if (a.command === 'ladder' && formation === 'forward36') {
+        a.result.games.forEach(
+          (
+            g: {
+              moves: string[];
+              plies: number;
+              winner: string | null;
+              reason: string;
+              hiSeat: string;
+            },
+            i: number,
+          ) => {
+            const named =
+              (g.winner === 'red' && g.plies === 151) ||
+              (g.winner === null && g.reason === 'progress-clock');
+            const id = `ladder/${formation}/${i}`;
+            if (!named || found.some((r) => r.id === id)) return;
+            found.push({
+              id,
+              family: 'ladder',
+              formation,
+              nodes: a.args.hi,
+              lo: a.args.lo,
+              clock: Number(a.rules.progressClock),
+              veteran: a.rules.soldiers === 'veteran',
+              rules: a.rules,
+              moves: g.moves,
+              winner: g.winner,
+              reason: g.reason,
+              hiSeat: g.hiSeat,
+            });
+          },
+        );
+      }
+    }
+    const FAMILY_ORDER = ['standard', 'veteran', 'ladder'];
+    const FORMATION_ORDER = Object.keys(NAME);
+    found.sort(
+      (x, y) =>
+        FAMILY_ORDER.indexOf(x.family) - FAMILY_ORDER.indexOf(y.family) ||
+        FORMATION_ORDER.indexOf(x.formation) - FORMATION_ORDER.indexOf(y.formation) ||
+        x.nodes - y.nodes ||
+        x.clock - y.clock,
+    );
+    if (found.length !== 58)
+      throw new Error(`games set: ${found.length} horde games; the post let readers open 58`);
+    const setRecords = found.map((r) => {
+      if (!FORMATION_ORDER.includes(r.formation))
+        throw new Error(`games set: no name for formation ${r.formation}`);
+      const placement = String(
+        HORDE_FORMATIONS[r.formation as keyof typeof HORDE_FORMATIONS],
+      ).split(/\s+/)[0]!;
+      // The lab kernel under the artifact's own rules.
+      const { kernel } = hordeXiangqiVariant.create(
+        resolveRules(hordeXiangqiVariant.ruleSchema, r.rules),
+      );
+      let st = kernel.initial(`set-${r.id}`);
+      for (const [i, u] of r.moves.entries()) {
+        const m = kernel.fromUci(st, u);
+        if (!m)
+          throw new Error(`games set: ${r.id} ply ${i + 1} ${u} is illegal in the lab kernel`);
+        st = kernel.apply(st, m);
+      }
+      // The browser's replay, the function the page runs.
+      const { states } = replayHordeXiangqiRecord({
+        placement,
+        moves: r.moves.join(' '),
+        veteran: r.veteran,
+        progressClock: r.clock,
+        red: '',
+        black: '',
+        event: '',
+        resultText: '',
+      });
+      const key = (b: Record<string, { color: string; role: string } | undefined>) =>
+        Object.entries(b)
+          .filter(([, p]) => p)
+          .sort(([x], [y]) => x.localeCompare(y))
+          .map(([sq, p]) => `${sq}:${p!.color}${p!.role}`)
+          .join(' ');
+      if (key(states.at(-1)!.board as never) !== key(st.board as never))
+        throw new Error(`games set: ${r.id} ends on a different board in the browser replay`);
+      const plies = r.moves.length;
+      const cont = r.reason === 'ply-cap' ? CONTINUED[r.id] : undefined;
+      if (r.reason === 'ply-cap' && (r.family === 'ladder' || (cont && cont.reason !== 'CLOCK')))
+        throw new Error(`games set: ${r.id} hit the cap in an unexpected way`);
+      if (r.family === 'ladder' && (r.nodes !== 100000 || r.lo !== 10000))
+        throw new Error(`games set: ${r.id} is not the 100k against 10k ladder`);
+      if (cont && plies !== 1000)
+        throw new Error(`games set: ${r.id} capped at ${plies}, not 1,000`);
+      const verdict = verdictOf(r.winner, r.reason, plies);
+      // The verdict as an argument of the label and result: arg-free.
+      const short = r.reason === 'ply-cap' ? 'v-capped' : verdict.k;
+      const name: ['k', string] = ['k', `name-${r.formation}`];
+      const ladder = r.family === 'ladder';
+      const hordeNodes = ladder ? (r.hiSeat === 'red' ? r.nodes : r.lo!) : r.nodes;
+      const armyNodes = ladder ? (r.hiSeat === 'black' ? r.nodes : r.lo!) : r.nodes;
+      return {
+        id: r.id,
+        group: { k: `grp-${r.family}`, a: [] },
+        label: ladder
+          ? {
+              k: 'lab-ladder',
+              a: [nodesText(hordeNodes), nodesText(armyNodes), ['k', short] as SetArg],
+            }
+          : {
+              k: 'lab-game',
+              a: [name, nodesText(r.nodes), r.clock, ['k', short] as SetArg],
+            },
+        result: ladder
+          ? {
+              k: 'res-ladder',
+              a: [['k', short] as SetArg, pl(plies), nodesText(hordeNodes), nodesText(armyNodes)],
+            }
+          : cont
+            ? { k: 'res-capped', a: [pl(cont.plies), nodesText(r.nodes), r.clock] }
+            : r.reason === 'ply-cap'
+              ? { k: 'res-unfinished', a: [pl(plies), nodesText(r.nodes), r.clock] }
+              : {
+                  k: 'res-game',
+                  a: [['k', short] as SetArg, pl(plies), nodesText(r.nodes), r.clock],
+                },
+        verdict,
+        red: { k: 'seat-fsf', a: [nodesText(hordeNodes)] },
+        black: { k: 'seat-fsf', a: [nodesText(armyNodes)] },
+        moves: r.moves.join(' '),
+        veteran: r.veteran,
+        start: placement,
+        clock: r.clock,
+      };
+    });
+    console.log(
+      `  horde games: ${setRecords.length}; reasons ${[...new Set(found.map((r) => r.reason))].join(', ')}`,
+    );
+    const SET_MODULE = path.join(HERE, '../apps/web/src/horde-xiangqi-games.ts');
+    const setModule = `// Generated by scripts/gen-horde-diagrams.mts in this repository (--site).
+// Do not hand-edit. Every lab game the horde-xiangqi article lets a reader
+// step through, loaded on demand by its games card. The page replays each
+// record through the horde rule kernel (replayHordeXiangqiRecord); the
+// generator ran that same replay on every record against the lab kernel.
+
+import type { StepGameSet } from './article-game-set.js';
+import { replayHordeXiangqiRecord } from './horde-xiangqi-replay.js';
+
+export const GAME_SET: StepGameSet = {
+  open: 'veteran/forward36/1000000/120',
+  replay: (record) =>
+    replayHordeXiangqiRecord({
+      placement: record.start ?? '',
+      moves: record.moves,
+      veteran: record.veteran === true,
+      progressClock: record.clock ?? 60,
+      red: '',
+      black: '',
+      event: '',
+      resultText: '',
+    }).states.map((state) => state.board),
+  records: [
+${setRecords.map((r) => `    ${JSON.stringify(r)},`).join('\n')}
+  ],
+};
+`;
+    if (!setRecords.some((r) => r.id === 'veteran/forward36/1000000/120'))
+      throw new Error('games set: the forward36 veteran game is missing');
+    // Templates the records name, and only those.
+    const setKeys = new Set<string>(['game']);
+    const walk = (t: { k: string; a: SetArg[] }) => {
+      setKeys.add(t.k);
+      const holes = [...(SET_STR[t.k] ?? '').matchAll(/%(\d)/g)].map((m) => Number(m[1]));
+      if (holes.some((n) => n > t.a.length))
+        throw new Error(`games set: ${t.k} has more holes than arguments`);
+      for (const a of t.a) {
+        if (!Array.isArray(a)) continue;
+        // A ['k', key] argument is filled without arguments of its own.
+        if (/%\d/.test(SET_STR[a[1]] ?? ''))
+          throw new Error(`games set: ${a[1]} nested with holes`);
+        setKeys.add(a[1]);
+      }
+    };
+    for (const r of setRecords) {
+      for (const t of [r.group, r.label, r.result, r.verdict, r.red, r.black]) walk(t as SetText);
+    }
+    for (const k of [...setKeys])
+      if (SET_STR[k] === undefined) throw new Error(`games set: no template for ${k}`);
+    const setStrings = Object.fromEntries(
+      [...setKeys].sort().map((k) => [k, SET_STR[k]!] as const),
+    );
+    const moduleWithStrings = `${module}
+/** The English templates the games card's records name (horde-xiangqi-games.ts). */
+export const HORDE_GAME_SET_STRINGS: Record<string, string> = ${JSON.stringify(setStrings, null, 2)};
+`;
+    writeFileSync(SITE_MODULE, moduleWithStrings);
+    writeFileSync(SET_MODULE, setModule);
     // The board literals come out on one line each; hand them to the repo's
     // formatter so the generated file passes the same gate as a written one.
-    execSync(`npx biome check --write "${SITE_MODULE}"`, {
+    execSync(`npx biome check --write "${SITE_MODULE}" "${SET_MODULE}"`, {
       cwd: path.join(HERE, '..'),
       stdio: 'ignore',
     });
     console.log('  apps/web/src/horde-xiangqi-article-diagrams.ts');
+    console.log(`  apps/web/src/horde-xiangqi-games.ts (${setModule.length} bytes)`);
   }
   // The replay on the page draws any piece a game can reach (a black soldier
   // across the river, say), not only what the figures show: copy the whole set.

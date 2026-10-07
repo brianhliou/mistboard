@@ -1,4 +1,5 @@
 import {
+  HORDE_GAME_SET_STRINGS,
   HORDE_XIANGQI_ARRAYS,
   HORDE_XIANGQI_CHARIOT_GAME,
   HORDE_XIANGQI_COVER_CHESS,
@@ -319,6 +320,22 @@ export const hordeXiangqiArticle: Article = {
           kind: 'paragraph',
           text: 'The engine is [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish); the harness that produced the games, with the engine gate and the commands, is the [variant lab](https://github.com/brianhliou/mistboard/tree/main/scripts/variant-lab).',
         },
+      ],
+    },
+    {
+      heading: 'Every game, to step through',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'Fifty-eight of the engine games are in the viewer below: the engine against itself on the arrays at 200,000, one million and five million nodes a move, 28 games with standard soldiers and 28 with veterans; and two ladder games on the standard forward array, where 100,000 nodes met 10,000: the horde’s fastest win, mate at ply 151, and a draw on the clock. It opens on the horde’s win above. Pick any other from the list.',
+        },
+        {
+          kind: 'step-game-set',
+          load: () => import('../../horde-xiangqi-games.js'),
+          strings: HORDE_GAME_SET_STRINGS,
+          caption:
+            'All 58 games, each replayed through the rule kernel. The arrow keys step through the one on the board.',
+        } as ArticleBlock,
       ],
     },
     {

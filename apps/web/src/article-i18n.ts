@@ -3416,6 +3416,44 @@ const ZH_HANS: Record<string, string> = {
     'Fairy-Stockfish 自战，每着 100 万节点，120 步无吃子限制',
   'Red wins. Xiangqi scores the side with no legal move as the loser; Lichess Horde would call it a draw.':
     '红方胜。象棋判无子可动的一方负；Lichess 的部落棋会判和。',
+  // horde-xiangqi games card (2026-10-07).
+  'Fifty-eight of the engine games are in the viewer below: the engine against itself on the arrays at 200,000, one million and five million nodes a move, 28 games with standard soldiers and 28 with veterans; and two ladder games on the standard forward array, where 100,000 nodes met 10,000: the horde’s fastest win, mate at ply 151, and a draw on the clock. It opens on the horde’s win above. Pick any other from the list.':
+    '引擎对局中有五十八盘在下面的查看器里：引擎在各个阵形上自战，每着 200,000、一百万和五百万节点，标准兵 28 盘，老兵 28 盘；另有两盘标准兵前压阵形上的阶梯对局，100,000 节点对 10,000 节点：兵团最快的一胜，第 151 步将死，以及一盘无吃子步数到限的和棋。查看器先打开上面那盘兵团的胜局。列表里的任何一盘都可以选。',
+  'All 58 games, each replayed through the rule kernel. The arrow keys step through the one on the board.':
+    '全部 58 盘棋，每一盘都经规则内核重放。方向键可以逐步走棋盘上的这一盘。',
+  'Ladder: 100k against 10k nodes': '阶梯对局：100k 对 10k 节点',
+  'Standard soldiers, engine against itself': '标准兵，引擎自战',
+  'Veteran soldiers, engine against itself': '老兵，引擎自战',
+  '%1: %2 nodes, %3-ply clock. %4': '%1：%2 节点，%3 步无吃子限制。%4',
+  'Horde at %1, army at %2 nodes. %3': '兵团 %1，全军 %2 节点。%3',
+  '18, ranks 1-2': '18 兵，第 1-2 线',
+  '18, ranks 3-4': '18 兵，第 3-4 线',
+  '27, ranks 1-3': '27 兵，第 1-3 线',
+  '27, ranks 2-4': '27 兵，第 2-4 线',
+  '27, ranks 4-6': '27 兵，第 4-6 线',
+  '36, ranks 1-4': '36 兵，第 1-4 线',
+  '36, ranks 2-5': '36 兵，第 2-5 线',
+  '36, ranks 3-6': '36 兵，第 3-6 线',
+  '45, ranks 1-5': '45 兵，第 1-5 线',
+  '32, xiangqi’s five points': '32 兵，象棋的五个兵位',
+  '31, parent shape': '31 兵，母版形状',
+  '40, parent shape': '40 兵，母版形状',
+  'Stopped by the harness at its 1,000-ply cap. Played on from there with the clock in force, it was drawn on the clock at ply %1. Both sides %2 nodes a move, %3-ply no-capture clock.':
+    '测试框架在 1,000 步上限处停下了这盘棋。从那里在无吃子限制下续弈，于第 %1 步因无吃子步数到限成和。双方每着 %2 节点，%3 步无吃子限制。',
+  '%1 after %2 plies. Both sides %3 nodes a move, %4-ply no-capture clock.':
+    '%2 步后%1。双方每着 %3 节点，%4 步无吃子限制。',
+  '%1 after %2 plies. The horde searched %3 nodes a move, the army %4.':
+    '%2 步后%1。兵团每着搜索 %3 节点，全军 %4。',
+  'Unfinished: the harness stopped it at its %1-ply cap. Both sides %2 nodes a move, %3-ply no-capture clock.':
+    '未下完：测试框架在 %1 步上限处停下了它。双方每着 %2 节点，%3 步无吃子限制。',
+  'Fairy-Stockfish, %1 nodes': 'Fairy-Stockfish，%1 节点',
+  'Unfinished at %1 plies': '第 %1 步时未下完',
+  'Army wins by extinction': '全军以全灭取胜',
+  'Unfinished at the ply cap': '到步数上限时未下完',
+  'Draw by the clock': '无吃子步数到限，和棋',
+  'Draw by repetition': '重复局面，和棋',
+  'Horde wins by checkmate': '兵团将死取胜',
+  'Horde wins by smother': '兵团困毙取胜',
   // horde-xiangqi merge (2026-10-07): the brianhliou.com post folded in.
   'None of the twenty-four designs is a game, and the reason is the soldier. With xiangqi’s own soldier the army wins every start of 40 or fewer on its own side of the river, by one trick: a chariot behind the block. Give the soldier its crossed-river move from the first step and the trick is gone, but the game becomes a siege, 37 draws in 48 games. Below the river the block cannot defend itself; above it the army cannot attack it. There is no play page for Horde Xiangqi; this page holds the measurement.':
     '二十四种设计没有一种成得了游戏，原因在兵身上。用象棋原本的兵，凡是兵团起始于自己这半边、40 兵及以下的阵形，全军每局都赢，靠的是同一个招法：一只车绕到兵阵背后。让兵从第一步起就有过河兵的走法，这个招法就没了，但棋局变成围城，48 局里 37 局和棋。过河之前，兵阵无法自保；过河之后，全军攻不动它。部落象棋没有对局页面；本页记录的是这份测量。',
@@ -7248,6 +7286,44 @@ const ZH_HANT: Record<string, string> = {
     'Fairy-Stockfish 自戰，每著 100 萬節點，120 步無吃子限制',
   'Red wins. Xiangqi scores the side with no legal move as the loser; Lichess Horde would call it a draw.':
     '紅方勝。象棋判無子可動的一方負；Lichess 的部落棋會判和。',
+  // horde-xiangqi games card (2026-10-07).
+  'Fifty-eight of the engine games are in the viewer below: the engine against itself on the arrays at 200,000, one million and five million nodes a move, 28 games with standard soldiers and 28 with veterans; and two ladder games on the standard forward array, where 100,000 nodes met 10,000: the horde’s fastest win, mate at ply 151, and a draw on the clock. It opens on the horde’s win above. Pick any other from the list.':
+    '引擎對局中有五十八盤在下面的檢視器裡：引擎在各個陣形上自戰，每著 200,000、一百萬和五百萬節點，標準兵 28 盤，老兵 28 盤；另有兩盤標準兵前壓陣形上的階梯對局，100,000 節點對 10,000 節點：兵團最快的一勝，第 151 步將死，以及一盤無吃子步數到限的和棋。檢視器先開啟上面那盤兵團的勝局。列表裡的任何一盤都可以選。',
+  'All 58 games, each replayed through the rule kernel. The arrow keys step through the one on the board.':
+    '全部 58 盤棋，每一盤都經規則核心重放。方向鍵可以逐步走棋盤上的這一盤。',
+  'Ladder: 100k against 10k nodes': '階梯對局：100k 對 10k 節點',
+  'Standard soldiers, engine against itself': '標準兵，引擎自戰',
+  'Veteran soldiers, engine against itself': '老兵，引擎自戰',
+  '%1: %2 nodes, %3-ply clock. %4': '%1：%2 節點，%3 步無吃子限制。%4',
+  'Horde at %1, army at %2 nodes. %3': '兵團 %1，全軍 %2 節點。%3',
+  '18, ranks 1-2': '18 兵，第 1-2 線',
+  '18, ranks 3-4': '18 兵，第 3-4 線',
+  '27, ranks 1-3': '27 兵，第 1-3 線',
+  '27, ranks 2-4': '27 兵，第 2-4 線',
+  '27, ranks 4-6': '27 兵，第 4-6 線',
+  '36, ranks 1-4': '36 兵，第 1-4 線',
+  '36, ranks 2-5': '36 兵，第 2-5 線',
+  '36, ranks 3-6': '36 兵，第 3-6 線',
+  '45, ranks 1-5': '45 兵，第 1-5 線',
+  '32, xiangqi’s five points': '32 兵，象棋的五個兵位',
+  '31, parent shape': '31 兵，母版形狀',
+  '40, parent shape': '40 兵，母版形狀',
+  'Stopped by the harness at its 1,000-ply cap. Played on from there with the clock in force, it was drawn on the clock at ply %1. Both sides %2 nodes a move, %3-ply no-capture clock.':
+    '測試框架在 1,000 步上限處停下了這盤棋。從那裡在無吃子限制下續弈，於第 %1 步因無吃子步數到限成和。雙方每著 %2 節點，%3 步無吃子限制。',
+  '%1 after %2 plies. Both sides %3 nodes a move, %4-ply no-capture clock.':
+    '%2 步後%1。雙方每著 %3 節點，%4 步無吃子限制。',
+  '%1 after %2 plies. The horde searched %3 nodes a move, the army %4.':
+    '%2 步後%1。兵團每著搜尋 %3 節點，全軍 %4。',
+  'Unfinished: the harness stopped it at its %1-ply cap. Both sides %2 nodes a move, %3-ply no-capture clock.':
+    '未下完：測試框架在 %1 步上限處停下了它。雙方每著 %2 節點，%3 步無吃子限制。',
+  'Fairy-Stockfish, %1 nodes': 'Fairy-Stockfish，%1 節點',
+  'Unfinished at %1 plies': '第 %1 步時未下完',
+  'Army wins by extinction': '全軍以全滅取勝',
+  'Unfinished at the ply cap': '到步數上限時未下完',
+  'Draw by the clock': '無吃子步數到限，和棋',
+  'Draw by repetition': '重複局面，和棋',
+  'Horde wins by checkmate': '兵團將死取勝',
+  'Horde wins by smother': '兵團困斃取勝',
   // horde-xiangqi merge (2026-10-07), converted from the Simplified entries.
   'None of the twenty-four designs is a game, and the reason is the soldier. With xiangqi’s own soldier the army wins every start of 40 or fewer on its own side of the river, by one trick: a chariot behind the block. Give the soldier its crossed-river move from the first step and the trick is gone, but the game becomes a siege, 37 draws in 48 games. Below the river the block cannot defend itself; above it the army cannot attack it. There is no play page for Horde Xiangqi; this page holds the measurement.':
     '二十四種設計沒有一種成得了遊戲，原因在兵身上。用象棋原本的兵，凡是兵團起始於自己這半邊、40 兵及以下的陣形，全軍每局都贏，靠的是同一個招法：一隻車繞到兵陣背後。讓兵從第一步起就有過河兵的走法，這個招法就沒了，但棋局變成圍城，48 局裡 37 局和棋。過河之前，兵陣無法自保；過河之後，全軍攻不動它。部落象棋沒有對局頁面；本頁記錄的是這份測量。',
