@@ -22,9 +22,11 @@ import {
   type PracticeGoal,
   type PracticeTermination,
   standardXiangqiEngineFen,
+  standardXiangqiFen,
   type XiangqiColor,
   type XiangqiGameState,
   type XiangqiMove,
+  type XiangqiTablebaseOutcome,
   type XiangqiTablebaseResponse,
   xiangqiMoveToFsfUci,
 } from '@mistboard/game';
@@ -37,6 +39,11 @@ import { fetchXiangqiTablebase } from './xiangqi-tablebase-client.js';
  *  Above the server's own queue cap plus its chessdb timeout, so a slow but
  *  live answer still lands; past it the move is graded as it always was. */
 export const PRACTICE_TABLEBASE_TIMEOUT_MS = 4500;
+
+/** The pause between the learner's move landing and the engine's reply, so the
+ *  two plies read as two moves rather than one jump. Same order as lichess
+ *  practice; measured from the learner's move, so search time counts toward it. */
+export const PRACTICE_REPLY_DELAY_MS = 400;
 
 export type XiangqiTablebaseLookupFn = (
   truth: XiangqiGameState,
@@ -67,9 +74,11 @@ export function xiangqiPracticeTermination(
  *
  * The score is returned exactly as the engine gave it — side-to-move POV — and
  * the runner flips it. `bestUci` is the first move of the top line, which is
- * what the defender plays. `exact` is set only from an exact tablebase answer
- * (also side to move); a miss, an outage or the timeout leave it null, and the
- * runner grades by the engine as before.
+ * what the defender plays. The exact result (also side to move) is `exact`
+ * when a parent's table already answered it, else `exactLater`, which resolves
+ * once the lookup does: the engine answer is returned without waiting on the
+ * network, so the learner is never held for the tablebase. A miss, an outage
+ * or the timeout resolve to null, and the runner grades by the engine.
  */
 export async function evaluateXiangqiForPractice(
   ceval: CevalHandle,
@@ -80,25 +89,88 @@ export async function evaluateXiangqiForPractice(
   // some engines answer with a stale line.
   if (truth.status.type !== 'playing') return { cp: null, mate: null, bestUci: null };
 
-  const [engine, exact] = await Promise.all([
-    searchForPractice(ceval, truth),
-    exactResult(lookup, truth),
-  ]);
-  return { ...engine, exact };
+  const known = knownExact.get(exactKey(truth));
+  if (known) return { ...(await searchForPractice(ceval, truth)), exact: { result: known } };
+  const exactLater = exactResult(lookup, truth);
+  return { ...(await searchForPractice(ceval, truth)), exactLater };
+}
+
+/**
+ * Exact results already known from a PARENT position's table, keyed like the
+ * tablebase client's memo (board + side to move), side-to-move POV.
+ *
+ * An exact answer lists every legal move with its result, so the position after
+ * any of them is answered by the lookup that was made for the position before
+ * it. Reading it from there takes the after-move lookup, a chessdb round trip
+ * paced at 400ms or more, off the path between the learner's move and the
+ * engine's reply; the grade is the same database's answer either way.
+ */
+const knownExact = new Map<string, XiangqiTablebaseOutcome>();
+/** Lookups still in flight. A learner who moves before the table for the
+ *  position they moved from has arrived waits on it rather than asking chessdb
+ *  for the child as well. */
+const inflight = new Set<Promise<unknown>>();
+const KNOWN_EXACT_ENTRIES = 2000;
+
+function exactKey(truth: XiangqiGameState): string {
+  return standardXiangqiFen(truth).split(' ').slice(0, 2).join(' ');
+}
+
+function rememberChildren(
+  parent: XiangqiGameState,
+  response: Extract<XiangqiTablebaseResponse, { status: 'exact' }>,
+): void {
+  for (const row of response.moves) {
+    let child: XiangqiGameState;
+    try {
+      child = applyStandardXiangqiMove(parent, { from: row.from, to: row.to });
+    } catch {
+      continue;
+    }
+    // A finished position is never evaluated for an exact result.
+    if (child.status.type !== 'playing') continue;
+    // The row is the MOVER's result; the child has the other side to move.
+    knownExact.set(exactKey(child), flipOutcome(row.result));
+  }
+  while (knownExact.size > KNOWN_EXACT_ENTRIES) {
+    const oldest = knownExact.keys().next().value;
+    if (oldest === undefined) break;
+    knownExact.delete(oldest);
+  }
+}
+
+function flipOutcome(result: XiangqiTablebaseOutcome): XiangqiTablebaseOutcome {
+  return result === 'win' ? 'loss' : result === 'loss' ? 'win' : 'draw';
+}
+
+/** Test seam: forget results learned from parent tables. */
+export function clearPracticeKnownExact(): void {
+  knownExact.clear();
+  inflight.clear();
 }
 
 async function exactResult(
   lookup: XiangqiTablebaseLookupFn,
   truth: XiangqiGameState,
-): Promise<PracticeEval['exact']> {
+): Promise<{ result: XiangqiTablebaseOutcome } | null> {
+  if (inflight.size > 0) await Promise.allSettled([...inflight]);
+  const known = knownExact.get(exactKey(truth));
+  if (known) return { result: known };
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PRACTICE_TABLEBASE_TIMEOUT_MS);
-  try {
+  const asked = (async () => {
     const response = await lookup(truth, controller.signal);
-    return response.status === 'exact' ? { result: response.result } : null;
+    if (response.status !== 'exact') return null;
+    rememberChildren(truth, response);
+    return { result: response.result };
+  })();
+  inflight.add(asked);
+  try {
+    return await asked;
   } catch {
     return null;
   } finally {
+    inflight.delete(asked);
     clearTimeout(timer);
   }
 }
@@ -135,6 +207,8 @@ export interface XiangqiPracticeOptions {
     parentTruth: XiangqiGameState,
     by: 'learner' | 'defender',
   ) => void;
+  /** See `PracticeConfig.minReplyDelayMs`; defaults to PRACTICE_REPLY_DELAY_MS. */
+  minReplyDelayMs?: number;
 }
 
 /** Build the runner config for a standard-xiangqi practice exercise. */
@@ -161,6 +235,7 @@ export function xiangqiPracticeConfig(
       formatXiangqiMove(parentTruth, move, currentXiangqiNotationStyle()),
     evaluate: options.evaluate,
     onMovePlayed: options.onMovePlayed,
+    minReplyDelayMs: options.minReplyDelayMs ?? PRACTICE_REPLY_DELAY_MS,
   };
 }
 

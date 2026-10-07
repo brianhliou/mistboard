@@ -83,6 +83,9 @@ export interface XiangqiPracticeOptions {
    * to the rest of the site.
    */
   nav?: HTMLElement;
+  /** Pause before the engine's reply; defaults to PRACTICE_REPLY_DELAY_MS. A
+   *  test seam: a scripted engine has no reason to wait. */
+  replyDelayMs?: number;
 }
 
 export interface XiangqiPracticeHandle {
@@ -140,16 +143,19 @@ export function mountXiangqiPractice(
       learner: opts.orientation,
       initialTruth: opts.initialTruth,
       evaluate: opts.evaluate,
-      onMovePlayed: (move, parentTruth, by) => {
+      ...(opts.replyDelayMs === undefined ? {} : { minReplyDelayMs: opts.replyDelayMs }),
+      onMovePlayed: (move, parentTruth) => {
         // The full standard-xiangqi voice, including the cannon boom, from the
         // classifier the live rooms use: a drill that clicks where a game booms
         // teaches the wrong ear for the piece.
         playSound(soundForOwnXiangqiMove(xiangqiTreeAdapter.project(parentTruth)[0]!.view, move));
-        // Paint the learner's own move NOW rather than when the engine has
-        // finished answering. Without this the board holds the old position for
-        // the whole search and then jumps two plies at once, so the sound they
-        // just heard describes a position they cannot see yet.
-        if (by === 'learner') render();
+        // Paint every ply NOW, in the same task as its sound, rather than when
+        // the evaluation of the new position has settled. That evaluation waits
+        // on a tablebase round trip (up to PRACTICE_TABLEBASE_TIMEOUT_MS), so a
+        // repaint deferred to it let the defender's move click and then land on
+        // the board half a second or more later; for the learner's own move it
+        // held the old position for the whole search and then jumped two plies.
+        render();
       },
     }),
   );

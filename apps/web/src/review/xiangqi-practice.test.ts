@@ -14,10 +14,11 @@ import {
   type XiangqiGameState,
   xiangqiMoveToFsfUci,
 } from '@mistboard/game';
-import { expect, test } from 'vitest';
+import { beforeEach, expect, test } from 'vitest';
 import type { CevalHandle } from './engine/ceval-types.js';
 import { createPracticeSession, type PracticeEval } from './practice-play.js';
 import {
+  clearPracticeKnownExact,
   evaluateXiangqiForPractice,
   xiangqiPracticeConfig,
   xiangqiPracticeTermination,
@@ -51,6 +52,10 @@ function steadyEngine(redCp: number) {
 
 const MATE: PracticeGoal = { kind: 'mate' };
 
+// Results learned from a parent's table are module state; no test may inherit
+// another's.
+beforeEach(() => clearPracticeKnownExact());
+
 test('a corpus endgame runs: the learner moves, the engine defends, play continues', async () => {
   const row = entry('soldier-vs-bare-general');
   expect(row.verdict, 'the fixture should be a book WIN, so the goal is to convert').toBe('win');
@@ -64,6 +69,7 @@ test('a corpus endgame runs: the learner moves, the engine defends, play continu
       learner: row.turn,
       initialTruth: start,
       evaluate: steadyEngine(700),
+      minReplyDelayMs: 0,
     }),
   );
   await session.start();
@@ -98,6 +104,7 @@ test("the defender actually plays the engine's move, round-tripped through FSF U
       learner: row.turn,
       initialTruth: start,
       evaluate: steadyEngine(700),
+      minReplyDelayMs: 0,
     }),
   );
   await session.start();
@@ -117,6 +124,7 @@ test('the kernel rejects an illegal move without consuming the attempt', async (
       learner: row.turn,
       initialTruth: start,
       evaluate: steadyEngine(700),
+      minReplyDelayMs: 0,
     }),
   );
   await session.start();
@@ -153,6 +161,7 @@ test('every corpus entry compiles to a position the runner can open', async () =
         learner: row.turn,
         initialTruth: start,
         evaluate: steadyEngine(row.verdict === 'win' ? 700 : 0),
+        minReplyDelayMs: 0,
       }),
     );
     await session.start();
@@ -194,7 +203,9 @@ test('practice eval carries an exact tablebase result beside the engine score', 
     dtm: 9,
     moves: [{ from: 'e1', to: 'e2', result: 'win', dtm: 9 }],
   }));
-  expect(evaluation).toEqual({ cp: 120, mate: null, bestUci: 'e1e2', exact: { result: 'win' } });
+  const { exactLater, ...engine } = evaluation;
+  expect(engine).toEqual({ cp: 120, mate: null, bestUci: 'e1e2' });
+  expect(await exactLater).toEqual({ result: 'win' });
 });
 
 test('practice eval: no tablebase answer, or a failing lookup, is null and never a draw', async () => {
@@ -202,10 +213,50 @@ test('practice eval: no tablebase answer, or a failing lookup, is null and never
   const none = await evaluateXiangqiForPractice(fakeCeval(40), truth, async () => ({
     status: 'none',
   }));
-  expect(none.exact).toBeNull();
+  expect(await none.exactLater).toBeNull();
   const thrown = await evaluateXiangqiForPractice(fakeCeval(40), truth, async () => {
     throw new Error('offline');
   });
-  expect(thrown.exact).toBeNull();
+  expect(await thrown.exactLater).toBeNull();
   expect(thrown.cp).toBe(40);
+});
+
+test("the position after a move is graded from the parent's table, with no second lookup", async () => {
+  // An exact answer lists every legal move's result, so the lookup for the
+  // position after the learner's move is already answered by the one made for
+  // the position before it. Asking again put a paced chessdb round trip
+  // between the learner's move and the engine's reply.
+  const parent = createInitialXiangqiState('t');
+  const parentEval = await evaluateXiangqiForPractice(fakeCeval(300), parent, async () => ({
+    status: 'exact',
+    result: 'win',
+    dtm: 9,
+    moves: [
+      { from: 'e1', to: 'e2', result: 'win', dtm: 9 },
+      { from: 'a1', to: 'a2', result: 'draw', dtm: null },
+    ],
+  }));
+  await parentEval.exactLater;
+
+  let asked = 0;
+  const lookup = async () => {
+    asked += 1;
+    return { status: 'none' } as const;
+  };
+  // The mover's result, flipped to the side now to move.
+  const afterWin = applyStandardXiangqiMove(parent, { from: 'e1', to: 'e2' });
+  expect((await evaluateXiangqiForPractice(fakeCeval(-300), afterWin, lookup)).exact).toEqual({
+    result: 'loss',
+  });
+  const afterDraw = applyStandardXiangqiMove(parent, { from: 'a1', to: 'a2' });
+  expect((await evaluateXiangqiForPractice(fakeCeval(0), afterDraw, lookup)).exact).toEqual({
+    result: 'draw',
+  });
+  expect(asked, 'both answered from the parent table').toBe(0);
+
+  // A position no table has covered is still looked up.
+  const unrelated = applyStandardXiangqiMove(parent, { from: 'i1', to: 'i2' });
+  const uncovered = await evaluateXiangqiForPractice(fakeCeval(0), unrelated, lookup);
+  expect(await uncovered.exactLater).toBeNull();
+  expect(asked).toBe(1);
 });

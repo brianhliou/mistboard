@@ -71,6 +71,7 @@ function mount(
     goal,
     orientation: row.turn,
     evaluate,
+    replyDelayMs: 0,
     title: 'Basic endgames',
     summary: row.attacker,
   });
@@ -108,6 +109,7 @@ test('the concept prose is rendered when the chapter supplies one', async () => 
     goal: MATE,
     orientation: row.turn,
     evaluate: steady(700),
+    replyDelayMs: 0,
     brief: 'Tempo decides it.',
   });
   await handle.ready();
@@ -257,6 +259,7 @@ test("a solve is reported once, with the learner's move count", async () => {
     goal: { kind: 'win', centipawns: 600 },
     orientation: row.turn,
     evaluate: steady(900),
+    replyDelayMs: 0,
     onSolved: (moves) => solves.push(moves),
   });
   await handle.ready();
@@ -279,6 +282,7 @@ test('a solve is not re-reported when the learner restarts and solves again', as
     goal: { kind: 'win', centipawns: 600 },
     orientation: row.turn,
     evaluate: steady(900),
+    replyDelayMs: 0,
     onSolved: (moves) => solves.push(moves),
   });
   await handle.ready();
@@ -303,6 +307,7 @@ test('a failure is reported once per attempt, with its verdict', async () => {
     goal: MATE,
     orientation: row.turn,
     evaluate: collapsing(900, 0),
+    replyDelayMs: 0,
     onFailed: (verdict, moves) => failures.push({ verdict, moves }),
   });
   await handle.ready();
@@ -333,6 +338,7 @@ test('the learner sees their own move while the engine is still thinking', async
     initialTruth: endgameEntryState(row),
     goal: MATE,
     orientation: row.turn,
+    replyDelayMs: 0,
     evaluate: async (truth) => {
       shownAtSearch.push(host.querySelectorAll('.practice__move').length);
       return engine(truth);
@@ -349,4 +355,43 @@ test('the learner sees their own move while the engine is still thinking', async
   // search and then jumps two plies at once -- so the click the learner just
   // heard describes a board they cannot see yet.
   expect(shownAtSearch[0], "the learner's move is painted before the search").toBe(1);
+});
+
+test("the engine's reply is on the board while the position after it is still being evaluated", async () => {
+  // The defender's sound fires as its ply lands; the evaluation of the position
+  // after it waits on a tablebase round trip. The board must show the reply in
+  // the same task as the sound, not after that round trip.
+  const row = entry('soldier-vs-bare-general');
+  const host = document.createElement('div');
+  const engine = steady(700);
+  const boardSquares = () =>
+    [...host.querySelectorAll<HTMLElement>('.gamebook__board [data-piece-square]')]
+      .map((el) => el.dataset.pieceSquare)
+      .sort()
+      .join(',');
+  const truthSquares = (truth: XiangqiGameState) =>
+    Object.entries(truth.board)
+      .filter(([, piece]) => piece)
+      .map(([square]) => square)
+      .sort()
+      .join(',');
+  // Per search: did the board already show the position being searched?
+  const boardMatchedAtSearch: boolean[] = [];
+  const handle = mountXiangqiPractice(host, {
+    initialTruth: endgameEntryState(row),
+    goal: MATE,
+    orientation: row.turn,
+    replyDelayMs: 0,
+    evaluate: async (truth) => {
+      boardMatchedAtSearch.push(boardSquares() === truthSquares(truth));
+      return engine(truth);
+    },
+  });
+  await handle.ready();
+  boardMatchedAtSearch.length = 0;
+
+  const move = getStandardXiangqiLegalMoves(endgameEntryState(row))[0]!;
+  await handle.play(move);
+
+  expect(boardMatchedAtSearch, "learner's move, then the engine's reply").toEqual([true, true]);
 });
