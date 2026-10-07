@@ -12,8 +12,18 @@
  */
 import { readEffectiveSoundVolume } from './theme.js';
 
-/** A recorded quack, e.g. '/sound/duck/quack.mp3'. Null: the synthesized one. */
-export const DUCK_QUACK_FILE: string | null = null;
+/**
+ * The recorded quack (D4XX, Freesound 607226, CC0; see public/sound/CREDITS.md).
+ * Null would mean the synthesized one only.
+ */
+export const DUCK_QUACK_FILE: string | null = '/sound/duck/quack.mp3';
+
+/**
+ * The file is trimmed and peak-matched to the wood set's move.mp3, so it plays at
+ * the wood set's own master gain and sits at the same level as the move it
+ * follows.
+ */
+const DUCK_QUACK_FILE_GAIN = 0.8;
 
 /** Seconds after the move sound, so the two read as "piece, then duck". */
 const QUACK_DELAY_S = 0.08;
@@ -110,6 +120,23 @@ function loadFile(audio: AudioContext, file: string): void {
 }
 
 /**
+ * Start decoding the recorded quack ahead of the first placement, so the first
+ * quack of a game is the recording rather than the synthesized fallback. Safe
+ * before any user gesture: decoding works on a suspended AudioContext.
+ */
+export function preloadDuckQuack(): void {
+  if (!DUCK_QUACK_FILE) return;
+  const audio = ensureContext();
+  if (audio) loadFile(audio, DUCK_QUACK_FILE);
+}
+
+/** Test seam: forget the context and the decoded file. */
+export function resetDuckQuackForTests(): void {
+  ctx = null;
+  fileBuffer = null;
+}
+
+/**
  * Play one quack. Returns whether it played: silent when the site's sound is
  * muted or at zero volume, or when the browser has no WebAudio.
  */
@@ -122,11 +149,11 @@ export function playDuckQuack(): boolean {
   const at = audio.currentTime + QUACK_DELAY_S;
   if (DUCK_QUACK_FILE) {
     loadFile(audio, DUCK_QUACK_FILE);
-    if (fileBuffer instanceof AudioBuffer) {
+    if (fileBuffer !== null && typeof fileBuffer === 'object') {
       const source = audio.createBufferSource();
       source.buffer = fileBuffer;
       const gain = audio.createGain();
-      gain.gain.value = volume;
+      gain.gain.value = volume * DUCK_QUACK_FILE_GAIN;
       source.connect(gain).connect(audio.destination);
       source.start(at);
       return true;

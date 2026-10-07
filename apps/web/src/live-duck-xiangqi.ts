@@ -30,7 +30,12 @@ import {
 import './live-xiangqi.css';
 import './duck-xiangqi.css';
 import { duckPlacementCue, enterDuckGame } from './duck-xiangqi-intro.js';
-import { playDuckQuack, quackForFrameEvent, quackForOwnTurn } from './duck-xiangqi-quack.js';
+import {
+  playDuckQuack,
+  preloadDuckQuack,
+  quackForFrameEvent,
+  quackForOwnTurn,
+} from './duck-xiangqi-quack.js';
 import { duckXiangqiTurnLabel } from './duck-xiangqi-turn-label.js';
 import { duckXiangqiEnabled } from './feature-flags.js';
 import { t } from './i18n/catalog.js';
@@ -297,6 +302,7 @@ function renderPhaseNotice(liveRefs: LiveRefs, view: DuckXiangqiPlayerView | nul
 // ── Interaction ──────────────────────────────────────────────────────────────
 
 function installBoardInteraction(liveRefs: LiveRefs): void {
+  preloadDuckQuack();
   annotations = installBoardAnnotations({
     board: liveRefs.board,
     gameId: () => annotationOwner(core?.state.view),
