@@ -216,6 +216,29 @@ const enginePool = new UciEnginePool({
   queueTimeoutMessage: 'pikafish-jieqi concurrency queue timed out',
 });
 
+// AB-JChess live moves get their own slots (2026-10-06). In the shared pool above, a
+// Level 1 move queued behind two 4 s AB searches waits ~4 s against the 5 s queue
+// timeout, and any slower AB move (a longer budget, a stalled process) sheds it (a shed
+// move retries once, then resigns the bot). Two slots keep the parked-process ceiling
+// where the shared pool had it (at most two AB processes, each holding its 133 MB net
+// and its hash). The queue timeout covers a full AB move plus its process deadline, so
+// a third concurrent AB game waits one move rather than being shed; that wait is taken
+// off its own budget (`budgetAfterWait` in jieqiLiveEngineMove).
+export const ABJCHESS_LIVE_QUEUE_TIMEOUT_MS = 20_000;
+const abJchessLivePool = new UciEnginePool({
+  name: 'abjchess-live',
+  maxProcessesEnvVar: 'MISTBOARD_ABJCHESS_MAX_PROCESSES',
+  queueTimeoutEnvVar: 'MISTBOARD_ABJCHESS_QUEUE_TIMEOUT_MS',
+  defaultMaxProcesses: 2,
+  defaultQueueTimeoutMs: ABJCHESS_LIVE_QUEUE_TIMEOUT_MS,
+  queueTimeoutMessage: 'ab-jchess concurrency queue timed out',
+});
+
+/** The live-move pool a tier's binary runs in. */
+export function jieqiLivePool(engine?: 'ab-jchess'): UciEnginePool {
+  return engine === 'ab-jchess' ? abJchessLivePool : enginePool;
+}
+
 // Dedicated ANALYSIS pool: whole-game sweeps and decisions fan-outs acquire here,
 // never from the live pool above, so analysis compute can never occupy a live
 // bot-move slot (the queue-timeout starvation in #208/#168). Two slots match the
@@ -699,6 +722,9 @@ export async function jieqiLiveEngineMove(
   fen: string,
   opts: {
     movetimeMs?: number;
+    /** Re-derive the budget once a slot is free: a move that queued spent that wait on
+     *  its own clock. Returns the movetime to search; omitted = `movetimeMs` as given. */
+    budgetAfterWait?: (waitedMs: number) => number;
     moves?: readonly string[];
     newGame?: boolean;
     rng?: () => number;
@@ -706,11 +732,17 @@ export async function jieqiLiveEngineMove(
 ): Promise<UciEval> {
   const tier = jieqiEngineTierFor(engineId);
   if (!tier) throw new Error(`unknown Jieqi engine: ${engineId}`);
-  const release = await enginePool.acquire();
+  const queuedAt = Date.now();
+  const release = await jieqiLivePool(tier.engine).acquire();
   try {
+    const waitedMs = Date.now() - queuedAt;
+    const movetimeMs =
+      opts.budgetAfterWait && waitedMs > 0
+        ? opts.budgetAfterWait(waitedMs)
+        : (opts.movetimeMs ?? tier.movetimeMs);
     return await jieqiEngineSearch(fen, {
       depth: tier.depth,
-      movetimeMs: opts.movetimeMs ?? tier.movetimeMs,
+      movetimeMs,
       moves: opts.moves,
       newGame: opts.newGame,
       skill: tier.skill,
@@ -751,8 +783,9 @@ export function buildJieqiLiveCommands(fen: string, opts: JieqiEngineOptions = {
 }
 
 // Parked live-move processes, keyed by binary + handshake, so PikaJieQi and AB-JChess
-// park separately. enginePool above still caps how many run at once, so at most that
-// many of each are ever parked; an AB-JChess one holds its 133 MB net besides the hash. The idle TTL is long on purpose: a reaped session
+// park separately. Each binary's live pool (jieqiLivePool) still caps how many run at
+// once, so at most that many of each are ever parked; an AB-JChess one holds its 133 MB
+// net besides the hash. The idle TTL is long on purpose: a reaped session
 // means the next player pays the spawn + hash allocation on their clock, which is the
 // exact cost this cache exists to keep off the move path.
 const warmSessions = new UciWarmSessionCache({ name: 'pikafish-jieqi', idleTtlMs: 60 * 60_000 });
