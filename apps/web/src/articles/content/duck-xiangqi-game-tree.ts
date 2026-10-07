@@ -1,13 +1,16 @@
 import type { Locale } from '../../i18n/locale.js';
+import { duckTreeBoardSvg } from '../../duck-xiangqi-tree-diagrams.js';
 import { textCard } from '../text-card.js';
 import type { Article } from '../types.js';
 
 // How much wider the duck makes xiangqi's game tree, how much of that width is
-// the same position, and what is left costs an engine. The figures are static
-// SVGs written by scripts/duck-tree-figures.mjs, which recomputes the opening
-// counts quoted here from the rules kernel (1,920 / 2,554 / 1,268 / 1,310, the
-// h3e3 board) and throws if any of them moves, so the prose and the figures
-// cannot drift apart. The whole-game chart and the search depths come from 64
+// the same position, and what is left costs an engine. The two boards are live
+// diagrams (duck-xiangqi-tree-diagrams.ts) computed from the rules kernel and
+// pinned to the prose by its test, so they follow the reader's piece set and
+// board theme. The two charts are static SVGs written by
+// scripts/duck-tree-figures.mjs, which recomputes the opening counts quoted
+// here from the kernel (1,920 / 2,554 / 1,268 / 1,310, the h3e3 table) and
+// throws if any of them moves, so the prose and the figures cannot drift apart. The whole-game chart and the search depths come from 64
 // Fairy-Stockfish self-play games per variant at 100k nodes a move, NNUE off,
 // and depth at fixed node budgets over three positions (median); the per-ply
 // medians behind the chart are committed in scripts/data/duck-tree-figures.json.
@@ -62,9 +65,13 @@ export const duckXiangqiGameTreeArticle: Article = {
           text: 'Red has 44 moves from the starting position in both games. In xiangqi, black’s replies to them make 1,920 positions. In Duck Xiangqi, red’s turn is not over until the duck lands on one of the empty points, about 58 of them, so red’s first turn alone makes 2,554.',
         },
         {
-          kind: 'image-figure',
-          ...fig('board-all'),
-          alt: 'A xiangqi board after red plays cannon h3 to e3, with a yellow dot on each of the 58 empty points where the duck could land.',
+          kind: 'raw-svg',
+          svg: () =>
+            duckTreeBoardSvg(
+              'all',
+              'A xiangqi board after red plays cannon h3 to e3, with a yellow dot on each of the 58 empty points where the duck could land.',
+            ),
+          className: 'article-figure-xq--large-board',
           caption:
             'One of red’s 44 first moves. In xiangqi, black would reply next. In Duck Xiangqi, red first puts the duck on one of these points, and each choice is a different position.',
         },
@@ -92,9 +99,13 @@ export const duckXiangqiGameTreeArticle: Article = {
           text: 'The duck matters when it lands where black’s next move goes: a point a black piece moves to, slides through, or jumps over. Anywhere else, black has exactly the replies it would have with no duck on the board.',
         },
         {
-          kind: 'image-figure',
-          ...fig('board'),
-          alt: 'The same board. 30 points carry an orange disc with the number of black replies a duck there takes away, up to 8 on e8 in front of black’s palace. The other 28 points are small grey dots.',
+          kind: 'raw-svg',
+          svg: () =>
+            duckTreeBoardSvg(
+              'matter',
+              'The same board. 30 points carry an orange disc with the number of black replies a duck there takes away, up to 8 on e8 in front of black’s palace. The other 28 points are small grey dots.',
+            ),
+          className: 'article-figure-xq--large-board',
           caption:
             'Most of the points that matter sit on black’s side, in the paths of black’s pieces. On some of them the duck also gives a black cannon something to jump over, which adds a reply.',
         },

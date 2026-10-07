@@ -1,27 +1,28 @@
 // Figures for the article "What the duck does to xiangqi's game tree"
 // (apps/web/src/articles/content/duck-xiangqi-game-tree.ts).
 //
-//   node scripts/duck-tree-figures.mjs                 write the 18 SVGs
-//   node scripts/duck-tree-figures.mjs --extract <dir> refresh the figure 3 data
+//   node scripts/duck-tree-figures.mjs                 write the 4 chart SVGs
+//   node scripts/duck-tree-figures.mjs --extract <dir> refresh the branching data
 //                                                      from <dir>/per-ply.csv
 //
-// Figures 1 and 2 are computed here from the site's own rules kernel
+// The counts chart is computed here from the site's own rules kernel
 // (@mistboard/game, built dist), and every count the article quotes is asserted
 // before anything is written. If the kernel and the prose ever disagree, this
 // throws instead of shipping a figure that contradicts the paragraph beside it.
+// The two h3e3 boards are live diagrams now (apps/web/src/duck-xiangqi-tree-
+// diagrams.ts, pinned by its test); the h3e3 table is still asserted here.
 //
-// Figure 3 reads scripts/data/duck-tree-figures.json: for each game, one row
-// [ply, p25, median, p75] of legal moves at that ply across 64 Fairy-Stockfish
-// self-play games (100k nodes a move, NNUE off).
+// The branching chart reads scripts/data/duck-tree-figures.json: for each game,
+// one row [ply, p25, median, p75] of legal moves at that ply across 64
+// Fairy-Stockfish self-play games (100k nodes a move, NNUE off).
 //
-// Output: apps/web/public/article-thumbs/duck-tree-{trees,board,branching}
-// {,-dark}.svg (zh variants once the English is final). Text uses a system font stack because web
+// Output: apps/web/public/article-thumbs/duck-tree-{counts,branching}{,-dark}.svg
+// (zh variants once the English is final). Text uses a system font stack because web
 // fonts do not load inside an <img>.
 
 import { readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { renderXiangqiOgBoardSvg } from '@mistboard/board-render';
 import * as G from '@mistboard/game';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -147,7 +148,7 @@ assertEq(
   'b2,b3,b4,b5,h2,h3,h4,h5',
 );
 
-// Figure 2's move, against the article's table.
+// The live boards' move, against the article's table.
 const H3E3 = duck.find((g) => g.m === 'h3e3');
 assertEq('black replies after h3e3', H3E3.base.length, 45);
 assertEq('situations after h3e3', H3E3.classes, 31);
@@ -170,7 +171,6 @@ assertEq('h3e3 points that change black', effective.length, 30);
 console.log('kernel counts match the article:', JSON.stringify(counts));
 
 // ---------- shared drawing bits ----------
-const DUCK = '#f2c230'; // the duck's own yellow, for 'a point the duck could land on'
 const FONT =
   "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif";
 const THEMES = {
@@ -215,16 +215,10 @@ const L = {
     kNone: 'The duck changes nothing for black',
     kRm: 'The duck takes black replies away',
     kAdd: 'The duck gives black a new reply',
-    boardHeadAll: 'After cannon h3 to e3, the duck can land on any of these 58 points',
-    boardAll: 'A point the duck can land on. Each one is a different position.',
-    boardHead: 'Only 30 of those 58 points change what black can play',
     cX1: 'Xiangqi, after red moves',
     cX2: 'Xiangqi, after red and black have both moved',
     cD1: 'Duck Xiangqi, after red moves and places the duck',
     cD2: 'Duck Xiangqi, counting placements that leave black the same replies once',
-    boardRm: 'A duck here takes this many of black’s 45 replies away',
-    boardAdd: 'The duck also screens a black cannon: one new reply',
-    boardNone: 'A duck here changes nothing for black',
     yAxis: 'Legal moves at this ply (log scale)',
     xAxis: 'Ply',
     lineX: 'Xiangqi',
@@ -245,10 +239,6 @@ const L = {
     kNone: '鸭子对黑方毫无影响',
     kRm: '鸭子减少黑方应着',
     kAdd: '鸭子给黑方新增应着',
-    boardHead: '红方炮 h3 平 e3。没有鸭子时，黑方有 45 种应着。',
-    boardRm: '鸭子落在此点时减少的黑方应着数',
-    boardAdd: '鸭子同时给黑炮当炮架：新增一种应着',
-    boardNone: '鸭子落在此点对黑方毫无影响',
     yAxis: '该半回合的合法着法数（对数刻度）',
     xAxis: '半回合',
     lineX: '象棋',
@@ -269,10 +259,6 @@ const L = {
     kNone: '鴨子對黑方毫無影響',
     kRm: '鴨子減少黑方應著',
     kAdd: '鴨子給黑方新增應著',
-    boardHead: '紅方炮 h3 平 e3。沒有鴨子時，黑方有 45 種應著。',
-    boardRm: '鴨子落在此點時減少的黑方應著數',
-    boardAdd: '鴨子同時給黑炮當炮架：新增一種應著',
-    boardNone: '鴨子落在此點對黑方毫無影響',
     yAxis: '該半回合的合法著法數（對數刻度）',
     xAxis: '半回合',
     lineX: '象棋',
@@ -281,104 +267,6 @@ const L = {
     times: (n) => `約 ${n} 倍`,
   },
 };
-
-// mode 'all': every point the duck could land on. mode 'matter': which of them change black's replies.
-function figureBoard(locale, theme, mode) {
-  const t = L[locale];
-  const c = THEMES[theme];
-  const light = THEMES.light; // the board is wood in both themes
-  const W = 640;
-  const BH = 620;
-  const top = 56;
-  const pieces = Object.entries(H3E3.board).map(([sq, p]) => ({
-    file: fileOf(sq),
-    rank: rankOf(sq),
-    color: p.color,
-    role: p.role,
-  }));
-  const board = renderXiangqiOgBoardSvg({
-    files: 9,
-    ranks: 10,
-    pieces,
-    riverBetweenRanks: [5, 6],
-    palaces: [
-      { fileLo: 3, fileHi: 5, rankLo: 1, rankHi: 3 },
-      { fileLo: 3, fileHi: 5, rankLo: 8, rankHi: 10 },
-    ],
-    centerX: W / 2,
-    y: top,
-    height: BH,
-    lineWidth: 1.6,
-  });
-  const cell = BH / (9 + 1.16);
-  const margin = 0.58 * cell;
-  const bw = 2 * margin + 8 * cell;
-  const bx = W / 2 - bw / 2;
-  const px = (file) => bx + margin + file * cell;
-  const py = (rank) => top + margin + (10 - rank) * cell;
-
-  const parts = [];
-  const head = mode === 'all' ? t.boardHeadAll : t.boardHead;
-  parts.push(text(W / 2, 30, head, { size: 17, weight: 600, fill: c.ink, anchor: 'middle' }));
-  parts.push(board);
-  // Arrow h3 -> e3, stopping at the cannon's disc.
-  const [ax, ay, ex] = [px(7), py(3), px(4) + cell * 0.5];
-  parts.push(
-    `<line x1="${f1(ax)}" y1="${f1(ay)}" x2="${f1(ex + 10)}" y2="${f1(ay)}" stroke="#2b2118" stroke-width="4" stroke-linecap="round" opacity="0.85"/>`,
-    `<path d="M${f1(ex)} ${f1(ay)}l14 -9v18z" fill="#2b2118" opacity="0.85"/>`,
-  );
-  const occupied = new Set(Object.keys(H3E3.board));
-  for (const d of H3E3.ducks) {
-    if (occupied.has(d.sq)) continue;
-    const x = px(fileOf(d.sq));
-    const y = py(rankOf(d.sq));
-    if (mode === 'all') {
-      parts.push(
-        `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(cell * 0.16)}" fill="${DUCK}" stroke="#2b2118" stroke-width="1.2"/>`,
-      );
-      continue;
-    }
-    if (!d.rm.length && !d.add.length) {
-      parts.push(
-        `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(cell * 0.09)}" fill="#8f8a80" opacity="0.75"/>`,
-      );
-      continue;
-    }
-    const r = cell * (0.17 + 0.033 * d.rm.length);
-    parts.push(`<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(r)}" fill="${light.rm}"/>`);
-    parts.push(
-      text(x, y + 6, String(d.rm.length), {
-        size: 17,
-        weight: 700,
-        fill: '#ffffff',
-        anchor: 'middle',
-      }),
-    );
-  }
-
-  const ly = top + BH + 34;
-  const row = (y, mark, label) => {
-    parts.push(mark(40, y - 5));
-    parts.push(text(68, y, label, { size: 15, fill: c.ink }));
-  };
-  if (mode === 'all') {
-    row(
-      ly,
-      (x, y) =>
-        `<circle cx="${x}" cy="${y}" r="9" fill="${DUCK}" stroke="#2b2118" stroke-width="1.2"/>`,
-      t.boardAll,
-    );
-    return svgDoc(W, ly + 20, head, parts.join(''));
-  }
-  row(
-    ly,
-    (x, y) =>
-      `<circle cx="${x}" cy="${y}" r="11" fill="${light.rm}"/>${text(x, y + 5, '4', { size: 13, weight: 700, fill: '#ffffff', anchor: 'middle' })}`,
-    t.boardRm,
-  );
-  row(ly + 30, (x, y) => `<circle cx="${x}" cy="${y}" r="5" fill="#8f8a80"/>`, t.boardNone);
-  return svgDoc(W, ly + 50, head, parts.join(''));
-}
 
 // ---------- figure: positions after the first moves ----------
 function figureCounts(locale, theme) {
@@ -488,8 +376,6 @@ function figureBranching(locale, theme) {
 // ---------- write ----------
 const FIGS = {
   counts: figureCounts,
-  'board-all': (l, th) => figureBoard(l, th, 'all'),
-  board: (l, th) => figureBoard(l, th, 'matter'),
   branching: figureBranching,
 };
 // English only until the English is final; zh labels stay in L for then.
