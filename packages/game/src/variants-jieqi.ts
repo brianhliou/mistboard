@@ -615,6 +615,28 @@ export function applyJieqiMove(
 
 // ── Player view (redaction) ─────────────────────────────────────────────────
 
+/**
+ * Is the side to move in check? Public information: a face-down piece moves, and
+ * so attacks, as the role of its home square, so the masked board settles it and
+ * the answer is the same for both seats and a spectator. Once the game is over
+ * the side to move is the one that did not play the last move, so a checkmated
+ * position still reads as check (the mating ply in a postgame history). This is
+ * the reading for seatless views (truth, public); a seat's own view keeps the
+ * per-perspective rule every variant view shares.
+ */
+export function isJieqiSideToMoveInCheck(state: JieqiGameState): boolean {
+  const toMove = jieqiSideToMove(state);
+  if (!toMove) return false;
+  const general = findJieqiGeneral(state.board, toMove);
+  return general ? isAttacked(state.board, oppositeJieqiColor(toMove), general) : false;
+}
+
+function jieqiSideToMove(state: JieqiGameState): JieqiColor | null {
+  if (state.status.type === 'playing') return state.status.turn;
+  const mover = state.lastMove ? state.board[state.lastMove.to]?.color : undefined;
+  return mover ? oppositeJieqiColor(mover) : null;
+}
+
 // A full-information "truth" view (every identity revealed, every captured role
 // carried with its full role) for postgame review. Unlike getJieqiPlayerView,
 // nothing is redacted: this is the canonical board projected onto the player-view
@@ -627,7 +649,7 @@ export function jieqiTruthView(state: JieqiGameState): JieqiPlayerView {
     board: jieqiTruthBoard(state),
     legalMoves: [],
     captured: jieqiTruthCaptures(state),
-    inCheck: false,
+    inCheck: isJieqiSideToMoveInCheck(state),
     status: state.status,
     moveNumber: state.moveNumber,
     lastMove: state.lastMove,
@@ -720,28 +742,21 @@ export function getJieqiPlayerView(state: JieqiGameState, color: JieqiColor): Ji
 //     role only when the piece was already face-up when taken. A dark capture
 //     stays `role: null`, which is exactly what the VICTIM sees for that piece,
 //     so the observer never holds a role that one of the seats lacks;
-//   - no legal moves (nothing to play); inCheck for the side to move, which
-//     depends only on the public board (a face-down piece moves as the role of
-//     its starting square).
+//   - no legal moves (nothing to play); inCheck for the side to move
+//     (isJieqiSideToMoveInCheck), which depends only on the public board.
 // Never use this to reveal a finished game; that is jieqiTruthView.
 export function getJieqiPublicView(state: JieqiGameState): JieqiPlayerView {
   const captured: JieqiCapturedView[] = state.captures.map((c) => ({
     owner: c.owner,
     role: c.revealedAtCapture ? c.role : null,
   }));
-  let inCheck = false;
-  if (state.status.type === 'playing') {
-    const toMove = state.status.turn;
-    const general = findJieqiGeneral(state.board, toMove);
-    inCheck = general ? isAttacked(state.board, oppositeJieqiColor(toMove), general) : false;
-  }
   return {
     id: state.id,
     perspective: 'red',
     board: jieqiMaskedBoard(state),
     legalMoves: [],
     captured,
-    inCheck,
+    inCheck: isJieqiSideToMoveInCheck(state),
     status: state.status,
     moveNumber: state.moveNumber,
     lastMove: state.lastMove,
