@@ -34,7 +34,7 @@ export const solverAuditArticle: Article = {
   cardTitle: 'Auditing the Old Manuals',
   seoTitle: 'An Exact Audit of the Classical Xiangqi Manuals',
   summary:
-    'We ran an exhaustive solver over every short continuous-check composition in 適情雅趣 (1570), 渊深海阔 (1808) and a modern collection: 172 problems, asking whether the printed solution is the only one. Forty-five are. Seventy have a second winning continuation somewhere in the tree, fourteen have a second first move, nine can be mated faster, and three records turned out to be corrupt rather than wrong.',
+    'We ran an exhaustive solver over every short continuous-check composition in 適情雅趣 (1570), 渊深海阔 (1808) and a modern collection: 172 problems, asking whether the printed solution is the only one. Forty-five are. Seventy have a second winning continuation somewhere in the tree, fourteen have a second first move, nine can be mated faster, and three records turned out to be corrupt: the position as recorded cannot be the one the composer meant.',
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-10-06',
@@ -43,7 +43,7 @@ export const solverAuditArticle: Article = {
   intro: [
     {
       kind: 'paragraph',
-      text: 'A 排局 gives you a diagram and a claim. Red to play and mate in five, by checks all the way. For four centuries the check on that claim has been another player’s eyes, and the tradition is good at it: these positions have been copied, corrected and argued over by people who knew the game better than any of us. What nobody has done is ask a machine to enumerate the whole tree and report every other way the mate works.',
+      text: 'A 排局 gives you a diagram and a claim. Red to play and mate in five, by checks all the way. For four centuries the check on that claim has been another player’s eyes, and the tradition is good at it: these positions have been copied, corrected and argued over by people who knew the game better than any of us. We asked a machine to search the whole tree and report every other way the mate works.',
     },
     {
       kind: 'paragraph',
@@ -72,7 +72,7 @@ export const solverAuditArticle: Article = {
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: 'That becomes a position and a line by replaying it through the same rules kernel the site plays with. The replay is the first check on the record rather than on the book: a solution recorded short still replays cleanly, but a mis-typed piece usually produces an illegal move somewhere, and those records are dropped rather than trimmed. Then Pikafish sweeps each position for a verdict that contradicts the book’s, which is where the engine can say “this is not a Red win” and stop.',
+          text: 'That becomes a position and a line by replaying it through the same rules kernel the site plays with. The replay is the first check, and it tests our copy of each record: a solution recorded short still replays cleanly, but a mis-typed piece usually produces an illegal move somewhere, and those records are dropped whole. Then Pikafish sweeps each position for a verdict that contradicts the book’s, which is where the engine can say “this is not a Red win” and stop.',
         },
         {
           kind: 'paragraph',
@@ -109,7 +109,7 @@ export const solverAuditArticle: Article = {
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: 'Duals are the story, and they are not close calls. 適情雅趣 第011局 群鼠争穴 is a mate in seven: both chariots are given up, and the cannons and the horse do the rest. At Red’s sixth move the book plays 傌六进五, and 傌六进七 mates from the same position in the same number of moves.',
+          text: 'Most of the findings are duals, and they are clear-cut. 適情雅趣 第011局 群鼠争穴 is a mate in seven: both chariots are given up, and the cannons and the horse do the rest. At Red’s sixth move the book plays 傌六进五, and 傌六进七 mates from the same position in the same number of moves.',
         },
         {
           kind: 'embed',
@@ -134,7 +134,7 @@ export const solverAuditArticle: Article = {
       ],
     },
     {
-      heading: 'Some records are broken, not wrong',
+      heading: 'When the record itself is broken',
       blocks: [
         {
           kind: 'paragraph',
@@ -173,7 +173,7 @@ export const solverAuditArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'That changes how the rest of this should be read. An exact search that reports no forced mate looks identical whether the composition is broken or the record is, and one engine evaluation at the root separates them in seconds. Five positions we had flagged as cooked turned out fine that way: Red does force the mate, later than the printed line.',
+          text: 'An exact search that reports no forced mate looks identical whether the composition is broken or the record is, and one engine evaluation at the root separates them in seconds. Five positions we had flagged as cooked turned out fine that way: Red does force the mate, later than the printed line.',
         },
       ],
     },
@@ -203,7 +203,7 @@ export const solverAuditArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'None of this is a claim about the compositions as compositions. A dual in 適情雅趣 is a dual by a standard 適情雅趣 was not written to, and the geometry that made these positions worth copying for four hundred years is untouched by the count.',
+          text: 'None of this is a claim about the compositions as compositions. A dual in 適情雅趣 is a dual by a standard 適情雅趣 was not written to, and the geometry that made these positions worth copying for four hundred years does not depend on whether the line is unique.',
         },
         {
           kind: 'cta',

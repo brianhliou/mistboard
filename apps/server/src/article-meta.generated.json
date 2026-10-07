@@ -254,7 +254,7 @@
   "solver-audit": {
     "title": "What the Solver Found in the Old Manuals",
     "kind": "article",
-    "description": "We ran an exhaustive solver over every short continuous-check composition in 適情雅趣 (1570), 渊深海阔 (1808) and a modern collection: 172 problems, asking whether the printed solution is the only one. Forty-five are. Seventy have a second winning continuation somewhere in the tree, fourteen have a second first move, nine can be mated faster, and three records turned out to be corrupt rather than wrong.",
+    "description": "We ran an exhaustive solver over every short continuous-check composition in 適情雅趣 (1570), 渊深海阔 (1808) and a modern collection: 172 problems, asking whether the printed solution is the only one. Forty-five are. Seventy have a second winning continuation somewhere in the tree, fourteen have a second first move, nine can be mated faster, and three records turned out to be corrupt: the position as recorded cannot be the one the composer meant.",
     "status": "published"
   },
   "titled-players": {

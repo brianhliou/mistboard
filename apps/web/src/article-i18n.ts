@@ -168,10 +168,10 @@ const ZH_HANS: Record<string, string> = {
   // the 2026-10-01 brianhliou.com write-up (排局, 连将杀, 双解, 第二首着, 错谱).
   'Auditing the Old Manuals': '求解器审校古谱',
   'What the Solver Found in the Old Manuals': '求解器在古谱里发现了什么',
-  'We ran an exhaustive solver over every short continuous-check composition in 適情雅趣 (1570), 渊深海阔 (1808) and a modern collection: 172 problems, asking whether the printed solution is the only one. Forty-five are. Seventy have a second winning continuation somewhere in the tree, fourteen have a second first move, nine can be mated faster, and three records turned out to be corrupt rather than wrong.':
+  'We ran an exhaustive solver over every short continuous-check composition in 適情雅趣 (1570), 渊深海阔 (1808) and a modern collection: 172 problems, asking whether the printed solution is the only one. Forty-five are. Seventy have a second winning continuation somewhere in the tree, fourteen have a second first move, nine can be mated faster, and three records turned out to be corrupt: the position as recorded cannot be the one the composer meant.':
     '我们用穷尽求解器检验了《適情雅趣》（1570）、《渊深海阔》（1808）和一部现代集子中每一局较短的连将杀排局，共172局，问的是书中所印的解法是否唯一。45局是唯一的。70局在变化树的某处有第二种取胜续着，14局有第二首着，9局存在更快的杀法，另有3局是棋谱录错了，而不是排局本身有误。',
-  'A 排局 gives you a diagram and a claim. Red to play and mate in five, by checks all the way. For four centuries the check on that claim has been another player’s eyes, and the tradition is good at it: these positions have been copied, corrected and argued over by people who knew the game better than any of us. What nobody has done is ask a machine to enumerate the whole tree and report every other way the mate works.':
-    '一局排局给你一张图和一个结论：红先，五着连将杀。四百年来，检验这个结论的是另一位棋手的眼睛，而这一传统很擅长此事：这些局面被比我们任何人都更懂棋的人抄录、校正、争论过。从来没有人做过的，是让机器把整棵变化树列举出来，报告每一种别的成杀方法。',
+  'A 排局 gives you a diagram and a claim. Red to play and mate in five, by checks all the way. For four centuries the check on that claim has been another player’s eyes, and the tradition is good at it: these positions have been copied, corrected and argued over by people who knew the game better than any of us. We asked a machine to search the whole tree and report every other way the mate works.':
+    '一局排局给你一张图和一个结论：红先，五着连将杀。四百年来，检验这个结论的是另一位棋手的眼睛，而这一传统很擅长此事：这些局面被比我们任何人都更懂棋的人抄录、校正、争论过。我们让机器搜索整棵变化树，报告每一种别的成杀方法。',
   'We did that for the short problems, the ones where a solution runs nine to thirteen plies and exhaustive search finishes. 172 compositions across three books. The books hold up better than the engine reports suggested and worse than a composition judge would want.':
     '我们对短局做了这件事，也就是解法在九到十三步之间、穷尽搜索能算完的那些。三本书，172局排局。这些书比引擎报告所暗示的更经得起检验，但比排局裁判所希望的要差。',
   'Where the positions come from': '局面从哪里来',
@@ -181,7 +181,7 @@ const ZH_HANS: Record<string, string> = {
     '一局棋谱到手时是两个字符串。《適情雅趣》第011局 群鼠争穴的局面是每个棋子两位数字，从黑方底线读起，着法列表用同样的坐标。两者在文件里都是一整行；这里把它们拆开，每组四个棋子：',
   'The record for 第011局 as dpxq serves it, trimmed to the three tags that carry the position, the solution and the book’s verdict (“Red gives up both chariots; the two cannons win”).':
     'dpxq 提供的第011局棋谱，只保留承载局面、解法和书中结论（红方弃掉双车，靠双炮取胜）的三个标签。',
-  'That becomes a position and a line by replaying it through the same rules kernel the site plays with. The replay is the first check on the record rather than on the book: a solution recorded short still replays cleanly, but a mis-typed piece usually produces an illegal move somewhere, and those records are dropped rather than trimmed. Then Pikafish sweeps each position for a verdict that contradicts the book’s, which is where the engine can say “this is not a Red win” and stop.':
+  'That becomes a position and a line by replaying it through the same rules kernel the site plays with. The replay is the first check, and it tests our copy of each record: a solution recorded short still replays cleanly, but a mis-typed piece usually produces an illegal move somewhere, and those records are dropped whole. Then Pikafish sweeps each position for a verdict that contradicts the book’s, which is where the engine can say “this is not a Red win” and stop.':
     '把它在本站对局所用的同一套规则内核上重新走一遍，就得到一个局面和一条着法。这次重放首先检验的是棋谱，而不是书：一个解法记短了仍然能顺利重放，但录错的棋子通常会在某处产生非法着法，这些棋谱会被整局剔除，而不是截短。然后皮卡鱼逐一扫描每个局面，寻找与书中结论相矛盾的判断，引擎能在这里说出「这不是红胜」，然后到此为止。',
   'The sweep cannot say whether the solution is the only one. That takes exhaustive search: every legal Red move at every turn, every Black reply, to the end of the claimed length. On these boards, with twenty pieces and a nine-to-thirteen-ply solution, it finishes in seconds to a few minutes per problem. The whole audit below is a few hours of laptop time.':
     '这次扫描说不出解法是否唯一。那需要穷尽搜索：每一回合红方的每一步合法着法，黑方的每一种应着，一直搜到所称的步数为止。在这些局面上，二十个棋子、九到十三步的解法，每局只需几秒到几分钟。下面的整个审校在笔记本电脑上跑了几个小时。',
@@ -201,7 +201,7 @@ const ZH_HANS: Record<string, string> = {
   '林幼如作品集 (20th c.)': '林幼如作品集（20世纪）',
   'Continuous-check compositions up to thirteen plies, each solved exhaustively: every key, every winning continuation after every defence. Each problem is counted once, under its most serious fault. The nine not in a column are one book key that misses its own length and five Red wins past the search’s reach, in 適情雅趣 and 林幼如作品集, and the three broken records in 渊深海阔.':
     '十三步以内的连将杀排局，每局都做了穷尽求解：每一个首着，每一种防守之后的每一种取胜续着。每局只按最严重的毛病计一次。不在任何一列中的九局，是一局书中首着在所记步数内杀不了，以及五局红方能胜但超出搜索范围（分布在《適情雅趣》和《林幼如作品集》中），还有《渊深海阔》中的三局错谱。',
-  'Duals are the story, and they are not close calls. 適情雅趣 第011局 群鼠争穴 is a mate in seven: both chariots are given up, and the cannons and the horse do the rest. At Red’s sixth move the book plays 傌六进五, and 傌六进七 mates from the same position in the same number of moves.':
+  'Most of the findings are duals, and they are clear-cut. 適情雅趣 第011局 群鼠争穴 is a mate in seven: both chariots are given up, and the cannons and the horse do the rest. At Red’s sixth move the book plays 傌六进五, and 傌六进七 mates from the same position in the same number of moves.':
     '双解才是重点，而且都不是勉强算数的情况。《適情雅趣》第011局 群鼠争穴是七着杀：双车都弃掉，由双炮和马完成其余部分。红方第六着书中走傌六进五，而在同一局面上傌六进七也能在同样着数内成杀。',
   'The book’s line to Red’s sixth move, and then the other mate played out. Neither editor nor reader was looking for it, because in this tradition it has never been a fault. The chapter in the study carries both.':
     '书中着法走到红方第六着，然后把另一种杀法走出来。编者和读者都没有去找它，因为在这一传统里它从来不算毛病。研究里的这一章两种都收了。',
@@ -213,7 +213,7 @@ const ZH_HANS: Record<string, string> = {
     '第二首着走出来：不同的首着，同样六着成杀。',
   '適情雅趣 第015局 妙振兵铃: two first moves that both mate in six':
     '適情雅趣 第015局 妙振兵铃：两个首着都能六着成杀',
-  'Some records are broken, not wrong': '有些棋谱是录错了，不是排局错了',
+  'When the record itself is broken': '当棋谱本身录错时',
   '渊深海阔 第217局 疾诛文丑 claims a mate in five with every move a check, and the printed line does mate. It mates because Black’s fourth move walks into it. Black has a second legal move there, 车5退8, swinging the chariot that has stood on e2 since the diagram back to e10; after it Red has no check at all, so a continuous-check mate is over on the spot, and no quiet move mates either.':
     '《渊深海阔》第217局 疾诛文丑声称连将五着杀，所印着法也确实成杀。之所以成杀，是因为黑方第四着自己走进了杀局。黑方在那里还有另一步合法着法：车5退8，把原图中就停在 e2 的车调回 e10；走了这步之后，红方一步将军都没有，连将杀就此结束，任何不将军的着法也杀不了。',
   'The book’s line to Red’s fourth move, and then the move the record does not give: 车5退8 in place of 士6进5. Red is out of checks.':
@@ -230,8 +230,8 @@ const ZH_HANS: Record<string, string> = {
     '另外两局，第202局和第265局，情况更糟。没有任何单子改动能恢复其中任何一局，所以出错的不止一个子，或者着法列表也录错了。三局都按 dpxq 的记录原样留在《渊深海阔》的研究里，审校研究则收录了这一发现。',
   'Those three are the ones inside the 172. Across the whole corpus, 34 records are flagged as corrupt: the diagram as typed does not support the claim printed beside it. Ten of them claim mate by continuous checks, and nine are refuted inside the book’s own line, in four manuals; in each, the search ran six moves past the recorded length and found no continuous-check mate. They have a study of their own, linked below, ordered by how decisive the refutation is: in 第217局 Red is left without a single check, and in the last Red still has ten checks that go nowhere.':
     '这三局是172局之内的。在整个语料库中，有34局棋谱被标为错谱：录入的图支撑不了旁边印着的结论。其中十局声称连将杀，九局在书中自己的着法之内就被驳倒，分布在四部棋谱中；每一局的搜索都比所记步数多走了六着，也找不到连将杀。它们单独收在一个研究里，链接在下面，按驳倒的干脆程度排序：第217局中红方一步将军都没有，最后一局里红方仍有十步将军，却都杀不了。',
-  'That changes how the rest of this should be read. An exact search that reports no forced mate looks identical whether the composition is broken or the record is, and one engine evaluation at the root separates them in seconds. Five positions we had flagged as cooked turned out fine that way: Red does force the mate, later than the printed line.':
-    '这改变了其余部分应该怎么读。精确搜索报告没有强制杀时，排局本身有缺陷和棋谱录错看起来一模一样，而在根局面上做一次引擎评估，几秒钟就能区分两者。我们原本标为有缺陷的五个局面，这样一查就没问题：红方确实能强制成杀，只是比所印着法晚。',
+  'An exact search that reports no forced mate looks identical whether the composition is broken or the record is, and one engine evaluation at the root separates them in seconds. Five positions we had flagged as cooked turned out fine that way: Red does force the mate, later than the printed line.':
+    '精确搜索报告没有强制杀时，排局本身有缺陷和棋谱录错看起来一模一样，而在根局面上做一次引擎评估，几秒钟就能区分两者。我们原本标为有缺陷的五个局面，这样一查就没问题：红方确实能强制成杀，只是比所印着法晚。',
   'The four great positions: nothing broken': '四大名局：没有一局不成立',
   '七星聚会, 蚯蚓降龙, 野马操田 and 千里独行 are the street positions, argued over since 百局象棋谱 in 1801. They claim a draw, and a draw cannot be proved without the repetition law. What can be tested is whether the claim breaks, with one side forcing a mate. Across twenty-nine records of those four and their relatives, the search found no mate that contradicts the book. On eight it proved that neither side mates within its depth; on the rest it ran out of budget for one side or both before it could say.':
     '七星聚会、蚯蚓降龙、野马操田和千里独行是江湖排局，自1801年的《百局象棋谱》起就争论不休。它们的结论是和棋，而不借助重复局面的规则，和棋是证明不了的。能检验的是这个结论会不会被打破，即某一方能否强制成杀。在这四局及其变体的二十九份棋谱中，搜索没有找到与书相矛盾的杀法。其中八份证明了双方在搜索深度内都杀不了；其余的，在得出结论之前，一方或双方的搜索预算就用完了。',
@@ -242,7 +242,7 @@ const ZH_HANS: Record<string, string> = {
   'What we did not check': '我们没有检查的部分',
   'The quiet compositions, which are most of the corpus. A 宽紧杀 runs past twenty plies on a board with twenty pieces, and the exhaustive search that settles a nine-ply problem does not finish there. A proof-number search gets further and still runs out on the long ones. Everything above is about continuous-check problems only.':
     '不是连将的排局，也就是语料库的大部分。一局宽紧杀在二十个子的局面上要走二十步以上，能算清九步题的穷尽搜索在那里算不完。证明数搜索能走得更远，但在长局上还是会算不完。上面的一切都只涉及连将杀排局。',
-  'None of this is a claim about the compositions as compositions. A dual in 適情雅趣 is a dual by a standard 適情雅趣 was not written to, and the geometry that made these positions worth copying for four hundred years is untouched by the count.':
+  'None of this is a claim about the compositions as compositions. A dual in 適情雅趣 is a dual by a standard 適情雅趣 was not written to, and the geometry that made these positions worth copying for four hundred years does not depend on whether the line is unique.':
     '这些都不是对这些排局作为作品的评价。《適情雅趣》里的双解，是按一个《適情雅趣》本来就不为之而写的标准算出的双解；让这些局面四百年来值得抄录的那种几何之美，丝毫不受这个计数影响。',
   'Play every finding': '逐着演示每一项发现',
   'The nine refuted records': '九局被驳倒的棋谱',
@@ -3818,10 +3818,10 @@ const ZH_HANT: Record<string, string> = {
   // terms follow the zh-hant brianhliou.com twin (搜尋, 著法, 首著, 錯譜).
   'Auditing the Old Manuals': '求解器審校古譜',
   'What the Solver Found in the Old Manuals': '求解器在古譜裡發現了什麼',
-  'We ran an exhaustive solver over every short continuous-check composition in 適情雅趣 (1570), 渊深海阔 (1808) and a modern collection: 172 problems, asking whether the printed solution is the only one. Forty-five are. Seventy have a second winning continuation somewhere in the tree, fourteen have a second first move, nine can be mated faster, and three records turned out to be corrupt rather than wrong.':
+  'We ran an exhaustive solver over every short continuous-check composition in 適情雅趣 (1570), 渊深海阔 (1808) and a modern collection: 172 problems, asking whether the printed solution is the only one. Forty-five are. Seventy have a second winning continuation somewhere in the tree, fourteen have a second first move, nine can be mated faster, and three records turned out to be corrupt: the position as recorded cannot be the one the composer meant.':
     '我們用窮盡求解器檢驗了《適情雅趣》（1570）、《淵深海闊》（1808）和一部現代集子中每一局較短的連將殺排局，共172局，問的是書中所印的解法是否唯一。45局是唯一的。70局在變化樹的某處有第二種取勝續著，14局有第二首著，9局存在更快的殺法，另有3局是棋譜錄錯了，而不是排局本身有誤。',
-  'A 排局 gives you a diagram and a claim. Red to play and mate in five, by checks all the way. For four centuries the check on that claim has been another player’s eyes, and the tradition is good at it: these positions have been copied, corrected and argued over by people who knew the game better than any of us. What nobody has done is ask a machine to enumerate the whole tree and report every other way the mate works.':
-    '一局排局給你一張圖和一個結論：紅先，五著連將殺。四百年來，檢驗這個結論的是另一位棋手的眼睛，而這一傳統很擅長此事：這些局面被比我們任何人都更懂棋的人抄錄、校正、爭論過。從來沒有人做過的，是讓機器把整棵變化樹列舉出來，報告每一種別的成殺方法。',
+  'A 排局 gives you a diagram and a claim. Red to play and mate in five, by checks all the way. For four centuries the check on that claim has been another player’s eyes, and the tradition is good at it: these positions have been copied, corrected and argued over by people who knew the game better than any of us. We asked a machine to search the whole tree and report every other way the mate works.':
+    '一局排局給你一張圖和一個結論：紅先，五著連將殺。四百年來，檢驗這個結論的是另一位棋手的眼睛，而這一傳統很擅長此事：這些局面被比我們任何人都更懂棋的人抄錄、校正、爭論過。我們讓機器搜尋整棵變化樹，報告每一種別的成殺方法。',
   'We did that for the short problems, the ones where a solution runs nine to thirteen plies and exhaustive search finishes. 172 compositions across three books. The books hold up better than the engine reports suggested and worse than a composition judge would want.':
     '我們對短局做了這件事，也就是解法在九到十三步之間、窮盡搜尋能算完的那些。三本書，172局排局。這些書比引擎報告所暗示的更經得起檢驗，但比排局裁判所希望的要差。',
   'Where the positions come from': '局面從哪裡來',
@@ -3831,7 +3831,7 @@ const ZH_HANT: Record<string, string> = {
     '一局棋譜到手時是兩個字串。《適情雅趣》第011局 群鼠爭穴的局面是每個棋子兩位數字，從黑方底線讀起，著法列表用同樣的座標。兩者在檔案裡都是一整行；這裡把它們拆開，每組四個棋子：',
   'The record for 第011局 as dpxq serves it, trimmed to the three tags that carry the position, the solution and the book’s verdict (“Red gives up both chariots; the two cannons win”).':
     'dpxq 提供的第011局棋譜，只保留承載局面、解法和書中結論（紅方棄掉雙車，靠雙炮取勝）的三個標籤。',
-  'That becomes a position and a line by replaying it through the same rules kernel the site plays with. The replay is the first check on the record rather than on the book: a solution recorded short still replays cleanly, but a mis-typed piece usually produces an illegal move somewhere, and those records are dropped rather than trimmed. Then Pikafish sweeps each position for a verdict that contradicts the book’s, which is where the engine can say “this is not a Red win” and stop.':
+  'That becomes a position and a line by replaying it through the same rules kernel the site plays with. The replay is the first check, and it tests our copy of each record: a solution recorded short still replays cleanly, but a mis-typed piece usually produces an illegal move somewhere, and those records are dropped whole. Then Pikafish sweeps each position for a verdict that contradicts the book’s, which is where the engine can say “this is not a Red win” and stop.':
     '把它在本站對局所用的同一套規則核心上重新走一遍，就得到一個局面和一條著法。這次重放首先檢驗的是棋譜，而不是書：一個解法記短了仍然能順利重放，但錄錯的棋子通常會在某處產生非法著法，這些棋譜會被整局剔除，而不是截短。然後皮卡魚逐一掃描每個局面，尋找與書中結論相矛盾的判斷，引擎能在這裡說出「這不是紅勝」，然後到此為止。',
   'The sweep cannot say whether the solution is the only one. That takes exhaustive search: every legal Red move at every turn, every Black reply, to the end of the claimed length. On these boards, with twenty pieces and a nine-to-thirteen-ply solution, it finishes in seconds to a few minutes per problem. The whole audit below is a few hours of laptop time.':
     '這次掃描說不出解法是否唯一。那需要窮盡搜尋：每一回合紅方的每一步合法著法，黑方的每一種應著，一直搜到所稱的步數為止。在這些局面上，二十個棋子、九到十三步的解法，每局只需幾秒到幾分鐘。下面的整個審校在筆電上跑了幾個小時。',
@@ -3851,7 +3851,7 @@ const ZH_HANT: Record<string, string> = {
   '林幼如作品集 (20th c.)': '林幼如作品集（20世紀）',
   'Continuous-check compositions up to thirteen plies, each solved exhaustively: every key, every winning continuation after every defence. Each problem is counted once, under its most serious fault. The nine not in a column are one book key that misses its own length and five Red wins past the search’s reach, in 適情雅趣 and 林幼如作品集, and the three broken records in 渊深海阔.':
     '十三步以內的連將殺排局，每局都做了窮盡求解：每一個首著，每一種防守之後的每一種取勝續著。每局只按最嚴重的毛病計一次。不在任何一欄中的九局，是一局書中首著在所記步數內殺不了，以及五局紅方能勝但超出搜尋範圍（分佈在《適情雅趣》和《林幼如作品集》中），還有《淵深海闊》中的三局錯譜。',
-  'Duals are the story, and they are not close calls. 適情雅趣 第011局 群鼠争穴 is a mate in seven: both chariots are given up, and the cannons and the horse do the rest. At Red’s sixth move the book plays 傌六进五, and 傌六进七 mates from the same position in the same number of moves.':
+  'Most of the findings are duals, and they are clear-cut. 適情雅趣 第011局 群鼠争穴 is a mate in seven: both chariots are given up, and the cannons and the horse do the rest. At Red’s sixth move the book plays 傌六进五, and 傌六进七 mates from the same position in the same number of moves.':
     '雙解才是重點，而且都不是勉強算數的情況。《適情雅趣》第011局 群鼠爭穴是七著殺：雙車都棄掉，由雙炮和馬完成其餘部分。紅方第六著書中走傌六進五，而在同一局面上傌六進七也能在同樣著數內成殺。',
   'The book’s line to Red’s sixth move, and then the other mate played out. Neither editor nor reader was looking for it, because in this tradition it has never been a fault. The chapter in the study carries both.':
     '書中著法走到紅方第六著，然後把另一種殺法走出來。編者和讀者都沒有去找它，因為在這一傳統裡它從來不算毛病。研究裡的這一章兩種都收了。',
@@ -3863,7 +3863,7 @@ const ZH_HANT: Record<string, string> = {
     '第二首著走出來：不同的首著，同樣六著成殺。',
   '適情雅趣 第015局 妙振兵铃: two first moves that both mate in six':
     '適情雅趣 第015局 妙振兵鈴：兩個首著都能六著成殺',
-  'Some records are broken, not wrong': '有些棋譜是錄錯了，不是排局錯了',
+  'When the record itself is broken': '當棋譜本身錄錯時',
   '渊深海阔 第217局 疾诛文丑 claims a mate in five with every move a check, and the printed line does mate. It mates because Black’s fourth move walks into it. Black has a second legal move there, 车5退8, swinging the chariot that has stood on e2 since the diagram back to e10; after it Red has no check at all, so a continuous-check mate is over on the spot, and no quiet move mates either.':
     '《淵深海闊》第217局 疾誅文醜聲稱連將五著殺，所印著法也確實成殺。之所以成殺，是因為黑方第四著自己走進了殺局。黑方在那裡還有另一步合法著法：車5退8，把原圖中就停在 e2 的車調回 e10；走了這步之後，紅方一步將軍都沒有，連將殺就此結束，任何不將軍的著法也殺不了。',
   'The book’s line to Red’s fourth move, and then the move the record does not give: 车5退8 in place of 士6进5. Red is out of checks.':
@@ -3880,8 +3880,8 @@ const ZH_HANT: Record<string, string> = {
     '另外兩局，第202局和第265局，情況更糟。沒有任何單子改動能恢復其中任何一局，所以出錯的不止一個子，或者著法列表也錄錯了。三局都按 dpxq 的記錄原樣留在《淵深海闊》的研究裡，審校研究則收錄了這一發現。',
   'Those three are the ones inside the 172. Across the whole corpus, 34 records are flagged as corrupt: the diagram as typed does not support the claim printed beside it. Ten of them claim mate by continuous checks, and nine are refuted inside the book’s own line, in four manuals; in each, the search ran six moves past the recorded length and found no continuous-check mate. They have a study of their own, linked below, ordered by how decisive the refutation is: in 第217局 Red is left without a single check, and in the last Red still has ten checks that go nowhere.':
     '這三局是172局之內的。在整個語料庫中，有34局棋譜被標為錯譜：錄入的圖支撐不了旁邊印著的結論。其中十局聲稱連將殺，九局在書中自己的著法之內就被駁倒，分佈在四部棋譜中；每一局的搜尋都比所記步數多走了六著，也找不到連將殺。它們單獨收在一個研究裡，連結在下面，按駁倒的乾脆程度排序：第217局中紅方一步將軍都沒有，最後一局裡紅方仍有十步將軍，卻都殺不了。',
-  'That changes how the rest of this should be read. An exact search that reports no forced mate looks identical whether the composition is broken or the record is, and one engine evaluation at the root separates them in seconds. Five positions we had flagged as cooked turned out fine that way: Red does force the mate, later than the printed line.':
-    '這改變了其餘部分應該怎麼讀。精確搜尋報告沒有強制殺時，排局本身有缺陷和棋譜錄錯看起來一模一樣，而在根局面上做一次引擎評估，幾秒鐘就能區分兩者。我們原本標為有缺陷的五個局面，這樣一查就沒問題：紅方確實能強制成殺，只是比所印著法晚。',
+  'An exact search that reports no forced mate looks identical whether the composition is broken or the record is, and one engine evaluation at the root separates them in seconds. Five positions we had flagged as cooked turned out fine that way: Red does force the mate, later than the printed line.':
+    '精確搜尋報告沒有強制殺時，排局本身有缺陷和棋譜錄錯看起來一模一樣，而在根局面上做一次引擎評估，幾秒鐘就能區分兩者。我們原本標為有缺陷的五個局面，這樣一查就沒問題：紅方確實能強制成殺，只是比所印著法晚。',
   'The four great positions: nothing broken': '四大名局：沒有一局不成立',
   '七星聚会, 蚯蚓降龙, 野马操田 and 千里独行 are the street positions, argued over since 百局象棋谱 in 1801. They claim a draw, and a draw cannot be proved without the repetition law. What can be tested is whether the claim breaks, with one side forcing a mate. Across twenty-nine records of those four and their relatives, the search found no mate that contradicts the book. On eight it proved that neither side mates within its depth; on the rest it ran out of budget for one side or both before it could say.':
     '七星聚會、蚯蚓降龍、野馬操田和千里獨行是江湖排局，自1801年的《百局象棋譜》起就爭論不休。它們的結論是和棋，而不借助重複局面的規則，和棋是證明不了的。能檢驗的是這個結論會不會被打破，即某一方能否強制成殺。在這四局及其變體的二十九份棋譜中，搜尋沒有找到與書相矛盾的殺法。其中八份證明了雙方在搜尋深度內都殺不了；其餘的，在得出結論之前，一方或雙方的搜尋預算就用完了。',
@@ -3892,7 +3892,7 @@ const ZH_HANT: Record<string, string> = {
   'What we did not check': '我們沒有檢查的部分',
   'The quiet compositions, which are most of the corpus. A 宽紧杀 runs past twenty plies on a board with twenty pieces, and the exhaustive search that settles a nine-ply problem does not finish there. A proof-number search gets further and still runs out on the long ones. Everything above is about continuous-check problems only.':
     '不是連將的排局，也就是語料庫的大部分。一局寬緊殺在二十個子的局面上要走二十步以上，能算清九步題的窮盡搜尋在那裡算不完。證明數搜尋能走得更遠，但在長局上還是會算不完。上面的一切都只涉及連將殺排局。',
-  'None of this is a claim about the compositions as compositions. A dual in 適情雅趣 is a dual by a standard 適情雅趣 was not written to, and the geometry that made these positions worth copying for four hundred years is untouched by the count.':
+  'None of this is a claim about the compositions as compositions. A dual in 適情雅趣 is a dual by a standard 適情雅趣 was not written to, and the geometry that made these positions worth copying for four hundred years does not depend on whether the line is unique.':
     '這些都不是對這些排局作為作品的評價。《適情雅趣》裡的雙解，是按一個《適情雅趣》本來就不為之而寫的標準算出的雙解；讓這些局面四百年來值得抄錄的那種幾何之美，絲毫不受這個計數影響。',
   'Play every finding': '逐著演示每一項發現',
   'The nine refuted records': '九局被駁倒的棋譜',
