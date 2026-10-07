@@ -19,10 +19,9 @@ const CHAPTER = {
 } as const;
 const embed = (chapter: keyof typeof CHAPTER) => `/embed/study/${STUDY_ID}/${CHAPTER[chapter]}`;
 // The nine refuted records (scripts/problem-lab/refutations-study.ts, slug
-// refuted-records). FSJc9OM6 is the LOCAL seed: the production seed creates a
-// new id, and this constant must be set to it before the release that
-// publishes this page. Only the CTA links it, so this is the one edit.
-const REFUTED_STUDY_ID = 'FSJc9OM6';
+// refuted-records), seeded on production 2026-10-06 as @mistboard. Only the
+// CTA links it.
+const REFUTED_STUDY_ID = 'aGoX3pJY';
 const REFUTED_STUDY = `/study/${REFUTED_STUDY_ID}`;
 
 export const solverAuditArticle: Article = {
