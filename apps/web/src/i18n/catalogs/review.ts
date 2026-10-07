@@ -515,6 +515,8 @@ export const EN_REVIEW = {
   'analysis.tablebase.mateIn': 'Mate in {moves}',
   'analysis.tablebase.matedIn': 'Mated in {moves}',
   'analysis.tablebase.credit': 'chessdb.cn',
+  'analysis.tablebase.creditTitle':
+    'Exact endgame results from the Chinese Chess Cloud Database (chessdb.cn).',
   'practice.tablebase.keepsWin': 'Good. The tablebase says this keeps the win.',
   'practice.tablebase.holdsDraw': 'Good. The tablebase says this holds the draw.',
   'practice.tablebase.throwsWin':

@@ -80,6 +80,7 @@ export const ZH_HANS_REVIEW = {
   'analysis.tablebase.mateIn': '{moves} 步杀',
   'analysis.tablebase.matedIn': '{moves} 步被杀',
   'analysis.tablebase.credit': '云库 chessdb.cn',
+  'analysis.tablebase.creditTitle': '残局精确结果来自象棋云库（chessdb.cn）。',
   'practice.tablebase.keepsWin': '不错。残局库确认这一着保住了胜势。',
   'practice.tablebase.holdsDraw': '不错。残局库确认这一着守住了和棋。',
   'practice.tablebase.throwsWin': '残局库显示这一着把胜局走成了和棋。悔棋再想想。',

@@ -80,6 +80,7 @@ export const ZH_HANT_REVIEW = {
   'analysis.tablebase.mateIn': '{moves} 步殺',
   'analysis.tablebase.matedIn': '{moves} 步被殺',
   'analysis.tablebase.credit': '雲庫 chessdb.cn',
+  'analysis.tablebase.creditTitle': '殘局精確結果來自象棋雲庫（chessdb.cn）。',
   'practice.tablebase.keepsWin': '不錯。殘局庫確認這一著保住了勝勢。',
   'practice.tablebase.holdsDraw': '不錯。殘局庫確認這一著守住了和棋。',
   'practice.tablebase.throwsWin': '殘局庫顯示這一著把勝局走成了和棋。悔棋再想想。',

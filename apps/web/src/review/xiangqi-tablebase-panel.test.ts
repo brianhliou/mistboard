@@ -66,12 +66,11 @@ describe('xiangqi tablebase panel', () => {
     expect(panel.el.querySelector('.xq-tablebase__summary')?.textContent).toBe(
       'Red wins · Mate in 5',
     );
-    // The provider is credited in the header, opening in a new tab.
-    const credit = panel.el.querySelector<HTMLAnchorElement>('.xq-tablebase__credit');
+    // The provider is named in the header but not linked: the reader stays on the board.
+    const credit = panel.el.querySelector<HTMLElement>('.xq-tablebase__credit');
     expect(credit?.textContent).toBe('chessdb.cn');
-    expect(credit?.href).toBe('https://www.chessdb.cn/');
-    expect(credit?.target).toBe('_blank');
-    expect(credit?.rel).toBe('noopener');
+    expect(credit?.tagName).toBe('SPAN');
+    expect(credit?.title).toContain('chessdb.cn');
   });
 
   it("names the winning side when Black is to move and every row is Black's loss", async () => {

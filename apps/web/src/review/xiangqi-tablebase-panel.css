@@ -58,13 +58,8 @@
   flex: none;
   font-size: 10px;
   color: var(--site-muted);
-  text-decoration: none;
   white-space: nowrap;
-}
-.xq-tablebase__credit:hover,
-.xq-tablebase__credit:focus-visible {
-  color: var(--site-text);
-  text-decoration: underline;
+  cursor: help;
 }
 
 .xq-tablebase__table {

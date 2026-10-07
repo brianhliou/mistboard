@@ -57,10 +57,6 @@ export type XiangqiTablebasePanel = {
   ): void;
 };
 
-/** The provider credit in the header (chessdb.cn asks nothing, but the answers
- *  are theirs). */
-export const CHESSDB_URL = 'https://www.chessdb.cn/';
-
 export function createXiangqiTablebasePanel(
   lookup: XiangqiTablebaseLookup = fetchXiangqiTablebase,
 ): XiangqiTablebasePanel {
@@ -76,12 +72,12 @@ export function createXiangqiTablebasePanel(
   title.textContent = t('analysis.tablebase.title');
   const summary = document.createElement('span');
   summary.className = 'xq-tablebase__summary';
-  const credit = document.createElement('a');
+  // The provider is named, not linked: a link here pulls the reader off the
+  // board mid-analysis. The linked credit lives on the /source page.
+  const credit = document.createElement('span');
   credit.className = 'xq-tablebase__credit';
-  credit.href = CHESSDB_URL;
-  credit.target = '_blank';
-  credit.rel = 'noopener';
   credit.textContent = t('analysis.tablebase.credit');
+  credit.title = t('analysis.tablebase.creditTitle');
   head.append(title, summary, credit);
 
   const table = document.createElement('div');
