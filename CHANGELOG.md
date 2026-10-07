@@ -137,6 +137,7 @@ Conventions:
 
 ### Fixed
 
+- The new article on the classical manual audit shows its board on the homepage and blog index instead of a blank card ([7da525a0](https://github.com/brianhliou/mistboard/commit/7da525a0))
 - Chinese phase labels on advantage charts read on one line instead of one character per line ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
 - Vietnamese pages now draw every letter in the site font instead of switching to a system font mid-word ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
 - Jieqi game data now marks check on every checking move, including the mating move ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
