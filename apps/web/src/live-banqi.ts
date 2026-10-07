@@ -38,6 +38,7 @@ import {
   installBanqiBoardStyles,
   renderBanqiBoardSvg,
 } from './live-banqi-render.js';
+import { rebuildFinishedBanqiHistory } from './live-banqi-replay-history.js';
 import {
   maybePlayBanqiSnapshotSound,
   resetBanqiSoundState,
@@ -243,6 +244,18 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
   replayCapture: {
     positionKey: replayPositionKey,
     plyForView: (view, ctx) => replayPlyForView(view, ctx.positionChanged, ctx.latestPly),
+  },
+  // A FINISHED room only: its truth view plus the public move log recover the
+  // deal, so a cold join or reload gets every ply back (live-banqi-replay-history).
+  // A live room returns null here and keeps incremental capture: its deal is a
+  // server secret and its face-down tiles stay masked.
+  replayHistory: {
+    rebuild: ({ events, view, state }) =>
+      rebuildFinishedBanqiHistory(
+        events.filter(isBanqiMoveEvent).map((event) => event.move),
+        view,
+        isBanqiSeat(state.seat) ? state.seat : view.perspective,
+      ),
   },
 });
 
@@ -450,14 +463,16 @@ function banqiInkLabel(ink: BanqiColor): string {
 
 // ── Replay capture (no fog to redact; capture every distinct position) ────────
 
-// Banqi's view carries its own ply count, so the live ply is just view.ply while
-// playing; a finished frame appends a final ply only when the position changed.
+// Banqi's view carries its own ply count, which is the move count whether the
+// game is playing or over. Counting from what this client happened to capture
+// filed a cold join's finished view as ply 1 (it had captured nothing), and a
+// resignation's reveal as a ply past the last move.
 function replayPlyForView(
   view: BanqiWireView,
   positionChanged: boolean,
   latestPly: number,
 ): number {
-  if (view.status.type === 'playing') return view.ply;
+  if (view.status.type === 'playing' || view.status.type === 'finished') return view.ply;
   if (positionChanged && view.lastMove) return latestPly + 1;
   return latestPly;
 }

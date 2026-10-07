@@ -30,6 +30,7 @@ import { type BoardPoint, boardLastMoveMarkersSvg } from './board-lastmove.js';
 import { tokenPieceSize } from './board-metrics.js';
 import { readDisplayPreferences } from './display-preferences.js';
 import { darkXiangqiEnabled } from './feature-flags.js';
+import { rebuildFinishedDarkXiangqiHistory } from './live-dark-xiangqi-replay-history.js';
 import {
   maybePlayDarkXiangqiSnapshotSound,
   resetDarkXiangqiSoundState,
@@ -252,6 +253,17 @@ const client = createTenantLiveClient<XiangqiColor, DarkXiangqiWireView, Xiangqi
       if (ctx.positionChanged && view.lastMove) return ctx.latestPly + 1;
       return ctx.latestPly;
     },
+  },
+  // A FINISHED room only: it serves the unredacted move log and the truth board,
+  // so a cold join or reload replays the whole game from the start position
+  // (live-dark-xiangqi-replay-history). A live seat's fog view and a spectator's
+  // empty board return null here and keep fog-safe incremental capture.
+  replayHistory: {
+    rebuild: ({ events, view }) =>
+      rebuildFinishedDarkXiangqiHistory(
+        events.filter(isDarkXiangqiMoveEvent).map((event) => event.move),
+        view,
+      ),
   },
 });
 

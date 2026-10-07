@@ -246,7 +246,15 @@ const client = createTenantLiveClient<MahjongSeat, MahjongPlayerView, MahjongMov
   },
   replayCapture: {
     positionKey: replayPositionKey,
-    plyForView: (_view, ctx) => (ctx.positionChanged ? ctx.latestPly + 1 : ctx.latestPly),
+    plyForView: (view, ctx) => {
+      const ply = ctx.positionChanged ? ctx.latestPly + 1 : ctx.latestPly;
+      // A finished game is filed at its move count, so a cold join or reload
+      // lists every move instead of the one ply this client happened to see.
+      // Stepping back stays out: rebuilding earlier plies needs the wall, which
+      // is a server secret even after the game ends.
+      if (view.status.type !== 'finished') return ply;
+      return Math.max(ply, ctx.events.filter(isMahjongMoveEvent).length);
+    },
   },
 });
 
