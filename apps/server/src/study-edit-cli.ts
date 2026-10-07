@@ -148,7 +148,7 @@ function studyI18nLocales(i18n: unknown, i: number): string[] {
   if (locales.length === 0) throw new Error(`op ${i + 1}: empty i18n would drop every translation`);
   for (const locale of locales) {
     const value = (i18n as Record<string, unknown>)[locale];
-    if (!/^[a-z]{2}(-[a-z]+)?$/.test(locale) || !value || typeof value !== 'object') {
+    if (!/^[a-z]{2}(-[A-Za-z]+)?$/.test(locale) || !value || typeof value !== 'object') {
       throw new Error(`op ${i + 1}: i18n.${locale} must be a locale holding an object`);
     }
   }
