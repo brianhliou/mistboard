@@ -500,3 +500,32 @@
     min-height: 32px;
   }
 }
+
+/* ── Practice hand-off (xiangqi) ─────────────────────────────────────────── */
+
+.editor-practice {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--site-border);
+}
+
+.editor-practice__label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--site-muted);
+}
+
+.editor-practice-link {
+  grid-column: 1 / -1;
+  text-align: center;
+}
+
+.editor-practice-link.is-disabled {
+  color: var(--site-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}

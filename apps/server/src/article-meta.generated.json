@@ -281,6 +281,12 @@
     "description": "Every winner of the Chinese national xiangqi championship since 1956, and an annotated game for thirteen of them. Plus the nine hundred years before the title existed, and the decade that has been struck from the record.",
     "status": "published"
   },
+  "xiangqi-endgames": {
+    "title": "Xiangqi Endgames: Standard Wins and Draws",
+    "kind": "article",
+    "description": "Which xiangqi endgames are a win and which are a draw: 26 standard wins, tricky wins and standard draws, each checked against the chessdb.cn tablebase and playable against the computer.",
+    "status": "published"
+  },
   "xiangqi-match-fixing": {
     "title": "The Xiangqi Match-Fixing Case",
     "kind": "article",

@@ -475,6 +475,13 @@ export const EN_REVIEW = {
   'practice.progress': 'Progress: {pct}%',
   'practice.solvedOfTotal': '{solved} of {total} solved',
   'practice.section.endgames': 'Basic endgames',
+  'practice.position.title': 'Play out a position',
+  'practice.position.badFen': 'This link does not hold a xiangqi position the board can read.',
+  'practice.position.finished': 'This position is already over: there is no move left to play.',
+  'practice.position.badGoal': 'This link does not say whether to play for mate or hold the draw.',
+  'practice.position.badSide': 'This link does not say which side you play.',
+  'practice.position.toEditor': 'Set up a position in the board editor',
+  'practice.endgamesLink': 'Which endgames win and which draw',
   // The practice PLAYER: the panel around the exercise board. Split from the
   // /practice shelf keys above because they are different surfaces, but they ride
   // the same domain since a practice chapter is opened inside the study shell.

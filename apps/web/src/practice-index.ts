@@ -21,6 +21,7 @@
 
 import type { XiangqiPieceRole } from '@mistboard/game';
 import { type I18nKey, t } from './i18n/catalog.js';
+import { localizedHref } from './i18n/locale.js';
 import { buildNav } from './site-shell.js';
 import { localizedStudyDescription, localizedStudyName } from './study-i18n.js';
 import { renderXiangqiPiece } from './xiangqi-pieces.js';
@@ -168,6 +169,16 @@ function sidebar(sections: PracticeSectionDto[]): HTMLElement {
     count.textContent = t('practice.solvedOfTotal', { solved, total });
     side.append(count);
   }
+
+  // The reference behind the shelf: which endgames are wins and which are
+  // draws, each position playable from there.
+  const guide = document.createElement('p');
+  guide.className = 'practice-index__guide';
+  const guideLink = document.createElement('a');
+  guideLink.href = localizedHref('/blog/xiangqi-endgames');
+  guideLink.textContent = t('practice.endgamesLink');
+  guide.append(guideLink);
+  side.append(guide);
   return side;
 }
 

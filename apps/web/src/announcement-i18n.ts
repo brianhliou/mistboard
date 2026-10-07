@@ -35,6 +35,11 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-10-08 (xiangqi endgames guide) ── 例胜 / 巧胜 / 例和 / 云库 / 和电脑下 follow the xiangqi-endgames article text.
+  'A guide to xiangqi endgames: which win and which draw.':
+    '一份象棋残局指南：哪些能赢，哪些是和棋。',
+  'Twenty-six common xiangqi endgames, sorted the way Chinese endgame manuals sort them: standard wins, tricky wins and standard draws. Each has a board, the idea that decides it, and a verdict checked against the chessdb.cn cloud database. Press Play it out under any position to try it against the computer, or set up your own in the board editor and play it out from there.':
+    '二十六个常见象棋残局，按中国残局书的分法分为例胜、巧胜和例和。每个残局都有棋盘、决定胜负的要点，以及经云库 chessdb.cn 核对的结论。点击任一局面下方的“和电脑下”，就能和电脑实战练习；也可以在棋盘编辑器里摆出自己的局面，从那里开始下。',
   // ── 2026-10-07 (jieqi luck die) ── 翻子 / 暗子 / 评注 follow the review luck card and the jieqi rules article.
   'Jieqi review now marks the luck of every reveal with a die.':
     '揭棋复盘现在用骰子标出每次翻子的运气。',
@@ -448,6 +453,11 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-10-08 (xiangqi endgames guide) ── 例勝 / 巧勝 / 例和 / 雲庫 / 和電腦下 follow the xiangqi-endgames article text.
+  'A guide to xiangqi endgames: which win and which draw.':
+    '一份象棋殘局指南：哪些能贏，哪些是和棋。',
+  'Twenty-six common xiangqi endgames, sorted the way Chinese endgame manuals sort them: standard wins, tricky wins and standard draws. Each has a board, the idea that decides it, and a verdict checked against the chessdb.cn cloud database. Press Play it out under any position to try it against the computer, or set up your own in the board editor and play it out from there.':
+    '二十六個常見象棋殘局，按中國殘局書的分法分為例勝、巧勝和例和。每個殘局都有棋盤、決定勝負的要點，以及經雲庫 chessdb.cn 核對的結論。點擊任一局面下方的「和電腦下」，就能和電腦實戰練習；也可以在棋盤編輯器裡擺出自己的局面，從那裡開始下。',
   // ── 2026-10-07 (jieqi luck die) ── 翻子 / 暗子 / 評註 follow the review luck card and the jieqi rules article.
   'Jieqi review now marks the luck of every reveal with a die.':
     '揭棋復盤現在用骰子標出每次翻子的運氣。',
