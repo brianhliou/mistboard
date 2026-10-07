@@ -60,6 +60,8 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      // How the duck widens xiangqi's game tree, 2026-10-07.
+      '/blog/duck-xiangqi-game-tree',
       // The solver audit of the classical composition manuals, 2026-10-06.
       '/blog/solver-audit',
       // KataGo, the new top Jungle Chess bot, scheduled for 2026-10-03.
@@ -280,6 +282,7 @@ describe('article public listing gates', () => {
     // (blog/concept) article without a homeRow appears, newest first, with no
     // curated list. Deep dives have their own row (next test).
     expect(hrefs).toEqual([
+      '/blog/duck-xiangqi-game-tree',
       '/blog/solver-audit',
       '/blog/katago-jungle',
       '/blog/pikafish-reveal-bug',

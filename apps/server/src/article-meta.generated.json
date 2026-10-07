@@ -71,6 +71,12 @@
     "description": "Duck Chess on the xiangqi board. Every turn is a move and then a duck placement, the duck blocks and screens like a piece, and you win by capturing the general.",
     "status": "published"
   },
+  "duck-xiangqi-game-tree": {
+    "title": "What the duck does to xiangqi’s game tree",
+    "kind": "article",
+    "description": "One Duck Xiangqi move reaches more positions than two xiangqi moves, and the gap grows as pieces come off. About half the duck placements change nothing for the opponent, and the same engine search reaches 14 turns deep where xiangqi gets 25.",
+    "status": "published"
+  },
   "duck-xiangqi-strategy": {
     "title": "Duck Xiangqi Strategy for Your First Game",
     "kind": "article",
