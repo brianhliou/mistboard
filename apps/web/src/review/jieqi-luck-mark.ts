@@ -1,7 +1,7 @@
 // On-board luck mark for a jieqi chance move: a reveal, a capture of a face-down piece, or
 // both. The move list already carries its luck as an inline "🎲 +12%" badge; the board pins
-// it to the move's destination as a die with no number: colour says which way, pips say how
-// far (luckSizePips).
+// it to the move's destination as a die with no number: hue says which way, pips say how
+// far (luckSizePips), and the ink deepens with the pips (luckInk).
 //
 // Everything here is pure: the draw odds and the size buckets. The SVG lives in
 // board-luck-mark.ts, the hover card in luck-mark-card.ts.
@@ -167,9 +167,20 @@ export function luckSize(luck: number): LuckSize {
   return SIZE_BY_PIPS[luckSizePips(luck) - 1]!;
 }
 
-/** The die's colour: green or red only once the swing leaves the tiny bucket, so a one-pip
- *  die is always grey. */
+/** The die's side: lucky or unlucky only once the swing leaves the tiny bucket, so a
+ *  one-pip die is always grey. */
 export function luckSizeTone(luck: number): LuckTone {
   if (luckPoints(luck) < LUCK_SIZE_THRESHOLDS[0]) return 'even';
   return luck > 0 ? 'lucky' : 'unlucky';
+}
+
+export type LuckStep = 1 | 2 | 3 | 4 | 5 | 6;
+
+/** The die's ink: a diverging scale indexed by the same buckets as the pips, so a +3 and
+ *  a +40 differ in depth as well as face. Step 1 is the grey `even` ink; steps 2-6 deepen
+ *  on each side (board-luck-mark.css holds one custom property per side and step). */
+export type LuckInk = { side: LuckTone; step: LuckStep };
+
+export function luckInk(luck: number): LuckInk {
+  return { side: luckSizeTone(luck), step: luckSizePips(luck) };
 }

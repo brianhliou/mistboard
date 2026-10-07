@@ -35,6 +35,11 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-10-07 (jieqi luck die) ── 翻子 / 暗子 / 评注 follow the review luck card and the jieqi rules article.
+  'Jieqi review now marks the luck of every reveal with a die.':
+    '揭棋复盘现在用骰子标出每次翻子的运气。',
+  'In a jieqi game review, every reveal and every capture of a face-down piece now has a die on the board: teal when the draw helped, violet when it hurt, and more pips for a bigger swing. Hover or tap the piece to see what it was, how likely it was, and what it could have been. The move marks on a capture of a face-down piece now judge what the capturer could know, not what the piece turned out to be.':
+    '在揭棋对局复盘中，每次翻子和每次吃掉暗子，棋盘上都会出现一个骰子：青绿色表示运气帮了忙，紫色表示运气不好，点数越多，胜率变化越大。悬停或点按棋子，可以看到它是什么子、它出现的概率，以及它本来可能是什么子。吃暗子的着法评注现在按吃子一方当时能知道的信息来判断，而不是按那枚子最后翻出来是什么。',
   // ── 2026-10-07 (jieqi repetition) ── 长将 / 半回合 / 重复局面 follow the jieqi rules article.
   'Jieqi now has a repetition rule: perpetual check loses.': '揭棋新增重复局面规则：长将判负。',
   'Jieqi used to draw only after 120 plies without a capture, so a losing player could check forever and wait. Now the third repetition of a position ends the game. A player who gave check on every move of the cycle loses, as in xiangqi; any other repetition is a draw. Games started before the change keep the old rules.':
@@ -443,6 +448,11 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-10-07 (jieqi luck die) ── 翻子 / 暗子 / 評註 follow the review luck card and the jieqi rules article.
+  'Jieqi review now marks the luck of every reveal with a die.':
+    '揭棋復盤現在用骰子標出每次翻子的運氣。',
+  'In a jieqi game review, every reveal and every capture of a face-down piece now has a die on the board: teal when the draw helped, violet when it hurt, and more pips for a bigger swing. Hover or tap the piece to see what it was, how likely it was, and what it could have been. The move marks on a capture of a face-down piece now judge what the capturer could know, not what the piece turned out to be.':
+    '在揭棋對局復盤中，每次翻子和每次吃掉暗子，棋盤上都會出現一個骰子：青綠色表示運氣幫了忙，紫色表示運氣不好，點數越多，勝率變化越大。懸停或點按棋子，可以看到它是什麼子、它出現的機率，以及它本來可能是什麼子。吃暗子的著法評註現在按吃子一方當時能知道的資訊來判斷，而不是按那枚子最後翻出來是什麼。',
   // ── 2026-10-07 (jieqi repetition) ── 長將 / 半回合 / 重複局面 follow the jieqi rules article.
   'Jieqi now has a repetition rule: perpetual check loses.': '揭棋新增重複局面規則：長將判負。',
   'Jieqi used to draw only after 120 plies without a capture, so a losing player could check forever and wait. Now the third repetition of a position ends the game. A player who gave check on every move of the cycle loses, as in xiangqi; any other repetition is a draw. Games started before the change keep the old rules.':

@@ -4,6 +4,7 @@ import {
   LUCK_DIE_RATIO,
   type LuckMarkBounds,
   luckDieIconSvg,
+  luckInkClass,
   svgBoardLuckMark,
 } from './board-luck-mark.js';
 import { GLYPH_OFFSET_RATIO, GLYPH_RADIUS_RATIO } from './svg-board-marker.js';
@@ -114,13 +115,54 @@ describe('the luck die', () => {
     expect(cube(draw(8, topRight, bounds))).toEqual(cube(draw(8, topRight)));
   });
 
-  it('rolls one pip per size bucket and colours by direction, grey when tiny', () => {
+  it('rolls one pip per size bucket and inks by side and step, grey when tiny', () => {
     const pips = (svg: string): number => svg.match(/class="luck-mark__pip"/g)?.length ?? 0;
     expect([1, 3, 7, -14, 25, -35].map((luck) => pips(draw(luck)))).toEqual([1, 2, 3, 4, 5, 6]);
-    expect(draw(1)).toContain('luck-mark--even');
-    expect(draw(-1)).toContain('luck-mark--even');
-    expect(draw(3)).toContain('luck-mark--lucky');
-    expect(draw(-7)).toContain('luck-mark--unlucky');
+    expect(draw(1)).toContain('class="luck-mark luck-mark--even luck-mark--s1"');
+    expect(draw(-1)).toContain('class="luck-mark luck-mark--even luck-mark--s1"');
+    expect(draw(3)).toContain('class="luck-mark luck-mark--lucky luck-mark--s2"');
+    expect(draw(-7)).toContain('class="luck-mark luck-mark--unlucky luck-mark--s3"');
+    expect(draw(-35)).toContain('class="luck-mark luck-mark--unlucky luck-mark--s6"');
+    expect(luckInkClass(25)).toBe('luck-mark--lucky luck-mark--s5');
+  });
+
+  it('gives every side and step its own ink', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
+    const css = readFileSync(resolve(__dirname, 'board-luck-mark.css'), 'utf-8');
+    const block = (selector: string): string => {
+      const at = css.indexOf(`${selector} {`);
+      expect(at, selector).toBeGreaterThanOrEqual(0);
+      return css.slice(at, css.indexOf('}', at));
+    };
+    const tokens = block('.luck-mark,\n.luck-card');
+    const found = [...tokens.matchAll(/--luck-(even|(?:up|down)-\d): (#[0-9a-f]{6});/g)].map(
+      (m) => `${m[1]} ${m[2]}`,
+    );
+    // Teal lucky, violet unlucky, light at step 2 to deep at 6; step 1 grey. Eleven
+    // distinct inks: no two steps or sides share a colour.
+    expect(found).toEqual([
+      'even #7a7771',
+      'up-2 #8cd6ba',
+      'up-3 #43b28e',
+      'up-4 #07906d',
+      'up-5 #016f53',
+      'up-6 #00523d',
+      'down-2 #c4b2ee',
+      'down-3 #a080df',
+      'down-4 #8355ce',
+      'down-5 #692db6',
+      'down-6 #4f148f',
+    ]);
+    expect(new Set(found.map((f) => f.split(' ')[1])).size).toBe(11);
+    for (const side of ['lucky', 'unlucky']) {
+      const token = side === 'lucky' ? 'up' : 'down';
+      for (const step of [2, 3, 4, 5, 6]) {
+        expect(block(`.luck-mark--${side}.luck-mark--s${step}`)).toContain(
+          `--luck-ink: var(--luck-${token}-${step});`,
+        );
+      }
+    }
   });
 
   it('carries the piece-sized hit disc the hover card measures', () => {
@@ -133,7 +175,7 @@ describe('the luck die', () => {
 
   it('draws the same face as a standalone icon for the card', () => {
     const icon = luckDieIconSvg(-35);
-    expect(icon).toContain('luck-mark--unlucky');
+    expect(icon).toContain('luck-mark--unlucky luck-mark--s6');
     expect(icon.match(/class="luck-mark__pip"/g)).toHaveLength(6);
   });
 });

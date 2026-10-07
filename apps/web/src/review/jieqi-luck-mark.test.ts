@@ -5,6 +5,7 @@ import {
   jieqiChanceOdds,
   jieqiRevealOdds,
   LUCK_SIZE_THRESHOLDS,
+  luckInk,
   luckPoints,
   luckSize,
   luckSizePips,
@@ -108,6 +109,30 @@ describe('die size buckets', () => {
     expect(luckSizeTone(3)).toBe('lucky');
     expect(luckSizeTone(-2)).toBe('unlucky');
     expect(luckSizeTone(-35)).toBe('unlucky');
+  });
+
+  it('inks the die on a scale that steps with the pips, grey only at step 1', () => {
+    expect([0, 1.4, 1.6, 4.4, 4.6, 9.6, 19.6, 34.4, 34.6, 80].map((l) => luckInk(l))).toEqual([
+      { side: 'even', step: 1 },
+      { side: 'even', step: 1 },
+      { side: 'lucky', step: 2 },
+      { side: 'lucky', step: 2 },
+      { side: 'lucky', step: 3 },
+      { side: 'lucky', step: 4 },
+      { side: 'lucky', step: 5 },
+      { side: 'lucky', step: 5 },
+      { side: 'lucky', step: 6 },
+      { side: 'lucky', step: 6 },
+    ]);
+    // The test game's plies: 14 (+3) is a light step, 27 (-35) the deepest.
+    expect(luckInk(3)).toEqual({ side: 'lucky', step: 2 });
+    expect(luckInk(-7)).toEqual({ side: 'unlucky', step: 3 });
+    expect(luckInk(-35)).toEqual({ side: 'unlucky', step: 6 });
+    for (let l = -60; l <= 60; l += 0.5) {
+      const ink = luckInk(l);
+      expect(ink.step).toBe(luckSizePips(l));
+      expect(ink.side === 'even').toBe(ink.step === 1);
+    }
   });
 
   it('states whole unsigned points', () => {

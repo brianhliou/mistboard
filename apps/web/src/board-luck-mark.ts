@@ -1,7 +1,8 @@
 // The on-board luck mark for a chance move (a jieqi reveal): a die with no number, pinned
-// as a corner badge to the piece's lower-left. Its fill says which way the reveal went
-// (green, red, grey when tiny); its face says how far, in fixed buckets (luckSizePips), so
-// a five is always a huge swing. Variant-agnostic: it takes a point centre and the board's
+// as a corner badge to the piece's lower-left. Its hue says which way the reveal went
+// (one hue per side, grey when tiny); its face says how far, in fixed buckets
+// (luckSizePips), so a five is always a huge swing, and its ink deepens with the face
+// (luckInk), so a big swing also looks bigger. Variant-agnostic: it takes a point centre and the board's
 // piece and cell sizes, so any intersection or cell board can draw it.
 //
 // Two rules shape it:
@@ -13,7 +14,7 @@
 // - It is still. No idle motion; the hover card is the only thing that moves, and only
 //   when the reader points at the piece.
 import './board-luck-mark.css';
-import { luckSizePips, luckSizeTone } from './review/jieqi-luck-mark.js';
+import { luckInk, luckSizePips } from './review/jieqi-luck-mark.js';
 import { GLYPH_RADIUS_RATIO } from './svg-board-marker.js';
 
 export type LuckMarkSpec = {
@@ -62,6 +63,12 @@ export function luckDieCentre(center: Point, cell: number, bounds?: LuckMarkBoun
   };
 }
 
+/** Classes that pick the die's ink: its side and its step on the scale. */
+export function luckInkClass(luck: number): string {
+  const ink = luckInk(luck);
+  return `luck-mark--${ink.side} luck-mark--s${ink.step}`;
+}
+
 export function svgBoardLuckMark(
   spec: LuckMarkSpec,
   center: Point,
@@ -69,14 +76,13 @@ export function svgBoardLuckMark(
   square: string,
   bounds?: LuckMarkBounds,
 ): string {
-  const tone = luckSizeTone(spec.luck);
   const side = sizes.cell * LUCK_DIE_RATIO;
   const c = luckDieCentre(center, sizes.cell, bounds);
   // The hit disc is what the hover card measures (getBoundingClientRect): the piece itself,
   // so pointing at the revealed piece is pointing at its luck.
   const hit = `<circle class="luck-mark__hit" cx="${fmt(center.x)}" cy="${fmt(center.y)}" r="${fmt(sizes.piece / 2)}"/>`;
   return (
-    `<g class="luck-mark luck-mark--${tone}" data-luck-square="${square}">` +
+    `<g class="luck-mark ${luckInkClass(spec.luck)}" data-luck-square="${square}">` +
     `<rect class="luck-mark__cube" x="${fmt(c.x - side / 2)}" y="${fmt(c.y - side / 2)}" width="${fmt(side)}" height="${fmt(side)}" rx="${fmt(side * 0.22)}"/>` +
     dieFace(c, side, luckSizePips(spec.luck)) +
     `${hit}</g>`
@@ -133,9 +139,8 @@ function dieFace(centre: Point, side: number, pips: number): string {
 export function luckDieIconSvg(luck: number, px = 16): string {
   const side = 20;
   const box = side + 4;
-  const tone = luckSizeTone(luck);
   return (
-    `<svg class="luck-mark luck-mark--${tone}" viewBox="0 0 ${box} ${box}" width="${px}" height="${px}" aria-hidden="true">` +
+    `<svg class="luck-mark ${luckInkClass(luck)}" viewBox="0 0 ${box} ${box}" width="${px}" height="${px}" aria-hidden="true">` +
     `<rect class="luck-mark__cube" x="2" y="2" width="${side}" height="${side}" rx="${fmt(side * 0.22)}"/>` +
     dieFace({ x: box / 2, y: box / 2 }, side, luckSizePips(luck)) +
     `</svg>`

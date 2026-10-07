@@ -31,8 +31,8 @@ describe('luckCardHtml', () => {
     expect(words).toContain('Decisive swing');
     expect(words).toContain('It could have been');
     expect(html).toContain('luck-card__swing--unlucky');
-    // The size line carries the board's die: six pips, red.
-    expect(html).toContain('class="luck-mark luck-mark--unlucky"');
+    // The size line carries the board's die: six pips, the deepest unlucky ink.
+    expect(html).toContain('class="luck-mark luck-mark--unlucky luck-mark--s6"');
     expect(html.match(/class="luck-mark__pip"/g)).toHaveLength(6);
     // No signed percentages, no "draw" wording, no em dashes.
     expect(words).not.toMatch(/[−+]\d|%|draw|\u2014/);

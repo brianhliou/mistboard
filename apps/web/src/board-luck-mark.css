@@ -1,17 +1,68 @@
 /* On-board luck mark for a chance move (board-luck-mark.ts) and its hover card
-   (review/luck-mark-card.ts). Tones match the move list's luck badge
-   (review/move-list.css): green lucky, red unlucky, muted even. Nothing here
-   animates on its own; the card fades in only when the reader points at a mark. */
+   (review/luck-mark-card.ts). Nothing here animates on its own; the card fades in only
+   when the reader points at a mark.
+
+   The ink is a diverging scale tied to the die's buckets (luckInk): step 1 (one pip,
+   under 2 points) is grey; steps 2-6 deepen on each side, a light tint at 2 to a deep
+   shade at 6, so a +3 and a +40 no longer share a colour. Hues stay off red (the Red
+   player, the ?? glyph) and off the ?!/? yellow and orange, and the two sides keep apart
+   under deuteranopia and protanopia at every step. Light steps (2, 3) take dark pips:
+   white pips on them fall under 3:1. Teal for lucky, violet for unlucky (picked 2026-10-07
+   over a blue / magenta candidate). */
+
+.luck-mark,
+.luck-card {
+  --luck-even: #7a7771;
+  --luck-up-2: #8cd6ba;
+  --luck-up-3: #43b28e;
+  --luck-up-4: #07906d;
+  --luck-up-5: #016f53;
+  --luck-up-6: #00523d;
+  --luck-down-2: #c4b2ee;
+  --luck-down-3: #a080df;
+  --luck-down-4: #8355ce;
+  --luck-down-5: #692db6;
+  --luck-down-6: #4f148f;
+}
 
 .luck-mark {
-  --luck-ink: #1e8449;
+  --luck-ink: var(--luck-even);
+  --luck-pip: #fff;
   pointer-events: none;
 }
-.luck-mark--unlucky {
-  --luck-ink: #d92b2b;
+.luck-mark--lucky.luck-mark--s2 {
+  --luck-ink: var(--luck-up-2);
+  --luck-pip: var(--luck-up-6);
 }
-.luck-mark--even {
-  --luck-ink: hsl(40, 4%, 46%);
+.luck-mark--lucky.luck-mark--s3 {
+  --luck-ink: var(--luck-up-3);
+  --luck-pip: var(--luck-up-6);
+}
+.luck-mark--lucky.luck-mark--s4 {
+  --luck-ink: var(--luck-up-4);
+}
+.luck-mark--lucky.luck-mark--s5 {
+  --luck-ink: var(--luck-up-5);
+}
+.luck-mark--lucky.luck-mark--s6 {
+  --luck-ink: var(--luck-up-6);
+}
+.luck-mark--unlucky.luck-mark--s2 {
+  --luck-ink: var(--luck-down-2);
+  --luck-pip: var(--luck-down-6);
+}
+.luck-mark--unlucky.luck-mark--s3 {
+  --luck-ink: var(--luck-down-3);
+  --luck-pip: var(--luck-down-6);
+}
+.luck-mark--unlucky.luck-mark--s4 {
+  --luck-ink: var(--luck-down-4);
+}
+.luck-mark--unlucky.luck-mark--s5 {
+  --luck-ink: var(--luck-down-5);
+}
+.luck-mark--unlucky.luck-mark--s6 {
+  --luck-ink: var(--luck-down-6);
 }
 /* No dark-theme override on the board mark: the board surface keeps its own colours in
    dark mode, as the decision glyph does, so the mark keeps the inks that read on it. Only
@@ -29,7 +80,7 @@
   stroke-width: 2;
 }
 .luck-mark__pip {
-  fill: #fff;
+  fill: var(--luck-pip);
 }
 
 /* Hover / tap card */
@@ -98,19 +149,21 @@
   font-variant-numeric: tabular-nums;
 }
 .luck-card__swing--lucky {
-  color: #1e8449;
+  color: var(--luck-up-5);
 }
 .luck-card__swing--unlucky {
-  color: #d92b2b;
+  color: var(--luck-down-5);
 }
 .luck-card__swing--even {
   color: var(--site-muted);
 }
+/* The card's text takes a readable step of the same hue: 5 on the light panel, 2 on the
+   dark one (each over 6:1). */
 :root[data-effective-theme="dark"] .luck-card__swing--lucky {
-  color: #3cc174;
+  color: var(--luck-up-2);
 }
 :root[data-effective-theme="dark"] .luck-card__swing--unlucky {
-  color: #ff5d57;
+  color: var(--luck-down-2);
 }
 .luck-card__pool-label {
   margin-top: 8px;
@@ -145,16 +198,16 @@
   box-shadow: inset 0 0 0 1.5px currentColor;
 }
 .luck-card[data-tone="lucky"] .luck-card__chip--drawn {
-  color: #1e8449;
+  color: var(--luck-up-5);
 }
 .luck-card[data-tone="unlucky"] .luck-card__chip--drawn {
-  color: #d92b2b;
+  color: var(--luck-down-5);
 }
 :root[data-effective-theme="dark"] .luck-card[data-tone="lucky"] .luck-card__chip--drawn {
-  color: #3cc174;
+  color: var(--luck-up-2);
 }
 :root[data-effective-theme="dark"] .luck-card[data-tone="unlucky"] .luck-card__chip--drawn {
-  color: #ff5d57;
+  color: var(--luck-down-2);
 }
 .luck-card__count {
   font-size: 11px;

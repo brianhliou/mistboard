@@ -45,6 +45,14 @@ const baseAnnouncements: Announcement[] = [
   {
     date: '2026-10-07',
     kind: 'update',
+    headline: 'Jieqi review now marks the luck of every reveal with a die.',
+    body: 'In a jieqi game review, every reveal and every capture of a face-down piece now has a die on the board: teal when the draw helped, violet when it hurt, and more pips for a bigger swing. Hover or tap the piece to see what it was, how likely it was, and what it could have been. The move marks on a capture of a face-down piece now judge what the capturer could know, not what the piece turned out to be.',
+    href: '/games/search?variant=jieqi',
+    cta: 'Find a game',
+  },
+  {
+    date: '2026-10-07',
+    kind: 'update',
     headline: 'Jieqi now has a repetition rule: perpetual check loses.',
     body: 'Jieqi used to draw only after 120 plies without a capture, so a losing player could check forever and wait. Now the third repetition of a position ends the game. A player who gave check on every move of the cycle loses, as in xiangqi; any other repetition is a draw. Games started before the change keep the old rules.',
     href: '/rules/jieqi',
