@@ -152,6 +152,10 @@ export const VARIANT_SMOKE_CONFIGS = {
     engineId: 'ab-jchess-jieqi',
     defaultTimeoutMs: 60_000,
     engineSeat: { equals: 'ab-jchess-jieqi' },
+    // The build fetches the net from the authors' release and ships without it
+    // when that fails (scripts/fetch-abjchess-net.sh), which hides this slot.
+    unavailableCause:
+      'the server has no AB-JChess binary or net. The build skips the net when the download from the authors\' release fails or its sha256 does not match; search the web build log for "abjchess-net: WARNING", then redeploy once their release answers',
   },
   'jungle-katago': {
     name: 'jungle-katago',

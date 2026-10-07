@@ -251,7 +251,7 @@ export const abJchessArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: `AB-JChess is open source under the GPL-3.0 licence, at [github.com/lxsgx23/AB-JChess](${REPO}). Its authors let us use the engine and its network on Mistboard. The network is downloaded from their own release each time we build the site, never copied. Thank you, Huorongrong and Laoxu.`,
+          text: `AB-JChess is open source under the GPL-3.0 licence, at [github.com/lxsgx23/AB-JChess](${REPO}). Its authors let us use the engine and its network on Mistboard. The network is downloaded from their own release each time we build the site, never re-hosted. Thank you, Huorongrong and Laoxu.`,
         },
         {
           kind: 'cta',
