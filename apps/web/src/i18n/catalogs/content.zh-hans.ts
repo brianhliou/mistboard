@@ -190,7 +190,7 @@ export const ZH_HANS_CONTENT = {
   'source.dandelion':
     'Dandelion 4，作者 Kouza（lxsgx23）：本站最强斗兽棋机器人的神经网络来源，从其发布页获取，不在本站转存。',
   'source.pikafish':
-    '皮卡鱼（Pikafish），作者皮卡鱼开发团队：本站象棋最高等级的皮卡鱼机器人，也是象棋对局、研习和直播分析以及浏览器内分析棋盘所用的引擎，GPL-3.0。其神经网络权重按皮卡鱼权重协议使用。',
+    '皮卡鱼（Pikafish），作者皮卡鱼开发团队：本站象棋最高等级的皮卡鱼机器人，也是象棋对局、研习和直播分析以及浏览器内分析棋盘所用的引擎，GPL-3.0。其神经网络权重另有授权协议。',
   'source.pikafishSite': 'pikafish.com',
   'source.pikafishWeightsLicense': '权重协议',
   'source.projectIdentity': '项目身份',

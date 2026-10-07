@@ -238,7 +238,7 @@ export const EN_CONTENT = {
   'source.dandelion':
     "Dandelion 4 by Kouza (lxsgx23): the source of the top jungle bot's neural network, fetched from its release and never re-hosted.",
   'source.pikafish':
-    'Pikafish by the Pikafish developers: the Pikafish bot at the top of the xiangqi levels, and the engine behind xiangqi game, study and broadcast analysis and the in-browser analysis board, GPL-3.0. Its neural network weights are used under the Pikafish weights license.',
+    'Pikafish by the Pikafish developers: the Pikafish bot at the top of the xiangqi levels, and the engine behind xiangqi game, study and broadcast analysis and the in-browser analysis board, GPL-3.0. Its neural network weights carry their own license.',
   'source.pikafishSite': 'pikafish.com',
   'source.pikafishWeightsLicense': 'Weights license',
   'source.projectIdentity': 'Project identity',
