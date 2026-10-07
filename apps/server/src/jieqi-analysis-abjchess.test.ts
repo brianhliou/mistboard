@@ -266,12 +266,13 @@ test('decisions fall back the same way: a PikaJieQi blob is served under its own
   assert.equal(computes, 0);
 });
 
-test('mover-view grading (#487) re-keys both engines’ decisions; their old rows are still served', async () => {
-  // New computes file under the d4-mover ids, never under the all-knowing d3 ones.
-  assert.match(ABJCHESS_JIEQI_DECISIONS_ENGINE_ID, /^ab-jchess-jieqi-decisions@2\+.*\+d4-mover$/);
-  assert.match(JIEQI_DECISIONS_ENGINE_ID, /^pikafish-jieqi-decisions@.*\+d4-mover$/);
+test('each decomposition re-key (#487 mover view, d5 capture pool) keeps the old rows served', async () => {
+  // New computes file under the d5-capture ids, never under the d4 (captures graded on the
+  // identity hit) or all-knowing d3 ones.
+  assert.match(ABJCHESS_JIEQI_DECISIONS_ENGINE_ID, /^ab-jchess-jieqi-decisions@2\+.*\+d5-capture$/);
+  assert.match(JIEQI_DECISIONS_ENGINE_ID, /^pikafish-jieqi-decisions@.*\+d5-capture$/);
   for (const legacy of JIEQI_LEGACY_DECISIONS_ENGINE_IDS) {
-    assert.match(legacy, /\+d3$/);
+    assert.match(legacy, /\+(d3|d4-mover)$/);
     assert.notEqual(legacy, ABJCHESS_JIEQI_DECISIONS_ENGINE_ID);
     assert.notEqual(legacy, JIEQI_DECISIONS_ENGINE_ID);
   }
