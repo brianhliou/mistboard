@@ -19,6 +19,7 @@ import {
   loadJunglePostgame,
 } from './live-jungle-postgame.js';
 import type { ReplayHandle } from './replay.js';
+import { watchJungleMoveSound } from './watch-move-sound.js';
 import { mountTenantWatchReplay, type TenantWatchReplayOptions } from './watch-tenant-replay.js';
 
 export type JungleWatchReplayOptions = TenantWatchReplayOptions;
@@ -60,6 +61,8 @@ export function mountJungleWatchReplay(
         animateJungleBoardMove(boardEl, move, orientation, { reverse: direction === 'back' });
       },
       // Perfect-info board carries its own material; no captured-pool strips.
+      // Spectator cue: the mover's own-move sound (watch-move-sound.ts).
+      moveSound: watchJungleMoveSound,
       fillCaptures: () => {},
     },
   );

@@ -26,6 +26,7 @@ import {
 } from './live-jieqi-render.js';
 import type { ReplayHandle } from './replay.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
+import { watchJieqiMoveSound } from './watch-move-sound.js';
 import { mountTenantWatchReplay, type TenantWatchReplayOptions } from './watch-tenant-replay.js';
 
 export type JieqiWatchReplayOptions = TenantWatchReplayOptions;
@@ -112,6 +113,8 @@ export function mountJieqiWatchReplay(
         animateJieqiBoardMove(boardEl, move, orientation, { reverse: direction === 'back' });
       },
       // Captures are intentionally absent from the compact TV product.
+      // Spectator cue: the mover's own-move sound (watch-move-sound.ts).
+      moveSound: watchJieqiMoveSound,
       fillCaptures: () => {},
       moveLabels: jieqiWatchMoveLabels,
     },

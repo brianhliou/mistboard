@@ -32,6 +32,7 @@ import {
   fortressXiangqiDropTargets,
   fortressXiangqiMoveLabel,
 } from './fortress-xiangqi-view.js';
+import { soundForOwnFortressXiangqiMove } from './live-fortress-xiangqi-sound.js';
 import { playSound, playTerminalPlan } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
 import { setBoardFamily, xiangqiAppearanceChangedEvent } from './theme.js';
@@ -358,7 +359,7 @@ function handleSquareClick(square: FortressXiangqiSquare): void {
   if (move) {
     selectedSquare = null;
     core?.send({ type: 'move', from: move.from, to: move.to });
-    playSound(view.board[move.to] ? 'capture' : 'move');
+    playSound(soundForOwnFortressXiangqiMove(view, move));
     core?.renderAll();
     return;
   }
@@ -383,7 +384,7 @@ function dropPiece(from: FortressXiangqiSquare, to: FortressXiangqiSquare | null
   if (move && view) {
     selectedSquare = null;
     core?.send({ type: 'move', from: move.from, to: move.to });
-    playSound(view.board[move.to] ? 'capture' : 'move');
+    playSound(soundForOwnFortressXiangqiMove(view, move));
   } else {
     selectedSquare = null;
   }

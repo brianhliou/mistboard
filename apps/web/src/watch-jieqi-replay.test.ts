@@ -100,6 +100,52 @@ describe('Jieqi watch replay', () => {
     handle.destroy();
   });
 
+  it('sounds each ply from the track the board draws, never the hidden one', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse(soundFixture('jq_sound', 'finished'))),
+    );
+    const root = document.createElement('div');
+    const handle = await mountJieqiWatchReplay(root, 'jq_sound', { autoplay: false });
+
+    expect(handle.gameResult?.()).toBe('black-wins');
+    expect(handle.moveSoundAtPly?.(0)).toBeNull();
+    // Red moves a face-down piece: it reveals.
+    expect(handle.moveSoundAtPly?.(1)).toBe('flip');
+    // Black's face-down piece takes: the masked board never showed a cannon, so
+    // the cue is a plain capture although the truth track knows it was one.
+    expect(handle.moveSoundAtPly?.(2)).toBe('capture');
+    expect(handle.moveSoundAtPly?.(3)).toBeNull();
+
+    // Only once the viewer reveals identities (finished games only) does the
+    // board, and so the cue, know the mover was a cannon.
+    root.querySelector<HTMLButtonElement>('[aria-label="Reveal hidden identities"]')?.click();
+    expect(handle.moveSoundAtPly?.(2)).toBe('cannon-capture');
+    handle.destroy();
+  });
+
+  it('sounds a live game from its masked frames (the only track a live payload has)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({}, { status: 404 })),
+    );
+    const live = soundFixture('jq_live', 'live');
+    const root = document.createElement('div');
+    const handle = await mountJieqiWatchReplay(root, 'jq_live', {
+      autoplay: false,
+      compact: true,
+      live: true,
+      loadPostgameOverride: async () => ({ ok: true, postgame: live }),
+    });
+
+    expect(handle.plyCount?.()).toBe(2);
+    // TV tells a live frame from a finished record by this, to sound the end once.
+    expect(handle.gameResult?.()).toBe('in-progress');
+    expect(handle.moveSoundAtPly?.(1)).toBe('flip');
+    expect(handle.moveSoundAtPly?.(2)).toBe('capture');
+    handle.destroy();
+  });
+
   it('encodes room ids in the dedicated finished-game watch endpoint', () => {
     expect(jieqiWatchPostgameApiUrl('jq room')).toBe('/api/jieqi/games/jq%20room/watch');
   });
@@ -169,6 +215,80 @@ function postgameFixture(roomId: string): JieqiPostgameResponse {
       ],
     },
   };
+}
+
+// Two plies for the sound tests: red's face-down a4 steps to a5 (a reveal), then
+// black's face-down b8, a cannon in truth, takes on a5. The geometry is not a
+// legal cannon line; the classifier reads only the boards and the move.
+function soundFixture(roomId: string, kind: 'finished' | 'live'): JieqiPostgameResponse {
+  const general = (color: JieqiColor) => ({ color, role: 'general' as const, faceDown: false });
+  const start: JieqiPlayerBoard = {
+    e1: general('red'),
+    e10: general('black'),
+    a4: { color: 'red', role: 'soldier', faceDown: false },
+    b8: { color: 'black', role: 'cannon', faceDown: false },
+  };
+  const afterRed: JieqiPlayerBoard = {
+    e1: general('red'),
+    e10: general('black'),
+    a5: { color: 'red', role: 'soldier', faceDown: false },
+    b8: { color: 'black', role: 'cannon', faceDown: false },
+  };
+  const afterBlack: JieqiPlayerBoard = {
+    e1: general('red'),
+    e10: general('black'),
+    a5: { color: 'black', role: 'cannon', faceDown: false },
+  };
+  const maskedStart: JieqiPlayerBoard = {
+    ...start,
+    a4: { color: 'red', faceDown: true },
+    b8: { color: 'black', faceDown: true },
+  };
+  const maskedAfterRed: JieqiPlayerBoard = { ...afterRed, b8: { color: 'black', faceDown: true } };
+  const redMove: JieqiMove = { from: 'a4', to: 'a5' };
+  const blackMove: JieqiMove = { from: 'b8', to: 'a5' };
+  const playingRed = { type: 'playing' as const, turn: 'red' as const };
+  const playingBlack = { type: 'playing' as const, turn: 'black' as const };
+  const finished = {
+    type: 'finished' as const,
+    winner: 'black' as const,
+    reason: 'resignation' as const,
+  };
+  const masked = [
+    { ply: 0, view: view('red', maskedStart, undefined, playingRed) },
+    { ply: 1, view: view('red', maskedAfterRed, redMove, playingBlack) },
+    { ply: 2, view: view('red', afterBlack, blackMove, playingRed) },
+  ];
+  const truth = [
+    { ply: 0, view: view('red', start, undefined, playingRed) },
+    { ply: 1, view: view('red', afterRed, redMove, playingBlack) },
+    { ply: 2, view: view('red', afterBlack, blackMove, playingRed) },
+  ];
+  const live = kind === 'live';
+  return {
+    game: {
+      roomId,
+      variant: 'jieqi',
+      mode: 'pvp',
+      result: live ? 'in-progress' : 'black-wins',
+      termination: live ? 'in-progress' : 'resignation',
+      plyCount: 2,
+      startedAt: '2026-06-13T12:00:00.000Z',
+      endedAt: live ? null : '2026-06-13T12:05:00.000Z',
+      rated: false,
+      visibility: 'public',
+      initialMs: null,
+      incrementMs: null,
+    },
+    state: { status: live ? playingRed : finished, moveNumber: 2 },
+    timeline: [
+      { type: 'move-played', at: 2, color: 'red', move: redMove, ply: 1 },
+      { type: 'move-played', at: 3, color: 'black', move: blackMove, ply: 2 },
+    ],
+    view: view('red', afterBlack, blackMove, live ? playingRed : finished),
+    // A live payload carries the masked track only; the server withholds truth.
+    history: live ? { masked } : { truth, masked },
+  } as JieqiPostgameResponse;
 }
 
 function view(

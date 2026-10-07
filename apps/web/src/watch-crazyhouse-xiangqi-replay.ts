@@ -27,6 +27,7 @@ import {
 } from './crazyhouse-xiangqi-view.js';
 import type { ReplayHandle } from './replay.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
+import { watchCrazyhouseXiangqiMoveSound } from './watch-move-sound.js';
 import { mountTenantWatchReplay, type TenantWatchReplayOptions } from './watch-tenant-replay.js';
 import { animateXiangqiBoardMove, xiangqiBoardSvg } from './xiangqi-board.js';
 
@@ -68,6 +69,8 @@ export function mountCrazyhouseXiangqiWatchReplay(
     // when held none of. allRoles, not the live room's pocket bar: the showcase
     // strips are styled for it (landing.css), and /watch hides them, which the
     // pocket bar's own display rule would override.
+    // Spectator cue: the mover's own-move sound (watch-move-sound.ts).
+    moveSound: watchCrazyhouseXiangqiMoveSound,
     fillCaptures: (host, view, owner) =>
       fillCrazyhouseXiangqiReserve(host, view, owner, { allRoles: true }),
     sidedCaptures: true,

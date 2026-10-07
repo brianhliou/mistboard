@@ -24,6 +24,7 @@ import {
 import { replayAtomicXiangqiNotation } from './atomic-xiangqi-replay.js';
 import type { ReplayBoardOverlay, ReplayHandle } from './replay.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
+import { watchAtomicXiangqiMoveSound } from './watch-move-sound.js';
 import { mountTenantWatchReplay, type TenantWatchReplayOptions } from './watch-tenant-replay.js';
 import {
   animateXiangqiBoardMove,
@@ -80,6 +81,8 @@ export function mountAtomicXiangqiWatchReplay(
         lastOverlay = overlay;
         return boardSvg(view, orientation, false, overlay);
       },
+      // Spectator cue: the mover's own-move sound (watch-move-sound.ts).
+      moveSound: watchAtomicXiangqiMoveSound,
       fillCaptures: () => {},
       // Algebraic labels from the atomic kernel: the standard formatter would
       // read the wrong board after the first explosion. A record the kernel

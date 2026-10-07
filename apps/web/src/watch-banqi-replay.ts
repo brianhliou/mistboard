@@ -23,6 +23,7 @@ import {
 import type { ReplayHandle } from './replay.js';
 import { fillCapturedPoolWith } from './review/captured-pool.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
+import { watchBanqiMoveSound } from './watch-move-sound.js';
 import { mountTenantWatchReplay, type TenantWatchReplayOptions } from './watch-tenant-replay.js';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
@@ -70,6 +71,8 @@ export function mountBanqiWatchReplay(
       },
       // The same grouped pool the live room draws (review/captured-pool.ts); every
       // banqi capture has a known identity, so no hidden renderer is needed.
+      // Spectator cue: the mover's own-move sound (watch-move-sound.ts).
+      moveSound: watchBanqiMoveSound,
       fillCaptures: (host, view, owner) => {
         const pieceSet = readStoredXiangqiPieceSet();
         fillCapturedPoolWith(host, view.captured, owner, (entry) =>
