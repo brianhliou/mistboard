@@ -4,9 +4,12 @@ import { roomViewPolicy } from '../../server/src/server-policy.js';
 import {
   type CurrentGame,
   deadlineFractionLeft,
+  FINISHED_POOL_URL,
+  finishedPoolDue,
   finishedTileKind,
   isLowClock,
   liveTileKind,
+  settleAwaitingFinish,
   splitSections,
 } from './current-games-model.js';
 
@@ -122,5 +125,32 @@ describe('finishedTileKind', () => {
         'truth',
       ]);
     }
+  });
+});
+
+describe('just finished after a game leaves the wall', () => {
+  it('reads the feed without the 20-ply bar, so short games land', () => {
+    const url = new URL(FINISHED_POOL_URL, 'https://mistboard.com');
+    expect(url.pathname).toBe('/api/watch');
+    expect(url.searchParams.get('channel')).toBe('top');
+    expect(url.searchParams.get('curated')).toBe('0');
+  });
+
+  it('re-reads the pool every poll while a game is awaited, else once a minute', () => {
+    expect(finishedPoolDue(10_000, 0, 5_000, 60_000)).toBe(false);
+    expect(finishedPoolDue(61_000, 0, 5_000, 60_000)).toBe(true);
+    expect(finishedPoolDue(5_000, 1, 5_000, 60_000)).toBe(true);
+    // The re-render right after a fetch must not fetch again.
+    expect(finishedPoolDue(10, 1, 5_000, 60_000)).toBe(false);
+  });
+
+  it('stops waiting for a game once it arrives or its wait runs out', () => {
+    const awaiting = new Map([
+      ['arrived', 30_000],
+      ['still-coming', 30_000],
+      ['private', 1_000],
+    ]);
+    settleAwaitingFinish(awaiting, [{ roomId: 'arrived' }, { roomId: 'older' }], 2_000);
+    expect([...awaiting.keys()]).toEqual(['still-coming']);
   });
 });

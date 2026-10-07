@@ -145,3 +145,32 @@ export function finishedTileKind(variant: string): 'board' | 'fog' {
   }
   return 'fog';
 }
+
+// "Just finished" reads the cross-variant feed without the Featured channel's
+// 20-ply bar: a game that leaves the wall must land here however short it was.
+export const FINISHED_POOL_URL = '/api/watch?channel=top&curated=0';
+
+// Whether the finished pool is due a re-read. Normally once per `ttlMs`; while a
+// game that left the wall is awaited, on every poll (the half-poll floor keeps
+// the re-render a fetch triggers from fetching again at once).
+export function finishedPoolDue(
+  ageMs: number,
+  awaitingCount: number,
+  pollMs: number,
+  ttlMs: number,
+): boolean {
+  return ageMs > (awaitingCount > 0 ? pollMs / 2 : ttlMs);
+}
+
+// Drop the awaited games that reached the pool, and the ones whose wait ran out
+// (a private game, or an abort with no moves, never will).
+export function settleAwaitingFinish(
+  awaiting: Map<string, number>,
+  pool: readonly { roomId: string }[],
+  now: number,
+): void {
+  const arrived = new Set(pool.map((game) => game.roomId));
+  for (const [roomId, giveUpAt] of awaiting) {
+    if (arrived.has(roomId) || now > giveUpAt) awaiting.delete(roomId);
+  }
+}

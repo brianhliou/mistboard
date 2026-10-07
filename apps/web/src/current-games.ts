@@ -15,8 +15,13 @@
 // seat-on-move's deadline with a thin bar of the move's allowance left. Open
 // seeks draw the variant's starting position (seek-card.ts).
 //
-// Just finished: /api/watch's public replay pool (the same games /watch plays),
-// final positions drawn by the same showcase renderer /watch's queue preview
+// Just finished: /api/watch's public replay pool across every variant, without
+// the Featured channel's 20-ply bar (curated=0), so a game that leaves the wall
+// lands here however short it was. When a card leaves the wall the pool is
+// re-read on every poll until that game shows up (or FINISH_WAIT_MS passes: a
+// private game never will), and tiles are keyed by room, so a new finish slides
+// in at the front without redrawing the boards already on screen. Final
+// positions are drawn by the same showcase renderer /watch's queue preview
 // uses, in its default compact view. Open-information variants, the fog
 // variants (a finished room is open to spectators, so the final board is
 // revealed) and jieqi and banqi (face-down pieces face-down) draw a board
@@ -35,10 +40,13 @@ import {
   type CurrentGamePlayer,
   type CurrentGamesResponse,
   deadlineFractionLeft,
+  FINISHED_POOL_URL,
+  finishedPoolDue,
   finishedTileKind,
   isLowClock,
   liveCardShowsHands,
   liveTileKind,
+  settleAwaitingFinish,
   splitSections,
 } from './current-games-model.js';
 import { watchQueueResultLabel } from './finished-result-label.js';
@@ -71,6 +79,8 @@ const CLOCK_TICK_MS = 250;
 const FINISHED_PAGE = 12;
 // The finished feed is re-read at most this often; the 5 s poll re-renders from cache.
 const FINISHED_TTL_MS = 60_000;
+// How long a game that left the wall is waited for in the finished pool.
+const FINISH_WAIT_MS = 30_000;
 // Start a finished board's fetch a little before its tile scrolls into view.
 const FINISHED_MOUNT_MARGIN = '300px';
 
@@ -170,8 +180,12 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
     pending: Promise<FeaturedGame[]> | null;
   } = { at: Date.now(), games: [], pending: finishedRequest };
   let finishedShown = FINISHED_PAGE;
-  let finishedHandles: ReplayHandle[] = [];
+  // The tiles on screen, by room, so a pool change moves or adds tiles rather
+  // than redrawing every board.
+  const finishedTiles = new Map<string, { tile: HTMLElement; handle: ReplayHandle | null }>();
   let finishedKey = '';
+  // Games that just left the wall, until they appear in the pool (or give up).
+  const awaitingFinish = new Map<string, number>();
   const boardObserver =
     typeof IntersectionObserver === 'function'
       ? new IntersectionObserver(
@@ -253,6 +267,7 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
     }
     for (const [roomId, card] of cards) {
       if (seen.has(roomId)) continue;
+      awaitingFinish.set(roomId, Date.now() + FINISH_WAIT_MS);
       card.handle?.destroy();
       card.root.remove();
       cards.delete(roomId);
@@ -435,12 +450,16 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
       const fetched = await finishedCache.pending;
       if (!isConnected()) return;
       finishedCache = { at: Date.now(), games: fetched, pending: null };
-    } else if (Date.now() - finishedCache.at > FINISHED_TTL_MS) {
+      settleAwaitingFinish(awaitingFinish, fetched, Date.now());
+    } else if (
+      finishedPoolDue(Date.now() - finishedCache.at, awaitingFinish.size, POLL_MS, FINISHED_TTL_MS)
+    ) {
       // Re-read in the background; this render keeps the cached pool.
       const pending = fetchFinished();
       finishedCache = { ...finishedCache, pending };
       void pending.then((games) => {
         finishedCache = { at: Date.now(), games, pending: null };
+        settleAwaitingFinish(awaitingFinish, games, Date.now());
         if (isConnected()) void renderFinished();
       });
     }
@@ -449,31 +468,39 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
     showMore.hidden = shown.length >= pool.length;
     const key = shown.map((game) => game.roomId).join(',');
     if (key === finishedKey) return;
-    const previous = new Set(finishedKey ? finishedKey.split(',') : []);
-    const appendOnly = previous.size > 0 && [...previous].every((id, i) => shown[i]?.roomId === id);
     finishedKey = key;
     finished.root.hidden = shown.length === 0;
-    if (!appendOnly) {
-      for (const handle of finishedHandles) handle.destroy();
-      finishedHandles = [];
-      for (const host of pendingBoards.keys()) boardObserver?.unobserve(host);
-      pendingBoards.clear();
-      finished.grid.replaceChildren();
+    const keep = new Set(shown.map((game) => game.roomId));
+    for (const [roomId, entry] of finishedTiles) {
+      if (keep.has(roomId)) continue;
+      entry.handle?.destroy();
+      const host = entry.tile.querySelector<HTMLElement>('.current-game-board');
+      if (host) {
+        boardObserver?.unobserve(host);
+        pendingBoards.delete(host);
+      }
+      entry.tile.remove();
+      finishedTiles.delete(roomId);
     }
-    // "Show more" only appends: the tiles already drawn keep their boards.
-    for (const game of appendOnly ? shown.slice(previous.size) : shown) {
-      const tile = buildFinishedTile(game);
-      finished.grid.append(tile);
-      if (finishedTileKind(game.variant) !== 'board') continue;
+    // Tiles already drawn keep their boards; a game that just finished, or a
+    // "Show more" page, is built and slotted into its place in the order.
+    shown.forEach((game, index) => {
+      const existing = finishedTiles.get(game.roomId);
+      const tile = existing?.tile ?? buildFinishedTile(game);
+      const at = finished.grid.children[index] ?? null;
+      if (at !== tile) finished.grid.insertBefore(tile, at);
+      if (existing) return;
+      finishedTiles.set(game.roomId, { tile, handle: null });
+      if (finishedTileKind(game.variant) !== 'board') return;
       const host = tile.querySelector<HTMLElement>('.current-game-board');
-      if (!host) continue;
+      if (!host) return;
       if (boardObserver) {
         pendingBoards.set(host, game);
         boardObserver.observe(host);
       } else {
         void mountFinishedBoard(host, game);
       }
-    }
+    });
   }
 
   showMore.addEventListener(
@@ -520,7 +547,12 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
         handle.destroy();
         return;
       }
-      finishedHandles.push(handle);
+      const entry = finishedTiles.get(game.roomId);
+      if (!entry?.tile.contains(host)) {
+        handle.destroy();
+        return;
+      }
+      entry.handle = handle;
       handle.jumpToPly?.(handle.plyCount?.() ?? game.plyCount);
     } catch (err) {
       console.warn('[current-games] finished board failed', err);
@@ -552,7 +584,7 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
     window.clearInterval(clockTimer);
     if (pollTimer !== null) window.clearTimeout(pollTimer);
     for (const card of cards.values()) card.handle?.destroy();
-    for (const handle of finishedHandles) handle.destroy();
+    for (const entry of finishedTiles.values()) entry.handle?.destroy();
     boardObserver?.disconnect();
     observer.disconnect();
   });
@@ -818,7 +850,7 @@ async function fetchSeeks(): Promise<CorrespondenceSeek[] | null> {
 }
 
 async function fetchFinished(): Promise<FeaturedGame[]> {
-  const response = await fetch('/api/watch?channel=top').catch(() => null);
+  const response = await fetch(FINISHED_POOL_URL).catch(() => null);
   if (!response?.ok) return [];
   const body = (await response.json().catch(() => null)) as { unlocked?: FeaturedGame[] } | null;
   return body?.unlocked ?? [];
