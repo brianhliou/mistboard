@@ -32,8 +32,10 @@ import { budgetForMove } from './engine-time-budget.js';
 import {
   isJieqiEngineClientId,
   JIEQI_ENGINE_VERSION,
+  type JieqiEngineTier,
   jieqiEngineTierFor,
   jieqiEngineVersion,
+  jieqiLiveCeilingMs,
   jieqiLiveEngineMove,
   pikafishJieqiWarmSessionStats,
 } from './jieqi-engine.js';
@@ -185,8 +187,40 @@ export function scheduleJieqiEngineMove(ctx: JieqiEngineContext, room: JieqiEngi
 export type JieqiEngineMoveProvider = (
   engineId: string,
   fen: string,
-  opts: { movetimeMs?: number; moves?: readonly string[]; newGame?: boolean },
+  opts: {
+    movetimeMs?: number;
+    budgetAfterWait?: (waitedMs: number) => number;
+    moves?: readonly string[];
+    newGame?: boolean;
+  },
 ) => Promise<UciEval>;
+
+// The score each room's bot reported on its last move, so a decided position thinks for
+// the tier's base time (jieqiLiveCeilingMs). Process-local on purpose: after a restart
+// the next move simply gets the full ceiling once.
+const lastEngineScore = new WeakMap<object, UciEval>();
+
+/**
+ * One live move's think time: the tier's ceiling for this game's time control
+ * (jieqiLiveCeilingMs), then the shared clock allocator. `waitedMs` is time the move
+ * already spent queued for an engine slot, which came off the bot's clock.
+ */
+export function jieqiLiveMoveBudgetMs(input: {
+  tier: JieqiEngineTier;
+  clock: { initialMs: number; incrementMs: number } | null;
+  remainingMs: number | null;
+  lastScore?: { cp?: number | null; mate?: number | null } | null;
+  waitedMs?: number;
+}): number {
+  const { tier, clock, remainingMs, lastScore, waitedMs = 0 } = input;
+  return budgetForMove({
+    remainingMs: remainingMs === null ? null : Math.max(0, remainingMs - waitedMs),
+    incrementMs: clock?.incrementMs ?? 0,
+    ceilingMs: jieqiLiveCeilingMs(tier, clock, lastScore),
+    reserveMs: CLOCK_SAFETY_MS,
+    floorMs: MIN_MOVETIME_MS,
+  }).computeBudgetMs;
+}
 
 export async function playJieqiEngineMoveIfReady(
   ctx: JieqiEngineContext,
@@ -206,17 +240,18 @@ export async function playJieqiEngineMoveIfReady(
   if (remainingMs !== null && remainingMs <= 0) return;
 
   const { fen, moves, gameMoves } = jieqiEngineRepWindow(room, seat);
-  // Clock-aware per-move budget (shared allocator). Jieqi's strength anchor is the
-  // tier's search DEPTH (set inside jieqiLiveEngineMove); this movetime is the
-  // latency ceiling + time-pressure guard. Existing ceiling preserved —
-  // behavior-neutral for untimed play; adds increment awareness + graceful shrink.
-  const { computeBudgetMs: movetimeMs } = budgetForMove({
+  // Clock-aware per-move budget (shared allocator). The ladder's strength anchor is the
+  // tier's search DEPTH (set inside jieqiLiveEngineMove); for the uncapped tiers this
+  // movetime is the strength. The ceiling is the tier's movetime, except that a tier
+  // with a timed ceiling (AB-JChess) may think longer in a game whose clock pays for it.
+  const budgetInput = {
+    tier,
+    clock: clock ? { initialMs: clock.initialMs, incrementMs } : null,
     remainingMs,
-    incrementMs,
-    ceilingMs: tier.movetimeMs,
-    reserveMs: CLOCK_SAFETY_MS,
-    floorMs: MIN_MOVETIME_MS,
-  });
+    lastScore: lastEngineScore.get(room) ?? null,
+  };
+  const movetimeMs = jieqiLiveMoveBudgetMs(budgetInput);
+  const budgetAfterWait = (waitedMs: number) => jieqiLiveMoveBudgetMs({ ...budgetInput, waitedMs });
 
   // Engine-move boundary contract (see engine-move-guard.ts): bounded retries,
   // validate every output against the kernel, FAIL CLOSED (resign + page) rather
@@ -231,7 +266,12 @@ export async function playJieqiEngineMoveIfReady(
   } = await resolveValidatedEngineMove<JieqiMove>({
     maxAttempts: ENGINE_MOVE_MAX_ATTEMPTS,
     requestMove: async () => {
-      const search = await moveProvider(engineId, fen, { movetimeMs, moves, newGame });
+      const search = await moveProvider(engineId, fen, {
+        movetimeMs,
+        budgetAfterWait,
+        moves,
+        newGame,
+      });
       lastSearch = search;
       return search.best;
     },
@@ -297,6 +337,7 @@ export async function playJieqiEngineMoveIfReady(
   }
 
   reportEngineMoveOk();
+  if (lastSearch) lastEngineScore.set(room, lastSearch);
   logger.info(
     {
       kind: 'jieqi_engine_move_ok',

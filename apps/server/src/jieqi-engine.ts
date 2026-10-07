@@ -105,6 +105,11 @@ export type JieqiEngineTier = {
   retired?: boolean;
   // The binary behind the tier; omitted = PikaJieQi.
   engine?: 'ab-jchess';
+  // Live TIMED games only: the most one move may think when the game's clock can pay
+  // for it (jieqiLiveCeilingMs). `movetimeMs` stays the tier's identity: it is what
+  // untimed games and the EvE rating run play, and it feeds the catalog's configHash,
+  // so a timed-play budget never splits a bot's rating from its history.
+  timedCeilingMs?: number;
 };
 
 // The ladder (2026-09-29): Lichess's Stockfish level table, the same one the xiangqi
@@ -140,10 +145,13 @@ const JIEQI_ENGINE_TIERS: readonly JieqiEngineTier[] = [
   },
   {
     // The top slot: AB-JChess on level 8's budget (4000ms, Hash 256, the same threads).
-    // Full strength, so no depth cap and no skill.
+    // Full strength, so no depth cap and no skill. Rated (2354) at the 4000ms; in a timed
+    // game it may think up to 8 s a move when the clock allows (jieqiLiveCeilingMs): at
+    // 4 s it finished 10+5 games with more clock than it started with.
     id: JIEQI_ABJCHESS_ENGINE_ID,
     name: 'AB-JChess',
     movetimeMs: 4_000,
+    timedCeilingMs: 8_000,
     engine: 'ab-jchess',
   },
   // Pre-ladder tiers (depth caps only), never offered after the Pikafish consolidation.
@@ -215,6 +223,29 @@ const enginePool = new UciEnginePool({
   queueTimeoutEnvVar: 'MISTBOARD_PIKAFISH_QUEUE_TIMEOUT_MS',
   queueTimeoutMessage: 'pikafish-jieqi concurrency queue timed out',
 });
+
+// AB-JChess live moves get their own slots (2026-10-06). It may think up to 8 s a move in
+// a timed game, and in the shared pool above a Level 1 move queued behind two of those
+// would wait past the 5 s queue timeout and be shed (a shed move retries once, then
+// resigns the bot). Two slots keep the parked-process ceiling where the shared pool had
+// it (at most two AB processes, each holding its 133 MB net and its hash). The queue
+// timeout covers a full AB move plus its process deadline, so a third concurrent AB game
+// waits one move rather than being shed; that wait is taken off its own budget
+// (`budgetAfterWait` in jieqiLiveEngineMove).
+export const ABJCHESS_LIVE_QUEUE_TIMEOUT_MS = 20_000;
+const abJchessLivePool = new UciEnginePool({
+  name: 'abjchess-live',
+  maxProcessesEnvVar: 'MISTBOARD_ABJCHESS_MAX_PROCESSES',
+  queueTimeoutEnvVar: 'MISTBOARD_ABJCHESS_QUEUE_TIMEOUT_MS',
+  defaultMaxProcesses: 2,
+  defaultQueueTimeoutMs: ABJCHESS_LIVE_QUEUE_TIMEOUT_MS,
+  queueTimeoutMessage: 'ab-jchess concurrency queue timed out',
+});
+
+/** The live-move pool a tier's binary runs in. */
+export function jieqiLivePool(engine?: 'ab-jchess'): UciEnginePool {
+  return engine === 'ab-jchess' ? abJchessLivePool : enginePool;
+}
 
 // Dedicated ANALYSIS pool: whole-game sweeps and decisions fan-outs acquire here,
 // never from the live pool above, so analysis compute can never occupy a live
@@ -346,6 +377,36 @@ function netOption(): string[] {
 export function jieqiEngineTierFor(engineId: string | undefined): JieqiEngineTier | null {
   if (!engineId) return null;
   return JIEQI_ENGINE_BY_ID.get(engineId) ?? null;
+}
+
+// A score this far from even (AB-JChess's cp: 500 is a 99% expected score on its
+// fitted curve, 1/(1+exp(-0.00985*cp))) means the game is decided, so the move gets the
+// tier's base time rather than the timed-game extra.
+export const JIEQI_DECIDED_CP = 500;
+
+/**
+ * The most one live move may think: the latency ceiling handed to the shared clock
+ * allocator (budgetForMove), which still shrinks it whenever the clock cannot pay.
+ *
+ * A tier without `timedCeilingMs`, an untimed game, and a decided position all get the
+ * tier's own `movetimeMs`. Otherwise the ceiling is 1% of the game's nominal length
+ * (base + 40 increments, the estimate lichess sorts time controls by), never below the
+ * tier's movetime and never above its timed ceiling. So blitz keeps today's pace
+ * (1+1 and 3+2 stay at 4 s) and only longer games buy the extra depth: 5+5 thinks up to
+ * 5 s, 10+5 and slower up to 8 s.
+ */
+export function jieqiLiveCeilingMs(
+  tier: JieqiEngineTier,
+  clock: { initialMs: number; incrementMs: number } | null,
+  lastScore?: { cp?: number | null; mate?: number | null } | null,
+): number {
+  const timedCeilingMs = tier.timedCeilingMs;
+  if (timedCeilingMs === undefined || clock === null) return tier.movetimeMs;
+  if (lastScore && (lastScore.mate != null || Math.abs(lastScore.cp ?? 0) >= JIEQI_DECIDED_CP)) {
+    return tier.movetimeMs;
+  }
+  const nominalMs = clock.initialMs + 40 * clock.incrementMs;
+  return Math.round(Math.min(timedCeilingMs, Math.max(tier.movetimeMs, nominalMs / 100)));
 }
 
 // Presence check: true when the PikaJieQi binary resolves (live levels 1-8, the live
@@ -699,6 +760,9 @@ export async function jieqiLiveEngineMove(
   fen: string,
   opts: {
     movetimeMs?: number;
+    /** Re-derive the budget once a slot is free: a move that queued spent that wait on
+     *  its own clock. Returns the movetime to search; omitted = `movetimeMs` as given. */
+    budgetAfterWait?: (waitedMs: number) => number;
     moves?: readonly string[];
     newGame?: boolean;
     rng?: () => number;
@@ -706,11 +770,17 @@ export async function jieqiLiveEngineMove(
 ): Promise<UciEval> {
   const tier = jieqiEngineTierFor(engineId);
   if (!tier) throw new Error(`unknown Jieqi engine: ${engineId}`);
-  const release = await enginePool.acquire();
+  const queuedAt = Date.now();
+  const release = await jieqiLivePool(tier.engine).acquire();
   try {
+    const waitedMs = Date.now() - queuedAt;
+    const movetimeMs =
+      opts.budgetAfterWait && waitedMs > 0
+        ? opts.budgetAfterWait(waitedMs)
+        : (opts.movetimeMs ?? tier.movetimeMs);
     return await jieqiEngineSearch(fen, {
       depth: tier.depth,
-      movetimeMs: opts.movetimeMs ?? tier.movetimeMs,
+      movetimeMs,
       moves: opts.moves,
       newGame: opts.newGame,
       skill: tier.skill,
@@ -751,8 +821,9 @@ export function buildJieqiLiveCommands(fen: string, opts: JieqiEngineOptions = {
 }
 
 // Parked live-move processes, keyed by binary + handshake, so PikaJieQi and AB-JChess
-// park separately. enginePool above still caps how many run at once, so at most that
-// many of each are ever parked; an AB-JChess one holds its 133 MB net besides the hash. The idle TTL is long on purpose: a reaped session
+// park separately. Each binary's live pool (jieqiLivePool) still caps how many run at
+// once, so at most that many of each are ever parked; an AB-JChess one holds its 133 MB
+// net besides the hash. The idle TTL is long on purpose: a reaped session
 // means the next player pays the spawn + hash allocation on their clock, which is the
 // exact cost this cache exists to keep off the move path.
 const warmSessions = new UciWarmSessionCache({ name: 'pikafish-jieqi', idleTtlMs: 60 * 60_000 });
