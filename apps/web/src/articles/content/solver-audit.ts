@@ -67,7 +67,7 @@ export const solverAuditArticle: Article = {
           caption:
             'The record for 第011局 as dpxq serves it, trimmed to the three tags that carry the position, the solution and the book’s verdict (“Red gives up both chariots; the two cannons win”).',
           text:
-            '[DhtmlXQ_binit]\n72999999 59999957 22771799 99999411\n29942993 09960996 80282294 89999999\n\n[DhtmlXQ_movelist]\n22204220 72320232 77706042 17373222\n57362232 36443222 4432\n\n[DhtmlXQ_comment0]\n红弃双车，双炮胜',
+            '[DhtmlXQ_binit]\n72999999 59999957 22771799 99999941\n12994299 30996099 68028229 48999999\n\n[DhtmlXQ_movelist]\n22204220 72320232 77706042 17373222\n57362232 36443222 4432\n\n[DhtmlXQ_comment0]\n红弃双车，双炮胜',
         } as ArticleBlock,
         {
           kind: 'paragraph',
