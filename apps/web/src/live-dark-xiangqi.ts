@@ -62,6 +62,7 @@ import {
   xiangqiBoardPoint,
   xiangqiBoardViewBox,
   xiangqiDisplayFile,
+  xiangqiDisplayRow,
 } from './xiangqi-board-geometry.js';
 import {
   type XiangqiSurfaceConfig,
@@ -446,7 +447,7 @@ export function fogLayer(
       // grid cut its holes at intersection heights, a river gap too high on
       // every square below the river.
       const center = intersection(coord.file, coord.rank, perspective, layout);
-      const displayRank = displayRankFor(coord.rank, perspective);
+      const displayRank = xiangqiDisplayRow(coord.rank, perspective, RANK_COUNT);
       // Edge cutouts bleed to the board edge so no fog hairline survives between
       // a visible outer square and the frame. The test must therefore be on the
       // DISPLAY column, not the logical file: black sees the board rotated, so
@@ -817,10 +818,6 @@ function intersection(
   layout: XiangqiBoardLayout = activeLayout,
 ): { x: number; y: number } {
   return xiangqiBoardPoint(file, rank, perspective, layout, FOG_GEO);
-}
-
-function displayRankFor(rank: number, perspective: XiangqiColor): number {
-  return perspective === 'red' ? RANK_COUNT - rank : rank - 1;
 }
 
 function coordOf(square: XiangqiSquare): { file: number; rank: number } {

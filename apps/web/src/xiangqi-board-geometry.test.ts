@@ -43,6 +43,19 @@ describe('xiangqiBoardPoint', () => {
     expect(xiangqiBoardPoint(0, 5, 'red', 'cell', GEO).y).toBe(36 + 5 * 60 + 12);
   });
 
+  it('rotates for black: a1 sits top-right, i10 bottom-left', () => {
+    // A 180 degree rotation, not a top-to-bottom mirror: black's view puts red's
+    // a1 at the reader's top RIGHT. Every board flips through this function.
+    expect(xiangqiBoardPoint(0, 1, 'black', 'intersection', GEO)).toEqual({
+      x: GEO.margin + 8 * GEO.cell,
+      y: GEO.margin,
+    });
+    expect(xiangqiBoardPoint(8, 10, 'black', 'intersection', GEO)).toEqual({
+      x: GEO.margin,
+      y: GEO.margin + 9 * GEO.cell,
+    });
+  });
+
   it('applies the origin offset', () => {
     const base = xiangqiBoardPoint(3, 4, 'red', 'intersection', GEO);
     const shifted = xiangqiBoardPoint(3, 4, 'red', 'intersection', GEO, 100, 200);
