@@ -45,8 +45,8 @@ const baseAnnouncements: Announcement[] = [
   {
     date: '2026-10-09',
     kind: 'article',
-    headline: 'Xiangqi endgames: which win, which draw, and all 26 to practice.',
-    body: 'Twenty-six common xiangqi endgames, sorted the way Chinese endgame manuals sort them: standard wins, tricky wins and standard draws, each checked against the chessdb.cn cloud database. The guide explains what decides them, and all 26 are now on the Practice page against the computer, added to the endgame set for each piece, wins first, then draws to hold. You can also set up your own position in the board editor and play it out from there.',
+    headline: 'Xiangqi basic endgames: which material wins, which draws, and 46 to practice.',
+    body: 'A reference table of 35 common xiangqi endgames, graded the way Chinese endgame manuals grade them, from certain win to certain draw, each checked against the chessdb.cn cloud database and shown on its own small board. The Practice page now has 46 endgames to play out against the computer, sorted by piece, wins first, then draws to hold, and the tablebase tells you when a move throws the result away. You can also set up any position in the board editor and play it out from there.',
     href: '/blog/xiangqi-endgames',
     cta: 'Read the article',
   },

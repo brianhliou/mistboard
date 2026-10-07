@@ -364,7 +364,15 @@ export type TableBlock = {
    *  short-celled table (a record by event: name, dates, W, D, L) that must
    *  fit a phone column with no cell on two lines and no sideways scroll. */
   compact?: boolean;
+  /** A small board leading each row (an endgame table's positions), one per
+   *  row in `rows` order. `svg` is a diagram thunk like a raw-svg block's, so it
+   *  follows the reader's piece set and board layout; `label` is the diagram's
+   *  accessible name. On a phone the table becomes one card per row: the board
+   *  on the left, the cells stacked beside it. */
+  rowDiagrams?: TableRowDiagram[];
 };
+
+export type TableRowDiagram = { svg: () => string; label: string };
 
 // A raster figure in an article body (product screenshots, photos). `src` is a
 // path under apps/web/public, same convention as ImageArticleThumbnail; the SVG
