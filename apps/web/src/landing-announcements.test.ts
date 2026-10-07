@@ -305,6 +305,9 @@ describe('landing announcements', () => {
     };
 
     for (const variant of leaderboardVariants) {
+      // An unlisted variant (atomic xiangqi, during its rules rework) has no
+      // public surface, News included, so there is nothing to require.
+      if (!variantPublicSurfaceEnabled(variant.gameSpecId)) continue;
       const slug = readerFacingRuleSlugs[variant.gameSpecId] ?? variant.gameSpecId;
       // A launch may announce the rules page or the board. The board is the
       // only choice while a rules page is held back (a /rules link to an

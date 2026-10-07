@@ -505,9 +505,13 @@ export const GAME_SPECS: readonly GameSpec[] = [
     // Rules engine: packages/game/src/variants-atomic-xiangqi.ts. Why these
     // rules and not the plain port: docs-private/variant-lab/atomic-xiangqi/.
     //
-    // Hidden: no nav, picker, index or news; the rules page and deep links are
-    // the only ways in. The first twenty human games decide whether it is
-    // offered. Casual only: no rated flag, no pool in the user_ratings CHECK.
+    // Unlisted 2026-10-06 while the rules are reworked (Brian: "hide it for
+    // now"; the cannon exception is the part being replaced). Not in the play
+    // menu, News, rules rails, the rules index or the sitemap, and no bot
+    // profile or Mistboard TV names it. Still reachable by URL: the rules page
+    // (unindexed), play deep links (?play=computer&gameSpecId=atomic-xiangqi
+    // opens setup) and every finished game's replay. Rated pool and
+    // correspondence are unchanged for anyone who arrives by link.
     id: ATOMIC_XIANGQI_SPEC_ID,
     publicName: 'Atomic Xiangqi',
     family: 'xiangqi',
@@ -519,7 +523,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     reserves: 'none',
     dropPolicy: 'none',
     ratingPoolBase: 'atomic_xiangqi',
-    publicSurface: 'casual',
+    publicSurface: 'hidden',
     runtimeStatus: 'live',
     // Rating-ready like duck and fortress: the pool lights up under the global
     // rated flag. Migration 147 added 'atomic_xiangqi' to the user_ratings

@@ -805,7 +805,9 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     // check for the repetition law). Rules engine:
     // packages/game/src/variants-atomic-xiangqi.ts.
     //
-    // Launched 2026-09-17: in the play menu like every other xiangqi tenant.
+    // Launched 2026-09-17; unlisted 2026-10-06 while the rules are reworked:
+    // off the play menu, but deep links still open setup (the blog post's
+    // "play the computer" link) and finished games still replay.
     gameSpecId: ATOMIC_XIANGQI_SPEC_ID,
     roomIdPrefix: 'axq_',
     enabled: atomicXiangqiEnabled,
@@ -842,7 +844,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsTimeControl: true,
       },
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
-      offerInMenu: atomicXiangqiEnabled,
+      offerInMenu: hiddenFromMenu,
       acceptsDeepLink: atomicXiangqiEnabled,
       // Eight-level Fairy-Stockfish ladder on the patched atomic binary, ordered
       // strongest-first like the other xiangqi pickers.

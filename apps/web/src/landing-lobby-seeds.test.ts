@@ -39,10 +39,10 @@ describe('landing lobby bot seeks', () => {
     vi.unstubAllEnvs();
   });
 
-  it('renders seven distinct variants, opening with the ascending xiangqi ladder', () => {
+  it('renders six distinct variants, opening with the ascending xiangqi ladder', () => {
     const panel = buildLobbyPanel('en', { hydrate: false });
     const seeds = [...panel.querySelectorAll<HTMLElement>('.landing-lobby-seed')];
-    expect(seeds).toHaveLength(9);
+    expect(seeds).toHaveLength(8);
 
     const signature = seeds.map((seed) => `${seed.dataset.botId}|${seed.dataset.gameSpec}`);
     expect(signature).toEqual([
@@ -53,17 +53,17 @@ describe('landing lobby bot seeks', () => {
       'fairy-stockfish-level-3|duck-xiangqi',
       'fairy-stockfish-level-4|crazyhouse-xiangqi',
       'fairy-stockfish-level-5|fortress-xiangqi',
-      'fairy-stockfish-level-5|atomic-xiangqi',
       'misty|dark-chess',
     ]);
-    expect(new Set(signature).size).toBe(9);
-    expect(new Set(seeds.map((seed) => seed.dataset.gameSpec)).size).toBe(7);
+    // Atomic Xiangqi left the rotation when it was unlisted (2026-10-06).
+    expect(new Set(signature).size).toBe(8);
+    expect(new Set(seeds.map((seed) => seed.dataset.gameSpec)).size).toBe(6);
     // Every bot row advertises the bot default, 10+5, in every variant: it is
     // the slowest pace, so the rotation has nothing slower to move to, and it
     // clears the fog engines' 5s increment floor (#283).
     expect(
       seeds.map((seed) => seed.querySelector('.landing-lobby-seed-time')?.textContent),
-    ).toEqual(Array(9).fill('10+5'));
+    ).toEqual(Array(8).fill('10+5'));
   });
 
   it('labels each seed as an engine game rather than a human seek', () => {
@@ -309,7 +309,6 @@ describe('landing lobby bot seeks', () => {
       'duck-xiangqi',
       'crazyhouse-xiangqi',
       'fortress-xiangqi',
-      'atomic-xiangqi',
       'dark-xiangqi',
       'dark-chess',
       'jungle',

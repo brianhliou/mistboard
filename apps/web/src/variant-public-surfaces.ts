@@ -25,10 +25,10 @@ const VARIANT_PUBLIC_SURFACE_ENABLED = {
   // all, and a listing would invite people to trust numbers nobody has read.
   mahjong: false,
   'duck-xiangqi': true,
-  // Listed 2026-09-17: the rules page sits in the rails and tiles with the
-  // other xiangqi variants. The play menu is a separate switch (the tenant
-  // registry's offerInMenu), still hidden.
-  'atomic-xiangqi': true,
+  // Unlisted 2026-10-06 while the rules are reworked: off the rails, tiles,
+  // News and feed; /rules/atomic-xiangqi stays up by URL, unindexed (the
+  // server's NON_INDEXED_ARTICLE_SLUGS). Listed 2026-09-17 to 2026-10-06.
+  'atomic-xiangqi': false,
   'crazyhouse-xiangqi': true,
   // Study-only: no rules page, no tile, no feed entry. Chess studies are
   // reachable by their own URLs and the study picker, nothing lists the game.
