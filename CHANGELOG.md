@@ -26,6 +26,11 @@ Conventions:
 
 ### Playing
 
+- The general glows red when it is in check, in xiangqi, jieqi, Storm the Fortress and Atomic Xiangqi ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
+- Jieqi move lists mark check (+) and checkmate (#) ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
+- Jieqi games now end on the third repetition of a position, and a player who gave check on every move of the cycle loses, as in xiangqi ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
+- The Duck Xiangqi duck is bigger and quacks when placed. The placement tip shows only in your first three games; after that your turn tag reads "place duck" ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
+- New players now start against the computer at Level 2 in both xiangqi and jieqi, on the homepage and in the Play dialog, and a level you picked before is kept ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
 - Challenge a friend can be rated when both players are signed in, on every variant with rated play ([79547fd9](https://github.com/brianhliou/mistboard/commit/79547fd9))
 - Your open correspondence seeks lead the Correspondence page, under Waiting for an opponent ([dfa9549e](https://github.com/brianhliou/mistboard/commit/dfa9549e))
 - The homepage has a Jieqi by correspondence button: one move a day, an email when it is your turn, and a guest who signs up from it is paired straight away ([b123338b](https://github.com/brianhliou/mistboard/commit/b123338b))
@@ -48,6 +53,8 @@ Conventions:
 
 ### Learning and puzzles
 
+- [What the Solver Found in the Old Manuals](/blog/solver-audit) checks 172 short continuous-check compositions from 適情雅趣, 渊深海阔 and 林幼如作品集 with an exhaustive solver: 45 have one solution, and nine refuted records get a study of their own ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
+- Master-game chapters in Mistboard's own studies now open with the computer analysis chart, move marks and accuracy, the same as a game review; a chapter edited after its analysis shows the chart only up to the first changed move ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
 - Tony Fung 冯家俊, Hong Kong's 2022 world championship finalist, gets the fourth player page, in English and Chinese, with all 47 of his games in a study ([7af55c21](https://github.com/brianhliou/mistboard/commit/7af55c21))
 - The champions article explains how its games were annotated, with totals across both champion pages ([ca833e03](https://github.com/brianhliou/mistboard/commit/ca833e03))
 - the KataGo post's charts count moves and mark the move Misty lost and the move it saw it ([f30597b2](https://github.com/brianhliou/mistboard/commit/f30597b2))
@@ -60,6 +67,9 @@ Conventions:
 
 ### Watching and review
 
+- Xiangqi article boards whose game is in the broadcast archive now show the game's advantage chart under the board; click it to jump to any move, or hide it from the board menu ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
+- Game boards in articles now link to the game's full analysis, with the advantage chart and every move's verdict, when the game is in the broadcast archive ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
+- Live games on Mistboard TV now play sound: each move, capture, reveal, flip and drop sounds as it does for the players, with one tone when the game ends, and a speaker button turns it on or off ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
 - /games puts live games, correspondence games and open seeks in one colour-coded wall, open seeks show their starting board, and Just finished shows more games and loads faster ([dbe84a24](https://github.com/brianhliou/mistboard/commit/dbe84a24))
 - Correspondence games show their time control as days per move, and every game card links its variant name to the rules ([3c98c885](https://github.com/brianhliou/mistboard/commit/3c98c885))
 - Mistboard TV's game card links to the variant's rules and shows when the game finished, and its clocks match the game room ([ca833e03](https://github.com/brianhliou/mistboard/commit/ca833e03))
@@ -90,12 +100,14 @@ Conventions:
 
 ### Community
 
+- The contribute page asks players who read Chinese to review one rules page or lesson of the machine translation, and every Chinese rules page links to it ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
 - The leaderboard shows every speed that has rated players, provisional ratings marked with ? ([99752abc](https://github.com/brianhliou/mistboard/commit/99752abc))
 - Player names on correspondence seeks, games and challenges link to their profiles ([11790cc8](https://github.com/brianhliou/mistboard/commit/11790cc8))
 - Profile game lists filter by result and by opponent ([cce12ac5](https://github.com/brianhliou/mistboard/commit/cce12ac5))
 
 ### Site
 
+- The source page credits Pikafish with links to pikafish.com, its weights license and its repository, and the analysis board's engine name links to pikafish.com ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
 - Game cards show the variant as the title, with the time control on its own line ([99752abc](https://github.com/brianhliou/mistboard/commit/99752abc))
 - Correspondence lists use game cards, and challenging a specific player moves to their profile ([c3243b74](https://github.com/brianhliou/mistboard/commit/c3243b74))
 - KataGo on the homepage carries a Neural net tag ([11790cc8](https://github.com/brianhliou/mistboard/commit/11790cc8))
@@ -120,10 +132,24 @@ Conventions:
 
 ### Removed
 
+- Atomic Xiangqi is off the play menu and listings while its rules are reworked; games, replays and the rules page stay up by link ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
 - Jieqi, Banqi and Flip Jungle are off the game data page until their files can show which piece each reveal turned out to be ([4ce02088](https://github.com/brianhliou/mistboard/commit/4ce02088))
 
 ### Fixed
 
+- Chinese phase labels on advantage charts read on one line instead of one character per line ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
+- Vietnamese pages now draw every letter in the site font instead of switching to a system font mid-word ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
+- Jieqi game data now marks check on every checking move, including the mating move ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
+- Atomic Xiangqi move lists mark check and mate by atomic rules, and the live list uses your chosen notation ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
+- Xiangqi and Fog Xiangqi games ending by the 60-ply rule, stalemate or repetition now say so ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
+- A chariot and cannon of the same colour swapping squares no longer counts as a repeated position, so xiangqi games no longer end in a false repetition draw (same for king and knight in fog chess) ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
+- Games won by taking the general now end with the same words in every variant ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
+- Reloading or opening a finished jieqi room now shows the whole move list, steps through every move, and links Review game to the final move ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
+- Reopening a finished banqi, Flip Jungle or Fog Xiangqi game now shows every move and lets you step through the whole game; a finished mahjong game lists every move ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
+- /games: a game that ends now moves straight into Just finished, however short it was ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
+- The Atomic Xiangqi and Duck Xiangqi rules pages now show their publish date ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
+- Flipping a xiangqi replay board in an article now turns it round like a real board, so Black's first file sits on Black's right instead of the board only flipping top to bottom ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
+- Correspondence games no longer ask you to invite an opponent who already has a seat, and the first-move countdown reads in hours and minutes instead of seconds ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
 - Correspondence games show both players’ names immediately after a seek is accepted ([87b7a263](https://github.com/brianhliou/mistboard/commit/87b7a263))
 - Scrolling /games no longer stutters when many boards are on screen ([136e3284](https://github.com/brianhliou/mistboard/commit/136e3284))
 - The watch page's channel list names a player from the game shown, not one from hours earlier ([136e3284](https://github.com/brianhliou/mistboard/commit/136e3284))
@@ -167,6 +193,11 @@ Conventions:
 - The first download of a game data file no longer pauses live games while it is built ([4ce02088](https://github.com/brianhliou/mistboard/commit/4ce02088))
 - Latest studies on the homepage and /study lists the newest studies first; an automatic hourly update no longer lifts two older studies back to the top ([5dcc4b03](https://github.com/brianhliou/mistboard/commit/5dcc4b03))
 - A Fog Chess game's download no longer shows the real name of a player whose seat is set to private ([b4162222](https://github.com/brianhliou/mistboard/commit/b4162222))
+
+### Technical
+
+- The site now deploys without the AB-JChess network when its authors' release cannot be reached, hiding that bot until a later build fetches it ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
+- Signups are now located to the visitor's country in analytics, not the Cloudflare edge ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
 
 ## 2026-09
 
