@@ -35,6 +35,11 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-10-06 (solver audit) ── 排局 / 连将杀 / 双解 / 错谱 follow the solver-audit article.
+  'Forty-five of 172 classical xiangqi problems have only one solution.':
+    '172局古典象棋排局中，只有45局的解法是唯一的。',
+  'An exhaustive solver went through every short continuous-check composition in a Ming manual, a Qing manual and a modern collection, asking whether the printed solution is the only one. Most of the rest have a second winning line somewhere in the tree, and nine records in the wider corpus are refuted inside their own printed solution. Every finding replays in a study.':
+    '我们用穷尽求解器检验了一部明代古谱、一部清代古谱和一部现代集子中每一局较短的连将杀排局，问的是书中所印的解法是否唯一。其余的大多在变化树的某处有第二种取胜续着；在更大的语料库中，还有九局棋谱在书中自己的着法之内就被驳倒。每一项发现都可以在研究里逐着演示。',
   // ── 2026-10-03 (KataGo) ── 电脑 / 斗兽棋 follow the katago-jungle article.
   'KataGo is the new top Jungle Chess bot.': 'KataGo 成为新的最强斗兽棋电脑。',
   "hzyhhzy's KataGomo, built on KataGo with Kouza's Dandelion 4 network, learned Jungle Chess by playing itself and now sits above Misty. It beat Misty 82 to 0 in 200 games, with 118 draws. Misty stays the default; KataGo is the stronger pick.":
@@ -421,6 +426,11 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-10-06 (solver audit) ── 排局 / 連將殺 / 雙解 / 錯譜 follow the solver-audit article.
+  'Forty-five of 172 classical xiangqi problems have only one solution.':
+    '172局古典象棋排局中，只有45局的解法是唯一的。',
+  'An exhaustive solver went through every short continuous-check composition in a Ming manual, a Qing manual and a modern collection, asking whether the printed solution is the only one. Most of the rest have a second winning line somewhere in the tree, and nine records in the wider corpus are refuted inside their own printed solution. Every finding replays in a study.':
+    '我們用窮盡求解器檢驗了一部明代古譜、一部清代古譜和一部現代集子中每一局較短的連將殺排局，問的是書中所印的解法是否唯一。其餘的大多在變化樹的某處有第二種取勝續著；在更大的語料庫中，還有九局棋譜在書中自己的著法之內就被駁倒。每一項發現都可以在研究裡逐著演示。',
   // ── 2026-10-03 (KataGo) ── 電腦 / 鬥獸棋 follow the katago-jungle article.
   'KataGo is the new top Jungle Chess bot.': 'KataGo 成為新的最強鬥獸棋電腦。',
   "hzyhhzy's KataGomo, built on KataGo with Kouza's Dandelion 4 network, learned Jungle Chess by playing itself and now sits above Misty. It beat Misty 82 to 0 in 200 games, with 118 draws. Misty stays the default; KataGo is the stronger pick.":

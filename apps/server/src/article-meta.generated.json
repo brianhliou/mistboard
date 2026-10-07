@@ -251,6 +251,12 @@
     "description": "Half the moves in banqi, jieqi, and flip jungle are dice rolls, so a chess-style review blames you for variance. Mistboard’s game review splits every flip into the decision and the tile: luck-stripped accuracy, a luck line on the advantage graph, and what 52 human-versus-engine games say about who really earned their wins.",
     "status": "published"
   },
+  "solver-audit": {
+    "title": "What the Solver Found in the Old Manuals",
+    "kind": "article",
+    "description": "We ran an exhaustive solver over every short continuous-check composition in 適情雅趣 (1570), 渊深海阔 (1808) and a modern collection: 172 problems, asking whether the printed solution is the only one. Forty-five are. Seventy have a second winning continuation somewhere in the tree, fourteen have a second first move, nine can be mated faster, and three records turned out to be corrupt rather than wrong.",
+    "status": "published"
+  },
   "titled-players": {
     "title": "Bring your title to Mistboard",
     "kind": "article",

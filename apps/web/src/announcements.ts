@@ -43,6 +43,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-10-06',
+    kind: 'release',
+    headline: 'Forty-five of 172 classical xiangqi problems have only one solution.',
+    body: 'An exhaustive solver went through every short continuous-check composition in a Ming manual, a Qing manual and a modern collection, asking whether the printed solution is the only one. Most of the rest have a second winning line somewhere in the tree, and nine records in the wider corpus are refuted inside their own printed solution. Every finding replays in a study.',
+    href: '/blog/solver-audit',
+    cta: 'Read the post',
+  },
+  {
     date: '2026-10-03',
     kind: 'release',
     headline: 'KataGo is the new top Jungle Chess bot.',

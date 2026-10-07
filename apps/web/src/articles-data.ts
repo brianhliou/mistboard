@@ -21,6 +21,7 @@ import { pikafishArticle } from './articles/content/pikafish.js';
 import { abJchessArticle } from './articles/content/ab-jchess.js';
 import { pikafishRevealBugArticle } from './articles/content/pikafish-reveal-bug.js';
 import { katagoJungleArticle } from './articles/content/katago-jungle.js';
+import { solverAuditArticle } from './articles/content/solver-audit.js';
 import { jieqiBotWinsArticle } from './articles/content/jieqi-bot-wins.js';
 import { oneThousandGamesArticle } from './articles/content/one-thousand-games.js';
 import { darkChessArticle } from './articles/content/dark-chess.js';
@@ -60,6 +61,7 @@ import { tonyFungGaZenArticle } from './articles/content/tony-fung-ga-zen.js';
 import articleSnapshotFog from './article-snapshot-fog.json' with { type: 'json' };
 
 export const articles: Article[] = [
+  solverAuditArticle,
   pikafishRevealBugArticle,
   katagoJungleArticle,
   abJchessArticle,
