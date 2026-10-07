@@ -43,3 +43,15 @@ test('the endgame section covers every category in the corpus', () => {
     'a corpus category was added or removed; update PRACTICE_SECTIONS and the seeder SETS together',
   );
 });
+
+test('every card subtitle is a short line, not a sentence', () => {
+  // The shelf is title plus one line in lichess's manner ("Pin it to win it").
+  // A blurb that grows into a description wraps beside the icon at desktop
+  // width; the long form belongs to the study page.
+  for (const section of PRACTICE_SECTIONS) {
+    for (const card of section.cards) {
+      assert.ok(card.blurb.length <= 32, `${card.slug}: "${card.blurb}" is over 32 characters`);
+      assert.ok(!/[.;:]$/.test(card.blurb), `${card.slug}: a subtitle is not a sentence`);
+    }
+  }
+});

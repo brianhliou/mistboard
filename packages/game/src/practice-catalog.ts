@@ -18,9 +18,14 @@ import { XIANGQI_ENDGAME_PRACTICE_SLUG } from './xiangqi-endgame-practice.js';
 export interface PracticeCard {
   /** Matches `studies.slug`. */
   slug: string;
-  /** Card title. Falls back to the study's own name if a slug does not resolve. */
+  /** Card title, the fallback when the study has no name of its own; the card
+   *  normally shows the study's name, which is what the page it opens is called. */
   title: string;
-  /** One line under the title, in the manner of lichess's "Pin it to win it". */
+  /** The subtitle under the title, in lichess's manner ("It moves in straight
+   *  lines", "Pin it to win it"): a few words, never a sentence, short enough to
+   *  stay on one line beside the icon at desktop width. The study's own
+   *  description is the long form and stays on the study page. Localized in the
+   *  web app by slug (practice-index.ts); this is the English. */
   blurb: string;
 }
 
@@ -48,33 +53,33 @@ export const PRACTICE_SECTIONS: readonly PracticeSection[] = [
       // the survey; the piece-family sets after it go deeper on each.
       {
         slug: XIANGQI_ENDGAME_PRACTICE_SLUG,
-        title: 'Wins and draws',
-        blurb: 'The 26 standard results, easiest first',
+        title: 'Endgame wins and draws',
+        blurb: 'Win them, then hold them',
       },
       {
         slug: 'endgames-soldier',
         title: 'Soldier endgames',
-        blurb: 'What a soldier can finish, and what it cannot',
+        blurb: 'It never moves back',
       },
       {
         slug: 'endgames-chariot',
         title: 'Chariot endgames',
-        blurb: 'The piece that wins on its own',
+        blurb: 'Wins on its own',
       },
       {
         slug: 'endgames-horse',
         title: 'Horse endgames',
-        blurb: 'Slow, and blockable',
+        blurb: 'Mind the blocked leg',
       },
       {
         slug: 'endgames-cannon',
         title: 'Cannon endgames',
-        blurb: 'A cannon needs something to fire over',
+        blurb: 'Needs a screen',
       },
       {
         slug: 'endgames-insufficient',
         title: 'Not enough to win',
-        blurb: 'Material that cannot force mate',
+        blurb: 'Hold the draw',
       },
     ],
   },

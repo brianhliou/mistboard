@@ -481,7 +481,14 @@ export const EN_REVIEW = {
   'practice.position.badGoal': 'This link does not say whether to play for mate or hold the draw.',
   'practice.position.badSide': 'This link does not say which side you play.',
   'practice.position.toEditor': 'Set up a position in the board editor',
-  'practice.endgamesLink': 'Which endgames win and which draw',
+  'practice.ribbon.done': 'Done',
+  'practice.ribbon.play': 'Play!',
+  'practice.card.winsAndDraws': 'Win them, then hold them',
+  'practice.card.soldier': 'It never moves back',
+  'practice.card.chariot': 'Wins on its own',
+  'practice.card.horse': 'Mind the blocked leg',
+  'practice.card.cannon': 'Needs a screen',
+  'practice.card.insufficient': 'Hold the draw',
   // The practice PLAYER: the panel around the exercise board. Split from the
   // /practice shelf keys above because they are different surfaces, but they ride
   // the same domain since a practice chapter is opened inside the study shell.

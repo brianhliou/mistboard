@@ -14,8 +14,9 @@
  *
  * Anatomy (lichess /learn and /practice share it): a sticky left card with an
  * emblem, a title and a progress bar; then letterspaced section headings over a
- * grid of wide tiles, each an illustration beside a title and one line, with a
- * folded corner ribbon carrying state.
+ * grid of compact cards, each a square icon tile beside a title and one short
+ * line, with a folded corner ribbon carrying state. The cards are built by
+ * tile-map.ts, the one builder both pages call.
  */
 
 /* ── Map screen ─────────────────────────────────────────────────────────── */
@@ -118,21 +119,38 @@
   margin-top: 0;
 }
 
+/* Below 400px of main column the grid would push a card off the right edge;
+   `min(…, 100%)` lets one column take the full width instead. */
 .learn-xq-tile-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(min(380px, 100%), 1fr));
+  gap: 14px;
 }
 
-/* Neutral base; the state modifiers below paint the lichess-style tint gradient
-   (green = done, blue = ongoing, violet = locked). */
+/* State hues for the icon tile. Done is a leaf green, kept apart from the site
+   accent so a finished card and the card being worked on never read as the same
+   state; ongoing is the accent itself, the colour of the ring around it. */
+.learn-xq {
+  --learn-xq-tile-done: hsl(88, 40%, 44%);
+  --learn-xq-tile-ongoing: var(--site-accent);
+  --learn-xq-tile-future: hsl(274, 38%, 60%);
+  --learn-xq-tile-link: var(--site-accent);
+}
+
+:root[data-effective-theme="dark"] .learn-xq {
+  --learn-xq-tile-done: hsl(88, 34%, 40%);
+  --learn-xq-tile-future: hsl(274, 30%, 52%);
+}
+
+/* A neutral card; the state lives in the icon tile, the ribbon and (ongoing
+   only) the ring. Compact: one title line and one subtitle line. */
 .learn-xq-tile {
+  --learn-xq-icon: var(--learn-xq-tile-future);
   position: relative;
   display: flex;
   align-items: center;
-  gap: 0;
-  padding: 10px 48px 10px 0;
-  min-height: 90px;
+  min-height: 80px;
+  padding: 10px 60px 10px 0;
   border-radius: var(--site-radius);
   border: 1px solid var(--site-border-soft);
   background: var(--site-panel);
@@ -145,21 +163,39 @@
   isolation: isolate;
 }
 
-.learn-xq-tile > :not(.learn-xq-ribbon-wrap) {
+.learn-xq-tile--done {
+  --learn-xq-icon: var(--learn-xq-tile-done);
+}
+
+.learn-xq-tile--ongoing {
+  --learn-xq-icon: var(--learn-xq-tile-ongoing);
+}
+
+.learn-xq-tile--link {
+  --learn-xq-icon: var(--learn-xq-tile-link);
+}
+
+.learn-xq-tile:hover,
+.learn-xq-tile:focus-visible {
+  transform: scale(1.02);
+}
+
+.learn-xq-tile-illus,
+.learn-xq-tile-text {
   position: relative;
   z-index: 1;
 }
 
-.learn-xq-tile:hover {
-  transform: scale(1.02);
+.learn-xq-tile-text {
+  min-width: 0;
 }
 
 .learn-xq-tile-text h3 {
   margin: 0;
   font-family: "Roboto", "Noto Sans", sans-serif;
-  font-size: 1.6rem;
+  font-size: 1.35rem;
   font-weight: 400;
-  line-height: 1;
+  line-height: 1.1;
   color: var(--site-heading);
 }
 
@@ -170,82 +206,104 @@
   line-height: 1.2;
 }
 
+/* The square icon tile, tinted by state (lichess's gradient tile). */
 .learn-xq-tile-illus {
   display: grid;
-  flex: 0 0 102px;
+  flex: 0 0 auto;
   place-items: center;
-  opacity: 0.68;
+  width: 60px;
+  height: 60px;
+  margin: 0 16px;
+  border-radius: var(--site-radius-sm);
+  border: 1px solid color-mix(in srgb, var(--learn-xq-icon) 78%, black);
+  background: linear-gradient(
+    130deg,
+    var(--learn-xq-icon),
+    color-mix(in srgb, var(--learn-xq-icon) 72%, black)
+  );
+}
+
+.learn-xq-tile--future .learn-xq-tile-illus {
+  opacity: 0.8;
 }
 
 .learn-xq-tile-illus :is(svg) {
-  width: 70px;
-  height: 70px;
+  width: 46px;
+  height: 46px;
 }
 
 .learn-xq-tile-glyph {
-  font-size: 40px;
+  color: #fff;
+  font-size: 30px;
   line-height: 1;
 }
 
-/* Done: green (pine accent) tint rising from the bottom edge. The what-next
-   funnel tiles share this treatment (lichess renders them as completed). */
-.learn-xq-tile--done,
-.learn-xq-tile--link {
-  border-color: color-mix(in srgb, var(--site-accent) 65%, var(--site-border-soft));
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--site-accent) 40%, var(--site-panel)),
-    color-mix(in srgb, var(--site-accent) 20%, var(--site-panel)) 100px
-  );
-}
-
-.learn-xq-tile--done .learn-xq-tile-illus {
-  color: var(--site-accent);
-  opacity: 0.82;
-}
-
-/* Ongoing: blue tint + Lichess's traveling perimeter highlight. */
-.learn-xq-tile--ongoing {
-  border-color: color-mix(in srgb, var(--site-link) 65%, var(--site-border-soft));
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--site-link) 40%, var(--site-panel)),
-    color-mix(in srgb, var(--site-link) 20%, var(--site-panel)) 100px
-  );
-}
-
-.learn-xq-tile--ongoing::after {
-  --learn-xq-border-angle: 0turn;
+/* The accent ring around an ongoing card: a steady 2px border, with one pass of
+   lichess's travelling highlight on top when the card is drawn, hovered or
+   focused. The highlight runs once per trigger and then rests at opacity 0. */
+.learn-xq-tile-ring {
   position: absolute;
   inset: -1px;
   z-index: 2;
-  border: 3px solid transparent;
+  border: 2px solid var(--site-accent);
   border-radius: var(--site-radius);
+  pointer-events: none;
+}
+
+.learn-xq-tile-ring::after {
+  --learn-xq-border-angle: 0turn;
+  position: absolute;
+  inset: -2px;
+  border: 3px solid transparent;
+  border-radius: inherit;
   background: conic-gradient(
       from var(--learn-xq-border-angle),
       transparent 25%,
-      color-mix(in srgb, var(--site-link) 72%, #12283c),
-      color-mix(in srgb, var(--site-link) 20%, transparent)
+      color-mix(in srgb, var(--site-accent) 40%, white),
+      color-mix(in srgb, var(--site-accent) 25%, transparent)
     )
     border-box;
   content: "";
-  pointer-events: none;
-  animation: learn-xq-border-spin 3.5s linear infinite;
+  opacity: 0;
   mask:
     linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
   mask-composite: exclude;
 }
 
-/* Future: locked, violet and visually quieter than the actionable stage. */
-.learn-xq-tile--future {
-  --learn-xq-future: hsl(274, 65%, 70%);
-  border-color: color-mix(in srgb, var(--learn-xq-future) 65%, var(--site-border-soft));
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--learn-xq-future) 40%, var(--site-panel)),
-    color-mix(in srgb, var(--learn-xq-future) 20%, var(--site-panel)) 100px
-  );
+/* The progress line along the bottom edge, filled to the solved share. */
+.learn-xq-tile-line {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 0 0 var(--site-radius) var(--site-radius);
+  background: color-mix(in srgb, var(--site-accent) 14%, transparent);
+  pointer-events: none;
+}
+
+.learn-xq-tile-line-fill {
+  display: block;
+  height: 100%;
+  background: var(--site-accent);
+  transform-origin: left center;
+}
+
+.learn-xq-tile--intro .learn-xq-tile-ring {
+  animation: learn-xq-ring-in 600ms ease-out both;
+}
+
+.learn-xq-tile--intro .learn-xq-tile-ring::after,
+.learn-xq-tile--replay .learn-xq-tile-ring::after {
+  animation: learn-xq-ring-sweep 1400ms ease-in-out both;
+}
+
+.learn-xq-tile--intro .learn-xq-tile-line-fill,
+.learn-xq-tile--replay .learn-xq-tile-line-fill {
+  animation: learn-xq-line-draw 900ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
 @property --learn-xq-border-angle {
@@ -254,14 +312,35 @@
   initial-value: 0turn;
 }
 
-@keyframes learn-xq-border-spin {
-  to {
+@keyframes learn-xq-ring-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes learn-xq-ring-sweep {
+  0% {
+    --learn-xq-border-angle: 0turn;
+    opacity: 0;
+  }
+  15%,
+  75% {
+    opacity: 1;
+  }
+  100% {
     --learn-xq-border-angle: 1turn;
+    opacity: 0;
+  }
+}
+
+@keyframes learn-xq-line-draw {
+  from {
+    transform: scaleX(0);
   }
 }
 
 /* Folded corner ribbon (lichess anatomy): a 45deg band clipped to a triangle in
-   the top-right corner, carrying stars (done) or progress text (ongoing). */
+   the top-right corner, carrying "Done" or stars, "N / M", or "Play!". */
 .learn-xq-ribbon-wrap {
   position: absolute;
   top: -4px;
@@ -319,6 +398,10 @@
   background: #bddffa;
 }
 
+.learn-xq-ribbon--future {
+  background: #ddd3ee;
+}
+
 .learn-xq-ribbon .learn-xq-star {
   font-size: 0.92rem;
 }
@@ -332,6 +415,80 @@
   font-size: 1.15rem;
   line-height: 1;
   transform: rotate(-45deg);
+}
+
+/* Responsive rules for the shell live here with it, not in one consumer's
+   stylesheet: /practice imports only this file, and while they lived in
+   learn-xiangqi.css its rail stayed a 220px column at phone width. */
+@media (max-width: 980px) {
+  .learn-xq--map {
+    grid-template-columns: 1fr;
+  }
+
+  .learn-xq-side-card {
+    position: static;
+  }
+}
+
+@media (max-width: 560px) {
+  .learn-xq-tile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .learn-xq-tile {
+    min-height: 68px;
+    padding: 6px 44px 6px 0;
+  }
+
+  .learn-xq-tile-illus {
+    width: 48px;
+    height: 48px;
+    margin: 4px 12px;
+  }
+
+  .learn-xq-tile-illus :is(svg) {
+    width: 38px;
+    height: 38px;
+  }
+
+  .learn-xq-tile-glyph {
+    font-size: 24px;
+  }
+
+  .learn-xq-tile-text h3 {
+    font-size: 1.25rem;
+  }
+
+  .learn-xq-tile-text p {
+    margin-top: 2px;
+    font-size: 0.9rem;
+  }
+
+  .learn-xq-ribbon-wrap {
+    top: -14px;
+    right: -13px;
+    scale: 0.75;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .learn-xq-tile {
+    transition: none;
+  }
+
+  .learn-xq-tile:hover,
+  .learn-xq-tile:focus-visible {
+    transform: none;
+  }
+
+  /* Same specificity as the rules that start them, and later in the file. */
+  .learn-xq-tile--intro .learn-xq-tile-ring,
+  .learn-xq-tile--intro .learn-xq-tile-ring::after,
+  .learn-xq-tile--replay .learn-xq-tile-ring::after,
+  .learn-xq-tile--intro .learn-xq-tile-line-fill,
+  .learn-xq-tile--replay .learn-xq-tile-line-fill {
+    animation: none;
+  }
 }
 
 .learn-xq-what-next-copy {
