@@ -508,6 +508,10 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     ),
     linkLine(t('source.katago', {}, locale), 'https://github.com/lightvector/KataGo'),
     linkLine(t('source.dandelion', {}, locale), 'https://github.com/lxsgx23/Dandelion-Chess'),
+    // Pikafish runs the top xiangqi bot and all xiangqi analysis; credited with
+    // its home page and the NNUE weights license (no commercial use without
+    // permission), in the reader's language where pikafish.com has one.
+    pikafishCreditLine(locale),
   ]);
 
   const identity = sourceBlock(t('source.projectIdentity', {}, locale), [
@@ -765,6 +769,31 @@ function textLine(value: string): HTMLSpanElement {
   const span = document.createElement('span');
   span.textContent = value;
   return span;
+}
+
+export const PIKAFISH_REPO_URL = 'https://github.com/official-pikafish/Pikafish';
+export const PIKAFISH_SITE_URL = 'https://pikafish.com/';
+const PIKAFISH_WEIGHTS_LICENSE_URLS: Record<Locale, string> = {
+  en: 'https://www.pikafish.com/en/list.html',
+  'zh-Hans': 'https://www.pikafish.com/list.html',
+  'zh-Hant': 'https://www.pikafish.com/zh-hant/list.html',
+};
+
+export function pikafishWeightsLicenseUrl(locale: Locale): string {
+  return PIKAFISH_WEIGHTS_LICENSE_URLS[locale];
+}
+
+function pikafishCreditLine(locale: Locale): HTMLSpanElement {
+  const line = document.createElement('span');
+  line.className = 'source-credit-pikafish';
+  line.append(
+    linkLine(t('source.pikafish', {}, locale), PIKAFISH_REPO_URL),
+    ' ',
+    linkLine(t('source.pikafishSite', {}, locale), PIKAFISH_SITE_URL),
+    ' · ',
+    linkLine(t('source.pikafishWeightsLicense', {}, locale), pikafishWeightsLicenseUrl(locale)),
+  );
+  return line;
 }
 
 function linkLine(label: string, href: string): HTMLAnchorElement {
