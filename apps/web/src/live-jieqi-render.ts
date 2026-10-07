@@ -12,6 +12,7 @@ import {
   boardLastMoveMarkersSvg,
   boardLastMoveStyleAttr,
 } from './board-lastmove.js';
+import { type LuckMarkSpec, svgBoardLuckMark } from './board-luck-mark.js';
 import { boardCornerRadius, tokenPieceSize } from './board-metrics.js';
 import { readDisplayPreferences } from './display-preferences.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
@@ -127,9 +128,11 @@ export interface JieqiBoardArrow extends SvgBoardArrowStyle {
 
 export interface JieqiBoardMarker extends SvgBoardMarkerStyle {
   square: JieqiSquare;
-  kind: 'circle' | 'glyph';
+  kind: 'circle' | 'glyph' | 'luck';
   /** Badge label for kind 'glyph' (e.g. '??'). Ignored by 'circle'. */
   text?: string;
+  /** The reveal's luck for kind 'luck' (board-luck-mark.ts). */
+  luck?: LuckMarkSpec;
 }
 
 function jieqiCoordOf(square: JieqiSquare): { file: number; rank: number } {
@@ -231,6 +234,18 @@ export function jieqiArrowSvg(arrow: JieqiBoardArrow, perspective: JieqiColor): 
 export function jieqiMarkerSvg(marker: JieqiBoardMarker, perspective: JieqiColor): string {
   const { file, rank } = jieqiCoordOf(marker.square);
   const center = intersection(file, rank, perspective);
+  if (marker.kind === 'luck') {
+    if (!marker.luck) return '';
+    // The board's own rectangle, without the coordinate gutter: the die clamps inside it,
+    // which matters on the square grid, where the board ends half a cell past the edge point.
+    const board = xiangqiBoardViewBox(activeLayout, JIEQI_GEO_NO_COORDS);
+    return svgBoardLuckMark(marker.luck, center, { piece: PIECE_SIZE, cell: CELL }, marker.square, {
+      minX: board.minX,
+      minY: board.minY,
+      maxX: board.minX + board.width,
+      maxY: board.minY + board.height,
+    });
+  }
   if (marker.kind === 'glyph') {
     return svgBoardGlyphMarker(
       marker,

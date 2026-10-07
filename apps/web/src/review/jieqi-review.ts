@@ -9,13 +9,14 @@ import {
   type JieqiDeal,
   type JieqiGameState,
   type JieqiMove,
+  type JieqiPieceRole,
   type JieqiPlayerView,
   jieqiStateToPikafishFen,
   pikafishUciToJieqiMove,
 } from '@mistboard/game';
 import { createJieqiInteractiveBoard } from '../jieqi-board.js';
 import type { JieqiBoardArrow, JieqiBoardMarker } from '../live-jieqi-render.js';
-import { JIEQI_GEO } from '../live-jieqi-render.js';
+import { JIEQI_GEO, jieqiPieceGhostSvg } from '../live-jieqi-render.js';
 import { xiangqiAppearanceChangedEvent } from '../theme.js';
 import { xiangqiBoardAspect } from '../xiangqi-board-aspect.js';
 import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
@@ -25,7 +26,9 @@ import {
   engineArrowsFromLinesWithParser,
 } from './engine/engine-arrows.js';
 import type { NodeShape, VariantTreeAdapter } from './game-tree.js';
+import { jieqiRevealOdds } from './jieqi-luck-mark.js';
 import { makeJieqiTreeAdapter } from './jieqi-tree-adapter.js';
+import { attachLuckMarkCard, type LuckCardDetail } from './luck-mark-card.js';
 import { formatJieqiBestMove } from './move-advice.js';
 import {
   mountTreeReview,
@@ -52,6 +55,10 @@ function makeJieqiPresentation(
   JieqiBoardArrow,
   unknown
 > {
+  // The mark drawn now, for the hover card; the card itself checks the mark is on the board.
+  let luckDetail: LuckCardDetail | null = null;
+  const pieceArt = (role: JieqiPieceRole, color: JieqiColor): string =>
+    jieqiPieceGhostSvg({ color, role, faceDown: false });
   return {
     adapter,
     engine: {
@@ -87,7 +94,12 @@ function makeJieqiPresentation(
     perspective: (flipped) => (flipped ? 'black' : 'red'),
     // Review plays BOTH sides: the interactive seat is the side to move.
     seatFor: (view) => (view.status.type === 'playing' ? view.status.turn : null),
-    createBoard: (opts) => createJieqiInteractiveBoard(opts),
+    createBoard: (opts) => {
+      const board = createJieqiInteractiveBoard(opts);
+      const detachCard = attachLuckMarkCard(opts.board, () => luckDetail, pieceArt);
+      opts.signal?.addEventListener('abort', detachCard, { once: true });
+      return board;
+    },
     // No glide animation wired for jieqi yet; the board re-renders on nav.
     animateMove: () => {},
     shapeToArrow: (s: NodeShape): JieqiBoardArrow => ({
@@ -104,6 +116,18 @@ function makeJieqiPresentation(
       text: glyph.text,
       className: `xq-marker--${glyph.tone}`,
     }),
+    // The reveal's luck as a die on the square the revealed piece landed on.
+    moveLuckMarker: (move, info): JieqiBoardMarker | null => {
+      const mover = info.before.board[move.from]?.color;
+      if (!mover) return null;
+      luckDetail = {
+        square: move.to,
+        color: mover,
+        luck: info.luck,
+        odds: jieqiRevealOdds(info.before, move),
+      };
+      return { square: move.to, kind: 'luck', luck: { luck: info.luck } };
+    },
   };
 }
 

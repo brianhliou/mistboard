@@ -148,6 +148,9 @@ export interface TreeBoardFactoryOptions<Move, View, Color> {
   enabled: () => boolean;
   onMove: (move: Move, view: View) => void;
   onDrawShape?: (orig: string, dest: string | null, opts: { alt: boolean }) => void;
+  /** Aborted when the review unmounts: the factory tears down anything it attached
+   *  outside the board host (a hover card on document.body, page-wide listeners). */
+  signal?: AbortSignal;
 }
 
 /** The injected, variant-specific presentation bundle. Arrow/Marker are OPAQUE to
@@ -287,6 +290,11 @@ export interface TreePresentation<Move, Truth, View, Color, Arrow, Marker> {
    *  Return null when the move has no drawable destination; OMIT the hook
    *  entirely for variants that show no on-board glyphs. */
   moveGlyphMarker?(move: Move, glyph: { text: string; tone: MoveGlyphTone }): Marker | null;
+  /** On-board mark for a chance move's LUCK (a jieqi reveal): the move list's luck badge
+   *  pinned to the board. `before` is the truth the move was played from (the draw odds live
+   *  there). Called only for mainline moves the decision layer scored. Omit the hook, or
+   *  return null, to draw nothing. */
+  moveLuckMarker?(move: Move, info: { luck: number; before: Truth }): Marker | null;
   /** Game-phase segmentation over the mainline truths (index 0 = start position):
    *  drives the advantage chart's Opening/Middlegame/Endgame dividers and the
    *  summary's per-phase accuracy. Omit for variants without a phase heuristic —
@@ -816,6 +824,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   }
   const interactive = presentation.createBoard({
     board: boardEl,
+    signal: mountAbort.signal,
     getInteractionView: () => viewForKey(currentPov),
     getPerspective: orientation,
     // A read-only board offers no seat, so nothing is draggable in the first
@@ -1009,6 +1018,18 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     return marker ? [marker] : [];
   }
 
+  /** Luck mark for the reveal that LED to the current node (mainline only: the decision
+   *  layer scores the game as played, so a variation's reveal has no luck number). */
+  function luckMarkers(): Marker[] {
+    const build = presentation.moveLuckMarker;
+    const node = currentNode();
+    if (!build || !node.move || !node.parent) return [];
+    const luck = analysisMarkByPly.get(node.ply)?.luck;
+    if (luck === undefined || mainlineNodes()[node.ply] !== node) return [];
+    const marker = build(node.move, { luck, before: node.parent.truth });
+    return marker ? [marker] : [];
+  }
+
   /** Retro mode: the mistake that was played, drawn as a red arrow on the
    *  position it was played from (lichess showBadNode, paleRed). */
   function retroArrows(): Arrow[] {
@@ -1036,8 +1057,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     interactive.setArrows([...engineArrows(), ...retroArrows(), ...userArrows, ...hover]);
     // Glyph first so a user's own circle on the same point draws over it: the
     // annotation they just made should not be hidden by a derived badge.
+    // Luck under the glyph: when a reveal carries both, the verdict badge stays on top.
     interactive.setMarkers([
       ...engineMarkers(),
+      ...luckMarkers(),
       ...glyphMarkers(),
       ...shapes.filter((s) => s.kind === 'circle').map(presentation.shapeToMarker),
     ]);
