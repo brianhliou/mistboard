@@ -120,11 +120,19 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+/* Same teal/violet as the board die (board-luck-mark.css), so luck never reads as the red of a
+   blunder mark: step 5 on the light panel, step 2 on the dark one. */
 .review-move-list__luck--lucky {
-  color: #1e8449;
+  color: #016f53;
 }
 .review-move-list__luck--unlucky {
-  color: #e5222c;
+  color: #692db6;
+}
+:root[data-effective-theme="dark"] .review-move-list__luck--lucky {
+  color: #8cd6ba;
+}
+:root[data-effective-theme="dark"] .review-move-list__luck--unlucky {
+  color: #c4b2ee;
 }
 .review-move-list__luck--even {
   color: var(--site-muted);
