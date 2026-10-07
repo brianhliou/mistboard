@@ -43,6 +43,35 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-10-06',
+    kind: 'release',
+    headline: "Master games now show the engine's advantage chart.",
+    body: "Game chapters in Mistboard's own xiangqi studies now open with the advantage chart, the move marks and accuracy, as in a game review. Chapters set up from a position, such as compositions, have no chart. On the player pages, a board whose game is in the broadcast archive has the chart under it: click it to jump to any move, or hide it from the board menu.",
+    // Every board on the Cao Yanlei page is a broadcast game, so every one
+    // draws the chart; the other player pages have a mix.
+    href: '/blog/cao-yanlei',
+    cta: 'See the Cao Yanlei page',
+  },
+  {
+    date: '2026-10-06',
+    kind: 'article',
+    headline: 'A player page for Tony Fung.',
+    body: "Hong Kong's 2022 world championship finalist, who scored nine points from ten in this year's qualifier for China's top league. The page follows his last fourteen months and his run to the 2022 final in Kuching, with five of his games on the board, in English and Chinese. All 47 of his games are in a study with the engine's judgments and lines.",
+    href: '/blog/tony-fung-ga-zen',
+    cta: 'Read the article',
+  },
+  {
+    date: '2026-10-06',
+    kind: 'release',
+    headline: 'Play jieqi by correspondence, one move a day.',
+    body: 'The homepage has a new Jieqi by correspondence button. You get a day for each move, and if you are away, we email you when it is your move. It needs an account, and a guest who signs up from the button needs no second click: you join the oldest open game, or yours is posted for the next player who presses it.',
+    // The correspondence page with its start form set to jieqi, one day a
+    // move. Not /?corr=jieqi: that runs the quick pair on arrival and counts
+    // as a guest's return from sign-up in the card's analytics.
+    href: '/correspondence?gameSpecId=jieqi&days=1',
+    cta: 'Play by correspondence',
+  },
+  {
     date: '2026-10-03',
     kind: 'release',
     headline: 'KataGo is the new top Jungle Chess bot.',
