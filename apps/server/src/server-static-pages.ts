@@ -170,6 +170,28 @@ const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     description:
       'Work with Mistboard: titled players and coaches, creators and streamers, event organizers and clubs, writers and composers, and engine authors.',
   },
+  // The engine-seat scoreboard, moved from brianhliou.com/challenges/ (and its
+  // zh copies) on 2026-10-07; locale-prefixed like /bots.
+  '/challenges': {
+    title: 'Engine Challenges | Mistboard',
+    description:
+      'Beat a Mistboard bot in a fixed, public match and your engine takes its seat: jieqi, banqi, Jungle Chess and Flip Jungle, with the match rules and every result.',
+    localeGroup: '/challenges',
+  },
+  '/zh-hans/challenges': {
+    title: '引擎挑战 | Mistboard',
+    description:
+      '在固定、公开的对抗赛中击败 Mistboard 的机器人，你的引擎就接替它的席位：揭棋、暗棋、斗兽棋和翻翻棋，附对抗赛规则和每一个结果。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/challenges',
+  },
+  '/zh-hant/challenges': {
+    title: '引擎挑戰 | Mistboard',
+    description:
+      '在固定、公開的對抗賽中擊敗 Mistboard 的機器人，你的引擎就接替它的席位：揭棋、暗棋、鬥獸棋和翻翻棋，附對抗賽規則和每一個結果。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/challenges',
+  },
   '/changelog': {
     title: 'Changelog | Mistboard',
     description:
@@ -910,6 +932,9 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/patron',
   '/contribute',
   '/creators',
+  '/challenges',
+  '/zh-hans/challenges',
+  '/zh-hant/challenges',
   '/changelog',
   '/developers',
   '/api-docs',

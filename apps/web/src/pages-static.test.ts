@@ -85,6 +85,7 @@ describe('about page platform activity', () => {
       'Source code',
       'Contribute',
       'Work with us',
+      'Engine challenges',
       'Developers',
       'Game data',
       'API',

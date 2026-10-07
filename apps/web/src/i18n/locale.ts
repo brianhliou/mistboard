@@ -232,7 +232,9 @@ function isContentPath(pathname: string): boolean {
     pathname === '/learn/xiangqi' ||
     // 象棋人机对战: the bot directory has Chinese URLs, so a link or the
     // language switcher on it lands a Chinese reader on /zh-hans/bots.
-    pathname === '/bots'
+    pathname === '/bots' ||
+    // The engine-seat scoreboard, moved from brianhliou.com with its zh pages.
+    pathname === '/challenges'
   );
 }
 

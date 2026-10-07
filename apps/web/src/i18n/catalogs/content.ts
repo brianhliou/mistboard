@@ -281,6 +281,7 @@ export const EN_CONTENT = {
   'contribute.supportSuffix': '. Every bit helps, and it is never required to play.',
   'contribute.crossLinkPrefix': 'Have an audience, an event or an engine? See ',
   'contribute.crossLinkSuffix': '.',
+  'contribute.crossLinkOr': ' or ',
   'creators.heading': 'Work with us',
   'creators.intro':
     'Mistboard is a free, open-source site for Chinese chess and original strategy games, in English and Chinese, with no ads. We work with players, creators and organizers who want to bring the game to more people.',
@@ -319,6 +320,10 @@ export const EN_CONTENT = {
   'creators.enginesHeading': 'Engine authors',
   'creators.enginesBody':
     'We serve strong engines as bots on the site, credited by name, and rate them against our bot ladder.',
+  'creators.enginesChallengesPrefix':
+    ' An engine that beats a current bot in a public match takes its seat: see the ',
+  'creators.enginesChallengesLink': 'engine challenges',
+  'creators.enginesChallengesSuffix': '.',
   'creators.contactHeading': 'Contact',
   'creators.contactPrefix': 'Use the ',
   'creators.contactLink': 'contact form',
@@ -327,6 +332,60 @@ export const EN_CONTENT = {
   'creators.crossLinkPrefix':
     'Want to help in other ways, like reporting bugs, translating or writing code? See ',
   'creators.crossLinkSuffix': '.',
+  'challenges.heading': 'Engine challenges',
+  'challenges.introPrefix':
+    'Each game below has a bot, and any engine can take its seat. The test is fixed and every result is public: an engine that beats the current bot becomes the bot on the site, credited by name on its bot page and in the ',
+  'challenges.introChangelogLink': 'changelog',
+  'challenges.introSuffix': '.',
+  'challenges.seatsHeading': 'The seats',
+  'challenges.colGame': 'Game',
+  'challenges.colBot': 'Current bot',
+  'challenges.colWins': 'What wins the seat',
+  'challenges.gameJieqi': 'Jieqi',
+  'challenges.gameBanqi': 'Banqi',
+  'challenges.gameJungle': 'Jungle Chess',
+  'challenges.gameJungleFlip': 'Flip Jungle',
+  'challenges.jieqiBot':
+    ', a Pikafish fork with its own neural network, at 4 s a move on 4 threads.',
+  'challenges.jieqiWins': 'Beat AB-JChess at 4 s a move, 4 threads each.',
+  'challenges.banqiBot': ', our own engine, at 3.5M nodes a move.',
+  'challenges.banqiWins': 'Beat it at the same node budget.',
+  'challenges.jungleBot': ', a self-play neural network, at 150 visits a move. ',
+  'challenges.jungleBotBelow': ', at 5M nodes a move, is the easier bot below it.',
+  'challenges.jungleWins': 'Beat KataGo at 150 visits a move.',
+  'challenges.jungleFlipBot': ', our own engine, at 2.5M nodes a move.',
+  'challenges.jungleFlipWins': 'Beat it at the same node budget.',
+  'challenges.rulesHeading': 'How a match is run',
+  'challenges.ruleMatch':
+    '200 games against the current bot, 100 as each color, with the same time or node budget per move for both engines, on one machine, with the seed published. A match may be extended past 200 games.',
+  'challenges.ruleScore': 'A score of 0.55 or better (about +35 Elo) takes the seat.',
+  'challenges.ruleRun':
+    'We run the match within two weeks of a submission and post the result either way.',
+  'challenges.ruleSubmitPrefix':
+    'To submit, send a Linux x86-64 binary or a weights file, the exact command line and your own match log, as an ',
+  'challenges.ruleSubmitIssueLink': 'issue on GitHub',
+  'challenges.ruleSubmitMiddle': ' or through the ',
+  'challenges.ruleSubmitContactLink': 'contact form',
+  'challenges.ruleSubmitSuffix': '.',
+  'challenges.resultsHeading': 'Results',
+  'challenges.resultJieqi':
+    '2026-09-30, jieqi: AB-JChess, by Huorongrong and Laoxu (Kouza), beat Pikafish Level 8 248-136-16 over 400 games, a 0.64 score',
+  'challenges.resultJungle':
+    '2026-09-22, Jungle Chess: KataGo-AnimalChess, by hzyhhzy with a network from Kouza, beat MistyJungle 82-0 with 118 draws over 200 games at 1,000 visits a move',
+  'challenges.writeUpLink': 'write-up',
+  'challenges.gamesLink': 'games',
+  'challenges.linkSeparator': ', ',
+  'challenges.parenOpen': ' (',
+  'challenges.parenClose': ').',
+  'challenges.triedHeading': 'What has been tried',
+  'challenges.leadSeparator': '. ',
+  'challenges.triedJieqi':
+    "Before AB-JChess, ten nets trained on Pikafish's own jieqi evaluations; the best scored 0.4 against it over 200 games",
+  'challenges.triedJieqiLink': 'notes',
+  'challenges.triedBanqi':
+    'MistyBanqi has not yet played the academic Chinese dark chess programs (CLAP_CDC, DarkKnight).',
+  'challenges.triedJungle':
+    'MistyJungle beat the strongest classical engine we could run by about 16 Elo in June, then lost its seat to KataGo in September.',
   'thanks.heading': 'Thank you',
   'thanks.intro':
     'Mistboard stands on open-source work by many people and projects, and on everyone who plays, reports bugs, and helps it get better.',

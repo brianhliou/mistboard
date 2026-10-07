@@ -952,6 +952,49 @@ test('the videos library serves all three locales, each distinct and cross-linke
   assert.match(seen.get('/videos')!.body, /<html lang="en">/);
 });
 
+// Moved from brianhliou.com/challenges/ with its zh copies (2026-10-07), so
+// each language needs a URL of its own for the old pages to redirect to.
+test('the engine challenges page serves all three locales, each distinct and cross-linked', async () => {
+  const staticDir = await staticDirWithPreloadManifest();
+  const titles = new Set<string>();
+  for (const route of ['/challenges', '/zh-hans/challenges', '/zh-hant/challenges']) {
+    assert.ok(isClientRoute(route), `${route} would 404 on a direct hit in production`);
+    assert.ok(SITEMAP_STATIC_ROUTES.includes(route), `${route} is not advertised in the sitemap`);
+    const response = captureResponse();
+    const served = await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname: route,
+      publicHost: 'https://mistboard.com',
+    });
+    assert.equal(served, true, `${route} fell through to the plain shell`);
+    const title = response.body.match(/<title>([^<]*)<\/title>/)?.[1] ?? '';
+    assert.ok(title && title !== 'Mistboard', `${route} serves the default title`);
+    titles.add(title);
+    for (const [lang, href] of [
+      ['en', 'https://mistboard.com/challenges'],
+      ['zh-Hans', 'https://mistboard.com/zh-hans/challenges'],
+      ['zh-Hant', 'https://mistboard.com/zh-hant/challenges'],
+    ]) {
+      assert.ok(
+        response.body.includes(`<link rel="alternate" hreflang="${lang}" href="${href}">`),
+        `${route} is missing the ${lang} alternate`,
+      );
+    }
+    const lang = route.startsWith('/zh-hans')
+      ? 'zh-Hans'
+      : route.startsWith('/zh-hant')
+        ? 'zh-Hant'
+        : 'en';
+    assert.match(response.body, new RegExp(`<html lang="${lang}">`));
+  }
+  assert.equal(titles.size, 3, 'titles must differ');
+  // /challenge/:id (a correspondence invite) is a different route; the
+  // scoreboard must not swallow it or be swallowed by it.
+  assert.ok(isClientRoute('/challenge/abc123'));
+  assert.ok(!isClientRoute('/challenges/abc123'));
+});
+
 test('the xiangqi course serves all three locales, each distinct and cross-linked', async () => {
   // Before 2026-09-22 only /learn/xiangqi was routable: the zh course existed
   // in the bundle (learn-copy-zh.ts) and had no URL, so nothing could index
@@ -995,7 +1038,7 @@ test('the xiangqi course serves all three locales, each distinct and cross-linke
 // member names itself, exactly once.
 test('every locale-group SPA route names itself as canonical', async () => {
   const staticDir = await staticDirWithPreloadManifest();
-  const groups = ['/videos', '/bots', '/learn/xiangqi'];
+  const groups = ['/videos', '/bots', '/learn/xiangqi', '/challenges'];
   for (const group of groups) {
     for (const route of [group, `/zh-hans${group}`, `/zh-hant${group}`]) {
       const response = captureResponse();

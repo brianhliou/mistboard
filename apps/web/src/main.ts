@@ -215,6 +215,10 @@ const wantsTerms = path === '/terms' || page === 'terms';
 const wantsPrivacy = path === '/privacy' || page === 'privacy';
 const wantsContribute = path === '/contribute' || page === 'contribute';
 const wantsCreators = path === '/creators' || page === 'creators';
+// Engine challenges: locale-prefixed like /bots, so the zh copies moved from
+// brianhliou.com/zh-hans/challenges/ have URLs of their own.
+const wantsChallenges =
+  path === '/challenges' || path === '/zh-hans/challenges' || path === '/zh-hant/challenges';
 const wantsChangelog =
   path === '/changelog' || /^\/changelog\/\d{4}-\d{2}$/.exec(path) !== null || page === 'changelog';
 const wantsDevelopers = path === '/developers' || page === 'developers';
@@ -964,6 +968,11 @@ if (replaySample) {
   setTitleKey('creators.heading');
   void mountOrReport(() =>
     import('./creators-page.js').then(({ mountCreators }) => mountCreators(appRoot)),
+  );
+} else if (wantsChallenges) {
+  setTitleKey('challenges.heading');
+  void mountOrReport(() =>
+    import('./challenges-page.js').then(({ mountChallenges }) => mountChallenges(appRoot)),
   );
 } else if (wantsChangelog) {
   setTitleKey('changelog.heading');

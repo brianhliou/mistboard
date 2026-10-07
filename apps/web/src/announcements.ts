@@ -235,7 +235,7 @@ const baseAnnouncements: Announcement[] = [
     kind: 'status',
     headline: 'Wanted: a neural network for jieqi.',
     body: "Our jieqi bot is a hand-written classical engine, and a strong player beats it. Pikafish's jieqi branch has the search and a jieqi NNUE architecture but has never had weights to load; we trained ten nets on the classical engine's own evaluations and none beat it. If yours does over a 200-game match, it becomes the bot on this site, with your name on it. Banqi and Jungle are open on the same terms, and there is a best-of-eight against the jieqi bot for players.",
-    href: 'https://brianhliou.com/challenges/',
+    href: '/challenges',
     cta: 'See the open challenges',
   },
   {

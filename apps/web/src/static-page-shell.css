@@ -245,3 +245,50 @@
   font-weight: 600;
   color: var(--site-muted);
 }
+
+/* /challenges: the engine-seat table and its three short lists. The table
+   scrolls inside its wrapper rather than widening the panel on a phone. */
+.challenges-table-wrap {
+  margin: 4px 0 16px;
+  overflow-x: auto;
+}
+
+.challenges-table {
+  width: 100%;
+  min-width: 520px;
+  border-collapse: collapse;
+}
+
+.challenges-table th,
+.challenges-table td {
+  padding: 8px 14px 8px 0;
+  text-align: left;
+  vertical-align: top;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--site-text);
+  border-bottom: 1px solid var(--site-border-soft);
+}
+
+.challenges-table thead th {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--site-muted);
+}
+
+.challenges-table tbody th {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.static-prose .challenges-list {
+  margin: 0 0 14px;
+  padding-left: 20px;
+  color: var(--site-text);
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.static-prose .challenges-list li + li {
+  margin-top: 6px;
+}
