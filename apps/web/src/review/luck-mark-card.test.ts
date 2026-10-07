@@ -70,4 +70,68 @@ describe('luckCardHtml', () => {
     expect(words).toContain('Moderate swing');
     expect(words).not.toContain('could have been');
   });
+
+  const VICTIM: RevealOdds = {
+    role: 'soldier',
+    count: 5,
+    total: 12,
+    pool: [
+      { role: 'soldier', count: 5 },
+      { role: 'cannon', count: 2 },
+      { role: 'chariot', count: 1 },
+    ],
+  };
+
+  it('says a face-down capture is a capture, with the victim’s odds and bag in its colour', () => {
+    const html = luckCardHtml(
+      { square: 'c7', color: 'red', luck: -8, kind: 'capture', odds: null, capture: VICTIM },
+      stubPiece,
+    );
+    const words = text(html);
+    expect(words).toContain('Unlucky capture: Soldier (5 in 12)');
+    expect(words).toContain('Cost Red 8 points of win chance vs. an average capture');
+    expect(words).toContain('It could have been');
+    expect(words).not.toMatch(/reveal|\u2014/i);
+    // The taken piece and its bag are the victim's (Black's), not the capturer's.
+    expect(html).toContain('data-piece="black-soldier"');
+    expect(html).toContain('data-piece="black-chariot"');
+    expect(html).not.toContain('data-piece="red-');
+  });
+
+  it('says a lucky capture without odds when the victim’s deal is unknown', () => {
+    const words = text(
+      luckCardHtml(
+        { square: 'c7', color: 'black', luck: 22, kind: 'capture', odds: null, capture: null },
+        stubPiece,
+      ),
+    );
+    expect(words).toContain('Lucky capture');
+    expect(words).toContain("Raised Black's win chance by 22 points vs. an average capture");
+    expect(words).not.toContain('could have been');
+  });
+
+  it('names both draws of a reveal-and-capture under one luck line', () => {
+    const html = luckCardHtml(
+      {
+        square: 'c7',
+        color: 'red',
+        luck: 12,
+        kind: 'both',
+        odds: { ...ODDS, role: 'chariot' },
+        capture: VICTIM,
+      },
+      stubPiece,
+    );
+    const words = text(html);
+    expect(words).toContain('Lucky reveal and capture');
+    expect(words).toContain('Revealed Chariot (2 in 5)');
+    expect(words).toContain('Captured Soldier (5 in 12)');
+    expect(words).toContain("Raised Red's win chance by 12 points vs. an average outcome");
+    expect(words).toContain('Big swing');
+    // Compact: one luck line, no bags.
+    expect(html.match(/luck-card__swing--/g)).toHaveLength(1);
+    expect(words).not.toContain('could have been');
+    expect(html).toContain('data-piece="red-chariot"');
+    expect(html).toContain('data-piece="black-soldier"');
+  });
 });

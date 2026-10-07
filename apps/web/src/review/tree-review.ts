@@ -290,7 +290,7 @@ export interface TreePresentation<Move, Truth, View, Color, Arrow, Marker> {
    *  Return null when the move has no drawable destination; OMIT the hook
    *  entirely for variants that show no on-board glyphs. */
   moveGlyphMarker?(move: Move, glyph: { text: string; tone: MoveGlyphTone }): Marker | null;
-  /** On-board mark for a chance move's LUCK (a jieqi reveal): the move list's luck badge
+  /** On-board mark for a chance move's LUCK (a jieqi reveal or face-down capture): the badge
    *  pinned to the board. `before` is the truth the move was played from (the draw odds live
    *  there). Called only for mainline moves the decision layer scored. Omit the hook, or
    *  return null, to draw nothing. */

@@ -26,7 +26,7 @@ import {
   engineArrowsFromLinesWithParser,
 } from './engine/engine-arrows.js';
 import type { NodeShape, VariantTreeAdapter } from './game-tree.js';
-import { jieqiRevealOdds } from './jieqi-luck-mark.js';
+import { jieqiChanceOdds } from './jieqi-luck-mark.js';
 import { makeJieqiTreeAdapter } from './jieqi-tree-adapter.js';
 import { attachLuckMarkCard, type LuckCardDetail } from './luck-mark-card.js';
 import { formatJieqiBestMove } from './move-advice.js';
@@ -116,15 +116,20 @@ function makeJieqiPresentation(
       text: glyph.text,
       className: `xq-marker--${glyph.tone}`,
     }),
-    // The reveal's luck as a die on the square the revealed piece landed on.
+    // A chance move's luck as a die on its destination square: where the revealed piece
+    // landed, or where the face-down piece was taken. The card states the odds from the
+    // pool the server averaged over (the mover's own bag, the victim's, or both).
     moveLuckMarker: (move, info): JieqiBoardMarker | null => {
       const mover = info.before.board[move.from]?.color;
       if (!mover) return null;
+      const chance = jieqiChanceOdds(info.before, move);
       luckDetail = {
         square: move.to,
         color: mover,
         luck: info.luck,
-        odds: jieqiRevealOdds(info.before, move),
+        kind: chance?.kind ?? 'reveal',
+        odds: chance?.reveal ?? null,
+        capture: chance?.capture ?? null,
       };
       return { square: move.to, kind: 'luck', luck: { luck: info.luck } };
     },

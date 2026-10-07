@@ -18,6 +18,8 @@ import { VacuousAnalysisError } from './game-analysis-sweep.js';
 import {
   analyzeJieqiDecisions,
   analyzeJieqiPostgame,
+  believedMoverPool,
+  isJieqiChanceMove,
   JIEQI_ANALYSIS_ENGINE_ID,
   JIEQI_DECISIONS_ENGINE_ID,
   JIEQI_LEGACY_DECISIONS_ENGINE_IDS,
@@ -32,6 +34,7 @@ import {
   PIKAFISH_JIEQI_ANALYSIS_PROFILE,
   resolveJieqiAnalysis,
   resolveJieqiDecisions,
+  victimDarkPool,
 } from './jieqi-analysis.js';
 import { buildJieqiPositionCommand } from './jieqi-engine.js';
 import { jieqiMoveToPikafishUci, jieqiStateToPikafishFen } from './jieqi-fen.js';
@@ -1182,4 +1185,49 @@ test('a regrade ignores rows stored by an earlier decomposition algorithm', asyn
   );
   assert.equal(regraded!.engineId, JIEQI_DECISIONS_ENGINE_ID);
   assert.deepEqual(regraded!.decisions, fresh);
+});
+
+// The review's luck card (apps/web/src/review/jieqi-luck-mark.ts) states a chance ply's odds
+// from its own copy of these two pools; the web test "Face-down captures: the victim's pool as
+// the capturer knew it" builds the same states and expects the same counts. Keep both in step.
+function luckCardPoolFixture(revealing: boolean): JieqiGameState {
+  const s = createInitialJieqiState('t', STANDARD_JIEQI_DEAL);
+  assert.deepEqual(
+    [s.board.a10?.role, s.board.b10?.role, s.board.c10?.role],
+    ['chariot', 'horse', 'elephant'],
+  );
+  delete s.board.a10; // Red took Black's a10 chariot face-down: Red saw it.
+  s.captures.push({ owner: 'black', role: 'chariot', revealedAtCapture: false });
+  s.board.b10 = { ...s.board.b10!, faceDown: false }; // Black revealed its b10 horse.
+  delete s.board.b1; // Black took Red's b1 horse after it was revealed.
+  s.captures.push({ owner: 'red', role: 'horse', revealedAtCapture: true });
+  s.board.a1 = { ...s.board.a1!, faceDown: revealing };
+  return s;
+}
+
+test('the luck card’s pools match the server’s: victim on-board dark pool, mover believed pool', () => {
+  const victim = new Map<JieqiPieceRole, number>([
+    ['soldier', 5],
+    ['cannon', 2],
+    ['elephant', 2],
+    ['advisor', 2],
+    ['chariot', 1],
+    ['horse', 1],
+  ]);
+  const mover = new Map<JieqiPieceRole, number>([
+    ['soldier', 5],
+    ['chariot', 2],
+    ['cannon', 2],
+    ['elephant', 2],
+    ['advisor', 2],
+    ['horse', 1],
+  ]);
+  const sorted = (pool: Map<JieqiPieceRole, number>) => new Map([...pool].sort());
+  for (const revealing of [false, true]) {
+    const state = luckCardPoolFixture(revealing);
+    assert.deepEqual(sorted(victimDarkPool(state, 'black')), sorted(victim));
+    if (revealing) assert.deepEqual(sorted(believedMoverPool(state, 'red')), sorted(mover));
+  }
+  // And the ply is a chance ply on both sides of the wire.
+  assert.ok(isJieqiChanceMove(luckCardPoolFixture(false), { from: 'a1', to: 'c10' }));
 });

@@ -745,7 +745,12 @@ async function moverWinAfter(
 // The identities the MOVER believes one of its dark squares may hold (#487): its dark tiles on
 // the board plus its own pieces the opponent captured while still dark, which it never saw. That
 // is the pool gradingFen gives the engine for the mover, so the weights and the positions agree.
-function believedMoverPool(state: JieqiGameState, mover: JieqiColor): Map<JieqiPieceRole, number> {
+// Exported for the test that pins the review's luck card (apps/web jieqi-luck-mark.ts, which
+// mirrors both pools) to the same counts.
+export function believedMoverPool(
+  state: JieqiGameState,
+  mover: JieqiColor,
+): Map<JieqiPieceRole, number> {
   const pool = new Map<JieqiPieceRole, number>();
   for (const piece of Object.values(state.board)) {
     if (piece?.color === mover && piece.faceDown) bumpRole(pool, piece.role);
@@ -760,7 +765,10 @@ function believedMoverPool(state: JieqiGameState, mover: JieqiColor): Map<JieqiP
 // face-down pieces still on the board. Under capturer-only reveal the capturer saw every victim
 // piece it took (dark or not) and every one the victim revealed by moving, so the victim's dealt
 // set minus everything seen is exactly this on-board multiset: no more, no less.
-function victimDarkPool(state: JieqiGameState, victim: JieqiColor): Map<JieqiPieceRole, number> {
+export function victimDarkPool(
+  state: JieqiGameState,
+  victim: JieqiColor,
+): Map<JieqiPieceRole, number> {
   const pool = new Map<JieqiPieceRole, number>();
   for (const piece of Object.values(state.board)) {
     if (piece?.color === victim && piece.faceDown) bumpRole(pool, piece.role);

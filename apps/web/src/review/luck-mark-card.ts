@@ -1,5 +1,6 @@
-// Hover / tap card for the on-board luck mark (board-luck-mark.ts): what the piece turned
-// out to be, the odds of that, the swing, and the bag it came out of.
+// Hover / tap card for the on-board luck mark (board-luck-mark.ts): what the hidden piece
+// turned out to be (the mover's own on a reveal, the opponent's on a face-down capture), the
+// odds of that, the swing, and the bag it came out of.
 //
 // The board's hit layer sits above the marker layer and owns every click (piece selection,
 // drags), so the card does not listen on the mark itself. It watches pointer positions on
@@ -9,15 +10,26 @@
 import type { JieqiPieceRole } from '@mistboard/game';
 import { luckDieIconSvg } from '../board-luck-mark.js';
 import { t } from '../i18n/catalog.js';
-import { luckPoints, luckSize, luckSizeTone, type RevealOdds } from './jieqi-luck-mark.js';
+import {
+  type JieqiChanceKind,
+  luckPoints,
+  luckSize,
+  luckSizeTone,
+  type RevealOdds,
+} from './jieqi-luck-mark.js';
 
 export type LuckCardDetail = {
   /** The square the mark is drawn on; the card only opens over a mark on this square. */
   square: string;
   color: 'red' | 'black';
   luck: number;
-  /** Null when the odds are unknown: the card then states only the swing. */
+  /** What the move resolved; absent means a reveal. */
+  kind?: JieqiChanceKind;
+  /** The reveal's odds (the mover's pool). Null when unknown, or when nothing was revealed:
+   *  the card then states only the swing. */
   odds: RevealOdds | null;
+  /** The face-down capture's odds (the victim's pool as the capturer knew it). */
+  capture?: RevealOdds | null;
 };
 
 type RoleKey =
@@ -38,11 +50,13 @@ export function luckCardTone(detail: LuckCardDetail): 'lucky' | 'unlucky' | 'eve
   return luckSizeTone(detail.luck);
 }
 
+type PieceSvg = (role: JieqiPieceRole, color: 'red' | 'black') => string;
+
 function poolHtml(
-  detail: LuckCardDetail,
+  color: 'red' | 'black',
   odds: RevealOdds,
   label: string,
-  pieceSvg: (role: JieqiPieceRole, color: 'red' | 'black') => string,
+  pieceSvg: PieceSvg,
 ): string {
   return (
     `<div class="luck-card__pool-label">${label}</div>` +
@@ -50,41 +64,81 @@ function poolHtml(
       .map(
         (entry) =>
           `<span class="luck-card__chip${entry.role === odds.role ? ' luck-card__chip--drawn' : ''}" title="${roleName(entry.role)}">` +
-          `${pieceSvg(entry.role, detail.color)}<span class="luck-card__count">×${entry.count}</span></span>`,
+          `${pieceSvg(entry.role, color)}<span class="luck-card__count">×${entry.count}</span></span>`,
       )
       .join('')}</div>`
   );
 }
 
+function headHtml(piece: string, text: string): string {
+  return (
+    `<div class="luck-card__head">${piece ? `<span class="luck-card__piece">${piece}</span>` : ''}` +
+    `<span class="luck-card__title luck-card__lead">${text}</span></div>`
+  );
+}
+
 /**
  * The card's markup: every number explained in the sentence it sits in. A lead line that names
- * the reveal and its odds ("Lucky reveal: Chariot (2 in 9)"), what it did to the mover's
- * win chance against an average reveal, the die's size bucket in a word beside the die
- * itself, then what else the piece could have been. Pure: piece art comes in through
- * `pieceSvg` so tests need no board.
+ * the draw and its odds ("Lucky reveal: Chariot (2 in 9)", "Unlucky capture: Soldier (5 in
+ * 12)"), what it did to the mover's win chance against an average draw, the die's size bucket
+ * in a word beside the die itself, then what else the piece could have been. A move that both
+ * reveals and captures a dark piece has one combined luck number (the server averages over
+ * both bags at once), so its card names both draws with their odds under one luck line and
+ * leaves the bags out. Pure: piece art comes in through `pieceSvg` so tests need no board.
  */
-export function luckCardHtml(
-  detail: LuckCardDetail,
-  pieceSvg: (role: JieqiPieceRole, color: 'red' | 'black') => string,
-): string {
+export function luckCardHtml(detail: LuckCardDetail, pieceSvg: PieceSvg): string {
   const tone = luckSizeTone(detail.luck);
-  const odds = detail.odds;
+  const kind = detail.kind ?? 'reveal';
+  const victim = detail.color === 'red' ? 'black' : 'red';
+  const side = t(detail.color === 'red' ? 'summary.red' : 'summary.black');
+  const points = luckPoints(detail.luck);
+  const swing = (text: string) =>
+    `<div class="luck-card__swing luck-card__swing--${tone}">${text}</div>`;
+  const size =
+    `<div class="luck-card__size">${luckDieIconSvg(detail.luck)}` +
+    `<span>${t(`review.luckCard.size.${luckSize(detail.luck)}`)}</span></div>`;
+  if (kind === 'both') {
+    const draw = (
+      odds: RevealOdds | null | undefined,
+      key: 'review.luckCard.drawRevealed' | 'review.luckCard.drawCaptured',
+      color: 'red' | 'black',
+    ): string =>
+      odds
+        ? `<div class="luck-card__draw">${headHtml(
+            pieceSvg(odds.role, color),
+            t(key, { piece: roleName(odds.role), count: odds.count, total: odds.total }),
+          )}</div>`
+        : '';
+    return (
+      headHtml('', t(`review.luckCard.bothLead.${tone}`)) +
+      draw(detail.odds, 'review.luckCard.drawRevealed', detail.color) +
+      draw(detail.capture, 'review.luckCard.drawCaptured', victim) +
+      swing(t(`review.luckCard.bothEffect.${tone}`, { side, points })) +
+      size
+    );
+  }
+  const capture = kind === 'capture';
+  const odds = capture ? (detail.capture ?? null) : detail.odds;
+  const pieceColor = capture ? victim : detail.color;
   const lead = odds
-    ? t(`review.luckCard.lead.${tone}`, {
+    ? t(capture ? `review.luckCard.captureLead.${tone}` : `review.luckCard.lead.${tone}`, {
         piece: roleName(odds.role),
         count: odds.count,
         total: odds.total,
       })
-    : t(`review.luckCard.leadBare.${tone}`);
-  const side = t(detail.color === 'red' ? 'summary.red' : 'summary.black');
-  const effect = t(`review.luckCard.effect.${tone}`, { side, points: luckPoints(detail.luck) });
-  const size = t(`review.luckCard.size.${luckSize(detail.luck)}`);
+    : t(capture ? `review.luckCard.captureLeadBare.${tone}` : `review.luckCard.leadBare.${tone}`);
+  const effect = t(
+    capture ? `review.luckCard.captureEffect.${tone}` : `review.luckCard.effect.${tone}`,
+    { side, points },
+  );
+  const poolLabel = t(
+    capture ? 'review.luckCard.couldHaveBeenCaptured' : 'review.luckCard.couldHaveBeen',
+  );
   return (
-    `<div class="luck-card__head">${odds ? `<span class="luck-card__piece">${pieceSvg(odds.role, detail.color)}</span>` : ''}` +
-    `<span class="luck-card__title luck-card__lead">${lead}</span></div>` +
-    `<div class="luck-card__swing luck-card__swing--${tone}">${effect}</div>` +
-    `<div class="luck-card__size">${luckDieIconSvg(detail.luck)}<span>${size}</span></div>` +
-    (odds ? poolHtml(detail, odds, t('review.luckCard.couldHaveBeen'), pieceSvg) : '')
+    headHtml(odds ? pieceSvg(odds.role, pieceColor) : '', lead) +
+    swing(effect) +
+    size +
+    (odds ? poolHtml(pieceColor, odds, poolLabel, pieceSvg) : '')
   );
 }
 
@@ -96,7 +150,7 @@ export function luckCardHtml(
 export function attachLuckMarkCard(
   boardHost: HTMLElement,
   getDetail: () => LuckCardDetail | null,
-  pieceSvg: (role: JieqiPieceRole, color: 'red' | 'black') => string,
+  pieceSvg: PieceSvg,
 ): () => void {
   const card = document.createElement('div');
   card.className = 'luck-card';
@@ -124,7 +178,7 @@ export function attachLuckMarkCard(
   }
 
   function show(rect: DOMRect, detail: LuckCardDetail): void {
-    const key = `${detail.square}:${detail.luck}`;
+    const key = `${detail.square}:${detail.kind ?? 'reveal'}:${detail.luck}`;
     if (shownFor !== key) {
       card.innerHTML = luckCardHtml(detail, pieceSvg);
       card.dataset.tone = luckCardTone(detail);

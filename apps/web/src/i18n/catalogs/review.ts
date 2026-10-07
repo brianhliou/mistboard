@@ -834,6 +834,28 @@ export const EN_REVIEW = {
   'review.luckCard.size.huge': 'Huge swing',
   'review.luckCard.size.decisive': 'Decisive swing',
   'review.luckCard.couldHaveBeen': 'It could have been',
+  'review.luckCard.captureLead.lucky': 'Lucky capture: {piece} ({count} in {total})',
+  'review.luckCard.captureLead.unlucky': 'Unlucky capture: {piece} ({count} in {total})',
+  'review.luckCard.captureLead.even': 'Average capture: {piece} ({count} in {total})',
+  'review.luckCard.captureLeadBare.lucky': 'Lucky capture',
+  'review.luckCard.captureLeadBare.unlucky': 'Unlucky capture',
+  'review.luckCard.captureLeadBare.even': 'Average capture',
+  'review.luckCard.captureEffect.lucky':
+    "Raised {side}'s win chance by {points} points vs. an average capture",
+  'review.luckCard.captureEffect.unlucky':
+    'Cost {side} {points} points of win chance vs. an average capture',
+  'review.luckCard.captureEffect.even': 'About as good for {side} as an average capture',
+  'review.luckCard.couldHaveBeenCaptured': 'It could have been',
+  'review.luckCard.bothLead.lucky': 'Lucky reveal and capture',
+  'review.luckCard.bothLead.unlucky': 'Unlucky reveal and capture',
+  'review.luckCard.bothLead.even': 'Average reveal and capture',
+  'review.luckCard.drawRevealed': 'Revealed {piece} ({count} in {total})',
+  'review.luckCard.drawCaptured': 'Captured {piece} ({count} in {total})',
+  'review.luckCard.bothEffect.lucky':
+    "Raised {side}'s win chance by {points} points vs. an average outcome",
+  'review.luckCard.bothEffect.unlucky':
+    'Cost {side} {points} points of win chance vs. an average outcome',
+  'review.luckCard.bothEffect.even': 'About as good for {side} as an average outcome',
 } as const;
 
 export type ReviewI18nKey = keyof typeof EN_REVIEW;

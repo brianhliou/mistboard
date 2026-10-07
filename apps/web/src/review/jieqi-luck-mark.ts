@@ -1,6 +1,7 @@
-// On-board luck mark for a jieqi reveal. The move list already carries the reveal's luck
-// as an inline "🎲 +12%" badge; the board pins it to the square the revealed piece landed
-// on as a die with no number: colour says which way, pips say how far (luckSizePips).
+// On-board luck mark for a jieqi chance move: a reveal, a capture of a face-down piece, or
+// both. The move list already carries its luck as an inline "🎲 +12%" badge; the board pins
+// it to the move's destination as a die with no number: colour says which way, pips say how
+// far (luckSizePips).
 //
 // Everything here is pure: the draw odds and the size buckets. The SVG lives in
 // board-luck-mark.ts, the hover card in luck-mark-card.ts.
@@ -9,8 +10,9 @@ import type { JieqiGameState, JieqiMove, JieqiPieceRole } from '@mistboard/game'
 /** One identity the face-down piece could have been, with how many of it were in the bag. */
 export type RevealPoolEntry = { role: JieqiPieceRole; count: number };
 
+/** The odds of one hidden identity a move resolved (a reveal's or a face-down capture's). */
 export type RevealOdds = {
-  /** The identity the reveal actually produced. */
+  /** The identity the draw actually produced. */
   role: JieqiPieceRole;
   /** How many of `role` were in the mover's pool (the drawn one included). */
   count: number;
@@ -58,11 +60,74 @@ export function jieqiRevealOdds(before: JieqiGameState, move: JieqiMove): Reveal
     if (capture.owner === mover && !capture.revealedAtCapture) bump(capture.role, capture.unknown);
   }
   if (undetermined) return null;
+  return oddsFrom(source.role, counts);
+}
+
+/**
+ * The odds behind a FACE-DOWN CAPTURE, from the CAPTURER's knowledge just before it: the
+ * victim's face-down pieces still on the board. Mirrors the server's victimDarkPool
+ * (jieqi-analysis.ts), the pool its capture luck is averaged over. Under capturer-only reveal
+ * the capturer has seen every victim piece it took (dark or not) and every one the victim
+ * revealed by moving, so the victim's dealt set minus all of that is exactly this on-board
+ * multiset; the victim's own pieces captured face-down are NOT in it (the capturer saw them).
+ *
+ * Null when `move` takes no face-down opponent piece, or when any identity in the pool was
+ * never determined (an imported game's lazy deal).
+ */
+export function jieqiCaptureOdds(before: JieqiGameState, move: JieqiMove): RevealOdds | null {
+  const source = before.board[move.from];
+  const target = before.board[move.to];
+  if (!source || !target?.faceDown || target.color === source.color || target.unknown) {
+    return null;
+  }
+  const victim = target.color;
+  const counts = new Map<JieqiPieceRole, number>();
+  for (const piece of Object.values(before.board)) {
+    if (piece?.color !== victim || !piece.faceDown) continue;
+    if (piece.unknown) return null;
+    counts.set(piece.role, (counts.get(piece.role) ?? 0) + 1);
+  }
+  return oddsFrom(target.role, counts);
+}
+
+/** Which hidden identities a chance move resolved: the mover's own dark piece (a reveal), an
+ *  opponent's dark piece it took (a face-down capture), or both at once. */
+export type JieqiChanceKind = 'reveal' | 'capture' | 'both';
+
+export type JieqiChanceOdds = {
+  kind: JieqiChanceKind;
+  /** The reveal's odds (kind reveal / both), null when undeterminable. */
+  reveal: RevealOdds | null;
+  /** The capture's odds (kind capture / both), null when undeterminable. */
+  capture: RevealOdds | null;
+};
+
+/**
+ * Everything the luck card states about a chance move, in the server's terms
+ * (jieqi-analysis.ts isJieqiChanceMove + poolMeanWin): a move that both reveals and captures a
+ * dark piece averages over both pools at once, so the card names both draws. Null when the
+ * move resolves no hidden identity (it would have no luck row).
+ */
+export function jieqiChanceOdds(before: JieqiGameState, move: JieqiMove): JieqiChanceOdds | null {
+  const source = before.board[move.from];
+  if (!source) return null;
+  const target = before.board[move.to];
+  const reveals = source.faceDown === true;
+  const captures = target?.faceDown === true && target.color !== source.color;
+  if (!reveals && !captures) return null;
+  return {
+    kind: reveals && captures ? 'both' : reveals ? 'reveal' : 'capture',
+    reveal: reveals ? jieqiRevealOdds(before, move) : null,
+    capture: captures ? jieqiCaptureOdds(before, move) : null,
+  };
+}
+
+function oddsFrom(role: JieqiPieceRole, counts: Map<JieqiPieceRole, number>): RevealOdds {
   const total = [...counts.values()].reduce((sum, n) => sum + n, 0);
   const pool = [...counts.entries()]
-    .map(([role, count]) => ({ role, count }))
+    .map(([r, count]) => ({ role: r, count }))
     .sort((a, b) => b.count - a.count || ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role));
-  return { role: source.role, count: counts.get(source.role) ?? 0, total, pool };
+  return { role, count: counts.get(role) ?? 0, total, pool };
 }
 
 export type LuckTone = 'lucky' | 'unlucky' | 'even';

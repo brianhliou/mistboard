@@ -1,6 +1,8 @@
-import { createInitialJieqiState, type JieqiGameState } from '@mistboard/game';
+import { createInitialJieqiState, type JieqiGameState, STANDARD_JIEQI_DEAL } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import {
+  jieqiCaptureOdds,
+  jieqiChanceOdds,
   jieqiRevealOdds,
   LUCK_SIZE_THRESHOLDS,
   luckPoints,
@@ -112,5 +114,95 @@ describe('die size buckets', () => {
     expect(luckPoints(-34.6)).toBe(35);
     expect(luckPoints(13.7)).toBe(14);
     expect(luckPoints(-0.3)).toBe(0);
+  });
+});
+
+// ── Face-down captures: the victim's pool as the capturer knew it ────────────────────
+// The same constructed states and expected pools as the server's pool test
+// (apps/server/src/jieqi-analysis.test.ts, "the luck card's pools match the server's"):
+// the card states odds from the pool the server averaged the luck over, so the two must agree.
+// Keep the two fixtures in step.
+function poolFixture(revealing: boolean): JieqiGameState {
+  const s = createInitialJieqiState('t', STANDARD_JIEQI_DEAL);
+  expect([s.board.a10?.role, s.board.b10?.role, s.board.c10?.role]).toEqual([
+    'chariot',
+    'horse',
+    'elephant',
+  ]);
+  // Red took Black's a10 chariot while it was face-down: Red saw it, so it is out of the pool
+  // Red believes Black's dark squares hold (it stays in Black's own bag).
+  delete s.board.a10;
+  s.captures.push({ owner: 'black', role: 'chariot', revealedAtCapture: false });
+  // Black revealed its b10 horse by moving it.
+  s.board.b10 = { ...s.board.b10!, faceDown: false };
+  // Black took Red's b1 horse after it was revealed: known to Red, out of Red's bag.
+  delete s.board.b1;
+  s.captures.push({ owner: 'red', role: 'horse', revealedAtCapture: true });
+  // The capturing piece on a1: face-up for a pure capture, still dark for reveal-and-capture.
+  s.board.a1 = { ...s.board.a1!, faceDown: revealing };
+  return s;
+}
+const TAKE_C10 = { from: 'a1', to: 'c10' } as const;
+const VICTIM_POOL = [
+  { role: 'soldier', count: 5 },
+  { role: 'cannon', count: 2 },
+  { role: 'elephant', count: 2 },
+  { role: 'advisor', count: 2 },
+  { role: 'chariot', count: 1 },
+  { role: 'horse', count: 1 },
+];
+const MOVER_POOL = [
+  { role: 'soldier', count: 5 },
+  { role: 'chariot', count: 2 },
+  { role: 'cannon', count: 2 },
+  { role: 'elephant', count: 2 },
+  { role: 'advisor', count: 2 },
+  { role: 'horse', count: 1 },
+];
+
+describe('jieqiCaptureOdds', () => {
+  it('counts the victim’s face-down pieces still on the board, nothing the capturer saw', () => {
+    const odds = jieqiCaptureOdds(poolFixture(false), TAKE_C10);
+    expect(odds).toEqual({ role: 'elephant', count: 2, total: 13, pool: VICTIM_POOL });
+  });
+
+  it('has no odds for a face-up target, an own piece, or an empty square', () => {
+    const before = poolFixture(false);
+    expect(jieqiCaptureOdds(before, { from: 'a1', to: 'b10' })).toBeNull();
+    expect(jieqiCaptureOdds(before, { from: 'a1', to: 'c1' })).toBeNull();
+    expect(jieqiCaptureOdds(before, { from: 'a1', to: 'e5' })).toBeNull();
+  });
+
+  it('has no odds when any identity in the victim’s pool was never dealt', () => {
+    const before = poolFixture(false);
+    before.board.d10!.unknown = true;
+    expect(jieqiCaptureOdds(before, TAKE_C10)).toBeNull();
+  });
+});
+
+describe('jieqiChanceOdds', () => {
+  it('names a pure face-down capture and its victim pool', () => {
+    const chance = jieqiChanceOdds(poolFixture(false), TAKE_C10);
+    expect(chance?.kind).toBe('capture');
+    expect(chance?.reveal).toBeNull();
+    expect(chance?.capture?.pool).toEqual(VICTIM_POOL);
+  });
+
+  it('gives a reveal-and-capture both draws, each from its own pool', () => {
+    const chance = jieqiChanceOdds(poolFixture(true), TAKE_C10);
+    expect(chance?.kind).toBe('both');
+    expect(chance?.reveal).toEqual({ role: 'chariot', count: 2, total: 14, pool: MOVER_POOL });
+    expect(chance?.capture).toEqual({ role: 'elephant', count: 2, total: 13, pool: VICTIM_POOL });
+  });
+
+  it('leaves a pure reveal as before, and a quiet move with nothing', () => {
+    const before = poolFixture(true);
+    const chance = jieqiChanceOdds(before, { from: 'a1', to: 'a2' });
+    expect(chance).toEqual({
+      kind: 'reveal',
+      reveal: jieqiRevealOdds(before, { from: 'a1', to: 'a2' }),
+      capture: null,
+    });
+    expect(jieqiChanceOdds(before, { from: 'e1', to: 'e2' })).toBeNull();
   });
 });

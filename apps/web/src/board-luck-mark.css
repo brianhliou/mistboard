@@ -85,6 +85,13 @@
   font-weight: 700;
   color: var(--site-heading, inherit);
 }
+/* A reveal-and-capture card names both draws, one per line, under its lead. */
+.luck-card__draw {
+  margin-top: 3px;
+}
+.luck-card__draw .luck-card__title {
+  font-weight: 500;
+}
 .luck-card__swing {
   margin-top: 3px;
   font-weight: 600;
