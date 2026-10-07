@@ -1,7 +1,14 @@
 import { createInitialXiangqiState } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameAnalysis, XiangqiGameAnalysisResponse } from './review/game-analysis.js';
-import { mountXiangqiReplay, type XiangqiReplaySpec } from './xiangqi-replay.js';
+import {
+  EVAL_GRAPH_STORAGE_KEY,
+  mountXiangqiReplay,
+  readEvalGraphHidden,
+  writeEvalGraphHidden,
+  type XiangqiReplayController,
+  type XiangqiReplaySpec,
+} from './xiangqi-replay.js';
 import { createReplayAdvantageChart, loadReplayChartAnalysis } from './xiangqi-replay-chart.js';
 
 // An article board whose game is in the broadcast archive shows that game's
@@ -67,6 +74,34 @@ class FakeIntersectionObserver {
   }
 }
 
+/** A Storage stand-in: the test runner's window has no working localStorage. */
+function memoryStorage(): Storage {
+  const data = new Map<string, string>();
+  return {
+    get length() {
+      return data.size;
+    },
+    clear: () => data.clear(),
+    getItem: (key) => data.get(key) ?? null,
+    key: (i) => [...data.keys()][i] ?? null,
+    removeItem: (key) => void data.delete(key),
+    setItem: (key, value) => void data.set(key, String(value)),
+  };
+}
+
+function useStorage(storage: Storage): void {
+  Object.defineProperty(window, 'localStorage', { configurable: true, value: storage });
+}
+
+// Boards left mounted keep listening for the page-wide graph setting, so every
+// test unmounts what it mounted.
+const mounted: XiangqiReplayController[] = [];
+const mount: typeof mountXiangqiReplay = (...args) => {
+  const controller = mountXiangqiReplay(...args);
+  mounted.push(controller);
+  return controller;
+};
+
 let host: HTMLElement;
 let fetchMock: ReturnType<typeof vi.fn>;
 
@@ -75,12 +110,14 @@ beforeEach(() => {
   host = document.createElement('div');
   document.body.append(host);
   FakeIntersectionObserver.instances = [];
+  useStorage(memoryStorage());
   vi.stubGlobal('IntersectionObserver', FakeIntersectionObserver);
   fetchMock = vi.fn(async () => jsonResponse(analysisBody(4)));
   vi.stubGlobal('fetch', fetchMock);
 });
 
 afterEach(() => {
+  for (const controller of mounted.splice(0)) controller.destroy();
   vi.unstubAllGlobals();
 });
 
@@ -94,7 +131,7 @@ async function mountVisible(
   s: XiangqiReplaySpec = spec,
   lang?: 'zh-Hans' | 'zh-Hant',
 ): Promise<void> {
-  mountXiangqiReplay(host, s, { lang });
+  mount(host, s, { lang });
   FakeIntersectionObserver.instances[0]!.intersect();
   await vi.waitFor(() =>
     expect(host.querySelector('.xq-replay-chart .advantage-chart')).not.toBeNull(),
@@ -143,7 +180,7 @@ describe('loadReplayChartAnalysis (data path)', () => {
 
 describe('article board advantage chart (mount)', () => {
   it('reserves its slot between the board and the control bar, and fetches nothing until visible', () => {
-    mountXiangqiReplay(host, spec);
+    mount(host, spec);
     const s = slot();
     expect(s).not.toBeNull();
     expect(s?.childElementCount).toBe(0);
@@ -191,13 +228,13 @@ describe('article board advantage chart (mount)', () => {
   it('names the chart and its phases in the page language', async () => {
     await mountVisible(spec, 'zh-Hans');
     expect(host.querySelector('.advantage-chart')?.getAttribute('aria-label')).toBe(
-      '全局形势图，点击可跳到该步',
+      '优势图，点击可跳到该步',
     );
   });
 
   it('leaves nothing behind when the game has no stored analysis', async () => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
-    mountXiangqiReplay(host, spec);
+    mount(host, spec);
     FakeIntersectionObserver.instances[0]!.intersect();
     await vi.waitFor(() => expect(slot()).toBeNull());
     // Flipping re-orders the column; the dropped slot must not come back.
@@ -216,7 +253,7 @@ describe('article board advantage chart (mount)', () => {
 
   it('has no slot and no observer without a board id', () => {
     const { boardId: _omit, ...noBoard } = spec;
-    mountXiangqiReplay(host, noBoard);
+    mount(host, noBoard);
     expect(slot()).toBeNull();
     expect(FakeIntersectionObserver.instances).toHaveLength(0);
   });
@@ -224,7 +261,7 @@ describe('article board advantage chart (mount)', () => {
   it('does not mount into a destroyed board', async () => {
     let release: (r: Response) => void = () => {};
     fetchMock.mockReturnValueOnce(new Promise<Response>((resolve) => (release = resolve)));
-    const controller = mountXiangqiReplay(host, spec);
+    const controller = mount(host, spec);
     const s = slot()!;
     FakeIntersectionObserver.instances[0]!.intersect();
     controller.destroy();
@@ -256,5 +293,110 @@ describe('createReplayAdvantageChart', () => {
       (el) => el.textContent,
     );
     expect(labels).toEqual(['开局', '中局']);
+  });
+});
+
+describe('eval graph setting (board menu)', () => {
+  const menuItems = (root: ParentNode = host) => [
+    ...root.querySelectorAll<HTMLButtonElement>('.xq-replay-menu-item'),
+  ];
+  const graphItem = (root: ParentNode = host) =>
+    root.querySelector<HTMLButtonElement>('.xq-replay-menu-item--graph');
+  const boardColKinds = (root: ParentNode = host) =>
+    [...root.querySelector('.xq-replay-board-col')!.children].map(
+      (el) => el.className.split(' ')[0],
+    );
+  const WITHOUT_CHART = [
+    'xq-replay-seat',
+    'raw-svg-stepper-frame',
+    'xq-replay-seat',
+    'xq-replay-controls-wrap',
+  ];
+
+  it('defaults to shown, with a Hide item in the menu', () => {
+    mount(host, spec);
+    expect(readEvalGraphHidden()).toBe(false);
+    expect(graphItem()?.textContent).toBe('Hide eval graph');
+    expect(menuItems().at(-1)).toBe(graphItem());
+    expect(slot()).not.toBeNull();
+  });
+
+  it('hides every board on the page, persists, and never fetches a hidden graph', () => {
+    const second = document.createElement('div');
+    document.body.append(second);
+    mount(host, spec);
+    mount(second, spec);
+    graphItem()!.click();
+    expect(window.localStorage.getItem(EVAL_GRAPH_STORAGE_KEY)).toBe('hidden');
+    for (const root of [host, second]) {
+      expect(root.querySelector('.xq-replay-chart')).toBeNull();
+      expect(boardColKinds(root)).toEqual(WITHOUT_CHART);
+      expect(graphItem(root)?.textContent).toBe('Show eval graph');
+    }
+    // Both observers stopped before either board was seen.
+    expect(FakeIntersectionObserver.instances.every((o) => o.disconnected)).toBe(true);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('remembers a hidden graph on the next visit: no slot, no observer, no fetch', () => {
+    window.localStorage.setItem(EVAL_GRAPH_STORAGE_KEY, 'hidden');
+    mount(host, spec);
+    expect(slot()).toBeNull();
+    expect(boardColKinds()).toEqual(WITHOUT_CHART);
+    expect(FakeIntersectionObserver.instances).toHaveLength(0);
+    expect(graphItem()?.textContent).toBe('Show eval graph');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('showing it again reserves the slot and loads it when visible', async () => {
+    window.localStorage.setItem(EVAL_GRAPH_STORAGE_KEY, 'hidden');
+    mount(host, spec);
+    graphItem()!.click();
+    expect(window.localStorage.getItem(EVAL_GRAPH_STORAGE_KEY)).toBeNull();
+    expect(boardColKinds()[3]).toBe('xq-replay-chart');
+    expect(graphItem()?.textContent).toBe('Hide eval graph');
+    FakeIntersectionObserver.instances[0]!.intersect();
+    await vi.waitFor(() => expect(host.querySelector('.advantage-chart')).not.toBeNull());
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('hiding a drawn graph and showing it again does not refetch', async () => {
+    await mountVisible({ ...spec, startPly: 1 });
+    graphItem()!.click();
+    expect(slot()).toBeNull();
+    nextButton().click(); // ply 2 while hidden
+    graphItem()!.click();
+    expect(host.querySelector('.xq-replay-chart .advantage-chart')).not.toBeNull();
+    expect(cursorX()).toBe('150.00');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps working when storage throws: defaults to shown, and the page still follows', () => {
+    const blocked = (): never => {
+      throw new Error('blocked');
+    };
+    useStorage({ ...memoryStorage(), getItem: blocked, setItem: blocked, removeItem: blocked });
+    expect(readEvalGraphHidden()).toBe(false);
+    mount(host, spec);
+    expect(slot()).not.toBeNull();
+    expect(() => writeEvalGraphHidden(true)).not.toThrow();
+    expect(slot()).toBeNull();
+    expect(graphItem()?.textContent).toBe('Show eval graph');
+  });
+
+  it('is labelled in the page language', () => {
+    mount(host, spec, { lang: 'zh-Hans' });
+    expect(graphItem()?.textContent).toBe('隐藏优势图');
+    graphItem()!.click();
+    expect(graphItem()?.textContent).toBe('显示优势图');
+    host.replaceChildren();
+    mount(host, spec, { lang: 'zh-Hant' });
+    expect(graphItem()?.textContent).toBe('顯示優勢圖');
+  });
+
+  it('is not offered on a board with no graph to show', () => {
+    const { boardId: _omit, ...noBoard } = spec;
+    mount(host, noBoard);
+    expect(graphItem()).toBeNull();
   });
 });

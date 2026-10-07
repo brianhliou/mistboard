@@ -187,6 +187,34 @@ export const BROADCAST_BOARD_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export type XiangqiReplayController = { destroy: () => void };
 
+/** One setting for every article board's eval graph, kept across visits.
+ *  Absent means shown, the default; only "hidden" is ever written. */
+export const EVAL_GRAPH_STORAGE_KEY = 'mistboard.articleEvalGraph';
+/** Fired on window when the setting changes; detail `{ hidden: boolean }`. */
+export const evalGraphChangedEvent = 'mistboard:eval-graph-changed';
+
+/** Whether the reader hid the eval graph. Storage that throws (private mode,
+ *  blocked site data) reads as the default: shown. */
+export function readEvalGraphHidden(): boolean {
+  try {
+    return window.localStorage.getItem(EVAL_GRAPH_STORAGE_KEY) === 'hidden';
+  } catch {
+    return false;
+  }
+}
+
+/** Save the setting and tell every board on the page. The boards follow even
+ *  when storage refuses the write; only the next visit forgets it then. */
+export function writeEvalGraphHidden(hidden: boolean): void {
+  try {
+    if (hidden) window.localStorage.setItem(EVAL_GRAPH_STORAGE_KEY, 'hidden');
+    else window.localStorage.removeItem(EVAL_GRAPH_STORAGE_KEY);
+  } catch {
+    // Not persisted; the page still follows.
+  }
+  window.dispatchEvent(new CustomEvent(evalGraphChangedEvent, { detail: { hidden } }));
+}
+
 const GEOMETRY: XiangqiBoardGeometry = {
   fileCount: 9,
   rankCount: 10,
@@ -600,11 +628,20 @@ export function mountXiangqiReplay(
   // full height, so a chart arriving later moves nothing on the page; it is
   // dropped again if the game turns out to have no stored analysis. Without
   // IntersectionObserver there is no lazy load, so there is no slot either.
+  // A reader who hid the graph (the menu's "Hide eval graph", one setting for
+  // every article board) gets no slot and no fetch: the card is its old height.
   let chartSlot: HTMLElement | null = null;
   if (spec.boardId && typeof IntersectionObserver === 'function') {
     chartSlot = document.createElement('div');
     chartSlot.className = 'xq-replay-chart';
   }
+  /** The game has no stored analysis (or it did not match): never shown again. */
+  let chartGone = false;
+  let graphHidden = readEvalGraphHidden();
+  const chartShown = (): boolean => chartSlot !== null && !chartGone && !graphHidden;
+  /** Put the slot in the card, or take it out, to match chartShown(). */
+  let placeChartSlot: () => void = () => {};
+  let graphToggle: HTMLButtonElement | null = null;
 
   if (annotated) {
     // Study layout, built as ONE card rather than a board next to a bordered
@@ -649,26 +686,40 @@ export function mountXiangqiReplay(
     const seatBottom = seat(nameOf(bottomSide), bottomSide);
     // The chart sits between the board and the control bar, so the bar stays
     // the card's bottom edge, level with the result foot beside it.
-    const boardColParts = (top: HTMLElement, bottom: HTMLElement): HTMLElement[] =>
-      chartSlot ? [top, frame, bottom, chartSlot, controlWrap] : [top, frame, bottom, controlWrap];
-    boardCol.append(...boardColParts(seatTop, seatBottom));
+    let flipped = false;
+    // An explicit re-order of the whole column, for a flip and for the graph
+    // coming or going. Shuffling two nodes around each other left the control
+    // bar above the board.
+    placeChartSlot = () => {
+      const slot = chartShown() && chartSlot ? [chartSlot] : [];
+      boardCol.replaceChildren(
+        flipped ? seatBottom : seatTop,
+        frame,
+        flipped ? seatTop : seatBottom,
+        ...slot,
+        controlWrap,
+      );
+    };
+    placeChartSlot();
 
     // Registered here, where the column's parts are in scope. The callbacks run
     // later, and goto/render are hoisted function declarations, so referring to
     // them before their definitions is fine.
-    let flipped = false;
     menuItem('Flip the board', () => {
       perspective = perspective === 'red' ? 'black' : 'red';
       flipped = !flipped;
-      // An explicit re-order of the whole column. Shuffling two nodes around
-      // each other left the control bar above the board.
-      boardCol.replaceChildren(
-        ...boardColParts(flipped ? seatBottom : seatTop, flipped ? seatTop : seatBottom),
-      );
+      placeChartSlot();
       render();
     });
     menuItem('Back to the start', () => gotoMainline(0));
     menuItem('Jump to the end', () => gotoMainline(total));
+    if (chartSlot) {
+      // Writes the one shared setting; every board on the page (this one
+      // included) follows through the change event, so the label is set there.
+      graphToggle = menuItem('', () => writeEvalGraphHidden(!graphHidden));
+      graphToggle.classList.add('xq-replay-menu-item--graph');
+      graphToggle.textContent = graphHidden ? copy.showEvalGraph : copy.hideEvalGraph;
+    }
     const moveCol = document.createElement('div');
     moveCol.className = 'xq-replay-move-col';
     // The move panel is taken out of flow (see the CSS) so a 180-ply list
@@ -688,7 +739,16 @@ export function mountXiangqiReplay(
     grid.append(boardCol, moveCol);
     host.append(header, grid);
   } else {
-    host.append(header, frame, ...(chartSlot ? [chartSlot] : []), controls, slider, narrative);
+    host.append(header, frame, controls, slider, narrative);
+    placeChartSlot = () => {
+      if (!chartSlot) return;
+      if (chartShown()) {
+        if (!chartSlot.isConnected) frame.after(chartSlot);
+      } else {
+        chartSlot.remove();
+      }
+    };
+    placeChartSlot();
   }
 
   // The embed card's credit line, in the same place and the same type: under
@@ -1246,10 +1306,8 @@ export function mountXiangqiReplay(
     const analysis = await mod.loadReplayChartAnalysis(boardId, total);
     if (destroyed) return;
     if (!analysis) {
-      // No stored analysis: give the reserved height back, and keep the slot
-      // out of the flip menu's re-order.
-      slot.remove();
-      chartSlot = null;
+      // No stored analysis: give the reserved height back, for good.
+      dropChart();
       return;
     }
     const drawn = mod.createReplayAdvantageChart(analysis, {
@@ -1276,25 +1334,54 @@ export function mountXiangqiReplay(
     drawn.setPly(index);
   }
 
-  if (chartSlot && spec.boardId) {
+  /** No chart for this game: the slot leaves the card and never comes back. */
+  function dropChart(): void {
+    chartGone = true;
+    placeChartSlot();
+  }
+
+  /** Watch for the board nearing the viewport, if the graph is wanted and has
+   *  not been fetched yet. Fetched once, within 600px of the screen. */
+  let chartRequested = false;
+  function watchChart(): void {
     const slot = chartSlot;
     const boardId = spec.boardId;
-    // Fetched when the board comes within a screen of the viewport, once.
+    if (!slot || !boardId || chartRequested || chartObserver || !chartShown()) return;
     chartObserver = new IntersectionObserver(
       (entries) => {
         if (!entries.some((entry) => entry.isIntersecting)) return;
         chartObserver?.disconnect();
         chartObserver = null;
+        chartRequested = true;
         loadChart(boardId, slot).catch(() => {
-          if (destroyed) return;
-          slot.remove();
-          chartSlot = null;
+          if (!destroyed) dropChart();
         });
       },
       { rootMargin: '600px 0px' },
     );
     chartObserver.observe(host);
   }
+
+  // The shared show/hide setting. Every board on the page hears the change,
+  // including the one whose menu made it.
+  const onEvalGraphChanged = (event: Event): void => {
+    const hidden = (event as CustomEvent<{ hidden: boolean }>).detail?.hidden;
+    if (typeof hidden !== 'boolean' || hidden === graphHidden) return;
+    graphHidden = hidden;
+    if (graphToggle) graphToggle.textContent = hidden ? copy.showEvalGraph : copy.hideEvalGraph;
+    if (hidden) {
+      // Not fetched yet: stop watching, so a hidden graph is never fetched.
+      chartObserver?.disconnect();
+      chartObserver = null;
+    }
+    placeChartSlot();
+    if (!hidden) {
+      chart?.setPly(index);
+      watchChart();
+    }
+  };
+  if (chartSlot) window.addEventListener(evalGraphChangedEvent, onEvalGraphChanged);
+  watchChart();
 
   relabel();
   render();
@@ -1303,6 +1390,7 @@ export function mountXiangqiReplay(
     destroy(): void {
       destroyed = true;
       chartObserver?.disconnect();
+      window.removeEventListener(evalGraphChangedEvent, onEvalGraphChanged);
       first.removeEventListener('click', onFirst);
       prev.removeEventListener('click', onPrev);
       next.removeEventListener('click', onNext);
