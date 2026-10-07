@@ -335,26 +335,31 @@ export const EN_CONTENT = {
   'champions.heading': 'Engine champions',
   'champions.intro':
     'Each game has one reigning champion engine. It is the bot you play on the site, credited by name. Any engine can challenge for the title in a public match.',
-  'champions.reigningLabel': 'Reigning champion: ',
-  'champions.holderLabel': 'Holder: ',
-  'champions.holderOpen': ' (house engine, title open)',
-  'champions.gameJieqi': 'Jieqi',
-  'champions.gameBanqi': 'Banqi',
-  'champions.gameJungle': 'Jungle Chess',
-  'champions.gameJungleFlip': 'Flip Jungle',
   'champions.aboutJieqi':
     'By Huorongrong and Laoxu (Kouza): a Pikafish fork with its own neural network. It plays here at 4 s a move on 4 threads.',
-  'champions.aboutBanqi':
-    'Our own engine, at 3.5M nodes a move. No challenger has played a title match yet.',
   'champions.aboutJunglePrefix':
     'By hzyhhzy with a network from Kouza: a self-play neural network. It plays here at 150 visits a move; ',
   'champions.aboutJungleSuffix': ', at 5M nodes a move, is the easier bot below it.',
-  'champions.aboutJungleFlip':
-    'Our own engine, at 2.5M nodes a move. No challenger has played a title match yet.',
-  'champions.wonJieqi':
-    'Took the title on 2026-09-30 from Pikafish Level 8, 248-136-16 over 400 games',
-  'champions.wonJungle':
-    'Took the title on 2026-09-22 from MistyJungle, 82-0 with 118 draws over 200 games at 1,000 visits a move',
+  'champions.championBadge': 'Champion',
+  'champions.statWins': 'wins',
+  'champions.statDraws': 'draws',
+  'champions.statLosses': 'losses',
+  'champions.barLabel': '{wins} wins, {draws} draws, {losses} losses',
+  'champions.tookJieqi':
+    'Took the title from Pikafish Level 8 on 2026-09-30, over 400 games, a 0.64 score.',
+  'champions.tookJungle':
+    'Took the title from MistyJungle on 2026-09-22, over 200 games at 1,000 visits a move, without a loss.',
+  'champions.readMatch': 'Read the match',
+  'champions.seeGames': 'See the games',
+  'champions.playChampion': 'Play the champion',
+  'champions.openHeading': 'Open titles',
+  'champions.openIntro':
+    'Every other game with a bot. The bot you play holds the title until a challenger beats it in a match, and no challenger has played one yet.',
+  'champions.heldBy': 'Held by',
+  'champions.openBadge': 'Title open',
+  'champions.challengeCta': 'Challenge for this title',
+  'champions.enginePikafish': 'Pikafish',
+  'champions.engineFairyStockfish8': 'Fairy-Stockfish Level 8',
   'champions.writeUpLink': 'write-up',
   'champions.gamesLink': 'games',
   'champions.linkSeparator': ', ',

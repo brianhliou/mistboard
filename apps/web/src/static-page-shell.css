@@ -246,45 +246,346 @@
   color: var(--site-muted);
 }
 
-/* /champions: one card per game (the reigning engine, or the house engine
-   holding an open title), then two short lists. Two cards a row on a wide
-   panel, one on a phone. */
-.champions-cards {
+/* /champions. Titles won in a match are hero cards (crown, game marker, the
+   match score as a stat over a thin win/draw/loss bar, quiet buttons), two a
+   row on a wide panel and one on a phone. Every other game sits below in a
+   quieter "Open titles" grid. Motion only on hover, and none under
+   prefers-reduced-motion. */
+.static-prose {
+  --champions-win: var(--site-accent);
+  --champions-draw: hsl(40, 5%, 76%);
+  --champions-loss: hsl(5, 52%, 64%);
+  --champions-gold-bg: hsl(43, 86%, 92%);
+  --champions-gold-border: hsl(43, 62%, 66%);
+  --champions-gold-text: hsl(36, 78%, 26%);
+}
+
+:root[data-effective-theme="dark"] .static-prose {
+  --champions-draw: hsl(40, 4%, 36%);
+  --champions-loss: hsl(5, 42%, 50%);
+  --champions-gold-bg: hsl(40, 40%, 15%);
+  --champions-gold-border: hsl(41, 48%, 36%);
+  --champions-gold-text: hsl(43, 72%, 70%);
+}
+
+.champions-heroes {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 8px 0 8px;
+}
+
+.static-prose .champions-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px 18px 16px;
+  border: 1px solid var(--site-border);
+  border-top: 3px solid var(--champions-gold-border);
+  border-radius: var(--site-radius);
+  background: linear-gradient(180deg, var(--site-accent-soft), var(--site-panel) 120px);
+  box-shadow: 0 1px 2px var(--site-shadow);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.static-prose .champions-hero:hover {
+  border-color: var(--champions-gold-border);
+  box-shadow: 0 6px 18px var(--site-shadow);
+  transform: translateY(-2px);
+}
+
+.static-prose .champions-hero-head {
+  display: flex;
+  align-items: center;
   gap: 12px;
-  margin: 4px 0 22px;
 }
 
-@media (max-width: 640px) {
-  .champions-cards {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.static-prose .champions-marker {
+  display: inline-flex;
+  flex: 0 0 auto;
 }
 
-.static-prose .champions-card {
-  padding: 14px 16px 4px;
-  border: 1px solid var(--site-border-soft);
-  border-radius: var(--site-radius-sm);
-  background: var(--site-panel-soft);
+.static-prose .champions-hero .champions-marker {
+  --variant-marker-color: var(--site-accent);
 }
 
-.static-prose .champions-card h3 {
-  margin: 0 0 6px;
-  font-size: 17px;
-  font-weight: 600;
+.static-prose .champions-hero-titles {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.static-prose .champions-hero-eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin: 0 0 4px;
+}
+
+.static-prose .champions-hero-game {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   line-height: 1.3;
+  text-transform: uppercase;
 }
 
-.static-prose .champions-card p {
-  margin: 0 0 10px;
+.static-prose .champions-hero-name {
+  margin: 0;
+  color: var(--site-heading);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.15;
+  overflow-wrap: break-word;
+}
+
+.static-prose .champions-crown {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px 2px 7px;
+  border: 1px solid var(--champions-gold-border);
+  border-radius: 999px;
+  background: var(--champions-gold-bg);
+  color: var(--champions-gold-text);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.static-prose .champions-crown .ui-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.static-prose .champions-stats {
+  display: flex;
+  gap: 22px;
+  margin: 0 0 8px;
+}
+
+.static-prose .champions-stat {
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+.static-prose .champions-stat dd {
+  margin: 0;
+  color: var(--site-heading);
+  font-size: 30px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+}
+
+.static-prose .champions-stat dt {
+  color: var(--site-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.static-prose .champions-stat-wins dd {
+  color: var(--champions-win);
+}
+
+.static-prose .champions-bar {
+  display: flex;
+  gap: 2px;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+}
+
+.static-prose .champions-bar > span {
+  flex-basis: 0;
+  min-width: 3px;
+}
+
+.static-prose .champions-bar-wins {
+  background: var(--champions-win);
+}
+
+.static-prose .champions-bar-draws {
+  background: var(--champions-draw);
+}
+
+.static-prose .champions-bar-losses {
+  background: var(--champions-loss);
+}
+
+.static-prose .champions-took {
+  margin: 0;
+  color: var(--site-heading);
   font-size: 15px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.static-prose .champions-about {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 14px;
   line-height: 1.55;
 }
 
-.static-prose .champions-card .champions-holder {
-  font-weight: 600;
+.static-prose .champions-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.static-prose .champions-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius-sm);
+  background: var(--site-panel);
   color: var(--site-heading);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  text-decoration: none;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.static-prose .champions-btn:hover {
+  border-color: var(--site-accent);
+  background: var(--site-accent-soft);
+  color: var(--site-accent-strong);
+  text-decoration: none;
+}
+
+.static-prose .champions-btn:focus-visible {
+  outline: 2px solid var(--site-accent);
+  outline-offset: 2px;
+}
+
+.champions-open-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 10px;
+  margin: 4px 0 8px;
+}
+
+.static-prose .champions-open {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius-sm);
+  background: var(--site-panel-soft);
+  transition: border-color 140ms ease;
+}
+
+.static-prose .champions-open:hover {
+  border-color: var(--site-border);
+}
+
+.static-prose .champions-open-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.static-prose .champions-open-game {
+  margin: 0;
+  color: var(--site-heading);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.static-prose .champions-open-holder {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.static-prose .champions-open-label {
+  color: var(--site-muted);
+  font-size: 12px;
+}
+
+.static-prose .champions-open-holder-link {
+  color: var(--site-text);
+  font-weight: 600;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.static-prose .champions-open-holder-link:hover {
+  color: var(--site-accent);
+  text-decoration: underline;
+}
+
+.static-prose .champions-open-badge {
+  padding: 1px 8px;
+  border: 1px dashed var(--site-border);
+  border-radius: 999px;
+  color: var(--site-muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.static-prose .champions-open .champions-btn {
+  min-height: 30px;
+  margin-top: auto;
+  padding: 4px 10px;
+  font-size: 13px;
+}
+
+.static-prose h2#challenge {
+  scroll-margin-top: 72px;
+}
+
+@media (max-width: 640px) {
+  .champions-heroes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .champions-open-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .static-prose .champions-hero-name {
+    font-size: 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .static-prose .champions-hero,
+  .static-prose .champions-btn,
+  .static-prose .champions-open {
+    transition: none;
+  }
+
+  .static-prose .champions-hero:hover {
+    transform: none;
+  }
 }
 
 .static-prose .champions-list {
