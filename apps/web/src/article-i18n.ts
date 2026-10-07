@@ -3035,7 +3035,6 @@ const ZH_HANS: Record<string, string> = {
   'The engine’s own game at two million nodes a move, ply 35. Nothing on the board can ever capture anything again.':
     '引擎每着两百万节点自战的对局，第 35 步。棋盘上再没有任何棋子能吃掉任何东西。',
   'What we are publishing instead of a play page': '我们发布的是什么，而不是一个对局页面',
-  'Read the full analysis': '阅读完整分析',
   'Check the proofs yourself': '亲自检验这些证明',
   'Learn xiangqi': '学习象棋',
   '2. Rxh1 Rxb10: RED TO MOVE': '2. Rxh1 Rxb10：轮到红方',
@@ -3273,43 +3272,19 @@ const ZH_HANS: Record<string, string> = {
     '我们把部落棋搬到象棋棋盘上，先测量再动手：十二种开局阵形、两种兵的走法，每一种由引擎自战四局。用象棋自己的兵，全军靠同一招赢下每一局；让兵从开局起就有过河兵的走法，棋局则变成四局里有三局和棋的围城。我们发布的是这份测量，而不是这个变体。',
   'Horde chess is 36 pawns and no king against a normal army; the pawns win by checkmate, the army by taking the last pawn. Lichess has played it since 2015. We put the same idea on the xiangqi board: Red has soldiers only and no general, Black has the standard army, and everything else is xiangqi. Then we measured it before designing anything.':
     '部落棋是 36 个兵、没有王，对阵正常的一军；兵靠将死取胜，全军靠吃掉最后一个兵取胜。Lichess 从 2015 年起就有它。我们把同样的想法搬到象棋棋盘上：红方只有兵、没有将，黑方是标准全军，其他一切照象棋。然后在设计任何东西之前先做了测量。',
-  'None of the twenty-four designs is a game, and the reason is the soldier. Below the river a block of soldiers cannot defend itself; above it the army cannot attack it. The full map, with a picture of every array beside its result and every engine game in a viewer, is on brianhliou.com; this page is the short account and the reason there is no play button.':
-    '二十四种设计没有一种是一盘棋，原因在兵身上。河的这边一片兵阵守不住自己；河的那边全军攻不动它。完整的设计地图，每种阵形旁边都有图和结果，每一盘引擎对局都能在浏览器里回放，都在 brianhliou.com；本页是简短的说明，也解释了为什么这里没有「开始对局」按钮。',
-  'Twelve arrays and two soldiers': '十二种阵形，两种兵',
-  'The soldier’s move is the whole design space; how many soldiers, where they start, what shape the block is and which no-capture clock runs are dials. We turned all of them: 18 to 45 soldiers, blocks at the back, a rank forward, or already across the river, the parent’s silhouette, xiangqi’s own five soldier points. Two soldier rules: xiangqi’s own, which moves one point forward and sideways only after crossing the river, and the veteran, which has the crossed soldier’s move from its first step. Every array was played four times at four search budgets by Fairy-Stockfish against itself, refereed by a rule kernel that had agreed with the engine on every legal move first.':
-    '兵的走法就是整个设计空间；兵有多少、从哪里起步、兵阵是什么形状、用哪一种无吃子步数限制，都只是旋钮。我们把它们全都转过了：18 到 45 个兵，兵阵靠后、前移一行、或者一开始就在河对岸，原版的轮廓，象棋原有的五个兵位。两种兵的走法：象棋自己的兵，向前一步、过河后才能横走；老兵，从第一步起就有过河兵的走法。每种阵形都由 Fairy-Stockfish 自战，四种搜索量各一局，由一个事先已与引擎在每一步合法着法上达成一致的规则内核担任裁判。',
   'The parent’s array with standard soldiers, and the closest thing to a game we found: 36 veterans a rank forward, drawn with the crossed-soldier piece because that is the move they have.':
     '原版阵形配标准兵，以及我们找到的最接近一盘棋的设计：36 个老兵前移一行，用过河兵的棋子图案画出，因为那正是它们的走法。',
   'Standard soldiers: the chariot eats the horde from behind': '标准兵：车从背后吃光兵团',
-  'A standard soldier covers only the point in front of it, so the horde is nine columns rather than a wall. The moment a column empties, a chariot drops through it to the first rank and takes a soldier a move from behind, and nothing in the horde attacks backward. Every array of 40 or fewer that starts on its own side loses this way, four games out of four. Only a five-deep block of 45, or a start already across the river, sometimes gets enough soldiers over before the chariot is done, and those cells split.':
-    '标准兵只控制正前方一个点，所以兵团是九根纵列，而不是一堵墙。哪一列一空，车就顺着它落到底线，从背后每着吃一个兵，而兵团里没有任何子能向后攻击。40 兵及以下、从己方半场开始的每一种阵形都是这样输的，四局全输。只有五行厚的 45 兵阵，或者一开始就在河对岸的阵形，有时能在车吃完之前把足够多的兵送过河，那几格的结果才分化。',
-  'The million-node game from the parent’s array. Black’s chariot drops through the f-file, which the horde emptied by advancing; fifteen moves later eleven soldiers are gone and the army has lost nothing for them.':
-    '原版阵形的 100 万节点对局。黑车顺着兵团推进时空出来的 f 线落到底线；十五回合后十一个兵没了，全军毫无损失。',
   'Veteran soldiers: the horde holds, and the siege is a draw': '老兵：兵团守得住，围城是和棋',
-  'Give every horde soldier the crossed soldier’s move from the start and the road closes: a veteran column attacks the points beside it, so the chariot cannot sit next to it for free. The horde becomes a side. Between equals the game becomes a siege: the horde marches to the palace, finds a general and two chariots waiting, and stops, because the block guards itself where it stands but can only advance a whole rank at a time while the army waits. Forty-eight games: 37 draws, six horde wins, five army wins, all five against 18 soldiers.':
-    '让兵团的每个兵从开局起就有过河兵的走法，路就堵上了：一列老兵攻击身边的点，车不能白白停在它旁边。兵团成了一方棋。势均力敌之间，棋局成了围城：兵团推进到九宫前，发现一个将带着双车在等，然后停住，因为兵阵站在原地时能互相保护，却只能整行一起推进，而全军在一旁等着。四十八局：37 和，兵团 6 胜，全军 5 胜，五胜全是对 18 兵。',
-  'The one array the horde is favoured in is the same siege with a better score, not a different game: four hundred to a thousand plies in which the army’s best plan is to wait in the palace and the horde’s is to shuffle a block one point at a time.':
-    '兵团占优的唯一阵形是同一场围城加一个更好的比分，不是另一盘棋：四百到一千步里，全军的最佳计划是待在九宫里等，兵团的最佳计划是把兵阵一格一格地挪。',
-  'What a different soldier would need': '换一种兵需要什么',
-  'A chess pawn captures diagonally, so the pawn behind covers the point its neighbour steps to and pawns advance as chains; that is why Horde works in chess. The xiangqi soldier captures the way it moves, straight ahead, so the point a soldier steps to is covered by nothing, and the river is a cliff: no cover on the way, total cover once there. No count, start rank, shape or clock changes that. What would is a soldier with cover on the way, and the candidates run from a diagonal-forward capture to a double step, two soldiers a turn, or the chess pawn outright. We stopped at the veteran because it is the only one xiangqi already has; each of the others is a new piece and a different game.':
-    '国际象棋的兵斜着吃子，所以后面的兵保护着邻兵要走到的点，兵成链推进；部落棋在国际象棋里成立就是这个原因。象棋的兵怎么走就怎么吃，直着向前，所以兵要走到的点没有任何子保护，河就是一道悬崖：路上毫无掩护，到了那边掩护全面。兵数、起始行、阵形、无吃子限制都改变不了这一点。能改变它的是一种在路上有掩护的兵，候选从斜向前吃子，到第一步走两格、每回合走两个兵，直到干脆用国际象棋的兵。我们止步于老兵，因为它是唯一象棋本来就有的；其余每一种都是新棋子，也就是另一盘棋。',
   'The rule kernel with both soldier rules and all twelve arrays, the Fairy-Stockfish stanzas, all 387 engine games, the checks behind them, and a verifier that replays every game against the rules and recomputes the tallies in half a minute, with no engine needed. If you have a soldier rule that gives the block cover on the way, that is where the next attempt starts; open an issue there and the write-up will say so.':
     '含两种兵的走法和全部十二种阵形的规则内核、Fairy-Stockfish 的变体配置、全部 387 盘引擎对局、它们背后的各项检验，以及一个不需要引擎、半分钟内就能对照规则重放每一盘并重新计算统计的校验器。如果你有一种能给兵阵路上掩护的兵的走法，下一次尝试就从那里开始；去那里提一个 issue，文章会如实写明。',
   'Check the games yourself': '亲自检验这些对局',
-  '36 STANDARD SOLDIERS, RANKS 1-4': '36 个标准兵，第 1-4 行',
-  '36 VETERANS, RANKS 2-5': '36 个老兵，第 2-5 行',
-  'MOVE 25: THE f-FILE IS OPEN': '第 25 回合：f 线已空',
-  '15 MOVES LATER: 11 SOLDIERS GONE': '15 回合后：11 个兵没了',
+  '36 STANDARD SOLDIERS, RANKS 1-4': '36 个标准兵，第 1-4 线',
+  '36 VETERANS, RANKS 2-5': '36 个老兵，第 2-5 线',
   // horde-xiangqi playthrough frames (2026-09-15).
   // horde-xiangqi playthrough frames (2026-09-15).
-  'The horde’s win from its best array, the one it wins four times in five, every ply: the march, the siege, both chariots falling, and the smother at ply 435. Replayed on this page through the rule kernel; every game in this array is in the viewer on brianhliou.com.':
-    '兵团在它最好的阵形（五局四胜的那一种）里的胜局，每一步都在：行军、围城、双车先后被吃，以及第 435 步的困毙。本页通过规则内核重放；这种阵形的每一盘棋都在 brianhliou.com 的浏览器里。',
   'Horde, 36 veterans': '兵团，36 个老兵',
   'The army': '全军',
-  'The block edges forward a rank at a time; the army has given up two soldiers and a horse and has not touched the block.':
-    '兵阵一行一行地向前挪；全军已经丢了两个兵和一个马，还没碰到兵阵。',
-  'Seven soldiers are across the river and the army is down to eight pieces: both elephants and all five soldiers gone. The chariots cannot sit beside a veteran column.':
-    '七个兵过了河，全军只剩八个子：两个象和五个兵全没了。车没法停在老兵纵列的旁边。',
   'Ten across. From here the two chariots and the general hold the palace and the block shuffles: this is the siege every veteran game above 27 soldiers reaches.':
     '十个兵过河。从这里起双车和将守住九宫，兵阵来回挪动：这就是 27 兵以上的每一局老兵对局都会走到的围城。',
   'The first chariot falls, traded for soldiers the horde could afford to lose; nineteen are left.':
@@ -3323,6 +3298,165 @@ const ZH_HANS: Record<string, string> = {
     'Fairy-Stockfish 自战，每着 100 万节点，120 步无吃子限制',
   'Red wins. Xiangqi scores the side with no legal move as the loser; Lichess Horde would call it a draw.':
     '红方胜。象棋判无子可动的一方负；Lichess 的部落棋会判和。',
+  // horde-xiangqi merge (2026-10-07): the brianhliou.com post folded in.
+  'None of the twenty-four designs is a game, and the reason is the soldier. With xiangqi’s own soldier the army wins every start of 40 or fewer on its own side of the river, by one trick: a chariot behind the block. Give the soldier its crossed-river move from the first step and the trick is gone, but the game becomes a siege, 37 draws in 48 games. Below the river the block cannot defend itself; above it the army cannot attack it. There is no play page for Horde Xiangqi; this page holds the measurement.':
+    '二十四种设计没有一种成得了游戏，原因在兵身上。用象棋原本的兵，凡是兵团起始于自己这半边、40 兵及以下的阵形，全军每局都赢，靠的是同一个招法：一只车绕到兵阵背后。让兵从第一步起就有过河兵的走法，这个招法就没了，但棋局变成围城，48 局里 37 局和棋。过河之前，兵阵无法自保；过河之后，全军攻不动它。部落象棋没有对局页面；本页记录的是这份测量。',
+  'The rules': '规则',
+  'Horde chess is the parent: 36 pawns and no king against a normal army. The port keeps as much of xiangqi as it can. Red is the horde: soldiers only, no general, and Red moves first. Black is the standard army. Red wins by checkmate; Black wins by capturing every red piece. There is no check against the horde and no facing rule, since only one general exists.':
+    '国际象棋的部落棋（Horde）是它的母版：36 个兵、没有王，对抗正常的一方军队。这次移植尽量保留象棋本身的规则。红方是兵团：只有兵，没有帅，红方先行。黑方是标准全军。红方靠将死取胜；黑方靠吃掉红方所有子取胜。由于棋盘上只有一个将，兵团一方不存在被将，也不存在白脸将。',
+  'The side to move with no legal move loses, as in xiangqi; Lichess Horde calls it a draw, and the terminal rules below say how much that matters. Threefold repetition draws, and so does a run of 60 or 120 plies without a capture. Standard soldiers move as in xiangqi: one point forward, sideways only after crossing the river, never backward. Veteran soldiers have the crossed soldier’s move from their first step. The army’s five soldiers stay standard either way.':
+    '轮到行棋而无合法着法的一方判负，与象棋相同；Lichess 的部落棋判为和棋，下面的终局规则一节会说明这有多大影响。三次重复局面判和；连续 60 或 120 步无吃子也判和。标准兵走法与象棋相同：向前一格，过河后才能横走，永不后退。老兵从第一步起就有过河兵的走法。无论哪种设定，全军一方的五个兵都是标准兵。',
+  'The design space': '设计空间',
+  'Five dials. A design is a soldier rule and a start array, and twenty-four were played.':
+    '五个旋钮。一种设计由一种兵的走法和一种初始阵形构成，我们下了二十四种。',
+  Dial: '旋钮',
+  'Settings tried': '试过的设定',
+  'The soldier’s move': '兵的走法',
+  'Standard; veteran (sideways from move one)': '标准；老兵（第一步即可横走）',
+  'How many soldiers': '兵的数量',
+  'Where the block starts': '兵阵起始位置',
+  'At the back (rank 1 up), forward (rank 2 or 3 up), across the river (front rank on rank 6)':
+    '靠底（第 1 线往上）、前压（第 2 或第 3 线往上）、过河（前排位于第 6 线）',
+  'The block’s shape': '兵阵的形状',
+  'Full rows; the parent’s shape (rows plus paired outposts); xiangqi’s five soldier points':
+    '整排；母版的形状（成排再加成对的前哨）；象棋的五个兵位',
+  'Terminal rules': '终局规则',
+  'No-capture clock of 60 or 120 plies; stalemate as a loss (xiangqi) or a draw (the parent)':
+    '60 或 120 步的无吃子步数限制；困毙判负（象棋）或判和（母版）',
+  'Every design ran on stock Fairy-Stockfish with a short configuration and no engine code, refereed by a rule kernel that agreed with the engine’s move generator before any game was read (the checks are under “How we checked it”). Each array was played four times, the engine against itself at four search budgets with no randomness, and once more at a million nodes a move. The engine cannot use its xiangqi neural net without a red general on the board, so it plays on classical evaluation alone. It plays the game anyway.':
+    '每种设计都跑在原版 Fairy-Stockfish 上，只用一小段配置，不改引擎代码，由一个规则内核担任裁判，并在读取任何对局之前就与引擎的着法生成器逐一核对一致（检查见“我们是怎么核验的”一节）。每种阵形下四局，引擎在四档搜索预算下自我对弈，无随机成分；再以每着一百万节点下一局。棋盘上没有红帅，引擎无法使用它的象棋神经网络，因此只靠古典评估下棋。它照样把棋下完了。',
+  'The twelve start arrays, in the order of the tables below. Red is the horde, Black the standard army; each array was played with both soldier rules.':
+    '十二种初始阵形，按下方表格的顺序排列。红方是兵团，黑方是标准全军；每种阵形都用两种兵的走法各下过。',
+  'Nine of the twelve arrays go to the army four games out of four, by one mechanism. A standard soldier covers only the point in front of it, so the horde is nine columns rather than a wall. The moment a column empties, a chariot drops through it to the first rank and eats the block from behind at a soldier a move, and nothing in the horde attacks backward. Shape changes nothing: an outpost is a target, not cover.':
+    '十二种阵形里有九种四局全归全军，靠的是同一个机制。标准兵只控制它正前方那一格，所以兵团是九列纵队，而不是一道墙。某一列一旦走空，车就从这一列直落底线，一着吃一个兵地从背后蚕食兵阵，而兵团没有任何子力能向后攻击。形状不起作用：前哨是靶子，不是掩护。',
+  'The million-node game from the parent’s array, every ply. The chariot drops at ply 50; step on from there to watch the block go from behind. Replayed on this page through the rule kernel.':
+    '原版阵形的一百万节点对局，每一步都在。车在第 50 步落到底线；从那里往后一步步看兵阵如何从背后被吃掉。本页通过规则内核重放。',
+  'Fairy-Stockfish against itself, a million nodes a move, 60-ply clock':
+    'Fairy-Stockfish 自战，每着 100 万节点，60 步无吃子限制',
+  'Black wins: the last soldier is gone.': '黑方胜：最后一个兵也没了。',
+  'The other three arrays are one exception: enough soldiers get across before the chariot is done. 45 on ranks 1 to 5 is a five-deep block, and its four games split two army wins, one horde mate and one draw. The two arrays that start across the river begin in contact with the army’s soldiers. The 27 still loses; the 36 is a coin flip that skips the march and previews the veteran game.':
+    '另外三种阵形是同一个例外：在车做完这件事之前，有足够多的兵过了河。第 1 至 5 线的 45 兵是五层深的兵阵，四局结果是全军两胜、兵团将死一局、和棋一局。两种从过河处起始的阵形一开局就与全军的兵短兵相接。27 兵仍然要输；36 兵则是五五开，它跳过了行军阶段，预演了老兵版的棋局。',
+  Soldiers: '兵数',
+  Start: '起始',
+  Army: '全军',
+  Horde: '兵团',
+  '1M game': '百万节点局',
+  Plies: '步数',
+  'Ranks 1-2': '第 1-2 线',
+  'Army, extinction': '全军，全灭',
+  'Ranks 3-4': '第 3-4 线',
+  'Ranks 1-3': '第 1-3 线',
+  'Ranks 2-4': '第 2-4 线',
+  'Ranks 4-6': '第 4-6 线',
+  'Ranks 1-4': '第 1-4 线',
+  'Ranks 2-5': '第 2-5 线',
+  'Ranks 3-6': '第 3-6 线',
+  'Horde, mate': '兵团，将死',
+  'Ranks 1-5': '第 1-5 线',
+  'Xiangqi’s five points': '象棋的五个兵位',
+  'Parent shape': '母版形状',
+  'Army, Horde and Draw count four games per array at 150,000, 200,000, 300,000 and 500,000 nodes a move, 120-ply clock, every move the engine’s first choice. Then the single game at a million nodes with a 60-ply clock, and its length. Four arrays were played once more at five million nodes: the army won the 36 on ranks 1 to 4 in 156 plies, the 36 on ranks 2 to 5 in 146 and the 32 in 106, and the 36 across the river drew by repetition at 104.':
+    '全军、兵团、和棋三栏统计每种阵形的四局，每着 150,000、200,000、300,000 和 500,000 节点，120 步无吃子限制，每着都取引擎首选。之后是每着一百万节点、60 步限制下的单局及其步数。有四种阵形在每着五百万节点下又下了一局：全军在 156 步赢下第 1 至 4 线的 36 兵，在 146 步赢下第 2 至 5 线的 36 兵，在 106 步赢下 32 兵；过河起始的 36 兵在第 104 步因重复局面和棋。',
+  'The chariot’s road exists because a standard soldier attacks nothing beside it, and xiangqi already has a soldier that does: the crossed soldier, which moves and captures one point forward or sideways. Veteran soldiers are a horde that starts promoted. Every horde soldier has that move from its first step, nothing else changes, and a player learns nothing new.':
+    '车之所以有路可走，是因为标准兵不攻击身旁任何一格，而象棋里本来就有一种能做到的兵：过河兵，可向前或横向一格行走与吃子。老兵就是一开始就已经升变的兵团。兵团的每个兵从第一步起就有这种走法，其余一切不变，玩家不需要学任何新东西。',
+  'This closes the road. A veteran column attacks the points beside it, so the chariot cannot sit next to it for free. The horde becomes a side, and between equals the game becomes a siege: 48 games, 37 draws. The army wins only against 18 soldiers, and from 27 up it never wins.':
+    '这条路被堵死了。老兵纵队会攻击身旁各格，车没法白站在它旁边。兵团成了真正的一方，而在实力相当的双方之间，棋局变成围城：48 局，37 和。全军只赢得了对 18 兵的局，从 27 兵往上它一局不胜。',
+  'Army lost': '全军损失',
+  'Draw, clock': '和棋，步数限制',
+  'Horde, smother': '兵团，困毙',
+  'Draw, repetition': '和棋，重复局面',
+  'Four games per array at the same four budgets and the 120-ply clock, then the single game at a million nodes; Army lost counts the army’s pieces lost in that game. *Three million-node games ran into the harness’s 1,000-ply cap and were played on from that position with the clock in force; no capture followed, and the ply shown is where the clock ended them. Each ended with nine or ten soldiers against a general and both chariots, with an elephant or an advisor beside them in two.':
+    '每种阵形在同样的四档预算、120 步限制下各下四局，然后是一百万节点下的单局；全军损失一栏统计全军在那一局里损失的子力。*有三局一百万节点对局撞上了测试框架的 1,000 步上限，之后从该局面继续下，步数限制照常生效；之后未再出现吃子，表中所示步数即为步数限制终止之处。三局结束时都是九或十个兵对将加双车，其中两局还多一个象或一个士。',
+  '**The ending.** The horde marches, takes the army’s cannons and elephants on the way in, and arrives at the palace to find a general with two chariots waiting. From there the soldiers cannot force their way past the chariots, and the chariots cannot eat a block of soldiers that guard each other. Start rank and shape decide how much of the army the horde takes on the way in, and nothing else. The parent’s 31 shows the other face of the same rule: its four games drew at 155 to 245 plies with never more than two soldiers across the river, because a block that has not moved cannot be attacked and a block that moves loses the soldier that moved.':
+    '**终局形态。**兵团行军推进，路上吃掉全军的炮和相，抵达九宫时发现将和两只车在那里等着。到了这一步，兵冲不过车，车也吃不动互相保护的兵阵。起始横线和形状只决定兵团在路上能吃掉全军多少子，别无其他。母版的 31 兵展示了同一条规则的另一面：四局在 155 至 245 步和棋，过河的兵从未超过两个，因为没动过的兵阵无法被攻击，而一动就要丢掉动过的那个兵。',
+  'The ending, here from the 40-soldier array at a million nodes a move: twelve soldiers against a general, an advisor and two chariots at ply 754. The soldiers cannot force a way past the chariots, and the chariots take a soldier only when one steps out of the block: two in the next 246 plies, at 822 and 896.':
+    '终局形态，这里取自 40 兵阵形、每着一百万节点的对局：第 754 步时，十二个兵对将、士和双车。兵冲不过车，而车只有在某个兵走出兵阵时才吃得到它：接下来 246 步里只吃了两个，分别在第 822 和 896 步。',
+  'We took the 40-soldier ending at ply 754 and let the engine play it on for 200 more plies at five million nodes a side: one capture, and the engine’s own evaluation of the horde’s advantage slid from 2.3 pawns to 0.7. At a million nodes the army had managed two captures in the same stretch, then none in the next 120, and the clock ended it. Two soldiers in 262 plies is not winning an ending.':
+    '我们把 40 兵那局在第 754 步的残局拿出来，让引擎双方各以每着五百万节点再下 200 步：只吃了一个子，而引擎自己对兵团优势的评估值从 2.3 兵滑到 0.7。在一百万节点下，全军在同样这段里吃了两个子，接下来的 120 步里一个也没吃，步数限制结束了对局。262 步吃两个兵，算不上赢下残局。',
+  '**The win.** The 36 that starts a rank forward took both chariots and smothered the bare general at ply 435: no move, no check, which xiangqi scores as a loss. It is the one array where the horde is the favourite, with three wins in its four games and the million-node game too: a rank closer to the river, it arrives with more of the army already gone and enough soldiers left to trade for the chariots. The horde’s other wins are the same finish, all past ply 390, and four of its six are the smother.':
+    '**取胜的那一局。**前压一线的 36 兵吃掉了两只车，并在第 435 步把光将困毙：无着可走又未被将，象棋判负。这是兵团唯一占优的阵形，四局赢三局，一百万节点那局也赢了：离河近一线，抵达时全军已经损失更多，而剩下的兵也足够换掉两只车。兵团其余的胜局都是同样的收束，全部在第 390 步之后，六胜里有四胜是困毙。',
+  'The horde’s win, every ply: the march, the siege, the chariots falling at plies 267 and 431, and the smother at ply 435. Replayed on this page through the rule kernel.':
+    '兵团的胜局，每一步都在：行军、围城、第 267 和第 431 步双车先后被吃，以及第 435 步的困毙。本页通过规则内核重放。',
+  'The terminal rules': '终局规则',
+  'Three ways a game here stops without a winner, and they are not the same thing. **Repetition**: the same position with the same side to move three times; a draw. **The clock**: a run of plies with no capture, 60 or 120 of them; a draw, and a soldier stepping forward does not reset it. **The cap**: the harness stopped the game at 400, 1,000 or 2,000 plies. That is not a rule of the game, so a capped game is unfinished, not drawn. Three million-node veteran games hit the 1,000 cap and were played on until the clock ended them, and no four-budget game reached 2,000, so every result in the tables is one of the first two.':
+    '这里有三种让棋局无胜负而终止的方式，它们并不是一回事。**重复局面**：同一局面、同一方行棋出现三次；判和。**步数限制**：连续若干步无吃子，60 步或 120 步；判和，而且兵向前一步并不重置计数。**上限**：测试框架在 400、1,000 或 2,000 步处终止对局。这不是棋规，所以被截断的对局是未下完，而不是和棋。有三局一百万节点的老兵对局撞上了 1,000 步上限，随后继续下到步数限制终止；而四档预算的对局没有一局到过 2,000 步，因此表格里的每个结果都属于前两种。',
+  '**The clock.** Xiangqi’s no-capture rule is 60 plies. With standard soldiers it fired once in 48 games. With veterans it is the usual ending: 30 of the 37 draws, the other seven by repetition. At 60 plies it cuts live games short with the march still going, so the veteran games and every four-game sample run at 120. The clock is also a rule the engine plays by, so a game under a 60-ply clock and one under 120 are different games from ply 2, not one game cut at different points.':
+    '**步数限制。**象棋的无吃子规则是 60 步。用标准兵时，48 局里只触发过一次。用老兵时它是常见的收束：37 和里有 30 局如此，另外七局是重复局面。设成 60 步会在行军还在进行时截断还活着的棋局，所以老兵对局和每一组四局样本都用 120 步。步数限制同时也是引擎遵循的规则，所以 60 步限制下的一局和 120 步限制下的一局，从第 2 步起就是两局不同的棋，而不是同一局在不同处被截断。',
+  '**Stalemate.** Under the parent’s rule a general with no move and no check is a draw. Re-scoring every game in the lab under that rule: five of the horde’s seven equal-strength wins with veterans become draws, and one of its four with standard soldiers; against a random army, 20 of its 35 wins with standard soldiers and 16 of its 38 with veterans; and five of its ten wins in the veteran budget ladder. The smother is the horde’s mate about half the time, and the parent’s rule would take it away.':
+    '**困毙。**按母版的规则，将无着可走又未被将判和棋。把实验室里的每局都按这条规则重新判定：老兵、实力相当条件下兵团的七胜里有五胜变成和棋，标准兵的四胜里有一胜变成和棋；对随机走子的全军，标准兵下兵团的 35 胜里有 20 胜、老兵下 38 胜里有 16 胜变成和棋；老兵预算阶梯测试的十胜里有五胜同样如此。困毙大约占了兵团胜法的一半，而母版的规则会把它拿掉。',
+  'Why the soldier fails, and what a different soldier would need':
+    '兵为什么不行，换一种兵又需要什么',
+  'The game has two phases, and xiangqi’s soldier fails in each of them differently.':
+    '棋局分两个阶段，象棋的兵在每个阶段都以不同方式失灵。',
+  '**Below the river, the block cannot defend itself.** A standard soldier attacks only the point ahead of it. So the horde is nine columns, not a wall: a chariot beside a column, or behind it, is untouchable, and any file that empties is a road to the back rank. Every start of 40 or fewer on the horde’s own side is decided here, by that one chariot, four games in four. At 45 the block is deep enough to outlast it some of the time, and that array splits.':
+    '**过河之前，兵阵无法自保。**标准兵只攻击正前方一格。于是兵团是九列纵队，而不是一道墙：车站在某列旁边或它后面都碰不到，任何走空的纵线都是通往底线的大路。兵团在自己这半边、40 兵及以下的所有阵形，都在这一阶段被这一只车判定，四局全输。到 45 兵时，兵阵够厚，有时能熬过去，那一种阵形于是结果分化。',
+  '**Above the river, the block cannot move.** A crossed soldier (or a veteran) attacks sideways too, so the block guards itself where it stands. But it protects only the points its soldiers could step to, never the point ahead of a neighbour. The soldier that steps forward lands on a point nobody covers and is a free capture until a neighbour steps up beside it. So the block can advance only as a whole rank, nine moves per rank, while the army waits, and any soldier that moves early is picked off. The army, for its part, cannot attack a block that has not moved. Nine of the twelve veteran arrays end there in every game or all but one: a general and two chariots in the palace, a block of soldiers outside it, and nothing either side can do.':
+    '**过河之后，兵阵动不了。**过河兵（或老兵）也能横向攻击，所以兵阵原地就能互相保护。但它只保护自家兵能走到的格子，绝不保护邻兵正前方那一格。向前一步的兵落在没人控制的格子上，在邻兵跟上来并列之前就是白送的一子。于是兵阵只能整排整排地推进，每推一排要走九着，而全军只需等待；任何提前走动的兵都会被点掉。而全军一方也攻不动一个没动过的兵阵。十二种老兵阵形里有九种就在这里终止，或全部对局如此，或只有一局例外：将和两只车守在九宫，一堆兵围在外面，双方都无事可做。',
+  'The same step on three boards: the middle piece has just moved one point forward, and the green rings are the points its side now protects. A chess pawn captures diagonally, so the pawn on d4 covers e5 and the pawn that arrived there is safe from the rook: pawns advance as chains. A xiangqi soldier captures the way it moves, straight ahead, so d4 and f4 cover d5 and f5 and nothing covers e5; the chariot takes the soldier for free. Veteran soldiers (right) attack sideways too, which makes the block guard itself where it stands, and still nothing covers the point a soldier steps to. The horde can hold its ground and cannot leave it.':
+    '同一步棋，三张棋盘：中间那个子刚向前走了一格，绿圈是它这一方此刻保护的点。国际象棋的兵斜着吃子，所以 d4 的兵控制着 e5，走到那里的兵车吃不得：兵成链推进。象棋的兵怎么走就怎么吃，直着向前，所以 d4 和 f4 控制 d5 和 f5，没有任何子控制 e5；车白吃这个兵。老兵（右）也能横向攻击，所以兵阵原地就能互相保护，但兵要走到的那一点仍然没有任何子控制。兵团守得住阵地，却离不开它。',
+  'A chess pawn is built differently. It captures diagonally, so the pawn on d4 already covers e5 before the e-pawn steps there: pawns advance as chains, one at a time, each landing protected, and a chain can be undermined from the base. That is why Horde works in chess and why chess players never have to think about it. On the xiangqi board the river is a cliff: no cover on the way, total cover once there, and no setting of count, start rank, shape or clock changes that. Those are the dials we turned. The one we left alone, past the veteran, is the soldier itself.':
+    '国际象棋的兵构造不同。它斜吃，所以 d4 的兵在 e 兵走到 e5 之前就已经控制了 e5：兵是成链推进的，一次走一个，每一步落点都有保护，而兵链可以从底部瓦解。这就是部落棋在国际象棋里成立、而国际象棋棋手根本不必考虑这件事的原因。在象棋盘上，河是一道悬崖：过去的路上没有掩护，一旦过去又是全覆盖，而数量、起始横线、形状、步数限制怎么调都改变不了这一点。这些正是我们转过的旋钮。除了老兵之外，我们没有碰的那个旋钮，就是兵本身。',
+  'That is where the next attempt starts. The property the horde is missing is cover on the way: a soldier that protects the point its neighbour is about to step to, so the block can advance one piece at a time instead of one rank at a time. Anything that supplies it is a candidate, from small to large: a soldier that captures diagonally forward but still moves straight, a double step on the first move, two soldiers moving per turn as in the old Five Tigers handicap, a second promotion at the far rank, or the chess pawn outright, which turns this into Horde chess on a bigger board. We stopped at the veteran because it is the only one of these xiangqi already has; each of the others is a new piece, and a new piece is a different game. The rules are data in the lab, so any of them is one line and an afternoon of engine time, and the tables here are the baseline to beat.':
+    '下一次尝试就从那里开始。兵团缺的那条性质是路上的掩护：一个能保护邻兵即将踏上的那一格的兵，好让兵阵一次推进一个子，而不是一次推进一排。任何能提供这条性质的设计都是候选，改动从小到大不等：斜前吃子但仍直走的兵、第一步可走两格、像旧时“五虎”让子那样一回合走两个兵、到底线后再升一次变，或者干脆直接用国际象棋的兵，那就把这变成了大棋盘上的部落国际象棋。我们止步于老兵，因为它是这些方案里唯一象棋本来就有的；其余每一个都是新子力，而新子力就是另一种游戏。规则在实验室里就是数据，所以其中任何一个都只是一行配置加一下午的引擎时间，而这里的表格就是需要超越的基线。',
+  'Run it yourself': '自己跑一遍',
+  'The whole variant is a stanza in Fairy-Stockfish’s `variants.ini`. This is the parent’s array with veteran soldiers and the 120-ply clock (`nMoveRule` counts moves, so 60 is 120 plies); for standard soldiers drop the `customPiece1` line and write `P` for `V` in the start position.':
+    '整个变体就是 Fairy-Stockfish 的 `variants.ini` 里的一段。下面是母版阵形配老兵与 120 步限制（`nMoveRule` 按回合计，所以 60 就是 120 步）；要用标准兵，删掉 `customPiece1` 那一行，并在初始局面里把 `V` 写成 `P`。',
+  'Two lines matter and are easy to leave out. `chasingRule = none` is mandatory: the engine’s chase detector reads the missing general’s square on a kingless side. `flyingGeneral = false` changes nothing and documents a fact: the engine keys the facing rule on its king piece and silently switches it off when one side has none.':
+    '有两行很关键、又很容易漏掉。`chasingRule = none` 是必需的：在无将的一方，引擎的捉子检测会去读那个不存在的将的位置。`flyingGeneral = false` 其实不改变任何东西，只是记录一个事实：引擎把白脸将规则挂在它的王类子力上，一方没有王时会静默关掉它。',
+  '**The engine plays these rules.** A rule kernel (the same one that ran Atomic Xiangqi, with hooks for a side with no general, a win by extinction, and the veteran soldier) referees every game: the engine proposes a move, the kernel validates and applies it, and an engine quietly playing different rules aborts the run instead of producing a record of a different game. Before any game was read, the two had to agree on every legal move: perft to depth 3 from each array, nine hand-built positions compared as exact move sets, and 300 positions from random play. Zero disagreements, both soldier rules, all twelve arrays.':
+    '**引擎确实在按这些规则下棋。**一个规则内核（就是跑原子象棋那一个，加上了无将一方、全灭取胜和老兵的接口）为每一局担任裁判：引擎提出一着，内核校验并落子，如果引擎悄悄按别的规则下棋，运行会中止，而不是产出另一种游戏的记录。在读取任何对局之前，两者必须在每一个合法着法上一致：从每个阵形做深度 3 的 perft、九个手工构造的局面按精确着法集合比对、以及随机走子产生的 300 个局面。零分歧，两种兵的走法、全部十二种阵形。',
+  '**The engine understands the game.** At 100,000 nodes it beat a random mover 70-0 with standard soldiers and 78 of 80 with veterans. Ten times the search budget beat a tenth of it 17-1-2 on the standard forward array and 11-0-9 on veterans. One footnote: on the parent’s array with standard soldiers, ten times the budget scored only 55%, because every decided game went to the army whichever budget held it; the seat was the result, not the search.':
+    '**引擎懂这个游戏。**在 100,000 节点下，它用标准兵对随机走子方 70-0，用老兵 80 局胜 78 局。十倍搜索预算对十分之一预算，在标准前压阵形上 17-1-2，在老兵上 11-0-9。一条脚注：在母版阵形配标准兵时，十倍预算只拿到 55%，因为无论哪一档预算坐哪一边，每一局有胜负的棋都归全军；决定结果的是座位，不是搜索。',
+  '**How deep the search is.** Node budgets, not time, so nothing depends on the machine: 200,000, 1 million and 5 million nodes a move reach about depth 12, 15 to 20, and 24 to 33 on these positions. Play is not saturated at these budgets: the across-the-river array with standard soldiers went draw, army, horde, horde, army, horde, draw across seven budgets. The standard-soldier verdict holds at every budget tried, by the same mechanism, and that claim is safe. The siege is the position class search is worst at: a hundred-ply plan is invisible at depth 20, and classical evaluation has no idea what the ending is worth (it scored the fortress at +2.3 for the horde while the army was eroding it). So the draw claim is weaker than the loss claim, and a human with a plan might do better on either side than the engine did.':
+    '**搜索有多深。**用节点预算而不是时间，所以结果不依赖机器：每着 200,000、一百万和五百万节点，在这些局面上大致达到深度 12、15 至 20、24 至 33。在这些预算下棋力还没饱和：标准兵的过河阵形，七档预算跑出来依次是和、全军、兵团、兵团、全军、兵团、和。标准兵的结论在试过的每一档预算下都成立，机制一致，这个论断是稳的。围城是搜索最不擅长的局面类型：一百步的计划在深度 20 下完全看不见，而古典评估根本不知道这种残局值多少（在全军正在蚕食兵阵时，它给这个堡垒打了兵团 +2.3）。所以和棋的论断比负局的论断要弱，有计划的人类在任何一边都可能下得比引擎好。',
+  '**One game is one sample.** Every array was played four times, at 150,000, 200,000, 300,000 and 500,000 nodes a move, every move the engine’s first choice and no random openings, so the counts in the tables are a rate and the million-node game is one of five, not the verdict. A deterministic engine replays the same game from the same start, so the budgets are what make the four games different, and the script refuses an array where two of them came out identical (none did). Where an array splits, the split is the result. One more caveat on the veteran numbers: the engine sees the veteran as a custom piece with a value estimated from its mobility, not tuned, so its judgement of a soldier-for-piece trade is rougher than for the standard soldier. The fortress it cannot break at five million nodes is real; the material it gave up on the way in may not be best play.':
+    '**一局只是一个样本。**每种阵形都下了四局，每着 150,000、200,000、300,000 和 500,000 节点，每着都取引擎首选，没有随机开局，所以表格里的计数是一个比率，而一百万节点对局是五局之一，不是结论。确定性的引擎从同一起始会重现同一局棋，所以正是预算让这四局不同；脚本会拒收其中两局完全相同的阵形（没有出现过）。结果分化时，分化本身就是结果。关于老兵数据还有一条说明：引擎把老兵当作自定义子力，其价值是按机动性估出来的，未经调优，所以它对“一兵换一子”的判断比对标准兵更粗糙。它在五百万节点下都攻不破的那个堡垒是真实的；而它推进路上舍掉的子力，可能并非最佳着法。',
+  'A variant is a game, for this series, if it clears three bars under measured play: it is decided between good players rather than drawn by default; neither side wins from the start; and both seats have something to do. Horde Xiangqi clears none of them in any design tried.':
+    '对这个系列而言，一个变体要算游戏，需要在可测量的对弈中越过三道门槛：在高手之间有胜负，而不是默认和棋；任何一方都不能从开局就必胜；两个座位都有事可做。部落象棋在试过的任何设计里都一道也没越过。',
+  '**Standard soldiers:** the army wins from every start of 40 or fewer on its own side of the river, 36 games out of 36, by one trick. Decided, but from move one. At 45, or starting across the river, the array is a coin flip settled by the opening exchanges.':
+    '**标准兵：**兵团起始于自己这半边、40 兵及以下的所有阵形，全军全胜，36 局全胜，靠的是同一个招法。有胜负，但从第一着就定了。到 45 兵，或从过河处起始，阵形就变成由开局几手交换决定的五五开。',
+  '**Veteran soldiers:** a siege that two good players draw 37 times in 48, in games of 137 to 1,098 plies. The horde wins six, four of them by smother, and the army wins five, all against 18 soldiers. Not decided, and neither seat has a plan: the army’s best play is to sit in the palace and wait, the horde’s is to shuffle a block one point at a time. The one array the horde is favoured in is the same siege with a better score, not a different game.':
+    '**老兵：**两位高手之间是一场围城，48 局里 37 局和棋，每局 137 至 1,098 步。兵团胜六局，其中四局靠困毙；全军胜五局，全都是对 18 兵。没有胜负，而且两个座位都没有计划：全军的最佳下法是待在九宫里等，兵团的最佳下法是把兵阵一格一格地挪。兵团唯一占优的阵形只是同一场围城分数更好一点，不是另一种游戏。',
+  '**Against weak play** the horde is dangerous: at 100,000 nodes it beat a random army 35 times in 35, 20 of them by smother, and people are weaker than a million-node search. That makes it a trap, not a game.':
+    '**对付弱手时**兵团很危险：在 100,000 节点下它对随机走子的全军 35 局全胜，其中 20 局靠困毙，而人比一百万节点的搜索要弱。这让它成了一个陷阱，而不是一个游戏。',
+  'What would reopen it: a human result, a soldier rule that gives the block cover on the way (the candidates are listed above), or a chariot-fall rate well above the six in 48 measured here. Nothing so far points that way for xiangqi’s own soldier. The soldier is the design space, the river is a cliff in it, and the next design has to change the soldier.':
+    '什么能让它重新打开：人类对局的结果、一种能给兵阵提供路上掩护的兵的规则（候选已列在上面），或者车被吃的比率远高于这里测到的 48 局中 6 局。就象棋原本的兵而言，目前没有任何迹象指向那个方向。兵就是设计空间，河是其中的一道悬崖，下一个设计必须改兵。',
+  '**Prior art.** We looked in Fairy-Stockfish’s variant file, PyChess, Lichess, Chess.com’s official list, PlayStrategy, Ludii, both Wikipedias’ xiangqi-variant pages, chessvariants.com’s 9x10 index, a Zhihu list of 231 folk xiangqi variants and the nine soldier-named variants with rules on Baidu Baike, and found no horde among them. Tieba’s folk boards and Chess.com’s user variants we could not read, so this is a thorough negative, not an exhaustive one. Xiangqi’s own lopsided games (Manchu chess, Five Tigers, the nine-piece handicap) run the other way, taking pieces from one side, soldiers first. Horde chess descends from BrainKing’s Horde Chess (2002) and Lord Dunsany’s “Pieces against Pawns” (1942), and Lichess settled its rules in [scalachess](https://github.com/lichess-org/scalachess/commit/79cfa70) in 2015.':
+    '**已有工作检索。**我们查过 Fairy-Stockfish 的变体文件、PyChess、Lichess、Chess.com 的官方列表、PlayStrategy、Ludii、中英文维基百科的象棋变体条目、chessvariants.com 的 9x10 索引、知乎上一份 231 种民间象棋变体的清单，以及百度百科上九种带“兵”字名称且有规则的变体，没有找到部落式的变体。贴吧的民间棋盘和 Chess.com 的用户变体我们看不到，所以这是一次尽力的否证，而非穷尽的否证。象棋本身的不对称让子棋（满洲棋、五虎、九子让先）走的是反方向，是从一方拿掉子力，先拿兵。国际象棋的部落棋源自 BrainKing 的 Horde Chess（2002）和 Lord Dunsany 的“Pieces against Pawns”（1942），Lichess 在 2015 年于 [scalachess](https://github.com/lichess-org/scalachess/commit/79cfa70) 定下了它的规则。',
+  'The engine is [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish); the harness that produced the games, with the engine gate and the commands, is the [variant lab](https://github.com/brianhliou/mistboard/tree/main/scripts/variant-lab).':
+    '引擎是 [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish)；产出这些对局的测试框架，连同引擎校验关卡和相关命令，是[变体实验室](https://github.com/brianhliou/mistboard/tree/main/scripts/variant-lab)。',
+  '18, RANKS 1-2': '18 兵，第 1-2 线',
+  '18, RANKS 3-4': '18 兵，第 3-4 线',
+  '27, RANKS 1-3': '27 兵，第 1-3 线',
+  '27, RANKS 2-4': '27 兵，第 2-4 线',
+  '27, RANKS 4-6': '27 兵，第 4-6 线',
+  '36, RANKS 1-4': '36 兵，第 1-4 线',
+  '36, RANKS 2-5': '36 兵，第 2-5 线',
+  '36, RANKS 3-6': '36 兵，第 3-6 线',
+  '45, RANKS 1-5': '45 兵，第 1-5 线',
+  '32, XIANGQI’S FIVE POINTS': '32 兵，象棋的五个兵位',
+  '31, PARENT SHAPE': '31 兵，母版形状',
+  '40, PARENT SHAPE': '40 兵，母版形状',
+  'PLY 754: 12 SOLDIERS': '第 754 步：12 个兵',
+  'PLY 1,000: 10 SOLDIERS': '第 1,000 步：10 个兵',
+  'CHESS: AFTER e4-e5, d4 COVERS e5': '国际象棋：e4-e5 之后，d4 控制 e5',
+  'SOLDIERS: AFTER e4-e5, NOTHING COVERS e5': '兵：e4-e5 之后，无子控制 e5',
+  'VETERANS: STILL NOTHING COVERS e5': '老兵：仍然无子控制 e5',
+  'Horde, 36 soldiers': '兵团，36 个兵',
+  'The parent’s array: 36 standard soldiers on ranks 1 to 4, no general, Red to move. Black is the whole army.':
+    '原版阵形：36 个标准兵位于第 1 至 4 线，没有帅，红方先行。黑方是完整的全军。',
+  'The chariot drops to the first rank through the f-file, which the horde emptied by advancing. No soldier attacks backward, so nothing can touch it there.':
+    '车顺着 f 线落到底线，这一列是兵团推进时自己走空的。没有兵能向后攻击，所以它停在那里谁也碰不到。',
+  'It takes a soldier from behind and goes on at about one a move: fifteen moves after the drop, 11 soldiers are gone for a horse and two of the army’s soldiers.':
+    '它从背后吃掉一个兵，然后大约一着吃一个地继续下去：落底线十五回合后，十一个兵没了，换来的是全军的一个马和两个兵。',
+  'The last soldier falls. The whole horde cost the army four soldiers and two horses.':
+    '最后一个兵倒下。整个兵团只让全军付出了四个兵和两个马。',
+  'The start: 36 veterans on ranks 2 to 5, no general, Red to move. Black is the whole army.':
+    '开局：36 个老兵位于第 2 至 5 线，没有帅，红方先行。黑方是完整的全军。',
+  'The block edges forward a rank at a time; four soldiers have gone for two of the army’s soldiers and a horse.':
+    '兵阵一行一行地向前挪；四个兵已经没了，换掉了全军两个兵和一个马。',
+  'Seven soldiers are across the river and the army is down to eight pieces: both elephants, a horse and all five soldiers gone. The chariots cannot sit beside a veteran column.':
+    '七个兵过了河，全军只剩八个子：两个象、一个马和五个兵全没了。车没法停在老兵纵列的旁边。',
   // -- Atomic Xiangqi (rules page + launch note), machine-drafted 2026-09-17 --
   // Diagram labels (localizeSvgMarkup swaps <text> nodes through this dictionary).
   'CHARIOT TAKES THE HORSE': '车吃马',
@@ -6634,7 +6768,6 @@ const ZH_HANT: Record<string, string> = {
   'The engine’s own game at two million nodes a move, ply 35. Nothing on the board can ever capture anything again.':
     '引擎每著兩百萬節點自戰的對局，第 35 步。棋盤上再沒有任何棋子能吃掉任何東西。',
   'What we are publishing instead of a play page': '我們發佈的是什麼，而不是一個對局頁面',
-  'Read the full analysis': '閱讀完整分析',
   'Check the proofs yourself': '親自檢驗這些證明',
   'Learn xiangqi': '學習象棋',
   '2. Rxh1 Rxb10: RED TO MOVE': '2. Rxh1 Rxb10：輪到紅方',
@@ -6863,43 +6996,19 @@ const ZH_HANT: Record<string, string> = {
     '我們把部落棋搬到象棋棋盤上，先測量再動手：十二種開局陣形、兩種兵的走法，每一種由引擎自戰四局。用象棋自己的兵，全軍靠同一招贏下每一局；讓兵從開局起就有過河兵的走法，棋局則變成四局裡有三局和棋的圍城。我們發佈的是這份測量，而不是這個變體。',
   'Horde chess is 36 pawns and no king against a normal army; the pawns win by checkmate, the army by taking the last pawn. Lichess has played it since 2015. We put the same idea on the xiangqi board: Red has soldiers only and no general, Black has the standard army, and everything else is xiangqi. Then we measured it before designing anything.':
     '部落棋是 36 個兵、沒有王，對陣正常的一軍；兵靠將死取勝，全軍靠吃掉最後一個兵取勝。Lichess 從 2015 年起就有它。我們把同樣的想法搬到象棋棋盤上：紅方只有兵、沒有將，黑方是標準全軍，其他一切照象棋。然後在設計任何東西之前先做了測量。',
-  'None of the twenty-four designs is a game, and the reason is the soldier. Below the river a block of soldiers cannot defend itself; above it the army cannot attack it. The full map, with a picture of every array beside its result and every engine game in a viewer, is on brianhliou.com; this page is the short account and the reason there is no play button.':
-    '二十四種設計沒有一種是一盤棋，原因在兵身上。河的這邊一片兵陣守不住自己；河的那邊全軍攻不動它。完整的設計地圖，每種陣形旁邊都有圖和結果，每一盤引擎對局都能在瀏覽器裡回放，都在 brianhliou.com；本頁是簡短的說明，也解釋了為什麼這裡沒有「開始對局」按鈕。',
-  'Twelve arrays and two soldiers': '十二種陣形，兩種兵',
-  'The soldier’s move is the whole design space; how many soldiers, where they start, what shape the block is and which no-capture clock runs are dials. We turned all of them: 18 to 45 soldiers, blocks at the back, a rank forward, or already across the river, the parent’s silhouette, xiangqi’s own five soldier points. Two soldier rules: xiangqi’s own, which moves one point forward and sideways only after crossing the river, and the veteran, which has the crossed soldier’s move from its first step. Every array was played four times at four search budgets by Fairy-Stockfish against itself, refereed by a rule kernel that had agreed with the engine on every legal move first.':
-    '兵的走法就是整個設計空間；兵有多少、從哪裡起步、兵陣是什麼形狀、用哪一種無吃子步數限制，都只是旋鈕。我們把它們全都轉過了：18 到 45 個兵，兵陣靠後、前移一行、或者一開始就在河對岸，原版的輪廓，象棋原有的五個兵位。兩種兵的走法：象棋自己的兵，向前一步、過河後才能橫走；老兵，從第一步起就有過河兵的走法。每種陣形都由 Fairy-Stockfish 自戰，四種搜尋量各一局，由一個事先已與引擎在每一步合法著法上達成一致的規則內核擔任裁判。',
   'The parent’s array with standard soldiers, and the closest thing to a game we found: 36 veterans a rank forward, drawn with the crossed-soldier piece because that is the move they have.':
     '原版陣形配標準兵，以及我們找到的最接近一盤棋的設計：36 個老兵前移一行，用過河兵的棋子圖案畫出，因為那正是它們的走法。',
   'Standard soldiers: the chariot eats the horde from behind': '標準兵：車從背後吃光兵團',
-  'A standard soldier covers only the point in front of it, so the horde is nine columns rather than a wall. The moment a column empties, a chariot drops through it to the first rank and takes a soldier a move from behind, and nothing in the horde attacks backward. Every array of 40 or fewer that starts on its own side loses this way, four games out of four. Only a five-deep block of 45, or a start already across the river, sometimes gets enough soldiers over before the chariot is done, and those cells split.':
-    '標準兵只控制正前方一個點，所以兵團是九根縱列，而不是一堵牆。哪一列一空，車就順著它落到底線，從背後每著吃一個兵，而兵團裡沒有任何子能向後攻擊。40 兵及以下、從己方半場開始的每一種陣形都是這樣輸的，四局全輸。只有五行厚的 45 兵陣，或者一開始就在河對岸的陣形，有時能在車吃完之前把足夠多的兵送過河，那幾格的結果才分化。',
-  'The million-node game from the parent’s array. Black’s chariot drops through the f-file, which the horde emptied by advancing; fifteen moves later eleven soldiers are gone and the army has lost nothing for them.':
-    '原版陣形的 100 萬節點對局。黑車順著兵團推進時空出來的 f 線落到底線；十五回合後十一個兵沒了，全軍毫無損失。',
   'Veteran soldiers: the horde holds, and the siege is a draw': '老兵：兵團守得住，圍城是和棋',
-  'Give every horde soldier the crossed soldier’s move from the start and the road closes: a veteran column attacks the points beside it, so the chariot cannot sit next to it for free. The horde becomes a side. Between equals the game becomes a siege: the horde marches to the palace, finds a general and two chariots waiting, and stops, because the block guards itself where it stands but can only advance a whole rank at a time while the army waits. Forty-eight games: 37 draws, six horde wins, five army wins, all five against 18 soldiers.':
-    '讓兵團的每個兵從開局起就有過河兵的走法，路就堵上了：一列老兵攻擊身邊的點，車不能白白停在它旁邊。兵團成了一方棋。勢均力敵之間，棋局成了圍城：兵團推進到九宮前，發現一個將帶著雙車在等，然後停住，因為兵陣站在原地時能互相保護，卻只能整行一起推進，而全軍在一旁等著。四十八局：37 和，兵團 6 勝，全軍 5 勝，五勝全是對 18 兵。',
-  'The one array the horde is favoured in is the same siege with a better score, not a different game: four hundred to a thousand plies in which the army’s best plan is to wait in the palace and the horde’s is to shuffle a block one point at a time.':
-    '兵團佔優的唯一陣形是同一場圍城加一個更好的比分，不是另一盤棋：四百到一千步裡，全軍的最佳計劃是待在九宮裡等，兵團的最佳計劃是把兵陣一格一格地挪。',
-  'What a different soldier would need': '換一種兵需要什麼',
-  'A chess pawn captures diagonally, so the pawn behind covers the point its neighbour steps to and pawns advance as chains; that is why Horde works in chess. The xiangqi soldier captures the way it moves, straight ahead, so the point a soldier steps to is covered by nothing, and the river is a cliff: no cover on the way, total cover once there. No count, start rank, shape or clock changes that. What would is a soldier with cover on the way, and the candidates run from a diagonal-forward capture to a double step, two soldiers a turn, or the chess pawn outright. We stopped at the veteran because it is the only one xiangqi already has; each of the others is a new piece and a different game.':
-    '國際象棋的兵斜著吃子，所以後面的兵保護著鄰兵要走到的點，兵成鏈推進；部落棋在國際象棋裡成立就是這個原因。象棋的兵怎麼走就怎麼吃，直著向前，所以兵要走到的點沒有任何子保護，河就是一道懸崖：路上毫無掩護，到了那邊掩護全面。兵數、起始行、陣形、無吃子限制都改變不了這一點。能改變它的是一種在路上有掩護的兵，候選從斜向前吃子，到第一步走兩格、每回合走兩個兵，直到乾脆用國際象棋的兵。我們止步於老兵，因為它是唯一象棋本來就有的；其餘每一種都是新棋子，也就是另一盤棋。',
   'The rule kernel with both soldier rules and all twelve arrays, the Fairy-Stockfish stanzas, all 387 engine games, the checks behind them, and a verifier that replays every game against the rules and recomputes the tallies in half a minute, with no engine needed. If you have a soldier rule that gives the block cover on the way, that is where the next attempt starts; open an issue there and the write-up will say so.':
     '含兩種兵的走法和全部十二種陣形的規則內核、Fairy-Stockfish 的變體配置、全部 387 盤引擎對局、它們背後的各項檢驗，以及一個不需要引擎、半分鐘內就能對照規則重放每一盤並重新計算統計的校驗器。如果你有一種能給兵陣路上掩護的兵的走法，下一次嘗試就從那裡開始；去那裡提一個 issue，文章會如實寫明。',
   'Check the games yourself': '親自檢驗這些對局',
-  '36 STANDARD SOLDIERS, RANKS 1-4': '36 個標準兵，第 1-4 行',
-  '36 VETERANS, RANKS 2-5': '36 個老兵，第 2-5 行',
-  'MOVE 25: THE f-FILE IS OPEN': '第 25 回合：f 線已空',
-  '15 MOVES LATER: 11 SOLDIERS GONE': '15 回合後：11 個兵沒了',
+  '36 STANDARD SOLDIERS, RANKS 1-4': '36 個標準兵，第 1-4 線',
+  '36 VETERANS, RANKS 2-5': '36 個老兵，第 2-5 線',
   // horde-xiangqi playthrough frames, derived (2026-09-15).
   // horde-xiangqi playthrough frames, derived (2026-09-15).
-  'The horde’s win from its best array, the one it wins four times in five, every ply: the march, the siege, both chariots falling, and the smother at ply 435. Replayed on this page through the rule kernel; every game in this array is in the viewer on brianhliou.com.':
-    '兵團在它最好的陣形（五局四勝的那一種）裡的勝局，每一步都在：行軍、圍城、雙車先後被吃，以及第 435 步的困斃。本頁通過規則內核重放；這種陣形的每一盤棋都在 brianhliou.com 的瀏覽器裡。',
   'Horde, 36 veterans': '兵團，36 個老兵',
   'The army': '全軍',
-  'The block edges forward a rank at a time; the army has given up two soldiers and a horse and has not touched the block.':
-    '兵陣一行一行地向前挪；全軍已經丟了兩個兵和一個馬，還沒碰到兵陣。',
-  'Seven soldiers are across the river and the army is down to eight pieces: both elephants and all five soldiers gone. The chariots cannot sit beside a veteran column.':
-    '七個兵過了河，全軍只剩八個子：兩個象和五個兵全沒了。車沒法停在老兵縱列的旁邊。',
   'Ten across. From here the two chariots and the general hold the palace and the block shuffles: this is the siege every veteran game above 27 soldiers reaches.':
     '十個兵過河。從這裡起雙車和將守住九宮，兵陣來回挪動：這就是 27 兵以上的每一局老兵對局都會走到的圍城。',
   'The first chariot falls, traded for soldiers the horde could afford to lose; nineteen are left.':
@@ -6913,6 +7022,165 @@ const ZH_HANT: Record<string, string> = {
     'Fairy-Stockfish 自戰，每著 100 萬節點，120 步無吃子限制',
   'Red wins. Xiangqi scores the side with no legal move as the loser; Lichess Horde would call it a draw.':
     '紅方勝。象棋判無子可動的一方負；Lichess 的部落棋會判和。',
+  // horde-xiangqi merge (2026-10-07), converted from the Simplified entries.
+  'None of the twenty-four designs is a game, and the reason is the soldier. With xiangqi’s own soldier the army wins every start of 40 or fewer on its own side of the river, by one trick: a chariot behind the block. Give the soldier its crossed-river move from the first step and the trick is gone, but the game becomes a siege, 37 draws in 48 games. Below the river the block cannot defend itself; above it the army cannot attack it. There is no play page for Horde Xiangqi; this page holds the measurement.':
+    '二十四種設計沒有一種成得了遊戲，原因在兵身上。用象棋原本的兵，凡是兵團起始於自己這半邊、40 兵及以下的陣形，全軍每局都贏，靠的是同一個招法：一隻車繞到兵陣背後。讓兵從第一步起就有過河兵的走法，這個招法就沒了，但棋局變成圍城，48 局裡 37 局和棋。過河之前，兵陣無法自保；過河之後，全軍攻不動它。部落象棋沒有對局頁面；本頁記錄的是這份測量。',
+  'The rules': '規則',
+  'Horde chess is the parent: 36 pawns and no king against a normal army. The port keeps as much of xiangqi as it can. Red is the horde: soldiers only, no general, and Red moves first. Black is the standard army. Red wins by checkmate; Black wins by capturing every red piece. There is no check against the horde and no facing rule, since only one general exists.':
+    '國際象棋的部落棋（Horde）是它的母版：36 個兵、沒有王，對抗正常的一方軍隊。這次移植儘量保留象棋本身的規則。紅方是兵團：只有兵，沒有帥，紅方先行。黑方是標準全軍。紅方靠將死取勝；黑方靠吃掉紅方所有子取勝。由於棋盤上只有一個將，兵團一方不存在被將，也不存在白臉將。',
+  'The side to move with no legal move loses, as in xiangqi; Lichess Horde calls it a draw, and the terminal rules below say how much that matters. Threefold repetition draws, and so does a run of 60 or 120 plies without a capture. Standard soldiers move as in xiangqi: one point forward, sideways only after crossing the river, never backward. Veteran soldiers have the crossed soldier’s move from their first step. The army’s five soldiers stay standard either way.':
+    '輪到行棋而無合法著法的一方判負，與象棋相同；Lichess 的部落棋判為和棋，下面的終局規則一節會說明這有多大影響。三次重複局面判和；連續 60 或 120 步無吃子也判和。標準兵走法與象棋相同：向前一格，過河後才能橫走，永不後退。老兵從第一步起就有過河兵的走法。無論哪種設定，全軍一方的五個兵都是標準兵。',
+  'The design space': '設計空間',
+  'Five dials. A design is a soldier rule and a start array, and twenty-four were played.':
+    '五個旋鈕。一種設計由一種兵的走法和一種初始陣形構成，我們下了二十四種。',
+  Dial: '旋鈕',
+  'Settings tried': '試過的設定',
+  'The soldier’s move': '兵的走法',
+  'Standard; veteran (sideways from move one)': '標準；老兵（第一步即可橫走）',
+  'How many soldiers': '兵的數量',
+  'Where the block starts': '兵陣起始位置',
+  'At the back (rank 1 up), forward (rank 2 or 3 up), across the river (front rank on rank 6)':
+    '靠底（第 1 線往上）、前壓（第 2 或第 3 線往上）、過河（前排位於第 6 線）',
+  'The block’s shape': '兵陣的形狀',
+  'Full rows; the parent’s shape (rows plus paired outposts); xiangqi’s five soldier points':
+    '整排；母版的形狀（成排再加成對的前哨）；象棋的五個兵位',
+  'Terminal rules': '終局規則',
+  'No-capture clock of 60 or 120 plies; stalemate as a loss (xiangqi) or a draw (the parent)':
+    '60 或 120 步的無吃子步數限制；困斃判負（象棋）或判和（母版）',
+  'Every design ran on stock Fairy-Stockfish with a short configuration and no engine code, refereed by a rule kernel that agreed with the engine’s move generator before any game was read (the checks are under “How we checked it”). Each array was played four times, the engine against itself at four search budgets with no randomness, and once more at a million nodes a move. The engine cannot use its xiangqi neural net without a red general on the board, so it plays on classical evaluation alone. It plays the game anyway.':
+    '每種設計都跑在原版 Fairy-Stockfish 上，只用一小段配置，不改引擎程式碼，由一個規則核心擔任裁判，並在讀取任何對局之前就與引擎的著法生成器逐一核對一致（檢查見「我們是怎麼核驗的」一節）。每種陣形下四局，引擎在四檔搜尋預算下自我對弈，無隨機成分；再以每著一百萬節點下一局。棋盤上沒有紅帥，引擎無法使用它的象棋神經網路，因此只靠古典評估下棋。它照樣把棋下完了。',
+  'The twelve start arrays, in the order of the tables below. Red is the horde, Black the standard army; each array was played with both soldier rules.':
+    '十二種初始陣形，按下方表格的順序排列。紅方是兵團，黑方是標準全軍；每種陣形都用兩種兵的走法各下過。',
+  'Nine of the twelve arrays go to the army four games out of four, by one mechanism. A standard soldier covers only the point in front of it, so the horde is nine columns rather than a wall. The moment a column empties, a chariot drops through it to the first rank and eats the block from behind at a soldier a move, and nothing in the horde attacks backward. Shape changes nothing: an outpost is a target, not cover.':
+    '十二種陣形裡有九種四局全歸全軍，靠的是同一個機制。標準兵只控制它正前方那一格，所以兵團是九列縱隊，而不是一道牆。某一列一旦走空，車就從這一列直落底線，一著吃一個兵地從背後蠶食兵陣，而兵團沒有任何子力能向後攻擊。形狀不起作用：前哨是靶子，不是掩護。',
+  'The million-node game from the parent’s array, every ply. The chariot drops at ply 50; step on from there to watch the block go from behind. Replayed on this page through the rule kernel.':
+    '原版陣形的一百萬節點對局，每一步都在。車在第 50 步落到底線；從那裡往後一步步看兵陣如何從背後被吃掉。本頁透過規則核心重放。',
+  'Fairy-Stockfish against itself, a million nodes a move, 60-ply clock':
+    'Fairy-Stockfish 自戰，每著 100 萬節點，60 步無吃子限制',
+  'Black wins: the last soldier is gone.': '黑方勝：最後一個兵也沒了。',
+  'The other three arrays are one exception: enough soldiers get across before the chariot is done. 45 on ranks 1 to 5 is a five-deep block, and its four games split two army wins, one horde mate and one draw. The two arrays that start across the river begin in contact with the army’s soldiers. The 27 still loses; the 36 is a coin flip that skips the march and previews the veteran game.':
+    '另外三種陣形是同一個例外：在車做完這件事之前，有足夠多的兵過了河。第 1 至 5 線的 45 兵是五層深的兵陣，四局結果是全軍兩勝、兵團將死一局、和棋一局。兩種從過河處起始的陣形一開局就與全軍的兵短兵相接。27 兵仍然要輸；36 兵則是五五開，它跳過了行軍階段，預演了老兵版的棋局。',
+  Soldiers: '兵數',
+  Start: '起始',
+  Army: '全軍',
+  Horde: '兵團',
+  '1M game': '百萬節點局',
+  Plies: '步數',
+  'Ranks 1-2': '第 1-2 線',
+  'Army, extinction': '全軍，全滅',
+  'Ranks 3-4': '第 3-4 線',
+  'Ranks 1-3': '第 1-3 線',
+  'Ranks 2-4': '第 2-4 線',
+  'Ranks 4-6': '第 4-6 線',
+  'Ranks 1-4': '第 1-4 線',
+  'Ranks 2-5': '第 2-5 線',
+  'Ranks 3-6': '第 3-6 線',
+  'Horde, mate': '兵團，將死',
+  'Ranks 1-5': '第 1-5 線',
+  'Xiangqi’s five points': '象棋的五個兵位',
+  'Parent shape': '母版形狀',
+  'Army, Horde and Draw count four games per array at 150,000, 200,000, 300,000 and 500,000 nodes a move, 120-ply clock, every move the engine’s first choice. Then the single game at a million nodes with a 60-ply clock, and its length. Four arrays were played once more at five million nodes: the army won the 36 on ranks 1 to 4 in 156 plies, the 36 on ranks 2 to 5 in 146 and the 32 in 106, and the 36 across the river drew by repetition at 104.':
+    '全軍、兵團、和棋三欄統計每種陣形的四局，每著 150,000、200,000、300,000 和 500,000 節點，120 步無吃子限制，每著都取引擎首選。之後是每著一百萬節點、60 步限制下的單局及其步數。有四種陣形在每著五百萬節點下又下了一局：全軍在 156 步贏下第 1 至 4 線的 36 兵，在 146 步贏下第 2 至 5 線的 36 兵，在 106 步贏下 32 兵；過河起始的 36 兵在第 104 步因重複局面和棋。',
+  'The chariot’s road exists because a standard soldier attacks nothing beside it, and xiangqi already has a soldier that does: the crossed soldier, which moves and captures one point forward or sideways. Veteran soldiers are a horde that starts promoted. Every horde soldier has that move from its first step, nothing else changes, and a player learns nothing new.':
+    '車之所以有路可走，是因為標準兵不攻擊身旁任何一格，而象棋裡本來就有一種能做到的兵：過河兵，可向前或橫向一格行走與吃子。老兵就是一開始就已經升變的兵團。兵團的每個兵從第一步起就有這種走法，其餘一切不變，玩家不需要學任何新東西。',
+  'This closes the road. A veteran column attacks the points beside it, so the chariot cannot sit next to it for free. The horde becomes a side, and between equals the game becomes a siege: 48 games, 37 draws. The army wins only against 18 soldiers, and from 27 up it never wins.':
+    '這條路被堵死了。老兵縱隊會攻擊身旁各格，車沒法白站在它旁邊。兵團成了真正的一方，而在實力相當的雙方之間，棋局變成圍城：48 局，37 和。全軍只贏得了對 18 兵的局，從 27 兵往上它一局不勝。',
+  'Army lost': '全軍損失',
+  'Draw, clock': '和棋，步數限制',
+  'Horde, smother': '兵團，困斃',
+  'Draw, repetition': '和棋，重複局面',
+  'Four games per array at the same four budgets and the 120-ply clock, then the single game at a million nodes; Army lost counts the army’s pieces lost in that game. *Three million-node games ran into the harness’s 1,000-ply cap and were played on from that position with the clock in force; no capture followed, and the ply shown is where the clock ended them. Each ended with nine or ten soldiers against a general and both chariots, with an elephant or an advisor beside them in two.':
+    '每種陣形在同樣的四檔預算、120 步限制下各下四局，然後是一百萬節點下的單局；全軍損失一欄統計全軍在那一局裡損失的子力。*有三局一百萬節點對局撞上了測試框架的 1,000 步上限，之後從該局面繼續下，步數限制照常生效；之後未再出現吃子，表中所示步數即為步數限制終止之處。三局結束時都是九或十個兵對將加雙車，其中兩局還多一個象或一個士。',
+  '**The ending.** The horde marches, takes the army’s cannons and elephants on the way in, and arrives at the palace to find a general with two chariots waiting. From there the soldiers cannot force their way past the chariots, and the chariots cannot eat a block of soldiers that guard each other. Start rank and shape decide how much of the army the horde takes on the way in, and nothing else. The parent’s 31 shows the other face of the same rule: its four games drew at 155 to 245 plies with never more than two soldiers across the river, because a block that has not moved cannot be attacked and a block that moves loses the soldier that moved.':
+    '**終局形態。**兵團行軍推進，路上吃掉全軍的炮和相，抵達九宮時發現將和兩隻車在那裡等著。到了這一步，兵衝不過車，車也吃不動互相保護的兵陣。起始橫線和形狀只決定兵團在路上能吃掉全軍多少子，別無其他。母版的 31 兵展示了同一條規則的另一面：四局在 155 至 245 步和棋，過河的兵從未超過兩個，因為沒動過的兵陣無法被攻擊，而一動就要丟掉動過的那個兵。',
+  'The ending, here from the 40-soldier array at a million nodes a move: twelve soldiers against a general, an advisor and two chariots at ply 754. The soldiers cannot force a way past the chariots, and the chariots take a soldier only when one steps out of the block: two in the next 246 plies, at 822 and 896.':
+    '終局形態，這裡取自 40 兵陣形、每著一百萬節點的對局：第 754 步時，十二個兵對將、士和雙車。兵衝不過車，而車只有在某個兵走出兵陣時才吃得到它：接下來 246 步裡只吃了兩個，分別在第 822 和 896 步。',
+  'We took the 40-soldier ending at ply 754 and let the engine play it on for 200 more plies at five million nodes a side: one capture, and the engine’s own evaluation of the horde’s advantage slid from 2.3 pawns to 0.7. At a million nodes the army had managed two captures in the same stretch, then none in the next 120, and the clock ended it. Two soldiers in 262 plies is not winning an ending.':
+    '我們把 40 兵那局在第 754 步的殘局拿出來，讓引擎雙方各以每著五百萬節點再下 200 步：只吃了一個子，而引擎自己對兵團優勢的評估值從 2.3 兵滑到 0.7。在一百萬節點下，全軍在同樣這段裡吃了兩個子，接下來的 120 步裡一個也沒吃，步數限制結束了對局。262 步吃兩個兵，算不上贏下殘局。',
+  '**The win.** The 36 that starts a rank forward took both chariots and smothered the bare general at ply 435: no move, no check, which xiangqi scores as a loss. It is the one array where the horde is the favourite, with three wins in its four games and the million-node game too: a rank closer to the river, it arrives with more of the army already gone and enough soldiers left to trade for the chariots. The horde’s other wins are the same finish, all past ply 390, and four of its six are the smother.':
+    '**取勝的那一局。**前壓一線的 36 兵吃掉了兩隻車，並在第 435 步把光將困斃：無著可走又未被將，象棋判負。這是兵團唯一佔優的陣形，四局贏三局，一百萬節點那局也贏了：離河近一線，抵達時全軍已經損失更多，而剩下的兵也足夠換掉兩隻車。兵團其餘的勝局都是同樣的收束，全部在第 390 步之後，六勝裡有四勝是困斃。',
+  'The horde’s win, every ply: the march, the siege, the chariots falling at plies 267 and 431, and the smother at ply 435. Replayed on this page through the rule kernel.':
+    '兵團的勝局，每一步都在：行軍、圍城、第 267 和第 431 步雙車先後被吃，以及第 435 步的困斃。本頁透過規則核心重放。',
+  'The terminal rules': '終局規則',
+  'Three ways a game here stops without a winner, and they are not the same thing. **Repetition**: the same position with the same side to move three times; a draw. **The clock**: a run of plies with no capture, 60 or 120 of them; a draw, and a soldier stepping forward does not reset it. **The cap**: the harness stopped the game at 400, 1,000 or 2,000 plies. That is not a rule of the game, so a capped game is unfinished, not drawn. Three million-node veteran games hit the 1,000 cap and were played on until the clock ended them, and no four-budget game reached 2,000, so every result in the tables is one of the first two.':
+    '這裡有三種讓棋局無勝負而終止的方式，它們並不是一回事。**重複局面**：同一局面、同一方行棋出現三次；判和。**步數限制**：連續若干步無吃子，60 步或 120 步；判和，而且兵向前一步並不重置計數。**上限**：測試框架在 400、1,000 或 2,000 步處終止對局。這不是棋規，所以被截斷的對局是未下完，而不是和棋。有三局一百萬節點的老兵對局撞上了 1,000 步上限，隨後繼續下到步數限制終止；而四檔預算的對局沒有一局到過 2,000 步，因此表格裡的每個結果都屬於前兩種。',
+  '**The clock.** Xiangqi’s no-capture rule is 60 plies. With standard soldiers it fired once in 48 games. With veterans it is the usual ending: 30 of the 37 draws, the other seven by repetition. At 60 plies it cuts live games short with the march still going, so the veteran games and every four-game sample run at 120. The clock is also a rule the engine plays by, so a game under a 60-ply clock and one under 120 are different games from ply 2, not one game cut at different points.':
+    '**步數限制。**象棋的無吃子規則是 60 步。用標準兵時，48 局裡只觸發過一次。用老兵時它是常見的收束：37 和裡有 30 局如此，另外七局是重複局面。設成 60 步會在行軍還在進行時截斷還活著的棋局，所以老兵對局和每一組四局樣本都用 120 步。步數限制同時也是引擎遵循的規則，所以 60 步限制下的一局和 120 步限制下的一局，從第 2 步起就是兩局不同的棋，而不是同一局在不同處被截斷。',
+  '**Stalemate.** Under the parent’s rule a general with no move and no check is a draw. Re-scoring every game in the lab under that rule: five of the horde’s seven equal-strength wins with veterans become draws, and one of its four with standard soldiers; against a random army, 20 of its 35 wins with standard soldiers and 16 of its 38 with veterans; and five of its ten wins in the veteran budget ladder. The smother is the horde’s mate about half the time, and the parent’s rule would take it away.':
+    '**困斃。**按母版的規則，將無著可走又未被將判和棋。把實驗室裡的每局都按這條規則重新判定：老兵、實力相當條件下兵團的七勝裡有五勝變成和棋，標準兵的四勝裡有一勝變成和棋；對隨機走子的全軍，標準兵下兵團的 35 勝裡有 20 勝、老兵下 38 勝裡有 16 勝變成和棋；老兵預算階梯測試的十勝裡有五勝同樣如此。困斃大約佔了兵團勝法的一半，而母版的規則會把它拿掉。',
+  'Why the soldier fails, and what a different soldier would need':
+    '兵為什麼不行，換一種兵又需要什麼',
+  'The game has two phases, and xiangqi’s soldier fails in each of them differently.':
+    '棋局分兩個階段，象棋的兵在每個階段都以不同方式失靈。',
+  '**Below the river, the block cannot defend itself.** A standard soldier attacks only the point ahead of it. So the horde is nine columns, not a wall: a chariot beside a column, or behind it, is untouchable, and any file that empties is a road to the back rank. Every start of 40 or fewer on the horde’s own side is decided here, by that one chariot, four games in four. At 45 the block is deep enough to outlast it some of the time, and that array splits.':
+    '**過河之前，兵陣無法自保。**標準兵只攻擊正前方一格。於是兵團是九列縱隊，而不是一道牆：車站在某列旁邊或它後面都碰不到，任何走空的縱線都是通往底線的大路。兵團在自己這半邊、40 兵及以下的所有陣形，都在這一階段被這一隻車判定，四局全輸。到 45 兵時，兵陣夠厚，有時能熬過去，那一種陣形於是結果分化。',
+  '**Above the river, the block cannot move.** A crossed soldier (or a veteran) attacks sideways too, so the block guards itself where it stands. But it protects only the points its soldiers could step to, never the point ahead of a neighbour. The soldier that steps forward lands on a point nobody covers and is a free capture until a neighbour steps up beside it. So the block can advance only as a whole rank, nine moves per rank, while the army waits, and any soldier that moves early is picked off. The army, for its part, cannot attack a block that has not moved. Nine of the twelve veteran arrays end there in every game or all but one: a general and two chariots in the palace, a block of soldiers outside it, and nothing either side can do.':
+    '**過河之後，兵陣動不了。**過河兵（或老兵）也能橫向攻擊，所以兵陣原地就能互相保護。但它只保護自家兵能走到的格子，絕不保護鄰兵正前方那一格。向前一步的兵落在沒人控制的格子上，在鄰兵跟上來並列之前就是白送的一子。於是兵陣只能整排整排地推進，每推一排要走九著，而全軍只需等待；任何提前走動的兵都會被點掉。而全軍一方也攻不動一個沒動過的兵陣。十二種老兵陣形裡有九種就在這裡終止，或全部對局如此，或只有一局例外：將和兩隻車守在九宮，一堆兵圍在外面，雙方都無事可做。',
+  'The same step on three boards: the middle piece has just moved one point forward, and the green rings are the points its side now protects. A chess pawn captures diagonally, so the pawn on d4 covers e5 and the pawn that arrived there is safe from the rook: pawns advance as chains. A xiangqi soldier captures the way it moves, straight ahead, so d4 and f4 cover d5 and f5 and nothing covers e5; the chariot takes the soldier for free. Veteran soldiers (right) attack sideways too, which makes the block guard itself where it stands, and still nothing covers the point a soldier steps to. The horde can hold its ground and cannot leave it.':
+    '同一步棋，三張棋盤：中間那個子剛向前走了一格，綠圈是它這一方此刻保護的點。國際象棋的兵斜著吃子，所以 d4 的兵控制著 e5，走到那裡的兵車吃不得：兵成鏈推進。象棋的兵怎麼走就怎麼吃，直著向前，所以 d4 和 f4 控制 d5 和 f5，沒有任何子控制 e5；車白吃這個兵。老兵（右）也能橫向攻擊，所以兵陣原地就能互相保護，但兵要走到的那一點仍然沒有任何子控制。兵團守得住陣地，卻離不開它。',
+  'A chess pawn is built differently. It captures diagonally, so the pawn on d4 already covers e5 before the e-pawn steps there: pawns advance as chains, one at a time, each landing protected, and a chain can be undermined from the base. That is why Horde works in chess and why chess players never have to think about it. On the xiangqi board the river is a cliff: no cover on the way, total cover once there, and no setting of count, start rank, shape or clock changes that. Those are the dials we turned. The one we left alone, past the veteran, is the soldier itself.':
+    '國際象棋的兵構造不同。它斜吃，所以 d4 的兵在 e 兵走到 e5 之前就已經控制了 e5：兵是成鏈推進的，一次走一個，每一步落點都有保護，而兵鏈可以從底部瓦解。這就是部落棋在國際象棋裡成立、而國際象棋棋手根本不必考慮這件事的原因。在象棋盤上，河是一道懸崖：過去的路上沒有掩護，一旦過去又是全覆蓋，而數量、起始橫線、形狀、步數限制怎麼調都改變不了這一點。這些正是我們轉過的旋鈕。除了老兵之外，我們沒有碰的那個旋鈕，就是兵本身。',
+  'That is where the next attempt starts. The property the horde is missing is cover on the way: a soldier that protects the point its neighbour is about to step to, so the block can advance one piece at a time instead of one rank at a time. Anything that supplies it is a candidate, from small to large: a soldier that captures diagonally forward but still moves straight, a double step on the first move, two soldiers moving per turn as in the old Five Tigers handicap, a second promotion at the far rank, or the chess pawn outright, which turns this into Horde chess on a bigger board. We stopped at the veteran because it is the only one of these xiangqi already has; each of the others is a new piece, and a new piece is a different game. The rules are data in the lab, so any of them is one line and an afternoon of engine time, and the tables here are the baseline to beat.':
+    '下一次嘗試就從那裡開始。兵團缺的那條性質是路上的掩護：一個能保護鄰兵即將踏上的那一格的兵，好讓兵陣一次推進一個子，而不是一次推進一排。任何能提供這條性質的設計都是候選，改動從小到大不等：斜前吃子但仍直走的兵、第一步可走兩格、像舊時「五虎」讓子那樣一回合走兩個兵、到底線後再升一次變，或者乾脆直接用國際象棋的兵，那就把這變成了大棋盤上的部落國際象棋。我們止步於老兵，因為它是這些方案裡唯一象棋本來就有的；其餘每一個都是新子力，而新子力就是另一種遊戲。規則在實驗室裡就是資料，所以其中任何一個都只是一行配置加一下午的引擎時間，而這裡的表格就是需要超越的基線。',
+  'Run it yourself': '自己跑一遍',
+  'The whole variant is a stanza in Fairy-Stockfish’s `variants.ini`. This is the parent’s array with veteran soldiers and the 120-ply clock (`nMoveRule` counts moves, so 60 is 120 plies); for standard soldiers drop the `customPiece1` line and write `P` for `V` in the start position.':
+    '整個變體就是 Fairy-Stockfish 的 `variants.ini` 裡的一段。下面是母版陣形配老兵與 120 步限制（`nMoveRule` 按回合計，所以 60 就是 120 步）；要用標準兵，刪掉 `customPiece1` 那一行，並在初始局面裡把 `V` 寫成 `P`。',
+  'Two lines matter and are easy to leave out. `chasingRule = none` is mandatory: the engine’s chase detector reads the missing general’s square on a kingless side. `flyingGeneral = false` changes nothing and documents a fact: the engine keys the facing rule on its king piece and silently switches it off when one side has none.':
+    '有兩行很關鍵、又很容易漏掉。`chasingRule = none` 是必需的：在無將的一方，引擎的捉子檢測會去讀那個不存在的將的位置。`flyingGeneral = false` 其實不改變任何東西，只是記錄一個事實：引擎把白臉將規則掛在它的王類子力上，一方沒有王時會靜默關掉它。',
+  '**The engine plays these rules.** A rule kernel (the same one that ran Atomic Xiangqi, with hooks for a side with no general, a win by extinction, and the veteran soldier) referees every game: the engine proposes a move, the kernel validates and applies it, and an engine quietly playing different rules aborts the run instead of producing a record of a different game. Before any game was read, the two had to agree on every legal move: perft to depth 3 from each array, nine hand-built positions compared as exact move sets, and 300 positions from random play. Zero disagreements, both soldier rules, all twelve arrays.':
+    '**引擎確實在按這些規則下棋。**一個規則核心（就是跑原子象棋那一個，加上了無將一方、全滅取勝和老兵的介面）為每一局擔任裁判：引擎提出一著，核心校驗並落子，如果引擎悄悄按別的規則下棋，執行會中止，而不是產出另一種遊戲的記錄。在讀取任何對局之前，兩者必須在每一個合法著法上一致：從每個陣形做深度 3 的 perft、九個手工構造的局面按精確著法集合比對、以及隨機走子產生的 300 個局面。零分歧，兩種兵的走法、全部十二種陣形。',
+  '**The engine understands the game.** At 100,000 nodes it beat a random mover 70-0 with standard soldiers and 78 of 80 with veterans. Ten times the search budget beat a tenth of it 17-1-2 on the standard forward array and 11-0-9 on veterans. One footnote: on the parent’s array with standard soldiers, ten times the budget scored only 55%, because every decided game went to the army whichever budget held it; the seat was the result, not the search.':
+    '**引擎懂這個遊戲。**在 100,000 節點下，它用標準兵對隨機走子方 70-0，用老兵 80 局勝 78 局。十倍搜尋預算對十分之一預算，在標準前壓陣形上 17-1-2，在老兵上 11-0-9。一條腳註：在母版陣形配標準兵時，十倍預算只拿到 55%，因為無論哪一檔預算坐哪一邊，每一局有勝負的棋都歸全軍；決定結果的是座位，不是搜尋。',
+  '**How deep the search is.** Node budgets, not time, so nothing depends on the machine: 200,000, 1 million and 5 million nodes a move reach about depth 12, 15 to 20, and 24 to 33 on these positions. Play is not saturated at these budgets: the across-the-river array with standard soldiers went draw, army, horde, horde, army, horde, draw across seven budgets. The standard-soldier verdict holds at every budget tried, by the same mechanism, and that claim is safe. The siege is the position class search is worst at: a hundred-ply plan is invisible at depth 20, and classical evaluation has no idea what the ending is worth (it scored the fortress at +2.3 for the horde while the army was eroding it). So the draw claim is weaker than the loss claim, and a human with a plan might do better on either side than the engine did.':
+    '**搜尋有多深。**用節點預算而不是時間，所以結果不依賴機器：每著 200,000、一百萬和五百萬節點，在這些局面上大致達到深度 12、15 至 20、24 至 33。在這些預算下棋力還沒飽和：標準兵的過河陣形，七檔預算跑出來依次是和、全軍、兵團、兵團、全軍、兵團、和。標準兵的結論在試過的每一檔預算下都成立，機制一致，這個論斷是穩的。圍城是搜尋最不擅長的局面型別：一百步的計劃在深度 20 下完全看不見，而古典評估根本不知道這種殘局值多少（在全軍正在蠶食兵陣時，它給這個堡壘打了兵團 +2.3）。所以和棋的論斷比負局的論斷要弱，有計劃的人類在任何一邊都可能下得比引擎好。',
+  '**One game is one sample.** Every array was played four times, at 150,000, 200,000, 300,000 and 500,000 nodes a move, every move the engine’s first choice and no random openings, so the counts in the tables are a rate and the million-node game is one of five, not the verdict. A deterministic engine replays the same game from the same start, so the budgets are what make the four games different, and the script refuses an array where two of them came out identical (none did). Where an array splits, the split is the result. One more caveat on the veteran numbers: the engine sees the veteran as a custom piece with a value estimated from its mobility, not tuned, so its judgement of a soldier-for-piece trade is rougher than for the standard soldier. The fortress it cannot break at five million nodes is real; the material it gave up on the way in may not be best play.':
+    '**一局只是一個樣本。**每種陣形都下了四局，每著 150,000、200,000、300,000 和 500,000 節點，每著都取引擎首選，沒有隨機開局，所以表格裡的計數是一個比率，而一百萬節點對局是五局之一，不是結論。確定性的引擎從同一起始會重現同一局棋，所以正是預算讓這四局不同；指令碼會拒收其中兩局完全相同的陣形（沒有出現過）。結果分化時，分化本身就是結果。關於老兵資料還有一條說明：引擎把老兵當作自定義子力，其價值是按機動性估出來的，未經調優，所以它對「一兵換一子」的判斷比對標準兵更粗糙。它在五百萬節點下都攻不破的那個堡壘是真實的；而它推進路上舍掉的子力，可能並非最佳著法。',
+  'A variant is a game, for this series, if it clears three bars under measured play: it is decided between good players rather than drawn by default; neither side wins from the start; and both seats have something to do. Horde Xiangqi clears none of them in any design tried.':
+    '對這個系列而言，一個變體要算遊戲，需要在可測量的對弈中越過三道門檻：在高手之間有勝負，而不是預設和棋；任何一方都不能從開局就必勝；兩個座位都有事可做。部落象棋在試過的任何設計裡都一道也沒越過。',
+  '**Standard soldiers:** the army wins from every start of 40 or fewer on its own side of the river, 36 games out of 36, by one trick. Decided, but from move one. At 45, or starting across the river, the array is a coin flip settled by the opening exchanges.':
+    '**標準兵：**兵團起始於自己這半邊、40 兵及以下的所有陣形，全軍全勝，36 局全勝，靠的是同一個招法。有勝負，但從第一著就定了。到 45 兵，或從過河處起始，陣形就變成由開局幾手交換決定的五五開。',
+  '**Veteran soldiers:** a siege that two good players draw 37 times in 48, in games of 137 to 1,098 plies. The horde wins six, four of them by smother, and the army wins five, all against 18 soldiers. Not decided, and neither seat has a plan: the army’s best play is to sit in the palace and wait, the horde’s is to shuffle a block one point at a time. The one array the horde is favoured in is the same siege with a better score, not a different game.':
+    '**老兵：**兩位高手之間是一場圍城，48 局裡 37 局和棋，每局 137 至 1,098 步。兵團勝六局，其中四局靠困斃；全軍勝五局，全都是對 18 兵。沒有勝負，而且兩個座位都沒有計劃：全軍的最佳下法是待在九宮裡等，兵團的最佳下法是把兵陣一格一格地挪。兵團唯一佔優的陣形只是同一場圍城分數更好一點，不是另一種遊戲。',
+  '**Against weak play** the horde is dangerous: at 100,000 nodes it beat a random army 35 times in 35, 20 of them by smother, and people are weaker than a million-node search. That makes it a trap, not a game.':
+    '**對付弱手時**兵團很危險：在 100,000 節點下它對隨機走子的全軍 35 局全勝，其中 20 局靠困斃，而人比一百萬節點的搜尋要弱。這讓它成了一個陷阱，而不是一個遊戲。',
+  'What would reopen it: a human result, a soldier rule that gives the block cover on the way (the candidates are listed above), or a chariot-fall rate well above the six in 48 measured here. Nothing so far points that way for xiangqi’s own soldier. The soldier is the design space, the river is a cliff in it, and the next design has to change the soldier.':
+    '什麼能讓它重新開啟：人類對局的結果、一種能給兵陣提供路上掩護的兵的規則（候選已列在上面），或者車被吃的比率遠高於這裡測到的 48 局中 6 局。就象棋原本的兵而言，目前沒有任何跡象指向那個方向。兵就是設計空間，河是其中的一道懸崖，下一個設計必須改兵。',
+  '**Prior art.** We looked in Fairy-Stockfish’s variant file, PyChess, Lichess, Chess.com’s official list, PlayStrategy, Ludii, both Wikipedias’ xiangqi-variant pages, chessvariants.com’s 9x10 index, a Zhihu list of 231 folk xiangqi variants and the nine soldier-named variants with rules on Baidu Baike, and found no horde among them. Tieba’s folk boards and Chess.com’s user variants we could not read, so this is a thorough negative, not an exhaustive one. Xiangqi’s own lopsided games (Manchu chess, Five Tigers, the nine-piece handicap) run the other way, taking pieces from one side, soldiers first. Horde chess descends from BrainKing’s Horde Chess (2002) and Lord Dunsany’s “Pieces against Pawns” (1942), and Lichess settled its rules in [scalachess](https://github.com/lichess-org/scalachess/commit/79cfa70) in 2015.':
+    '**已有工作檢索。**我們查過 Fairy-Stockfish 的變體檔案、PyChess、Lichess、Chess.com 的官方列表、PlayStrategy、Ludii、中英文維基百科的象棋變體條目、chessvariants.com 的 9x10 索引、知乎上一份 231 種民間象棋變體的清單，以及百度百科上九種帶「兵」字名稱且有規則的變體，沒有找到部落式的變體。貼吧的民間棋盤和 Chess.com 的使用者變體我們看不到，所以這是一次盡力的否證，而非窮盡的否證。象棋本身的不對稱讓子棋（滿洲棋、五虎、九子讓先）走的是反方向，是從一方拿掉子力，先拿兵。國際象棋的部落棋源自 BrainKing 的 Horde Chess（2002）和 Lord Dunsany 的「Pieces against Pawns」（1942），Lichess 在 2015 年於 [scalachess](https://github.com/lichess-org/scalachess/commit/79cfa70) 定下了它的規則。',
+  'The engine is [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish); the harness that produced the games, with the engine gate and the commands, is the [variant lab](https://github.com/brianhliou/mistboard/tree/main/scripts/variant-lab).':
+    '引擎是 [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish)；產出這些對局的測試框架，連同引擎校驗關卡和相關命令，是[變體實驗室](https://github.com/brianhliou/mistboard/tree/main/scripts/variant-lab)。',
+  '18, RANKS 1-2': '18 兵，第 1-2 線',
+  '18, RANKS 3-4': '18 兵，第 3-4 線',
+  '27, RANKS 1-3': '27 兵，第 1-3 線',
+  '27, RANKS 2-4': '27 兵，第 2-4 線',
+  '27, RANKS 4-6': '27 兵，第 4-6 線',
+  '36, RANKS 1-4': '36 兵，第 1-4 線',
+  '36, RANKS 2-5': '36 兵，第 2-5 線',
+  '36, RANKS 3-6': '36 兵，第 3-6 線',
+  '45, RANKS 1-5': '45 兵，第 1-5 線',
+  '32, XIANGQI’S FIVE POINTS': '32 兵，象棋的五個兵位',
+  '31, PARENT SHAPE': '31 兵，母版形狀',
+  '40, PARENT SHAPE': '40 兵，母版形狀',
+  'PLY 754: 12 SOLDIERS': '第 754 步：12 個兵',
+  'PLY 1,000: 10 SOLDIERS': '第 1,000 步：10 個兵',
+  'CHESS: AFTER e4-e5, d4 COVERS e5': '國際象棋：e4-e5 之後，d4 控制 e5',
+  'SOLDIERS: AFTER e4-e5, NOTHING COVERS e5': '兵：e4-e5 之後，無子控制 e5',
+  'VETERANS: STILL NOTHING COVERS e5': '老兵：仍然無子控制 e5',
+  'Horde, 36 soldiers': '兵團，36 個兵',
+  'The parent’s array: 36 standard soldiers on ranks 1 to 4, no general, Red to move. Black is the whole army.':
+    '原版陣形：36 個標準兵位於第 1 至 4 線，沒有帥，紅方先行。黑方是完整的全軍。',
+  'The chariot drops to the first rank through the f-file, which the horde emptied by advancing. No soldier attacks backward, so nothing can touch it there.':
+    '車順著 f 線落到底線，這一列是兵團推進時自己走空的。沒有兵能向後攻擊，所以它停在那裡誰也碰不到。',
+  'It takes a soldier from behind and goes on at about one a move: fifteen moves after the drop, 11 soldiers are gone for a horse and two of the army’s soldiers.':
+    '它從背後吃掉一個兵，然後大約一著吃一個地繼續下去：落底線十五回合後，十一個兵沒了，換來的是全軍的一個馬和兩個兵。',
+  'The last soldier falls. The whole horde cost the army four soldiers and two horses.':
+    '最後一個兵倒下。整個兵團只讓全軍付出了四個兵和兩個馬。',
+  'The start: 36 veterans on ranks 2 to 5, no general, Red to move. Black is the whole army.':
+    '開局：36 個老兵位於第 2 至 5 線，沒有帥，紅方先行。黑方是完整的全軍。',
+  'The block edges forward a rank at a time; four soldiers have gone for two of the army’s soldiers and a horse.':
+    '兵陣一行一行地向前挪；四個兵已經沒了，換掉了全軍兩個兵和一個馬。',
+  'Seven soldiers are across the river and the army is down to eight pieces: both elephants, a horse and all five soldiers gone. The chariots cannot sit beside a veteran column.':
+    '七個兵過了河，全軍只剩八個子：兩個象、一個馬和五個兵全沒了。車沒法停在老兵縱列的旁邊。',
   // -- Atomic Xiangqi (rules page + launch note), Traditional, 2026-09-17 --
   // Diagram labels.
   'CHARIOT TAKES THE HORSE': '車吃馬',
