@@ -559,7 +559,7 @@ export function mountXiangqiReplay(
   menuButton.className = 'stepper-button stepper-button-menu';
   menuButton.setAttribute('aria-haspopup', 'true');
   menuButton.setAttribute('aria-expanded', 'false');
-  menuButton.setAttribute('aria-label', 'More');
+  menuButton.setAttribute('aria-label', copy.moreActions);
   menuButton.innerHTML =
     '<svg class="stepper-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" ' +
     'focusable="false" fill="currentColor"><circle cx="8" cy="3.2" r="1.5"/>' +
@@ -705,14 +705,14 @@ export function mountXiangqiReplay(
     // Registered here, where the column's parts are in scope. The callbacks run
     // later, and goto/render are hoisted function declarations, so referring to
     // them before their definitions is fine.
-    menuItem('Flip the board', () => {
+    menuItem(copy.flipBoard, () => {
       perspective = perspective === 'red' ? 'black' : 'red';
       flipped = !flipped;
       placeChartSlot();
       render();
     });
-    menuItem('Back to the start', () => gotoMainline(0));
-    menuItem('Jump to the end', () => gotoMainline(total));
+    menuItem(copy.backToStart, () => gotoMainline(0));
+    menuItem(copy.jumpToEnd, () => gotoMainline(total));
     if (chartSlot) {
       // Writes the one shared setting; every board on the page (this one
       // included) follows through the change event, so the label is set there.

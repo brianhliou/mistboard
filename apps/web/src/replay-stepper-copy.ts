@@ -58,6 +58,11 @@ export type ReplayStepperCopy = {
   showEvalGraph: string;
   /** The chart's phase dividers, in the page's language. */
   phases: { opening: string; middlegame: string; endgame: string };
+  /** The annotated board's ⋮ menu: its accessible name and its three items. */
+  moreActions: string;
+  flipBoard: string;
+  backToStart: string;
+  jumpToEnd: string;
 };
 
 type FamilyStrings = {
@@ -100,6 +105,10 @@ const COMMON: Record<
     advantageChart: 'Engine evaluation over the game. Click to jump to a move.',
     hideEvalGraph: 'Hide eval graph',
     showEvalGraph: 'Show eval graph',
+    moreActions: 'More',
+    flipBoard: 'Flip the board',
+    backToStart: 'Back to the start',
+    jumpToEnd: 'Jump to the end',
     phases: { opening: 'Opening', middlegame: 'Middlegame', endgame: 'Endgame' },
   },
   'zh-Hans': {
@@ -129,6 +138,10 @@ const COMMON: Record<
     advantageChart: '优势图，点击可跳到该步',
     hideEvalGraph: '隐藏优势图',
     showEvalGraph: '显示优势图',
+    moreActions: '更多',
+    flipBoard: '翻转棋盘',
+    backToStart: '回到开始',
+    jumpToEnd: '跳到最后一步',
     phases: { opening: '开局', middlegame: '中局', endgame: '残局' },
   },
   'zh-Hant': {
@@ -158,6 +171,10 @@ const COMMON: Record<
     advantageChart: '優勢圖，點擊可跳到該步',
     hideEvalGraph: '隱藏優勢圖',
     showEvalGraph: '顯示優勢圖',
+    moreActions: '更多',
+    flipBoard: '翻轉棋盤',
+    backToStart: '回到開始',
+    jumpToEnd: '跳到最後一步',
     phases: { opening: '開局', middlegame: '中局', endgame: '殘局' },
   },
 };
