@@ -59,14 +59,14 @@ export const duckXiangqiGameTreeArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'Red has 44 moves from the starting position in both games. In xiangqi, black’s replies to them make 1,920 positions. In Duck Xiangqi, red’s turn is not over until the duck lands on one of about 58 empty points, so red’s first turn alone makes 2,554.',
+          text: 'Red has 44 moves from the starting position in both games. In xiangqi, black’s replies to them make 1,920 positions. In Duck Xiangqi, red’s turn is not over until the duck lands on one of the empty points, about 58 of them, so red’s first turn alone makes 2,554.',
         },
         {
           kind: 'image-figure',
-          ...fig('trees'),
-          alt: 'Two radial trees. Left: xiangqi after red and black have each moved, 44 spokes adding up to 1,920 positions. Right: Duck Xiangqi after red’s first turn, 44 longer spokes adding up to 2,554 positions, colored by what the duck does to black.',
+          ...fig('board-all'),
+          alt: 'A xiangqi board after red plays cannon h3 to e3, with a yellow dot on each of the 58 empty points where the duck could land.',
           caption:
-            'Every dot is a position. The dark ring is red’s 44 first moves, and the spoke behind each one is what can follow it, so a longer spoke means more positions.',
+            'One of red’s 44 first moves. In xiangqi, black would reply next. In Duck Xiangqi, red first puts the duck on one of these points, and each choice is a different position.',
         },
       ],
     },
@@ -80,24 +80,23 @@ export const duckXiangqiGameTreeArticle: Article = {
         {
           kind: 'image-figure',
           ...fig('board'),
-          alt: 'A xiangqi board after red plays cannon h3 to e3. Orange discs on black’s half mark duck points that take replies away, up to 8 on e8. Violet rings on the b and h files mark points where the duck also gives a black cannon a screen. Grey dots mark points where the duck changes nothing.',
+          alt: 'The same board. 30 points carry an orange disc with the number of black replies a duck there takes away, up to 8 on e8 in front of black’s palace. The other 28 points are small grey dots.',
           caption:
-            'After red’s central cannon, h3 to e3. The number on a point is how many of black’s 45 replies a duck there takes away. Violet rings mark points where the duck gives a black cannon something to jump over. Grey points change nothing.',
+            'Most of the points that matter sit on black’s side, in the paths of black’s pieces. On some of them the duck also gives a black cannon something to jump over, which adds a reply.',
         },
         {
           kind: 'paragraph',
-          text: 'On this board, 28 of the 58 points change nothing. Put the duck on any of them and black faces the same choices, then moves the duck somewhere new, so the game that follows is the same game. Two small things differ: black cannot leave the duck where it is, and repetitions count the duck’s square.',
+          text: 'The 28 grey points change nothing. Put the duck on any of them and black faces the same choices, then moves the duck somewhere new, so the game that follows is the same game. Two small things differ: black cannot leave the duck where it is, and repetitions count the duck’s square.',
         },
         {
           kind: 'paragraph',
-          text: 'So a search can look at one of them and skip the rest. Merge every duck placement that leaves black the same replies, and red’s 2,554 first turns come down to 1,310. Take the duck away entirely and what is left is ordinary xiangqi, 44 moves.',
+          text: 'So a search can look at one of them and skip the rest. Count every duck placement that leaves black the same replies once, and red’s 2,554 first turns come down to 1,310.',
         },
         {
           kind: 'image-figure',
-          ...fig('collapse'),
-          alt: 'Three radial trees. Left: Duck Xiangqi after red’s first turn, 2,554 positions. Middle: the same tree with placements that change nothing for black merged into one dot each, 1,310 positions. Right: the duck taken away, 44 positions.',
-          caption:
-            'In the middle, each dot stands for all the placements that leave black the same replies, sized by how many it replaces. The large grey dot on each spoke is every placement that changes nothing.',
+          ...fig('counts'),
+          alt: 'Four bars. Xiangqi after red moves: 44. Xiangqi after red and black have both moved: 1,920. Duck Xiangqi after red moves and places the duck: 2,554. Duck Xiangqi counting placements that leave black the same replies once: 1,310.',
+          caption: 'Positions from the start, counted by the site’s own rules engine.',
         },
       ],
     },

@@ -165,9 +165,12 @@ assertEq(
     .join(', '),
   EXPECTED_H3E3,
 );
+assertEq('duck points after h3e3', H3E3.ducks.length, 58);
+assertEq('h3e3 points that change black', effective.length, 30);
 console.log('kernel counts match the article:', JSON.stringify(counts));
 
 // ---------- shared drawing bits ----------
+const DUCK = '#f2c230'; // the duck's own yellow, for 'a point the duck could land on'
 const FONT =
   "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif";
 const THEMES = {
@@ -217,8 +220,14 @@ const L = {
     kNone: 'The duck changes nothing for black',
     kRm: 'The duck takes black replies away',
     kAdd: 'The duck gives black a new reply',
-    boardHead: 'Red plays cannon h3 to e3. With no duck, black has 45 replies.',
-    boardRm: 'Black replies the duck takes away from that point',
+    boardHeadAll: 'After cannon h3 to e3, the duck can land on any of these 58 points',
+    boardAll: 'A point the duck can land on. Each one is a different position.',
+    boardHead: 'Only 30 of those 58 points change what black can play',
+    cX1: 'Xiangqi, after red moves',
+    cX2: 'Xiangqi, after red and black have both moved',
+    cD1: 'Duck Xiangqi, after red moves and places the duck',
+    cD2: 'Duck Xiangqi, counting placements that leave black the same replies once',
+    boardRm: 'A duck here takes this many of black’s 45 replies away',
     boardAdd: 'The duck also screens a black cannon: one new reply',
     boardNone: 'A duck here changes nothing for black',
     yAxis: 'Legal moves at this ply (log scale)',
@@ -446,7 +455,8 @@ function figureTrees(locale, theme, ids) {
 }
 
 // ---------- figure 2: the board after h3e3 ----------
-function figureBoard(locale, theme) {
+// mode 'all': every point the duck could land on. mode 'matter': which of them change black's replies.
+function figureBoard(locale, theme, mode) {
   const t = L[locale];
   const c = THEMES[theme];
   const light = THEMES.light; // the board is wood in both themes
@@ -481,9 +491,8 @@ function figureBoard(locale, theme) {
   const py = (rank) => top + margin + (10 - rank) * cell;
 
   const parts = [];
-  parts.push(
-    text(W / 2, 30, t.boardHead, { size: 17, weight: 600, fill: c.ink, anchor: 'middle' }),
-  );
+  const head = mode === 'all' ? t.boardHeadAll : t.boardHead;
+  parts.push(text(W / 2, 30, head, { size: 17, weight: 600, fill: c.ink, anchor: 'middle' }));
   parts.push(board);
   // Arrow h3 -> e3, stopping at the cannon's disc.
   const [ax, ay, ex] = [px(7), py(3), px(4) + cell * 0.5];
@@ -496,6 +505,12 @@ function figureBoard(locale, theme) {
     if (occupied.has(d.sq)) continue;
     const x = px(fileOf(d.sq));
     const y = py(rankOf(d.sq));
+    if (mode === 'all') {
+      parts.push(
+        `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(cell * 0.16)}" fill="${DUCK}" stroke="#2b2118" stroke-width="1.2"/>`,
+      );
+      continue;
+    }
     if (!d.rm.length && !d.add.length) {
       parts.push(
         `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(cell * 0.09)}" fill="#8f8a80" opacity="0.75"/>`,
@@ -503,11 +518,6 @@ function figureBoard(locale, theme) {
       continue;
     }
     const r = cell * (0.17 + 0.033 * d.rm.length);
-    if (d.add.length) {
-      parts.push(
-        `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(r + 5)}" fill="none" stroke="${light.add}" stroke-width="3.5"/>`,
-      );
-    }
     parts.push(`<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(r)}" fill="${light.rm}"/>`);
     parts.push(
       text(x, y + 6, String(d.rm.length), {
@@ -524,21 +534,53 @@ function figureBoard(locale, theme) {
     parts.push(mark(40, y - 5));
     parts.push(text(68, y, label, { size: 15, fill: c.ink }));
   };
+  if (mode === 'all') {
+    row(
+      ly,
+      (x, y) =>
+        `<circle cx="${x}" cy="${y}" r="9" fill="${DUCK}" stroke="#2b2118" stroke-width="1.2"/>`,
+      t.boardAll,
+    );
+    return svgDoc(W, ly + 20, head, parts.join(''));
+  }
   row(
     ly,
     (x, y) =>
       `<circle cx="${x}" cy="${y}" r="11" fill="${light.rm}"/>${text(x, y + 5, '4', { size: 13, weight: 700, fill: '#ffffff', anchor: 'middle' })}`,
     t.boardRm,
   );
-  row(
-    ly + 30,
-    (x, y) =>
-      `<circle cx="${x}" cy="${y}" r="8" fill="${light.rm}"/><circle cx="${x}" cy="${y}" r="12" fill="none" stroke="${light.add}" stroke-width="3"/>`,
-    t.boardAdd,
-  );
-  row(ly + 60, (x, y) => `<circle cx="${x}" cy="${y}" r="5" fill="#8f8a80"/>`, t.boardNone);
-  const H = ly + 80;
-  return svgDoc(W, H, t.boardHead, parts.join(''));
+  row(ly + 30, (x, y) => `<circle cx="${x}" cy="${y}" r="5" fill="#8f8a80"/>`, t.boardNone);
+  return svgDoc(W, ly + 50, head, parts.join(''));
+}
+
+// ---------- figure: positions after the first moves ----------
+function figureCounts(locale, theme) {
+  const t = L[locale];
+  const c = THEMES[theme];
+  const W = 900;
+  const L0 = 20;
+  const BAR_W = 700;
+  const max = 2600;
+  const rows = [
+    [t.cX1, counts.redMoves, c.xiangqi],
+    [t.cX2, counts.xiangqiLeaves, c.xiangqi],
+    [t.cD1, counts.duckLeaves, c.rm],
+    [t.cD2, counts.classes, c.none],
+  ];
+  const parts = [];
+  let y = 20;
+  for (const [label, n, colour] of rows) {
+    parts.push(text(L0, y + 16, label, { size: 15, fill: c.ink }));
+    const w = Math.max(3, (n / max) * BAR_W);
+    parts.push(
+      `<rect x="${L0}" y="${y + 26}" width="${f1(w)}" height="22" rx="3" fill="${colour}"/>`,
+    );
+    parts.push(
+      text(L0 + w + 10, y + 43, n.toLocaleString('en'), { size: 16, weight: 600, fill: c.ink }),
+    );
+    y += 68;
+  }
+  return svgDoc(W, y + 4, rows.map(([l, n]) => `${l}: ${n}`).join('. '), parts.join(''));
 }
 
 // ---------- figure 3: branching across whole games ----------
@@ -618,9 +660,9 @@ function figureBranching(locale, theme) {
 
 // ---------- write ----------
 const FIGS = {
-  trees: (l, th) => figureTrees(l, th, ['a', 'b']),
-  collapse: (l, th) => figureTrees(l, th, ['b', 'c', 'd']),
-  board: figureBoard,
+  counts: figureCounts,
+  'board-all': (l, th) => figureBoard(l, th, 'all'),
+  board: (l, th) => figureBoard(l, th, 'matter'),
   branching: figureBranching,
 };
 // English only until the English is final; zh labels stay in L for then.
