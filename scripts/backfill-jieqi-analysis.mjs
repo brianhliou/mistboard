@@ -5,6 +5,14 @@
 //   node scripts/backfill-jieqi-analysis.mjs --dry-run
 //   node scripts/backfill-jieqi-analysis.mjs --room <roomId>
 //   node scripts/backfill-jieqi-analysis.mjs --limit 5 [--no-decisions]
+//   node scripts/backfill-jieqi-analysis.mjs --regrade-decisions [--apply] [--limit N] [--concurrency N]
+//
+// --regrade-decisions recomputes the decisions blob of every finished jieqi game whose only
+// decisions row was written by an earlier decomposition algorithm (an id in
+// JIEQI_LEGACY_DECISIONS_ENGINE_IDS) and has no row under a current id. Dry by default: it
+// lists those games; --apply computes and writes them under the current id. The legacy row is
+// kept (harmless, and served only when no current row exists). The Layer-1 sweep is not
+// recomputed: its rows are algorithm-independent.
 //
 // Against prod, via the pattern that never prints the credential:
 //   railway run -s Postgres -- sh -c \
@@ -42,7 +50,14 @@
 // Idempotent: a game whose cache row already exists is served from cache and skipped,
 // so re-running after an interrupt only does the remaining work.
 
-import { resolveJieqiAnalysis, resolveJieqiDecisions } from '../apps/server/dist/jieqi-analysis.js';
+import {
+  ABJCHESS_JIEQI_DECISIONS_ENGINE_ID,
+  JIEQI_DECISION_DEPTH,
+  JIEQI_DECISIONS_ENGINE_ID,
+  JIEQI_LEGACY_DECISIONS_ENGINE_IDS,
+  resolveJieqiAnalysis,
+  resolveJieqiDecisions,
+} from '../apps/server/dist/jieqi-analysis.js';
 import { getPool, init as initPersistence } from '../apps/server/dist/persistence-db.js';
 import { loadFinishedJieqiGameInputs } from '../apps/server/dist/routes/jieqi-games.js';
 
@@ -53,7 +68,10 @@ const flagValue = (flag) => {
   return i === -1 ? null : args[i + 1];
 };
 
-const dryRun = has('--dry-run');
+const regrade = has('--regrade-decisions');
+// A regrade is dry unless --apply; the warm-cache mode is live unless --dry-run.
+const dryRun = regrade ? !has('--apply') : has('--dry-run');
+const concurrency = Math.max(1, Number(flagValue('--concurrency')) || 1);
 const withDecisions = !has('--no-decisions');
 const onlyRoom = flagValue('--room');
 const limit = Number(flagValue('--limit')) || null;
@@ -78,6 +96,8 @@ if (process.arch !== 'x64' && !has('--allow-foreign-arch') && !dryRun) {
 
 initPersistence(process.env.DATABASE_URL);
 const pool = getPool();
+
+if (regrade) await runRegrade();
 
 // Finished games only: the loader rejects anything else, so filtering here keeps the
 // dry-run count honest rather than reporting work that would be skipped.
@@ -154,3 +174,89 @@ console.log(
 );
 await pool.end();
 process.exit(failed > 0 ? 1 : 0);
+
+// ── --regrade-decisions ──────────────────────────────────────────────────────────────
+
+async function runRegrade() {
+  const currentIds = [JIEQI_DECISIONS_ENGINE_ID, ABJCHESS_JIEQI_DECISIONS_ENGINE_ID];
+  const { rows: stale } = await pool.query(
+    `SELECT g.room_id, g.ply_count, g.result,
+            array_agg(DISTINCT a.engine_id) AS legacy_ids
+       FROM games g
+       JOIN game_analysis a
+         ON a.room_id = g.room_id AND a.depth = $1 AND a.engine_id = ANY($2::text[])
+      WHERE g.variant = 'jieqi' AND g.ended_at IS NOT NULL
+        AND (${onlyRoom ? 'g.room_id = $4' : 'TRUE'})
+        AND NOT EXISTS (
+          SELECT 1 FROM game_analysis c
+           WHERE c.room_id = g.room_id AND c.depth = $1 AND c.engine_id = ANY($3::text[])
+        )
+      GROUP BY g.room_id, g.ply_count, g.result
+      ORDER BY g.ply_count ASC`,
+    [
+      JIEQI_DECISION_DEPTH,
+      [...JIEQI_LEGACY_DECISIONS_ENGINE_IDS],
+      currentIds,
+      ...(onlyRoom ? [onlyRoom] : []),
+    ],
+  );
+  const targets = limit ? stale.slice(0, limit) : stale;
+  const totalPlies = targets.reduce((sum, r) => sum + (r.ply_count ?? 0), 0);
+  console.log(
+    `${targets.length} jieqi game(s) with only legacy decisions rows` +
+      `${limit && stale.length > targets.length ? ` (of ${stale.length})` : ''}, ${totalPlies} plies total`,
+  );
+  console.log(`  regrading to: ${currentIds.join(' | ')} @ depth ${JIEQI_DECISION_DEPTH}`);
+  for (const row of targets) {
+    const legacy = row.legacy_ids.map((id) => id.split('+').at(-1)).join(',');
+    console.log(`  ${row.room_id}  ${row.ply_count} plies  ${row.result}  legacy ${legacy}`);
+  }
+  if (dryRun || targets.length === 0) {
+    if (dryRun) console.log('\ndry run (pass --apply to regrade): nothing computed');
+    await pool.end();
+    process.exit(0);
+  }
+
+  console.log(`\nregrading with concurrency ${concurrency}`);
+  let done = 0;
+  let failed = 0;
+  const startedAll = Date.now();
+  const queue = [...targets];
+  const worker = async () => {
+    for (let row = queue.shift(); row; row = queue.shift()) {
+      const started = Date.now();
+      try {
+        const inputs = await loadFinishedJieqiGameInputs(row.room_id);
+        if (!inputs) {
+          console.log(`  ${row.room_id}  SKIP (not a finished jieqi event log)`);
+          continue;
+        }
+        const result = await resolveJieqiDecisions(
+          row.room_id,
+          inputs.moves,
+          inputs.deal,
+          undefined,
+          undefined,
+          true,
+          undefined,
+          { servePreviousAlgorithms: false },
+        );
+        done++;
+        console.log(
+          `  ${row.room_id}  ${row.ply_count} plies  ${result?.decisions.length ?? 0} decisions` +
+            `  ${result?.engineId.split('+').at(-1) ?? 'none'}` +
+            `  ${((Date.now() - started) / 1000).toFixed(1)}s  [${done + failed}/${targets.length}]`,
+        );
+      } catch (err) {
+        failed++;
+        console.error(`  ${row.room_id}  FAILED: ${err instanceof Error ? err.message : err}`);
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(concurrency, targets.length) }, worker));
+  console.log(
+    `\n${done} regraded, ${failed} failed, ${((Date.now() - startedAll) / 1000 / 60).toFixed(1)} min total`,
+  );
+  await pool.end();
+  process.exit(failed > 0 ? 1 : 0);
+}

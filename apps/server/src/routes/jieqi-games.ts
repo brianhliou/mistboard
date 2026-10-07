@@ -90,7 +90,7 @@ export function clearJieqiWatchPostgameCache(): void {
 
 // Computer analysis (Layer 1): fixed-strength eval of every ply, red-seat POV, cached +
 // coalesced. Decision-vs-luck decomposition (Layer 2): the heavier, opt-in tier on top —
-// per REVEAL ply it returns {best, played, realized} EVs (mover POV) so the client can
+// per chance ply (a reveal or a face-down capture) it returns {best, played, realized} EVs (mover POV) so the client can
 // split the swing into decision quality vs luck. Jieqi hides face-down IDENTITIES, so
 // reconstruction needs the per-game DEAL (events[0].setup) — we replay the raw event log
 // (which retains the server-secret deal), not the client payload. Gates/envelopes: the
@@ -112,9 +112,10 @@ const handleAnalysisRoutes = createGameAnalysisRoutes({
   countPlies: (inputs) => inputs.moves.length,
   resolveAnalysis: (roomId, inputs, computeIfMissing) =>
     resolveJieqiAnalysis(roomId, inputs.moves, inputs.deal, undefined, undefined, computeIfMissing),
-  // Mark the REVEAL (chance) plies so the client leaves them unjudged. Unlike banqi's
-  // from===to flip, a jieqi reveal is a normal move of a face-down piece, so we detect it by
-  // replaying the deal (jieqiChancePlies), not by move shape.
+  // Mark the chance plies (a reveal, or a capture of a face-down piece) so the client leaves
+  // them unjudged on the chart and grades them from the decisions layer. Unlike banqi's
+  // from===to flip, both are normal moves, so we detect them by replaying the deal
+  // (jieqiChancePlies), not by move shape.
   analysisExtras: (inputs) => ({ chancePlies: jieqiChancePlies(inputs.moves, inputs.deal) }),
   resolveDecisions: (roomId, inputs, computeIfMissing) =>
     resolveJieqiDecisions(
