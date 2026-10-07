@@ -1,46 +1,26 @@
 import {
-  type EndgameEntry,
-  endgameEntryFen,
   endgameEntryState,
   endgameHubEntry,
-  endgamePracticeSetup,
-  XIANGQI_ENDGAME_HUB,
-  XIANGQI_ENDGAME_HUB_GROUPS,
+  XIANGQI_ENDGAME_PRACTICE_SLUG,
 } from '@mistboard/game';
 import { XQ_BOARD_H, XQ_BOARD_W, xqBoardGrid, xqBoardSvg, xqPiecesLayer, xqSvg } from '../diagrams.js';
-import { practicePositionHref } from '../../practice-position-params.js';
-import type { Article, ArticleBlock, ArticleSection } from '../types.js';
-import {
-  ENDGAME_GRADE_LABEL,
-  ENDGAME_GROUP_HEADING,
-  ENDGAME_PAGE_TEXT as T,
-  endgameContrastParagraph,
-  endgameRowParagraph,
-  endgameRowText,
-} from '../xiangqi-endgames-text.js';
+import type { Article } from '../types.js';
+import { ENDGAME_PAGE_TEXT as T } from '../xiangqi-endgames-text.js';
 
-// 象棋残局: the standard endgame results, each one a position you can play out.
-//
-// Which positions, in which order, under which grade: packages/game
-// xiangqi-endgame-hub.ts. What the page says about them, in all three scripts:
-// ../xiangqi-endgames-text.ts. Every verdict here is backed by a row in the
-// committed chessdb checks file, and xiangqi-endgame-hub.test.ts fails if a
-// grade and its check disagree, so this module adds no claims of its own.
+// 象棋残局: what decides an endgame, the three grades with one position each,
+// and one way in to the practice set that holds all 26 (a @mistboard study,
+// seeded from packages/game xiangqi-endgame-practice.ts). The page used to list
+// every position with its own Play link to a bare single-exercise page; the
+// study player already gives the rail, the progress and Next, so the page links
+// there once. Every verdict is held to the committed chessdb checks by
+// xiangqi-endgame-hub.test.ts; this module adds no claims of its own.
 
-/** Practice from this exact position: a win as Red to mate, a draw as Black. */
-export function endgamePracticeHref(entry: EndgameEntry): string {
-  const { side, goal } = endgamePracticeSetup(entry);
-  return practicePositionHref(endgameEntryFen(entry), goal, side);
-}
+/** The practice set, by its slug: the study id is minted by the seed. */
+export const XIANGQI_ENDGAMES_PRACTICE_HREF = `/practice?set=${XIANGQI_ENDGAME_PRACTICE_SLUG}`;
 
-function analysisHref(entry: EndgameEntry): string {
-  return `/analysis/xiangqi?fen=${encodeURIComponent(endgameEntryFen(entry))}`;
-}
-
-// One board per position, drawn from the same kernel state the practice page
-// starts from. No label: the sub-heading above it names the position.
-function board(entry: EndgameEntry): () => string {
-  const state = endgameEntryState(entry);
+// A board drawn from the same kernel state the practice chapter starts from.
+function board(id: string): () => string {
+  const state = endgameEntryState(endgameHubEntry(id));
   return () =>
     xqSvg(
       XQ_BOARD_W,
@@ -48,33 +28,6 @@ function board(entry: EndgameEntry): () => string {
       xqBoardSvg({ state, x: 0, y: 0, label: '', perspective: 'red', boardOffset: 0 }),
     );
 }
-
-function positionBlocks(id: string, paragraph: string): ArticleBlock[] {
-  const entry = endgameHubEntry(id);
-  return [
-    { kind: 'paragraph', text: paragraph },
-    { kind: 'raw-svg', svg: board(entry) },
-    {
-      kind: 'cta',
-      layout: 'single-row',
-      buttons: [
-        { label: T.play.en, href: endgamePracticeHref(entry), emphasis: 'primary' },
-        { label: T.analyse.en, href: analysisHref(entry), emphasis: 'secondary' },
-      ],
-    },
-  ];
-}
-
-const groupSections: ArticleSection[] = XIANGQI_ENDGAME_HUB_GROUPS.map((group) => ({
-  heading: ENDGAME_GROUP_HEADING[group].en,
-  blocks: XIANGQI_ENDGAME_HUB.filter((row) => row.group === group).flatMap((row) => [
-    { kind: 'sub-heading', text: endgameRowText(row.id).name.en } as ArticleBlock,
-    ...positionBlocks(row.id, endgameRowParagraph(row.id, row.grade).en),
-    ...(row.contrasts ?? []).flatMap((contrast) =>
-      positionBlocks(contrast, endgameContrastParagraph(contrast).en),
-    ),
-  ]),
-}));
 
 // The card art: the chariot-against-horse-and-elephants fortress, the page's
 // best-known draw.
@@ -107,47 +60,40 @@ export const xiangqiEndgamesArticle: Article = {
   audience:
     'Xiangqi players learning which endgames win and which draw, and anyone who wants to practise the standard positions against the computer.',
   intro: [
-    { kind: 'paragraph', text: T.introGrades.en },
-    { kind: 'paragraph', text: T.introSource.en },
+    { kind: 'paragraph', text: T.introDecides.en },
     { kind: 'paragraph', text: T.introPractice.en },
+    {
+      kind: 'cta',
+      buttons: [{ label: T.practiceButton.en, href: XIANGQI_ENDGAMES_PRACTICE_HREF, emphasis: 'primary' }],
+    },
   ],
   sections: [
     {
-      heading: T.glanceHeading.en,
+      heading: T.gradesHeading.en,
       blocks: [
+        { kind: 'paragraph', text: T.introGrades.en },
         {
-          kind: 'table',
-          headers: [T.glanceEnding.en, T.glanceGrade.en],
-          rows: XIANGQI_ENDGAME_HUB.map((row) => [
-            endgameRowText(row.id).name.en,
-            ENDGAME_GRADE_LABEL[row.grade].en,
-          ]),
-          wrap: true,
+          kind: 'svg-row',
+          items: [
+            { svg: board('three-soldiers-vs-full-defence'), caption: T.captionStandardWin.en },
+            { svg: board('horse-vs-elephant-zugzwang'), caption: T.captionTrickyWin.en },
+            {
+              svg: board('chariot-vs-horse-two-elephants-fortress'),
+              caption: T.captionStandardDraw.en,
+            },
+          ],
         },
+        { kind: 'paragraph', text: T.oneStep.en },
+        { kind: 'paragraph', text: T.introSource.en },
       ],
     },
-    ...groupSections,
     {
       heading: T.ownHeading.en,
       blocks: [
         { kind: 'paragraph', text: T.ownText.en },
         {
           kind: 'cta',
-          buttons: [{ label: T.ownButton.en, href: '/editor/xiangqi', emphasis: 'primary' }],
-        },
-      ],
-    },
-    {
-      heading: T.faqHeading.en,
-      blocks: [
-        {
-          kind: 'faq',
-          items: [
-            { question: T.faqDrawQ.en, answer: T.faqDrawA.en },
-            { question: T.faqTrickyQ.en, answer: T.faqTrickyA.en },
-            { question: T.faqChariotQ.en, answer: T.faqChariotA.en },
-            { question: T.faqCheckQ.en, answer: T.faqCheckA.en },
-          ],
+          buttons: [{ label: T.ownButton.en, href: '/editor/xiangqi', emphasis: 'secondary' }],
         },
       ],
     },

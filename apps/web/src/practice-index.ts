@@ -28,7 +28,7 @@ import { renderXiangqiPiece } from './xiangqi-pieces.js';
 import './tile-map.css';
 import './practice-index.css';
 
-interface PracticeCardDto {
+export interface PracticeCardDto {
   slug: string;
   /** The catalogue's English, the fallback when the study has no text for this
    *  reader's locale. */
@@ -76,7 +76,7 @@ function sectionTitle(section: PracticeSectionDto): string {
   return key ? t(key) : section.title;
 }
 
-interface PracticeSectionDto {
+export interface PracticeSectionDto {
   id: string;
   title: string;
   cards: PracticeCardDto[];
@@ -86,10 +86,29 @@ export function mountPracticeIndex(root: HTMLElement): void {
   root.classList.add('landing-page');
   root.replaceChildren(buildNav(), notice(t('practice.loading')));
   void load()
-    .then((sections) => render(root, sections))
+    .then((sections) => {
+      const target = practiceSetTarget(sections, window.location.search);
+      if (target) window.location.replace(target);
+      else render(root, sections);
+    })
     .catch(() => {
       root.replaceChildren(buildNav(), notice(t('practice.failed')));
     });
+}
+
+/**
+ * `/practice?set=<slug>` opens that set's study: the stable link for a set,
+ * which an article can carry across re-seeds (the study id is minted by the
+ * seed; the slug never changes). An unknown or unseeded slug shows the shelf.
+ */
+export function practiceSetTarget(sections: PracticeSectionDto[], search: string): string | null {
+  const slug = new URLSearchParams(search).get('set');
+  if (!slug) return null;
+  for (const section of sections) {
+    const card = section.cards.find((entry) => entry.slug === slug);
+    if (card) return `/study/${encodeURIComponent(card.studyId)}`;
+  }
+  return null;
 }
 
 async function load(): Promise<PracticeSectionDto[]> {

@@ -284,7 +284,7 @@
   "xiangqi-endgames": {
     "title": "Xiangqi Endgames: Standard Wins and Draws",
     "kind": "article",
-    "description": "Which xiangqi endgames are a win and which are a draw: 26 standard wins, tricky wins and standard draws, each checked against the chessdb.cn tablebase and playable against the computer.",
+    "description": "Which xiangqi endgames are a win and which are a draw, and why: 26 standard positions, each checked against the chessdb.cn tablebase, to practice against the computer.",
     "status": "published"
   },
   "xiangqi-match-fixing": {

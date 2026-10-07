@@ -217,7 +217,7 @@ export function practiceChapterBody(entry: EndgameEntry): Record<string, unknown
   };
 }
 
-class Session {
+export class Session {
   private cookie = '';
   constructor(private readonly base: string) {}
 
@@ -296,7 +296,7 @@ class Session {
  * if it exists, which keeps `--dry-run` and `--email` working with no file
  * present.
  */
-function readCookie(path: string | null): string | null {
+export function readCookie(path: string | null): string | null {
   const fromEnv = process.env.MISTBOARD_SESSION_COOKIE;
   if (fromEnv) return fromEnv;
   const file = path ?? join(homedir(), '.mistboard-cookie');

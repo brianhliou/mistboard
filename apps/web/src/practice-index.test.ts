@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { mountPracticeIndex } from './practice-index.js';
+import { mountPracticeIndex, practiceSetTarget } from './practice-index.js';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -110,5 +110,33 @@ describe('practice shelf', () => {
       }),
     );
     expect(root.querySelector('.learn-xq-categ h2')?.textContent).toBe('Openings');
+  });
+});
+
+describe('practiceSetTarget', () => {
+  const sections = [
+    {
+      id: 'endgames',
+      title: 'Basic endgames',
+      cards: [
+        {
+          slug: 'endgames-wins-and-draws',
+          title: 'Wins and draws',
+          blurb: 'b',
+          studyId: 'abc123',
+          exerciseCount: 26,
+          solvedCount: 0,
+        },
+      ],
+    },
+  ];
+
+  it('sends ?set=<slug> to the study the slug resolves to', () => {
+    expect(practiceSetTarget(sections, '?set=endgames-wins-and-draws')).toBe('/study/abc123');
+  });
+
+  it('shows the shelf for no slug or one the catalogue does not resolve', () => {
+    expect(practiceSetTarget(sections, '')).toBeNull();
+    expect(practiceSetTarget(sections, '?set=endgames-unseeded')).toBeNull();
   });
 });

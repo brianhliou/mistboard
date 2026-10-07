@@ -13,6 +13,8 @@
 // Lives in @mistboard/game so the server (resolving slugs) and the web client
 // (rendering cards) read the same list, rather than two copies drifting apart.
 
+import { XIANGQI_ENDGAME_PRACTICE_SLUG } from './xiangqi-endgame-practice.js';
+
 export interface PracticeCard {
   /** Matches `studies.slug`. */
   slug: string;
@@ -41,6 +43,14 @@ export const PRACTICE_SECTIONS: readonly PracticeSection[] = [
     id: 'endgames',
     title: 'Basic endgames',
     cards: [
+      // The 26 graded results of the 象棋残局 article in one set, wins before
+      // draws (packages/game xiangqi-endgame-practice.ts). First because it is
+      // the survey; the piece-family sets after it go deeper on each.
+      {
+        slug: XIANGQI_ENDGAME_PRACTICE_SLUG,
+        title: 'Wins and draws',
+        blurb: 'The 26 standard results, easiest first',
+      },
       {
         slug: 'endgames-soldier',
         title: 'Soldier endgames',
