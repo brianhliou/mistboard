@@ -894,6 +894,7 @@ function buildQuickPairPools(locale: Locale): QuickPairPools {
     const botOffer = landingVariantSupportsPve(gameSpecId)
       ? landingBotOffer(gameSpecId, {
           rememberedXiangqiBotId: rememberedPveEngine(XIANGQI_SPEC_ID),
+          rememberedJieqiBotId: rememberedPveEngine(JIEQI_SPEC_ID),
         })
       : null;
     if (botOffer) {

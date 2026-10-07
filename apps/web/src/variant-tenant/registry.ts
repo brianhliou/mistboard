@@ -45,6 +45,7 @@ import {
   xiangqiEnabled,
 } from '../feature-flags.js';
 import type { I18nKey } from '../i18n/catalog.js';
+import { JIEQI_FIRST_GAME_ENGINE_ID, XIANGQI_FIRST_GAME_ENGINE_ID } from '../landing-bot-policy.js';
 import type { GameMeta, ReplayHandle } from '../replay.js';
 import { hasLikelyVariantGrant } from '../signed-in-state.js';
 
@@ -310,7 +311,9 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
           kind: 'container',
         },
       ],
-      defaultEngineId: 'fairy-stockfish-xiangqi-level-4',
+      // A device with no remembered xiangqi engine is a newcomer: the same
+      // first-game rung the homepage offers (landing-bot-policy).
+      defaultEngineId: XIANGQI_FIRST_GAME_ENGINE_ID,
     },
   },
   {
@@ -476,7 +479,9 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
           kind: 'container',
         },
       ],
-      defaultEngineId: 'pikafish-jieqi-level-4',
+      // A device with no remembered jieqi engine is a newcomer: the same
+      // first-game rung the homepage offers (landing-bot-policy).
+      defaultEngineId: JIEQI_FIRST_GAME_ENGINE_ID,
     },
   },
   {

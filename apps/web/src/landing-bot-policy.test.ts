@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   fairyStockfishLevel,
+  JIEQI_FIRST_GAME_LEVEL,
+  jieqiPrimaryLevel,
   LANDING_BOT_GAME_SPEC_IDS,
   landingBotLadder,
   landingBotLadderIndex,
@@ -9,6 +11,7 @@ import {
   landingBotRotationBucket,
   landingLobbyBotOffer,
   landingXiangqiBotOffers,
+  pikafishJieqiLevel,
   playableBotIdsBySpec,
   pveEngineIdForRememberedPick,
   xiangqiPrimaryLevel,
@@ -97,6 +100,56 @@ describe('landing bot policy', () => {
     ).toMatchObject({ botId: 'fairy-stockfish-level-4' });
   });
 
+  it('starts a first-time jieqi device on Level 2 and keeps a remembered Pikafish level', () => {
+    // Newcomer: no remembered jieqi bot, same rule as xiangqi.
+    expect(JIEQI_FIRST_GAME_LEVEL).toBe(2);
+    expect(jieqiPrimaryLevel(undefined)).toBe(2);
+    expect(jieqiPrimaryLevel(null)).toBe(2);
+    expect(jieqiPrimaryLevel('')).toBe(2);
+    expect(landingBotOffer('jieqi')).toMatchObject({
+      botId: 'pikafish-level-2',
+      botName: 'Pikafish Level 2',
+      timeControlId: '10m5',
+    });
+    // Remembered: a one-click start stores the bot id, a setup-dialog pick the
+    // engine id; both name the same rung and are kept exactly.
+    expect(jieqiPrimaryLevel('pikafish-level-6')).toBe(6);
+    expect(jieqiPrimaryLevel('pikafish-jieqi-level-3')).toBe(3);
+    expect(jieqiPrimaryLevel('pikafish-level-1')).toBe(1);
+    expect(
+      landingBotOffer('jieqi', { rememberedJieqiBotId: 'pikafish-jieqi-level-5' }),
+    ).toMatchObject({ botId: 'pikafish-level-5', botName: 'Pikafish Level 5' });
+    // Anything else is a returning player, not a newcomer: Level 4.
+    for (const other of [
+      'pikafish',
+      'pikafish-jieqi-strongest',
+      'ab-jchess',
+      'ab-jchess-jieqi',
+      'pikafish-level-8',
+      'pikafish-level-0',
+      'fairy-stockfish-level-2',
+    ]) {
+      expect(jieqiPrimaryLevel(other)).toBe(4);
+    }
+    expect(pikafishJieqiLevel('pikafish-jieqi-level-42')).toBeNull();
+    // The xiangqi memory never moves the jieqi offer, and vice versa.
+    expect(
+      landingBotOffer('jieqi', { rememberedXiangqiBotId: 'fairy-stockfish-level-8' }),
+    ).toMatchObject({ botId: 'pikafish-level-2' });
+    expect(landingBotOffer('xiangqi', { rememberedJieqiBotId: 'pikafish-level-6' })).toMatchObject({
+      botId: 'fairy-stockfish-level-2',
+    });
+  });
+
+  it('opens the setup dialog on the homepage first-game level when nothing is remembered', () => {
+    expect(webVariantTenantForSpecId('jieqi')?.landing?.defaultEngineId).toBe(
+      `pikafish-jieqi-level-${JIEQI_FIRST_GAME_LEVEL}`,
+    );
+    expect(webVariantTenantForSpecId('xiangqi')?.landing?.defaultEngineId).toBe(
+      `fairy-stockfish-xiangqi-level-${xiangqiPrimaryLevel(null)}`,
+    );
+  });
+
   describe('lobby rows rotate rung and clock by bucket', () => {
     const ALL_PACES = ['1m1', '3m2', '5m5', '10m5'] as const;
     const buckets = Array.from({ length: 12 }, (_, index) => 82_620 + index);
@@ -121,9 +174,9 @@ describe('landing bot policy', () => {
           new Set(['misty']),
         );
       }
-      // Jieqi's ladder rows stay on level 4 until the ladder is rated.
+      // Jieqi's ladder rows stay on the newcomer level until the ladder is rated.
       expect(new Set(rowsFor('jieqi').map((offer) => offer.botId))).toEqual(
-        new Set(['pikafish-level-4']),
+        new Set(['pikafish-level-2']),
       );
     });
 
@@ -160,7 +213,7 @@ describe('landing bot policy', () => {
   });
 
   it('uses the established house bot for every other supported variant', () => {
-    expect(landingBotOffer('jieqi')?.botId).toBe('pikafish-level-4');
+    expect(landingBotOffer('jieqi')?.botId).toBe('pikafish-level-2');
     // Every Misty variant, fog included, advertises the 10+5 bot default. For
     // the fog engines it also clears the 5s increment floor (#283) the picker
     // and the create routes enforce (isAllowedEngineTimeControl).
@@ -181,7 +234,28 @@ describe('landing bot policy', () => {
     expect(pveEngineIdForRememberedPick('jieqi', 'pikafish-jieqi-level-3')).toBe(
       'pikafish-jieqi-level-3',
     );
-    expect(pveEngineIdForRememberedPick('xiangqi', 'pikafish')).toBe('pikafish');
+    expect(pveEngineIdForRememberedPick('xiangqi', 'pikafish')).toBe('pikafish-xiangqi-level-8');
+  });
+
+  it('maps a remembered xiangqi bot to the engine the setup menu lists', () => {
+    const menu =
+      webVariantTenantForSpecId('xiangqi')?.landing?.engineOptions?.map((e) => e.id) ?? [];
+    for (const botId of ['pikafish', 'fairy-stockfish-level-1', 'fairy-stockfish-level-8']) {
+      expect(menu).toContain(pveEngineIdForRememberedPick('xiangqi', botId));
+    }
+    expect(pveEngineIdForRememberedPick('xiangqi', 'fairy-stockfish-level-5')).toBe(
+      'fairy-stockfish-xiangqi-level-5',
+    );
+    expect(pveEngineIdForRememberedPick('xiangqi', 'fairy-stockfish-xiangqi-level-3')).toBe(
+      'fairy-stockfish-xiangqi-level-3',
+    );
+    // The dialog's engine id reads back as the same rung on the homepage.
+    expect(xiangqiPrimaryLevel('fairy-stockfish-xiangqi-level-7')).toBe(7);
+    expect(xiangqiPrimaryLevel('fairy-stockfish-xiangqi-level-9')).toBe(5);
+    // Other variants keep their ids untouched.
+    expect(pveEngineIdForRememberedPick('fortress-xiangqi', 'fairy-stockfish-level-5')).toBe(
+      'fairy-stockfish-level-5',
+    );
   });
 
   it('maps a remembered KataGo bot to the jungle engine the setup menu lists', () => {

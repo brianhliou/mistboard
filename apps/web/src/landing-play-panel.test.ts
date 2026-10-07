@@ -79,7 +79,9 @@ describe('homepage play panel', () => {
   it('ends the jieqi ladder on AB-JChess', () => {
     const board = buildPlayPanel('en', { hydrate: false });
     const jieqi = row(board, 'jieqi');
-    clickNext(jieqi, 'level', 4);
+    // A device with no remembered jieqi bot starts on the newcomer level.
+    expect(stepValue(jieqi, 'level')).toBe('Level 2');
+    clickNext(jieqi, 'level', 6);
     expect(stepValue(jieqi, 'level')).toBe('Level 8');
     clickNext(jieqi, 'level', 12);
     expect(stepValue(jieqi, 'level')).toBe('AB-JChess');
