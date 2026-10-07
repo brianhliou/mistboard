@@ -1,18 +1,28 @@
 import { endgameEntryState, endgameHubEntry } from '@mistboard/game';
 import { XQ_BOARD_H, XQ_BOARD_W, xqBoardGrid, xqBoardSvg, xqPiecesLayer, xqSvg } from '../diagrams.js';
-import type { Article } from '../types.js';
-import { ENDGAME_PAGE_TEXT as T } from '../xiangqi-endgames-text.js';
+import type { Article, ArticleBlock } from '../types.js';
+import {
+  ENDGAME_TABLE_GROUP_HEADING,
+  ENDGAME_TABLE_GROUPS,
+  endgameStudyHref,
+  endgameTableRows,
+  ENDGAME_PAGE_TEXT as T,
+} from '../xiangqi-endgames-text.js';
 
-// 象棋残局: what decides an endgame, the three grades with one position each,
-// and one way in to /practice, whose piece-by-piece sets hold all 26 (seeded
-// from packages/game xiangqi-endgame-practice.ts). The page used to list every
-// position with its own Play link to a bare single-exercise page; the study
-// player already gives the rail, the progress and Next, so the page links there
-// once. Every verdict is held to the committed chessdb checks by
-// xiangqi-endgame-hub.test.ts; this module adds no claims of its own.
+// 象棋残局, an evergreen reference: what decides an endgame, a win-or-draw
+// table of 33 common endings by attacking piece (each name links to the
+// position in the practice sets), one exercise drawn from the kernel with a
+// link to play it in its study chapter (the study embed only replays, so the
+// page links out), the fortress pair, and how to set up or look up any other
+// ending. Every result is held to a chessdb check by xiangqi-endgames.test.ts
+// and xiangqi-endgame-hub.test.ts; the words and links live in
+// ../xiangqi-endgames-text.ts.
 
-/** The practice shelf: the 26 are spread over its sets, one per piece. */
+/** The practice shelf: the 33 are spread over its sets, one per piece. */
 export const XIANGQI_ENDGAMES_PRACTICE_HREF = '/practice';
+
+/** The position the page asks the reader to play. */
+export const XIANGQI_ENDGAMES_EXERCISE_ID = 'horse-vs-elephant-zugzwang';
 
 // A board drawn from the same kernel state the practice chapter starts from.
 function board(id: string): () => string {
@@ -41,6 +51,18 @@ export const XIANGQI_ENDGAMES_THUMBNAIL = () => {
   return `<svg class="xq-article-svg" viewBox="0 0 320 200" role="img" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto"><g transform="translate(${tx.toFixed(1)} 4) scale(${scale.toFixed(4)})">${body}</g></svg>`;
 };
 
+
+// One sub-heading and one table per attacking piece.
+const tableBlocks: ArticleBlock[] = ENDGAME_TABLE_GROUPS.flatMap((group): ArticleBlock[] => [
+  { kind: 'sub-heading', text: ENDGAME_TABLE_GROUP_HEADING[group].en },
+  {
+    kind: 'table',
+    headers: [T.headerMaterial.en, T.headerResult.en, T.headerIdea.en],
+    rows: endgameTableRows(group),
+    wrap: true,
+  },
+]);
+
 export const xiangqiEndgamesArticle: Article = {
   slug: 'xiangqi-endgames',
   kind: 'article',
@@ -65,22 +87,41 @@ export const xiangqiEndgamesArticle: Article = {
   ],
   sections: [
     {
-      heading: T.gradesHeading.en,
+      heading: T.tableHeading.en,
       blocks: [
-        { kind: 'paragraph', text: T.introGrades.en },
+        { kind: 'paragraph', text: T.tableIntro.en },
+        ...tableBlocks,
+        { kind: 'paragraph', text: T.introSource.en },
+      ],
+    },
+    {
+      heading: T.exerciseHeading.en,
+      blocks: [
+        { kind: 'paragraph', text: T.exerciseText.en },
+        { kind: 'raw-svg', svg: board(XIANGQI_ENDGAMES_EXERCISE_ID), caption: T.exerciseCaption.en },
         {
-          kind: 'svg-row',
-          items: [
-            { svg: board('three-soldiers-vs-full-defence'), caption: T.captionStandardWin.en },
-            { svg: board('horse-vs-elephant-zugzwang'), caption: T.captionTrickyWin.en },
+          kind: 'cta',
+          buttons: [
             {
-              svg: board('chariot-vs-horse-two-elephants-fortress'),
-              caption: T.captionStandardDraw.en,
+              label: T.exerciseButton.en,
+              href: endgameStudyHref(XIANGQI_ENDGAMES_EXERCISE_ID),
+              emphasis: 'primary',
             },
           ],
         },
+      ],
+    },
+    {
+      heading: T.fortressHeading.en,
+      blocks: [
+        {
+          kind: 'svg-row',
+          items: [
+            { svg: board('chariot-vs-horse-two-elephants-fortress'), caption: T.captionFortress.en },
+            { svg: board('chariot-vs-horse-two-elephants-broken'), caption: T.captionBroken.en },
+          ],
+        },
         { kind: 'paragraph', text: T.oneStep.en },
-        { kind: 'paragraph', text: T.introSource.en },
       ],
     },
     {
@@ -92,6 +133,10 @@ export const xiangqiEndgamesArticle: Article = {
           buttons: [{ label: T.ownButton.en, href: '/editor/xiangqi', emphasis: 'secondary' }],
         },
       ],
+    },
+    {
+      heading: T.tablebaseHeading.en,
+      blocks: [{ kind: 'paragraph', text: T.tablebaseText.en }],
     },
   ],
 };
