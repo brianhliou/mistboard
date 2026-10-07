@@ -19,7 +19,8 @@
 // A plan file:
 //   { "study": "uMbk76wd",
 //     "ops": [
-//       { "op": "study", "name": "…", "description": "…", "visibility": "public" },
+//       { "op": "study", "name": "…", "description": "…", "visibility": "public",
+//         "i18n": { "zh-hans": { "name": "…", "description": "…" }, … } },
 //       { "op": "rename", "chapter": "ZmPpVH90", "name": "Game 6" },
 //       { "op": "tree", "chapter": "squFZ3GM", "tree": "trees/ch2.json" },
 //       { "op": "add", "ref": "g7", "name": "Game 7", "tree": { "version": 1, … } },
@@ -62,7 +63,15 @@ import {
 import { ensureDealtRoot, isSerializedTree, parseChapterTags } from './routes/studies.js';
 
 export type StudyEditOp =
-  | { op: 'study'; name?: string; description?: string; visibility?: StudyVisibility }
+  | {
+      op: 'study';
+      name?: string;
+      description?: string;
+      visibility?: StudyVisibility;
+      /** The study's whole translation overlay, replaced (not merged), e.g.
+       *  { "zh-hans": { "name": "…", "description": "…" }, "zh-hant": { … } }. */
+      i18n?: Record<string, unknown>;
+    }
   | { op: 'rename'; chapter: string; name: string }
   | { op: 'tree'; chapter: string; tree: unknown }
   | {
@@ -129,6 +138,23 @@ export function readPlan(path: string): StudyEditPlan {
   return plan;
 }
 
+/** A study op's `i18n` replaces the whole overlay, so a typo would wipe every
+ *  translation: require an object of locale -> object, and name the locales. */
+function studyI18nLocales(i18n: unknown, i: number): string[] {
+  if (!i18n || typeof i18n !== 'object' || Array.isArray(i18n)) {
+    throw new Error(`op ${i + 1}: i18n must be an object of locale -> { name, description }`);
+  }
+  const locales = Object.keys(i18n);
+  if (locales.length === 0) throw new Error(`op ${i + 1}: empty i18n would drop every translation`);
+  for (const locale of locales) {
+    const value = (i18n as Record<string, unknown>)[locale];
+    if (!/^[a-z]{2}(-[A-Za-z]+)?$/.test(locale) || !value || typeof value !== 'object') {
+      throw new Error(`op ${i + 1}: i18n.${locale} must be a locale holding an object`);
+    }
+  }
+  return locales;
+}
+
 /** Check every op against the study as it will stand when that op runs, and
  *  describe it. Throws on the first op that the apply would fail or refuse. */
 export function checkPlan(
@@ -166,6 +192,10 @@ export function checkPlan(
         if (op.description !== undefined) lines.push(`study description -> "${op.description}"`);
         if (op.visibility !== undefined) {
           lines.push(`study visibility: ${study.visibility} -> ${op.visibility}`);
+        }
+        if (op.i18n !== undefined) {
+          const locales = studyI18nLocales(op.i18n, i);
+          lines.push(`study i18n replaced: ${locales.join(', ')}`);
         }
         return;
       }
@@ -319,6 +349,7 @@ export async function applyPlan(
             ...(op.name === undefined ? {} : { name: op.name.trim() }),
             ...(op.description === undefined ? {} : { description: op.description }),
             ...(op.visibility === undefined ? {} : { visibility: op.visibility }),
+            ...(op.i18n === undefined ? {} : { i18n: op.i18n }),
           }),
         );
         break;
