@@ -228,6 +228,96 @@ describe('tenant live-client core', () => {
     expect(h.client.state.lobbyMatch).toBe(true);
   });
 
+  // Driven through the real frame, not a chrome ctx: the earlier fix keyed on
+  // roomMode 'correspondence', which a test ctx could inject but no tenant ever
+  // reports (they narrow roomMode to pve/pvp), so prod still showed the invite.
+  // Prod, 2026-10-06: a jieqi correspondence game, both accounts seated, Red
+  // had moved, Black offline -> "Invite opponent" and "aborting in 86390s".
+  describe('invite window, from the wire', () => {
+    const DAY_MS = 86_400_000;
+    function correspondenceFrame(
+      overrides: Partial<TenantLiveFrame<TColor, TView>> = {},
+    ): Partial<TenantLiveFrame<TColor, TView>> {
+      return {
+        seat: 'red',
+        seats: { red: 'c-red', blue: 'c-blue' },
+        connectedSeats: { red: true, blue: false },
+        timeControl: { initialMs: DAY_MS, incrementMs: 0, daysPerMove: 1 },
+        // What jieqi-tenant.ts sends for every human room, correspondence too.
+        roomMode: 'pvp',
+        state: view({ status: { type: 'playing', turn: 'blue' }, moveNumber: 1 }),
+        abortDeadline: Date.now() + 86_390_000,
+        events: [moveEvent('red', 'c4', 'c5', 1)],
+        ...overrides,
+      };
+    }
+
+    function panelText(h: Harness): { status: string; actions: string; controls: string } {
+      const refs = h.refs();
+      return {
+        status: refs.actionSection.hidden ? '' : (refs.actionStatus.textContent ?? ''),
+        actions: refs.roomActions.textContent ?? '',
+        controls: refs.gameControls.textContent ?? '',
+      };
+    }
+
+    it('shows no invite in a correspondence game whose seats are both taken', () => {
+      const h = createHarness();
+      h.feedHello(correspondenceFrame());
+      const text = panelText(h);
+      expect(text.status).not.toContain('Invite opponent');
+      expect(text.status).not.toContain('Copy the invite link');
+      expect(text.actions).not.toContain('Copy invite');
+    });
+
+    it('counts the correspondence first-move window as a duration, not seconds', () => {
+      const h = createHarness();
+      h.feedHello(correspondenceFrame());
+      const { controls } = panelText(h);
+      // One unit: the space is non-breaking so the column never splits it.
+      expect(controls).toContain('Waiting for first move, aborting in 23h\u00a059m');
+      expect(controls).not.toMatch(/\d{3,}s/);
+    });
+
+    it('keeps the invite for a friend room until the friend takes the seat', () => {
+      const h = createHarness();
+      h.feedHello({
+        seat: 'red',
+        seats: { red: 'c-red' },
+        connectedSeats: { red: true, blue: false },
+        timeControl: { initialMs: 300_000, incrementMs: 5_000 },
+        state: view({ moveNumber: 1 }),
+      });
+      expect(panelText(h).status).toContain('Invite opponent');
+      expect(panelText(h).actions).toContain('Copy invite');
+
+      // The friend sits down, then their tab drops: the seat is held.
+      h.feedSnapshot({
+        seat: 'red',
+        seats: { red: 'c-red', blue: 'c-blue' },
+        connectedSeats: { red: true, blue: false },
+        state: view({ moveNumber: 1 }),
+      });
+      expect(panelText(h).status).not.toContain('Invite opponent');
+      expect(panelText(h).actions).not.toContain('Copy invite');
+    });
+
+    it('shows no invite in a rated lobby pairing', () => {
+      const h = createHarness();
+      h.feedHello({
+        seat: 'red',
+        seats: { red: 'c-red' },
+        connectedSeats: { red: true, blue: false },
+        lobbyMatch: true,
+        rated: true,
+        timeControl: { initialMs: 300_000, incrementMs: 5_000 },
+        state: view({ moveNumber: 1 }),
+      });
+      expect(panelText(h).status).not.toContain('Invite opponent');
+      expect(panelText(h).actions).not.toContain('Copy invite');
+    });
+  });
+
   it('drives the shared lifecycle frame from viewer-safe room state', () => {
     const h = createHarness();
     h.feedHello({

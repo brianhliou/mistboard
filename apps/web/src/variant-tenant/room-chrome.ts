@@ -147,6 +147,9 @@ export type TenantChromeContext<C extends string> = {
   seatProfiles(): Partial<Record<C, ProfileIdentity>>;
   abortDeadline(): number | null;
   forfeitDeadline(): number | null;
+  // 'pvp' or 'pve' as the tenant reports it. Tenant snapshots never say
+  // 'correspondence' (every client narrows roomMode to pve/pvp), so a
+  // correspondence room is read off timeControl().daysPerMove instead.
   roomMode(): string;
   room(): string;
   debugRequested(): boolean;
@@ -570,22 +573,49 @@ export function createTenantRoomChrome<C extends string>(
     }
   }
 
-  // PvP invite window: the viewer is seated, the game has not really started
-  // (no completed first full move), and the opponent's seat has no live
-  // connection. Engine seats are reported connected by the server, so PvE
-  // rooms never read as waiting.
-  function waitingForOpponent(): boolean {
+  // A days-per-move room. Read off the time control the server sends with every
+  // snapshot: the tenants' roomMode never says 'correspondence', so the branch
+  // that keyed on it was dead in every real room (2026-10-06, a jieqi
+  // correspondence game showed the invite and an 86390s countdown).
+  function isCorrespondence(): boolean {
+    const days = ctx.timeControl()?.daysPerMove;
+    return ctx.roomMode() === 'correspondence' || (typeof days === 'number' && days > 0);
+  }
+
+  // The pregame opponent seat for a seated viewer, or null when there is no
+  // pregame to wait through (not playing, past the first full move, socket
+  // down, spectator).
+  function pregameOpponent(): C | null {
     const view = ctx.view();
-    if (view?.status.type !== 'playing' || view.moveNumber >= 2) return false;
-    if (ctx.connectionState() !== 'connected') return false;
+    if (view?.status.type !== 'playing' || view.moveNumber >= 2) return null;
+    if (ctx.connectionState() !== 'connected') return null;
     const seat = seatColor();
-    if (seat === null) return false;
-    const opponent = tenant.oppositeColor(seat);
-    // A correspondence opponent is away between moves by design: only an
-    // empty seat is waiting. Keyed on the connection, a seated opponent who
-    // had already moved read "Waiting for opponent" with an invite link.
-    if (ctx.roomMode() === 'correspondence') return !ctx.seats()[opponent];
+    return seat === null ? null : tenant.oppositeColor(seat);
+  }
+
+  // The invite window: the opponent's seat is UNCLAIMED in a room the viewer
+  // shares by link (a friend room, rated or casual). Keyed on the seat, never
+  // on the occupant's connection: an opponent who holds the seat (a
+  // correspondence player between moves, a friend whose tab dropped, an
+  // engine) is not someone to invite. A lobby room has no link to share.
+  // Correspondence seeks seat both accounts at accept, so their rooms never
+  // open it.
+  function inviteWindowOpen(): boolean {
+    const opponent = pregameOpponent();
+    if (opponent === null || ctx.lobbyMatch()) return false;
+    return !ctx.seats()[opponent];
+  }
+
+  // A lobby room whose paired opponent has not connected yet: the no-show
+  // window (LOBBY_NO_SHOW_ABORT_MS), shown as "waiting", never as an invite.
+  function lobbyOpponentMissing(): boolean {
+    const opponent = pregameOpponent();
+    if (opponent === null || !ctx.lobbyMatch()) return false;
     return ctx.connectedSeats()[opponent] !== true;
+  }
+
+  function waitingForOpponent(): boolean {
+    return inviteWindowOpen() || lobbyOpponentMissing();
   }
 
   function renderRoomActions(): void {
@@ -626,13 +656,12 @@ export function createTenantRoomChrome<C extends string>(
     // joins. No Home button either (lichess parity): the site nav is the way
     // out, and the empty host collapses its row.
     if (view?.status.type === 'aborted') return;
-    // A lobby room has no friend to invite.
-    if (ctx.lobbyMatch()) return;
-    // The invite link only while the opponent is still missing: never in a bot
-    // game (the engine seat reports connected), and not once both players are
-    // in, where the button used to sit in the column for the whole game
-    // (Brian's playtest, 2026-10-02).
-    if (!waitingForOpponent()) return;
+    // The invite link only while the opponent's seat is unclaimed in a room
+    // shared by link: never in a lobby room, a bot game (the engine holds its
+    // seat) or a correspondence game (both accounts seated at accept), and not
+    // once both seats are taken, where the button used to sit in the column
+    // for the whole game (Brian's playtest, 2026-10-02).
+    if (!inviteWindowOpen()) return;
 
     row.append(copyInviteButton());
     refs.roomActions.append(row);
@@ -826,9 +855,8 @@ export function createTenantRoomChrome<C extends string>(
     if (ctx.connectionState() === 'displaced') return t('live.statusSessionMoved');
     if (!view) return t('live.statusConnecting');
     if (!ctx.isReplayLive()) return t('live.titleViewingReplay');
-    if (waitingForOpponent()) {
-      return ctx.lobbyMatch() ? t('live.statusWaitingForOpponent') : t('live.titleInviteOpponent');
-    }
+    if (lobbyOpponentMissing()) return t('live.statusWaitingForOpponent');
+    if (inviteWindowOpen()) return t('live.titleInviteOpponent');
     if (view.status.type === 'finished') return t('live.titleGameFinished');
     if (view.status.type === 'aborted') return t('live.statusGameAborted');
     if (ctx.seat() === view.status.turn) return t('live.statusYourMove');
@@ -851,9 +879,8 @@ export function createTenantRoomChrome<C extends string>(
     if (ctx.connectionState() === 'displaced') return t('live.roomDisplaced');
     if (!view) return t('live.roomOpeningSocket');
     if (!ctx.isReplayLive()) return t('live.roomReturnToLatest');
-    if (waitingForOpponent()) {
-      return ctx.lobbyMatch() ? t('live.roomWaitingOpponentConnect') : t('live.roomInviteBody');
-    }
+    if (lobbyOpponentMissing()) return t('live.roomWaitingOpponentConnect');
+    if (inviteWindowOpen()) return t('live.roomInviteBody');
     if (view.status.type === 'finished') {
       const reason = reasonText(view.status.reason);
       return view.status.winner
@@ -969,12 +996,15 @@ export function createTenantRoomChrome<C extends string>(
     const seconds = Math.max(0, Math.ceil(remaining / 1000));
     // In a lobby room the deadline running while the opponent is away is the
     // no-show window: nobody owes a move yet, they have not arrived.
-    if (ctx.lobbyMatch() && waitingForOpponent()) {
+    if (lobbyOpponentMissing()) {
       return t('live.opponentNotConnectedAbortingIn', { seconds });
     }
-    // A correspondence window is the day allowance: "61640s" read as noise.
-    if (ctx.roomMode() === 'correspondence') {
-      const time = formatDayClock(remaining);
+    // A correspondence window is the day allowance: "86390s" read as noise.
+    // The rule matches the copy: an unmade first move in it aborts the game
+    // (pregame-timeout, sweepTenantRoomDeadline), it is not a loss.
+    if (isCorrespondence()) {
+      // Non-breaking: the narrow table column split "23h / 59m" across lines.
+      const time = formatDayClock(remaining).replaceAll(' ', ' ');
       return isSideToMove
         ? t('live.makeFirstMoveAbortingInTime', { time })
         : t('live.waitingFirstMoveAbortingInTime', { time });

@@ -186,7 +186,10 @@ describe('tenant room chrome action status', () => {
   });
 
   it('shows invite guidance while the opponent seat is empty pre-game', () => {
-    const { chrome, refs } = chromeHarness({ connectedSeats: { white: true, red: false } });
+    const { chrome, refs } = chromeHarness({
+      connectedSeats: { white: true, red: false },
+      seats: { white: 'c-white' },
+    });
     chrome.renderActionStatus();
     expect(refs.actionSection.hidden).toBe(false);
     expect(refs.actionStatus.textContent).toContain('Invite opponent');
@@ -460,8 +463,11 @@ describe('tenant room chrome meta and invite emphasis', () => {
     expect(refs.gameInfo.textContent).not.toContain('White');
   });
 
-  it('offers copy-invite only while waiting for the opponent', () => {
-    const waiting = chromeHarness({ connectedSeats: { white: true, red: false } });
+  it('offers copy-invite only while the opponent seat is unclaimed', () => {
+    const waiting = chromeHarness({
+      connectedSeats: { white: true, red: false },
+      seats: { white: 'c-white' },
+    });
     waiting.chrome.renderRoomActions();
     const waitingCopy = waiting.refs.roomActions.querySelector('button');
     expect(waitingCopy?.textContent).toBe('Copy invite');
@@ -472,6 +478,14 @@ describe('tenant room chrome meta and invite emphasis', () => {
     const playing = chromeHarness();
     playing.chrome.renderRoomActions();
     expect(playing.refs.roomActions.textContent).not.toContain('Copy invite');
+
+    // The friend took the seat and their tab dropped: the seat is theirs, so
+    // there is nobody to invite (keyed on the seat, not the connection).
+    const dropped = chromeHarness({ connectedSeats: { white: true, red: false } });
+    dropped.chrome.renderActionStatus();
+    dropped.chrome.renderRoomActions();
+    expect(dropped.refs.actionStatus.textContent).not.toContain('Invite opponent');
+    expect(dropped.refs.roomActions.textContent).not.toContain('Copy invite');
   });
 
   it('offers no copy-invite in a bot game', () => {
@@ -532,6 +546,8 @@ describe('tenant room chrome bot rematch', () => {
 // opponent" until the server's no-show abort (LOBBY_NO_SHOW_ABORT_MS) ended it.
 describe('tenant room chrome lobby rooms', () => {
   const absentOpponent = { connectedSeats: { white: true, red: false } };
+  // A friend room before the friend opens the link: their seat is unclaimed.
+  const openSeat = { ...absentOpponent, seats: { white: 'c-white' } };
 
   it('tells a lobby player its opponent is connecting, never to share an invite', () => {
     const { chrome, refs } = chromeHarness({ ...absentOpponent, lobbyMatch: true });
@@ -560,7 +576,7 @@ describe('tenant room chrome lobby rooms', () => {
   });
 
   it('keeps the invite prompt and button for an invite room', () => {
-    const { chrome, refs } = chromeHarness({ ...absentOpponent, lobbyMatch: false });
+    const { chrome, refs } = chromeHarness({ ...openSeat, lobbyMatch: false });
     chrome.renderActionStatus();
     chrome.renderRoomActions();
     expect(refs.actionStatus.textContent).toContain('Copy the invite link');
@@ -570,8 +586,12 @@ describe('tenant room chrome lobby rooms', () => {
   // A correspondence opponent is offline between moves; a seated one is not
   // missing (2026-10-04: a jieqi game read "Waiting for opponent" with an
   // invite link after the opponent had already moved).
+  // Correspondence is read off the time control, as on the wire: no tenant
+  // client reports roomMode 'correspondence' (2026-10-06).
+  const dayPerMove = { initialMs: 86_400_000, incrementMs: 0, daysPerMove: 1 };
+
   it('treats a seated, offline correspondence opponent as present', () => {
-    const { chrome, refs } = chromeHarness({ ...absentOpponent, roomMode: 'correspondence' });
+    const { chrome, refs } = chromeHarness({ ...absentOpponent, timeControl: dayPerMove });
     chrome.renderMeta();
     chrome.renderActionStatus();
     chrome.renderRoomActions();
@@ -582,9 +602,8 @@ describe('tenant room chrome lobby rooms', () => {
 
   it('still offers the invite while a correspondence seat is empty', () => {
     const { chrome, refs } = chromeHarness({
-      ...absentOpponent,
-      roomMode: 'correspondence',
-      seats: { white: 'c-white' },
+      ...openSeat,
+      timeControl: dayPerMove,
     });
     chrome.renderRoomActions();
     expect(refs.roomActions.textContent).toContain('Copy invite');
@@ -592,11 +611,43 @@ describe('tenant room chrome lobby rooms', () => {
 
   it('counts a correspondence first-move window in hours, not seconds', () => {
     const { chrome, refs } = chromeHarness({
-      roomMode: 'correspondence',
+      timeControl: dayPerMove,
       abortDeadline: Date.now() + (17 * 60 + 7) * 60_000 + 30_000,
     });
     chrome.renderGameControls();
-    expect(refs.gameControls.textContent).toContain('Make your first move, aborting in 17h 7m');
+    expect(refs.gameControls.textContent).toContain(
+      'Make your first move, aborting in 17h\u00a07m',
+    );
+  });
+
+  // Rated is not a reason on its own: a rated friend room is still shared by
+  // link (c3f33ac6), so it keeps the invite while the seat is open. A rated
+  // lobby pairing, or a rated room with both seats taken, never shows it.
+  it('keeps the invite for a rated friend room with an open seat', () => {
+    const { chrome, refs } = chromeHarness({ ...openSeat, rated: true });
+    chrome.renderRoomActions();
+    expect(refs.roomActions.textContent).toContain('Copy invite');
+  });
+
+  it('offers no invite in a rated lobby room or a rated room with both seats taken', () => {
+    for (const overrides of [
+      { ...openSeat, rated: true, lobbyMatch: true },
+      { ...absentOpponent, rated: true },
+    ]) {
+      const { chrome, refs } = chromeHarness(overrides);
+      chrome.renderActionStatus();
+      chrome.renderRoomActions();
+      expect(refs.actionStatus.textContent).not.toContain('Invite opponent');
+      expect(refs.roomActions.textContent).not.toContain('Copy invite');
+    }
+  });
+
+  it('offers no invite to a spectator, even with a seat open', () => {
+    const { chrome, refs } = chromeHarness({ ...openSeat, seat: 'spectator' });
+    chrome.renderActionStatus();
+    chrome.renderRoomActions();
+    expect(refs.actionStatus.textContent).not.toContain('Invite opponent');
+    expect(refs.roomActions.textContent).not.toContain('Copy invite');
   });
 });
 
