@@ -53,7 +53,6 @@ const ALLOWED: Record<string, Reason> = {
   'review/xiangqi-game-source.ts': '#464',
   'variant-mini-boards.ts': '#464',
   'xiangqi-import-page.ts': '#464',
-  'xiangqi-replay.ts': '#464',
 };
 
 // A capitalised English phrase of two or more words: 'Game aborted',

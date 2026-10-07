@@ -232,6 +232,27 @@ describe('article board advantage chart (mount)', () => {
     );
   });
 
+  it('follows the article language, not the site UI locale', async () => {
+    // An English article read with the site set to zh-hant keeps the site
+    // chrome (table of contents) in zh-hant by design, but the board and its
+    // chart are article content: they read in the article's language.
+    window.localStorage.setItem('mistboard.locale', 'zh-Hant');
+    await mountVisible(spec);
+    expect(host.querySelector('.advantage-chart')?.getAttribute('aria-label')).toBe(
+      'Engine evaluation over the game. Click to jump to a move.',
+    );
+    expect(host.querySelector('.xq-replay-menu-item')?.textContent).toBe('Flip the board');
+    for (const controller of mounted.splice(0)) controller.destroy();
+    host.replaceChildren();
+    window.localStorage.setItem('mistboard.locale', 'en');
+    FakeIntersectionObserver.instances = [];
+    await mountVisible(spec, 'zh-Hant');
+    expect(host.querySelector('.advantage-chart')?.getAttribute('aria-label')).toBe(
+      '優勢圖，點擊可跳到該步',
+    );
+    expect(host.querySelector('.xq-replay-menu-item')?.textContent).toBe('翻轉棋盤');
+  });
+
   it('leaves nothing behind when the game has no stored analysis', async () => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
     mount(host, spec);
