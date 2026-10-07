@@ -1,13 +1,16 @@
 // Every word on the 象棋残局 page, in all three scripts, in one place, and the
 // links its table cells carry.
 //
-// The page is a reference: a win-or-draw table of 33 common endings by
-// attacking piece, one exercise drawn from the kernel with a link to play it,
-// the fortress pair, and how to set up and look up any other ending. The 26
-// graded rows and their teaching lines live in packages/game
-// (xiangqi-endgame-hub.ts, xiangqi-endgame-practice.ts); the seven extra rows
-// below are shelf positions the article also shows, with their own chessdb
-// checks recorded here. The English strings ARE the article; the zh
+// The page is a reference: a win-or-draw table of 35 common endings by
+// attacking piece, graded in the manuals' words (例胜 / 巧胜 / 难胜 / 例和, with a
+// glossary of all six), one exercise drawn from the kernel with a link to play
+// it, the fortress pair, how to set up and look up any other ending, and how
+// far the tablebase reaches. The 26 graded rows and their teaching lines live
+// in packages/game (xiangqi-endgame-hub.ts, xiangqi-endgame-practice.ts); the
+// nine extra rows below are shelf positions the article also shows, with their
+// own chessdb checks recorded here. Two of them (单车对马炮, 车炮对单车 with
+// Black on the middle file) and the vocabulary came from the brianhliou.com
+// post "Xiangqi Basic Endgames" (2026-08-14), which now redirects here. The English strings ARE the article; the zh
 // dictionaries that article-i18n.ts spreads in are generated from the same
 // triples, so the three scripts cannot drift apart.
 //
@@ -33,20 +36,20 @@ function tri(en: string, hans: string, hant: string): EndgameText {
 /** Fixed page strings. */
 export const ENDGAME_PAGE_TEXT = {
   title: tri(
-    'Xiangqi Endgames: Which Material Wins and Which Draws',
+    'Xiangqi Basic Endgames: Which Material Wins and Which Draws',
     '象棋残局：哪些子力能赢，哪些只能和',
     '象棋殘局：哪些子力能贏，哪些只能和',
   ),
   seoTitle: tri(
-    'Xiangqi Endgames: Win or Draw Table for 33 Common Endings',
-    '象棋残局胜和表：33种常见残局，附电脑练习',
-    '象棋殘局勝和表：33種常見殘局，附電腦練習',
+    'Xiangqi Basic Endgames: Win or Draw Table for 35 Common Endings',
+    '象棋残局胜和表：35种常见残局，附电脑练习',
+    '象棋殘局勝和表：35種常見殘局，附電腦練習',
   ),
-  cardTitle: tri('Xiangqi Endgames', '象棋残局', '象棋殘局'),
+  cardTitle: tri('Xiangqi Basic Endgames', '象棋残局', '象棋殘局'),
   summary: tri(
-    'Which xiangqi endgames win and which draw: a table of 33 common endings with the result and the key idea for each, every result checked against the chessdb.cn tablebase, and every position ready to practice against the computer.',
-    '哪些象棋残局能赢，哪些只能和：33种常见残局的胜和表，每一种都附结果和要点，结果全部经象棋云库 chessdb.cn 核对，每个局面都可以直接和电脑练习。',
-    '哪些象棋殘局能贏，哪些只能和：33種常見殘局的勝和表，每一種都附結果和要點，結果全部經象棋雲庫 chessdb.cn 核對，每個局面都可以直接和電腦練習。',
+    'Xiangqi basic endgames, which win and which draw: a table of 35 common endings with the result and the key idea for each, every result checked against the chessdb.cn tablebase, and every position ready to practice against the computer.',
+    '哪些象棋残局能赢，哪些只能和：35种常见残局的胜和表，每一种都附结果和要点，结果全部经象棋云库 chessdb.cn 核对，每个局面都可以直接和电脑练习。',
+    '哪些象棋殘局能贏，哪些只能和：35種常見殘局的勝和表，每一種都附結果和要點，結果全部經象棋雲庫 chessdb.cn 核對，每個局面都可以直接和電腦練習。',
   ),
   introDecides: tri(
     'Two counts decide most xiangqi endgames before a move is played: what the attacker has left, and how much of the defence is still standing. Advisors and elephants never cross the river, but around their own general they are worth more than their size. A lone chariot, the strongest piece on the board, beats a general missing one elephant and only draws against the full defence of two advisors and two elephants (士象全). Three high soldiers or two horses break that same defence.',
@@ -54,9 +57,9 @@ export const ENDGAME_PAGE_TEXT = {
     '大多數象棋殘局，在走第一步之前就由兩件事決定了：進攻方還剩什麼子力，防守方的士象還剩多少。士象不能過河，但守在自己的將旁邊，作用遠大於本身的價值。盤上最強的單車能勝單缺象，卻只能和士象全；而三個高兵或雙馬卻能攻破士象全。',
   ),
   introPractice: tri(
-    'All 33 positions in the table below are on the Practice page against the computer, in the set for their piece. In the wins you play Red and give mate; in the draws you play Black and hold for 15 moves.',
-    '下表全部33个局面都在练习页，按子力分在各自的练习集里，和电脑对下。胜局你执红将死对方；和局你执黑守住15回合。',
-    '下表全部33個局面都在練習頁，按子力分在各自的練習集裡，和電腦對下。勝局你執紅將死對方；和局你執黑守住15回合。',
+    'All 35 positions in the table below are on the Practice page against the computer, in the set for their piece. In the wins you play Red and give mate; in the draws you play Black and hold for 15 moves.',
+    '下表全部35个局面都在练习页，按子力分在各自的练习集里，和电脑对下。胜局你执红将死对方；和局你执黑守住15回合。',
+    '下表全部35個局面都在練習頁，按子力分在各自的練習集裡，和電腦對下。勝局你執紅將死對方；和局你執黑守住15回合。',
   ),
   practiceButton: tri('Practice these endgames', '练习这些残局', '練習這些殘局'),
   tableHeading: tri(
@@ -65,16 +68,27 @@ export const ENDGAME_PAGE_TEXT = {
     '哪些殘局能贏，哪些是和棋',
   ),
   tableIntro: tri(
-    '**Win** means the attacker forces mate with correct play, whatever the defender does. **Draw** means the defender holds from the right setup. **Tricky win** (巧胜) marks material that is normally a draw, in a position where the attacker can still force mate. The **full defence** (士象全) is two advisors and two elephants. Soldiers are named by how far they have come: a **bottom soldier** (底兵) stands on the last rank, a **low soldier** (低兵) one rank short of it, and a **high soldier** (高兵) further back, where it can still come down on the palace. Each name in the table opens that position in the practice sets.',
-    '**胜**：只要技术正确，不论对方怎样防守，进攻方都能将死对方。**和**：防守方摆好阵形即可守和。**巧胜**：这类子力通常是和棋，但在该局面下进攻方仍能强行将死。**士象全**指双士双象。兵按走到的位置区分：**底兵**已到底线，**低兵**差一线到底，**高兵**还在更后面，仍能下压九宫。点表中的名称，即可在练习集里打开该局面。',
-    '**勝**：只要技術正確，不論對方怎樣防守，進攻方都能將死對方。**和**：防守方擺好陣形即可守和。**巧勝**：這類子力通常是和棋，但在該局面下進攻方仍能強行將死。**士象全**指雙士雙象。兵按走到的位置區分：**底兵**已到底線，**低兵**差一線到底，**高兵**還在更後面，仍能下壓九宮。點表中的名稱，即可在練習集裡打開該局面。',
+    'Each result is the grade Chinese endgame manuals give that kind of ending (the scale is below), shown on one position of that kind. In a **tricky win** (巧胜) the material normally draws and this position wins; in a **hard win** (难胜) the board shows the setup that holds. The **full defence** (士象全) is two advisors and two elephants. Soldiers are named by how far they have come: a **bottom soldier** (底兵) stands on the last rank, a **low soldier** (低兵) one rank short of it, and a **high soldier** (高兵) further back, where it can still come down on the palace. Each name in the table opens that position in the practice sets.',
+    '结果一栏是中文残局书对这类残局的等级（见下面的等级表），旁边是这类残局的一个局面。**巧胜**：这类子力通常是和棋，但该局面能赢；**难胜**：棋盘上摆的是守和的阵形。**士象全**指双士双象。兵按走到的位置区分：**底兵**已到底线，**低兵**差一线到底，**高兵**还在更后面，仍能下压九宫。点表中的名称，即可在练习集里打开该局面。',
+    '結果一欄是中文殘局書對這類殘局的等級（見下面的等級表），旁邊是這類殘局的一個局面。**巧勝**：這類子力通常是和棋，但該局面能贏；**難勝**：棋盤上擺的是守和的陣形。**士象全**指雙士雙象。兵按走到的位置區分：**底兵**已到底線，**低兵**差一線到底，**高兵**還在更後面，仍能下壓九宮。點表中的名稱，即可在練習集裡打開該局面。',
   ),
+  gradesIntro: tri(
+    'The manuals grade an ending on a six-step scale. The table uses four of the steps: a 必胜 or 必和 ending shows as 例胜 or 例和, which understates the result and never misstates it.',
+    '残局书把残局的胜和分为六个等级。表中用其中四级：必胜、必和的残局记作例胜、例和，这样只会说轻，不会说错。',
+    '殘局書把殘局的勝和分為六個等級。表中用其中四級：必勝、必和的殘局記作例勝、例和，這樣只會說輕，不會說錯。',
+  ),
+  headerGrade: tri('Grade', '等级', '等級'),
+  headerClaim: tri('What it claims', '含义', '含義'),
   headerMaterial: tri('Material', '子力', '子力'),
   headerResult: tri('Result', '结果', '結果'),
   headerIdea: tri('Key idea', '要点', '要點'),
-  resultWin: tri('Win', '胜', '勝'),
-  resultDraw: tri('Draw', '和', '和'),
-  resultTrickyWin: tri('Tricky win', '巧胜', '巧勝'),
+  // The result cells carry the manuals' word in English too: plain 'Win' and
+  // 'Draw' are keys other articles translate as 胜 and 和, and the shared
+  // dictionary lets the later entry win.
+  resultWin: tri('Win (例胜)', '例胜', '例勝'),
+  resultDraw: tri('Draw (例和)', '例和', '例和'),
+  resultTrickyWin: tri('Tricky win (巧胜)', '巧胜', '巧勝'),
+  resultHardWin: tri('Hard to win (难胜)', '难胜', '難勝'),
   groupSoldier: tri('Soldier endgames', '兵类残局', '兵類殘局'),
   groupHorse: tri('Horse endgames', '马类残局', '馬類殘局'),
   groupCannon: tri('Cannon endgames', '炮类残局', '砲類殘局'),
@@ -113,9 +127,9 @@ export const ENDGAME_PAGE_TEXT = {
     '勝：同樣的子力，一個象在g10。',
   ),
   oneStep: tri(
-    'In the first diagram the horse stands on the elephant point in front of the general and the two elephants protect each other, and the chariot cannot get through. In the second, the elephant from g6 stands on g10, and the chariot wins. It works the other way too: pull the three high soldiers back one rank and their win over the full defence is gone.',
-    '第一幅图中，马守在将前的象位上，双象互相保护，单车攻不进去。第二幅图只是把g6的象换到g10，单车就能取胜。反过来也一样：把三个高兵各退一路，它们对士象全的胜势就没了。',
-    '第一幅圖中，馬守在將前的象位上，雙象互相保護，單車攻不進去。第二幅圖只是把g6的象換到g10，單車就能取勝。反過來也一樣：把三個高兵各退一路，它們對士象全的勝勢就沒了。',
+    'In the first diagram the horse stands on the elephant point in front of the general and the two elephants protect each other, and the chariot cannot get through. In the second, the elephant from g6 stands on g10, and the chariot wins. It works the other way too: pull the three high soldiers back one rank and their win over the full defence is gone, because two of them now stand on points a black elephant can reach.',
+    '第一幅图中，马守在将前的象位上，双象互相保护，单车攻不进去。第二幅图只是把g6的象换到g10，单车就能取胜。反过来也一样：把三个高兵各退一路，它们对士象全的胜势就没了，因为其中两个兵站到了黑象能走到的象位上。',
+    '第一幅圖中，馬守在將前的象位上，雙象互相保護，單車攻不進去。第二幅圖只是把g6的象換到g10，單車就能取勝。反過來也一樣：把三個高兵各退一路，它們對士象全的勝勢就沒了，因為其中兩個兵站到了黑象能走到的象位上。',
   ),
   ownHeading: tri('Set up your own endgame', '自己摆残局', '自己擺殘局'),
   ownText: tri(
@@ -130,12 +144,59 @@ export const ENDGAME_PAGE_TEXT = {
     '想知道某个局面的确切结果，在编辑器里点“分析棋盘”，再打开棋盘下方的“开局库”。子力少到一定程度时，那里会显示“残局库”：每一步合法着法的确切结果（来自象棋云库 chessdb.cn），以及几步杀。',
     '想知道某個局面的確切結果，在編輯器裡點「分析棋盤」，再打開棋盤下方的「開局庫」。子力少到一定程度時，那裡會顯示「殘局庫」：每一步合法著法的確切結果（來自象棋雲庫 chessdb.cn），以及幾步殺。',
   ),
+  tablebaseReach: tri(
+    'How far the tablebase reaches: chessdb.cn lists 8,705 xiangqi endgame tables, about 102 trillion positions in all ([its table list](https://www.chessdb.cn/egtb_info.html), read 2026-10-07). Most have eight or nine pieces. Forty have twelve, and one has thirteen: three soldiers with a full defence against a full defence. Horse and cannon against a horse, both sides with a full defence, is also thirteen pieces and is in no table, which is why it is missing from the table above: the manuals grade it 例胜, and neither the database nor an engine search has confirmed it.',
+    '残局库能覆盖多大范围：象棋云库 chessdb.cn 列出8,705张象棋残局表，共约102万亿个局面（[残局表清单](https://www.chessdb.cn/egtb_info.html)，2026-10-07查阅）。大多数是八子或九子残局。十二子的有40张，十三子的只有一张：三兵仕相全对士象全。马炮仕相全对马士象全同样是十三子，却不在任何一张表里，所以上表没有列入：棋谱判它例胜，但残局库和引擎搜索都还没能证实。',
+    '殘局庫能涵蓋多大範圍：象棋雲庫 chessdb.cn 列出8,705張象棋殘局表，共約102兆個局面（[殘局表清單](https://www.chessdb.cn/egtb_info.html)，2026-10-07查閱）。大多數是八子或九子殘局。十二子的有40張，十三子的只有一張：三兵仕相全對士象全。馬砲仕相全對馬士象全同樣是十三子，卻不在任何一張表裡，所以上表沒有列入：棋譜判它例勝，但殘局庫和引擎搜尋都還沒能證實。',
+  ),
 } satisfies Record<string, EndgameText>;
+
+// ── The six grades ──
+
+/**
+ * The manuals' scale, strongest win to firmest draw (the wording follows the
+ * brianhliou.com post's table, 2026-08-14). The page's results use 例胜, 巧胜,
+ * 难胜 and 例和.
+ */
+export const ENDGAME_GRADE_GLOSSARY: readonly { grade: EndgameText; claim: EndgameText }[] = [
+  {
+    grade: tri('必胜 (bì shèng)', '必胜', '必勝'),
+    claim: tri('Wins from any position with this material', '此种子力从任何局面都能取胜', '這組子力從任何局面都能取勝'),
+  },
+  {
+    grade: tri('例胜 (lì shèng)', '例胜', '例勝'),
+    claim: tri('Wins with standard technique', '按标准技术取胜', '以標準技術取勝'),
+  },
+  {
+    grade: tri('巧胜 (qiǎo shèng)', '巧胜', '巧勝'),
+    claim: tri(
+      'Normally a draw; wins only from particular positions',
+      '通常是和棋，只在特定局面下才能取胜',
+      '通常是和棋，只能從特定局面取勝',
+    ),
+  },
+  {
+    grade: tri('难胜 (nán shèng)', '难胜', '難勝'),
+    claim: tri(
+      'Hard to win, which is not the same as a draw',
+      '难以取胜，这与和棋并不相同',
+      '難以取勝，與和棋並不相同',
+    ),
+  },
+  {
+    grade: tri('例和 (lì hé)', '例和', '例和'),
+    claim: tri('Draws with standard defensive technique', '按标准技术守和', '以標準技術和棋'),
+  },
+  {
+    grade: tri('必和 (bì hé)', '必和', '必和'),
+    claim: tri('Draws from any position', '从任何局面都能守和', '從任何局面都能和棋'),
+  },
+];
 
 // ── The table ──
 
 export type EndgameTableGroup = 'soldier' | 'horse' | 'cannon' | 'chariot' | 'mixed';
-export type EndgameTableResult = 'win' | 'draw' | 'tricky-win';
+export type EndgameTableResult = 'win' | 'draw' | 'tricky-win' | 'hard-win';
 
 export const ENDGAME_TABLE_GROUPS: readonly EndgameTableGroup[] = [
   'soldier',
@@ -161,6 +222,11 @@ export type EndgameTableRow = {
   material: EndgameText;
   /** Set where the hub's teaching line does not fit a table cell, or the row is not a hub row. */
   idea?: EndgameText;
+  /**
+   * 难胜: the class grade, which is not this position's result. The board shows
+   * the holding setup (a database draw) and the idea names what breaks it.
+   */
+  grade?: 'hard-win';
 };
 
 /**
@@ -174,6 +240,8 @@ export type EndgameExtraCheck = {
   result: 'win' | 'draw';
   distance: number | null;
   checkedAt: string;
+  /** The corpus position one step away that the row's idea cites, with its own check. */
+  contrast?: { id: string; result: 'win'; distance: number };
 };
 
 export const ENDGAME_TABLE_EXTRA_CHECKS: readonly EndgameExtraCheck[] = [
@@ -213,6 +281,24 @@ export const ENDGAME_TABLE_EXTRA_CHECKS: readonly EndgameExtraCheck[] = [
     result: 'draw',
     distance: null,
     checkedAt: '2026-10-07',
+  },
+  {
+    id: 'chariot-vs-two-minor-pieces',
+    source: 'chessdb',
+    result: 'draw',
+    distance: null,
+    checkedAt: '2026-10-07',
+    // The cannon one point sideways, on e10: mate in 12 (23 plies).
+    contrast: { id: 'chariot-vs-two-minor-pieces-cannon-off', result: 'win', distance: 23 },
+  },
+  {
+    id: 'chariot-cannon-vs-chariot',
+    source: 'chessdb',
+    result: 'draw',
+    distance: null,
+    checkedAt: '2026-10-07',
+    // The defending chariot one rank higher, on e6: mate in 17 (34 plies).
+    contrast: { id: 'chariot-cannon-vs-chariot-too-high', result: 'win', distance: 34 },
   },
 ];
 
@@ -428,6 +514,17 @@ export const ENDGAME_TABLE: readonly EndgameTableRow[] = [
       '有士象全保護的單車可以守和雙車。',
     ),
   },
+  {
+    id: 'chariot-vs-two-minor-pieces',
+    group: 'chariot',
+    material: tri('Chariot vs horse and cannon', '单车对马炮', '單車對馬砲'),
+    grade: 'hard-win',
+    idea: tri(
+      'Black holds with the cannon directly behind its own general and the horse off every square one chariot move attacks. Move the cannon one point sideways and Red mates in 12.',
+      '黑方的守法：炮摆在自己将的正后方，马避开红车一步能捉到的位置。把炮平开一路，红方十二步杀。',
+      '黑方的守法：砲擺在自己將的正後方，馬避開紅車一步能捉到的位置。把砲平開一路，紅方十二步殺。',
+    ),
+  },
   // ── 马兵、车炮 ──
   {
     id: 'horse-and-soldier-vs-three-defence',
@@ -448,13 +545,33 @@ export const ENDGAME_TABLE: readonly EndgameTableRow[] = [
       '車砲對單車（紅車占中路）',
     ),
   },
+  {
+    id: 'chariot-cannon-vs-chariot',
+    group: 'mixed',
+    material: tri(
+      'Chariot and cannon vs chariot, Black chariot on the middle file',
+      '车炮对单车（黑车占中路）',
+      '車砲對單車（黑車占中路）',
+    ),
+    idea: tri(
+      'The black chariot holds the middle file level with the red chariot and cannon, low enough to guard the foot of the file, where the mate 海底捞月 is played. One rank higher and Red mates in 17.',
+      '黑车占住中路，与红方车炮同在一条横线上，守住中路底端，海底捞月就做不成。黑车高一路，红方十七步杀。',
+      '黑車占住中路，與紅方車砲同在一條橫線上，守住中路底端，海底撈月就做不成。黑車高一路，紅方十七步殺。',
+    ),
+  },
 ];
+
+/** The glossary as table rows, in English (the dictionaries carry zh). */
+export function endgameGradeGlossaryRows(): string[][] {
+  return ENDGAME_GRADE_GLOSSARY.map((entry) => [entry.grade.en, entry.claim.en]);
+}
 
 /** The 26 graded rows by id. */
 const HUB_ROWS = new Map(XIANGQI_ENDGAME_HUB.map((row) => [row.id, row]));
 
-/** What the table says for a row: the hub grade, or the extra row's check. */
+/** What the table says for a row: the hub grade, a 难胜 row's grade, or the extra row's check. */
 export function endgameTableResult(id: string): EndgameTableResult {
+  if (ENDGAME_TABLE.find((row) => row.id === id)?.grade === 'hard-win') return 'hard-win';
   const hub = HUB_ROWS.get(id);
   if (hub) {
     if (hub.grade === 'standard-draw') return 'draw';
@@ -465,10 +582,18 @@ export function endgameTableResult(id: string): EndgameTableResult {
   return extra.result;
 }
 
+/** The result of the position on the row's board (a 巧胜 position wins, a 难胜 board holds). */
+export function endgamePositionResult(id: string): 'win' | 'draw' {
+  const result = endgameTableResult(id);
+  if (result === 'hard-win') return 'draw';
+  return result === 'draw' ? 'draw' : 'win';
+}
+
 const RESULT_TEXT: Record<EndgameTableResult, EndgameText> = {
   win: ENDGAME_PAGE_TEXT.resultWin,
   draw: ENDGAME_PAGE_TEXT.resultDraw,
   'tricky-win': ENDGAME_PAGE_TEXT.resultTrickyWin,
+  'hard-win': ENDGAME_PAGE_TEXT.resultHardWin,
 };
 
 export function endgameTableIdea(row: EndgameTableRow): EndgameText {
@@ -597,6 +722,16 @@ export const ENDGAME_PROD_CHAPTERS: Record<
     chapter: 'HJWlVc5G',
     rootFen: '2b1ka3/4a4/r3b4/9/9/3R1R3/9/9/9/4K4 r - - 0 1',
   },
+  'chariot-vs-two-minor-pieces': {
+    study: 'hc6LmrOG',
+    chapter: 'hIZwpqop',
+    rootFen: '5c3/5k3/9/3n5/9/R8/9/9/9/4K4 r - - 0 1',
+  },
+  'chariot-cannon-vs-chariot': {
+    study: 'hc6LmrOG',
+    chapter: 'GoeeVBgU',
+    rootFen: '5k3/9/9/9/9/R1C1r4/9/9/9/3K5 r - - 0 1',
+  },
 };
 
 /** The practice set a corpus position sits in. */
@@ -644,12 +779,13 @@ export function endgameTableGroupRows(group: EndgameTableGroup): EndgameTableRow
 
 /** Every string the page shows, as triples. */
 export function endgamePageTexts(): EndgameText[] {
+  const glossary = ENDGAME_GRADE_GLOSSARY.flatMap((entry) => [entry.grade, entry.claim]);
   const cells = ENDGAME_TABLE.flatMap((row) => [
     tri(materialCell(row, 'en'), materialCell(row, 'zh-Hans'), materialCell(row, 'zh-Hant')),
     endgameTableIdea(row),
     endgameDiagramLabel(row),
   ]);
-  return [...Object.values(ENDGAME_PAGE_TEXT), ...cells];
+  return [...Object.values(ENDGAME_PAGE_TEXT), ...glossary, ...cells];
 }
 
 export function endgamePageDictionary(lang: 'zh-Hans' | 'zh-Hant'): Record<string, string> {

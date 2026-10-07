@@ -6,22 +6,23 @@ import {
   ENDGAME_TABLE_GROUPS,
   type EndgameTableGroup,
   endgameDiagramLabel,
+  endgameGradeGlossaryRows,
   endgameStudyHref,
   endgameTableGroupRows,
   endgameTableRows,
   ENDGAME_PAGE_TEXT as T,
 } from '../xiangqi-endgames-text.js';
 
-// 象棋残局, an evergreen reference: what decides an endgame, a win-or-draw
-// table of 33 common endings by attacking piece (each name links to the
-// position in the practice sets), one exercise drawn from the kernel with a
+// 象棋残局, an evergreen reference: what decides an endgame, the manuals'
+// six-step grade scale, a win-or-draw table of 35 common endings by attacking
+// piece (each name links to the position in the practice sets), one exercise drawn from the kernel with a
 // link to play it in its study chapter (the study embed only replays, so the
 // page links out), the fortress pair, and how to set up or look up any other
-// ending. Every result is held to a chessdb check by xiangqi-endgames.test.ts
+// ending, with how far the tablebase reaches. Every result is held to a chessdb check by xiangqi-endgames.test.ts
 // and xiangqi-endgame-hub.test.ts; the words and links live in
 // ../xiangqi-endgames-text.ts.
 
-/** The practice shelf: the 33 are spread over its sets, one per piece. */
+/** The practice shelf: the 35 are spread over its sets, one per piece. */
 export const XIANGQI_ENDGAMES_PRACTICE_HREF = '/practice';
 
 /** The position the page asks the reader to play. */
@@ -113,6 +114,8 @@ export const xiangqiEndgamesArticle: Article = {
       heading: T.tableHeading.en,
       blocks: [
         { kind: 'paragraph', text: T.tableIntro.en },
+        { kind: 'paragraph', text: T.gradesIntro.en },
+        { kind: 'table', headers: [T.headerGrade.en, T.headerClaim.en], rows: endgameGradeGlossaryRows(), wrap: true },
         ...tableBlocks,
         { kind: 'paragraph', text: T.introSource.en },
       ],
@@ -159,7 +162,10 @@ export const xiangqiEndgamesArticle: Article = {
     },
     {
       heading: T.tablebaseHeading.en,
-      blocks: [{ kind: 'paragraph', text: T.tablebaseText.en }],
+      blocks: [
+        { kind: 'paragraph', text: T.tablebaseText.en },
+        { kind: 'paragraph', text: T.tablebaseReach.en },
+      ],
     },
   ],
 };

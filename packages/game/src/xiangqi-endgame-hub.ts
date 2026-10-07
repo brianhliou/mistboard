@@ -16,8 +16,9 @@
 // The position is ours, and its own result is settled separately: every
 // position below has a row in xiangqi-endgame-hub-checks.ts (a chessdb.cn exact
 // result), and xiangqi-endgame-hub.test.ts fails if a grade and its check
-// disagree. 难胜 rows (单车 vs 马炮, 单车 vs 双马) are not on the page, and neither
-// are the two horse-and-cannon rows: the database does not hold them and
+// disagree. 难胜 rows (单车 vs 马炮, 单车 vs 双马) are not hub rows (the page adds
+// 单车 vs 马炮 itself, at its holding setup, in xiangqi-endgames-text.ts), and
+// the two horse-and-cannon rows are not on the page: the database does not hold them and
 // Pikafish at depth 30 neither mated the win (+284) nor read the draw as level
 // (+115), so their verdicts could not be confirmed.
 

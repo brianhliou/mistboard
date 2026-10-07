@@ -282,9 +282,9 @@
     "status": "published"
   },
   "xiangqi-endgames": {
-    "title": "Xiangqi Endgames: Which Material Wins and Which Draws",
+    "title": "Xiangqi Basic Endgames: Which Material Wins and Which Draws",
     "kind": "article",
-    "description": "Which xiangqi endgames win and which draw: a table of 33 common endings with the result and the key idea for each, every result checked against the chessdb.cn tablebase, and every position ready to practice against the computer.",
+    "description": "Xiangqi basic endgames, which win and which draw: a table of 35 common endings with the result and the key idea for each, every result checked against the chessdb.cn tablebase, and every position ready to practice against the computer.",
     "status": "published"
   },
   "xiangqi-match-fixing": {
