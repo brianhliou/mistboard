@@ -19,6 +19,7 @@ export const duckXiangqiStrategyArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-09-11',
+  updatedAt: '2026-10-07',
   audience:
     'Anyone who has just read the Duck Xiangqi rules and is about to play, and xiangqi players wondering whether the duck changes anything real.',
   thumbnail: { kind: 'svg', svg: DUCK_XIANGQI_THUMBNAIL },
@@ -40,6 +41,16 @@ export const duckXiangqiStrategyArticle: Article = {
           kind: 'paragraph',
           text: 'Every turn you move a piece and then place the duck. The move is xiangqi and you already know how to think about it. The placement is the new game, and it is where first games are lost.',
         },
+        {
+          kind: 'paragraph',
+          text: 'The duck half is nearly always about the other player: which line to shut, which horse to freeze, what to make awkward. So half of every turn goes on spoiling. It feels like always playing your second-best move.',
+        },
+        {
+          kind: 'embed',
+          path: '/embed/study/uMbk76wd/RPLi9LsH?ply=36',
+          title: 'Duck Xiangqi: an ordinary middlegame, eighteen moves into an engine game',
+          aspect: [702, 640],
+        } as ArticleBlock,
         {
           kind: 'raw-svg',
           svg: DUCK_XIANGQI_TURN_PAIR,
@@ -123,6 +134,10 @@ export const duckXiangqiStrategyArticle: Article = {
           kind: 'paragraph',
           text: 'In ordinary xiangqi that is forbidden. Here the prohibition stopped making sense once check was gone, so flying the general is simply a capture that ends the game. It is one more threat with no warning attached, and one more line the duck can open or close.',
         },
+        {
+          kind: 'paragraph',
+          text: 'The engine sees that capture coming from any distance. A person often won’t: it comes from the far end of the board, down a file the duck was guarding a turn ago. None of the six published engine games ends this way. Two of the original seven did, and both came from an engine bug that could lose track of the capture. After the fix on 29 September, one of those games replayed as a different win and the other never reached a decisive finish, so the study holds six.',
+        },
       ],
     },
     {
@@ -130,7 +145,7 @@ export const duckXiangqiStrategyArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'That is the range across the six engine games. Expect a full-length game rather than a novelty, and pick a clock accordingly: the two paces offered here are 5+5 and 10+5 for exactly this reason.',
+          text: 'That is the range across the six engine games, and the median is 171. Expect a full-length game rather than a novelty, and pick a clock accordingly: the two paces offered here are 5+5 and 10+5 for exactly this reason.',
         },
       ],
     },

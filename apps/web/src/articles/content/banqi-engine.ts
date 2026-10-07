@@ -137,7 +137,7 @@ export const banqiEngineArticle: Article = {
       secondary: [
         {
           label: 'The engineering story',
-          href: 'https://brianhliou.com/posts/tuning-a-banqi-engine/',
+          href: 'https://brianhliou.com/posts/building-banqi-engine/',
           emphasis: 'secondary',
           external: true,
         },
