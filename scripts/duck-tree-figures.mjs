@@ -15,7 +15,7 @@
 // self-play games (100k nodes a move, NNUE off).
 //
 // Output: apps/web/public/article-thumbs/duck-tree-{trees,board,branching}
-// {,-dark}{,.zh-hans,.zh-hant}.svg. Text uses a system font stack because web
+// {,-dark}.svg (zh variants once the English is final). Text uses a system font stack because web
 // fonts do not load inside an <img>.
 
 import { readFileSync, statSync, writeFileSync } from 'node:fs';
@@ -209,10 +209,10 @@ const L = {
     aN: '1,920 positions',
     b: 'Duck Xiangqi, red moves once',
     bN: '2,554 positions',
-    c: 'The same move, placements that change nothing merged',
-    cN: '1,310 distinct situations',
-    d: 'The same move without the duck',
-    dN: '44 positions',
+    c: 'Placements that change nothing, merged',
+    cN: '1,310 left to search',
+    d: 'The duck taken away',
+    dN: '44 positions, as in xiangqi',
     kX: 'A xiangqi position',
     kNone: 'The duck changes nothing for black',
     kRm: 'The duck takes black replies away',
@@ -313,17 +313,19 @@ function treeLayout(groups, leavesOf) {
 }
 const effectOf = (d) => (d.add.length ? 'add' : d.rm.length ? 'rm' : 'none');
 
-function figureTrees(locale, theme) {
+// One row of panels: ids picks from a (xiangqi), b (duck), c (merged), d (no duck).
+function figureTrees(locale, theme, ids) {
   const t = L[locale];
   const c = THEMES[theme];
   const W = 1000;
-  const PW = 480;
-  const R = 205;
+  const GAP = 20;
+  const PW = (W - GAP * (ids.length - 1)) / ids.length;
+  const R = Math.min(205, PW / 2 - 12);
   const HEAD = 62;
   const PH = HEAD + 2 * R + 24;
   const LEG = 70;
-  const H = 2 * PH + 10 + LEG;
-  const base = 1.45;
+  const H = PH + LEG;
+  const base = 1.45 * Math.max(0.75, R / 205);
 
   const X = treeLayout(xiangqi, (g) => g.replies.map(() => ({})));
   // Within a wedge: no-effect placements first, then those that remove, then those that add.
@@ -348,9 +350,11 @@ function figureTrees(locale, theme) {
   });
 
   const parts = [];
-  const panel = (col, row, title, count, draw) => {
-    const ox = col * (PW + (W - 2 * PW));
-    const oy = row * (PH + 10);
+  const panel = (id, title, count, draw) => {
+    const col = ids.indexOf(id);
+    if (col === -1) return;
+    const ox = col * (PW + GAP);
+    const oy = 0;
     const cx = ox + PW / 2;
     const cy = oy + HEAD + R;
     parts.push(text(cx, oy + 24, title, { size: 17, weight: 600, fill: c.ink, anchor: 'middle' }));
@@ -384,7 +388,7 @@ function figureTrees(locale, theme) {
     return keys.map((k) => [k.split('|')[0], Number(k.split('|')[1]), groups.get(k)]);
   };
 
-  panel(0, 0, t.a, t.aN, (at, cx, cy) => {
+  panel('a', t.a, t.aN, (at, cx, cy) => {
     hubsAndRoot(at, cx, cy, X.hubs);
     parts.push(
       dots(
@@ -394,7 +398,7 @@ function figureTrees(locale, theme) {
       ),
     );
   });
-  panel(1, 0, t.b, t.bN, (at, cx, cy) => {
+  panel('b', t.b, t.bN, (at, cx, cy) => {
     hubsAndRoot(at, cx, cy, D.hubs);
     for (const [colour, r, ls] of byColour(D.leaves, (l) => c[l.e]))
       parts.push(
@@ -405,7 +409,7 @@ function figureTrees(locale, theme) {
         ),
       );
   });
-  panel(0, 1, t.c, t.cN, (at, cx, cy) => {
+  panel('c', t.c, t.cN, (at, cx, cy) => {
     hubsAndRoot(at, cx, cy, D.hubs);
     for (const [colour, r, ls] of byColour(
       merged,
@@ -420,14 +424,14 @@ function figureTrees(locale, theme) {
         ),
       );
   });
-  panel(1, 1, t.d, t.dN, (at, cx, cy) => {
+  panel('d', t.d, t.dN, (at, cx, cy) => {
     hubsAndRoot(at, cx, cy, D.hubs, base * 2.6);
   });
 
   // Legend, two rows of two.
-  const ly = 2 * PH + 10 + 22;
+  const ly = PH + 22;
   const keys = [
-    [c.xiangqi, t.kX],
+    ...(ids.includes('a') ? [[c.xiangqi, t.kX]] : []),
     [c.none, t.kNone],
     [c.rm, t.kRm],
     [c.add, t.kAdd],
@@ -438,12 +442,7 @@ function figureTrees(locale, theme) {
     parts.push(dots([[x, y - 5]], 6, colour));
     parts.push(text(x + 16, y, label, { size: 15, fill: c.ink }));
   });
-  return svgDoc(
-    W,
-    H,
-    `${t.a}: ${t.aN}. ${t.b}: ${t.bN}. ${t.c}: ${t.cN}. ${t.d}: ${t.dN}.`,
-    parts.join(''),
-  );
+  return svgDoc(W, H, ids.map((id) => `${t[id]}: ${t[`${id}N`]}.`).join(' '), parts.join(''));
 }
 
 // ---------- figure 2: the board after h3e3 ----------
@@ -618,9 +617,16 @@ function figureBranching(locale, theme) {
 }
 
 // ---------- write ----------
-const FIGS = { trees: figureTrees, board: figureBoard, branching: figureBranching };
+const FIGS = {
+  trees: (l, th) => figureTrees(l, th, ['a', 'b']),
+  collapse: (l, th) => figureTrees(l, th, ['b', 'c', 'd']),
+  board: figureBoard,
+  branching: figureBranching,
+};
+// English only until the English is final; zh labels stay in L for then.
+const LOCALES = ['en'];
 for (const [name, fig] of Object.entries(FIGS)) {
-  for (const locale of Object.keys(L)) {
+  for (const locale of LOCALES) {
     for (const theme of ['light', 'dark']) {
       const file = `duck-tree-${name}${theme === 'dark' ? '-dark' : ''}${locale === 'en' ? '' : `.${locale}`}.svg`;
       const out = path.join(OUT_DIR, file);

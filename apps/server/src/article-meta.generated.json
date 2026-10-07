@@ -72,9 +72,9 @@
     "status": "published"
   },
   "duck-xiangqi-game-tree": {
-    "title": "What the duck does to xiangqi’s game tree",
+    "title": "How much the duck adds to xiangqi’s game tree",
     "kind": "article",
-    "description": "One Duck Xiangqi move reaches more positions than two xiangqi moves, and the gap grows as pieces come off. About half the duck placements change nothing for the opponent, and the same engine search reaches 14 turns deep where xiangqi gets 25.",
+    "description": "One Duck Xiangqi move reaches more positions than two xiangqi moves. About half of them leave the opponent exactly the same choices, so a search can skip them. What is left still cuts how far an engine sees almost in half.",
     "status": "published"
   },
   "duck-xiangqi-strategy": {
