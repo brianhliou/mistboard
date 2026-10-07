@@ -128,7 +128,7 @@ export const atomicXiangqiBuildArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Openings look like xiangqi’s. The cannon shot that took a cannon and a horse together under an earlier version of the rules is gone, so nobody trades cannons on move one; the engine opens Cb5, Ri3, Ra3 or Hg3, and the first explosion usually comes in the middlegame.',
+          text: 'Openings look like xiangqi’s. The opening cannon shot that took a horse, a chariot and an elephant at once under an earlier version of the rules is gone; the engine opens Cb5, Ri3, Ra3 or Hg3, and the first explosion usually comes in the middlegame.',
         },
       ],
     },

@@ -3342,8 +3342,8 @@ const ZH_HANS: Record<string, string> = {
     '对局以爆炸或将死结束，在 23 到 73 回合之间',
   'Of the ten decisive engine games behind this launch, six end with a general blown up and four with checkmate; the shortest is 23 moves and the longest 73. Expect a full game, and pick a clock for one: 10+5 is the default here.':
     '这次发布背后的十盘分出胜负的引擎对局里，六盘以将帅被炸结束，四盘以将死结束；最短 23 回合，最长 73 回合。要做好下完一整盘的准备，并按此选择用时：这里默认是 10+5。',
-  'Openings look like xiangqi’s. The cannon shot that took a cannon and a horse together under an earlier version of the rules is gone, so nobody trades cannons on move one; the engine opens Cb5, Ri3, Ra3 or Hg3, and the first explosion usually comes in the middlegame.':
-    '开局看起来和象棋一样。早期版本规则下那记一炮同时带走对方的炮和马的炮击已经没有了，所以没人会在第一回合兑炮；引擎的开局是 Cb5、Ri3、Ra3 或 Hg3，第一次爆炸通常出现在中局。',
+  'Openings look like xiangqi’s. The opening cannon shot that took a horse, a chariot and an elephant at once under an earlier version of the rules is gone; the engine opens Cb5, Ri3, Ra3 or Hg3, and the first explosion usually comes in the middlegame.':
+    '开局看起来和象棋一样。早期版本规则下那记一炮同时带走对方马、车、象的开局炮击已经没有了；引擎的开局是 Cb5、Ri3、Ra3 或 Hg3，第一次爆炸通常出现在中局。',
   'The bot takes a general on offer without thinking': '送到嘴边的将帅，电脑想都不想就吃',
   'The bot is Fairy-Stockfish with a patch for these rules, eight node-anchored levels, the same ladder the other xiangqi variants use. Its weaker levels are weakened by choosing a move other than the best one they found, and on the duck board that made a level-1 bot decline a general capture it could see. Here the loop checks for a move that removes the general before it asks the engine anything, so a general left next to a capturable piece is taken at every level. Weakness is in how the bot builds a position, not in whether it finishes one.':
     '电脑是加了这套规则补丁的 Fairy-Stockfish，八个以节点数锚定的等级，和其他象棋变体用的是同一套阶梯。较弱的等级是通过不走自己找到的最佳着法来削弱的，在鸭子象棋的棋盘上，这曾让一个 1 级电脑放弃了一次它看得见的吃将。这里的循环在向引擎提问之前会先检查有没有能移除将帅的着法，所以留在可吃棋子旁边的将帅，在每一个等级都会被吃掉。电脑的弱点在于它如何构筑局面，而不在于它会不会收官。',
@@ -6859,8 +6859,8 @@ const ZH_HANT: Record<string, string> = {
     '對局以爆炸或將死結束，在 23 到 73 回合之間',
   'Of the ten decisive engine games behind this launch, six end with a general blown up and four with checkmate; the shortest is 23 moves and the longest 73. Expect a full game, and pick a clock for one: 10+5 is the default here.':
     '這次釋出背後的十盤分出勝負的引擎對局裡，六盤以將帥被炸結束，四盤以將死結束；最短 23 回合，最長 73 回合。要做好下完一整盤的準備，並按此選擇用時：這裡預設是 10+5。',
-  'Openings look like xiangqi’s. The cannon shot that took a cannon and a horse together under an earlier version of the rules is gone, so nobody trades cannons on move one; the engine opens Cb5, Ri3, Ra3 or Hg3, and the first explosion usually comes in the middlegame.':
-    '開局看起來和象棋一樣。早期版本規則下那記一炮同時帶走對方的炮和馬的炮擊已經沒有了，所以沒人會在第一回合兌炮；引擎的開局是 Cb5、Ri3、Ra3 或 Hg3，第一次爆炸通常出現在中局。',
+  'Openings look like xiangqi’s. The opening cannon shot that took a horse, a chariot and an elephant at once under an earlier version of the rules is gone; the engine opens Cb5, Ri3, Ra3 or Hg3, and the first explosion usually comes in the middlegame.':
+    '開局看起來和象棋一樣。早期版本規則下那記一炮同時帶走對方馬、車、象的開局炮擊已經沒有了；引擎的開局是 Cb5、Ri3、Ra3 或 Hg3，第一次爆炸通常出現在中局。',
   'The bot takes a general on offer without thinking': '送到嘴邊的將帥，電腦想都不想就吃',
   'The bot is Fairy-Stockfish with a patch for these rules, eight node-anchored levels, the same ladder the other xiangqi variants use. Its weaker levels are weakened by choosing a move other than the best one they found, and on the duck board that made a level-1 bot decline a general capture it could see. Here the loop checks for a move that removes the general before it asks the engine anything, so a general left next to a capturable piece is taken at every level. Weakness is in how the bot builds a position, not in whether it finishes one.':
     '電腦是加了這套規則補丁的 Fairy-Stockfish，八個以節點數錨定的等級，和其他象棋變體用的是同一套階梯。較弱的等級是透過不走自己找到的最佳著法來削弱的，在鴨子象棋的棋盤上，這曾讓一個 1 級電腦放棄了一次它看得見的吃將。這裡的循環在向引擎提問之前會先檢查有沒有能移除將帥的著法，所以留在可吃棋子旁邊的將帥，在每一個等級都會被吃掉。電腦的弱點在於它如何構築局面，而不在於它會不會收官。',
