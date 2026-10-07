@@ -36,6 +36,7 @@ import {
   renderJungleFlipBoardSvg,
 } from './jungle-flip-render.js';
 import { jungleFlipSeatInk as jungleFlipSeatInkForFirstColor } from './jungle-flip-result-label.js';
+import { rebuildFinishedJungleFlipHistory } from './live-jungle-flip-replay-history.js';
 import {
   maybePlayJungleFlipSnapshotSound,
   resetJungleFlipSoundState,
@@ -237,6 +238,18 @@ const client = createTenantLiveClient<JungleFlipSeat, JungleFlipWireView, Jungle
       }),
     // Flip Jungle's view carries its own ply count; capture every distinct position at it.
     plyForView: (view) => view.ply,
+  },
+  // A FINISHED room only: its truth view plus the public move log recover the
+  // deal, so a cold join or reload gets every ply back
+  // (live-jungle-flip-replay-history). A live room returns null here and keeps
+  // incremental capture: its deal is a server secret and face-down tiles stay masked.
+  replayHistory: {
+    rebuild: ({ events, view, state }) =>
+      rebuildFinishedJungleFlipHistory(
+        events.filter(isJungleFlipMoveEvent).map((event) => event.move),
+        view,
+        isJungleFlipSeat(state.seat) ? state.seat : view.perspective,
+      ),
   },
 });
 
