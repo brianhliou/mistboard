@@ -68,6 +68,20 @@ export const duckXiangqiGameTreeArticle: Article = {
           caption:
             'One of red’s 44 first moves. In xiangqi, black would reply next. In Duck Xiangqi, red first puts the duck on one of these points, and each choice is a different position.',
         },
+        {
+          kind: 'paragraph',
+          text: 'The gap compounds with every turn. After one turn each, Duck Xiangqi already has more positions than xiangqi has after two turns each.',
+        },
+        {
+          kind: 'table',
+          headers: ['Positions after', 'Xiangqi', 'Duck Xiangqi'],
+          rows: [
+            ['Red’s first turn', '44', '2,554'],
+            ['One turn each', '1,920', '6,166,242'],
+            ['Two turns each', '3,290,240', 'Not counted'],
+          ],
+          caption: 'Every legal sequence from the starting position, counted by Fairy-Stockfish.',
+        },
       ],
     },
     {
@@ -86,7 +100,7 @@ export const duckXiangqiGameTreeArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'The 28 grey points change nothing. Put the duck on any of them and black faces the same choices, then moves the duck somewhere new, so the game that follows is the same game. Two small things differ: black cannot leave the duck where it is, and repetitions count the duck’s square.',
+          text: 'The busiest point is e8, in front of black’s palace: a duck there takes 8 replies away whatever red played first. The 28 grey points change nothing. Put the duck on any of them and black faces the same choices, then moves the duck somewhere new, so the game that follows is the same game. Two small things differ: black cannot leave the duck where it is, and repetitions count the duck’s square.',
         },
         {
           kind: 'paragraph',
@@ -116,7 +130,7 @@ export const duckXiangqiGameTreeArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'That width costs search depth. Given the same number of positions to look at, Fairy-Stockfish sees a little over half as far ahead in Duck Xiangqi. We counted depth in turns in both games, and a Duck Xiangqi turn includes the duck.',
+          text: 'That width costs search depth. Given the same number of positions to look at, Fairy-Stockfish sees a little over half as far ahead in Duck Xiangqi. We counted depth in turns in both games, and a Duck Xiangqi turn includes the duck. A search that counted each set of equivalent duck placements once would win some of that depth back. We have not measured how much.',
         },
         {
           kind: 'table',
@@ -135,7 +149,7 @@ export const duckXiangqiGameTreeArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The site’s own rules engine, the code that checks every move played here, counted the opening positions. Fairy-Stockfish played the games at 100,000 positions a move, with its neural network off. Xiangqi counts are strictly legal, so a move that leaves your own general capturable does not count. Duck Xiangqi has no check rule (you win by capturing the general), so every piece move counts.',
+          text: 'The site’s own rules engine, the code that checks every move played here, counted the first move’s positions, and Fairy-Stockfish counted the deeper ones. Fairy-Stockfish also played the games at 100,000 positions a move, with its neural network off. Xiangqi counts are strictly legal, so a move that leaves your own general capturable does not count. Duck Xiangqi has no check rule (you win by capturing the general), so every piece move counts.',
         },
         {
           kind: 'cta',
