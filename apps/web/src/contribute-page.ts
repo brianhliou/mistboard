@@ -84,7 +84,7 @@ function buildContribute(locale: Locale = currentLocale()): HTMLElement {
       t('contribute.crossLinkPrefix', {}, locale),
       proseLink(t('creators.heading', {}, locale), '/creators'),
       t('contribute.crossLinkOr', {}, locale),
-      proseLink(t('challenges.heading', {}, locale), localizedHref('/challenges', locale)),
+      proseLink(t('champions.heading', {}, locale), localizedHref('/champions', locale)),
       t('contribute.crossLinkSuffix', {}, locale),
     ]),
   );

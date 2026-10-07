@@ -264,6 +264,11 @@ export function legacyPageRedirect(pathname: string): string | null {
   // internal link points there); /news served the identical page, so the pair
   // read as duplicates to a crawler. One permanent hop, no canonical tag.
   if (normalized === '/news') return '/feed';
+  // The engine page moved from brianhliou.com/challenges/ as /challenges and
+  // was renamed /champions the same day (2026-10-07): one reigning engine per
+  // game. Each language keeps its prefix.
+  const challenges = /^(\/zh-hans|\/zh-hant)?\/challenges$/.exec(normalized);
+  if (challenges) return `${challenges[1] ?? ''}/champions`;
   return null;
 }
 
@@ -365,6 +370,11 @@ export function isClientRoute(pathname: string): boolean {
     normalized === '/privacy' ||
     normalized === '/contribute' ||
     normalized === '/creators' ||
+    normalized === '/champions' ||
+    normalized === '/zh-hans/champions' ||
+    normalized === '/zh-hant/champions' ||
+    // Renamed to /champions; legacyPageRedirect 301s these before the SPA
+    // fallback, and main.ts still takes them (like /news).
     normalized === '/challenges' ||
     normalized === '/zh-hans/challenges' ||
     normalized === '/zh-hant/challenges' ||

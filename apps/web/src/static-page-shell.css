@@ -246,42 +246,48 @@
   color: var(--site-muted);
 }
 
-/* /challenges: the engine-seat table and its three short lists. The table
-   scrolls inside its wrapper rather than widening the panel on a phone. */
-.challenges-table-wrap {
-  margin: 4px 0 16px;
-  overflow-x: auto;
+/* /champions: one card per game (the reigning engine, or the house engine
+   holding an open title), then two short lists. Two cards a row on a wide
+   panel, one on a phone. */
+.champions-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 4px 0 22px;
 }
 
-.challenges-table {
-  width: 100%;
-  min-width: 520px;
-  border-collapse: collapse;
+@media (max-width: 640px) {
+  .champions-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
-.challenges-table th,
-.challenges-table td {
-  padding: 8px 14px 8px 0;
-  text-align: left;
-  vertical-align: top;
+.static-prose .champions-card {
+  padding: 14px 16px 4px;
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius-sm);
+  background: var(--site-panel-soft);
+}
+
+.static-prose .champions-card h3 {
+  margin: 0 0 6px;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.static-prose .champions-card p {
+  margin: 0 0 10px;
   font-size: 15px;
-  line-height: 1.5;
-  color: var(--site-text);
-  border-bottom: 1px solid var(--site-border-soft);
+  line-height: 1.55;
 }
 
-.challenges-table thead th {
-  font-size: 14px;
+.static-prose .champions-card .champions-holder {
   font-weight: 600;
-  color: var(--site-muted);
+  color: var(--site-heading);
 }
 
-.challenges-table tbody th {
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.static-prose .challenges-list {
+.static-prose .champions-list {
   margin: 0 0 14px;
   padding-left: 20px;
   color: var(--site-text);
@@ -289,6 +295,6 @@
   line-height: 1.65;
 }
 
-.static-prose .challenges-list li + li {
+.static-prose .champions-list li + li {
   margin-top: 6px;
 }

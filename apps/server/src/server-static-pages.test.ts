@@ -954,10 +954,10 @@ test('the videos library serves all three locales, each distinct and cross-linke
 
 // Moved from brianhliou.com/challenges/ with its zh copies (2026-10-07), so
 // each language needs a URL of its own for the old pages to redirect to.
-test('the engine challenges page serves all three locales, each distinct and cross-linked', async () => {
+test('the engine champions page serves all three locales, each distinct and cross-linked', async () => {
   const staticDir = await staticDirWithPreloadManifest();
   const titles = new Set<string>();
-  for (const route of ['/challenges', '/zh-hans/challenges', '/zh-hant/challenges']) {
+  for (const route of ['/champions', '/zh-hans/champions', '/zh-hant/champions']) {
     assert.ok(isClientRoute(route), `${route} would 404 on a direct hit in production`);
     assert.ok(SITEMAP_STATIC_ROUTES.includes(route), `${route} is not advertised in the sitemap`);
     const response = captureResponse();
@@ -972,9 +972,9 @@ test('the engine challenges page serves all three locales, each distinct and cro
     assert.ok(title && title !== 'Mistboard', `${route} serves the default title`);
     titles.add(title);
     for (const [lang, href] of [
-      ['en', 'https://mistboard.com/challenges'],
-      ['zh-Hans', 'https://mistboard.com/zh-hans/challenges'],
-      ['zh-Hant', 'https://mistboard.com/zh-hant/challenges'],
+      ['en', 'https://mistboard.com/champions'],
+      ['zh-Hans', 'https://mistboard.com/zh-hans/champions'],
+      ['zh-Hant', 'https://mistboard.com/zh-hant/champions'],
     ]) {
       assert.ok(
         response.body.includes(`<link rel="alternate" hreflang="${lang}" href="${href}">`),
@@ -989,10 +989,15 @@ test('the engine challenges page serves all three locales, each distinct and cro
     assert.match(response.body, new RegExp(`<html lang="${lang}">`));
   }
   assert.equal(titles.size, 3, 'titles must differ');
+  // The page's first name, /challenges, is a 301 hop, never a sitemap entry.
+  for (const old of ['/challenges', '/zh-hans/challenges', '/zh-hant/challenges']) {
+    assert.ok(!SITEMAP_STATIC_ROUTES.includes(old), `${old} is still in the sitemap`);
+  }
   // /challenge/:id (a correspondence invite) is a different route; the
-  // scoreboard must not swallow it or be swallowed by it.
+  // champions page and its old name must not swallow it.
   assert.ok(isClientRoute('/challenge/abc123'));
   assert.ok(!isClientRoute('/challenges/abc123'));
+  assert.ok(!isClientRoute('/champions/abc123'));
 });
 
 test('the xiangqi course serves all three locales, each distinct and cross-linked', async () => {
@@ -1038,7 +1043,7 @@ test('the xiangqi course serves all three locales, each distinct and cross-linke
 // member names itself, exactly once.
 test('every locale-group SPA route names itself as canonical', async () => {
   const staticDir = await staticDirWithPreloadManifest();
-  const groups = ['/videos', '/bots', '/learn/xiangqi', '/challenges'];
+  const groups = ['/videos', '/bots', '/learn/xiangqi', '/champions'];
   for (const group of groups) {
     for (const route of [group, `/zh-hans${group}`, `/zh-hant${group}`]) {
       const response = captureResponse();

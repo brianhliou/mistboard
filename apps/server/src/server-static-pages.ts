@@ -170,27 +170,28 @@ const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     description:
       'Work with Mistboard: titled players and coaches, creators and streamers, event organizers and clubs, writers and composers, and engine authors.',
   },
-  // The engine-seat scoreboard, moved from brianhliou.com/challenges/ (and its
-  // zh copies) on 2026-10-07; locale-prefixed like /bots.
-  '/challenges': {
-    title: 'Engine Challenges | Mistboard',
+  // One reigning champion engine per game, moved from
+  // brianhliou.com/challenges/ (and its zh copies) on 2026-10-07; /challenges
+  // 301s here. Locale-prefixed like /bots.
+  '/champions': {
+    title: 'Engine Champions | Mistboard',
     description:
-      'Beat a Mistboard bot in a fixed, public match and your engine takes its seat: jieqi, banqi, Jungle Chess and Flip Jungle, with the match rules and every result.',
-    localeGroup: '/challenges',
+      'The reigning champion engine for jieqi, banqi, Jungle Chess and Flip Jungle: the bot you play on Mistboard, the title history, and how any engine can challenge for the title in a public match.',
+    localeGroup: '/champions',
   },
-  '/zh-hans/challenges': {
-    title: '引擎挑战 | Mistboard',
+  '/zh-hans/champions': {
+    title: '引擎冠军 | Mistboard',
     description:
-      '在固定、公开的对抗赛中击败 Mistboard 的机器人，你的引擎就接替它的席位：揭棋、暗棋、斗兽棋和翻翻棋，附对抗赛规则和每一个结果。',
+      '揭棋、暗棋、斗兽棋和翻翻棋的现任冠军引擎：就是你在 Mistboard 上对弈的机器人，附头衔历史，以及任何引擎如何在公开对抗赛中挑战头衔。',
     htmlLang: 'zh-Hans',
-    localeGroup: '/challenges',
+    localeGroup: '/champions',
   },
-  '/zh-hant/challenges': {
-    title: '引擎挑戰 | Mistboard',
+  '/zh-hant/champions': {
+    title: '引擎冠軍 | Mistboard',
     description:
-      '在固定、公開的對抗賽中擊敗 Mistboard 的機器人，你的引擎就接替它的席位：揭棋、暗棋、鬥獸棋和翻翻棋，附對抗賽規則和每一個結果。',
+      '揭棋、暗棋、鬥獸棋和翻翻棋的現任冠軍引擎：就是你在 Mistboard 上對弈的機器人，附頭銜歷史，以及任何引擎如何在公開對抗賽中挑戰頭銜。',
     htmlLang: 'zh-Hant',
-    localeGroup: '/challenges',
+    localeGroup: '/champions',
   },
   '/changelog': {
     title: 'Changelog | Mistboard',
@@ -932,9 +933,9 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/patron',
   '/contribute',
   '/creators',
-  '/challenges',
-  '/zh-hans/challenges',
-  '/zh-hant/challenges',
+  '/champions',
+  '/zh-hans/champions',
+  '/zh-hant/champions',
   '/changelog',
   '/developers',
   '/api-docs',

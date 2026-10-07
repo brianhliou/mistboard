@@ -80,12 +80,12 @@ function buildCreators(locale: Locale = currentLocale()): HTMLElement {
     proseSubheading(t('creators.enginesHeading', {}, locale)),
     proseParagraph([
       t('creators.enginesBody', {}, locale),
-      t('creators.enginesChallengesPrefix', {}, locale),
+      t('creators.enginesChampionsPrefix', {}, locale),
       proseLink(
-        t('creators.enginesChallengesLink', {}, locale),
-        localizedHref('/challenges', locale),
+        t('creators.enginesChampionsLink', {}, locale),
+        localizedHref('/champions', locale),
       ),
-      t('creators.enginesChallengesSuffix', {}, locale),
+      t('creators.enginesChampionsSuffix', {}, locale),
     ]),
 
     proseSubheading(t('creators.contactHeading', {}, locale)),

@@ -215,10 +215,25 @@ const wantsTerms = path === '/terms' || page === 'terms';
 const wantsPrivacy = path === '/privacy' || page === 'privacy';
 const wantsContribute = path === '/contribute' || page === 'contribute';
 const wantsCreators = path === '/creators' || page === 'creators';
-// Engine challenges: locale-prefixed like /bots, so the zh copies moved from
-// brianhliou.com/zh-hans/challenges/ have URLs of their own.
-const wantsChallenges =
+// Engine champions: locale-prefixed like /bots, so the zh copies moved from
+// brianhliou.com/zh-hans/challenges/ have URLs of their own. The page was
+// /challenges until 2026-10-07: the server 301s the old paths
+// (legacyPageRedirect); the client still takes them (Vite dev, a cached shell)
+// and swaps the address bar to the canonical URL.
+const wantsLegacyChampions =
   path === '/challenges' || path === '/zh-hans/challenges' || path === '/zh-hant/challenges';
+if (wantsLegacyChampions) {
+  window.history.replaceState(
+    window.history.state,
+    '',
+    `${path.replace(/challenges$/, 'champions')}${window.location.search}${window.location.hash}`,
+  );
+}
+const wantsChampions =
+  wantsLegacyChampions ||
+  path === '/champions' ||
+  path === '/zh-hans/champions' ||
+  path === '/zh-hant/champions';
 const wantsChangelog =
   path === '/changelog' || /^\/changelog\/\d{4}-\d{2}$/.exec(path) !== null || page === 'changelog';
 const wantsDevelopers = path === '/developers' || page === 'developers';
@@ -969,10 +984,10 @@ if (replaySample) {
   void mountOrReport(() =>
     import('./creators-page.js').then(({ mountCreators }) => mountCreators(appRoot)),
   );
-} else if (wantsChallenges) {
-  setTitleKey('challenges.heading');
+} else if (wantsChampions) {
+  setTitleKey('champions.heading');
   void mountOrReport(() =>
-    import('./challenges-page.js').then(({ mountChallenges }) => mountChallenges(appRoot)),
+    import('./champions-page.js').then(({ mountChampions }) => mountChampions(appRoot)),
   );
 } else if (wantsChangelog) {
   setTitleKey('changelog.heading');

@@ -613,6 +613,22 @@ test('legacyPageRedirect sends the old games-database paths to /games/search, on
   assert.equal(legacyPageRedirect('/historical-xiangqi/game/hxq_abc123'), null);
 });
 
+test('legacyPageRedirect sends /challenges to /champions in each language, once', () => {
+  assert.equal(legacyPageRedirect('/challenges'), '/champions');
+  assert.equal(legacyPageRedirect('/challenges/'), '/champions');
+  assert.equal(legacyPageRedirect('/zh-hans/challenges'), '/zh-hans/champions');
+  assert.equal(legacyPageRedirect('/zh-hant/challenges'), '/zh-hant/champions');
+  for (const target of ['/champions', '/zh-hans/champions', '/zh-hant/champions']) {
+    // The target is a client route, so the hop terminates.
+    assert.equal(legacyPageRedirect(target), null);
+    assert.equal(isClientRoute(target), true);
+  }
+  // /challenge/:id is a correspondence invite, not the old engine page.
+  assert.equal(legacyPageRedirect('/challenge/abc123'), null);
+  assert.equal(legacyPageRedirect('/challenges/abc123'), null);
+  assert.equal(legacyPageRedirect('/en/challenges'), null);
+});
+
 test('isClientRoute lets vendored ceval engine assets fall through to static', () => {
   // /engine/:id is the admin engine-profile SPA page, but /engine/fairy-stockfish/*
   // are real vendored files. They MUST NOT be rewritten to index.html, or the local
