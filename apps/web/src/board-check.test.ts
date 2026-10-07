@@ -5,6 +5,7 @@ import {
   standardXiangqiCheckedGeneral,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
+import { boardCheckGlowSvg } from './board-check.js';
 import { renderFortressXiangqiBoardSvg } from './fortress-xiangqi-render.js';
 import { type DarkXiangqiWireView, renderDarkXiangqiBoardSvg } from './live-dark-xiangqi.js';
 import { renderJieqiBoardSvg } from './live-jieqi-render.js';
@@ -85,6 +86,15 @@ describe('board check glow', () => {
     });
     expect(renderFortressXiangqiBoardSvg(view('black'), 'red')).toContain(GLOW);
     expect(renderFortressXiangqiBoardSvg(view('red'), 'red')).not.toContain(GLOW);
+  });
+
+  it('keeps the halo tight: at most 20% past the disc, never reaching a neighbour', () => {
+    // Xiangqi's piece is 54 units on a 60-unit cell.
+    const svg = boardCheckGlowSvg({ x: 100, y: 100 }, 54);
+    const r = Number(/class="board-check__glow"[^>]*\br="([\d.]+)"/.exec(svg)?.[1]);
+    expect(r).toBeGreaterThan(27);
+    expect(r).toBeLessThanOrEqual(27 * 1.2);
+    expect(r + 27).toBeLessThan(60);
   });
 
   it('Fog Xiangqi never glows, even with an attacker on the general file', () => {

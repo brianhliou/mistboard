@@ -1,10 +1,11 @@
-/* The check glow (board-check.ts): solid red under the general's disc, fading
-   to nothing about a cell out. Static: no animation, by the study/play surface
-   rule that boards move only on interaction. --board-check overrides the hue
-   for a board theme that needs it. */
+/* The check halo (board-check.ts): red under the general's disc, fading to
+   nothing 18% of the piece radius past its edge. Static: no animation, by the
+   study/play surface rule that boards move only on interaction. Opacity was
+   0.95 until 2026-10-06 (Brian: "too big and strong"); halved to 0.48.
+   --board-check overrides the hue for a board theme that needs it. */
 .board-check__core {
   stop-color: var(--board-check, #e11d1d);
-  stop-opacity: 0.95;
+  stop-opacity: 0.48;
 }
 
 .board-check__edge {
