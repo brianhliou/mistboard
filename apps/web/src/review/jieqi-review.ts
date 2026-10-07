@@ -28,7 +28,7 @@ import {
 import type { NodeShape, VariantTreeAdapter } from './game-tree.js';
 import { jieqiChanceOdds } from './jieqi-luck-mark.js';
 import { makeJieqiTreeAdapter } from './jieqi-tree-adapter.js';
-import { attachLuckMarkCard, type LuckCardDetail } from './luck-mark-card.js';
+import { attachLuckBadgeCard, attachLuckMarkCard, type LuckCardDetail } from './luck-mark-card.js';
 import { formatJieqiBestMove } from './move-advice.js';
 import {
   mountTreeReview,
@@ -44,6 +44,27 @@ export type JieqiReviewConfig = TreeReviewConfig<JieqiMove, JieqiGameState>;
 
 /** Handle returned by mountJieqiReview: snapshot the current tree to persist it. */
 export type JieqiReviewHandle = TreeReviewHandle;
+
+/** The luck card's detail for a scored chance move: the odds from the pool the server
+ *  averaged over (the mover's own bag, the victim's, or both). Null when the move has no
+ *  mover (never for a played move). One builder for the board's die and the move-list
+ *  badge, so both open the same card. */
+export function jieqiLuckDetail(
+  move: JieqiMove,
+  info: { luck: number; before: JieqiGameState },
+): LuckCardDetail | null {
+  const mover = info.before.board[move.from]?.color;
+  if (!mover) return null;
+  const chance = jieqiChanceOdds(info.before, move);
+  return {
+    square: move.to,
+    color: mover,
+    luck: info.luck,
+    kind: chance?.kind ?? 'reveal',
+    odds: chance?.reveal ?? null,
+    capture: chance?.capture ?? null,
+  };
+}
 
 function makeJieqiPresentation(
   adapter: VariantTreeAdapter<JieqiMove, JieqiGameState, JieqiPlayerView>,
@@ -120,18 +141,21 @@ function makeJieqiPresentation(
     // landed, or where the face-down piece was taken. The card states the odds from the
     // pool the server averaged over (the mover's own bag, the victim's, or both).
     moveLuckMarker: (move, info): JieqiBoardMarker | null => {
-      const mover = info.before.board[move.from]?.color;
-      if (!mover) return null;
-      const chance = jieqiChanceOdds(info.before, move);
-      luckDetail = {
-        square: move.to,
-        color: mover,
-        luck: info.luck,
-        kind: chance?.kind ?? 'reveal',
-        odds: chance?.reveal ?? null,
-        capture: chance?.capture ?? null,
-      };
+      luckDetail = jieqiLuckDetail(move, info);
+      if (!luckDetail) return null;
       return { square: move.to, kind: 'luck', luck: { luck: info.luck } };
+    },
+    // The move list's 🎲 badge opens the same card, for its own move (not only the current one).
+    moveListLuck: ({ list, luckAt, signal }) => {
+      const detach = attachLuckBadgeCard(
+        list,
+        (badge) => {
+          const at = luckAt(badge.dataset.luckPath ?? '');
+          return at ? jieqiLuckDetail(at.move, at) : null;
+        },
+        pieceArt,
+      );
+      signal.addEventListener('abort', detach, { once: true });
     },
   };
 }

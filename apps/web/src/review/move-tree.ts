@@ -178,8 +178,10 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
       if (ann.suffixClass) suffixEl.classList.add(`review-move--${ann.suffixClass}`);
     }
     // Inline luck badge for a reveal (chance) move — the reveal's variance, shown but never graded.
+    // data-luck-path lets the luck card (luck-mark-card.ts) find the move a badge labels.
     if (ann?.luck) {
       luckEl.textContent = ann.luck;
+      luckEl.dataset.luckPath = key;
       if (ann.luckTone) luckEl.classList.add(`review-move-list__luck--${ann.luckTone}`);
     }
     // Every move carries its eval, reveals included: the three slots read orthogonally — glyph =

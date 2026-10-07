@@ -1,6 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { svgBoardLuckMark } from '../board-luck-mark.js';
 import type { RevealOdds } from './jieqi-luck-mark.js';
-import { luckCardHtml, luckCardTone } from './luck-mark-card.js';
+import {
+  attachLuckBadgeCard,
+  attachLuckMarkCard,
+  type LuckCardDetail,
+  luckCardHtml,
+  luckCardTone,
+  luckMarkContains,
+} from './luck-mark-card.js';
 
 const stubPiece = (role: string, color: string): string =>
   `<svg data-piece="${color}-${role}"></svg>`;
@@ -133,5 +141,142 @@ describe('luckCardHtml', () => {
     expect(words).not.toContain('could have been');
     expect(html).toContain('data-piece="red-chariot"');
     expect(html).toContain('data-piece="black-soldier"');
+  });
+});
+
+// ── Triggers: the board's die, and the move list's badge ──
+
+const DETAIL: LuckCardDetail = { square: 'd3', color: 'red', luck: -7, odds: ODDS };
+
+function stubRect(el: Element | null, rect: DOMRect): void {
+  if (!el) throw new Error('missing element');
+  (el as Element).getBoundingClientRect = () => rect;
+}
+
+function pointer(
+  target: EventTarget,
+  type: string,
+  init: { pointerType: string; x?: number; y?: number; relatedTarget?: EventTarget | null },
+): void {
+  target.dispatchEvent(
+    new PointerEvent(type, {
+      bubbles: true,
+      pointerType: init.pointerType,
+      clientX: init.x ?? 0,
+      clientY: init.y ?? 0,
+      relatedTarget: init.relatedTarget ?? null,
+    }),
+  );
+}
+
+const openCard = (): HTMLElement | null =>
+  document.querySelector<HTMLElement>('.luck-card.luck-card--open:not([hidden])');
+
+describe('luck card triggers', () => {
+  let detach: (() => void) | null = null;
+  afterEach(() => {
+    detach?.();
+    detach = null;
+    document.body.replaceChildren();
+  });
+
+  // A piece at (100, 100), 60px across; its die pinned down-left, mostly outside the disc.
+  function boardWithMark(): HTMLElement {
+    const host = document.createElement('div');
+    host.innerHTML = `<svg>${svgBoardLuckMark({ luck: -7 }, { x: 100, y: 100 }, { piece: 60, cell: 72 }, 'd3')}</svg>`;
+    document.body.append(host);
+    stubRect(host.querySelector('.luck-mark__hit'), new DOMRect(70, 70, 60, 60));
+    stubRect(host.querySelector('.luck-mark__cube'), new DOMRect(58, 112, 30, 30));
+    return host;
+  }
+
+  it('opens from the die’s outer corner, outside the piece', () => {
+    const host = boardWithMark();
+    detach = attachLuckMarkCard(host, () => DETAIL, stubPiece);
+    // (60, 140) is on the die and ~56px from the piece's centre: outside its 30px disc.
+    pointer(host, 'pointermove', { pointerType: 'mouse', x: 60, y: 140 });
+    expect(openCard()?.textContent).toContain('Unlucky reveal');
+    // Off both the piece and the die: closed.
+    pointer(host, 'pointermove', { pointerType: 'mouse', x: 20, y: 20 });
+    expect(openCard()).toBeNull();
+  });
+
+  it('pins open on a tap on the die', () => {
+    const host = boardWithMark();
+    detach = attachLuckMarkCard(host, () => DETAIL, stubPiece);
+    pointer(host, 'pointerdown', { pointerType: 'touch', x: 60, y: 140 });
+    expect(openCard()).not.toBeNull();
+    pointer(host, 'pointermove', { pointerType: 'touch', x: 20, y: 20 });
+    expect(openCard()).not.toBeNull();
+  });
+
+  it('measures the die as part of the mark', () => {
+    const piece = new DOMRect(70, 70, 60, 60);
+    const die = new DOMRect(58, 112, 30, 30);
+    expect(luckMarkContains(piece, die, 100, 100)).toBe(true);
+    expect(luckMarkContains(piece, null, 60, 140)).toBe(false);
+    expect(luckMarkContains(piece, die, 60, 140)).toBe(true);
+    expect(luckMarkContains(piece, die, 20, 20)).toBe(false);
+  });
+
+  function listWithBadge(onJump: () => void): { list: HTMLElement; badge: HTMLElement } {
+    const list = document.createElement('section');
+    list.innerHTML =
+      '<button type="button" class="review-move-list__move"><span class="review-move-list__san">c4-c5</span>' +
+      '<span class="review-move-list__luck" data-luck-path="a/b">🎲 -7%</span></button>' +
+      '<button type="button" class="review-move-list__move"><span class="review-move-list__san">h2-e2</span>' +
+      '<span class="review-move-list__luck"></span></button>';
+    document.body.append(list);
+    list.querySelector('button')!.addEventListener('click', onJump);
+    const badge = list.querySelector<HTMLElement>('[data-luck-path]')!;
+    stubRect(badge, new DOMRect(300, 400, 50, 18));
+    return { list, badge };
+  }
+
+  it('opens from a move-list badge on hover, for that badge’s move', () => {
+    const { list, badge } = listWithBadge(() => {});
+    const asked: string[] = [];
+    detach = attachLuckBadgeCard(
+      list,
+      (el) => {
+        asked.push(el.dataset.luckPath ?? '');
+        return DETAIL;
+      },
+      stubPiece,
+    );
+    pointer(badge, 'pointerover', { pointerType: 'mouse' });
+    expect(asked).toEqual(['a/b']);
+    expect(openCard()?.textContent).toContain('Cost Red 7 points');
+    // Leaving the badge for its move button closes it.
+    pointer(badge, 'pointerout', {
+      pointerType: 'mouse',
+      relatedTarget: list.querySelector('.review-move-list__san'),
+    });
+    expect(openCard()).toBeNull();
+    // An empty badge slot (a move with no luck) opens nothing.
+    pointer(list.querySelectorAll('.review-move-list__luck')[1]!, 'pointerover', {
+      pointerType: 'mouse',
+    });
+    expect(openCard()).toBeNull();
+  });
+
+  it('a tap on the badge pins the card and still selects the move', () => {
+    let jumps = 0;
+    const { list, badge } = listWithBadge(() => {
+      jumps += 1;
+    });
+    detach = attachLuckBadgeCard(list, () => DETAIL, stubPiece);
+    pointer(badge, 'pointerdown', { pointerType: 'touch' });
+    badge.click();
+    expect(jumps).toBe(1);
+    expect(openCard()).not.toBeNull();
+    // A second tap on the same badge closes it (and re-selects the same move, a no-op).
+    pointer(badge, 'pointerdown', { pointerType: 'touch' });
+    expect(openCard()).toBeNull();
+    // A tap elsewhere closes a pinned card.
+    pointer(badge, 'pointerdown', { pointerType: 'touch' });
+    expect(openCard()).not.toBeNull();
+    pointer(document.body, 'pointerdown', { pointerType: 'touch' });
+    expect(openCard()).toBeNull();
   });
 });

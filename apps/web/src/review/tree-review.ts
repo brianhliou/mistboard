@@ -295,6 +295,15 @@ export interface TreePresentation<Move, Truth, View, Color, Arrow, Marker> {
    *  there). Called only for mainline moves the decision layer scored. Omit the hook, or
    *  return null, to draw nothing. */
   moveLuckMarker?(move: Move, info: { luck: number; before: Truth }): Marker | null;
+  /** Wire the move list's luck badges ("🎲 -7%") to the variant's luck card. `luckAt` maps a
+   *  badge's path key (its data-luck-path) to the scored chance move it labels, from the same
+   *  marks the badge text is built from. Called once per mount; detach on `signal`. Omit for
+   *  variants whose badges open nothing. */
+  moveListLuck?(opts: {
+    list: HTMLElement;
+    luckAt(key: string): { move: Move; luck: number; before: Truth } | null;
+    signal: AbortSignal;
+  }): void;
   /** Game-phase segmentation over the mainline truths (index 0 = start position):
    *  drives the advantage chart's Opening/Middlegame/Endgame dividers and the
    *  summary's per-phase accuracy. Omit for variants without a phase heuristic —
@@ -1003,6 +1012,8 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // Per-ply marks from the stored analysis (analysis-marks.ts), rebuilt with the map
   // above; the engine-off better-move arrows read it.
   let analysisMarkByPly = new Map<number, AnalysisMark>();
+  /** Path key → the scored chance move behind each move-list luck badge (moveListLuck). */
+  let luckByPathKey = new Map<string, { move: Move; luck: number; before: Truth }>();
 
   /** Badge for the glyph on the move that LED to the current node (so it sits on
    *  the piece that just moved). Empty at the root, for variants without the
@@ -1113,6 +1124,11 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       notifyChange();
     },
     result: config.result,
+  });
+  presentation.moveListLuck?.({
+    list: moveTree.el,
+    luckAt: (key) => luckByPathKey.get(key) ?? null,
+    signal: mountAbort.signal,
   });
 
   // ── Computer-injected refutation lines (lichess "computer variations") ──
@@ -2109,6 +2125,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
           formatBestMove: formatBestForAdvice,
         })
       : new Map();
+    luckByPathKey = new Map();
     if (gameAnalysis) {
       const nodes = mainlineNodes();
       const evalByPly = new Map(gameAnalysis.evals.map((entry) => [entry.ply, entry]));
@@ -2130,7 +2147,11 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         // the server scored. The top alternative alone is grafted as a one-move
         // branch (injectCandidateMoves) so the advice's move can be clicked.
         const luck = mark.luck;
-        byPathKey.set(pathKey(tree.pathTo(node)), {
+        const nodeKey = pathKey(tree.pathTo(node));
+        if (luck !== undefined && node.move && node.parent) {
+          luckByPathKey.set(nodeKey, { move: node.move, luck, before: node.parent.truth });
+        }
+        byPathKey.set(nodeKey, {
           suffix: mark.suffix,
           suffixClass: mark.suffixClass,
           eval: entry ? formatEval(entry.cp, entry.mate) : undefined,

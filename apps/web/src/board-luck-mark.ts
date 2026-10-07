@@ -78,8 +78,9 @@ export function svgBoardLuckMark(
 ): string {
   const side = sizes.cell * LUCK_DIE_RATIO;
   const c = luckDieCentre(center, sizes.cell, bounds);
-  // The hit disc is what the hover card measures (getBoundingClientRect): the piece itself,
-  // so pointing at the revealed piece is pointing at its luck.
+  // The hit disc and the die's square are what the hover card measures
+  // (getBoundingClientRect): pointing at the revealed piece, or at its die, is pointing at
+  // its luck.
   const hit = `<circle class="luck-mark__hit" cx="${fmt(center.x)}" cy="${fmt(center.y)}" r="${fmt(sizes.piece / 2)}"/>`;
   return (
     `<g class="luck-mark ${luckInkClass(spec.luck)}" data-luck-square="${square}">` +
