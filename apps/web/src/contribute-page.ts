@@ -3,7 +3,7 @@
 // the shared /about rail + panel shell.
 
 import { t } from './i18n/catalog.js';
-import { currentLocale, type Locale } from './i18n/locale.js';
+import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { buildNav, GITHUB_URL } from './site-shell.js';
 import {
   proseExternalLink,
@@ -83,6 +83,8 @@ function buildContribute(locale: Locale = currentLocale()): HTMLElement {
     proseParagraph([
       t('contribute.crossLinkPrefix', {}, locale),
       proseLink(t('creators.heading', {}, locale), '/creators'),
+      t('contribute.crossLinkOr', {}, locale),
+      proseLink(t('champions.heading', {}, locale), localizedHref('/champions', locale)),
       t('contribute.crossLinkSuffix', {}, locale),
     ]),
   );

@@ -4,7 +4,7 @@
 // something live. Renders inside the shared /about rail + panel shell.
 
 import { t } from './i18n/catalog.js';
-import { currentLocale, type Locale } from './i18n/locale.js';
+import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { buildNav } from './site-shell.js';
 import {
   proseHeading,
@@ -78,7 +78,15 @@ function buildCreators(locale: Locale = currentLocale()): HTMLElement {
     proseParagraph([t('creators.writersBody', {}, locale)]),
 
     proseSubheading(t('creators.enginesHeading', {}, locale)),
-    proseParagraph([t('creators.enginesBody', {}, locale)]),
+    proseParagraph([
+      t('creators.enginesBody', {}, locale),
+      t('creators.enginesChampionsPrefix', {}, locale),
+      proseLink(
+        t('creators.enginesChampionsLink', {}, locale),
+        localizedHref('/champions', locale),
+      ),
+      t('creators.enginesChampionsSuffix', {}, locale),
+    ]),
 
     proseSubheading(t('creators.contactHeading', {}, locale)),
     proseParagraph([

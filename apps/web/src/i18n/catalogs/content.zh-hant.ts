@@ -379,6 +379,7 @@ export const ZH_HANT_CONTENT = {
   'contribute.supportSuffix': '。哪怕一點也有用，而且下棋從來不需要付費。',
   'contribute.crossLinkPrefix': '如果你有觀眾、賽事或引擎，請看',
   'contribute.crossLinkSuffix': '。',
+  'contribute.crossLinkOr': '或',
   'creators.heading': '與我們合作',
   'creators.intro':
     'Mistboard 是一個免費、開源、無廣告的網站，提供象棋和原創策略遊戲，支援中文和英文。我們希望與願意把這項棋類帶給更多人的棋手、內容創作者和主辦方合作。',
@@ -414,12 +415,63 @@ export const ZH_HANT_CONTENT = {
   'creators.enginesHeading': '引擎作者',
   'creators.enginesBody':
     '我們把強引擎作為網站上的機器人提供服務，註明作者，並在我們的機器人梯隊中評定等級分。',
+  'creators.enginesChampionsPrefix': '在公開對抗賽中擊敗冠軍的引擎會奪得頭銜：請看',
+  'creators.enginesChampionsLink': '引擎冠軍',
+  'creators.enginesChampionsSuffix': '。',
   'creators.contactHeading': '聯絡',
   'creators.contactPrefix': '請使用',
   'creators.contactLink': '聯絡表單',
   'creators.contactSuffix': '。告訴我們你是誰、在做什麼，並附上你的頻道、賽事或個人資料連結。',
   'creators.crossLinkPrefix': '想用其他方式幫忙，比如回報問題、翻譯或寫程式？請看',
   'creators.crossLinkSuffix': '。',
+  'champions.heading': '引擎冠軍',
+  'champions.intro':
+    '每個遊戲都有一位現任冠軍引擎。它就是你在網站上對弈的機器人，並署上作者的名字。任何引擎都可以在公開對抗賽中挑戰冠軍頭銜。',
+  'champions.aboutJieqi':
+    '作者 Huorongrong 和 Laoxu（Kouza）：帶有自己神經網路的 Pikafish 分叉。在本站每步 4 秒，4 執行緒。',
+  'champions.aboutJunglePrefix':
+    '作者 hzyhhzy，網路來自 Kouza：自我對弈訓練的神經網路。在本站每步 150 次訪問；',
+  'champions.aboutJungleSuffix': '（每步 500 萬節點）是它下面較容易的機器人。',
+  'champions.championBadge': '冠軍',
+  'champions.statWins': '勝',
+  'champions.statDraws': '和',
+  'champions.statLosses': '負',
+  'champions.barLabel': '{wins} 勝，{draws} 和，{losses} 負',
+  'champions.tookJieqi': '2026-09-30 從皮卡魚第 8 級手中奪得頭銜，共 400 局，得分 0.64。',
+  'champions.tookJungle':
+    '2026-09-22 從 MistyJungle 手中奪得頭銜，共 200 局，每步 1,000 次訪問，一局未負。',
+  'champions.readMatch': '閱讀比賽報導',
+  'champions.seeGames': '查看對局',
+  'champions.playChampion': '與冠軍對弈',
+  'champions.openHeading': '待爭頭銜',
+  'champions.openIntro':
+    '其他所有有機器人的遊戲。你對弈的機器人持有頭銜，直到有挑戰者在對抗賽中擊敗它；目前還沒有挑戰者下過頭銜賽。',
+  'champions.heldBy': '持有者',
+  'champions.openBadge': '頭銜待爭',
+  'champions.challengeCta': '挑戰此頭銜',
+  'champions.enginePikafish': '皮卡魚',
+  'champions.engineFairyStockfish8': 'Fairy-Stockfish 第 8 級',
+  'champions.writeUpLink': '文章',
+  'champions.gamesLink': '對局',
+  'champions.linkSeparator': '、',
+  'champions.parenOpen': '（',
+  'champions.parenClose': '）。',
+  'champions.historyHeading': '頭銜歷史',
+  'champions.historyJieqi':
+    '2026-09-30，揭棋：Huorongrong 和 Laoxu（Kouza）的 AB-JChess 從皮卡魚第 8 級手中奪得頭銜，400 局 248-136-16，得分 0.64',
+  'champions.historyJungle':
+    '2026-09-22，鬥獸棋：hzyhhzy 的 KataGo-AnimalChess（網路來自 Kouza）從 MistyJungle 手中奪得頭銜，每步 1,000 次訪問，200 局 82 勝 0 負 118 和',
+  'champions.challengeHeading': '挑戰頭銜',
+  'champions.ruleMatch':
+    '與冠軍對弈 200 局，每種顏色各 100 局，雙方都使用冠軍每步的時間或節點預算，在同一台機器上進行，公開隨機種子。對抗賽可以延長到 200 局以上。',
+  'champions.ruleScore': '得分達到 0.55 或更高（約 +35 Elo）即奪得頭銜。',
+  'champions.ruleRun': '我們會在收到提交後兩週內進行對抗賽，無論結果如何都會公布。',
+  'champions.ruleSubmitPrefix':
+    '提交方式：把 Linux x86-64 二進位檔或權重檔、準確的命令列，以及你自己的對抗賽記錄，透過',
+  'champions.ruleSubmitIssueLink': 'GitHub issue',
+  'champions.ruleSubmitMiddle': '或',
+  'champions.ruleSubmitContactLink': '聯絡表單',
+  'champions.ruleSubmitSuffix': '發給我們。',
   'thanks.heading': '致謝',
   'thanks.intro':
     'Mistboard 站在許多人和專案的開源工作之上，也站在每一位下棋、回報問題、幫它變得更好的人之上。',

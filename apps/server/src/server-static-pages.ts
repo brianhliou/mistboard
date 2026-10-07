@@ -170,6 +170,29 @@ const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     description:
       'Work with Mistboard: titled players and coaches, creators and streamers, event organizers and clubs, writers and composers, and engine authors.',
   },
+  // One reigning champion engine per game, moved from
+  // brianhliou.com/challenges/ (and its zh copies) on 2026-10-07; /challenges
+  // 301s here. Locale-prefixed like /bots.
+  '/champions': {
+    title: 'Engine Champions | Mistboard',
+    description:
+      'The reigning champion engine for jieqi, banqi, Jungle Chess and Flip Jungle: the bot you play on Mistboard, the title history, and how any engine can challenge for the title in a public match.',
+    localeGroup: '/champions',
+  },
+  '/zh-hans/champions': {
+    title: '引擎冠军 | Mistboard',
+    description:
+      '揭棋、暗棋、斗兽棋和翻翻棋的现任冠军引擎：就是你在 Mistboard 上对弈的机器人，附头衔历史，以及任何引擎如何在公开对抗赛中挑战头衔。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/champions',
+  },
+  '/zh-hant/champions': {
+    title: '引擎冠軍 | Mistboard',
+    description:
+      '揭棋、暗棋、鬥獸棋和翻翻棋的現任冠軍引擎：就是你在 Mistboard 上對弈的機器人，附頭銜歷史，以及任何引擎如何在公開對抗賽中挑戰頭銜。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/champions',
+  },
   '/changelog': {
     title: 'Changelog | Mistboard',
     description:
@@ -910,6 +933,9 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/patron',
   '/contribute',
   '/creators',
+  '/champions',
+  '/zh-hans/champions',
+  '/zh-hant/champions',
   '/changelog',
   '/developers',
   '/api-docs',

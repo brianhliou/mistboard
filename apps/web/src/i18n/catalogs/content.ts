@@ -281,6 +281,7 @@ export const EN_CONTENT = {
   'contribute.supportSuffix': '. Every bit helps, and it is never required to play.',
   'contribute.crossLinkPrefix': 'Have an audience, an event or an engine? See ',
   'contribute.crossLinkSuffix': '.',
+  'contribute.crossLinkOr': ' or ',
   'creators.heading': 'Work with us',
   'creators.intro':
     'Mistboard is a free, open-source site for Chinese chess and original strategy games, in English and Chinese, with no ads. We work with players, creators and organizers who want to bring the game to more people.',
@@ -319,6 +320,10 @@ export const EN_CONTENT = {
   'creators.enginesHeading': 'Engine authors',
   'creators.enginesBody':
     'We serve strong engines as bots on the site, credited by name, and rate them against our bot ladder.',
+  'creators.enginesChampionsPrefix':
+    ' An engine that beats the champion in a public match takes its title: see the ',
+  'creators.enginesChampionsLink': 'engine champions',
+  'creators.enginesChampionsSuffix': '.',
   'creators.contactHeading': 'Contact',
   'creators.contactPrefix': 'Use the ',
   'creators.contactLink': 'contact form',
@@ -327,6 +332,56 @@ export const EN_CONTENT = {
   'creators.crossLinkPrefix':
     'Want to help in other ways, like reporting bugs, translating or writing code? See ',
   'creators.crossLinkSuffix': '.',
+  'champions.heading': 'Engine champions',
+  'champions.intro':
+    'Each game has one reigning champion engine. It is the bot you play on the site, credited by name. Any engine can challenge for the title in a public match.',
+  'champions.aboutJieqi':
+    'By Huorongrong and Laoxu (Kouza): a Pikafish fork with its own neural network. It plays here at 4 s a move on 4 threads.',
+  'champions.aboutJunglePrefix':
+    'By hzyhhzy with a network from Kouza: a self-play neural network. It plays here at 150 visits a move; ',
+  'champions.aboutJungleSuffix': ', at 5M nodes a move, is the easier bot below it.',
+  'champions.championBadge': 'Champion',
+  'champions.statWins': 'wins',
+  'champions.statDraws': 'draws',
+  'champions.statLosses': 'losses',
+  'champions.barLabel': '{wins} wins, {draws} draws, {losses} losses',
+  'champions.tookJieqi':
+    'Took the title from Pikafish Level 8 on 2026-09-30, over 400 games, a 0.64 score.',
+  'champions.tookJungle':
+    'Took the title from MistyJungle on 2026-09-22, over 200 games at 1,000 visits a move, without a loss.',
+  'champions.readMatch': 'Read the match',
+  'champions.seeGames': 'See the games',
+  'champions.playChampion': 'Play the champion',
+  'champions.openHeading': 'Open titles',
+  'champions.openIntro':
+    'Every other game with a bot. The bot you play holds the title until a challenger beats it in a match, and no challenger has played one yet.',
+  'champions.heldBy': 'Held by',
+  'champions.openBadge': 'Title open',
+  'champions.challengeCta': 'Challenge for this title',
+  'champions.enginePikafish': 'Pikafish',
+  'champions.engineFairyStockfish8': 'Fairy-Stockfish Level 8',
+  'champions.writeUpLink': 'write-up',
+  'champions.gamesLink': 'games',
+  'champions.linkSeparator': ', ',
+  'champions.parenOpen': ' (',
+  'champions.parenClose': ').',
+  'champions.historyHeading': 'Title history',
+  'champions.historyJieqi':
+    '2026-09-30, Jieqi: AB-JChess, by Huorongrong and Laoxu (Kouza), took the title from Pikafish Level 8, 248-136-16 over 400 games, a 0.64 score',
+  'champions.historyJungle':
+    '2026-09-22, Jungle Chess: KataGo-AnimalChess, by hzyhhzy with a network from Kouza, took the title from MistyJungle, 82-0 with 118 draws over 200 games at 1,000 visits a move',
+  'champions.challengeHeading': 'Challenge for a title',
+  'champions.ruleMatch':
+    "200 games against the champion, 100 as each color, with the champion's time or node budget per move for both engines, on one machine, with the seed published. A match may be extended past 200 games.",
+  'champions.ruleScore': 'A score of 0.55 or better (about +35 Elo) takes the title.',
+  'champions.ruleRun':
+    'We run the match within two weeks of a submission and post the result either way.',
+  'champions.ruleSubmitPrefix':
+    'To submit, send a Linux x86-64 binary or a weights file, the exact command line and your own match log, as an ',
+  'champions.ruleSubmitIssueLink': 'issue on GitHub',
+  'champions.ruleSubmitMiddle': ' or through the ',
+  'champions.ruleSubmitContactLink': 'contact form',
+  'champions.ruleSubmitSuffix': '.',
   'thanks.heading': 'Thank you',
   'thanks.intro':
     'Mistboard stands on open-source work by many people and projects, and on everyone who plays, reports bugs, and helps it get better.',
