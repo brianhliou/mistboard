@@ -185,8 +185,34 @@ export function scheduleJieqiEngineMove(ctx: JieqiEngineContext, room: JieqiEngi
 export type JieqiEngineMoveProvider = (
   engineId: string,
   fen: string,
-  opts: { movetimeMs?: number; moves?: readonly string[]; newGame?: boolean },
+  opts: {
+    movetimeMs?: number;
+    budgetAfterWait?: (waitedMs: number) => number;
+    moves?: readonly string[];
+    newGame?: boolean;
+  },
 ) => Promise<UciEval>;
+
+/**
+ * One live move's think time: the shared clock allocator under the tier's movetime.
+ * `waitedMs` is time the move already spent queued for an engine slot, which came off
+ * the bot's clock, so it is taken off the remaining clock before allocating.
+ */
+export function jieqiLiveMoveBudgetMs(input: {
+  ceilingMs: number;
+  remainingMs: number | null;
+  incrementMs: number;
+  waitedMs?: number;
+}): number {
+  const { ceilingMs, remainingMs, incrementMs, waitedMs = 0 } = input;
+  return budgetForMove({
+    remainingMs: remainingMs === null ? null : Math.max(0, remainingMs - waitedMs),
+    incrementMs,
+    ceilingMs,
+    reserveMs: CLOCK_SAFETY_MS,
+    floorMs: MIN_MOVETIME_MS,
+  }).computeBudgetMs;
+}
 
 export async function playJieqiEngineMoveIfReady(
   ctx: JieqiEngineContext,
@@ -210,13 +236,9 @@ export async function playJieqiEngineMoveIfReady(
   // tier's search DEPTH (set inside jieqiLiveEngineMove); this movetime is the
   // latency ceiling + time-pressure guard. Existing ceiling preserved —
   // behavior-neutral for untimed play; adds increment awareness + graceful shrink.
-  const { computeBudgetMs: movetimeMs } = budgetForMove({
-    remainingMs,
-    incrementMs,
-    ceilingMs: tier.movetimeMs,
-    reserveMs: CLOCK_SAFETY_MS,
-    floorMs: MIN_MOVETIME_MS,
-  });
+  const budgetInput = { ceilingMs: tier.movetimeMs, remainingMs, incrementMs };
+  const movetimeMs = jieqiLiveMoveBudgetMs(budgetInput);
+  const budgetAfterWait = (waitedMs: number) => jieqiLiveMoveBudgetMs({ ...budgetInput, waitedMs });
 
   // Engine-move boundary contract (see engine-move-guard.ts): bounded retries,
   // validate every output against the kernel, FAIL CLOSED (resign + page) rather
@@ -231,7 +253,12 @@ export async function playJieqiEngineMoveIfReady(
   } = await resolveValidatedEngineMove<JieqiMove>({
     maxAttempts: ENGINE_MOVE_MAX_ATTEMPTS,
     requestMove: async () => {
-      const search = await moveProvider(engineId, fen, { movetimeMs, moves, newGame });
+      const search = await moveProvider(engineId, fen, {
+        movetimeMs,
+        budgetAfterWait,
+        moves,
+        newGame,
+      });
       lastSearch = search;
       return search.best;
     },
