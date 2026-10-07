@@ -839,7 +839,8 @@ export function duckXiangqiPositionRepetitionKey(state: DuckXiangqiGameState): s
   const parts: string[] = [];
   for (const square of allDuckXiangqiSquares()) {
     const piece = state.board[square];
-    if (piece) parts.push(`${square}:${piece.color[0]}${piece.role[0]}`);
+    // The whole role, not its first letter: chariot and cannon both start with c.
+    if (piece) parts.push(`${square}:${piece.color[0]}.${piece.role}`);
   }
   const turn = state.status.type === 'playing' ? state.status.turn : '-';
   return `${parts.join(',')}|duck:${state.duck ?? '-'}|${turn}`;
