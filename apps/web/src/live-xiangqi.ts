@@ -100,7 +100,9 @@ const xiangqiWebTenant: WebVariantTenant<XiangqiColor> = {
   selectInstruction: 'live.selectPieceThenDestination',
 };
 
-function xiangqiReasonPhrase(reason: string): TenantReasonKey {
+// Total over the reasons the standard kernel and the room emit, so the end line
+// never falls back to "the game rules" for a reason the game knows.
+export function xiangqiReasonPhrase(reason: string): TenantReasonKey {
   switch (reason) {
     case 'checkmate':
       return 'result.checkmate';
@@ -118,6 +120,8 @@ function xiangqiReasonPhrase(reason: string): TenantReasonKey {
       return 'result.threefoldRepetition';
     case 'chasing':
       return 'result.perpetualCheck';
+    case 'progress-clock':
+      return 'result.sixtyPliesNoCapture';
     default:
       return 'result.gameRules';
   }
