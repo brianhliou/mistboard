@@ -44,6 +44,14 @@ export type Announcement = {
 const baseAnnouncements: Announcement[] = [
   {
     date: '2026-10-07',
+    kind: 'update',
+    headline: 'Jieqi now has a repetition rule: perpetual check loses.',
+    body: 'Jieqi used to draw only after 120 plies without a capture, so a losing player could check forever and wait. Now the third repetition of a position ends the game. A player who gave check on every move of the cycle loses, as in xiangqi; any other repetition is a draw. Games started before the change keep the old rules.',
+    href: '/rules/jieqi',
+    cta: 'Read the rules',
+  },
+  {
+    date: '2026-10-07',
     kind: 'release',
     headline: "Master games now show the engine's advantage chart.",
     body: "Game chapters in Mistboard's own xiangqi studies now open with the advantage chart, the move marks and accuracy, as in a game review. Chapters set up from a position, such as compositions, have no chart. On the player pages, a board whose game is in the broadcast archive has the chart under it: click it to jump to any move, or hide it from the board menu.",

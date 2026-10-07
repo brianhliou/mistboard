@@ -695,7 +695,8 @@ describe('rules variant sidebar', () => {
     expect(pageText).not.toMatch(/\bsquares?\b/i);
     expect(pageText).toContain('starting point it occupies');
     expect(pageText).toContain('120 plies, or 60 moves by each player');
-    expect(pageText).toContain('Repeated positions do not trigger a separate automatic draw');
+    expect(pageText).toContain('Repetition follows xiangqi');
+    expect(pageText).toContain('perpetual check cannot save a lost game');
     const jieqiSvgs = [...page.querySelectorAll('.article-figure .xq-article-svg')];
     expect(jieqiSvgs.length).toBeGreaterThanOrEqual(4);
     // The shuffled-start board is the section hero (a single enlarged board,

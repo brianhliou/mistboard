@@ -124,8 +124,12 @@ export const jieqiArticle: Article = {
           },
           {
             kind: 'paragraph',
+            text: 'Mistboard automatically draws after 120 plies, or 60 moves by each player, without a capture.',
+          },
+          {
+            kind: 'paragraph',
             text:
-              'Mistboard automatically draws after 120 plies, or 60 moves by each player, without a capture. Repeated positions do not trigger a separate automatic draw.',
+              'Repetition follows xiangqi. On the third occurrence of the same position, a player who gave check on every one of their moves in the repeating cycle loses, so perpetual check cannot save a lost game. If both players checked throughout, or the cycle had no checks, the game is drawn. Perpetual chase without check is not ruled on and stays a draw.',
           },
         ],
       },

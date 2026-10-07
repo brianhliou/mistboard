@@ -19,12 +19,15 @@
 //   - Capturer-only reveal: if a dark piece is captured, only the capturer
 //     learns its identity. The owner never knew it, so they learn nothing.
 //
-// Deliberately NOT in this kernel (see commit fc810c8 "Document Jieqi long-beat
-// parity"): perpetual-check / long-beat repetition adjudication. Patched
-// Pikafish-jieqi is the behavioral oracle for that rule family and rated jieqi
-// is gated on fixture parity, so we do not hand-build a bespoke classifier here.
-// Automatic draws come only from the Guangdong/Tencent no-capture clock
-// (60 full moves = 120 plies without a capture).
+// Repetition (since 2026-10): a game created with `repetition: true` counts
+// positions, and the third occurrence of one ends it as 'repetition'. The
+// server's jieqi tenant then applies the xiangqi chasing rule on top: the side
+// that gave check on every one of its moves in the closing cycle loses
+// (jieqiPerpetualCheckLoser). Perpetual chase is not adjudicated, as in xiangqi
+// on this site. States made without the flag (replays, analysis, games created
+// before the rule) never end on repetition, so an old game replays to the end
+// it had. Automatic draws otherwise come from the Guangdong/Tencent no-capture
+// clock (60 full moves = 120 plies without a capture).
 //
 // This module owns canonical state (it knows every true identity). Hidden-info
 // masking lives entirely in getJieqiPlayerView; the server renders that view and
@@ -88,9 +91,12 @@ export type JieqiGameEndReason =
   | 'timeout'
   | 'resignation'
   | 'abandonment'
-  // Never produced by this kernel (it does not adjudicate repetition): an
-  // imported lab game whose own referee declared a threefold draw.
-  | 'repetition';
+  // Third occurrence of a position (games created with `repetition: true`), or
+  // an imported lab game whose own referee declared a threefold draw.
+  | 'repetition'
+  // Never produced by this kernel: the server tenant's perpetual-check loss, a
+  // 'repetition' the checking side manufactured (jieqiPerpetualCheckLoser).
+  | 'chasing';
 
 export type JieqiGameStatus =
   | { type: 'playing'; turn: JieqiColor }
@@ -117,6 +123,21 @@ export type JieqiGameState = {
   noCaptureClock: number;
   captures: JieqiCapture[];
   lastMove?: JieqiMove;
+  // Threefold-repetition bookkeeping, present only when the game enforces the
+  // rule. Both cover the positions since the last capture or reveal: neither can
+  // be undone, so no earlier position can recur. Keys spell every TRUE identity,
+  // face-down pieces included, so this is server-only state: no view builder
+  // reads it, and it must never reach a client.
+  positionCounts?: Record<string, number>;
+  repetitionLog?: JieqiRepetitionEntry[];
+};
+
+// One position in the repetition window, and the ply that produced it (absent
+// for the window's first position).
+export type JieqiRepetitionEntry = {
+  key: string;
+  mover?: JieqiColor;
+  gaveCheck?: boolean;
 };
 
 // ── Player view (hidden-info boundary) ──────────────────────────────────────
@@ -294,9 +315,16 @@ export function oppositeJieqiColor(color: JieqiColor): JieqiColor {
   return color === 'red' ? 'black' : 'red';
 }
 
+export type JieqiInitialStateOptions = {
+  // Enforce threefold repetition (the live rule for games created since
+  // 2026-10). Off by default so replays and analysis walk any move list.
+  repetition?: boolean;
+};
+
 export function createInitialJieqiState(
   gameId: string,
   deal: JieqiDeal = STANDARD_JIEQI_DEAL,
+  opts: JieqiInitialStateOptions = {},
 ): JieqiGameState {
   assertValidJieqiDeal(deal);
   const board: JieqiBoard = {};
@@ -314,7 +342,7 @@ export function createInitialJieqiState(
     board[sq] = { color: 'black', role: deal.black[i], faceDown: true };
     if (unknown.black.has(sq)) board[sq].unknown = true;
   });
-  return {
+  const state: JieqiGameState = {
     id: gameId,
     board,
     status: { type: 'playing', turn: 'red' },
@@ -322,6 +350,27 @@ export function createInitialJieqiState(
     noCaptureClock: 0,
     captures: [],
   };
+  if (opts.repetition) {
+    const key = jieqiPositionKey(board, 'red');
+    state.positionCounts = { [key]: 1 };
+    state.repetitionLog = [{ key }];
+  }
+  return state;
+}
+
+/**
+ * The repetition key: every piece with its TRUE role and face-down flag, plus
+ * the side to move. Server-only (it names hidden identities). A dark piece can
+ * only leave its square by revealing, so within one repetition window this
+ * distinguishes exactly the positions the masked board does.
+ */
+export function jieqiPositionKey(board: JieqiBoard, turn: JieqiColor): string {
+  const pieces = (Object.entries(board) as [JieqiSquare, JieqiPiece | undefined][])
+    .filter(([, piece]) => piece)
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([sq, p]) => `${sq}:${p!.color}.${p!.role}${p!.faceDown ? '.d' : ''}`)
+    .join(',');
+  return `${turn}|${pieces}`;
 }
 
 // ── Move generation ─────────────────────────────────────────────────────────
@@ -591,6 +640,28 @@ export function applyJieqiMove(
   const moveNumber = turn === 'black' ? state.moveNumber + 1 : state.moveNumber;
   const limit = opts.noCaptureClockLimit ?? DEFAULT_NO_CAPTURE_PLY_LIMIT;
 
+  // Repetition window: a capture or a reveal starts a new one (neither can be
+  // undone, so no earlier position can come back).
+  let positionCounts: Record<string, number> | undefined;
+  let repetitionLog: JieqiRepetitionEntry[] | undefined;
+  let repeatedThrice = false;
+  if (state.positionCounts) {
+    const key = jieqiPositionKey(board, next);
+    const nextGeneral = findJieqiGeneral(board, next);
+    const gaveCheck = nextGeneral ? isAttacked(board, turn, nextGeneral) : false;
+    const entry: JieqiRepetitionEntry = { key, mover: turn, gaveCheck };
+    const irreversible = wasCapture || state.board[move.from]?.faceDown === true;
+    if (irreversible) {
+      positionCounts = { [key]: 1 };
+      repetitionLog = [entry];
+    } else {
+      positionCounts = { ...state.positionCounts, [key]: (state.positionCounts[key] ?? 0) + 1 };
+      repetitionLog = [...(state.repetitionLog ?? []), entry];
+    }
+    repeatedThrice = (positionCounts[key] ?? 0) >= 3;
+  }
+
+  // Order: general capture > checkmate/stalemate > threefold > no-capture clock.
   let status: JieqiGameStatus = { type: 'playing', turn: next };
   if (captured?.role === 'general') {
     // Pathological under checkmate play, but score it as a win for safety.
@@ -599,6 +670,8 @@ export function applyJieqiMove(
     const general = findJieqiGeneral(board, next);
     const inCheck = general ? isAttacked(board, turn, general) : true;
     status = { type: 'finished', winner: turn, reason: inCheck ? 'checkmate' : 'stalemate' };
+  } else if (repeatedThrice) {
+    status = { type: 'finished', winner: null, reason: 'repetition' };
   } else if (noCaptureClock >= limit) {
     status = { type: 'finished', winner: null, reason: 'no-capture-clock' };
   }
@@ -611,7 +684,36 @@ export function applyJieqiMove(
     noCaptureClock,
     captures,
     lastMove: move,
+    ...(positionCounts ? { positionCounts, repetitionLog } : {}),
   };
+}
+
+// ── Perpetual-check adjudication ────────────────────────────────────────────
+
+/**
+ * Jieqi wins and losses follow xiangqi, so a perpetual check loses. When a game
+ * has just ended on 'repetition', take the cycle that closed it (the plies after
+ * the second-to-last occurrence of the repeated position, through the last) and
+ * name the side that gave check on every one of its own moves in it. Mutual
+ * perpetual check and check-free cycles return null: the draw stands. Mirrors
+ * xiangqiPerpetualCheckLoser; perpetual chase is not covered, as there.
+ */
+export function jieqiPerpetualCheckLoser(state: JieqiGameState): JieqiColor | null {
+  const log = state.repetitionLog;
+  if (!log || log.length === 0) return null;
+  const repeatedKey = log[log.length - 1]!.key;
+  const occurrences = log.flatMap((entry, i) => (entry.key === repeatedKey ? [i] : []));
+  if (occurrences.length < 3) return null;
+  const cycle = log.slice(occurrences[occurrences.length - 2]! + 1, occurrences.at(-1)! + 1);
+  const perpetualBy = (color: JieqiColor): boolean => {
+    const own = cycle.filter((entry) => entry.mover === color);
+    return own.length > 0 && own.every((entry) => entry.gaveCheck === true);
+  };
+  const red = perpetualBy('red');
+  const black = perpetualBy('black');
+  if (red && !black) return 'red';
+  if (black && !red) return 'black';
+  return null;
 }
 
 // ── Player view (redaction) ─────────────────────────────────────────────────

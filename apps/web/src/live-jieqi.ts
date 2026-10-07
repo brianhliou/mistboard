@@ -265,6 +265,10 @@ function jieqiReasonPhrase(reason: string): TenantReasonKey {
       return 'result.stalemate';
     case 'no-capture-clock':
       return 'result.noProgress';
+    case 'repetition':
+      return 'result.threefoldRepetition';
+    case 'chasing':
+      return 'result.perpetualCheck';
     case 'timeout':
       return 'result.timeout';
     case 'resignation':

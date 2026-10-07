@@ -35,6 +35,10 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-10-07 (jieqi repetition) ── 长将 / 半回合 / 重复局面 follow the jieqi rules article.
+  'Jieqi now has a repetition rule: perpetual check loses.': '揭棋新增重复局面规则：长将判负。',
+  'Jieqi used to draw only after 120 plies without a capture, so a losing player could check forever and wait. Now the third repetition of a position ends the game. A player who gave check on every move of the cycle loses, as in xiangqi; any other repetition is a draw. Games started before the change keep the old rules.':
+    '以前揭棋只有连续 120 个半回合没有吃子才自动判和，输棋的一方可以一直将军拖到和棋。现在同一局面第三次出现时对局结束。在重复循环中每一步都将军的一方判负，与象棋相同；其他重复局面判和。规则更新前开始的对局仍按旧规则进行。',
   // ── 2026-10-06 (master-game charts; Tony Fung; jieqi correspondence) ── 优势图 / 评注 / 准确率 / 研习 /
   // 直播档案 / 揭棋通信对局 follow the review catalog, nav, the tony-fung-ga-zen article and home.corrTitle.
   "Master games now show the engine's advantage chart.": '大师对局现在显示引擎的优势图。',
@@ -439,6 +443,10 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-10-07 (jieqi repetition) ── 長將 / 半回合 / 重複局面 follow the jieqi rules article.
+  'Jieqi now has a repetition rule: perpetual check loses.': '揭棋新增重複局面規則：長將判負。',
+  'Jieqi used to draw only after 120 plies without a capture, so a losing player could check forever and wait. Now the third repetition of a position ends the game. A player who gave check on every move of the cycle loses, as in xiangqi; any other repetition is a draw. Games started before the change keep the old rules.':
+    '以前揭棋只有連續 120 個半回合沒有吃子才自動判和，輸棋的一方可以一直將軍拖到和棋。現在同一局面第三次出現時對局結束。在重複循環中每一步都將軍的一方判負，與象棋相同；其他重複局面判和。規則更新前開始的對局仍按舊規則進行。',
   // ── 2026-10-06 (master-game charts; Tony Fung; jieqi correspondence) ── 優勢圖 / 評註 / 準確率 / 研習 /
   // 直播檔案 / 揭棋通信對局 follow the review catalog, nav, the tony-fung-ga-zen article and home.corrTitle.
   "Master games now show the engine's advantage chart.": '大師對局現在顯示引擎的優勢圖。',
