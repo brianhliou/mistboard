@@ -1,6 +1,7 @@
 import {
   ANTI_GAME_2M,
   ANTI_GAME_5M,
+  ANTI_GAME_SET_STRINGS,
   ANTI_PROOF_LINE,
   ANTI_XIANGQI_DEAD,
   ANTI_XIANGQI_FORK_FRAMES,
@@ -235,6 +236,22 @@ export const antiXiangqiArticle: Article = {
           kind: 'paragraph',
           text: 'From each of the 70 decisive endings, with a budget of a million positions, 63 proofs closed, 7 ran out of budget, and none was refuted. The median proof is 19 positions, a single line in which every defending reply is compelled; the largest is the 1,864 of the chariot recapture. The checker passes all 63. The fork table is those values backed up the chain from the 100,000-node sweep, and scoring it from the million-node sweep changes no value within eight plies of the array.',
         },
+      ],
+    },
+    {
+      heading: 'Every game, to step through',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'Every game this article rests on is in the viewer below: the engine against itself at one, two and five million nodes a move; a game from each of the 83 endings of the opening chain; the 20 ladder games, where a strong engine met a weak one from random openings; and the main line of each of the 63 proofs. It opens on the 2M game. Pick any other from the list.',
+        },
+        {
+          kind: 'step-game-set',
+          load: () => import('../../anti-xiangqi-games.js'),
+          strings: ANTI_GAME_SET_STRINGS,
+          caption:
+            'All 169 games, each replayed through the rule kernel. The arrow keys step through the one on the board.',
+        } as ArticleBlock,
       ],
     },
     {

@@ -3288,6 +3288,42 @@ const ZH_HANS: Record<string, string> = {
   'The proofs': '证明',
   'From each of the 70 decisive endings, with a budget of a million positions, 63 proofs closed, 7 ran out of budget, and none was refuted. The median proof is 19 positions, a single line in which every defending reply is compelled; the largest is the 1,864 of the chariot recapture. The checker passes all 63. The fork table is those values backed up the chain from the 100,000-node sweep, and scoring it from the million-node sweep changes no value within eight plies of the array.':
     '从 70 个分出胜负的终点各自出发，预算为一百万个局面：63 个证明闭合，7 个耗尽预算，没有一个被推翻。证明的中位规模是 19 个局面，是一条单线，防守方的每个应着都是被迫的；最大的是车吃回那一支的 1,864 个局面。校验器 63 个全部通过。分叉表就是这些价值从 100,000 节点扫描沿连锁回推的结果；改用一百万节点扫描评分，在距初始阵型八步以内没有任何价值改变。',
+  'Every game, to step through': '每一盘棋，逐步回放',
+  'Every game this article rests on is in the viewer below: the engine against itself at one, two and five million nodes a move; a game from each of the 83 endings of the opening chain; the 20 ladder games, where a strong engine met a weak one from random openings; and the main line of each of the 63 proofs. It opens on the 2M game. Pick any other from the list.':
+    '本文依据的每一盘棋都在下面的查看器里：引擎每着一百万、两百万和五百万节点的自战对局；开局连锁 83 个终点各一盘；20 盘阶梯对局，即强引擎从随机开局对阵弱引擎；以及 63 个证明各自的主变。查看器先打开 2M 那盘。列表里的任何一盘都可以选。',
+  'All 169 games, each replayed through the rule kernel. The arrow keys step through the one on the board.':
+    '全部 169 盘棋，每一盘都经规则内核重放。方向键可以逐步走棋盘上的这一盘。',
+  'by extinction': '全灭',
+  'by the progress clock': '无吃子步数到限',
+  'by repetition': '重复局面',
+  Game: '对局',
+  'Best play, engine against itself': '最佳着法：引擎自战',
+  'Every ending of the opening chain (%1), engine at 100k':
+    '开局连锁的每个终点（%1），引擎每着 100k 节点',
+  'Ladder: 100k against 10k nodes from eight random plies (20)':
+    '阶梯对局：100k 对 10k 节点，前八步随机（20）',
+  'Proof lines: the certificate’s main line (%1)': '证明线：证明凭证的主变（%1）',
+  '%1M nodes a move, %2 plies': '每着 %1M 节点，%2 步',
+  'ending at ply %1 #%2: stall, %3 at %4': '第 %1 步终点 #%2：僵局，第 %4 步%3',
+  'ending at ply %1 #%2: %3 in %4': '第 %1 步终点 #%2：%3，共 %4 步',
+  'ending at ply %1 #%2: %3 in %4, proven': '第 %1 步终点 #%2：%3，共 %4 步，已证明',
+  'pair %1, 100k as %2: %3 in %4': '第 %1 对，100k 执%2：%3，共 %4 步',
+  'ending at ply %1 #%2: %3, %4 positions': '第 %1 步终点 #%2：%3，%4 个局面',
+  '%1 %2 after %3 plies, %4 million nodes a move for both sides.':
+    '%3 步后%1（%2），双方每着 %4M 节点。',
+  '%1 %2 after %3 plies. The chain ended at ply %4.': '%3 步后%1（%2）。连锁在第 %4 步结束。',
+  '%1 %2 after %3 plies. The chain ended at ply %4; the loss from there is proven.':
+    '%3 步后%1（%2）。连锁在第 %4 步结束；从那里起的输棋已被证明。',
+  '%1 %2 after %3 plies. The first eight plies were random; 100k nodes played %4, 10k the other side.':
+    '%3 步后%1（%2）。前八步是随机的；100k 节点执%4，10k 执另一方。',
+  'The engine opened 1. Cxh10; shown as its mirror image so the files match the boards in the post.':
+    '引擎实际以 1. Cxh10 开局；这里按镜像显示，让纵线与文中的棋盘一致。',
+  '%1 by force from the ending at ply %2: the certificate covers %3 positions, and this is its main line, every defender reply here being one the certificate answers.':
+    '从第 %2 步的终点起，%1已成定局：证明凭证覆盖 %3 个局面，这是它的主变，这里防守方的每个应着都是凭证有答案的。',
+  'Fairy-Stockfish, 100k nodes': 'Fairy-Stockfish，100k 节点',
+  'Fairy-Stockfish, 10k nodes': 'Fairy-Stockfish，10k 节点',
+  'Fairy-Stockfish, %1M nodes': 'Fairy-Stockfish，%1M 节点',
+  'the proof': '证明',
   'Everything above is in one repository: the rule kernel, the three Fairy-Stockfish stanzas, all 166 endings of the opening chain, one engine game from each ending at each budget, every proof certificate, and the games in a viewer that opens from the folder. `npm run verify` replays every certificate against the rules in a few seconds and reports 63, 63, 20 and 7 valid, and the README has the four commands that reproduce the sweep and the proofs with a Fairy-Stockfish binary.':
     '上面的一切都在一个代码库里：规则内核，三段 Fairy-Stockfish 变体配置，开局连锁的全部 166 个终点，每个终点在每种预算下各一盘引擎对局，每一份证明凭证，以及可以直接从该目录打开的对局浏览器。`npm run verify` 几秒钟内就把每一份凭证对照规则重放一遍，并报告 63、63、20 和 7 项有效；README 里有四条命令，配合一个 Fairy-Stockfish 可执行文件即可复现扫描与证明。',
   'If you can show a third surviving opening, a defence in any certificate, or a win for either side from the positions above, open an issue there. This page will say so.':
@@ -7084,6 +7120,42 @@ const ZH_HANT: Record<string, string> = {
   'The proofs': '證明',
   'From each of the 70 decisive endings, with a budget of a million positions, 63 proofs closed, 7 ran out of budget, and none was refuted. The median proof is 19 positions, a single line in which every defending reply is compelled; the largest is the 1,864 of the chariot recapture. The checker passes all 63. The fork table is those values backed up the chain from the 100,000-node sweep, and scoring it from the million-node sweep changes no value within eight plies of the array.':
     '從 70 個分出勝負的終點各自出發，預算為一百萬個局面：63 個證明閉合，7 個耗盡預算，沒有一個被推翻。證明的中位規模是 19 個局面，是一條單線，防守方的每個應著都是被迫的；最大的是車吃回那一支的 1,864 個局面。校驗器 63 個全部透過。分叉表就是這些價值從 100,000 節點掃描沿連鎖回推的結果；改用一百萬節點掃描評分，在距初始陣型八步以內沒有任何價值改變。',
+  'Every game, to step through': '每一盤棋，逐步回放',
+  'Every game this article rests on is in the viewer below: the engine against itself at one, two and five million nodes a move; a game from each of the 83 endings of the opening chain; the 20 ladder games, where a strong engine met a weak one from random openings; and the main line of each of the 63 proofs. It opens on the 2M game. Pick any other from the list.':
+    '本文依據的每一盤棋都在下面的檢視器裡：引擎每著一百萬、兩百萬和五百萬節點的自戰對局；開局連鎖 83 個終點各一盤；20 盤階梯對局，即強引擎從隨機開局對陣弱引擎；以及 63 個證明各自的主變。檢視器先打開 2M 那盤。列表裡的任何一盤都可以選。',
+  'All 169 games, each replayed through the rule kernel. The arrow keys step through the one on the board.':
+    '全部 169 盤棋，每一盤都經規則內核重放。方向鍵可以逐步走棋盤上的這一盤。',
+  'by extinction': '全滅',
+  'by the progress clock': '無吃子步數到限',
+  'by repetition': '重複局面',
+  Game: '對局',
+  'Best play, engine against itself': '最佳著法：引擎自戰',
+  'Every ending of the opening chain (%1), engine at 100k':
+    '開局連鎖的每個終點（%1），引擎每著 100k 節點',
+  'Ladder: 100k against 10k nodes from eight random plies (20)':
+    '階梯對局：100k 對 10k 節點，前八步隨機（20）',
+  'Proof lines: the certificate’s main line (%1)': '證明線：證明憑證的主變（%1）',
+  '%1M nodes a move, %2 plies': '每著 %1M 節點，%2 步',
+  'ending at ply %1 #%2: stall, %3 at %4': '第 %1 步終點 #%2：僵局，第 %4 步%3',
+  'ending at ply %1 #%2: %3 in %4': '第 %1 步終點 #%2：%3，共 %4 步',
+  'ending at ply %1 #%2: %3 in %4, proven': '第 %1 步終點 #%2：%3，共 %4 步，已證明',
+  'pair %1, 100k as %2: %3 in %4': '第 %1 對，100k 執%2：%3，共 %4 步',
+  'ending at ply %1 #%2: %3, %4 positions': '第 %1 步終點 #%2：%3，%4 個局面',
+  '%1 %2 after %3 plies, %4 million nodes a move for both sides.':
+    '%3 步後%1（%2），雙方每著 %4M 節點。',
+  '%1 %2 after %3 plies. The chain ended at ply %4.': '%3 步後%1（%2）。連鎖在第 %4 步結束。',
+  '%1 %2 after %3 plies. The chain ended at ply %4; the loss from there is proven.':
+    '%3 步後%1（%2）。連鎖在第 %4 步結束；從那裡起的輸棋已被證明。',
+  '%1 %2 after %3 plies. The first eight plies were random; 100k nodes played %4, 10k the other side.':
+    '%3 步後%1（%2）。前八步是隨機的；100k 節點執%4，10k 執另一方。',
+  'The engine opened 1. Cxh10; shown as its mirror image so the files match the boards in the post.':
+    '引擎實際以 1. Cxh10 開局；這裡按映象顯示，讓縱線與文中的棋盤一致。',
+  '%1 by force from the ending at ply %2: the certificate covers %3 positions, and this is its main line, every defender reply here being one the certificate answers.':
+    '從第 %2 步的終點起，%1已成定局：證明憑證覆蓋 %3 個局面，這是它的主變，這裡防守方的每個應著都是憑證有答案的。',
+  'Fairy-Stockfish, 100k nodes': 'Fairy-Stockfish，100k 節點',
+  'Fairy-Stockfish, 10k nodes': 'Fairy-Stockfish，10k 節點',
+  'Fairy-Stockfish, %1M nodes': 'Fairy-Stockfish，%1M 節點',
+  'the proof': '證明',
   'Everything above is in one repository: the rule kernel, the three Fairy-Stockfish stanzas, all 166 endings of the opening chain, one engine game from each ending at each budget, every proof certificate, and the games in a viewer that opens from the folder. `npm run verify` replays every certificate against the rules in a few seconds and reports 63, 63, 20 and 7 valid, and the README has the four commands that reproduce the sweep and the proofs with a Fairy-Stockfish binary.':
     '上面的一切都在一個程式碼庫裡：規則核心，三段 Fairy-Stockfish 變體配置，開局連鎖的全部 166 個終點，每個終點在每種預算下各一盤引擎對局，每一份證明憑證，以及可以直接從該目錄開啟的對局瀏覽器。`npm run verify` 幾秒鐘內就把每一份憑證對照規則重放一遍，並報告 63、63、20 和 7 項有效；README 裡有四條命令，配合一個 Fairy-Stockfish 可執行檔案即可復現掃描與證明。',
   'If you can show a third surviving opening, a defence in any certificate, or a win for either side from the positions above, open an issue there. This page will say so.':

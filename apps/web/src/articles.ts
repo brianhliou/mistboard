@@ -21,6 +21,7 @@ import './community-rail.css';
 import './articles.css';
 import { localizeAnnouncementString } from './announcement-i18n.js';
 import { type Announcement, announcements } from './announcements.js';
+import { mountLazyStepGameSet, type StepGameSetController } from './article-game-set.js';
 import {
   type ArticleLang,
   localizedArticleHref,
@@ -57,6 +58,7 @@ import {
   type RawSvgStepperBlock,
   type RawSvgStepperStep,
   type StaticBoardsBlock,
+  type StepGameSetBlock,
   type SubHeadingBlock,
   type SvgRowBlock,
   type TableBlock,
@@ -1331,7 +1333,8 @@ type PendingBlock =
   | JieqiReplayBlock
   | BanqiReplayBlock
   | JungleReplayBlock
-  | JungleFlipReplayBlock;
+  | JungleFlipReplayBlock
+  | StepGameSetBlock;
 type PendingMount = {
   block: PendingBlock;
   lang?: ArticleLang;
@@ -1351,6 +1354,7 @@ function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElement {
   if (block.kind === 'raw-svg') return renderRawSvgBlock(block, lang);
   if (block.kind === 'svg-row') return renderSvgRowBlock(block, lang);
   if (block.kind === 'raw-svg-stepper') return renderRawSvgStepperBlock(block, lang);
+  if (block.kind === 'step-game-set') return renderStepGameSetBlock(block, lang);
   if (block.kind === 'code') return renderCodeBlock(block);
   if (block.kind === 'embed') return renderEmbedBlock(block);
   if (block.kind === 'table') return renderTableBlock(block);
@@ -1502,6 +1506,25 @@ function renderHordeXiangqiReplayBlock(
   const figure = document.createElement('figure');
   figure.className = 'article-figure article-figure-interactive article-figure-xq';
   figure.dataset.pendingWidget = 'horde-xiangqi-replay';
+
+  const mountTarget = document.createElement('div');
+  mountTarget.className = 'article-interactive-target';
+  figure.append(mountTarget);
+
+  if (block.caption) {
+    const cap = document.createElement('figcaption');
+    cap.className = 'article-figure-caption';
+    cap.textContent = block.caption;
+    figure.append(cap);
+  }
+  rememberPendingMount(figure, block, lang);
+  return figure;
+}
+
+function renderStepGameSetBlock(block: StepGameSetBlock, lang?: ArticleLang): HTMLElement {
+  const figure = document.createElement('figure');
+  figure.className = 'article-figure article-figure-interactive article-figure-xq';
+  figure.dataset.pendingWidget = 'step-game-set';
 
   const mountTarget = document.createElement('div');
   mountTarget.className = 'article-interactive-target';
@@ -2236,6 +2259,7 @@ export function mountPendingWidgets(
   | BanqiReplayController
   | JungleReplayController
   | JungleFlipReplayController
+  | StepGameSetController
 > {
   const controllers: Array<
     | StepperController
@@ -2246,6 +2270,7 @@ export function mountPendingWidgets(
     | BanqiReplayController
     | JungleReplayController
     | JungleFlipReplayController
+    | StepGameSetController
   > = [];
   const pending = root.querySelectorAll<HTMLElement>('[data-pending-widget]');
   pending.forEach((figure) => {
@@ -2268,6 +2293,14 @@ export function mountPendingWidgets(
       controllers.push(mountDuckXiangqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'horde-xiangqi-replay') {
       controllers.push(mountHordeXiangqiReplay(target, block.spec, { lang }));
+    } else if (block.kind === 'step-game-set') {
+      controllers.push(
+        mountLazyStepGameSet(target, block.load, {
+          lang,
+          strings: block.strings,
+          title: block.title,
+        }),
+      );
     } else if (block.kind === 'atomic-xiangqi-replay') {
       controllers.push(mountAtomicXiangqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'chess-replay') {

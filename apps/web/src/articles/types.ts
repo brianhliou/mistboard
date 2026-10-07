@@ -17,6 +17,7 @@ import type { ChessReplaySpec } from '../chess-replay.js';
 import type { CrazyhouseXiangqiReplaySpec } from '../crazyhouse-xiangqi-replay.js';
 import type { DuckXiangqiReplaySpec } from '../duck-xiangqi-replay.js';
 import type { FortressXiangqiReplaySpec } from '../fortress-xiangqi-replay.js';
+import type { StepGameSetModule } from '../article-game-set.js';
 import type { HordeXiangqiReplaySpec } from '../horde-xiangqi-replay.js';
 import type { Locale } from '../i18n/locale.js';
 import type { JieqiReplaySpec } from '../jieqi-replay.js';
@@ -284,6 +285,18 @@ export type RawSvgStepperBlock = {
   caption?: string;
 };
 
+// Many games behind one step card with a picker. The records load on demand
+// (`load`, a dynamic import, so they get their own chunk); they carry template
+// keys and arguments, and `strings` holds the English templates here in the
+// article, where the translator reaches them.
+export type StepGameSetBlock = {
+  kind: 'step-game-set';
+  load: () => Promise<StepGameSetModule>;
+  strings: Record<string, string>;
+  title?: string;
+  caption?: string;
+};
+
 // Code/data block — for inline source snippets, captured payloads, or any
 // monospace content. `text` is rendered verbatim inside <pre><code>; the
 // renderer escapes it. Use `language` for syntax-highlighting hints (the
@@ -382,6 +395,7 @@ export type ArticleBlock =
   | RawSvgBlock
   | SvgRowBlock
   | RawSvgStepperBlock
+  | StepGameSetBlock
   | XiangqiReplayBlock
   | ChessReplayBlock
   | FortressXiangqiReplayBlock

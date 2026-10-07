@@ -2386,6 +2386,20 @@
   font-weight: 600;
 }
 
+.article-step-card-picker-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+  text-align: center;
+}
+
+/* A game set before its records arrive: hold roughly the card's height so
+   the page does not jump when it mounts. */
+.article-step-card-loading {
+  min-height: 420px;
+}
+
 .article-step-card-picker-blurb {
   max-width: 560px;
   margin: 2px 0 0;

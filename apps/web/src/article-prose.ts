@@ -117,6 +117,13 @@ const BLOCK_PROSE: {
       return n && !isMoveNotation(n) ? [n] : [];
     }),
   ],
+  // Every template a record can name: the picker's groups and options, the
+  // sentence under it, the seats and the result foot.
+  'step-game-set': (b) => [
+    ...caption(b),
+    ...(b.title ? [b.title] : []),
+    ...Object.values(b.strings),
+  ],
   'xq-replay': replay,
   'fortress-xiangqi-replay': replay,
   'crazyhouse-xiangqi-replay': replay,
