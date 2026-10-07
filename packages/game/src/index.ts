@@ -67,4 +67,5 @@ export {
   type XiangqiRuleKernel,
   type XiangqiRuleState,
 } from './xiangqi-rule-kernel.js';
+export * from './xiangqi-tablebase.js';
 export * from './xiangqi-uci.js';

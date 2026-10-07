@@ -56,8 +56,10 @@ export const SHOW_PV1_REPLY_SEGMENT = false;
 // moves within 20cp were shown as three playable and two not. Bounded in
 // practice by the slider's max and by the cutoff.
 
-/** The best line: fixed weight, always drawn. */
-const BEST_STYLE = { opacity: 0.4, width: 14 } as const;
+/** The best line: fixed weight, always drawn. Exported as the shape every
+ *  hover preview borrows (review/hover-arrow.ts), so a previewed move and the
+ *  engine's pick are the same arrow in different ink. */
+export const BEST_STYLE = { opacity: 0.4, width: 14 } as const;
 
 /** The best ACTION when it has no travel (a flip, a drop): a ring on one point.
  *  It deliberately does NOT inherit BEST_STYLE's opacity. An arrow is 14 units

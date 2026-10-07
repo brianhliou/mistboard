@@ -25,11 +25,23 @@ import {
   type XiangqiColor,
   type XiangqiGameState,
   type XiangqiMove,
+  type XiangqiTablebaseResponse,
   xiangqiMoveToFsfUci,
 } from '@mistboard/game';
 import { currentXiangqiNotationStyle } from '../xiangqi-notation.js';
 import type { CevalHandle } from './engine/ceval-types.js';
 import type { PracticeConfig, PracticeEval } from './practice-play.js';
+import { fetchXiangqiTablebase } from './xiangqi-tablebase-client.js';
+
+/** How long practice waits on the tablebase before grading by the engine alone.
+ *  Above the server's own queue cap plus its chessdb timeout, so a slow but
+ *  live answer still lands; past it the move is graded as it always was. */
+export const PRACTICE_TABLEBASE_TIMEOUT_MS = 4500;
+
+export type XiangqiTablebaseLookupFn = (
+  truth: XiangqiGameState,
+  signal?: AbortSignal,
+) => Promise<XiangqiTablebaseResponse>;
 
 /**
  * Depth the defender's move and the goal verdict are both taken at. lila uses 16
@@ -50,20 +62,51 @@ export function xiangqiPracticeTermination(
 }
 
 /**
- * Evaluate one position with a client engine, at the practice depth.
+ * Evaluate one position with a client engine, at the practice depth, and look
+ * it up in the tablebase alongside.
  *
  * The score is returned exactly as the engine gave it — side-to-move POV — and
  * the runner flips it. `bestUci` is the first move of the top line, which is
- * what the defender plays.
+ * what the defender plays. `exact` is set only from an exact tablebase answer
+ * (also side to move); a miss, an outage or the timeout leave it null, and the
+ * runner grades by the engine as before.
  */
 export async function evaluateXiangqiForPractice(
   ceval: CevalHandle,
   truth: XiangqiGameState,
+  lookup: XiangqiTablebaseLookupFn = fetchXiangqiTablebase,
 ): Promise<PracticeEval> {
   // A finished position has no move to search; asking anyway wastes a search and
   // some engines answer with a stale line.
   if (truth.status.type !== 'playing') return { cp: null, mate: null, bestUci: null };
 
+  const [engine, exact] = await Promise.all([
+    searchForPractice(ceval, truth),
+    exactResult(lookup, truth),
+  ]);
+  return { ...engine, exact };
+}
+
+async function exactResult(
+  lookup: XiangqiTablebaseLookupFn,
+  truth: XiangqiGameState,
+): Promise<PracticeEval['exact']> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PRACTICE_TABLEBASE_TIMEOUT_MS);
+  try {
+    const response = await lookup(truth, controller.signal);
+    return response.status === 'exact' ? { result: response.result } : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function searchForPractice(
+  ceval: CevalHandle,
+  truth: XiangqiGameState,
+): Promise<PracticeEval> {
   const update = await ceval.evaluate({
     movesUci: [],
     initialFen: standardXiangqiEngineFen(truth),

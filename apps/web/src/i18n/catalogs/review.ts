@@ -515,6 +515,21 @@ export const EN_REVIEW = {
   'practice.verdictMistake': 'That lets it slip. Take the move back and look again.',
   'practice.verdictInaccuracy': 'Not the cleanest, but the exercise is still alive.',
   'practice.verdictGood': 'Good. Keep going.',
+  'analysis.tablebase.title': 'Tablebase',
+  'analysis.tablebase.win': 'Win',
+  'analysis.tablebase.draw': 'Draw',
+  'analysis.tablebase.loss': 'Loss',
+  'analysis.tablebase.mateIn': 'Mate in {moves}',
+  'analysis.tablebase.matedIn': 'Mated in {moves}',
+  'analysis.tablebase.credit': 'chessdb.cn',
+  'analysis.tablebase.creditTitle':
+    'Exact endgame results from the Chinese Chess Cloud Database (chessdb.cn).',
+  'practice.tablebase.keepsWin': 'Good. The tablebase says this keeps the win.',
+  'practice.tablebase.holdsDraw': 'Good. The tablebase says this holds the draw.',
+  'practice.tablebase.throwsWin':
+    'The tablebase says this throws the win away: it is only a draw now. Take the move back and look again.',
+  'practice.tablebase.loses':
+    'The tablebase says this move loses. Take the move back and look again.',
   // Study surface chrome. Study/chapter TEXT is author-supplied and localized
   // per study (study-i18n.ts); these are the fixed labels around it.
   'study.chapterCount': '{count} Chapters',
