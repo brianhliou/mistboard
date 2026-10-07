@@ -96,6 +96,19 @@ test('describes a valid plan in order, tracking chapters it adds and deletes', (
   ]);
 });
 
+test('a study op names the locales its i18n replaces, and refuses an overlay that would wipe them', () => {
+  const zh = { 'zh-hans': { name: '六局' }, 'zh-hant': { name: '六局' } };
+  assert.deepEqual(checkPlan(study(), plan([{ op: 'study', i18n: zh }])), [
+    'study i18n replaced: zh-hans, zh-hant',
+  ]);
+  for (const i18n of [{}, [], 'zh', { 'zh-hans': 'six' }, { _note: { x: 1 } }]) {
+    assert.throws(
+      () => checkPlan(study(), plan([{ op: 'study', i18n: i18n as Record<string, unknown> }])),
+      /i18n/,
+    );
+  }
+});
+
 test('rejects what the apply would fail on', () => {
   const s = study();
   assert.throws(() => checkPlan(s, plan([{ op: 'rename', chapter: 'zz', name: 'x' }])), /zz/);

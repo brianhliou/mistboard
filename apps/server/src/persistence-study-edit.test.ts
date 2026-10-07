@@ -44,7 +44,12 @@ definePersistenceTests('study edit', () => {
       {
         study: study.id,
         ops: [
-          { op: 'study', name: 'Seed v2', description: 'new' },
+          {
+            op: 'study',
+            name: 'Seed v2',
+            description: 'new',
+            i18n: { 'zh-hans': { name: '种子二', description: '新' } },
+          },
           { op: 'add', ref: 'two', name: 'Two', tree: tree('h3e3', 'h10g8') },
           { op: 'add', ref: 'three', name: 'Three', tree: tree('c4c5') },
           { op: 'tree', chapter: first, tree: tree('b3e3', 'b10c8') },
@@ -57,6 +62,7 @@ definePersistenceTests('study edit', () => {
     const after = (await getStudyById(study.id))!;
     assert.equal(after.name, 'Seed v2');
     assert.equal(after.description, 'new');
+    assert.deepEqual(after.i18n, { 'zh-hans': { name: '种子二', description: '新' } });
     assert.deepEqual(
       after.chapters.map((c) => c.name),
       ['Three', 'One, replayed', 'Two'],
