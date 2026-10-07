@@ -342,7 +342,6 @@
  * the green that means "your work is stored". */
 .study-actions__status[data-state="viewer"] {
   color: var(--site-text-soft, #888);
-  cursor: help;
 }
 .study-actions__status[data-state="error"],
 .study-actions__status[data-state="conflict"] {

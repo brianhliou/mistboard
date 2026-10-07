@@ -229,7 +229,6 @@
   line-height: 1.4;
   color: var(--site-muted);
   background: var(--site-surface);
-  cursor: help;
 }
 
 .engine-panel__lines {

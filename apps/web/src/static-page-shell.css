@@ -289,16 +289,12 @@
   border-radius: var(--site-radius);
   background: linear-gradient(180deg, var(--site-accent-soft), var(--site-panel) 120px);
   box-shadow: 0 1px 2px var(--site-shadow);
-  transition:
-    border-color 160ms ease,
-    box-shadow 160ms ease,
-    transform 160ms ease;
+  transition: border-color 160ms ease;
 }
 
+/* Hover only sharpens the border: no lift, no shadow growth. */
 .static-prose .champions-hero:hover {
   border-color: var(--champions-gold-border);
-  box-shadow: 0 6px 18px var(--site-shadow);
-  transform: translateY(-2px);
 }
 
 .static-prose .champions-hero-head {
@@ -584,10 +580,6 @@
   .static-prose .champions-btn,
   .static-prose .champions-open {
     transition: none;
-  }
-
-  .static-prose .champions-hero:hover {
-    transform: none;
   }
 }
 

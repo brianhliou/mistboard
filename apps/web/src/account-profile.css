@@ -2059,7 +2059,6 @@
   border-color: var(--site-border);
   background: transparent;
   color: var(--site-heading);
-  cursor: help;
 }
 
 .profile-game-row-win {
