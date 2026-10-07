@@ -72,9 +72,9 @@
     "status": "published"
   },
   "duck-xiangqi-game-tree": {
-    "title": "How much the duck adds to xiangqi’s game tree",
+    "title": "One Duck Xiangqi move is worth two xiangqi moves",
     "kind": "article",
-    "description": "One Duck Xiangqi move reaches more positions than two xiangqi moves. About half of them leave the opponent exactly the same choices, so a search can skip them. What is left still cuts how far an engine sees almost in half.",
+    "description": "Red’s first Duck Xiangqi turn reaches more positions than a full xiangqi move by each side. About half of them leave the opponent exactly the same choices, so a search can skip them. What is left still cuts how far an engine sees almost in half.",
     "status": "published"
   },
   "duck-xiangqi-strategy": {

@@ -39,11 +39,11 @@ export const duckXiangqiGameTreeArticle: Article = {
   kind: 'article',
   publisher: 'mistboard',
   boardFamily: 'xiangqi',
-  title: 'How much the duck adds to xiangqi’s game tree',
+  title: 'One Duck Xiangqi move is worth two xiangqi moves',
   cardTitle: 'Duck Xiangqi’s game tree',
   seoTitle: 'Duck Xiangqi’s Game Tree, Measured Against Xiangqi',
   summary:
-    'One Duck Xiangqi move reaches more positions than two xiangqi moves. About half of them leave the opponent exactly the same choices, so a search can skip them. What is left still cuts how far an engine sees almost in half.',
+    'Red’s first Duck Xiangqi turn reaches more positions than a full xiangqi move by each side. About half of them leave the opponent exactly the same choices, so a search can skip them. What is left still cuts how far an engine sees almost in half.',
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-10-07',
@@ -58,7 +58,7 @@ export const duckXiangqiGameTreeArticle: Article = {
   ],
   sections: [
     {
-      heading: 'One Duck Xiangqi move reaches more positions than two xiangqi moves',
+      heading: 'Red’s first turn alone makes 2,554 positions',
       blocks: [
         {
           kind: 'paragraph',
@@ -115,7 +115,7 @@ export const duckXiangqiGameTreeArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'So a search can look at one of them and skip the rest. Count every duck placement that leaves black the same replies once, and red’s 2,554 first turns come down to 1,310.',
+          text: 'So a search can look at one of them and skip the rest. Count every duck placement that leaves black the same replies once, and at the first move red’s 2,554 turns come down to 1,310.',
         },
         {
           kind: 'image-figure',
@@ -126,11 +126,20 @@ export const duckXiangqiGameTreeArticle: Article = {
       ],
     },
     {
-      heading: 'The same search sees 25 turns ahead in xiangqi and 14 in Duck Xiangqi',
+      heading: 'A duck away from your opponent’s pieces wastes half your turn',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'Later in the game the duck widens the tree even more. Xiangqi’s choices shrink as pieces come off the board. In Duck Xiangqi each capture also frees a point for the duck, so a turn stays nearly as wide as it was in the opening.',
+          text: 'The same board is a rule of thumb for players. Put the duck on a grey point and your opponent’s choices are exactly what they would be without it, so you have played a xiangqi move and passed on the rest of your turn. The duck earns its place in the paths of your opponent’s pieces: on the files their chariots and cannons use, and in front of their horses and elephants. At the start, the points that take the most away are on your opponent’s cannon row, where one duck cuts across both cannons at once.',
+        },
+      ],
+    },
+    {
+      heading: 'The duck’s share of the tree grows as pieces come off',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'To see past the opening, we had Fairy-Stockfish play 64 games of each against itself and counted the choices at every move. Xiangqi’s choices shrink as pieces come off the board. In Duck Xiangqi each capture also frees a point for the duck, so a turn stays nearly as wide as it was in the opening, and 200 half-moves in it has about 100 times the choices of a xiangqi move.',
         },
         {
           kind: 'image-figure',
@@ -139,6 +148,11 @@ export const duckXiangqiGameTreeArticle: Article = {
           caption:
             'Legal turns at each ply in 64 games per variant that Fairy-Stockfish played against itself, on a log scale. Games end at different lengths, so fewer games feed the right side of the chart.',
         },
+      ],
+    },
+    {
+      heading: 'The same search sees 25 turns ahead in xiangqi and 14 in Duck Xiangqi',
+      blocks: [
         {
           kind: 'paragraph',
           text: 'That width costs search depth. Given the same number of positions to look at, Fairy-Stockfish sees a little over half as far ahead in Duck Xiangqi. We counted depth in turns in both games, and a Duck Xiangqi turn includes the duck. A search that counted each set of equivalent duck placements once would win some of that depth back. We have not measured how much.',
@@ -160,7 +174,7 @@ export const duckXiangqiGameTreeArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The site’s own rules engine, the code that checks every move played here, counted the first move’s positions, and Fairy-Stockfish counted the deeper ones. Fairy-Stockfish also played the games at 100,000 positions a move, with its neural network off. Xiangqi counts are strictly legal, so a move that leaves your own general capturable does not count. Duck Xiangqi has no check rule (you win by capturing the general), so every piece move counts.',
+          text: 'The site’s own rules engine, the code that checks every move played here, counted the first move’s positions, and Fairy-Stockfish counted the deeper ones. Fairy-Stockfish also played the 64 games per variant, at 100,000 positions a move, with its neural network off. Xiangqi counts are strictly legal, so a move that leaves your own general capturable does not count. Duck Xiangqi has no check rule (you win by capturing the general), so every piece move counts.',
         },
         {
           kind: 'cta',
