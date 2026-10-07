@@ -14,6 +14,7 @@ import {
   type CevalUpdate,
   type CevalVariant,
   cevalEngineName,
+  cevalEngineUrl,
   cevalSupported,
   cevalSupportsInfinite,
   createCeval,
@@ -119,7 +120,19 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
   id.className = 'engine-panel__id';
   const nameLabel = document.createElement('div');
   nameLabel.className = 'engine-panel__name';
-  nameLabel.textContent = engineName;
+  const engineUrl = cevalEngineUrl(opts.variant);
+  if (engineUrl) {
+    // Credit the engine where it works (Pikafish: its home page).
+    const link = document.createElement('a');
+    link.className = 'engine-panel__name-link';
+    link.href = engineUrl;
+    link.target = '_blank';
+    link.rel = 'noreferrer noopener';
+    link.textContent = engineName;
+    nameLabel.append(link);
+  } else {
+    nameLabel.textContent = engineName;
+  }
   const sub = document.createElement('div');
   sub.className = 'engine-panel__sub';
   id.append(nameLabel, sub);

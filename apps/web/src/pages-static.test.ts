@@ -190,6 +190,32 @@ describe('about page platform activity', () => {
     expect(root.textContent).toContain('專案身份');
   });
 
+  it('credits Pikafish on the source page with its site, weights license and repository', () => {
+    const cases = [
+      ['/source', 'Pikafish by the Pikafish developers', 'https://www.pikafish.com/en/list.html'],
+      ['/zh-hans/source', '皮卡鱼（Pikafish）', 'https://www.pikafish.com/list.html'],
+      ['/zh-hant/source', '皮卡魚（Pikafish）', 'https://www.pikafish.com/zh-hant/list.html'],
+    ] as const;
+    for (const [path, credit, licenseUrl] of cases) {
+      window.history.replaceState(null, '', path);
+      const root = document.createElement('main');
+      document.body.append(root);
+      mountSource(root);
+
+      const line = root.querySelector('.source-credit-pikafish');
+      expect(line, path).not.toBeNull();
+      expect(line?.textContent).toContain(credit);
+      const hrefs = [...(line?.querySelectorAll('a') ?? [])].map((a) => a.getAttribute('href'));
+      expect(hrefs).toEqual([
+        'https://github.com/official-pikafish/Pikafish',
+        'https://pikafish.com/',
+        licenseUrl,
+      ]);
+      expect(line?.textContent).not.toContain('\u2014');
+      root.remove();
+    }
+  });
+
   it('renders feed and contact inside the static rail', async () => {
     window.history.replaceState(null, '', '/feed');
 

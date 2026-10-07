@@ -55,6 +55,14 @@ export function pikafishEngineName(variant: CevalVariant): string | null {
   return isPikafishCevalVariant(variant) ? 'Pikafish' : null;
 }
 
+/** The project's home page: the analysis board names Pikafish with a link to
+ *  it wherever it analyses on the Pikafish net (credit, as /source does). */
+export const PIKAFISH_HOME_URL = 'https://pikafish.com/';
+
+export function pikafishEngineUrl(variant: CevalVariant): string | null {
+  return isPikafishCevalVariant(variant) ? PIKAFISH_HOME_URL : null;
+}
+
 /** Fairy-Stockfish a1-i10 → Pikafish a0-i9. Anything that is not a plain
  *  board move is passed through untouched. */
 export function fsfUciToPikafishUci(uci: string): string {

@@ -162,6 +162,26 @@ describe('createEnginePanel flip-game opening scores', () => {
   });
 });
 
+describe('createEnginePanel engine name', () => {
+  it('links Pikafish to its home page where xiangqi analyses on its net', () => {
+    const panel = createEnginePanel({ variant: 'xiangqi' });
+    const link = panel.el.querySelector<HTMLAnchorElement>('.engine-panel__name a');
+    expect(link?.textContent).toBe('Pikafish');
+    expect(link?.getAttribute('href')).toBe('https://pikafish.com/');
+    expect(link?.target).toBe('_blank');
+    expect(link?.rel).toContain('noopener');
+    panel.dispose();
+  });
+
+  it('keeps a plain label for engines other than Pikafish', () => {
+    const panel = createEnginePanel({ variant: 'fortressxiangqi' });
+    const name = panel.el.querySelector('.engine-panel__name');
+    expect(name?.querySelector('a')).toBeNull();
+    expect(name?.textContent).not.toBe('Pikafish');
+    panel.dispose();
+  });
+});
+
 describe('createEnginePanel arrow toggle', () => {
   const checkbox = (panel: { el: HTMLElement }): HTMLInputElement =>
     panel.el.querySelector('.engine-panel__setting-checkbox') as HTMLInputElement;

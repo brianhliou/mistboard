@@ -26,7 +26,12 @@ import type {
 import { cevalSupportsInfinite, depthForEffort } from './ceval-types.js';
 import { isMistyCevalVariant, MistyCeval, mistyEngineName } from './misty-ceval.js';
 import { createMultiPvBurstCollector, createThrottledEmitter } from './multipv-burst.js';
-import { isPikafishCevalVariant, PikafishCeval, pikafishEngineName } from './pikafish-ceval.js';
+import {
+  isPikafishCevalVariant,
+  PikafishCeval,
+  pikafishEngineName,
+  pikafishEngineUrl,
+} from './pikafish-ceval.js';
 import { isPikaJieqiCevalVariant, PikaJieQiCeval, pikaJieqiEngineName } from './pikajieqi-ceval.js';
 import { parseInfo } from './uci-info.js';
 
@@ -98,6 +103,11 @@ export function cevalEngineName(variant: CevalVariant): string {
     pikaJieqiEngineName(variant) ??
     CEVAL_ENGINE_NAME
   );
+}
+
+/** Where the engine name links to, for an engine whose credit asks for one. */
+export function cevalEngineUrl(variant: CevalVariant): string | null {
+  return pikafishEngineUrl(variant);
 }
 
 // --- low-level engine (singleton) ---------------------------------------------

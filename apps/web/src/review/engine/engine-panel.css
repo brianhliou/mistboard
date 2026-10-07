@@ -111,6 +111,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.engine-panel__name-link {
+  color: inherit;
+  text-decoration: none;
+}
+.engine-panel__name-link:hover,
+.engine-panel__name-link:focus-visible {
+  text-decoration: underline;
+}
 .engine-panel__sub {
   font-size: 11px;
   color: var(--site-muted);
