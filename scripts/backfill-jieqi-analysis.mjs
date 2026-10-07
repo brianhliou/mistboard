@@ -71,7 +71,22 @@ const flagValue = (flag) => {
 const regrade = has('--regrade-decisions');
 // A regrade is dry unless --apply; the warm-cache mode is live unless --dry-run.
 const dryRun = regrade ? !has('--apply') : has('--dry-run');
-const concurrency = Math.max(1, Number(flagValue('--concurrency')) || 1);
+const requestedConcurrency = Math.max(1, Number(flagValue('--concurrency')) || 1);
+// A regrade grades every game on the AB-JChess analysis pool (jieqi-engine.ts), one slot
+// by default with a 30s queue wait: a second worker only waits, times out and fails its
+// game (10-07: 9 of 11 failed at --concurrency 2). Never run more workers than slots.
+const abJchessAnalysisSlots = Math.max(
+  1,
+  Number(process.env.MISTBOARD_ABJCHESS_ANALYSIS_MAX_PROCESSES) || 1,
+);
+const concurrency = regrade
+  ? Math.min(requestedConcurrency, abJchessAnalysisSlots)
+  : requestedConcurrency;
+if (concurrency < requestedConcurrency) {
+  console.log(
+    `--concurrency ${requestedConcurrency} capped to ${concurrency}: the AB-JChess analysis pool has ${abJchessAnalysisSlots} slot(s)`,
+  );
+}
 const withDecisions = !has('--no-decisions');
 const onlyRoom = flagValue('--room');
 const limit = Number(flagValue('--limit')) || null;
