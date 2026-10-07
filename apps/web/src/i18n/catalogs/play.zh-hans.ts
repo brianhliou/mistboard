@@ -469,6 +469,7 @@ export const ZH_HANS_PLAY = {
   'live.unknownCaptured': '其中 {count} 枚已被吃，不知是哪几枚',
   'live.duckPlaceTitle': '现在放置鸭子',
   'live.duckPlaceBody': '任一空位皆可。放好鸭子之前，你的着法不会发出。',
+  'live.duckPlaceChip': '放鸭子',
   'live.checkTitle': '将军',
   'live.atomicCheckYour': '你的将帅下一步可能被吃或被炸。这样的重复将军会判负。',
   'live.atomicCheckColor': '{color}的将帅下一步可能被吃或被炸。这样的重复将军会判负。',

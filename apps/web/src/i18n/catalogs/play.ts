@@ -491,6 +491,7 @@ export const EN_PLAY = {
   'live.unknownCaptured': '{count} of these already taken, unknown which',
   'live.duckPlaceTitle': 'Now place the duck',
   'live.duckPlaceBody': 'Any empty point. Your move is not sent until you do.',
+  'live.duckPlaceChip': 'place duck',
   'live.checkTitle': 'Check',
   'live.atomicCheckYour':
     'Your general can be taken or blown up next move. A repeated check like this loses.',
@@ -789,6 +790,7 @@ export const CRITICAL_PLAY_I18N_KEYS = [
   'live.unknownCaptured',
   'live.duckPlaceTitle',
   'live.duckPlaceBody',
+  'live.duckPlaceChip',
   'live.checkTitle',
   'live.atomicCheckYour',
   'live.atomicCheckColor',
