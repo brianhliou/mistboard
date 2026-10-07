@@ -4,7 +4,6 @@ import {
   mountPracticeIndex,
   nextPracticeSlug,
   type PracticeSectionDto,
-  practiceSetTarget,
   practiceTileState,
 } from './practice-index.js';
 
@@ -159,19 +158,19 @@ describe('practice shelf', () => {
             title: 'Basic endgames',
             cards: [
               {
-                slug: 'endgames-wins-and-draws',
+                slug: 'endgames-soldier',
                 title: 'A',
                 blurb: 'a',
                 studyId: 'a',
-                exerciseCount: 26,
+                exerciseCount: 16,
                 solvedCount: 0,
               },
               {
-                slug: 'endgames-soldier',
+                slug: 'endgames-chariot',
                 title: 'B',
                 blurb: 'b',
                 studyId: 'b',
-                exerciseCount: 11,
+                exerciseCount: 14,
                 solvedCount: 0,
               },
             ],
@@ -186,7 +185,7 @@ describe('practice shelf', () => {
     // Nothing solved yet, so no progress line to draw.
     expect(first?.querySelector('.learn-xq-tile-line')).toBeNull();
     expect(second?.classList.contains('learn-xq-tile--future')).toBe(true);
-    expect(second?.querySelector('.learn-xq-ribbon')?.textContent).toBe('0 / 11');
+    expect(second?.querySelector('.learn-xq-ribbon')?.textContent).toBe('0 / 14');
     expect(second?.querySelector('.learn-xq-tile-ring')).toBeNull();
   });
 
@@ -249,33 +248,5 @@ describe('practiceTileState', () => {
     ];
     expect(nextPracticeSlug(sections)).toBe('two');
     expect(nextPracticeSlug([{ id: 'a', title: 'A', cards: [card('one', 4)] }])).toBeNull();
-  });
-});
-
-describe('practiceSetTarget', () => {
-  const sections = [
-    {
-      id: 'endgames',
-      title: 'Basic endgames',
-      cards: [
-        {
-          slug: 'endgames-wins-and-draws',
-          title: 'Wins and draws',
-          blurb: 'b',
-          studyId: 'abc123',
-          exerciseCount: 26,
-          solvedCount: 0,
-        },
-      ],
-    },
-  ];
-
-  it('sends ?set=<slug> to the study the slug resolves to', () => {
-    expect(practiceSetTarget(sections, '?set=endgames-wins-and-draws')).toBe('/study/abc123');
-  });
-
-  it('shows the shelf for no slug or one the catalogue does not resolve', () => {
-    expect(practiceSetTarget(sections, '')).toBeNull();
-    expect(practiceSetTarget(sections, '?set=endgames-unseeded')).toBeNull();
   });
 });

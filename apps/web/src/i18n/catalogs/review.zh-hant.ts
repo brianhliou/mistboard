@@ -56,7 +56,6 @@ export const ZH_HANT_REVIEW = {
   'practice.position.toEditor': '在棋盤編輯器裡擺一個局面',
   'practice.ribbon.done': '完成',
   'practice.ribbon.play': '開始',
-  'practice.card.winsAndDraws': '勝局取勝，和局守和',
   'practice.card.soldier': '兵不能後退',
   'practice.card.chariot': '單車就能取勝',
   'practice.card.horse': '當心蹩馬腿',

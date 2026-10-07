@@ -1,23 +1,29 @@
-// The 象棋残局 practice set: the 26 graded hub positions as one @mistboard
-// practice study, in teaching order, with the words each chapter opens on.
+// The /practice endgame shelf: five studies, one per attacking piece, each in
+// teaching order, with the words every chapter opens on.
 //
-// A sequence of exercises belongs in the study player, which already gives the
-// chapter rail, "#3 of 26" and Next without a page load; the endgames article
-// links into it once instead of linking each position to a bare practice page.
+// The shelf began as the basic-endgame corpus cut by `category` (32 positions,
+// seeded 2026-09). The 象棋残局 article then graded 26 positions of its own; 12
+// are the same boards as shelf chapters and the other 14 fold into the set of
+// their attacking piece here, so there is one shelf rather than a survey set
+// beside five deeper ones (Brian, 2026-10-07: "organize by piece").
+//
 // The server seeder (apps/server/src/seed-xiangqi-endgame-practice.ts) writes
-// exactly what this module returns, and the /practice catalogue points at the
-// study by XIANGQI_ENDGAME_PRACTICE_SLUG.
+// exactly what `xiangqiEndgamePracticeSets` returns into the existing studies,
+// in place, and the /practice catalogue points at each by its slug.
 //
-// Order: standard wins, then tricky wins, each easiest first by the database's
-// distance to mate for that exact position; then the standard draws, which you
-// hold as Black, in the hub's own order (soldier, horse, cannon, chariot).
+// Order inside a set: the wins, easiest first by the database's distance to mate
+// for that exact position, then the draws you hold as Black, in the order listed.
 //
 // zh is machine translation (2026-10-07), not native-reviewed. Terms follow the
 // basic-endgame study (apps/server/src/xiangqi-endgame-study-i18n.ts): 例胜 /
 // 巧胜 / 例和, 高兵, 士象全, 炮架; zh-Hant writes 砲 for the cannon there too.
 
-import { endgameEntryFen } from './xiangqi-endgame-corpus.js';
-import { type EndgameGrade, endgameHubEntry, XIANGQI_ENDGAME_HUB } from './xiangqi-endgame-hub.js';
+import {
+  type EndgameEntry,
+  endgameEntryFen,
+  XIANGQI_ENDGAME_CORPUS,
+} from './xiangqi-endgame-corpus.js';
+import { XIANGQI_ENDGAME_HUB } from './xiangqi-endgame-hub.js';
 import { XIANGQI_ENDGAME_HUB_CHECKS } from './xiangqi-endgame-hub-checks.js';
 
 export type EndgameText = { en: string; 'zh-Hans': string; 'zh-Hant': string };
@@ -26,20 +32,8 @@ function tri(en: string, hans: string, hant: string): EndgameText {
   return { en, 'zh-Hans': hans, 'zh-Hant': hant };
 }
 
-/** `studies.slug` of the set; the /practice catalogue and the article use it. */
-export const XIANGQI_ENDGAME_PRACTICE_SLUG = 'endgames-wins-and-draws';
-
 /** A draw chapter is held for this many of the learner's moves. */
 export const XIANGQI_ENDGAME_PRACTICE_DRAW_MOVES = 15;
-
-export const XIANGQI_ENDGAME_PRACTICE_SET = {
-  name: tri('Endgame wins and draws', '残局胜和定式', '殘局勝和定式'),
-  description: tri(
-    'Give mate as Red in the wins, easiest first, then hold the draws as Black for 15 moves.',
-    '胜局由易到难，你执红将死对方；和局你执黑守住15回合。',
-    '勝局由易到難，你執紅將死對方；和局你執黑守住15回合。',
-  ),
-} as const;
 
 /** Per hub row: the manual-style name (the chapter name) and the teaching line. */
 export const XIANGQI_ENDGAME_ROW_TEXT: Record<string, { name: EndgameText; line: EndgameText }> = {
@@ -263,54 +257,204 @@ export function endgameRowText(id: string): { name: EndgameText; line: EndgameTe
   return text;
 }
 
+/** The `studies.slug` of each set; the /practice catalogue names them. */
+export type EndgamePracticeSetSlug =
+  | 'endgames-soldier'
+  | 'endgames-chariot'
+  | 'endgames-horse'
+  | 'endgames-cannon'
+  | 'endgames-insufficient';
+
+/**
+ * Which corpus positions each set holds. Listed here, not derived from the
+ * corpus `category`, because the corpus also carries positions that are not
+ * exercises (the three one-point counterexamples beside the chariot and soldier
+ * rows). A position goes to the set of its attacking piece; a mixed attack goes
+ * to its strongest piece (chariot and cannon is a chariot ending), and the
+ * horse-and-cannon pairings stay with the cannon, where they were seeded.
+ *
+ * The wins are reordered by mate distance; the draws keep the order given here.
+ */
+export const XIANGQI_ENDGAME_PRACTICE_SET_IDS: Record<EndgamePracticeSetSlug, readonly string[]> = {
+  'endgames-soldier': [
+    'soldier-vs-bare-general',
+    'high-soldier-vs-bare-general',
+    'high-soldier-vs-advisor-tricky',
+    'soldier-vs-advisor',
+    'high-low-soldiers-vs-two-advisors',
+    'two-soldiers-vs-two-advisors',
+    'two-soldiers-vs-two-elephants',
+    'two-soldiers-vs-bare-cannon',
+    'two-high-soldiers-vs-cannon',
+    'three-soldiers-vs-full-defence',
+    'three-soldiers-vs-horse-and-two-advisors',
+    'three-soldiers-vs-cannon-and-two-elephants',
+    'general-and-soldier-zugzwang',
+    'reciprocal-zugzwang',
+    'high-soldier-vs-advisor',
+    'two-soldiers-vs-advisor-and-elephant',
+  ],
+  'endgames-chariot': [
+    'chariot-cannon-vs-chariot-center',
+    'chariot-vs-three-defence',
+    'chariot-vs-cannon-two-advisors-tricky',
+    'chariot-vs-full-defence-tricky',
+    'chariot-vs-horse-two-elephants-broken',
+    'chariot-vs-horse-two-advisors',
+    'two-chariots-vs-two-horses-full-defence',
+    'chariot-vs-full-defence',
+    'chariot-vs-horse-two-elephants-fortress',
+    'chariot-vs-cannon-two-advisors',
+    'chariot-vs-two-minor-pieces',
+    'chariot-cannon-vs-chariot',
+    'chariot-cannon-full-vs-chariot-full',
+    'two-chariots-vs-chariot-full-defence',
+  ],
+  'endgames-horse': [
+    'horse-vs-elephant-zugzwang',
+    'horse-and-soldier-vs-three-defence',
+    'horse-vs-advisor',
+    'two-horses-vs-full-defence',
+    'horse-vs-elephant',
+    'horse-vs-crossed-soldier',
+    'horse-and-soldier-vs-full-defence',
+  ],
+  'endgames-cannon': [
+    'cannon-and-advisor-vs-two-advisors',
+    'two-cannons-advisor-vs-full-defence',
+    'horse-cannon-vs-horse',
+    'two-cannons-vs-two-elephants',
+    'cannon-and-full-defence-vs-full-defence',
+    'horse-cannon-vs-cannon',
+  ],
+  'endgames-insufficient': [
+    'bottom-soldier-vs-bare-general',
+    'soldiers-five-on-last-rank',
+    'cannon-vs-bare-general',
+  ],
+};
+
+/** Shelf order, the catalogue's too. */
+export const XIANGQI_ENDGAME_PRACTICE_SLUGS = Object.keys(
+  XIANGQI_ENDGAME_PRACTICE_SET_IDS,
+) as EndgamePracticeSetSlug[];
+
+/**
+ * Plies to mate for shelf wins that are not article rows (whose distances are
+ * in xiangqi-endgame-hub-checks.ts), from the side to move: chessdb.cn
+ * `queryall`, read 2026-10-07. Two wins are beyond the database
+ * (two-chariots-vs-two-horses-full-defence, horse-cannon-vs-horse) and sort
+ * after every win with a distance.
+ */
+const SHELF_MATE_PLIES: Record<string, number> = {
+  'soldier-vs-bare-general': 7,
+  'soldier-vs-advisor': 19,
+  'two-soldiers-vs-two-advisors': 23,
+  'two-soldiers-vs-two-elephants': 13,
+  'two-soldiers-vs-bare-cannon': 17,
+  'three-soldiers-vs-horse-and-two-advisors': 13,
+  'three-soldiers-vs-cannon-and-two-elephants': 23,
+  'general-and-soldier-zugzwang': 13,
+  'reciprocal-zugzwang': 8,
+};
+
+/** Plies to mate for a win, or Infinity when no source gives one. */
+export function endgamePracticeMateDistance(id: string): number {
+  const check = XIANGQI_ENDGAME_HUB_CHECKS.find((row) => row.id === id);
+  if (check?.result === 'win' && check.distance !== null) return check.distance;
+  return SHELF_MATE_PLIES[id] ?? Number.POSITIVE_INFINITY;
+}
+
+/**
+ * Shelf chapters that are article rows but keep the corpus note as their brief,
+ * because it says more than the article's one line. Every other article row
+ * opens on the article's line: either the corpus had no note (the chapter
+ * opened on its own name), or the note gave the winning move away or pointed at
+ * a chapter "above" that the new order moves.
+ */
+const KEEPS_CORPUS_NOTE: ReadonlySet<string> = new Set([
+  'three-soldiers-vs-full-defence',
+  'two-horses-vs-full-defence',
+  'horse-vs-elephant',
+  'cannon-vs-bare-general',
+  'chariot-vs-full-defence',
+]);
+
+/** Briefs written for the shelf, where the corpus note no longer fits. */
+const SHELF_BRIEFS: Record<string, EndgameText> = {
+  // The note began "The fortress above", and the fortress, a draw, now comes
+  // after this win.
+  'chariot-vs-horse-two-elephants-broken': tri(
+    'The drawing fortress for this material, with one elephant moved to the back rank. That one point is the whole difference: here the chariot wins.',
+    '这是该子力的守和阵形，只是一个象退到了底线。仅这一点之差，单车便能取胜。',
+    '這是該子力的守和陣形，只是一個象退到了底線。僅這一點之差，單車便能取勝。',
+  ),
+};
+
 export type EndgamePracticeChapter = {
   /** Corpus id of the position. */
   id: string;
-  grade: EndgameGrade;
-  /** Chapter name, unique within the set (the seeder matches chapters by it). */
-  name: EndgameText;
-  /** The one or two sentences the chapter opens on. */
-  brief: EndgameText;
-  /** Root position, Red to move. */
+  entry: EndgameEntry;
+  /** Root position, either side to move. */
   fen: string;
   /** In the grammar `parsePracticeGoal` accepts. */
   goal: string;
   /** The side the learner plays: Red converts a win, Black holds a draw. */
   orientation: 'red' | 'black';
+  /**
+   * The words the chapter opens on, in all three scripts; null means the corpus
+   * note (or, with none, the matchup), which the server's dictionaries
+   * translate.
+   */
+  brief: EndgameText | null;
+  /** Plies to mate for a win, Infinity for a draw or an unknown distance. */
+  distance: number;
 };
 
-const GRADE_ORDER: readonly EndgameGrade[] = ['standard-win', 'tricky-win', 'standard-draw'];
+export type EndgamePracticeSet = {
+  slug: EndgamePracticeSetSlug;
+  chapters: EndgamePracticeChapter[];
+};
 
-/** Plies to mate the database gives for a win, or Infinity when it gives none. */
-function mateDistance(id: string): number {
-  const check = XIANGQI_ENDGAME_HUB_CHECKS.find((row) => row.id === id);
-  if (!check || check.result !== 'win' || check.distance === null) return Number.POSITIVE_INFINITY;
-  return check.distance;
+function corpusEntry(id: string): EndgameEntry {
+  const entry = XIANGQI_ENDGAME_CORPUS.find((candidate) => candidate.id === id);
+  if (!entry) throw new Error(`xiangqi endgame practice: no corpus entry ${id}`);
+  return entry;
 }
 
-/** The set's chapters, in the order the study holds them. */
-export function xiangqiEndgamePracticeChapters(): EndgamePracticeChapter[] {
-  return GRADE_ORDER.flatMap((grade) => {
-    const rows = XIANGQI_ENDGAME_HUB.filter((row) => row.grade === grade);
-    // Array.prototype.sort is stable, so equal distances keep hub order, and the
-    // draws (no distance) keep it outright.
-    const ordered =
-      grade === 'standard-draw'
-        ? rows
-        : [...rows].sort((a, b) => mateDistance(a.id) - mateDistance(b.id));
-    return ordered.map((row) => {
-      const entry = endgameHubEntry(row.id);
-      const text = endgameRowText(row.id);
-      const win = grade !== 'standard-draw';
-      return {
-        id: row.id,
-        grade,
-        name: text.name,
-        brief: text.line,
-        fen: endgameEntryFen(entry),
-        goal: win ? 'mate' : `draw in ${XIANGQI_ENDGAME_PRACTICE_DRAW_MOVES}`,
-        orientation: win ? 'red' : 'black',
-      };
-    });
+const HUB_IDS: ReadonlySet<string> = new Set(XIANGQI_ENDGAME_HUB.map((row) => row.id));
+
+function briefFor(id: string): EndgameText | null {
+  const written = SHELF_BRIEFS[id];
+  if (written) return written;
+  if (HUB_IDS.has(id) && !KEEPS_CORPUS_NOTE.has(id)) return endgameRowText(id).line;
+  return null;
+}
+
+function practiceChapter(id: string): EndgamePracticeChapter {
+  const entry = corpusEntry(id);
+  const win = entry.verdict === 'win';
+  return {
+    id,
+    entry,
+    fen: endgameEntryFen(entry),
+    goal: win ? 'mate' : `draw in ${XIANGQI_ENDGAME_PRACTICE_DRAW_MOVES}`,
+    orientation: win ? 'red' : 'black',
+    brief: briefFor(id),
+    distance: win ? endgamePracticeMateDistance(id) : Number.POSITIVE_INFINITY,
+  };
+}
+
+/** The five sets, each in the order its study holds the chapters. */
+export function xiangqiEndgamePracticeSets(): EndgamePracticeSet[] {
+  return XIANGQI_ENDGAME_PRACTICE_SLUGS.map((slug) => {
+    const chapters = XIANGQI_ENDGAME_PRACTICE_SET_IDS[slug].map(practiceChapter);
+    // Array.prototype.sort is stable: equal and unknown distances keep the
+    // listed order, and the draws keep it outright.
+    const wins = chapters
+      .filter((chapter) => chapter.goal === 'mate')
+      .sort((a, b) => (a.distance === b.distance ? 0 : a.distance - b.distance));
+    const draws = chapters.filter((chapter) => chapter.goal !== 'mate');
+    return { slug, chapters: [...wins, ...draws] };
   });
 }

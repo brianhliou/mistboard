@@ -388,7 +388,9 @@ const studyChapterRoute = studyChapterRouteFromPath(path);
 const studyId = studyBaseId ?? studyChapterRoute?.studyId ?? null;
 const studyChapterId = studyChapterRoute?.chapterId ?? null;
 const wantsStudyIndex = path === '/study';
-const wantsPractice = path === '/practice';
+// Locale-prefixed too, like the course: localeFromPath() picks the language.
+const wantsPractice =
+  path === '/practice' || path === '/zh-hans/practice' || path === '/zh-hant/practice';
 const wantsPracticePosition = path === '/practice/position';
 // Hidden DEV-only lab for Jungle river-movement cues (rat / tiger / lion). No nav entry.
 const wantsJungleCuesLab = import.meta.env.DEV && path === '/jungle-cues';

@@ -1,10 +1,10 @@
 // Every word on the 象棋残局 page, in all three scripts, in one place.
 //
 // The page is short on purpose: what decides an endgame, the three grades with
-// one diagram each, and one button into the practice set. The 26 positions, their
-// names and their teaching lines live with the set in packages/game
-// (xiangqi-endgame-practice.ts), because the practice study is where a reader
-// meets them. The English strings ARE the article; the zh dictionaries that
+// one diagram each, and one button to /practice. The 26 positions and their
+// teaching lines live with the practice sets in packages/game
+// (xiangqi-endgame-practice.ts), because the practice studies are where a
+// reader meets them. The English strings ARE the article; the zh dictionaries that
 // article-i18n.ts spreads in are generated from the same triples below, so the
 // three scripts cannot drift apart.
 //
@@ -44,11 +44,11 @@ export const ENDGAME_PAGE_TEXT = {
     '大多數象棋殘局，在走第一步之前就由兩件事決定了：進攻方還剩什麼子力，防守方的士象還剩多少。士象不能過河，但守在自己的將旁邊，作用遠大於本身的價值。盤上最強的單車能勝單缺象，卻只能和士象全；而三個高兵或雙馬卻能攻破士象全。',
   ),
   introPractice: tri(
-    'The practice set has all 26 standard positions against the computer. In the wins you play Red and give mate, easiest first; in the draws you play Black and hold for 15 moves.',
-    '练习集收录全部26个实用残局，和电脑对下。胜局由易到难，你执红将死对方；和局你执黑守住15回合。',
-    '練習集收錄全部26個實用殘局，和電腦對下。勝局由易到難，你執紅將死對方；和局你執黑守住15回合。',
+    'All 26 are on the Practice page against the computer, in the set for their piece. In the wins you play Red and give mate, easiest first; in the draws you play Black and hold for 15 moves.',
+    '全部26局都在练习页，按子力分在各自的练习集里，和电脑对下。胜局由易到难，你执红将死对方；和局你执黑守住15回合。',
+    '全部26局都在練習頁，按子力分在各自的練習集裡，和電腦對下。勝局由易到難，你執紅將死對方；和局你執黑守住15回合。',
   ),
-  practiceButton: tri('Practice all 26', '练习全部26局', '練習全部26局'),
+  practiceButton: tri('Practice these endgames', '练习这些残局', '練習這些殘局'),
   gradesHeading: tri('Three grades', '三个等级', '三個等級'),
   introGrades: tri(
     'Chinese endgame manuals sort the common endings into grades. This page uses three. A **standard win** (例胜) is won with correct technique whatever the defender does. A **tricky win** (巧胜) is material that is normally a draw, in a position where the attacker can still force the win. A **standard draw** (例和) holds when the defender sets up correctly.',

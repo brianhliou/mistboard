@@ -483,7 +483,6 @@ export const EN_REVIEW = {
   'practice.position.toEditor': 'Set up a position in the board editor',
   'practice.ribbon.done': 'Done',
   'practice.ribbon.play': 'Play!',
-  'practice.card.winsAndDraws': 'Win them, then hold them',
   'practice.card.soldier': 'It never moves back',
   'practice.card.chariot': 'Wins on its own',
   'practice.card.horse': 'Mind the blocked leg',

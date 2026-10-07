@@ -36,10 +36,10 @@ export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
   // ── 2026-10-08 (xiangqi endgames guide) ── 例胜 / 巧胜 / 例和 / 云库 / 和电脑下 follow the xiangqi-endgames article text.
-  'Xiangqi endgames: which win, which draw, and a practice set of all 26.':
-    '象棋残局：哪些能赢，哪些是和棋，以及全部26局的练习集。',
-  'Twenty-six common xiangqi endgames, sorted the way Chinese endgame manuals sort them: standard wins, tricky wins and standard draws, each checked against the chessdb.cn cloud database. The guide explains what decides them, and a new set on the Practice page has all 26 against the computer, wins first, then draws to hold. You can also set up your own position in the board editor and play it out from there.':
-    '二十六个常见象棋残局，按中国残局书的分法分为例胜、巧胜和例和，每一个都经云库 chessdb.cn 核对。指南讲清决定胜负的要点；练习页新增的练习集收录全部26局，可和电脑对下，先练胜局，再练守和。也可以在棋盘编辑器里摆出自己的局面，从那里开始下。',
+  'Xiangqi endgames: which win, which draw, and all 26 to practice.':
+    '象棋残局：哪些能赢，哪些是和棋，全部26局都能练习。',
+  'Twenty-six common xiangqi endgames, sorted the way Chinese endgame manuals sort them: standard wins, tricky wins and standard draws, each checked against the chessdb.cn cloud database. The guide explains what decides them, and all 26 are now on the Practice page against the computer, added to the endgame set for each piece, wins first, then draws to hold. You can also set up your own position in the board editor and play it out from there.':
+    '二十六个常见象棋残局，按中国残局书的分法分为例胜、巧胜和例和，每一个都经云库 chessdb.cn 核对。指南讲清决定胜负的要点；练习页按子力分类的残局练习集现已加入全部26局，可和电脑对下，先练胜局，再练守和。也可以在棋盘编辑器里摆出自己的局面，从那里开始下。',
   // ── 2026-10-07 (jieqi luck die) ── 翻子 / 暗子 / 评注 follow the review luck card and the jieqi rules article.
   'Jieqi review now marks the luck of every reveal with a die.':
     '揭棋复盘现在用骰子标出每次翻子的运气。',
@@ -454,10 +454,10 @@ const ZH_HANS: Record<string, string> = {
 
 const ZH_HANT: Record<string, string> = {
   // ── 2026-10-08 (xiangqi endgames guide) ── 例勝 / 巧勝 / 例和 / 雲庫 / 和電腦下 follow the xiangqi-endgames article text.
-  'Xiangqi endgames: which win, which draw, and a practice set of all 26.':
-    '象棋殘局：哪些能贏，哪些是和棋，以及全部26局的練習集。',
-  'Twenty-six common xiangqi endgames, sorted the way Chinese endgame manuals sort them: standard wins, tricky wins and standard draws, each checked against the chessdb.cn cloud database. The guide explains what decides them, and a new set on the Practice page has all 26 against the computer, wins first, then draws to hold. You can also set up your own position in the board editor and play it out from there.':
-    '二十六個常見象棋殘局，按中國殘局書的分法分為例勝、巧勝和例和，每一個都經雲庫 chessdb.cn 核對。指南講清決定勝負的要點；練習頁新增的練習集收錄全部26局，可和電腦對下，先練勝局，再練守和。也可以在棋盤編輯器裡擺出自己的局面，從那裡開始下。',
+  'Xiangqi endgames: which win, which draw, and all 26 to practice.':
+    '象棋殘局：哪些能贏，哪些是和棋，全部26局都能練習。',
+  'Twenty-six common xiangqi endgames, sorted the way Chinese endgame manuals sort them: standard wins, tricky wins and standard draws, each checked against the chessdb.cn cloud database. The guide explains what decides them, and all 26 are now on the Practice page against the computer, added to the endgame set for each piece, wins first, then draws to hold. You can also set up your own position in the board editor and play it out from there.':
+    '二十六個常見象棋殘局，按中國殘局書的分法分為例勝、巧勝和例和，每一個都經雲庫 chessdb.cn 核對。指南講清決定勝負的要點；練習頁按子力分類的殘局練習集現已加入全部26局，可和電腦對下，先練勝局，再練守和。也可以在棋盤編輯器裡擺出自己的局面，從那裡開始下。',
   // ── 2026-10-07 (jieqi luck die) ── 翻子 / 暗子 / 評註 follow the review luck card and the jieqi rules article.
   'Jieqi review now marks the luck of every reveal with a die.':
     '揭棋復盤現在用骰子標出每次翻子的運氣。',

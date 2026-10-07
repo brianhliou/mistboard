@@ -56,7 +56,6 @@ export const ZH_HANS_REVIEW = {
   'practice.position.toEditor': '在棋盘编辑器里摆一个局面',
   'practice.ribbon.done': '完成',
   'practice.ribbon.play': '开始',
-  'practice.card.winsAndDraws': '胜局取胜，和局守和',
   'practice.card.soldier': '兵不能后退',
   'practice.card.chariot': '单车就能取胜',
   'practice.card.horse': '当心蹩马腿',

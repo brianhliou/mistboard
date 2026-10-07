@@ -453,6 +453,10 @@ export function isClientRoute(pathname: string): boolean {
     // The practice index is a plain client page: it lists curated studies and
     // mounts no board, so unlike /study/:id it is not a review-shell route.
     normalized === '/practice' ||
+    // The shelf in Chinese: the page and its zh catalogue shipped with the
+    // English URL alone, and /zh-hans/practice 404'd (2026-10-07).
+    normalized === '/zh-hans/practice' ||
+    normalized === '/zh-hant/practice' ||
     // Practice from any position (?fen=&goal=&side=): the endgames page and the
     // board editor link here. It mounts the ceval engine, so it is also a
     // review-shell route below. The query is read fail-closed by the client.

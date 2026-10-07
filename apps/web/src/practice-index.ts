@@ -49,7 +49,6 @@ export interface PracticeCardDto {
 /** The shelf subtitle for each catalogue slug. A slug missing here shows the
  *  catalogue's English, which is untranslated but correct. */
 const CARD_SUBTITLE_KEYS: Record<string, I18nKey> = {
-  'endgames-wins-and-draws': 'practice.card.winsAndDraws',
   'endgames-soldier': 'practice.card.soldier',
   'endgames-chariot': 'practice.card.chariot',
   'endgames-horse': 'practice.card.horse',
@@ -96,29 +95,10 @@ export function mountPracticeIndex(root: HTMLElement): void {
   root.classList.add('landing-page');
   root.replaceChildren(buildNav(), notice(t('practice.loading')));
   void load()
-    .then((sections) => {
-      const target = practiceSetTarget(sections, window.location.search);
-      if (target) window.location.replace(target);
-      else render(root, sections);
-    })
+    .then((sections) => render(root, sections))
     .catch(() => {
       root.replaceChildren(buildNav(), notice(t('practice.failed')));
     });
-}
-
-/**
- * `/practice?set=<slug>` opens that set's study: the stable link for a set,
- * which an article can carry across re-seeds (the study id is minted by the
- * seed; the slug never changes). An unknown or unseeded slug shows the shelf.
- */
-export function practiceSetTarget(sections: PracticeSectionDto[], search: string): string | null {
-  const slug = new URLSearchParams(search).get('set');
-  if (!slug) return null;
-  for (const section of sections) {
-    const card = section.cards.find((entry) => entry.slug === slug);
-    if (card) return `/study/${encodeURIComponent(card.studyId)}`;
-  }
-  return null;
 }
 
 async function load(): Promise<PracticeSectionDto[]> {

@@ -1,82 +1,44 @@
 /**
- * Seed (or bring up to date) the "Endgame wins and draws" practice
- * study: the 26 graded positions of the 象棋残局 article, one practice chapter
- * each, in the order packages/game xiangqi-endgame-practice.ts gives.
+ * Bring the five /practice endgame studies (Soldier, Chariot, Horse, Cannon, Not
+ * enough to win) in line with packages/game xiangqi-endgame-practice.ts, IN
+ * PLACE.
  *
- * The definition is checked into the repo; this script only writes it. It is
- * idempotent: it finds the study by its curated slug (through /api/practice once
- * the catalogue lists it, else by exact name among the account's own studies)
- * and updates it in place, so a second run changes nothing a learner sees and
- * never mints a second study. Missing chapters are added, existing ones are
- * rewritten, the order is reset, and chapters it does not know are reported but
- * left alone.
+ * The studies are pointed at by curated slug, and every shared link and every
+ * learner's solved count is keyed to their ids and chapter ids, so a set that
+ * changes is updated, never re-created: chapters it has are matched by name and
+ * rewritten only where they differ, chapters it lacks are added, the order is
+ * reset, and chapters the definition does not know are reported and left at the
+ * end. A set whose slug resolves to no study (a fresh database) is created.
+ * Idempotent: a second run reports every chapter unchanged and writes nothing.
  *
- * DRY RUN BY DEFAULT. Nothing is written without `--apply`.
+ * DRY RUN BY DEFAULT. The plan is read from the public study pages, so a dry run
+ * needs no credential. Nothing is written without `--apply`.
  *
- * Local dev (dev sign-in code; the account must be an admin to set the slug):
+ * Local dev (dev sign-in code; the account must be an admin to set a slug):
  *   npx tsx apps/server/src/seed-xiangqi-endgame-practice.ts \
  *     --base http://127.0.0.1:3071 --email you@example.com [--apply]
  *
  * Production, with the admin cookie `npm run auth:cookie` writes to
  * ~/.mistboard-cookie (read from the file, never from the command line, never
- * logged):
+ * logged); the cookie must belong to the studies' owner:
  *   npx tsx apps/server/src/seed-xiangqi-endgame-practice.ts --base https://mistboard.com
  *   npx tsx apps/server/src/seed-xiangqi-endgame-practice.ts --base https://mistboard.com --apply
  */
 import { pathToFileURL } from 'node:url';
 import {
   type EndgamePracticeChapter,
-  XIANGQI_ENDGAME_PRACTICE_SET,
-  XIANGQI_ENDGAME_PRACTICE_SLUG,
-  xiangqiEndgamePracticeChapters,
+  type EndgamePracticeSet,
+  xiangqiEndgamePracticeSets,
 } from '@mistboard/game';
-import { readCookie, Session } from './seed-xiangqi-practice-study.js';
+import {
+  PRACTICE_SETS,
+  practiceChapterBody,
+  readCookie,
+  Session,
+} from './seed-xiangqi-practice-study.js';
+import { PRACTICE_SET_I18N } from './xiangqi-endgame-study-i18n.js';
 
 const DEFAULT_BASE = 'http://127.0.0.1:3001';
-const LANGS = ['zh-Hans', 'zh-Hant'] as const;
-
-/** The study's name and description overlay, in the shape migration 115 stores. */
-export function endgamePracticeSetI18n(): Record<string, { name: string; description: string }> {
-  const set = XIANGQI_ENDGAME_PRACTICE_SET;
-  return Object.fromEntries(
-    LANGS.map((lang) => [lang, { name: set.name[lang], description: set.description[lang] }]),
-  );
-}
-
-/** The chapter as POST /api/studies/:id/chapters takes it. Goal and flag are a
- *  separate PATCH (they validate together). */
-export function endgamePracticeChapterBody(chapter: EndgamePracticeChapter): {
-  name: string;
-  i18n: Record<string, { name: string }>;
-  variant: 'xiangqi';
-  orientation: 'red' | 'black';
-  root: unknown;
-} {
-  return {
-    name: chapter.name.en,
-    i18n: Object.fromEntries(LANGS.map((lang) => [lang, { name: chapter.name[lang] }])),
-    variant: 'xiangqi',
-    orientation: chapter.orientation,
-    root: {
-      version: 1,
-      rootFen: chapter.fen,
-      // Childless: a practice chapter is a position and a goal, no solution.
-      // The brief is the root comment, with its overlay on the comment itself,
-      // which is where study-i18n.ts reads per-node translations from.
-      root: {
-        annotations: {
-          comments: [
-            {
-              text: chapter.brief.en,
-              i18n: Object.fromEntries(LANGS.map((lang) => [lang, chapter.brief[lang]])),
-            },
-          ],
-        },
-        children: [],
-      },
-    },
-  };
-}
 
 type Args = {
   base: string;
@@ -107,40 +69,61 @@ async function json<T>(response: Response, what: string): Promise<T> {
   return (await response.json()) as T;
 }
 
-/** The study's id, or null when it does not exist yet. */
-async function findStudy(session: Session, signedIn: boolean): Promise<string | null> {
+/** JSON with sorted keys, so a stored value and a built one compare by content. */
+function canon(value: unknown): string {
+  return JSON.stringify(value, (_key, v) =>
+    v && typeof v === 'object' && !Array.isArray(v)
+      ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a.localeCompare(b)))
+      : v,
+  );
+}
+
+export type StoredChapter = {
+  id: string;
+  name: string;
+  i18n?: unknown;
+  orientation?: string;
+  version: number;
+  practice?: boolean;
+  practiceGoal?: string | null;
+  root?: { rootFen?: string; root?: unknown };
+};
+
+/** What differs between a stored chapter and the definition, by PATCH. */
+export function chapterChanges(
+  stored: StoredChapter,
+  chapter: EndgamePracticeChapter,
+): { content: boolean; orientation: boolean; practice: boolean } {
+  const body = practiceChapterBody(chapter);
+  return {
+    content:
+      canon(stored.i18n ?? {}) !== canon(body.i18n ?? {}) ||
+      stored.root?.rootFen !== body.root.rootFen ||
+      canon(stored.root?.root) !== canon(body.root.root),
+    orientation: stored.orientation !== body.orientation,
+    practice: stored.practice !== true || stored.practiceGoal !== chapter.goal,
+  };
+}
+
+function setMeta(slug: string) {
+  const meta = PRACTICE_SETS.find((set) => set.slug === slug);
+  const i18n = PRACTICE_SET_I18N[slug];
+  if (!meta || !i18n) throw new Error(`no name or translation for set ${slug}`);
+  return { name: meta.name, description: meta.description, i18n };
+}
+
+async function catalogueIds(session: Session): Promise<Map<string, string>> {
   const catalogue = await json<{ sections: { cards: { slug: string; studyId: string }[] }[] }>(
     await session.get('/api/practice'),
     'GET /api/practice',
   );
-  for (const section of catalogue.sections) {
-    const card = section.cards.find((c) => c.slug === XIANGQI_ENDGAME_PRACTICE_SLUG);
-    if (card) return card.studyId;
-  }
-  // Before the release that adds the slug to the catalogue, /api/practice does
-  // not resolve it; the owner's own list does. Exact name, since ?q= is a search.
-  if (!signedIn) return null;
-  const name = XIANGQI_ENDGAME_PRACTICE_SET.name.en;
-  const mine = await json<{ studies?: { id: string; name: string }[] }>(
-    await session.get(`/api/studies/mine?q=${encodeURIComponent(name)}`),
-    'GET /api/studies/mine',
+  return new Map(
+    catalogue.sections.flatMap((section) => section.cards.map((c) => [c.slug, c.studyId])),
   );
-  return mine.studies?.find((study) => study.name === name)?.id ?? null;
 }
 
 async function patchOk(session: Session, path: string, body: unknown, what: string) {
   await json<unknown>(await session.patch(path, body), what);
-}
-
-async function setSlug(session: Session, studyId: string): Promise<void> {
-  const response = await session.put(`/api/admin/studies/${studyId}/slug`, {
-    slug: XIANGQI_ENDGAME_PRACTICE_SLUG,
-  });
-  if (!response.ok) {
-    throw new Error(
-      `slug failed: ${response.status} ${await response.text()} (the account must be an admin)`,
-    );
-  }
 }
 
 async function flagPractice(
@@ -157,141 +140,169 @@ async function flagPractice(
   );
 }
 
-async function create(
-  session: Session,
-  chapters: EndgamePracticeChapter[],
-  args: Args,
-): Promise<string> {
-  const [first, ...rest] = chapters;
-  if (!first) throw new Error('no chapters');
+async function create(session: Session, set: EndgamePracticeSet, args: Args): Promise<void> {
+  const [first, ...rest] = set.chapters;
+  if (!first) throw new Error(`${set.slug} has no chapters`);
+  const meta = setMeta(set.slug);
   const created = await json<{ study: { id: string }; chapters: { id: string }[] }>(
     await session.post('/api/studies', {
-      name: XIANGQI_ENDGAME_PRACTICE_SET.name.en,
-      description: XIANGQI_ENDGAME_PRACTICE_SET.description.en,
-      i18n: endgamePracticeSetI18n(),
+      name: meta.name,
+      description: meta.description,
+      i18n: meta.i18n,
       visibility: args.visibility,
-      chapter: endgamePracticeChapterBody(first),
+      chapter: practiceChapterBody(first),
     }),
-    'create study',
+    `create ${set.slug}`,
   );
   const studyId = created.study.id;
-  await setSlug(session, studyId);
+  const slugged = await session.put(`/api/admin/studies/${studyId}/slug`, { slug: set.slug });
+  if (!slugged.ok) {
+    throw new Error(
+      `slug ${set.slug} failed: ${slugged.status} ${await slugged.text()} (the account must be an admin)`,
+    );
+  }
   const firstId = created.chapters[0]?.id;
-  if (!firstId) throw new Error('created study has no chapter');
+  if (!firstId) throw new Error(`created ${set.slug} has no chapter`);
   await flagPractice(session, studyId, firstId, first);
   for (const chapter of rest) {
     const added = await json<{ chapter: { id: string } }>(
-      await session.post(`/api/studies/${studyId}/chapters`, endgamePracticeChapterBody(chapter)),
+      await session.post(`/api/studies/${studyId}/chapters`, practiceChapterBody(chapter)),
       `add ${chapter.id}`,
     );
     await flagPractice(session, studyId, added.chapter.id, chapter);
   }
-  return studyId;
+  console.log(`  created ${studyId} with ${set.chapters.length} chapters`);
 }
 
+/** Plan, print, and (with --apply) write one existing study. */
 async function update(
   session: Session,
+  set: EndgamePracticeSet,
   studyId: string,
-  chapters: EndgamePracticeChapter[],
-): Promise<void> {
-  await patchOk(
-    session,
-    `/api/studies/${studyId}`,
-    {
-      name: XIANGQI_ENDGAME_PRACTICE_SET.name.en,
-      description: XIANGQI_ENDGAME_PRACTICE_SET.description.en,
-      i18n: endgamePracticeSetI18n(),
-    },
-    'update study',
-  );
-  await setSlug(session, studyId);
+  apply: boolean,
+): Promise<number> {
+  const detail = await json<{
+    study: { name: string; description?: string | null; i18n?: unknown };
+    chapters: StoredChapter[];
+  }>(await session.get(`/api/studies/${studyId}`), `read ${set.slug}`);
+  const meta = setMeta(set.slug);
+  let writes = 0;
 
-  const detail = await json<{ chapters: { id: string; name: string; version: number }[] }>(
-    await session.get(`/api/studies/${studyId}`),
-    'read study',
-  );
-  const byName = new Map(detail.chapters.map((c) => [c.name, c]));
+  const metaChanged =
+    detail.study.name !== meta.name ||
+    (detail.study.description ?? '') !== meta.description ||
+    canon(detail.study.i18n ?? {}) !== canon(meta.i18n);
+  if (metaChanged) {
+    console.log('  study name/description/i18n: rewrite');
+    writes += 1;
+    if (apply) await patchOk(session, `/api/studies/${studyId}`, meta, `update ${set.slug}`);
+  }
+
+  const byName = new Map<string, StoredChapter>();
+  for (const stored of detail.chapters) {
+    if (byName.has(stored.name)) {
+      throw new Error(`${set.slug} has two chapters named "${stored.name}"; cannot match by name`);
+    }
+    byName.set(stored.name, stored);
+  }
+
   const order: string[] = [];
-  let added = 0;
-  for (const chapter of chapters) {
-    const body = endgamePracticeChapterBody(chapter);
-    const existing = byName.get(body.name);
-    let chapterId: string;
-    if (existing) {
-      const path = `/api/studies/${studyId}/chapters/${existing.id}`;
+  for (const [index, chapter] of set.chapters.entries()) {
+    const body = practiceChapterBody(chapter);
+    const stored = byName.get(body.name);
+    const label = `  ${String(index + 1).padStart(2)}. ${chapter.goal.padEnd(10)} ${body.name}`;
+    if (!stored) {
+      console.log(`${label}  [add]`);
+      writes += 1;
+      if (apply) {
+        const added = await json<{ chapter: { id: string } }>(
+          await session.post(`/api/studies/${studyId}/chapters`, body),
+          `add ${chapter.id}`,
+        );
+        await flagPractice(session, studyId, added.chapter.id, chapter);
+        order.push(added.chapter.id);
+      }
+      continue;
+    }
+    order.push(stored.id);
+    const changes = chapterChanges(stored, chapter);
+    const what = Object.entries(changes)
+      .filter(([, changed]) => changed)
+      .map(([field]) => field);
+    console.log(`${label}  [${what.length ? `rewrite ${what.join(', ')}` : 'unchanged'}]`);
+    if (!what.length) continue;
+    writes += 1;
+    if (!apply) continue;
+    const path = `/api/studies/${studyId}/chapters/${stored.id}`;
+    if (changes.content) {
       await patchOk(
         session,
         path,
-        { name: body.name, i18n: body.i18n, root: body.root, baseVersion: existing.version },
+        { name: body.name, i18n: body.i18n ?? {}, root: body.root, baseVersion: stored.version },
         `rewrite ${chapter.id}`,
       );
-      await patchOk(session, path, { orientation: body.orientation }, `orient ${chapter.id}`);
-      chapterId = existing.id;
-    } else {
-      const created = await json<{ chapter: { id: string } }>(
-        await session.post(`/api/studies/${studyId}/chapters`, body),
-        `add ${chapter.id}`,
-      );
-      chapterId = created.chapter.id;
-      added += 1;
     }
-    await flagPractice(session, studyId, chapterId, chapter);
-    order.push(chapterId);
+    if (changes.orientation) {
+      await patchOk(session, path, { orientation: body.orientation }, `orient ${chapter.id}`);
+    }
+    if (changes.practice) await flagPractice(session, studyId, stored.id, chapter);
   }
+
   // Unknown chapters keep their place at the end: someone added them by hand.
   const known = new Set(order);
-  const extras = detail.chapters.filter((c) => !known.has(c.id));
-  for (const extra of extras) console.warn(`  left alone (not in the definition): ${extra.name}`);
-  await patchOk(
-    session,
-    `/api/studies/${studyId}/chapters`,
-    { chapterIds: [...order, ...extras.map((c) => c.id)] },
-    'reorder chapters',
-  );
-  console.log(`updated ${studyId}: ${chapters.length - added} rewritten, ${added} added`);
+  const extras = detail.chapters.filter((stored) => !known.has(stored.id));
+  for (const extra of extras)
+    console.log(`      left alone (not in the definition): ${extra.name}`);
+  const desired = apply
+    ? [...order, ...extras.map((c) => c.id)]
+    : set.chapters.map((c) => practiceChapterBody(c).name);
+  const current = apply
+    ? detail.chapters.map((c) => c.id)
+    : detail.chapters.filter((c) => !extras.includes(c)).map((c) => c.name);
+  if (canon(desired) !== canon(current)) {
+    console.log('  chapter order: reset');
+    writes += 1;
+    if (apply) {
+      await patchOk(
+        session,
+        `/api/studies/${studyId}/chapters`,
+        { chapterIds: desired },
+        `reorder ${set.slug}`,
+      );
+    }
+  }
+  return writes;
 }
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
-  const chapters = xiangqiEndgamePracticeChapters();
+  const sets = xiangqiEndgamePracticeSets();
 
   const session = new Session(args.base);
-  let signedIn = false;
-  if (args.email) {
-    await session.signIn(args.email);
-    signedIn = true;
-  } else if (args.cookie) {
-    session.useCookie(args.cookie);
-    signedIn = true;
+  if (args.email) await session.signIn(args.email);
+  else if (args.cookie) session.useCookie(args.cookie);
+  if (args.apply && !args.email && !args.cookie) {
+    throw new Error('--apply needs --email (dev) or an admin cookie (prod)');
   }
 
-  const existing = await findStudy(session, signedIn);
-  console.log(`${XIANGQI_ENDGAME_PRACTICE_SLUG} on ${args.base}`);
+  const ids = await catalogueIds(session);
+  console.log(`${args.apply ? 'APPLY' : 'DRY RUN'} against ${args.base}`);
+  let writes = 0;
+  for (const set of sets) {
+    const studyId = ids.get(set.slug);
+    console.log(`\n${set.slug}: ${studyId ?? 'no study'} (${set.chapters.length} chapters)`);
+    if (!studyId) {
+      console.log('  not in the catalogue: would create');
+      writes += 1;
+      if (args.apply) await create(session, set, args);
+      continue;
+    }
+    writes += await update(session, set, studyId, args.apply);
+  }
   console.log(
-    existing
-      ? `  exists as ${existing}: would update in place`
-      : signedIn
-        ? '  not found: would create'
-        : '  not in the catalogue (sign in to also check your own studies)',
+    `\n${writes} change${writes === 1 ? '' : 's'} ${args.apply ? 'written' : 'planned'}.` +
+      (args.apply ? '' : ' Dry run: pass --apply to write.'),
   );
-  chapters.forEach((chapter, index) => {
-    console.log(
-      `  ${String(index + 1).padStart(2)}. ${chapter.goal.padEnd(11)} ${chapter.orientation.padEnd(5)} ${chapter.name.en}`,
-    );
-  });
-
-  if (!args.apply) {
-    console.log(`\n${chapters.length} chapters. Dry run: pass --apply to write.`);
-    return;
-  }
-  if (!signedIn) throw new Error('--apply needs --email (dev) or an admin cookie (prod)');
-
-  if (existing) {
-    await update(session, existing, chapters);
-  } else {
-    const id = await create(session, chapters, args);
-    console.log(`created ${id} with ${chapters.length} chapters`);
-  }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

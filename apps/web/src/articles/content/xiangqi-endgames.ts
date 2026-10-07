@@ -1,22 +1,18 @@
-import {
-  endgameEntryState,
-  endgameHubEntry,
-  XIANGQI_ENDGAME_PRACTICE_SLUG,
-} from '@mistboard/game';
+import { endgameEntryState, endgameHubEntry } from '@mistboard/game';
 import { XQ_BOARD_H, XQ_BOARD_W, xqBoardGrid, xqBoardSvg, xqPiecesLayer, xqSvg } from '../diagrams.js';
 import type { Article } from '../types.js';
 import { ENDGAME_PAGE_TEXT as T } from '../xiangqi-endgames-text.js';
 
 // 象棋残局: what decides an endgame, the three grades with one position each,
-// and one way in to the practice set that holds all 26 (a @mistboard study,
-// seeded from packages/game xiangqi-endgame-practice.ts). The page used to list
-// every position with its own Play link to a bare single-exercise page; the
-// study player already gives the rail, the progress and Next, so the page links
-// there once. Every verdict is held to the committed chessdb checks by
+// and one way in to /practice, whose piece-by-piece sets hold all 26 (seeded
+// from packages/game xiangqi-endgame-practice.ts). The page used to list every
+// position with its own Play link to a bare single-exercise page; the study
+// player already gives the rail, the progress and Next, so the page links there
+// once. Every verdict is held to the committed chessdb checks by
 // xiangqi-endgame-hub.test.ts; this module adds no claims of its own.
 
-/** The practice set, by its slug: the study id is minted by the seed. */
-export const XIANGQI_ENDGAMES_PRACTICE_HREF = `/practice?set=${XIANGQI_ENDGAME_PRACTICE_SLUG}`;
+/** The practice shelf: the 26 are spread over its sets, one per piece. */
+export const XIANGQI_ENDGAMES_PRACTICE_HREF = '/practice';
 
 // A board drawn from the same kernel state the practice chapter starts from.
 function board(id: string): () => string {

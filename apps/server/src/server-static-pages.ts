@@ -214,6 +214,19 @@ const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     title: 'Xiangqi Practice | Mistboard',
     description:
       'Practise xiangqi (Chinese chess) endgames against the engine: each position sets a goal, the engine defends, and it tells you when the win has slipped.',
+    localeGroup: '/practice',
+  },
+  '/zh-hans/practice': {
+    title: '象棋残局练习 | Mistboard',
+    description: '和电脑练习象棋残局：每个局面都有目标，电脑负责防守，胜势丢掉时会提示你。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/practice',
+  },
+  '/zh-hant/practice': {
+    title: '象棋殘局練習 | Mistboard',
+    description: '和電腦練習象棋殘局：每個局面都有目標，電腦負責防守，勝勢丟掉時會提示你。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/practice',
   },
   '/study': {
     title: 'Xiangqi Studies | Mistboard',
@@ -885,6 +898,8 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/zh-hans/learn/xiangqi',
   '/zh-hant/learn/xiangqi',
   '/practice',
+  '/zh-hans/practice',
+  '/zh-hant/practice',
   '/analysis',
   '/editor',
   '/study',
