@@ -23,6 +23,7 @@ export const atomicXiangqiArticle: Article = {
     'Xiangqi where a capture is an explosion. The capturer, the captured piece and the four neighbouring pieces go; soldiers survive; a cannon shot takes only its target; and a blast threat on the general is check.',
   showSummaryOnPage: false,
   status: 'published',
+  publishedAt: '2026-09-15',
   updatedAt: '2026-09-16',
   audience:
     'Xiangqi players, and Atomic Chess players who want the xiangqi version stated precisely.',
