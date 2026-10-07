@@ -17,5 +17,13 @@ Its terminal cues are from
 released under CC0 1.0: `win.ogg` is pizzicato 02, `loss.ogg` is pizzicato 01,
 and `draw.ogg` is pizzicato 12.
 
+The Duck Xiangqi quack (`duck/quack.mp3`) is
+[D4XX](https://freesound.org/people/D4XX/)'s "Ducks"
+([freesound.org 607226](https://freesound.org/people/D4XX/sounds/607226/)),
+released under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
+(credited here as courtesy). Mistboard ships one quack from it, trimmed to
+0.28 s, mono, and peak-matched to the wood set's `move.mp3`. The synthesized
+quack in `apps/web/src/duck-xiangqi-quack.ts` plays while the file decodes.
+
 The "Mist" sounds are Mistboard's own WebAudio-synthesized tones
 (`apps/web/src/live-sound.ts`), no external assets.

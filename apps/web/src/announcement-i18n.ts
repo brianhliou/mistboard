@@ -35,6 +35,19 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-10-06 (master-game charts; Tony Fung; jieqi correspondence) ── 优势图 / 评注 / 准确率 / 研习 /
+  // 直播档案 / 揭棋通信对局 follow the review catalog, nav, the tony-fung-ga-zen article and home.corrTitle.
+  "Master games now show the engine's advantage chart.": '大师对局现在显示引擎的优势图。',
+  "Game chapters in Mistboard's own xiangqi studies now open with the advantage chart, the move marks and accuracy, as in a game review. Chapters set up from a position, such as compositions, have no chart. On the player pages, a board whose game is in the broadcast archive has the chart under it: click it to jump to any move, or hide it from the board menu.":
+    'Mistboard 自己的象棋研习中，对局章节现在一打开就显示优势图、着法评注和准确率，和对局复盘一样。从摆好的局面开始的章节（例如排局）没有优势图。在棋手页面上，如果棋盘上的对局在直播档案里，棋盘下方会显示它的优势图：点击优势图可以跳到任意一步，也可以在棋盘菜单里隐藏它。',
+  'See the Cao Yanlei page': '查看曹岩磊的页面',
+  'A player page for Tony Fung.': '冯家俊有了自己的棋手页面。',
+  "Hong Kong's 2022 world championship finalist, who scored nine points from ten in this year's qualifier for China's top league. The page follows his last fourteen months and his run to the 2022 final in Kuching, with five of his games on the board, in English and Chinese. All 47 of his games are in a study with the engine's judgments and lines.":
+    '打进 2022 年世锦赛决赛的香港棋手，今年象甲预选赛十分拿下九分。页面讲述他最近十四个月的比赛和 2022 年在古晋打进决赛的经历，棋盘上有他的五盘对局，提供英文和中文版。他的全部 47 盘对局都收在一个研习里，附引擎的判断和变化。',
+  'Play jieqi by correspondence, one move a day.': '下揭棋通信对局，每天走一步。',
+  'The homepage has a new Jieqi by correspondence button. You get a day for each move, and if you are away, we email you when it is your move. It needs an account, and a guest who signs up from the button needs no second click: you join the oldest open game, or yours is posted for the next player who presses it.':
+    '首页新增了“揭棋通信对局”按钮。每一步有一天时间；如果你不在网站上，轮到你走时我们会发邮件提醒你。这需要一个账号，访客从这个按钮注册后不必再点一次：你会加入最早的一盘公开对局，或者系统替你发出一盘，等下一位按下按钮的玩家接受。',
+  'Play by correspondence': '下通信对局',
   // ── 2026-10-06 (solver audit) ── 排局 / 连将杀 / 双解 / 错谱 follow the solver-audit article.
   'Forty-five of 172 classical xiangqi problems have only one solution.':
     '172局古典象棋排局中，只有45局的解法是唯一的。',
@@ -426,6 +439,19 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-10-06 (master-game charts; Tony Fung; jieqi correspondence) ── 優勢圖 / 評註 / 準確率 / 研習 /
+  // 直播檔案 / 揭棋通信對局 follow the review catalog, nav, the tony-fung-ga-zen article and home.corrTitle.
+  "Master games now show the engine's advantage chart.": '大師對局現在顯示引擎的優勢圖。',
+  "Game chapters in Mistboard's own xiangqi studies now open with the advantage chart, the move marks and accuracy, as in a game review. Chapters set up from a position, such as compositions, have no chart. On the player pages, a board whose game is in the broadcast archive has the chart under it: click it to jump to any move, or hide it from the board menu.":
+    'Mistboard 自己的象棋研習中，對局章節現在一打開就顯示優勢圖、著法評註和準確率，和對局復盤一樣。從擺好的局面開始的章節（例如排局）沒有優勢圖。在棋手頁面上，如果棋盤上的對局在直播檔案裡，棋盤下方會顯示它的優勢圖：點擊優勢圖可以跳到任意一步，也可以在棋盤選單裡隱藏它。',
+  'See the Cao Yanlei page': '查看曹岩磊的頁面',
+  'A player page for Tony Fung.': '馮家俊有了自己的棋手頁面。',
+  "Hong Kong's 2022 world championship finalist, who scored nine points from ten in this year's qualifier for China's top league. The page follows his last fourteen months and his run to the 2022 final in Kuching, with five of his games on the board, in English and Chinese. All 47 of his games are in a study with the engine's judgments and lines.":
+    '打進 2022 年世錦賽決賽的香港棋手，今年象甲預選賽十分拿下九分。頁面講述他最近十四個月的比賽和 2022 年在古晉打進決賽的經歷，棋盤上有他的五盤對局，提供英文和中文版。他的全部 47 盤對局都收在一個研習裡，附引擎的判斷和變化。',
+  'Play jieqi by correspondence, one move a day.': '下揭棋通信對局，每天走一步。',
+  'The homepage has a new Jieqi by correspondence button. You get a day for each move, and if you are away, we email you when it is your move. It needs an account, and a guest who signs up from the button needs no second click: you join the oldest open game, or yours is posted for the next player who presses it.':
+    '首頁新增了「揭棋通信對局」按鈕。每一步有一天時間；如果你不在網站上，輪到你走時我們會寄信提醒你。這需要一個帳號，訪客從這個按鈕註冊後不必再點一次：你會加入最早的一盤公開對局，或者系統替你發出一盤，等下一位按下按鈕的玩家接受。',
+  'Play by correspondence': '下通信對局',
   // ── 2026-10-06 (solver audit) ── 排局 / 連將殺 / 雙解 / 錯譜 follow the solver-audit article.
   'Forty-five of 172 classical xiangqi problems have only one solution.':
     '172局古典象棋排局中，只有45局的解法是唯一的。',

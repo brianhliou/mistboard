@@ -468,6 +468,7 @@ export const ZH_HANT_PLAY = {
   'live.unknownCaptured': '其中 {count} 枚已被吃，不知是哪幾枚',
   'live.duckPlaceTitle': '現在放置鴨子',
   'live.duckPlaceBody': '任一空位皆可。放好鴨子之前，你的著法不會送出。',
+  'live.duckPlaceChip': '放鴨子',
   'live.checkTitle': '將軍',
   'live.atomicCheckYour': '你的將帥下一步可能被吃或被炸。這樣的重複將軍會判負。',
   'live.atomicCheckColor': '{color}的將帥下一步可能被吃或被炸。這樣的重複將軍會判負。',

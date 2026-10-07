@@ -7,10 +7,13 @@ import {
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import {
+  DUCK_TOKEN_SCALE,
   type DuckXiangqiBoardPhase,
   duckXiangqiBoardSvg,
   duckXiangqiClickResult,
+  duckXiangqiGhostSvg,
 } from './duck-xiangqi-board.js';
+import { XIANGQI_LIVE_PIECE_SIZE } from './xiangqi-board.js';
 
 const PIECE_PHASE = (selected: DuckXiangqiSquare | null): DuckXiangqiBoardPhase => ({
   kind: 'piece',
@@ -261,5 +264,52 @@ describe('duckXiangqiBoardSvg', () => {
     });
     expect(svg).toContain('xq-arrow--draw');
     expect(svg).toContain('xq-marker--circle');
+  });
+});
+
+// The duck has to be the first thing the eye finds (Brian, 2026-10-06: "more
+// popping"): larger than a piece, a thick bright ring, a shadow that lifts it
+// off the board, and a landing that plays once when it arrives. No dark outer
+// rim: that was tried in the spike and turned down.
+describe('the duck token', () => {
+  const view = () => getDuckXiangqiPlayerView(afterOneTurn(), 'red');
+  const duckGroup = (svg: string) => {
+    const start = svg.indexOf('<g class="dkx-duck');
+    return svg.slice(start, svg.indexOf('</g></g>', start) + 8);
+  };
+
+  it('is drawn larger than a piece, with the gold ring and a drop shadow', () => {
+    const svg = duckXiangqiBoardSvg(view(), 'red', {
+      interactive: true,
+      phase: PIECE_PHASE(null),
+      targets: [],
+      pieceSet: 'international',
+    });
+    const duck = duckGroup(svg);
+    expect(DUCK_TOKEN_SCALE).toBeGreaterThan(1);
+    expect(duck).toContain(`scale(${(XIANGQI_LIVE_PIECE_SIZE * DUCK_TOKEN_SCALE) / 100})`);
+    expect(duck).toContain('class="dkx-duck-ring"');
+    expect(duck).toContain('stroke="#f2b705"');
+    expect(duck).toContain('filter="url(#dkx-duck-shadow)"');
+    expect(svg).toContain('<filter id="dkx-duck-shadow"');
+    // The spike's dark outer rim stays out.
+    expect(duck).not.toContain('#5c3d00');
+  });
+
+  it('plays its landing only on the render the caller marks as a landing', () => {
+    const base = { interactive: true, phase: PIECE_PHASE(null), targets: [] };
+    expect(duckXiangqiBoardSvg(view(), 'red', base)).not.toContain('dkx-duck--landed');
+    expect(duckXiangqiBoardSvg(view(), 'red', { ...base, duckLanded: false })).not.toContain(
+      'dkx-duck--landed',
+    );
+    expect(duckXiangqiBoardSvg(view(), 'red', { ...base, duckLanded: true })).toContain(
+      'dkx-duck dkx-duck--landed',
+    );
+  });
+
+  it('previews at the same size and ring as the real duck', () => {
+    const ghost = duckXiangqiGhostSvg('e5', 'red', 'intersection', 'international');
+    expect(ghost).toContain(`scale(${(XIANGQI_LIVE_PIECE_SIZE * DUCK_TOKEN_SCALE) / 100})`);
+    expect(ghost).toContain('class="dkx-duck-ring"');
   });
 });

@@ -81,7 +81,30 @@ export type DuckXiangqiBoardState = {
   /** Right-click arrows and circles, from the shared board-annotation store. */
   arrows?: readonly XiangqiBoardArrow[];
   markers?: readonly XiangqiBoardMarker[];
+  /**
+   * True on the one render where the duck has just landed on a new point, so it
+   * plays its landing once. The CALLER decides (the live room tracks the last
+   * square it drew); the board keeps no memory between renders, because replay,
+   * review and postgame boards share this renderer and must never animate.
+   */
+  duckLanded?: boolean;
 };
+
+/**
+ * The duck is drawn 10% larger than a piece. It is the one token both players
+ * move and the one that blocks everything, so it should be the first thing the
+ * eye finds; at piece size it read as one more disc. 1.1 still clears the
+ * neighbouring points' pieces on both board layouts.
+ */
+export const DUCK_TOKEN_SCALE = 1.1;
+
+/** The duck's ring: a brighter, thicker gold than the variant accent it frames. */
+const DUCK_POP_RING = '#f2b705';
+
+/** The set's own duck frame plus the duck's ring, in the 100-unit piece box. */
+function duckTokenMarks(set: XiangqiPieceSet): string {
+  return `${duckPieceMarks(set)}<circle class="dkx-duck-ring" cx="50" cy="50" r="46" fill="none" stroke="${DUCK_POP_RING}" stroke-width="5.5"/>`;
+}
 
 const SQUARES = (() => {
   const out: DuckXiangqiSquare[] = [];
@@ -109,19 +132,24 @@ function duckLayer(
   perspective: Color,
   layout: XiangqiBoardLayout,
   pieceSet: DuckXiangqiBoardState['pieceSet'],
+  landed: boolean,
 ): string {
   if (!duck) return '';
   const p = point(duck, perspective, layout);
-  const size = XIANGQI_LIVE_PIECE_SIZE;
+  const size = XIANGQI_LIVE_PIECE_SIZE * DUCK_TOKEN_SCALE;
   // Resolve the set the way `renderXiangqiPiece` does when the caller passes
   // none, so the duck's frame always matches the pieces beside it.
   const resolved = pieceSet ?? readStoredXiangqiPieceSet();
   // Authored in the same 100-unit piece box as every disc on this board, so the
   // duck scales with the pieces instead of being sized on its own.
+  // On top of the set's own frame: a thick bright-gold ring, so the duck
+  // separates from the cream discs around it and from the cream board, and a
+  // soft drop shadow, so it sits ON the board like a token rather than in it.
   return [
-    `<g class="dkx-duck" data-duck-square="${duck}" aria-label="duck">`,
-    `<g transform="translate(${p.x - size / 2},${p.y - size / 2}) scale(${size / 100})">`,
-    duckPieceMarks(resolved),
+    `<defs><filter id="dkx-duck-shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="2.5" stdDeviation="2.4" flood-color="#2a1a00" flood-opacity="0.5"/></filter></defs>`,
+    `<g class="dkx-duck${landed ? ' dkx-duck--landed' : ''}" data-duck-square="${duck}" aria-label="duck">`,
+    `<g transform="translate(${p.x - size / 2},${p.y - size / 2}) scale(${size / 100})" filter="url(#dkx-duck-shadow)">`,
+    duckTokenMarks(resolved),
     `</g>`,
     `</g>`,
   ].join('');
@@ -219,11 +247,11 @@ export function duckXiangqiGhostSvg(
   pieceSet: XiangqiPieceSet | undefined,
 ): string {
   const p = point(square, perspective, layout);
-  const size = XIANGQI_LIVE_PIECE_SIZE;
+  const size = XIANGQI_LIVE_PIECE_SIZE * DUCK_TOKEN_SCALE;
   const resolved = pieceSet ?? readStoredXiangqiPieceSet();
   return [
     `<g class="dkx-duck-ghost-token" transform="translate(${p.x - size / 2},${p.y - size / 2}) scale(${size / 100})">`,
-    duckPieceMarks(resolved),
+    duckTokenMarks(resolved),
     `</g>`,
   ].join('');
 }
@@ -400,7 +428,7 @@ export function duckXiangqiBoardSvg(
       <g class="xq-live-selection">${selectionSvg}</g>
       <g class="dkx-live-targets">${state.interactive ? targetLayer(state.targets, state.phase, perspective, layout, duckAnywhere, shown.board) : ''}</g>
       <g class="xq-live-pieces">${pieceLayer(shown, perspective, layout, state.pieceSet)}</g>
-      <g class="dkx-live-duck">${duckLayer(view.duck, perspective, layout, state.pieceSet)}</g>
+      <g class="dkx-live-duck">${duckLayer(view.duck, perspective, layout, state.pieceSet, state.duckLanded === true)}</g>
       <g class="dkx-duck-ghost" aria-hidden="true" pointer-events="none"></g>
       <g class="xq-live-markers" aria-hidden="true" pointer-events="none">${markerBand(state.markers ?? [], perspective, layout, 'point')}</g>
       <g class="xq-live-arrows" aria-hidden="true" pointer-events="none">${(state.arrows ?? [])

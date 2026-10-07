@@ -115,6 +115,11 @@ export type WebVariantTenant<C extends string> = {
   // "to move" is clear before the clock starts. Default off; banqi opts in because its
   // colors do not exist until the first flip, making the mover otherwise ambiguous.
   showPregameTurn?: boolean;
+  // Optional: relabel the side-to-move chip ("to move") for a seat. Return null
+  // for the default. Duck Xiangqi says "place duck" while a duck placement is
+  // pending, so a two-action turn's second half reads in the same spot as the
+  // first, with no extra element and nothing shifting.
+  turnChipLabel?(seat: C): I18nKey | null;
 };
 
 export type TenantChromeContext<C extends string> = {
@@ -330,7 +335,9 @@ export function createTenantRoomChrome<C extends string>(
         if (isTurn) {
           const toMove = document.createElement('span');
           toMove.className = 'clock-to-move';
-          toMove.textContent = t('live.toMove');
+          const chipLabel = tenant.turnChipLabel?.(color) ?? null;
+          toMove.textContent = t(chipLabel ?? 'live.toMove');
+          if (chipLabel) toMove.dataset.turnLabel = chipLabel;
           toMove.setAttribute('aria-hidden', 'false');
           playerLine.append(toMove);
         }
@@ -390,7 +397,9 @@ export function createTenantRoomChrome<C extends string>(
       );
       const toMove = document.createElement('span');
       toMove.className = 'clock-to-move';
-      toMove.textContent = t('live.toMove');
+      const chipLabel = tenant.turnChipLabel?.(color) ?? null;
+      toMove.textContent = t(chipLabel ?? 'live.toMove');
+      if (chipLabel) toMove.dataset.turnLabel = chipLabel;
       toMove.setAttribute('aria-hidden', isActive ? 'false' : 'true');
       playerLine.append(toMove);
       const time = document.createElement('strong');
