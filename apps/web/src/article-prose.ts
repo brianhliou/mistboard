@@ -110,6 +110,8 @@ const BLOCK_PROSE: {
   'svg-row': (b) => [...caption(b), ...b.items.flatMap(caption)],
   'raw-svg-stepper': (b) => [
     ...caption(b),
+    ...(b.result ? [b.result] : []),
+    ...(b.seats ? [b.seats.first.name, b.seats.second.name] : []),
     ...b.steps.flatMap((step) => {
       const n = step.narrative;
       return n && !isMoveNotation(n) ? [n] : [];

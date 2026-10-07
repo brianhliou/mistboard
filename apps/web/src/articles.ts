@@ -28,6 +28,7 @@ import {
   translateArticle,
   translateArticleText,
 } from './article-i18n.js';
+import { createStepCard } from './article-step-card.js';
 import {
   type Article,
   type ArticleBlock,
@@ -54,6 +55,7 @@ import {
   type LiveBoardsBlock,
   type RawSvgBlock,
   type RawSvgStepperBlock,
+  type RawSvgStepperStep,
   type StaticBoardsBlock,
   type SubHeadingBlock,
   type SvgRowBlock,
@@ -1816,48 +1818,54 @@ function renderRawSvgStepperBlock(block: RawSvgStepperBlock, lang?: ArticleLang)
   const figure = document.createElement('figure');
   figure.className = 'article-figure article-figure-interactive article-figure-raw-svg-stepper';
 
-  const host = document.createElement('div');
-  host.className = 'raw-svg-stepper stepper';
-  host.tabIndex = 0;
-
-  const frame = document.createElement('div');
-  frame.className = 'raw-svg-stepper-frame';
-
-  const controls = document.createElement('div');
-  controls.className = 'stepper-controls';
-
-  const prev = document.createElement('button');
-  prev.type = 'button';
-  prev.className = 'stepper-button stepper-button-prev';
-  prev.setAttribute('aria-label', 'Previous step');
-  prev.textContent = '←';
-
-  const counter = document.createElement('span');
-  counter.className = 'stepper-counter';
-
-  const next = document.createElement('button');
-  next.type = 'button';
-  next.className = 'stepper-button stepper-button-next';
-  next.setAttribute('aria-label', 'Next step');
-  next.textContent = '→';
-
-  const narrative = document.createElement('div');
-  narrative.className = 'stepper-narrative';
-
-  controls.append(prev, counter, next);
-  if (block.header) {
-    const header = document.createElement('div');
-    header.className = 'xq-replay-header';
-    const players = document.createElement('div');
-    players.textContent = block.header.players;
-    const event = document.createElement('div');
-    event.className = 'xq-replay-header-event';
-    event.textContent = block.header.event;
-    header.append(players, event);
-    host.append(header);
-  }
-  host.append(frame, controls, narrative);
-  figure.append(host);
+  const markup = (step: RawSvgStepperStep | undefined): string => {
+    if (!step) return '';
+    return typeof step.svg === 'function'
+      ? localizeSvgMarkup(
+          withXiangqiBoardLayout(readStoredXiangqiBoardLayout(), () =>
+            withXiangqiPieceSet(readStoredXiangqiPieceSet(), step.svg as () => string),
+          ),
+          lang,
+        )
+      : localizeSvgMarkup(step.svg, lang);
+  };
+  // A frame wider than tall (several boards in a row, the fog stepper's
+  // three panes) takes the card's width with its text under it.
+  const view = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(markup(block.steps[0]));
+  const wide = view ? Number(view[1]) / Number(view[2]) > 1.2 : false;
+  // A game: every step after the start names its move, and the rail is the
+  // score sheet with each step's narrative as the note under its move.
+  const asGame = block.steps.length > 1 && block.steps.slice(1).every((step) => step.move);
+  let shown = -1;
+  const paint = (board: HTMLElement, index: number): void => {
+    shown = index;
+    board.innerHTML = markup(block.steps[index]);
+    if (board.querySelector('.xq-article-svg')) markXqDiagramsNoTranslate(board);
+  };
+  const card = createStepCard(
+    {
+      lang,
+      title: block.header?.players,
+      subtitle: block.header?.event,
+      wide,
+    },
+    {
+      count: block.steps.length,
+      paint,
+      ...(asGame
+        ? {
+            moves: block.steps.slice(1).map((step) => ({
+              label: step.move ?? '',
+              ...(step.narrative ? { note: step.narrative } : {}),
+            })),
+            intro: block.steps[0]?.narrative,
+          }
+        : { narratives: block.steps.map((step) => step.narrative) }),
+      ...(block.seats ? { seats: block.seats } : {}),
+      ...(block.result ? { result: block.result } : {}),
+    },
+  );
+  figure.append(card.el);
 
   if (block.caption) {
     const cap = document.createElement('figcaption');
@@ -1866,81 +1874,17 @@ function renderRawSvgStepperBlock(block: RawSvgStepperBlock, lang?: ArticleLang)
     figure.append(cap);
   }
 
-  let stepIdx = 0;
-
-  function render(): void {
-    const step = block.steps[stepIdx];
-    if (!step) return;
-    frame.innerHTML =
-      typeof step.svg === 'function'
-        ? localizeSvgMarkup(
-            withXiangqiBoardLayout(readStoredXiangqiBoardLayout(), () =>
-              withXiangqiPieceSet(readStoredXiangqiPieceSet(), step.svg as () => string),
-            ),
-            lang,
-          )
-        : localizeSvgMarkup(step.svg, lang);
-    const hasXiangqiDiagram = Boolean(frame.querySelector('.xq-article-svg'));
-    frame.classList.toggle('raw-svg-stepper-frame-xq', hasXiangqiDiagram);
-    figure.classList.toggle('article-figure-xq', hasXiangqiDiagram);
-    if (hasXiangqiDiagram) markXqDiagramsNoTranslate(frame);
-    narrative.textContent = step.narrative ?? '';
-    counter.textContent = `${stepIdx + 1} / ${block.steps.length}`;
-
-    const willDisablePrev = stepIdx === 0;
-    const willDisableNext = stepIdx === block.steps.length - 1;
-    const focused = document.activeElement;
-    if ((focused === prev && willDisablePrev) || (focused === next && willDisableNext)) {
-      host.focus();
-    }
-    prev.disabled = willDisablePrev;
-    next.disabled = willDisableNext;
-  }
-
-  function onPrev(): void {
-    if (stepIdx <= 0) return;
-    stepIdx -= 1;
-    render();
-  }
-
-  function onNext(): void {
-    if (stepIdx >= block.steps.length - 1) return;
-    stepIdx += 1;
-    render();
-  }
-
-  function onKeyDown(event: KeyboardEvent): void {
-    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-    switch (event.key) {
-      case 'ArrowLeft':
-      case 'q':
-      case 'Q':
-        event.preventDefault();
-        onPrev();
-        return;
-      case 'ArrowRight':
-      case 'e':
-      case 'E':
-        event.preventDefault();
-        onNext();
-        return;
-    }
-  }
-
-  prev.addEventListener('click', onPrev);
-  next.addEventListener('click', onNext);
-  host.addEventListener('keydown', onKeyDown);
-  render();
-
-  // Reactive piece set: repaint the frame's current step when the picker
-  // changes. render() already painted it; the global listener handles changes.
+  // Reactive piece set: repaint the shown step when the picker changes.
   if (block.steps.some((step) => typeof step.svg === 'function')) {
-    trackXqDiagram(frame, () => {
-      const step = block.steps[stepIdx];
-      if (!step) return '';
-      const raw = typeof step.svg === 'function' ? step.svg() : step.svg;
-      return localizeSvgMarkup(raw, lang);
-    });
+    const board = card.el.querySelector<HTMLElement>('.article-step-card-board');
+    if (board) {
+      trackXqDiagram(board, () => {
+        const step = block.steps[shown];
+        if (!step) return '';
+        const raw = typeof step.svg === 'function' ? step.svg() : step.svg;
+        return localizeSvgMarkup(raw, lang);
+      });
+    }
   }
 
   return figure;

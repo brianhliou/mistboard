@@ -264,12 +264,23 @@ export type RawSvgStepperStep = {
   // String, or a render thunk re-run on xiangqi appearance change (see RawSvgBlock).
   svg: string | (() => string);
   narrative?: string;
+  /** The move that led to this step ("Cxb10"). When every step after the first
+   *  names one, the card's rail is a score sheet and the narrative is the
+   *  note under the move. */
+  move?: string;
 };
 
 export type RawSvgStepperBlock = {
   kind: 'raw-svg-stepper';
   steps: RawSvgStepperStep[];
   header?: { players: string; event: string }; // optional title above the frame (engine-game style)
+  /** Seat rows above and below the board, as in the study embed. */
+  seats?: {
+    first: { name: string; ink: string | null };
+    second: { name: string; ink: string | null };
+  };
+  /** The result foot under the score sheet. */
+  result?: string;
   caption?: string;
 };
 

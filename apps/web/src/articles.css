@@ -2289,6 +2289,158 @@
   width: 100%;
 }
 
+/* The step card (article-step-card.ts): an article's step-through board in the
+   study embed's card (embed.css .embed-card). The embed sizes its board column
+   in JS from an iframe's box; in the column the card is the column's width,
+   the board column is what the sheet leaves (the sheet keeps the embed's 226px
+   floor), and the height follows the board. Under 560px of column the sheet
+   goes under the board. */
+.article-step-card {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.article-step-card-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.article-step-card-subtitle {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.article-step-card .embed-card {
+  width: 100%;
+  max-height: none;
+  margin: 0;
+}
+
+.article-step-card .embed-card:focus-visible {
+  outline: 2px solid var(--site-accent);
+  outline-offset: 2px;
+}
+
+.article-step-card .embed-card-board {
+  width: calc(100% - 226px);
+}
+
+/* No seat rows (a stepped figure): the mat keeps the same inset above and
+   below the board that it has at the sides. */
+.article-step-card .embed-card:not(.article-step-card-seated) .article-step-card-board {
+  padding-block: 8px;
+}
+
+.article-step-card-board {
+  line-height: 0;
+}
+
+.article-step-card-board > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+/* A figure's step text where a game's sheet would be. */
+.article-step-card-narrative {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 10px 12px;
+  overflow-y: auto;
+  color: var(--site-text);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.article-step-card-narrative:empty {
+  padding: 0;
+}
+
+/* The start position's line, at the head of the sheet. */
+.article-step-card-intro {
+  padding: 2px 5px 6px;
+  color: var(--site-muted);
+  font-size: 12px;
+  line-height: 1.35;
+  list-style: none;
+}
+
+/* The game picker in the title line. */
+.article-step-card-picker {
+  max-width: 100%;
+  margin-top: 4px;
+  padding: 5px 8px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius-sm, 8px);
+  background: var(--site-panel, var(--site-surface));
+  color: var(--site-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.article-step-card-picker-blurb {
+  max-width: 560px;
+  margin: 2px 0 0;
+  color: var(--site-muted);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+@container (max-width: 559px) {
+  .article-step-card .embed-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .article-step-card .embed-card-board {
+    width: 100%;
+  }
+  .article-step-card .embed-card-rail {
+    flex: none;
+    height: 200px;
+    min-height: 0;
+    border-left: 0;
+    border-top: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
+  }
+  .article-step-card .embed-card-rail.article-step-card-rail-text,
+  .article-step-card .embed-card-rail.article-step-card-rail-text .embed-card-rail-inner {
+    position: static;
+    height: auto;
+  }
+}
+
+/* Wide boards always stack, and step text (no sheet) is in flow under the
+   board, as tall as it needs, wherever the rail is. */
+.article-step-card--wide .embed-card {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.article-step-card--wide .embed-card-board {
+  width: 100%;
+}
+
+.article-step-card--wide .embed-card-rail {
+  flex: none;
+  min-height: 0;
+  border-left: 0;
+  border-top: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
+}
+
+.article-step-card--wide .embed-card-rail.article-step-card-rail-text,
+.article-step-card--wide .embed-card-rail.article-step-card-rail-text .embed-card-rail-inner {
+  position: static;
+  height: auto;
+}
+
 .raw-svg-stepper-frame {
   width: 100%;
 }
