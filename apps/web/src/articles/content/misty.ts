@@ -15,7 +15,7 @@ export const mistyArticle: Article = {
     showSummaryOnPage: false,
     status: 'published',
     publishedAt: '2026-06-21',
-    updatedAt: '2026-09-05',
+    updatedAt: '2026-10-07',
     audience:
       'Dark chess players and chess-engine builders curious about how the Mistboard engine works.',
     intro: [
@@ -97,7 +97,7 @@ export const mistyArticle: Article = {
           {
             kind: 'paragraph',
             text:
-              'Obscuro is not public. So as far as I can find, Misty is the only Fog of War chess engine built on that architecture that anyone else can run, read, or take apart, and that is most of the reason to publish it.',
+              'Obscuro’s paper ships no code. Misty is a Python and Rust implementation of its architecture, with a documented engine protocol and a server you can play it on. The other open implementation I know of is [obscuro-chess](https://github.com/opowell/obscuro-chess), a JavaScript port started in August 2026. Misty is published so that anyone can run it, read it, or take it apart.',
           },
           {
             kind: 'cta',

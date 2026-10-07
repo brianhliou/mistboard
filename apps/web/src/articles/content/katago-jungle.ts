@@ -20,8 +20,9 @@ import type { Article, ArticleBlock } from '../types.js';
 import evalsJson from './katago-jungle-evals.json' with { type: 'json' };
 import linesJson from './katago-jungle-lines.json' with { type: 'json' };
 
-// Facts from the KataGo seat (#434, be6fc95e) and the match write-up linked
-// below: 200 games against MistyJungle at 1,000 visits a move (82-0-118, 0.705,
+// Facts from the KataGo seat (#434, be6fc95e) and the match write-up
+// (brianhliou.com, 2026-09-23, merged into this article 2026-10-07; the blog
+// post 301s here): 200 games against MistyJungle at 1,000 visits a move (82-0-118, 0.705,
 // study 0t8xpyv6), then 50 at the site's 150 visits (19-0-31, 0.690).
 //
 // Text card (text-card.ts) on the jungle diagrams' green. KataGo has no Chinese
@@ -155,6 +156,7 @@ export const katagoJungleArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-10-03',
+  updatedAt: '2026-10-07',
   thumbnail: { kind: 'svg', svg: KATAGO_JUNGLE_THUMBNAIL },
   audience: 'People who play Jungle Chess against the bot on Mistboard.',
   intro: [
@@ -185,7 +187,43 @@ export const katagoJungleArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'All 200 games are in [one study](/study/0t8xpyv6), and the [match write-up](https://brianhliou.com/posts/katago-beats-misty-jungle/) has the details.',
+          text: "Mistboard's own rules code refereed every game, and each engine only proposed moves. The budgets were matched on time, about two seconds a move on one machine: Misty at its usual 5 million nodes on one thread, KataGo at 1,000 visits on four threads with the b10c384 network. Both engines stop at a fixed amount of search, so the games played on Modal are the games either would play here. KataGo's own repetition rule was switched off, so the referee's applied to both sides.",
+        },
+        {
+          kind: 'table',
+          compact: true,
+          keyColumn: true,
+          headers: ['KataGo', 'Wins', 'Draws', 'Losses', 'Score'],
+          rows: [
+            ['As red, 100 games', '44', '56', '0', '0.72'],
+            ['As black, 100 games', '38', '62', '0', '0.69'],
+            ['Total', '82', '118', '0', '0.705'],
+          ],
+          highlightRows: [2],
+          caption:
+            'The median game ran 127 plies. The 95% interval on the score is 0.67 to 0.74, about +125 to +180 Elo; the challenge asked for 0.55.',
+        },
+        {
+          kind: 'paragraph',
+          // The records file is the brianhliou.com asset, copied to apps/web/public.
+          text: 'All 200 games are in [one study](/study/0t8xpyv6), and the raw records are in [one file](/jungle-games/katago-vs-misty-2026-09-21.jsonl), a line of JSON per game.',
+        },
+      ],
+    },
+    {
+      heading: 'The tiger now jumps the river sideways',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'We found KataGo while searching GitHub for jieqi engines. It lives on the AnimalChess2025 branch of a repository named KataGomo, and nothing in that name says Jungle Chess, so an earlier search for Jungle engines had missed it.',
+        },
+        {
+          kind: 'paragraph',
+          text: "Its tiger jumps the river sideways as well as lengthwise, the same leap as the lion. Ours jumped lengthwise only, a reading taken from English Wikipedia's article. Tencent's QQ游戏 rules, Leiden University's Dou Shou Qi page and KataGo's own source all give the tiger the lion's jump, and a match between an engine trained on one rule and an engine playing another would have measured the rule.",
+        },
+        {
+          kind: 'paragraph',
+          text: 'Since 21 September the tiger on Mistboard jumps both ways, in the rules engine, the bot, the analysis board, the [rules page](/rules/jungle) and the puzzles. One puzzle the new jump refutes was withdrawn. The change only adds moves, so every earlier game is still legal as played.',
         },
       ],
     },
@@ -247,6 +285,19 @@ export const katagoJungleArticle: Article = {
         {
           kind: 'paragraph',
           text: 'In these two games, KataGo saw the win seven moves and two moves before Misty did.',
+        },
+      ],
+    },
+    {
+      heading: 'KataGo is the Go program, retrained by self-play',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'KataGo-AnimalChess is stock KataGo with the board and rules swapped for Jungle Chess and the self-play loop run as it was: 400 visits a move in self-play, a 10-block, 384-channel network trained by SGD on two GPUs, and rules randomised across the variants the Dandelion app supports, so one network plays all of them. The repository estimates under $50 of compute to reach top strength in a small game. The weights ship inside the app download, with no separate release and no stated licence.',
+        },
+        {
+          kind: 'paragraph',
+          text: "Misty's evaluation is three hand-written terms: material, distance to the den and a trap penalty. A learned correction on top of it did not help.",
         },
       ],
     },

@@ -23,7 +23,7 @@ export const duckXiangqiArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-09-09',
-  updatedAt: '2026-09-09',
+  updatedAt: '2026-10-07',
   audience:
     'Xiangqi players, and Duck Chess players who want the xiangqi version stated precisely.',
   thumbnail: { kind: 'svg', svg: DUCK_XIANGQI_THUMBNAIL },
@@ -48,7 +48,7 @@ export const duckXiangqiArticle: Article = {
     },
     {
       kind: 'paragraph',
-      text: 'Chess has one way of blocking a piece: stand on the point it wants. Xiangqi has four. The sections below are where that difference lands.',
+      text: 'Chess has one way of blocking a piece: stand on the point it wants. Xiangqi has five. The sections below are where that difference lands.',
     },
   ],
   sections: [
@@ -136,6 +136,10 @@ export const duckXiangqiArticle: Article = {
           text: 'Xiangqi never lets the two generals sit on one file with nothing between them. Here they may, because a general may fly down that file and capture the other one. That ends the game, and it is the only time a general leaves its palace.',
         },
         {
+          kind: 'paragraph',
+          text: 'The facing rule is check in another form. Two generals on an open file attack each other, so leaving them facing is moving into check, which xiangqi already forbids. Duck Chess has no check, so the facing rule has nothing left to say and goes with it. Duck Chess does the same with kings: they may stand side by side, and a king takes a king.',
+        },
+        {
           kind: 'raw-svg',
           svg: DUCK_XIANGQI_FACING_PIN,
           caption:
@@ -144,6 +148,10 @@ export const duckXiangqiArticle: Article = {
         {
           kind: 'paragraph',
           text: 'So the duck defends as well as blocks, and it is an uncomfortable defender: holding a file costs you the duck every single turn.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'Clear the board down to the two generals, on e1 and e10. Of the 88 empty points, 8 keep them apart: e2 to e9. Under xiangqi’s facing rule those 8 would be the only legal places for the duck. Here all 88 are legal, and the other 80 lose on the spot.',
         },
       ],
     },

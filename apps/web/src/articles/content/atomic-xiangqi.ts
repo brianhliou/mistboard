@@ -24,7 +24,7 @@ export const atomicXiangqiArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-09-15',
-  updatedAt: '2026-09-16',
+  updatedAt: '2026-10-07',
   audience:
     'Xiangqi players, and Atomic Chess players who want the xiangqi version stated precisely.',
   thumbnail: { kind: 'svg', svg: ATOMIC_XIANGQI_THUMBNAIL },
@@ -97,7 +97,11 @@ export const atomicXiangqiArticle: Article = {
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: 'This is the one change from a straight port, and it is there because the straight port has a draw by repetition that can start on move three and that the defender can never refuse. A chariot on the file of an advisor threatens to blow up the general. The only defence is to block with a cannon, and with cannons exploding, the block is also a shot back over the chariot at the attacker’s own advisor, so the chariot has to move to the other advisor file, the cannon follows, and the position repeats. In engine games a side that had lost a chariot could hold the draw this way against a far stronger opponent. A quiet shot leaves the block standing but harmless, and the check rule below makes the hop that remains a loss for the side making it. The cannon becomes a piece you trade and block with rather than the piece that clears a rank, and everything else about the explosion stays as it is.',
+          text: 'This is the one change from a straight port, and the straight port had two faults that needed it. The first showed on move one. From the starting array each cannon can jump the enemy cannon and take the horse behind it, and the blast takes the chariot and elephant beside the horse as well: three pieces for a cannon, and every best-play engine game opened with both sides doing it. The second was a draw by repetition that can start on move three and that the defender can never refuse. A chariot on the file of an advisor threatens to blow up the general. The only defence is to block with a cannon, and with cannons exploding, the block is also a shot back over the chariot at the attacker’s own advisor, so the chariot has to move to the other advisor file, the cannon follows, and the position repeats. In engine games a side that had lost a chariot could hold the draw this way against a far stronger opponent.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'The fix took two rules, and neither works alone. A quiet shot ends the opening exchange and leaves the block standing but harmless, but the chariot may still hop and the cannon still has to follow. Counting a blast threat as check (the next section) does nothing by itself: while the block can shoot back, both sides check on every move, and a repetition both sides check through is a draw. With both rules the hop is a one-sided perpetual check and loses. The engine scores it as a loss and plays on, about a quarter of a pawn down. The cannon becomes a piece you trade and block with rather than the piece that clears a rank, and everything else about the explosion stays as it is.',
         },
       ],
     },
@@ -138,6 +142,10 @@ export const atomicXiangqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
+          text: 'Every number on this page comes from engine games refereed by the rules kernel and played by a patched Fairy-Stockfish, and the two have to agree on every legal-move count before a number is read. The engine with ten times the nodes wins 29 of 32 games, at two strength levels, without losing one. Of the 44 first moves from the array, each played out at a million nodes a side, none wins for Red and three lose. None of the 19 repetition draws is a one-sided perpetual check. The [variant lab](https://github.com/brianhliou/mistboard/tree/main/scripts/variant-lab) has the kernel, the patch and the commands behind each number.',
+        },
+        {
+          kind: 'paragraph',
           text: 'One of the engine games behind this page: Fairy-Stockfish at ten million nodes as Red against itself at one million. Red is a pawn and a half up by move 6 and the game stays close until Black’s 21…Hxf9, a horse taking a cannon on f9 with Black’s own advisor on f10 beside it. The blast takes the advisor, the palace is a piece lighter for nothing, and it never recovers: 30…Cb9 leaves the general without cover, and on move 38 Red’s chariot takes the cannon on d8, next to the general on d9. The blast takes the general, and the elephant on e8 with it.',
         },
         {
@@ -156,15 +164,10 @@ export const atomicXiangqiArticle: Article = {
     },
     playClosing({
       heading: 'Play on Mistboard',
-      lead: 'Play it against the engine at any of eight strengths, or against a friend with an invite link. The [launch note](/blog/atomic-xiangqi-build) is what decides a first game; the design post has the measurements behind the cannon rule; the study has all twelve engine games, with every explosion marked and a note on the move that decided each.',
+      lead: 'Play it against the engine at any of eight strengths, or against a friend with an invite link. The [launch note](/blog/atomic-xiangqi-build) is what decides a first game; the study has all twelve engine games, with every explosion marked and a note on the move that decided each.',
       playLabel: 'Play Atomic Xiangqi',
       playHref: '/?play=computer&gameSpecId=atomic-xiangqi',
       secondary: [
-        {
-          label: 'The design post',
-          href: 'https://brianhliou.com/posts/atomic-xiangqi/',
-          emphasis: 'secondary',
-        },
         { label: 'The twelve engine games', href: '/study/dPKhvJKb', emphasis: 'secondary' },
       ],
     }),

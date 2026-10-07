@@ -164,6 +164,90 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // duck-xiangqi, duck-xiangqi-strategy, misty blog merge (2026-10-07): machine-translated.
+  'Chess has one way of blocking a piece: stand on the point it wants. Xiangqi has five. The sections below are where that difference lands.':
+    '国际象棋只有一种挡子的办法：站到它想去的点上。象棋有五种。下面几节讲的就是这个差别落在哪里。',
+  'The facing rule is check in another form. Two generals on an open file attack each other, so leaving them facing is moving into check, which xiangqi already forbids. Duck Chess has no check, so the facing rule has nothing left to say and goes with it. Duck Chess does the same with kings: they may stand side by side, and a king takes a king.':
+    '将帅不能照面这条规则，其实是将军的另一种说法。同一路上中间无子的两位将帅互相攻击，所以让它们照面就等于送将，而象棋本来就禁止送将。鸭子国际象棋没有将军，这条规则也就无话可说，随之取消。鸭子国际象棋对王也是这样处理的：两王可以相邻，王可以吃王。',
+  'Clear the board down to the two generals, on e1 and e10. Of the 88 empty points, 8 keep them apart: e2 to e9. Under xiangqi’s facing rule those 8 would be the only legal places for the duck. Here all 88 are legal, and the other 80 lose on the spot.':
+    '把棋盘清到只剩两位将帅，分别在 e1 和 e10。88 个空点里，只有 8 个能把它们隔开：e2 到 e9。按象棋的照面规则，鸭子只能合法地放在这 8 个点上。这里 88 个点都合法，而其余 80 个点放下去就当场输棋。',
+  'The duck half is nearly always about the other player: which line to shut, which horse to freeze, what to make awkward. So half of every turn goes on spoiling. It feels like always playing your second-best move.':
+    '放鸭子的那一半几乎总是冲着对手去的：封哪条线，蹩哪匹马，给对方添什么别扭。所以每一回合有一半花在搅局上。感觉就像永远在走自己的次优着。',
+  'Duck Xiangqi: an ordinary middlegame, eighteen moves into an engine game':
+    '鸭子象棋：一盘引擎对局第十八回合的普通中局',
+  'The engine sees that capture coming from any distance. A person often won’t: it comes from the far end of the board, down a file the duck was guarding a turn ago. None of the six published engine games ends this way. Two of the original seven did, and both came from an engine bug that could lose track of the capture. After the fix on 29 September, one of those games replayed as a different win and the other never reached a decisive finish, so the study holds six.':
+    '引擎隔多远都能看到这一吃。人却常常看不到：它来自棋盘的另一端，沿着一路杀过来，而鸭子上一回合还守在那一路上。已发布的六盘引擎对局没有一盘是这样结束的。最初的七盘里有两盘是，而且两盘都源于一个引擎漏洞：引擎可能会算丢这一吃。9 月 29 日修复之后，其中一盘重下变成了另一种赢法，另一盘始终没有分出胜负，所以研习里现在是六盘。',
+  'That is the range across the six engine games, and the median is 171. Expect a full-length game rather than a novelty, and pick a clock accordingly: the two paces offered here are 5+5 and 10+5 for exactly this reason.':
+    '这是六盘引擎对局的范围，中位数是 171 步。请把它当成一盘完整的棋而不是小玩意，并据此选择用时：这里提供 5+5 和 10+5 两种节奏，正是出于这个原因。',
+  'Obscuro’s paper ships no code. Misty is a Python and Rust implementation of its architecture, with a documented engine protocol and a server you can play it on. The other open implementation I know of is [obscuro-chess](https://github.com/opowell/obscuro-chess), a JavaScript port started in August 2026. Misty is published so that anyone can run it, read it, or take it apart.':
+    'Obscuro 的论文没有附带代码。Misty 是该架构的 Python 和 Rust 实现，有文档化的引擎协议，也有一个可以和它对弈的服务器。我所知道的另一个开源实现是 [obscuro-chess](https://github.com/opowell/obscuro-chess)，一个 2026 年 8 月开始的 JavaScript 移植版。Misty 开源发布，任何人都可以运行、阅读和拆解它。',
+  // how-puzzle-mining-works blog merge (2026-10-07): machine-translated.
+  'Every source carries a licence status, and publishing refuses any puzzle whose source has not been cleared.':
+    '每个来源都带有授权状态，来源未获授权的题目一律不予发布。',
+  'What survives the gate goes to an audit. A separate process searches every solution again at depth 22 with no node ceiling, knowing nothing of what the first pass decided, and about 6% of the survivors do not hold up. Those are dropped too.':
+    '通过判定关卡的题目还要接受复核。另一个独立进程以 22 层深度、不设节点上限，把每道题的解答重新搜索一遍，它完全不知道第一遍的结论。大约 6% 的幸存者经不起复核，同样被丢弃。',
+  'In August 2026 mining cost about six core-hours per thousand games, or about one core-minute per published puzzle.':
+    '2026 年 8 月，挖掘的成本约为每千盘对局六个核心小时，也就是每发布一道题目约一个核心分钟。',
+  'A rating scores what makes the line hard to see': '评分衡量的是这条线路难在哪里',
+  'Every puzzle needs a rating before anyone has solved it, so the trainer can pick problems near your level. Rating by mate depth gives four distinct values across the corpus. The rating walks the solution instead: a quiet first move adds, a capture subtracts, a sacrifice the solver never wins back adds up to 200, and the number of replies the defender has pushes it either way. On 2 September 2026 the 1,415 puzzles served had 479 distinct ratings between 1000 and 2600.':
+    '每道题目在还没有人解过之前就需要一个评分，这样训练器才能挑出接近你水平的题目。只按杀棋步数评分，整个题库只会得到四个不同的数值。所以评分会把解答逐步走一遍：第一步不吃子会加分，吃子会减分，解题者弃掉且始终没有追回的子力最多加 200 分，防守方可走的应着数量则可能加分也可能减分。2026 年 9 月 2 日，上线的 1,415 道题目共有 479 个不同的评分，介于 1000 到 2600 之间。',
+  'The largest penalty goes to a first move that takes something nothing can take back, scaled by the piece it wins and capped at a chariot’s 900, because a hanging piece is the easiest thing on a board to spot. The check only runs while the game is still going. A capture that mates also leaves the defender no legal reply, and counted naively that looks like a piece nothing can recapture, which would mark down every mating capture in the corpus.':
+    '扣分最多的，是第一步吃掉一个对方无法反吃的子，扣分按吃到的子力计算，上限是一个车的 900，因为无人保护的子是棋盘上最容易发现的东西。这项检查只在对局仍在进行时才执行。吃子同时将死对方时，防守方也没有任何合法应着；如果照字面去数，这看起来就像一个无法反吃的子，题库里每一步吃子成杀都会被扣分。',
+  'One kind of position is withheld: the solver is already at least 300 centipawns ahead and the answer takes something undefended. It teaches nothing at any rating, and a rating can only decide who gets shown a problem. That rule hid 12% of the corpus.':
+    '有一类局面不予上线：解题者已经领先至少 300 厘兵，而答案是吃掉一个无人保护的子。这种题目在任何评分上都教不了什么，而评分只能决定一道题出现在谁面前。这条规则隐藏了题库的 12%。',
+  // katago-jungle blog merge (2026-10-07): machine-translated.
+  "Mistboard's own rules code refereed every game, and each engine only proposed moves. The budgets were matched on time, about two seconds a move on one machine: Misty at its usual 5 million nodes on one thread, KataGo at 1,000 visits on four threads with the b10c384 network. Both engines stop at a fixed amount of search, so the games played on Modal are the games either would play here. KataGo's own repetition rule was switched off, so the referee's applied to both sides.":
+    '每盘棋都由 Mistboard 自己的规则代码裁判，两个引擎只负责提出着法。双方的预算按用时对齐，在同一台机器上每步大约两秒：Misty 用它平时的 500 万个节点、单线程，KataGo 用 1,000 次访问、四线程，搭配 b10c384 神经网络。两个引擎都在固定的搜索量处停下，所以在 Modal 上下出的棋，就是它们在这里会下出的棋。KataGo 自带的重复局面规则被关闭，双方都按裁判的规则处理重复。',
+  KataGo: 'KataGo',
+  Wins: '胜',
+  Losses: '负',
+  Score: '得分率',
+  'As red, 100 games': '执红，100 盘',
+  'As black, 100 games': '执黑，100 盘',
+  Total: '合计',
+  'The median game ran 127 plies. The 95% interval on the score is 0.67 to 0.74, about +125 to +180 Elo; the challenge asked for 0.55.':
+    '对局长度的中位数是 127 个半回合。得分率的 95% 置信区间是 0.67 到 0.74，约合 +125 到 +180 Elo；挑战赛的要求是 0.55。',
+  'All 200 games are in [one study](/study/0t8xpyv6), and the raw records are in [one file](/jungle-games/katago-vs-misty-2026-09-21.jsonl), a line of JSON per game.':
+    '全部 200 盘都收在[一个研究](/study/0t8xpyv6)里，原始记录放在[一个文件](/jungle-games/katago-vs-misty-2026-09-21.jsonl)中，每盘一行 JSON。',
+  'The tiger now jumps the river sideways': '虎现在可以横向跳河',
+  'We found KataGo while searching GitHub for jieqi engines. It lives on the AnimalChess2025 branch of a repository named KataGomo, and nothing in that name says Jungle Chess, so an earlier search for Jungle engines had missed it.':
+    '我们是在 GitHub 上找揭棋引擎时发现 KataGo 的。它放在一个名为 KataGomo 的仓库的 AnimalChess2025 分支上，名字里看不出和斗兽棋有关，所以之前专门找斗兽棋引擎时漏掉了它。',
+  "Its tiger jumps the river sideways as well as lengthwise, the same leap as the lion. Ours jumped lengthwise only, a reading taken from English Wikipedia's article. Tencent's QQ游戏 rules, Leiden University's Dou Shou Qi page and KataGo's own source all give the tiger the lion's jump, and a match between an engine trained on one rule and an engine playing another would have measured the rule.":
+    '它的虎既能纵向跳河，也能横向跳河，跳法和狮一样。我们的虎原先只能纵向跳，这个理解来自英文维基百科的条目。腾讯 QQ游戏的规则、莱顿大学的斗兽棋页面和 KataGo 自己的源代码，都让虎拥有和狮一样的跳法；一个按某条规则训练的引擎，去和一个按另一条规则下棋的引擎比赛，比出来的只是规则的差别。',
+  'Since 21 September the tiger on Mistboard jumps both ways, in the rules engine, the bot, the analysis board, the [rules page](/rules/jungle) and the puzzles. One puzzle the new jump refutes was withdrawn. The change only adds moves, so every earlier game is still legal as played.':
+    '从 9 月 21 日起，Mistboard 上的虎可以纵横两个方向跳河，规则引擎、电脑、分析棋盘、[规则页面](/rules/jungle)和题目都已更新。有一道题目被新的跳法驳倒，已经撤下。这次改动只增加了着法，所以之前的每一盘棋按原样仍然合法。',
+  'KataGo is the Go program, retrained by self-play': 'KataGo 就是那个围棋程序，用自我对弈重新训练',
+  'KataGo-AnimalChess is stock KataGo with the board and rules swapped for Jungle Chess and the self-play loop run as it was: 400 visits a move in self-play, a 10-block, 384-channel network trained by SGD on two GPUs, and rules randomised across the variants the Dandelion app supports, so one network plays all of them. The repository estimates under $50 of compute to reach top strength in a small game. The weights ship inside the app download, with no separate release and no stated licence.':
+    'KataGo-AnimalChess 就是原版 KataGo，只是把棋盘和规则换成了斗兽棋，自我对弈的训练流程原样照跑：自我对弈时每步 400 次访问，10 个残差块、384 个通道的神经网络在两块 GPU 上用 SGD 训练，规则在 Dandelion 软件支持的各个变体之间随机切换，所以一个网络就能下所有变体。仓库里估计，在一个小型棋类上练到顶尖棋力，算力花费不到 50 美元。网络权重打包在软件的下载里，没有单独发布，也没有注明许可协议。',
+  "Misty's evaluation is three hand-written terms: material, distance to the den and a trap penalty. A learned correction on top of it did not help.":
+    'Misty 的评估只有三项手写的内容：子力、离兽穴的距离，以及陷阱扣分。在它之上再加一层学习出来的修正，并没有帮助。',
+  // atomic-xiangqi blog merge (2026-10-07): machine-translated.
+  'This is the one change from a straight port, and the straight port had two faults that needed it. The first showed on move one. From the starting array each cannon can jump the enemy cannon and take the horse behind it, and the blast takes the chariot and elephant beside the horse as well: three pieces for a cannon, and every best-play engine game opened with both sides doing it. The second was a draw by repetition that can start on move three and that the defender can never refuse. A chariot on the file of an advisor threatens to blow up the general. The only defence is to block with a cannon, and with cannons exploding, the block is also a shot back over the chariot at the attacker’s own advisor, so the chariot has to move to the other advisor file, the cannon follows, and the position repeats. In engine games a side that had lost a chariot could hold the draw this way against a far stronger opponent.':
+    '这是相对于直接移植的唯一改动，直接移植的版本有两个毛病，都要靠它解决。第一个在第一回合就出现了。从开局阵势起，每一方的炮都能隔着对方的炮打掉后面的马，而爆炸还会带走马旁边的车和象：一个炮换三个子，在引擎的最佳着法对局里，每一盘开局双方都这样走。第二个是一种最早第三回合就能出现、防守方永远无法拒绝的重复局面和棋。一辆车站在士所在的线上，威胁把将帅炸掉。唯一的防守是用炮垫挡；而如果炮也会爆炸，这一垫挡同时就是隔着车反打进攻方自己的士，于是车只好换到另一条士线上，炮跟过去，局面重复。在引擎对局中，少了一辆车的一方靠这一招就能顶住比自己强得多的对手。',
+  'The fix took two rules, and neither works alone. A quiet shot ends the opening exchange and leaves the block standing but harmless, but the chariot may still hop and the cannon still has to follow. Counting a blast threat as check (the next section) does nothing by itself: while the block can shoot back, both sides check on every move, and a repetition both sides check through is a draw. With both rules the hop is a one-sided perpetual check and loses. The engine scores it as a loss and plays on, about a quarter of a pawn down. The cannon becomes a piece you trade and block with rather than the piece that clears a rank, and everything else about the explosion stays as it is.':
+    '解决它用了两条规则，缺一不可。炮击不爆炸，开局的那种兑换就没有了，垫挡仍然成立却不构成威胁；但车仍然可以来回跳，炮也仍然得跟过去。把爆炸威胁算作将军（见下一节），单独用也不起作用：只要垫挡的炮还能反打，双方每一步都在将军，而双方都在将军的重复局面判和。两条规则合在一起，来回跳就成了单方面的长将，判负。引擎也把它算作输棋，宁可落后大约四分之一个兵继续下。炮由此变成一枚用来兑换和垫挡的棋子，而不再是扫清一条横线的棋子；爆炸的其余部分全部不变。',
+  'Every number on this page comes from engine games refereed by the rules kernel and played by a patched Fairy-Stockfish, and the two have to agree on every legal-move count before a number is read. The engine with ten times the nodes wins 29 of 32 games, at two strength levels, without losing one. Of the 44 first moves from the array, each played out at a million nodes a side, none wins for Red and three lose. None of the 19 repetition draws is a one-sided perpetual check. The [variant lab](https://github.com/brianhliou/mistboard/tree/main/scripts/variant-lab) has the kernel, the patch and the commands behind each number.':
+    '本页的每一个数字都来自引擎对局：由规则内核裁判，由打过补丁的 Fairy-Stockfish 来下，两者必须在每一个合法着法数上完全一致，才开始读任何数字。节点数多十倍的引擎在两个强度档位上下了 32 盘，赢 29 盘，一盘未输。从开局阵势出发的 44 种第一步，每种都以双方各一百万节点下完，没有一种让红方获胜，有三种让红方输棋。19 盘重复局面和棋里，没有一盘是单方面的长将。[变体实验室](https://github.com/brianhliou/mistboard/tree/main/scripts/variant-lab)里有内核、补丁和每个数字背后的命令。',
+  'Play it against the engine at any of eight strengths, or against a friend with an invite link. The [launch note](/blog/atomic-xiangqi-build) is what decides a first game; the study has all twelve engine games, with every explosion marked and a note on the move that decided each.':
+    '和八个强度档位的引擎对弈，或者用邀请链接约朋友。[发布说明](/blog/atomic-xiangqi-build)讲的是第一盘棋的胜负由什么决定；研究里有全部十二盘引擎对局，每次爆炸都有标记，每盘的决定性一步都有注解。',
+  // solver-audit blog merge (2026-10-07): machine-translated.
+  '適情雅趣 第108局 争舟走渡 prints a mate in seven, thirteen plies. At Red’s first move the soldier can take the advisor beside the general instead, 兵四平五, and that mates in six. Nine of the 172 can be mated faster than printed.':
+    '《適情雅趣》第108局 争舟走渡印的是七着杀，共十三步。红方第一着改用兵吃将旁边的士，兵四平五，六着就能成杀。172局中有9局存在比所印更快的杀法。',
+  '適情雅趣 第108局 争舟走渡: a mate in six where the book prints seven':
+    '適情雅趣 第108局 争舟走渡：书中印七着杀，六着即可成杀',
+  'The book’s line, with 兵四平五 as a branch at Red’s first move: it takes the advisor and mates a move sooner.':
+    '书中着法，红方第一着处另有分枝兵四平五：吃士，早一着成杀。',
+  'The audit was wrong three times first': '审校先错了三次',
+  'The counts above come from the fourth version of the audit. The first was a pass over the quiet compositions, and it searched the position after the key as though Red were to play twice. It reported 176 of 190 sound. The number meant nothing, because every search had started on the wrong side.':
+    '上面的数字来自第四版审校。第一版检验的是不连将的排局，它在首着之后的局面上搜索时，当成了红方连走两步。结果报告190局中176局无瑕。这个数字毫无意义，因为每一次搜索都从错误的一方开始。',
+  'The second judged every composition as a chess mate-in-n. A quiet 排局 claims only 红先胜, Red plays and wins, and against that claim a second key and a faster mate are not faults. About half the faults that pass counted went away. Both mistakes were in the quiet-move audit, shelved for the reason in the next section; the 172 above are continuous-check problems, where the length is part of what the book claims.':
+    '第二版把每一局都当成国际象棋排局里的“n着杀”来判。不连将的排局只声称红先胜，对这样的结论来说，第二首着和更快的杀法都不算毛病。那一轮算出的毛病大约有一半就此作废。这两个错误都出在不连将排局的审校里，那部分已经搁置，原因见下一节；上面的172局都是连将杀排局，着数本身就是书中结论的一部分。',
+  'The third was running the exact search without the engine screen described above. Eight records were first read as broken compositions: five are the Red wins past the search’s reach in the table, and three are the broken records above.':
+    '第三个错误是没有先做上面说的引擎筛查，就直接跑精确搜索。有八局起初被判为排局本身有缺陷：其中五局是表中那些红方能胜但超出搜索范围的，另外三局是上面的错谱。',
+  'A fourth was in the helpmates, the problems where both sides cooperate to reach mate. The composer that built them tested for checkmate, and xiangqi also scores 困毙, a side left with no legal move, as a loss. A line ending in 困毙 is a second solution, so 22 of the 186 helpmates we had published as sound had lines the composer could not see, 64 in the worst of them. A re-check that counts 困毙 is written and has not shipped yet.':
+    '第四个错误出在协作杀里，也就是双方合作走成杀局的题。生成这些题的程序只检验将死，而象棋把困毙，即一方无子可动，同样判负。以困毙结束的着法也是一种解，所以我们当作唯一解发布的186道协作杀里，有22道含有生成程序看不到的解，最多的一道有64种。按困毙计算的复查程序已经写好，还没有上线。',
+  'Four bugs, and each was a rule we knew and had not put into the tool: whose move it is, what a 排局 claims, that a mistyped record looks like a broken composition, and that 困毙 loses.':
+    '四个错误，每一个都是我们本来知道、却没有写进工具的规则：轮到哪一方走，排局声称的是什么，录错的棋谱看起来和有缺陷的排局一样，以及困毙判负。',
   // solver-audit (2026-10-06): machine-drafted, not native-reviewed. Terms follow
   // the 2026-10-01 brianhliou.com write-up (排局, 连将杀, 双解, 第二首着, 错谱).
   'Auditing the Old Manuals': '求解器审校古谱',
@@ -363,8 +447,6 @@ const ZH_HANS: Record<string, string> = {
   '82 wins and no losses against Misty': '对 Misty 82 胜 0 负',
   "Before putting it on the site, we played it against Misty, our own Jungle Chess bot, in an open challenge of 200 games at 1,000 visits a move. hzyhhzy's engine won 82, lost none and drew 118, a score of 0.705. Every win came from walking into Misty's den, and every draw was a repetition.":
     '上线之前，我们让它和我们自己的斗兽棋电脑 Misty 进行了一场公开挑战赛：200 盘，每步 1,000 次访问。hzyhhzy 的引擎赢 82 盘、输 0 盘、和 118 盘，得分率 0.705。每一盘胜局都是走进 Misty 的兽穴取胜，每一盘和棋都是重复局面。',
-  'All 200 games are in [one study](/study/0t8xpyv6), and the [match write-up](https://brianhliou.com/posts/katago-beats-misty-jungle/) has the details.':
-    '全部 200 盘都收在[一个研究](/study/0t8xpyv6)里，详情见[比赛记录](https://brianhliou.com/posts/katago-beats-misty-jungle/)。',
   'Misty is still where you start': '入门仍从 Misty 开始',
   'KataGo is at the top of the Jungle Chess bot list, above Misty. Misty stays the default and the easier opponent; pick KataGo when you want the stronger game. Game review and analysis for Jungle Chess still run on Misty.':
     'KataGo 排在斗兽棋电脑列表的最上面，在 Misty 之上。Misty 仍是默认对手，也是较容易的那一个；想下更难的棋就选 KataGo。斗兽棋的复盘和分析仍由 Misty 负责。',
@@ -1176,8 +1258,6 @@ const ZH_HANS: Record<string, string> = {
   'The engine is open source': '引擎已开源',
   "Misty's source is on GitHub under the GPL, and it installs from PyPI as misty-chess. What ships is the Fog Chess engine itself: the belief enumerator, the search, the guards that veto a catastrophic move at commit time, and the test suite that holds the Rust and Python implementations to byte-for-byte agreement at every ply. The variant siblings and the research lab stay private.":
     'Misty 的源代码以 GPL 协议发布在 GitHub 上，也可以从 PyPI 安装，包名是 misty-chess。公开的部分就是迷雾国际象棋引擎本身：信念枚举器、搜索、在提交着法时否决灾难性选择的守卫，以及要求 Rust 与 Python 两套实现在每一步都逐字节一致的测试套件。变体同系引擎与研究实验代码仍然是私有的。',
-  'Obscuro is not public. So as far as I can find, Misty is the only Fog of War chess engine built on that architecture that anyone else can run, read, or take apart, and that is most of the reason to publish it.':
-    'Obscuro 并未公开。因此据我所知，Misty 是唯一一个基于该架构、并且其他人可以运行、阅读和拆解的迷雾国际象棋引擎，这也是把它开源的主要理由。',
   'Misty on GitHub': 'GitHub 上的 Misty',
   'That does not make Misty solved or perfectly safe. It means the cheap fog-specific failures that made earlier versions look silly are much rarer, so games against it test your understanding instead of your patience.':
     '这并不意味着 Misty 已被彻底解决或绝对安全。它意味着那些让早期版本显得可笑的低级迷雾特有错误已经少见得多，因此与它对弈考验的是你的理解，而不是耐心。',
@@ -2916,8 +2996,6 @@ const ZH_HANS: Record<string, string> = {
     'Brian H. Liou 于 2026 年把鸭子象棋移植到 9 路 10 线的棋盘上，作为 Mistboard 原创。Dr Tim Paulden 在 2016 年发明了[鸭子国际象棋](https://duckchess.com)，而 Jim Aikin 早在 1999 年就在[八石棋](https://www.chessvariants.com/page/EightStoneChess)里把可移动的中立石子放上了国际象棋盘。此前没有人把这个想法搬到象棋上。让它变得古怪的棋子是炮：炮吃子必须隔着一个子跳过去，而放在任何地方的鸭子都算一个子，所以你每放一次鸭子，都是给对手架起一座可以打过来的炮架。',
   'The duck belongs to nobody. Nothing can capture it and nothing can land on it, it is never material, and it is not either side’s piece. Its whole job is to be in the way, and both players take turns deciding where.':
     '鸭子不属于任何一方。没有子能吃它，也没有子能落在它上面；它不计入子力，也不是任何一方的棋子。它唯一的作用就是挡在路上，而挡在哪里由双方轮流决定。',
-  'Chess has one way of blocking a piece: stand on the point it wants. Xiangqi has four. The sections below are where that difference lands.':
-    '国际象棋只有一种挡子的办法：站到它想去的点上。象棋有四种。下面几节讲的就是这个差别落在哪里。',
   'One turn, two actions': '一个回合，两个动作',
   'The board, the pieces, and the opening array are ordinary xiangqi. Red moves first.':
     '棋盘、棋子和开局摆法都和普通象棋一样。红方先行。',
@@ -3102,8 +3180,6 @@ const ZH_HANS: Record<string, string> = {
   'In ordinary xiangqi that is forbidden. Here the prohibition stopped making sense once check was gone, so flying the general is simply a capture that ends the game. It is one more threat with no warning attached, and one more line the duck can open or close.':
     '在普通象棋里这是禁止的。这里一旦没有了将军，这条禁令就失去了意义，所以飞将只是一次结束棋局的吃子。它是又一个没有任何警告的威胁，也是鸭子可以打开或关闭的又一条线路。',
   'Games run 120 to 249 plies': '对局长度在 120 到 249 步之间',
-  'That is the range across the six engine games. Expect a full-length game rather than a novelty, and pick a clock accordingly: the two paces offered here are 5+5 and 10+5 for exactly this reason.':
-    '这是六盘引擎对局的范围。请把它当成一盘完整的棋而不是小玩意，并据此选择用时：这里提供 5+5 和 10+5 两种节奏，正是出于这个原因。',
   'Eight engine strengths, or a friend. The rules page has the whole thing with diagrams, and the study has all six engine games if you want to watch it played first.':
     '八个引擎强度，或者找个朋友。规则页有带图解的完整规则，如果想先看看别人怎么下，研习里有全部六盘引擎对局。',
   Rules: '规则',
@@ -3209,8 +3285,6 @@ const ZH_HANS: Record<string, string> = {
     '炮吃子不爆炸。只移除炮和它的目标：目标旁边的棋子不受影响，炮跳过的炮架也不受影响。炮击是远程的；爆炸只发生在接触时。',
   'Red’s cannon fires over its soldier and takes the horse. The cannon and the horse go; the chariot and cannon beside the horse stay, and so does the soldier that screened the shot.':
     '红炮隔着己方的兵打马。炮和马消失；马旁边的车和炮留下，充当炮架的兵也留下。',
-  'This is the one change from a straight port, and it is there because the straight port has a draw by repetition that can start on move three and that the defender can never refuse. A chariot on the file of an advisor threatens to blow up the general. The only defence is to block with a cannon, and with cannons exploding, the block is also a shot back over the chariot at the attacker’s own advisor, so the chariot has to move to the other advisor file, the cannon follows, and the position repeats. In engine games a side that had lost a chariot could hold the draw this way against a far stronger opponent. A quiet shot leaves the block standing but harmless, and the check rule below makes the hop that remains a loss for the side making it. The cannon becomes a piece you trade and block with rather than the piece that clears a rank, and everything else about the explosion stays as it is.':
-    '这是相对于直接移植的唯一改动，原因是直接移植的版本存在一种最早第三回合就能出现、防守方永远无法拒绝的重复局面和棋。一辆车站在士所在的线上，威胁把将帅炸掉。唯一的防守是用炮垫挡；而如果炮也会爆炸，这一垫挡同时就是隔着车反打进攻方自己的士，于是车只好换到另一条士线上，炮跟过去，局面重复。在引擎对局中，少了一辆车的一方靠这一招就能顶住比自己强得多的对手。炮击不爆炸，垫挡仍然成立却不构成威胁，下面的将军规则又让剩下的那种来回跳成为跳的一方的输棋。炮由此变成一枚用来兑换和垫挡的棋子，而不再是扫清一条横线的棋子；爆炸的其余部分全部不变。',
   'A threat to blow up the general is check': '炸掉将帅的威胁算作将军',
   'Xiangqi’s rules about the general stand. A move may not leave your general where a piece attacks it, and the two generals may not face each other down an open file. Checkmate wins. A player with no legal move loses.':
     '象棋关于将帅的规则照旧。走棋不能让自己的将帅留在被攻击的位置，双方将帅不能在无子相隔的同一条线上照面。将死获胜。无子可动的一方负。',
@@ -3226,10 +3300,7 @@ const ZH_HANS: Record<string, string> = {
     '本页背后的引擎对局之一：一千万节点的 Fairy-Stockfish 执红，对阵一百万节点的自己。第 6 回合红方已多出一个半兵，之后局面一直接近，直到黑方第 21 回合的 Hxf9：马吃 f9 的炮，而黑方自己的士就在旁边的 f10。爆炸带走了士，九宫白白少了一子，从此再没恢复：第 30 回合的 Cb9 让将失去了掩护，第 38 回合红车吃掉 d8 的炮，紧挨着 d9 的将。爆炸带走了将，连同 e8 的象。',
   'Atomic Xiangqi: an engine game decided by a self-blast in the palace':
     '原子象棋：一盘由九宫内自炸决定的引擎对局',
-  'Play it against the engine at any of eight strengths, or against a friend with an invite link. The [launch note](/blog/atomic-xiangqi-build) is what decides a first game; the design post has the measurements behind the cannon rule; the study has all twelve engine games, with every explosion marked and a note on the move that decided each.':
-    '和八个强度档位的引擎对弈，或者用邀请链接约朋友。[发布说明](/blog/atomic-xiangqi-build)讲的是第一盘棋的胜负由什么决定；设计文章有炮规则背后的测量数据；研究里有全部十二盘引擎对局，每次爆炸都有标记，每盘的决定性一步都有注解。',
   'Play Atomic Xiangqi': '下原子象棋',
-  'The design post': '设计文章',
   'The twelve engine games': '十二盘引擎对局',
   'Atomic Xiangqi: What Decides Your First Game': '原子象棋：第一盘棋的胜负由什么决定',
   'Atomic Xiangqi Is Live: What Decides Your First Game':
@@ -3812,10 +3883,94 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  ...ZH_HANS,
+  // duck-xiangqi, duck-xiangqi-strategy, misty blog merge (2026-10-07): machine-translated.
+  'Chess has one way of blocking a piece: stand on the point it wants. Xiangqi has five. The sections below are where that difference lands.':
+    '國際象棋只有一種擋子的辦法：站到它想去的點上。象棋有五種。下面幾節講的就是這個差別落在哪裡。',
+  'The facing rule is check in another form. Two generals on an open file attack each other, so leaving them facing is moving into check, which xiangqi already forbids. Duck Chess has no check, so the facing rule has nothing left to say and goes with it. Duck Chess does the same with kings: they may stand side by side, and a king takes a king.':
+    '將帥不能照面這條規則，其實是將軍的另一種說法。同一路上中間無子的兩位將帥互相攻擊，所以讓它們照面就等於送將，而象棋本來就禁止送將。鴨子國際象棋沒有將軍，這條規則也就無話可說，隨之取消。鴨子國際象棋對王也是這樣處理的：兩王可以相鄰，王可以吃王。',
+  'Clear the board down to the two generals, on e1 and e10. Of the 88 empty points, 8 keep them apart: e2 to e9. Under xiangqi’s facing rule those 8 would be the only legal places for the duck. Here all 88 are legal, and the other 80 lose on the spot.':
+    '把棋盤清到只剩兩位將帥，分別在 e1 和 e10。88 個空點裡，只有 8 個能把它們隔開：e2 到 e9。按象棋的照面規則，鴨子只能合法地放在這 8 個點上。這裡 88 個點都合法，而其餘 80 個點放下去就當場輸棋。',
+  'The duck half is nearly always about the other player: which line to shut, which horse to freeze, what to make awkward. So half of every turn goes on spoiling. It feels like always playing your second-best move.':
+    '放鴨子的那一半幾乎總是衝著對手去的：封哪條線，蹩哪匹馬，給對方添什麼彆扭。所以每一回合有一半花在攪局上。感覺就像永遠在走自己的次優著。',
+  'Duck Xiangqi: an ordinary middlegame, eighteen moves into an engine game':
+    '鴨子象棋：一盤引擎對局第十八回合的普通中局',
+  'The engine sees that capture coming from any distance. A person often won’t: it comes from the far end of the board, down a file the duck was guarding a turn ago. None of the six published engine games ends this way. Two of the original seven did, and both came from an engine bug that could lose track of the capture. After the fix on 29 September, one of those games replayed as a different win and the other never reached a decisive finish, so the study holds six.':
+    '引擎隔多遠都能看到這一吃。人卻常常看不到：它來自棋盤的另一端，沿著一路殺過來，而鴨子上一回合還守在那一路上。已發布的六盤引擎對局沒有一盤是這樣結束的。最初的七盤裡有兩盤是，而且兩盤都源於一個引擎漏洞：引擎可能會算丟這一吃。9 月 29 日修復之後，其中一盤重下變成了另一種贏法，另一盤始終沒有分出勝負，所以研習裡現在是六盤。',
+  'That is the range across the six engine games, and the median is 171. Expect a full-length game rather than a novelty, and pick a clock accordingly: the two paces offered here are 5+5 and 10+5 for exactly this reason.':
+    '這是六盤引擎對局的範圍，中位數是 171 步。請把它當成一盤完整的棋而不是小玩意，並據此選擇用時：這裡提供 5+5 和 10+5 兩種節奏，正是出於這個原因。',
+  'Obscuro’s paper ships no code. Misty is a Python and Rust implementation of its architecture, with a documented engine protocol and a server you can play it on. The other open implementation I know of is [obscuro-chess](https://github.com/opowell/obscuro-chess), a JavaScript port started in August 2026. Misty is published so that anyone can run it, read it, or take it apart.':
+    'Obscuro 的論文沒有附帶程式碼。Misty 是該架構的 Python 和 Rust 實作，有文件化的引擎協定，也有一個可以和它對弈的伺服器。我所知道的另一個開源實作是 [obscuro-chess](https://github.com/opowell/obscuro-chess)，一個 2026 年 8 月開始的 JavaScript 移植版。Misty 開源發布，任何人都可以執行、閱讀和拆解它。',
+  // how-puzzle-mining-works blog merge (2026-10-07): machine-translated.
+  'Every source carries a licence status, and publishing refuses any puzzle whose source has not been cleared.':
+    '每個來源都帶有授權狀態，來源未獲授權的題目一律不予發布。',
+  'What survives the gate goes to an audit. A separate process searches every solution again at depth 22 with no node ceiling, knowing nothing of what the first pass decided, and about 6% of the survivors do not hold up. Those are dropped too.':
+    '通過判定關卡的題目還要接受複核。另一個獨立程序以 22 層深度、不設節點上限，把每道題的解答重新搜尋一遍，它完全不知道第一遍的結論。大約 6% 的倖存者經不起複核，同樣被丟棄。',
+  'In August 2026 mining cost about six core-hours per thousand games, or about one core-minute per published puzzle.':
+    '2026 年 8 月，挖掘的成本約為每千盤對局六個核心小時，也就是每發布一道題目約一個核心分鐘。',
+  'A rating scores what makes the line hard to see': '評分衡量的是這條線路難在哪裡',
+  'Every puzzle needs a rating before anyone has solved it, so the trainer can pick problems near your level. Rating by mate depth gives four distinct values across the corpus. The rating walks the solution instead: a quiet first move adds, a capture subtracts, a sacrifice the solver never wins back adds up to 200, and the number of replies the defender has pushes it either way. On 2 September 2026 the 1,415 puzzles served had 479 distinct ratings between 1000 and 2600.':
+    '每道題目在還沒有人解過之前就需要一個評分，這樣訓練器才能挑出接近你水準的題目。只按殺棋步數評分，整個題庫只會得到四個不同的數值。所以評分會把解答逐步走一遍：第一步不吃子會加分，吃子會減分，解題者棄掉且始終沒有追回的子力最多加 200 分，防守方可走的應著數量則可能加分也可能減分。2026 年 9 月 2 日，上線的 1,415 道題目共有 479 個不同的評分，介於 1000 到 2600 之間。',
+  'The largest penalty goes to a first move that takes something nothing can take back, scaled by the piece it wins and capped at a chariot’s 900, because a hanging piece is the easiest thing on a board to spot. The check only runs while the game is still going. A capture that mates also leaves the defender no legal reply, and counted naively that looks like a piece nothing can recapture, which would mark down every mating capture in the corpus.':
+    '扣分最多的，是第一步吃掉一個對方無法反吃的子，扣分按吃到的子力計算，上限是一個車的 900，因為無人保護的子是棋盤上最容易發現的東西。這項檢查只在對局仍在進行時才執行。吃子同時將死對方時，防守方也沒有任何合法應著；如果照字面去數，這看起來就像一個無法反吃的子，題庫裡每一步吃子成殺都會被扣分。',
+  'One kind of position is withheld: the solver is already at least 300 centipawns ahead and the answer takes something undefended. It teaches nothing at any rating, and a rating can only decide who gets shown a problem. That rule hid 12% of the corpus.':
+    '有一類局面不予上線：解題者已經領先至少 300 厘兵，而答案是吃掉一個無人保護的子。這種題目在任何評分上都教不了什麼，而評分只能決定一道題出現在誰面前。這條規則隱藏了題庫的 12%。',
+  // katago-jungle blog merge (2026-10-07): machine-translated.
+  "Mistboard's own rules code refereed every game, and each engine only proposed moves. The budgets were matched on time, about two seconds a move on one machine: Misty at its usual 5 million nodes on one thread, KataGo at 1,000 visits on four threads with the b10c384 network. Both engines stop at a fixed amount of search, so the games played on Modal are the games either would play here. KataGo's own repetition rule was switched off, so the referee's applied to both sides.":
+    '每盤棋都由 Mistboard 自己的規則程式碼裁判，兩個引擎只負責提出著法。雙方的預算按用時對齊，在同一台機器上每步大約兩秒：Misty 用它平時的 500 萬個節點、單執行緒，KataGo 用 1,000 次訪問、四執行緒，搭配 b10c384 神經網路。兩個引擎都在固定的搜尋量處停下，所以在 Modal 上下出的棋，就是它們在這裡會下出的棋。KataGo 內建的重複局面規則被關閉，雙方都按裁判的規則處理重複。',
+  KataGo: 'KataGo',
+  Wins: '勝',
+  Losses: '負',
+  Score: '得分率',
+  'As red, 100 games': '執紅，100 盤',
+  'As black, 100 games': '執黑，100 盤',
+  Total: '合計',
+  'The median game ran 127 plies. The 95% interval on the score is 0.67 to 0.74, about +125 to +180 Elo; the challenge asked for 0.55.':
+    '對局長度的中位數是 127 個半回合。得分率的 95% 信賴區間是 0.67 到 0.74，約合 +125 到 +180 Elo；挑戰賽的要求是 0.55。',
+  'All 200 games are in [one study](/study/0t8xpyv6), and the raw records are in [one file](/jungle-games/katago-vs-misty-2026-09-21.jsonl), a line of JSON per game.':
+    '全部 200 盤都收在[一個研究](/study/0t8xpyv6)裡，原始紀錄放在[一個檔案](/jungle-games/katago-vs-misty-2026-09-21.jsonl)中，每盤一行 JSON。',
+  'The tiger now jumps the river sideways': '虎現在可以橫向跳河',
+  'We found KataGo while searching GitHub for jieqi engines. It lives on the AnimalChess2025 branch of a repository named KataGomo, and nothing in that name says Jungle Chess, so an earlier search for Jungle engines had missed it.':
+    '我們是在 GitHub 上找揭棋引擎時發現 KataGo 的。它放在一個名為 KataGomo 的儲存庫的 AnimalChess2025 分支上，名字裡看不出和鬥獸棋有關，所以之前專門找鬥獸棋引擎時漏掉了它。',
+  "Its tiger jumps the river sideways as well as lengthwise, the same leap as the lion. Ours jumped lengthwise only, a reading taken from English Wikipedia's article. Tencent's QQ游戏 rules, Leiden University's Dou Shou Qi page and KataGo's own source all give the tiger the lion's jump, and a match between an engine trained on one rule and an engine playing another would have measured the rule.":
+    '它的虎既能縱向跳河，也能橫向跳河，跳法和獅一樣。我們的虎原先只能縱向跳，這個理解來自英文維基百科的條目。騰訊 QQ遊戲的規則、萊頓大學的鬥獸棋頁面和 KataGo 自己的原始碼，都讓虎擁有和獅一樣的跳法；一個按某條規則訓練的引擎，去和一個按另一條規則下棋的引擎比賽，比出來的只是規則的差別。',
+  'Since 21 September the tiger on Mistboard jumps both ways, in the rules engine, the bot, the analysis board, the [rules page](/rules/jungle) and the puzzles. One puzzle the new jump refutes was withdrawn. The change only adds moves, so every earlier game is still legal as played.':
+    '從 9 月 21 日起，Mistboard 上的虎可以縱橫兩個方向跳河，規則引擎、電腦、分析棋盤、[規則頁面](/rules/jungle)和題目都已更新。有一道題目被新的跳法駁倒，已經撤下。這次改動只增加了著法，所以之前的每一盤棋按原樣仍然合法。',
+  'KataGo is the Go program, retrained by self-play': 'KataGo 就是那個圍棋程式，用自我對弈重新訓練',
+  'KataGo-AnimalChess is stock KataGo with the board and rules swapped for Jungle Chess and the self-play loop run as it was: 400 visits a move in self-play, a 10-block, 384-channel network trained by SGD on two GPUs, and rules randomised across the variants the Dandelion app supports, so one network plays all of them. The repository estimates under $50 of compute to reach top strength in a small game. The weights ship inside the app download, with no separate release and no stated licence.':
+    'KataGo-AnimalChess 就是原版 KataGo，只是把棋盤和規則換成了鬥獸棋，自我對弈的訓練流程原樣照跑：自我對弈時每步 400 次訪問，10 個殘差塊、384 個通道的神經網路在兩塊 GPU 上用 SGD 訓練，規則在 Dandelion 軟體支援的各個變體之間隨機切換，所以一個網路就能下所有變體。儲存庫裡估計，在一個小型棋類上練到頂尖棋力，算力花費不到 50 美元。網路權重打包在軟體的下載裡，沒有單獨發布，也沒有註明授權條款。',
+  "Misty's evaluation is three hand-written terms: material, distance to the den and a trap penalty. A learned correction on top of it did not help.":
+    'Misty 的評估只有三項手寫的內容：子力、離獸穴的距離，以及陷阱扣分。在它之上再加一層學習出來的修正，並沒有幫助。',
+  // atomic-xiangqi blog merge (2026-10-07): machine-translated.
+  'This is the one change from a straight port, and the straight port had two faults that needed it. The first showed on move one. From the starting array each cannon can jump the enemy cannon and take the horse behind it, and the blast takes the chariot and elephant beside the horse as well: three pieces for a cannon, and every best-play engine game opened with both sides doing it. The second was a draw by repetition that can start on move three and that the defender can never refuse. A chariot on the file of an advisor threatens to blow up the general. The only defence is to block with a cannon, and with cannons exploding, the block is also a shot back over the chariot at the attacker’s own advisor, so the chariot has to move to the other advisor file, the cannon follows, and the position repeats. In engine games a side that had lost a chariot could hold the draw this way against a far stronger opponent.':
+    '這是相對於直接移植的唯一改動，直接移植的版本有兩個毛病，都要靠它解決。第一個在第一回合就出現了。從開局陣勢起，每一方的炮都能隔著對方的炮打掉後面的馬，而爆炸還會帶走馬旁邊的車和象：一個炮換三個子，在引擎的最佳著法對局裡，每一盤開局雙方都這樣走。第二個是一種最早第三回合就能出現、防守方永遠無法拒絕的重複局面和棋。一輛車站在士所在的線上，威脅把將帥炸掉。唯一的防守是用炮墊擋；而如果炮也會爆炸，這一墊擋同時就是隔著車反打進攻方自己的士，於是車只好換到另一條士線上，炮跟過去，局面重複。在引擎對局中，少了一輛車的一方靠這一招就能頂住比自己強得多的對手。',
+  'The fix took two rules, and neither works alone. A quiet shot ends the opening exchange and leaves the block standing but harmless, but the chariot may still hop and the cannon still has to follow. Counting a blast threat as check (the next section) does nothing by itself: while the block can shoot back, both sides check on every move, and a repetition both sides check through is a draw. With both rules the hop is a one-sided perpetual check and loses. The engine scores it as a loss and plays on, about a quarter of a pawn down. The cannon becomes a piece you trade and block with rather than the piece that clears a rank, and everything else about the explosion stays as it is.':
+    '解決它用了兩條規則，缺一不可。炮擊不爆炸，開局的那種兌換就沒有了，墊擋仍然成立卻不構成威脅；但車仍然可以來回跳，炮也仍然得跟過去。把爆炸威脅算作將軍（見下一節），單獨用也不起作用：只要墊擋的炮還能反打，雙方每一步都在將軍，而雙方都在將軍的重複局面判和。兩條規則合在一起，來回跳就成了單方面的長將，判負。引擎也把它算作輸棋，寧可落後大約四分之一個兵繼續下。炮由此變成一枚用來兌換和墊擋的棋子，而不再是掃清一條橫線的棋子；爆炸的其餘部分全部不變。',
+  'Every number on this page comes from engine games refereed by the rules kernel and played by a patched Fairy-Stockfish, and the two have to agree on every legal-move count before a number is read. The engine with ten times the nodes wins 29 of 32 games, at two strength levels, without losing one. Of the 44 first moves from the array, each played out at a million nodes a side, none wins for Red and three lose. None of the 19 repetition draws is a one-sided perpetual check. The [variant lab](https://github.com/brianhliou/mistboard/tree/main/scripts/variant-lab) has the kernel, the patch and the commands behind each number.':
+    '本頁的每一個數字都來自引擎對局：由規則內核裁判，由打過補丁的 Fairy-Stockfish 來下，兩者必須在每一個合法著法數上完全一致，才開始讀任何數字。節點數多十倍的引擎在兩個強度檔位上下了 32 盤，贏 29 盤，一盤未輸。從開局陣勢出發的 44 種第一步，每種都以雙方各一百萬節點下完，沒有一種讓紅方獲勝，有三種讓紅方輸棋。19 盤重複局面和棋裡，沒有一盤是單方面的長將。[變體實驗室](https://github.com/brianhliou/mistboard/tree/main/scripts/variant-lab)裡有內核、補丁和每個數字背後的命令。',
+  'Play it against the engine at any of eight strengths, or against a friend with an invite link. The [launch note](/blog/atomic-xiangqi-build) is what decides a first game; the study has all twelve engine games, with every explosion marked and a note on the move that decided each.':
+    '和八個強度檔位的引擎對弈，或者用邀請連結約朋友。[釋出說明](/blog/atomic-xiangqi-build)講的是第一盤棋的勝負由什麼決定；研究裡有全部十二盤引擎對局，每次爆炸都有標記，每盤的決定性一步都有註解。',
+  // solver-audit blog merge (2026-10-07): machine-translated.
+  '適情雅趣 第108局 争舟走渡 prints a mate in seven, thirteen plies. At Red’s first move the soldier can take the advisor beside the general instead, 兵四平五, and that mates in six. Nine of the 172 can be mated faster than printed.':
+    '《適情雅趣》第108局 爭舟走渡印的是七著殺，共十三步。紅方第一著改用兵吃將旁邊的士，兵四平五，六著就能成殺。172局中有9局存在比所印更快的殺法。',
+  '適情雅趣 第108局 争舟走渡: a mate in six where the book prints seven':
+    '適情雅趣 第108局 爭舟走渡：書中印七著殺，六著即可成殺',
+  'The book’s line, with 兵四平五 as a branch at Red’s first move: it takes the advisor and mates a move sooner.':
+    '書中著法，紅方第一著處另有分枝兵四平五：吃士，早一著成殺。',
+  'The audit was wrong three times first': '審校先錯了三次',
+  'The counts above come from the fourth version of the audit. The first was a pass over the quiet compositions, and it searched the position after the key as though Red were to play twice. It reported 176 of 190 sound. The number meant nothing, because every search had started on the wrong side.':
+    '上面的數字來自第四版審校。第一版檢驗的是不連將的排局，它在首著之後的局面上搜尋時，當成了紅方連走兩步。結果報告190局中176局無瑕。這個數字毫無意義，因為每一次搜尋都從錯誤的一方開始。',
+  'The second judged every composition as a chess mate-in-n. A quiet 排局 claims only 红先胜, Red plays and wins, and against that claim a second key and a faster mate are not faults. About half the faults that pass counted went away. Both mistakes were in the quiet-move audit, shelved for the reason in the next section; the 172 above are continuous-check problems, where the length is part of what the book claims.':
+    '第二版把每一局都當成國際象棋排局裡的「n著殺」來判。不連將的排局只聲稱紅先勝，對這樣的結論來說，第二首著和更快的殺法都不算毛病。那一輪算出的毛病大約有一半就此作廢。這兩個錯誤都出在不連將排局的審校裡，那部分已經擱置，原因見下一節；上面的172局都是連將殺排局，著數本身就是書中結論的一部分。',
+  'The third was running the exact search without the engine screen described above. Eight records were first read as broken compositions: five are the Red wins past the search’s reach in the table, and three are the broken records above.':
+    '第三個錯誤是沒有先做上面說的引擎篩查，就直接跑精確搜尋。有八局起初被判為排局本身有缺陷：其中五局是表中那些紅方能勝但超出搜尋範圍的，另外三局是上面的錯譜。',
+  'A fourth was in the helpmates, the problems where both sides cooperate to reach mate. The composer that built them tested for checkmate, and xiangqi also scores 困毙, a side left with no legal move, as a loss. A line ending in 困毙 is a second solution, so 22 of the 186 helpmates we had published as sound had lines the composer could not see, 64 in the worst of them. A re-check that counts 困毙 is written and has not shipped yet.':
+    '第四個錯誤出在協作殺裡，也就是雙方合作走成殺局的題。生成這些題的程式只檢驗將死，而象棋把困斃，即一方無子可動，同樣判負。以困斃結束的著法也是一種解，所以我們當作唯一解發布的186道協作殺裡，有22道含有生成程式看不到的解，最多的一道有64種。按困斃計算的複查程式已經寫好，還沒有上線。',
+  'Four bugs, and each was a rule we knew and had not put into the tool: whose move it is, what a 排局 claims, that a mistyped record looks like a broken composition, and that 困毙 loses.':
+    '四個錯誤，每一個都是我們本來知道、卻沒有寫進工具的規則：輪到哪一方走，排局聲稱的是什麼，錄錯的棋譜看起來和有缺陷的排局一樣，以及困斃判負。',
   // Traditional starts from the complete Simplified key set, then every
   // authored Taiwan lexical or glyph fork below overrides that shared value.
   // Keep this spread first so new Traditional entries cannot be overwritten.
-  ...ZH_HANS,
   // solver-audit (2026-10-06): machine-drafted Traditional, not native-reviewed;
   // terms follow the zh-hant brianhliou.com twin (搜尋, 著法, 首著, 錯譜).
   'Auditing the Old Manuals': '求解器審校古譜',
@@ -4015,8 +4170,6 @@ const ZH_HANT: Record<string, string> = {
   '82 wins and no losses against Misty': '對 Misty 82 勝 0 負',
   "Before putting it on the site, we played it against Misty, our own Jungle Chess bot, in an open challenge of 200 games at 1,000 visits a move. hzyhhzy's engine won 82, lost none and drew 118, a score of 0.705. Every win came from walking into Misty's den, and every draw was a repetition.":
     '上線之前，我們讓它和我們自己的鬥獸棋電腦 Misty 進行了一場公開挑戰賽：200 盤，每步 1,000 次訪問。hzyhhzy 的引擎贏 82 盤、輸 0 盤、和 118 盤，得分率 0.705。每一盤勝局都是走進 Misty 的獸穴取勝，每一盤和棋都是重複局面。',
-  'All 200 games are in [one study](/study/0t8xpyv6), and the [match write-up](https://brianhliou.com/posts/katago-beats-misty-jungle/) has the details.':
-    '全部 200 盤都收在[一個研究](/study/0t8xpyv6)裡，詳情見[比賽記錄](https://brianhliou.com/posts/katago-beats-misty-jungle/)。',
   'Misty is still where you start': '入門仍從 Misty 開始',
   'KataGo is at the top of the Jungle Chess bot list, above Misty. Misty stays the default and the easier opponent; pick KataGo when you want the stronger game. Game review and analysis for Jungle Chess still run on Misty.':
     'KataGo 排在鬥獸棋電腦列表的最上面，在 Misty 之上。Misty 仍是預設對手，也是較容易的那一個；想下更難的棋就選 KataGo。鬥獸棋的復盤和分析仍由 Misty 負責。',
@@ -4897,8 +5050,6 @@ const ZH_HANT: Record<string, string> = {
   'The engine is open source': '引擎已開源',
   "Misty's source is on GitHub under the GPL, and it installs from PyPI as misty-chess. What ships is the Fog Chess engine itself: the belief enumerator, the search, the guards that veto a catastrophic move at commit time, and the test suite that holds the Rust and Python implementations to byte-for-byte agreement at every ply. The variant siblings and the research lab stay private.":
     'Misty 的原始碼以 GPL 授權發布在 GitHub 上，也可以從 PyPI 安裝，套件名稱是 misty-chess。公開的部分就是迷霧國際象棋引擎本身：信念列舉器、搜尋、在提交著法時否決災難性選擇的守衛，以及要求 Rust 與 Python 兩套實作在每一步都逐位元組一致的測試套件。變體同系引擎與研究實驗程式碼仍然是私有的。',
-  'Obscuro is not public. So as far as I can find, Misty is the only Fog of War chess engine built on that architecture that anyone else can run, read, or take apart, and that is most of the reason to publish it.':
-    'Obscuro 並未公開。因此據我所知，Misty 是唯一一個基於該架構、並且其他人可以執行、閱讀和拆解的迷霧國際象棋引擎，這也是把它開源的主要理由。',
   'Misty on GitHub': 'GitHub 上的 Misty',
   'That does not make Misty solved or perfectly safe. It means the cheap fog-specific failures that made earlier versions look silly are much rarer, so games against it test your understanding instead of your patience.':
     '這並不意味著 Misty 已被徹底解決或絕對安全。它意味著那些讓早期版本顯得可笑的低級迷霧特有錯誤已經少見得多，因此與它對弈考驗的是你的理解，而不是耐心。',
@@ -6363,8 +6514,6 @@ const ZH_HANT: Record<string, string> = {
     'Brian H. Liou 於 2026 年把鴨子象棋移植到 9 路 10 線的棋盤上，作為 Mistboard 原創。Dr Tim Paulden 在 2016 年發明了[鴨子國際象棋](https://duckchess.com)，而 Jim Aikin 早在 1999 年就在[八石棋](https://www.chessvariants.com/page/EightStoneChess)裡把可移動的中立石子放上了國際象棋盤。此前沒有人把這個想法搬到象棋上。讓它變得古怪的棋子是炮：炮吃子必須隔著一個子跳過去，而放在任何地方的鴨子都算一個子，所以你每放一次鴨子，都是給對手架起一座可以打過來的炮架。',
   'The duck belongs to nobody. Nothing can capture it and nothing can land on it, it is never material, and it is not either side’s piece. Its whole job is to be in the way, and both players take turns deciding where.':
     '鴨子不屬於任何一方。沒有子能吃它，也沒有子能落在它上面；它不計入子力，也不是任何一方的棋子。它唯一的作用就是擋在路上，而擋在哪裡由雙方輪流決定。',
-  'Chess has one way of blocking a piece: stand on the point it wants. Xiangqi has four. The sections below are where that difference lands.':
-    '國際象棋只有一種擋子的辦法：站到它想去的點上。象棋有四種。下面幾節講的就是這個差別落在哪裡。',
   'One turn, two actions': '一個回合，兩個動作',
   'The board, the pieces, and the opening array are ordinary xiangqi. Red moves first.':
     '棋盤、棋子和開局擺法都和普通象棋一樣。紅方先行。',
@@ -6548,8 +6697,6 @@ const ZH_HANT: Record<string, string> = {
   'In ordinary xiangqi that is forbidden. Here the prohibition stopped making sense once check was gone, so flying the general is simply a capture that ends the game. It is one more threat with no warning attached, and one more line the duck can open or close.':
     '在普通象棋裡這是禁止的。這裡一旦沒有了將軍，這條禁令就失去了意義，所以飛將只是一次結束棋局的吃子。它是又一個沒有任何警告的威脅，也是鴨子可以打開或關閉的又一條線路。',
   'Games run 120 to 249 plies': '對局長度在 120 到 249 步之間',
-  'That is the range across the six engine games. Expect a full-length game rather than a novelty, and pick a clock accordingly: the two paces offered here are 5+5 and 10+5 for exactly this reason.':
-    '這是六盤引擎對局的範圍。請把它當成一盤完整的棋而不是小玩意，並據此選擇用時：這裡提供 5+5 和 10+5 兩種節奏，正是出於這個原因。',
   'Eight engine strengths, or a friend. The rules page has the whole thing with diagrams, and the study has all six engine games if you want to watch it played first.':
     '八個引擎強度，或者找個朋友。規則頁有帶圖解的完整規則，如果想先看看別人怎麼下，研習裡有全部六盤引擎對局。',
   Rules: '規則',
@@ -6655,8 +6802,6 @@ const ZH_HANT: Record<string, string> = {
     '炮吃子不爆炸。只移除炮和它的目標：目標旁邊的棋子不受影響，炮跳過的炮架也不受影響。炮擊是遠端的；爆炸只發生在接觸時。',
   'Red’s cannon fires over its soldier and takes the horse. The cannon and the horse go; the chariot and cannon beside the horse stay, and so does the soldier that screened the shot.':
     '紅炮隔著己方的兵打馬。炮和馬消失；馬旁邊的車和炮留下，充當炮架的兵也留下。',
-  'This is the one change from a straight port, and it is there because the straight port has a draw by repetition that can start on move three and that the defender can never refuse. A chariot on the file of an advisor threatens to blow up the general. The only defence is to block with a cannon, and with cannons exploding, the block is also a shot back over the chariot at the attacker’s own advisor, so the chariot has to move to the other advisor file, the cannon follows, and the position repeats. In engine games a side that had lost a chariot could hold the draw this way against a far stronger opponent. A quiet shot leaves the block standing but harmless, and the check rule below makes the hop that remains a loss for the side making it. The cannon becomes a piece you trade and block with rather than the piece that clears a rank, and everything else about the explosion stays as it is.':
-    '這是相對於直接移植的唯一改動，原因是直接移植的版本存在一種最早第三回合就能出現、防守方永遠無法拒絕的重複局面和棋。一輛車站在士所在的線上，威脅把將帥炸掉。唯一的防守是用炮墊擋；而如果炮也會爆炸，這一墊擋同時就是隔著車反打進攻方自己的士，於是車只好換到另一條士線上，炮跟過去，局面重複。在引擎對局中，少了一輛車的一方靠這一招就能頂住比自己強得多的對手。炮擊不爆炸，墊擋仍然成立卻不構成威脅，下面的將軍規則又讓剩下的那種來回跳成為跳的一方的輸棋。炮由此變成一枚用來兌換和墊擋的棋子，而不再是掃清一條橫線的棋子；爆炸的其餘部分全部不變。',
   'A threat to blow up the general is check': '炸掉將帥的威脅算作將軍',
   'Xiangqi’s rules about the general stand. A move may not leave your general where a piece attacks it, and the two generals may not face each other down an open file. Checkmate wins. A player with no legal move loses.':
     '象棋關於將帥的規則照舊。走棋不能讓自己的將帥留在被攻擊的位置，雙方將帥不能在無子相隔的同一條線上照面。將死獲勝。無子可動的一方負。',
@@ -6672,10 +6817,7 @@ const ZH_HANT: Record<string, string> = {
     '本頁背後的引擎對局之一：一千萬節點的 Fairy-Stockfish 執紅，對陣一百萬節點的自己。第 6 回合紅方已多出一個半兵，之後局面一直接近，直到黑方第 21 回合的 Hxf9：馬吃 f9 的炮，而黑方自己的士就在旁邊的 f10。爆炸帶走了士，九宮白白少了一子，從此再沒恢復：第 30 回合的 Cb9 讓將失去了掩護，第 38 回合紅車吃掉 d8 的炮，緊挨著 d9 的將。爆炸帶走了將，連同 e8 的象。',
   'Atomic Xiangqi: an engine game decided by a self-blast in the palace':
     '原子象棋：一盤由九宮內自炸決定的引擎對局',
-  'Play it against the engine at any of eight strengths, or against a friend with an invite link. The [launch note](/blog/atomic-xiangqi-build) is what decides a first game; the design post has the measurements behind the cannon rule; the study has all twelve engine games, with every explosion marked and a note on the move that decided each.':
-    '和八個強度檔位的引擎對弈，或者用邀請連結約朋友。[釋出說明](/blog/atomic-xiangqi-build)講的是第一盤棋的勝負由什麼決定；設計文章有炮規則背後的測量資料；研究裡有全部十二盤引擎對局，每次爆炸都有標記，每盤的決定性一步都有註解。',
   'Play Atomic Xiangqi': '下原子象棋',
-  'The design post': '設計文章',
   'The twelve engine games': '十二盤引擎對局',
   'Atomic Xiangqi: What Decides Your First Game': '原子象棋：第一盤棋的勝負由什麼決定',
   'Atomic Xiangqi Is Live: What Decides Your First Game':

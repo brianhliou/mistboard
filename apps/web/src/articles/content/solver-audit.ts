@@ -18,6 +18,7 @@ const CHAPTER = {
   secondKey: 'qCaPgQkT',
   corrupt: '98Ce7IuR',
   famous: 'tao4KCOH',
+  faster: 'CEd3lnPl',
 } as const;
 const embed = (chapter: keyof typeof CHAPTER) => `/embed/study/${STUDY_ID}/${CHAPTER[chapter]}`;
 // The nine refuted records (scripts/problem-lab/refutations-study.ts, slug
@@ -78,6 +79,7 @@ export const solverAuditArticle: Article = {
   thumbnail: { kind: 'svg', svg: SOLVER_AUDIT_THUMBNAIL },
   status: 'published',
   publishedAt: '2026-10-06',
+  updatedAt: '2026-10-07',
   audience:
     'Xiangqi players who know the classical manuals, and chess problemists who want to know what a 450-year-old composition tradition looks like under a solver.',
   intro: [
@@ -170,6 +172,18 @@ export const solverAuditArticle: Article = {
             'The second key played out: a different first move, the same six moves to mate.',
           aspect: [702, 700],
         } as ArticleBlock,
+        {
+          kind: 'paragraph',
+          text: '適情雅趣 第108局 争舟走渡 prints a mate in seven, thirteen plies. At Red’s first move the soldier can take the advisor beside the general instead, 兵四平五, and that mates in six. Nine of the 172 can be mated faster than printed.',
+        },
+        {
+          kind: 'embed',
+          path: embed('faster'),
+          title: '適情雅趣 第108局 争舟走渡: a mate in six where the book prints seven',
+          caption:
+            'The book’s line, with 兵四平五 as a branch at Red’s first move: it takes the advisor and mates a move sooner.',
+          aspect: [702, 700],
+        } as ArticleBlock,
       ],
     },
     {
@@ -231,6 +245,31 @@ export const solverAuditArticle: Article = {
             '七星聚会 as 渊深海阔 prints it: two chariots, a cannon and three soldiers against a chariot, an elephant and four soldiers. Fifty-four plies of the book\u2019s line. Red cannot force a mate within the search; for Black, the search ran out of budget before it could say.',
           aspect: [702, 700],
         } as ArticleBlock,
+      ],
+    },
+    {
+      heading: 'The audit was wrong three times first',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'The counts above come from the fourth version of the audit. The first was a pass over the quiet compositions, and it searched the position after the key as though Red were to play twice. It reported 176 of 190 sound. The number meant nothing, because every search had started on the wrong side.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'The second judged every composition as a chess mate-in-n. A quiet 排局 claims only 红先胜, Red plays and wins, and against that claim a second key and a faster mate are not faults. About half the faults that pass counted went away. Both mistakes were in the quiet-move audit, shelved for the reason in the next section; the 172 above are continuous-check problems, where the length is part of what the book claims.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'The third was running the exact search without the engine screen described above. Eight records were first read as broken compositions: five are the Red wins past the search’s reach in the table, and three are the broken records above.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'A fourth was in the helpmates, the problems where both sides cooperate to reach mate. The composer that built them tested for checkmate, and xiangqi also scores 困毙, a side left with no legal move, as a loss. A line ending in 困毙 is a second solution, so 22 of the 186 helpmates we had published as sound had lines the composer could not see, 64 in the worst of them. A re-check that counts 困毙 is written and has not shipped yet.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'Four bugs, and each was a rule we knew and had not put into the tool: whose move it is, what a 排局 claims, that a mistyped record looks like a broken composition, and that 困毙 loses.',
+        },
       ],
     },
     {

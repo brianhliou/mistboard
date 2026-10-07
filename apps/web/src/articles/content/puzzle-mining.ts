@@ -83,6 +83,11 @@ export const puzzleMiningArticle: Article = {
   thumbnail: { kind: 'svg', svg: PUZZLE_MINING_THUMBNAIL },
   status: 'published',
   publishedAt: '2026-09-02',
+  // Merged in the brianhliou.com twin (2026-09-02 post): licence gate, audit,
+  // cost line and the rating section. The post's classifySolverMove snippet was
+  // stale and stays out; the withheld threshold is AHEAD_CP=300 in
+  // scripts/hide-xiangqi-puzzles.mjs (the post's "more than a horse" was wrong).
+  updatedAt: '2026-10-07',
   audience:
     'Developers curious how an automated puzzle pipeline decides what counts as a puzzle, and players who want to know where the puzzles on this site come from.',
   boardFamily: 'xiangqi',
@@ -107,6 +112,10 @@ export const puzzleMiningArticle: Article = {
         {
           kind: 'paragraph',
           text: 'A run freezes its game list before any engine time is spent, sampled across ratings, time controls, results and lengths so it does not turn out to be all blitz. Nothing is added to a run once it starts.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'Every source carries a licence status, and publishing refuses any puzzle whose source has not been cleared.',
         },
       ],
     },
@@ -151,6 +160,10 @@ export const puzzleMiningArticle: Article = {
           caption:
             'The gate in evaluation order. Green passes the move, grey rejects it, and the label on the right is the reason stored on the candidate.',
         } as ArticleBlock,
+        {
+          kind: 'paragraph',
+          text: 'What survives the gate goes to an audit. A separate process searches every solution again at depth 22 with no node ceiling, knowing nothing of what the first pass decided, and about 6% of the survivors do not hold up. Those are dropped too.',
+        },
       ],
     },
     {
@@ -164,6 +177,10 @@ export const puzzleMiningArticle: Article = {
           kind: 'code',
           language: 'typescript',
           text: PM_SCAN_LOOP,
+        },
+        {
+          kind: 'paragraph',
+          text: 'In August 2026 mining cost about six core-hours per thousand games, or about one core-minute per published puzzle.',
         },
         {
           kind: 'paragraph',
@@ -325,6 +342,27 @@ export const puzzleMiningArticle: Article = {
         {
           kind: 'paragraph',
           text: '**Promised mate not reached** is the narrow one, and it is not a rule against non-mate puzzles. It fires only when the engine returned a mate score, so the line promised a mate, and replaying it inside the seven-ply cap never got there. The promise could not be checked, so the candidate goes. A position with an ordinary winning evaluation never enters that branch at all, and ships as one of the winning-advantage puzzles above.',
+        },
+      ],
+    },
+    {
+      // packages/game/src/puzzles-xiangqi-difficulty.ts (clamp 1000..2600,
+      // sacrifice bonus 200, free-capture penalty = MATERIAL_CP capped at 900,
+      // guarded by status 'playing'); migration 129 + hide-xiangqi-puzzles.mjs
+      // for the withheld class. 1,415 / 479 are the post's 2026-09-02 figures.
+      heading: 'A rating scores what makes the line hard to see',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'Every puzzle needs a rating before anyone has solved it, so the trainer can pick problems near your level. Rating by mate depth gives four distinct values across the corpus. The rating walks the solution instead: a quiet first move adds, a capture subtracts, a sacrifice the solver never wins back adds up to 200, and the number of replies the defender has pushes it either way. On 2 September 2026 the 1,415 puzzles served had 479 distinct ratings between 1000 and 2600.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'The largest penalty goes to a first move that takes something nothing can take back, scaled by the piece it wins and capped at a chariot’s 900, because a hanging piece is the easiest thing on a board to spot. The check only runs while the game is still going. A capture that mates also leaves the defender no legal reply, and counted naively that looks like a piece nothing can recapture, which would mark down every mating capture in the corpus.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'One kind of position is withheld: the solver is already at least 300 centipawns ahead and the answer takes something undefended. It teaches nothing at any rating, and a rating can only decide who gets shown a problem. That rule hid 12% of the corpus.',
         },
       ],
     },
