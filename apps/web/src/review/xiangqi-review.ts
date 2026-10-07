@@ -56,9 +56,9 @@ export type XiangqiReviewConfig = TreeReviewConfig<
   /** Attach the opening-explorer underboard tab. Defaults to true. */
   openingExplorer?: boolean;
   /** Show the exact endgame table (chessdb.cn, via our server) inside the
-   *  opening-explorer pane for covered positions. Defaults to on for the
-   *  analysis board only, where the reader is asking "what is this position
-   *  worth"; a played game's review can opt in. Needs the explorer. */
+   *  opening-explorer pane for covered positions. Defaults to on wherever the
+   *  explorer is (analysis, game review, broadcast, study), as on lichess.
+   *  Needs the explorer. */
   tablebasePanel?: boolean;
   /** The moves are a played record (a broadcast or archive game): replay past
    *  the draws an arbiter decides instead of stopping at the kernel's call. */
@@ -184,7 +184,7 @@ export function mountXiangqiReview(
   // on a surface where nobody looks.
   // The tablebase rides inside the explorer pane (lichess): same book button,
   // and a covered position shows the exact table instead of the book.
-  const withTablebase = config.tablebasePanel ?? config.reviewSurface === 'analysis';
+  const withTablebase = xiangqiTablebaseEnabled(config);
   const explorer =
     config.openingExplorer === false
       ? undefined
@@ -202,6 +202,11 @@ export function xiangqiHoverArrow(
   tone: HoverArrowTone | null,
 ): XiangqiBoardArrow | null {
   return move ? { from: move.from, to: move.to, ...hoverArrowStyle(tone ?? 'book') } : null;
+}
+
+/** The tablebase is on wherever the explorer is, unless a caller opts out. */
+export function xiangqiTablebaseEnabled(config: { tablebasePanel?: boolean }): boolean {
+  return config.tablebasePanel ?? true;
 }
 
 /** The shared explorer panel, typed to the xiangqi kernel state. */
