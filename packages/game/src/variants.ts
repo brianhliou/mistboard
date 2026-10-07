@@ -313,7 +313,8 @@ function positionRepetitionKey(state: GameState): string {
   const board = Object.entries(state.board)
     .filter(([, piece]) => piece)
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([square, piece]) => `${square}:${piece!.color[0]}${piece!.role[0]}`)
+    // The whole role, not its first letter: king and knight both start with k.
+    .map(([square, piece]) => `${square}:${piece!.color[0]}.${piece!.role}`)
     .join(',');
   const castling = [...state.castlingRights].sort().join(',');
   return [
