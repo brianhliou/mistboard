@@ -89,6 +89,14 @@
   pointer-events: none;
   user-select: none;
 }
+/* Chinese labels: upright Han in vertical-rl stacks one character per line, so
+   these run horizontally on one line. Too wide for the phase's span, the label
+   is hidden by advantage-chart.ts, never wrapped. */
+.advantage-chart__phase-label--line {
+  writing-mode: horizontal-tb;
+  white-space: nowrap;
+  letter-spacing: 0;
+}
 /* The advantage area wears the leading player's bound ink at FULL strength, flat
    and opaque, the way the eval bar beside the board wears it. The lead is the one
    thing this chart is about, so it gets a solid shape rather than a wash, and the
