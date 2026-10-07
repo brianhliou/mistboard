@@ -13,6 +13,7 @@ import {
   classifyXiangqiMove,
   fsfUciToXiangqiSquares,
   type StandardXiangqiPlayerView,
+  standardXiangqiCheckedGeneral,
   standardXiangqiEngineFen,
   type XiangqiColor,
   type XiangqiGameState,
@@ -130,7 +131,11 @@ const xiangqiPresentation: TreePresentation<
   seatFor: (view) => (view.status.type === 'playing' ? view.status.turn : null),
   // Learn from your mistakes: the played mistake draws as a from→to arrow.
   retro: { moveSquares: (move) => ({ orig: move.from, dest: move.to }) },
-  createBoard: (opts) => createXiangqiInteractiveBoard(opts),
+  createBoard: (opts) =>
+    createXiangqiInteractiveBoard({
+      ...opts,
+      checkSquare: (view) => standardXiangqiCheckedGeneral(view.board, view.status),
+    }),
   animateMove: animateXiangqiBoardMove,
   shapeToArrow: (s: NodeShape): XiangqiBoardArrow => ({
     from: s.orig as XiangqiSquare,

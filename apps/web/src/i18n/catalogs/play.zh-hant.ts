@@ -447,7 +447,6 @@ export const ZH_HANT_PLAY = {
   'result.drawBy': '以{reason}和棋。',
   'result.stalemate': '困斃',
   'result.generalCapture': '擒將',
-  'result.generalCaptured': '將帥被擒',
   'result.threefoldRepetition': '三次重複局面',
   'result.perpetualCheck': '長將',
   'result.gameRules': '規則判定',

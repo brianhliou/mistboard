@@ -94,6 +94,9 @@ let draggingFrom: JieqiSquare | null = null;
 // Snapshot extras that ride the frame (read by the chrome + play-again body).
 let roomMode: 'pve' | 'pvp' = 'pvp';
 let pveEngineId: string | null = null;
+// The server's + / # per ply (jieqi-tenant jieqiLiveCheckMarks). Rides every
+// frame; absent means no move has given check yet.
+let checkMarks: readonly string[] = [];
 
 const jieqiWebTenant: WebVariantTenant<JieqiColor> = {
   displayName: 'variant.jieqi.name',
@@ -128,6 +131,7 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
   onFrame: (frame) => {
     if (frame.roomMode === 'pve' || frame.roomMode === 'pvp') roomMode = frame.roomMode;
     if (typeof frame.pveEngineId === 'string') pveEngineId = frame.pveEngineId;
+    checkMarks = jieqiFrameCheckMarks(frame.checkMarks);
   },
   onSnapshotApplied: () => {
     if (core) maybePlayJieqiSnapshotSound(core.state.view, core.state.seat);
@@ -141,6 +145,7 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
     draggingFrom = null;
     roomMode = 'pvp';
     pveEngineId = null;
+    checkMarks = [];
   },
   renderBoard,
   // Piece glides (pieceAnimation pref). Live: only REMOTE moves animate -- an own
@@ -206,6 +211,7 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
     listClass: 'xiangqi-move-list',
     masked: false,
     notate: (move) => `${move.from}-${move.to}`,
+    notateLine: (moves) => jieqiLiveMoveLabels(moves, checkMarks),
     isMoveEvent: isJieqiMoveEvent,
   },
   replayCapture: {
@@ -216,6 +222,20 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
 
 export function bootstrapJieqiLiveRoom(): void {
   client.bootstrap();
+}
+
+/** The frame's check marks, or none when absent or malformed. */
+export function jieqiFrameCheckMarks(value: unknown): readonly string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((mark) => (mark === '+' || mark === '#' ? mark : ''));
+}
+
+/** from-to labels with the server's + / # for each ply. Exported for tests. */
+export function jieqiLiveMoveLabels(
+  moves: readonly JieqiMove[],
+  marks: readonly string[],
+): string[] {
+  return moves.map((move, index) => `${move.from}-${move.to}${marks[index] ?? ''}`);
 }
 
 function jieqiReasonPhrase(reason: string): TenantReasonKey {

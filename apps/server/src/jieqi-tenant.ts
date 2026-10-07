@@ -33,6 +33,7 @@ import {
   type JieqiPieceRole,
   type JieqiPlayerView,
   type JieqiSquare,
+  jieqiCheckMark,
   jieqiTruthBoard,
   jieqiTruthCaptures,
   oppositeJieqiColor,
@@ -44,9 +45,14 @@ import {
   jieqiEngineVersion,
 } from './jieqi-engine.js';
 import type * as persistence from './persistence.js';
-import { tenantPveEngineId } from './variant-tenant/runtime.js';
+import {
+  applyTenantEvent,
+  replayTenantEvents,
+  tenantPveEngineId,
+} from './variant-tenant/runtime.js';
 import type {
   TenantClientEvent,
+  TenantProjection,
   TenantRoomEvent,
   TenantSeat,
   TenantSnapshotClient,
@@ -167,6 +173,37 @@ export function getJieqiTruthView(state: JieqiGameState): JieqiPlayerView {
   };
 }
 
+// The live move list's + / # per ply. The client cannot derive them: a move
+// event carries no reveal, and a revealed piece checks by its true role. Check
+// itself is public (it reads only the board both seats and a spectator see),
+// so every client gets the same list. Extended incrementally per room, since
+// it rides every frame.
+type JieqiMarkCache = {
+  count: number;
+  projection: TenantProjection<JieqiColor, JieqiGameState, typeof JIEQI_SPEC_ID>;
+  marks: Array<'' | '+' | '#'>;
+};
+const jieqiMarkCache = new WeakMap<object, JieqiMarkCache>();
+
+export function jieqiLiveCheckMarks(room: {
+  events: readonly TenantRoomEvent<JieqiColor, JieqiMove, typeof JIEQI_SPEC_ID>[];
+}): Array<'' | '+' | '#'> {
+  const created = room.events?.[0];
+  if (created?.type !== 'room-created') return [];
+  let cache = jieqiMarkCache.get(room);
+  if (!cache || cache.count > room.events.length) {
+    cache = { count: 1, projection: replayTenantEvents(jieqiTenant, [created]), marks: [] };
+    jieqiMarkCache.set(room, cache);
+  }
+  for (let i = cache.count; i < room.events.length; i += 1) {
+    const event = room.events[i]!;
+    cache.projection = applyTenantEvent(jieqiTenant, cache.projection, event);
+    if (event.type === 'move-played') cache.marks.push(jieqiCheckMark(cache.projection.state));
+  }
+  cache.count = room.events.length;
+  return cache.marks;
+}
+
 export const jieqiTenant: JieqiTenant = {
   kind: 'jieqi',
   gameSpecId: JIEQI_SPEC_ID,
@@ -218,7 +255,12 @@ export const jieqiTenant: JieqiTenant = {
   wire: {
     snapshotExtras: (room) => {
       const pveEngineId = tenantPveEngineId(jieqiTenant, room);
-      return pveEngineId === null ? { roomMode: 'pvp' } : { roomMode: 'pve', pveEngineId };
+      const marks = jieqiLiveCheckMarks(room);
+      return {
+        ...(pveEngineId === null ? { roomMode: 'pvp' } : { roomMode: 'pve', pveEngineId }),
+        // Only when a move gave check, so a check-free room's wire is unchanged.
+        ...(marks.some((mark) => mark !== '') ? { checkMarks: marks } : {}),
+      };
     },
   },
   persistence: {

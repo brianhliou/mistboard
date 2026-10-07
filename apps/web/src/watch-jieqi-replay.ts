@@ -10,7 +10,7 @@
 // the same shape watch-jungle-flip-replay uses, with jieqi's key names, since
 // jieqi's 'truth' has to keep meaning fully-revealed for the review's deal
 // recovery.
-import type { JieqiPlayerView } from '@mistboard/game';
+import { type JieqiMove, type JieqiPlayerView, jieqiMoveLabel } from '@mistboard/game';
 import {
   type JieqiPostgameResponse,
   type JieqiPostgameViewKey,
@@ -36,6 +36,23 @@ type JieqiWatchLoadResult =
 
 // 'masked' and 'truth' are both single, side-agnostic boards, so they share the
 // neutral pane; only the review payload's per-color keys pick a side.
+/**
+ * from-to plus + / #, each read off the view the payload already carries for
+ * the ply the move produced (masked track first; check is public in jieqi).
+ * Exported for tests.
+ */
+export function jieqiWatchMoveLabels(postgame: JieqiPostgameResponse): string[] {
+  const moves = postgame.timeline.flatMap((event) =>
+    event.type === 'move-played' && event.move ? [event.move as JieqiMove] : [],
+  );
+  return moves.map((move, index) => {
+    const after =
+      postgameViewAtPly(postgame, 'masked', index + 1) ??
+      postgameViewAtPly(postgame, 'truth', index + 1);
+    return after ? jieqiMoveLabel(move, after) : `${move.from}-${move.to}`;
+  });
+}
+
 function paneKind(key: JieqiPostgameViewKey): 'white' | 'truth' | 'black' {
   if (key === 'red') return 'white';
   if (key === 'black') return 'black';
@@ -96,6 +113,7 @@ export function mountJieqiWatchReplay(
       },
       // Captures are intentionally absent from the compact TV product.
       fillCaptures: () => {},
+      moveLabels: jieqiWatchMoveLabels,
     },
   );
 }

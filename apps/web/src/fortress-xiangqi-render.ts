@@ -5,8 +5,13 @@ import type {
   FortressXiangqiSquare,
   XiangqiPiece,
 } from '@mistboard/game';
-import { fortressXiangqiCoordOf, fortressXiangqiSquareOf } from '@mistboard/game';
+import {
+  fortressXiangqiCheckedGeneral,
+  fortressXiangqiCoordOf,
+  fortressXiangqiSquareOf,
+} from '@mistboard/game';
 import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import { boardCheckGlowSvg } from './board-check.js';
 import {
   BOARD_LASTMOVE_MARKER_SELECTOR,
   boardLastMoveMarkersSvg,
@@ -127,6 +132,9 @@ export type FortressXiangqiBoardRenderOptions = {
   draggingFrom?: FortressXiangqiSquare | null;
   /** Override the stored board-layout preference (tests, previews). */
   layout?: XiangqiBoardLayout;
+  /** false = no check glow (rules diagrams). Default: glow the general of the
+   *  side facing the move when it is in check. */
+  check?: boolean;
 };
 
 export interface FortressXiangqiBoardArrow extends SvgBoardArrowStyle {
@@ -178,6 +186,7 @@ export function renderFortressXiangqiBoardSvg(
       ${cell ? `<g class="xq-live-palace-bands">${xiangqiSurfacePalaceBands(surface, perspective, layout)}</g>` : ''}
       ${coords ? `<g class="fxq-coords xq-live-coords" aria-hidden="true" pointer-events="none">${coords}</g>` : ''}
       ${lastMoveMarkers(view, perspective)}
+      ${options.check === false ? '' : checkGlow(view, perspective)}
       ${selectionRing(options.selectedSquare ?? null, perspective)}
       ${options.interactive ? '' : moveHints(view, targets, perspective)}
       ${options.interactive ? '' : blockedMarks(options.blockedSquares ?? [], perspective)}
@@ -187,6 +196,13 @@ export function renderFortressXiangqiBoardSvg(
       ${options.interactive ? hitLayer(perspective, view, targets) : ''}
     </svg>
   `;
+}
+
+function checkGlow(view: FortressXiangqiPlayerView, perspective: FortressXiangqiColor): string {
+  const square = fortressXiangqiCheckedGeneral(view.board, view.status);
+  if (!square) return '';
+  const coord = fortressXiangqiCoordOf(square);
+  return boardCheckGlowSvg(intersection(coord.file, coord.rank, perspective), PIECE_SIZE);
 }
 
 export function fortressXiangqiMarkerSvg(

@@ -1,5 +1,12 @@
-import type { JieqiColor, JieqiMove, JieqiPlayerView, JieqiSquare } from '@mistboard/game';
+import {
+  type JieqiColor,
+  type JieqiMove,
+  type JieqiPlayerView,
+  type JieqiSquare,
+  jieqiCheckedGeneral,
+} from '@mistboard/game';
 import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import { boardCheckGlowSvg } from './board-check.js';
 import {
   BOARD_LASTMOVE_MARKER_SELECTOR,
   boardLastMoveMarkersSvg,
@@ -107,6 +114,10 @@ export type JieqiBoardRenderOptions = {
   draggingFrom?: JieqiSquare | null;
   /** Override the stored board-layout preference (tests, previews). */
   layout?: XiangqiBoardLayout;
+  /** false = no check glow. Default: glow the general of the side facing the
+   *  move when it is in check. Check is public in jieqi (a face-down piece
+   *  attacks as its home-square role), so every view of the board may show it. */
+  check?: boolean;
 };
 
 export interface JieqiBoardArrow extends SvgBoardArrowStyle {
@@ -188,6 +199,7 @@ export function renderJieqiBoardSvg(
       ${palaceBands}
       ${coords ? `<g class="jieqi-coords xq-live-coords" aria-hidden="true" pointer-events="none">${coords}</g>` : ''}
       ${lastMoveMarkers(view, perspective)}
+      ${options.check === false ? '' : checkGlow(view, perspective)}
       ${selectionRing(options.selectedSquare ?? null, perspective)}
       ${options.interactive ? '' : moveHints(view, legalMoves, perspective)}
       ${pieceLayer(view, perspective, pieceSet, options.draggingFrom ?? null)}
@@ -196,6 +208,13 @@ export function renderJieqiBoardSvg(
       ${options.interactive ? hitLayer(perspective, view, legalMoves) : ''}
     </svg>
   `;
+}
+
+function checkGlow(view: JieqiPlayerView, perspective: JieqiColor): string {
+  const square = jieqiCheckedGeneral(view.board, view.status);
+  if (!square) return '';
+  const { file, rank } = jieqiCoordOf(square);
+  return boardCheckGlowSvg(intersection(file, rank, perspective), PIECE_SIZE);
 }
 
 export function jieqiArrowSvg(arrow: JieqiBoardArrow, perspective: JieqiColor): string {

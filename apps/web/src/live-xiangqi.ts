@@ -19,6 +19,7 @@ import {
   formatXiangqiMoves,
   getStandardXiangqiPlayerView,
   type StandardXiangqiPlayerView,
+  standardXiangqiCheckedGeneral,
   XIANGQI_SPEC_ID,
   type XiangqiColor,
   type XiangqiMove,
@@ -100,7 +101,9 @@ const xiangqiWebTenant: WebVariantTenant<XiangqiColor> = {
   selectInstruction: 'live.selectPieceThenDestination',
 };
 
-function xiangqiReasonPhrase(reason: string): TenantReasonKey {
+// Total over the reasons the standard kernel and the room emit, so the end line
+// never falls back to "the game rules" for a reason the game knows.
+export function xiangqiReasonPhrase(reason: string): TenantReasonKey {
   switch (reason) {
     case 'checkmate':
       return 'result.checkmate';
@@ -118,6 +121,8 @@ function xiangqiReasonPhrase(reason: string): TenantReasonKey {
       return 'result.threefoldRepetition';
     case 'chasing':
       return 'result.perpetualCheck';
+    case 'progress-clock':
+      return 'result.sixtyPliesNoCapture';
     default:
       return 'result.gameRules';
   }
@@ -277,6 +282,7 @@ function renderBoard(liveRefs: LiveRefs, view: StandardXiangqiPlayerView | null)
     draggingFrom,
     arrows: drawn.arrows,
     markers: drawn.markers,
+    checkSquare: standardXiangqiCheckedGeneral(view.board, view.status),
   });
   // Click + drag are delegated to the persistent board container once at mount
   // (installXiangqiBoardInteraction), so they survive these innerHTML re-renders.

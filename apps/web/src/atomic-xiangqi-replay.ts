@@ -16,7 +16,7 @@ import {
   type AtomicXiangqiMove,
   applyAtomicXiangqiMove,
   createInitialAtomicXiangqiState,
-  formatXiangqiMove,
+  formatAtomicXiangqiMove,
   fsfUciToXiangqiSquares,
   getAtomicXiangqiPlayerView,
   isAtomicXiangqiLegalMove,
@@ -88,7 +88,7 @@ export function replayAtomicXiangqiNotation(moves: string): {
   const labels: string[] = [];
   tokens.forEach((token, ply) => {
     const move = moveForToken(state, token, ply);
-    labels.push(formatXiangqiMove(state, move, style));
+    labels.push(formatAtomicXiangqiMove(state, move, style));
     state = applyAtomicXiangqiMove(state, move);
     played.push(move);
     states.push(state);

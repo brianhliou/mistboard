@@ -160,10 +160,18 @@ const darkXiangqiWebTenant: WebVariantTenant<XiangqiColor> = {
   selectInstruction: 'live.selectVisiblePiece',
 };
 
-function darkXiangqiReasonPhrase(reason: string): TenantReasonKey {
+// Total over the reasons the fog kernel and the room emit (variants-xiangqi.ts:
+// general capture, no move at all, threefold repetition, the 60-ply clock).
+export function darkXiangqiReasonPhrase(reason: string): TenantReasonKey {
   switch (reason) {
     case 'general-captured':
       return 'result.generalCapture';
+    case 'stalemate':
+      return 'result.stalemate';
+    case 'repetition':
+      return 'result.threefoldRepetition';
+    case 'progress-clock':
+      return 'result.sixtyPliesNoCapture';
     case 'timeout':
       return 'result.timeout';
     case 'resignation':

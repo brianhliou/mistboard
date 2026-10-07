@@ -1,10 +1,10 @@
 // Live multiplayer room client for Atomic Xiangqi (9x10, open information, a
 // capture is an explosion). The standard xiangqi live client with three
 // differences: the board rings the points the last explosion cleared, the
-// check notice says what check means here, and the move list is coordinate
-// pairs (the WXF formatter replays a game through the standard kernel, which
-// does not explode). Everything else is live-xiangqi.ts: the intersection
-// board, click/drag, sounds, replay capture.
+// check notice says what check means here, and the move list replays through
+// the atomic kernel (formatAtomicXiangqiMoves), so labels and their +/# follow
+// the explosion rather than the standard rules. Everything else is
+// live-xiangqi.ts: the intersection board, click/drag, sounds, replay capture.
 
 import {
   ATOMIC_XIANGQI_SPEC_ID,
@@ -13,8 +13,10 @@ import {
   type AtomicXiangqiPlayerView,
   type AtomicXiangqiSquare,
   applyAtomicXiangqiMove,
+  atomicXiangqiCheckedGeneral,
   coordOf,
   createInitialAtomicXiangqiState,
+  formatAtomicXiangqiMoves,
   getAtomicXiangqiPlayerView,
 } from '@mistboard/game';
 import './live-xiangqi.css';
@@ -62,6 +64,7 @@ import {
   xiangqiPieceGhostSvg,
 } from './xiangqi-board.js';
 import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
+import { currentXiangqiNotationStyle, xiangqiNotationChangedEvent } from './xiangqi-notation.js';
 
 type AtomicMoveEvent = TenantMovePlayed<AtomicXiangqiColor, AtomicXiangqiMove>;
 
@@ -180,6 +183,8 @@ const client = createTenantLiveClient<
         if (core) renderBoard(core.refs, core.displayedView());
       },
     });
+    // The theme gear changes the notation mid-game; relabel the list in place.
+    window.addEventListener(xiangqiNotationChangedEvent, () => ctx.renderAll());
   },
   moveList: {
     rowClass: 'move-row xiangqi-move-row',
@@ -187,6 +192,9 @@ const client = createTenantLiveClient<
     listClass: 'xiangqi-move-list',
     masked: false,
     notate: (move) => `${move.from}-${move.to}`,
+    // The reader's notation, as on the replay and review pages, written against
+    // the atomic kernel so `+`/`#` follow atomic's check and blast rules.
+    notateLine: (moves) => formatAtomicXiangqiMoves(moves, currentXiangqiNotationStyle()),
     isMoveEvent: isAtomicMoveEvent,
   },
   replayCapture: {
@@ -254,6 +262,7 @@ function renderBoard(liveRefs: LiveRefs, view: AtomicXiangqiPlayerView | null): 
     draggingFrom,
     arrows: drawn.arrows,
     markers: [...atomicXiangqiBlastMarkers(view, { fresh }), ...drawn.markers],
+    checkSquare: atomicXiangqiCheckedGeneral(view.board, view.status),
   });
   if (fresh && atomicXiangqiCaptureAnimates(view)) {
     cancelCapture = animateAtomicXiangqiCapture(liveRefs.board, view, perspective);

@@ -243,8 +243,42 @@ function serializeChinese(
 // say what moved. Absolute squares, red's a1 bottom-left for both sides, which
 // is exactly the address a chess player already reads.
 
-const ALGEBRAIC_CHECK = '+';
-const ALGEBRAIC_MATE = '#';
+export const XIANGQI_ALGEBRAIC_CHECK = '+';
+export const XIANGQI_ALGEBRAIC_MATE = '#';
+
+/**
+ * The algebraic label without its check suffix: piece letter, disambiguation,
+ * `x` on capture, destination. `legalMoves` is the mover's legal set under the
+ * variant's own rules (disambiguation names only the rivals that can really go
+ * there). A variant with its own check rule (atomic) adds its own suffix.
+ */
+export function xiangqiAlgebraicMoveBody(
+  board: XiangqiGameState['board'],
+  move: XiangqiMove,
+  legalMoves: readonly XiangqiMove[],
+): string | null {
+  const piece = board[move.from];
+  if (!piece) return null;
+  const letter = WXF_ROLE_TO_LETTER[piece.role];
+  const capture = board[move.to] ? 'x' : '';
+
+  // Chess disambiguation: another piece of the same role can reach the square,
+  // so name the origin file if that settles it, else the rank, else the square.
+  const rivals = legalMoves.filter(
+    (other) =>
+      other.to === move.to && other.from !== move.from && board[other.from]?.role === piece.role,
+  );
+  let origin = '';
+  if (rivals.length > 0) {
+    const from = coordOf(move.from);
+    const sharesFile = rivals.some((other) => coordOf(other.from).file === from.file);
+    const sharesRank = rivals.some((other) => coordOf(other.from).rank === from.rank);
+    if (!sharesFile) origin = move.from[0]!;
+    else if (!sharesRank) origin = String(from.rank);
+    else origin = move.from;
+  }
+  return `${letter}${origin}${capture}${move.to}`;
+}
 
 /**
  * Format one move in chess-style algebraic against its pre-move state, or null
@@ -261,37 +295,19 @@ export function formatXiangqiAlgebraicMove(
   if (!piece || piece.color !== color) return null;
   if (!isStandardXiangqiLegalMove(state, move)) return null;
 
-  const letter = WXF_ROLE_TO_LETTER[piece.role];
-  const capture = state.board[move.to] ? 'x' : '';
-
-  // Chess disambiguation: another piece of the same role can reach the square,
-  // so name the origin file if that settles it, else the rank, else the square.
-  const rivals = getStandardXiangqiLegalMoves(state).filter(
-    (other) =>
-      other.to === move.to &&
-      other.from !== move.from &&
-      state.board[other.from]?.role === piece.role,
-  );
-  let origin = '';
-  if (rivals.length > 0) {
-    const from = coordOf(move.from);
-    const sharesFile = rivals.some((other) => coordOf(other.from).file === from.file);
-    const sharesRank = rivals.some((other) => coordOf(other.from).rank === from.rank);
-    if (!sharesFile) origin = move.from[0]!;
-    else if (!sharesRank) origin = String(from.rank);
-    else origin = move.from;
-  }
+  const body = xiangqiAlgebraicMoveBody(state.board, move, getStandardXiangqiLegalMoves(state));
+  if (body === null) return null;
 
   const after = applyStandardXiangqiMove(state, move);
   const opponent: XiangqiColor = color === 'red' ? 'black' : 'red';
   let suffix = '';
   if (after.status.type === 'finished' && after.status.reason === 'checkmate') {
-    suffix = ALGEBRAIC_MATE;
+    suffix = XIANGQI_ALGEBRAIC_MATE;
   } else if (isStandardXiangqiGeneralInCheck(after, opponent)) {
-    suffix = ALGEBRAIC_CHECK;
+    suffix = XIANGQI_ALGEBRAIC_CHECK;
   }
 
-  return `${letter}${origin}${capture}${move.to}${suffix}`;
+  return `${body}${suffix}`;
 }
 
 // --- public API --------------------------------------------------------------

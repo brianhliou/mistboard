@@ -10,6 +10,7 @@ import {
   getJieqiPlayerView,
   getJieqiPublicView,
   isJieqiLegalMove,
+  isJieqiSideToMoveInCheck,
   type JieqiBoard,
   type JieqiColor,
   type JieqiDeal,
@@ -380,11 +381,73 @@ test('jieqiTruthView reveals every identity and captures carry full roles', () =
   assert.deepEqual(truth.board.e5, { color: 'red', role: 'horse', faceDown: false });
   // The captured dark piece carries its full role (no per-viewer redaction).
   assert.deepEqual(truth.captured, [{ owner: 'black', role: 'cannon' }]);
-  // Truth view is rendered from red's perspective and is never in check / has no
-  // legal moves attached (it is a static review projection).
+  // Truth view is rendered from red's perspective and has no legal moves
+  // attached (it is a static review projection). Nobody is in check here.
   assert.equal(truth.perspective, 'red');
   assert.equal(truth.inCheck, false);
   assert.deepEqual(truth.legalMoves, []);
+});
+
+// The postgame API's `view`, `history.truth` and `history.masked` are all built
+// on jieqiTruthView, so a hardcoded false there made every ply of every finished
+// game read "not in check", the mating move included.
+test('the truth view reports check for the side to move, through the mating move', () => {
+  const checking = playing(
+    {
+      d1: up('red', 'general'),
+      f10: up('black', 'general'),
+      a10: up('red', 'chariot'),
+    },
+    'black',
+  );
+  assert.equal(jieqiTruthView(checking).inCheck, true);
+  assert.equal(jieqiTruthView(playing(checking.board, 'red')).inCheck, false);
+
+  const beforeMate = playing({
+    e10: up('black', 'general'),
+    e3: up('red', 'chariot'),
+    a10: up('red', 'chariot'),
+    g5: up('red', 'chariot'),
+    f2: up('red', 'general'),
+  });
+  const mated = applyJieqiMove(beforeMate, { from: 'g5', to: 'g10' });
+  assert.equal(mated.status.type === 'finished' && mated.status.reason, 'checkmate');
+  // The finished position still has black's general under attack: the mating
+  // ply is check for the side that would move, in the truth and public views.
+  assert.equal(jieqiTruthView(mated).inCheck, true);
+  assert.equal(getJieqiPublicView(mated).inCheck, true);
+  assert.equal(isJieqiSideToMoveInCheck(mated), true);
+});
+
+test('a stalemated finish is not check', () => {
+  const state = playing({
+    e10: up('black', 'general'),
+    d1: up('red', 'chariot'),
+    f1: up('red', 'chariot'),
+    a5: up('red', 'chariot'),
+    e2: up('red', 'general'),
+    e5: up('red', 'soldier'),
+  });
+  const after = applyJieqiMove(state, { from: 'a5', to: 'a9' });
+  assert.equal(after.status.type === 'finished' && after.status.reason, 'stalemate');
+  assert.equal(jieqiTruthView(after).inCheck, false);
+  assert.equal(isJieqiSideToMoveInCheck(after), false);
+});
+
+test('check is read from the masked board: a face-down piece attacks as its home role', () => {
+  // A face-down piece on red's b3 cannon square moves (and checks) as a cannon
+  // whatever it really is, so the truth view agrees with what both seats see.
+  const state = playing(
+    {
+      e1: up('red', 'general'),
+      b3: dark('red', 'soldier'),
+      b5: up('black', 'soldier'),
+      b10: up('black', 'general'),
+    },
+    'black',
+  );
+  assert.equal(getJieqiPublicView(state).inCheck, true);
+  assert.equal(jieqiTruthView(state).inCheck, true);
 });
 
 // ── Public view (live spectators) ───────────────────────────────────────────

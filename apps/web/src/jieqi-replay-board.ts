@@ -24,6 +24,7 @@ import {
   type JieqiGameState,
   type JieqiMove,
   type JieqiSquare,
+  jieqiMoveLabel,
   parseJieqiFen,
 } from '@mistboard/game';
 import {
@@ -102,7 +103,12 @@ export function replayJieqiLine(
   return replayFrom(parsed.state, tokens);
 }
 
-const label = (move: JieqiMove): string => `${move.from}-${move.to}`;
+// from-to plus the check mark of the position the move left (states[i + 1]).
+const label = (line: JieqiReplayLine, index: number): string => {
+  const move = line.played[index]!;
+  const after = line.states[index + 1];
+  return after ? jieqiMoveLabel(move, after) : `${move.from}-${move.to}`;
+};
 
 /** A study shape as the review board draws it (jieqi-review.ts shapeToArrow):
  *  the same classes, so the brush colours match. A ring is a circle marker in
@@ -241,7 +247,7 @@ export function mountJieqiReplayBoard(
     },
     plyCount: () => total,
     moveEntries: () =>
-      played.map((move, i) => {
+      played.map((_move, i) => {
         const ply = i + 1;
         const glyph = options.glyphs?.[ply];
         const note = options.notes?.[ply];
@@ -250,14 +256,14 @@ export function mountJieqiReplayBoard(
         const assessment = options.assessments?.[ply];
         return {
           ply,
-          label: label(move),
+          label: label(line, i),
           ...(glyph ? { suffix: glyph, suffixClass: GLYPH_SUFFIX_CLASS[glyph] } : {}),
           ...(note ? { note } : {}),
           ...(assessment ? { assessment } : {}),
           ...(side
             ? {
                 line: {
-                  moves: side.played.map(label),
+                  moves: side.played.map((_, j) => label(side, j)),
                   ...(meta?.verdict ? { verdict: meta.verdict } : {}),
                   ...(meta?.note ? { note: meta.note } : {}),
                 },

@@ -432,10 +432,10 @@ function replayPositionKey(view: DuckXiangqiPlayerView): string {
   return JSON.stringify({ board, duck: view.duck ?? null, moveNumber: view.moveNumber });
 }
 
-function duckReasonPhrase(reason: string): TenantReasonKey {
+export function duckReasonPhrase(reason: string): TenantReasonKey {
   switch (reason) {
     case 'general-captured':
-      return 'result.generalCaptured';
+      return 'result.generalCapture';
     case 'stalemate':
       return 'result.noLegalTurn';
     case 'progress':

@@ -21,6 +21,7 @@ import {
   type AtomicXiangqiMove,
   type AtomicXiangqiPlayerView,
   type AtomicXiangqiSquare,
+  atomicXiangqiCheckedGeneral,
   atomicXiangqiFen,
   fsfUciToXiangqiSquares,
 } from '@mistboard/game';
@@ -88,6 +89,7 @@ function createAtomicXiangqiInteractiveBoard(
     seatFor: (view) => opts.seatFor(view as AtomicXiangqiPlayerView),
     enabled: () => opts.enabled(),
     onMove: (move, view) => opts.onMove(move, view as AtomicXiangqiPlayerView),
+    checkSquare: (view) => atomicXiangqiCheckedGeneral(view.board, view.status),
     ...(opts.onDrawShape
       ? {
           onDrawShape: (orig: AtomicXiangqiSquare, dest: AtomicXiangqiSquare | null, drawOpts) =>
