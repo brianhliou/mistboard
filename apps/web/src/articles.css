@@ -1071,6 +1071,14 @@
   width: calc(100% * 292 / 604);
 }
 
+/* A single board that carries a number on its points (the Duck Xiangqi game-tree
+   figures): the hero's width on a desktop, the full column on a phone. The
+   phone rule below caps single boards at 296px, which shrinks a one-digit disc
+   under legibility; one more class than that rule, so it wins wherever it sits. */
+.article-figure-xq.article-figure-xq--large-board > .xq-article-svg[data-xq-layout="single"] {
+  width: min(480px, 100%);
+}
+
 /* A starting-position board marked as the section hero should match the
    interactive board width. Scope this to the semantic hero class rather than
    an article slug so public route aliases cannot silently disable the sizing. */

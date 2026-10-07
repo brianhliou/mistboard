@@ -62,6 +62,8 @@ describe('article public listing gates', () => {
     expect(hrefs).toEqual([
       // The xiangqi endgames page (象棋残局), 2026-10-08.
       '/blog/xiangqi-endgames',
+      // How the duck widens xiangqi's game tree, 2026-10-07.
+      '/blog/duck-xiangqi-game-tree',
       // The solver audit of the classical composition manuals, 2026-10-06.
       '/blog/solver-audit',
       // KataGo, the new top Jungle Chess bot, scheduled for 2026-10-03.
@@ -283,6 +285,7 @@ describe('article public listing gates', () => {
     // curated list. Deep dives have their own row (next test).
     expect(hrefs).toEqual([
       '/blog/xiangqi-endgames',
+      '/blog/duck-xiangqi-game-tree',
       '/blog/solver-audit',
       '/blog/katago-jungle',
       '/blog/pikafish-reveal-bug',
