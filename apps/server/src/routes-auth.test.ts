@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Readable } from 'node:stream';
 import { hashSecret } from './account-session.js';
+import { setServerCaptureTransport } from './analytics-server.js';
 import {
   consumeEmailLoginChallenge,
   createEmailLoginChallenge,
@@ -97,12 +98,77 @@ definePersistenceTests('auth routes', () => {
     assert.equal(response.status, 202);
     assert.equal(await consumeEmailLoginChallenge('route-old-code', oldHash, new Date()), null);
   });
+
+  test('signup_completed geolocates the visitor from cf-connecting-ip, not the Cloudflare edge', async () => {
+    const sent = await signupCaptureIp('cf-geo@example.com', {
+      // Railway appends the Cloudflare edge it saw; the visitor is only in
+      // the header Cloudflare sets.
+      'x-forwarded-for': '203.0.113.50, 172.70.100.1',
+      'cf-connecting-ip': '36.112.5.9',
+    });
+    assert.equal(sent, '36.112.5.9');
+  });
+
+  test('signup_completed keeps the trusted forwarded hop without cf-connecting-ip', async () => {
+    const sent = await signupCaptureIp('no-cf-geo@example.com', {
+      'x-forwarded-for': '203.0.113.50, 198.51.100.77',
+    });
+    assert.equal(sent, '198.51.100.77');
+  });
 });
 
-function jsonRequest(body: unknown, remoteAddress: string): IncomingMessage {
+async function signupCaptureIp(
+  email: string,
+  headers: Record<string, string>,
+): Promise<string | undefined> {
+  const bodies: string[] = [];
+  const previousTransport = setServerCaptureTransport(async (_url, body) => {
+    bodies.push(body);
+  });
+  const previousKey = process.env.MISTBOARD_POSTHOG_KEY;
+  const previousHost = process.env.MISTBOARD_POSTHOG_HOST;
+  process.env.MISTBOARD_POSTHOG_KEY = 'phc_test';
+  process.env.MISTBOARD_POSTHOG_HOST = 'https://ph.example';
+  try {
+    const start = captureResponse();
+    await tryHandle(
+      {},
+      jsonRequest({ email }, '10.0.0.9', headers),
+      start,
+      '/api/auth/email/start',
+    );
+    assert.equal(start.status, 202);
+    const { devCode, loginId } = JSON.parse(start.body) as { devCode: string; loginId: string };
+    const confirm = captureResponse();
+    await tryHandle(
+      {},
+      jsonRequest({ code: devCode, loginId }, '10.0.0.9', headers),
+      confirm,
+      '/api/auth/email/confirm',
+    );
+    assert.equal(confirm.status, 200);
+    const signups = bodies
+      .map((body) => JSON.parse(body) as { event: string; properties: { $ip?: string } })
+      .filter((payload) => payload.event === 'signup_completed');
+    assert.equal(signups.length, 1);
+    return signups[0]!.properties.$ip;
+  } finally {
+    setServerCaptureTransport(previousTransport);
+    if (previousKey === undefined) delete process.env.MISTBOARD_POSTHOG_KEY;
+    else process.env.MISTBOARD_POSTHOG_KEY = previousKey;
+    if (previousHost === undefined) delete process.env.MISTBOARD_POSTHOG_HOST;
+    else process.env.MISTBOARD_POSTHOG_HOST = previousHost;
+  }
+}
+
+function jsonRequest(
+  body: unknown,
+  remoteAddress: string,
+  headers: Record<string, string> = {},
+): IncomingMessage {
   const request = Readable.from([JSON.stringify(body)]) as unknown as IncomingMessage;
   request.method = 'POST';
-  request.headers = {};
+  request.headers = { ...headers };
   Object.defineProperty(request, 'socket', { value: { remoteAddress } });
   return request;
 }

@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   buildServerCapturePayload,
   captureServerEvent,
+  clientIpForAnalytics,
   serverAnalyticsConfig,
   setServerCaptureTransport,
 } from './analytics-server.js';
@@ -93,4 +94,33 @@ test('a failing transport never throws out of capture', async () => {
   } finally {
     setServerCaptureTransport(previous);
   }
+});
+
+test('analytics ip prefers cf-connecting-ip over the trusted proxy hop', () => {
+  const socket = { remoteAddress: '10.0.0.1' } as never;
+  const behindCloudflare = {
+    headers: {
+      'x-forwarded-for': '203.0.113.50, 172.70.100.1',
+      'cf-connecting-ip': ' 36.112.5.9 ',
+    },
+    socket,
+  };
+  assert.equal(clientIpForAnalytics(behindCloudflare), '36.112.5.9');
+  assert.equal(
+    clientIpForAnalytics({ headers: { 'cf-connecting-ip': '2408:8207::1' }, socket }),
+    '2408:8207::1',
+  );
+  // No header, or one that is not an address: same answer as the rate-limit key.
+  assert.equal(
+    clientIpForAnalytics({ headers: { 'x-forwarded-for': '203.0.113.50, 172.70.100.1' }, socket }),
+    '172.70.100.1',
+  );
+  assert.equal(
+    clientIpForAnalytics({
+      headers: { 'x-forwarded-for': '172.70.100.1', 'cf-connecting-ip': 'not-an-ip' },
+      socket,
+    }),
+    '172.70.100.1',
+  );
+  assert.equal(clientIpForAnalytics({ headers: {}, socket }), '10.0.0.1');
 });

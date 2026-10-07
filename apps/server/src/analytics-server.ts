@@ -11,7 +11,28 @@
 // / MISTBOARD_POSTHOG_HOST as overrides. No SDK: one POST to /capture/ per
 // event, fire-and-forget, never throws, no-op without a key (local dev, tests).
 
+import type { IncomingMessage } from 'node:http';
+import { isIP } from 'node:net';
+import { clientIpForRateLimit, type RuntimeEnv } from './server-policy.js';
+
 const captureTimeoutMs = 3_000;
+
+// The visitor address PostHog should geolocate a server-sent event to.
+// clientIpForRateLimit trusts one proxy hop, which behind Cloudflare is the
+// Cloudflare edge, so every signup located to a Cloudflare POP (mainland
+// China signups showed as US). Cloudflare puts the visitor in
+// cf-connecting-ip; prefer it when it parses as an address. A request sent
+// straight to the Railway origin can forge the header, which is acceptable
+// for a geo hint and is why this is never used as a rate-limit key.
+export function clientIpForAnalytics(
+  request: Pick<IncomingMessage, 'headers' | 'socket'>,
+  env: RuntimeEnv = process.env,
+): string {
+  const header = request.headers['cf-connecting-ip'];
+  const raw = (Array.isArray(header) ? header[0] : header)?.trim();
+  if (raw && isIP(raw) !== 0) return raw;
+  return clientIpForRateLimit(request, env);
+}
 
 export type ServerAnalyticsConfig = { key: string; host: string };
 
