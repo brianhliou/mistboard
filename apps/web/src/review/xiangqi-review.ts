@@ -32,6 +32,7 @@ import { xiangqiBoardAspect } from '../xiangqi-board-aspect.js';
 import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
 import { bestMoveArrow, engineArrowsFromLines } from './engine/engine-arrows.js';
 import type { NodeShape } from './game-tree.js';
+import { type HoverArrowTone, hoverArrowStyle } from './hover-arrow.js';
 import { createOpeningExplorer } from './opening-explorer.js';
 import {
   mountTreeReview,
@@ -40,6 +41,7 @@ import {
   type TreeReviewHandle,
 } from './tree-review.js';
 import { xiangqiGamePhases } from './xiangqi-phases.js';
+import { createXiangqiTablebasePanel } from './xiangqi-tablebase-panel.js';
 import { xiangqiRecordTreeAdapter, xiangqiTreeAdapter } from './xiangqi-tree-adapter.js';
 
 /** Whole-game analysis source (variant-neutral; re-exported for the callers). */
@@ -53,6 +55,11 @@ export type XiangqiReviewConfig = TreeReviewConfig<
 > & {
   /** Attach the opening-explorer underboard tab. Defaults to true. */
   openingExplorer?: boolean;
+  /** Show the exact endgame table (chessdb.cn, via our server) inside the
+   *  opening-explorer pane for covered positions. Defaults to on wherever the
+   *  explorer is (analysis, game review, broadcast, study), as on lichess.
+   *  Needs the explorer. */
+  tablebasePanel?: boolean;
   /** The moves are a played record (a broadcast or archive game): replay past
    *  the draws an arbiter decides instead of stopping at the kernel's call. */
   record?: boolean;
@@ -175,39 +182,47 @@ export function mountXiangqiReview(
   // surface does today (the study board did until 2026-08-26). The panel is
   // closed until the reader opens it from the book tool, so this costs nothing
   // on a surface where nobody looks.
+  // The tablebase rides inside the explorer pane (lichess): same book button,
+  // and a covered position shows the exact table instead of the book.
+  const withTablebase = xiangqiTablebaseEnabled(config);
   const explorer =
-    config.openingExplorer === false ? undefined : (config.explorer ?? xiangqiOpeningExplorer());
+    config.openingExplorer === false
+      ? undefined
+      : (config.explorer ?? xiangqiOpeningExplorer(withTablebase));
   const presentation = config.record
     ? { ...xiangqiPresentation, adapter: xiangqiRecordTreeAdapter }
     : xiangqiPresentation;
   return mountTreeReview(root, presentation, { ...config, explorer });
 }
 
+/** The board preview for a hovered book or tablebase row: the standard hover
+ *  arrow (review/hover-arrow.ts), inked by where the move came from. */
+export function xiangqiHoverArrow(
+  move: XiangqiMove | null,
+  tone: HoverArrowTone | null,
+): XiangqiBoardArrow | null {
+  return move ? { from: move.from, to: move.to, ...hoverArrowStyle(tone ?? 'book') } : null;
+}
+
+/** The tablebase is on wherever the explorer is, unless a caller opts out. */
+export function xiangqiTablebaseEnabled(config: { tablebasePanel?: boolean }): boolean {
+  return config.tablebasePanel ?? true;
+}
+
 /** The shared explorer panel, typed to the xiangqi kernel state. */
-function xiangqiOpeningExplorer(): NonNullable<XiangqiReviewConfig['explorer']> {
-  const explorer = createOpeningExplorer();
+function xiangqiOpeningExplorer(
+  withTablebase: boolean,
+): NonNullable<XiangqiReviewConfig['explorer']> {
+  const explorer = createOpeningExplorer(
+    withTablebase ? { tablebase: createXiangqiTablebasePanel() } : {},
+  );
   return {
     el: explorer.el,
     setTruth: (truth) => explorer.setState(truth),
     setActive: (isActive) => explorer.setActive(isActive),
     onPlayMove: (handler) => explorer.onPlayMove(handler),
-    // Hover hint in a distinct ink (teal, dashed) so it never reads as an engine
-    // suggestion — it is "the move under your cursor", not "the best move".
     onHoverMove: (handler) =>
-      explorer.onHoverMove((move) =>
-        handler(
-          move
-            ? {
-                from: move.from,
-                to: move.to,
-                className: 'xq-arrow--explorer',
-                color: '#8a63d2',
-                dashed: true,
-                opacity: 0.85,
-              }
-            : null,
-        ),
-      ),
+      explorer.onHoverMove((move, tone) => handler(xiangqiHoverArrow(move, tone))),
   };
 }
 

@@ -659,6 +659,15 @@ test('isReviewShellRoute matches postgame review documents (COOP/COEP scope)', (
   // isolated.
   assert.equal(isReviewShellRoute('/editor'), false);
   assert.equal(isReviewShellRoute('/editor/xiangqi'), false);
+  // Practice from a position runs the engine against the learner; the practice
+  // shelf itself mounts no board and stays a plain page. Only the exact path is
+  // a route: anything under it 404s rather than booting the runner.
+  assert.equal(isReviewShellRoute('/practice/position'), true);
+  assert.equal(isReviewShellRoute('/practice'), false);
+  assert.equal(isClientRoute('/practice/position'), true);
+  assert.equal(isClientRoute('/practice/position/'), true);
+  assert.equal(isClientRoute('/practice/position/extra'), false);
+  assert.equal(isClientRoute('/practice/positions'), false);
   // The puzzle trainer mounts the same ceval engine after a puzzle is completed.
   // Both the list and a specific puzzle must be isolated, because the isolation
   // is fixed at document load and pushState nav between puzzles never reloads.

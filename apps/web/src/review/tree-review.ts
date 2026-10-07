@@ -503,8 +503,9 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
     /** Register the handler that plays a move the reader clicked in the table. */
     onPlayMove(handler: (move: Move) => void): void;
     /** Register the handler for hovering a move in the table: it hands back a
-     *  ready-built board arrow (or null on leave). The caller owns the arrow's
-     *  look so it reads as distinct from the engine's blue. */
+     *  ready-built board arrow (or null on leave). The caller builds it with the
+     *  standard hover arrow (review/hover-arrow.ts): the engine arrow's shape in
+     *  a book or result ink. */
     onHoverMove(handler: (arrow: Arrow | null) => void): void;
   };
   /** Game result appended to the move list as a terminal block (lichess: "0-1"
@@ -656,7 +657,9 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // Clicking a move in the opening explorer plays it, same as playing it on the
   // board: the explorer is a navigation surface, not a readout.
   config.explorer?.onPlayMove(handleMove);
-  // Hovering a move previews it as a distinct arrow (the caller built its look).
+  // Hovering a move previews it as an arrow (the caller built its look: the
+  // standard hover arrow, review/hover-arrow.ts). The explorer pane also hosts
+  // the xiangqi tablebase table, which previews through this same slot.
   let explorerHoverArrow: Arrow | null = null;
   config.explorer?.onHoverMove((arrow) => {
     explorerHoverArrow = arrow;

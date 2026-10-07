@@ -1037,13 +1037,50 @@ test('the xiangqi course serves all three locales, each distinct and cross-linke
   assert.match(seen.get('/learn/xiangqi')!.body, /<html lang="en">/);
 });
 
+test('the practice shelf serves all three locales, each distinct and cross-linked', async () => {
+  // /zh-hans/practice 404'd in production on 2026-10-07 while the Chinese course
+  // beside it served: the page and its zh catalogue existed, but only the English
+  // URL was a route. Same contract as the course above.
+  const staticDir = await staticDirWithPreloadManifest();
+  const titles = new Set<string>();
+  for (const [route, lang] of [
+    ['/practice', 'en'],
+    ['/zh-hans/practice', 'zh-Hans'],
+    ['/zh-hant/practice', 'zh-Hant'],
+  ] as const) {
+    assert.ok(isClientRoute(route), `${route} would 404 on a direct hit in production`);
+    assert.ok(SITEMAP_STATIC_ROUTES.includes(route), `${route} is not advertised in the sitemap`);
+    const response = captureResponse();
+    const served = await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname: route,
+      publicHost: 'https://mistboard.com',
+    });
+    assert.equal(served, true, `${route} fell through to the plain shell`);
+    titles.add(response.body.match(/<title>([^<]*)<\/title>/)?.[1] ?? '');
+    assert.match(response.body, new RegExp(`<html lang="${lang}">`));
+    for (const [alt, href] of [
+      ['en', 'https://mistboard.com/practice'],
+      ['zh-Hans', 'https://mistboard.com/zh-hans/practice'],
+      ['zh-Hant', 'https://mistboard.com/zh-hant/practice'],
+    ]) {
+      assert.ok(
+        response.body.includes(`<link rel="alternate" hreflang="${alt}" href="${href}">`),
+        `${route} is missing the ${alt} alternate`,
+      );
+    }
+  }
+  assert.equal(titles.size, 3, 'titles must differ');
+});
+
 // The locale groups carried hreflang but no canonical until 2026-10-02, so a
 // crawler had alternates naming three URLs and nothing saying which URL each
 // page is (a query-string variant or a trailing-slash copy could compete). Each
 // member names itself, exactly once.
 test('every locale-group SPA route names itself as canonical', async () => {
   const staticDir = await staticDirWithPreloadManifest();
-  const groups = ['/videos', '/bots', '/learn/xiangqi', '/champions'];
+  const groups = ['/videos', '/bots', '/learn/xiangqi', '/champions', '/practice'];
   for (const group of groups) {
     for (const route of [group, `/zh-hans${group}`, `/zh-hant${group}`]) {
       const response = captureResponse();

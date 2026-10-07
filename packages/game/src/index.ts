@@ -47,6 +47,9 @@ export * from './variants-xiangqi.js';
 export * from './variants-xiangqi-standard.js';
 export * from './xiangqi-broadcast.js';
 export * from './xiangqi-endgame-corpus.js';
+export * from './xiangqi-endgame-hub.js';
+export * from './xiangqi-endgame-hub-checks.js';
+export * from './xiangqi-endgame-practice.js';
 export * from './xiangqi-exchange.js';
 export * from './xiangqi-import.js';
 export * from './xiangqi-judgment-comment.js';
@@ -65,4 +68,5 @@ export {
   type XiangqiRuleKernel,
   type XiangqiRuleState,
 } from './xiangqi-rule-kernel.js';
+export * from './xiangqi-tablebase.js';
 export * from './xiangqi-uci.js';

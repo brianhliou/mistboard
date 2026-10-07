@@ -508,6 +508,9 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     ),
     linkLine(t('source.katago', {}, locale), 'https://github.com/lightvector/KataGo'),
     linkLine(t('source.dandelion', {}, locale), 'https://github.com/lxsgx23/Dandelion-Chess'),
+    // The tablebase in the explorer pane and practice grading read chessdb.cn
+    // (through our server); credited with a link like the engines.
+    linkLine(t('source.chessdb', {}, locale), 'https://www.chessdb.cn/'),
     // Pikafish runs the top xiangqi bot and all xiangqi analysis; credited with
     // its home page and the NNUE weights license (no commercial use without
     // permission), in the reader's language where pikafish.com has one.

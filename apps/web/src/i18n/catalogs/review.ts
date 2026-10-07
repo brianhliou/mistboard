@@ -475,6 +475,19 @@ export const EN_REVIEW = {
   'practice.progress': 'Progress: {pct}%',
   'practice.solvedOfTotal': '{solved} of {total} solved',
   'practice.section.endgames': 'Basic endgames',
+  'practice.position.title': 'Play out a position',
+  'practice.position.badFen': 'This link does not hold a xiangqi position the board can read.',
+  'practice.position.finished': 'This position is already over: there is no move left to play.',
+  'practice.position.badGoal': 'This link does not say whether to play for mate or hold the draw.',
+  'practice.position.badSide': 'This link does not say which side you play.',
+  'practice.position.toEditor': 'Set up a position in the board editor',
+  'practice.ribbon.done': 'Done',
+  'practice.ribbon.play': 'Play!',
+  'practice.card.soldier': 'It never moves back',
+  'practice.card.chariot': 'Wins on its own',
+  'practice.card.horse': 'Mind the blocked leg',
+  'practice.card.cannon': 'Needs a screen',
+  'practice.card.insufficient': 'Hold the draw',
   // The practice PLAYER: the panel around the exercise board. Split from the
   // /practice shelf keys above because they are different surfaces, but they ride
   // the same domain since a practice chapter is opened inside the study shell.
@@ -508,6 +521,21 @@ export const EN_REVIEW = {
   'practice.verdictMistake': 'That lets it slip. Take the move back and look again.',
   'practice.verdictInaccuracy': 'Not the cleanest, but the exercise is still alive.',
   'practice.verdictGood': 'Good. Keep going.',
+  'analysis.tablebase.title': 'Tablebase',
+  'analysis.tablebase.win': 'Win',
+  'analysis.tablebase.draw': 'Draw',
+  'analysis.tablebase.loss': 'Loss',
+  'analysis.tablebase.mateIn': 'Mate in {moves}',
+  'analysis.tablebase.matedIn': 'Mated in {moves}',
+  'analysis.tablebase.credit': 'chessdb.cn',
+  'analysis.tablebase.creditTitle':
+    'Exact endgame results from the Chinese Chess Cloud Database (chessdb.cn).',
+  'practice.tablebase.keepsWin': 'Good. The tablebase says this keeps the win.',
+  'practice.tablebase.holdsDraw': 'Good. The tablebase says this holds the draw.',
+  'practice.tablebase.throwsWin':
+    'The tablebase says this throws the win away: it is only a draw now. Take the move back and look again.',
+  'practice.tablebase.loses':
+    'The tablebase says this move loses. Take the move back and look again.',
   // Study surface chrome. Study/chapter TEXT is author-supplied and localized
   // per study (study-i18n.ts); these are the fixed labels around it.
   'study.chapterCount': '{count} Chapters',

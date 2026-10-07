@@ -60,6 +60,8 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      // The xiangqi endgames page (象棋残局), 2026-10-08.
+      '/blog/xiangqi-endgames',
       // The solver audit of the classical composition manuals, 2026-10-06.
       '/blog/solver-audit',
       // KataGo, the new top Jungle Chess bot, scheduled for 2026-10-03.
@@ -280,6 +282,7 @@ describe('article public listing gates', () => {
     // (blog/concept) article without a homeRow appears, newest first, with no
     // curated list. Deep dives have their own row (next test).
     expect(hrefs).toEqual([
+      '/blog/xiangqi-endgames',
       '/blog/solver-audit',
       '/blog/katago-jungle',
       '/blog/pikafish-reveal-bug',

@@ -53,6 +53,7 @@ import { xiangqiChampionsArticle } from './articles/content/xiangqi-champions.js
 import { xiangqiMatchFixingArticle } from './articles/content/xiangqi-match-fixing.js';
 import { xiangqiWorldChampionshipArticle } from './articles/content/xiangqi-world-championship.js';
 import { xiangqiArticle } from './articles/content/xiangqi.js';
+import { xiangqiEndgamesArticle } from './articles/content/xiangqi-endgames.js';
 import { yinShengArticle } from './articles/content/yin-sheng.js';
 import { caoYanleiArticle } from './articles/content/cao-yanlei.js';
 import { laiLyHuynhArticle } from './articles/content/lai-ly-huynh.js';
@@ -61,6 +62,7 @@ import { tonyFungGaZenArticle } from './articles/content/tony-fung-ga-zen.js';
 import articleSnapshotFog from './article-snapshot-fog.json' with { type: 'json' };
 
 export const articles: Article[] = [
+  xiangqiEndgamesArticle,
   solverAuditArticle,
   pikafishRevealBugArticle,
   katagoJungleArticle,

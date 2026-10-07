@@ -466,6 +466,14 @@ export function isClientRoute(pathname: string): boolean {
     // The practice index is a plain client page: it lists curated studies and
     // mounts no board, so unlike /study/:id it is not a review-shell route.
     normalized === '/practice' ||
+    // The shelf in Chinese: the page and its zh catalogue shipped with the
+    // English URL alone, and /zh-hans/practice 404'd (2026-10-07).
+    normalized === '/zh-hans/practice' ||
+    normalized === '/zh-hant/practice' ||
+    // Practice from any position (?fen=&goal=&side=): the endgames page and the
+    // board editor link here. It mounts the ceval engine, so it is also a
+    // review-shell route below. The query is read fail-closed by the client.
+    normalized === '/practice/position' ||
     normalized === '/study' ||
     /^\/study\/[A-Za-z0-9]+(?:\/[A-Za-z0-9]+)?$/.test(normalized) ||
     // Locale-prefixed study permalinks (/zh-hans/study/:id) serve the same SPA
@@ -557,6 +565,9 @@ export function isReviewShellRoute(pathname: string): boolean {
     // so both need the COOP/COEP headers or SharedArrayBuffer silently goes away
     // on the localized URL only.
     /^(?:\/(?:zh-hans|zh-hant))?\/study\/[A-Za-z0-9]+(?:\/[A-Za-z0-9]+)?$/.test(normalized) ||
+    // Practice from a position runs the engine against the learner, so it needs
+    // SharedArrayBuffer like a study practice chapter does.
+    normalized === '/practice/position' ||
     normalized === '/puzzles' ||
     /^\/puzzles\/[^/]+$/.test(normalized) ||
     // A finished broadcast board is a review with the ceval engine, and it opens

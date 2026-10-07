@@ -12,6 +12,7 @@
 // (head term 迷雾国际象棋 / 迷霧國際象棋 validated against the zh chess-variant
 // community; Traditional carries the Taiwan lexical forks, not a glyph conversion).
 import { hasOwnKey } from '@mistboard/game';
+import { endgamePageDictionary } from './articles/xiangqi-endgames-text.js';
 import type { Article } from './articles-data.js';
 import { contentLocalePrefix, type Locale, localizedHref } from './i18n/locale.js';
 
@@ -32,6 +33,9 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Machine-drafted 2026-10-07, not native-reviewed; every string is generated
+  // from articles/xiangqi-endgames-text.ts, which holds all three scripts.
+  'xiangqi-endgames',
   // Machine-drafted 2026-10-06, not native-reviewed, locked with its English
   // copy, which publishes in the same release. Terms follow the 2026-10-01
   // brianhliou.com write-up of the same audit (排局, 连将杀, 双解, 错谱, 困毙).
@@ -164,6 +168,8 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // xiangqi-endgames (2026-10-07): generated from the page's own text module.
+  ...endgamePageDictionary('zh-Hans'),
   // solver-audit (2026-10-06): machine-drafted, not native-reviewed. Terms follow
   // the 2026-10-01 brianhliou.com write-up (排局, 连将杀, 双解, 第二首着, 错谱).
   'Auditing the Old Manuals': '求解器审校古谱',
@@ -3816,6 +3822,7 @@ const ZH_HANT: Record<string, string> = {
   // authored Taiwan lexical or glyph fork below overrides that shared value.
   // Keep this spread first so new Traditional entries cannot be overwritten.
   ...ZH_HANS,
+  ...endgamePageDictionary('zh-Hant'),
   // solver-audit (2026-10-06): machine-drafted Traditional, not native-reviewed;
   // terms follow the zh-hant brianhliou.com twin (搜尋, 著法, 首著, 錯譜).
   'Auditing the Old Manuals': '求解器審校古譜',

@@ -34,7 +34,19 @@ export interface PracticeEval {
   mate: number | null;
   /** Engine UCI of the best move here; the defender plays this. */
   bestUci: string | null;
+  /**
+   * The exact game-theoretic result of this position, from an endgame tablebase,
+   * in the same point of view as the score. Absent or null whenever there is no
+   * EXACT answer: an outage, an uncovered position, a half-solved one. Never a
+   * guess, so its absence must never be read as a draw.
+   */
+  exact?: { result: PracticeExactResult } | null;
 }
+
+export type PracticeExactResult = 'win' | 'draw' | 'loss';
+
+/** What the tablebase said about the learner's last move, when it graded it. */
+export type PracticeTablebaseOutcome = 'keepsWin' | 'holdsDraw' | 'throwsWin' | 'loses';
 
 export type PracticePhase =
   /** Waiting on the engine (opening evaluation, or the defender thinking). */
@@ -71,6 +83,14 @@ export interface PracticeView {
    * whole move. Null when no hint has been asked for, or none is available.
    */
   hint: { level: 'origin'; uci: string } | { level: 'move'; uci: string } | null;
+  /**
+   * Who graded the last learner move. 'tablebase' when the positions before
+   * and after it both had an exact result, and then `tablebase` says what the
+   * move did; 'engine' otherwise (the win% curve, as always). Null before the
+   * first graded move.
+   */
+  graded: 'tablebase' | 'engine' | null;
+  tablebase: PracticeTablebaseOutcome | null;
 }
 
 export interface PracticeConfig<M, T> {
@@ -153,6 +173,8 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
   let phase: PracticePhase = 'thinking';
   let verdict: PracticeVerdict | null = null;
   let hintLevel = 0;
+  let graded: PracticeView['graded'] = null;
+  let tablebaseOutcome: PracticeTablebaseOutcome | null = null;
 
   /** Flip a side-to-move-POV evaluation into the learner's POV. */
   function toLearnerPov(raw: PracticeEval, truth: T): PracticeEval {
@@ -162,6 +184,7 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
       cp: raw.cp === null ? null : -raw.cp,
       mate: raw.mate === null ? null : -raw.mate,
       bestUci: raw.bestUci,
+      exact: raw.exact ? { result: flipExact(raw.exact.result) } : null,
     };
   }
 
@@ -171,11 +194,15 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
   }
 
   function adjudicate(): PracticeOutcome {
+    // An exact draw is level, whatever the engine's number says: a depth-16
+    // search can read a book draw as -5, and "hold the draw" would then end in
+    // defeat on a position the tablebase proves held.
+    const exactDraw = frame.evaluation?.exact?.result === 'draw';
     return evaluatePracticeGoal({
       goal: config.goal,
       movesPlayed: frame.movesPlayed,
-      cp: frame.evaluation?.cp ?? null,
-      mate: frame.evaluation?.mate ?? null,
+      cp: exactDraw ? 0 : (frame.evaluation?.cp ?? null),
+      mate: exactDraw ? null : (frame.evaluation?.mate ?? null),
       termination: config.termination(frame.truth, config.learner),
     });
   }
@@ -267,12 +294,35 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
     verdict =
       winBefore === null || winAfter === null ? 'good' : practiceJudgment(winBefore, winAfter);
 
+    // An exact result on BOTH sides of the move outranks the curve: the
+    // tablebase knows whether the move kept the result, where a depth-16
+    // search only estimates it.
+    const exact = tablebaseGrade(before.evaluation?.exact, frame.evaluation?.exact);
+    graded = exact ? 'tablebase' : 'engine';
+    tablebaseOutcome = exact;
+
     // A move that ends the game in the learner's favour is never a failure,
     // however the curve reads it: delivering mate can look like a huge swing.
     const termination = config.termination(frame.truth, config.learner);
     if (termination === 'learner-wins') {
       verdict = 'good';
       phase = 'success';
+      return verdict;
+    }
+
+    if (exact) {
+      if (exact === 'throwsWin' || exact === 'loses') {
+        verdict = exact === 'loses' ? 'blunder' : 'mistake';
+        previous = before;
+        phase = 'failed';
+        return verdict;
+      }
+      // Kept the win or held the draw: a pass, whatever the curve made of it.
+      verdict = 'good';
+      if (settle()) return verdict;
+      if (await playDefender()) return verdict;
+      if (settle()) return verdict;
+      phase = 'play';
       return verdict;
     }
 
@@ -317,6 +367,8 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
     frame = previous;
     previous = null;
     verdict = null;
+    graded = null;
+    tablebaseOutcome = null;
     hintLevel = 0;
     phase = 'play';
   }
@@ -325,6 +377,8 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
     frame = { truth: config.initialTruth, evaluation: null, movesPlayed: 0, moves: [] };
     previous = null;
     verdict = null;
+    graded = null;
+    tablebaseOutcome = null;
     hintLevel = 0;
     await start();
   }
@@ -344,6 +398,8 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
       awaitingMove: phase === 'play',
       moves: frame.moves,
       hint: hintView,
+      graded,
+      tablebase: tablebaseOutcome,
     };
   }
 
@@ -356,4 +412,31 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
     retry,
     reset,
   };
+}
+
+function flipExact(result: PracticeExactResult): PracticeExactResult {
+  return result === 'win' ? 'loss' : result === 'loss' ? 'win' : 'draw';
+}
+
+/**
+ * The tablebase's verdict on a learner move, both sides in the learner's point
+ * of view; null when either side is not exact, or when the pair is not a
+ * learner's choice the table can grade (already lost before the move, or a
+ * "gain" that perfect information makes impossible and so means the two
+ * lookups disagree).
+ */
+export function tablebaseGrade(
+  before: PracticeEval['exact'],
+  after: PracticeEval['exact'],
+): PracticeTablebaseOutcome | null {
+  if (!before || !after) return null;
+  if (before.result === 'win') {
+    if (after.result === 'win') return 'keepsWin';
+    return after.result === 'draw' ? 'throwsWin' : 'loses';
+  }
+  if (before.result === 'draw') {
+    if (after.result === 'draw') return 'holdsDraw';
+    return after.result === 'loss' ? 'loses' : null;
+  }
+  return null;
 }

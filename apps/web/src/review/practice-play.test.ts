@@ -453,3 +453,106 @@ test('a run driven with no ply observer behaves identically', async () => {
   expectBe(session.view().phase, 'play');
   expectBe(session.view().moves.length, 2);
 });
+
+// Tablebase grading: an exact result on both sides of the learner's move
+// outranks the win% curve. Exact results are side-to-move POV, like the score.
+const tb = (
+  cp: number | null,
+  bestUci: string | null,
+  result: 'win' | 'draw' | 'loss',
+): PracticeEval => ({ cp, mate: null, bestUci, exact: { result } });
+
+test('tablebase: a move that keeps the win passes even when the curve drops', async () => {
+  // +900 to +150 is a blunder by the curve, but the table says still won.
+  const { session } = harness(
+    {
+      evals: {
+        '': tb(900, 'a1', 'win'),
+        L: tb(-150, 'd1', 'loss'), // defender to move, lost for the defender
+        'L d1': tb(160, 'a2', 'win'),
+      },
+    },
+    WIN,
+  );
+  await session.start();
+  expectBe(await session.attempt('L'), 'good');
+  const view = session.view();
+  expectBe(view.phase, 'play');
+  expectBe(view.graded, 'tablebase');
+  expectBe(view.tablebase, 'keepsWin');
+});
+
+test('tablebase: throwing a win into a draw fails, even when the engine still likes it', async () => {
+  const { session } = harness(
+    {
+      evals: {
+        '': tb(900, 'a1', 'win'),
+        L: tb(-850, 'd1', 'draw'), // engine still thinks the learner is winning
+      },
+    },
+    WIN,
+  );
+  await session.start();
+  expectBe(await session.attempt('L'), 'mistake');
+  const view = session.view();
+  expectBe(view.phase, 'failed');
+  expectBe(view.tablebase, 'throwsWin');
+  session.retry();
+  expectBe(session.view().tablebase, null, 'retry clears the last grade');
+  expectBe(session.view().graded, null);
+});
+
+test('tablebase: a losing move from a drawn position is a blunder', async () => {
+  const DRAW: PracticeGoal = { kind: 'draw' };
+  const { session } = harness(
+    {
+      evals: {
+        '': tb(0, 'a1', 'draw'),
+        L: tb(30, 'd1', 'win'), // the defender now wins
+      },
+    },
+    DRAW,
+  );
+  await session.start();
+  expectBe(await session.attempt('L'), 'blunder');
+  expectBe(session.view().phase, 'failed');
+  expectBe(session.view().tablebase, 'loses');
+});
+
+test('tablebase: holding the draw passes', async () => {
+  const DRAW: PracticeGoal = { kind: 'draw', moves: 5 };
+  const { session } = harness(
+    {
+      evals: {
+        '': tb(-300, 'a1', 'draw'),
+        L: tb(500, 'd1', 'draw'), // the curve says lost; the table says drawn
+        'L d1': tb(-480, 'a2', 'draw'),
+      },
+    },
+    DRAW,
+  );
+  await session.start();
+  expectBe(await session.attempt('L'), 'good');
+  expectBe(session.view().tablebase, 'holdsDraw');
+  expectBe(session.view().phase, 'play');
+});
+
+test('tablebase: an exact result on one side only grades by the engine', async () => {
+  // The position after the move has no exact answer (an outage, say). That must
+  // never be read as a draw: the engine grades, as it always did.
+  const { session } = harness(
+    {
+      evals: {
+        '': tb(900, 'a1', 'win'),
+        L: ev(-880, 'd1'),
+        'L d1': ev(890, 'a2'),
+      },
+    },
+    WIN,
+  );
+  await session.start();
+  expectBe(await session.attempt('L'), 'good');
+  const view = session.view();
+  expectBe(view.graded, 'engine');
+  expectBe(view.tablebase, null);
+});

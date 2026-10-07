@@ -328,6 +328,18 @@ export function mountXiangqiPractice(
 
   /** What the coach says about the move just graded. */
   function verdictLine(view: PracticeView): string {
+    // A move the tablebase graded says so: "the tablebase says" is a fact about
+    // the position, where the engine lines below are an estimate.
+    switch (view.tablebase) {
+      case 'keepsWin':
+        return t('practice.tablebase.keepsWin');
+      case 'holdsDraw':
+        return t('practice.tablebase.holdsDraw');
+      case 'throwsWin':
+        return t('practice.tablebase.throwsWin');
+      case 'loses':
+        return t('practice.tablebase.loses');
+    }
     switch (view.verdict) {
       case 'blunder':
         return t('practice.verdictBlunder');

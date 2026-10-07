@@ -4,30 +4,33 @@
 // (@mistboard/game practice-catalog.ts) and returns sections of cards in
 // teaching order. This page's job is to render that shelf and get out of the way.
 //
-// Uses the SAME tile-map shell as /learn/xiangqi (tile-map.css): sticky sidebar
-// with an emblem and a progress bar, letterspaced section headings, a grid of
-// wide tiles with a folded corner ribbon. The two pages are the same kind of
+// Uses the SAME tile-map shell as /learn/xiangqi (tile-map.css, and the one card
+// builder in tile-map.ts): sticky sidebar with an emblem and a progress bar,
+// letterspaced section headings, a grid of compact cards with a folded corner
+// ribbon. The two pages are the same kind of
 // thing -- a shelf of sets you work through -- and lichess draws its /learn and
 // /practice indexes the same way for the same reason. Building a second card
 // language here would make two surfaces that do one job look like two products.
 //
-// Localized from two sources, which is the thing to keep straight here. The
-// chrome (heading, progress, section titles) comes from the app catalog; a
-// card's TITLE and BLURB come from the study the card points at, which carries
-// its own per-locale text, with the catalogue's English as the fallback. Reading
-// the card off the catalogue instead is what left this shelf in English while
-// every study behind it was translated: the response already carried the
-// overlay and the page threw it away.
+// Localized from two sources, which is the thing to keep straight here. A
+// card's TITLE comes from the study the card points at, which carries its own
+// per-locale name, with the catalogue's English as the fallback: reading it off
+// the catalogue instead is what left this shelf in English while every study
+// behind it was translated. The SUBTITLE is shelf copy, a few words in lichess's
+// manner, so it comes from the app catalog by slug (the study's description is
+// the long form and stays on the study page); everything else on the page is
+// app-catalog chrome too.
 
 import type { XiangqiPieceRole } from '@mistboard/game';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { buildNav } from './site-shell.js';
-import { localizedStudyDescription, localizedStudyName } from './study-i18n.js';
+import { localizedStudyName } from './study-i18n.js';
+import { buildTileMapCard, type TileMapRibbon, type TileMapState } from './tile-map.js';
 import { renderXiangqiPiece } from './xiangqi-pieces.js';
 import './tile-map.css';
 import './practice-index.css';
 
-interface PracticeCardDto {
+export interface PracticeCardDto {
   slug: string;
   /** The catalogue's English, the fallback when the study has no text for this
    *  reader's locale. */
@@ -43,18 +46,25 @@ interface PracticeCardDto {
   solvedCount: number;
 }
 
-/** A card's title and blurb for the current locale.
+/** The shelf subtitle for each catalogue slug. A slug missing here shows the
+ *  catalogue's English, which is untranslated but correct. */
+const CARD_SUBTITLE_KEYS: Record<string, I18nKey> = {
+  'endgames-soldier': 'practice.card.soldier',
+  'endgames-chariot': 'practice.card.chariot',
+  'endgames-horse': 'practice.card.horse',
+  'endgames-cannon': 'practice.card.cannon',
+  'endgames-insufficient': 'practice.card.insufficient',
+};
+
+/** A card's title and subtitle for the current locale.
  *
- *  The study's own text wins when it has any, because that is what the page the
- *  card opens is called; the catalogue's English is the fallback, and it is a
- *  real one -- these two sets of words are written separately and a study that
- *  is renamed should rename its card. */
-function cardText(entry: PracticeCardDto): { title: string; blurb: string } {
+ *  The study's own name wins when it has one, because that is what the page the
+ *  card opens is called; a study that is renamed renames its card. */
+function cardText(entry: PracticeCardDto): { title: string; subtitle: string } {
+  const key = CARD_SUBTITLE_KEYS[entry.slug];
   return {
     title: entry.name ? localizedStudyName(entry.name, entry.i18n) : entry.title,
-    blurb: entry.description
-      ? localizedStudyDescription(entry.description, entry.i18n)
-      : entry.blurb,
+    subtitle: key ? t(key) : entry.blurb,
   };
 }
 
@@ -75,7 +85,7 @@ function sectionTitle(section: PracticeSectionDto): string {
   return key ? t(key) : section.title;
 }
 
-interface PracticeSectionDto {
+export interface PracticeSectionDto {
   id: string;
   title: string;
   cards: PracticeCardDto[];
@@ -110,6 +120,7 @@ function render(root: HTMLElement, sections: PracticeSectionDto[]): void {
   if (sections.length === 0) {
     main.append(notice(t('practice.empty')));
   }
+  const next = nextPracticeSlug(sections);
   for (const section of sections) {
     const block = document.createElement('section');
     block.className = 'learn-xq-categ';
@@ -117,7 +128,7 @@ function render(root: HTMLElement, sections: PracticeSectionDto[]): void {
     heading.textContent = sectionTitle(section);
     const grid = document.createElement('div');
     grid.className = 'learn-xq-tile-grid';
-    for (const entry of section.cards) grid.append(tile(entry));
+    for (const entry of section.cards) grid.append(tile(entry, entry.slug === next));
     block.append(heading, grid);
     main.append(block);
   }
@@ -171,43 +182,66 @@ function sidebar(sections: PracticeSectionDto[]): HTMLElement {
   return side;
 }
 
-function tile(entry: PracticeCardDto): HTMLElement {
-  const link = document.createElement('a');
-  // `--link` is the tint /learn uses for an actionable destination tile.
-  link.className = 'learn-xq-tile learn-xq-tile--link';
-  link.href = `/study/${encodeURIComponent(entry.studyId)}`;
+/** How a card reads: its state and what its corner ribbon says. */
+export interface PracticeTileState {
+  state: TileMapState;
+  ribbon: 'done' | 'progress' | 'play' | 'count';
+}
 
-  const illus = document.createElement('div');
-  illus.className = 'learn-xq-tile-illus';
-  illus.innerHTML = renderXiangqiPiece(
-    { color: 'red', role: pieceForSlug(entry.slug) },
-    { size: 56 },
-  );
+/**
+ * A card's state from its counts, lichess's practice rule plus its /learn
+ * "Play!" marker: finished is done; started is ongoing ("3 / 11"); the next set
+ * to do, not yet started, is ongoing too and says "Play!"; any other untouched
+ * set is future and shows its size ("0 / 9"). Ongoing is what carries the accent
+ * ring and the progress line.
+ */
+export function practiceTileState(
+  card: Pick<PracticeCardDto, 'solvedCount' | 'exerciseCount'>,
+  isNext: boolean,
+): PracticeTileState {
+  if (card.exerciseCount > 0 && card.solvedCount >= card.exerciseCount) {
+    return { state: 'done', ribbon: 'done' };
+  }
+  if (card.solvedCount > 0) return { state: 'ongoing', ribbon: 'progress' };
+  if (isNext) return { state: 'ongoing', ribbon: 'play' };
+  return { state: 'future', ribbon: 'count' };
+}
 
-  const text = document.createElement('div');
-  text.className = 'learn-xq-tile-text';
+/**
+ * The next set to do: the first card in teaching order that is not finished.
+ * Null when every set is done (or the shelf is empty).
+ */
+export function nextPracticeSlug(sections: PracticeSectionDto[]): string | null {
+  for (const section of sections) {
+    for (const card of section.cards) {
+      if (practiceTileState(card, false).state !== 'done') return card.slug;
+    }
+  }
+  return null;
+}
+
+function tile(entry: PracticeCardDto, isNext: boolean): HTMLElement {
+  const { state, ribbon } = practiceTileState(entry, isNext);
   const copy = cardText(entry);
-  const title = document.createElement('h3');
-  title.textContent = copy.title;
-  const blurb = document.createElement('p');
-  blurb.textContent = copy.blurb;
-  text.append(title, blurb);
-
-  link.append(illus, text);
-
-  // The folded corner ribbon carries state, as it does on /learn: "solved /
-  // total", and the done tint once the set is finished.
-  const done = entry.solvedCount >= entry.exerciseCount && entry.exerciseCount > 0;
-  if (done) link.classList.add('learn-xq-tile--done');
-  const wrap = document.createElement('div');
-  wrap.className = 'learn-xq-ribbon-wrap';
-  const ribbon = document.createElement('div');
-  ribbon.className = `learn-xq-ribbon learn-xq-ribbon--${done ? 'done' : 'ongoing'}`;
-  ribbon.textContent = `${entry.solvedCount} / ${entry.exerciseCount}`;
-  wrap.append(ribbon);
-  link.append(wrap);
-
-  return link;
+  const count = `${entry.solvedCount} / ${entry.exerciseCount}`;
+  const ribbonSpec: TileMapRibbon =
+    ribbon === 'done'
+      ? { variant: 'done', text: t('practice.ribbon.done') }
+      : ribbon === 'play'
+        ? { variant: 'ongoing', text: t('practice.ribbon.play') }
+        : { variant: ribbon === 'progress' ? 'ongoing' : 'future', text: count };
+  return buildTileMapCard({
+    href: `/study/${encodeURIComponent(entry.studyId)}`,
+    state,
+    illustration: renderXiangqiPiece(
+      { color: 'red', role: pieceForSlug(entry.slug) },
+      { size: 46 },
+    ),
+    title: copy.title,
+    subtitle: copy.subtitle,
+    ribbon: ribbonSpec,
+    progress: entry.exerciseCount > 0 ? entry.solvedCount / entry.exerciseCount : 0,
+  });
 }
 
 /**

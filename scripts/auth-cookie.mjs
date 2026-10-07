@@ -6,7 +6,7 @@
  *
  * Exists to delete a step that was pure friction: every script that writes to a
  * study (study-name-i18n.mjs, world-title-study.mjs, study-tag-i18n.mjs,
- * seed-xiangqi-practice-study.ts) authenticates as the study's owner by reading
+ * seed-xiangqi-endgame-practice.ts) authenticates as the study's owner by reading
  * ~/.mistboard-cookie, and the only documented way to fill that file was to open
  * devtools, find the cookie, and paste it. That is a browser errand to renew a
  * credential the site is perfectly willing to issue over its own API.

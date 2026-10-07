@@ -183,7 +183,7 @@ export function localizedHref(path: string, locale = currentLocale()): string {
 export type LocaleSwitchNavigation = { kind: 'navigate'; href: string } | { kind: 'reload' };
 
 // How the language switcher should leave the page once the new locale is
-// stored. Only the home page, /rules, /blog and /learn/xiangqi carry a locale
+// stored. Only the home page, /rules, /blog, /learn/xiangqi and /practice carry a locale
 // prefix, so on every other route localizedHref hands back the current URL
 // unchanged. Assigning an identical
 // URL to location.href normally reloads, but when the URL carries a fragment
@@ -230,6 +230,7 @@ function isContentPath(pathname: string): boolean {
     pathname === '/blog' ||
     pathname.startsWith('/blog/') ||
     pathname === '/learn/xiangqi' ||
+    pathname === '/practice' ||
     // 象棋人机对战: the bot directory has Chinese URLs, so a link or the
     // language switcher on it lands a Chinese reader on /zh-hans/bots.
     pathname === '/bots' ||
