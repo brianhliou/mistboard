@@ -67,6 +67,7 @@ Conventions:
 
 ### Watching and review
 
+- Jieqi review marks each reveal and each capture of a face-down piece with a die: teal when the draw helped, violet when it hurt, more pips for a bigger swing, and a card that says what the piece could have been ([9722ca87](https://github.com/brianhliou/mistboard/commit/9722ca87))
 - Xiangqi article boards whose game is in the broadcast archive now show the game's advantage chart under the board; click it to jump to any move, or hide it from the board menu ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
 - Game boards in articles now link to the game's full analysis, with the advantage chart and every move's verdict, when the game is in the broadcast archive ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
 - Live games on Mistboard TV now play sound: each move, capture, reveal, flip and drop sounds as it does for the players, with one tone when the game ends, and a speaker button turns it on or off ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
@@ -137,6 +138,7 @@ Conventions:
 
 ### Fixed
 
+- Jieqi review grades a capture of a face-down piece on what the capturer could know, not on what it turned out to be, and compares every move against alternatives valued the same way ([9722ca87](https://github.com/brianhliou/mistboard/commit/9722ca87))
 - The new article on the classical manual audit shows its board on the homepage and blog index instead of a blank card ([7da525a0](https://github.com/brianhliou/mistboard/commit/7da525a0))
 - Chinese phase labels on advantage charts read on one line instead of one character per line ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
 - Vietnamese pages now draw every letter in the site font instead of switching to a system font mid-word ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
