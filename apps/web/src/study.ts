@@ -26,6 +26,7 @@ import './study-index.css';
 import type { XiangqiPieceRole } from '@mistboard/game';
 import { deepCloneJson, normalizeStartFen, parsePracticeGoal } from '@mistboard/game';
 import { buildStudyChat } from './review/spectator-chat.js';
+import { fetchStudyChapterAnalysis } from './review/study-analysis.js';
 import { mountStudyReview } from './review/study-review.js';
 import type { TreeReviewHandle } from './review/tree-review.js';
 import type { SerializedTree } from './review/tree-serialize.js';
@@ -100,6 +101,9 @@ type ChapterDto = {
   practiceGoal?: string | null;
   /** Whether the signed-in reader has already solved this exercise. */
   solved?: boolean;
+  /** The chapter has a stored engine analysis (study_chapter_analysis): the
+   *  page fetches it and the underboard gets the advantage chart. */
+  hasAnalysis?: boolean;
   /** PGN-style tags: who had Red, the result, the event. Absent on chapters
    *  authored before migration 128, and on chapters that are not a real game. */
   tags?: {
@@ -931,7 +935,15 @@ function renderStudy(
     // page renders its nav, then the board lands. A stale mount (the reader
     // switched chapters while the chunk loaded) is dropped on arrival.
     const mountToken = ++mountSeq;
+    // The chapter's engine analysis, cut to the mainline prefix it still covers
+    // in the tree being mounted (for an owner, possibly an unsaved draft).
+    // Started now so it loads beside the board chunk.
+    const mountedTree = autosave?.initialTree ?? chapter.root;
+    const storedAnalysis = chapter.hasAnalysis
+      ? fetchStudyChapterAnalysis(study.id, chapter.id, mountedTree)
+      : null;
     void mountStudyReview(variant, root, {
+      storedAnalysis,
       reviewSurface: 'study',
       pageClassName: `${variant}-review study-review`,
       ariaLabel: t('study.ariaStudy'),
@@ -979,6 +991,10 @@ function renderStudy(
       // The way to actually play it is Preview, so that is the action offered
       // here AND the tab the panel opens on. Read-only without a visible way to
       // test would just move the trap somewhere else.
+      // A reader opens on the chart when there is one, as a game review does;
+      // the owner keeps the authoring tabs in front. A chapter whose analysis
+      // covers nothing has no such tab, and the panel falls back to its first.
+      ...(chapter.hasAnalysis && !study.isOwner ? { initialUnderboardTab: 'analysis' } : {}),
       ...(chapter.practice && study.isOwner && !previewMode
         ? {
             boardReadOnly: {
@@ -1008,7 +1024,7 @@ function renderStudy(
             },
           }
         : {}),
-      initialTree: autosave?.initialTree ?? chapter.root,
+      initialTree: mountedTree,
       // A composition chapter (SerializedTree.rootFen) roots the board at its
       // hand-set position; an invalid FEN degrades to the standard start, same
       // posture as a corrupt blob.
