@@ -1,3 +1,5 @@
+import { type XiangqiSquare, xiangqiBoardFromDhtmlxqBinit } from '@mistboard/game';
+import { XQ_CELL, xqBoardSvg, xqPoint, xqVisionDemoState } from '../diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
 // The audit's short account. Every finding is a chapter in the study, where the
@@ -24,6 +26,44 @@ const embed = (chapter: keyof typeof CHAPTER) => `/embed/study/${STUDY_ID}/${CHA
 const REFUTED_STUDY_ID = 'aGoX3pJY';
 const REFUTED_STUDY = `/study/${REFUTED_STUDY_ID}`;
 
+// 適情雅趣 第011局 群鼠争穴 as dpxq serves it (the three tags the page quotes).
+// The code block shows it and the card decodes it, so the two cannot disagree.
+export const RECORD_011 =
+  '[DhtmlXQ_binit]\n72999999 59999957 22771799 99999941\n12994299 30996099 68028229 48999999\n\n[DhtmlXQ_movelist]\n22204220 72320232 77706042 17373222\n57362232 36443222 4432\n\n[DhtmlXQ_comment0]\n红弃双车，双炮胜';
+
+// The book's key: the chariot on c8 to c10, check, the first of the two
+// chariots Red gives up. solver-audit-thumbnail.test.ts replays it in the kernel.
+export const RECORD_011_KEY = { from: 'c8', to: 'c10' } as const;
+
+// 16:10 to match the card media box (.articles-index-card-media, 16/10).
+const THUMB_ASPECT = 16 / 10;
+
+// Card art: 第011局 at the diagram, cropped to Black's half where the whole
+// solution plays out, with the key drawn. Decoded by the kernel's own binit
+// reader from the record above, never a hand-placed board.
+export const SOLVER_AUDIT_THUMBNAIL = (): string => {
+  const board = xiangqiBoardFromDhtmlxqBinit(RECORD_011);
+  if (!board) throw new Error('solver-audit thumbnail: 第011局 binit did not decode');
+  const boardY = 28; // xqBoardSvg draws the grid 28 below its y, under the title row.
+  const pad = XQ_CELL * 0.6;
+  const left = xqPoint(0, 10, 'red', 0, boardY).x - pad;
+  const right = xqPoint(8, 10, 'red', 0, boardY).x + pad;
+  const w = right - left;
+  const h = w / THUMB_ASPECT;
+  const top = xqPoint(0, 10, 'red', 0, boardY).y - pad;
+  const svg = xqBoardSvg({
+    state: xqVisionDemoState('solver-audit-thumb', board),
+    x: 0,
+    y: 0,
+    label: '',
+    perspective: 'red',
+    arrows: [
+      { from: RECORD_011_KEY.from as XiangqiSquare, to: RECORD_011_KEY.to as XiangqiSquare },
+    ],
+  });
+  return `<svg class="xq-article-svg" viewBox="${left} ${top} ${w} ${h}" role="img" aria-label="Composition 11 of the 1570 manual: Red\'s chariot on c8 goes to c10 with check, the first of two chariots Red gives up" xmlns="http://www.w3.org/2000/svg"><rect class="xq-diagram-bg" x="${left}" y="${top}" width="${w}" height="${h}"/>${svg}</svg>`;
+};
+
 export const solverAuditArticle: Article = {
   slug: 'solver-audit',
   kind: 'article',
@@ -35,6 +75,7 @@ export const solverAuditArticle: Article = {
   summary:
     'We ran an exhaustive solver over every short continuous-check composition in 適情雅趣 (1570), 渊深海阔 (1808) and a modern collection: 172 problems, asking whether the printed solution is the only one. Forty-five are. Seventy have a second winning continuation somewhere in the tree, fourteen have a second first move, nine can be mated faster, and three records turned out to be corrupt: the position as recorded cannot be the one the composer meant.',
   showSummaryOnPage: false,
+  thumbnail: { kind: 'svg', svg: SOLVER_AUDIT_THUMBNAIL },
   status: 'published',
   publishedAt: '2026-10-06',
   audience:
@@ -66,8 +107,7 @@ export const solverAuditArticle: Article = {
           language: 'text',
           caption:
             'The record for 第011局 as dpxq serves it, trimmed to the three tags that carry the position, the solution and the book’s verdict (“Red gives up both chariots; the two cannons win”).',
-          text:
-            '[DhtmlXQ_binit]\n72999999 59999957 22771799 99999941\n12994299 30996099 68028229 48999999\n\n[DhtmlXQ_movelist]\n22204220 72320232 77706042 17373222\n57362232 36443222 4432\n\n[DhtmlXQ_comment0]\n红弃双车，双炮胜',
+          text: RECORD_011,
         } as ArticleBlock,
         {
           kind: 'paragraph',
