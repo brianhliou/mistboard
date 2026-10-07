@@ -209,6 +209,9 @@ export type TenantReplayHistoryConfig<C extends string, V> = {
    * sent this client — nothing new crosses the wire. Fog tenants receive
    * redacted logs (opponent moves are omitted or stripped), CANNOT rebuild,
    * and must stay on incremental capture; never infer hidden state here.
+   * One exception: a hidden-info tenant may rebuild a FINISHED room from the
+   * truth view the server already serves it (jieqi: live-jieqi-replay-history),
+   * returning null for every unfinished view.
    * Return null to keep the captured history (e.g. when an event fails to
    * replay through the kernel).
    */
