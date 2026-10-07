@@ -447,7 +447,6 @@ export const ZH_HANS_PLAY = {
   'result.drawBy': '以{reason}和棋。',
   'result.stalemate': '困毙',
   'result.generalCapture': '擒将',
-  'result.generalCaptured': '将帅被擒',
   'result.threefoldRepetition': '三次重复局面',
   'result.perpetualCheck': '长将',
   'result.gameRules': '规则判定',
