@@ -252,17 +252,20 @@
    quieter "Open titles" grid. Motion only on hover, and none under
    prefers-reduced-motion. */
 .static-prose {
-  --champions-win: var(--site-accent);
+  /* The site's good/bad-for-the-side grammar (board-luck-mark.css): teal, grey, violet.
+     Never red: red is a side in xiangqi. */
+  --champions-win: #07906d;
   --champions-draw: hsl(40, 5%, 76%);
-  --champions-loss: hsl(5, 52%, 64%);
+  --champions-loss: #8355ce;
   --champions-gold-bg: hsl(43, 86%, 92%);
   --champions-gold-border: hsl(43, 62%, 66%);
   --champions-gold-text: hsl(36, 78%, 26%);
 }
 
 :root[data-effective-theme="dark"] .static-prose {
+  --champions-win: #43b28e;
   --champions-draw: hsl(40, 4%, 36%);
-  --champions-loss: hsl(5, 42%, 50%);
+  --champions-loss: #a080df;
   --champions-gold-bg: hsl(40, 40%, 15%);
   --champions-gold-border: hsl(41, 48%, 36%);
   --champions-gold-text: hsl(43, 72%, 70%);
