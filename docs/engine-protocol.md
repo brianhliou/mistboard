@@ -1,6 +1,7 @@
 # Engine protocol
 
-Mistboard speaks to engines through a single redacted protocol. This document
+Mistboard speaks to Fog of War engines through this redacted protocol (other
+variants use UCI engines; see [`ARCHITECTURE.md`](ARCHITECTURE.md)). This document
 specifies what the server sends, what an engine returns, and the redaction
 guarantees that make the protocol auditable.
 
@@ -14,7 +15,6 @@ Mistboard's trust story is that no player (including first-party engines)
 can see hidden information under Fog of War rules. The same protocol applies
 to:
 
-- Built-in engines that ship in the public Mistboard repo
 - First-party engines that ship as separate binaries
 - Third-party engines that anyone is free to write
 

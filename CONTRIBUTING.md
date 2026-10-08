@@ -1,15 +1,16 @@
 # Contributing
 
-Mistboard is an open-source platform for original strategy games, built for
-serious play: server-enforced board games and variants across chess, xiangqi,
-shogi, Jungle, and related families, including both open-information games and
-hidden-information games such as dark chess. Before opening a pull request, check
-whether the change helps the product rule:
+Mistboard is a free, open-source place to play and study Chinese chess
+(xiangqi, Jieqi, Banqi) and the original strategy games built on it, such as
+Duck Xiangqi, Fog Xiangqi, Fortress, and Crazyhouse Xiangqi. Jungle Chess, Flip
+Jungle, and Fog Chess are live too. Every game is server-enforced, and several
+hide information from one side (Fog of War, Jieqi, Banqi, Flip Jungle). Before
+opening a pull request, check whether the change helps the product rule:
 
-> Does this make Mistboard a more trustworthy, serious place to play, study,
-> rank, or build engines for its games?
+> Does this make Mistboard a more trustworthy place to play, study, rank, or
+> build engines for xiangqi and its variants?
 
-If the answer is no, open an issue or discussion first.
+If the answer is no, open an issue first.
 
 For project direction, licensing, branding, reference, roadmap, and monetization
 boundaries, see [`docs/project-direction.md`](docs/project-direction.md).
@@ -18,25 +19,23 @@ boundaries, see [`docs/project-direction.md`](docs/project-direction.md).
 
 Good contributions:
 
-- Fog of War rules correctness
-- hidden-information safety
-- `PlayerView` tests
+- rules correctness for any live variant, with tests in `packages/game`
+- hidden-information safety and `PlayerView` tests
 - replay and postgame reveal improvements
 - board interaction polish
+- translations (see [`docs/translations.md`](docs/translations.md))
 - engine protocol surfaces in `packages/game/src/engine-protocol.ts` and
   `apps/server/src/engine-protocol/`. The first-party engine implementation is
   outside this repository; the public contract is the contribution surface here.
 - documentation for rules, protocols, tournaments, and engine integration
 
-Usually out of scope for v1 unless explicitly gate-cleared:
+Open an issue and agree on direction before a pull request that:
 
-- ungated ratings
-- broad public matchmaking
-- chat
-- moderation tooling
-- OAuth
-- billing
-- broad general chess-platform features
+- adds a new variant
+- changes ratings, matchmaking, or who can play rated
+- adds or changes chat, forum, or moderation features
+- touches payments or account sign-in (OAuth is not supported today)
+- adds broad general chess-platform features
 
 ## Development
 
@@ -44,14 +43,13 @@ Prerequisites:
 
 - Node.js 22 or newer
 - npm
-- Docker, only if you need local Postgres-backed flows
+- Docker, for the default `npm run dev` (it starts Postgres in a container);
+  `npm run dev:memory` runs without it
 
 First-time setup:
 
 ```bash
 npm install
-npm run agent:scan        # live dirty-state, worktree, hotspot, and test map
-npm run worktree:prepare  # fresh-worktree deps, dist declarations, drift guard
 ```
 
 Local dev loop:
@@ -88,24 +86,18 @@ npm run db:seed:qa       # profiles, finished variant games, watch feed, QA fixt
 Good entry points for local testing:
 
 ```text
-http://localhost:3000/?variant=xiangqi
+http://localhost:3000/?play=computer&gameSpecId=xiangqi
+http://localhost:3000/?play=computer&gameSpecId=jieqi
 http://localhost:3000/?room=fog-dev&reset=1&variant=dark-chess
-http://localhost:3000/?room=fog-engine-dev&reset=1&variant=dark-chess&dev=engine
 ```
 
-The first opens the play picker with standard xiangqi preselected (any
-registered variant id works). The other two are dark-chess dev rooms.
+The first two open the play-the-computer setup on that variant (any registered
+game spec id works). The third is a Fog Chess dev room.
 
 For mobile/article layout iteration after the dev server is running:
 
 ```bash
 npm run test:mobile:shots
-```
-
-For manual launch gates, write a public-safe evidence entry:
-
-```bash
-npm run gate:evidence -- --gate mobile-gameplay --result pass
 ```
 
 See [GitHub issues](https://github.com/brianhliou/mistboard/issues) for what's

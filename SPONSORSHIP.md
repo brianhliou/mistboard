@@ -18,7 +18,7 @@ For broader monetization and project-direction boundaries, see `docs/project-dir
 
 Examples:
 
-- Fog of War tournament prize pools
+- tournament prize pools
 - broadcast/replay production costs
 - engine benchmark reports
 - public research writeups

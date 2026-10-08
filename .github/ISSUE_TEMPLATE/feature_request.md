@@ -6,7 +6,7 @@ labels: enhancement
 assignees: ""
 ---
 
-Before opening, please skim [`CONTRIBUTING.md`](../../CONTRIBUTING.md) and [`docs/project-direction.md`](../../docs/project-direction.md). Some areas (ungated ratings, broad public matchmaking, chat, OAuth, billing) are deliberately deferred in v1.
+Before opening, please skim [`CONTRIBUTING.md`](../../CONTRIBUTING.md) and [`docs/project-direction.md`](../../docs/project-direction.md). Open the discussion here before building anything that adds a variant or changes ratings, matchmaking, chat, moderation, payments, or sign-in.
 
 ## Problem
 

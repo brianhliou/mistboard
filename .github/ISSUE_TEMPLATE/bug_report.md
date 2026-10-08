@@ -26,7 +26,7 @@ What you expected instead.
 
 ## Environment
 
-- Page: (e.g. `/`, `/room/abc`, `/game/123`, `/replay/...`)
+- Page: (e.g. `/`, `/room/abc`, `/xiangqi/game/123`, `/broadcast/...`)
 - Browser + version:
 - Device / OS:
 - Approx time (UTC) if it's a live-game issue:

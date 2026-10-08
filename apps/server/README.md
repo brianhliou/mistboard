@@ -5,7 +5,7 @@ WebSocket game server. Handles room lifecycle, player sessions, clocks, event pe
 ## Key responsibilities
 
 - Create and manage game rooms (in-memory or Postgres-backed)
-- Enforce hidden-information: all outbound messages go through `getPlayerView` before leaving the server
+- Enforce hidden-information: every outbound message is a seat-scoped view (`getPlayerView` on the chess stack, each tenant variant's own view policy) before it leaves the server
 - Validate moves against canonical `GameState` and append `GameEvent`s
 - Serve static web client (`apps/web/dist`) and WebSocket upgrades on the same port
 - HTTP API for room creation, lobby, replay, OG images
@@ -13,8 +13,8 @@ WebSocket game server. Handles room lifecycle, player sessions, clocks, event pe
 ## Running locally
 
 ```bash
-npm run dev              # in-memory rooms, no Postgres required
-npm run dev:persistent   # Postgres-backed rooms (required for reconnect/replay testing)
+npm run dev              # default: Docker Postgres (port 5435), migrations, server + web
+npm run dev:memory       # in-memory rooms, no Docker needed
 ```
 
 Dev room URLs:
@@ -23,6 +23,9 @@ Dev room URLs:
 http://localhost:3000/?room=fog-dev&reset=1&variant=dark-chess
 http://localhost:3000/?room=fog-engine-dev&reset=1&variant=dark-chess&dev=engine
 ```
+
+Both are Fog Chess rooms on the chess stack; xiangqi-family variants run through
+`src/variant-tenant/`.
 
 ## Tests
 
@@ -44,8 +47,8 @@ violations or persistence bugs.
 | `index.ts` | Server orchestration and dependency wiring |
 | `server-http.ts` | HTTP/static/API entry routing |
 | `http-api.ts` + `routes/*` | REST endpoints by domain |
-| `server-ws-connection.ts` | Chess-family WebSocket connection handling |
-| `room-manager.ts` | Core chess-family game loop |
+| `server-ws-connection.ts` | Chess-stack WebSocket connection handling; tenant variants ride `variant-tenant/ws.ts` |
+| `room-manager.ts` | Chess-stack game loop; tenant variants ride `variant-tenant/runtime.ts` |
 | `payloads.ts` | Recipient-scoped snapshots and fog redaction |
 
 ## Live engine service

@@ -1,6 +1,6 @@
 # Translations
 
-Mistboard is English-first. English is the source contract for app interface copy. Simplified
+English is the source language and the source contract for app interface copy. Simplified
 Chinese (`zh-Hans`) and Traditional Chinese (`zh-Hant`) are the supported outreach locales.
 Adding or retiring a locale is a product decision, not a per-feature requirement.
 
@@ -46,8 +46,9 @@ and a direct localized URL redirects to the complete English prerender.
 
 1. Run `npm run i18n:coverage -- <slug>` to list the article's missing source strings.
 2. Add both `zh-Hans` and `zh-Hant` values without changing the English article structure.
-3. Get the editorial and terminology review appropriate for the article. Native-language quality
-   review remains a human gate; automated coverage proves presence, not correctness.
+3. Check terminology against the site's published terms. Native-language quality
+   review is welcome but does not block publication; automated coverage proves presence, not
+   correctness.
 4. Once both scripts report 100%, explicitly add the slug to `TRANSLATED_ARTICLE_SLUGS` in
    `apps/web/src/article-i18n.ts`. That single publication list drives links, rendering, prerenders,
    hreflang output, and the coverage contract.

@@ -8,7 +8,7 @@ What does this change and why?
 
 > Does this make Mistboard a more trustworthy place to play, study, rank, or build engines for xiangqi and its variants?
 
-If not, link the issue or discussion where direction was agreed.
+If not, link the issue where direction was agreed.
 
 ## Hidden-information safety
 
