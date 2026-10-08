@@ -665,7 +665,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
         ? `${tenant.reviewUrl(state.room)}?ply=${replay.activePly() ?? replay.latestPly()}`
         : null,
     );
-    refs.boardStatus.hidden = view !== null;
+    chrome.renderBoardStatus();
     chrome.renderActionStatus();
     chrome.renderGameControls();
     chrome.renderRoomActions();
