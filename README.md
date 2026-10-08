@@ -9,15 +9,15 @@ Mistboard is a free, open-source place to play and study Chinese chess, and
 home to the original strategy games we build.
 
 Chinese chess here means xiangqi and its traditional relatives, Jieqi and Banqi.
-Most places to play them online assume you already read Chinese. Mistboard is
-built for the player who doesn't: pieces render as icons you can identify
-before you can read 車 or 砲, rules and articles are written in English rather
-than translated into it, and a beginner course starts from the first move.
+The site runs in English, Simplified Chinese, and Traditional Chinese. Pieces
+can render as icons you can identify before you can read 車 or 砲, and a
+beginner course starts from the first move.
 
 Beside the traditional games sit the ones Mistboard invents: Duck Xiangqi, Fog
-Xiangqi, and Fortress, with more in design. Each starts from a board people
-already know and changes one thing, and each gets a rules page and
-server-enforced play. Jungle Chess, Flip Jungle, and Fog Chess are live too.
+Xiangqi, Fortress, and Crazyhouse Xiangqi, with more in design. Each starts
+from a board people already know and changes one thing, and each gets a rules
+page and server-enforced play. Jungle Chess, Flip Jungle, and Fog Chess are
+live too.
 
 The goal is a trustworthy open-source place to play, study, rank, and build
 engines for xiangqi and its variants.
@@ -29,6 +29,8 @@ other chess platform.
 
 - Low-friction [PvP rooms](https://mistboard.com) with shareable room links and
   account-optional play, plus a lobby, engine opponents, and correspondence.
+- Rated play (Glicko-2) through Find opponent and friend challenges, between
+  two signed-in accounts.
 - Tactics puzzles mined from real games, and an analysis board that runs the
   engine in the browser.
 - Mistboard TV, tournament broadcasts, and a games database of finished games
@@ -36,8 +38,9 @@ other chess platform.
 - Rules pages for every variant, a beginner xiangqi course, and studies.
 - Postgame replay from either player's perspective or full truth, with public
   game links and PGN and JSON export.
-- Leaderboards, rating stats, a forum, a blog, and directories for coaches and
-  streamers.
+- Leaderboards, rating stats, a forum, a blog, chat, and directories for
+  coaches and streamers.
+- Board and game embeds for other sites, including oEmbed.
 - A first-party engine track that uses the same redacted
   [`EngineTurnRequest`](docs/engine-protocol.md) boundary available to any
   third-party engine.
@@ -49,7 +52,8 @@ work and known issues, see the
 
 ## Development
 
-Prerequisite: Node.js 22 or newer.
+Prerequisites: Node.js 22 or newer, and Docker for the default Postgres-backed
+dev server (`npm run dev:memory` runs without it).
 
 ```bash
 npm install

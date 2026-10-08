@@ -8,12 +8,15 @@ and viewers get a clean live/replay experience for top games without joining a
 live room.
 
 The broadcast system is publishing and study infrastructure. It is not
-matchmaking, ratings, chat, or a general tournament server.
+matchmaking, ratings, or a general tournament server.
 
-## Current Checkpoint
+## Current State
 
-As of July 7, 2026, the core xiangqi broadcast loop is on `main` and locally
-testable with one command:
+Broadcasts relay real events: the 2026 professional calendar runs through the
+scheduled poller, with event pages in lichess's shape (a pinned game list with
+a chat room, a board that opens in place, standings, player pages), English
+names, and games that embed on other sites and download as PGN. The loop is
+locally testable with one command:
 
 ```bash
 npm run smoke:xiangqi-broadcast
@@ -46,11 +49,10 @@ Landed:
   manifest tours keep re-polling the manifest rather than the last page;
 - source URL safety policy that keeps production source polling fail-closed.
 
-Still intentionally open:
-
-- visual polish for top-tier event watching, including theater-mode treatment,
-  multi-board scanning, live-move affordances, and mobile QA;
-- running the first real approved event through the scheduled-polling stack.
+Since the July checkpoint, the viewer was rebuilt for top-tier event watching
+(round picker, live side-to-move marks, evaluation pills), dpxq
+became a second source (including boards that only publish a result), and a
+broadcast added after its event finished fetches its own games for a week.
 
 Study/game-analysis UI is not a blocker for this broadcast track. Broadcasts
 can publish and replay top games first; analysis can attach later to completed
@@ -267,8 +269,8 @@ Current status:
 | M6 real-source adapter proof | Landed for WXF/DhtmlXQ |
 | Source production hardening (#118) | Landed: source policy, backoff, health buckets, manifest workflow, dry-run preview |
 | Operator source import (ops console) | Landed |
-| Scheduled polling (in-server) | Landed; awaiting first real approved event |
-| Viewer polish for top-tier events | Not started |
+| Scheduled polling (in-server) | Landed; running real events |
+| Viewer polish for top-tier events | Landed |
 
 ### M0: Broadcast Brief And Fixture Schema
 

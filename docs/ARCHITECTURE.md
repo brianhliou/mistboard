@@ -13,7 +13,7 @@ apps/server            WebSocket rooms, variant-tenant runtime, sessions, clocks
 apps/web               Browser client (Vite + vanilla TypeScript, no framework): live rooms, review/analysis, watch, learn, articles, accounts
 ```
 
-`INDEX.md` at the repo root is the file-level map for all four workspaces.
+`INDEX.md` at the repo root is the file-level map for all workspaces.
 
 ## Key abstraction
 
@@ -55,21 +55,24 @@ Analysis comes in layers: server-side whole-game engine eval cached in the `game
 
 ## In-browser engines (ceval)
 
-Review and analysis surfaces can run an engine in the browser behind a single `CevalHandle` contract (`apps/web/src/review/engine/`): a Fairy-Stockfish WASM backend and Misty WASM backends (first-party Rust engines compiled to WebAssembly). Backends are dispatched per variant, evaluate one redacted FEN per position, and stream MultiPV lines to the engine panel and eval bar. Hidden-information variants feed the browser engine the same redacted encoding the server-side engines get.
+Review and analysis surfaces can run an engine in the browser behind a single `CevalHandle` contract (`apps/web/src/review/engine/`): Fairy-Stockfish, Pikafish (xiangqi), Pikafish-jieqi, and Misty WASM backends (Misty is first-party Rust compiled to WebAssembly). Backends are dispatched per variant, evaluate one redacted FEN per position, and stream MultiPV lines to the engine panel and eval bar. Hidden-information variants feed the browser engine the same redacted encoding the server-side engines get.
 
 ## Watch (Mistboard TV)
 
-`/watch` channels are derived from the variant registry: each watchable tenant contributes a human-play channel, and engine-vs-engine games are segregated into a cross-variant Engines channel. Replays mount through per-variant watch adapters over the postgame APIs. Live fog games are never observable with board truth; watch surfaces show finished games.
+`/watch` channels are derived from the variant registry: each watchable tenant contributes a human-play channel, and engine-vs-engine games are segregated into a cross-variant Engines channel. Replays mount through per-variant watch adapters over the postgame APIs. Open-information games can be watched live. Live fog games show spectators only the public view, never board truth; the full replay opens after the game ends.
 
 ## Engine protocol boundary
 
-First-party engine internals live outside this repository. The server speaks to hidden-information engines only through the redacted `EngineTurnRequest`/`EngineTurnResponse` protocol (`packages/game/src/engine-protocol.ts`; human-readable contract in [`docs/engine-protocol.md`](engine-protocol.md)), and `apps/server/src/engine-paths.ts` is the single point that resolves the private engine repo location. Perfect-information variants are served by UCI subprocess engines (Fairy-Stockfish, Pikafish, first-party Misty binaries) through a shared UCI harness; the protocol path is reserved for games where redaction matters.
+First-party engine internals live outside this repository. Fog engines are served through the redacted `EngineTurnRequest`/`EngineTurnResponse` protocol (`packages/game/src/engine-protocol.ts`; human-readable contract in [`docs/engine-protocol.md`](engine-protocol.md)), and `apps/server/src/engine-paths.ts` is the single point that resolves the private engine repo location. Other variants are served by UCI subprocess engines (Fairy-Stockfish, Pikafish, first-party Misty binaries) through a shared UCI harness. Jieqi, whose hidden piece identities are the secret, rides that harness too, fed a redacted current-position FEN.
 
 ## Other product surfaces
 
 - **Studies**: user-created analysis documents; chapters store serialized move trees and replay through the shared review stack.
 - **Tournament broadcasts**: xiangqi broadcast ingest (polling external sources, legality-replaying moves) with SSE-updated public viewer pages.
 - **Puzzles**: per-variant mined puzzle corpora live in `packages/game` with a rated attempt loop on the server.
+- **Rated play**: Glicko-2 ratings for live PvP between two signed-in accounts, through Find opponent or a friend challenge.
+- **Correspondence**: days-per-move games, open to every launched variant.
+- **Forum and embeds**: a community forum, and board/game embeds (with oEmbed) for other sites.
 - **Learn**: interactive rules tutorials built on the same kernels and board renderers as live play.
 
 ## Packages/game internals

@@ -78,8 +78,8 @@ Replay visibility:
 
 ## Runtime Shape
 
-Production-like deployments run one Node service for HTTP and WebSocket traffic,
-backed by Postgres. The exact provider, account setup, network topology, and
+Production-like deployments run one web service for HTTP and WebSocket traffic,
+plus an optional engine-worker service, backed by Postgres. The exact provider, account setup, network topology, and
 deployment runbook are operational details and do not belong in this public
 architecture note.
 
@@ -170,7 +170,7 @@ gaps the other seeders miss, idempotently and without touching existing rows:
   `/api/leaderboard?variant=xiangqi` is non-empty locally.
 
 Correspondence "your-turn" games are deliberately not seeded: a dashboard entry
-needs both a `room_deadlines` row and a hydratable dark-chess event log +
+needs both a `room_deadlines` row and a hydratable event log +
 running-game row, and there is no committed non-terminal fixture to replay, so a
 static seed would be a hollow `/room` link. Create one against the running dev
 server instead.
@@ -192,7 +192,8 @@ authority.
 
 ## Apps/server In Production-Like Runtimes
 
-`npm start` runs `node apps/server/dist/index.js`, which serves both:
+`npm start` runs `scripts/start.mjs`, which starts `apps/server/dist/main.js`
+(or `dist/worker.js` for the engine worker). The web service serves both:
 
 - Static `apps/web/dist/*` over HTTP from the same `$PORT`.
 - WebSocket upgrades on the same port.
