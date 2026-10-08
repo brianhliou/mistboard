@@ -21,7 +21,8 @@
 // {"seat","token"}) to open a room by hand. Flags: --states a,c,f (subset),
 // --no-shots (rooms and manifest only), --api (default: web port + 1),
 // --reveal-odds a|b|c (open the room with ?revealOdds=, the live reveal-odds UI
-// variant; a shows one chip's percentage, b one face-down piece's popover),
+// variant; a and c always show their numbers, b opens one face-down piece's
+// popover),
 // --mobile f,g (also shoot these states at 390 px).
 //
 // Side-by-side page from finished runs (no dev pair needed):
@@ -242,17 +243,12 @@ function readPage() {
   };
 }
 
-// Open the variant's on-demand surface so the shot shows it: a's first own-side
-// percentage bubble, b's popover over one of the seat's own face-down pieces.
+// Open the variant's on-demand surface so the shot shows it: b's popover over
+// one of the seat's own face-down pieces (a and c print every number already).
 // A phone taps (b's tap also selects the piece, as it would for a player).
 async function openRevealOdds(page, variant, width, view, seat) {
   const mobile = width === 'mobile';
-  if (variant === 'a') {
-    const chip = page.locator('.reveal-odds-row--bottom .reveal-odds-chip').first();
-    if ((await chip.count()) === 0) return;
-    if (mobile) await chip.tap();
-    else await chip.hover();
-  } else if (variant === 'b') {
+  if (variant === 'b') {
     const square = Object.entries(view.board ?? {})
       .filter(([, piece]) => piece?.faceDown && piece.color === seat)
       .map(([sq]) => sq)

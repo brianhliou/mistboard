@@ -1,9 +1,10 @@
 // The live jieqi room's reveal odds (jieqi-reveal-odds.ts has the counting and
 // why it is exact). Three UI variants behind `?revealOdds=a|b|c`, for a pick:
 //
-//   a. a compact pool row beside each seat's captured tray: piece glyphs with
-//      unseen counts, the percentage on hover or tap; the uncertain side adds
-//      "N taken unseen";
+//   a. (the default) a labelled pool row beside each seat's captured tray:
+//      "N face-down could be:", then a piece icon per unseen role with its
+//      count badge and its percentage printed under it, always visible; the
+//      uncertain side adds "N taken unseen" on the label line;
 //   b. hover or tap any face-down piece on the board for a popover with its
 //      side's odds, plus a slim pool row (glyphs and counts only);
 //   c. a table in the game-info rail (below the board on a phone): one row per
@@ -122,63 +123,40 @@ function mountRows(
   glyph: () => PieceGlyph,
 ): RevealOddsMount {
   const rows = insertRows(slots, variant);
-  const interactive = variant === 'a';
-  // Which chip's percentage is open (tap), kept across re-renders.
-  let open: { color: JieqiColor; role: JieqiPieceRole } | null = null;
+  const percent = variant === 'a';
   let last: RevealOddsInput | null = null;
   const popover = variant === 'b' ? installPopover(slots, () => last, glyph) : null;
-
-  const paint = (): void => {
-    const odds = last ? oddsToShow(last.view) : null;
-    const bottomInk = last?.orientation ?? 'red';
-    const topInk: JieqiColor = bottomInk === 'red' ? 'black' : 'red';
-    const draw = glyph();
-    renderPoolRow(rows.top, odds?.[topInk] ?? null, { interactive, open, glyph: draw });
-    renderPoolRow(rows.bottom, odds?.[bottomInk] ?? null, { interactive, open, glyph: draw });
-    popover?.refresh();
-  };
-
-  if (interactive) {
-    const onChip = (event: Event): void => {
-      const chip = (event.target as Element | null)?.closest<HTMLElement>('.reveal-odds-chip');
-      if (!chip) return;
-      const color = chip.dataset.ink as JieqiColor;
-      const role = chip.dataset.role as JieqiPieceRole;
-      open = open && open.color === color && open.role === role ? null : { color, role };
-      paint();
-    };
-    rows.top.addEventListener('click', onChip);
-    rows.bottom.addEventListener('click', onChip);
-    document.addEventListener('click', (event) => {
-      if (!open) return;
-      const target = event.target as Element | null;
-      if (target?.closest('.reveal-odds-chip')) return;
-      open = null;
-      paint();
-    });
-  }
 
   return {
     variant,
     render(input) {
       last = input;
-      paint();
+      const odds = oddsToShow(input.view);
+      const bottomInk = input.orientation;
+      const topInk: JieqiColor = bottomInk === 'red' ? 'black' : 'red';
+      const draw = glyph();
+      renderPoolRow(rows.top, odds?.[topInk] ?? null, { percent, glyph: draw });
+      renderPoolRow(rows.bottom, odds?.[bottomInk] ?? null, { percent, glyph: draw });
+      popover?.refresh();
     },
   };
 }
 
+/**
+ * One side's pool row. With `percent` (variant a) the row reads as a labelled
+ * block: "N face-down could be:" over the piece icons, each with its chance
+ * printed under it, and "N taken unseen" on the label line. Without it
+ * (variant b's slim row) it is one line of icons and counts.
+ */
 export function renderPoolRow(
   host: HTMLElement,
   side: RevealOddsSide | null,
-  options: {
-    interactive: boolean;
-    open: { color: JieqiColor; role: JieqiPieceRole } | null;
-    glyph: PieceGlyph;
-  },
+  options: { percent: boolean; glyph: PieceGlyph },
 ): void {
   host.replaceChildren();
   if (!side || side.faceDown === 0) {
     delete host.dataset.ink;
+    host.removeAttribute('aria-label');
     return;
   }
   host.dataset.ink = side.color;
@@ -188,30 +166,32 @@ export function renderPoolRow(
   );
   const lead = document.createElement('span');
   lead.className = 'reveal-odds-row__lead';
-  lead.textContent = t('live.revealOdds.faceDownCount', { count: side.faceDown });
-  host.append(lead);
+  lead.textContent = options.percent
+    ? t('live.revealOdds.couldBe', { count: side.faceDown })
+    : t('live.revealOdds.faceDownCount', { count: side.faceDown });
+  let note: HTMLSpanElement | null = null;
+  if (side.takenUnseen > 0) {
+    note = document.createElement('span');
+    note.className = 'reveal-odds-row__note';
+    note.textContent = t('live.revealOdds.takenUnseen', { count: side.takenUnseen });
+  }
   const pieces = document.createElement('span');
   pieces.className = 'reveal-odds-row__pieces';
   for (const entry of side.entries) {
-    const chip = document.createElement(options.interactive ? 'button' : 'span');
-    if (chip instanceof HTMLButtonElement) chip.type = 'button';
+    const chip = document.createElement('span');
     chip.className = 'reveal-odds-chip';
     chip.dataset.ink = side.color;
     chip.dataset.role = entry.role;
     chip.dataset.count = String(entry.count);
+    chip.setAttribute('role', 'img');
     chip.setAttribute('aria-label', chanceText(side, entry.role));
-    if (options.interactive) {
-      const isOpen = options.open?.color === side.color && options.open.role === entry.role;
-      chip.classList.toggle('is-open', isOpen);
-      chip.setAttribute('aria-expanded', String(isOpen));
-    }
     const disc = document.createElement('span');
     disc.className = 'reveal-odds-chip__piece';
     disc.setAttribute('aria-hidden', 'true');
     disc.innerHTML = options.glyph({ color: side.color, role: entry.role });
+    if (entry.count > 1) disc.append(countBadge(entry.count));
     chip.append(disc);
-    if (entry.count > 1) chip.append(countBadge(entry.count));
-    if (options.interactive) {
+    if (options.percent) {
       const pct = document.createElement('span');
       pct.className = 'reveal-odds-chip__pct';
       pct.setAttribute('aria-hidden', 'true');
@@ -220,12 +200,15 @@ export function renderPoolRow(
     }
     pieces.append(chip);
   }
-  host.append(pieces);
-  if (side.takenUnseen > 0) {
-    const note = document.createElement('span');
-    note.className = 'reveal-odds-row__note';
-    note.textContent = t('live.revealOdds.takenUnseen', { count: side.takenUnseen });
-    host.append(note);
+  if (options.percent) {
+    const head = document.createElement('span');
+    head.className = 'reveal-odds-row__head';
+    head.append(lead);
+    if (note) head.append(note);
+    host.append(head, pieces);
+  } else {
+    host.append(lead, pieces);
+    if (note) host.append(note);
   }
 }
 

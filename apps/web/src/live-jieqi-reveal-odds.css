@@ -4,21 +4,28 @@
    odds (the 2026-09-20 rule in live-review.css .rail-material). */
 
 .reveal-odds-row {
-  --reveal-chip: 26px;
+  --reveal-chip: 20px;
 
   display: flex;
   align-items: center;
   gap: 6px;
-  min-height: calc(var(--reveal-chip) + 6px);
+  min-height: calc(var(--reveal-chip) + 4px);
   padding: 2px 0;
   overflow: visible;
   white-space: nowrap;
 }
 
-.reveal-odds-row--b {
-  --reveal-chip: 20px;
+/* a: a labelled block, sized like part of the seat's area rather than a
+   footnote: the label line, then the icons with the percentage printed under
+   each. The band reserves all three lines (label, icon, percent). */
+.reveal-odds-row--a {
+  --reveal-chip: clamp(28px, calc((100cqw - 50px) / 6), 38px);
 
-  min-height: calc(var(--reveal-chip) + 4px);
+  display: grid;
+  grid-template-rows: auto auto;
+  align-content: start;
+  row-gap: 3px;
+  min-height: calc(var(--reveal-chip) + 2.45rem);
 }
 
 .reveal-odds-row--top {
@@ -27,6 +34,13 @@
 
 .reveal-odds-row--bottom {
   margin-top: 4px;
+}
+
+.reveal-odds-row__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
 }
 
 .reveal-odds-row__lead,
@@ -42,38 +56,51 @@
   font-weight: 600;
 }
 
+.reveal-odds-row--a .reveal-odds-row__lead {
+  min-width: 0;
+  font-size: 0.84rem;
+  color: var(--site-text);
+}
+
+/* The uncertain side's "N taken unseen": its own fact, so a pill at the end of
+   the label line rather than more grey text. */
+.reveal-odds-row--a .reveal-odds-row__note {
+  margin-left: auto;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--site-text) 10%, transparent);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--site-text);
+}
+
 .reveal-odds-row__pieces {
   display: flex;
   align-items: center;
   gap: 3px;
 }
 
+.reveal-odds-row--a .reveal-odds-row__pieces {
+  align-items: flex-start;
+  gap: 6px;
+}
+
 .reveal-odds-chip {
-  position: relative;
-  display: inline-block;
-  flex: 0 0 var(--reveal-chip);
-  width: var(--reveal-chip);
-  height: var(--reveal-chip);
-  padding: 0;
-  margin: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  color: inherit;
+  display: inline-flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
   line-height: 0;
 }
 
-button.reveal-odds-chip {
-  cursor: pointer;
-  border-radius: 50%;
+.reveal-odds-chip__piece {
+  position: relative;
+  display: block;
+  width: var(--reveal-chip);
+  height: var(--reveal-chip);
 }
 
-button.reveal-odds-chip:focus-visible {
-  outline: 2px solid var(--site-accent);
-  outline-offset: 1px;
-}
-
-.reveal-odds-chip__piece,
 .reveal-odds-chip__piece svg {
   display: block;
   width: 100%;
@@ -88,42 +115,19 @@ button.reveal-odds-chip:focus-visible {
   bottom: -3px;
 }
 
-/* The percentage: a bubble over the chip on hover (a mouse), keyboard focus,
-   or a tap (is-open). It floats, so opening one moves nothing. */
+.reveal-odds-row--a .reveal-odds-chip .captures-count-badge {
+  min-width: 14px;
+  height: 14px;
+  font-size: 10px;
+}
+
+/* a's percentage: always printed under its icon (no hover, no tap). */
 .reveal-odds-chip__pct {
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 4px);
-  z-index: 5;
-  transform: translateX(-50%);
-  padding: 2px 5px;
-  border-radius: 4px;
-  background: var(--site-text, #1f1d1a);
-  color: var(--site-panel, #ffffff);
-  font-size: 11px;
+  font-size: 0.8rem;
   font-weight: 700;
-  line-height: 1.3;
+  line-height: 1.2;
+  color: var(--site-text);
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  pointer-events: none;
-  visibility: hidden;
-}
-
-.reveal-odds-chip.is-open .reveal-odds-chip__pct,
-.reveal-odds-chip:focus-visible .reveal-odds-chip__pct {
-  visibility: visible;
-}
-
-@media (hover: hover) {
-  .reveal-odds-chip:hover .reveal-odds-chip__pct {
-    visibility: visible;
-  }
-}
-
-/* The bottom row's bubble opens downward on desktop, away from the clock. */
-.reveal-odds-row--bottom .reveal-odds-chip__pct {
-  bottom: auto;
-  top: calc(100% + 4px);
 }
 
 /* ── b: the board popover ──────────────────────────────────────────────── */
@@ -286,15 +290,15 @@ button.reveal-odds-chip:focus-visible {
    regardless of bundle order. */
 @media (max-width: 799px) {
   .live-review__cluster .game-console > .reveal-odds-row {
-    --reveal-chip: 22px;
+    --reveal-chip: 18px;
 
     flex: 0 0 100%;
     margin: 0;
     padding: 0 2px;
   }
 
-  .live-review__cluster .game-console > .reveal-odds-row--b {
-    --reveal-chip: 18px;
+  .live-review__cluster .game-console > .reveal-odds-row--a {
+    --reveal-chip: 30px;
   }
 
   .live-review__cluster .game-console > .reveal-odds-row--top {
@@ -303,12 +307,5 @@ button.reveal-odds-chip:focus-visible {
 
   .live-review__cluster .game-console > .reveal-odds-row--bottom {
     order: 33;
-  }
-
-  /* On a phone the bottom row sits under the seat line with the actions
-     below it: its bubble opens upward like the top row's. */
-  .reveal-odds-row--bottom .reveal-odds-chip__pct {
-    top: auto;
-    bottom: calc(100% + 4px);
   }
 }

@@ -314,7 +314,7 @@ export function parseComposeSpec(spec) {
 
 const VARIANT_NOTES = {
   baseline: 'Today: no odds anywhere on the page.',
-  a: 'Pool row beside each seat: glyphs with unseen counts; the percentage on hover or tap (one bubble is open in the shot).',
+  a: 'Labelled pool row beside each seat ("N face-down could be:"): a piece icon per unseen role with its count badge and its percentage printed under it.',
   b: 'Hover or tap any face-down piece: a popover with its side’s odds (open over one of the seat’s own pieces in the shot), plus a slim pool row.',
   c: 'A table in the game-info rail (below the board on a phone): percent and count per piece type, one column per side.',
 };

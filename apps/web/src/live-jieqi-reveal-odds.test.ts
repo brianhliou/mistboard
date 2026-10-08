@@ -50,10 +50,10 @@ const blackExact: RevealOddsSide = {
 const startView = () => getJieqiPlayerView(createInitialJieqiState('ui'), 'red');
 
 describe('reveal odds pool row (a, b)', () => {
-  it('draws one chip per unseen role with its chance read aloud and a count badge', () => {
+  it('a labels the row and prints every percentage, with no tap needed', () => {
     const host = document.createElement('div');
-    renderPoolRow(host, redUncertain, { interactive: true, open: null, glyph });
-    const chips = [...host.querySelectorAll<HTMLButtonElement>('button.reveal-odds-chip')];
+    renderPoolRow(host, redUncertain, { percent: true, glyph });
+    const chips = [...host.querySelectorAll<HTMLElement>('.reveal-odds-chip')];
     expect(chips.map((c) => c.dataset.role)).toEqual([
       'chariot',
       'cannon',
@@ -62,45 +62,54 @@ describe('reveal odds pool row (a, b)', () => {
       'advisor',
       'soldier',
     ]);
+    expect(host.querySelector('button')).toBeNull();
+    expect(chips.map((c) => c.querySelector('.reveal-odds-chip__pct')?.textContent)).toEqual([
+      '13%',
+      '13%',
+      '13%',
+      '13%',
+      '13%',
+      '33%',
+    ]);
+    expect(chips[5].getAttribute('role')).toBe('img');
     expect(chips[5].getAttribute('aria-label')).toBe('Soldier: 5 in 15, 33%');
-    expect(chips[5].querySelector('.reveal-odds-chip__pct')?.textContent).toBe('33%');
     expect(chips[5].querySelector('[data-glyph="red-soldier"]')).not.toBeNull();
-    expect(host.querySelector('.reveal-odds-row__lead')?.textContent).toBe('13 face-down');
-    expect(host.querySelector('.reveal-odds-row__note')?.textContent).toBe('2 taken unseen');
-    expect(host.textContent).not.toContain('—');
+    expect(
+      chips[5].querySelector('.reveal-odds-chip__piece .captures-count-badge')?.textContent,
+    ).toBe('5');
+    const head = host.querySelector('.reveal-odds-row__head');
+    expect(head?.querySelector('.reveal-odds-row__lead')?.textContent).toBe(
+      '13 face-down could be:',
+    );
+    expect(head?.querySelector('.reveal-odds-row__note')?.textContent).toBe('2 taken unseen');
+    expect(host.textContent).not.toContain('\u2014');
   });
 
-  it('marks the tapped chip open and leaves the exact side without a note', () => {
+  it('a leaves the exact side without a note and badges only counts above one', () => {
     const host = document.createElement('div');
-    renderPoolRow(host, blackExact, {
-      interactive: true,
-      open: { color: 'black', role: 'horse' },
-      glyph,
-    });
+    renderPoolRow(host, blackExact, { percent: true, glyph });
     const [horse, soldier] = host.querySelectorAll<HTMLElement>('.reveal-odds-chip');
-    expect(horse.classList.contains('is-open')).toBe(true);
-    expect(horse.getAttribute('aria-expanded')).toBe('true');
-    expect(soldier.classList.contains('is-open')).toBe(false);
+    expect(horse.querySelector('.reveal-odds-chip__pct')?.textContent).toBe('33%');
+    expect(horse.querySelector('.captures-count-badge')).toBeNull();
+    expect(soldier.querySelector('.reveal-odds-chip__pct')?.textContent).toBe('67%');
     expect(host.querySelector('.reveal-odds-row__note')).toBeNull();
   });
 
-  it('b draws static chips with no percentage bubble, and an empty side clears the row', () => {
+  it('b draws a slim row with no percentages, and an empty side clears the row', () => {
     const host = document.createElement('div');
-    renderPoolRow(host, blackExact, { interactive: false, open: null, glyph });
-    expect(host.querySelector('button')).toBeNull();
-    expect(host.querySelectorAll('span.reveal-odds-chip')).toHaveLength(2);
+    renderPoolRow(host, blackExact, { percent: false, glyph });
+    expect(host.querySelectorAll('.reveal-odds-chip')).toHaveLength(2);
     expect(host.querySelector('.reveal-odds-chip__pct')).toBeNull();
+    expect(host.querySelector('.reveal-odds-row__head')).toBeNull();
+    expect(host.querySelector('.reveal-odds-row__lead')?.textContent).toBe('3 face-down');
     renderPoolRow(
       host,
       { ...blackExact, entries: [], unseen: 0, faceDown: 0 },
-      {
-        interactive: false,
-        open: null,
-        glyph,
-      },
+      { percent: false, glyph },
     );
     expect(host.childElementCount).toBe(0);
-    renderPoolRow(host, null, { interactive: false, open: null, glyph });
+    expect(host.hasAttribute('aria-label')).toBe(false);
+    renderPoolRow(host, null, { percent: true, glyph });
     expect(host.childElementCount).toBe(0);
   });
 });
@@ -208,7 +217,7 @@ describe('reveal odds visibility', () => {
     mount.render(input('red'));
     expect(top.dataset.ink).toBe('black');
     expect(bottom.dataset.ink).toBe('red');
-    expect(bottom.querySelectorAll('button.reveal-odds-chip')).toHaveLength(6);
+    expect(bottom.querySelectorAll('.reveal-odds-chip__pct')).toHaveLength(6);
     // A remount (a room re-entry) replaces the rows rather than stacking them.
     mountRevealOdds(slots, 'a', () => glyph);
     expect(console.querySelectorAll('[data-reveal-odds]')).toHaveLength(2);
