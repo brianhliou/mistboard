@@ -63,7 +63,12 @@ test('tablebase: an exact answer is returned and the second lookup is a cache hi
   );
 });
 
-test('tablebase: a slow chessdb times out to no data, then cools down', async () => {
+test('tablebase: a slow chessdb times out to no data, then cools down', async (t) => {
+  // AbortSignal.timeout's timer is unref'd, and the fake fetch holds no handle,
+  // so nothing else keeps the event loop alive while the lookup waits for it:
+  // on Node 22 (CI) the runner cancels the file mid-await.
+  const keepAlive = setInterval(() => {}, 1_000);
+  t.after(() => clearInterval(keepAlive));
   let now = 1_000;
   const db = fakeChessdb(
     (_url, init) =>
