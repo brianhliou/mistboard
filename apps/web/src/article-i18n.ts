@@ -324,6 +324,11 @@ const ZH_HANS: Record<string, string> = {
   'Duck Xiangqi depth': '鸭子象棋深度',
   'Median of three positions: the start, and two and four turns in.':
     '三个局面的中位数：初始局面，以及走了两个回合和四个回合之后的局面。',
+  'One small rule makes xiangqi a new game': '一条小规则，让象棋变成一种新棋',
+  'The board, the pieces and the way they move are all xiangqi’s, so a xiangqi player can sit down and play Duck Xiangqi straight away. The duck still changes almost everything under them. Opening theory stops after the first move, because every line in it assumes there is no duck. And the game is harder for the kind of engine that plays it now. Classical search, the alpha-beta search Fairy-Stockfish runs, pays for every extra choice at every turn it looks ahead, which is why the depth gap grows with the budget.':
+    '棋盘、棋子和走法全都是象棋的，所以象棋棋手坐下来就能下鸭子象棋。但鸭子几乎改变了棋子背后的一切。开局理论在第一步之后就失效了，因为其中每一路变化都假定棋盘上没有鸭子。对目前下这种棋的引擎来说，它也更难。传统搜索，也就是 Fairy-Stockfish 所用的 alpha-beta 搜索，每向前多看一个回合，都要为每一个多出来的选择付出代价，这就是为什么搜索预算越大，深度差距越大。',
+  'We don’t know yet what strong Duck Xiangqi looks like. Some placements are pure technique, like the duck on e8 that takes away eight replies. Others might be aimed at the player rather than the position: a duck on a quiet point that invites one move, or a duck that blocks the line your opponent is watching while the real threat is somewhere else. An engine that sees 14 turns ahead finds the first kind. The second kind will show up only in games between strong players.':
+    '我们还不知道高水平的鸭子象棋是什么样子。有些落点纯粹是技术，比如放在 e8 的鸭子，一下拿走八个应着。另一些落点针对的可能是对手这个人，而不是局面：把鸭子放在一个安静的点上，引诱对方走某一步；或者用鸭子挡住对手正盯着的那条线，而真正的威胁在别处。一个能向前看 14 个回合的引擎找得到第一种。第二种，只有在高手之间的对局里才会出现。',
   'How we counted': '我们是怎么统计的',
   'The site’s own rules engine, the code that checks every move played here, counted the first move’s positions, and Fairy-Stockfish counted the deeper ones. Fairy-Stockfish also played the 64 games per variant, at 100,000 positions a move, with its neural network off. Xiangqi counts are strictly legal, so a move that leaves your own general capturable does not count. Duck Xiangqi has no check rule (you win by capturing the general), so every piece move counts.':
     '第一步的局面由本站自己的规则引擎统计，也就是检查这里每一步棋的那段代码；更深的局面由 Fairy-Stockfish 统计。每种棋的 64 局也是 Fairy-Stockfish 下的，每步搜索 100,000 个局面，并关闭了神经网络。象棋的计数严格按合法着法，所以让自己的将帅可被吃掉的着法不算。鸭子象棋没有将军规则（吃掉将帅即获胜），所以每一步走子都算。',
@@ -4666,6 +4671,11 @@ const ZH_HANT: Record<string, string> = {
   'Duck Xiangqi depth': '鴨子象棋深度',
   'Median of three positions: the start, and two and four turns in.':
     '三個局面的中位數：初始局面，以及走了兩個回合和四個回合之後的局面。',
+  'One small rule makes xiangqi a new game': '一條小規則，讓象棋變成一種新棋',
+  'The board, the pieces and the way they move are all xiangqi’s, so a xiangqi player can sit down and play Duck Xiangqi straight away. The duck still changes almost everything under them. Opening theory stops after the first move, because every line in it assumes there is no duck. And the game is harder for the kind of engine that plays it now. Classical search, the alpha-beta search Fairy-Stockfish runs, pays for every extra choice at every turn it looks ahead, which is why the depth gap grows with the budget.':
+    '棋盤、棋子和走法全都是象棋的，所以象棋棋手坐下來就能下鴨子象棋。但鴨子幾乎改變了棋子背後的一切。開局理論在第一步之後就失效了，因為其中每一路變化都假定棋盤上沒有鴨子。對目前下這種棋的引擎來說，它也更難。傳統搜尋，也就是 Fairy-Stockfish 所用的 alpha-beta 搜尋，每向前多看一個回合，都要為每一個多出來的選擇付出代價，這就是為什麼搜尋預算越大，深度差距越大。',
+  'We don’t know yet what strong Duck Xiangqi looks like. Some placements are pure technique, like the duck on e8 that takes away eight replies. Others might be aimed at the player rather than the position: a duck on a quiet point that invites one move, or a duck that blocks the line your opponent is watching while the real threat is somewhere else. An engine that sees 14 turns ahead finds the first kind. The second kind will show up only in games between strong players.':
+    '我們還不知道高水準的鴨子象棋是什麼樣子。有些落點純粹是技術，比如放在 e8 的鴨子，一下拿走八個應著。另一些落點針對的可能是對手這個人，而不是局面：把鴨子放在一個安靜的點上，引誘對方走某一步；或者用鴨子擋住對手正盯著的那條線，而真正的威脅在別處。一個能向前看 14 個回合的引擎找得到第一種。第二種，只有在高手之間的對局裡才會出現。',
   'How we counted': '我們是怎麼統計的',
   'The site’s own rules engine, the code that checks every move played here, counted the first move’s positions, and Fairy-Stockfish counted the deeper ones. Fairy-Stockfish also played the 64 games per variant, at 100,000 positions a move, with its neural network off. Xiangqi counts are strictly legal, so a move that leaves your own general capturable does not count. Duck Xiangqi has no check rule (you win by capturing the general), so every piece move counts.':
     '第一步的局面由本站自己的規則引擎統計，也就是檢查這裡每一步棋的那段程式碼；更深的局面由 Fairy-Stockfish 統計。每種棋的 64 局也是 Fairy-Stockfish 下的，每步搜尋 100,000 個局面，並關閉了神經網路。象棋的計數嚴格按合法著法，所以讓自己的將帥可被吃掉的著法不算。鴨子象棋沒有將軍規則（吃掉將帥即獲勝），所以每一步走子都算。',
