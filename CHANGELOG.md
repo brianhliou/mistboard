@@ -150,6 +150,7 @@ Conventions:
 
 ### Fixed
 
+- zoomed charts in articles get a solid background instead of showing through to the dark overlay ([4a138d71](https://github.com/brianhliou/mistboard/commit/4a138d71))
 - Practice draws the computer's reply together with its sound, after a short pause, instead of up to a second and a half later ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
 - The Chinese practice pages (/zh-hans/practice, /zh-hant/practice) load instead of a 404 ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
 - The Duck Xiangqi rules count five ways to block, not four, and the Misty page names the other open implementation of its architecture ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
