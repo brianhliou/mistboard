@@ -35,6 +35,12 @@
     "description": "MistyBanqi played itself 200 times at ten million nodes a move under the Taiwanese competition rules. On the engine’s own point scale, a lead under ten points is a coin flip at every stage of the game, and the side that loses its general first loses 87% of the time.",
     "status": "published"
   },
+  "benedict-xiangqi": {
+    "title": "Benedict Xiangqi: The First Mover Wins 78%",
+    "kind": "article",
+    "description": "We put Benedict Chess’s rule on the xiangqi board: nothing is captured, and every enemy piece your moved piece attacks joins you. The game has no endgame and no draws, and the first mover wins 78% of engine games, nearly all of it from one cannon move. The pie rule looks like the repair.",
+    "status": "published"
+  },
   "cao-yanlei": {
     "title": "Cao Yanlei 曹岩磊",
     "kind": "article",

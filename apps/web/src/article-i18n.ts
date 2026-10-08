@@ -133,6 +133,9 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   'anti-xiangqi',
   // Machine-drafted 2026-09-15, locked the day the English copy published.
   'horde-xiangqi',
+  // Machine-drafted 2026-10-07, not native-reviewed, from the zh-hans and
+  // zh-hant brianhliou.com posts; locked the day the English copy publishes.
+  'benedict-xiangqi',
   // Machine-drafted 2026-09-17, not native-reviewed, locked the day the rules
   // page and the launch note were listed.
   'atomic-xiangqi',
@@ -3119,6 +3122,183 @@ const ZH_HANS: Record<string, string> = {
   'The engine’s own game at two million nodes a move, ply 35. Nothing on the board can ever capture anything again.':
     '引擎每着两百万节点自战的对局，第 35 步。棋盘上再没有任何棋子能吃掉任何东西。',
   'What we are publishing instead of a play page': '我们发布的是什么，而不是一个对局页面',
+  // benedict-xiangqi (2026-10-07): machine-drafted, not native-reviewed.
+  'Benedict Xiangqi Is Unfair': '本尼迪克特象棋并不公平',
+  'Benedict Xiangqi: The First Mover Wins 78%': '本尼迪克特象棋：先手方胜率 78%',
+  'We put Benedict Chess’s rule on the xiangqi board: nothing is captured, and every enemy piece your moved piece attacks joins you. The game has no endgame and no draws, and the first mover wins 78% of engine games, nearly all of it from one cannon move. The pie rule looks like the repair.':
+    '我们把本尼迪克特国际象棋的规则搬到象棋棋盘上：不吃子，你走动的棋子所攻击的每一个敌方棋子都会倒戈归你。这个游戏没有残局，也没有和棋；在引擎对局中先手方赢下 78%，几乎全部来自一步炮。饼干规则看起来是修补的办法。',
+  'Benedict Chess has no captures. When you move a piece, every enemy piece it attacks from its new square changes color and joins you, and you win by turning the enemy king. W. D. Troyka invented it and named it for Benedict Arnold, who changed sides. We put the same rule on the xiangqi board and measured the result with an engine of our own.':
+    '本尼迪克特国际象棋没有吃子。你走一步棋后，这枚棋子从新位置攻击到的每一个敌方棋子都会变色并加入你方；把对方的王变过来就赢了。它由 W. D. Troyka 发明，并以叛变投敌的本尼迪克特·阿诺德命名。我们把同一条规则放到象棋棋盘上，并用我们自己写的引擎测量了结果。',
+  'Conversion games already exist, and several sit one rule away from this one. Desertion Chess converts a piece by moving next to it, and keeps captures. Andernach Chess turns the capturing piece. Cleopatra Chess is Troyka’s rule for a single piece. Banqi and jieqi, xiangqi’s own flipping games, turn a piece over to reveal what it is, which says nothing about whose it is. Benedict Xiangqi takes Troyka’s rule whole, for every piece, on the xiangqi board.':
+    '转化类的棋早已存在，其中有几种与本作只差一条规则。叛逃棋（Desertion Chess）靠走到一枚棋子旁边来转化它，并保留吃子。安德纳赫棋（Andernach Chess）改变的是吃子的那枚棋子。克娄巴特拉棋（Cleopatra Chess）是只对一枚棋子生效的 Troyka 规则。翻翻棋（暗棋）和揭棋是象棋自己的翻子游戏，翻开一枚棋子是为了揭示它是什么，与它归谁无关。本尼迪克特象棋把 Troyka 的规则完整地用于每一枚棋子，搬到象棋棋盘上。',
+  'The port forced four design decisions with no default answer. Then the measurement found the game unfair: the first mover wins 78% of engine games, and nearly all of that comes from one cannon move on move one. Mistboard has no Benedict Xiangqi play page. This page holds the design and the measurement.':
+    '移植过程中有四个设计决定没有现成答案。随后测量发现这个游戏并不公平：先手方赢下 78% 的引擎对局，而且几乎全部来自第一步的一着炮。Mistboard 没有本尼迪克特象棋的对局页面，本页记录的是设计与测量。',
+  'The rule': '规则',
+  'Move a piece. Every enemy piece it attacks from where it lands joins you. Nothing is ever captured, so all 32 pieces stay on the board for the whole game, and a move that attacks the enemy general wins.':
+    '走一枚棋子。它从落点攻击到的每一个敌方棋子都会加入你方。棋子永远不会被吃掉，所以 32 枚棋子整局都留在棋盘上；一步攻击到对方将帅的棋即获胜。',
+  'The rule on a demo board. The rings mark the pieces the move converted.':
+    '在演示棋盘上的规则。圆圈标出这步棋转化的棋子。',
+  'Red to move. The chariot on d1 attacks nothing. Two black soldiers stand on the fourth rank, where it is going.':
+    '红方走棋。d1 上的车什么也没有攻击。两个黑卒站在第四横线上，正是它要去的地方。',
+  'Both soldiers change sides. Nothing was captured and nothing left the board, so Red is two pieces up and Black two down from one move.':
+    '两个卒都换了阵营。没有吃子，也没有棋子离开棋盘，所以一步棋就让红方多出两子、黑方少了两子。',
+  'A standing attack does nothing. Only the piece that moved converts, so a chariot already bearing on a piece has to move again to take it. Threats are made by moving.':
+    '停在原地的攻击不起作用。只有走动的那枚棋子会转化对方，所以已经瞄着某枚棋子的车必须再走一步才能拿下它。威胁只能靠走棋来制造。',
+  'What it does to xiangqi': '它对象棋做了什么',
+  '**No endgame, ever.** There are no trades and nothing simplifies, and an endgame tablebase cannot exist because the material never shrinks. Xiangqi endgame theory, which is most of xiangqi theory, does not transfer at all.':
+    '**永远没有残局。** 没有兑子，局面不会简化，残局库也不可能存在，因为子力从不减少。象棋的残局理论，也就是象棋理论的大部分，完全用不上。',
+  '**Cannons never weaken.** A xiangqi cannon needs a screen to capture, so in xiangqi it weakens as the board empties. Here the board never empties, and a cannon is as dangerous late in the game as on move 3.':
+    '**炮永远不会变弱。** 象棋的炮需要炮架才能吃子，所以在象棋里它会随着棋盘变空而变弱。这里棋盘从不变空，炮在对局后段和第 3 步时一样危险。',
+  '**Advisors and elephants defend nothing.** They exist to guard against captures, and there are no captures. They still block lines and screen for cannons, but everything they were designed to do is gone.':
+    '**仕和相什么也守不住。** 它们存在是为了防吃子，而这里没有吃子。它们仍能挡住线路、给炮当炮架，但它们被设计出来要做的事都没有了。',
+  '**Games are short and nobody draws.** Half of the 54 engine games below were over by ply 28. None of them was drawn, and none of 6,000 games of uniformly random legal moves was either. With no material to trade and no endgame to grind, every game reaches a decision.':
+    '**对局很短，没有人和棋。** 下面 54 盘引擎对局中，一半在第 28 步前结束。没有一盘是和棋，6,000 盘均匀随机合法着法的对局也没有一盘和棋。没有子力可兑，也没有残局可磨，每一盘都会分出胜负。',
+  '**About 28% of legal moves lose on the spot.** That is the mean over the 1,696 positions in the engine games. The median position has 10% of its moves losing, and a minority of very sharp positions carries the mean. The share climbs from 24% in the first fifth of a game to 37% in the last, so there is no quiet opening phase to develop in.':
+    '**约 28% 的合法着法当场就输。** 这是引擎对局中 1,696 个局面的平均值。中位局面有 10% 的着法会输，平均值是由少数非常尖锐的局面拉高的。这个比例从对局前五分之一的 24% 升到最后五分之一的 37%，所以不存在可以安心出子的平静开局阶段。',
+  'Designing it: four decisions': '设计：四个决定',
+  '**The generals still may never face.** Xiangqi forbids the two generals from standing on one file with nothing between them, and we kept it. The alternative is to make the flying general a win, and it breaks: only the piece that moved converts, so unblocking the file wins nothing, and the generals end up facing each other while play carries on until someone shuffles a general along the file to claim it.':
+    '**将帅仍然不能照面。** 象棋禁止两个将帅在同一条直线上中间无子相隔，我们保留了这条规则。另一种做法是把白脸将变成胜利条件，但它行不通：只有走动的棋子才会转化，所以打开这条线并不能取胜，结果将帅相对而立，对局却继续，直到有人把将帅沿着这条线挪一步去领取胜利。',
+  'Keeping the prohibition costs nothing and adds something xiangqi does not have. A piece pinned on the generals’ file cannot be removed, because nothing here removes anything, and converting it does not release it, since a conversion recolors in place. You can win the piece and still be unable to move it until a general steps off the file.':
+    '保留这条禁令没有代价，还带来了象棋没有的东西。被钉在将帅线上的棋子无法被移走，因为这里没有任何东西能移走棋子；转化它也不能解开牵制，因为转化是原地变色。你可以赢得这枚棋子，却仍然动不了它，直到一方的将帅离开这条线。',
+  '**Advisors and elephants are bound to the region they stand in, whoever owns them.** A converted advisor stands inside the enemy palace. Bound to its owner’s palace it would be frozen there for good; bound to the palace it stands in, it keeps playing and attacks from inside. From the starting array the two readings agree, because every advisor starts in its own palace.':
+    '**仕和相受它们所在的区域约束，不论归谁所有。** 被转化的仕站在敌方九宫里。如果受原主人的九宫约束，它会永远冻结在那里；受它所在的九宫约束，它就能继续行棋，从内部发动攻击。从初始局面看两种理解是一样的，因为每个仕都从自己的九宫出发。',
+  '**Soldiers are bound to their owner.** A soldier’s forward direction has to follow whoever owns it now, or a converted soldier marches away from its new side forever. Getting these two rules backwards breaks the game quietly.':
+    '**兵卒受其主人约束。** 兵卒的前进方向必须跟随它现在的主人，否则被转化的兵卒会永远背离新的阵营前进。把这两条规则弄反，会悄无声息地毁掉这个游戏。',
+  '**Draws need a progress clock.** With no captures, nearly every move can be undone, and three-fold repetition alone is not enough. The clock resets on the only two events that cannot be undone: a conversion, or a soldier move.':
+    '**和棋需要进度计数。** 没有吃子，几乎每一步都可以撤回，仅靠三次重复局面不够。计数在仅有的两种不可撤回的事件上清零：一次转化，或一步兵卒走动。',
+  'How we tested it': '我们如何测试',
+  'No existing engine plays this. Pikafish and Fairy-Stockfish encode capture rules, and Fairy-Stockfish’s one conversion mechanism flips pieces enclosed by a drop, Reversi-style, which is a different rule. So we wrote one in Rust: alpha-beta search with a transposition table, principal variation search, late move reductions, and a quiescence search over conversions. Its piece values were fitted by logistic regression on self-play outcomes, and they beat our hand-picked values head to head.':
+    '现有的引擎都下不了这个棋。Pikafish 和 Fairy-Stockfish 都内置了吃子规则，而 Fairy-Stockfish 唯一的转化机制是像黑白棋那样翻转被落子包围的棋子，那是另一条规则。所以我们用 Rust 写了一个：带置换表的 alpha-beta 搜索、主要变例搜索、后期着法缩减，以及针对转化的静态搜索。它的子力价值是用逻辑回归在自对弈结果上拟合出来的，并在对抗中胜过了我们手工挑选的价值。',
+  'We do not quote the fitted values. An earlier fit on a quarter of the data had several values whose signs later reversed, which is more noise than a table of piece values can carry. The ordering survived: advisors and elephants come out close to worthless, which follows anyway from there being nothing to defend against.':
+    '我们不公布拟合出的数值。早先用四分之一数据做的一次拟合中，有好几个数值后来符号反转，这样的噪声是一张子力价值表承受不了的。排序保留了下来：仕和相几乎一文不值，而这本来就可以从无需防守推出。',
+  'The rules were checked before anything was measured. All 54 engine games below replay through Mistboard’s TypeScript rule kernel with the same conversions and the same number of legal moves at every one of their 1,696 positions, and every board on this page is played through that kernel. Three results do not depend on how well the engine plays.':
+    '在测量任何东西之前，先检查了规则。下面全部 54 盘引擎对局都能在 Mistboard 的 TypeScript 规则内核中重放，1,696 个局面中的每一个都得到相同的转化和相同数量的合法着法；本页的每一个棋盘也都经过这个内核。有三个结果不取决于引擎下得多好。',
+  Test: '测试',
+  'Uniformly random legal moves, 6,000 games': '均匀随机合法着法，6,000 局',
+  '54.5% for the first mover, no draws': '先手方 54.5%，无和棋',
+  'Proof search from the starting array, 20.8 billion nodes': '从初始局面做证明搜索，208 亿节点',
+  'No forced win within 13 plies': '13 步之内没有强制胜',
+  'Legal moves that lose on the spot, 1,696 positions': '当场就输的合法着法，1,696 个局面',
+  'Mean 28%, median 10%': '平均 28%，中位数 10%',
+  'Random play already favors the first mover. 54.5% over 6,000 games is about seven standard errors above even, so a tempo is worth something before either side plays well.':
+    '随机对弈已经偏向先手方。6,000 局中 54.5% 比五五开高出约七个标准误，所以在双方都还下不好之前，一步先手就已经有价值。',
+  'The proof needs care, because an ordinary search cannot make one. Late move reductions search later moves shallower, so a normal search that finds no win has only shown that it did not look everywhere. With reductions and quiescence turned off, and the question asked as a yes or no at the mate threshold, the search proves there is no forced win within 13 plies. That took 20.8 billion nodes and about half an hour.':
+    '这个证明需要谨慎，因为普通搜索做不出证明。后期着法缩减会把靠后的着法搜得更浅，所以普通搜索没找到胜着，只说明它没有处处都看到。关闭缩减和静态搜索，并在杀棋阈值上以是或否来提问，搜索就证明了 13 步之内没有强制胜。这用了 208 亿个节点，约半小时。',
+  'We also checked whether the 78% moves when the engine gets stronger. It barely moves between 300,000 and 2 million nodes a move, a sevenfold range.':
+    '我们还检查了引擎变强时 78% 是否会变化。从每步 30 万节点到 200 万节点，七倍的范围内，它几乎没有变化。',
+  'Stability alone is not enough. An earlier version of this measurement varied its games with a six-ply random opening book, got 52.7%, and held it across a tenfold range of engine strength. It was stable because the book spent the very tempo being measured: six random plies throw the advantage away before either engine plays a move. A broken thermometer reads room temperature in every room. The 78% uses no book and takes its variety from evaluation jitter.':
+    '仅有稳定还不够。这项测量的早期版本用六步随机开局库来让对局多样化，得到 52.7%，并且在十倍的引擎强度范围内保持不变。它稳定，是因为开局库把要测量的那一步先手花掉了：六步随机着法在两个引擎走第一步之前就把优势丢掉了。坏掉的温度计在每个房间都显示室温。78% 不用开局库，对局的多样性来自评估抖动。',
+  'One cannon move decides it': '一步炮定胜负',
+  'The first mover wins 78% of engine games, measured from the starting array with no opening book and the two colors taking the first move in turn. Then we measured each of Red’s 42 legal first moves on its own, and the diagnosis changed shape.':
+    '先手方赢下 78% 的引擎对局，这是从初始局面测得的，不用开局库，红黑轮流先走。随后我们单独测量了红方全部 42 个合法的第一步，诊断的样子变了。',
+  'Red scores': '红方得分',
+  c1a3: 'c1a3',
+  h1g3: 'h1g3',
+  a4a5: 'a4a5',
+  e1e2: 'e1e2',
+  a1a3: 'a1a3',
+  g4g5: 'g4g5',
+  g1i3: 'g1i3',
+  b3b2: 'b3b2',
+  b3b4: 'b3b4',
+  b3a3: 'b3a3',
+  h3h2: 'h3h2',
+  b3b7: 'b3b7',
+  b3c3: 'b3c3',
+  b3d3: 'b3d3',
+  d1e2: 'd1e2',
+  h1i3: 'h1i3',
+  i4i5: 'i4i5',
+  e4e5: 'e4e5',
+  h3f3: 'h3f3',
+  b3f3: 'b3f3',
+  a1a2: 'a1a2',
+  b3g3: 'b3g3',
+  b1a3: 'b1a3',
+  h3h7: 'h3h7',
+  h3c3: 'h3c3',
+  c1e3: 'c1e3',
+  h3h4: 'h3h4',
+  i1i2: 'i1i2',
+  b3e3: 'b3e3',
+  b3b6: 'b3b6',
+  h3g3: 'h3g3',
+  c4c5: 'c4c5',
+  f1e2: 'f1e2',
+  i1i3: 'i1i3',
+  h3e3: 'h3e3',
+  h3h5: 'h3h5',
+  h3i3: 'h3i3',
+  h3d3: 'h3d3',
+  b3b5: 'b3b5',
+  g1e3: 'g1e3',
+  b1c3: 'b1c3',
+  h3h6: 'h3h6',
+  'All 42 legal first moves, 24 engine games each at 300,000 nodes a move. Read down each pair of columns, lowest score first.':
+    '全部 42 个合法的第一步，每个以每步 30 万节点下 24 盘引擎对局。按每一对列从上往下读，得分从低到高。',
+  'The two best are the same idea, a cannon lifted to the fifth or sixth rank: h3h6 scores 91.7% and b3b5 87.5%. The three that score nothing are two elephant moves to the edge of the board, c1a3 and g1i3, and the general stepping up the middle, e1e2. Red’s first move is worth anywhere from nothing to 92%, so the 78% measures an engine that always finds the strong opening.':
+    '最好的两步是同一个想法，把炮升到第五或第六横线：h3h6 得 91.7%，b3b5 得 87.5%。得零分的三步是两步走到棋盘边上的相（c1a3 和 g1i3），以及帅从中路上一步（e1e2）。红方第一步的价值从零到 92% 不等，所以 78% 衡量的是一个总能找到强势开局的引擎。',
+  'From the starting array. The rings mark what each move converted, and on the last move the general it attacks.':
+    '从初始局面开始。圆圈标出每步棋转化的棋子，最后一步标出它攻击的将。',
+  'The starting array, Red to move.': '初始局面，红方走棋。',
+  'The cannon fires up the b-file over Black’s own cannon and turns the horse on b10. It also threatens b5e5, with Black’s soldier on e7 as the screen and the general behind it. 32 of Black’s 38 replies lose at once, and b5e5 wins against every one of them.':
+    '炮沿 b 线隔着黑方自己的炮打过去，把 b10 的马变了过来。它同时威胁 b5e5：以黑方 e7 的卒为炮架，将就在后面。黑方 38 种应着中有 32 种当场就输，而 b5e5 对每一种都能取胜。',
+  'Black answers in kind and turns the horse on h1. It looks reasonable, and it is one of the 32.':
+    '黑方以同样方式回应，把 h1 的马变过去。这步看起来很合理，但它就是那 32 种之一。',
+  'The cannon fires over the soldier on e7 at the general on e10, and the game is over.':
+    '炮隔着 e7 的卒打向 e10 的将，对局结束。',
+  'A xiangqi cannon needs exactly one piece between it and its target, and Black’s starting position supplies that piece in the right place for free. The threat exists because the xiangqi starting array happens to sit where Benedict’s rule can use it.':
+    '象棋的炮和目标之间需要正好一枚棋子，而黑方的初始局面免费把这枚棋子摆在了恰好的位置。这个威胁之所以存在，是因为象棋的初始局面恰好落在本尼迪克特规则能利用的地方。',
+  'Every game the engine played': '引擎下的每一盘棋',
+  'All 54 games from the strongest setting, 2 million nodes a move, uncurated. Red moved first in 36 and won 33; Black moved first in 18 and won 13. The first mover won 46, and the eight it lost are the ones worth opening.':
+    '最强设置下的全部 54 盘对局，每步 200 万节点，未经挑选。红方先走 36 盘，赢 33 盘；黑方先走 18 盘，赢 13 盘。先手方赢了 46 盘，输掉的那 8 盘最值得打开看看。',
+  'All 54 games, each replayed through the rule kernel. The rings mark the pieces each move converted, and on the last move the general it attacks. The arrow keys step through the game on the board.':
+    '全部 54 盘对局，每一盘都经规则内核重放。圆圈标出每步棋转化的棋子，最后一步标出它攻击的将。用方向键逐步浏览棋盘上的对局。',
+  'First mover won (%1)': '先手方胜（%1）',
+  'First mover lost (%1)': '先手方负（%1）',
+  'Game %1: %2 first, %3 plies': '第 %1 局：%2先走，%3 步',
+  '%1 moved first and won in %2 plies.': '%1先走，%2 步获胜。',
+  '%1 moved first and lost in %2 plies.': '%1先走，%2 步落败。',
+  'Engine, 2M nodes': '引擎，200 万节点',
+  'The pie rule': '饼干规则',
+  'The spread across those 42 openings is what makes the game recoverable, and the repair already exists. The pie rule divides a cake the way two children do: one cuts, the other picks. Red plays a first move, then Black chooses whether to stay Black or take over Red’s position. Playing the strongest opening becomes pointless when Black can simply take it.':
+    '这 42 种开局之间的差距正是这个游戏可以挽救的原因，而修补办法已经存在。饼干规则像两个孩子分蛋糕：一个切，另一个挑。红方先走第一步，然后黑方选择继续执黑，还是接手红方的局面。当黑方可以直接拿走最强的开局时，走最强的开局就没有意义了。',
+  'So Red is pushed toward the move closest to even, and four of the 42 sit there. Two are the cannon declining its own best square, and two are the quietest developing moves on the board.':
+    '于是红方被推向最接近均势的着法，42 步中有四步在那里。两步是炮放弃自己的最佳位置，另外两步是棋盘上最安静的出子着法。',
+  'The four first moves closest to even, with what Red scores after each.':
+    '最接近均势的四个第一步，以及每一步之后红方的得分。',
+  'b3b4, 45.8%. The cannon steps up one square, short of the fifth rank that does the damage.':
+    'b3b4，45.8%。炮向前一步，还没到造成破坏的第五横线。',
+  'b3b7, 50.0%. The cannon goes all the way in, converting now and giving up the standing threat.':
+    'b3b7，50.0%。炮一直打进去，立刻转化，放弃了持续的威胁。',
+  'd1e2, 54.2%. An advisor develops into the middle of the palace.':
+    'd1e2，54.2%。仕走到九宫中心出子。',
+  'e4e5, 54.2%. The central soldier: the one quiet developing move that is not a blunder.':
+    'e4e5，54.2%。中兵：唯一一步不是败着的安静出子着法。',
+  'Held to one of those, the game lands near 50%, because Red can no longer use the advantage. Hex is a proven first-player win at every board size and is played competitively, because of the swap.':
+    '限定在其中一步上，对局就会接近 50%，因为红方再也无法利用这份优势。六贯棋（Hex）在每种棋盘大小下都被证明是先手胜，却因为换边规则而被竞技性地下着。',
+  'Those four numbers come from 24 games each: too few to rank them against each other, and enough to say the spread from 0% to 92% is real. Confirming that one of them holds near 50% over a proper sample is the open work.':
+    '这四个数字各来自 24 盘对局：不足以在它们之间排名，但足以说明从 0% 到 92% 的差距是真实的。用足够的样本确认其中一步能稳定在 50% 附近，是尚待完成的工作。',
+  'The pie rule fixes fairness and leaves the sharpness alone. The losing-move share is a property of the rules, so it does not move. The contest becomes even and stays sharp, and whether people want to play that is a question win rates cannot answer.':
+    '饼干规则修正了公平性，而没有改变尖锐程度。当场就输的着法比例是规则本身的属性，所以它不会变。比赛变得均衡，却依然尖锐；人们是否想下这样的棋，胜率回答不了。',
+  'It is not shippable as a competitive game. No rated ladder survives the first mover winning three games in four.':
+    '它还不能作为竞技游戏上线。先手方每四盘赢三盘，任何等级分阶梯都撑不住。',
+  'Unfair does not mean unplayable. Losing chess is a proven first-player win and is played every day, because the proof runs down lines no human finds, and Hex is played behind the swap. What is different here is depth. This 78% rests on one move you can say in a sentence, lift a cannon to the fifth rank, and an engine finds it every time. A proven win nobody can reach is a curiosity. A win you can memorize is the game.':
+    '不公平不等于不能下。自杀棋已被证明是先手胜，却每天都有人下，因为那个证明走的是人类找不到的变化；六贯棋则在换边规则下照样被人下。这里的不同在于深度。这个 78% 依靠的是一步一句话就能说清的棋，把炮升到第五横线，而引擎每次都能找到它。没人够得着的已证胜局只是奇闻；一个能背下来的胜法就是整个游戏。',
+  'Two repairs beyond the pie rule are untested. Marking the general and giving the defender one move to answer would blunt the cannon threat directly. Or the starting array could move its central soldiers, since the threat exists only because Black’s soldier stands where a cannon needs its screen.':
+    '饼干规则之外，还有两个修补办法未经测试。把将帅标记出来、给防守方一步应对的机会，可以直接削弱炮的威胁。或者改动初始局面中的中兵，因为这个威胁之所以存在，只是因为黑方的卒恰好站在炮需要炮架的位置。',
+  'Does Red have a forced win?': '红方有强制胜吗？',
+  'Everything above is a win rate, a statement about two particular engines. Whether the game is a first-player win under perfect play has an answer that does not depend on how well anything plays. What we have is a lower bound, no forced win within 13 plies. That rules out a cheap one, and half of the engine games were over by ply 28.':
+    '上面的一切都是胜率，是关于两个特定引擎的陈述。这个游戏在完美对弈下是否先手胜，其答案不取决于任何东西下得多好。我们手里的是一个下界，13 步之内没有强制胜。这排除了廉价的胜法，而引擎对局中有一半在第 28 步前就结束了。',
+  'Two things make the question harder than it looks. Material is conserved, so there is no endgame database to build and nothing for a forward search to meet in the middle. Strategy stealing does not apply either: pieces move and never accumulate, so a first player cannot make an arbitrary move and then discard it. What helps is that games are short and always decisive, a shallow and sharply terminal tree, which is the shape proof-number search is good at.':
+    '有两件事让这个问题比看起来更难。子力守恒，所以没有残局库可建，正向搜索也没有可以会合的中点。策略窃取也用不上：棋子只会移动，从不累积，所以先手方不能随便走一步再把它丢掉。有帮助的是对局短且总能分出胜负，是一棵浅而终局尖锐的树，而这正是证明数搜索擅长的形状。',
+  'The next rung is 14 plies. The proof splits across Red’s 42 first moves and runs them in parallel at almost no loss, because with no forced win no branch ever cuts off another. Splitting two plies deep gives 1,740 independent jobs, enough for a cluster. Proof-number search, which spends its effort on the narrowest part of the proof tree, is how Mark Watkins solved losing chess, and we have not implemented it yet.':
+    '下一级是 14 步。证明可以按红方 42 个第一步拆分并几乎无损地并行运行，因为既然没有强制胜，任何一个分支都不会剪掉另一个。拆到两步深，会得到 1,740 个独立任务，足以用上一个集群。证明数搜索把精力花在证明树最窄的部分，马克·沃特金斯正是用它解决了自杀棋，而我们还没有实现它。',
+  'A weak solution, or an ultra-weak one by an argument we have not thought of, would settle the pie rule question too: a proven first-player win is exactly the case the swap was invented for. The engine, the test harness, the 54 games and the full opening table are in one repository.':
+    '弱解，或者通过我们没想到的论证得到的超弱解，也会顺带解决饼干规则的问题：已被证明的先手胜正是换边规则被发明出来要应对的情形。引擎、测试工具、54 盘对局和完整的开局表都在一个代码仓库里。',
+  'Check the numbers': '核对数据',
+  'Benedict Xiangqi: Benedict Chess on the Xiangqi Board, Measured':
+    '本尼迪克特象棋：象棋棋盘上的本尼迪克特国际象棋，实测',
   'Check the proofs yourself': '亲自检验这些证明',
   'Learn xiangqi': '学习象棋',
   '2. Rxh1 Rxb10: RED TO MOVE': '2. Rxh1 Rxb10：轮到红方',
@@ -6960,6 +7140,140 @@ const ZH_HANT: Record<string, string> = {
   'The engine’s own game at two million nodes a move, ply 35. Nothing on the board can ever capture anything again.':
     '引擎每著兩百萬節點自戰的對局，第 35 步。棋盤上再沒有任何棋子能吃掉任何東西。',
   'What we are publishing instead of a play page': '我們發佈的是什麼，而不是一個對局頁面',
+  // benedict-xiangqi (2026-10-07), converted from the Simplified entries.
+  'Benedict Xiangqi Is Unfair': '本尼迪克特象棋並不公平',
+  'Benedict Xiangqi: The First Mover Wins 78%': '本尼迪克特象棋：先手方勝率 78%',
+  'We put Benedict Chess’s rule on the xiangqi board: nothing is captured, and every enemy piece your moved piece attacks joins you. The game has no endgame and no draws, and the first mover wins 78% of engine games, nearly all of it from one cannon move. The pie rule looks like the repair.':
+    '我們把本尼迪克特國際象棋的規則搬到象棋棋盤上：不喫子，你走動的棋子所攻擊的每一個敵方棋子都會倒戈歸你。這個遊戲沒有殘局，也沒有和棋；在引擎對局中先手方贏下 78%，幾乎全部來自一步炮。餅乾規則看起來是修補的辦法。',
+  'Benedict Chess has no captures. When you move a piece, every enemy piece it attacks from its new square changes color and joins you, and you win by turning the enemy king. W. D. Troyka invented it and named it for Benedict Arnold, who changed sides. We put the same rule on the xiangqi board and measured the result with an engine of our own.':
+    '本尼迪克特國際象棋沒有喫子。你走一步棋後，這枚棋子從新位置攻擊到的每一個敵方棋子都會變色並加入你方；把對方的王變過來就贏了。它由 W. D. Troyka 發明，並以叛變投敵的本尼迪克特·阿諾德命名。我們把同一條規則放到象棋棋盤上，並用我們自己寫的引擎測量了結果。',
+  'Conversion games already exist, and several sit one rule away from this one. Desertion Chess converts a piece by moving next to it, and keeps captures. Andernach Chess turns the capturing piece. Cleopatra Chess is Troyka’s rule for a single piece. Banqi and jieqi, xiangqi’s own flipping games, turn a piece over to reveal what it is, which says nothing about whose it is. Benedict Xiangqi takes Troyka’s rule whole, for every piece, on the xiangqi board.':
+    '轉化類的棋早已存在，其中有幾種與本作只差一條規則。叛逃棋（Desertion Chess）靠走到一枚棋子旁邊來轉化它，並保留喫子。安德納赫棋（Andernach Chess）改變的是喫子的那枚棋子。克婁巴特拉棋（Cleopatra Chess）是隻對一枚棋子生效的 Troyka 規則。翻翻棋（暗棋）和揭棋是象棋自己的翻子游戲，翻開一枚棋子是爲了揭示它是什麼，與它歸誰無關。本尼迪克特象棋把 Troyka 的規則完整地用於每一枚棋子，搬到象棋棋盤上。',
+  'The port forced four design decisions with no default answer. Then the measurement found the game unfair: the first mover wins 78% of engine games, and nearly all of that comes from one cannon move on move one. Mistboard has no Benedict Xiangqi play page. This page holds the design and the measurement.':
+    '移植過程中有四個設計決定沒有現成答案。隨後測量發現這個遊戲並不公平：先手方贏下 78% 的引擎對局，而且幾乎全部來自第一步的一着炮。Mistboard 沒有本尼迪克特象棋的對局頁面，本頁記錄的是設計與測量。',
+  'The rule': '規則',
+  'Move a piece. Every enemy piece it attacks from where it lands joins you. Nothing is ever captured, so all 32 pieces stay on the board for the whole game, and a move that attacks the enemy general wins.':
+    '走一枚棋子。它從落點攻擊到的每一個敵方棋子都會加入你方。棋子永遠不會被喫掉，所以 32 枚棋子整局都留在棋盤上；一步攻擊到對方將帥的棋即獲勝。',
+  'The rule on a demo board. The rings mark the pieces the move converted.':
+    '在演示棋盤上的規則。圓圈標出這步棋轉化的棋子。',
+  'Red to move. The chariot on d1 attacks nothing. Two black soldiers stand on the fourth rank, where it is going.':
+    '紅方走棋。d1 上的車什麼也沒有攻擊。兩個黑卒站在第四橫線上，正是它要去的地方。',
+  'Both soldiers change sides. Nothing was captured and nothing left the board, so Red is two pieces up and Black two down from one move.':
+    '兩個卒都換了陣營。沒有喫子，也沒有棋子離開棋盤，所以一步棋就讓紅方多出兩子、黑方少了兩子。',
+  'A standing attack does nothing. Only the piece that moved converts, so a chariot already bearing on a piece has to move again to take it. Threats are made by moving.':
+    '停在原地的攻擊不起作用。只有走動的那枚棋子會轉化對方，所以已經瞄着某枚棋子的車必須再走一步才能拿下它。威脅只能靠走棋來製造。',
+  'What it does to xiangqi': '它對象棋做了什麼',
+  '**No endgame, ever.** There are no trades and nothing simplifies, and an endgame tablebase cannot exist because the material never shrinks. Xiangqi endgame theory, which is most of xiangqi theory, does not transfer at all.':
+    '**永遠沒有殘局。** 沒有兌子，局面不會簡化，殘局庫也不可能存在，因爲子力從不減少。象棋的殘局理論，也就是象棋理論的大部分，完全用不上。',
+  '**Cannons never weaken.** A xiangqi cannon needs a screen to capture, so in xiangqi it weakens as the board empties. Here the board never empties, and a cannon is as dangerous late in the game as on move 3.':
+    '**炮永遠不會變弱。** 象棋的炮需要炮架才能喫子，所以在象棋裏它會隨着棋盤變空而變弱。這裏棋盤從不變空，炮在對局後段和第 3 步時一樣危險。',
+  '**Advisors and elephants defend nothing.** They exist to guard against captures, and there are no captures. They still block lines and screen for cannons, but everything they were designed to do is gone.':
+    '**仕和相什麼也守不住。** 它們存在是爲了防喫子，而這裏沒有喫子。它們仍能擋住線路、給炮當炮架，但它們被設計出來要做的事都沒有了。',
+  '**Games are short and nobody draws.** Half of the 54 engine games below were over by ply 28. None of them was drawn, and none of 6,000 games of uniformly random legal moves was either. With no material to trade and no endgame to grind, every game reaches a decision.':
+    '**對局很短，沒有人和棋。** 下面 54 盤引擎對局中，一半在第 28 步前結束。沒有一盤是和棋，6,000 盤均勻隨機合法着法的對局也沒有一盤和棋。沒有子力可兌，也沒有殘局可磨，每一盤都會分出勝負。',
+  '**About 28% of legal moves lose on the spot.** That is the mean over the 1,696 positions in the engine games. The median position has 10% of its moves losing, and a minority of very sharp positions carries the mean. The share climbs from 24% in the first fifth of a game to 37% in the last, so there is no quiet opening phase to develop in.':
+    '**約 28% 的合法着法當場就輸。** 這是引擎對局中 1,696 個局面的平均值。中位局面有 10% 的着法會輸，平均值是由少數非常尖銳的局面拉高的。這個比例從對局前五分之一的 24% 升到最後五分之一的 37%，所以不存在可以安心出子的平靜開局階段。',
+  'Designing it: four decisions': '設計：四個決定',
+  '**The generals still may never face.** Xiangqi forbids the two generals from standing on one file with nothing between them, and we kept it. The alternative is to make the flying general a win, and it breaks: only the piece that moved converts, so unblocking the file wins nothing, and the generals end up facing each other while play carries on until someone shuffles a general along the file to claim it.':
+    '**將帥仍然不能照面。** 象棋禁止兩個將帥在同一條直線上中間無子相隔，我們保留了這條規則。另一種做法是把白臉將變成勝利條件，但它行不通：只有走動的棋子纔會轉化，所以打開這條線並不能取勝，結果將帥相對而立，對局卻繼續，直到有人把將帥沿着這條線挪一步去領取勝利。',
+  'Keeping the prohibition costs nothing and adds something xiangqi does not have. A piece pinned on the generals’ file cannot be removed, because nothing here removes anything, and converting it does not release it, since a conversion recolors in place. You can win the piece and still be unable to move it until a general steps off the file.':
+    '保留這條禁令沒有代價，還帶來了象棋沒有的東西。被釘在將帥線上的棋子無法被移走，因爲這裏沒有任何東西能移走棋子；轉化它也不能解開牽制，因爲轉化是原地變色。你可以贏得這枚棋子，卻仍然動不了它，直到一方的將帥離開這條線。',
+  '**Advisors and elephants are bound to the region they stand in, whoever owns them.** A converted advisor stands inside the enemy palace. Bound to its owner’s palace it would be frozen there for good; bound to the palace it stands in, it keeps playing and attacks from inside. From the starting array the two readings agree, because every advisor starts in its own palace.':
+    '**仕和相受它們所在的區域約束，不論歸誰所有。** 被轉化的仕站在敵方九宮裏。如果受原主人的九宮約束，它會永遠凍結在那裏；受它所在的九宮約束，它就能繼續行棋，從內部發動攻擊。從初始局面看兩種理解是一樣的，因爲每個仕都從自己的九宮出發。',
+  '**Soldiers are bound to their owner.** A soldier’s forward direction has to follow whoever owns it now, or a converted soldier marches away from its new side forever. Getting these two rules backwards breaks the game quietly.':
+    '**兵卒受其主人約束。** 兵卒的前進方向必須跟隨它現在的主人，否則被轉化的兵卒會永遠背離新的陣營前進。把這兩條規則弄反，會悄無聲息地毀掉這個遊戲。',
+  '**Draws need a progress clock.** With no captures, nearly every move can be undone, and three-fold repetition alone is not enough. The clock resets on the only two events that cannot be undone: a conversion, or a soldier move.':
+    '**和棋需要進度計數。** 沒有喫子，幾乎每一步都可以撤回，僅靠三次重複局面不夠。計數在僅有的兩種不可撤回的事件上清零：一次轉化，或一步兵卒走動。',
+  'How we tested it': '我們如何測試',
+  'No existing engine plays this. Pikafish and Fairy-Stockfish encode capture rules, and Fairy-Stockfish’s one conversion mechanism flips pieces enclosed by a drop, Reversi-style, which is a different rule. So we wrote one in Rust: alpha-beta search with a transposition table, principal variation search, late move reductions, and a quiescence search over conversions. Its piece values were fitted by logistic regression on self-play outcomes, and they beat our hand-picked values head to head.':
+    '現有的引擎都下不了這個棋。Pikafish 和 Fairy-Stockfish 都內置了喫子規則，而 Fairy-Stockfish 唯一的轉化機制是像黑白棋那樣翻轉被落子包圍的棋子，那是另一條規則。所以我們用 Rust 寫了一個：帶置換表的 alpha-beta 搜索、主要變例搜索、後期着法縮減，以及針對轉化的靜態搜索。它的子力價值是用邏輯迴歸在自對弈結果上擬合出來的，並在對抗中勝過了我們手工挑選的價值。',
+  'We do not quote the fitted values. An earlier fit on a quarter of the data had several values whose signs later reversed, which is more noise than a table of piece values can carry. The ordering survived: advisors and elephants come out close to worthless, which follows anyway from there being nothing to defend against.':
+    '我們不公佈擬合出的數值。早先用四分之一數據做的一次擬閤中，有好幾個數值後來符號反轉，這樣的噪聲是一張子力價值表承受不了的。排序保留了下來：仕和相幾乎一文不值，而這本來就可以從無需防守推出。',
+  'The rules were checked before anything was measured. All 54 engine games below replay through Mistboard’s TypeScript rule kernel with the same conversions and the same number of legal moves at every one of their 1,696 positions, and every board on this page is played through that kernel. Three results do not depend on how well the engine plays.':
+    '在測量任何東西之前，先檢查了規則。下面全部 54 盤引擎對局都能在 Mistboard 的 TypeScript 規則內核中重放，1,696 個局面中的每一個都得到相同的轉化和相同數量的合法着法；本頁的每一個棋盤也都經過這個內核。有三個結果不取決於引擎下得多好。',
+  Test: '測試',
+  'Uniformly random legal moves, 6,000 games': '均勻隨機合法着法，6,000 局',
+  '54.5% for the first mover, no draws': '先手方 54.5%，無和棋',
+  'Proof search from the starting array, 20.8 billion nodes': '從初始局面做證明搜索，208 億節點',
+  'No forced win within 13 plies': '13 步之內沒有強制勝',
+  'Legal moves that lose on the spot, 1,696 positions': '當場就輸的合法着法，1,696 個局面',
+  'Mean 28%, median 10%': '平均 28%，中位數 10%',
+  'Random play already favors the first mover. 54.5% over 6,000 games is about seven standard errors above even, so a tempo is worth something before either side plays well.':
+    '隨機對弈已經偏向先手方。6,000 局中 54.5% 比五五開高出約七個標準誤，所以在雙方都還下不好之前，一步先手就已經有價值。',
+  'The proof needs care, because an ordinary search cannot make one. Late move reductions search later moves shallower, so a normal search that finds no win has only shown that it did not look everywhere. With reductions and quiescence turned off, and the question asked as a yes or no at the mate threshold, the search proves there is no forced win within 13 plies. That took 20.8 billion nodes and about half an hour.':
+    '這個證明需要謹慎，因爲普通搜索做不出證明。後期着法縮減會把靠後的着法搜得更淺，所以普通搜索沒找到勝着，只說明它沒有處處都看到。關閉縮減和靜態搜索，並在殺棋閾值上以是或否來提問，搜索就證明了 13 步之內沒有強制勝。這用了 208 億個節點，約半小時。',
+  'We also checked whether the 78% moves when the engine gets stronger. It barely moves between 300,000 and 2 million nodes a move, a sevenfold range.':
+    '我們還檢查了引擎變強時 78% 是否會變化。從每步 30 萬節點到 200 萬節點，七倍的範圍內，它幾乎沒有變化。',
+  'Stability alone is not enough. An earlier version of this measurement varied its games with a six-ply random opening book, got 52.7%, and held it across a tenfold range of engine strength. It was stable because the book spent the very tempo being measured: six random plies throw the advantage away before either engine plays a move. A broken thermometer reads room temperature in every room. The 78% uses no book and takes its variety from evaluation jitter.':
+    '僅有穩定還不夠。這項測量的早期版本用六步隨機開局庫來讓對局多樣化，得到 52.7%，並且在十倍的引擎強度範圍內保持不變。它穩定，是因爲開局庫把要測量的那一步先手花掉了：六步隨機着法在兩個引擎走第一步之前就把優勢丟掉了。壞掉的溫度計在每個房間都顯示室溫。78% 不用開局庫，對局的多樣性來自評估抖動。',
+  'One cannon move decides it': '一步炮定勝負',
+  'The first mover wins 78% of engine games, measured from the starting array with no opening book and the two colors taking the first move in turn. Then we measured each of Red’s 42 legal first moves on its own, and the diagnosis changed shape.':
+    '先手方贏下 78% 的引擎對局，這是從初始局面測得的，不用開局庫，紅黑輪流先走。隨後我們單獨測量了紅方全部 42 個合法的第一步，診斷的樣子變了。',
+  'Red scores': '紅方得分',
+  'All 42 legal first moves, 24 engine games each at 300,000 nodes a move. Read down each pair of columns, lowest score first.':
+    '全部 42 個合法的第一步，每個以每步 30 萬節點下 24 盤引擎對局。按每一對列從上往下讀，得分從低到高。',
+  'The two best are the same idea, a cannon lifted to the fifth or sixth rank: h3h6 scores 91.7% and b3b5 87.5%. The three that score nothing are two elephant moves to the edge of the board, c1a3 and g1i3, and the general stepping up the middle, e1e2. Red’s first move is worth anywhere from nothing to 92%, so the 78% measures an engine that always finds the strong opening.':
+    '最好的兩步是同一個想法，把炮升到第五或第六橫線：h3h6 得 91.7%，b3b5 得 87.5%。得零分的三步是兩步走到棋盤邊上的相（c1a3 和 g1i3），以及帥從中路上一步（e1e2）。紅方第一步的價值從零到 92% 不等，所以 78% 衡量的是一個總能找到強勢開局的引擎。',
+  'From the starting array. The rings mark what each move converted, and on the last move the general it attacks.':
+    '從初始局面開始。圓圈標出每步棋轉化的棋子，最後一步標出它攻擊的將。',
+  'The starting array, Red to move.': '初始局面，紅方走棋。',
+  'The cannon fires up the b-file over Black’s own cannon and turns the horse on b10. It also threatens b5e5, with Black’s soldier on e7 as the screen and the general behind it. 32 of Black’s 38 replies lose at once, and b5e5 wins against every one of them.':
+    '炮沿 b 線隔着黑方自己的炮打過去，把 b10 的馬變了過來。它同時威脅 b5e5：以黑方 e7 的卒爲炮架，將就在後面。黑方 38 種應着中有 32 種當場就輸，而 b5e5 對每一種都能取勝。',
+  'Black answers in kind and turns the horse on h1. It looks reasonable, and it is one of the 32.':
+    '黑方以同樣方式回應，把 h1 的馬變過去。這步看起來很合理，但它就是那 32 種之一。',
+  'The cannon fires over the soldier on e7 at the general on e10, and the game is over.':
+    '炮隔着 e7 的卒打向 e10 的將，對局結束。',
+  'A xiangqi cannon needs exactly one piece between it and its target, and Black’s starting position supplies that piece in the right place for free. The threat exists because the xiangqi starting array happens to sit where Benedict’s rule can use it.':
+    '象棋的炮和目標之間需要正好一枚棋子，而黑方的初始局面免費把這枚棋子擺在了恰好的位置。這個威脅之所以存在，是因爲象棋的初始局面恰好落在本尼迪克特規則能利用的地方。',
+  'Every game the engine played': '引擎下的每一盤棋',
+  'All 54 games from the strongest setting, 2 million nodes a move, uncurated. Red moved first in 36 and won 33; Black moved first in 18 and won 13. The first mover won 46, and the eight it lost are the ones worth opening.':
+    '最強設置下的全部 54 盤對局，每步 200 萬節點，未經挑選。紅方先走 36 盤，贏 33 盤；黑方先走 18 盤，贏 13 盤。先手方贏了 46 盤，輸掉的那 8 盤最值得打開看看。',
+  'All 54 games, each replayed through the rule kernel. The rings mark the pieces each move converted, and on the last move the general it attacks. The arrow keys step through the game on the board.':
+    '全部 54 盤對局，每一盤都經規則內核重放。圓圈標出每步棋轉化的棋子，最後一步標出它攻擊的將。用方向鍵逐步瀏覽棋盤上的對局。',
+  'First mover won (%1)': '先手方勝（%1）',
+  'First mover lost (%1)': '先手方負（%1）',
+  '%1 moved first and won in %2 plies.': '%1先走，%2 步獲勝。',
+  '%1 moved first and lost in %2 plies.': '%1先走，%2 步落敗。',
+  'Engine, 2M nodes': '引擎，200 萬節點',
+  'The pie rule': '餅乾規則',
+  'The spread across those 42 openings is what makes the game recoverable, and the repair already exists. The pie rule divides a cake the way two children do: one cuts, the other picks. Red plays a first move, then Black chooses whether to stay Black or take over Red’s position. Playing the strongest opening becomes pointless when Black can simply take it.':
+    '這 42 種開局之間的差距正是這個遊戲可以挽救的原因，而修補辦法已經存在。餅乾規則像兩個孩子分蛋糕：一個切，另一個挑。紅方先走第一步，然後黑方選擇繼續執黑，還是接手紅方的局面。當黑方可以直接拿走最強的開局時，走最強的開局就沒有意義了。',
+  'So Red is pushed toward the move closest to even, and four of the 42 sit there. Two are the cannon declining its own best square, and two are the quietest developing moves on the board.':
+    '於是紅方被推向最接近均勢的着法，42 步中有四步在那裏。兩步是炮放棄自己的最佳位置，另外兩步是棋盤上最安靜的出子着法。',
+  'The four first moves closest to even, with what Red scores after each.':
+    '最接近均勢的四個第一步，以及每一步之後紅方的得分。',
+  'b3b4, 45.8%. The cannon steps up one square, short of the fifth rank that does the damage.':
+    'b3b4，45.8%。炮向前一步，還沒到造成破壞的第五橫線。',
+  'b3b7, 50.0%. The cannon goes all the way in, converting now and giving up the standing threat.':
+    'b3b7，50.0%。炮一直打進去，立刻轉化，放棄了持續的威脅。',
+  'd1e2, 54.2%. An advisor develops into the middle of the palace.':
+    'd1e2，54.2%。仕走到九宮中心出子。',
+  'e4e5, 54.2%. The central soldier: the one quiet developing move that is not a blunder.':
+    'e4e5，54.2%。中兵：唯一一步不是敗着的安靜出子着法。',
+  'Held to one of those, the game lands near 50%, because Red can no longer use the advantage. Hex is a proven first-player win at every board size and is played competitively, because of the swap.':
+    '限定在其中一步上，對局就會接近 50%，因爲紅方再也無法利用這份優勢。六貫棋（Hex）在每種棋盤大小下都被證明是先手勝，卻因爲換邊規則而被競技性地下着。',
+  'Those four numbers come from 24 games each: too few to rank them against each other, and enough to say the spread from 0% to 92% is real. Confirming that one of them holds near 50% over a proper sample is the open work.':
+    '這四個數字各來自 24 盤對局：不足以在它們之間排名，但足以說明從 0% 到 92% 的差距是真實的。用足夠的樣本確認其中一步能穩定在 50% 附近，是尚待完成的工作。',
+  'The pie rule fixes fairness and leaves the sharpness alone. The losing-move share is a property of the rules, so it does not move. The contest becomes even and stays sharp, and whether people want to play that is a question win rates cannot answer.':
+    '餅乾規則修正了公平性，而沒有改變尖銳程度。當場就輸的着法比例是規則本身的屬性，所以它不會變。比賽變得均衡，卻依然尖銳；人們是否想下這樣的棋，勝率回答不了。',
+  'It is not shippable as a competitive game. No rated ladder survives the first mover winning three games in four.':
+    '它還不能作爲競技遊戲上線。先手方每四盤贏三盤，任何等級分階梯都撐不住。',
+  'Unfair does not mean unplayable. Losing chess is a proven first-player win and is played every day, because the proof runs down lines no human finds, and Hex is played behind the swap. What is different here is depth. This 78% rests on one move you can say in a sentence, lift a cannon to the fifth rank, and an engine finds it every time. A proven win nobody can reach is a curiosity. A win you can memorize is the game.':
+    '不公平不等於不能下。自殺棋已被證明是先手勝，卻每天都有人下，因爲那個證明走的是人類找不到的變化；六貫棋則在換邊規則下照樣被人下。這裏的不同在於深度。這個 78% 依靠的是一步一句話就能說清的棋，把炮升到第五橫線，而引擎每次都能找到它。沒人夠得着的已證勝局只是奇聞；一個能背下來的勝法就是整個遊戲。',
+  'Two repairs beyond the pie rule are untested. Marking the general and giving the defender one move to answer would blunt the cannon threat directly. Or the starting array could move its central soldiers, since the threat exists only because Black’s soldier stands where a cannon needs its screen.':
+    '餅乾規則之外，還有兩個修補辦法未經測試。把將帥標記出來、給防守方一步應對的機會，可以直接削弱炮的威脅。或者改動初始局面中的中兵，因爲這個威脅之所以存在，只是因爲黑方的卒恰好站在炮需要炮架的位置。',
+  'Does Red have a forced win?': '紅方有強制勝嗎？',
+  'Everything above is a win rate, a statement about two particular engines. Whether the game is a first-player win under perfect play has an answer that does not depend on how well anything plays. What we have is a lower bound, no forced win within 13 plies. That rules out a cheap one, and half of the engine games were over by ply 28.':
+    '上面的一切都是勝率，是關於兩個特定引擎的陳述。這個遊戲在完美對弈下是否先手勝，其答案不取決於任何東西下得多好。我們手裏的是一個下界，13 步之內沒有強制勝。這排除了廉價的勝法，而引擎對局中有一半在第 28 步前就結束了。',
+  'Two things make the question harder than it looks. Material is conserved, so there is no endgame database to build and nothing for a forward search to meet in the middle. Strategy stealing does not apply either: pieces move and never accumulate, so a first player cannot make an arbitrary move and then discard it. What helps is that games are short and always decisive, a shallow and sharply terminal tree, which is the shape proof-number search is good at.':
+    '有兩件事讓這個問題比看起來更難。子力守恆，所以沒有殘局庫可建，正向搜索也沒有可以會合的中點。策略竊取也用不上：棋子只會移動，從不累積，所以先手方不能隨便走一步再把它丟掉。有幫助的是對局短且總能分出勝負，是一棵淺而終局尖銳的樹，而這正是證明數搜索擅長的形狀。',
+  'The next rung is 14 plies. The proof splits across Red’s 42 first moves and runs them in parallel at almost no loss, because with no forced win no branch ever cuts off another. Splitting two plies deep gives 1,740 independent jobs, enough for a cluster. Proof-number search, which spends its effort on the narrowest part of the proof tree, is how Mark Watkins solved losing chess, and we have not implemented it yet.':
+    '下一級是 14 步。證明可以按紅方 42 個第一步拆分並幾乎無損地並行運行，因爲既然沒有強制勝，任何一個分支都不會剪掉另一個。拆到兩步深，會得到 1,740 個獨立任務，足以用上一個集羣。證明數搜索把精力花在證明樹最窄的部分，馬克·沃特金斯正是用它解決了自殺棋，而我們還沒有實現它。',
+  'A weak solution, or an ultra-weak one by an argument we have not thought of, would settle the pie rule question too: a proven first-player win is exactly the case the swap was invented for. The engine, the test harness, the 54 games and the full opening table are in one repository.':
+    '弱解，或者通過我們沒想到的論證得到的超弱解，也會順帶解決餅乾規則的問題：已被證明的先手勝正是換邊規則被髮明出來要應對的情形。引擎、測試工具、54 盤對局和完整的開局表都在一個代碼倉庫裏。',
+  'Check the numbers': '覈對數據',
+  'Benedict Xiangqi: Benedict Chess on the Xiangqi Board, Measured':
+    '本尼迪克特象棋：象棋棋盤上的本尼迪克特國際象棋，實測',
   'Check the proofs yourself': '親自檢驗這些證明',
   'Learn xiangqi': '學習象棋',
   '2. Rxh1 Rxb10: RED TO MOVE': '2. Rxh1 Rxb10：輪到紅方',
