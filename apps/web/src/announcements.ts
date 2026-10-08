@@ -59,6 +59,14 @@ const baseAnnouncements: Announcement[] = [
     cta: 'Read the article',
   },
   {
+    date: '2026-10-08',
+    kind: 'update',
+    headline: 'Jieqi games now show what your face-down pieces could be.',
+    body: "In a live jieqi game, a row beside each side's captured pieces now lists what that side's face-down pieces could still turn out to be, with how many of each remain and the chance of each. It counts only what the rules already show, so it is on for both players and spectators, rated games included.",
+    href: '/?play=computer&gameSpecId=jieqi',
+    cta: 'Play jieqi',
+  },
+  {
     date: '2026-10-07',
     kind: 'update',
     headline: 'Jieqi review now marks the luck of every reveal with a die.',
