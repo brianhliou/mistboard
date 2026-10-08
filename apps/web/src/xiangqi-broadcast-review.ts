@@ -89,7 +89,6 @@ export function mountBroadcastBoardReview(
 
   const metaCard = createGameMetaCard({
     markerId: 'xiangqi',
-    glyph: '象',
     headline: [eventName ?? t('broadcast.eyebrow')],
     // Lichess's board view names its event as the way back to the boards.
     headlineHref: `/broadcast/xiangqi/${encodeURIComponent(

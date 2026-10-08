@@ -89,8 +89,6 @@ let annotations: BoardAnnotations | null = null;
 
 const xiangqiWebTenant: WebVariantTenant<XiangqiColor> = {
   displayName: 'variant.xiangqi.name',
-  metaMarkerId: 'xiangqi',
-  metaGlyph: '象',
   colors: ['red', 'black'],
   isColor: isXiangqiColor,
   oppositeColor: (color) => (color === 'red' ? 'black' : 'red'),

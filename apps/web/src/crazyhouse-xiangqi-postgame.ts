@@ -168,7 +168,7 @@ export function crazyhouseXiangqiReviewConfig(
   const gamePlayers = postgame.game.players ?? [];
   const status = reviewOutcomeLine(gameOutcome(postgame.game.result), postgame.game.termination);
   const { metaCard, details } = buildReviewMeta({
-    markerId: 'xiangqi',
+    gameSpecId: CRAZYHOUSE_XIANGQI_SPEC_ID,
     variantName: variantDisplayLabel(CRAZYHOUSE_XIANGQI_SPEC_ID),
     game: postgame.game,
     status,

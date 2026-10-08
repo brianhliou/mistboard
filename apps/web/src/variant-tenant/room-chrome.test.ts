@@ -65,6 +65,7 @@ type CtxOverrides = Partial<{
   abortDeadline: number | null;
   roomMode: string;
   playAgainRequestBody: Record<string, unknown>;
+  gameSpecId: string;
 }>;
 
 function chromeHarness(
@@ -72,6 +73,7 @@ function chromeHarness(
   tenantOverride: WebVariantTenant<Color> = tenant,
 ) {
   const ctx: TenantChromeContext<Color> = {
+    ...(overrides.gameSpecId !== undefined ? { gameSpecId: overrides.gameSpecId } : {}),
     view: () => overrides.view ?? playingView(),
     seat: () => overrides.seat ?? 'white',
     connectionState: () => overrides.connectionState ?? 'connected',
@@ -325,15 +327,20 @@ describe('tenant room chrome player names', () => {
     expect(refs.playerBottom.querySelector('.presence-dot')).not.toBeNull();
   });
 
-  it('gives the meta card the variant marker, not a family glyph', () => {
-    const markerTenant: WebVariantTenant<Color> = { ...tenant, metaMarkerId: 'jungle-flip' };
-    const { chrome, refs } = chromeHarness({}, markerTenant);
+  it('gives the meta card the variant marker of the room spec, not a family glyph', () => {
+    const { chrome, refs } = chromeHarness({ gameSpecId: 'jungle-flip' });
     chrome.renderMeta();
     const icon = refs.gameInfo.querySelector('.game-meta-card__icon');
     // The room is where a game's identity matters most; it reads the same icon
     // language as the picker, watch rail, and review page rather than a CJK
     // glyph shared by every variant in the family.
     expect(icon?.querySelector('[data-variant-marker-id="jungle-flip"]')).not.toBeNull();
+  });
+
+  it('renders no icon box, never a stand-in glyph, for a spec with no marker', () => {
+    const { chrome, refs } = chromeHarness({ gameSpecId: 'mahjong' });
+    chrome.renderMeta();
+    expect(refs.gameInfo.querySelector('.game-meta-card__icon')).toBeNull();
   });
 
   it('heads the meta card Rated for a rated room and Casual otherwise', () => {

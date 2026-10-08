@@ -1,7 +1,7 @@
 // Shared game meta card (lichess/playstrategy-style), used by the live room's
 // left rail AND the review pages' left rail so both surfaces read identically:
 //
-//   [glyph]  Xiangqi
+//   [marker] Xiangqi
 //            5+0 • Casual
 //            3 days ago
 //   ● red player (2203)            1
@@ -86,11 +86,10 @@ export function seatResultScores(
 
 export type GameMetaCardConfig = {
   /** Finalized variant marker for the icon box (the site-wide icon language:
-   *  picker, watch rail, puzzles, profile). Wins over `glyph` when set. */
+   *  picker, watch rail, puzzles, profile). Omitted, the card has no icon box.
+   *  There is deliberately no free-text glyph alternative: a stand-in glyph
+   *  ('象', '🦆') is how a room read differently from every other surface. */
   markerId?: VariantMiniId;
-  /** Variant glyph for the icon box (e.g. '象', '♔', '☗', '虎'). Fallback for
-   *  variants without a finalized marker. */
-  glyph?: string;
   /** "5+0 • Casual" style segments; falsy segments are skipped. */
   headline: Array<string | null | undefined>;
   /** Makes the headline text a link (a broadcast game's event page). */
@@ -126,12 +125,6 @@ export function createGameMetaCard(config: GameMetaCardConfig): GameMetaCard {
     icon.className = 'game-meta-card__icon';
     icon.setAttribute('aria-hidden', 'true');
     icon.innerHTML = renderVariantMarker(config.markerId, { size: 40 });
-    head.append(icon);
-  } else if (config.glyph) {
-    const icon = document.createElement('span');
-    icon.className = 'game-meta-card__icon';
-    icon.textContent = config.glyph;
-    icon.setAttribute('aria-hidden', 'true');
     head.append(icon);
   }
   const headText = document.createElement('div');

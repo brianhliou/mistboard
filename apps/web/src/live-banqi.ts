@@ -130,8 +130,6 @@ function banqiLiveSeatInk(seat: BanqiSeat): BanqiColor | null {
 
 const banqiWebTenant: WebVariantTenant<BanqiSeat> = {
   displayName: 'variant.banqi.name',
-  metaMarkerId: 'banqi',
-  metaGlyph: '象',
   colors: ['red', 'black'],
   isColor: isBanqiSeat,
   oppositeColor: (color) => (color === 'red' ? 'black' : 'red'),

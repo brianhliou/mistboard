@@ -30,6 +30,7 @@ import { type ProfileIdentity, playerNameEl, profileTargetFor } from '../profile
 import { createGameMetaCard, seatResultScores } from '../review/game-meta-card.js';
 import type { VariantMiniId } from '../variant-mini-boards.js';
 import { localizedRulesHref } from '../variant-public-surfaces.js';
+import { variantMiniIdForRawVariant } from '../variants.js';
 import { formatClock, formatDayClock } from '../web-utils.js';
 import { capitalize, noticeBody, noticeTitle, presenceDot } from './chrome-dom.js';
 
@@ -61,15 +62,11 @@ export type TenantSeatKey = Extract<I18nKey, `setup.${string}` | `live.seat${str
 export type WebVariantTenant<C extends string> = {
   // Variant name key ('variant.xiangqi.name').
   displayName: I18nKey;
-  // Meta-card icon: the finalized variant marker, the same icon language the
-  // picker, watch rail, puzzles, profile, and the review page's meta card use.
-  // Set it on every tenant — the room is the one surface where a game's identity
-  // matters most, and a family glyph reads as "some xiangqi" where the marker
-  // reads as the exact variant.
-  metaMarkerId?: VariantMiniId;
-  // Fallback icon glyph, family-canonical (象 xiangqi, 虎 jungle,
-  // ♔ chess), for tenants with no marker. Omitting both renders no icon box.
-  metaGlyph?: string;
+  // No meta-card icon field: the chrome derives the variant marker from the
+  // room's gameSpecId (variants.ts), the same lookup the picker, watch rail and
+  // review page use. Tenants used to supply it, and a free-text glyph ('🦆',
+  // '象') or a family marker ('xiangqi' on atomic) is what made the room the one
+  // surface that showed a different icon.
   // Move order: [first mover, second mover]; also the board's default
   // top-to-bottom reading for a colors[0] viewer.
   colors: readonly C[];
@@ -531,8 +528,7 @@ export function createTenantRoomChrome<C extends string>(
     );
 
     const card = createGameMetaCard({
-      markerId: tenant.metaMarkerId,
-      glyph: tenant.metaGlyph,
+      markerId: roomMarkerId(ctx.gameSpecId),
       // A guest refused a rated seat never receives a snapshot, so the refusal
       // itself is what says the room is rated.
       headline: [
@@ -1050,3 +1046,10 @@ const SEAT_WORD_KEYS: Readonly<Record<string, I18nKey>> = {
   west: 'live.seatWest',
   north: 'live.seatNorth',
 };
+
+/** The meta card's variant marker for a room's game spec (legacy aliases
+ *  resolve through their canonical spec). Undefined for a spec that is never
+ *  shown as a variant (mahjong): no icon box, never a stand-in glyph. */
+export function roomMarkerId(gameSpecId: string | undefined): VariantMiniId | undefined {
+  return (gameSpecId && variantMiniIdForRawVariant(gameSpecId)) || undefined;
+}

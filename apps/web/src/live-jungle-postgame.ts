@@ -147,7 +147,7 @@ function renderPostgame(root: HTMLElement, postgame: JunglePostgameResponse): vo
     postgame.game.termination,
   );
   const { metaCard, details } = buildReviewMeta({
-    markerId: 'jungle',
+    gameSpecId: JUNGLE_SPEC_ID,
     variantName: variantDisplayLabel(JUNGLE_SPEC_ID),
     game: postgame.game,
     status,

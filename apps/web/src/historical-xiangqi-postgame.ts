@@ -93,7 +93,6 @@ function renderHistoricalXiangqiGame(root: HTMLElement, game: HistoricalXiangqiG
   const replay = buildXiangqiReplayFromMoves(game.moves, undefined, { record: true });
   const metaCard = createGameMetaCard({
     markerId: 'xiangqi',
-    glyph: '象',
     headline: ['Historical game'],
     variantName: variantDisplayLabel(XIANGQI_SPEC_ID),
     subline: [formatDate(game.playedOn), game.eventName].filter(Boolean).join(' · '),

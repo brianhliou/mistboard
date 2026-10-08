@@ -278,7 +278,7 @@ describe('the duck token', () => {
     return svg.slice(start, svg.indexOf('</g></g>', start) + 8);
   };
 
-  it('is drawn larger than a piece, with the gold ring and a drop shadow', () => {
+  it('is drawn larger than a piece, with the gold ring and no shadow', () => {
     const svg = duckXiangqiBoardSvg(view(), 'red', {
       interactive: true,
       phase: PIECE_PHASE(null),
@@ -290,8 +290,10 @@ describe('the duck token', () => {
     expect(duck).toContain(`scale(${(XIANGQI_LIVE_PIECE_SIZE * DUCK_TOKEN_SCALE) / 100})`);
     expect(duck).toContain('class="dkx-duck-ring"');
     expect(duck).toContain('stroke="#f2b705"');
-    expect(duck).toContain('filter="url(#dkx-duck-shadow)"');
-    expect(svg).toContain('<filter id="dkx-duck-shadow"');
+    // Flat like every piece on the board (Brian, 2026-10-08): the ring and
+    // size make it pop; a shadow was the board's only 3D effect.
+    expect(svg).not.toContain('dkx-duck-shadow');
+    expect(duck).not.toContain('filter=');
     // The spike's dark outer rim stays out.
     expect(duck).not.toContain('#5c3d00');
   });

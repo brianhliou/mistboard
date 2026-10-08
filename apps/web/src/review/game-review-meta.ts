@@ -20,6 +20,7 @@
 // Everything else (time control, casual/rated, time-ago, players, marker, spectator
 // room) is plain envelope data and lives here so it can't drift between variants.
 
+import type { GameSpecId } from '@mistboard/game';
 import {
   brandedEngineName,
   type GameOutcome,
@@ -31,8 +32,8 @@ import { t } from '../i18n/catalog.js';
 import { currentLocale } from '../i18n/locale.js';
 import { profileTargetFor } from '../profile-link.js';
 import { correspondenceLabelFromMs } from '../replay-meta.js';
-import type { VariantMiniId } from '../variant-mini-boards.js';
 import { localizedRulesHrefForRoom } from '../variant-public-surfaces.js';
+import { variantMiniIdForGameSpec } from '../variants.js';
 import {
   createGameMetaCard,
   type GameMetaPlayer,
@@ -88,11 +89,11 @@ export type ReviewGameOrigin = {
 };
 
 export type ReviewMetaConfig = {
-  /** Finalized variant marker id (usually === GameSpecId; translate spec →
-   *  VariantMiniId before calling where they differ). */
-  markerId?: VariantMiniId;
-  /** Glyph fallback for variants without a finalized marker. */
-  glyph?: string;
+  /** The game's spec. The card's icon is that spec's variant marker
+   *  (variants.ts), so a review page cannot name a different marker or a
+   *  free-text glyph: a duck emoji and a family 'xiangqi' marker on Crazyhouse
+   *  were both hand-picked here before. */
+  gameSpecId: GameSpecId;
   /** Accented trailing headline segment, e.g. 'Xiangqi', 'Flip Jungle'. */
   variantName: string;
   game: ReviewMetaGame;
@@ -116,8 +117,7 @@ export type ReviewMeta = {
 export function buildReviewMeta(config: ReviewMetaConfig): ReviewMeta {
   const { game } = config;
   const card = createGameMetaCard({
-    markerId: config.markerId,
-    glyph: config.glyph,
+    markerId: variantMiniIdForGameSpec(config.gameSpecId) ?? undefined,
     headline: [reviewTimeControlLabel(game), game.rated ? t('watch.rated') : t('watch.casual')],
     variantName: config.variantName,
     variantHref: localizedRulesHrefForRoom(game.roomId),

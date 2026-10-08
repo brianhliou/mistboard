@@ -246,7 +246,7 @@ describe('labelize', () => {
 describe('buildReviewMeta', () => {
   it('renders a meta card + spectator room from the envelope', () => {
     const { metaCard, details } = buildReviewMeta({
-      markerId: 'xiangqi',
+      gameSpecId: 'xiangqi',
       variantName: 'Xiangqi',
       status: 'Red wins by Checkmate',
       game: {
@@ -272,7 +272,7 @@ describe('buildReviewMeta', () => {
 
   it('shows an imported game its event and credit, engine tags, and no spectator room', () => {
     const { metaCard, details } = buildReviewMeta({
-      markerId: 'jieqi',
+      gameSpecId: 'jieqi',
       variantName: 'Jieqi',
       status: 'Checkmate • Red is victorious',
       game: {
@@ -312,7 +312,7 @@ describe('buildReviewMeta', () => {
 
   it('marks the winning row and scores both seats from the envelope result', () => {
     const { metaCard } = buildReviewMeta({
-      markerId: 'xiangqi',
+      gameSpecId: 'xiangqi',
       variantName: 'Xiangqi',
       status: 'Checkmate • Red is victorious',
       game: {
@@ -336,7 +336,7 @@ describe('buildReviewMeta', () => {
 
   it('scores a draw on both rows and marks neither as the winner', () => {
     const { metaCard } = buildReviewMeta({
-      markerId: 'xiangqi',
+      gameSpecId: 'xiangqi',
       variantName: 'Xiangqi',
       status: 'Draw • no progress',
       game: {

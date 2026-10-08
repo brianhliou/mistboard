@@ -156,7 +156,7 @@ function renderPostgame(root: HTMLElement, postgame: FortressXiangqiPostgameResp
 
   const status = reviewOutcomeLine(gameOutcome(postgame.game.result), postgame.game.termination);
   const { metaCard, details } = buildReviewMeta({
-    markerId: 'fortress-xiangqi',
+    gameSpecId: FORTRESS_XIANGQI_SPEC_ID,
     variantName: variantDisplayLabel(FORTRESS_XIANGQI_SPEC_ID),
     game: postgame.game,
     status,

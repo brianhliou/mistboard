@@ -83,8 +83,6 @@ let annotations: BoardAnnotations | null = null;
 
 const crazyhouseXiangqiWebTenant: WebVariantTenant<CrazyhouseXiangqiColor> = {
   displayName: 'variant.crazyhouseXiangqi.name',
-  metaMarkerId: 'xiangqi',
-  metaGlyph: '象',
   colors: ['red', 'black'],
   isColor: isXiangqiColor,
   oppositeColor: (color) => (color === 'red' ? 'black' : 'red'),
