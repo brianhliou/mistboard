@@ -278,6 +278,10 @@ export const banqiLuckArticle: Article = {
           text:
             'Jieqi gets the same treatment with a different pool. A jieqi reveal draws from your own remaining dark pieces, so you know the color and not the piece. A banqi tile is dark to both players, color included. Different bags, same arithmetic, and jungle’s flip variant makes a third. Every one of them gets the dashed line.',
         },
+        {
+          kind: 'paragraph',
+          text: 'How much of a flip game the flips decide is measured in [Flip Jungle’s skill ceiling](/blog/flip-jungle-skill-ceiling): an engine with 512 times the search still loses 23% of its games.',
+        },
       ],
     },
     {

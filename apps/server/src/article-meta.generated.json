@@ -89,6 +89,12 @@
     "description": "Chinese chess with one duck both players share. The rules take a minute to read. What decides your first game takes longer, starting with the fact that the duck you place is a cannon platform for your opponent and never for you.",
     "status": "published"
   },
+  "flip-jungle-skill-ceiling": {
+    "title": "Flip Jungle: 512 times the search still loses 23% of games",
+    "kind": "article",
+    "description": "Flip Jungle is 4×4 Jungle Chess with every animal face-down. A near-perfect engine shows how much skill survives the flips: 512 times the search buys about 242 Elo and still loses 23% of its games.",
+    "status": "published"
+  },
   "fog-chess": {
     "title": "Fog Chess Rules",
     "kind": "rules",

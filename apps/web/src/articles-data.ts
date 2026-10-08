@@ -20,6 +20,7 @@ import { jieqiPlatformArticle } from './articles/content/jieqi-platform.js';
 import { pikafishArticle } from './articles/content/pikafish.js';
 import { abJchessArticle } from './articles/content/ab-jchess.js';
 import { pikafishRevealBugArticle } from './articles/content/pikafish-reveal-bug.js';
+import { flipJungleSkillCeilingArticle } from './articles/content/flip-jungle-skill-ceiling.js';
 import { katagoJungleArticle } from './articles/content/katago-jungle.js';
 import { duckXiangqiGameTreeArticle } from './articles/content/duck-xiangqi-game-tree.js';
 import { solverAuditArticle } from './articles/content/solver-audit.js';
@@ -113,6 +114,7 @@ export const articles: Article[] = [
   banqiStatisticsArticle,
   banqiEngineArticle,
   banqiLuckArticle,
+  flipJungleSkillCeilingArticle,
   puzzleMiningArticle,
   puzzleTwoAnswersArticle,
   riverbankCannonArticle,

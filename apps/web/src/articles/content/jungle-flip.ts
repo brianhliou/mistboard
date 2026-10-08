@@ -136,6 +136,10 @@ export const jungleFlipArticle: Article = {
           kind: 'paragraph',
           text: 'The [companion study](/study/uKxJ60mN) has all twenty games from the run, each opening into its own deal, with a note on how it went.',
         },
+        {
+          kind: 'paragraph',
+          text: 'How strong is the bot, and how much do the flips decide? [Flip Jungle’s skill ceiling](/blog/flip-jungle-skill-ceiling) grades it against exact endgame tables and measures what 512 times the search is worth.',
+        },
       ],
     },
     {
