@@ -709,35 +709,34 @@
   display: none;
 }
 
-/* Xiangqi board swatches (presentation style, not an open-ended colour picker). */
+/* Xiangqi board tiles: one per board shape. The lined and square-grid tiles
+   wear the picked board colour (--xq-custom-*, set by theme.ts; unset for the
+   default International colour), so the row previews the board you get. */
+.theme-tile-preview-xqboard[data-id="lined"] {
+  background-color: var(--xq-custom-bg, #f5dca8);
+  background-image:
+    linear-gradient(
+      to right,
+      color-mix(in srgb, var(--xq-custom-ink, #5a3a14) 55%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--xq-custom-ink, #5a3a14) 55%, transparent) 1px,
+      transparent 1px
+    );
+  background-position: 7px 7px;
+  background-size: 12px 12px;
+}
 .theme-tile-preview-xqboard[data-id="cell"] {
-  background-color: #f5dca8;
+  background-color: var(--xq-custom-bg, #f5dca8);
   background-image: conic-gradient(
-    rgba(90, 58, 20, 0.12) 25%,
+    color-mix(in srgb, var(--xq-custom-ink, #5a3a14) 12%, transparent) 25%,
     transparent 0 50%,
-    rgba(90, 58, 20, 0.12) 0 75%,
+    color-mix(in srgb, var(--xq-custom-ink, #5a3a14) 12%, transparent) 0 75%,
     transparent 0
   );
   background-size: 16px 16px;
-}
-.theme-tile-preview-xqboard[data-id="international"] {
-  background: #f5dca8;
-}
-.theme-tile-preview-xqboard[data-id="traditional"] {
-  background: #d9bd82;
-}
-.theme-tile-preview-xqboard[data-id="jungle"] {
-  background-color: #b9d98a;
-  background-image:
-    linear-gradient(#fbe9c6, #fbe9c6),
-    conic-gradient(#a8cd78 25%, transparent 0 50%, #a8cd78 0 75%, transparent 0);
-  background-size:
-    38% 38%,
-    16px 16px;
-  background-position:
-    center,
-    0 0;
-  background-repeat: no-repeat, repeat;
 }
 
 /* Xiangqi piece tiles show a representative glyph centered on a neutral disc. */
@@ -1225,4 +1224,84 @@
 :root[data-effective-theme="dark"] .clock-to-move {
   background: var(--site-accent-soft);
   color: var(--site-accent-strong);
+}
+
+/* Xiangqi board colour (gear > Board, 2026-10-08): round swatches for the
+   presets (xiangqi-board-color.ts sets each fill inline as --xq-swatch). */
+/* 20px + 5px gaps keeps all eight (seven presets and Jungle, on the square
+   grid) on one row in the 199px panel body; the selected ring stays inside the
+   gap. */
+.xq-board-color-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.xq-board-color-swatch {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--site-text) 22%, transparent);
+  border-radius: 999px;
+  background: var(--xq-swatch, #f5dca8);
+  cursor: pointer;
+  transition:
+    box-shadow 120ms ease,
+    transform 120ms ease;
+}
+
+.xq-board-color-swatch:hover {
+  transform: scale(1.08);
+}
+
+.xq-board-color-swatch:focus-visible {
+  outline: 2px solid var(--site-focus, var(--site-accent));
+  outline-offset: 2px;
+}
+
+.xq-board-color-swatch.selected {
+  box-shadow:
+    0 0 0 2px var(--site-panel, #fff),
+    0 0 0 4px var(--site-accent);
+}
+
+.xq-board-color-swatch[data-xq-board-color="grain"] {
+  background:
+    repeating-linear-gradient(172deg, rgba(106, 69, 31, 0.16) 0 2px, transparent 2px 6px), #e2bf88;
+}
+
+/* Jungle: the lawn (app-base.css's Jungle tokens) with a strip of river across
+   the middle. Offered only on the square grid, the one layout Jungle draws on. */
+.xq-board-color-swatch[data-xq-board-color="jungle"] {
+  background: linear-gradient(to bottom, #b9d98a 0 38%, #7fb7cf 38% 62%, #a8cd78 62% 100%);
+}
+
+:root:not([data-xiangqi-board-layout="cell"]) .xq-board-color-swatch[data-xq-board-color="jungle"] {
+  display: none;
+}
+
+/* River text: Off / 楚河 漢界 / Mistboard. Each button sizes to its label and
+   shares the spare width, so "Mistboard" never overflows a third of the row. */
+.xq-river-text-row {
+  display: flex;
+  gap: 4px;
+}
+
+.xq-river-text-row .theme-mode-option {
+  flex: 1 1 auto;
+  min-height: 32px;
+  padding: 0 6px;
+  white-space: nowrap;
+}
+
+.appearance-submenu[data-key="board"] .xq-start-markers-field {
+  padding: 0 12px 12px;
+}
+
+/* The river text and the start brackets exist only on the lined board, so both
+   hide on the square grid (which Jungle also is). */
+:root[data-xiangqi-board-layout="cell"] .xq-river-text-field,
+:root[data-xiangqi-board-layout="cell"] .xq-start-markers-field {
+  display: none;
 }

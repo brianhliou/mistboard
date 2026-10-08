@@ -8,11 +8,13 @@
 
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  XIANGQI_START_POINTS,
   type XiangqiSurfaceConfig,
   xiangqiSurfaceGrid,
   xiangqiSurfacePalace,
   xiangqiSurfacePalaceBands,
   xiangqiSurfaceRiver,
+  xiangqiSurfaceStartMarkers,
 } from './xiangqi-board-surface.js';
 
 const STANDARD: XiangqiSurfaceConfig = {
@@ -22,7 +24,7 @@ const STANDARD: XiangqiSurfaceConfig = {
     { fileMin: 3, fileMax: 5, rankMin: 8, rankMax: 10 },
   ],
   riverAfterRank: 5,
-  riverLabel: '楚 河   漢 界',
+  riverText: true,
 };
 
 describe('xiangqi board surface, intersection layout', () => {
@@ -50,6 +52,15 @@ describe('xiangqi board surface, intersection layout', () => {
     expect(svg).toContain('楚 河   漢 界');
   });
 
+  // River text (2026-10-08): both captions are drawn and CSS shows the chosen
+  // one, so switching needs no re-render.
+  it('draws both the classic and the Mistboard river caption', () => {
+    const svg = xiangqiSurfaceRiver(STANDARD, 'red', 'intersection');
+    expect(svg).toContain('class="xq-live-river-label"');
+    expect(svg).toContain('class="xq-live-river-brand"');
+    expect(svg).toContain('>Mistboard<');
+  });
+
   it('draws two crossed diagonals per palace', () => {
     const svg = xiangqiSurfacePalace(STANDARD, 'red', 'intersection');
     expect(svg.match(/<line /g)).toHaveLength(4);
@@ -74,6 +85,8 @@ describe('xiangqi board surface, square grid layout', () => {
     expect(svg).toContain('xq-live-cell-river');
     expect(svg).toContain('height="12"');
     expect(svg).not.toContain('楚');
+    expect(svg).not.toContain('xq-live-river-label');
+    expect(svg).not.toContain('xq-live-river-brand');
   });
 });
 
@@ -134,5 +147,87 @@ describe('jungle theme art', () => {
     document.documentElement.dataset.xiangqiBoardTheme = 'jungle';
     expect(xiangqiSurfacePalaceBands(STANDARD, 'red', 'intersection')).not.toContain('palace-rug');
     expect(xiangqiSurfaceRiver(STANDARD, 'red', 'intersection')).not.toContain('water.png');
+  });
+});
+
+// Start markers (2026-10-08): the printed brackets at the 4 cannon and 10
+// soldier starting points, half brackets on the edge files, lined layout only.
+describe('start markers', () => {
+  const WITH_STARTS: XiangqiSurfaceConfig = { ...STANDARD, startPoints: XIANGQI_START_POINTS };
+  const marks = (svg: string): Array<{ file: number; rank: number; d: string }> =>
+    [...svg.matchAll(/data-file="(\d+)" data-rank="(\d+)" d="([^"]+)"/g)].map((m) => ({
+      file: Number(m[1]),
+      rank: Number(m[2]),
+      d: m[3] ?? '',
+    }));
+  const xs = (d: string): number[] =>
+    [...d.matchAll(/[ML](-?[\d.]+) (-?[\d.]+)/g)].map((m) => Number(m[1]));
+
+  afterEach(() => {
+    document.documentElement.removeAttribute('data-xiangqi-start-markers');
+  });
+
+  it('marks exactly the 4 cannon and 10 soldier points', () => {
+    const found = marks(xiangqiSurfaceStartMarkers(WITH_STARTS, 'red', 'intersection'));
+    expect(found).toHaveLength(14);
+    const keys = found.map(({ file, rank }) => `${file},${rank}`).sort();
+    const cannons = ['1,3', '1,8', '7,3', '7,8'];
+    const soldiers = [0, 2, 4, 6, 8].flatMap((file) => [`${file},4`, `${file},7`]);
+    expect(keys).toEqual([...cannons, ...soldiers].sort());
+  });
+
+  it('draws four brackets on an interior point and two on an edge file', () => {
+    const found = marks(xiangqiSurfaceStartMarkers(WITH_STARTS, 'red', 'intersection'));
+    for (const { file, d } of found) {
+      const brackets = d.split('M').length - 1;
+      expect(brackets).toBe(file === 0 || file === 8 ? 2 : 4);
+    }
+  });
+
+  it('keeps edge half brackets on the board side, and follows a flipped board', () => {
+    const red = marks(xiangqiSurfaceStartMarkers(WITH_STARTS, 'red', 'intersection'));
+    const black = marks(xiangqiSurfaceStartMarkers(WITH_STARTS, 'black', 'intersection'));
+    const at = (list: typeof red, file: number, rank: number) =>
+      list.find((m) => m.file === file && m.rank === rank)?.d ?? '';
+    // File a is the left edge (x=36) for red and the right edge (x=516) for black.
+    expect(Math.min(...xs(at(red, 0, 4)))).toBeGreaterThan(36);
+    expect(Math.max(...xs(at(black, 0, 4)))).toBeLessThan(516);
+    // Red's b3 cannon point sits at (96, 456) from red's side and (456, 156) from
+    // black's: the brackets surround the point either way.
+    const around = (d: string) => {
+      const pts = [...d.matchAll(/[ML](-?[\d.]+) (-?[\d.]+)/g)].map((m) => [
+        Number(m[1]),
+        Number(m[2]),
+      ]);
+      const cx = pts.reduce((s, p) => s + (p[0] ?? 0), 0) / pts.length;
+      const cy = pts.reduce((s, p) => s + (p[1] ?? 0), 0) / pts.length;
+      return [Math.round(cx), Math.round(cy)];
+    };
+    expect(around(at(red, 1, 3))).toEqual([96, 456]);
+    expect(around(at(black, 1, 3))).toEqual([456, 156]);
+  });
+
+  it('is absent when turned off, on the square grid, or on a board without start points', () => {
+    expect(xiangqiSurfaceStartMarkers(WITH_STARTS, 'red', 'intersection', false)).toBe('');
+    document.documentElement.dataset.xiangqiStartMarkers = 'off';
+    expect(xiangqiSurfaceStartMarkers(WITH_STARTS, 'red', 'intersection')).toBe('');
+    document.documentElement.dataset.xiangqiStartMarkers = 'on';
+    expect(marks(xiangqiSurfaceStartMarkers(WITH_STARTS, 'red', 'intersection'))).toHaveLength(14);
+    expect(xiangqiSurfaceStartMarkers(WITH_STARTS, 'red', 'cell')).toBe('');
+    expect(xiangqiSurfaceStartMarkers(STANDARD, 'red', 'intersection')).toBe('');
+  });
+});
+
+describe('wood grain preview', () => {
+  afterEach(() => {
+    document.documentElement.removeAttribute('data-xiangqi-board-grain');
+  });
+
+  it('adds nothing to the grid unless the grain attribute is on', () => {
+    expect(xiangqiSurfaceGrid(STANDARD, 'intersection')).not.toContain('xq-live-grain');
+    document.documentElement.dataset.xiangqiBoardGrain = 'on';
+    const svg = xiangqiSurfaceGrid(STANDARD, 'intersection');
+    expect(svg.startsWith('<image class="xq-live-grain"')).toBe(true);
+    expect(xiangqiSurfaceGrid(STANDARD, 'cell')).not.toContain('xq-live-grain');
   });
 });

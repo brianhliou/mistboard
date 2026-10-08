@@ -23,7 +23,13 @@ import {
   type XiangqiBoardGeometry,
   xiangqiBoardPoint,
   xiangqiBoardViewBox,
+  xiangqiDisplayFile,
 } from './xiangqi-board-geometry.js';
+import {
+  XIANGQI_RIVER_BRAND_TEXT,
+  XIANGQI_RIVER_BRAND_TRACKING,
+  XIANGQI_RIVER_CLASSIC_TEXT,
+} from './xiangqi-river-text.js';
 
 /** A palace, in 1-indexed board coordinates (inclusive on both ends). */
 export interface XiangqiPalaceRect {
@@ -39,16 +45,36 @@ export interface XiangqiSurfaceConfig {
   palaces: readonly XiangqiPalaceRect[];
   /** The river sits between this rank and the next one up. Null for no river. */
   riverAfterRank: number | null;
-  /** Caption drawn in the river on the intersection layout. Omit for none. */
-  riverLabel?: string;
+  /** Draw the river captions on the intersection layout (xiangqi-river-text.ts:
+   *  the reader's River text choice picks which one shows). Omit for none:
+   *  jieqi, for one, keeps a bare river. */
+  riverText?: boolean;
+  /** Points that get the printed start brackets (the cannons' and soldiers'
+   *  starting points on a standard board). Omit for a board whose setup is not
+   *  the standard one: Storm the Fortress starts its cannons on the back rank. */
+  startPoints?: readonly XiangqiStartPoint[];
 }
+
+/** A point in board coordinates: 0-indexed file, 1-indexed rank, the same
+ *  convention xiangqiBoardPoint takes. */
+export interface XiangqiStartPoint {
+  file: number;
+  rank: number;
+}
+
+/** The 14 printed points of a standard 9x10 board: 4 cannon points (files b and
+ *  h, ranks 3 and 8) and 10 soldier points (files a, c, e, g, i, ranks 4 and 7). */
+export const XIANGQI_START_POINTS: readonly XiangqiStartPoint[] = [
+  ...[1, 7].flatMap((file) => [3, 8].map((rank) => ({ file, rank }))),
+  ...[0, 2, 4, 6, 8].flatMap((file) => [4, 7].map((rank) => ({ file, rank }))),
+];
 
 /** Grid lines, or the checkered rects of the square-grid layout. */
 export function xiangqiSurfaceGrid(cfg: XiangqiSurfaceConfig, layout: XiangqiBoardLayout): string {
   const { geo } = cfg;
   if (layout === 'cell') return cellGrid(cfg);
   const { cell, margin, fileCount, rankCount } = geo;
-  const parts: string[] = [];
+  const parts: string[] = [xiangqiSurfaceGrain(cfg, layout)];
   const left = margin;
   const right = margin + (fileCount - 1) * cell;
   const top = margin;
@@ -74,6 +100,28 @@ export function xiangqiSurfaceGrid(cfg: XiangqiSurfaceConfig, layout: XiangqiBoa
     }
   }
   return parts.join('');
+}
+
+// WOOD GRAIN PREVIEW (2026-10-08, behind ?boardgrain=1 only). Painted textures
+// were rejected before as too noisy, so this is the quietest grain that still
+// reads as wood: long low-frequency streaks from fractal noise, a warm brown at
+// low alpha, multiplied into the fill. It sits under the grid lines. One data
+// URI image, so several boards on a page need no document-unique filter ids.
+const GRAIN_SVG = encodeURIComponent(
+  "<svg xmlns='http://www.w3.org/2000/svg' width='640' height='640'>" +
+    "<filter id='g' x='0' y='0' width='100%' height='100%'>" +
+    "<feTurbulence type='fractalNoise' baseFrequency='0.0035 0.11' numOctaves='3' seed='11'/>" +
+    "<feColorMatrix values='0 0 0 0 0.42  0 0 0 0 0.27  0 0 0 0 0.12  1.1 0 0 0 -0.42'/>" +
+    '</filter>' +
+    "<rect width='640' height='640' filter='url(#g)'/></svg>",
+);
+
+export function xiangqiSurfaceGrain(cfg: XiangqiSurfaceConfig, layout: XiangqiBoardLayout): string {
+  if (layout === 'cell') return '';
+  if (typeof document === 'undefined') return '';
+  if (document.documentElement.dataset.xiangqiBoardGrain !== 'on') return '';
+  const vb = xiangqiBoardViewBox(layout, cfg.geo);
+  return `<image class="xq-live-grain" x="${vb.minX}" y="${vb.minY}" width="${vb.width}" height="${vb.height}" preserveAspectRatio="none" href="data:image/svg+xml,${GRAIN_SVG}"/>`;
 }
 
 function cellGrid(cfg: XiangqiSurfaceConfig): string {
@@ -217,6 +265,66 @@ export function xiangqiSurfacePalace(
   return parts.join('');
 }
 
+// START MARKERS (2026-10-08). The small corner brackets a printed board carries
+// at the cannons' and soldiers' starting points, with half brackets on the edge
+// files where the outer half would hang off the board. They are a drawing of an
+// intersection's four corners, so they exist only on the lined layout: the
+// square grid has no intersections (its cells already draw their own corners),
+// and Jungle, which is drawn on the square grid, is left as its lawn.
+//
+// On by default; the gear's Board panel turns them off. The choice is a root data
+// attribute stamped by theme.ts, read here for the same reason the Jungle theme
+// is: every xiangqi-shaped board re-renders on an appearance change, so reading
+// it here reaches all of them without threading a flag through each renderer.
+export function xiangqiStartMarkersEnabled(): boolean {
+  return (
+    typeof document === 'undefined' ||
+    document.documentElement.dataset.xiangqiStartMarkers !== 'off'
+  );
+}
+
+/** The start brackets, one <path> per point. Empty on the square grid, on a
+ *  board with no start points, or when the reader turned them off. */
+export function xiangqiSurfaceStartMarkers(
+  cfg: XiangqiSurfaceConfig,
+  perspective: XiangqiColor,
+  layout: XiangqiBoardLayout,
+  enabled: boolean = xiangqiStartMarkersEnabled(),
+): string {
+  if (!enabled || layout === 'cell' || !cfg.startPoints?.length) return '';
+  const { cell, fileCount } = cfg.geo;
+  // Proportions read off printed boards: the bracket stands a little off the
+  // lines so it never merges with them, and each arm is under a fifth of a cell,
+  // so a piece standing on the point (radius 0.45 cells) hides all of it.
+  const gap = round(cell * 0.07);
+  const arm = round(cell * 0.17);
+  return cfg.startPoints
+    .map(({ file, rank }) => {
+      const { x, y } = point(cfg, file, rank, perspective, layout);
+      const col = xiangqiDisplayFile(file, perspective, fileCount);
+      const segments: string[] = [];
+      for (const dx of [-1, 1]) {
+        // An edge file has no board on its outer side, so only the inner half.
+        if ((dx < 0 && col === 0) || (dx > 0 && col === fileCount - 1)) continue;
+        for (const dy of [-1, 1]) {
+          const cx = round(x + dx * gap);
+          const cy = round(y + dy * gap);
+          segments.push(`M${cx} ${round(cy + dy * arm)}L${cx} ${cy}L${round(cx + dx * arm)} ${cy}`);
+        }
+      }
+      return `<path class="xq-live-start-mark" data-file="${file}" data-rank="${rank}" d="${segments.join('')}"/>`;
+    })
+    .join('');
+}
+
+function round(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+/** Font size of the brand caption, in board units (live-xiangqi.css agrees):
+ *  the classic inscription's 22 times XIANGQI_RIVER_BRAND_SCALE. */
+const BRAND_FONT_SIZE = 32;
+
 /** The river: a caption on the intersection layout, a band on the square grid. */
 export function xiangqiSurfaceRiver(
   cfg: XiangqiSurfaceConfig,
@@ -232,12 +340,17 @@ export function xiangqiSurfaceRiver(
     if (jungleThemeActive()) return jungleRiver(x, y, fileCount * cell, riverGap);
     return `<rect class="xq-live-cell-river" x="${x}" y="${y}" width="${fileCount * cell}" height="${riverGap}"/>`;
   }
-  if (!cfg.riverLabel) return '';
+  if (!cfg.riverText) return '';
   const riverTop = margin + (rankCount - 1 - cfg.riverAfterRank) * cell;
   const y = riverTop + cell / 2;
   const x = margin + ((fileCount - 1) / 2) * cell;
+  // Both captions; CSS shows the chosen one (live-xiangqi.css). The brand is set
+  // larger than the hanzi, since Latin letters stand shorter in their em; the
+  // shift re-centres its trailing letter-spacing (XIANGQI_RIVER_BRAND_TRACKING).
+  const brandX = round(x + (BRAND_FONT_SIZE * XIANGQI_RIVER_BRAND_TRACKING) / 2);
   return `
-    <text class="xq-live-river-label" x="${x}" y="${y + 1}">${cfg.riverLabel}</text>
+    <text class="xq-live-river-label" x="${x}" y="${y + 1}">${XIANGQI_RIVER_CLASSIC_TEXT}</text>
+    <text class="xq-live-river-brand" translate="no" x="${brandX}" y="${y + 1}">${XIANGQI_RIVER_BRAND_TEXT}</text>
   `;
 }
 

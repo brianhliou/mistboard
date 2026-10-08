@@ -65,12 +65,14 @@ import {
   xiangqiDisplayRow,
 } from './xiangqi-board-geometry.js';
 import {
+  XIANGQI_START_POINTS,
   type XiangqiSurfaceConfig,
   xiangqiSurfaceCoords,
   xiangqiSurfaceGrid,
   xiangqiSurfacePalace,
   xiangqiSurfacePalaceBands,
   xiangqiSurfaceRiver,
+  xiangqiSurfaceStartMarkers,
 } from './xiangqi-board-surface.js';
 import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
 import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
@@ -132,7 +134,8 @@ const FOG_SURFACE: XiangqiSurfaceConfig = {
     { fileMin: 3, fileMax: 5, rankMin: 8, rankMax: 10 },
   ],
   riverAfterRank: 5,
-  riverLabel: '楚 河   漢 界',
+  riverText: true,
+  startPoints: XIANGQI_START_POINTS,
 };
 let activeLayout: XiangqiBoardLayout = 'intersection';
 
@@ -395,7 +398,7 @@ function boardSvg(
   return `
     <svg class="xq-live-svg xq-live-svg--${layout} xq-surface xq-surface--${layout}" data-xiangqi-layout="${layout}" viewBox="${vb.minX} ${vb.minY} ${vb.width} ${vb.height}" xmlns="http://www.w3.org/2000/svg">
       <rect class="xq-live-bg" x="${vb.minX}" y="${vb.minY}" width="${vb.width}" height="${vb.height}"/>
-      <g class="xq-live-grid">${xiangqiSurfaceGrid(surface, layout)}</g>
+      <g class="xq-live-grid">${xiangqiSurfaceGrid(surface, layout)}${xiangqiSurfaceStartMarkers(surface, perspective, layout)}</g>
       <g class="xq-live-palace-bands">${xiangqiSurfacePalaceBands(surface, perspective, layout)}</g>
       <g class="xq-live-palace">${xiangqiSurfacePalace(surface, perspective, layout)}</g>
       ${layout === 'cell' ? '' : `<g class="xq-live-river" ${NON_SELECTABLE_RIVER_ATTRS}>${xiangqiSurfaceRiver(surface, perspective, layout)}</g>`}

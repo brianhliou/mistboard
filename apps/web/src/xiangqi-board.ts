@@ -39,12 +39,14 @@ import {
   xiangqiBoardViewBox,
 } from './xiangqi-board-geometry.js';
 import {
+  XIANGQI_START_POINTS,
   type XiangqiSurfaceConfig,
   xiangqiSurfaceCoords,
   xiangqiSurfaceGrid,
   xiangqiSurfacePalace,
   xiangqiSurfacePalaceBands,
   xiangqiSurfaceRiver,
+  xiangqiSurfaceStartMarkers,
 } from './xiangqi-board-surface.js';
 import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
 import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
@@ -89,7 +91,8 @@ export const LIVE_BOARD_SURFACE: XiangqiSurfaceConfig = {
     { fileMin: 3, fileMax: 5, rankMin: 8, rankMax: 10 },
   ],
   riverAfterRank: 5,
-  riverLabel: '楚 河   漢 界',
+  riverText: true,
+  startPoints: XIANGQI_START_POINTS,
 };
 export const XIANGQI_LIVE_PIECE_SIZE = tokenPieceSize(CELL);
 const PIECE_SIZE = XIANGQI_LIVE_PIECE_SIZE;
@@ -218,7 +221,7 @@ export function xiangqiBoardSvg(
   return `
     <svg class="xq-live-svg xq-live-svg--${layout} xq-surface xq-surface--${layout}" data-xiangqi-layout="${layout}" viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg">
       <rect class="xq-live-bg" x="${vb.minX}" y="${vb.minY}" width="${vb.width}" height="${vb.height}"/>
-      <g class="xq-live-grid">${xiangqiSurfaceGrid(surface, layout)}</g>
+      <g class="xq-live-grid">${xiangqiSurfaceGrid(surface, layout)}${xiangqiSurfaceStartMarkers(surface, perspective, layout)}</g>
       <g class="xq-live-palace-bands">${xiangqiSurfacePalaceBands(surface, perspective, layout)}</g>
       <g class="xq-live-palace">${xiangqiSurfacePalace(surface, perspective, layout)}</g>
       <g class="xq-live-river" ${NON_SELECTABLE_RIVER_ATTRS}>${xiangqiSurfaceRiver(surface, perspective, layout)}</g>

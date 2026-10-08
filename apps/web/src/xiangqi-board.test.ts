@@ -538,3 +538,29 @@ describe('board coordinate labels', () => {
     expect(chinese).not.toContain('>a<');
   });
 });
+
+// Start markers reach the live board through the shared surface: 14 brackets on
+// the lined layout when on (the default), none when off or on the square grid.
+describe('board start markers', () => {
+  const view = getStandardXiangqiPlayerView(createInitialXiangqiState('xq-start-marks'), 'red');
+  const base = { interactive: false, selectedSquare: null, draggingFrom: null } as const;
+  const markCount = (svg: string): number => svg.split('class="xq-live-start-mark"').length - 1;
+
+  it('draws the 14 start points by default, from either side', () => {
+    document.documentElement.removeAttribute('data-xiangqi-start-markers');
+    const svg = xiangqiBoardSvg(view, 'red', { ...base, layout: 'intersection' });
+    expect(markCount(svg)).toBe(14);
+    expect(markCount(xiangqiBoardSvg(view, 'black', { ...base, layout: 'intersection' }))).toBe(14);
+    // Inside the grid group, so they sit under the pieces.
+    const grid = svg.slice(svg.indexOf('<g class="xq-live-grid">'), svg.indexOf('</g>'));
+    expect(markCount(grid)).toBe(14);
+  });
+
+  it('draws none when turned off or on the square grid', () => {
+    document.documentElement.dataset.xiangqiStartMarkers = 'off';
+    expect(markCount(xiangqiBoardSvg(view, 'red', { ...base, layout: 'intersection' }))).toBe(0);
+    document.documentElement.dataset.xiangqiStartMarkers = 'on';
+    expect(markCount(xiangqiBoardSvg(view, 'red', { ...base, layout: 'cell' }))).toBe(0);
+    document.documentElement.removeAttribute('data-xiangqi-start-markers');
+  });
+});

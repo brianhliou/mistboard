@@ -1088,10 +1088,11 @@
 
 /* Xiangqi diagram theming. The diagrams draw their own board (chessground can't
    render a xiangqi grid), so their colors come from the shared --xq-diagram-*
-   tokens (defined in app-base.css, driven by data-xiangqi-board-theme /
-   data-fog-theme). Changing the board/fog picker restyles every diagram with no
-   re-render, the xiangqi equivalent of chess board-theme CSS. (Piece sets are
-   inline glyphs, so they re-render in JS instead.) */
+   tokens (defined in app-base.css, driven by data-xiangqi-board-color, the
+   board theme, data-xiangqi-river-text and data-fog-theme). Changing the
+   board/fog picker restyles every diagram with no re-render, the xiangqi
+   equivalent of chess board-theme CSS. (Piece sets are inline glyphs, so they
+   re-render in JS instead.) */
 .xq-article-svg .xq-diagram-bg {
   fill: var(--xq-diagram-bg, #d9bd82);
 }
@@ -1106,6 +1107,16 @@
 }
 .xq-article-svg .xq-diagram-river-label {
   display: var(--xq-river-label-display, none);
+}
+.xq-article-svg .xq-diagram-river-brand {
+  display: var(--xq-river-brand-display, none);
+}
+/* The alternate river wordmark (?xqRiverStyle=b; live-xiangqi.css has the why). */
+:root[data-xiangqi-river-style="b"] .xq-article-svg .xq-diagram-river-brand {
+  font-family: "Noto Sans", ui-sans-serif, system-ui, sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
 }
 .xq-article-svg .xq-diagram-title {
   fill: var(--site-heading, var(--xq-diagram-ink, #4b3c2a));

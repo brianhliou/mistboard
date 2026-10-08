@@ -254,7 +254,33 @@
   display: var(--xq-river-label-display, none);
 }
 
-.xq-live-svg--cell .xq-live-river-label {
+/* The wordmark in the river (gear > Board > River text > Mistboard): the same
+   ink as 楚河 漢界, in title case, large enough to fill the river as the hanzi
+   do, lightly tracked. 32px and 0.04em are what xiangqi-board-surface.ts centres
+   against (BRAND_FONT_SIZE, XIANGQI_RIVER_BRAND_TRACKING). Style 'a' is a serif;
+   the alternate 'b' (?xqRiverStyle=b) is the nav's wordmark, Noto Sans in lower
+   case. */
+.xq-live-river-brand {
+  display: var(--xq-river-brand-display, none);
+}
+
+.xq-live-river text.xq-live-river-brand {
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+:root[data-xiangqi-river-style="b"] .xq-live-river text.xq-live-river-brand {
+  font-family: "Noto Sans", ui-sans-serif, system-ui, sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+}
+
+/* The square grid's river is a 12-unit band: no room for a caption without
+   covering the pieces beside it, so neither shows there. */
+.xq-live-svg--cell .xq-live-river-label,
+.xq-live-svg--cell .xq-live-river-brand {
   display: none;
 }
 
