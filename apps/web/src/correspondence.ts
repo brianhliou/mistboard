@@ -45,6 +45,8 @@ import {
   deadlineRemainingMs,
   deadlineUrgency,
   heroBoardGame,
+  type InboxBoardSide,
+  inboxBoardSide,
   inboxTileKind,
   indexByRoom,
   type OpenSeek,
@@ -277,9 +279,9 @@ function buildGrid(modifier: string): HTMLElement {
   return grid;
 }
 
-// One of your games as a /games card: opponent and you in the seat rows (first
-// mover at the bottom, matching the board), the time left on the seat that is
-// to move, the share of the move's allowance left as the bar, and the variant
+// One of your games as a /games card: the opponent's seat row on top and yours
+// at the bottom, the board drawn from your side, the time left on the seat that
+// is to move, the share of the move's allowance left as the bar, and the variant
 // and cadence in the meta. A "Your move" card adds Play your move. The whole
 // card opens the game through the stretched .current-game-open; the
 // opponent's profile link sits above it, a sibling, so anchors never nest.
@@ -319,21 +321,24 @@ export function buildInboxCard(
   const onMove = yourMove ? mySeat : opponentSeat;
   onMove.clock.hidden = false;
 
+  // You at the bottom and the opponent at the top on every card, the board
+  // turned to match (buildBoardHost). The deadline bar hangs under the row whose
+  // clock is running: yours on a Your move card, the opponent's on a Waiting one.
   const board = buildBoardHost(ctx, game, current);
-  const youAtBottom = seatBoardView(game) !== null || isFirstMoverSeat(game, current);
-  const [top, bottom] = youAtBottom ? [opponentSeat, mySeat] : [mySeat, opponentSeat];
-  card.append(open, top.row, board, bottom.row);
-
   const days = current?.timeControl?.daysPerMove ?? null;
+  let track: HTMLElement | null = null;
   let fill: HTMLElement | null = null;
   if (days) {
-    const track = document.createElement('div');
+    track = document.createElement('div');
     track.className = 'current-game-bar';
     track.setAttribute('aria-hidden', 'true');
     fill = document.createElement('span');
     track.append(fill);
-    card.append(track);
   }
+  card.append(open, opponentSeat.row);
+  if (track && !yourMove) card.append(track);
+  card.append(board, mySeat.row);
+  if (track && yourMove) card.append(track);
 
   const meta = document.createElement('div');
   meta.className = 'current-game-meta';
@@ -391,25 +396,15 @@ function buildInboxSeat(name: HTMLElement): { row: HTMLElement; clock: HTMLEleme
   return { row, clock };
 }
 
-// Whether your seat moves first, which the board draws at the bottom (the
-// compact renderer's white point of view; /games orders its seats the same
-// way). The feed's players say which colour moves first; without the feed,
-// red and white do.
-function isFirstMoverSeat(game: CorrespondenceGame, current: CurrentGame | undefined): boolean {
-  const players = current?.players ?? [];
-  const first =
-    players.find((player) => player.color === 'red' || player.color === 'white') ?? players[0];
-  if (first) return first.color === game.mySeat;
-  return game.mySeat === 'red' || game.mySeat === 'white';
-}
-
 // ---- Boards -------------------------------------------------------------------------
 
 // The board, the mist, or the variant placeholder. Your own Fog Chess or Fog
 // Xiangqi game draws your seat's fog view (the server's seatBoard, the same
-// PlayerView the game room gives your seat) on that variant's board. Otherwise an
-// open game mounts the same compact live renderer the /games wall uses, fed
-// the public feed's payload, and anything hidden keeps the misty tile.
+// PlayerView the game room gives your seat, already turned to you) on that
+// variant's board. Otherwise an open game mounts the same compact live renderer
+// the /games wall uses, fed the public feed's payload and turned to your side
+// (inboxBoardSide), and anything hidden keeps the misty tile. The host's
+// data-perspective names the side drawn at the bottom.
 function buildBoardHost(
   ctx: PageContext,
   game: CorrespondenceGame,
@@ -419,10 +414,15 @@ function buildBoardHost(
   host.className = 'current-game-board correspondence-board';
   const seatView = seatBoardView(game);
   if (seatView) {
+    const perspective = seatView.view.perspective;
+    host.dataset.perspective =
+      perspective === 'white' || perspective === 'red' ? 'first' : 'second';
     host.append(buildFogTile(game.gameSpecId));
     void mountSeatBoard(ctx, host, seatView);
     return host;
   }
+  const side = inboxBoardSide(game, current);
+  host.dataset.perspective = side;
   const kind = inboxTileKind(game.gameSpecId, current);
   if (kind === 'fog') {
     host.append(buildFogTile(game.gameSpecId));
@@ -430,7 +430,7 @@ function buildBoardHost(
   }
   host.append(buildPlaceholderTile(game.gameSpecId));
   if (kind === 'board' && current?.payload) {
-    void mountBoard(ctx, host, game.gameSpecId, game.roomId, current, current.payload);
+    void mountBoard(ctx, host, game.gameSpecId, game.roomId, current, current.payload, side);
   }
   return host;
 }
@@ -472,7 +472,11 @@ async function mountBoard(
   roomId: string,
   current: CurrentGame,
   payload: Record<string, unknown>,
+  // Your side for an inbox card; omitted (the signed-out showcase) or 'fixed',
+  // the renderer keeps its own default side.
+  side?: InboxBoardSide,
 ): Promise<void> {
+  const pov = side === 'second' ? 'black' : side === 'first' ? 'white' : null;
   try {
     const { mountShowcaseBoard } = await import('./showcase-board.js');
     if (!ctx.isConnected()) return;
@@ -487,7 +491,10 @@ async function mountBoard(
       metadataByRoomId: {},
       namesByRoomId: { [roomId]: seatNames(current) },
       onLoadError: () => true,
-      pov: 'white',
+      pov: pov ?? 'white',
+      // A tenant board turned to you: the same public view (the feed carries no
+      // seat's private track), only drawn from your side.
+      ...(pov ? { tenantPov: pov } : {}),
     });
     if (!ctx.isConnected()) {
       handle.destroy();

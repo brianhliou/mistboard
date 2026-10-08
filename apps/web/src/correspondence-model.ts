@@ -210,6 +210,43 @@ export function seatBoardView(
   };
 }
 
+// ---- Your side of the board -------------------------------------------------------
+
+// Specs whose board has no sides: the deal is face down and each ink binds on a
+// flip, so the board draws one fixed way for both players (the room does too).
+// The card still seats you at the bottom; only the board stays put.
+export const FIXED_ORIENTATION_SPECS: ReadonlySet<string> = new Set(['banqi', 'jungle-flip']);
+
+// Whether your seat moves first. The feed's players say which colour moves
+// first (red or white when present, else the first listed); without the feed,
+// red and white do.
+export function isFirstMoverSeat(
+  game: Pick<CorrespondenceGame, 'mySeat'>,
+  current: Pick<CurrentGame, 'players'> | null | undefined,
+): boolean {
+  const players = current?.players ?? [];
+  const first =
+    players.find((player) => player.color === 'red' || player.color === 'white') ?? players[0];
+  if (first) return first.color === game.mySeat;
+  return game.mySeat === 'red' || game.mySeat === 'white';
+}
+
+// The side a card's board is drawn from: always yours (Brian, 2026-10-08: you at
+// the bottom, the opponent at the top, on every card), the way the game room
+// orients for your seat. 'first' and 'second' are move order (the compact
+// renderers' white/red and black); 'fixed' is a sideless board drawn as the
+// variant always draws it. Turning the board changes only where squares sit:
+// the view drawn is still the public one (jieqi's face-down pieces stay down).
+export type InboxBoardSide = 'first' | 'second' | 'fixed';
+
+export function inboxBoardSide(
+  game: Pick<CorrespondenceGame, 'gameSpecId' | 'mySeat'>,
+  current: Pick<CurrentGame, 'players'> | null | undefined,
+): InboxBoardSide {
+  if (FIXED_ORIENTATION_SPECS.has(game.gameSpecId)) return 'fixed';
+  return isFirstMoverSeat(game, current) ? 'first' : 'second';
+}
+
 // The visibility classes whose public board the inbox may draw. 'open' hides
 // nothing. 'hidden-identity' (jieqi, banqi, Flip Jungle) hides which piece a
 // face-down tile is, from both players; the server's watch policy serves those
