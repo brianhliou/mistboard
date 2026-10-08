@@ -53,6 +53,8 @@ Conventions:
 
 ### Learning and puzzles
 
+- Flip Jungle's skill ceiling joins the blog, KataGo's Jungle Chess page adds Misty's den-race tests, and the Pikafish reveal-bug page adds the September audit and its correction ([efb647e8](https://github.com/brianhliou/mistboard/commit/efb647e8))
+- a write-up of the repetition bug that let a chariot and cannon swap count as a repeated position, in English and Chinese ([efb647e8](https://github.com/brianhliou/mistboard/commit/efb647e8))
 - The xiangqi analysis board and game review show an exact tablebase in the book pane (every move's win, draw or loss and mate distance, from chessdb.cn) in covered endgames, and practice grades covered positions by it ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
 - New Xiangqi Basic Endgames reference: 35 common endings graded from certain win to certain draw, each checked against chessdb.cn, with a board for every position and a link to practise it ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
 - The endgame practice sets on /practice grow to 46 positions, sorted by piece, wins first, then draws to hold ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
@@ -77,6 +79,8 @@ Conventions:
 
 ### Watching and review
 
+- 2026 North American Xiangqi Championship (Houston), all 9 rounds with 75 game records from dpxq ([efb647e8](https://github.com/brianhliou/mistboard/commit/efb647e8))
+- broadcast games published without their moves now say "No record published" on the board ([efb647e8](https://github.com/brianhliou/mistboard/commit/efb647e8))
 - In jieqi review, hovering or tapping the luck die on the board, or the 🎲 badge in the move list, now opens the luck card for that move ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
 - Jieqi review marks each reveal and each capture of a face-down piece with a die: teal when the draw helped, violet when it hurt, more pips for a bigger swing, and a card that says what the piece could have been ([9722ca87](https://github.com/brianhliou/mistboard/commit/9722ca87))
 - Xiangqi article boards whose game is in the broadcast archive now show the game's advantage chart under the board; click it to jump to any move, or hide it from the board menu ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
@@ -150,6 +154,8 @@ Conventions:
 
 ### Fixed
 
+- broadcast standings no longer count a playoff table's summary row as an extra game ([efb647e8](https://github.com/brianhliou/mistboard/commit/efb647e8))
+- on broadcast boards with only a result, the evaluation gauge now shows the winner, all Red for 1-0 and all Black for 0-1 ([efb647e8](https://github.com/brianhliou/mistboard/commit/efb647e8))
 - zoomed charts in articles get a solid background instead of showing through to the dark overlay ([4a138d71](https://github.com/brianhliou/mistboard/commit/4a138d71))
 - Practice draws the computer's reply together with its sound, after a short pause, instead of up to a second and a half later ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
 - The Chinese practice pages (/zh-hans/practice, /zh-hant/practice) load instead of a 404 ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
