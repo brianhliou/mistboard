@@ -2175,13 +2175,24 @@
 
 /* A table whose rows each lead with a board (TableBlock.rowDiagrams, the
    endgames table). The board is the full diagram scaled down, so it keeps the
-   site's board theme and piece set. At 200px a piece disc is ~20px and its
-   character reads; a four-column table cannot give the text room beside a
-   board that wide, so each row is a card: the board on the left, the
+   site's board theme and piece set. At 260px a piece disc is ~26px and its
+   character reads at a glance; a four-column table cannot give the text room
+   beside a board that wide, so each row is a card: the board on the left, the
    material, result and idea stacked beside it. The header row goes, because
    the card's order says what each line is. */
 .article-table-diagrams {
   white-space: normal;
+}
+
+/* Full column width, never shrink-to-content: the narrow-table rule below
+   (.article-figure-table .article-table, width: max-content, centred) sized
+   each group's table to its longest idea line, so a group whose lines were all
+   short (the cannon group in zh) centred and its boards sat ~23px right of
+   every other group's. Three classes outrank that rule's two in both the dev
+   and the production bundle order. */
+.article-figure-table .article-table.article-table-diagrams {
+  width: 100%;
+  margin-inline: 0;
 }
 
 .article-table-diagrams thead {
@@ -2194,7 +2205,7 @@
 
 .article-table-diagrams tbody tr {
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr);
+  grid-template-columns: 260px minmax(0, 1fr);
   /* Three text rows at their own height; the fourth takes the slack, so a
      short card keeps its lines together at the top beside the board. */
   grid-template-rows: auto auto auto 1fr;
@@ -2217,13 +2228,13 @@
 .article-table-diagrams td.article-table-diagram {
   grid-column: 1;
   grid-row: 1 / -1;
-  width: 200px;
+  width: 260px;
   line-height: 0;
 }
 
 .article-table-diagram > .xq-article-svg {
   display: block;
-  width: 200px;
+  width: 260px;
   height: auto;
 }
 
@@ -2236,8 +2247,8 @@
   opacity: 0.75;
 }
 
-/* On a phone the board goes above its text, 180px wide, so the text keeps the
-   full width of the column. */
+/* On a phone the board goes above its text at the card's full width, up to
+   300px, so the text keeps the full width of the column. */
 @media (max-width: 600px) {
   .article-table-diagrams tbody tr {
     grid-template-columns: minmax(0, 1fr);
@@ -2248,12 +2259,13 @@
 
   .article-table-diagrams td.article-table-diagram {
     grid-row: auto;
-    width: 180px;
+    width: 100%;
+    max-width: 300px;
     margin-bottom: 8px;
   }
 
   .article-table-diagram > .xq-article-svg {
-    width: 180px;
+    width: 100%;
   }
 }
 

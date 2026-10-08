@@ -105,14 +105,14 @@ export const ENDGAME_PAGE_TEXT = {
     '試一局：單馬對單象',
   ),
   exerciseText: tri(
-    'A horse against a lone elephant is a draw as a rule: the elephant switches flanks faster than the horse can cut it off. In this position the elephant is stuck on one side and Red moves first, and that is enough. The tablebase gives Red mate in five moves. The first move decides it: find the square that keeps the elephant from getting back across.',
+    'A horse against a lone elephant is a draw as a rule: the elephant switches flanks faster than the horse can cut it off. In this position the elephant is stuck on one side and Red moves first, and that is enough. The tablebase gives Red mate in five moves. The first move decides it: find the point that keeps the elephant from getting back across.',
     '单马对单象通常是和棋：象换翼的速度比马切断它的速度更快。这个局面里象被困在一侧，又轮到红方先走，这就够了。残局库给出红方五步杀。关键在第一步：找到那个让象回不到另一侧的位置。',
     '單馬對單象通常是和棋：象換翼的速度比馬切斷它的速度更快。這個局面裡象被困在一側，又輪到紅方先走，這就夠了。殘局庫給出紅方五步殺。關鍵在第一步：找到那個讓象回不到另一側的位置。',
   ),
   exerciseCaption: tri('Red to move and mate in five.', '红先，五步杀。', '紅先，五步殺。'),
   exerciseButton: tri('Play it out', '和电脑下', '和電腦下'),
   fortressHeading: tri(
-    'One square can turn a draw into a win',
+    'One point can turn a draw into a win',
     '差一个位置，和棋就变成胜局',
     '差一個位置，和棋就變成勝局',
   ),
@@ -520,7 +520,7 @@ export const ENDGAME_TABLE: readonly EndgameTableRow[] = [
     material: tri('Chariot vs horse and cannon', '单车对马炮', '單車對馬砲'),
     grade: 'hard-win',
     idea: tri(
-      'Black holds with the cannon directly behind its own general and the horse off every square one chariot move attacks. Move the cannon one point sideways and Red mates in 12.',
+      'Black holds with the cannon directly behind its own general and the horse off every point one chariot move attacks. Move the cannon one point sideways and Red mates in 12.',
       '黑方的守法：炮摆在自己将的正后方，马避开红车一步能捉到的位置。把炮平开一路，红方十二步杀。',
       '黑方的守法：砲擺在自己將的正後方，馬避開紅車一步能捉到的位置。把砲平開一路，紅方十二步殺。',
     ),
