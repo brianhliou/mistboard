@@ -1,0 +1,126 @@
+/* Live jieqi reveal odds (live-jieqi-reveal-odds.ts). Each row is a RESERVED
+   band: it keeps its height whether or not it has anything to show, so the
+   board and the rail never move with the odds (the 2026-09-20 rule in
+   live-review.css .rail-material). */
+
+/* A labelled block, sized like part of the seat's area rather than a
+   footnote: the label line, then the icons with the percentage printed under
+   each. The band reserves all three lines (label, icon, percent). */
+.reveal-odds-row {
+  --reveal-chip: clamp(28px, calc((100cqw - 50px) / 6), 38px);
+
+  display: grid;
+  grid-template-rows: auto auto;
+  align-content: start;
+  row-gap: 3px;
+  min-height: calc(var(--reveal-chip) + 2.45rem);
+  padding: 2px 0;
+  overflow: visible;
+  white-space: nowrap;
+}
+
+.reveal-odds-row--top {
+  margin-bottom: 4px;
+}
+
+.reveal-odds-row--bottom {
+  margin-top: 4px;
+}
+
+.reveal-odds-row__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.reveal-odds-row__lead {
+  flex: 0 0 auto;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--site-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The uncertain side's "N taken unseen": its own fact, so a pill at the end of
+   the label line rather than more grey text. */
+.reveal-odds-row__note {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--site-text) 10%, transparent);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--site-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.reveal-odds-row__pieces {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.reveal-odds-chip {
+  display: inline-flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  line-height: 0;
+}
+
+.reveal-odds-chip__piece {
+  position: relative;
+  display: block;
+  width: var(--reveal-chip);
+  height: var(--reveal-chip);
+}
+
+.reveal-odds-chip__piece svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.reveal-odds-chip .captures-count-badge {
+  min-width: 14px;
+  height: 14px;
+  font-size: 10px;
+  right: -3px;
+  bottom: -3px;
+}
+
+/* The percentage: always printed under its icon (no hover, no tap). */
+.reveal-odds-chip__pct {
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--site-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Phone: the seat lines are one flex row each (live-review.css, max-width
+   799px). Both pool rows go BELOW the board, each its own line: the viewer's
+   under their seat line, then the opponent's (the piece colours say whose).
+   Nothing is added above the board, so it sits exactly where it does without
+   odds. Specificity beats that file's `.game-console > *` order rule
+   regardless of bundle order. */
+@media (max-width: 799px) {
+  .live-review__cluster .game-console > .reveal-odds-row {
+    --reveal-chip: 30px;
+
+    flex: 0 0 100%;
+    margin: 0;
+    padding: 0 2px;
+  }
+
+  .live-review__cluster .game-console > .reveal-odds-row--top {
+    order: 34;
+  }
+
+  .live-review__cluster .game-console > .reveal-odds-row--bottom {
+    order: 33;
+  }
+}
