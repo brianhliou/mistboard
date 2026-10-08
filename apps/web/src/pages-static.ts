@@ -515,6 +515,14 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     // its home page and the NNUE weights license (no commercial use without
     // permission), in the reader's language where pikafish.com has one.
     pikafishCreditLine(locale),
+    // The five third-party xiangqi piece sets (2026-10-08); sources and licences
+    // sit beside the files in public/piece-sets/xiangqi/<id>/README.md. Wood is
+    // CC BY 4.0, so its credit names the author and links the licence.
+    linkLine(t('source.pieceSetLacquer', {}, locale), PIECE_SET_SOURCE_URLS.lacquer),
+    woodPieceSetCreditLine(locale),
+    linkLine(t('source.pieceSetBook', {}, locale), PIECE_SET_SOURCE_URLS.book),
+    linkLine(t('source.pieceSetBrush', {}, locale), PIECE_SET_SOURCE_URLS.brush),
+    linkLine(t('source.pieceSetClerical', {}, locale), PIECE_SET_SOURCE_URLS.clerical),
   ]);
 
   const identity = sourceBlock(t('source.projectIdentity', {}, locale), [
@@ -795,6 +803,30 @@ function pikafishCreditLine(locale: Locale): HTMLSpanElement {
     linkLine(t('source.pikafishSite', {}, locale), PIKAFISH_SITE_URL),
     ' · ',
     linkLine(t('source.pikafishWeightsLicense', {}, locale), pikafishWeightsLicenseUrl(locale)),
+  );
+  return line;
+}
+
+const PYCHESS_XIANGQI_PIECES_URL =
+  'https://github.com/gbtami/pychess-variants/tree/master/static/images/pieces/xiangqi';
+
+export const PIECE_SET_SOURCE_URLS = {
+  lacquer: `${PYCHESS_XIANGQI_PIECES_URL}/playok`,
+  wood: 'https://github.com/Kadagaden/chess-pieces/tree/master/xiangqi_gmchess_style_wood',
+  book: 'https://www.babelstone.co.uk/Fonts/Xiangqi.html',
+  brush: `${PYCHESS_XIANGQI_PIECES_URL}/hnzw`,
+  clerical: `${PYCHESS_XIANGQI_PIECES_URL}/lishuw`,
+} as const;
+
+const CC_BY_4_URL = 'https://creativecommons.org/licenses/by/4.0/';
+
+function woodPieceSetCreditLine(locale: Locale): HTMLSpanElement {
+  const line = document.createElement('span');
+  line.className = 'source-credit-wood';
+  line.append(
+    linkLine(t('source.pieceSetWood', {}, locale), PIECE_SET_SOURCE_URLS.wood),
+    ' · ',
+    linkLine(t('source.pieceSetWoodLicense', {}, locale), CC_BY_4_URL),
   );
   return line;
 }

@@ -8,6 +8,7 @@ import {
 } from './xiangqi-board-color.js';
 import {
   DEFAULT_XIANGQI_PIECE_SET,
+  RETIRED_XIANGQI_PIECE_SETS,
   XIANGQI_PIECE_SETS,
   type XiangqiPieceSet,
 } from './xiangqi-piece-sets.js';
@@ -149,7 +150,14 @@ export function readStoredXiangqiPieceSet(): XiangqiPieceSet {
         window.localStorage.removeItem(xiangqiPieceSetStorageKey);
       }
     }
-    const stored = storedXiangqiPieceSet(window.localStorage.getItem(xiangqiPieceSetStorageKey));
+    const raw = window.localStorage.getItem(xiangqiPieceSetStorageKey);
+    // A pick of a retired set (Western, Symbols; 2026-10-08) is cleared so the
+    // browser follows inference again, as if nothing had been chosen.
+    if (raw !== null && RETIRED_XIANGQI_PIECE_SETS.has(raw)) {
+      window.localStorage.removeItem(xiangqiPieceSetStorageKey);
+      return inferredXiangqiPieceSet();
+    }
+    const stored = storedXiangqiPieceSet(raw);
     return stored ?? inferredXiangqiPieceSet();
   } catch {
     return inferredXiangqiPieceSet();

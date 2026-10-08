@@ -758,9 +758,7 @@
 }
 
 .theme-tile-preview-xqpiece[data-id="traditional"],
-.theme-tile-preview-xqpiece[data-id="simplified"],
-.theme-tile-preview-xqpiece[data-id="western"],
-.theme-tile-preview-xqpiece[data-id="symbols"] {
+.theme-tile-preview-xqpiece[data-id="simplified"] {
   font-size: 34px;
 }
 

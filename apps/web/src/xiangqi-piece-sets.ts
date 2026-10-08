@@ -4,13 +4,20 @@
 // soldier) so the same sets serve every xiangqi-family surface. Image sets are the international default and the
 // Dobutsu animal set. The Chess-style prototype reuses the international art
 // without its surrounding disc, and 'Animal (no disc)' does the same for the
-// Dobutsu heads; glyph sets cover traditional/simplified Hanzi,
-// Western Latin initials, and stroked line-art symbols.
+// Dobutsu heads; glyph sets cover traditional/simplified Hanzi. The asset sets
+// (lacquer, wood, book, brush, clerical; 2026-10-08) are third-party SVG discs,
+// each with its own face-down back; sources and licences sit beside the files
+// in public/piece-sets/xiangqi/<id>/README.md.
 // Chinese characters render from baked Noto Sans CJK SC Bold outlines (see
 // cjkGlyphMark) so the live board matches the OG cards and variant mini-boards.
 
 import { XIANGQI_GLYPH_PATHS } from '@mistboard/board-render';
-import type { XiangqiColor, XiangqiPiece, XiangqiPieceRole } from '@mistboard/game';
+import {
+  hasOwnKey,
+  type XiangqiColor,
+  type XiangqiPiece,
+  type XiangqiPieceRole,
+} from '@mistboard/game';
 
 export type XiangqiPieceSet =
   | 'international'
@@ -19,20 +26,40 @@ export type XiangqiPieceSet =
   | 'animal-flat'
   | 'traditional'
   | 'simplified'
-  | 'western'
-  | 'symbols';
+  | AssetXiangqiPieceSet;
+
+// Third-party SVG sets drawn whole by their files (disc, ring and character).
+export type AssetXiangqiPieceSet = 'lacquer' | 'wood' | 'book' | 'brush' | 'clerical';
 export type XiangqiShroudedStyle = 'question' | 'back';
 
-export const XIANGQI_PIECE_SETS: ReadonlyArray<{ id: XiangqiPieceSet; label: string }> = [
-  { id: 'international', label: 'International' },
-  { id: 'international-flat', label: 'Chess-style' },
-  { id: 'animal-dobutsu', label: 'Animal Dobutsu' },
-  { id: 'animal-flat', label: 'Animal (no disc)' },
-  { id: 'traditional', label: 'Traditional' },
-  { id: 'simplified', label: 'Simplified' },
-  { id: 'western', label: 'Western' },
-  { id: 'symbols', label: 'Symbols' },
+// labelKey names the set in the shell catalog (en, zh-Hans, zh-Hant); label is
+// the English fallback for surfaces that render without a locale.
+export const XIANGQI_PIECE_SETS: ReadonlyArray<{
+  id: XiangqiPieceSet;
+  label: string;
+  labelKey: `prefs.xqPieceSet.${XiangqiPieceSet}`;
+}> = [
+  { id: 'international', label: 'International', labelKey: 'prefs.xqPieceSet.international' },
+  {
+    id: 'international-flat',
+    label: 'Chess-style',
+    labelKey: 'prefs.xqPieceSet.international-flat',
+  },
+  { id: 'animal-dobutsu', label: 'Animal Dobutsu', labelKey: 'prefs.xqPieceSet.animal-dobutsu' },
+  { id: 'animal-flat', label: 'Animal (no disc)', labelKey: 'prefs.xqPieceSet.animal-flat' },
+  { id: 'traditional', label: 'Traditional', labelKey: 'prefs.xqPieceSet.traditional' },
+  { id: 'simplified', label: 'Simplified', labelKey: 'prefs.xqPieceSet.simplified' },
+  { id: 'lacquer', label: 'Lacquer', labelKey: 'prefs.xqPieceSet.lacquer' },
+  { id: 'wood', label: 'Wood', labelKey: 'prefs.xqPieceSet.wood' },
+  { id: 'book', label: 'Book', labelKey: 'prefs.xqPieceSet.book' },
+  { id: 'brush', label: 'Brush', labelKey: 'prefs.xqPieceSet.brush' },
+  { id: 'clerical', label: 'Clerical', labelKey: 'prefs.xqPieceSet.clerical' },
 ];
+
+// Sets that were offered once and removed (2026-10-08: the Latin-initial and
+// line-icon diagram sets). A stored pick of one reads as "no pick", so the
+// browser follows the default inference again.
+export const RETIRED_XIANGQI_PIECE_SETS: ReadonlySet<string> = new Set(['western', 'symbols']);
 
 export const DEFAULT_XIANGQI_PIECE_SET: XiangqiPieceSet = 'international';
 
@@ -82,20 +109,12 @@ const SIMPLIFIED: Record<XiangqiColor, Record<XiangqiPieceRole, string>> = {
   },
 };
 
-const WESTERN: Record<XiangqiPieceRole, string> = {
-  general: 'G',
-  advisor: 'A',
-  elephant: 'E',
-  horse: 'H',
-  cannon: 'C',
-  chariot: 'R',
-  soldier: 'S',
-};
-
-type ImageXiangqiPieceSet = Extract<
-  XiangqiPieceSet,
-  'animal-dobutsu' | 'animal-flat' | 'international' | 'international-flat'
->;
+type ImageXiangqiPieceSet =
+  | Extract<
+      XiangqiPieceSet,
+      'animal-dobutsu' | 'animal-flat' | 'international' | 'international-flat'
+    >
+  | AssetXiangqiPieceSet;
 type AnimalXiangqiPieceSet = Extract<XiangqiPieceSet, 'animal-dobutsu'>;
 
 export type XiangqiPieceTilePreview =
@@ -122,14 +141,11 @@ export function xiangqiGlyph(
   role: XiangqiPieceRole,
 ): string {
   if (set === 'simplified') return SIMPLIFIED[color][role];
-  if (set === 'western') return WESTERN[role];
-  if (isImagePieceSet(set)) return WESTERN[role];
   return TRADITIONAL[color][role];
 }
 
 // A compact representative mark for the settings-panel tile (the red general).
 export function xiangqiPreviewGlyph(set: XiangqiPieceSet): string {
-  if (set === 'symbols') return '★';
   if (isImagePieceSet(set)) return 'G';
   return xiangqiGlyph(set, 'red', 'general');
 }
@@ -168,6 +184,17 @@ export function renderXiangqiPieceGlyphed(
     opts.size !== undefined || opts.x !== undefined || opts.y !== undefined
       ? ` x="${opts.x ?? 0}" y="${opts.y ?? 0}" width="${opts.size ?? 100}" height="${opts.size ?? 100}"`
       : '';
+  if (isAssetPieceSet(set)) {
+    const open = `<svg${classAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`;
+    if (!opts.shrouded) {
+      return `${open}${assetImageMark(assetPieceHref(set, piece.color, piece.role))}</svg>`;
+    }
+    // Face-down (jieqi, banqi diagrams) shows the set's own back; a fog "?"
+    // token draws the mark over that same back in the set's ink.
+    const question =
+      opts.shroudedStyle === 'back' ? '' : glyphMark('?', ASSET_SETS[set].ink[piece.color]);
+    return `${open}${assetImageMark(assetPieceHref(set, piece.color, 'back'))}${question}</svg>`;
+  }
   if (opts.shrouded && opts.shroudedStyle === 'back') {
     return [
       `<svg${classAttr}${styleAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
@@ -232,9 +259,7 @@ export function renderXiangqiPieceGlyphed(
   }
   const inner = opts.shrouded
     ? glyphMark('?', colorHex)
-    : set === 'symbols'
-      ? symbolMark(piece.role, colorHex)
-      : cjkGlyphMark(xiangqiGlyph(set, piece.color, piece.role), colorHex);
+    : cjkGlyphMark(xiangqiGlyph(set, piece.color, piece.role), colorHex);
   return [
     `<svg${classAttr}${styleAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
     `<circle cx="50" cy="50" r="46" fill="${baseFill}" stroke="${colorHex}" stroke-width="${ringWidth}"/>`,
@@ -368,8 +393,69 @@ function isImagePieceSet(set: XiangqiPieceSet): set is ImageXiangqiPieceSet {
     set === 'international' ||
     set === 'international-flat' ||
     set === 'animal-dobutsu' ||
-    set === 'animal-flat'
+    set === 'animal-flat' ||
+    isAssetPieceSet(set)
   );
+}
+
+export function isAssetPieceSet(set: XiangqiPieceSet): set is AssetXiangqiPieceSet {
+  return hasOwnKey(ASSET_SETS, set);
+}
+
+// The asset sets' files are normalised so the disc is centred with radius 45
+// in the 100-unit box (scripts in the README of each folder), so one frame
+// fits them all. `ink` is the set's character colour per side, used for marks
+// Mistboard draws on the set's back (the fog "?", the Fortress treasure).
+// `neutralBack` names the back a banqi tile may show: only a set whose red and
+// black backs look alike has one, since a banqi tile must not leak its colour.
+type AssetSetSpec = {
+  version: number;
+  ink: Record<XiangqiColor, string>;
+  neutralBack: XiangqiColor | null;
+};
+
+const ASSET_SETS: Record<AssetXiangqiPieceSet, AssetSetSpec> = {
+  lacquer: { version: 1, ink: { red: '#ffffff', black: '#ffffff' }, neutralBack: null },
+  wood: { version: 1, ink: { red: '#ae1d04', black: '#1e1e1a' }, neutralBack: 'red' },
+  book: { version: 1, ink: { red: '#ff0000', black: '#000000' }, neutralBack: null },
+  brush: { version: 1, ink: { red: '#ff0000', black: '#005500' }, neutralBack: 'red' },
+  clerical: { version: 1, ink: { red: '#ff0101', black: '#005500' }, neutralBack: 'red' },
+};
+
+function assetPieceHref(
+  set: AssetXiangqiPieceSet,
+  color: XiangqiColor,
+  role: XiangqiPieceRole | 'back',
+): string {
+  return `/piece-sets/xiangqi/${set}/${color}-${role}.svg?v=${ASSET_SETS[set].version}`;
+}
+
+function assetImageMark(href: string): string {
+  return `<image href="${escapeAttr(href)}" x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid meet"/>`;
+}
+
+/**
+ * A banqi face-down tile in this set's own back art, in the 100-unit piece box,
+ * or null when the set has no colour-neutral back (the caller keeps its plain
+ * disc). Banqi hides the colour from both players, so a back that differs by
+ * side cannot be used.
+ */
+export function xiangqiNeutralBackMarks(set: XiangqiPieceSet): string | null {
+  if (!isAssetPieceSet(set)) return null;
+  const color = ASSET_SETS[set].neutralBack;
+  return color ? assetImageMark(assetPieceHref(set, color, 'back')) : null;
+}
+
+/**
+ * The Fortress Xiangqi Treasure on an asset set: none of the five sources draws
+ * one, so it is the set's back with 寶 in the set's ink, the same character the
+ * glyph sets use.
+ */
+export function assetTreasureMarks(set: AssetXiangqiPieceSet, color: XiangqiColor): string {
+  return [
+    assetImageMark(assetPieceHref(set, color, 'back')),
+    cjkGlyphMark('寶', ASSET_SETS[set].ink[color]),
+  ].join('');
 }
 
 // ?v bump: the animal art files are swapped in place (stable URLs), so a version
@@ -502,7 +588,12 @@ export function duckPieceMarks(set: XiangqiPieceSet): string {
     // square. The other flat pieces are scaled up for the same reason.
     return duckImageMark(100);
   }
-  // The glyph sets (traditional, simplified, western, symbols) share one
+  // The asset sets frame the duck on their own neutral back where they have one
+  // (the wood sets); the lacquer and book backs are red or black, which would
+  // seat the duck, so those take the glyph sets' cream disc below.
+  const back = xiangqiNeutralBackMarks(set);
+  if (back) return [back, duckImageMark(72)].join('');
+  // The glyph sets (traditional, simplified, and the lacquer and book sets) share one
   // double-ring disc. The art has to live INSIDE the inner ring, where those
   // sets put their character: the master is ~80% content inside its own box, so
   // a 74-unit box lands ~59 units tall against the inner ring's 76 diameter,
@@ -527,52 +618,6 @@ export function internationalTreasureMarks(color: XiangqiColor): string {
 
 export function internationalFlatTreasureMarks(color: XiangqiColor): string {
   return internationalFlatImageMark(internationalFlatTreasureHref(color), 'treasure');
-}
-
-// Stroked line-art icons (the "Symbols" diagram set). One consistent visual style:
-// piece-color strokes, no fill, rounded joins. Intentionally simple v1 art.
-function symbolMark(role: XiangqiPieceRole, colorHex: string): string {
-  const stroke = `fill="none" stroke="${colorHex}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"`;
-  switch (role) {
-    case 'general':
-      // Five-point star (commander).
-      return `<path d="M50 26 L55.9 41.9 L72.8 42.6 L59.5 53.1 L64.1 69.4 L50 60 L35.9 69.4 L40.5 53.1 L27.2 42.6 L44.1 41.9 Z" ${stroke}/>`;
-    case 'advisor':
-      // Diamond (palace guard).
-      return `<path d="M50 30 L68 51 L50 72 L32 51 Z" ${stroke}/>`;
-    case 'elephant':
-      // Diagonal cross (the elephant moves diagonally).
-      return `<path d="M37 38 L63 64 M63 38 L37 64" ${stroke}/>`;
-    case 'chariot':
-      // Battlemented tower (rook/chariot).
-      return [
-        `<rect x="36" y="46" width="28" height="24" ${stroke}/>`,
-        `<rect x="36" y="38" width="8" height="8" ${stroke}/>`,
-        `<rect x="46" y="38" width="8" height="8" ${stroke}/>`,
-        `<rect x="56" y="38" width="8" height="8" ${stroke}/>`,
-      ].join('');
-    case 'horse':
-      // Open-bottom horseshoe.
-      return `<path d="M36 66 A16 16 0 1 1 64 66" fill="none" stroke="${colorHex}" stroke-width="8" stroke-linecap="round"/>`;
-    case 'cannon':
-      // Bore ring with a centered shot (the cannon's muzzle).
-      return `<circle cx="50" cy="51" r="16" ${stroke}/><circle cx="50" cy="51" r="5" fill="${colorHex}"/>`;
-    case 'soldier':
-      // Double advancing chevron.
-      return `<path d="M36 60 L50 44 L64 60" ${stroke}/><path d="M36 70 L50 54 L64 70" ${stroke}/>`;
-  }
-}
-
-// Faceted gem for the Fortress Xiangqi Treasure in the Symbols set (the Treasure
-// is the objective piece). Same stroked-line-art style as symbolMark above,
-// distinct from the advisor's plain diamond. Treasure is not a XiangqiPieceRole,
-// so it gets its own mark rather than a symbolMark case.
-export function treasureSymbolMark(colorHex: string): string {
-  const stroke = `fill="none" stroke="${colorHex}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"`;
-  return [
-    `<path d="M38 38 L62 38 L72 48 L50 72 L28 48 Z" ${stroke}/>`,
-    `<path d="M28 48 L72 48 M38 38 L46 48 M62 38 L54 48 M46 48 L50 72 M54 48 L50 72" ${stroke}/>`,
-  ].join('');
 }
 
 function escapeAttr(value: string): string {

@@ -1,12 +1,21 @@
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { XIANGQI_GLYPH_PATHS } from '@mistboard/board-render';
 import type { XiangqiPiece } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import {
+  type AssetXiangqiPieceSet,
+  assetTreasureMarks,
   DEFAULT_XIANGQI_PIECE_SET,
+  duckPieceMarks,
   internationalFlatTreasureMarks,
   internationalTreasureMarks,
+  isAssetPieceSet,
+  RETIRED_XIANGQI_PIECE_SETS,
   renderXiangqiPieceGlyphed,
+  XIANGQI_PIECE_SETS,
   xiangqiGlyph,
+  xiangqiNeutralBackMarks,
   xiangqiPieceTilePreview,
   xiangqiPreviewGlyph,
 } from './xiangqi-piece-sets.js';
@@ -30,8 +39,6 @@ describe('xiangqiGlyph', () => {
     expect(xiangqiGlyph('traditional', 'black', 'advisor')).toBe('士');
     expect(xiangqiGlyph('traditional', 'red', 'elephant')).toBe('相');
     expect(xiangqiGlyph('traditional', 'black', 'elephant')).toBe('象');
-    expect(xiangqiGlyph('western', 'red', 'advisor')).toBe('A');
-    expect(xiangqiGlyph('western', 'red', 'elephant')).toBe('E');
   });
 
   it('uses shared modern characters for the simplified set', () => {
@@ -41,18 +48,10 @@ describe('xiangqiGlyph', () => {
     expect(xiangqiGlyph('simplified', 'black', 'horse')).toBe('马');
   });
 
-  it('uses color-agnostic Latin initials for the western set', () => {
-    expect(xiangqiGlyph('western', 'red', 'chariot')).toBe('R');
-    expect(xiangqiGlyph('western', 'black', 'cannon')).toBe('C');
-    expect(xiangqiGlyph('western', 'red', 'soldier')).toBe('S');
-  });
-
-  it('keeps an initial fallback for the image sets', () => {
-    expect(xiangqiGlyph('international', 'red', 'general')).toBe('G');
-    expect(xiangqiGlyph('international-flat', 'red', 'general')).toBe('G');
-    expect(xiangqiGlyph('international', 'black', 'elephant')).toBe('E');
-    expect(xiangqiGlyph('animal-dobutsu', 'red', 'general')).toBe('G');
-    expect(xiangqiGlyph('animal-dobutsu', 'black', 'elephant')).toBe('E');
+  it('falls back to the traditional characters for the image sets', () => {
+    expect(xiangqiGlyph('international', 'red', 'general')).toBe('帥');
+    expect(xiangqiGlyph('animal-dobutsu', 'black', 'elephant')).toBe('象');
+    expect(xiangqiGlyph('wood', 'black', 'horse')).toBe('馬');
   });
 });
 
@@ -66,16 +65,6 @@ describe('renderXiangqiPieceGlyphed', () => {
     expect(svg).toContain(`<path d="${XIANGQI_GLYPH_PATHS.帥}"`);
     expect(svg).not.toContain('<text');
     expect(svg).toContain('aria-label="red general"');
-  });
-
-  it('renders the western initial', () => {
-    expect(renderXiangqiPieceGlyphed(redGeneral, 'western', {})).toContain('>G<');
-  });
-
-  it('renders stroked line-art (no character text) for the symbols set', () => {
-    const svg = renderXiangqiPieceGlyphed(redGeneral, 'symbols', {});
-    expect(svg).toContain('<path');
-    expect(svg).not.toContain(XIANGQI_GLYPH_PATHS.帥);
   });
 
   it('renders the international set from figure cutouts on a deterministic token', () => {
@@ -201,14 +190,6 @@ describe('renderXiangqiPieceGlyphed', () => {
     expect(treasure).not.toContain('<circle');
   });
 
-  it('renders a distinct symbol for advisor and elephant', () => {
-    const advisor = renderXiangqiPieceGlyphed({ color: 'red', role: 'advisor' }, 'symbols', {});
-    const elephant = renderXiangqiPieceGlyphed({ color: 'red', role: 'elephant' }, 'symbols', {});
-    expect(advisor).toContain('<path');
-    expect(elephant).toContain('<path');
-    expect(advisor).not.toBe(elephant);
-  });
-
   it('renders the Dobutsu animal set from the full seven-role fitted image assets', () => {
     const advisor = renderXiangqiPieceGlyphed(
       { color: 'red', role: 'advisor' },
@@ -286,8 +267,6 @@ describe('xiangqiPreviewGlyph', () => {
   it('returns a representative red general per set', () => {
     expect(xiangqiPreviewGlyph('traditional')).toBe('帥');
     expect(xiangqiPreviewGlyph('simplified')).toBe('帅');
-    expect(xiangqiPreviewGlyph('western')).toBe('G');
-    expect(xiangqiPreviewGlyph('symbols')).toBe('★');
     expect(xiangqiPreviewGlyph('international')).toBe('G');
     expect(xiangqiPreviewGlyph('international-flat')).toBe('G');
     expect(xiangqiPreviewGlyph('animal-dobutsu')).toBe('G');
@@ -314,6 +293,105 @@ describe('xiangqiPieceTilePreview', () => {
     if (dobutsu.kind === 'svg') {
       expect(dobutsu.markup).toContain('/piece-sets/xiangqi/animal-dobutsu/red-general.png');
       expect(dobutsu.markup).toContain('stroke="#c2261e"');
+    }
+  });
+});
+
+describe('asset piece sets', () => {
+  const ASSET_SETS: readonly AssetXiangqiPieceSet[] = [
+    'lacquer',
+    'wood',
+    'book',
+    'brush',
+    'clerical',
+  ];
+  const ROLES = [
+    'general',
+    'advisor',
+    'elephant',
+    'horse',
+    'chariot',
+    'cannon',
+    'soldier',
+  ] as const;
+  const COLORS = ['red', 'black'] as const;
+  const publicDir = ['public', 'apps/web/public']
+    .map((candidate) => resolve(process.cwd(), candidate))
+    .find((candidate) => existsSync(`${candidate}/piece-sets/xiangqi`)) as string;
+
+  function hrefs(svg: string): string[] {
+    return [...svg.matchAll(/href="([^"]+)"/g)].map((match) => match[1]!.replaceAll('&amp;', '&'));
+  }
+
+  function fileExists(href: string): boolean {
+    return existsSync(`${publicDir}${href.split('?')[0]}`);
+  }
+
+  it('offers exactly the five asset sets beside the six built-in ones, and none retired', () => {
+    expect(
+      XIANGQI_PIECE_SETS.filter((set) => isAssetPieceSet(set.id)).map((set) => set.id),
+    ).toEqual(ASSET_SETS);
+    expect(XIANGQI_PIECE_SETS).toHaveLength(11);
+    for (const set of XIANGQI_PIECE_SETS) {
+      expect(RETIRED_XIANGQI_PIECE_SETS.has(set.id)).toBe(false);
+      expect(set.labelKey).toBe(`prefs.xqPieceSet.${set.id}`);
+    }
+  });
+
+  for (const set of ASSET_SETS) {
+    it(`${set}: renders all 14 pieces, the back and the fog token from files that exist`, () => {
+      for (const color of COLORS) {
+        for (const role of ROLES) {
+          const svg = renderXiangqiPieceGlyphed({ color, role }, set, {});
+          expect(hrefs(svg)).toEqual([`/piece-sets/xiangqi/${set}/${color}-${role}.svg?v=1`]);
+          expect(fileExists(hrefs(svg)[0]!), `${set} ${color} ${role}`).toBe(true);
+          expect(svg).toContain(`aria-label="${color} ${role}"`);
+        }
+        const back = renderXiangqiPieceGlyphed({ color, role: 'general' }, set, {
+          shrouded: true,
+          shroudedStyle: 'back',
+        });
+        expect(hrefs(back)).toEqual([`/piece-sets/xiangqi/${set}/${color}-back.svg?v=1`]);
+        expect(fileExists(hrefs(back)[0]!)).toBe(true);
+        expect(back).not.toContain('general.svg');
+        expect(back).not.toContain('?</text>');
+        const question = renderXiangqiPieceGlyphed({ color, role: 'general' }, set, {
+          shrouded: true,
+        });
+        expect(hrefs(question)).toEqual([`/piece-sets/xiangqi/${set}/${color}-back.svg?v=1`]);
+        expect(question).toContain('>?</text>');
+        expect(question).toContain(`aria-label="${color} hidden piece"`);
+      }
+    });
+
+    it(`${set}: Fortress treasure and duck draw on files that exist`, () => {
+      for (const color of COLORS) {
+        const treasure = assetTreasureMarks(set, color);
+        expect(hrefs(treasure)).toEqual([`/piece-sets/xiangqi/${set}/${color}-back.svg?v=1`]);
+        expect(treasure).toContain(`<path d="${XIANGQI_GLYPH_PATHS.寶}"`);
+      }
+      for (const href of hrefs(duckPieceMarks(set))) {
+        expect(fileExists(href), href).toBe(true);
+      }
+    });
+
+    it(`${set}: previews in the settings tile as its own red general`, () => {
+      const preview = xiangqiPieceTilePreview(set);
+      expect(preview.kind).toBe('svg');
+      if (preview.kind === 'svg') {
+        expect(preview.markup).toContain(`/piece-sets/xiangqi/${set}/red-general.svg`);
+      }
+    });
+  }
+
+  it('gives banqi a back only where both sides share one look', () => {
+    expect(xiangqiNeutralBackMarks('lacquer')).toBeNull();
+    expect(xiangqiNeutralBackMarks('book')).toBeNull();
+    expect(xiangqiNeutralBackMarks('international')).toBeNull();
+    expect(xiangqiNeutralBackMarks('traditional')).toBeNull();
+    for (const set of ['wood', 'brush', 'clerical'] as const) {
+      const marks = xiangqiNeutralBackMarks(set);
+      expect(marks && hrefs(marks)).toEqual([`/piece-sets/xiangqi/${set}/red-back.svg?v=1`]);
     }
   });
 });

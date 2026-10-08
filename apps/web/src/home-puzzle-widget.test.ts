@@ -49,7 +49,7 @@ describe('home puzzle widget', () => {
     const widget = await buildHomePuzzleWidget();
     const traditionalMarkup = widget?.innerHTML;
 
-    setStoredXiangqiPieceSet('western');
+    setStoredXiangqiPieceSet('wood');
     window.dispatchEvent(new Event(xiangqiAppearanceChangedEvent));
 
     expect(widget?.innerHTML).not.toBe(traditionalMarkup);

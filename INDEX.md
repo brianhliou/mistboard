@@ -724,7 +724,7 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `live-xiangqi.css` | Shared xiangqi live-route board sizing/aspect styles loaded by `live.ts`, `live-dark-xiangqi.ts`, and `dark-xiangqi-postgame.ts` |
 | `dark-xiangqi-postgame.css` | Flagged Dark Xiangqi postgame route styles loaded by `dark-xiangqi-postgame.ts` |
 | `xiangqi-fog.ts` | Shared Fog of War SVG region for every xiangqi board (full 9×10): one masked region with flat tint + optional drift/mistveil texture mapped to the global fog assets |
-| `xiangqi-piece-sets.ts` | Selectable piece sets for the xiangqi family (all seven roles): traditional/simplified character scripts + western/symbol diagram sets; shared disc/ring, only the inner mark changes |
+| `xiangqi-piece-sets.ts` | Selectable piece sets for the xiangqi family (all seven roles): international/Chess-style/animal image sets, traditional/simplified character scripts on a shared disc/ring, and five third-party SVG sets (lacquer, wood, book, brush, clerical) with their own backs; sources and licences in `public/piece-sets/xiangqi/<id>/README.md`; retired ids (western, symbols) clear from storage |
 | `xiangqi-appearance-storage.ts` | localStorage-backed xiangqi board-theme + piece-set preferences (read/write/normalize), shared by the xiangqi renderers |
 | `xiangqi-replay.ts` | Full xiangqi (9×10) article replay: one board stepped through a move list via the real kernel, rendered on demand (first used by the Xiangqi Rules article) |
 | `shogi4-rules-diagrams.ts` | GENERATED inline SVG diagrams for the Shogi4 rules article (Oca tiles); regenerate via the shogi4 repo's `gen_rules_diagrams.py`, do not hand-edit |

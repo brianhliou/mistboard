@@ -51,11 +51,12 @@ import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
 import {
   animalFlatTreasureMarks,
   animalTreasureMarks,
+  assetTreasureMarks,
   cjkGlyphMark,
   internationalFlatTreasureMarks,
   internationalTreasureMarks,
+  isAssetPieceSet,
   renderXiangqiPieceGlyphed,
-  treasureSymbolMark,
   type XiangqiPieceSet,
 } from './xiangqi-piece-sets.js';
 
@@ -404,7 +405,7 @@ function renderFortressXiangqiPiece(
 
 // Treasure disc inner marks (centered in a 100x100 box). On the Dobutsu set it
 // mirrors the animal-disc look (cream fill + image + colored ring) with the
-// peacock art from the v2 minimal set. Other sets use the character disc.
+// peacock art from the v2 minimal set. Asset sets put 寶 on their own back; glyph sets use the character disc.
 function treasureInnerMarks(color: FortressXiangqiColor, set: XiangqiPieceSet): string {
   if (set === 'animal-dobutsu') {
     return animalTreasureMarks(color);
@@ -418,15 +419,14 @@ function treasureInnerMarks(color: FortressXiangqiColor, set: XiangqiPieceSet): 
   if (set === 'international-flat') {
     return internationalFlatTreasureMarks(color);
   }
+  if (isAssetPieceSet(set)) {
+    return assetTreasureMarks(set, color);
+  }
   const colorHex = color === 'red' ? '#b91c1c' : '#1f2937';
   // Hanzi draws from the same baked Noto Sans CJK SC Bold outline every other
   // xiangqi piece uses (never the viewer's system serif), so the Treasure's
-  // stroke weight matches its neighbors. The Symbols set gets a faceted gem so
-  // it stays glyph-free like the rest of that set.
-  const mark =
-    set === 'symbols'
-      ? treasureSymbolMark(colorHex)
-      : cjkGlyphMark(set === 'simplified' ? '宝' : set === 'western' ? 'T' : '寶', colorHex);
+  // stroke weight matches its neighbors.
+  const mark = cjkGlyphMark(set === 'simplified' ? '宝' : '寶', colorHex);
   return [
     `<circle cx="50" cy="50" r="46" fill="#f3e6c4" stroke="${colorHex}" stroke-width="2.5"/>`,
     `<circle cx="50" cy="50" r="38" fill="none" stroke="${colorHex}" stroke-width="1.5"/>`,

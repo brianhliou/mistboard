@@ -133,10 +133,24 @@ describe('xiangqi appearance storage normalization', () => {
 
   it('keeps a non-default pick across the v4 rollout', () => {
     const storage = installLocalStorage();
-    storage.setItem('mistboard.xiangqiPieceSet', 'symbols');
+    storage.setItem('mistboard.xiangqiPieceSet', 'wood');
     storage.setItem('mistboard.xiangqiPieceSetVersion', '3');
-    expect(readStoredXiangqiPieceSet()).toBe('symbols');
+    expect(readStoredXiangqiPieceSet()).toBe('wood');
     expect(storage.getItem('mistboard.xiangqiPieceSetVersion')).toBe('4');
+  });
+
+  it('clears a retired set so the browser follows the inference again', () => {
+    for (const retired of ['western', 'symbols']) {
+      const storage = installLocalStorage();
+      storage.setItem('mistboard.xiangqiPieceSet', retired);
+      storage.setItem('mistboard.xiangqiPieceSetVersion', '4');
+      document.cookie = 'mb_cc=TW';
+      expect(readStoredXiangqiPieceSet()).toBe('traditional');
+      expect(storage.getItem('mistboard.xiangqiPieceSet')).toBeNull();
+      expect(storage.getItem('mistboard.xiangqiPieceSetVersion')).toBe('4');
+      document.cookie = 'mb_cc=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      expect(readStoredXiangqiPieceSet()).toBe('international');
+    }
   });
 
   it('keeps an explicit International pick over the inference once v4 is written', () => {
