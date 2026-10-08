@@ -53,6 +53,16 @@ Conventions:
 
 ### Learning and puzzles
 
+- The xiangqi analysis board and game review show an exact tablebase in the book pane (every move's win, draw or loss and mate distance, from chessdb.cn) in covered endgames, and practice grades covered positions by it ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
+- New Xiangqi Basic Endgames reference: 35 common endings graded from certain win to certain draw, each checked against chessdb.cn, with a board for every position and a link to practise it ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
+- The endgame practice sets on /practice grow to 46 positions, sorted by piece, wins first, then draws to hold ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
+- Practice and Xiangqi Basics share one card design with short subtitles, a progress ribbon, and a ring that marks the set to play next ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
+- [One Duck Xiangqi move is worth two xiangqi moves](/blog/duck-xiangqi-game-tree), an article on how the duck widens the game tree and what that costs an engine, in English and Chinese ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
+- New article, Benedict Xiangqi Is Unfair: a balance study of a xiangqi variant where pieces convert instead of capturing, with all 54 engine games to step through ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
+- The Anti Xiangqi and Horde Xiangqi articles carry their full analysis, with 169 and 58 engine games to step through, and every step-through board in the articles now looks like the study embed ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
+- The puzzle-mining, KataGo vs Misty, solver audit, Atomic Xiangqi and Duck Xiangqi pages gain the detail from their brianhliou.com versions ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
+- Secrets of Strategy (韬略元机), the Dream of Divine Strategy (梦入神机) and four smaller collections join the library: 682 more problems and games, each on its own board with the book's line as the mainline, credited to dpxq.com ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
+- Signed-out players who solve a practice exercise are offered a sign-in to keep their progress ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
 - [What the Solver Found in the Old Manuals](/blog/solver-audit) checks 172 short continuous-check compositions from 適情雅趣, 渊深海阔 and 林幼如作品集 with an exhaustive solver: 45 have one solution, and nine refuted records get a study of their own ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
 - Master-game chapters in Mistboard's own studies now open with the computer analysis chart, move marks and accuracy, the same as a game review; a chapter edited after its analysis shows the chart only up to the first changed move ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
 - Tony Fung 冯家俊, Hong Kong's 2022 world championship finalist, gets the fourth player page, in English and Chinese, with all 47 of his games in a study ([7af55c21](https://github.com/brianhliou/mistboard/commit/7af55c21))
@@ -67,6 +77,7 @@ Conventions:
 
 ### Watching and review
 
+- In jieqi review, hovering or tapping the luck die on the board, or the 🎲 badge in the move list, now opens the luck card for that move ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
 - Jieqi review marks each reveal and each capture of a face-down piece with a die: teal when the draw helped, violet when it hurt, more pips for a bigger swing, and a card that says what the piece could have been ([9722ca87](https://github.com/brianhliou/mistboard/commit/9722ca87))
 - Xiangqi article boards whose game is in the broadcast archive now show the game's advantage chart under the board; click it to jump to any move, or hide it from the board menu ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
 - Game boards in articles now link to the game's full analysis, with the advantage chart and every move's verdict, when the game is in the broadcast archive ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
@@ -108,6 +119,7 @@ Conventions:
 
 ### Site
 
+- Engine champions page at /champions: the reigning champion engine for every game with a bot, the title history, and how any engine can challenge for a title ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
 - The source page credits Pikafish with links to pikafish.com, its weights license and its repository, and the analysis board's engine name links to pikafish.com ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
 - Game cards show the variant as the title, with the time control on its own line ([99752abc](https://github.com/brianhliou/mistboard/commit/99752abc))
 - Correspondence lists use game cards, and challenging a specific player moves to their profile ([c3243b74](https://github.com/brianhliou/mistboard/commit/c3243b74))
@@ -138,6 +150,9 @@ Conventions:
 
 ### Fixed
 
+- Practice draws the computer's reply together with its sound, after a short pause, instead of up to a second and a half later ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
+- The Chinese practice pages (/zh-hans/practice, /zh-hant/practice) load instead of a 404 ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
+- The Duck Xiangqi rules count five ways to block, not four, and the Misty page names the other open implementation of its architecture ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
 - Jieqi review grades a capture of a face-down piece on what the capturer could know, not on what it turned out to be, and compares every move against alternatives valued the same way ([9722ca87](https://github.com/brianhliou/mistboard/commit/9722ca87))
 - The new article on the classical manual audit shows its board on the homepage and blog index instead of a blank card ([7da525a0](https://github.com/brianhliou/mistboard/commit/7da525a0))
 - Chinese phase labels on advantage charts read on one line instead of one character per line ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
