@@ -7,8 +7,10 @@ import type { StudyWithChapters } from './persistence-studies.js';
 import {
   checkCreate,
   checkPlan,
+  editableOwners,
   mainlinePlies,
   readPlan,
+  renamedI18n,
   type StudyCreateSpec,
   type StudyEditPlan,
 } from './study-edit-cli.js';
@@ -71,6 +73,74 @@ test('refuses a study the site does not own, before looking at the ops', () => {
   assert.throws(
     () => checkPlan(study('someone'), plan([{ op: 'rename', chapter: 'a', name: 'x' }])),
     /owned by @someone; this tool edits only studies owned by @mistboard/,
+  );
+});
+
+test('--allow-owner admits exactly the one handle it names, and nothing by default', () => {
+  const rename = plan([{ op: 'rename', chapter: 'a', name: 'x' }]);
+  assert.deepEqual(editableOwners(), ['mistboard']);
+  assert.throws(
+    () => checkPlan(study('brianhliou'), rename, editableOwners()),
+    /owned by @brianhliou; this tool edits only studies owned by @mistboard/,
+  );
+  assert.deepEqual(checkPlan(study('brianhliou'), rename, editableOwners('brianhliou')), [
+    'rename a: "Game 1" -> "x"',
+  ]);
+  assert.deepEqual(editableOwners('@brianhliou'), ['mistboard', 'brianhliou']);
+  assert.throws(
+    () => checkPlan(study('brianhliou'), rename, editableOwners('someone')),
+    /owned by @brianhliou; this tool edits only studies owned by @mistboard, @someone/,
+  );
+  assert.throws(() => editableOwners(''), /bad handle/);
+  assert.throws(() => editableOwners('a b'), /bad handle/);
+});
+
+test('a rename carries locale names, checks the name it expects, and keeps other locales', () => {
+  const s = study();
+  assert.deepEqual(
+    checkPlan(
+      s,
+      plan([
+        {
+          op: 'rename',
+          chapter: 'a',
+          name: 'Unbroken · Game 1',
+          i18n: {
+            'zh-Hans': { name: '未被推翻 · 第一局' },
+            'zh-Hant': { name: '未被推翻 · 第一局' },
+          },
+          expect: 'Game 1',
+        },
+      ]),
+    ),
+    [
+      'rename a: "Game 1" -> "Unbroken · Game 1" zh-Hans "未被推翻 · 第一局" zh-Hant "未被推翻 · 第一局"',
+    ],
+  );
+  assert.throws(
+    () => checkPlan(s, plan([{ op: 'rename', chapter: 'a', name: 'x', expect: 'Game 2' }])),
+    /a is "Game 1", not "Game 2"/,
+  );
+  for (const i18n of [{ 'zh-Hant': { name: ' ' } }, { 'zh-Hant': {} }, { ZH: { name: 'x' } }]) {
+    assert.throws(
+      () => checkPlan(s, plan([{ op: 'rename', chapter: 'a', name: 'x', i18n: i18n as never }])),
+      /i18n locale|empty zh-Hant name/,
+    );
+  }
+  assert.deepEqual(
+    renamedI18n(
+      {
+        'zh-Hans': { name: '和局成立', note: 'kept' },
+        'zh-Hant': { name: '和局成立' },
+        vi: { name: 'v' },
+      },
+      { 'zh-Hans': { name: '未被推翻 ' }, 'zh-Hant': { name: '未被推翻' } },
+    ),
+    {
+      'zh-Hans': { name: '未被推翻', note: 'kept' },
+      'zh-Hant': { name: '未被推翻' },
+      vi: { name: 'v' },
+    },
   );
 });
 
