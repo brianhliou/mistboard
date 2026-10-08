@@ -24,6 +24,7 @@
     "variant:catalog": "tsx scripts/variant-catalog.ts",
     "lab": "tsx scripts/variant-lab/lab/cli.ts",
     "study:edit": "tsx apps/server/src/study-edit-cli.ts",
+    "email:preview": "tsx apps/server/src/scripts/email-previews.ts",
     "study:analyse": "tsx apps/server/src/study-analysis-cli.ts",
     "videos:audit": "node scripts/videos-audit.mjs",
     "videos:mine": "node scripts/videos-mine.mjs",

@@ -11,10 +11,10 @@ import { DAY_MS } from '@mistboard/game';
 import { logger } from './obs.js';
 import * as persistence from './persistence.js';
 import type { DeadlineWarningCandidate } from './persistence-room-deadlines.js';
+import { correspondenceDeadlineEmail, emailLocale } from './player-email.js';
 import { sendTransactionalEmail, transactionalEmailConfigured } from './send-email.js';
 
 const fromAddress = process.env.MISTBOARD_AUTH_EMAIL_FROM ?? process.env.RESEND_FROM_EMAIL;
-const publicHost = process.env.MISTBOARD_HOST ?? 'https://mistboard.com';
 
 export const correspondenceDeadlineWarningEnabled = transactionalEmailConfigured && !!fromAddress;
 
@@ -83,22 +83,26 @@ async function sendDeadlineWarningEmail(
   remainingMs: number,
 ): Promise<boolean> {
   if (!fromAddress) return false;
-  const url = `${publicHost}/room/${encodeURIComponent(candidate.roomId)}`;
-  const opponent = candidate.opponentName ?? 'your opponent';
-  const left = formatRemaining(remainingMs);
-  const subject = 'Your move is running out of time';
-  const text =
-    `It's your move against ${opponent}, and your clock runs out in about ${left}.\n\n` +
-    `Play your move: ${url}\n\n` +
-    // Before the opening moves the sweeper aborts the room (lifecycle
-    // tenantAbortPhaseFor), so "forfeited" would be untrue for exactly the
-    // recipient most likely to read this: someone who never played a move.
-    'If the clock runs out, the game is forfeited, or cancelled if the opening moves were never played.';
+  // Before the opening moves the sweeper aborts the room (lifecycle
+  // tenantAbortPhaseFor), so the copy says "forfeited, or cancelled": plain
+  // "forfeited" would be untrue for exactly the recipient most likely to read
+  // it, someone who never played a move.
+  const email = correspondenceDeadlineEmail(
+    {
+      roomId: candidate.roomId,
+      gameSpecId: candidate.gameSpecId,
+      opponentName: candidate.opponentName,
+      allowanceMs: candidate.allowanceMs,
+      remainingMs,
+    },
+    emailLocale(candidate.recipientLocale),
+  );
   const result = await sendTransactionalEmail({
     from: fromAddress,
     to: [candidate.recipientEmail],
-    subject,
-    text,
+    subject: email.subject,
+    text: email.text,
+    html: email.html,
   });
   if (!result.ok) {
     logger.error(
@@ -117,11 +121,4 @@ async function sendDeadlineWarningEmail(
     'deadline warning email sent',
   );
   return true;
-}
-
-function formatRemaining(ms: number): string {
-  const hours = Math.max(1, Math.round(ms / (60 * 60 * 1000)));
-  if (hours < 36) return hours === 1 ? '1 hour' : `${hours} hours`;
-  const days = Math.round(hours / 24);
-  return days === 1 ? '1 day' : `${days} days`;
 }

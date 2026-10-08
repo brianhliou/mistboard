@@ -527,12 +527,13 @@ async function createSeekResult(
  */
 export function correspondenceStartNoticeFor(
   roomId: string,
-  seek: { creatorUserId: string; daysPerMove: number },
+  seek: { creatorUserId: string; daysPerMove: number; gameSpecId: string },
   accepter: { displayName: string; handle: string },
   creatorSide: 'first' | 'second',
 ): CorrespondenceStartNotice {
   return {
     roomId,
+    gameSpecId: seek.gameSpecId,
     creatorUserId: seek.creatorUserId,
     accepterName: accepter.displayName || accepter.handle,
     creatorOnMove: creatorSide === 'first',

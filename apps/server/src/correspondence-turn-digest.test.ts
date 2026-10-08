@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  digestSubject,
-  digestText,
+  digestEmail,
   digestWindowStart,
   MIN_WAIT_MS,
   sweepCorrespondenceTurnDigests,
@@ -39,6 +38,7 @@ function candidate(
   return {
     userId,
     email: `${userId}@example.com`,
+    locale: null,
     games: games.map((game) => ({
       roomId: game.roomId,
       gameSpecId: 'xiangqi',
@@ -144,15 +144,20 @@ test('a failing send or list never propagates, and disabled is a no-op', async (
 test('the email names every game with its opponent, time left and link', () => {
   const now = new Date('2026-09-20T15:00:00Z');
   const c = candidate('u1', [{ roomId: 'xq_one' }, { roomId: 'xq_two', opponentName: null }], now);
-  assert.equal(digestSubject(1), 'Your move in 1 correspondence game');
-  assert.equal(digestSubject(2), 'Your move in 2 correspondence games');
-  const text = digestText(c, now);
-  assert.match(text, /^2 correspondence games are waiting on your move:/);
-  assert.match(text, /- Xiangqi vs Opp, 2 days left: https:\/\/mistboard\.com\/room\/xq_one/);
+  const one = digestEmail(candidate('u1', [{ roomId: 'xq_one' }], now), now);
+  assert.equal(one.subject, 'Your move in xiangqi against Opp');
+  const email = digestEmail(c, now);
+  assert.equal(email.subject, 'Your move in xiangqi against Opp and 1 other game');
+  assert.match(email.text, /2 correspondence games are waiting on your move/);
   assert.match(
-    text,
-    /- Xiangqi vs your opponent, 2 days left: https:\/\/mistboard\.com\/room\/xq_two/,
+    email.text,
+    /- Xiangqi against Opp, 2 days left: https:\/\/mistboard\.com\/room\/xq_one/,
   );
-  assert.match(text, /\/correspondence\n/);
-  assert.match(text, /at most one of these a day/);
+  assert.match(
+    email.text,
+    /- Xiangqi against your opponent, 2 days left: https:\/\/mistboard\.com\/room\/xq_two/,
+  );
+  assert.match(email.text, /\/correspondence\n/);
+  assert.match(email.text, /at most one of these a day/);
+  assert.match(email.html, /href="https:\/\/mistboard\.com\/room\/xq_one"/);
 });
