@@ -115,6 +115,7 @@ export const pikafishRevealBugArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-10-03',
+  updatedAt: '2026-10-07',
   thumbnail: { kind: 'svg', svg: REVEAL_BUG_THUMBNAIL },
   boardFamily: 'xiangqi',
   audience: 'People who play jieqi against the bot on Mistboard, and people who build jieqi engines.',
@@ -208,6 +209,31 @@ export const pikafishRevealBugArticle: Article = {
         {
           kind: 'paragraph',
           text: 'AB-JChess is built from Pikafish and averages reveals the same way. It has the cut-short flaw and not the colour one. Of the 60 reveals that decided its losses to our bot, it overrated 2.',
+        },
+      ],
+    },
+    {
+      // Folded in from the brianhliou.com post of 2026-09-22 ("Testing an Audit
+      // of the Jieqi Engine"), which 301s here, keeping its October 7 correction.
+      // The post put a 200-game match at "roughly ± 25 Elo"; ±0.07 around 0.5 is
+      // about ±50 Elo, corrected here.
+      heading: 'An earlier audit tested the averaging on the buggy engine',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'In September we tested an outside source review of the same engine, from [iwestlin/jieqi-ai](https://github.com/iwestlin/jieqi-ai). Two of its five findings were worth a match. The engine had already beaten ten nets distilled from its own evaluations, the best of them scoring 0.43. Each test played the changed engine against the shipped one, colours alternating, at equal time, with a referee dealing the hidden pieces so neither engine saw one.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'The first finding was a real evaluation bug: one colour’s face-down pieces were never counted, so Red got credit for threatening them and Black never did. Fixing it alone scored 0.475 over 200 games at 500 ms a move (91-101-8). Retuning the 43 terms it touches, over 10,000 SPSA game pairs, scored 0.507 (96-93-11). Both are within noise: 200 games is ±0.07 at 95%, roughly ±50 Elo, so a change worth 10 Elo cannot be seen.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'The second was the averaging this page is about, a clamped weighted average with a fallback to the worst case. In July it had chosen a reveal with a true 64% chance of winning over a safe move at 97%. A replacement took the engine’s top four moves, searched each possible piece separately and played the best average. It scored 0.370 over 100 games (30-56-14) at 2.2 times the time, and 0.410 over 50 games (17-26-7) at 7 times. We concluded then that the worst-case fallback does useful work.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'That conclusion came from the colour bug above. The fallback was meant to assume the worst, and as Black it assumed the best, so the test ran on an engine that was not doing it half the time. Since then [AB-JChess](/blog/ab-jchess) has beaten this engine 248-136-16 over 400 games and is now the top jieqi bot.',
         },
       ],
     },

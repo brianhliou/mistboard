@@ -33,6 +33,13 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Machine-drafted 2026-10-07, not native-reviewed, locked with its English
+  // copy, which publishes in the same release (the fe26e31c repetition-key fix).
+  'chariot-cannon-repetition-key',
+  // Machine-drafted 2026-10-07, not native-reviewed, locked with its English
+  // copy, which publishes in the same release (the brianhliou.com post of
+  // 2026-07-02, folded in; sentences reused from its zh versions).
+  'flip-jungle-skill-ceiling',
   // Machine-drafted 2026-10-07, not native-reviewed; every string is generated
   // from articles/xiangqi-endgames-text.ts, which holds all three scripts.
   'xiangqi-endgames',
@@ -175,8 +182,162 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // chariot-cannon-repetition-key: machine-drafted 2026-10-07, not native-reviewed.
+  'Chariot and cannon both start with C': '车和炮的英文都以 C 开头',
+  'Chariot and cannon, both C': '车和炮，都是 C',
+  'A xiangqi threefold repetition bug: the chariot and the cannon shared a key':
+    '象棋三次重复局面判定的一个错误：车和炮被记成了同一个字母',
+  "A one-character bug in Mistboard's xiangqi repetition key let a game end in a threefold draw after a position had occurred only twice.":
+    'Mistboard 象棋重复局面键里一个只差一个字符的错误，让一个局面只出现两次，对局就被判为三次重复和棋。',
+  'Our xiangqi repetition key labelled each piece by the first letter of its role, so the chariot and the cannon were both `c`. Swapping a chariot and a cannon left the key unchanged, so a game could be drawn by threefold repetition after only two.':
+    '我们的象棋重复局面键用棋子角色英文名的首字母来标记每个棋子，于是车（chariot）和炮（cannon）都是 `c`。车和炮互换位置后，键不变，所以一个局面只出现两次，对局就可能被判为三次重复和棋。',
+  'The fix writes out the role name. Fog Chess had the same bug with the king and the knight. No finished game changes result.':
+    '修复后，键里写出完整的角色名。迷雾国际象棋的王（king）和马（knight）也有同样的错误。已结束的对局，没有一盘结果改变。',
+  'The key used the first letter of each role': '键只用了每个角色的首字母',
+  'Threefold repetition needs a way to say "this is the same position." Mistboard turns each position into a string and counts how often each one comes up.':
+    '三次重复需要一种方法来判断“这是同一个局面”。Mistboard 把每个局面转成一个字符串，并统计每个字符串出现了几次。',
+  "`role[0]` is the first letter of the role, and two of xiangqi's seven roles start with `c`. A red chariot on a1 and cannon on b3 write `a1rc` and `b3rc`. Swap them and they still write `a1rc` and `b3rc`.":
+    '`role[0]` 是角色名的首字母，而象棋的七种角色里有两种以 `c` 开头。a1 上的红车和 b3 上的红炮分别写成 `a1rc` 和 `b3rc`。两者互换后，写出来仍然是 `a1rc` 和 `b3rc`。',
+  "The opening position next to the same position with red's a1 chariot and b3 cannon swapped":
+    '开局局面，旁边是红方 a1 车与 b3 炮互换后的同一局面',
+  "Left: the opening. Right: red's a1 chariot and b3 cannon have traded places. The old key cannot tell them apart.":
+    '左：开局。右：红方 a1 的车和 b3 的炮互换了位置。旧的键分不出两者。',
+  'Fourteen legal plies drew a game': '十四步合法着法，判出一盘和棋',
+  'Red makes the swap in five moves while Black walks a chariot out and home, then each side moves a horse out and back:':
+    '红方用五步完成互换，同时黑方把一个车走出去再走回来；然后双方各把一个马跳出去再跳回来：',
+  After: '走完',
+  'Old count': '旧计数',
+  'Real count': '实际计数',
+  'the start': '开局',
+  'opening: 1': '开局局面：1',
+  'the swap, 5 moves a side': '互换，每方 5 步',
+  'swapped: 1': '互换局面：1',
+  'a horse out and back': '马跳出再跳回',
+  '3, draw': '3，判和',
+  'swapped: 2': '互换局面：2',
+  'Fourteen legal plies, and the site scored a draw. No player reported it; it turned up in a read of this code while jieqi was getting a repetition rule.':
+    '十四步合法着法，网站就判了和棋。没有棋手报告过这个问题；它是在给揭棋加上重复局面规则时，阅读这段代码发现的。',
+  'The fix writes the role out in full': '修复：把角色名完整写出',
+  'A test plays those fourteen plies and checks the game goes on. The same shortcut was in Fog Chess (king and knight both `k`) and Duck Xiangqi; both are fixed.':
+    '一个测试会走完这十四步，并检查对局仍在继续。迷雾国际象棋（王 king 和马 knight 都是 `k`）和鸭子象棋里也有同样的简写；两者都已修复。',
+  'What it means on the site': '对网站意味着什么',
+  '**Finished games:** none change. Replayed under the corrected key, all 29 xiangqi repetition draws, 2 perpetual-check losses, 2 Duck Xiangqi draws and 19 Fog Chess draws end the same way.':
+    '**已结束的对局：**没有一盘改变。用修正后的键重放，全部 29 盘象棋重复局面和棋、2 盘长将判负、2 盘鸭子象棋和棋和 19 盘迷雾国际象棋和棋，结果都一样。',
+  '**New games:** xiangqi, Fog Xiangqi, Fog Chess and Duck Xiangqi end on repetition only when a position has really occurred three times.':
+    '**新对局：**象棋、迷雾象棋、迷雾国际象棋和鸭子象棋，只有在同一局面真正出现三次时，才会因重复局面结束。',
+  "**Puzzles:** the miner's duplicate check reads both spellings, so no published puzzle comes back as new.":
+    '**谜题：**谜题挖掘器的查重会同时识别新旧两种写法，所以已发布的谜题不会被当成新题再出现。',
+  'A key built from abbreviations needs one check that no single abbreviation shows: that no two names shorten to the same thing. A letter table written by hand makes that check when someone picks `r` for the chariot. `role[0]` never did.':
+    '用缩写拼成的键需要一项检查，而这项检查从任何单个缩写上都看不出来：没有两个名字缩写成同一个东西。手写的字母表在有人为车选定 `r` 的那一刻，就做了这项检查。`role[0]` 从来没有做过。',
   // xiangqi-endgames (2026-10-07): generated from the page's own text module.
   ...endgamePageDictionary('zh-Hans'),
+  // flip-jungle-skill-ceiling, katago-jungle den races, pikafish-reveal-bug audit, and the two links to the new page (2026-10-07): machine-drafted, not native-reviewed.
+  'Flip Jungle: 512 times the search still loses 23% of games':
+    '翻翻棋：搜索量提升 512 倍，仍有 23% 的对局落败',
+  'Flip Jungle is 4×4 Jungle Chess with every animal face-down. A near-perfect engine shows how much skill survives the flips: 512 times the search buys about 242 Elo and still loses 23% of its games.':
+    '翻翻棋是所有动物都盖着的 4×4 斗兽棋。一个近乎完美的引擎能测出翻棋之后还剩多少棋力：512 倍的搜索量大约只换来 242 Elo，而且仍会输掉 23% 的对局。',
+  '[Flip Jungle](/rules/jungle-flip) is Jungle Chess on a 4×4 board with all sixteen animals face-down. Each turn you flip a tile, which reveals a random animal, or move a face-up animal one square. MistyJungleFlip, the bot you play here, picks the optimal move 99 to 100% of the time in the endgames that can be checked exactly. That makes it a measuring instrument for the question every flip game raises: how much of a game is skill, and how much is the flips?':
+    '[翻翻棋](/rules/jungle-flip)是在 4×4 棋盘上进行的斗兽棋，十六只动物开局时全都盖着。轮到你时，可以翻开一张棋子，随机揭示一只动物，或者把一只已翻开的动物走一格。本站的电脑 MistyJungleFlip 在能精确核对的残局中，选出最优着法的比例为 99% 到 100%。这让它成了一件测量仪器，用来回答每种翻棋游戏都会引出的问题：一盘棋里有多少是棋力，多少是翻棋？',
+  'Less skill than it feels like. A copy of the engine with 512 times more search still loses 23% of its games against the weaker one.':
+    '比感觉上要少。搜索量多 512 倍的引擎副本，对上较弱的那一个，仍会输掉 23% 的对局。',
+  Measure: '测量项',
+  'Search ladder, 1k to 512k nodes': '搜索阶梯，1k 到 512k 节点',
+  '242 Elo across a 512× range': '512 倍跨度对应 242 Elo',
+  '512× more search': '搜索量提升 512 倍',
+  'loses 23% of games': '输掉 23% 的对局',
+  '8× more search': '搜索量提升 8 倍',
+  'loses 37 to 40%': '输掉 37% 到 40%',
+  'Any search against random moves': '任意搜索对随机走子',
+  'about 99% (random won 0 of 800)': '约 99%（随机方 800 局全败）',
+  'Endgames, 5 pieces or fewer, against exact tablebases': '残局（5 子以内）对精确残局库',
+  '99 to 100% optimal': '99% 到 100% 最优',
+  'Midgames, 5 to 6 pieces, against an exact solver': '中局（5 到 6 子）对精确求解器',
+  '200 of 200 moves optimal': '200 着中 200 着最优',
+  'A search engine with exact endgames': '一个带精确残局的搜索引擎',
+  'MistyJungleFlip is alpha-beta search with a handwritten evaluation and no neural network: material plus mobility, with a small term against draws. Its strength is set by a node budget, not a clock, so the same position gets the same move on any machine, and a measured gap belongs to the engine rather than the hardware.':
+    'MistyJungleFlip 是 alpha-beta 搜索，配手工评估函数，没有神经网络：评估值由子力加机动性构成，另有一个小小的厌和项。棋力由节点预算而非时钟决定，因此同一局面在任何机器上都返回同一着法，测出的差距属于引擎而不是硬件。',
+  'A flip is a chance node. Its value is the average over the animals still face-down, pruned with star-minimax, the chance-node form of alpha-beta. Endgames come from exact tablebases instead, solved backward from every finished position. Each entry stores the result under best play and the distance to it.':
+    '翻棋是机会节点。它的价值是所有仍盖着的动物的平均值，并用 star-minimax，即机会节点版的 alpha-beta 进行剪枝。残局则来自精确残局库，从每个终局局面往回推解出。每个条目存储双方最佳着法下的结果，以及到达该结果的距离。',
+  'Checked against exact answers where they exist': '凡有精确答案之处，都拿来核对',
+  'Self-play shows which of two versions is stronger, not whether either plays well: two copies of one engine share the same blind spots. So move quality is graded against the tablebases. In endgames of up to five pieces the engine played the optimal move 99 to 100% of the time; the misses were search depth, and a deeper search cleared them. A forward solver built on the tablebases reaches five- and six-piece midgames with tiles still face-down, and on 200 of those the engine matched the optimal move every time.':
+    '自我对弈只能测出两个版本哪个更强，测不出它们是否下得好：同一引擎的两个副本共享同样的盲点。所以着法质量改为对照残局库来评分。在最多五子的残局中，引擎选出最优着法的比例为 99% 到 100%；失误都是搜索深度问题，更深的搜索就解决了。基于残局库构建的前向求解器能覆盖仍有棋子盖着的五子和六子中局；在其中 200 个局面上，引擎每次都走出了最优着法。',
+  'That coverage stops where exact computation stops, near the end of the game. The opening, where the flips happen, is too large to solve, so nothing here verifies the engine’s opening play.':
+    '这种覆盖到精确计算的边界为止，也就是接近终局处。翻棋发生的开局阶段太大，无法求解，所以这里的一切都没有验证引擎的开局水平。',
+  '512 times the search buys about 242 Elo': '512 倍的搜索量，大约只值 242 Elo',
+  'To measure the opening without an exact answer, four copies searching 1k, 8k, 64k and 512k nodes a move played a round robin of paired, colour-swapped games, 120 per pairing. Their fitted ratings were +0, +89, +153 and +242. Each eightfold step is worth 64 to 89 Elo, and the ladder flattens at the top: 320k to 640k nodes was worth 6 Elo. In chess, 512 times the compute is worth several hundred.':
+    '为了在没有精确答案的情况下衡量开局，四个副本分别每着搜索 1k、8k、64k 和 512k 节点，进行成对换色的循环赛，每个配对 120 局。拟合出的等级分为 +0、+89、+153 和 +242。每 8 倍的台阶值 64 到 89 Elo，且在高端趋于平坦：320k 到 640k 节点只值 6 Elo。在国际象棋里，512 倍的算力值好几百分。',
+  'Upsets are more common than the ratings suggest. An engine with 8 times the search loses 37 to 40% of its games; one with 512 times loses 23%. The flips decide enough games on their own that more search cannot close the gap.':
+    '爆冷比等级分所暗示的更常见。搜索量多 8 倍的引擎会输掉 37% 到 40% 的对局；多 512 倍的输掉 23%。翻棋自身决定的对局足够多，更多搜索也补不上这个差距。',
+  'The one big step is at the bottom. A 1k-node search beats a random mover about 99% of the time (random won 0 of 800 games across the tiers), a gap near 850 Elo. About 80% of the distance from random to perfect is that single step, from moving at random to searching at all. Tuning the evaluation did nothing: better piece values, a rat-and-elephant term and draw aversion all came back flat in paired self-play.':
+    '唯一的大台阶在最底部。1k 节点的搜索约 99% 地战胜随机走子（各档位共 800 局中随机方 0 胜），差距接近 850 Elo。从随机到完美的距离里，约 80% 就在这一步上，即从随便走子到开始搜索。调评估函数毫无作用：更好的子力价值、鼠与象的专项、厌和项，在成对自我对弈中全都没有变化。',
+  'Perfect play against perfect play is a draw': '完美对完美是和棋',
+  'Small versions of the game can be solved outright. With two and four pieces, every tile face-down at the start and played to the end under the full rules, the game is a draw under best play: two perfect players cannot beat each other. Solving even a six-piece game from the opening crosses 40 million distinct positions, the same wall that keeps the sixteen-piece game out of reach, so the full game is unproven.':
+    '足够小的版本可以彻底解出。两子和四子的版本，开局时所有棋子都盖着，按完整规则下到终局，在双方最佳着法下都是和棋：两个完美棋手无法战胜彼此。哪怕从开局解一个六子游戏，也已超过 4000 万个不同局面，正是这道墙让十六子的完整游戏无法企及，所以完整游戏未被证明。',
+  'That still places the 23%. Perfect against perfect is a draw. Perfect against a much weaker player is a near-certain win: the random mover lost all 800 of its games. Two close players sit in between, with the gap inside the variance and the flips deciding.':
+    '这仍能给那 23% 定位。完美对完美是和棋。完美对远弱的棋手几乎必胜：随机走子方 800 局全败。两个接近的棋手处在中间，差距落在方差之内，由翻棋来决定。',
+  'How far the tablebases go': '残局库能走多远',
+  'The tables cover every fully revealed position at each piece count and ignore the 40-half-move no-progress rule.':
+    '这些表覆盖每个子数下所有完全翻开的局面，不计 40 个半回合的无进展规则。',
+  Pieces: '子数',
+  Positions: '局面数',
+  'Longest forced win': '最长必胜',
+  Build: '构建',
+  '9 plies': '9 着',
+  instant: '瞬时',
+  '1.9M': '190 万',
+  '21 plies': '21 着',
+  '2 s': '2 秒',
+  '79M': '7900 万',
+  '41 plies': '41 着',
+  '200 s': '200 秒',
+  '2.3B': '23 亿',
+  '63 plies': '63 着',
+  '4 hr on a laptop, 2.8 GB': '笔记本上 4 小时，2.8 GB',
+  '46B': '460 亿',
+  unbuilt: '未构建',
+  'days, ~140 GB of RAM': '数天，约 140 GB 内存',
+  'Six pieces could be built on a rented server and would add nothing: five-piece coverage already grades every endgame that reaches the tables. Past that, a full solve means the opening, a flip tree of sixteen distinct pieces revealed in random order, with on the order of 10¹¹ or more reachable states.':
+    '六子表可以在租用的服务器上构建，但毫无增益：五子的覆盖已经能给每一个进入表中的残局评分。再往前，完整求解就意味着要解开局，而开局是一棵翻棋树：十六个不同棋子以随机顺序翻开，可达状态在 10¹¹ 量级以上。',
+  'The distance column was not in the first tables. They stored win, draw or loss, which is enough to grade moves but not to finish games. In one self-play game the engine held a tiger and a rat against a lone elephant, a forced win (the rat traps the elephant in three plies, since an elephant cannot take a rat). For eight turns it played moves the tables graded optimal and made no progress, because every winning move scored the same, until repetition drew the game. With the distance stored, a win in 3 outranks a win in 9: the engine takes the shortest forced win, drags out forced losses, and that endgame ends with the rat taking the elephant in three. Chess endgame tables such as Syzygy carry a distance for the same reason.':
+    '最初的表里没有距离这一列。它们只存胜、和、负，这足以给着法评分，却不足以收官。在一盘自我对弈中，引擎有一虎一鼠对孤象，按表是必胜（鼠三着内困住象，因为象不能吃鼠）。连续八回合，它走出按表评为最优的着法，却毫无进展，因为每一步取胜着法得分相同，直到重复规则判为和棋。存入距离后，3 着取胜优于 9 着取胜：引擎选最短的必胜路线，并把必败局面尽量拖长，那个残局以鼠三着吃象告终。国际象棋的残局库，例如 Syzygy，附带距离也是同样的原因。',
+  'Skill shows in the average, not the game': '棋力体现在平均值上，而不在单局上',
+  'Skill is real in Flip Jungle: the 242-Elo ladder is a real gap, and over a long match the stronger engine wins. But the deal and the flips decide a large share of any one game, so even a far stronger player loses often, and one result says little about who is better. The measurement still missing is a rating against a strong human player, the one test that does not lean on the engine or its solver.':
+    '翻翻棋里棋力是真实存在的：242 Elo 的阶梯是真实差距，在长期对抗中更强的引擎会赢。但发牌和翻棋决定了任一局中相当大的一部分，所以哪怕强得多的棋手也常常落败，一局结果几乎说明不了谁更强。还缺的测量是对强人类棋手的等级分，这是唯一不依赖引擎或其求解器的检验。',
+  'Our [game review](/blog/skill-vs-luck) splits each flip into the decision and the luck, so you can see which share of your own games was which. The [twenty engine games](/study/uKxJ60mN) from the rules page show the bot playing itself, and the engine’s source is [on GitHub](https://github.com/brianhliou/misty-flip-jungle).':
+    '本站的[对局复盘](/blog/skill-vs-luck)把每一次翻子拆成决定和运气，让你看清自己的对局里哪部分是哪一种。规则页上的[二十盘引擎对局](/study/uKxJ60mN)是电脑自我对弈，引擎源码在 [GitHub 上](https://github.com/brianhliou/misty-flip-jungle)。',
+  'Play MistyJungleFlip': '与 MistyJungleFlip 对弈',
+  'Flip Jungle rules': '翻翻棋规则',
+  'FLIP JUNGLE': '翻翻棋',
+  'SKILL CEILING': '棋力上限',
+  '512× THE SEARCH, 23% LOST': '512 倍搜索，仍输 23%',
+  'Flip Jungle skill vs luck: 512× more search still loses 23% of games':
+    '翻翻棋的棋力与运气：搜索量多 512 倍，仍输 23% 的对局',
+  "Flip Jungle's skill ceiling": '翻翻棋的棋力上限',
+  'How much of a flip game the flips decide is measured in [Flip Jungle’s skill ceiling](/blog/flip-jungle-skill-ceiling): an engine with 512 times the search still loses 23% of its games.':
+    '翻棋游戏里有多少由翻棋决定，[翻翻棋的棋力上限](/blog/flip-jungle-skill-ceiling)一文做了测量：搜索量多 512 倍的引擎，仍会输掉 23% 的对局。',
+  'How strong is the bot, and how much do the flips decide? [Flip Jungle’s skill ceiling](/blog/flip-jungle-skill-ceiling) grades it against exact endgame tables and measures what 512 times the search is worth.':
+    '电脑有多强，翻棋又决定了多少？[翻翻棋的棋力上限](/blog/flip-jungle-skill-ceiling)用精确残局库给它评分，并测出 512 倍的搜索量值多少。',
+  'Misty has no idea of a den race': 'Misty 不懂冲兽穴竞速',
+  'Misty scores a position by material plus a bonus for each piece’s distance to the enemy den. It never asks whether a runner heading for its own den gets there first; it finds out when the search reaches the den, about 12 plies out. In August we tried three ways to teach it, and all three came back null or negative.':
+    'Misty 对局面的评估是子力，加上每个棋子离对方兽穴距离的奖励。它从不去问奔向自己兽穴的对方棋子是否会先到；等搜索抵达兽穴时它才发现，那大约是 12 着之后。8 月我们试了三种办法教它，三种结果都是无效或负收益。',
+  'First, how often a race decides a game. Of 172 self-play games at Misty’s usual 5 million nodes, 52.9% ended in a repetition draw, 26.2% in a den entry and 20.9% in a no-progress draw. Only 4.7% were genuine races, won by a side that was level or behind ten plies out. The same test at 200k nodes reported 22%: weaker play inflates races about fivefold.':
+    '先看竞速多常决定对局。在 Misty 平常的 500 万节点下自我对弈 172 盘，52.9% 以重复和棋结束，26.2% 以进入兽穴结束，20.9% 以无进展和棋结束。只有 4.7% 是真正的竞速：胜方在十着之前持平或落后。同样的测试在 20 万节点下给出 22%：较弱的对弈会把竞速夸大约五倍。',
+  'Deeper search finds little more. Over those 8 races, 60 million nodes saw the loss at most 4 plies sooner than 5 million, and no sooner in 4 of them. A search extension near the dens scored +45 Elo when granted free, at 3.3 times the nodes; held to the same budget, it scored −15 and −12. A den-race term, comparing the two runners once per side, scored −3 and +9 at weights 10 and 25. Each of those matches was 300 colour-swapped pairs.':
+    '更深的搜索也找不到多少东西。在这 8 盘竞速里，6000 万节点比 500 万节点最多早 4 着看到败势，其中 4 盘一着也没有提前。兽穴附近的搜索延伸在免费给予时得到 +45 Elo，代价是 3.3 倍的节点；把预算固定后，它得到 −15 和 −12。专门的冲兽穴竞速评估项，每方各比较一次双方的奔袭棋子，在权重 10 和 25 下分别得到 −3 和 +9。每一场对抗都是 300 对换色对局。',
+  'Misty plays a race well enough when the search reaches it. In one self-play game under the old tiger rule, Red’s tiger took a wolf and stood in the d-file corridor beside Blue’s elephant. It could not jump sideways, so Blue did not hurry to take it. When the elephant stepped from d7 to d6, Red’s lion jumped from c3 to c7, into the square the elephant had left. The elephant took the tiger on d5, and the lion was three moves from a den Blue could not defend. Blue ended 13 points ahead and lost. Misty has no den-race term; depth found the line. Since 21 September the tiger jumps sideways, so the corridor no longer traps it.':
+    '搜索够得着时，Misty 照样能把竞速下好。在旧虎规则下的一盘自我对弈中，红方的虎吃掉一只狼，站进 d 路通道，就在蓝方的象旁边。它不能横向跳，所以蓝方不急着吃它。当象从 d7 走到 d6，红方的狮从 c3 跳到 c7，跳进象刚离开的格子。象在 d5 吃掉了虎，而狮离一个蓝方守不住的兽穴只差三步。蓝方最终领先 13 分，却输了。Misty 没有冲兽穴竞速评估项；是搜索深度找到了这条线。自 9 月 21 日起，虎可以横向跳，这条通道不再困得住它。',
+  'What did move Jungle Chess was two constants from the same games: a no-capture draw clock that ended games early, and a draw contempt near zero. Changing them took self-play from a quarter of games decided to about half. The lesson we kept: hold the search budget fixed, or you measure the budget. The 52 games are in [one study](/study/4UhOMlsE).':
+    '真正改变了斗兽棋对局的，是同一批对局里找到的两个常数：一个让对局过早结束的无吃子和棋计数，以及接近零的和棋轻视值。改掉它们后，自我对弈中分出胜负的对局从四分之一升到大约一半。我们留下的教训是：要把搜索预算固定住，否则测的只是预算。那 52 盘对局都收在[一个研究](/study/4UhOMlsE)里。',
+  'An earlier audit tested the averaging on the buggy engine':
+    '更早的一次审查，是在有漏洞的引擎上测试取平均的',
+  'In September we tested an outside source review of the same engine, from [iwestlin/jieqi-ai](https://github.com/iwestlin/jieqi-ai). Two of its five findings were worth a match. The engine had already beaten ten nets distilled from its own evaluations, the best of them scoring 0.43. Each test played the changed engine against the shipped one, colours alternating, at equal time, with a referee dealing the hidden pieces so neither engine saw one.':
+    '9 月，我们测试了一份外部对同一引擎的源码审查，来自 [iwestlin/jieqi-ai](https://github.com/iwestlin/jieqi-ai)。它的五项发现里，有两项值得下一场对抗来检验。在此之前，这个引擎已经赢过十个从它自身评估蒸馏出来的网络，其中最好的得分 0.43。每项测试都让改动后的引擎对阵已上线的引擎，轮换执色，用时相同，由裁判程序发放暗子，双方引擎都看不到暗子。',
+  'The first finding was a real evaluation bug: one colour’s face-down pieces were never counted, so Red got credit for threatening them and Black never did. Fixing it alone scored 0.475 over 200 games at 500 ms a move (91-101-8). Retuning the 43 terms it touches, over 10,000 SPSA game pairs, scored 0.507 (96-93-11). Both are within noise: 200 games is ±0.07 at 95%, roughly ±50 Elo, so a change worth 10 Elo cannot be seen.':
+    '第一项是真实的评估漏洞：有一方的暗子从未被计入，所以红方威胁暗子能得分，黑方从来得不到。只修这个漏洞，每着 500 ms 下 200 盘得分 0.475（91-101-8）。再用 10,000 对 SPSA 对局重新调校它涉及的 43 项参数，得分 0.507（96-93-11）。两者都在噪声之内：200 盘在 95% 置信度下是 ±0.07，大约 ±50 Elo，所以价值 10 Elo 的改动根本看不出来。',
+  'The second was the averaging this page is about, a clamped weighted average with a fallback to the worst case. In July it had chosen a reveal with a true 64% chance of winning over a safe move at 97%. A replacement took the engine’s top four moves, searched each possible piece separately and played the best average. It scored 0.370 over 100 games (30-56-14) at 2.2 times the time, and 0.410 over 50 games (17-26-7) at 7 times. We concluded then that the worst-case fallback does useful work.':
+    '第二项就是本页讲的取平均：一个带上下限的加权平均，并在需要时退回最差结果。7 月，它曾选了一步真实胜率 64% 的翻子，放弃了胜率 97% 的稳妥着法。替代方案取引擎排名前四的着法，对每一种可能的棋子分别搜索，再走平均值最好的一步。它在 2.2 倍用时下 100 盘得分 0.370（30-56-14），在 7 倍用时下 50 盘得分 0.410（17-26-7）。我们当时的结论是：退回最差结果这一步确实有用。',
+  'That conclusion came from the colour bug above. The fallback was meant to assume the worst, and as Black it assumed the best, so the test ran on an engine that was not doing it half the time. Since then [AB-JChess](/blog/ab-jchess) has beaten this engine 248-136-16 over 400 games and is now the top jieqi bot.':
+    '这个结论来自上面的颜色漏洞。退回这一步本该假设最坏情况，而执黑时它假设的是最好情况，所以那次测试用的引擎有一半时间根本没在这样做。此后 [AB-JChess](/blog/ab-jchess) 在 400 盘中以 248-136-16 战胜了这个引擎，现在是最强的揭棋电脑。',
   // duck-xiangqi, duck-xiangqi-strategy, misty blog merge (2026-10-07): machine-translated.
   'Chess has one way of blocking a piece: stand on the point it wants. Xiangqi has five. The sections below are where that difference lands.':
     '国际象棋只有一种挡子的办法：站到它想去的点上。象棋有五种。下面几节讲的就是这个差别落在哪里。',
@@ -4521,6 +4682,160 @@ const ZH_HANS: Record<string, string> = {
 
 const ZH_HANT: Record<string, string> = {
   ...ZH_HANS,
+  // chariot-cannon-repetition-key: machine-drafted 2026-10-07, not native-reviewed.
+  'Chariot and cannon both start with C': '車和炮的英文都以 C 開頭',
+  'Chariot and cannon, both C': '車和炮，都是 C',
+  'A xiangqi threefold repetition bug: the chariot and the cannon shared a key':
+    '象棋三次重複局面判定的一個錯誤：車和炮被記成了同一個字母',
+  "A one-character bug in Mistboard's xiangqi repetition key let a game end in a threefold draw after a position had occurred only twice.":
+    'Mistboard 象棋重複局面鍵裡一個只差一個字元的錯誤，讓一個局面只出現兩次，對局就被判為三次重複和棋。',
+  'Our xiangqi repetition key labelled each piece by the first letter of its role, so the chariot and the cannon were both `c`. Swapping a chariot and a cannon left the key unchanged, so a game could be drawn by threefold repetition after only two.':
+    '我們的象棋重複局面鍵用棋子角色英文名的首字母來標記每個棋子，於是車（chariot）和炮（cannon）都是 `c`。車和炮互換位置後，鍵不變，所以一個局面只出現兩次，對局就可能被判為三次重複和棋。',
+  'The fix writes out the role name. Fog Chess had the same bug with the king and the knight. No finished game changes result.':
+    '修復後，鍵裡寫出完整的角色名。迷霧國際象棋的王（king）和馬（knight）也有同樣的錯誤。已結束的對局，沒有一盤結果改變。',
+  'The key used the first letter of each role': '鍵只用了每個角色的首字母',
+  'Threefold repetition needs a way to say "this is the same position." Mistboard turns each position into a string and counts how often each one comes up.':
+    '三次重複需要一種方法來判斷「這是同一個局面」。Mistboard 把每個局面轉成一個字串，並統計每個字串出現了幾次。',
+  "`role[0]` is the first letter of the role, and two of xiangqi's seven roles start with `c`. A red chariot on a1 and cannon on b3 write `a1rc` and `b3rc`. Swap them and they still write `a1rc` and `b3rc`.":
+    '`role[0]` 是角色名的首字母，而象棋的七種角色裡有兩種以 `c` 開頭。a1 上的紅車和 b3 上的紅炮分別寫成 `a1rc` 和 `b3rc`。兩者互換後，寫出來仍然是 `a1rc` 和 `b3rc`。',
+  "The opening position next to the same position with red's a1 chariot and b3 cannon swapped":
+    '開局局面，旁邊是紅方 a1 車與 b3 炮互換後的同一局面',
+  "Left: the opening. Right: red's a1 chariot and b3 cannon have traded places. The old key cannot tell them apart.":
+    '左：開局。右：紅方 a1 的車和 b3 的炮互換了位置。舊的鍵分不出兩者。',
+  'Fourteen legal plies drew a game': '十四步合法著法，判出一盤和棋',
+  'Red makes the swap in five moves while Black walks a chariot out and home, then each side moves a horse out and back:':
+    '紅方用五步完成互換，同時黑方把一個車走出去再走回來；然後雙方各把一個馬跳出去再跳回來：',
+  After: '走完',
+  'Old count': '舊計數',
+  'Real count': '實際計數',
+  'the start': '開局',
+  'opening: 1': '開局局面：1',
+  'the swap, 5 moves a side': '互換，每方 5 步',
+  'swapped: 1': '互換局面：1',
+  'a horse out and back': '馬跳出再跳回',
+  '3, draw': '3，判和',
+  'swapped: 2': '互換局面：2',
+  'Fourteen legal plies, and the site scored a draw. No player reported it; it turned up in a read of this code while jieqi was getting a repetition rule.':
+    '十四步合法著法，網站就判了和棋。沒有棋手回報過這個問題；它是在給揭棋加上重複局面規則時，閱讀這段程式碼發現的。',
+  'The fix writes the role out in full': '修復：把角色名完整寫出',
+  'A test plays those fourteen plies and checks the game goes on. The same shortcut was in Fog Chess (king and knight both `k`) and Duck Xiangqi; both are fixed.':
+    '一個測試會走完這十四步，並檢查對局仍在繼續。迷霧國際象棋（王 king 和馬 knight 都是 `k`）和鴨子象棋裡也有同樣的簡寫；兩者都已修復。',
+  'What it means on the site': '對網站意味著什麼',
+  '**Finished games:** none change. Replayed under the corrected key, all 29 xiangqi repetition draws, 2 perpetual-check losses, 2 Duck Xiangqi draws and 19 Fog Chess draws end the same way.':
+    '**已結束的對局：**沒有一盤改變。用修正後的鍵重放，全部 29 盤象棋重複局面和棋、2 盤長將判負、2 盤鴨子象棋和棋和 19 盤迷霧國際象棋和棋，結果都一樣。',
+  '**New games:** xiangqi, Fog Xiangqi, Fog Chess and Duck Xiangqi end on repetition only when a position has really occurred three times.':
+    '**新對局：**象棋、迷霧象棋、迷霧國際象棋和鴨子象棋，只有在同一局面真正出現三次時，才會因重複局面結束。',
+  "**Puzzles:** the miner's duplicate check reads both spellings, so no published puzzle comes back as new.":
+    '**謎題：**謎題挖掘器的查重會同時識別新舊兩種寫法，所以已發布的謎題不會被當成新題再出現。',
+  'A key built from abbreviations needs one check that no single abbreviation shows: that no two names shorten to the same thing. A letter table written by hand makes that check when someone picks `r` for the chariot. `role[0]` never did.':
+    '用縮寫拼成的鍵需要一項檢查，而這項檢查從任何單個縮寫上都看不出來：沒有兩個名字縮寫成同一個東西。手寫的字母表在有人為車選定 `r` 的那一刻，就做了這項檢查。`role[0]` 從來沒有做過。',
+  // flip-jungle-skill-ceiling, katago-jungle den races, pikafish-reveal-bug audit, and the two links to the new page (2026-10-07): machine-drafted, not native-reviewed.
+  'Flip Jungle: 512 times the search still loses 23% of games':
+    '翻翻棋：搜尋量提升 512 倍，仍有 23% 的對局落敗',
+  'Flip Jungle is 4×4 Jungle Chess with every animal face-down. A near-perfect engine shows how much skill survives the flips: 512 times the search buys about 242 Elo and still loses 23% of its games.':
+    '翻翻棋是所有動物都蓋著的 4×4 鬥獸棋。一個近乎完美的引擎能測出翻棋之後還剩多少棋力：512 倍的搜尋量大約只換來 242 Elo，而且仍會輸掉 23% 的對局。',
+  '[Flip Jungle](/rules/jungle-flip) is Jungle Chess on a 4×4 board with all sixteen animals face-down. Each turn you flip a tile, which reveals a random animal, or move a face-up animal one square. MistyJungleFlip, the bot you play here, picks the optimal move 99 to 100% of the time in the endgames that can be checked exactly. That makes it a measuring instrument for the question every flip game raises: how much of a game is skill, and how much is the flips?':
+    '[翻翻棋](/rules/jungle-flip)是在 4×4 棋盤上進行的鬥獸棋，十六隻動物開局時全都蓋著。輪到你時，可以翻開一張棋子，隨機揭示一隻動物，或者把一隻已翻開的動物走一格。本站的電腦 MistyJungleFlip 在能精確核對的殘局中，選出最優著法的比例為 99% 到 100%。這讓它成了一件測量儀器，用來回答每種翻棋遊戲都會引出的問題：一盤棋裡有多少是棋力，多少是翻棋？',
+  'Less skill than it feels like. A copy of the engine with 512 times more search still loses 23% of its games against the weaker one.':
+    '比感覺上要少。搜尋量多 512 倍的引擎副本，對上較弱的那一個，仍會輸掉 23% 的對局。',
+  Measure: '測量項',
+  'Search ladder, 1k to 512k nodes': '搜尋階梯，1k 到 512k 節點',
+  '242 Elo across a 512× range': '512 倍跨度對應 242 Elo',
+  '512× more search': '搜尋量提升 512 倍',
+  'loses 23% of games': '輸掉 23% 的對局',
+  '8× more search': '搜尋量提升 8 倍',
+  'loses 37 to 40%': '輸掉 37% 到 40%',
+  'Any search against random moves': '任意搜尋對隨機走子',
+  'about 99% (random won 0 of 800)': '約 99%（隨機方 800 局全敗）',
+  'Endgames, 5 pieces or fewer, against exact tablebases': '殘局（5 子以內）對精確殘局庫',
+  '99 to 100% optimal': '99% 到 100% 最優',
+  'Midgames, 5 to 6 pieces, against an exact solver': '中局（5 到 6 子）對精確求解器',
+  '200 of 200 moves optimal': '200 著中 200 著最優',
+  'A search engine with exact endgames': '一個帶精確殘局的搜尋引擎',
+  'MistyJungleFlip is alpha-beta search with a handwritten evaluation and no neural network: material plus mobility, with a small term against draws. Its strength is set by a node budget, not a clock, so the same position gets the same move on any machine, and a measured gap belongs to the engine rather than the hardware.':
+    'MistyJungleFlip 是 alpha-beta 搜尋，配手工評估函式，沒有神經網路：評估值由子力加機動性構成，另有一個小小的厭和項。棋力由節點預算而非時鐘決定，因此同一局面在任何機器上都回傳同一著法，測出的差距屬於引擎而不是硬體。',
+  'A flip is a chance node. Its value is the average over the animals still face-down, pruned with star-minimax, the chance-node form of alpha-beta. Endgames come from exact tablebases instead, solved backward from every finished position. Each entry stores the result under best play and the distance to it.':
+    '翻棋是機會節點。它的價值是所有仍蓋著的動物的平均值，並用 star-minimax，即機會節點版的 alpha-beta 進行剪枝。殘局則來自精確殘局庫，從每個終局局面往回推解出。每個條目儲存雙方最佳著法下的結果，以及到達該結果的距離。',
+  'Checked against exact answers where they exist': '凡有精確答案之處，都拿來核對',
+  'Self-play shows which of two versions is stronger, not whether either plays well: two copies of one engine share the same blind spots. So move quality is graded against the tablebases. In endgames of up to five pieces the engine played the optimal move 99 to 100% of the time; the misses were search depth, and a deeper search cleared them. A forward solver built on the tablebases reaches five- and six-piece midgames with tiles still face-down, and on 200 of those the engine matched the optimal move every time.':
+    '自我對弈只能測出兩個版本哪個更強，測不出它們是否下得好：同一引擎的兩個副本共享同樣的盲點。所以著法品質改為對照殘局庫來評分。在最多五子的殘局中，引擎選出最優著法的比例為 99% 到 100%；失誤都是搜尋深度問題，更深的搜尋就解決了。基於殘局庫建構的前向求解器能涵蓋仍有棋子蓋著的五子和六子中局；在其中 200 個局面上，引擎每次都走出了最優著法。',
+  'That coverage stops where exact computation stops, near the end of the game. The opening, where the flips happen, is too large to solve, so nothing here verifies the engine’s opening play.':
+    '這種涵蓋到精確計算的邊界為止，也就是接近終局處。翻棋發生的開局階段太大，無法求解，所以這裡的一切都沒有驗證引擎的開局水準。',
+  '512 times the search buys about 242 Elo': '512 倍的搜尋量，大約只值 242 Elo',
+  'To measure the opening without an exact answer, four copies searching 1k, 8k, 64k and 512k nodes a move played a round robin of paired, colour-swapped games, 120 per pairing. Their fitted ratings were +0, +89, +153 and +242. Each eightfold step is worth 64 to 89 Elo, and the ladder flattens at the top: 320k to 640k nodes was worth 6 Elo. In chess, 512 times the compute is worth several hundred.':
+    '為了在沒有精確答案的情況下衡量開局，四個副本分別每著搜尋 1k、8k、64k 和 512k 節點，進行成對換色的循環賽，每個配對 120 局。擬合出的等級分為 +0、+89、+153 和 +242。每 8 倍的台階值 64 到 89 Elo，且在高端趨於平坦：320k 到 640k 節點只值 6 Elo。在國際象棋裡，512 倍的算力值好幾百分。',
+  'Upsets are more common than the ratings suggest. An engine with 8 times the search loses 37 to 40% of its games; one with 512 times loses 23%. The flips decide enough games on their own that more search cannot close the gap.':
+    '爆冷比等級分所暗示的更常見。搜尋量多 8 倍的引擎會輸掉 37% 到 40% 的對局；多 512 倍的輸掉 23%。翻棋自身決定的對局足夠多，更多搜尋也補不上這個差距。',
+  'The one big step is at the bottom. A 1k-node search beats a random mover about 99% of the time (random won 0 of 800 games across the tiers), a gap near 850 Elo. About 80% of the distance from random to perfect is that single step, from moving at random to searching at all. Tuning the evaluation did nothing: better piece values, a rat-and-elephant term and draw aversion all came back flat in paired self-play.':
+    '唯一的大台階在最底部。1k 節點的搜尋約 99% 地戰勝隨機走子（各檔位共 800 局中隨機方 0 勝），差距接近 850 Elo。從隨機到完美的距離裡，約 80% 就在這一步上，即從隨便走子到開始搜尋。調評估函式毫無作用：更好的子力價值、鼠與象的專項、厭和項，在成對自我對弈中全都沒有變化。',
+  'Perfect play against perfect play is a draw': '完美對完美是和棋',
+  'Small versions of the game can be solved outright. With two and four pieces, every tile face-down at the start and played to the end under the full rules, the game is a draw under best play: two perfect players cannot beat each other. Solving even a six-piece game from the opening crosses 40 million distinct positions, the same wall that keeps the sixteen-piece game out of reach, so the full game is unproven.':
+    '足夠小的版本可以徹底解出。兩子和四子的版本，開局時所有棋子都蓋著，按完整規則下到終局，在雙方最佳著法下都是和棋：兩個完美棋手無法戰勝彼此。哪怕從開局解一個六子遊戲，也已超過 4000 萬個不同局面，正是這道牆讓十六子的完整遊戲無法企及，所以完整遊戲未被證明。',
+  'That still places the 23%. Perfect against perfect is a draw. Perfect against a much weaker player is a near-certain win: the random mover lost all 800 of its games. Two close players sit in between, with the gap inside the variance and the flips deciding.':
+    '這仍能給那 23% 定位。完美對完美是和棋。完美對遠弱的棋手幾乎必勝：隨機走子方 800 局全敗。兩個接近的棋手處在中間，差距落在變異數之內，由翻棋來決定。',
+  'How far the tablebases go': '殘局庫能走多遠',
+  'The tables cover every fully revealed position at each piece count and ignore the 40-half-move no-progress rule.':
+    '這些表涵蓋每個子數下所有完全翻開的局面，不計 40 個半回合的無進展規則。',
+  Pieces: '子數',
+  Positions: '局面數',
+  'Longest forced win': '最長必勝',
+  Build: '建構',
+  '9 plies': '9 著',
+  instant: '瞬間',
+  '1.9M': '190 萬',
+  '21 plies': '21 著',
+  '2 s': '2 秒',
+  '79M': '7900 萬',
+  '41 plies': '41 著',
+  '200 s': '200 秒',
+  '2.3B': '23 億',
+  '63 plies': '63 著',
+  '4 hr on a laptop, 2.8 GB': '筆電上 4 小時，2.8 GB',
+  '46B': '460 億',
+  unbuilt: '未建構',
+  'days, ~140 GB of RAM': '數天，約 140 GB 記憶體',
+  'Six pieces could be built on a rented server and would add nothing: five-piece coverage already grades every endgame that reaches the tables. Past that, a full solve means the opening, a flip tree of sixteen distinct pieces revealed in random order, with on the order of 10¹¹ or more reachable states.':
+    '六子表可以在租用的伺服器上建構，但毫無增益：五子的涵蓋已經能給每一個進入表中的殘局評分。再往前，完整求解就意味著要解開局，而開局是一棵翻棋樹：十六個不同棋子以隨機順序翻開，可達狀態在 10¹¹ 量級以上。',
+  'The distance column was not in the first tables. They stored win, draw or loss, which is enough to grade moves but not to finish games. In one self-play game the engine held a tiger and a rat against a lone elephant, a forced win (the rat traps the elephant in three plies, since an elephant cannot take a rat). For eight turns it played moves the tables graded optimal and made no progress, because every winning move scored the same, until repetition drew the game. With the distance stored, a win in 3 outranks a win in 9: the engine takes the shortest forced win, drags out forced losses, and that endgame ends with the rat taking the elephant in three. Chess endgame tables such as Syzygy carry a distance for the same reason.':
+    '最初的表裡沒有距離這一欄。它們只存勝、和、負，這足以給著法評分，卻不足以收官。在一盤自我對弈中，引擎有一虎一鼠對孤象，按表是必勝（鼠三著內困住象，因為象不能吃鼠）。連續八回合，它走出按表評為最優的著法，卻毫無進展，因為每一步取勝著法得分相同，直到重複規則判為和棋。存入距離後，3 著取勝優於 9 著取勝：引擎選最短的必勝路線，並把必敗局面盡量拖長，那個殘局以鼠三著吃象告終。國際象棋的殘局庫，例如 Syzygy，附帶距離也是同樣的原因。',
+  'Skill shows in the average, not the game': '棋力體現在平均值上，而不在單局上',
+  'Skill is real in Flip Jungle: the 242-Elo ladder is a real gap, and over a long match the stronger engine wins. But the deal and the flips decide a large share of any one game, so even a far stronger player loses often, and one result says little about who is better. The measurement still missing is a rating against a strong human player, the one test that does not lean on the engine or its solver.':
+    '翻翻棋裡棋力是真實存在的：242 Elo 的階梯是真實差距，在長期對抗中更強的引擎會贏。但發牌和翻棋決定了任一局中相當大的一部分，所以哪怕強得多的棋手也常常落敗，一局結果幾乎說明不了誰更強。還缺的測量是對強人類棋手的等級分，這是唯一不依賴引擎或其求解器的檢驗。',
+  'Our [game review](/blog/skill-vs-luck) splits each flip into the decision and the luck, so you can see which share of your own games was which. The [twenty engine games](/study/uKxJ60mN) from the rules page show the bot playing itself, and the engine’s source is [on GitHub](https://github.com/brianhliou/misty-flip-jungle).':
+    '本站的[對局覆盤](/blog/skill-vs-luck)把每一次翻子拆成決定和運氣，讓你看清自己的對局裡哪部分是哪一種。規則頁上的[二十盤引擎對局](/study/uKxJ60mN)是電腦自我對弈，引擎原始碼在 [GitHub 上](https://github.com/brianhliou/misty-flip-jungle)。',
+  'Play MistyJungleFlip': '與 MistyJungleFlip 對弈',
+  'Flip Jungle rules': '翻翻棋規則',
+  'FLIP JUNGLE': '翻翻棋',
+  'SKILL CEILING': '棋力上限',
+  '512× THE SEARCH, 23% LOST': '512 倍搜尋，仍輸 23%',
+  'Flip Jungle skill vs luck: 512× more search still loses 23% of games':
+    '翻翻棋的棋力與運氣：搜尋量多 512 倍，仍輸 23% 的對局',
+  "Flip Jungle's skill ceiling": '翻翻棋的棋力上限',
+  'How much of a flip game the flips decide is measured in [Flip Jungle’s skill ceiling](/blog/flip-jungle-skill-ceiling): an engine with 512 times the search still loses 23% of its games.':
+    '翻棋遊戲裡有多少由翻棋決定，[翻翻棋的棋力上限](/blog/flip-jungle-skill-ceiling)一文做了測量：搜尋量多 512 倍的引擎，仍會輸掉 23% 的對局。',
+  'How strong is the bot, and how much do the flips decide? [Flip Jungle’s skill ceiling](/blog/flip-jungle-skill-ceiling) grades it against exact endgame tables and measures what 512 times the search is worth.':
+    '電腦有多強，翻棋又決定了多少？[翻翻棋的棋力上限](/blog/flip-jungle-skill-ceiling)用精確殘局庫給它評分，並測出 512 倍的搜尋量值多少。',
+  'Misty has no idea of a den race': 'Misty 不懂衝獸穴競速',
+  'Misty scores a position by material plus a bonus for each piece’s distance to the enemy den. It never asks whether a runner heading for its own den gets there first; it finds out when the search reaches the den, about 12 plies out. In August we tried three ways to teach it, and all three came back null or negative.':
+    'Misty 對局面的評估是子力，加上每個棋子離對方獸穴距離的獎勵。它從不去問奔向自己獸穴的對方棋子是否會先到；等搜尋抵達獸穴時它才發現，那大約是 12 著之後。8 月我們試了三種辦法教它，三種結果都是無效或負收益。',
+  'First, how often a race decides a game. Of 172 self-play games at Misty’s usual 5 million nodes, 52.9% ended in a repetition draw, 26.2% in a den entry and 20.9% in a no-progress draw. Only 4.7% were genuine races, won by a side that was level or behind ten plies out. The same test at 200k nodes reported 22%: weaker play inflates races about fivefold.':
+    '先看競速多常決定對局。在 Misty 平常的 500 萬節點下自我對弈 172 盤，52.9% 以重複和棋結束，26.2% 以進入獸穴結束，20.9% 以無進展和棋結束。只有 4.7% 是真正的競速：勝方在十著之前持平或落後。同樣的測試在 20 萬節點下給出 22%：較弱的對弈會把競速誇大約五倍。',
+  'Deeper search finds little more. Over those 8 races, 60 million nodes saw the loss at most 4 plies sooner than 5 million, and no sooner in 4 of them. A search extension near the dens scored +45 Elo when granted free, at 3.3 times the nodes; held to the same budget, it scored −15 and −12. A den-race term, comparing the two runners once per side, scored −3 and +9 at weights 10 and 25. Each of those matches was 300 colour-swapped pairs.':
+    '更深的搜尋也找不到多少東西。在這 8 盤競速裡，6000 萬節點比 500 萬節點最多早 4 著看到敗勢，其中 4 盤一著也沒有提前。獸穴附近的搜尋延伸在免費給予時得到 +45 Elo，代價是 3.3 倍的節點；把預算固定後，它得到 −15 和 −12。專門的衝獸穴競速評估項，每方各比較一次雙方的奔襲棋子，在權重 10 和 25 下分別得到 −3 和 +9。每一場對抗都是 300 對換色對局。',
+  'Misty plays a race well enough when the search reaches it. In one self-play game under the old tiger rule, Red’s tiger took a wolf and stood in the d-file corridor beside Blue’s elephant. It could not jump sideways, so Blue did not hurry to take it. When the elephant stepped from d7 to d6, Red’s lion jumped from c3 to c7, into the square the elephant had left. The elephant took the tiger on d5, and the lion was three moves from a den Blue could not defend. Blue ended 13 points ahead and lost. Misty has no den-race term; depth found the line. Since 21 September the tiger jumps sideways, so the corridor no longer traps it.':
+    '搜尋夠得著時，Misty 照樣能把競速下好。在舊虎規則下的一盤自我對弈中，紅方的虎吃掉一隻狼，站進 d 路通道，就在藍方的象旁邊。它不能橫向跳，所以藍方不急著吃它。當象從 d7 走到 d6，紅方的獅從 c3 跳到 c7，跳進象剛離開的格子。象在 d5 吃掉了虎，而獅離一個藍方守不住的獸穴只差三步。藍方最終領先 13 分，卻輸了。Misty 沒有衝獸穴競速評估項；是搜尋深度找到了這條線。自 9 月 21 日起，虎可以橫向跳，這條通道不再困得住它。',
+  'What did move Jungle Chess was two constants from the same games: a no-capture draw clock that ended games early, and a draw contempt near zero. Changing them took self-play from a quarter of games decided to about half. The lesson we kept: hold the search budget fixed, or you measure the budget. The 52 games are in [one study](/study/4UhOMlsE).':
+    '真正改變了鬥獸棋對局的，是同一批對局裡找到的兩個常數：一個讓對局過早結束的無吃子和棋計數，以及接近零的和棋輕視值。改掉它們後，自我對弈中分出勝負的對局從四分之一升到大約一半。我們留下的教訓是：要把搜尋預算固定住，否則測的只是預算。那 52 盤對局都收在[一個研究](/study/4UhOMlsE)裡。',
+  'An earlier audit tested the averaging on the buggy engine':
+    '更早的一次審查，是在有漏洞的引擎上測試取平均的',
+  'In September we tested an outside source review of the same engine, from [iwestlin/jieqi-ai](https://github.com/iwestlin/jieqi-ai). Two of its five findings were worth a match. The engine had already beaten ten nets distilled from its own evaluations, the best of them scoring 0.43. Each test played the changed engine against the shipped one, colours alternating, at equal time, with a referee dealing the hidden pieces so neither engine saw one.':
+    '9 月，我們測試了一份外部對同一引擎的原始碼審查，來自 [iwestlin/jieqi-ai](https://github.com/iwestlin/jieqi-ai)。它的五項發現裡，有兩項值得下一場對抗來檢驗。在此之前，這個引擎已經贏過十個從它自身評估蒸餾出來的網路，其中最好的得分 0.43。每項測試都讓改動後的引擎對陣已上線的引擎，輪換執色，用時相同，由裁判程式發放暗子，雙方引擎都看不到暗子。',
+  'The first finding was a real evaluation bug: one colour’s face-down pieces were never counted, so Red got credit for threatening them and Black never did. Fixing it alone scored 0.475 over 200 games at 500 ms a move (91-101-8). Retuning the 43 terms it touches, over 10,000 SPSA game pairs, scored 0.507 (96-93-11). Both are within noise: 200 games is ±0.07 at 95%, roughly ±50 Elo, so a change worth 10 Elo cannot be seen.':
+    '第一項是真實的評估漏洞：有一方的暗子從未被計入，所以紅方威脅暗子能得分，黑方從來得不到。只修這個漏洞，每著 500 ms 下 200 盤得分 0.475（91-101-8）。再用 10,000 對 SPSA 對局重新調校它涉及的 43 項參數，得分 0.507（96-93-11）。兩者都在雜訊之內：200 盤在 95% 信賴水準下是 ±0.07，大約 ±50 Elo，所以價值 10 Elo 的改動根本看不出來。',
+  'The second was the averaging this page is about, a clamped weighted average with a fallback to the worst case. In July it had chosen a reveal with a true 64% chance of winning over a safe move at 97%. A replacement took the engine’s top four moves, searched each possible piece separately and played the best average. It scored 0.370 over 100 games (30-56-14) at 2.2 times the time, and 0.410 over 50 games (17-26-7) at 7 times. We concluded then that the worst-case fallback does useful work.':
+    '第二項就是本頁講的取平均：一個帶上下限的加權平均，並在需要時退回最差結果。7 月，它曾選了一步真實勝率 64% 的翻子，放棄了勝率 97% 的穩妥著法。替代方案取引擎排名前四的著法，對每一種可能的棋子分別搜尋，再走平均值最好的一步。它在 2.2 倍用時下 100 盤得分 0.370（30-56-14），在 7 倍用時下 50 盤得分 0.410（17-26-7）。我們當時的結論是：退回最差結果這一步確實有用。',
+  'That conclusion came from the colour bug above. The fallback was meant to assume the worst, and as Black it assumed the best, so the test ran on an engine that was not doing it half the time. Since then [AB-JChess](/blog/ab-jchess) has beaten this engine 248-136-16 over 400 games and is now the top jieqi bot.':
+    '這個結論來自上面的顏色漏洞。退回這一步本該假設最壞情況，而執黑時它假設的是最好情況，所以那次測試用的引擎有一半時間根本沒在這樣做。此後 [AB-JChess](/blog/ab-jchess) 在 400 盤中以 248-136-16 戰勝了這個引擎，現在是最強的揭棋電腦。',
   // duck-xiangqi, duck-xiangqi-strategy, misty blog merge (2026-10-07): machine-translated.
   'Chess has one way of blocking a piece: stand on the point it wants. Xiangqi has five. The sections below are where that difference lands.':
     '國際象棋只有一種擋子的辦法：站到它想去的點上。象棋有五種。下面幾節講的就是這個差別落在哪裡。',

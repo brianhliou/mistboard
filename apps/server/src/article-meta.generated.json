@@ -47,6 +47,12 @@
     "description": "Beat the world champion 12 to 8 in a ten-game match in January, then the rest of his season through the first stage of China's top league. Six games on the board, all 75 analysed.",
     "status": "published"
   },
+  "chariot-cannon-repetition-key": {
+    "title": "Chariot and cannon both start with C",
+    "kind": "article",
+    "description": "A one-character bug in Mistboard's xiangqi repetition key let a game end in a threefold draw after a position had occurred only twice.",
+    "status": "published"
+  },
   "chess": {
     "title": "Chess Rules",
     "kind": "rules",
@@ -87,6 +93,12 @@
     "title": "Duck Xiangqi Strategy for Your First Game",
     "kind": "article",
     "description": "Chinese chess with one duck both players share. The rules take a minute to read. What decides your first game takes longer, starting with the fact that the duck you place is a cannon platform for your opponent and never for you.",
+    "status": "published"
+  },
+  "flip-jungle-skill-ceiling": {
+    "title": "Flip Jungle: 512 times the search still loses 23% of games",
+    "kind": "article",
+    "description": "Flip Jungle is 4×4 Jungle Chess with every animal face-down. A near-perfect engine shows how much skill survives the flips: 512 times the search buys about 242 Elo and still loses 23% of its games.",
     "status": "published"
   },
   "fog-chess": {

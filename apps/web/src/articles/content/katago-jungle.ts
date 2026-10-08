@@ -302,6 +302,35 @@ export const katagoJungleArticle: Article = {
       ],
     },
     {
+      // Folded in from the brianhliou.com post of 2026-08-31 ("Testing a
+      // Den-Race Term in a Jungle Engine"), which 301s here. The deficit table
+      // there (0, 0, 0, 0, 2, 2, 2, 4 plies over 8 races) has a median of 1, not
+      // the "median of two plies" its prose said.
+      heading: 'Misty has no idea of a den race',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'Misty scores a position by material plus a bonus for each piece’s distance to the enemy den. It never asks whether a runner heading for its own den gets there first; it finds out when the search reaches the den, about 12 plies out. In August we tried three ways to teach it, and all three came back null or negative.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'First, how often a race decides a game. Of 172 self-play games at Misty’s usual 5 million nodes, 52.9% ended in a repetition draw, 26.2% in a den entry and 20.9% in a no-progress draw. Only 4.7% were genuine races, won by a side that was level or behind ten plies out. The same test at 200k nodes reported 22%: weaker play inflates races about fivefold.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'Deeper search finds little more. Over those 8 races, 60 million nodes saw the loss at most 4 plies sooner than 5 million, and no sooner in 4 of them. A search extension near the dens scored +45 Elo when granted free, at 3.3 times the nodes; held to the same budget, it scored −15 and −12. A den-race term, comparing the two runners once per side, scored −3 and +9 at weights 10 and 25. Each of those matches was 300 colour-swapped pairs.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'Misty plays a race well enough when the search reaches it. In one self-play game under the old tiger rule, Red’s tiger took a wolf and stood in the d-file corridor beside Blue’s elephant. It could not jump sideways, so Blue did not hurry to take it. When the elephant stepped from d7 to d6, Red’s lion jumped from c3 to c7, into the square the elephant had left. The elephant took the tiger on d5, and the lion was three moves from a den Blue could not defend. Blue ended 13 points ahead and lost. Misty has no den-race term; depth found the line. Since 21 September the tiger jumps sideways, so the corridor no longer traps it.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'What did move Jungle Chess was two constants from the same games: a no-capture draw clock that ended games early, and a draw contempt near zero. Changing them took self-play from a quarter of games decided to about half. The lesson we kept: hold the search budget fixed, or you measure the budget. The 52 games are in [one study](/study/4UhOMlsE).',
+        },
+      ],
+    },
+    {
       heading: 'Misty is still where you start',
       blocks: [
         {
