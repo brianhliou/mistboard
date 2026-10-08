@@ -284,7 +284,7 @@ describe('appearance family gating', () => {
       [...document.querySelectorAll<HTMLButtonElement>('[data-theme-tile="xqboard"]')].map((tile) =>
         tile.getAttribute('aria-label'),
       ),
-    ).toEqual(['International', 'Traditional', 'Square grid', 'Jungle']);
+    ).toEqual(['Lined', 'Square grid']);
 
     document
       .querySelector<HTMLButtonElement>('[data-theme-tile="xqboard"][data-id="cell"]')
@@ -293,26 +293,77 @@ describe('appearance family gating', () => {
     expect(document.documentElement.dataset.xiangqiBoardLayout).toBe('cell');
 
     document
-      .querySelector<HTMLButtonElement>('[data-theme-tile="xqboard"][data-id="traditional"]')
+      .querySelector<HTMLButtonElement>('[data-theme-tile="xqboard"][data-id="lined"]')
       ?.click();
-    expect(window.localStorage.getItem('mistboard.xiangqiBoardTheme')).toBe('traditional');
     expect(window.localStorage.getItem('mistboard.xiangqiBoardLayout')).toBe('intersection');
     expect(document.documentElement.dataset.xiangqiBoardLayout).toBe('intersection');
+  });
 
-    // Jungle is a theme that lives on the square grid: choosing it sets both.
+  // Jungle was a third board tile until 2026-10-08 (Brian: "really just a reskin
+  // of the second one"). It is now the square grid's last colour swatch.
+  it('offers Jungle as a square-grid colour that turns on the Jungle theme', async () => {
+    await rebuildThemePanel();
     const tile = (id: string) =>
       document.querySelector<HTMLButtonElement>(`[data-theme-tile="xqboard"][data-id="${id}"]`);
-    tile('jungle')?.click();
-    expect(document.documentElement.dataset.xiangqiBoardTheme).toBe('jungle');
-    expect(document.documentElement.dataset.xiangqiBoardLayout).toBe('cell');
-    expect(tile('jungle')?.getAttribute('aria-checked')).toBe('true');
-    expect(tile('cell')?.getAttribute('aria-checked')).toBe('false');
+    const swatch = (id: string) =>
+      document.querySelector<HTMLButtonElement>(`[data-xq-board-color="${id}"]`);
+    expect(tile('jungle')).toBeNull();
+    expect(swatch('jungle')?.getAttribute('aria-label')).toBe('Jungle');
 
-    // Leaving Jungle for plain squares leaves its colours too.
     tile('cell')?.click();
-    expect(window.localStorage.getItem('mistboard.xiangqiBoardTheme')).toBe('international');
-    expect(document.documentElement.dataset.xiangqiBoardLayout).toBe('cell');
+    swatch('jungle')?.click();
+    expect(document.documentElement.dataset.xiangqiBoardTheme).toBe('jungle');
+    expect(document.documentElement.dataset.xiangqiBoardColor).toBeUndefined();
+    expect(window.localStorage.getItem('mistboard.xiangqiBoardColor')).toBe('jungle');
+    expect(swatch('jungle')?.getAttribute('aria-checked')).toBe('true');
     expect(tile('cell')?.getAttribute('aria-checked')).toBe('true');
+
+    // Another colour leaves Jungle and stays on the square grid.
+    swatch('oak')?.click();
+    expect(document.documentElement.dataset.xiangqiBoardTheme).toBe('international');
+    expect(document.documentElement.dataset.xiangqiBoardColor).toBe('oak');
+    expect(document.documentElement.dataset.xiangqiBoardLayout).toBe('cell');
+
+    // Lined while Jungle is the colour falls back to the default colour.
+    swatch('jungle')?.click();
+    tile('lined')?.click();
+    expect(document.documentElement.dataset.xiangqiBoardTheme).toBe('international');
+    expect(window.localStorage.getItem('mistboard.xiangqiBoardColor')).toBe('international');
+    expect(swatch('international')?.getAttribute('aria-checked')).toBe('true');
+    expect(swatch('jungle')?.getAttribute('aria-checked')).toBe('false');
+  });
+
+  // Brian's 2026-10-08 review: on a ?xqRiver= preview link the board followed a
+  // click but the selected option stayed on the previewed one, because the
+  // preview outranked the stored pick. A pick now ends the preview.
+  it('moves the river-text selection to each option clicked, even on a preview link', async () => {
+    window.history.replaceState(null, '', '/?xqRiver=brand&xqBoardColor=slate');
+    await rebuildThemePanel();
+    const options = [...document.querySelectorAll<HTMLButtonElement>('[data-xq-river-text]')];
+    const selected = () =>
+      options
+        .filter((option) => option.getAttribute('aria-checked') === 'true')
+        .map((option) => option.dataset.xqRiverText);
+    expect(selected()).toEqual(['brand']);
+
+    for (const id of ['classic', 'off', 'brand', 'classic']) {
+      options.find((option) => option.dataset.xqRiverText === id)?.click();
+      expect(selected()).toEqual([id]);
+      expect(
+        options
+          .filter((option) => option.classList.contains('selected'))
+          .map((o) => o.dataset.xqRiverText),
+      ).toEqual([id]);
+      expect(document.documentElement.dataset.xiangqiRiverText).toBe(id);
+    }
+    expect(new URLSearchParams(window.location.search).has('xqRiver')).toBe(false);
+    // The other preview is untouched until its own row is used.
+    expect(new URLSearchParams(window.location.search).get('xqBoardColor')).toBe('slate');
+    document.querySelector<HTMLButtonElement>('[data-xq-board-color="paper"]')?.click();
+    expect(
+      document.querySelector('[data-xq-board-color="paper"]')?.getAttribute('aria-checked'),
+    ).toBe('true');
+    expect(window.location.search).toBe('');
   });
 
   it('surfaces the xiangqi pickers, with no Game toggle, without xiangqi env flags', async () => {
@@ -322,6 +373,29 @@ describe('appearance family gating', () => {
     expect(document.querySelector('[data-theme-tile="xqlayout"]')).toBeNull();
     expect(document.querySelector('[data-theme-tile="xqboard"]')).not.toBeNull();
     expect(document.querySelector('[data-theme-tile="xqpiece"]')).not.toBeNull();
+  });
+
+  // Board colour and river text are their own rows (2026-10-08): a fixed swatch
+  // row with no free colour picker, and a three-way river caption switch.
+  it('offers board colour as seven swatches plus Jungle, and river text as its own switch', async () => {
+    await rebuildThemePanel();
+    document.querySelector<HTMLButtonElement>('[data-appearance-target="board"]')?.click();
+    const submenu = document.querySelector<HTMLElement>('.appearance-submenu[data-key="board"]');
+
+    expect(submenu?.querySelector('input[type="color"]')).toBeNull();
+    expect(
+      [...(submenu?.querySelectorAll<HTMLButtonElement>('[data-xq-board-color]') ?? [])].map(
+        (swatch) => swatch.dataset.xqBoardColor,
+      ),
+    ).toEqual(['international', 'traditional', 'paper', 'birch', 'oak', 'grey', 'slate', 'jungle']);
+
+    submenu?.querySelector<HTMLButtonElement>('[data-xq-river-text="brand"]')?.click();
+    expect(document.documentElement.dataset.xiangqiRiverText).toBe('brand');
+    expect(window.localStorage.getItem('mistboard.xiangqiRiverText')).toBe('brand');
+
+    submenu?.querySelector<HTMLButtonElement>('[data-xq-board-color="slate"]')?.click();
+    expect(document.documentElement.dataset.xiangqiBoardColor).toBe('slate');
+    expect(window.localStorage.getItem('mistboard.xiangqiBoardColor')).toBe('slate');
   });
 
   // Board and Pieces both drop straight into the xiangqi tiles now. This is the

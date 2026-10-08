@@ -8,7 +8,7 @@
 // preference setters this panel calls — the panel is a dumb view over that API.
 import { trackLocaleChanged, trackNotationChanged } from './analytics.js';
 import { type ConnectionStatus, createConnectionStatus } from './connection-status.js';
-import { t } from './i18n/catalog.js';
+import { type I18nKey, t } from './i18n/catalog.js';
 import {
   currentLocale,
   LOCALE_META,
@@ -25,14 +25,20 @@ import {
   readEffectiveSoundVolume,
   readStoredSiteTheme,
   readStoredSoundMuted,
+  readStoredXiangqiBoardColor,
+  readStoredXiangqiRiverText,
+  readStoredXiangqiStartMarkers,
   readXiangqiBoardChoice,
   type SiteTheme,
   setSiteThemePreference,
   setSoundSetPreference,
   setSoundVolumePreference,
   setXiangqiBoardChoicePreference,
+  setXiangqiBoardColorPreference,
   setXiangqiNotationPreference,
   setXiangqiPieceSetPreference,
+  setXiangqiRiverTextPreference,
+  setXiangqiStartMarkersPreference,
   showAppearanceView,
   siteThemeOptions,
   type TileKind,
@@ -42,26 +48,31 @@ import {
 import { buildUiIcon, type UiIconName } from './ui-icon.js';
 import {
   readStoredXiangqiPieceSet,
-  type XiangqiBoardTheme,
+  xiangqiBoardGrainFlag,
   xiangqiNotationOptions,
 } from './xiangqi-appearance-storage.js';
+import {
+  JUNGLE_XIANGQI_BOARD_COLOR,
+  XIANGQI_BOARD_COLOR_PRESETS,
+  type XiangqiBoardColor,
+  xiangqiBoardColorPreset,
+} from './xiangqi-board-color.js';
 import { currentXiangqiNotationPreference } from './xiangqi-notation.js';
 import {
   XIANGQI_PIECE_SETS,
   type XiangqiPieceSet,
   xiangqiPieceTilePreview,
 } from './xiangqi-piece-sets.js';
+import { XIANGQI_RIVER_TEXTS, type XiangqiRiverText } from './xiangqi-river-text.js';
 
-const xiangqiBoardThemes: Array<{ id: XiangqiBoardTheme; label: string }> = [
-  { id: 'international', label: 'International' },
-  { id: 'traditional', label: 'Traditional' },
-];
-// Jungle is a theme AND a layout (it only exists on the square grid), so it is
-// listed after Square grid rather than among the intersection themes above.
+// Only boards that are genuinely different get a tile (Brian, 2026-10-08: the
+// old International/Traditional tiles were a colour and a river caption riding
+// on a "board", while start markers were a checkbox). Jungle was a third tile
+// until his next review ("really just a reskin of the second one"); it is now
+// the square grid's last colour swatch.
 const xiangqiBoardChoices: Array<{ id: XiangqiBoardChoice; label: string }> = [
-  ...xiangqiBoardThemes,
+  { id: 'lined', label: 'Lined' },
   { id: 'cell', label: 'Square grid' },
-  { id: 'jungle', label: 'Jungle' },
 ];
 
 // Fills the signed-out gear's dropdown panel: the shared appearance menu, a
@@ -152,6 +163,9 @@ export function buildAppearanceMenu(options: AppearanceMenuOptions = {}): HTMLEl
         undefined,
         false,
       ),
+      createXiangqiBoardColorField(locale),
+      createXiangqiRiverTextField(locale),
+      createXiangqiStartMarkersField(locale),
     );
   }
   addCategory('board', t('prefs.board', {}, locale), boardBody);
@@ -370,6 +384,115 @@ function createTileField<T extends string>(
     field.append(text);
   }
   field.append(row);
+  return field;
+}
+
+const BOARD_COLOR_LABEL_KEYS: Record<XiangqiBoardColor, I18nKey> = {
+  international: 'prefs.boardColorInternational',
+  traditional: 'prefs.boardColorTraditional',
+  paper: 'prefs.boardColorPaper',
+  birch: 'prefs.boardColorBirch',
+  oak: 'prefs.boardColorOak',
+  grey: 'prefs.boardColorGrey',
+  slate: 'prefs.boardColorSlate',
+  grain: 'prefs.boardColorGrain',
+  jungle: 'prefs.boardColorJungle',
+};
+
+// Board colour: one row of round swatches, a radiogroup like the tiles above.
+// No free picker ("RGB selector is a bit too complex"). The last swatch is
+// Jungle, a lawn with a strip of river; CSS (theme.css) shows it only on the
+// square grid, the one layout Jungle is drawn on.
+function createXiangqiBoardColorField(locale: Locale): HTMLDivElement {
+  const field = document.createElement('div');
+  field.className = 'theme-control-field xq-board-color-field';
+  const label = document.createElement('span');
+  label.textContent = t('prefs.boardColor', {}, locale);
+
+  const row = document.createElement('div');
+  row.className = 'xq-board-color-row';
+  row.setAttribute('role', 'radiogroup');
+  row.setAttribute('aria-label', t('prefs.boardColor', {}, locale));
+
+  const active = readStoredXiangqiBoardColor();
+  const ids: XiangqiBoardColor[] = [
+    ...XIANGQI_BOARD_COLOR_PRESETS.map((preset) => preset.id),
+    ...(xiangqiBoardGrainFlag() ? (['grain'] as const) : []),
+    JUNGLE_XIANGQI_BOARD_COLOR,
+  ];
+  for (const id of ids) {
+    const swatch = document.createElement('button');
+    swatch.type = 'button';
+    swatch.className = 'xq-board-color-swatch';
+    swatch.dataset.xqBoardColor = id;
+    const name = t(BOARD_COLOR_LABEL_KEYS[id], {}, locale);
+    swatch.title = name;
+    swatch.setAttribute('aria-label', name);
+    swatch.setAttribute('role', 'radio');
+    swatch.setAttribute('aria-checked', String(id === active));
+    if (id === active) swatch.classList.add('selected');
+    if (id !== JUNGLE_XIANGQI_BOARD_COLOR) {
+      swatch.style.setProperty('--xq-swatch', xiangqiBoardColorPreset(id).fill);
+    }
+    swatch.addEventListener('click', () => setXiangqiBoardColorPreference(id));
+    row.append(swatch);
+  }
+
+  field.append(label, row);
+  return field;
+}
+
+// River text: a three-way segmented choice. The two captions are labelled with
+// themselves (they read the same in every interface language); only "Off" is
+// translated. Hidden on the square grid by CSS, whose river has no room for one.
+function createXiangqiRiverTextField(locale: Locale): HTMLDivElement {
+  const field = document.createElement('div');
+  field.className = 'theme-control-field xq-river-text-field';
+  const label = document.createElement('span');
+  label.textContent = t('prefs.riverText', {}, locale);
+
+  const row = document.createElement('div');
+  row.className = 'xq-river-text-row';
+  row.setAttribute('role', 'radiogroup');
+  row.setAttribute('aria-label', t('prefs.riverText', {}, locale));
+
+  const labels: Record<XiangqiRiverText, string> = {
+    off: t('prefs.riverTextOff', {}, locale),
+    classic: '楚河 漢界',
+    brand: 'Mistboard',
+  };
+  const active = readStoredXiangqiRiverText();
+  for (const id of XIANGQI_RIVER_TEXTS) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'theme-mode-option';
+    button.dataset.xqRiverText = id;
+    button.textContent = labels[id];
+    if (id === 'classic') button.lang = 'zh-Hant';
+    button.setAttribute('role', 'radio');
+    button.setAttribute('aria-checked', String(id === active));
+    if (id === active) button.classList.add('selected');
+    button.addEventListener('click', () => setXiangqiRiverTextPreference(id));
+    row.append(button);
+  }
+
+  field.append(label, row);
+  return field;
+}
+
+// The printed start brackets. Hidden on the square grid by CSS (theme.css): the
+// marks are drawn only on the lined layout, so the switch would do nothing there.
+function createXiangqiStartMarkersField(locale: Locale): HTMLLabelElement {
+  const field = document.createElement('label');
+  field.className = 'theme-control-check-field xq-start-markers-field';
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.dataset.xqStartMarkers = '';
+  input.checked = readStoredXiangqiStartMarkers();
+  input.addEventListener('change', () => setXiangqiStartMarkersPreference(input.checked));
+  const text = document.createElement('span');
+  text.textContent = t('prefs.startMarkers', {}, locale);
+  field.append(input, text);
   return field;
 }
 

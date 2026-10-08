@@ -35,6 +35,7 @@ import {
   resetXiangqiSoundState,
   soundForOwnXiangqiMove,
 } from './live-xiangqi-sound.js';
+import { xiangqiAppearanceChangedEvent } from './theme.js';
 import {
   annotationOwner,
   type BoardAnnotations,
@@ -212,6 +213,9 @@ const client = createTenantLiveClient<XiangqiColor, StandardXiangqiPlayerView, X
     });
     // The theme gear changes the notation mid-game; relabel the list in place.
     window.addEventListener(xiangqiNotationChangedEvent, () => ctx.renderAll());
+    // Board appearance (layout, colour, start markers, piece set) also changes
+    // mid-game; every sibling xiangqi room re-renders on it, this one did not.
+    window.addEventListener(xiangqiAppearanceChangedEvent, ctx.renderAll);
   },
   moveList: {
     rowClass: 'move-row xiangqi-move-row',

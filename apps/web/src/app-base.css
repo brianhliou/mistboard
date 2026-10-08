@@ -295,17 +295,20 @@
   --xq-fog-fill: rgba(46, 43, 37, 0);
 }
 
-/* Xiangqi board tokens. The board surface (bg + grid ink) tracks
-   data-xiangqi-board-theme; the fog tint tracks data-fog-theme. Shared by full
-   live boards, article diagrams, compact/fortress boards, and variant markers.
-   International is the default: no standard-river Chinese text, neutral river
-   and palace bands. Traditional restores the river text and warmer board tone.
-   Piece sets are inline glyphs, so they re-render in JS instead. */
+/* Xiangqi board tokens. The board surface (bg + grid ink) is the International
+   colour by default and follows data-xiangqi-board-color (rule below) or the
+   Jungle theme; the river captions follow data-xiangqi-river-text; the fog tint
+   tracks data-fog-theme. Shared by full live boards, article diagrams,
+   compact/fortress boards, and variant markers. The Traditional board was
+   folded into a colour and a river-text choice on 2026-10-08
+   (xiangqi-appearance-storage.ts migrates stored picks). Piece sets are inline
+   glyphs, so they re-render in JS instead. */
 :root {
   --xq-board-bg: #f5dca8;
   --xq-board-ink: #5a3a14;
   --xq-board-band: rgba(90, 58, 20, 0.06);
   --xq-river-label-display: none;
+  --xq-river-brand-display: none;
   --xq-diagram-bg: var(--xq-board-bg);
   --xq-diagram-ink: var(--xq-board-ink);
   --xq-diagram-palace-band: rgba(255, 255, 255, 0);
@@ -321,7 +324,6 @@
   --xq-board-bg: #f5dca8;
   --xq-board-ink: #5a3a14;
   --xq-board-band: rgba(90, 58, 20, 0.06);
-  --xq-river-label-display: none;
   --xq-diagram-bg: var(--xq-board-bg);
   --xq-diagram-ink: var(--xq-board-ink);
   --xq-diagram-palace-band: rgba(255, 255, 255, 0);
@@ -332,20 +334,13 @@
   --xq-live-ink: var(--xq-board-ink);
   --xq-live-palace-band: rgba(255, 255, 255, 0);
 }
-:root[data-xiangqi-board-theme="traditional"] {
-  --xq-board-bg: #d9bd82;
-  --xq-board-ink: #4b3c2a;
-  --xq-board-band: rgba(75, 60, 42, 0.07);
+/* River text (gear > Board > River text): every board draws both captions and
+   these show the chosen one. Off by default (the :root values above). */
+:root[data-xiangqi-river-text="classic"] {
   --xq-river-label-display: inline;
-  --xq-diagram-bg: var(--xq-board-bg);
-  --xq-diagram-ink: var(--xq-board-ink);
-  --xq-diagram-palace-band: rgba(255, 255, 255, 0);
-  --mini-xq-board-bg: var(--xq-board-bg);
-  --mini-xq-palace-band: var(--xq-board-band);
-  --mini-xq-grid: var(--xq-board-ink);
-  --xq-live-board-bg: var(--xq-board-bg);
-  --xq-live-ink: var(--xq-board-ink);
-  --xq-live-palace-band: rgba(255, 255, 255, 0);
+}
+:root[data-xiangqi-river-text="brand"] {
+  --xq-river-brand-display: inline;
 }
 /* Jungle: the children's board. A lawn of two greens and a deep green ink; the
    rugs and the painted river are drawn by xiangqi-board-surface.ts. */
@@ -354,6 +349,7 @@
   --xq-board-ink: #3d5a1e;
   --xq-board-band: rgba(61, 90, 30, 0.08);
   --xq-river-label-display: none;
+  --xq-river-brand-display: none;
   --xq-diagram-bg: var(--xq-board-bg);
   --xq-diagram-ink: var(--xq-board-ink);
   --xq-diagram-palace-band: rgba(255, 255, 255, 0);
@@ -368,6 +364,17 @@
   /* Jungle and Flip Jungle follow along on their plain ('bare') board: the same
      lawn instead of tan land (jungle-render.ts, jungle-flip-render.ts). */
   --jungle-bare-land: #b9d98a;
+}
+/* A picked board colour (gear > Board > Board color, 2026-10-08). theme.ts sets
+   the three --xq-custom-* properties from the preset (xiangqi-board-color.ts);
+   the default International colour sets none and keeps the values above. Only
+   the base tokens are overridden: every derived token above is
+   var(--xq-board-*), so it follows. Higher specificity than the theme rules,
+   and Jungle is excluded here so its lawn stays a lawn. */
+:root[data-xiangqi-board-color]:not([data-xiangqi-board-theme="jungle"]) {
+  --xq-board-bg: var(--xq-custom-bg);
+  --xq-board-ink: var(--xq-custom-ink);
+  --xq-board-band: var(--xq-custom-band);
 }
 :root[data-fog-theme="solid"] {
   --xq-diagram-fog: rgba(36, 25, 15, 0.62);

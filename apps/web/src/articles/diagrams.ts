@@ -47,6 +47,7 @@ import {
   type XiangqiPieceSet,
   type XiangqiShroudedStyle,
 } from '../xiangqi-piece-sets.js';
+import { xiangqiDiagramRiverText } from '../xiangqi-river-text.js';
 import type { ArticleSection, CtaBlock, CtaButton } from './types.js';
 
 // Passthrough re-exports: identifiers referenced directly by article content
@@ -1315,9 +1316,7 @@ function xqPalaceAndRiver(x0: number, y0: number, perspective: XiangqiColor): st
   // River band sits between ranks 5 and 6 (file 4 is the horizontal center).
   const riverY = (xqPoint(0, 5, perspective, x0, y0).y + xqPoint(0, 6, perspective, x0, y0).y) / 2;
   const riverX = xqPoint(4, 1, perspective, x0, y0).x;
-  parts.push(
-    `<text x="${riverX}" y="${riverY + 1}" font-family="serif" font-size="16" class="xq-diagram-ink xq-diagram-river-label" text-anchor="middle" dominant-baseline="central">楚 河   漢 界</text>`,
-  );
+  parts.push(xiangqiDiagramRiverText(riverX, riverY + 1));
   return parts.join('');
 }
 

@@ -34,12 +34,14 @@ import {
   xiangqiBoardViewBox,
 } from './xiangqi-board-geometry.js';
 import {
+  XIANGQI_START_POINTS,
   type XiangqiSurfaceConfig,
   xiangqiSurfaceCoords,
   xiangqiSurfaceGrid,
   xiangqiSurfacePalace,
   xiangqiSurfacePalaceBands,
   xiangqiSurfaceRiver,
+  xiangqiSurfaceStartMarkers,
 } from './xiangqi-board-surface.js';
 import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
 import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
@@ -85,8 +87,11 @@ const JIEQI_SURFACE: XiangqiSurfaceConfig = {
     { fileMin: 3, fileMax: 5, rankMin: 8, rankMax: 10 },
   ],
   // The river breaks the interior files. Jieqi carries no 楚河漢界 caption, so
-  // no riverLabel: the gap alone is the cue, as it was before this shared.
+  // no riverText: the gap alone is the cue, as it was before this shared.
   riverAfterRank: 5,
+  // Jieqi deals its face-down pieces onto the standard points, so the printed
+  // brackets mark the same places they do on a xiangqi board.
+  startPoints: XIANGQI_START_POINTS,
 };
 // The layout for the CURRENT render. The exported marker/arrow helpers take a
 // perspective but no layout (they are called for whatever board is on screen),
@@ -197,7 +202,7 @@ export function renderJieqiBoardSvg(
   return `
     <svg class="jieqi-board jieqi-board--${layout} xq-surface xq-surface--${layout}" data-xiangqi-layout="${layout}"${boardLastMoveStyleAttr(PIECE_SIZE)} viewBox="${vb.minX} ${vb.minY} ${vb.width} ${vb.height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Jieqi board">
       ${backdrop}
-      <g class="jieqi-grid">${xiangqiSurfaceGrid(surface, layout)}${xiangqiSurfacePalace(surface, perspective, layout)}</g>
+      <g class="jieqi-grid">${xiangqiSurfaceGrid(surface, layout)}${xiangqiSurfaceStartMarkers(surface, perspective, layout)}${xiangqiSurfacePalace(surface, perspective, layout)}</g>
       ${river}
       ${palaceBands}
       ${coords ? `<g class="jieqi-coords xq-live-coords" aria-hidden="true" pointer-events="none">${coords}</g>` : ''}

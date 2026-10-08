@@ -37,6 +37,7 @@ import { type XiangqiBoardGeometry, xiangqiBoardPoint } from './xiangqi-board-ge
 import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle, xiangqiNotationChangedEvent } from './xiangqi-notation.js';
 import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
+import { xiangqiDiagramRiverText } from './xiangqi-river-text.js';
 
 // Geometry/colours mirror the static xiangqi diagrams in articles-data.ts so
 // the replay board is visually identical to the rules diagrams.
@@ -286,9 +287,7 @@ function gridSvg(perspective: XiangqiColor): string {
       `<line x1="${c.x}" y1="${c.y}" x2="${d.x}" y2="${d.y}" class="xq-diagram-line" stroke-width="1"/>`,
     );
   }
-  parts.push(
-    `<text x="${left + 4 * CELL}" y="${(riverTop + riverBottom) / 2 + 1}" font-family="serif" font-size="16" class="xq-diagram-ink xq-diagram-river-label" text-anchor="middle" dominant-baseline="central">楚 河   漢 界</text>`,
-  );
+  parts.push(xiangqiDiagramRiverText(left + 4 * CELL, (riverTop + riverBottom) / 2 + 1));
   return parts.join('');
 }
 

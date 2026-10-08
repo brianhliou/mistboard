@@ -1,15 +1,36 @@
 import { currentLocale, type Locale } from './i18n/locale.js';
 import { viewerCountry } from './viewer-geo.js';
 import {
+  DEFAULT_XIANGQI_BOARD_COLOR,
+  JUNGLE_XIANGQI_BOARD_COLOR,
+  normalizeXiangqiBoardColor,
+  type XiangqiBoardColor,
+} from './xiangqi-board-color.js';
+import {
   DEFAULT_XIANGQI_PIECE_SET,
   XIANGQI_PIECE_SETS,
   type XiangqiPieceSet,
 } from './xiangqi-piece-sets.js';
+import {
+  DEFAULT_XIANGQI_RIVER_TEXT,
+  normalizeXiangqiRiverText,
+  XIANGQI_RIVER_TEXTS,
+  type XiangqiRiverText,
+} from './xiangqi-river-text.js';
 
+// The board theme is now only "standard or Jungle". 'international' is the
+// standard board, whatever its colour (the stored id and the
+// data-xiangqi-board-theme value are kept so nothing that reads them breaks).
+// 'traditional' was a third theme until 2026-10-08: a darker board that also
+// printed 楚河 漢界. It is now the 'traditional' board colour plus the classic
+// river text, and a stored 'traditional' is migrated to exactly that
+// (migrateLegacyBoardThemes below).
 // 'jungle' is the children's board (2026-09-25): a lawn of two greens, cream rugs
-// for palaces, a painted river. It is drawn on the square grid, so choosing it
-// also sets the cell layout (theme.ts).
-export type XiangqiBoardTheme = 'international' | 'traditional' | 'jungle';
+// for palaces, a painted river. Since 2026-10-08 it is a board colour, the Jungle
+// swatch, offered on the square grid only, so the theme is derived (Jungle colour
+// on the square grid) rather than stored; a stored 'jungle' theme is migrated to
+// that colour (migrateLegacyBoardThemes below).
+export type XiangqiBoardTheme = 'international' | 'jungle';
 export type XiangqiBoardLayout = 'intersection' | 'cell';
 
 const xiangqiBoardStorageKey = 'mistboard.xiangqiBoardTheme';
@@ -38,8 +59,7 @@ const HANZI_PIECE_COUNTRIES: ReadonlySet<string> = new Set([
   'VN',
 ]);
 const xiangqiBoardThemes: ReadonlyArray<{ id: XiangqiBoardTheme; label: string }> = [
-  { id: 'international', label: 'International' },
-  { id: 'traditional', label: 'Traditional' },
+  { id: 'international', label: 'Lined' },
   { id: 'jungle', label: 'Jungle' },
 ];
 const xiangqiBoardLayouts: ReadonlyArray<{ id: XiangqiBoardLayout; label: string }> = [
@@ -47,28 +67,13 @@ const xiangqiBoardLayouts: ReadonlyArray<{ id: XiangqiBoardLayout; label: string
   { id: 'cell', label: 'Square grid' },
 ];
 
+/** The theme the board renders: Jungle when the Jungle colour is picked and the
+ *  layout is the square grid, else the standard board. Derived, never stored. */
 export function readStoredXiangqiBoardTheme(): XiangqiBoardTheme {
-  try {
-    const stored = window.localStorage.getItem(xiangqiBoardStorageKey);
-    const version = window.localStorage.getItem(xiangqiBoardStorageVersionKey);
-    const normalized = normalizeXiangqiBoardTheme(stored);
-    if (version !== xiangqiBoardStorageVersion || normalized !== stored) {
-      window.localStorage.setItem(xiangqiBoardStorageVersionKey, xiangqiBoardStorageVersion);
-      window.localStorage.setItem(xiangqiBoardStorageKey, normalized);
-    }
-    return normalized;
-  } catch {
-    return defaultXiangqiBoardTheme;
-  }
-}
-
-export function writeStoredXiangqiBoardTheme(theme: XiangqiBoardTheme): void {
-  try {
-    window.localStorage.setItem(xiangqiBoardStorageKey, theme);
-    window.localStorage.setItem(xiangqiBoardStorageVersionKey, xiangqiBoardStorageVersion);
-  } catch {
-    // The data attribute still updates for the current page.
-  }
+  return readStoredXiangqiBoardColor() === JUNGLE_XIANGQI_BOARD_COLOR &&
+    readStoredXiangqiBoardLayout() === 'cell'
+    ? 'jungle'
+    : defaultXiangqiBoardTheme;
 }
 
 export function readStoredXiangqiBoardLayout(): XiangqiBoardLayout {
@@ -79,6 +84,8 @@ export function readStoredXiangqiBoardLayout(): XiangqiBoardLayout {
     if (xiangqiBoardLayouts.some((layout) => layout.id === previewLayout)) {
       return previewLayout as XiangqiBoardLayout;
     }
+    // A stored Jungle theme also sets the layout; migrate before reading it.
+    migrateLegacyBoardThemes();
     const stored = window.localStorage.getItem(xiangqiBoardLayoutStorageKey);
     const version = window.localStorage.getItem(xiangqiBoardLayoutStorageVersionKey);
     const normalized = normalizeXiangqiBoardLayout(stored);
@@ -181,6 +188,164 @@ function storedXiangqiPieceSet(value: string | null): XiangqiPieceSet | null {
 
 export function normalizeXiangqiPieceSet(value: string | null): XiangqiPieceSet {
   return storedXiangqiPieceSet(value) ?? defaultXiangqiPieceSet;
+}
+
+// ── Board colour, river text and start markers (2026-10-08) ─────────────────
+// Three independent choices in the gear's Board panel. The colour is a preset id
+// (xiangqi-board-color.ts owns the presets and their ink); the river text is
+// off, the classic 楚河 漢界, or the Mistboard wordmark (xiangqi-river-text.ts);
+// the start markers are the printed brackets at the cannons' and soldiers'
+// starting points. Each stores only an explicit pick: an empty key means
+// "follow the default", so a later change of default reaches everyone who never
+// chose. All keys share the mistboard.xiangqi prefix, so theme.ts's
+// cross-document listener carries them to other tabs and embedded boards.
+
+const xiangqiBoardColorStorageKey = 'mistboard.xiangqiBoardColor';
+const xiangqiRiverTextStorageKey = 'mistboard.xiangqiRiverText';
+const xiangqiStartMarkersStorageKey = 'mistboard.xiangqiStartMarkers';
+const defaultXiangqiStartMarkers = true;
+
+// The Traditional board theme became a colour plus a river text. A browser that
+// stored it keeps exactly what it saw: the 'traditional' colour and the classic
+// inscription, unless it already holds its own pick for either. The theme key
+// goes back to the standard board ('international'), keeping its storage
+// version, so the layout and every other pick stay as they were. Idempotent;
+// each reader runs it first, so the order the readers run in does not matter.
+// A stored 'international' needs nothing: it is the default colour with no
+// river text, which is what an empty colour and river-text key already mean.
+//
+// The Jungle board theme became the Jungle colour (2026-10-08). A browser that
+// stored it saw Jungle whatever its colour key held (the colour row was hidden
+// under Jungle), so the colour is overwritten with 'jungle'; and Jungle was only
+// ever chosen together with the square grid, so the layout is set to it too.
+// Older theme ids (tournament, blue, ...) normalize to the standard board, as
+// they did before. Every stored theme ends as 'international' at the current
+// version, so this runs its writes once per browser.
+function migrateLegacyBoardThemes(): void {
+  const stored = window.localStorage.getItem(xiangqiBoardStorageKey);
+  const version = window.localStorage.getItem(xiangqiBoardStorageVersionKey);
+  if (stored === 'traditional') {
+    if (window.localStorage.getItem(xiangqiBoardColorStorageKey) === null) {
+      window.localStorage.setItem(xiangqiBoardColorStorageKey, 'traditional');
+    }
+    if (window.localStorage.getItem(xiangqiRiverTextStorageKey) === null) {
+      window.localStorage.setItem(xiangqiRiverTextStorageKey, 'classic');
+    }
+  } else if (stored === 'jungle') {
+    window.localStorage.setItem(xiangqiBoardColorStorageKey, JUNGLE_XIANGQI_BOARD_COLOR);
+    writeStoredXiangqiBoardLayout('cell');
+  }
+  if (stored === null && version === null) return;
+  if (stored !== defaultXiangqiBoardTheme || version !== xiangqiBoardStorageVersion) {
+    window.localStorage.setItem(xiangqiBoardStorageKey, defaultXiangqiBoardTheme);
+    window.localStorage.setItem(xiangqiBoardStorageVersionKey, xiangqiBoardStorageVersion);
+  }
+}
+
+export function readStoredXiangqiBoardColor(): XiangqiBoardColor {
+  try {
+    // QA/share hook, like xqLayout: preview a colour without saving it.
+    const preview = new URLSearchParams(window.location.search).get('xqBoardColor');
+    if (preview !== null) return normalizeXiangqiBoardColor(preview);
+    migrateLegacyBoardThemes();
+    return normalizeXiangqiBoardColor(window.localStorage.getItem(xiangqiBoardColorStorageKey));
+  } catch {
+    return DEFAULT_XIANGQI_BOARD_COLOR;
+  }
+}
+
+export function writeStoredXiangqiBoardColor(color: XiangqiBoardColor): void {
+  try {
+    window.localStorage.setItem(xiangqiBoardColorStorageKey, color);
+  } catch {
+    // The root attributes still update for the current page.
+  }
+}
+
+export function readStoredXiangqiRiverText(): XiangqiRiverText {
+  try {
+    // QA/share hook: `?xqRiver=brand` previews a caption without saving it.
+    const preview = new URLSearchParams(window.location.search).get('xqRiver');
+    if (XIANGQI_RIVER_TEXTS.includes(preview as XiangqiRiverText)) {
+      return preview as XiangqiRiverText;
+    }
+    migrateLegacyBoardThemes();
+    return normalizeXiangqiRiverText(window.localStorage.getItem(xiangqiRiverTextStorageKey));
+  } catch {
+    return DEFAULT_XIANGQI_RIVER_TEXT;
+  }
+}
+
+export function writeStoredXiangqiRiverText(text: XiangqiRiverText): void {
+  try {
+    window.localStorage.setItem(xiangqiRiverTextStorageKey, text);
+  } catch {
+    // The root attribute still updates for the current page.
+  }
+}
+
+// The Mistboard river caption has two settings while Brian compares them
+// (2026-10-08): 'a', the default, and 'b', reached only by the ?xqRiverStyle=b
+// flag. The flag is remembered, so the alternate follows him across pages;
+// ?xqRiverStyle=a goes back. app-base.css reads data-xiangqi-river-style.
+const xiangqiRiverStyleStorageKey = 'mistboard.xiangqiRiverStyle';
+export type XiangqiRiverStyle = 'a' | 'b';
+
+export function readStoredXiangqiRiverStyle(): XiangqiRiverStyle {
+  try {
+    const flag = new URLSearchParams(window.location.search).get('xqRiverStyle');
+    if (flag === 'a' || flag === 'b') {
+      window.localStorage.setItem(xiangqiRiverStyleStorageKey, flag);
+      return flag;
+    }
+    return window.localStorage.getItem(xiangqiRiverStyleStorageKey) === 'b' ? 'b' : 'a';
+  } catch {
+    return 'a';
+  }
+}
+
+export function readStoredXiangqiStartMarkers(): boolean {
+  try {
+    const stored = window.localStorage.getItem(xiangqiStartMarkersStorageKey);
+    if (stored === 'on') return true;
+    if (stored === 'off') return false;
+    return defaultXiangqiStartMarkers;
+  } catch {
+    return defaultXiangqiStartMarkers;
+  }
+}
+
+export function writeStoredXiangqiStartMarkers(on: boolean): void {
+  try {
+    window.localStorage.setItem(xiangqiStartMarkersStorageKey, on ? 'on' : 'off');
+  } catch {
+    // The root attribute still updates for the current page.
+  }
+}
+
+/** The URL preview hooks (?xqLayout=, ?xqBoardColor=, ?xqRiver=) win over the
+ *  stored pick, so a pick made on a preview link has to end the preview, or the
+ *  gear would keep showing the previewed option as selected while the board
+ *  shows the pick (Brian's 2026-10-08 review: the river-text selection "stuck"
+ *  on a ?xqRiver= link). Drops the parameter from the address in place. */
+export function endXiangqiAppearancePreview(param: 'xqLayout' | 'xqBoardColor' | 'xqRiver'): void {
+  try {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has(param)) return;
+    url.searchParams.delete(param);
+    window.history.replaceState(window.history.state, '', url);
+  } catch {
+    // No history API: the pick still applies to this page.
+  }
+}
+
+/** The ?boardgrain=1 preview flag: offers the faint wood-grain preset. */
+export function xiangqiBoardGrainFlag(): boolean {
+  try {
+    return new URLSearchParams(window.location.search).get('boardgrain') === '1';
+  } catch {
+    return false;
+  }
 }
 
 // ── Move-notation display preference ────────────────────────────────────────

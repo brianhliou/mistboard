@@ -6,26 +6,45 @@ import type { Locale } from './i18n/locale.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { readStoredSoundSet, type SoundSetId, storeSoundSet } from './sound-sets.js';
 import {
+  endXiangqiAppearancePreview,
+  readStoredXiangqiBoardColor,
   readStoredXiangqiBoardLayout,
   readStoredXiangqiBoardTheme,
   readStoredXiangqiPieceSet,
+  readStoredXiangqiRiverStyle,
+  readStoredXiangqiRiverText,
+  readStoredXiangqiStartMarkers,
+  writeStoredXiangqiBoardColor,
   writeStoredXiangqiBoardLayout,
-  writeStoredXiangqiBoardTheme,
   writeStoredXiangqiNotation,
   writeStoredXiangqiPieceSet,
+  writeStoredXiangqiRiverText,
+  writeStoredXiangqiStartMarkers,
   type XiangqiBoardLayout,
   type XiangqiBoardTheme,
   type XiangqiNotationPreference,
+  type XiangqiRiverStyle,
+  xiangqiBoardGrainFlag,
 } from './xiangqi-appearance-storage.js';
+import {
+  DEFAULT_XIANGQI_BOARD_COLOR,
+  JUNGLE_XIANGQI_BOARD_COLOR,
+  type XiangqiBoardColor,
+  xiangqiBoardColorPalette,
+} from './xiangqi-board-color.js';
 import {
   currentXiangqiNotationPreference,
   xiangqiNotationChangedEvent,
 } from './xiangqi-notation.js';
 import type { XiangqiPieceSet } from './xiangqi-piece-sets.js';
+import type { XiangqiRiverText } from './xiangqi-river-text.js';
 
 export {
+  readStoredXiangqiBoardColor,
   readStoredXiangqiBoardLayout,
   readStoredXiangqiPieceSet,
+  readStoredXiangqiRiverText,
+  readStoredXiangqiStartMarkers,
 } from './xiangqi-appearance-storage.js';
 
 // This module is the ALWAYS-LOADED theme layer: applying stored preferences at
@@ -48,9 +67,10 @@ export type SiteTheme = 'system' | 'light' | 'dark';
 // The appearance "family" is the GameSpec family (chess-family games share board
 // themes + piece sets; likewise for xiangqi). Driven by gameSpecForId(id).family.
 export type BoardFamily = GameFamilyId;
-// The xiangqi Board picker folds the board theme and the cell/intersection
-// layout into one choice row: the two themes plus the square-grid layout.
-export type XiangqiBoardChoice = XiangqiBoardTheme | 'cell';
+// The xiangqi Board picker's tiles are the genuinely different boards: the
+// lined board (intersections) and the square grid. Colour (Jungle included, as a
+// square-grid-only swatch), river text and start markers are separate rows.
+export type XiangqiBoardChoice = 'lined' | 'cell';
 
 const siteThemeStorageKey = 'mistboard.siteTheme';
 const boardStorageKey = 'mistboard.boardTheme';
@@ -145,6 +165,10 @@ export function initializeThemeSettings(): void {
   applyXiangqiBoardLayout(readStoredXiangqiBoardLayout());
   applyBoardCoordinates(readDisplayPreferences().boardCoordinates);
   applyXiangqiBoardTheme(readStoredXiangqiBoardTheme());
+  applyXiangqiBoardColor(readStoredXiangqiBoardColor());
+  applyXiangqiRiverText(readStoredXiangqiRiverText());
+  applyXiangqiRiverStyle(readStoredXiangqiRiverStyle());
+  applyXiangqiStartMarkers(readStoredXiangqiStartMarkers());
   applyXiangqiPieceSet(readStoredXiangqiPieceSet());
   if (!document.documentElement.dataset.boardFamily) {
     document.documentElement.dataset.boardFamily = defaultBoardFamily;
@@ -170,6 +194,10 @@ function watchForXiangqiAppearanceInOtherDocuments(): void {
     if (key !== null && !key.startsWith('mistboard.xiangqi')) return;
     applyXiangqiBoardLayout(readStoredXiangqiBoardLayout());
     applyXiangqiBoardTheme(readStoredXiangqiBoardTheme());
+    applyXiangqiBoardColor(readStoredXiangqiBoardColor());
+    applyXiangqiRiverText(readStoredXiangqiRiverText());
+    applyXiangqiRiverStyle(readStoredXiangqiRiverStyle());
+    applyXiangqiStartMarkers(readStoredXiangqiStartMarkers());
     applyXiangqiPieceSet(readStoredXiangqiPieceSet());
     syncThemeControls();
     dispatchXiangqiAppearanceChanged();
@@ -234,6 +262,49 @@ function applyXiangqiBoardLayout(layout: XiangqiBoardLayout): void {
   document.documentElement.dataset.xiangqiBoardLayout = layout;
 }
 
+/** A picked board colour becomes three custom properties on the root, which the
+ *  :root[data-xiangqi-board-color] rule in app-base.css maps onto the board
+ *  tokens every xiangqi-shaped renderer already reads. The default colour sets
+ *  nothing: the stylesheet's own values are that colour. Neither does Jungle: its
+ *  theme attribute carries its tokens on the square grid, and on the lined board
+ *  it paints the default colour. */
+export function applyXiangqiBoardColor(color: XiangqiBoardColor): void {
+  const root = document.documentElement;
+  if (color === DEFAULT_XIANGQI_BOARD_COLOR || color === JUNGLE_XIANGQI_BOARD_COLOR) {
+    delete root.dataset.xiangqiBoardColor;
+    delete root.dataset.xiangqiBoardTone;
+    delete root.dataset.xiangqiBoardGrain;
+    root.style.removeProperty('--xq-custom-bg');
+    root.style.removeProperty('--xq-custom-ink');
+    root.style.removeProperty('--xq-custom-band');
+    return;
+  }
+  const palette = xiangqiBoardColorPalette(color);
+  root.dataset.xiangqiBoardColor = color;
+  root.dataset.xiangqiBoardTone = palette.dark ? 'dark' : 'light';
+  root.style.setProperty('--xq-custom-bg', palette.bg);
+  root.style.setProperty('--xq-custom-ink', palette.ink);
+  root.style.setProperty('--xq-custom-band', palette.band);
+  if (color === 'grain' && xiangqiBoardGrainFlag()) root.dataset.xiangqiBoardGrain = 'on';
+  else delete root.dataset.xiangqiBoardGrain;
+}
+
+/** Which river caption shows; app-base.css maps the attribute onto the display
+ *  tokens the board and diagram stylesheets read. */
+export function applyXiangqiRiverText(text: XiangqiRiverText): void {
+  document.documentElement.dataset.xiangqiRiverText = text;
+}
+
+/** How the Mistboard caption is set: 'a' (the default) or the alternate 'b',
+ *  which only the ?xqRiverStyle= flag reaches (xiangqi-appearance-storage.ts). */
+function applyXiangqiRiverStyle(style: XiangqiRiverStyle): void {
+  document.documentElement.dataset.xiangqiRiverStyle = style;
+}
+
+function applyXiangqiStartMarkers(on: boolean): void {
+  document.documentElement.dataset.xiangqiStartMarkers = on ? 'on' : 'off';
+}
+
 /** Mirrors the coordinate preference onto the root so CSS can pick the matching
  *  board aspect. The label gutter is only reserved when labels are shown, so the
  *  board is a different rectangle in each state and the host slot has to agree
@@ -274,19 +345,44 @@ export function setPieceSetPreference(pieceSet: PieceSet): void {
 }
 
 export function setXiangqiBoardChoicePreference(value: XiangqiBoardChoice): void {
-  // 'Square grid' keeps whichever colour theme is stored, except Jungle: Jungle is
-  // itself a square-grid choice, so leaving it for plain squares means leaving
-  // its colours too.
-  const theme: XiangqiBoardTheme | null =
-    value !== 'cell' ? value : readStoredXiangqiBoardTheme() === 'jungle' ? 'international' : null;
-  if (theme) {
-    applyXiangqiBoardTheme(theme);
-    writeStoredXiangqiBoardTheme(theme);
-  }
-  const layout: XiangqiBoardLayout =
-    value === 'cell' || value === 'jungle' ? 'cell' : 'intersection';
-  applyXiangqiBoardLayout(layout);
+  const layout: XiangqiBoardLayout = value === 'lined' ? 'intersection' : 'cell';
+  endXiangqiAppearancePreview('xqLayout');
   writeStoredXiangqiBoardLayout(layout);
+  // Jungle needs the square grid's cells. Leaving for the lined board falls back
+  // to the default colour rather than keeping a hidden Jungle pick: the stored
+  // colour is then always the one the board shows and the row has selected.
+  if (layout === 'intersection' && readStoredXiangqiBoardColor() === JUNGLE_XIANGQI_BOARD_COLOR) {
+    writeStoredXiangqiBoardColor(DEFAULT_XIANGQI_BOARD_COLOR);
+  }
+  applyXiangqiBoardLayout(layout);
+  applyXiangqiBoardColor(readStoredXiangqiBoardColor());
+  applyXiangqiBoardTheme(readStoredXiangqiBoardTheme());
+  syncThemeControls();
+  dispatchXiangqiAppearanceChanged();
+}
+
+/** Jungle is a colour too: picking it turns on the Jungle theme (the square grid
+ *  is the only place the swatch is offered). */
+export function setXiangqiBoardColorPreference(color: XiangqiBoardColor): void {
+  endXiangqiAppearancePreview('xqBoardColor');
+  writeStoredXiangqiBoardColor(color);
+  applyXiangqiBoardColor(color);
+  applyXiangqiBoardTheme(readStoredXiangqiBoardTheme());
+  syncThemeControls();
+  dispatchXiangqiAppearanceChanged();
+}
+
+export function setXiangqiRiverTextPreference(text: XiangqiRiverText): void {
+  endXiangqiAppearancePreview('xqRiver');
+  applyXiangqiRiverText(text);
+  writeStoredXiangqiRiverText(text);
+  syncThemeControls();
+  dispatchXiangqiAppearanceChanged();
+}
+
+export function setXiangqiStartMarkersPreference(on: boolean): void {
+  applyXiangqiStartMarkers(on);
+  writeStoredXiangqiStartMarkers(on);
   syncThemeControls();
   dispatchXiangqiAppearanceChanged();
 }
@@ -554,6 +650,16 @@ function syncThemeControls(): void {
   syncTileRow('fog', fogTheme);
   syncTileRow('piece', pieceSet);
   syncTileRow('xqpiece', readStoredXiangqiPieceSet());
+  syncXiangqiBoardColorControls(readStoredXiangqiBoardColor());
+  const riverText = readStoredXiangqiRiverText();
+  document.querySelectorAll<HTMLElement>('[data-xq-river-text]').forEach((button) => {
+    const isActive = button.dataset.xqRiverText === riverText;
+    button.setAttribute('aria-checked', String(isActive));
+    button.classList.toggle('selected', isActive);
+  });
+  document.querySelectorAll<HTMLInputElement>('input[data-xq-start-markers]').forEach((input) => {
+    input.checked = readStoredXiangqiStartMarkers();
+  });
   document.querySelectorAll<HTMLInputElement>('input[data-sound-volume]').forEach((input) => {
     input.value = String(Math.round(effectiveVolume * 100));
   });
@@ -582,9 +688,15 @@ function syncThemeControls(): void {
 }
 
 export function readXiangqiBoardChoice(): XiangqiBoardChoice {
-  const theme = readStoredXiangqiBoardTheme();
-  if (readStoredXiangqiBoardLayout() === 'cell') return theme === 'jungle' ? 'jungle' : 'cell';
-  return theme;
+  return readStoredXiangqiBoardLayout() === 'cell' ? 'cell' : 'lined';
+}
+
+function syncXiangqiBoardColorControls(color: XiangqiBoardColor): void {
+  document.querySelectorAll<HTMLElement>('[data-xq-board-color]').forEach((swatch) => {
+    const isActive = swatch.dataset.xqBoardColor === color;
+    swatch.setAttribute('aria-checked', String(isActive));
+    swatch.classList.toggle('selected', isActive);
+  });
 }
 
 function syncSiteThemeControls(activeTheme: SiteTheme): void {

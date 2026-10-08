@@ -572,12 +572,6 @@ export function installFortressXiangqiBoardStyles(): void {
       --fxq-river: var(--fxq-board-bg, #f5dca8);
       --fxq-grid: var(--xq-board-ink, #5a3a14);
     }
-    :root[data-xiangqi-board-theme="traditional"] {
-      --fxq-board-bg: var(--xq-board-bg, #d9bd82);
-      --fxq-palace-band: var(--fxq-board-bg, #d9bd82);
-      --fxq-river: var(--fxq-board-bg, #d9bd82);
-      --fxq-grid: var(--xq-board-ink, #4b3c2a);
-    }
     .fxq-board {
       -webkit-user-select: none;
       user-select: none;

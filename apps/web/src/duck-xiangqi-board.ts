@@ -40,6 +40,7 @@ import {
   xiangqiSurfacePalace,
   xiangqiSurfacePalaceBands,
   xiangqiSurfaceRiver,
+  xiangqiSurfaceStartMarkers,
 } from './xiangqi-board-surface.js';
 import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { duckPieceMarks, type XiangqiPieceSet } from './xiangqi-piece-sets.js';
@@ -420,7 +421,7 @@ export function duckXiangqiBoardSvg(
   return `
     <svg class="xq-live-svg xq-live-svg--${layout} dkx-live-svg xq-surface xq-surface--${layout}" data-xiangqi-layout="${layout}" viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg">
       <rect class="xq-live-bg" x="${vb.minX}" y="${vb.minY}" width="${vb.width}" height="${vb.height}"/>
-      <g class="xq-live-grid">${xiangqiSurfaceGrid(DUCK_SURFACE, layout)}</g>
+      <g class="xq-live-grid">${xiangqiSurfaceGrid(DUCK_SURFACE, layout)}${xiangqiSurfaceStartMarkers(DUCK_SURFACE, perspective, layout)}</g>
       <g class="xq-live-palace-bands">${xiangqiSurfacePalaceBands(DUCK_SURFACE, perspective, layout)}</g>
       <g class="xq-live-palace">${xiangqiSurfacePalace(DUCK_SURFACE, perspective, layout)}</g>
       <g class="xq-live-river" aria-hidden="true" pointer-events="none">${xiangqiSurfaceRiver(DUCK_SURFACE, perspective, layout)}</g>

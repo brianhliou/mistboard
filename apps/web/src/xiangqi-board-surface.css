@@ -78,3 +78,45 @@
     drop-shadow(0 1.5px 0 #fffaf0) drop-shadow(0 -1.5px 0 #fffaf0)
     drop-shadow(0 3px 4px rgba(35, 27, 18, 0.25));
 }
+
+/* Start markers: the printed brackets at the cannons' and soldiers' starting
+   points (xiangqiSurfaceStartMarkers). The same ink as the grid, so a custom
+   board colour carries them along with the lines. */
+.xq-surface .xq-live-start-mark {
+  fill: none;
+  stroke: var(--xq-live-ink, #5a3a14);
+  stroke-width: 1.2;
+  stroke-linecap: square;
+}
+
+/* A surface that has not re-rendered since the reader turned them off still
+   hides them. */
+:root[data-xiangqi-start-markers="off"] .xq-surface .xq-live-start-mark {
+  display: none;
+}
+
+/* Move hints and the selection on a dark picked colour. The tuned teal
+   (live-xiangqi.css) sits at about 1.2:1 on walnut and under 2:1 on navy, so a
+   dark board swaps it for a light mint. Jungle keeps its lawn and its teal. */
+:root[data-xiangqi-board-tone="dark"]:not([data-xiangqi-board-theme="jungle"]) .xq-live-hint-dot {
+  fill: rgba(167, 243, 208, 0.85);
+}
+:root[data-xiangqi-board-tone="dark"]:not([data-xiangqi-board-theme="jungle"])
+  .xq-live-hint-capture {
+  stroke: rgba(167, 243, 208, 0.7);
+}
+:root[data-xiangqi-board-tone="dark"]:not([data-xiangqi-board-theme="jungle"])
+  .xq-live-selection-cell,
+:root[data-xiangqi-board-tone="dark"]:not([data-xiangqi-board-theme="jungle"])
+  .xq-live-target-hover {
+  fill: rgba(167, 243, 208, 0.28);
+}
+
+/* The ?boardgrain=1 wood grain (xiangqiSurfaceGrain): a faint overlay under the
+   lines, never on top of them. 0.3 judged in the dev pair (2026-10-08): at 0.5
+   the streaks competed with the grid. */
+.xq-surface .xq-live-grain {
+  opacity: 0.3;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
