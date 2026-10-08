@@ -47,6 +47,13 @@ export type DiscoveryProviderInput = {
    * page per round may skip these; the latest round is always read.
    */
   settledRounds?: ReadonlySet<number>;
+  /**
+   * Source URLs the store already holds as finished games. A settled round
+   * that still lists a record outside this set is read again: its stored
+   * boards may all be results-only pairings, which are finished without
+   * moves, and the record needs its pairing to land on that board.
+   */
+  completeUrls?: ReadonlySet<string>;
   /** Pause between a provider's own page fetches (dpxq 503s on bursts). */
   spacingMs?: number;
 };

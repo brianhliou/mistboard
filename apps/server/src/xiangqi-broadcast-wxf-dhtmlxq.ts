@@ -359,7 +359,16 @@ export function convertWxfDhtmlXqPageToSnapshot(
     const tags = parseFrameTags(frame);
     const title = cleanTagValue(tags.get('title'));
     const pinned = frames.length === 1 ? options.sourceBoardId : undefined;
-    let sourceBoardId = pinned ?? sourceBoardIdFromTitle(title, index);
+    // A dpxq record page (view_m_<id>) is one game whose title opens with the
+    // red team, not a board token: a Latin team name ("HTown 林年浩 和 ...")
+    // read as one and filed every game that team played red on one board
+    // (2026 North American Championship). Such a page is keyed by its game
+    // id below.
+    let sourceBoardId =
+      pinned ??
+      (sourceGameId(options.sourceUrl)
+        ? `board-${index + 1}`
+        : sourceBoardIdFromTitle(title, index));
     const binit = requireTag(tags, 'binit', sourceBoardId);
     if (!binit.ok) {
       issues.push(binit.issue);

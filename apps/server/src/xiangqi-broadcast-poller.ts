@@ -727,6 +727,7 @@ async function discoverStatedRounds(
     fetchImpl: context.fetchImpl,
     timeoutMs: context.timeoutMs,
     settledRounds,
+    completeUrls,
     spacingMs: context.leafSpacingMs,
   });
   if (!discovered.ok) {

@@ -98,13 +98,19 @@ async function fetchText(
 /**
  * Every pairing the tour's round pages list. The latest page comes first and
  * names the round count; earlier rounds are read unless the caller says they
- * are settled. A page that cannot be read or parsed contributes nothing: the
- * game list still stands on its own.
+ * are settled. A settled round with a record still to import is read anyway
+ * (`pendingRounds`): a round of results-only pairings counts as settled, and
+ * its records arriving later need the pairings to take the pairing's board
+ * (2026 North American Championship: the first pass stored all 108 pairings
+ * and filed 32 records; the next pass skipped every round page, and the rest
+ * were keyed by their title). A page that cannot be read or parsed
+ * contributes nothing: the game list still stands on its own.
  */
 async function readPairings(
   input: DiscoveryProviderInput,
   tour: string,
   origin: string,
+  pendingRounds: ReadonlySet<number>,
 ): Promise<Array<DpxqPairing & { pageUrl: string }>> {
   const latestUrl = roundPageUrl(tour, undefined, origin);
   const latest = await fetchText(input, latestUrl);
@@ -118,7 +124,8 @@ async function readPairings(
     pageUrl: roundPageUrl(tour, page.roundNumber, origin),
   }));
   for (let round = 1; round <= page.roundCount; round += 1) {
-    if (round === page.roundNumber || input.settledRounds?.has(round)) continue;
+    if (round === page.roundNumber) continue;
+    if (input.settledRounds?.has(round) && !pendingRounds.has(round)) continue;
     if (input.spacingMs) await new Promise((resolve) => setTimeout(resolve, input.spacingMs));
     const url = roundPageUrl(tour, round, origin);
     const fetched = await fetchText(input, url);
@@ -142,17 +149,29 @@ export const dpxqTourDiscoveryProvider: DiscoveryProvider = {
       return { ok: false, message: 'dpxq-tour discovery needs a numeric tour id (tour=12683)' };
     }
 
-    // `pairings=0` opts a tour out of the round pages (records only).
-    const pairings =
-      input.config.get('pairings') === '0' ? [] : await readPairings(input, tour, origin);
-
+    // The game list first: which rounds still have records to import decides
+    // which settled round pages are worth reading again.
     const listUrl = tourGameListUrl(tour, origin);
     const list = await fetchText(input, listUrl);
+    const games = list.ok ? parseDpxqTourGameList(list.text) : [];
+    const pendingRounds = new Set<number>();
+    const completeUrls = input.completeUrls;
+    for (const game of completeUrls ? games : []) {
+      if (game.roundNumber === undefined) continue;
+      if (!completeUrls?.has(archiveBoardUrl(game.id, origin))) {
+        pendingRounds.add(game.roundNumber);
+      }
+    }
+
+    // `pairings=0` opts a tour out of the round pages (records only).
+    const pairings =
+      input.config.get('pairings') === '0'
+        ? []
+        : await readPairings(input, tour, origin, pendingRounds);
     if (!list.ok && pairings.length === 0) {
       return { ok: false, message: `tour game list unreachable: ${list.message}` };
     }
 
-    const games = list.ok ? parseDpxqTourGameList(list.text) : [];
     if (games.length === 0 && pairings.length === 0) {
       // Normal before a tour has any uploaded records: the list page answered
       // and is empty. Marked quiet so an upcoming event polled by its auto

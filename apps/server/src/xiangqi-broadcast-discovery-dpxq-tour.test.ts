@@ -215,6 +215,37 @@ test('settled rounds are not fetched again; the latest always is', async () => {
   );
 });
 
+test('a settled round with a record still to import is read again for its pairings', async () => {
+  // Every pairing stored results-only makes every round settled; a record that
+  // lands after that still needs its round's pairings to take the pairing's id.
+  const listed = await dpxqTourDiscoveryProvider.discover(asianInput().input);
+  assert.equal(listed.ok, true);
+  if (!listed.ok) return;
+  const roundOne = listed.boards.filter((board) => board.roundNumber === 1);
+  assert.ok(roundOne.length > 0);
+  const allUrls = new Set(listed.boards.map((board) => board.url));
+
+  const pending = asianInput(new Set([1, 2, 3, 4, 5, 6, 7]));
+  const withoutOne = new Set(allUrls);
+  withoutOne.delete(roundOne[0]!.url);
+  const result = await dpxqTourDiscoveryProvider.discover({
+    ...pending.input,
+    completeUrls: withoutOne,
+  });
+  assert.equal(result.ok, true);
+  assert.deepEqual(
+    pending.fetched.filter((url) => url.includes('round_')),
+    [roundPageUrl('9503'), roundPageUrl('9503', 1)],
+  );
+
+  const done = asianInput(new Set([1, 2, 3, 4, 5, 6, 7]));
+  await dpxqTourDiscoveryProvider.discover({ ...done.input, completeUrls: allUrls });
+  assert.deepEqual(
+    done.fetched.filter((url) => url.includes('round_')),
+    [roundPageUrl('9503')],
+  );
+});
+
 test('pairings=0 reads the game list only', async () => {
   const { input, fetched } = asianInput();
   input.config.set('pairings', '0');

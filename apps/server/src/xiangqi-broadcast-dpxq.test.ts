@@ -119,6 +119,31 @@ test('a tiebreak with the same pairing and colours in one round is its own board
   assert.notEqual(convert(undefined).id, classical.id);
 });
 
+test('a record whose title opens with a Latin team name is keyed by its game, not the team', () => {
+  // dpxq titles a record "<red team> <red> <result> <black team> <black>"; the
+  // 2026 North American Championship's teams include HTown and Katy, and the
+  // title's first token was read as a board token, so every game a team played
+  // red landed on one board.
+  const EVENT = '2026年第十届北美杯象棋锦标赛';
+  const convert = (title: string, red: string, black: string, id: string) => {
+    const page = liveBoardPage({ red, black, plies: 8, event: EVENT, round: '第04轮' }).replace(
+      '[DhtmlXQ_binit]',
+      `[DhtmlXQ_title]${title}[/DhtmlXQ_title]<br>[DhtmlXQ_binit]`,
+    );
+    const normalized = normalizeDpxqPageToFrameHtml(page);
+    const converted = convertWxfDhtmlXqPageToSnapshot(normalized.ok ? normalized.html : '', {
+      sourceUrl: `http://www.dpxq.com/hldcg/search/view_m_${id}.html`,
+    });
+    if (!converted.ok) throw new Error('dpxq conversion failed');
+    return converted.snapshot.boards[0]!;
+  };
+  const first = convert('HTown 林年浩 和 UsCentralVietnamese 谢文川', '林年浩', '谢文川', '140580');
+  const second = convert('HTown David Nguyen 负 Katy 黎日光', 'David Nguyen', '黎日光', '140590');
+  assert.notEqual(first.sourceBoardId, 'htown');
+  assert.match(first.sourceBoardId, /^b[0-9a-z]+$/);
+  assert.notEqual(first.id, second.id);
+});
+
 test('a record matched to its round-page pairing is filed under the pairing id', () => {
   // Real record: 2024 Asian individual championship, men r07 table 1 game 2
   // (the final's rapid playoff), view_m_128343.
@@ -177,6 +202,22 @@ test('dpxq archive page normalizes and replays as the full real game', () => {
   assert.equal(board.black.name, '陶汉明');
   assert.equal(board.result, '1/2-1/2');
   assert.equal(board.status, 'complete');
+});
+
+test('an archive page with variations replays branch 0, the game as played', () => {
+  // view_m_140550 (2026 North American Championship): the movelist var holds a
+  // branch list and the [DhtmlXQ_movelist] tag stays empty.
+  const branched = ARCHIVE_HTML.replace(
+    /var DhtmlXQ_movelist = '\[DhtmlXQ_movelist\]\d+\[\/DhtmlXQ_movelist\]'/,
+    `var DhtmlXQ_movelist = '[0_1_0]${FULL_MOVELIST}[/0_1_0][0_57_1]18282002[/0_57_1][1_88_2]1435[/1_88_2]'`,
+  );
+  assert.notEqual(branched, ARCHIVE_HTML);
+  const normalized = normalizeDpxqPageToFrameHtml(branched);
+  assert.equal(normalized.ok, true);
+  const converted = convertWxfDhtmlXqPageToSnapshot(normalized.ok ? normalized.html : '');
+  assert.equal(converted.ok, true);
+  if (!converted.ok) return;
+  assert.equal(converted.snapshot.boards[0]!.moves.length, 89);
 });
 
 test('an archive page filed with no round does not take its opening as the round', () => {
@@ -365,6 +406,32 @@ test('a live board takes the team from the combined red/black tag', () => {
   assert.equal(board.red.federation, '浙江民泰银行象棋队');
   assert.equal(board.black.name, '戴晨');
   assert.equal(board.black.federation, '杭州市棋类协会');
+});
+
+test('a Latin name with spaces does not lend its first word to the team', () => {
+  // view_m_140512 (2026 North American Championship): [DhtmlXQ_red] "Katy Van
+  // Nguyen", [DhtmlXQ_redname] "Van Nguyen". Split at the last space, the team
+  // read "Katy Van".
+  const base = liveBoardPage({ red: 'Katy Van Nguyen', black: '纽约 孟健', plies: 8 });
+  const named = base.replace(
+    '</body>',
+    '[DhtmlXQ_redname]Van Nguyen[/DhtmlXQ_redname][DhtmlXQ_blackname]孟健[/DhtmlXQ_blackname]</body>',
+  );
+  const withTeamTag = named.replace(
+    '</body>',
+    '[DhtmlXQ_redteam]Katy[/DhtmlXQ_redteam][DhtmlXQ_blackteam]纽约[/DhtmlXQ_blackteam]</body>',
+  );
+  for (const page of [named, withTeamTag]) {
+    const normalized = normalizeDpxqPageToFrameHtml(page);
+    const converted = convertWxfDhtmlXqPageToSnapshot(normalized.ok ? normalized.html : '');
+    assert.equal(converted.ok, true);
+    if (!converted.ok) return;
+    const board = converted.snapshot.boards[0]!;
+    assert.equal(board.red.name, 'Van Nguyen');
+    assert.equal(board.red.federation, 'Katy');
+    assert.equal(board.black.name, '孟健');
+    assert.equal(board.black.federation, '纽约');
+  }
 });
 
 test('an individual game gets no invented affiliation', () => {

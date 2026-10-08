@@ -65,7 +65,19 @@ const PLAYER_NAME_OVERRIDES = new Map<string, string>([
 // The federation a source's team field names, for the players outside
 // mainland China whose own spelling is not pinyin. Keys are matched as
 // substrings, so 中国香港 and 香港象棋总会 are both Hong Kong.
-type FederationRegion = 'HK' | 'MO' | 'TW' | 'VN' | 'MY' | 'SG' | 'PH' | 'JP' | 'TH' | 'BN' | 'AU';
+type FederationRegion =
+  | 'HK'
+  | 'MO'
+  | 'TW'
+  | 'VN'
+  | 'MY'
+  | 'SG'
+  | 'PH'
+  | 'JP'
+  | 'TH'
+  | 'BN'
+  | 'AU'
+  | 'NA';
 const FEDERATION_REGIONS: Array<[string, FederationRegion]> = [
   ['香港', 'HK'],
   ['澳门', 'MO'],
@@ -84,8 +96,30 @@ const FEDERATION_REGIONS: Array<[string, FederationRegion]> = [
   ['澳洲', 'AU'],
 ];
 
+// North American teams enter as city clubs, matched whole rather than as
+// substrings: 金州 is also a district of Dalian, and a mainland team named
+// for it must keep pinyin. The set is the 2026 North American Championship's
+// (Houston, dpxq tour 12473) team field, in Chinese and as the Latin team
+// names the source gives.
+const NORTH_AMERICAN_TEAMS = new Set([
+  '洛杉矶',
+  '纽约',
+  '纽约2',
+  '北加州',
+  '新泽西',
+  '休斯顿',
+  '休斯敦',
+  '金州',
+  '温哥华',
+  '新奥尔良',
+  'HTown',
+  'Katy',
+  'UsCentralVietnamese',
+]);
+
 function federationRegion(federation: string | undefined): FederationRegion | undefined {
   if (!federation) return undefined;
+  if (NORTH_AMERICAN_TEAMS.has(federation.trim())) return 'NA';
   return FEDERATION_REGIONS.find(([key]) => federation.includes(key))?.[1];
 }
 
@@ -154,6 +188,32 @@ const FEDERATION_PLAYER_NAMES = new Map<string, string>([
   ['TW:刘国华', 'Liu Kuo-hua'],
   ['TW:彭柔安', 'Peng Jou-an'],
   ['TW:赵奕帆', 'Chao Yi-fan'],
+  // 2026 10th North American Championship (Houston): the entry list in the
+  // host's special issue (houstonxiangqi.org, 北美锦标赛特刊电子版, p. 32), which
+  // prints each player's English and Chinese names side by side. North
+  // American players write the given name first, and so do these. 范志 is
+  // listed as "Klevestakt Makspringer" and stays pinyin until confirmed.
+  ['NA:王安泰', 'Antai Wang'],
+  ['NA:胡全', 'Michael Hu'],
+  ['NA:罗健文', 'Kean Mun Loh'],
+  ['NA:胡玉山', 'Yushan Hu'],
+  ['NA:杜国胜', 'Yogi Do'],
+  ['NA:谢文川', 'Richard Tse'],
+  ['NA:林年浩', 'Jimmy Lin'],
+  ['NA:张文鑫', 'Wenxin Zhang'],
+  ['NA:廖建国', 'Lien Quoc'],
+  ['NA:黎英豪', 'Anh Hao Le'],
+  ['NA:彭铂', 'Bo Peng'],
+  ['NA:彭佳文', 'Oscar Peng'],
+  ['NA:李铭坚', 'Henry Li'],
+  ['NA:孟健', 'Jian Meng'],
+  ['NA:曹智聪', 'Stephen Cho'],
+  ['NA:孙一鸣', 'Yiming Sun'],
+  ['NA:刘凯', 'Kai Liu'],
+  // The entry list names these two in English only; the host's Players page
+  // (houstonxiangqi.org/players) pairs them with their Chinese names.
+  ['NA:黎日光', 'Nhat Quang Le'],
+  ['NA:谢光平', 'Ben Ta'],
 ]);
 
 function federationPlayerName(zh: string, federation: string | undefined): string | undefined {
@@ -161,8 +221,19 @@ function federationPlayerName(zh: string, federation: string | undefined): strin
   return region ? FEDERATION_PLAYER_NAMES.get(`${region}:${zh}`) : undefined;
 }
 
+// Whole event names whose English the organiser fixes, where the glossary
+// would read differently: the host calls this one the North American Xiangqi
+// Championship, without the edition number dpxq's name carries.
+const EVENT_NAME_OVERRIDES = new Map<string, string>([
+  ['2026年第十届北美杯象棋锦标赛', '2026 North American Xiangqi Championship'],
+]);
+
 // Longest match wins; entries are sorted by key length at module init.
 const EVENT_GLOSSARY: Array<[string, string]> = [
+  // The North American Championship, as dpxq (北美杯) and its host (北美洲)
+  // name it.
+  ['北美杯', 'North American Cup'],
+  ['北美洲', 'North American'],
   ['全国象棋团体赛', 'National Xiangqi Team Championship'],
   ['全国象棋个人赛', 'National Xiangqi Individual Championship'],
   ['象棋甲级联赛', 'Xiangqi Division A League'],
@@ -314,6 +385,16 @@ const PLACE_GLOSSARY: Array<[string, string]> = [
   ['加拿大', 'Canada'],
   ['美国', 'United States'],
   ['英国', 'United Kingdom'],
+  // North American city teams (2026 North American Championship). 金州 is
+  // not here: it is also a district of Dalian; see TEAM_NAME_OVERRIDES.
+  ['洛杉矶', 'Los Angeles'],
+  ['纽约', 'New York'],
+  ['北加州', 'Northern California'],
+  ['新泽西', 'New Jersey'],
+  ['休斯顿', 'Houston'],
+  ['休斯敦', 'Houston'],
+  ['温哥华', 'Vancouver'],
+  ['新奥尔良', 'New Orleans'],
   ['法国', 'France'],
   ['德国', 'Germany'],
   ['意大利', 'Italy'],
@@ -417,6 +498,11 @@ const TEAM_GLOSSARY: Array<[string, string]> = [
   ...PLACE_GLOSSARY,
   ...EVENT_GLOSSARY,
 ];
+
+// Whole team names whose English is not their parts' (the Golden State team
+// at the 2026 North American Championship; 金州 inside a longer name is
+// Jinzhou, Dalian, and keeps pinyin).
+const TEAM_NAME_OVERRIDES = new Map<string, string>([['金州', 'Golden State']]);
 
 const ROUND_GLOSSARY: Array<[string, string]> = [
   ['四分之一决赛', 'Quarterfinal'],
@@ -707,7 +793,10 @@ function translateGlossaryText(
 }
 
 export function translateXiangqiEventName(zh: string): string | undefined {
-  return translateGlossaryText(zh, EVENT_GLOSSARY_SORTED, EVENT_UNITS);
+  return (
+    EVENT_NAME_OVERRIDES.get(zh.trim()) ??
+    translateGlossaryText(zh, EVENT_GLOSSARY_SORTED, EVENT_UNITS)
+  );
 }
 
 export function translateXiangqiRoundLabel(zh: string): string | undefined {
@@ -719,7 +808,10 @@ export function translateXiangqiRoundLabel(zh: string): string | undefined {
 }
 
 export function translateXiangqiTeamName(zh: string): string | undefined {
-  return translateGlossaryText(zh, TEAM_GLOSSARY_SORTED, EVENT_UNITS);
+  return (
+    TEAM_NAME_OVERRIDES.get(zh.trim()) ??
+    translateGlossaryText(zh, TEAM_GLOSSARY_SORTED, EVENT_UNITS)
+  );
 }
 
 // Recompute `nameEn` from the current `name`. The existing nameEn (if any) is

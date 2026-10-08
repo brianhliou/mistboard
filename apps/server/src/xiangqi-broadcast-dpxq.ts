@@ -43,6 +43,15 @@ function collectDhtmlxqTags(text: string): Map<string, string> {
   return tags;
 }
 
+// An archive game that carries variations stores its moves as a branch list
+// instead: var DhtmlXQ_movelist = '[0_1_0]…[/0_1_0][0_57_1]…[/0_57_1]', each
+// key parent_startPly_branch, with branch 0 the game as played. The page's
+// [DhtmlXQ_movelist] tag is then empty, so read branch 0 and leave the
+// variations behind (2026 North American Championship, view_m_140550).
+function mainLineFromBranchedMovelist(text: string): string {
+  return text.match(/\[0_1_0\](\d*)\[\/0_1_0\]/)?.[1] ?? '';
+}
+
 function extractTitle(text: string): string | undefined {
   const match = text.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
   const value = match?.[1]?.replace(/\s+/g, ' ').trim();
@@ -132,7 +141,7 @@ export function normalizeDpxqPageToFrameHtml(text: string): DpxqNormalizeResult 
   }
 
   const tags = collectDhtmlxqTags(text);
-  const movelist = tags.get('movelist') ?? '';
+  const movelist = tags.get('movelist') || mainLineFromBranchedMovelist(text);
   const title = extractTitle(text);
   const titleParts = title ? parseDpxqTitle(title) : {};
 
@@ -145,21 +154,36 @@ export function normalizeDpxqPageToFrameHtml(text: string): DpxqNormalizeResult 
   // list of anonymous pairings, so it is kept beside the name, not discarded.
   const side = (
     nameTag: string,
+    teamTag: string,
     combinedTag: string,
     titleName: string | undefined,
     titleTeam: string | undefined,
   ): { player: string; team?: string } => {
-    const combined = splitTeamAndPlayer(tags.get(combinedTag));
+    const combinedRaw = tags.get(combinedTag)?.trim();
+    const combined = splitTeamAndPlayer(combinedRaw);
     const clean = tags.get(nameTag)?.trim();
     const player = clean || combined.player || titleName || '';
-    // Only trust the combined tag's team when it agrees on the player, so a
-    // mismatched pair of tags yields no affiliation rather than a wrong one.
-    const team = combined.team && (!clean || clean === combined.player) ? combined.team : titleTeam;
+    // The dedicated team tag first. Failing that, a combined tag that ends
+    // with the clean name gives the team as what precedes it: a Latin name
+    // has spaces, so "Katy Van Nguyen" split at its last space made the team
+    // "Katy Van" (2026 North American Championship). Otherwise only trust a
+    // split that agrees on the player, so a mismatched pair of tags yields no
+    // affiliation rather than a wrong one; the title splits the same way.
+    const statedTeam = tags.get(teamTag)?.trim();
+    const beforeClean =
+      clean && combinedRaw?.endsWith(` ${clean}`)
+        ? combinedRaw.slice(0, -clean.length - 1).trim()
+        : undefined;
+    const team =
+      statedTeam ||
+      beforeClean ||
+      (combined.team && (!clean || clean === combined.player) ? combined.team : undefined) ||
+      (!clean || clean === titleName ? titleTeam : undefined);
     return { player, ...(team ? { team } : {}) };
   };
 
-  const redSide = side('redname', 'red', titleParts.red, titleParts.redTeam);
-  const blackSide = side('blackname', 'black', titleParts.black, titleParts.blackTeam);
+  const redSide = side('redname', 'redteam', 'red', titleParts.red, titleParts.redTeam);
+  const blackSide = side('blackname', 'blackteam', 'black', titleParts.black, titleParts.blackTeam);
   const red = redSide.player;
   const black = blackSide.player;
   if (!red || !black) {
