@@ -336,7 +336,11 @@
   grid-template-rows: auto minmax(0, 1fr) auto auto;
   gap: 0;
   width: min(100%, 520px);
-  max-height: min(720px, calc(100vh - 36px));
+  /* The cap used to be 720px, which bound before the viewport did on every
+     laptop: the six-row Computer setup needs ~750px at four columns, so the
+     accordion scrolled even on a 1117px-tall screen. The viewport is the real
+     limit; 880px only stops the dialog from towering on a tall monitor. */
+  max-height: min(880px, calc(100vh - 36px));
   overflow: visible;
   padding: 0;
   border: 1px solid color-mix(in srgb, var(--site-accent) 22%, transparent);
@@ -826,23 +830,28 @@
 }
 
 /* Variant picker: connected PlayStrategy-style cells instead of separate
-   floating cards. Four columns fit the setup modal; narrower screens step down. */
+   floating cards. Compact cells so the whole setup fits a laptop screen without
+   scrolling: five columns on a wide screen (the dialog widens to 600px), four in
+   the 520px dialog, three or two on a phone. */
 .landing-variant-grid {
+  --landing-variant-card-height: 88px;
+  --landing-variant-grid-rows: 3;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-auto-rows: minmax(102px, auto);
+  grid-auto-rows: minmax(var(--landing-variant-card-height), auto);
   align-items: stretch;
   /* Caps the picker at THREE rows and scrolls past that, instead of growing the
-     dialog a row at a time as the catalog does. The dialog is
-     max-height: min(720px, 100vh - 36px) and the picker is only its first
-     section: at four rows the time controls and the Play button start getting
-     pushed under the fold on a laptop, which is the one control that must never
-     move. Three rows is 12 variants; the fourth row scrolls into view.
+     dialog a row at a time as the catalog does. The picker is only the dialog's
+     first section: past the cap the time controls and the Play button start
+     getting pushed under the fold on a laptop, which is the one control that
+     must never move. Three rows is 15 variants at five columns; the next row
+     scrolls into view. Phones (three columns) allow four rows, since the
+     dialog there has the height and a nested scroller is worse.
      `overflow-y` rather than `overflow` so the horizontal clip that squares off
      the cell borders is unchanged. The + 2px is the grid's own top and bottom
-     border: box-sizing is border-box, so without it three full rows overflow by
+     border: box-sizing is border-box, so without it full rows overflow by
      2px and the picker shows a scrollbar with nothing to scroll to. */
-  max-height: calc(3 * 102px + 2px);
+  max-height: calc(var(--landing-variant-grid-rows) * var(--landing-variant-card-height) + 2px);
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -855,11 +864,11 @@
 .landing-variant-card {
   display: grid;
   align-content: center;
-  gap: 5px;
+  gap: 4px;
   justify-items: center;
   min-width: 0;
-  min-height: 102px;
-  padding: 10px 7px 9px;
+  min-height: var(--landing-variant-card-height, 88px);
+  padding: 8px 6px 7px;
   border: 0;
   border-radius: 0;
   background: color-mix(in srgb, var(--site-panel-soft) 82%, var(--site-panel) 18%);
@@ -880,7 +889,7 @@
 .landing-variant-card-thumb {
   display: block;
   width: 100%;
-  max-width: 52px;
+  max-width: 40px;
   aspect-ratio: 1 / 1;
 }
 
@@ -903,7 +912,7 @@
 }
 
 .landing-variant-card-name {
-  min-height: 30px;
+  min-height: 28px;
   font-size: 12px;
   font-weight: 760;
   line-height: 1.14;
@@ -956,8 +965,19 @@
   text-transform: uppercase;
 }
 
+@media (min-width: 680px) {
+  .landing-setup-dialog {
+    width: min(100%, 600px);
+  }
+
+  .landing-variant-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 520px) {
   .landing-variant-grid {
+    --landing-variant-grid-rows: 4;
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
