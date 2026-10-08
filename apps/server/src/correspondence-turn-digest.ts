@@ -16,14 +16,13 @@
  * every minute; the day key is what makes it daily.
  */
 
-import { gameSpecForId, isGameSpecId } from '@mistboard/game';
 import { logger } from './obs.js';
 import * as persistence from './persistence.js';
 import type { CorrespondenceDigestCandidate } from './persistence-correspondence-digest.js';
+import { correspondenceDigestEmail, emailLocale, type PlayerEmail } from './player-email.js';
 import { sendTransactionalEmail, transactionalEmailConfigured } from './send-email.js';
 
 const fromAddress = process.env.MISTBOARD_AUTH_EMAIL_FROM ?? process.env.RESEND_FROM_EMAIL;
-const publicHost = process.env.MISTBOARD_HOST ?? 'https://mistboard.com';
 
 export const correspondenceTurnDigestEnabled = transactionalEmailConfigured && !!fromAddress;
 
@@ -97,40 +96,21 @@ export async function sweepCorrespondenceTurnDigests(
   }
 }
 
-export function digestSubject(gameCount: number): string {
-  return gameCount === 1
-    ? 'Your move in 1 correspondence game'
-    : `Your move in ${gameCount} correspondence games`;
-}
-
-export function digestText(candidate: CorrespondenceDigestCandidate, now: Date): string {
-  const count = candidate.games.length;
-  const lead =
-    count === 1
-      ? 'One correspondence game is waiting on your move:'
-      : `${count} correspondence games are waiting on your move:`;
-  const lines = candidate.games.map((game) => {
-    const opponent = game.opponentName ?? 'your opponent';
-    const url = `${publicHost}/room/${encodeURIComponent(game.roomId)}`;
-    return `- ${gameName(game.gameSpecId)} vs ${opponent}, ${formatRemaining(game.dueAt.getTime() - now.getTime())} left: ${url}`;
-  });
-  return (
-    `${lead}\n\n${lines.join('\n')}\n\n` +
-    `All your correspondence games: ${publicHost}/correspondence\n\n` +
-    'You get at most one of these a day, and only while a game has been waiting on you. ' +
-    `Turn it off under Notifications: ${publicHost}/account`
-  );
+export function digestEmail(candidate: CorrespondenceDigestCandidate, now: Date): PlayerEmail {
+  return correspondenceDigestEmail(candidate.games, now, emailLocale(candidate.locale));
 }
 
 async function sendCorrespondenceDigestEmail(
   candidate: CorrespondenceDigestCandidate,
 ): Promise<boolean> {
   if (!fromAddress) return false;
+  const email = digestEmail(candidate, new Date());
   const result = await sendTransactionalEmail({
     from: fromAddress,
     to: [candidate.email],
-    subject: digestSubject(candidate.games.length),
-    text: digestText(candidate, new Date()),
+    subject: email.subject,
+    text: email.text,
+    html: email.html,
   });
   if (!result.ok) {
     logger.error(
@@ -149,15 +129,4 @@ async function sendCorrespondenceDigestEmail(
     'turn digest email sent',
   );
   return true;
-}
-
-function gameName(gameSpecId: string): string {
-  return isGameSpecId(gameSpecId) ? gameSpecForId(gameSpecId).publicName : 'Correspondence';
-}
-
-function formatRemaining(ms: number): string {
-  const hours = Math.max(1, Math.round(ms / HOUR_MS));
-  if (hours < 36) return hours === 1 ? '1 hour' : `${hours} hours`;
-  const days = Math.round(hours / 24);
-  return days === 1 ? '1 day' : `${days} days`;
 }

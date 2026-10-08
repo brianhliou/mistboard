@@ -17,6 +17,8 @@ export type CorrespondenceDigestGame = {
 export type CorrespondenceDigestCandidate = {
   userId: string;
   email: string;
+  // users.locale ('en' | 'zh-Hans' | 'zh-Hant' | null): the email's language.
+  locale: string | null;
   games: CorrespondenceDigestGame[];
 };
 
@@ -49,13 +51,14 @@ export async function listCorrespondenceDigestCandidates(
   const { rows } = await getPool().query<{
     user_id: string;
     email: string;
+    locale: string | null;
     room_id: string;
     game_spec_id: string;
     opponent_name: string | null;
     due_at: Date;
     warned_at: Date | null;
   }>(
-    `SELECT u.id AS user_id, u.email, rd.room_id, rd.game_spec_id, rd.due_at, rd.warned_at,
+    `SELECT u.id AS user_id, u.email, u.locale, rd.room_id, rd.game_spec_id, rd.due_at, rd.warned_at,
             COALESCE(opp_user.display_name, opp_user.handle) AS opponent_name
      FROM room_deadlines rd
      JOIN users u ON u.id = rd.seat_user_id
@@ -79,7 +82,7 @@ export async function listCorrespondenceDigestCandidates(
   for (const row of rows) {
     let candidate = byUser.get(row.user_id);
     if (!candidate) {
-      candidate = { userId: row.user_id, email: row.email, games: [] };
+      candidate = { userId: row.user_id, email: row.email, locale: row.locale, games: [] };
       byUser.set(row.user_id, candidate);
     }
     candidate.games.push({

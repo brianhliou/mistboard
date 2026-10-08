@@ -452,14 +452,14 @@ export async function deleteCorrespondenceSeek(id: string, ownerUserId?: string)
  */
 export async function correspondenceStartRecipient(
   userId: string,
-): Promise<{ email: string } | null> {
-  const { rows } = await getPool().query<{ email: string }>(
-    `SELECT email FROM users
+): Promise<{ email: string; locale: string | null } | null> {
+  const { rows } = await getPool().query<{ email: string; locale: string | null }>(
+    `SELECT email, locale FROM users
      WHERE id = $1
        AND email IS NOT NULL
        AND closed_at IS NULL
        AND COALESCE((account_preferences->>'correspondenceStartEmail')::boolean, true)`,
     [userId],
   );
-  return rows[0] ? { email: rows[0].email } : null;
+  return rows[0] ? { email: rows[0].email, locale: rows[0].locale } : null;
 }

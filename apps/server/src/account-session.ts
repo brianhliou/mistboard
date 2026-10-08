@@ -1,6 +1,7 @@
 import { createHash, randomInt, randomUUID } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
 import { handleBaseForEmail, maxHandleLength, randomFallbackHandle } from './account-identity.js';
+import { renderEmail } from './email-layout.js';
 import * as persistence from './persistence.js';
 import { touchPresence } from './presence.js';
 import { sendTransactionalEmail, transactionalEmailConfigured } from './send-email.js';
@@ -152,37 +153,51 @@ export async function sendAccountClosureCode(
   return sendAccountEmailCode(email, code, 'account-closure');
 }
 
+// Login, email-change and closure codes. English only: the login request is
+// for an address that may have no account yet, so there is no stored locale to
+// read. No settings link: nobody can opt out of a code they asked for.
+export function accountCodeEmail(
+  code: string,
+  purpose: 'account-closure' | 'email-change' | 'login',
+): { subject: string; text: string; html: string } {
+  const subject =
+    purpose === 'account-closure'
+      ? 'Confirm closing your Mistboard account'
+      : purpose === 'email-change'
+        ? 'Confirm your new Mistboard email'
+        : 'Your Mistboard login code';
+  const headline =
+    purpose === 'account-closure'
+      ? 'Your account-closure code'
+      : purpose === 'email-change'
+        ? 'Your email-change code'
+        : 'Your login code';
+  const intro =
+    purpose === 'account-closure'
+      ? 'Your Mistboard account-closure code is'
+      : purpose === 'email-change'
+        ? 'Your Mistboard email-change code is'
+        : 'Your Mistboard login code is';
+  const { text, html } = renderEmail({
+    preheader: `${intro} ${code}.`,
+    headline,
+    code,
+    paragraphs: ['Enter it on Mistboard to continue. The code expires in 10 minutes.'],
+    footer: {
+      reason: 'If you did not request this code, you can ignore this email.',
+      manage: null,
+    },
+  });
+  return { subject, text, html };
+}
+
 async function sendAccountEmailCode(
   email: string,
   code: string,
   purpose: 'account-closure' | 'email-change' | 'login',
 ): Promise<{ ok: true } | { ok: false }> {
   if (!authEmailDeliveryEnabled || !authEmailFrom) return { ok: false };
-  const isEmailChange = purpose === 'email-change';
-  const isAccountClosure = purpose === 'account-closure';
-  const subject = isAccountClosure
-    ? 'Confirm closing your Mistboard account'
-    : isEmailChange
-      ? 'Confirm your new Mistboard email'
-      : 'Your Mistboard login code';
-  const intro = isAccountClosure
-    ? 'Your Mistboard account-closure code is'
-    : isEmailChange
-      ? 'Your Mistboard email-change code is'
-      : 'Your Mistboard login code is';
-  const text = [
-    `${intro} ${code}.`,
-    '',
-    'This code expires in 10 minutes.',
-    'If you did not request this code, you can ignore this email.',
-  ].join('\n');
-  const html = [
-    `<p>${intro}:</p>`,
-    `<p style="font-size:24px;font-weight:700;letter-spacing:0.12em">${escapeHtml(code)}</p>`,
-    '<p>This code expires in 10 minutes.</p>',
-    '<p>If you did not request this code, you can ignore this email.</p>',
-  ].join('');
-
+  const { subject, text, html } = accountCodeEmail(code, purpose);
   const result = await sendTransactionalEmail({
     from: authEmailFrom,
     to: [email],
@@ -202,15 +217,6 @@ async function sendAccountEmailCode(
     }),
   );
   return { ok: false };
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
 }
 
 export function hashSecret(secret: string): string {

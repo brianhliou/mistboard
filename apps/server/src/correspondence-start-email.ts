@@ -19,15 +19,18 @@
 
 import { logger } from './obs.js';
 import * as persistence from './persistence.js';
+import { correspondenceStartEmail, type EmailLocale, emailLocale } from './player-email.js';
 import { sendTransactionalEmail, transactionalEmailConfigured } from './send-email.js';
 
 const fromAddress = process.env.MISTBOARD_AUTH_EMAIL_FROM ?? process.env.RESEND_FROM_EMAIL;
-const publicHost = process.env.MISTBOARD_HOST ?? 'https://mistboard.com';
 
 export const correspondenceStartEmailEnabled = transactionalEmailConfigured && !!fromAddress;
 
 export type CorrespondenceStartNotice = {
   roomId: string;
+  // Named in the subject and body: identical subjects threaded different games
+  // into one Gmail conversation.
+  gameSpecId: string;
   // The account that posted the seek and walked away. The accepter is on the
   // page and gets nothing: mailing them would be noise, and it would double
   // the send volume of the one email nobody can opt back into by visiting.
@@ -43,8 +46,8 @@ export type CorrespondenceStartEmailDeps = {
   enabled: boolean;
   // Returns a mailbox only when the notice should be sent: the opt-out lives in
   // the query, so this module never re-derives what an unset preference means.
-  loadRecipient: (userId: string) => Promise<{ email: string } | null>;
-  send: (to: string, notice: CorrespondenceStartNotice) => Promise<boolean>;
+  loadRecipient: (userId: string) => Promise<{ email: string; locale?: string | null } | null>;
+  send: (to: string, notice: CorrespondenceStartNotice, locale: EmailLocale) => Promise<boolean>;
 };
 
 /**
@@ -79,25 +82,32 @@ export async function sendCorrespondenceStartEmail(
 
   const recipient = await loadRecipient(notice.creatorUserId);
   if (!recipient) return false;
-  return send(recipient.email, notice);
+  return send(recipient.email, notice, emailLocale(recipient.locale));
 }
 
-async function sendEmail(to: string, notice: CorrespondenceStartNotice): Promise<boolean> {
+async function sendEmail(
+  to: string,
+  notice: CorrespondenceStartNotice,
+  locale: EmailLocale,
+): Promise<boolean> {
   if (!fromAddress) return false;
-  const url = `${publicHost}/room/${encodeURIComponent(notice.roomId)}`;
-  const opponent = notice.accepterName ?? 'Someone';
-  const pace = notice.daysPerMove === 1 ? '1 day per move' : `${notice.daysPerMove} days per move`;
-  const subject = notice.creatorOnMove
-    ? 'Your game has started, and it is your move'
-    : 'Your game has started';
-  const body = notice.creatorOnMove
-    ? `${opponent} accepted your correspondence seek, and you have the first move.\n\n` +
-      `Play it here: ${url}\n\n` +
-      `The pace is ${pace}. If your clock runs out before you play, the game is cancelled.`
-    : `${opponent} accepted your correspondence seek and has the first move.\n\n` +
-      `Your game: ${url}\n\n` +
-      `The pace is ${pace}. If the first move is not played in time, the game is cancelled.`;
-  const result = await sendTransactionalEmail({ from: fromAddress, to: [to], subject, text: body });
+  const email = correspondenceStartEmail(
+    {
+      roomId: notice.roomId,
+      gameSpecId: notice.gameSpecId,
+      opponentName: notice.accepterName,
+      creatorOnMove: notice.creatorOnMove,
+      daysPerMove: notice.daysPerMove,
+    },
+    locale,
+  );
+  const result = await sendTransactionalEmail({
+    from: fromAddress,
+    to: [to],
+    subject: email.subject,
+    text: email.text,
+    html: email.html,
+  });
   if (!result.ok) {
     logger.error(
       {
