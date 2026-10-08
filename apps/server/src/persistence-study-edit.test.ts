@@ -1,7 +1,7 @@
 import { createUser } from './persistence.js';
 import { createStudy, getStudyById } from './persistence-studies.js';
 import { assert, definePersistenceTests, test } from './persistence-test-support.js';
-import { applyPlan } from './study-edit-cli.js';
+import { applyPlan, editableOwners } from './study-edit-cli.js';
 
 definePersistenceTests('study edit', () => {
   const now = new Date('2026-09-29T12:00:00.000Z');
@@ -85,5 +85,34 @@ definePersistenceTests('study edit', () => {
       /owned by @edit-person/,
     );
     assert.equal((await getStudyById(study.id))!.name, 'Seed');
+  });
+
+  test('--allow-owner edits that one person, and a rename sets its locale names', async () => {
+    const study = await seed('edit-allowed');
+    const first = study.chapters[0]!.id;
+    const rename = {
+      study: study.id,
+      ops: [
+        {
+          op: 'rename' as const,
+          chapter: first,
+          expect: 'One',
+          name: 'Unbroken · One',
+          i18n: { 'zh-Hans': { name: '未被推翻 · 一' }, 'zh-Hant': { name: '未被推翻 · 一' } },
+        },
+      ],
+    };
+    await assert.rejects(
+      applyPlan(study, rename, editableOwners('someone-else')),
+      /owned by @edit-allowed/,
+    );
+    assert.equal((await getStudyById(study.id))!.chapters[0]!.name, 'One');
+    await applyPlan(study, rename, editableOwners('edit-allowed'));
+    const chapter = (await getStudyById(study.id))!.chapters[0]!;
+    assert.equal(chapter.name, 'Unbroken · One');
+    assert.deepEqual(chapter.i18n, {
+      'zh-Hans': { name: '未被推翻 · 一' },
+      'zh-Hant': { name: '未被推翻 · 一' },
+    });
   });
 });

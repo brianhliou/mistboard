@@ -6,7 +6,12 @@
 //
 //   npm run study:edit -- --plan <plan.json>            # dry run: print the plan
 //   npm run study:edit -- --plan <plan.json> --apply    # write it
+//   npm run study:edit -- --plan <plan.json> --allow-owner <handle> [--apply]
 //   npm run study:edit -- --dump <studyId> [--out f]    # the study as JSON
+//
+// `--allow-owner` admits exactly one more owner handle for that run, for an edit
+// the owner approved (2026-10-07: Brian's own @brianhliou solver-audit study). It
+// widens edits only, never `create`, and the dry run names the owner it is under.
 //
 // Prod runs it under `command railway run -s Postgres -- sh -c
 // 'DATABASE_URL="$DATABASE_PUBLIC_URL" npm run -s study:edit -- …'`.
@@ -21,7 +26,8 @@
 //     "ops": [
 //       { "op": "study", "name": "…", "description": "…", "visibility": "public",
 //         "i18n": { "zh-hans": { "name": "…", "description": "…" }, … } },
-//       { "op": "rename", "chapter": "ZmPpVH90", "name": "Game 6" },
+//       { "op": "rename", "chapter": "ZmPpVH90", "name": "Game 6", "expect": "Game 5",
+//         "i18n": { "zh-Hans": { "name": "第六局" }, "zh-Hant": { "name": "第六局" } } },
 //       { "op": "tree", "chapter": "squFZ3GM", "tree": "trees/ch2.json" },
 //       { "op": "add", "ref": "g7", "name": "Game 7", "tree": { "version": 1, … } },
 //       { "op": "delete", "chapter": "Sg3b9nXw" },
@@ -29,6 +35,8 @@
 // A `tree` is a SerializedTree, inline or a path relative to the plan file.
 // `order` must name every chapter the study has at that point in the plan.
 // `add` takes optional chapter `tags` (red, black, result, event, date, …).
+// A `rename`'s `i18n` sets the name for each locale it lists, keeping the
+// chapter's other locales; `expect` refuses a chapter not named that now.
 //
 // A plan may make the study instead of naming one: `create` in place of
 // `study`, owned by a site handle, with its first chapter; `ops` then run on
@@ -72,7 +80,17 @@ export type StudyEditOp =
        *  { "zh-hans": { "name": "…", "description": "…" }, "zh-hant": { … } }. */
       i18n?: Record<string, unknown>;
     }
-  | { op: 'rename'; chapter: string; name: string }
+  | {
+      op: 'rename';
+      chapter: string;
+      name: string;
+      /** Per-locale names; each replaces that locale's name in the chapter's
+       *  overlay, other locales untouched. */
+      i18n?: Record<string, { name: string }>;
+      /** The name the chapter must have now, so a plan written against one
+       *  copy of a study cannot rename the wrong chapter in another. */
+      expect?: string;
+    }
   | { op: 'tree'; chapter: string; tree: unknown }
   | {
       op: 'add';
@@ -104,6 +122,32 @@ export type StudyEditPlan = { study?: string; create?: StudyCreateSpec; ops: Stu
 
 /** The accounts whose studies this tool may edit: the site's own. */
 export const SITE_OWNED_HANDLES: readonly string[] = ['mistboard'];
+
+/** The owners an edit may touch: the site's own, plus the one handle an
+ *  `--allow-owner` names for this run. */
+export function editableOwners(allowOwner?: string): readonly string[] {
+  if (allowOwner === undefined) return SITE_OWNED_HANDLES;
+  const handle = allowOwner.trim().replace(/^@/, '');
+  if (!/^[A-Za-z0-9_-]+$/.test(handle))
+    throw new Error(`--allow-owner: bad handle "${allowOwner}"`);
+  return SITE_OWNED_HANDLES.includes(handle) ? SITE_OWNED_HANDLES : [...SITE_OWNED_HANDLES, handle];
+}
+
+/** The chapter's overlay with each locale's name set from a rename's `i18n`. */
+export function renamedI18n(
+  current: Record<string, unknown>,
+  names: Record<string, { name: string }>,
+): Record<string, unknown> {
+  const next: Record<string, unknown> = { ...current };
+  for (const [locale, entry] of Object.entries(names)) {
+    const was = current[locale];
+    next[locale] = {
+      ...(was && typeof was === 'object' && !Array.isArray(was) ? was : {}),
+      name: entry.name.trim(),
+    };
+  }
+  return next;
+}
 
 /** Plies along the first-child line: what the chapter plays when opened. */
 export function mainlinePlies(tree: unknown): number {
@@ -201,7 +245,25 @@ export function checkPlan(
       }
       case 'rename': {
         if (!op.name?.trim()) throw new Error(`op ${i + 1}: empty name`);
-        lines.push(`rename ${op.chapter}: "${known(op.chapter, i)}" -> "${op.name}"`);
+        const current = known(op.chapter, i);
+        if (op.expect !== undefined && current !== op.expect) {
+          throw new Error(`op ${i + 1}: ${op.chapter} is "${current}", not "${op.expect}"`);
+        }
+        if (op.i18n !== undefined && (typeof op.i18n !== 'object' || Array.isArray(op.i18n))) {
+          throw new Error(`op ${i + 1}: i18n must be an object of locale -> { name }`);
+        }
+        for (const [locale, entry] of Object.entries(op.i18n ?? {})) {
+          if (!/^[a-z]{2}(-[A-Za-z]+)?$/.test(locale)) {
+            throw new Error(`op ${i + 1}: i18n locale "${locale}"`);
+          }
+          if (typeof entry?.name !== 'string' || !entry.name.trim()) {
+            throw new Error(`op ${i + 1}: empty ${locale} name`);
+          }
+        }
+        const locales = Object.entries(op.i18n ?? {})
+          .map(([locale, entry]) => ` ${locale} "${entry.name}"`)
+          .join('');
+        lines.push(`rename ${op.chapter}: "${current}" -> "${op.name}"${locales}`);
         names.set(op.chapter, op.name);
         return;
       }
@@ -353,9 +415,12 @@ export async function applyPlan(
           }),
         );
         break;
-      case 'rename':
-        must(op.chapter, await renameChapter(op.chapter, owner, op.name.trim()));
+      case 'rename': {
+        const chapter = study.chapters.find((c) => c.id === op.chapter);
+        const i18n = op.i18n === undefined ? undefined : renamedI18n(chapter?.i18n ?? {}, op.i18n);
+        must(op.chapter, await renameChapter(op.chapter, owner, op.name.trim(), i18n));
         break;
+      }
       case 'tree':
         must(
           op.chapter,
@@ -403,8 +468,11 @@ async function main(): Promise<void> {
       dump: { type: 'string' },
       out: { type: 'string' },
       apply: { type: 'boolean', default: false },
+      'allow-owner': { type: 'string' },
     },
   });
+  const allowOwner = values['allow-owner'];
+  const owners = editableOwners(allowOwner);
   const url = process.env.DATABASE_URL;
   if (!url || (!values.plan && !values.dump)) {
     console.error(
@@ -424,6 +492,8 @@ async function main(): Promise<void> {
     }
     const plan = readPlan(values.plan!);
     if (plan.create) {
+      if (allowOwner !== undefined)
+        throw new Error('--allow-owner edits a study; it never creates one');
       const planned = checkCreate(plan.create);
       for (const line of planned.lines) console.log(`- ${line}`);
       for (const line of checkPlan(planned.study, plan)) console.log(`- ${line}`);
@@ -441,12 +511,18 @@ async function main(): Promise<void> {
     const study = await getStudyById(plan.study!);
     if (!study) throw new Error(`study ${plan.study} not found`);
     console.log(describeStudy(study));
-    for (const line of checkPlan(study, plan)) console.log(`- ${line}`);
+    const handle = study.ownerHandle ?? '';
+    if (!SITE_OWNED_HANDLES.includes(handle) && owners.includes(handle)) {
+      console.log(
+        `owner override: editing @${study.ownerHandle}'s study (--allow-owner ${allowOwner})`,
+      );
+    }
+    for (const line of checkPlan(study, plan, owners)) console.log(`- ${line}`);
     if (!values.apply) {
       console.log('dry run: nothing written (pass --apply)');
       return;
     }
-    await applyPlan(study, plan);
+    await applyPlan(study, plan, owners);
     const after = await getStudyById(plan.study!);
     console.log(`applied. now:\n${after ? describeStudy(after) : '(study gone)'}`);
   } finally {
