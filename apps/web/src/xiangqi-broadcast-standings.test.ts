@@ -117,4 +117,34 @@ describe('broadcastStandings with round-page results', () => {
     ]);
     expect(pair.find((r) => r.player.name === '刘柏宏')?.games).toBe(2);
   });
+
+  it('ignores a table aggregate row once the per-game boards of that table are there', () => {
+    // The 2026 Asian championship, men, round 7 table 1: dpxq's aggregate row
+    // (no game number, the match score ½-½) was stored before the playoff's
+    // three games, and scored as a fourth: 冯家俊 1½, 王禹博 ½.
+    const game = (
+      red: string,
+      black: string,
+      result: '1-0' | '0-1' | '1/2-1/2',
+      details: { table: number; game?: number; kind?: 'standard' | 'rapid' | 'blitz' },
+    ) => ({
+      red: p(red),
+      black: p(black),
+      result,
+      status: 'complete' as const,
+      roundId: 'r07',
+      details,
+    });
+    const rows = broadcastStandings([
+      game('冯家俊', '王禹博', '1/2-1/2', { table: 1 }),
+      game('冯家俊', '王禹博', '1/2-1/2', { table: 1, game: 1, kind: 'standard' }),
+      game('王禹博', '冯家俊', '1/2-1/2', { table: 1, game: 2, kind: 'rapid' }),
+      game('冯家俊', '王禹博', '1-0', { table: 1, game: 3, kind: 'blitz' }),
+      game('甲', '乙', '1-0', { table: 2 }),
+    ]);
+    const score = (name: string) => rows.find((r) => r.player.name === name);
+    expect([score('冯家俊')?.games, score('冯家俊')?.score]).toEqual([1, 1]);
+    expect([score('王禹博')?.games, score('王禹博')?.score]).toEqual([1, 0]);
+    expect(score('甲')?.score).toBe(1);
+  });
 });

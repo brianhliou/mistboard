@@ -256,6 +256,11 @@ export type DiscoveryManifestSource = {
    * page `url` names. The poller applies it as it is.
    */
   resultsOnly?: XiangqiBroadcastBoard;
+  /**
+   * A stored board to remove, with nothing to fetch: a table's aggregate row
+   * (`r07t01`) whose per-game boards (`r07t01g1`..) replace it.
+   */
+  retireBoardId?: string;
 };
 
 export type DiscoveryManifestBuild =
@@ -346,6 +351,8 @@ export type SeededRound = { id: string; name?: string };
  *  apart from a record stored before pairings were read. */
 export type StoredBoardRef = {
   id: string;
+  /** `r07t01`, `r07t01g2` for a pairing's board; a converter id otherwise. */
+  sourceBoardId?: string;
   roundNumber?: number;
   sourceUrl?: string;
   red: { name: string; federation?: string };
@@ -572,7 +579,35 @@ export function buildStatedRoundManifestSources(input: {
     });
   }
 
-  if (candidates.length === 0 && resultsOnly.length === 0) {
+  // A table that played several games first lists one aggregate row with the
+  // match score, then a row per game. An aggregate stored from a read in
+  // between is not a game, so once the table's per-game boards are stored or
+  // listed it is retired. Read from what is stored as well as from the page:
+  // a finished round's page is not read again, and the boards are what count.
+  const tablesWithGames = new Set<string>();
+  for (const pairing of pairings) {
+    if (pairing.game === undefined) continue;
+    const table = pairingSourceBoardId({ roundNumber: pairing.roundNumber, table: pairing.table });
+    tablesWithGames.add(`${pairing.roundNumber}:${table}`);
+  }
+  for (const row of stored) {
+    const table = row.sourceBoardId?.match(/^(r\d+t\d+)g\d+$/)?.[1];
+    if (table && row.roundNumber !== undefined) tablesWithGames.add(`${row.roundNumber}:${table}`);
+  }
+  const retirements: DiscoveryManifestSource[] = [];
+  for (const row of stored) {
+    if (row.plies > 0 || row.roundNumber === undefined) continue;
+    if (!row.sourceBoardId || !/^r\d+t\d+$/.test(row.sourceBoardId)) continue;
+    if (!tablesWithGames.has(`${row.roundNumber}:${row.sourceBoardId}`)) continue;
+    retirements.push({
+      url: row.sourceUrl ?? row.id,
+      ...common(roundFor(row.roundNumber)),
+      boardNumber: row.details?.table ?? 1,
+      retireBoardId: row.id,
+    });
+  }
+
+  if (candidates.length === 0 && resultsOnly.length === 0 && retirements.length === 0) {
     return { ok: false, message: NOTHING_NEW_MESSAGE, quiet: true };
   }
 
@@ -580,7 +615,8 @@ export function buildStatedRoundManifestSources(input: {
   const kept = candidates.slice(0, input.source.maxBoards);
   return {
     ok: true,
-    sources: [...resultsOnly, ...kept],
+    // Retirements last: the per-game boards they defer to land first.
+    sources: [...resultsOnly, ...kept, ...retirements],
     droppedForCap: candidates.length - kept.length,
     skippedComplete,
     roundsAdded: [...roundsAdded].sort((a, b) => a - b),

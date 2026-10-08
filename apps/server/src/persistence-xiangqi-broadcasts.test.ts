@@ -509,6 +509,95 @@ definePersistenceTests('xiangqi broadcasts', () => {
     assert.equal(after.length, 16);
   });
 
+  test('a table aggregate stored before its per-game rows is retired when they land', async () => {
+    // The 2026 Asian championship, men, round 7 table 1: dpxq first listed the
+    // playoff as one aggregate row, a poll stored it as r07t01, and the
+    // per-game rows landed beside it; standings scored it as a fourth game.
+    // Replayed on the 2024 final: poll 1 reads the round page before its
+    // per-game rows and records exist, poll 2 reads it after.
+    const dpxqFixture = (name: string) =>
+      readFileSync(fileURLToPath(new URL(`../fixtures/dpxq/${name}`, import.meta.url)), 'utf-8');
+    const slug = 'asian-2024-men-playoff';
+    const sourceUrl = `mistboard-discover://dpxq-tour?tour=9503&tourSlug=${slug}`;
+    await importXiangqiBroadcastPack({
+      tour: {
+        schema: 'mistboard.xiangqi.broadcast.v1',
+        slug,
+        name: '2024年第20届亚洲象棋个人锦标赛 男子组',
+        sourceUrl,
+      },
+      rounds: [],
+      boards: [],
+    });
+    const full: Record<string, string> = {
+      'http://www.dpxq.com/hldcg/round_9503.html': dpxqFixture(
+        'round_9503-asian-2024-men-r07.html',
+      ),
+      'http://www.dpxq.com/hldcg/round_9503_1.html': dpxqFixture(
+        'round_9503_1-asian-2024-men-r01.html',
+      ),
+      'http://www.dpxq.com/hldcg/movelist_9503.html': dpxqFixture(
+        'movelist_9503-asian-2024-men-r01-r07.html',
+      ),
+    };
+    for (const id of ['128342', '128343', '131470', '131471']) {
+      full[`http://www.dpxq.com/hldcg/search/view_m_${id}.html`] = dpxqFixture(
+        `view_m_${id}-asian-2024.html`,
+      );
+    }
+    const dropLines = (html: string, pattern: RegExp) =>
+      html
+        .split('\n')
+        .filter((line) => !pattern.test(line))
+        .join('\n');
+    const early = {
+      ...full,
+      'http://www.dpxq.com/hldcg/round_9503.html': dropLines(
+        full['http://www.dpxq.com/hldcg/round_9503.html']!,
+        /class="duojun"/,
+      ),
+      'http://www.dpxq.com/hldcg/movelist_9503.html': dropLines(
+        full['http://www.dpxq.com/hldcg/movelist_9503.html']!,
+        /第07轮/,
+      ),
+    };
+    const poll = (pages: Record<string, string>) =>
+      pollXiangqiBroadcastSourceOnce({
+        sourceUrl,
+        tourSlug: slug,
+        fetchImpl: multiSourceFetch(pages),
+        sourcePolicy: { allowedHosts: ['www.dpxq.com'], allowLocal: false },
+      });
+    const r07Ids = async () =>
+      (await listXiangqiBroadcastBoards(`${slug}-r07`)).map((board) => board.sourceBoardId).sort();
+
+    const first = await poll(early);
+    assert.equal(first.ok, true, first.ok ? '' : first.message);
+    assert.equal((await r07Ids()).includes('r07t01'), true, 'the aggregate stored as a board');
+
+    const second = await poll(full);
+    assert.equal(second.ok, true, second.ok ? '' : second.message);
+    const ids = await r07Ids();
+    assert.equal(ids.includes('r07t01'), false, 'the aggregate is retired');
+    assert.deepEqual(
+      ids.filter((id) => id.startsWith('r07t01')),
+      ['r07t01g1', 'r07t01g2'],
+    );
+    assert.equal(ids.length, 16);
+    if (second.ok) {
+      assert.deepEqual(
+        second.updates.flatMap((u) => (u.ok && u.status === 'retired' ? [u.boardId] : [])),
+        [`${slug}-${slug}-r07-r07t01`],
+      );
+    }
+    const logs = await listXiangqiBroadcastSyncLogs({ tourSlug: slug });
+    assert.equal(logs.filter((log) => log.kind === 'superseded').length, 1);
+
+    // Retired once: the next poll has nothing to do.
+    const third = await poll(full);
+    assert.equal(third.ok ? 'ok' : third.message, 'every listed board is already imported');
+  });
+
   test('explicit correction can replace a non-prefix legal board update', async () => {
     const pack = await fixturePack();
     const fullBoard = (pack.boards as XiangqiBroadcastBoard[])[0]!;

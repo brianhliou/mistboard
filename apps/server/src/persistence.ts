@@ -608,6 +608,8 @@ export {
   nextUnanalysedXiangqiBroadcastBoard,
   queryCompletedXiangqiBroadcastBoards,
   recordXiangqiBroadcastSyncLog,
+  retireSupersededXiangqiBroadcastAggregate,
+  retireSupersededXiangqiBroadcastAggregateOn,
   setXiangqiBroadcastTourSchedule,
 } from './persistence-xiangqi-broadcasts.js';
 export type {

@@ -43,16 +43,27 @@ function points(result: XiangqiBroadcastResult, seat: 'red' | 'black'): number {
  */
 export function standingsGames(boards: readonly StandingsBoard[]): ScoredGame[] {
   const finished = boards.filter((board) => board.status === 'complete' && board.result !== '*');
+  const tableKey = (board: StandingsBoard) =>
+    board.roundId === undefined || board.details?.table === undefined
+      ? undefined
+      : `${board.roundId}|${board.details.table}|${[board.red.name.trim(), board.black.name.trim()].sort().join('|')}`;
+  // A table's aggregate row (the match score, no game number) is not a game
+  // once its per-game boards are here; the server retires it, this keeps a
+  // stale one from scoring as one more game meanwhile.
+  const tablesWithGames = new Set(
+    finished.flatMap((board) => {
+      const key = tableKey(board);
+      return key !== undefined && board.details?.game !== undefined ? [key] : [];
+    }),
+  );
   const tables = new Map<string, StandingsBoard[]>();
   const games: ScoredGame[] = [];
   for (const board of finished) {
-    const table = board.details?.table;
-    if (board.roundId === undefined || table === undefined || board.details?.game === undefined) {
-      games.push(board);
+    const key = tableKey(board);
+    if (key === undefined || board.details?.game === undefined) {
+      if (key === undefined || !tablesWithGames.has(key)) games.push(board);
       continue;
     }
-    const pair = [board.red.name.trim(), board.black.name.trim()].sort().join('|');
-    const key = `${board.roundId}|${table}|${pair}`;
     const list = tables.get(key) ?? [];
     list.push(board);
     tables.set(key, list);

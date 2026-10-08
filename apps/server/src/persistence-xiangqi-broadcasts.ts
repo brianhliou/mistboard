@@ -148,7 +148,9 @@ export type XiangqiBroadcastBoardUpdateStatus =
   | 'unchanged'
   | 'extended'
   | 'updated'
-  | 'corrected';
+  | 'corrected'
+  /** Removed: a table's aggregate row whose per-game boards replace it. */
+  | 'retired';
 
 export type XiangqiBroadcastBoardUpdateResult =
   | {
@@ -507,6 +509,58 @@ async function retireResultsOnlyTwin(
       payload: { retiredBoardId: row.id, sourceUrl: board.sourceUrl ?? null },
     });
   }
+}
+
+// A table that plays more than one game in a round (a playoff: 慢棋, 快棋,
+// 超快棋) first shows on dpxq's round page as one aggregate row carrying the
+// match score, and only later as a row per game. A poll that read the page in
+// between stored the aggregate as a results-only board (`r07t01`); the
+// per-game boards (`r07t01g1`..) later landed beside it, and standings scored
+// the aggregate as one more game. Retire it once a per-game board of the same
+// table is stored: only a moveless aggregate-shaped board, and only while a
+// game board of its table exists in the same round, so a failed fetch of the
+// games leaves the aggregate standing until they land.
+export async function retireSupersededXiangqiBroadcastAggregateOn(
+  client: Queryable,
+  input: { tourSlug: string; roundId: string; boardId: string },
+): Promise<XiangqiBroadcastBoardUpdateResult> {
+  const { rows } = await client.query<{ id: string; source_board_id: string }>(
+    `DELETE FROM xiangqi_broadcast_boards AS agg
+      WHERE agg.id = $1 AND agg.tour_slug = $2 AND agg.round_id = $3
+        AND agg.ply_count = 0
+        AND agg.source_board_id ~ '^r[0-9]+t[0-9]+$'
+        AND EXISTS (
+          SELECT 1 FROM xiangqi_broadcast_boards AS game
+           WHERE game.round_id = agg.round_id
+             AND game.source_board_id ~ ('^' || agg.source_board_id || 'g[0-9]+$'))
+      RETURNING agg.id, agg.source_board_id`,
+    [input.boardId, input.tourSlug, input.roundId],
+  );
+  const row = rows[0];
+  // Nothing matched: already retired, or its games are not stored yet.
+  if (!row) return { ok: true, boardId: input.boardId, status: 'unchanged', plyCount: 0 };
+  await dropBroadcastAnalysis(client, row.id);
+  await appendSyncLog(client, {
+    tourSlug: input.tourSlug,
+    roundId: input.roundId,
+    boardId: row.id,
+    sourceBoardId: row.source_board_id,
+    severity: 'info',
+    kind: 'superseded',
+    message: `retired ${row.id}: the table's per-game boards replace its aggregate row`,
+    payload: { retiredBoardId: row.id },
+  });
+  return { ok: true, boardId: row.id, status: 'retired', plyCount: 0 };
+}
+
+export async function retireSupersededXiangqiBroadcastAggregate(input: {
+  tourSlug: string;
+  roundId: string;
+  boardId: string;
+}): Promise<XiangqiBroadcastBoardUpdateResult> {
+  return await withTransaction((client) =>
+    retireSupersededXiangqiBroadcastAggregateOn(client, input),
+  );
 }
 
 async function appendSyncLog(

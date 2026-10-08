@@ -64,6 +64,9 @@ export type XiangqiBroadcastManifestSource = {
   /** A board to apply as it is, with nothing to fetch (discovery only: a
    *  round page's pairing and result). Never read from a fetched manifest. */
   resultsOnly?: XiangqiBroadcastBoard;
+  /** A stored board to retire (discovery only; see
+   *  DiscoveryManifestSource.retireBoardId). Never read from a fetched manifest. */
+  retireBoardId?: string;
 };
 
 export type XiangqiBroadcastSourceManifest = {
@@ -141,6 +144,27 @@ type SourceUnit = {
   sourceUrl: string;
   snapshot: XiangqiBroadcastSourceSnapshot;
 };
+
+type RetireUnit = { sourceUrl: string; tourSlug: string; roundId: string; boardId: string };
+
+async function applyRetireUnit(
+  unit: RetireUnit,
+  client: pg.PoolClient | null,
+): Promise<XiangqiBroadcastPollSourceOutcome> {
+  const input = { tourSlug: unit.tourSlug, roundId: unit.roundId, boardId: unit.boardId };
+  const update = client
+    ? await persistence.retireSupersededXiangqiBroadcastAggregateOn(client, input)
+    : await persistence.retireSupersededXiangqiBroadcastAggregate(input);
+  return {
+    ok: true,
+    sourceUrl: unit.sourceUrl,
+    tourSlug: unit.tourSlug,
+    roundsImported: 0,
+    boardsSeen: 0,
+    boardsFailed: update.ok ? 0 : 1,
+    updates: [update],
+  };
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -710,6 +734,7 @@ async function discoverStatedRounds(
       }
       stored.push({
         id: board.id,
+        sourceBoardId: board.sourceBoardId,
         ...(roundNumber !== undefined ? { roundNumber } : {}),
         ...(board.sourceUrl ? { sourceUrl: board.sourceUrl } : {}),
         red: board.red,
@@ -868,10 +893,22 @@ async function pollSourceOutcomes(
       | { ok: false; kind: XiangqiBroadcastPollErrorKind; message: string }
     )
   > = [];
+  const retirements: RetireUnit[] = [];
   if (body.kind === 'manifest') {
     let fetchedLeaves = 0;
     for (const entry of body.manifest.sources) {
-      const { url, resultsOnly, ...entryOptions } = entry;
+      const { url, resultsOnly, retireBoardId, ...entryOptions } = entry;
+      if (retireBoardId) {
+        if (entry.tourSlug && entry.roundId) {
+          retirements.push({
+            sourceUrl: url,
+            tourSlug: entry.tourSlug,
+            roundId: entry.roundId,
+            boardId: retireBoardId,
+          });
+        }
+        continue;
+      }
       if (resultsOnly) {
         resolutions.push({
           sourceUrl: url,
@@ -922,6 +959,7 @@ async function pollSourceOutcomes(
             },
       );
     }
+    for (const retirement of retirements) outcomes.push(await applyRetireUnit(retirement, client));
     return outcomes;
   };
 

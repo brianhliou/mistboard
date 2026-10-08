@@ -284,6 +284,45 @@ test('boards already stored complete leave the manifest but keep their rank', ()
   assert.equal(built.skippedComplete, 2);
 });
 
+// 2026 Asian individual men, round 7 table 1: dpxq listed the playoff as one
+// aggregate row (stored as r07t01), then a row per game. Round 7 is finished,
+// so its page is not read again; the stored per-game boards are what retire
+// the aggregate. A moveless table with no game boards, and a game, stay.
+test('a stored table aggregate is retired once its per-game boards are stored', () => {
+  const ref = (sourceBoardId: string, plies: number, game?: number) => ({
+    id: `cup-cup-r01-${sourceBoardId}`,
+    sourceBoardId,
+    roundNumber: 1,
+    sourceUrl: plies > 0 ? `http://x/${sourceBoardId}` : 'http://www.dpxq.com/hldcg/round_1_1.html',
+    red: { name: '冯家俊' },
+    black: { name: '王禹博' },
+    status: 'complete',
+    result: '1/2-1/2',
+    plies,
+    details: { table: Number(sourceBoardId.match(/t(\d+)/)![1]), ...(game ? { game } : {}) },
+  });
+  const built = buildStatedRoundManifestSources({
+    source: parsed('mistboard-discover://fake-live?tourSlug=cup'),
+    boards: [stated('1', 1)],
+    rounds: SEEDED,
+    completeUrls: new Set([stated('1', 1).url]),
+    stored: [
+      ref('r01t01', 0),
+      ref('r01t01g1', 109, 1),
+      ref('r01t01g2', 150, 2),
+      ref('r01t01g3', 119, 3),
+      ref('r01t02', 0),
+      ref('r01t03', 80),
+    ],
+  });
+  assert.equal(built.ok, true, built.ok ? '' : built.message);
+  if (!built.ok) return;
+  assert.deepEqual(
+    built.sources.map((s) => [s.retireBoardId, s.roundId, s.boardNumber]),
+    [['cup-cup-r01-r01t01', 'cup-r01', 1]],
+  );
+});
+
 test('a list with nothing new is quiet, not an error', () => {
   const built = buildStatedRoundManifestSources({
     source: parsed('mistboard-discover://fake-live?tourSlug=cup'),
