@@ -34,6 +34,9 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
   // Machine-drafted 2026-10-07, not native-reviewed, locked with its English
+  // copy, which publishes in the same release (the fe26e31c repetition-key fix).
+  'chariot-cannon-repetition-key',
+  // Machine-drafted 2026-10-07, not native-reviewed, locked with its English
   // copy, which publishes in the same release (the brianhliou.com post of
   // 2026-07-02, folded in; sentences reused from its zh versions).
   'flip-jungle-skill-ceiling',
@@ -179,6 +182,53 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // chariot-cannon-repetition-key: machine-drafted 2026-10-07, not native-reviewed.
+  'Chariot and cannon both start with C': '车和炮的英文都以 C 开头',
+  'Chariot and cannon, both C': '车和炮，都是 C',
+  'A xiangqi threefold repetition bug: the chariot and the cannon shared a key':
+    '象棋三次重复局面判定的一个错误：车和炮被记成了同一个字母',
+  "A one-character bug in Mistboard's xiangqi repetition key let a game end in a threefold draw after a position had occurred only twice.":
+    'Mistboard 象棋重复局面键里一个只差一个字符的错误，让一个局面只出现两次，对局就被判为三次重复和棋。',
+  'Our xiangqi repetition key labelled each piece by the first letter of its role, so the chariot and the cannon were both `c`. Swapping a chariot and a cannon left the key unchanged, so a game could be drawn by threefold repetition after only two.':
+    '我们的象棋重复局面键用棋子角色英文名的首字母来标记每个棋子，于是车（chariot）和炮（cannon）都是 `c`。车和炮互换位置后，键不变，所以一个局面只出现两次，对局就可能被判为三次重复和棋。',
+  'The fix writes out the role name. Fog Chess had the same bug with the king and the knight. No finished game changes result.':
+    '修复后，键里写出完整的角色名。迷雾国际象棋的王（king）和马（knight）也有同样的错误。已结束的对局，没有一盘结果改变。',
+  'The key used the first letter of each role': '键只用了每个角色的首字母',
+  'Threefold repetition needs a way to say "this is the same position." Mistboard turns each position into a string and counts how often each one comes up.':
+    '三次重复需要一种方法来判断“这是同一个局面”。Mistboard 把每个局面转成一个字符串，并统计每个字符串出现了几次。',
+  "`role[0]` is the first letter of the role, and two of xiangqi's seven roles start with `c`. A red chariot on a1 and cannon on b3 write `a1rc` and `b3rc`. Swap them and they still write `a1rc` and `b3rc`.":
+    '`role[0]` 是角色名的首字母，而象棋的七种角色里有两种以 `c` 开头。a1 上的红车和 b3 上的红炮分别写成 `a1rc` 和 `b3rc`。两者互换后，写出来仍然是 `a1rc` 和 `b3rc`。',
+  "The opening position next to the same position with red's a1 chariot and b3 cannon swapped":
+    '开局局面，旁边是红方 a1 车与 b3 炮互换后的同一局面',
+  "Left: the opening. Right: red's a1 chariot and b3 cannon have traded places. The old key cannot tell them apart.":
+    '左：开局。右：红方 a1 的车和 b3 的炮互换了位置。旧的键分不出两者。',
+  'Fourteen legal plies drew a game': '十四步合法着法，判出一盘和棋',
+  'Red makes the swap in five moves while Black walks a chariot out and home, then each side moves a horse out and back:':
+    '红方用五步完成互换，同时黑方把一个车走出去再走回来；然后双方各把一个马跳出去再跳回来：',
+  After: '走完',
+  'Old count': '旧计数',
+  'Real count': '实际计数',
+  'the start': '开局',
+  'opening: 1': '开局局面：1',
+  'the swap, 5 moves a side': '互换，每方 5 步',
+  'swapped: 1': '互换局面：1',
+  'a horse out and back': '马跳出再跳回',
+  '3, draw': '3，判和',
+  'swapped: 2': '互换局面：2',
+  'Fourteen legal plies, and the site scored a draw. No player reported it; it turned up in a read of this code while jieqi was getting a repetition rule.':
+    '十四步合法着法，网站就判了和棋。没有棋手报告过这个问题；它是在给揭棋加上重复局面规则时，阅读这段代码发现的。',
+  'The fix writes the role out in full': '修复：把角色名完整写出',
+  'A test plays those fourteen plies and checks the game goes on. The same shortcut was in Fog Chess (king and knight both `k`) and Duck Xiangqi; both are fixed.':
+    '一个测试会走完这十四步，并检查对局仍在继续。迷雾国际象棋（王 king 和马 knight 都是 `k`）和鸭子象棋里也有同样的简写；两者都已修复。',
+  'What it means on the site': '对网站意味着什么',
+  '**Finished games:** none change. Replayed under the corrected key, all 29 xiangqi repetition draws, 2 perpetual-check losses, 2 Duck Xiangqi draws and 19 Fog Chess draws end the same way.':
+    '**已结束的对局：**没有一盘改变。用修正后的键重放，全部 29 盘象棋重复局面和棋、2 盘长将判负、2 盘鸭子象棋和棋和 19 盘迷雾国际象棋和棋，结果都一样。',
+  '**New games:** xiangqi, Fog Xiangqi, Fog Chess and Duck Xiangqi end on repetition only when a position has really occurred three times.':
+    '**新对局：**象棋、迷雾象棋、迷雾国际象棋和鸭子象棋，只有在同一局面真正出现三次时，才会因重复局面结束。',
+  "**Puzzles:** the miner's duplicate check reads both spellings, so no published puzzle comes back as new.":
+    '**谜题：**谜题挖掘器的查重会同时识别新旧两种写法，所以已发布的谜题不会被当成新题再出现。',
+  'A key built from abbreviations needs one check that no single abbreviation shows: that no two names shorten to the same thing. A letter table written by hand makes that check when someone picks `r` for the chariot. `role[0]` never did.':
+    '用缩写拼成的键需要一项检查，而这项检查从任何单个缩写上都看不出来：没有两个名字缩写成同一个东西。手写的字母表在有人为车选定 `r` 的那一刻，就做了这项检查。`role[0]` 从来没有做过。',
   // xiangqi-endgames (2026-10-07): generated from the page's own text module.
   ...endgamePageDictionary('zh-Hans'),
   // flip-jungle-skill-ceiling, katago-jungle den races, pikafish-reveal-bug audit, and the two links to the new page (2026-10-07): machine-drafted, not native-reviewed.
@@ -4632,6 +4682,53 @@ const ZH_HANS: Record<string, string> = {
 
 const ZH_HANT: Record<string, string> = {
   ...ZH_HANS,
+  // chariot-cannon-repetition-key: machine-drafted 2026-10-07, not native-reviewed.
+  'Chariot and cannon both start with C': '車和炮的英文都以 C 開頭',
+  'Chariot and cannon, both C': '車和炮，都是 C',
+  'A xiangqi threefold repetition bug: the chariot and the cannon shared a key':
+    '象棋三次重複局面判定的一個錯誤：車和炮被記成了同一個字母',
+  "A one-character bug in Mistboard's xiangqi repetition key let a game end in a threefold draw after a position had occurred only twice.":
+    'Mistboard 象棋重複局面鍵裡一個只差一個字元的錯誤，讓一個局面只出現兩次，對局就被判為三次重複和棋。',
+  'Our xiangqi repetition key labelled each piece by the first letter of its role, so the chariot and the cannon were both `c`. Swapping a chariot and a cannon left the key unchanged, so a game could be drawn by threefold repetition after only two.':
+    '我們的象棋重複局面鍵用棋子角色英文名的首字母來標記每個棋子，於是車（chariot）和炮（cannon）都是 `c`。車和炮互換位置後，鍵不變，所以一個局面只出現兩次，對局就可能被判為三次重複和棋。',
+  'The fix writes out the role name. Fog Chess had the same bug with the king and the knight. No finished game changes result.':
+    '修復後，鍵裡寫出完整的角色名。迷霧國際象棋的王（king）和馬（knight）也有同樣的錯誤。已結束的對局，沒有一盤結果改變。',
+  'The key used the first letter of each role': '鍵只用了每個角色的首字母',
+  'Threefold repetition needs a way to say "this is the same position." Mistboard turns each position into a string and counts how often each one comes up.':
+    '三次重複需要一種方法來判斷「這是同一個局面」。Mistboard 把每個局面轉成一個字串，並統計每個字串出現了幾次。',
+  "`role[0]` is the first letter of the role, and two of xiangqi's seven roles start with `c`. A red chariot on a1 and cannon on b3 write `a1rc` and `b3rc`. Swap them and they still write `a1rc` and `b3rc`.":
+    '`role[0]` 是角色名的首字母，而象棋的七種角色裡有兩種以 `c` 開頭。a1 上的紅車和 b3 上的紅炮分別寫成 `a1rc` 和 `b3rc`。兩者互換後，寫出來仍然是 `a1rc` 和 `b3rc`。',
+  "The opening position next to the same position with red's a1 chariot and b3 cannon swapped":
+    '開局局面，旁邊是紅方 a1 車與 b3 炮互換後的同一局面',
+  "Left: the opening. Right: red's a1 chariot and b3 cannon have traded places. The old key cannot tell them apart.":
+    '左：開局。右：紅方 a1 的車和 b3 的炮互換了位置。舊的鍵分不出兩者。',
+  'Fourteen legal plies drew a game': '十四步合法著法，判出一盤和棋',
+  'Red makes the swap in five moves while Black walks a chariot out and home, then each side moves a horse out and back:':
+    '紅方用五步完成互換，同時黑方把一個車走出去再走回來；然後雙方各把一個馬跳出去再跳回來：',
+  After: '走完',
+  'Old count': '舊計數',
+  'Real count': '實際計數',
+  'the start': '開局',
+  'opening: 1': '開局局面：1',
+  'the swap, 5 moves a side': '互換，每方 5 步',
+  'swapped: 1': '互換局面：1',
+  'a horse out and back': '馬跳出再跳回',
+  '3, draw': '3，判和',
+  'swapped: 2': '互換局面：2',
+  'Fourteen legal plies, and the site scored a draw. No player reported it; it turned up in a read of this code while jieqi was getting a repetition rule.':
+    '十四步合法著法，網站就判了和棋。沒有棋手回報過這個問題；它是在給揭棋加上重複局面規則時，閱讀這段程式碼發現的。',
+  'The fix writes the role out in full': '修復：把角色名完整寫出',
+  'A test plays those fourteen plies and checks the game goes on. The same shortcut was in Fog Chess (king and knight both `k`) and Duck Xiangqi; both are fixed.':
+    '一個測試會走完這十四步，並檢查對局仍在繼續。迷霧國際象棋（王 king 和馬 knight 都是 `k`）和鴨子象棋裡也有同樣的簡寫；兩者都已修復。',
+  'What it means on the site': '對網站意味著什麼',
+  '**Finished games:** none change. Replayed under the corrected key, all 29 xiangqi repetition draws, 2 perpetual-check losses, 2 Duck Xiangqi draws and 19 Fog Chess draws end the same way.':
+    '**已結束的對局：**沒有一盤改變。用修正後的鍵重放，全部 29 盤象棋重複局面和棋、2 盤長將判負、2 盤鴨子象棋和棋和 19 盤迷霧國際象棋和棋，結果都一樣。',
+  '**New games:** xiangqi, Fog Xiangqi, Fog Chess and Duck Xiangqi end on repetition only when a position has really occurred three times.':
+    '**新對局：**象棋、迷霧象棋、迷霧國際象棋和鴨子象棋，只有在同一局面真正出現三次時，才會因重複局面結束。',
+  "**Puzzles:** the miner's duplicate check reads both spellings, so no published puzzle comes back as new.":
+    '**謎題：**謎題挖掘器的查重會同時識別新舊兩種寫法，所以已發布的謎題不會被當成新題再出現。',
+  'A key built from abbreviations needs one check that no single abbreviation shows: that no two names shorten to the same thing. A letter table written by hand makes that check when someone picks `r` for the chariot. `role[0]` never did.':
+    '用縮寫拼成的鍵需要一項檢查，而這項檢查從任何單個縮寫上都看不出來：沒有兩個名字縮寫成同一個東西。手寫的字母表在有人為車選定 `r` 的那一刻，就做了這項檢查。`role[0]` 從來沒有做過。',
   // flip-jungle-skill-ceiling, katago-jungle den races, pikafish-reveal-bug audit, and the two links to the new page (2026-10-07): machine-drafted, not native-reviewed.
   'Flip Jungle: 512 times the search still loses 23% of games':
     '翻翻棋：搜尋量提升 512 倍，仍有 23% 的對局落敗',

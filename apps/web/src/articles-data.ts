@@ -20,6 +20,7 @@ import { jieqiPlatformArticle } from './articles/content/jieqi-platform.js';
 import { pikafishArticle } from './articles/content/pikafish.js';
 import { abJchessArticle } from './articles/content/ab-jchess.js';
 import { pikafishRevealBugArticle } from './articles/content/pikafish-reveal-bug.js';
+import { chariotCannonRepetitionKeyArticle } from './articles/content/chariot-cannon-repetition-key.js';
 import { flipJungleSkillCeilingArticle } from './articles/content/flip-jungle-skill-ceiling.js';
 import { katagoJungleArticle } from './articles/content/katago-jungle.js';
 import { duckXiangqiGameTreeArticle } from './articles/content/duck-xiangqi-game-tree.js';
@@ -67,6 +68,7 @@ import articleSnapshotFog from './article-snapshot-fog.json' with { type: 'json'
 export const articles: Article[] = [
   xiangqiEndgamesArticle,
   duckXiangqiGameTreeArticle,
+  chariotCannonRepetitionKeyArticle,
   solverAuditArticle,
   pikafishRevealBugArticle,
   katagoJungleArticle,

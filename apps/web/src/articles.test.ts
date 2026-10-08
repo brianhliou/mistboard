@@ -65,6 +65,9 @@ describe('article public listing gates', () => {
       '/blog/benedict-xiangqi',
       // The xiangqi endgames page (象棋残局), 2026-10-08.
       '/blog/xiangqi-endgames',
+      // The chariot/cannon repetition-key bug (fe26e31c), 2026-10-07, leads its
+      // date-mate on the tie order.
+      '/blog/chariot-cannon-repetition-key',
       // How the duck widens xiangqi's game tree, 2026-10-07.
       '/blog/duck-xiangqi-game-tree',
       // The solver audit of the classical composition manuals, 2026-10-06.
@@ -290,6 +293,7 @@ describe('article public listing gates', () => {
     expect(hrefs).toEqual([
       '/blog/benedict-xiangqi',
       '/blog/xiangqi-endgames',
+      '/blog/chariot-cannon-repetition-key',
       '/blog/duck-xiangqi-game-tree',
       '/blog/solver-audit',
       '/blog/katago-jungle',

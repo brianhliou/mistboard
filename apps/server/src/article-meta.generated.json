@@ -47,6 +47,12 @@
     "description": "Beat the world champion 12 to 8 in a ten-game match in January, then the rest of his season through the first stage of China's top league. Six games on the board, all 75 analysed.",
     "status": "published"
   },
+  "chariot-cannon-repetition-key": {
+    "title": "Chariot and cannon both start with C",
+    "kind": "article",
+    "description": "A one-character bug in Mistboard's xiangqi repetition key let a game end in a threefold draw after a position had occurred only twice.",
+    "status": "published"
+  },
   "chess": {
     "title": "Chess Rules",
     "kind": "rules",
