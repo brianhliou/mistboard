@@ -74,7 +74,7 @@ function chromeHarness(
 ) {
   const ctx: TenantChromeContext<Color> = {
     ...(overrides.gameSpecId !== undefined ? { gameSpecId: overrides.gameSpecId } : {}),
-    view: () => overrides.view ?? playingView(),
+    view: () => ('view' in overrides ? (overrides.view ?? null) : playingView()),
     seat: () => overrides.seat ?? 'white',
     connectionState: () => overrides.connectionState ?? 'connected',
     closeReason: () => overrides.closeReason ?? '',
@@ -169,6 +169,103 @@ describe('tenant room chrome action status', () => {
     });
     chrome.renderActionStatus();
     expect(refs.actionStatus.querySelector('a')).toBeNull();
+  });
+
+  describe('a live game refused to a visitor with no seat', () => {
+    // The prod report (2026-10-08): a Fog Xiangqi game opened in a private
+    // window read "Room unavailable. This Fog Xiangqi room is not active. Create
+    // a new invite to start a game." with the board spinning "Connecting".
+    afterEach(() => store.clear());
+
+    function refused(tenantOverride?: WebVariantTenant<Color>) {
+      return chromeHarness(
+        { view: null, seat: null, connectionState: 'rejected', closeReason: 'live game, no seat' },
+        tenantOverride,
+      );
+    }
+
+    it('says the game is in progress and who can see it, not that the room is inactive', () => {
+      const { chrome, refs } = refused();
+      chrome.renderActionStatus();
+      const text = refs.actionStatus.textContent ?? '';
+      expect(text).toContain('Game in progress');
+      expect(text).toContain(
+        'Only its two players can see this game while it is being played. The full game opens here for everyone once it ends.',
+      );
+      expect(text).not.toContain('Room unavailable');
+      expect(text).not.toContain('not active');
+      expect(text).not.toContain('invite');
+      expect(text).not.toContain('\u2014');
+      // Not styled as an error.
+      expect(refs.actionStatus.querySelector('.action-notice')?.className).toBe(
+        'action-notice default',
+      );
+    });
+
+    it('offers a signed-out visitor a way back to their seat', () => {
+      window.history.replaceState(null, '', '/room/dxq_live');
+      const { chrome, refs } = refused();
+      chrome.renderActionStatus();
+      const signIn = refs.actionStatus.querySelector<HTMLAnchorElement>('a');
+      expect(signIn?.textContent).toBe('One of the players? Sign in to return to your seat');
+      expect(decodeURIComponent(signIn?.getAttribute('href') ?? '')).toContain('/room/dxq_live');
+      window.history.replaceState(null, '', '/');
+    });
+
+    it('offers no sign-in to a visitor who is already signed in', () => {
+      store.set('mb_signed_in', '1');
+      const { chrome, refs } = refused();
+      chrome.renderActionStatus();
+      expect(refs.actionStatus.querySelector('a')).toBeNull();
+    });
+
+    it('uses the tenant line when its finished rooms do not open up', () => {
+      const { chrome, refs } = refused({
+        ...tenant,
+        liveGameRejectedBody: 'live.roomLiveHandSeatedOnly',
+      });
+      chrome.renderActionStatus();
+      const text = refs.actionStatus.textContent ?? '';
+      expect(text).toContain('Only the players at this table can see this hand');
+      expect(text).not.toContain('once it ends');
+    });
+
+    it('replaces the board spinner with a still label', () => {
+      const { chrome, refs } = refused();
+      chrome.renderBoardStatus();
+      expect(refs.boardStatus.hidden).toBe(false);
+      expect(boardStatusLabel(refs)).toBe('Game in progress');
+      expect(boardStatusSpinner(refs).hidden).toBe(true);
+      expect(refs.boardStatus.dataset.tone).toBe('pending');
+    });
+  });
+
+  describe('board status overlay', () => {
+    it('spins while the socket opens', () => {
+      const { chrome, refs } = chromeHarness({ view: null, connectionState: 'connecting' });
+      chrome.renderBoardStatus();
+      expect(refs.boardStatus.hidden).toBe(false);
+      expect(boardStatusLabel(refs)).toBe('Connecting');
+      expect(boardStatusSpinner(refs).hidden).toBe(false);
+    });
+
+    it('stops spinning on any refusal and names it', () => {
+      const { chrome, refs } = chromeHarness({
+        view: null,
+        connectionState: 'rejected',
+        closeReason: 'private room',
+      });
+      chrome.renderBoardStatus();
+      expect(boardStatusLabel(refs)).toBe('Room unavailable');
+      expect(boardStatusSpinner(refs).hidden).toBe(true);
+      expect(refs.boardStatus.dataset.tone).toBe('danger');
+    });
+
+    it('hides once a board arrives', () => {
+      const { chrome, refs } = chromeHarness();
+      chrome.renderBoardStatus();
+      expect(refs.boardStatus.hidden).toBe(true);
+    });
   });
 
   it('keeps the notice hidden while a seated player scrubs a live game', () => {
@@ -746,7 +843,7 @@ function refsFixture(): LiveRefs {
     actionStatus: el('div'),
     board: el('div'),
     boardPaused: el('div'),
-    boardStatus: el('div'),
+    boardStatus: boardStatusFixture(),
     capturesBottom: el('div'),
     capturesTop: el('div'),
     clockBottom: el('div'),
@@ -771,4 +868,22 @@ function refsFixture(): LiveRefs {
 
 function el<K extends keyof HTMLElementTagNameMap>(tagName: K): HTMLElementTagNameMap[K] {
   return document.createElement(tagName);
+}
+
+// The layout's overlay markup (live-layout.ts): a spinner and a label.
+function boardStatusFixture(): HTMLDivElement {
+  const status = el('div');
+  status.innerHTML =
+    '<div><span data-board-status-spinner></span><p data-board-status-label>Connecting</p></div>';
+  return status;
+}
+
+function boardStatusLabel(refs: LiveRefs): string | null {
+  return refs.boardStatus.querySelector('[data-board-status-label]')?.textContent ?? null;
+}
+
+function boardStatusSpinner(refs: LiveRefs): HTMLElement {
+  const spinner = refs.boardStatus.querySelector<HTMLElement>('[data-board-status-spinner]');
+  if (!spinner) throw new Error('fixture has a spinner');
+  return spinner;
 }

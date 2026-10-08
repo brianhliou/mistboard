@@ -42,7 +42,7 @@ import { jieqiTenant } from '../jieqi-tenant.js';
 import type { XiangqiEvent } from '../xiangqi-runtime.js';
 import { xiangqiTenant } from '../xiangqi-tenant.js';
 import { createTenantRuntimeRoomFromEvents, tenantSnapshotPayload } from './runtime.js';
-import { createTenantWsRuntime } from './ws.js';
+import { createTenantWsRuntime, TENANT_LIVE_GAME_NO_SEAT_REASON } from './ws.js';
 
 process.env.MISTBOARD_JIEQI_ENABLED = 'true';
 process.env.MISTBOARD_XIANGQI_ENABLED = 'true';
@@ -197,9 +197,70 @@ test('spectator fallback stays fail-closed in production without an admin token'
         room,
       );
 
-      assert.deepEqual(socket.closes, [{ code: 1008, reason: 'private room' }]);
+      // The close names the real situation (a live game, no seat for this
+      // visitor) instead of 'private room', which the room page rendered as
+      // "this room is not active".
+      assert.deepEqual(socket.closes, [{ code: 1008, reason: TENANT_LIVE_GAME_NO_SEAT_REASON }]);
+      assert.equal(TENANT_LIVE_GAME_NO_SEAT_REASON, 'live game, no seat');
+      // Hidden-info invariant: the rejected visitor gets no game state at all.
+      // No hello, no snapshot, no event, no board, no seat token.
       assert.deepEqual(socket.sent, [], 'a fail-closed visitor receives no frame');
       assert.equal(room.clients.size, 0, 'no spectator was admitted');
+      // Messages after the close reach no handler and draw no reply.
+      socket.receive({ type: 'snapshot:request' });
+      await Promise.resolve();
+      assert.deepEqual(socket.sent, [], 'a snapshot request after the close is not answered');
+      assert.equal(
+        room.events.filter((event) => event.type === 'seat-assigned').length,
+        2,
+        'the refusal appends no seat event',
+      );
+    }),
+  );
+});
+
+test('a signed-out visitor to a live fog room learns it is live, never the room contents', async () => {
+  // The prod report (2026-10-08): a fog xiangqi correspondence game opened in a
+  // private window. Same path with a stale seat token that matches nothing.
+  await withEnv('NODE_ENV', 'production', () =>
+    withEnv('MISTBOARD_ADMIN_DEBUG_TOKEN', undefined, async () => {
+      const room = fullDarkXiangqiRoom('dxq_live_no_seat');
+      const socket = new FakeSocket();
+      const request = fakeRequest('prod-visitor-02');
+      request.headers['sec-websocket-protocol'] = 'mistboard-seat.not-a-real-token';
+      await darkXiangqiWs.handleConnection(WS_CTX, socket.asWebSocket(), request, room);
+
+      assert.deepEqual(socket.closes, [{ code: 1008, reason: 'live game, no seat' }]);
+      assert.deepEqual(socket.sent, []);
+      assert.equal(room.clients.size, 0);
+    }),
+  );
+});
+
+test('an aborted fog room keeps the not-active reason: the game is not live', async () => {
+  await withEnv('NODE_ENV', 'production', () =>
+    withEnv('MISTBOARD_ADMIN_DEBUG_TOKEN', undefined, async () => {
+      const roomId = 'dxq_aborted_no_seat';
+      const events: DarkXiangqiEvent[] = [
+        { type: 'room-created', at: 1_000, roomId, gameSpecId: DARK_XIANGQI_SPEC_ID },
+        { type: 'seat-assigned', at: 2_000, roomId, clientId: 'client-red', seat: 'red' },
+        { type: 'seat-assigned', at: 3_000, roomId, clientId: 'client-black', seat: 'black' },
+        { type: 'game-aborted', at: 4_000, roomId, reason: 'pregame-timeout' },
+      ];
+      const created = createTenantRuntimeRoomFromEvents(darkXiangqiTenant, events);
+      assert.ok(created.ok, 'fixture event log must hydrate');
+      const room = created.room as unknown as DarkXiangqiLiveRoom;
+      assert.equal(room.projection.state.status.type, 'aborted');
+      const socket = new FakeSocket();
+      await darkXiangqiWs.handleConnection(
+        WS_CTX,
+        socket.asWebSocket(),
+        fakeRequest('prod-visitor-03'),
+        room,
+      );
+
+      assert.deepEqual(socket.closes, [{ code: 1008, reason: 'private room' }]);
+      assert.deepEqual(socket.sent, []);
     }),
   );
 });

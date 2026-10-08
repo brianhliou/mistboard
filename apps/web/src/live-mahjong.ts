@@ -81,6 +81,9 @@ const mahjongWebTenant: WebVariantTenant<MahjongSeat> = {
   reviewUrl: (roomId) => `/mahjong/game/${encodeURIComponent(roomId)}`,
   reasonPhrase: mahjongReasonPhrase,
   rejectedBody: 'live.mahjongRoomNotActive',
+  // The server reveals no finished mahjong room (no truthView), so the live
+  // refusal must not promise the full game at the end.
+  liveGameRejectedBody: 'live.roomLiveHandSeatedOnly',
   spectatorBody: 'live.spectatorMahjong',
   selectInstruction: 'live.selectMahjong',
 };

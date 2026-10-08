@@ -28,6 +28,7 @@ import type { LiveRefs } from '../live-state.js';
 import { postGameActions, renderGameResult, resultScore } from '../postgame-panel.js';
 import { type ProfileIdentity, playerNameEl, profileTargetFor } from '../profile-link.js';
 import { createGameMetaCard, seatResultScores } from '../review/game-meta-card.js';
+import { isLikelySignedIn } from '../signed-in-state.js';
 import type { VariantMiniId } from '../variant-mini-boards.js';
 import { localizedRulesHref } from '../variant-public-surfaces.js';
 import { variantMiniIdForRawVariant } from '../variants.js';
@@ -91,6 +92,12 @@ export type WebVariantTenant<C extends string> = {
   reasonPhrase(reason: string): TenantReasonKey;
   // The rejected-room body. Default: 'live.roomNotActive' with the variant name.
   rejectedBody?: I18nKey;
+  // The body for a visitor refused a seat at a live game whose class shows
+  // spectators nothing until it ends (close reason LIVE_GAME_NO_SEAT_REASON).
+  // Default: 'live.roomLiveGameSeatedOnly', which promises the full game at the
+  // end; a tenant whose finished room does not reveal (mahjong: no truthView on
+  // the server) overrides it with a line that makes no such promise.
+  liveGameRejectedBody?: I18nKey;
   spectatorBody: I18nKey;
   selectInstruction: I18nKey;
   // Optional: how to label a seat's player. Default (chess/xiangqi/jieqi):
@@ -183,6 +190,9 @@ export type TenantRoomChrome = {
   renderRoomActions(): void;
   renderActionStatus(): void;
   renderGameControls(): void;
+  // The overlay over an empty board: a spinner while the socket opens or
+  // reconnects, a still label once the room has refused this connection.
+  renderBoardStatus(): void;
   tickCountdowns(): void;
 };
 
@@ -811,6 +821,14 @@ export function createTenantRoomChrome<C extends string>(
       signIn.textContent = t('live.signInTakeSeat');
       notice.append(signIn);
     }
+    // A signed-out visitor may be one of the two players on another device;
+    // signing in reclaims an account seat and lands back on this room.
+    if (liveGameRejection() && !isLikelySignedIn()) {
+      const signIn = document.createElement('a');
+      signIn.href = loginHrefForCurrentPage();
+      signIn.textContent = t('live.signInIfPlayer');
+      notice.append(signIn);
+    }
     if (ctx.connectionState() === 'disconnected' || ctx.connectionState() === 'reconnecting') {
       const reconnect = document.createElement('button');
       reconnect.type = 'button';
@@ -822,6 +840,8 @@ export function createTenantRoomChrome<C extends string>(
   }
 
   function actionTone(view: TenantWebView<C> | null): 'danger' | 'default' | 'pending' | 'success' {
+    // Not an error: the room is fine, the game is simply not public yet.
+    if (liveGameRejection()) return 'default';
     if (ctx.connectionState() === 'rejected' || ctx.connectionState() === 'displaced') {
       return 'danger';
     }
@@ -839,11 +859,18 @@ export function createTenantRoomChrome<C extends string>(
     return null;
   }
 
+  // A full room whose class hides the board from spectators until the game
+  // ends (fog, concealed hands), refused while live (server variant-tenant/ws.ts).
+  function liveGameRejection(): boolean {
+    return ctx.connectionState() === 'rejected' && ctx.closeReason() === LIVE_GAME_NO_SEAT_REASON;
+  }
+
   function actionTitle(view: TenantWebView<C> | null): string {
     if (ctx.connectionState() === 'rejected') {
       const gated = accountGatedRejection();
       if (gated === 'rated') return t('live.titleRatedGame');
       if (gated === 'correspondence') return t('correspondence.heading');
+      if (liveGameRejection()) return t('live.titleGameInProgress');
       return ctx.closeReason() === 'play disabled'
         ? t('live.titlePlayingOff')
         : t('live.titleRoomUnavailable');
@@ -868,6 +895,8 @@ export function createTenantRoomChrome<C extends string>(
       const gated = accountGatedRejection();
       if (gated === 'rated') return t('live.rejectedRatedAccount');
       if (gated === 'correspondence') return t('live.rejectedCorrespondenceAccount');
+      if (liveGameRejection())
+        return t(tenant.liveGameRejectedBody ?? 'live.roomLiveGameSeatedOnly');
       return ctx.closeReason() === 'play disabled'
         ? t('live.roomPlayDisabled')
         : t(tenant.rejectedBody ?? 'live.roomNotActive', { variant: variantName() });
@@ -1017,6 +1046,30 @@ export function createTenantRoomChrome<C extends string>(
     return t('live.opponentLeftWinIn', { seconds });
   }
 
+  // The layout ships the overlay as a spinner labelled "Connecting". A refused
+  // or moved session is terminal (the socket never reopens), so it gets a still
+  // label naming the state instead of a spinner that turns forever.
+  function renderBoardStatus(): void {
+    if (!refs) return;
+    const view = ctx.view();
+    refs.boardStatus.hidden = view !== null;
+    if (view !== null) return;
+    const state = ctx.connectionState();
+    const terminal = state === 'rejected' || state === 'displaced';
+    let label: string;
+    if (terminal) label = actionTitle(view);
+    else if (state === 'disconnected' || state === 'reconnecting') {
+      label = t('live.statusReconnecting');
+    } else label = t('live.statusConnecting');
+    // A live game refused to a non-player is not an error; every other refusal
+    // keeps the danger tone the chess room uses.
+    refs.boardStatus.dataset.tone = terminal && !liveGameRejection() ? 'danger' : 'pending';
+    const labelEl = refs.boardStatus.querySelector<HTMLElement>('[data-board-status-label]');
+    if (labelEl) labelEl.textContent = label;
+    const spinner = refs.boardStatus.querySelector<HTMLElement>('[data-board-status-spinner]');
+    if (spinner) spinner.hidden = terminal;
+  }
+
   return {
     setRenderTarget,
     resetState,
@@ -1027,9 +1080,15 @@ export function createTenantRoomChrome<C extends string>(
     renderRoomActions,
     renderActionStatus,
     renderGameControls,
+    renderBoardStatus,
     tickCountdowns,
   };
 }
+
+// The tenant WebSocket's close reason for a visitor with no seat at a live game
+// whose class shows spectators nothing while it is played. Mirrors
+// TENANT_LIVE_GAME_NO_SEAT_REASON in apps/server/src/variant-tenant/ws.ts.
+export const LIVE_GAME_NO_SEAT_REASON = 'live game, no seat';
 
 // Default seat labels when a tenant has no seatLabel hook: the seat name IS
 // the colour (xiangqi, jieqi, fortress, duck, atomic, fog xiangqi) or the

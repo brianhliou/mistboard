@@ -70,6 +70,10 @@ import type {
 } from './tenant.js';
 import { TENANT_SERVER_ONLY_EVENT_TYPES, tenantSeatMayAct } from './tenant.js';
 
+// WebSocket close reason for a visitor with no seat at a live game whose class
+// shows spectators nothing while it is played (room-chrome.ts reads it).
+export const TENANT_LIVE_GAME_NO_SEAT_REASON = 'live game, no seat';
+
 export type TenantLiveClient<C extends string> = {
   debugRequested: false;
   displaced: boolean;
@@ -225,6 +229,17 @@ export function createTenantWsRuntime<
         isDebugViewAuthorized(request);
       if (assignment.reason === 'private room' && observable) {
         joinAsSpectator(ctx, socket, room, clientId, accountUser?.id ?? null);
+        return;
+      }
+      // A full room whose class refuses live spectators (fog, concealed hands)
+      // while the game is still being played. 'private room' read to the room
+      // page as "this room is not active", which is false and sent the visitor
+      // off to create an invite. The reason says only that the game is live and
+      // this connection holds no seat: no board, no moves, no seat identities,
+      // and no frame at all before the close. An aborted room keeps 'private
+      // room', because "not active" is true for it.
+      if (assignment.reason === 'private room' && room.projection.state.status.type === 'playing') {
+        socket.close(1008, TENANT_LIVE_GAME_NO_SEAT_REASON);
         return;
       }
       socket.close(1008, assignment.reason);
