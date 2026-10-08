@@ -21,7 +21,11 @@ import {
   svgBoardGlyphMarker,
 } from './svg-board-marker.js';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
-import { renderXiangqiPieceGlyphed, type XiangqiPieceSet } from './xiangqi-piece-sets.js';
+import {
+  renderXiangqiPieceGlyphed,
+  type XiangqiPieceSet,
+  xiangqiNeutralBackMarks,
+} from './xiangqi-piece-sets.js';
 
 // Bespoke SVG renderer for the banqi board, drawn as the bottom HALF of a xiangqi
 // board in its natural HORIZONTAL orientation: 8 files run left-to-right, 4 ranks
@@ -183,8 +187,22 @@ function gridLines(): string {
 }
 
 // A uniform face-down disc: one colour, a single ring, no glyph (the deal is
-// hidden from both). A flat disc with no inner ring keeps the back clean.
-function faceDownDisc(cx: number, cy: number, className = 'banqi-back'): string {
+// hidden from both). A flat disc with no inner ring keeps the back clean. A
+// piece set whose own back is the same for both sides (wood, brush, clerical)
+// draws that back instead; a set whose backs differ by colour keeps the disc,
+// since a banqi tile must not tell its colour.
+function faceDownDisc(
+  cx: number,
+  cy: number,
+  pieceSet: XiangqiPieceSet,
+  className = 'banqi-back',
+): string {
+  const marks = xiangqiNeutralBackMarks(pieceSet);
+  if (marks) {
+    const x = cx - PIECE_SIZE / 2;
+    const y = cy - PIECE_SIZE / 2;
+    return `<g class="${className}"><svg x="${x}" y="${y}" width="${PIECE_SIZE}" height="${PIECE_SIZE}" viewBox="0 0 100 100">${marks}</svg></g>`;
+  }
   const r = PIECE_SIZE * 0.46;
   return [`<g class="${className}">`, `<circle cx="${cx}" cy="${cy}" r="${r}"/>`, `</g>`].join('');
 }
@@ -200,7 +218,7 @@ function pieceLayer(
     const dragSource = square === draggingFrom;
     const { x, y } = cellCenter(square);
     const pieceSvg = entry.faceDown
-      ? faceDownDisc(x, y, dragSource ? 'banqi-back banqi-drag-source' : 'banqi-back')
+      ? faceDownDisc(x, y, pieceSet, dragSource ? 'banqi-back banqi-drag-source' : 'banqi-back')
       : renderXiangqiPieceGlyphed({ color: entry.color, role: entry.role }, pieceSet, {
           ariaLabel: `${entry.color} ${entry.role}`,
           className: dragSource ? 'banqi-piece banqi-drag-source' : 'banqi-piece',

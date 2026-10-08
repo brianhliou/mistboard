@@ -165,9 +165,15 @@ describe('duckXiangqiBoardSvg', () => {
       'animal-dobutsu',
       'traditional',
       'simplified',
-      'western',
-      'symbols',
+      'lacquer',
+      'wood',
+      'book',
+      'brush',
+      'clerical',
     ] as const;
+    // Sets that seat the duck on no disc of its own: the disc-less Chess-style
+    // set, and the asset sets that frame it on their colour-neutral back.
+    const ringless = new Set<string>(['international-flat', 'wood', 'brush', 'clerical']);
     for (const pieceSet of sets) {
       const svg = duckXiangqiBoardSvg(view, 'red', {
         interactive: false,
@@ -184,7 +190,7 @@ describe('duckXiangqiBoardSvg', () => {
       // no disc at all, so it has no ring to colour. Asserted positively only:
       // the SVG is the WHOLE board, so a "never red" check would trip on the
       // red pieces standing next to the duck.
-      if (pieceSet !== 'international-flat') {
+      if (!ringless.has(pieceSet)) {
         expect(svg, pieceSet).toContain('#b8860b');
       }
     }

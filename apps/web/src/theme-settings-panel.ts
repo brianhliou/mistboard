@@ -169,7 +169,7 @@ export function buildAppearanceMenu(options: AppearanceMenuOptions = {}): HTMLEl
         'xqpiece',
         t('prefs.pieces', {}, locale),
         t('prefs.xiangqiPieceSet', {}, locale),
-        XIANGQI_PIECE_SETS,
+        XIANGQI_PIECE_SETS.map((s) => ({ id: s.id, label: t(s.labelKey, {}, locale) })),
         readStoredXiangqiPieceSet(),
         setXiangqiPieceSetPreference,
         undefined,

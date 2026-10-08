@@ -241,6 +241,17 @@ export const EN_CONTENT = {
     "Dandelion 4 by Kouza (lxsgx23): the source of the top jungle bot's neural network, fetched from its release and never re-hosted.",
   'source.chessdb':
     'chessdb.cn, the Chinese Chess Cloud Database: exact endgame results in the xiangqi analysis board and practice.',
+  'source.pieceSetLacquer':
+    'Lacquer pieces: art by PlayOK, SVG by Sebastian Pipping, from pychess-variants, CC0 1.0.',
+  'source.pieceSetWood':
+    'Wood pieces: "gmchess style wood piece set" by Kadagaden, CC BY 4.0. Modified: re-centred, and the face-down back is the general with its character removed.',
+  'source.pieceSetWoodLicense': 'CC BY 4.0 license',
+  'source.pieceSetBook':
+    'Book pieces: glyphs from BabelStone Xiangqi Colour by Andrew West, SIL Open Font License 1.1.',
+  'source.pieceSetBrush':
+    'Brush pieces: the hnzw set from pychess-variants, by gbtami and contributors, AGPL-3.0.',
+  'source.pieceSetClerical':
+    'Clerical pieces: the lishuw set from pychess-variants, by gbtami and contributors, AGPL-3.0.',
   'source.pikafish':
     'Pikafish by the Pikafish developers: the Pikafish bot at the top of the xiangqi levels, and the engine behind xiangqi game, study and broadcast analysis and the in-browser analysis board, GPL-3.0. Its neural network weights carry their own license.',
   'source.pikafishSite': 'pikafish.com',
@@ -729,6 +740,12 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'source.katago',
   'source.dandelion',
   'source.chessdb',
+  'source.pieceSetLacquer',
+  'source.pieceSetWood',
+  'source.pieceSetWoodLicense',
+  'source.pieceSetBook',
+  'source.pieceSetBrush',
+  'source.pieceSetClerical',
   'source.pikafish',
   'source.pikafishSite',
   'source.pikafishWeightsLicense',

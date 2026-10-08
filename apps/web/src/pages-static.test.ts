@@ -12,6 +12,7 @@ import {
   mountPrivacy,
   mountSource,
   mountTerms,
+  PIECE_SET_SOURCE_URLS,
   renderArticlesIndexShellForPrerender,
   renderRulesIndexShellForPrerender,
   rulesIndexPrerenderHead,
@@ -213,6 +214,35 @@ describe('about page platform activity', () => {
         licenseUrl,
       ]);
       expect(line?.textContent).not.toContain('\u2014');
+      root.remove();
+    }
+  });
+
+  it('credits the five third-party xiangqi piece sets, with the CC BY licence on Wood', () => {
+    const cases = [
+      ['/source', 'by Kadagaden, CC BY 4.0'],
+      ['/zh-hans/source', 'Kadagaden 的“gmchess style wood piece set”，CC BY 4.0'],
+      ['/zh-hant/source', 'Kadagaden 的「gmchess style wood piece set」，CC BY 4.0'],
+    ] as const;
+    for (const [path, woodCredit] of cases) {
+      window.history.replaceState(null, '', path);
+      const root = document.createElement('main');
+      document.body.append(root);
+      mountSource(root);
+
+      const hrefs = [...root.querySelectorAll('a')].map((a) => a.getAttribute('href'));
+      for (const url of Object.values(PIECE_SET_SOURCE_URLS)) {
+        expect(hrefs, `${path} ${url}`).toContain(url);
+      }
+      const wood = root.querySelector('.source-credit-wood');
+      expect(wood?.textContent).toContain(woodCredit);
+      expect([...(wood?.querySelectorAll('a') ?? [])].map((a) => a.getAttribute('href'))).toEqual([
+        PIECE_SET_SOURCE_URLS.wood,
+        'https://creativecommons.org/licenses/by/4.0/',
+      ]);
+      expect(root.textContent).toContain('gbtami');
+      expect(root.textContent).toContain('Andrew West');
+      expect(root.textContent).not.toContain('\u2014');
       root.remove();
     }
   });

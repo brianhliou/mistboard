@@ -192,6 +192,17 @@ export const ZH_HANS_CONTENT = {
   'source.dandelion':
     'Dandelion 4，作者 Kouza（lxsgx23）：本站最强斗兽棋机器人的神经网络来源，从其发布页获取，不在本站转存。',
   'source.chessdb': '象棋云库（chessdb.cn）：象棋分析棋盘和练习中的残局精确结果。',
+  'source.pieceSetLacquer':
+    '亮漆棋子：PlayOK 绘制，Sebastian Pipping 制作 SVG，取自 pychess-variants，CC0 1.0。',
+  'source.pieceSetWood':
+    '木质棋子：Kadagaden 的“gmchess style wood piece set”，CC BY 4.0。已修改：重新居中，背面为去掉文字的将帅棋子。',
+  'source.pieceSetWoodLicense': 'CC BY 4.0 许可协议',
+  'source.pieceSetBook':
+    '棋书棋子：字形取自 Andrew West 的 BabelStone Xiangqi Colour 字体，SIL Open Font License 1.1。',
+  'source.pieceSetBrush':
+    '毛笔棋子：pychess-variants 的 hnzw 棋子，作者 gbtami 及贡献者，AGPL-3.0。',
+  'source.pieceSetClerical':
+    '隶书棋子：pychess-variants 的 lishuw 棋子，作者 gbtami 及贡献者，AGPL-3.0。',
   'source.pikafish':
     '皮卡鱼（Pikafish），作者皮卡鱼开发团队：本站象棋最高等级的皮卡鱼机器人，也是象棋对局、研习和直播分析以及浏览器内分析棋盘所用的引擎，GPL-3.0。其神经网络权重另有授权协议。',
   'source.pikafishSite': 'pikafish.com',
