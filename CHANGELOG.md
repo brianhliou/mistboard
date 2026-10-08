@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- Live jieqi games show what each side's face-down pieces could still be and the chance of each, for both players and spectators, rated games included ([c746143c](https://github.com/brianhliou/mistboard/commit/c746143c))
 - The general glows red when it is in check, in xiangqi, jieqi, Storm the Fortress and Atomic Xiangqi ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
 - Jieqi move lists mark check (+) and checkmate (#) ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
 - Jieqi games now end on the third repetition of a position, and a player who gave check on every move of the cycle loses, as in xiangqi ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
@@ -79,6 +80,7 @@ Conventions:
 
 ### Watching and review
 
+- Review pages, studies and live rooms share one move bar, with flip, the opening book and analysis in its menu, and a live jieqi room can step back after a reload ([c746143c](https://github.com/brianhliou/mistboard/commit/c746143c))
 - 2026 North American Xiangqi Championship (Houston), all 9 rounds with 75 game records from dpxq ([efb647e8](https://github.com/brianhliou/mistboard/commit/efb647e8))
 - broadcast games published without their moves now say "No record published" on the board ([efb647e8](https://github.com/brianhliou/mistboard/commit/efb647e8))
 - In jieqi review, hovering or tapping the luck die on the board, or the 🎲 badge in the move list, now opens the luck card for that move ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
@@ -116,6 +118,7 @@ Conventions:
 
 ### Community
 
+- You can now see who follows you: the bell names each new follower, and a private Followers tab sits beside Following on your Friends page ([c746143c](https://github.com/brianhliou/mistboard/commit/c746143c))
 - The contribute page asks players who read Chinese to review one rules page or lesson of the machine translation, and every Chinese rules page links to it ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
 - The leaderboard shows every speed that has rated players, provisional ratings marked with ? ([99752abc](https://github.com/brianhliou/mistboard/commit/99752abc))
 - Player names on correspondence seeks, games and challenges link to their profiles ([11790cc8](https://github.com/brianhliou/mistboard/commit/11790cc8))
@@ -123,6 +126,7 @@ Conventions:
 
 ### Site
 
+- The notification bell separates what is waiting on you from what is new, and correspondence cards show one clock, with the exact due time on hover ([c746143c](https://github.com/brianhliou/mistboard/commit/c746143c))
 - Engine champions page at /champions: the reigning champion engine for every game with a bot, the title history, and how any engine can challenge for a title ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
 - The source page credits Pikafish with links to pikafish.com, its weights license and its repository, and the analysis board's engine name links to pikafish.com ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
 - Game cards show the variant as the title, with the time control on its own line ([99752abc](https://github.com/brianhliou/mistboard/commit/99752abc))
@@ -154,6 +158,7 @@ Conventions:
 
 ### Fixed
 
+- Duck Xiangqi correspondence games now show Black's first move as your move, and no longer abort while Black still has time to reply ([c746143c](https://github.com/brianhliou/mistboard/commit/c746143c))
 - broadcast standings no longer count a playoff table's summary row as an extra game ([efb647e8](https://github.com/brianhliou/mistboard/commit/efb647e8))
 - on broadcast boards with only a result, the evaluation gauge now shows the winner, all Red for 1-0 and all Black for 0-1 ([efb647e8](https://github.com/brianhliou/mistboard/commit/efb647e8))
 - zoomed charts in articles get a solid background instead of showing through to the dark overlay ([4a138d71](https://github.com/brianhliou/mistboard/commit/4a138d71))
