@@ -86,6 +86,8 @@ export const ZH_HANS_REVIEW = {
   'practice.verdictMistake': '这一着让优势溜走了。悔棋再想想。',
   'practice.verdictInaccuracy': '不算最精确，但这道题还没走坏。',
   'practice.verdictGood': '不错，继续。',
+  'practice.signInToKeep': '登录后保存进度',
+  'practice.signInDismiss': '关闭',
   'analysis.tablebase.title': '残局库',
   'analysis.tablebase.win': '胜',
   'analysis.tablebase.draw': '和',

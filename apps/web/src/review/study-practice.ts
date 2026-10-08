@@ -9,6 +9,8 @@
 import type { PracticeGoal, XiangqiColor, XiangqiGameState } from '@mistboard/game';
 import { createInitialXiangqiState, parseStandardXiangqiFen } from '@mistboard/game';
 import { track } from '../analytics.js';
+import { loginHrefForCurrentPage } from '../auth-redirect.js';
+import { isLikelySignedIn } from '../signed-in-state.js';
 import { displayComment } from '../study-i18n.js';
 import { createCeval } from './engine/ceval.js';
 import type { PracticeEval } from './practice-play.js';
@@ -119,6 +121,9 @@ export function mountPracticeChapter(
     })(),
     ...(opts.progress === undefined ? {} : { progress: opts.progress }),
     ...(opts.onNext === undefined ? {} : { onNext: opts.onNext }),
+    // A guest's solve is dropped server-side, so after one the panel offers
+    // sign-in, returning to this chapter (the current URL) afterwards.
+    guestSignInHref: () => (isLikelySignedIn() ? undefined : loginHrefForCurrentPage()),
     ...(opts.chapterId === undefined
       ? {}
       : {

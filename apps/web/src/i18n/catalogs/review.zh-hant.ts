@@ -86,6 +86,8 @@ export const ZH_HANT_REVIEW = {
   'practice.verdictMistake': '這一著讓優勢溜走了。悔棋再想想。',
   'practice.verdictInaccuracy': '不算最精確，但這道題還沒走壞。',
   'practice.verdictGood': '不錯，繼續。',
+  'practice.signInToKeep': '登入後保存進度',
+  'practice.signInDismiss': '關閉',
   'analysis.tablebase.title': '殘局庫',
   'analysis.tablebase.win': '勝',
   'analysis.tablebase.draw': '和',

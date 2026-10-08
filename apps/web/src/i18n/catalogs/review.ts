@@ -521,6 +521,8 @@ export const EN_REVIEW = {
   'practice.verdictMistake': 'That lets it slip. Take the move back and look again.',
   'practice.verdictInaccuracy': 'Not the cleanest, but the exercise is still alive.',
   'practice.verdictGood': 'Good. Keep going.',
+  'practice.signInToKeep': 'Sign in to keep your progress',
+  'practice.signInDismiss': 'Dismiss',
   'analysis.tablebase.title': 'Tablebase',
   'analysis.tablebase.win': 'Win',
   'analysis.tablebase.draw': 'Draw',

@@ -395,3 +395,57 @@ test("the engine's reply is on the board while the position after it is still be
 
   expect(boardMatchedAtSearch, "learner's move, then the engine's reply").toEqual([true, true]);
 });
+
+// A guest's solve is not saved, so the panel offers sign-in after one: quietly,
+// once a solve has happened, never for a signed-in learner, and not again in
+// this tab once dismissed.
+async function mountForSavePrompt(guestSignInHref?: () => string | undefined) {
+  const row = entry('soldier-vs-bare-general');
+  const host = document.createElement('div');
+  const handle = mountXiangqiPractice(host, {
+    initialTruth: endgameEntryState(row),
+    goal: { kind: 'win', centipawns: 600 },
+    orientation: row.turn,
+    evaluate: steady(900),
+    replyDelayMs: 0,
+    ...(guestSignInHref ? { guestSignInHref } : {}),
+  });
+  await handle.ready();
+  const prompt = () => host.querySelector<HTMLElement>('.practice__save-prompt');
+  const solve = async () => {
+    await handle.play(getStandardXiangqiLegalMoves(endgameEntryState(row))[0]!);
+    expect(handle.view().phase, 'the fake must actually reach success').toBe('success');
+  };
+  return { host, prompt, solve };
+}
+
+test('a guest is offered sign-in after a solve, not before', async () => {
+  window.sessionStorage.clear();
+  const href = '/account?tab=login&referrer=%2Fstudy%2Fabc%2Fch1';
+  const { prompt, solve } = await mountForSavePrompt(() => href);
+  expect(prompt()?.hidden, 'nothing before a solve').toBe(true);
+  await solve();
+  expect(prompt()?.hidden).toBe(false);
+  expect(prompt()?.textContent).toContain('Sign in to keep your progress');
+  expect(prompt()?.querySelector('a')?.getAttribute('href')).toBe(href);
+});
+
+test('a signed-in learner is never offered sign-in', async () => {
+  window.sessionStorage.clear();
+  const { prompt, solve } = await mountForSavePrompt(() => undefined);
+  await solve();
+  expect(prompt()?.hidden).toBe(true);
+});
+
+test('a dismissed sign-in prompt stays dismissed for the session', async () => {
+  window.sessionStorage.clear();
+  const first = await mountForSavePrompt(() => '/account?tab=login');
+  await first.solve();
+  first.prompt()?.querySelector<HTMLButtonElement>('.practice__save-prompt-close')?.click();
+  expect(first.prompt()?.hidden).toBe(true);
+
+  const next = await mountForSavePrompt(() => '/account?tab=login');
+  await next.solve();
+  expect(next.prompt()?.hidden, 'not again after dismissal').toBe(true);
+  window.sessionStorage.clear();
+});

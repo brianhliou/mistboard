@@ -77,6 +77,15 @@ export interface XiangqiPracticeOptions {
    *  unused, and the two are indistinguishable in a completion count alone. */
   onFailed?: (verdict: PracticeVerdict, moves: number) => void;
   /**
+   * Where a GUEST signs in, asked at solve time; undefined for a signed-in
+   * learner. A guest's solve is not saved (the server drops it by design), so
+   * once they have solved something the panel offers this link, quietly and
+   * dismissibly. A function rather than a string because auth can settle after
+   * the mount, and because the return URL should be the page as it is at the
+   * solve, not as it was when the player opened.
+   */
+  guestSignInHref?: () => string | undefined;
+  /**
    * Site navigation to keep above the player. The mount replaces the root's
    * children, so a caller that built a nav there first would otherwise have it
    * silently wiped -- which is what happened, leaving the page with no way back
@@ -275,6 +284,22 @@ export function mountXiangqiPractice(
   controls.append(hintBtn, retryBtn, restartBtn, nextBtn);
   coach.append(coachStrip, bubble);
   coach.append(controls);
+  // Guest only, after a solve: the progress they just made is not kept.
+  const savePrompt = document.createElement('p');
+  savePrompt.className = 'practice__save-prompt';
+  savePrompt.hidden = true;
+  const savePromptLink = document.createElement('a');
+  savePromptLink.className = 'practice__save-prompt-link';
+  savePromptLink.textContent = t('practice.signInToKeep');
+  const savePromptClose = button('\u00d7', 'practice__save-prompt-close');
+  savePromptClose.setAttribute('aria-label', t('practice.signInDismiss'));
+  savePromptClose.title = t('practice.signInDismiss');
+  savePromptClose.addEventListener('click', () => {
+    dismissPracticeSavePrompt();
+    savePrompt.hidden = true;
+  });
+  savePrompt.append(savePromptLink, savePromptClose);
+  coach.append(savePrompt);
   side.append(coach);
   wrap.append(side);
 
@@ -411,6 +436,13 @@ export function mountXiangqiPractice(
       reportedSolved = true;
       playSound('level-end');
       opts.onSolved?.(view.movesPlayed);
+      // Decided once, at the first solve of this exercise: a guest who signs in
+      // in another tab still sees it here, which is harmless and self-correcting.
+      const href = practiceSavePromptDismissed() ? undefined : opts.guestSignInHref?.();
+      if (href) {
+        savePromptLink.href = href;
+        savePrompt.hidden = false;
+      }
     }
     // On the TRANSITION into failed, so a re-render of the same failed state
     // (asking for a hint, say) does not count as a second failure.
@@ -506,6 +538,26 @@ export function mountXiangqiPractice(
       root.replaceChildren();
     },
   };
+}
+
+// Per browser tab, like the visit it belongs to: a dismissed prompt stays
+// dismissed across this session's exercises and comes back on a later visit.
+const SAVE_PROMPT_DISMISSED_KEY = 'mb_practice_save_prompt_dismissed';
+
+export function practiceSavePromptDismissed(): boolean {
+  try {
+    return window.sessionStorage.getItem(SAVE_PROMPT_DISMISSED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function dismissPracticeSavePrompt(): void {
+  try {
+    window.sessionStorage.setItem(SAVE_PROMPT_DISMISSED_KEY, '1');
+  } catch {
+    // Storage unavailable: the prompt still hides for this exercise.
+  }
 }
 
 function button(label: string, className: string): HTMLButtonElement {
