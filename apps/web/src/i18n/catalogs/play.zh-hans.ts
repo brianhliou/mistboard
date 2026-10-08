@@ -328,7 +328,6 @@ export const ZH_HANS_PLAY = {
   'correspondence.register': '注册账号',
   'correspondence.signInToAccept': '登录后接受',
   'correspondence.playYourMove': '去走棋',
-  'correspondence.updatedAgo': '{ago}更新',
   'correspondence.dueAt': '{when} 到期',
   'correspondence.fogNote': '进入对局查看你这一方的视野',
   'correspondence.noGamesYet': '还没有对局。发布或接受一个求战，对局就会出现在这里。',

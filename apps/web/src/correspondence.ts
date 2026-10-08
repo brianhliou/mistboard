@@ -79,7 +79,6 @@ import { currentLocale, LOCALE_META, localizedHref } from './i18n/locale.js';
 import type { DarkXiangqiWireView } from './live-dark-xiangqi.js';
 import { appendWithNameNode, playerNameEl, profileTargetFor } from './profile-link.js';
 import { isCorrespondenceRatedModeEnabled, onRatedModeChange } from './rated-flag.js';
-import { timeAgo } from './relative-time.js';
 import type { ReplayHandle } from './replay.js';
 import { buildSeekCard } from './seek-card.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
@@ -350,26 +349,12 @@ export function buildInboxCard(
   meta.append(chip, text);
   card.append(meta);
 
-  // When the position last changed (the feed's newest event; the payload has no
-  // move text to name), and on your move, when the move is due.
-  const when: string[] = [];
-  if (current?.lastActivityAt) {
-    when.push(
-      t('correspondence.updatedAgo', {
-        ago: timeAgo(new Date(current.lastActivityAt).toISOString(), 'narrow'),
-      }),
-    );
-  }
-  if (yourMove) {
-    const due = formatDue(game.dueAt);
-    if (due) when.push(t('correspondence.dueAt', { when: due }));
-  }
-  if (when.length > 0) {
-    const line = document.createElement('p');
-    line.className = 'correspondence-card-when';
-    line.textContent = when.join(' · ');
-    card.append(line);
-  }
+  // The badge and its bar are the card's one clock. The exact due time rides on
+  // the badge as a tooltip rather than a second line under the meta: a dated
+  // "due" line plus an "Updated" time (any event, not the last move) read as
+  // three competing clocks (Brian, 2026-10-08).
+  const due = formatDue(game.dueAt);
+  if (due) onMove.clock.title = t('correspondence.dueAt', { when: due });
 
   if (yourMove) {
     const play = document.createElement('a');

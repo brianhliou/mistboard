@@ -328,7 +328,6 @@ export const ZH_HANT_PLAY = {
   'correspondence.register': '註冊帳號',
   'correspondence.signInToAccept': '登入後接受',
   'correspondence.playYourMove': '去走棋',
-  'correspondence.updatedAgo': '{ago}更新',
   'correspondence.dueAt': '{when} 到期',
   'correspondence.fogNote': '進入對局查看你這一方的視野',
   'correspondence.noGamesYet': '還沒有對局。發布或接受一個求戰，對局就會出現在這裡。',

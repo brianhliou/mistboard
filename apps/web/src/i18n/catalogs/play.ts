@@ -267,7 +267,6 @@ export const EN_PLAY = {
   'correspondence.register': 'Create an account',
   'correspondence.signInToAccept': 'Sign in to accept',
   'correspondence.playYourMove': 'Play your move',
-  'correspondence.updatedAgo': 'Updated {ago}',
   'correspondence.dueAt': 'due {when}',
   'correspondence.fogNote': 'Open the game to see your side of the fog',
   'correspondence.noGamesYet': 'No games yet. Post a seek or accept one, and it shows up here.',

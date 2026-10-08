@@ -64,6 +64,26 @@ describe('correspondence inbox card', () => {
     expect(card.querySelector('.correspondence-card-play')).toBeNull();
   });
 
+  // The badge and its bar already say how long is left; a second line restating
+  // the deadline as a date (and an "Updated" time that is any event, not the
+  // last move) read as three competing clocks. The exact due time is the
+  // badge's tooltip instead.
+  it('tells the deadline once: the badge, with the due time as its tooltip', () => {
+    for (const yourMove of [true, false]) {
+      const card = buildInboxCard(
+        pageCtx(),
+        { ...game, mySeat: yourMove ? 'red' : 'black', isYourMove: yourMove },
+        undefined,
+        yourMove,
+      );
+      expect(card.querySelector('.correspondence-card-when')).toBeNull();
+      const clock = [...card.querySelectorAll<HTMLElement>('.current-game-seat-clock')].find(
+        (el) => !el.hidden,
+      );
+      expect(clock?.title).toMatch(/^due /);
+    }
+  });
+
   it('marks a deadline under a day away as urgent', () => {
     const card = buildInboxCard(
       pageCtx(),

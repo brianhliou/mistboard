@@ -130,12 +130,6 @@
   color: var(--site-muted);
 }
 
-.correspondence-card-when {
-  margin: -2px 0 0;
-  font-size: 0.75rem;
-  color: var(--site-muted);
-}
-
 /* Play your move sits above the card-wide link, like the seat's profile link. */
 .correspondence-card-play {
   position: relative;
