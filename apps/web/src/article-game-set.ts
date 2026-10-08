@@ -51,6 +51,8 @@ export type StepGameSetRecord = {
   start?: string;
   /** The no-capture clock the game was played under. */
   clock?: number;
+  /** Black moved first: the score sheet opens in Black's column. */
+  firstMover?: 'black';
 };
 
 export type StepGameSet = {
@@ -62,6 +64,9 @@ export type StepGameSet = {
   replay?: (record: StepGameSetRecord) => GameSetBoard[];
   /** The record the card opens on; default the first. */
   open?: string;
+  /** Squares to ring on position `index` (a variant whose moves change pieces
+   *  they do not land on marks them here). */
+  marks?: (record: StepGameSetRecord, index: number) => readonly XiangqiSquare[];
 };
 
 export type StepGameSetModule = { GAME_SET: StepGameSet };
@@ -182,6 +187,7 @@ export function mountStepGameSet(
       count: moves.length + 1,
       paint(board, index, from) {
         const last = index ? moves[index - 1]! : null;
+        const marks = set.marks?.(record, index) ?? [];
         board.innerHTML = xqSvg(
           XQ_BOARD_W,
           // The board alone, no label band above it: the card's seat rows frame it.
@@ -193,6 +199,7 @@ export function mountStepGameSet(
             label: '',
             perspective,
             arrows: last ? [{ from: last.from, to: last.to }] : undefined,
+            dots: marks.length ? marks.map((square) => ({ square, capture: true })) : undefined,
             veteranSoldiers: record.veteran === true,
           }),
         );
@@ -203,7 +210,8 @@ export function mountStepGameSet(
         }
       },
       moves: moves.map((m, i) => ({ label: san?.[i] ?? `${m.from}-${m.to}` })),
-      intro: copy.intro,
+      ...(record.firstMover === 'black' ? { firstMover: 'b' as const } : {}),
+      intro: record.firstMover === 'black' ? copy.introSecond : copy.intro,
       seats: {
         first: { name: `${T(record.red)}${copy.firstRole}`, ink: 'red' },
         second: { name: `${T(record.black)}${copy.secondRole}`, ink: 'black' },

@@ -32,6 +32,7 @@ import { jieqiOpeningsArticle } from './articles/content/jieqi-openings.js';
 import { khaiCuocCoUpArticle } from './articles/content/khai-cuoc-co-up.js';
 import { darkXiangqiArticle } from './articles/content/dark-xiangqi.js';
 import { antiXiangqiArticle } from './articles/content/anti-xiangqi.js';
+import { benedictXiangqiArticle } from './articles/content/benedict-xiangqi.js';
 import { hordeXiangqiArticle } from './articles/content/horde-xiangqi.js';
 import { atomicXiangqiArticle } from './articles/content/atomic-xiangqi.js';
 import { atomicXiangqiBuildArticle } from './articles/content/atomic-xiangqi-build.js';
@@ -100,6 +101,7 @@ export const articles: Article[] = [
   atomicXiangqiBuildArticle,
   crazyhouseXiangqiArticle,
   antiXiangqiArticle,
+  benedictXiangqiArticle,
   hordeXiangqiArticle,
   serverEnforcedFogArticle,
   shogi4Article,

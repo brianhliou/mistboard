@@ -60,6 +60,9 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      // The Benedict Xiangqi design study, 2026-10-08, leads its date-mate on
+      // the tie order.
+      '/blog/benedict-xiangqi',
       // The xiangqi endgames page (象棋残局), 2026-10-08.
       '/blog/xiangqi-endgames',
       // How the duck widens xiangqi's game tree, 2026-10-07.
@@ -284,6 +287,7 @@ describe('article public listing gates', () => {
     // (blog/concept) article without a homeRow appears, newest first, with no
     // curated list. Deep dives have their own row (next test).
     expect(hrefs).toEqual([
+      '/blog/benedict-xiangqi',
       '/blog/xiangqi-endgames',
       '/blog/duck-xiangqi-game-tree',
       '/blog/solver-audit',

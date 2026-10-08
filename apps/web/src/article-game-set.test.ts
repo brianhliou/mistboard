@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { ANTI_GAME_SET_STRINGS } from './anti-xiangqi-article-diagrams.js';
 import {
+  type GameSetBoard,
   type GameSetText,
   gameSetLine,
   gameSetText,
+  mountStepGameSet,
   type StepGameSet,
+  type StepGameSetRecord,
   splitGameSetMove,
 } from './article-game-set.js';
 import { HORDE_GAME_SET_STRINGS } from './horde-xiangqi-article-diagrams.js';
@@ -70,4 +73,70 @@ describe('article game set', () => {
     expect(GAME_SET.records.filter((r) => r.veteran)).toHaveLength(28);
     // About 10 s: every ply resolves against the kernel's legal moves.
   }, 60_000);
+});
+
+describe('mounted game set', () => {
+  const start: GameSetBoard = {
+    e1: { color: 'red', role: 'general' },
+    a1: { color: 'red', role: 'chariot' },
+    e10: { color: 'black', role: 'general' },
+    a10: { color: 'black', role: 'chariot' },
+  };
+  const text = (k: string): GameSetText => ({ k, a: [] });
+  const record: StepGameSetRecord = {
+    id: 'black-first',
+    group: text('group'),
+    label: text('label'),
+    result: text('result'),
+    verdict: text('verdict'),
+    red: text('red'),
+    black: text('black'),
+    moves: 'a10a9 a1a2 a9a8',
+    firstMover: 'black',
+  };
+  const rings = (host: HTMLElement) => host.querySelectorAll('circle[r="16"]').length;
+
+  it('rings the marked squares and opens a Black-first game in the second column', () => {
+    const indices: number[] = [];
+    const host = document.createElement('div');
+    document.body.append(host);
+    const controller = mountStepGameSet(
+      host,
+      {
+        records: [record],
+        start,
+        marks: (_, index) => {
+          indices.push(index);
+          return ['e10'];
+        },
+      },
+      { strings: {} },
+    );
+    expect(indices.length).toBeGreaterThan(0);
+    expect(rings(host)).toBe(1);
+    const firstRow = host.querySelector('.review-move-list__row');
+    const cells = firstRow?.querySelectorAll('.review-move-list__move') ?? [];
+    expect(cells[0]?.classList.contains('review-move-list__move--gap')).toBe(true);
+    expect(cells[1]?.textContent).toContain('a10-a9');
+    expect(host.textContent).toContain('Black moves first.');
+    expect(host.textContent).not.toContain('Red moves first.');
+    controller.destroy();
+    host.remove();
+  });
+
+  it("paints no rings and opens in Red's column without marks or firstMover", () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    const redFirst = { ...record, id: 'red-first', moves: 'a1a2 a10a9', firstMover: undefined };
+    const controller = mountStepGameSet(host, { records: [redFirst], start }, { strings: {} });
+    expect(rings(host)).toBe(0);
+    const cells =
+      host.querySelector('.review-move-list__row')?.querySelectorAll('.review-move-list__move') ??
+      [];
+    expect(cells[0]?.classList.contains('review-move-list__move--gap')).toBe(false);
+    expect(cells[0]?.textContent).toContain('a1-a2');
+    expect(host.textContent).toContain('Red moves first.');
+    controller.destroy();
+    host.remove();
+  });
 });

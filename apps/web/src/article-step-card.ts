@@ -50,6 +50,8 @@ export type StepCardGame = {
   result?: string;
   /** Open on this position; default 0. */
   start?: number;
+  /** The second seat moved first: the sheet opens in its column. */
+  firstMover?: 'a' | 'b';
 };
 
 export type StepCardOptions = {
@@ -253,7 +255,7 @@ export function createStepCard(options: StepCardOptions, initial: StepCardGame):
         label: m.label,
         ...(m.note ? { note: m.note } : {}),
       }));
-      moveList = createMoveList(entries);
+      moveList = createMoveList(entries, game.firstMover ? { firstMover: game.firstMover } : {});
       if (game.intro) {
         const intro = document.createElement('li');
         intro.className = 'article-step-card-intro';
