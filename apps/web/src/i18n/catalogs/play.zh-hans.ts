@@ -472,6 +472,8 @@ export const ZH_HANS_PLAY = {
   'live.revealOdds.anyPiece': '任一{color}暗子',
   'live.revealOdds.faceDownCount': '{count} 枚暗子',
   'live.revealOdds.couldBe': '{count} 枚暗子可能是：',
+  'live.revealOdds.lost': '失子',
+  'live.revealOdds.lostUnseen': '{count} 枚未知',
   'live.duckPlaceTitle': '现在放置鸭子',
   'live.duckPlaceBody': '任一空位皆可。放好鸭子之前，你的着法不会发出。',
   'live.duckPlaceChip': '放鸭子',

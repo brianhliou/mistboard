@@ -3,10 +3,12 @@ import { describe, expect, it } from 'vitest';
 import { jieqiRevealOdds, type RevealOddsSide } from './jieqi-reveal-odds.js';
 import {
   chanceText,
+  liveRevealOddsVariantFrom,
   mountRevealOdds,
   oddsToShow,
   type PieceGlyph,
   type RevealOddsInput,
+  renderArmyBlock,
   renderOddsTable,
   renderPoolRow,
   renderPopover,
@@ -17,7 +19,8 @@ import {
 // note only where it applies, and that nothing renders once there is nothing
 // left to reveal.
 
-const glyph: PieceGlyph = ({ color, role }) => `<svg data-glyph="${color}-${role}"></svg>`;
+const glyph: PieceGlyph = ({ color, role, faceDown }) =>
+  `<svg data-glyph="${color}-${faceDown ? 'back' : role}"></svg>`;
 
 // Red as red sees it after black took two of red's face-down pieces unseen:
 // 13 face-down on the board, 15 identities still unseen.
@@ -239,5 +242,109 @@ describe('reveal odds visibility', () => {
     expect(table?.querySelectorAll('tbody tr')).toHaveLength(6);
     mount.render({ ...input(null), view: { ...startView(), status: { type: 'finished' } } });
     expect(table?.hidden).toBe(true);
+  });
+});
+
+describe('reveal odds by army (d)', () => {
+  // Red's losses as red sees them: a horse taken face-up (known), two taken
+  // face-down by black (unseen); black lost a soldier to red.
+  const captured = [
+    { owner: 'red' as const, role: null },
+    { owner: 'black' as const, role: 'soldier' as const },
+    { owner: 'red' as const, role: 'horse' as const },
+    { owner: 'red' as const, role: null },
+  ];
+
+  it('reads ?revealOdds=army (or d) and leaves a|b|c to the counting module', () => {
+    expect(liveRevealOddsVariantFrom('?revealOdds=army')).toBe('d');
+    expect(liveRevealOddsVariantFrom('?revealOdds=d')).toBe('d');
+    expect(liveRevealOddsVariantFrom('?revealOdds=b')).toBe('b');
+    expect(liveRevealOddsVariantFrom('?revealOdds=zzz')).toBe('a');
+    expect(liveRevealOddsVariantFrom('')).toBe('a');
+  });
+
+  it('puts one ink in a block: its could-be row, then only its own losses, unseen ones last', () => {
+    const host = document.createElement('div');
+    renderArmyBlock(host, 'red', redUncertain, captured, glyph);
+    expect(host.dataset.ink).toBe('red');
+    const [pool, lost] = [...host.children] as HTMLElement[];
+    expect(pool.classList.contains('reveal-odds-army__pool')).toBe(true);
+    expect(pool.querySelectorAll('.reveal-odds-chip__pct')).toHaveLength(6);
+    // The pill is gone: the unseen losses live on the lost line instead.
+    expect(host.querySelector('.reveal-odds-row__note')).toBeNull();
+    expect(lost.querySelector('.reveal-odds-army__label')?.textContent).toBe('Lost');
+    const pieces = [...lost.querySelectorAll<HTMLElement>('.reveal-odds-army__piece')];
+    expect(pieces.map((p) => [p.dataset.role, p.dataset.count])).toEqual([
+      ['horse', '1'],
+      ['unseen', '2'],
+    ]);
+    expect(pieces[0].innerHTML).toContain('data-glyph="red-horse"');
+    expect(pieces[1].innerHTML).toContain('data-glyph="red-back"');
+    expect(pieces[1].querySelector('.captures-count-badge')?.textContent).toBe('2');
+    expect(lost.querySelector('.reveal-odds-army__unseen')?.textContent).toBe('2 unseen');
+    expect(lost.getAttribute('aria-label')).toBe('Lost: Horse, 2 unseen');
+    expect(host.innerHTML).not.toContain('black-');
+  });
+
+  it("the opponent's block lists what the viewer took, face-up, with no unseen note", () => {
+    const host = document.createElement('div');
+    renderArmyBlock(host, 'black', blackExact, captured, glyph);
+    const lost = host.querySelector<HTMLElement>('.reveal-odds-army__lost');
+    expect(lost?.getAttribute('aria-label')).toBe('Lost: Soldier');
+    expect(lost?.querySelector('.reveal-odds-army__unseen')).toBeNull();
+    expect(host.querySelector<HTMLElement>('.reveal-odds-chip')?.dataset.ink).toBe('black');
+  });
+
+  it('keeps both bands but draws nothing when a side has no odds and no losses', () => {
+    const host = document.createElement('div');
+    renderArmyBlock(host, 'black', null, [], glyph);
+    const [pool, lost] = [...host.children] as HTMLElement[];
+    expect(pool.childElementCount).toBe(0);
+    expect(lost.childElementCount).toBe(0);
+  });
+
+  function layout() {
+    const console = document.createElement('div');
+    const capturesTop = document.createElement('div');
+    const capturesBottom = document.createElement('div');
+    console.append(capturesTop, capturesBottom);
+    const board = document.createElement('div');
+    const gameInfo = document.createElement('div');
+    document.body.append(console, board, gameInfo);
+    return { console, slots: { capturesTop, capturesBottom, board, gameInfo } };
+  }
+
+  it('mounts one block per side, hides the seat trays, and gives them back on a remount', () => {
+    const { console, slots } = layout();
+    const mount = mountRevealOdds(slots, 'd', () => glyph);
+    expect(mount.variant).toBe('d');
+    expect(slots.capturesTop.dataset.revealOddsArmy).toBe('hidden');
+    expect(slots.capturesBottom.dataset.revealOddsArmy).toBe('hidden');
+    const [top, , , bottom] = [...console.children] as HTMLElement[];
+    expect(top.className).toContain('reveal-odds-row--d');
+    const view = { ...startView(), captured };
+    mount.render({ view, orientation: 'red', seat: 'red' });
+    expect(top.dataset.ink).toBe('black');
+    expect(bottom.dataset.ink).toBe('red');
+    expect(top.querySelector('.reveal-odds-army__lost')?.getAttribute('aria-label')).toBe(
+      'Lost: Soldier',
+    );
+    expect(bottom.querySelector('.reveal-odds-army__unseen')?.textContent).toBe('2 unseen');
+    // After the game the odds go, the losses stay (the trays they replace did).
+    mount.render({
+      view: { ...view, status: { type: 'finished' } },
+      orientation: 'red',
+      seat: 'red',
+    });
+    expect(console.querySelectorAll('.reveal-odds-chip')).toHaveLength(0);
+    expect(console.querySelectorAll('.reveal-odds-army__piece')).toHaveLength(3);
+    // A spectator flipped to black: black's block at the bottom, red's on top.
+    mount.render({ view, orientation: 'black', seat: null });
+    expect(top.dataset.ink).toBe('red');
+    expect(bottom.dataset.ink).toBe('black');
+
+    mountRevealOdds(slots, 'a', () => glyph);
+    expect(slots.capturesTop.dataset.revealOddsArmy).toBeUndefined();
+    expect(console.querySelectorAll('[data-reveal-odds]')).toHaveLength(2);
   });
 });

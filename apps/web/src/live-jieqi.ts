@@ -24,7 +24,6 @@ import type {
 } from '@mistboard/game';
 import './live-xiangqi.css';
 import { jieqiEnabled } from './feature-flags.js';
-import { revealOddsVariantFrom } from './jieqi-reveal-odds.js';
 import { finishBadgesForResult, generalSquareOn } from './live-finish-badges.js';
 import { jieqiClickResult } from './live-jieqi-interaction.js';
 import {
@@ -35,7 +34,11 @@ import {
   renderJieqiBoardSvg,
 } from './live-jieqi-render.js';
 import { rebuildFinishedJieqiHistory } from './live-jieqi-replay-history.js';
-import { mountRevealOdds, type RevealOddsMount } from './live-jieqi-reveal-odds.js';
+import {
+  liveRevealOddsVariantFrom,
+  mountRevealOdds,
+  type RevealOddsMount,
+} from './live-jieqi-reveal-odds.js';
 import {
   maybePlayJieqiSnapshotSound,
   resetJieqiSoundState,
@@ -200,10 +203,19 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
     core = ctx;
     installJieqiBoardStyles();
     installJieqiBoardInteraction(ctx.refs);
-    revealOdds = mountRevealOdds(ctx.refs, revealOddsVariantFrom(window.location.search), () => {
-      const pieceSet = readStoredXiangqiPieceSet();
-      return (entry) => renderXiangqiPieceGlyphed(entry, pieceSet, { ariaLabel: '' });
-    });
+    revealOdds = mountRevealOdds(
+      ctx.refs,
+      liveRevealOddsVariantFrom(window.location.search),
+      () => {
+        const pieceSet = readStoredXiangqiPieceSet();
+        return ({ color, role, faceDown }) =>
+          renderXiangqiPieceGlyphed(
+            { color, role },
+            pieceSet,
+            faceDown ? { ariaLabel: '', shrouded: true, shroudedStyle: 'back' } : { ariaLabel: '' },
+          );
+      },
+    );
     // Hot-reload the viewer's xiangqi piece set mid-game (board + captured pool
     // render from the stored set); mirrors the chess family's appearance hook.
     window.addEventListener(xiangqiAppearanceChangedEvent, ctx.renderAll);

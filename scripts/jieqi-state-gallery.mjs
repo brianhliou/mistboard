@@ -20,9 +20,9 @@
 // shot seat's token (localStorage key mistboard.seatToken.<roomId>, value
 // {"seat","token"}) to open a room by hand. Flags: --states a,c,f (subset),
 // --no-shots (rooms and manifest only), --api (default: web port + 1),
-// --reveal-odds a|b|c (open the room with ?revealOdds=, the live reveal-odds UI
-// variant; a and c always show their numbers, b opens one face-down piece's
-// popover),
+// --reveal-odds a|b|c|army (open the room with ?revealOdds=, the live
+// reveal-odds UI variant; a, c and army always show their numbers, b opens one
+// face-down piece's popover),
 // --mobile f,g (also shoot these states at 390 px).
 //
 // Side-by-side page from finished runs (no dev pair needed):
@@ -86,8 +86,8 @@ function parseArgs(argv) {
     else if (arg === '--no-shots') options.shots = false;
     else if (arg === '--reveal-odds') {
       options.revealOdds = next();
-      if (!['a', 'b', 'c'].includes(options.revealOdds)) {
-        throw new Error(`--reveal-odds wants a, b or c, got ${options.revealOdds}`);
+      if (!['a', 'b', 'c', 'army'].includes(options.revealOdds)) {
+        throw new Error(`--reveal-odds wants a, b, c or army, got ${options.revealOdds}`);
       }
     } else if (arg === '--mobile')
       options.mobile = next()
@@ -237,6 +237,12 @@ function readPage() {
         (el) => el.getAttribute('aria-label'),
       ),
       notes: [...document.querySelectorAll('.reveal-odds-row__note')].map(text),
+      lost: [
+        ...document.querySelectorAll('.reveal-odds-row [aria-label].reveal-odds-army__lost'),
+      ].map(
+        (el) =>
+          `${el.closest('.reveal-odds-row--top') ? 'top' : 'bottom'}: ${el.getAttribute('aria-label')}`,
+      ),
       popover: text(document.querySelector('.reveal-odds-pop:not([hidden])')),
       table: [...document.querySelectorAll('.reveal-odds-table__grid tr')].map(text),
     },
@@ -333,6 +339,7 @@ function factsFor(state, result, readout) {
       if (odds.top.length) facts.push(`Page odds, top row: ${odds.top.join('; ')}.`);
       if (odds.bottom.length) facts.push(`Page odds, bottom row: ${odds.bottom.join('; ')}.`);
       if (odds.popover) facts.push(`Popover: ${odds.popover}.`);
+      if (odds.lost?.length) facts.push(`Lost lines: ${odds.lost.join('; ')}.`);
       if (odds.table.length) facts.push(`Table: ${odds.table.join(' | ')}.`);
     }
     if (readout.boardTop !== undefined) {

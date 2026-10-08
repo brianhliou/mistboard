@@ -1,5 +1,5 @@
 // The live jieqi room's reveal odds (jieqi-reveal-odds.ts has the counting and
-// why it is exact). Three UI variants behind `?revealOdds=a|b|c`, for a pick:
+// why it is exact). Four UI variants behind `?revealOdds=a|b|c|army`, for a pick:
 //
 //   a. (the default) a labelled pool row beside each seat's captured tray:
 //      "N face-down could be:", then a piece icon per unseen role with its
@@ -8,7 +8,14 @@
 //   b. hover or tap any face-down piece on the board for a popover with its
 //      side's odds, plus a slim pool row (glyphs and counts only);
 //   c. a table in the game-info rail (below the board on a phone): one row per
-//      piece type, one column per side, percent and count in each cell.
+//      piece type, one column per side, percent and count in each cell;
+//   d. (`?revealOdds=army`) a's row, grouped by army: each side of the clock
+//      describes ONE ink. The block holds that ink's "could be" row and, under
+//      it, a dimmed "Lost" line of that ink's captured pieces: face-up where the
+//      viewer knows them, the board's face-down back where they do not (with
+//      "N unseen" beside them, the slots the odds' denominator counts). The
+//      seat trays are hidden, since the blocks carry the same pieces (in a, b
+//      and c each tray shows the OTHER army: the pieces that seat captured).
 //
 // Every number comes from the DISPLAYED view only (the seat's own PlayerView,
 // or the spectator's public view), so the aid can never know more than the
@@ -24,6 +31,7 @@ import {
   type RevealOddsSide,
   type RevealOddsVariant,
   type RevealOddsView,
+  revealOddsVariantFrom,
 } from './jieqi-reveal-odds.js';
 import './live-jieqi-reveal-odds.css';
 import { countBadge } from './review/captured-pool.js';
@@ -44,10 +52,24 @@ export type RevealOddsInput = {
   seat: JieqiColor | null;
 };
 
-export type PieceGlyph = (piece: { color: JieqiColor; role: JieqiPieceRole }) => string;
+/** `faceDown` asks for the board's face-down back (d's unseen losses). */
+export type PieceGlyph = (piece: {
+  color: JieqiColor;
+  role: JieqiPieceRole;
+  faceDown?: boolean;
+}) => string;
+
+/** The counting module's a|b|c plus d, the by-army layout (live only). */
+export type LiveRevealOddsVariant = RevealOddsVariant | 'd';
+
+/** `?revealOdds=army` (or `d`) is the by-army layout; the rest is a|b|c. */
+export function liveRevealOddsVariantFrom(search: string): LiveRevealOddsVariant {
+  const value = new URLSearchParams(search).get('revealOdds');
+  return value === 'army' || value === 'd' ? 'd' : revealOddsVariantFrom(search);
+}
 
 export type RevealOddsMount = {
-  variant: RevealOddsVariant;
+  variant: LiveRevealOddsVariant;
   render(input: RevealOddsInput): void;
 };
 
@@ -87,16 +109,17 @@ export function oddsToShow(view: RevealOddsInput['view']): RevealOdds | null {
 
 export function mountRevealOdds(
   slots: RevealOddsSlots,
-  variant: RevealOddsVariant,
+  variant: LiveRevealOddsVariant,
   glyph: () => PieceGlyph,
 ): RevealOddsMount {
   if (variant === 'c') return mountTable(slots, glyph);
+  if (variant === 'd') return mountArmy(slots, glyph);
   return mountRows(slots, variant, glyph);
 }
 
 // ── a / b: a pool row beside each seat's tray ───────────────────────────────
 
-function rowHost(position: 'top' | 'bottom', variant: RevealOddsVariant): HTMLDivElement {
+function rowHost(position: 'top' | 'bottom', variant: LiveRevealOddsVariant): HTMLDivElement {
   const host = document.createElement('div');
   host.className = `reveal-odds-row reveal-odds-row--${position} reveal-odds-row--${variant}`;
   host.dataset.revealOdds = position;
@@ -107,9 +130,15 @@ function rowHost(position: 'top' | 'bottom', variant: RevealOddsVariant): HTMLDi
 // of the top tray; the bottom row mirrors it. On a phone both rows are lines
 // below the board, the viewer's first, so the board keeps its place
 // (live-jieqi-reveal-odds.css).
-function insertRows(slots: RevealOddsSlots, variant: RevealOddsVariant) {
+function insertRows(slots: RevealOddsSlots, variant: LiveRevealOddsVariant) {
   const existing = slots.capturesTop.parentElement?.querySelectorAll('[data-reveal-odds]');
   for (const el of existing ?? []) el.remove();
+  // Only d hides the seat trays (its blocks carry the same pieces); a remount
+  // under another variant gives them back.
+  for (const tray of [slots.capturesTop, slots.capturesBottom]) {
+    if (variant === 'd') tray.dataset.revealOddsArmy = 'hidden';
+    else delete tray.dataset.revealOddsArmy;
+  }
   const top = rowHost('top', variant);
   const bottom = rowHost('bottom', variant);
   slots.capturesTop.before(top);
@@ -151,7 +180,7 @@ function mountRows(
 export function renderPoolRow(
   host: HTMLElement,
   side: RevealOddsSide | null,
-  options: { percent: boolean; glyph: PieceGlyph },
+  options: { percent: boolean; glyph: PieceGlyph; takenNote?: boolean },
 ): void {
   host.replaceChildren();
   if (!side || side.faceDown === 0) {
@@ -170,7 +199,7 @@ export function renderPoolRow(
     ? t('live.revealOdds.couldBe', { count: side.faceDown })
     : t('live.revealOdds.faceDownCount', { count: side.faceDown });
   let note: HTMLSpanElement | null = null;
-  if (side.takenUnseen > 0) {
+  if (side.takenUnseen > 0 && options.takenNote !== false) {
     note = document.createElement('span');
     note.className = 'reveal-odds-row__note';
     note.textContent = t('live.revealOdds.takenUnseen', { count: side.takenUnseen });
@@ -210,6 +239,104 @@ export function renderPoolRow(
     host.append(lead, pieces);
     if (note) host.append(note);
   }
+}
+
+// ── d: by army ──────────────────────────────────────────────────────────────
+
+function mountArmy(slots: RevealOddsSlots, glyph: () => PieceGlyph): RevealOddsMount {
+  const rows = insertRows(slots, 'd');
+  return {
+    variant: 'd',
+    render(input) {
+      const view = input.view;
+      const live = view !== null && Object.keys(view.board).length > 0;
+      const odds = oddsToShow(view);
+      const bottomInk = input.orientation;
+      const topInk: JieqiColor = bottomInk === 'red' ? 'black' : 'red';
+      const draw = glyph();
+      const captured = live ? view.captured : [];
+      renderArmyBlock(rows.top, topInk, odds?.[topInk] ?? null, captured, draw);
+      renderArmyBlock(rows.bottom, bottomInk, odds?.[bottomInk] ?? null, captured, draw);
+    },
+  };
+}
+
+/**
+ * One ink's block: its "could be" row (a's look, without the taken-unseen
+ * pill) over a dimmed "Lost" line of its captured pieces. The lost line shows
+ * after the game too (the trays it replaces always did); the pool row only
+ * while there is a face-down piece of this ink left to reveal.
+ */
+export function renderArmyBlock(
+  host: HTMLElement,
+  color: JieqiColor,
+  side: RevealOddsSide | null,
+  captured: readonly { owner: JieqiColor; role: JieqiPieceRole | null }[],
+  glyph: PieceGlyph,
+): void {
+  host.replaceChildren();
+  host.dataset.ink = color;
+  const pool = document.createElement('div');
+  pool.className = 'reveal-odds-army__pool reveal-odds-row--a';
+  renderPoolRow(pool, side, { percent: true, glyph, takenNote: false });
+  const lost = document.createElement('div');
+  lost.className = 'reveal-odds-army__lost';
+  renderLostLine(lost, color, captured, glyph);
+  host.append(pool, lost);
+}
+
+function renderLostLine(
+  host: HTMLElement,
+  color: JieqiColor,
+  captured: readonly { owner: JieqiColor; role: JieqiPieceRole | null }[],
+  glyph: PieceGlyph,
+): void {
+  const mine = captured.filter((entry) => entry.owner === color);
+  if (mine.length === 0) return;
+  // Known roles in the canonical pool order, then the unseen ones, so the
+  // backs sit last, beside their "N unseen".
+  const known = new Map<JieqiPieceRole, number>();
+  let unseen = 0;
+  for (const entry of mine) {
+    if (entry.role === null) unseen += 1;
+    else known.set(entry.role, (known.get(entry.role) ?? 0) + 1);
+  }
+  const label = document.createElement('span');
+  label.className = 'reveal-odds-army__label';
+  label.textContent = t('live.revealOdds.lost');
+  const pieces = document.createElement('span');
+  pieces.className = 'reveal-odds-army__pieces';
+  const spoken: string[] = [];
+  const piece = (role: JieqiPieceRole, count: number, faceDown: boolean): HTMLSpanElement => {
+    const disc = document.createElement('span');
+    disc.className = faceDown
+      ? 'reveal-odds-army__piece reveal-odds-army__piece--unseen'
+      : 'reveal-odds-army__piece';
+    disc.dataset.role = faceDown ? 'unseen' : role;
+    disc.dataset.count = String(count);
+    disc.setAttribute('aria-hidden', 'true');
+    disc.innerHTML = glyph({ color, role, faceDown });
+    if (count > 1) disc.append(countBadge(count));
+    return disc;
+  };
+  const roles = [...known.keys()].sort(
+    (a, b) => JIEQI_POOL_ROLE_ORDER.indexOf(a) - JIEQI_POOL_ROLE_ORDER.indexOf(b),
+  );
+  for (const role of roles) {
+    const count = known.get(role) ?? 0;
+    pieces.append(piece(role, count, false));
+    spoken.push(count > 1 ? `${roleName(role)} x${count}` : roleName(role));
+  }
+  host.append(label, pieces);
+  if (unseen > 0) {
+    pieces.append(piece('soldier', unseen, true));
+    const note = document.createElement('span');
+    note.className = 'reveal-odds-army__unseen';
+    note.textContent = t('live.revealOdds.lostUnseen', { count: unseen });
+    spoken.push(note.textContent);
+    host.append(note);
+  }
+  host.setAttribute('aria-label', `${t('live.revealOdds.lost')}: ${spoken.join(', ')}`);
 }
 
 // ── b: the popover over the board ───────────────────────────────────────────

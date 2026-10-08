@@ -130,6 +130,78 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ── d: by army ────────────────────────────────────────────────────────────
+   Each block is one ink: a's "could be" row, then a quieter "Lost" line of the
+   same ink's captured pieces, smaller and dimmed, so what may still be on the
+   board reads apart from what is gone. The unseen losses are the board's
+   face-down back, last on the line, beside "N unseen": they are the slots the
+   percentages above share. Both lines reserve their band. */
+.reveal-odds-row--d {
+  --reveal-lost: 28px;
+
+  display: grid;
+  grid-template-rows: auto auto;
+  row-gap: 4px;
+}
+
+.reveal-odds-army__lost {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: calc(var(--reveal-lost) + 2px);
+}
+
+.reveal-odds-army__label,
+.reveal-odds-army__unseen {
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  color: var(--site-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.reveal-odds-army__label {
+  min-width: 2.6em;
+  font-weight: 600;
+}
+
+.reveal-odds-army__pieces {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.reveal-odds-army__piece {
+  position: relative;
+  display: block;
+  width: var(--reveal-lost);
+  height: var(--reveal-lost);
+  line-height: 0;
+}
+
+.reveal-odds-army__piece svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0.65;
+}
+
+.reveal-odds-army__piece--unseen {
+  margin-left: 4px;
+}
+
+.reveal-odds-army__piece .captures-count-badge {
+  min-width: 12px;
+  height: 12px;
+  font-size: 9px;
+  right: -3px;
+  bottom: -3px;
+}
+
+/* d hides the seat trays: its blocks carry the same pieces, grouped by ink. */
+.live-review__cluster .game-console > .captures-strip[data-reveal-odds-army="hidden"] {
+  display: none;
+}
+
 /* ── b: the board popover ──────────────────────────────────────────────── */
 
 .reveal-odds-pop {
@@ -299,6 +371,19 @@
 
   .live-review__cluster .game-console > .reveal-odds-row--a {
     --reveal-chip: 30px;
+  }
+
+  .live-review__cluster .game-console > .reveal-odds-row--d {
+    --reveal-lost: 24px;
+  }
+
+  .live-review__cluster .game-console > .reveal-odds-row--d .reveal-odds-row--a {
+    --reveal-chip: 30px;
+  }
+
+  /* d: the second army block (the opponent's) starts a little apart. */
+  .live-review__cluster .game-console > .reveal-odds-row--d.reveal-odds-row--top {
+    margin-top: 6px;
   }
 
   .live-review__cluster .game-console > .reveal-odds-row--top {

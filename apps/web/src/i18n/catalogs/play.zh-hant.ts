@@ -472,6 +472,8 @@ export const ZH_HANT_PLAY = {
   'live.revealOdds.anyPiece': '任一{color}暗子',
   'live.revealOdds.faceDownCount': '{count} 枚暗子',
   'live.revealOdds.couldBe': '{count} 枚暗子可能是：',
+  'live.revealOdds.lost': '失子',
+  'live.revealOdds.lostUnseen': '{count} 枚未知',
   'live.duckPlaceTitle': '現在放置鴨子',
   'live.duckPlaceBody': '任一空位皆可。放好鴨子之前，你的著法不會送出。',
   'live.duckPlaceChip': '放鴨子',
