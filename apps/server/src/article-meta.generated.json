@@ -203,6 +203,12 @@
     "description": "Nhà vô địch cờ tướng thế giới đầu tiên không đến từ Trung Quốc, bất bại ở Thượng Hải và thắng trận chung kết khi cầm quân Đen. Hành trình lên ngôi và một năm sau đó, năm ván thắng trên bàn cờ, 38 ván được phân tích.",
     "status": "published"
   },
+  "longest-forced-mates-xiangqi": {
+    "title": "The Longest Forced Mates in Xiangqi",
+    "kind": "article",
+    "description": "A horse and a soldier beat a general with both advisors and both elephants, and the slowest win in that endgame takes 65 moves. Seven records from xiangqi endgame tablebases, with the lines, and five of them end with the loser having no legal move.",
+    "status": "published"
+  },
   "luat-co-up": {
     "title": "Luật cờ úp",
     "kind": "article",

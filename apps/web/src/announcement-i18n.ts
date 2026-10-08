@@ -35,6 +35,10 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-10-09 (longest forced mates) ── 困毙 / 半回合 / 研究 follow the longest-forced-mates-xiangqi article text.
+  'The longest forced mates in xiangqi, played out move by move.': '象棋最长的必胜杀局，逐着演示。',
+  'A horse and a soldier against a general with both advisors and both elephants takes 65 moves to mate with best play on both sides, the longest of seven records pulled from xiangqi endgame tablebases. Every line is a chapter in a study you can step through, and five of the seven end with the loser having no legal move rather than in checkmate.':
+    '马兵对士象全，双方都走最佳着法，要65回合才能成杀，这是从象棋残局库中找出的七项纪录里最长的一项。每一条着法都是研究中可以逐着演示的一章，七局中有五局以负方无着可走（困毙）告终，而不是将死。',
   // ── 2026-10-10 (batch 3 manuals) ── 书名沿用研究页的中文名。
   'Secrets of Strategy and the Dream of Divine Strategy are online.':
     '《韬略元机》与《梦入神机》已上线。',
@@ -464,6 +468,10 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-10-09 (longest forced mates) ── 困斃 / 半回合 / 研究 follow the longest-forced-mates-xiangqi article text.
+  'The longest forced mates in xiangqi, played out move by move.': '象棋最長的必勝殺局，逐著演示。',
+  'A horse and a soldier against a general with both advisors and both elephants takes 65 moves to mate with best play on both sides, the longest of seven records pulled from xiangqi endgame tablebases. Every line is a chapter in a study you can step through, and five of the seven end with the loser having no legal move rather than in checkmate.':
+    '馬兵對士象全，雙方都走最佳著法，要65回合才能成殺，這是從象棋殘局庫中找出的七項紀錄裡最長的一項。每一條著法都是研究中可以逐著演示的一章，七局中有五局以負方無著可走（困斃）告終，而不是將死。',
   // ── 2026-10-10 (batch 3 manuals) ── 書名沿用研究頁的中文名。
   'Secrets of Strategy and the Dream of Divine Strategy are online.':
     '《韜略元機》與《夢入神機》已上線。',

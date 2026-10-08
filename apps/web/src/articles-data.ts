@@ -58,6 +58,7 @@ import { xiangqiMatchFixingArticle } from './articles/content/xiangqi-match-fixi
 import { xiangqiWorldChampionshipArticle } from './articles/content/xiangqi-world-championship.js';
 import { xiangqiArticle } from './articles/content/xiangqi.js';
 import { xiangqiEndgamesArticle } from './articles/content/xiangqi-endgames.js';
+import { longestForcedMatesXiangqiArticle } from './articles/content/longest-forced-mates-xiangqi.js';
 import { yinShengArticle } from './articles/content/yin-sheng.js';
 import { caoYanleiArticle } from './articles/content/cao-yanlei.js';
 import { laiLyHuynhArticle } from './articles/content/lai-ly-huynh.js';
@@ -66,6 +67,7 @@ import { tonyFungGaZenArticle } from './articles/content/tony-fung-ga-zen.js';
 import articleSnapshotFog from './article-snapshot-fog.json' with { type: 'json' };
 
 export const articles: Article[] = [
+  longestForcedMatesXiangqiArticle,
   xiangqiEndgamesArticle,
   duckXiangqiGameTreeArticle,
   chariotCannonRepetitionKeyArticle,

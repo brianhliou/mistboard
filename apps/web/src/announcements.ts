@@ -53,6 +53,14 @@ const baseAnnouncements: Announcement[] = [
   {
     date: '2026-10-09',
     kind: 'article',
+    headline: 'The longest forced mates in xiangqi, played out move by move.',
+    body: 'A horse and a soldier against a general with both advisors and both elephants takes 65 moves to mate with best play on both sides, the longest of seven records pulled from xiangqi endgame tablebases. Every line is a chapter in a study you can step through, and five of the seven end with the loser having no legal move rather than in checkmate.',
+    href: '/blog/longest-forced-mates-xiangqi',
+    cta: 'Read the article',
+  },
+  {
+    date: '2026-10-09',
+    kind: 'article',
     headline: 'Xiangqi basic endgames: which material wins, which draws, and 46 to practice.',
     body: 'A reference table of 35 common xiangqi endgames, graded the way Chinese endgame manuals grade them, from certain win to certain draw, each checked against the chessdb.cn cloud database and shown on its own small board. The Practice page now has 46 endgames to play out against the computer, sorted by piece, wins first, then draws to hold, and the tablebase tells you when a move throws the result away. You can also set up any position in the board editor and play it out from there.',
     href: '/blog/xiangqi-endgames',
