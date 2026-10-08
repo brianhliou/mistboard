@@ -46,6 +46,7 @@ import {
   jieqiEngineVersion,
 } from './jieqi-engine.js';
 import type * as persistence from './persistence.js';
+import { isProductionLikeRuntime, type RuntimeEnv } from './server-policy.js';
 import {
   applyTenantEvent,
   replayTenantEvents,
@@ -94,6 +95,27 @@ function isJieqiMove(value: unknown): value is JieqiMove {
 const RNG_RANGE = 2 ** 31;
 function cryptoRng(): number {
   return randomInt(0, RNG_RANGE) / RNG_RANGE;
+}
+
+// Dev/test only: MISTBOARD_DEV_JIEQI_DEAL_SEED=<uint32> deals every new room
+// from one seeded shuffle, so scripts/jieqi-state-gallery.mjs can replay a
+// scripted game into the same positions run after run. Only the randomness
+// changes: the deal is still a server secret in room-created, stripped from
+// every client event, and each seat still sees only its PlayerView. Fail
+// closed: a production-like runtime ignores the variable and deals from crypto.
+export function jieqiDealRng(
+  env: RuntimeEnv & { MISTBOARD_DEV_JIEQI_DEAL_SEED?: string } = process.env,
+): () => number {
+  const raw = env.MISTBOARD_DEV_JIEQI_DEAL_SEED?.trim();
+  if (!raw || isProductionLikeRuntime(env)) return cryptoRng;
+  if (!/^\d{1,10}$/.test(raw) || Number(raw) > 0xffffffff) return cryptoRng;
+  let a = Number(raw) >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
 // Reconstruct a deal from the persisted room-created setup. createInitialJieqiState
@@ -230,7 +252,7 @@ export const jieqiTenant: JieqiTenant = {
       createInitialJieqiState(roomId, asJieqiDeal(setup), {
         repetition: enforcesRepetition(setup),
       }),
-    createSetup: (): JieqiSetup => ({ ...createJieqiDeal(cryptoRng), repetition: true }),
+    createSetup: (): JieqiSetup => ({ ...createJieqiDeal(jieqiDealRng()), repetition: true }),
     // Apply the move, then the xiangqi chasing rule: a threefold repetition one
     // side reached by checking on every one of its moves is a LOSS for that
     // side, not a draw (jieqi wins and losses follow xiangqi). The history the

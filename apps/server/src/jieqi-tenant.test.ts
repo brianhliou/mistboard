@@ -12,6 +12,7 @@ import { test } from 'node:test';
 import {
   applyJieqiMove,
   createInitialJieqiState,
+  createJieqiDeal,
   getJieqiLegalMoves,
   JIEQI_SPEC_ID,
   type JieqiMove,
@@ -22,6 +23,7 @@ import { JIEQI_DEFAULT_ENGINE_ID } from './jieqi-engine.js';
 import {
   getJieqiClientView,
   jieqiClientEventFor,
+  jieqiDealRng,
   jieqiLiveCheckMarks,
   jieqiTenant,
 } from './jieqi-tenant.js';
@@ -41,6 +43,36 @@ test('jieqi room creation mints and persists a server-secret deal', () => {
   assert.ok(setup, 'room-created carries the deal');
   assert.equal(setup.red.length, 15);
   assert.equal(setup.black.length, 15);
+});
+
+// The dev deal seed (scripts/jieqi-state-gallery.mjs) pins the deal on a dev
+// pair only. Production-like runtimes must keep the crypto deal whatever the
+// environment says, or the deal of every live game becomes guessable.
+test('MISTBOARD_DEV_JIEQI_DEAL_SEED pins the deal on a dev runtime only', () => {
+  const dealWith = (env: Record<string, string | undefined>) =>
+    JSON.stringify(createJieqiDeal(jieqiDealRng(env)));
+  const seeded = { MISTBOARD_DEV_JIEQI_DEAL_SEED: '7' };
+  assert.equal(dealWith(seeded), dealWith(seeded), 'same seed, same deal');
+  assert.notEqual(dealWith(seeded), dealWith({ MISTBOARD_DEV_JIEQI_DEAL_SEED: '8' }));
+
+  for (const prodLike of [
+    { NODE_ENV: 'production' },
+    { RAILWAY_ENVIRONMENT: 'production' },
+    { RAILWAY_ENVIRONMENT_NAME: 'production' },
+    { RAILWAY_SERVICE_NAME: 'web' },
+  ]) {
+    const env = { ...seeded, ...prodLike };
+    // Crypto deals: three in a row never all match the seeded one.
+    const deals = [dealWith(env), dealWith(env), dealWith(env)];
+    assert.ok(
+      deals.some((deal) => deal !== dealWith(seeded)) && new Set(deals).size > 1,
+      `seed ignored under ${JSON.stringify(prodLike)}`,
+    );
+  }
+  for (const bad of ['', ' ', 'abc', '-1', '1.5', '4294967296', '99999999999']) {
+    const deals = new Set([1, 2, 3].map(() => dealWith({ MISTBOARD_DEV_JIEQI_DEAL_SEED: bad })));
+    assert.ok(deals.size > 1, `malformed seed "${bad}" falls back to crypto`);
+  }
 });
 
 test('the deal is stripped from room-created before any client sees it', () => {
