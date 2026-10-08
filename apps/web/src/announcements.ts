@@ -43,6 +43,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-10-10',
+    kind: 'release',
+    headline: 'Secrets of Strategy and the Dream of Divine Strategy are online.',
+    body: "Secrets of Strategy, a Qing manual in two volumes (159 full games and 176 compositions), and the Dream of Divine Strategy, a Ming book usually counted among the earliest xiangqi manuals that survive, join the shelf with three smaller collections of folk endgames (the Lakeshore Collection, the Plantain and Bamboo Studio Manual, and Masterpieces from the Plantain Window, 1879) and the endgame half of Secret in the Tangerine (1632). Six hundred and eighty-two more problems and games, each on its own board with the book's line played out as the mainline and the original title kept beside the English one. Positions come from dpxq.com and are credited on every chapter.",
+    href: '/study',
+    cta: 'Open the studies',
+  },
+  {
     date: '2026-10-09',
     kind: 'article',
     headline: 'Xiangqi basic endgames: which material wins, which draws, and 46 to practice.',

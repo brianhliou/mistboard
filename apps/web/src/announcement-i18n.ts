@@ -35,6 +35,11 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-10-10 (batch 3 manuals) ── 书名沿用研究页的中文名。
+  'Secrets of Strategy and the Dream of Divine Strategy are online.':
+    '《韬略元机》与《梦入神机》已上线。',
+  "Secrets of Strategy, a Qing manual in two volumes (159 full games and 176 compositions), and the Dream of Divine Strategy, a Ming book usually counted among the earliest xiangqi manuals that survive, join the shelf with three smaller collections of folk endgames (the Lakeshore Collection, the Plantain and Bamboo Studio Manual, and Masterpieces from the Plantain Window, 1879) and the endgame half of Secret in the Tangerine (1632). Six hundred and eighty-two more problems and games, each on its own board with the book's line played out as the mainline and the original title kept beside the English one. Positions come from dpxq.com and are credited on every chapter.":
+    '清代的《韬略元机》分两卷（一百五十九局全局与一百七十六局残局），明代的《梦入神机》一般认为是现存最早的象棋古谱之一，二者一同上架；同时上线的还有三部江湖残局集《湖涯集》、《蕉竹斋象棋谱》、《蕉窗逸品》（1879 年），以及《橘中秘》（1632 年）的残局部分。新增六百八十二局，每局独立成章，以书中着法作为主变，英文局名旁保留原标题。棋谱来源为 dpxq.com，每局均注明出处。',
   // ── 2026-10-08 (xiangqi endgames guide) ── 例胜 / 巧胜 / 例和 / 云库 / 和电脑下 follow the xiangqi-endgames article text.
   'Xiangqi basic endgames: which material wins, which draws, and 46 to practice.':
     '象棋基本残局：哪些子力能赢，哪些只能和，46局可练习。',
@@ -453,6 +458,11 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-10-10 (batch 3 manuals) ── 書名沿用研究頁的中文名。
+  'Secrets of Strategy and the Dream of Divine Strategy are online.':
+    '《韜略元機》與《夢入神機》已上線。',
+  "Secrets of Strategy, a Qing manual in two volumes (159 full games and 176 compositions), and the Dream of Divine Strategy, a Ming book usually counted among the earliest xiangqi manuals that survive, join the shelf with three smaller collections of folk endgames (the Lakeshore Collection, the Plantain and Bamboo Studio Manual, and Masterpieces from the Plantain Window, 1879) and the endgame half of Secret in the Tangerine (1632). Six hundred and eighty-two more problems and games, each on its own board with the book's line played out as the mainline and the original title kept beside the English one. Positions come from dpxq.com and are credited on every chapter.":
+    '清代的《韜略元機》分兩卷（一百五十九局全局與一百七十六局殘局），明代的《夢入神機》一般認為是現存最早的象棋古譜之一，二者一同上架；同時上線的還有三部江湖殘局集《湖涯集》、《蕉竹齋象棋譜》、《蕉窗逸品》（1879 年），以及《橘中秘》（1632 年）的殘局部分。新增六百八十二局，每局獨立成章，以書中著法作為主變，英文局名旁保留原標題。棋譜來源為 dpxq.com，每局均註明出處。',
   // ── 2026-10-08 (xiangqi endgames guide) ── 例勝 / 巧勝 / 例和 / 雲庫 / 和電腦下 follow the xiangqi-endgames article text.
   'Xiangqi basic endgames: which material wins, which draws, and 46 to practice.':
     '象棋基本殘局：哪些子力能贏，哪些只能和，46局可練習。',
