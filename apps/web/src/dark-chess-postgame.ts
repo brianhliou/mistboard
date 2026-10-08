@@ -112,7 +112,7 @@ export function mountDarkChessPostgame(
 
   const status = reviewOutcomeLine(gameOutcome(game.result), game.termination);
   const { metaCard, details } = buildReviewMeta({
-    markerId: 'dark-chess',
+    gameSpecId: DARK_CHESS_SPEC_ID,
     variantName: variantDisplayLabel(DARK_CHESS_SPEC_ID),
     game,
     status,

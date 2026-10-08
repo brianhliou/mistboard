@@ -143,7 +143,7 @@ function renderPostgame(root: HTMLElement, postgame: DarkXiangqiPostgameResponse
 
   const status = reviewOutcomeLine(gameOutcome(postgame.game.result), postgame.game.termination);
   const { metaCard, details } = buildReviewMeta({
-    markerId: 'dark-xiangqi',
+    gameSpecId: DARK_XIANGQI_SPEC_ID,
     variantName: variantDisplayLabel(DARK_XIANGQI_SPEC_ID),
     game: postgame.game,
     status,

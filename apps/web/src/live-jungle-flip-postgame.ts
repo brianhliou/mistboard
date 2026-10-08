@@ -177,7 +177,7 @@ function renderPostgame(root: HTMLElement, postgame: JungleFlipPostgameResponse)
     postgame.game.termination,
   );
   const { metaCard, details } = buildReviewMeta({
-    markerId: 'jungle-flip',
+    gameSpecId: JUNGLE_FLIP_SPEC_ID,
     variantName: variantDisplayLabel(JUNGLE_FLIP_SPEC_ID),
     game: postgame.game,
     status,

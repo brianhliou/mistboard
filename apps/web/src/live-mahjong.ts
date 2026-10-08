@@ -62,7 +62,6 @@ function mahjongReasonPhrase(reason: string): TenantReasonKey {
 
 const mahjongWebTenant: WebVariantTenant<MahjongSeat> = {
   displayName: 'variant.mahjong.name',
-  metaGlyph: '🀄',
   colors: MAHJONG_SEATS,
   isColor: isMahjongSeat,
   // "The seat after", not "the opponent". At a table of four there is no

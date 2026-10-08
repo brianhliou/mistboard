@@ -167,11 +167,8 @@ function renderPostgame(root: HTMLElement, postgame: DuckXiangqiPostgameResponse
   });
 
   const status = reviewOutcomeLine(gameOutcome(postgame.game.result), postgame.game.termination);
-  // Glyph, not markerId: `VariantMiniId` has no 'duck-xiangqi' member yet, and a
-  // marker id that is not in that union is a compile error rather than a missing
-  // tile. The duck stands in until a mini board exists.
   const { metaCard, details } = buildReviewMeta({
-    glyph: '🦆',
+    gameSpecId: DUCK_XIANGQI_SPEC_ID,
     variantName: variantDisplayLabel(DUCK_XIANGQI_SPEC_ID),
     game: postgame.game,
     status,

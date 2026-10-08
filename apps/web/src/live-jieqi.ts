@@ -107,8 +107,6 @@ let checkMarks: readonly string[] = [];
 
 const jieqiWebTenant: WebVariantTenant<JieqiColor> = {
   displayName: 'variant.jieqi.name',
-  metaMarkerId: 'jieqi',
-  metaGlyph: '象',
   colors: ['red', 'black'],
   isColor: isJieqiColor,
   oppositeColor: (color) => (color === 'red' ? 'black' : 'red'),

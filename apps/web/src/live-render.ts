@@ -360,10 +360,8 @@ function renderGameInfo(view: PlayerView | null): void {
   );
 
   const card = createGameMetaCard({
-    // Same finalized marker the picker/watch/review surfaces use; the ♔ glyph
-    // stays only as the fallback for a variant string we can't map.
+    // Same finalized marker the picker/watch/review surfaces use.
     markerId: metaMarkerId(view) ?? undefined,
-    glyph: '♔',
     headline: [timeLabel, modeEntry ? modeEntry[1] : t('live.modeCasual')],
     variantName: fmt,
     variantHref: localizedRulesHref(

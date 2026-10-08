@@ -94,7 +94,6 @@ export function mountXiangqiAnalysis(
     opts.picker ??
     createGameMetaCard({
       markerId: 'xiangqi',
-      glyph: '象',
       headline: [t('analysis.board')],
       variantName: variantDisplayLabel(XIANGQI_SPEC_ID),
       subline: replay.maxPly

@@ -127,8 +127,6 @@ function jungleFlipSeatLabel(seat: JungleFlipSeat): TenantSeatKey {
 
 const jungleFlipWebTenant: WebVariantTenant<JungleFlipSeat> = {
   displayName: 'variant.jungleFlip.name',
-  metaMarkerId: 'jungle-flip',
-  metaGlyph: '虎',
   colors: ['red', 'black'],
   isColor: isJungleFlipSeat,
   oppositeColor: (color) => (color === 'red' ? 'black' : 'red'),

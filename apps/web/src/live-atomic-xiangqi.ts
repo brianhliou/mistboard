@@ -84,8 +84,6 @@ let cancelCapture: (() => void) | null = null;
 
 const atomicXiangqiWebTenant: WebVariantTenant<AtomicXiangqiColor> = {
   displayName: 'variant.atomicXiangqi.name',
-  metaMarkerId: 'xiangqi',
-  metaGlyph: '象',
   colors: ['red', 'black'],
   isColor: isXiangqiColor,
   oppositeColor: (color) => (color === 'red' ? 'black' : 'red'),

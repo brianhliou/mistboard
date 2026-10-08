@@ -183,7 +183,7 @@ function renderPostgame(root: HTMLElement, postgame: BanqiPostgameResponse): voi
     postgame.game.termination,
   );
   const { metaCard, details } = buildReviewMeta({
-    markerId: 'banqi',
+    gameSpecId: BANQI_SPEC_ID,
     variantName: variantDisplayLabel(BANQI_SPEC_ID),
     game: postgame.game,
     status,

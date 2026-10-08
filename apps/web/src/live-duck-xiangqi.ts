@@ -84,7 +84,6 @@ function isDuckColor(value: unknown): value is DuckXiangqiColor {
 
 const duckWebTenant: WebVariantTenant<DuckXiangqiColor> = {
   displayName: 'variant.duckXiangqi.name',
-  metaGlyph: '🦆',
   colors: ['red', 'black'],
   isColor: isDuckColor,
   oppositeColor: (color) => (color === 'red' ? 'black' : 'red'),

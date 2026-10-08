@@ -186,7 +186,7 @@ function renderPostgame(root: HTMLElement, postgame: JieqiPostgameResponse): voi
 
   const status = reviewOutcomeLine(gameOutcome(postgame.game.result), postgame.game.termination);
   const { metaCard, details } = buildReviewMeta({
-    markerId: 'jieqi',
+    gameSpecId: JIEQI_SPEC_ID,
     variantName: variantDisplayLabel(JIEQI_SPEC_ID),
     game: postgame.game,
     status,

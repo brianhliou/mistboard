@@ -156,7 +156,7 @@ function renderPostgame(root: HTMLElement, postgame: AtomicXiangqiPostgameRespon
 
   const status = reviewOutcomeLine(gameOutcome(postgame.game.result), postgame.game.termination);
   const { metaCard, details } = buildReviewMeta({
-    markerId: 'atomic-xiangqi',
+    gameSpecId: ATOMIC_XIANGQI_SPEC_ID,
     variantName: variantDisplayLabel(ATOMIC_XIANGQI_SPEC_ID),
     game: postgame.game,
     status,
