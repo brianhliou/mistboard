@@ -547,7 +547,7 @@ export const ZH_HANT_REVIEW = {
   'broadcast.noGamesPublished': '未發布棋譜',
   'broadcast.noGamesInEndedEvent': '本賽事已結束，來源尚未發布棋譜。如有發布，將在此顯示。',
   'broadcast.noGamesInEndedRound': '來源尚未發布本輪棋譜。如有發布，將在此顯示。',
-  'broadcast.resultOnly': '僅有結果',
+  'broadcast.noRecord': '未公布棋譜',
   'broadcast.resultOnlyHint': '來源只公布了本局結果，沒有公布棋譜。',
   'broadcast.gameNotStarted': '未開始',
   'broadcast.calendarEarlier': '顯示之前的月份',

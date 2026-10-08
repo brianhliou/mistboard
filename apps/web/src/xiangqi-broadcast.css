@@ -2862,21 +2862,41 @@ a.xqb-standings-name:focus-visible {
 }
 
 .xqb-board-card-no-moves .xqb-card-board svg {
-  opacity: 0.35;
+  opacity: 0.45;
 }
 
-.xqb-card-no-moves {
+/* "No record published" (2026-10-07): a calm caption, not an error box. The
+   bold muted pill over a dim board read as a board that failed to load. */
+.xqb-card-no-moves,
+.xqb-review-no-record-label {
   position: absolute;
-  inset: 50% 8% auto;
+  inset: 50% 10% auto;
   transform: translateY(-50%);
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--site-panel) 88%, transparent);
-  color: var(--site-muted);
+  margin: 0;
+  border: 1px solid var(--site-border-soft);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--site-panel) 92%, transparent);
+  color: var(--site-text);
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.2;
-  padding: 4px 6px;
+  padding: 4px 8px;
   text-align: center;
+}
+
+/* The board view of the same game: the start position dimmed under the same
+   caption, centred on the board. */
+.xqb-review-no-record .dxq-postgame__board svg {
+  opacity: 0.45;
+}
+
+.xqb-review-no-record-label {
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.95rem;
+  padding: 6px 14px;
+  pointer-events: none;
+  white-space: nowrap;
 }
 
 .xqb-board-card-no-moves:hover {

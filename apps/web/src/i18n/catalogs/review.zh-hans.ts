@@ -547,7 +547,7 @@ export const ZH_HANS_REVIEW = {
   'broadcast.noGamesPublished': '未发布棋谱',
   'broadcast.noGamesInEndedEvent': '本赛事已结束，来源尚未发布棋谱。如有发布，将在此显示。',
   'broadcast.noGamesInEndedRound': '来源尚未发布本轮棋谱。如有发布，将在此显示。',
-  'broadcast.resultOnly': '仅有结果',
+  'broadcast.noRecord': '未公布棋谱',
   'broadcast.resultOnlyHint': '来源只公布了本局结果，没有公布棋谱。',
   'broadcast.gameNotStarted': '未开始',
   'broadcast.calendarEarlier': '显示之前的月份',

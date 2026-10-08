@@ -355,7 +355,7 @@ export const EN_REVIEW = {
     'This event is over and the source has not published its games. If it does, they appear here.',
   'broadcast.noGamesInEndedRound':
     "The source has not published this round's games. If it does, they appear here.",
-  'broadcast.resultOnly': 'Result only',
+  'broadcast.noRecord': 'No record published',
   'broadcast.resultOnlyHint': "The source published this result without the game's moves.",
   'broadcast.gameNotStarted': 'Not started',
   'broadcast.calendarEarlier': 'Show earlier months',

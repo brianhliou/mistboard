@@ -54,6 +54,45 @@ describe('broadcast board review seats', () => {
   });
 });
 
+// A finished game the source published without its moves: the board view
+// says so over the start position, as the round grid's card does.
+describe('broadcast board review without a record', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const mount = (timeline: Parameters<typeof mountBroadcastBoardReview>[1]['timeline']) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status: 204 })),
+    );
+    const root = document.createElement('div');
+    mountBroadcastBoardReview(root, {
+      board: {
+        id: 't-r01-b1',
+        tourSlug: 't',
+        roundId: 't-r01',
+        boardNumber: 1,
+        red: { name: '尹昇', nameEn: 'Yin Sheng' },
+        black: { name: '刘柏宏', nameEn: 'Liu Baihong' },
+        result: '0-1',
+      },
+      timeline,
+    });
+    return root;
+  };
+
+  it('labels the board "No record published"', () => {
+    const root = mount([]);
+    const label = root.querySelector('.review-board-host .xqb-review-no-record-label');
+    expect(label?.textContent).toBe('No record published');
+    expect(root.querySelector('.review-board-host')?.classList).toContain('xqb-review-no-record');
+  });
+
+  it('leaves a game with moves unlabelled', () => {
+    const root = mount([{ ply: 1, color: 'red', move: { from: 'h3', to: 'e3' } }]);
+    expect(root.querySelector('.xqb-review-no-record-label')).toBeNull();
+  });
+});
+
 // A creator links "the move at ply 34" in a video description (#454): the
 // finished review opens on ?ply=, keeps the URL and the Share field on the
 // reader's place, and offers the game as PGN.

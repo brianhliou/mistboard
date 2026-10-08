@@ -510,11 +510,12 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
           }),
           evaluation: { cp: -900, mate: null, source: 'analysis' },
         },
+        // A played game the sweep has not reached yet: no gauge until it has.
         fixtureBoard({
           n: 2,
           red: 'R2',
           black: 'B2',
-          moves: [],
+          moves: [{ from: 'b3', to: 'e3' }],
           status: 'complete',
           result: '1-0',
         }),
@@ -1506,6 +1507,54 @@ describe('eval gauge for a finished draw not analysed yet', () => {
   });
 });
 
+describe('eval gauge for a results-only board (no moves to analyse)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  // No engine will ever read these, so the result is the gauge: a full bar for
+  // the winner. An empty gauge read as Black winning every decisive game.
+  it('fills it for the winner: 1-0 all Red, 0-1 all Black, a draw level', async () => {
+    const board = (n: number, result: '1-0' | '0-1' | '1/2-1/2') =>
+      fixtureBoard({ n, red: `R${n}`, black: `B${n}`, moves: [], status: 'complete', result });
+    stubFetchJson(() => ({
+      ...ROUND,
+      boards: [
+        board(1, '1-0'),
+        board(2, '0-1'),
+        board(3, '1/2-1/2'),
+        // A played game keeps the engine's number, whatever the result.
+        {
+          ...fixtureBoard({
+            n: 4,
+            red: 'R4',
+            black: 'B4',
+            moves: [{ from: 'b3', to: 'e3' }],
+            status: 'complete',
+            result: '1-0',
+          }),
+          evaluation: { cp: -900, mate: null, source: 'analysis' },
+        },
+      ],
+    }));
+    stubEventSource();
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastRound(root, 't', 'r');
+
+    const heights = (selector: string) =>
+      [...root.querySelectorAll(selector)].map(
+        (gauge) => gauge.querySelector<HTMLElement>('.review-eval-bar__fill')?.style.height ?? null,
+      );
+    const cards = heights('.xqb-card-gauge');
+    expect(cards.slice(0, 3)).toEqual(['100.0%', '0.0%', '50.0%']);
+    expect(Number.parseFloat(cards[3] ?? '100')).toBeLessThan(25);
+    const rail = heights('.xqb-side-rail .xqb-rail-gauge');
+    expect(rail.slice(0, 3)).toEqual(['100.0%', '0.0%', '50.0%']);
+    expect(Number.parseFloat(rail[3] ?? '100')).toBeLessThan(25);
+    const cardGauges = root.querySelectorAll<HTMLElement>('.xqb-card-gauge');
+    expect(cardGauges[0]?.querySelector('.review-eval-bar--red-ahead')).not.toBeNull();
+    expect(cardGauges[1]?.querySelector('.review-eval-bar--red-ahead')).toBeNull();
+  });
+});
+
 describe('boards pager (lichess: pages, a page size that persists)', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -1611,7 +1660,9 @@ describe("results-only boards (a round page's pairing and result, no moves)", ()
     expect(played?.tagName).toBe('A');
     expect(resultOnly?.tagName).toBe('DIV');
     expect(resultOnly?.classList.contains('xqb-board-card-no-moves')).toBe(true);
-    expect(resultOnly?.querySelector('.xqb-card-no-moves')?.textContent).toBe('Result only');
+    expect(resultOnly?.querySelector('.xqb-card-no-moves')?.textContent).toBe(
+      'No record published',
+    );
     // The start position still draws, under the label.
     expect(resultOnly?.querySelector('.xqb-card-board > svg.xq-live-svg')).not.toBeNull();
     expect(

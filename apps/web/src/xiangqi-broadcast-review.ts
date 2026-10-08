@@ -120,7 +120,7 @@ export function mountBroadcastBoardReview(
   };
   if (opts.embedded) root.replaceChildren();
   else root.replaceChildren(buildNav());
-  return mountXiangqiReview(root, {
+  const review = mountXiangqiReview(root, {
     embedded: opts.embedded,
     pageClassName: 'xiangqi-review',
     ariaLabel: t('broadcast.boardAriaLabel'),
@@ -160,6 +160,24 @@ export function mountBroadcastBoardReview(
     // reaches a game, the button runs the same sweep in the reader's browser.
     analysis: broadcastAnalysisSource(data.board.id, replay),
   });
+  if (moves.length === 0) markNoRecord(root);
+  return review;
+}
+
+/**
+ * A finished game the source published with its result and no moves: the
+ * board view says so over the start position, as its card in the round grid
+ * does, so the empty board does not read as a page that failed to load.
+ */
+function markNoRecord(root: HTMLElement): void {
+  const wrap = root.querySelector<HTMLElement>('.review-board-host');
+  if (!wrap) return;
+  wrap.classList.add('xqb-review-no-record');
+  const stamp = document.createElement('p');
+  stamp.className = 'xqb-review-no-record-label';
+  stamp.textContent = t('broadcast.noRecord');
+  stamp.title = t('broadcast.resultOnlyHint');
+  wrap.append(stamp);
 }
 
 function broadcastAnalysisSource(

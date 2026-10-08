@@ -2812,7 +2812,7 @@ function boardCard(board: BroadcastBoardSummary, _playedOn?: string | null): HTM
     const stamp = document.createElement('span');
     stamp.className = 'xqb-card-no-moves';
     stamp.textContent =
-      board.status === 'complete' ? t('broadcast.resultOnly') : t('broadcast.gameNotStarted');
+      board.status === 'complete' ? t('broadcast.noRecord') : t('broadcast.gameNotStarted');
     boardEl.append(stamp);
   }
   // A live game shows who is to move where a finished one shows its score:
@@ -2911,10 +2911,15 @@ function railGauge(board: BroadcastBoardSummary): HTMLElement {
 /**
  * What a board's gauge shows: the stored evaluation of its last position, or,
  * for a finished draw not analysed yet, level (a drawn game ends even, and a
- * blank pill beside ½-½ read as broken). A decisive game with no evaluation
- * yet stays empty until the sweep reaches it.
+ * blank pill beside ½-½ read as broken). A finished game with no record has
+ * no position for an engine to read, so its result is the gauge: all Red for
+ * 1-0, all Black for 0-1 (an empty gauge read as Black winning every one). A
+ * decisive game with moves and no evaluation yet stays empty until the sweep
+ * reaches it.
  */
-function gaugeShare(board: BroadcastBoardSummary): { red: number; label: string } | null {
+function gaugeShare(
+  board: Pick<BroadcastBoardSummary, 'evaluation' | 'status' | 'result' | 'plyCount' | 'moves'>,
+): { red: number; label: string } | null {
   const evaluation = board.evaluation;
   if (evaluation) {
     return {
@@ -2922,7 +2927,12 @@ function gaugeShare(board: BroadcastBoardSummary): { red: number; label: string 
       label: formatEval(evaluation.cp, evaluation.mate),
     };
   }
-  if (board.status === 'complete' && board.result === '1/2-1/2') return { red: 0.5, label: '½-½' };
+  if (board.status !== 'complete') return null;
+  if (board.result === '1/2-1/2') return { red: 0.5, label: '½-½' };
+  if (isResultsOnlyBoard(board)) {
+    if (board.result === '1-0') return { red: 1, label: '1-0' };
+    if (board.result === '0-1') return { red: 0, label: '0-1' };
+  }
   return null;
 }
 
