@@ -3,11 +3,14 @@ import { test } from 'node:test';
 
 import {
   expandMoves,
+  expectedRevealOdds,
   GALLERY_STATES,
   OLD_POOL_NOTE,
+  parseComposeSpec,
   parseMove,
   pickPolicyMove,
   pliesPlayed,
+  renderComparisonHtml,
   renderGalleryHtml,
   resolveGalleryTargets,
   summarizeView,
@@ -171,5 +174,79 @@ test('the gallery page escapes its text and links each screenshot', () => {
   assert.match(html, /Opening &lt;script&gt;/);
   assert.match(html, /x &lt; y/);
   assert.ok(!html.includes('<script>'));
+  assert.ok(!html.includes('—'), 'no em dashes in the page');
+});
+
+test('the expected odds restate the start set minus what the seat has seen', () => {
+  const odds = expectedRevealOdds({
+    board: {
+      e1: { color: 'red', role: 'general', faceDown: false },
+      a1: { color: 'red', role: 'chariot', faceDown: false },
+      b1: { color: 'red', faceDown: true },
+      e10: { color: 'black', role: 'general', faceDown: false },
+      a10: { color: 'black', faceDown: true },
+    },
+    captured: [
+      { owner: 'red', role: null },
+      { owner: 'black', role: 'soldier' },
+    ],
+  });
+  // Red: one chariot seen face-up, one piece taken unseen (still a slot).
+  assert.equal(odds.red.unseen, 14);
+  assert.equal(odds.red.takenUnseen, 1);
+  assert.deepEqual(
+    odds.red.entries.find((e) => e.role === 'chariot'),
+    { role: 'chariot', count: 1 },
+  );
+  // Black: the captured soldier's identity is known to red, so it leaves the pool.
+  assert.equal(odds.black.unseen, 14);
+  assert.equal(odds.black.takenUnseen, 0);
+  assert.deepEqual(
+    odds.black.entries.find((e) => e.role === 'soldier'),
+    { role: 'soldier', count: 4 },
+  );
+  assert.ok(!odds.red.entries.some((e) => e.role === 'general'), 'the general is never hidden');
+});
+
+test('a compose spec is label=dir pairs, two or more, in order', () => {
+  assert.deepEqual(parseComposeSpec('baseline=/x/g, a=/x/a'), [
+    { label: 'baseline', dir: '/x/g' },
+    { label: 'a', dir: '/x/a' },
+  ]);
+  assert.throws(() => parseComposeSpec('baseline=/x/g'), /two or more/);
+  assert.throws(() => parseComposeSpec('baseline=/x/g,a'), /label=dir/);
+  assert.throws(() => parseComposeSpec('=/x/g,a=/x/a'), /label=dir/);
+});
+
+test('the comparison page puts each run side by side and keeps only the odds facts', () => {
+  const entry = (id, prefix, facts, widths = ['desktop']) => ({
+    id,
+    title: `State ${id} <b>`,
+    scenario: 'S',
+    seat: 'red',
+    facts,
+    shots: widths.map((width) => ({ width, file: `state-${id}-${width}.png` })),
+    prefix,
+  });
+  const html = renderComparisonHtml({
+    generatedAt: '2026-10-07T00:00:00.000Z',
+    columns: [
+      { label: 'baseline', prefix: '../gallery', entries: [entry('a', ''), entry('z', '')] },
+      {
+        label: 'a',
+        prefix: 'a',
+        entries: [
+          entry('a', 'a', ['Page odds, top row: x', 'Page move list: []'], ['desktop', 'mobile']),
+        ],
+      },
+    ],
+  });
+  assert.match(html, /src="\.\.\/gallery\/state-a-desktop\.png"/);
+  assert.match(html, /src="a\/state-a-desktop\.png"/);
+  assert.match(html, /src="a\/state-a-mobile\.png"/);
+  assert.match(html, /Page odds, top row: x/);
+  assert.ok(!html.includes('Page move list'), 'only odds facts are listed');
+  assert.ok(!html.includes('id="state-z"'), 'a state no other run shot is left out');
+  assert.match(html, /State a &lt;b&gt;/);
   assert.ok(!html.includes('—'), 'no em dashes in the page');
 });

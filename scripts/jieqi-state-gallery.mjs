@@ -19,7 +19,16 @@
 // Then open <out>/index.html. <out>/manifest.json has every room URL with the
 // shot seat's token (localStorage key mistboard.seatToken.<roomId>, value
 // {"seat","token"}) to open a room by hand. Flags: --states a,c,f (subset),
-// --no-shots (rooms and manifest only), --api (default: web port + 1).
+// --no-shots (rooms and manifest only), --api (default: web port + 1),
+// --reveal-odds a|b|c (open the room with ?revealOdds=, the live reveal-odds UI
+// variant; a shows one chip's percentage, b one face-down piece's popover),
+// --mobile f,g (also shoot these states at 390 px).
+//
+// Side-by-side page from finished runs (no dev pair needed):
+//
+//   node scripts/jieqi-state-gallery.mjs --compose baseline=<dir>,a=<dir>,b=<dir> --out <dir>
+//
+// Each <dir> is a previous --out; the first column is the reference.
 //
 // Safety: refuses any non-loopback --web/--api (fail closed), and the server
 // honours MISTBOARD_DEV_JIEQI_DEAL_SEED only outside a production-like runtime
@@ -29,16 +38,19 @@
 // disconnect forfeit is off), so the seat to move flags in about ten minutes.
 
 import { randomUUID } from 'node:crypto';
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { relative, resolve } from 'node:path';
 import WebSocket from 'ws';
 
 import {
   expandMoves,
+  expectedRevealOdds,
   GALLERY_STATES,
   OLD_POOL_NOTE,
+  parseComposeSpec,
   pickPolicyMove,
   pliesPlayed,
+  renderComparisonHtml,
   renderGalleryHtml,
   resolveGalleryTargets,
   summarizeView,
@@ -48,7 +60,14 @@ import {
 const STEP_TIMEOUT_MS = 10_000;
 
 function parseArgs(argv) {
-  const options = { states: null, shots: true, out: 'tmp/jieqi-state-gallery' };
+  const options = {
+    states: null,
+    shots: true,
+    out: 'tmp/jieqi-state-gallery',
+    revealOdds: null,
+    mobile: [],
+    compose: null,
+  };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     const next = () => {
@@ -64,6 +83,16 @@ function parseArgs(argv) {
         .split(',')
         .map((s) => s.trim());
     else if (arg === '--no-shots') options.shots = false;
+    else if (arg === '--reveal-odds') {
+      options.revealOdds = next();
+      if (!['a', 'b', 'c'].includes(options.revealOdds)) {
+        throw new Error(`--reveal-odds wants a, b or c, got ${options.revealOdds}`);
+      }
+    } else if (arg === '--mobile')
+      options.mobile = next()
+        .split(',')
+        .map((s) => s.trim());
+    else if (arg === '--compose') options.compose = parseComposeSpec(next());
     else throw new Error(`unknown flag ${arg}`);
   }
   return options;
@@ -198,14 +227,51 @@ function readPage() {
     moveList: [...document.querySelectorAll('.xiangqi-move-row__move')].map(text).filter(Boolean),
     seats: [...document.querySelectorAll('.round-table__player')].map(text),
     hiddenPoolChildren: pool ? pool.children.length : null,
+    boardTop: Math.round(document.querySelector('.board-stage')?.getBoundingClientRect().top ?? -1),
+    revealOdds: {
+      top: [...document.querySelectorAll('.reveal-odds-row--top .reveal-odds-chip')].map((el) =>
+        el.getAttribute('aria-label'),
+      ),
+      bottom: [...document.querySelectorAll('.reveal-odds-row--bottom .reveal-odds-chip')].map(
+        (el) => el.getAttribute('aria-label'),
+      ),
+      notes: [...document.querySelectorAll('.reveal-odds-row__note')].map(text),
+      popover: text(document.querySelector('.reveal-odds-pop:not([hidden])')),
+      table: [...document.querySelectorAll('.reveal-odds-table__grid tr')].map(text),
+    },
   };
 }
 
-async function shoot(browser, targets, outDir, state, result) {
+// Open the variant's on-demand surface so the shot shows it: a's first own-side
+// percentage bubble, b's popover over one of the seat's own face-down pieces.
+// A phone taps (b's tap also selects the piece, as it would for a player).
+async function openRevealOdds(page, variant, width, view, seat) {
+  const mobile = width === 'mobile';
+  if (variant === 'a') {
+    const chip = page.locator('.reveal-odds-row--bottom .reveal-odds-chip').first();
+    if ((await chip.count()) === 0) return;
+    if (mobile) await chip.tap();
+    else await chip.hover();
+  } else if (variant === 'b') {
+    const square = Object.entries(view.board ?? {})
+      .filter(([, piece]) => piece?.faceDown && piece.color === seat)
+      .map(([sq]) => sq)
+      .sort()[0];
+    if (!square) return;
+    const hit = page.locator(`.jieqi-live-board [data-square="${square}"]`);
+    if (mobile) await hit.tap();
+    else await hit.hover();
+  }
+  await page.waitForTimeout(250);
+}
+
+async function shoot(browser, targets, outDir, state, result, options) {
   const shots = [];
   let readout = null;
   const token = result.seats[state.seat].token;
-  for (const width of state.widths ?? ['desktop']) {
+  const widths = new Set(state.widths ?? ['desktop']);
+  if (options.mobile.includes(state.id)) widths.add('mobile');
+  for (const width of widths) {
     const viewport = VIEWPORTS[width];
     const context = await browser.newContext({
       viewport,
@@ -227,7 +293,8 @@ async function shoot(browser, targets, outDir, state, result) {
       { roomId: result.roomId, seat: state.seat, seatToken: token },
     );
     const page = await context.newPage();
-    await page.goto(`${targets.web}/room/${result.roomId}`);
+    const query = options.revealOdds ? `?revealOdds=${options.revealOdds}` : '';
+    await page.goto(`${targets.web}/room/${result.roomId}${query}`);
     await page.locator('.jieqi-live-board svg.jieqi-piece').first().waitFor({
       state: 'visible',
       timeout: STEP_TIMEOUT_MS,
@@ -237,7 +304,12 @@ async function shoot(browser, targets, outDir, state, result) {
       .locator('.round-table__player--bottom', { hasText: 'You' })
       .waitFor({ timeout: STEP_TIMEOUT_MS });
     await page.waitForTimeout(600);
-    if (!readout) readout = await page.evaluate(readPage);
+    if (options.revealOdds) {
+      await openRevealOdds(page, options.revealOdds, width, result.view, state.seat);
+    }
+    const pageValues = await page.evaluate(readPage);
+    if (!readout) readout = pageValues;
+    else readout.boardTopMobile = pageValues.boardTop;
     const file = `state-${state.id}-${width}.png`;
     await page.screenshot({ path: resolve(outDir, file), fullPage: width === 'mobile' });
     shots.push({ width, file, viewport });
@@ -260,12 +332,48 @@ function factsFor(state, result, readout) {
       `Page board: red ${b.red.hidden} face-down / ${b.red.shown} face-up; black ${b.black.hidden} face-down / ${b.black.shown} face-up. Top tray (taken by the opponent): [${readout.capturesTop.join(', ') || 'empty'}]. Bottom tray (taken by you): [${readout.capturesBottom.join(', ') || 'empty'}].`,
       `Page move list: [${readout.moveList.join(' ') || 'empty'}]. Face-down pool panel: ${readout.hiddenPoolChildren ? `${readout.hiddenPoolChildren} rows` : 'empty'}.`,
     );
+    const odds = readout.revealOdds;
+    if (odds && (odds.top.length || odds.bottom.length || odds.table.length || odds.popover)) {
+      if (odds.top.length) facts.push(`Page odds, top row: ${odds.top.join('; ')}.`);
+      if (odds.bottom.length) facts.push(`Page odds, bottom row: ${odds.bottom.join('; ')}.`);
+      if (odds.popover) facts.push(`Popover: ${odds.popover}.`);
+      if (odds.table.length) facts.push(`Table: ${odds.table.join(' | ')}.`);
+    }
+    if (readout.boardTop !== undefined) {
+      facts.push(
+        `Board top: ${readout.boardTop}px desktop${readout.boardTopMobile !== undefined ? `, ${readout.boardTopMobile}px at 390` : ''}.`,
+      );
+    }
   }
+  const expected = expectedRevealOdds(result.view);
+  facts.push(
+    `Expected from the ${state.seat} view: ${['red', 'black']
+      .map(
+        (ink) =>
+          `${ink} ${expected[ink].unseen} unseen (${expected[ink].takenUnseen} taken unseen): ${expected[ink].entries.map((e) => `${e.role} ${e.count}/${expected[ink].unseen}`).join(', ')}`,
+      )
+      .join('; ')}.`,
+  );
   return facts;
+}
+
+function compose(options) {
+  const outDir = resolve(options.out);
+  mkdirSync(outDir, { recursive: true });
+  const columns = options.compose.map(({ label, dir }) => {
+    const manifest = JSON.parse(readFileSync(resolve(dir, 'manifest.json'), 'utf8'));
+    return { label, prefix: relative(outDir, resolve(dir)), entries: manifest.entries };
+  });
+  writeFileSync(
+    resolve(outDir, 'index.html'),
+    renderComparisonHtml({ columns, generatedAt: new Date().toISOString() }),
+  );
+  console.log(`comparison: ${resolve(outDir, 'index.html')}`);
 }
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
+  if (options.compose) return compose(options);
   const targets = resolveGalleryTargets({ web: options.web, api: options.api });
   const states = options.states
     ? GALLERY_STATES.filter((state) => options.states.includes(state.id))
@@ -288,12 +396,13 @@ async function main() {
       // The other seat stays connected while the page is shot.
       result.seats[state.seat].client.socket.close();
       const shot = browser
-        ? await shoot(browser, targets, outDir, state, result)
+        ? await shoot(browser, targets, outDir, state, result, options)
         : { shots: [], readout: null };
       result.seats[state.seat === 'red' ? 'black' : 'red'].client.socket.close();
       const entry = {
         id: state.id,
         title: state.title,
+        revealOdds: options.revealOdds,
         scenario: state.scenario,
         reading: state.reading,
         seat: state.seat,
@@ -319,7 +428,7 @@ async function main() {
   } finally {
     await browser?.close();
   }
-  const command = `node scripts/jieqi-state-gallery.mjs --web ${targets.web} --out ${options.out}${options.states ? ` --states ${options.states.join(',')}` : ''}`;
+  const command = `node scripts/jieqi-state-gallery.mjs --web ${targets.web} --out ${options.out}${options.states ? ` --states ${options.states.join(',')}` : ''}${options.revealOdds ? ` --reveal-odds ${options.revealOdds}` : ''}${options.mobile.length ? ` --mobile ${options.mobile.join(',')}` : ''}`;
   writeFileSync(
     resolve(outDir, 'manifest.json'),
     `${JSON.stringify({ entries, rooms: manifest }, null, 2)}\n`,

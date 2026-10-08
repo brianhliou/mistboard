@@ -1,0 +1,314 @@
+/* Live jieqi reveal odds (live-jieqi-reveal-odds.ts). Every band here is
+   RESERVED: a row keeps its height whether or not it has anything to show, and
+   the popover is an overlay, so the board and the rail never move with the
+   odds (the 2026-09-20 rule in live-review.css .rail-material). */
+
+.reveal-odds-row {
+  --reveal-chip: 26px;
+
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: calc(var(--reveal-chip) + 6px);
+  padding: 2px 0;
+  overflow: visible;
+  white-space: nowrap;
+}
+
+.reveal-odds-row--b {
+  --reveal-chip: 20px;
+
+  min-height: calc(var(--reveal-chip) + 4px);
+}
+
+.reveal-odds-row--top {
+  margin-bottom: 4px;
+}
+
+.reveal-odds-row--bottom {
+  margin-top: 4px;
+}
+
+.reveal-odds-row__lead,
+.reveal-odds-row__note {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  color: var(--site-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.reveal-odds-row__lead {
+  min-width: 5.6em;
+  font-weight: 600;
+}
+
+.reveal-odds-row__pieces {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.reveal-odds-chip {
+  position: relative;
+  display: inline-block;
+  flex: 0 0 var(--reveal-chip);
+  width: var(--reveal-chip);
+  height: var(--reveal-chip);
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  line-height: 0;
+}
+
+button.reveal-odds-chip {
+  cursor: pointer;
+  border-radius: 50%;
+}
+
+button.reveal-odds-chip:focus-visible {
+  outline: 2px solid var(--site-accent);
+  outline-offset: 1px;
+}
+
+.reveal-odds-chip__piece,
+.reveal-odds-chip__piece svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.reveal-odds-chip .captures-count-badge {
+  min-width: 12px;
+  height: 12px;
+  font-size: 9px;
+  right: -3px;
+  bottom: -3px;
+}
+
+/* The percentage: a bubble over the chip on hover (a mouse), keyboard focus,
+   or a tap (is-open). It floats, so opening one moves nothing. */
+.reveal-odds-chip__pct {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 4px);
+  z-index: 5;
+  transform: translateX(-50%);
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--site-text, #1f1d1a);
+  color: var(--site-panel, #ffffff);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.reveal-odds-chip.is-open .reveal-odds-chip__pct,
+.reveal-odds-chip:focus-visible .reveal-odds-chip__pct {
+  visibility: visible;
+}
+
+@media (hover: hover) {
+  .reveal-odds-chip:hover .reveal-odds-chip__pct {
+    visibility: visible;
+  }
+}
+
+/* The bottom row's bubble opens downward on desktop, away from the clock. */
+.reveal-odds-row--bottom .reveal-odds-chip__pct {
+  bottom: auto;
+  top: calc(100% + 4px);
+}
+
+/* ── b: the board popover ──────────────────────────────────────────────── */
+
+.reveal-odds-pop {
+  position: absolute;
+  z-index: 6;
+  transform: translate(-50%, 0);
+  min-width: 150px;
+  padding: 6px 8px 7px;
+  border: 1px solid var(--site-border, #d6d0c4);
+  border-radius: 8px;
+  background: var(--site-panel, #ffffff);
+  color: var(--site-text, #1f1d1a);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+}
+
+.reveal-odds-pop[data-place="above"] {
+  transform: translate(-50%, -100%);
+}
+
+.reveal-odds-pop[hidden] {
+  display: none;
+}
+
+.reveal-odds-pop__title {
+  margin-bottom: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--site-muted);
+  white-space: nowrap;
+}
+
+.reveal-odds-pop__grid {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 4px 10px;
+}
+
+.reveal-odds-pop__cell {
+  display: grid;
+  grid-template-columns: 22px auto;
+  grid-template-rows: auto auto;
+  column-gap: 4px;
+  align-items: center;
+}
+
+.reveal-odds-pop__piece {
+  grid-row: 1 / span 2;
+  width: 22px;
+  height: 22px;
+}
+
+.reveal-odds-pop__piece svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.reveal-odds-pop__pct {
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.reveal-odds-pop__count,
+.reveal-odds-pop__note {
+  font-size: 0.68rem;
+  color: var(--site-muted);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.reveal-odds-pop__note {
+  margin-top: 4px;
+}
+
+/* ── c: the table in the game-info rail ────────────────────────────────── */
+
+.reveal-odds-table__summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.reveal-odds-table__grid {
+  width: 100%;
+  margin-top: 6px;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.reveal-odds-table__grid th,
+.reveal-odds-table__grid td {
+  padding: 3px 4px;
+  text-align: right;
+  font-weight: 400;
+}
+
+.reveal-odds-table__grid tbody th {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-align: left;
+}
+
+.reveal-odds-table__grid thead th {
+  vertical-align: bottom;
+  border-bottom: 1px solid var(--site-border, #d6d0c4);
+}
+
+.reveal-odds-table__grid tbody tr + tr > * {
+  border-top: 1px solid color-mix(in srgb, var(--site-border, #d6d0c4) 50%, transparent);
+}
+
+.reveal-odds-table__ink {
+  display: block;
+  font-weight: 600;
+}
+
+.reveal-odds-table__grid thead th[data-ink="red"] .reveal-odds-table__ink {
+  color: #b91c1c;
+}
+
+.reveal-odds-table__sub,
+.reveal-odds-table__count,
+.reveal-odds-table__grid tfoot td {
+  font-size: 0.72rem;
+  color: var(--site-muted);
+}
+
+.reveal-odds-table__count {
+  margin-left: 5px;
+}
+
+.reveal-odds-table__grid td.is-empty {
+  color: var(--site-muted);
+}
+
+.reveal-odds-table__piece {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+}
+
+.reveal-odds-table__piece svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Phone: the seat lines are one flex row each (live-review.css, max-width
+   799px). Both pool rows go BELOW the board, each its own line: the viewer's
+   under their seat line, then the opponent's (the piece colours say whose).
+   Nothing is added above the board, so it sits exactly where it does without
+   odds. Specificity beats that file's `.game-console > *` order rule
+   regardless of bundle order. */
+@media (max-width: 799px) {
+  .live-review__cluster .game-console > .reveal-odds-row {
+    --reveal-chip: 22px;
+
+    flex: 0 0 100%;
+    margin: 0;
+    padding: 0 2px;
+  }
+
+  .live-review__cluster .game-console > .reveal-odds-row--b {
+    --reveal-chip: 18px;
+  }
+
+  .live-review__cluster .game-console > .reveal-odds-row--top {
+    order: 34;
+  }
+
+  .live-review__cluster .game-console > .reveal-odds-row--bottom {
+    order: 33;
+  }
+
+  /* On a phone the bottom row sits under the seat line with the actions
+     below it: its bubble opens upward like the top row's. */
+  .reveal-odds-row--bottom .reveal-odds-chip__pct {
+    top: auto;
+    bottom: calc(100% + 4px);
+  }
+}

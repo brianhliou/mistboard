@@ -24,6 +24,7 @@ import type {
 } from '@mistboard/game';
 import './live-xiangqi.css';
 import { jieqiEnabled } from './feature-flags.js';
+import { revealOddsVariantFrom } from './jieqi-reveal-odds.js';
 import { finishBadgesForResult, generalSquareOn } from './live-finish-badges.js';
 import { jieqiClickResult } from './live-jieqi-interaction.js';
 import {
@@ -34,6 +35,7 @@ import {
   renderJieqiBoardSvg,
 } from './live-jieqi-render.js';
 import { rebuildFinishedJieqiHistory } from './live-jieqi-replay-history.js';
+import { mountRevealOdds, type RevealOddsMount } from './live-jieqi-reveal-odds.js';
 import {
   maybePlayJieqiSnapshotSound,
   resetJieqiSoundState,
@@ -89,6 +91,8 @@ let core: TenantLiveClientContext<JieqiColor, JieqiWireView> | null = null;
 let selectedSquare: JieqiSquare | null = null;
 // Right-click arrows/circles the player drew on this board.
 let annotations: BoardAnnotations | null = null;
+// The live reveal odds (live-jieqi-reveal-odds.ts), mounted once at setup.
+let revealOdds: RevealOddsMount | null = null;
 // The square a piece is being dragged from (its piece is lifted off the board so
 // only the floating ghost shows). Null when not dragging.
 let draggingFrom: JieqiSquare | null = null;
@@ -182,7 +186,10 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
     const undone = pending.prevView?.lastMove;
     if (undone) animateJieqiBoardMove(liveRefs.board, undone, perspective, { reverse: true });
   },
-  renderExtras: (refs, view) => renderCapturedPools(refs, view),
+  renderExtras: (refs, view) => {
+    renderCapturedPools(refs, view);
+    renderRevealOdds(view);
+  },
   onDisabled: (refs) => {
     // renderCapturedPools ran before the enabled guard in the original, so it
     // paints even when the flag is off; then the selection clears.
@@ -193,6 +200,10 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
     core = ctx;
     installJieqiBoardStyles();
     installJieqiBoardInteraction(ctx.refs);
+    revealOdds = mountRevealOdds(ctx.refs, revealOddsVariantFrom(window.location.search), () => {
+      const pieceSet = readStoredXiangqiPieceSet();
+      return (entry) => renderXiangqiPieceGlyphed(entry, pieceSet, { ariaLabel: '' });
+    });
     // Hot-reload the viewer's xiangqi piece set mid-game (board + captured pool
     // render from the stored set); mirrors the chess family's appearance hook.
     window.addEventListener(xiangqiAppearanceChangedEvent, ctx.renderAll);
@@ -408,6 +419,18 @@ function dropJieqiPiece(liveRefs: LiveRefs, from: JieqiSquare, to: JieqiSquare |
 // switch never leaves a stale panel behind.
 function renderCapturedPools(liveRefs: LiveRefs, view: JieqiWireView | null): void {
   renderJieqiMaterial(liveRefs, view, orientationFor(view));
+}
+
+// Reveal odds from the DISPLAYED view only: the seat's own PlayerView (or the
+// spectator's public view) at the ply on screen, so a scrub shows the odds as
+// they stood then and nothing reads past what this viewer was sent.
+function renderRevealOdds(view: JieqiWireView | null): void {
+  const seat = core?.state.seat;
+  revealOdds?.render({
+    view,
+    orientation: orientationFor(view),
+    seat: isJieqiColor(seat) ? seat : null,
+  });
 }
 
 // Exported for unit testing the material data path (revealed identity vs an

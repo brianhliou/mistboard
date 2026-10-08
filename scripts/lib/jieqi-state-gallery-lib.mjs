@@ -258,3 +258,150 @@ ${cards}
 
 export const OLD_POOL_NOTE =
   'Until 2026-09-20 the jieqi room rail had a "still face-down" panel (renderHiddenPoolPanel over jieqiHiddenPool): one row per side listing the identities still face-down as this viewer knew them. The opponent’s row was exact, because the viewer was told every dark piece they took. The viewer’s own row still listed the dark pieces the opponent had taken, with an "N of these already taken, unknown which" note. It was removed because a row listing pieces that may already be gone read as a bug; the captured strips carry the same facts and the player does the subtraction. Banqi and Flip Jungle keep the panel, since a captured tile is revealed to both sides there.';
+
+// The reveal-odds bookkeeping restated from a seat's raw view, so the gallery
+// can print what the page SHOULD show next to what it does (the page computes
+// it in apps/web/src/jieqi-reveal-odds.ts). Per ink: the 15-piece start set
+// minus face-up pieces minus captures with a known role; a captured null role
+// stays in the multiset and counts as taken unseen.
+const JIEQI_START_COUNTS = {
+  chariot: 2,
+  cannon: 2,
+  horse: 2,
+  elephant: 2,
+  advisor: 2,
+  soldier: 5,
+};
+
+export function expectedRevealOdds(view) {
+  const out = {};
+  for (const ink of ['red', 'black']) {
+    const counts = { ...JIEQI_START_COUNTS };
+    let takenUnseen = 0;
+    for (const piece of Object.values(view?.board ?? {})) {
+      if (piece?.color === ink && !piece.faceDown && piece.role in counts) counts[piece.role] -= 1;
+    }
+    for (const capture of view?.captured ?? []) {
+      if (capture.owner !== ink) continue;
+      if (capture.role === null) takenUnseen += 1;
+      else if (capture.role in counts) counts[capture.role] -= 1;
+    }
+    const entries = Object.entries(counts)
+      .filter(([, count]) => count > 0)
+      .map(([role, count]) => ({ role, count }));
+    const unseen = entries.reduce((sum, e) => sum + e.count, 0);
+    out[ink] = { entries, unseen, takenUnseen };
+  }
+  return out;
+}
+
+/** "baseline=dir,a=dir" -> [{ label, dir }], in order. */
+export function parseComposeSpec(spec) {
+  const columns = String(spec)
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const at = part.indexOf('=');
+      if (at <= 0 || at === part.length - 1) {
+        throw new Error(`jieqi-state-gallery: --compose wants label=dir pairs, got "${part}"`);
+      }
+      return { label: part.slice(0, at), dir: part.slice(at + 1) };
+    });
+  if (columns.length < 2) throw new Error('jieqi-state-gallery: --compose needs two or more runs');
+  return columns;
+}
+
+const VARIANT_NOTES = {
+  baseline: 'Today: no odds anywhere on the page.',
+  a: 'Pool row beside each seat: glyphs with unseen counts; the percentage on hover or tap (one bubble is open in the shot).',
+  b: 'Hover or tap any face-down piece: a popover with its side’s odds (open over one of the seat’s own pieces in the shot), plus a slim pool row.',
+  c: 'A table in the game-info rail (below the board on a phone): percent and count per piece type, one column per side.',
+};
+
+// Side by side: one section per state present in the first (reference) run,
+// one column per run, desktop shots in a grid and phone shots in a row below.
+export function renderComparisonHtml({ columns, generatedAt }) {
+  const [reference] = columns;
+  const byId = (column, id) => column.entries.find((entry) => entry.id === id);
+  const states = reference.entries.filter((entry) =>
+    columns.slice(1).some((c) => byId(c, entry.id)),
+  );
+  const figure = (column, entry, width) => {
+    const shot = entry?.shots.find((s) => s.width === width);
+    if (!shot) return '';
+    const src = column.prefix ? `${column.prefix}/${shot.file}` : shot.file;
+    return `<figure class="shot shot--${escapeHtml(width)}"><a href="${escapeHtml(src)}"><img src="${escapeHtml(src)}" alt="State ${escapeHtml(entry.id)}, ${escapeHtml(column.label)}, ${escapeHtml(width)}" loading="lazy"></a><figcaption><strong>${escapeHtml(column.label)}</strong> ${escapeHtml(width)}</figcaption></figure>`;
+  };
+  const sections = states
+    .map((state) => {
+      const desktop = columns.map((c) => figure(c, byId(c, state.id), 'desktop')).join('');
+      const mobile = columns.map((c) => figure(c, byId(c, state.id), 'mobile')).join('');
+      const facts = columns
+        .slice(1)
+        .map((c) => {
+          const entry = byId(c, state.id);
+          const lines = (entry?.facts ?? []).filter((line) =>
+            /^(Page odds|Popover|Table|Board top|Expected)/.test(line),
+          );
+          return lines.length
+            ? `<li><strong>${escapeHtml(c.label)}</strong><ul>${lines.map((l) => `<li>${escapeHtml(l)}</li>`).join('')}</ul></li>`
+            : '';
+        })
+        .join('');
+      return `<section class="state" id="state-${escapeHtml(state.id)}">
+  <h2><span class="tag">${escapeHtml(state.id)}</span> ${escapeHtml(state.title)}</h2>
+  <p class="scenario">${escapeHtml(state.scenario)} Seat: ${escapeHtml(state.seat)}.</p>
+  <div class="grid">${desktop}</div>
+  ${mobile ? `<div class="phones">${mobile}</div>` : ''}
+  ${facts ? `<ul class="facts">${facts}</ul>` : ''}
+</section>`;
+    })
+    .join('\n');
+  const legend = columns
+    .map(
+      (c) =>
+        `<li><strong>${escapeHtml(c.label)}</strong>: ${escapeHtml(VARIANT_NOTES[c.label] ?? '')}</li>`,
+    )
+    .join('');
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jieqi reveal odds</title>
+<style>
+:root { --bg: #f7f5f0; --fg: #1f1d1a; --muted: #6b665d; --card: #ffffff; --line: #e2ddd2; --tag: #8a3b12; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #151413; --fg: #ece8e1; --muted: #a39d92; --card: #1f1e1c; --line: #34312c; --tag: #f0a070; }
+}
+:root[data-theme="dark"] { --bg: #151413; --fg: #ece8e1; --muted: #a39d92; --card: #1f1e1c; --line: #34312c; --tag: #f0a070; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, -apple-system, sans-serif; }
+main { max-width: 1400px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 24px; margin: 0 0 4px; }
+.lede, .meta, .scenario { color: var(--muted); margin: 0 0 12px; }
+.legend { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px 12px 32px; margin: 16px 0 24px; }
+.state { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 16px; margin: 0 0 20px; }
+.state h2 { font-size: 18px; margin: 0 0 6px; }
+.tag { display: inline-block; min-width: 1.6em; text-align: center; color: var(--tag); font-weight: 700; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr)); gap: 12px; }
+.phones { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 12px; margin-top: 12px; }
+.shot { margin: 0; min-width: 0; }
+.shot img { width: 100%; height: auto; display: block; border: 1px solid var(--line); border-radius: 6px; }
+.shot figcaption { color: var(--muted); font-size: 12px; }
+.facts { margin: 12px 0 0; padding-left: 20px; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+<h1>Jieqi live reveal odds: three variants</h1>
+<p class="lede">The same live rooms as the baseline, opened with <code>?revealOdds=a|b|c</code>. Every number on these pages is computed in the browser from the seat's own PlayerView, so it can only restate what that player was already shown. Click a shot for full size.</p>
+<p class="meta">Generated ${escapeHtml(generatedAt)}.</p>
+<ul class="legend">${legend}</ul>
+${sections}
+</main>
+</body>
+</html>
+`;
+}
