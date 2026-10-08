@@ -33,6 +33,10 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Machine-drafted 2026-10-08, not native-reviewed, locked with its English
+  // copy, which publishes in the same release (the brianhliou.com draft of
+  // 2026-10-08, folded in before it was posted).
+  'longest-forced-mates-xiangqi',
   // Machine-drafted 2026-10-07, not native-reviewed, locked with its English
   // copy, which publishes in the same release (the fe26e31c repetition-key fix).
   'chariot-cannon-repetition-key',
@@ -182,6 +186,74 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // longest-forced-mates-xiangqi: machine-drafted 2026-10-08, not native-reviewed. Terms follow the study uXu609QE zh names and solver-audit (困毙, 半回合 for a ply, 回合 for a move).
+  'The Longest Forced Mates in Xiangqi': '象棋最长的必胜杀局',
+  'The Longest Forced Mates': '最长的必胜杀局',
+  'A horse and a soldier beat a general with both advisors and both elephants, and the slowest win in that endgame takes 65 moves. Seven records from xiangqi endgame tablebases, with the lines, and five of them end with the loser having no legal move.':
+    '马兵能胜士象全，而这一残局里最慢的胜法要走65回合。七项出自象棋残局库的纪录，附完整着法，其中五局以负方无着可走告终。',
+  'We generated xiangqi endgame tablebases for every one-and-two-attacker class against the full defence and pulled out the deepest position in each. The longest is a horse and a soldier: 65 moves of best play by both sides.':
+    '我们为一子和两子进攻对士象全的每一类残局生成了象棋残局库，并找出每一类中最深的局面。最长的是马兵：双方都走最佳着法，共65回合。',
+  'Five of the seven records end with the losing general having no legal move. That is 困毙, and in xiangqi it loses, so a longest-mate line can finish without a check on the board.':
+    '七项纪录中有五项以负方无着可走告终。这就是困毙，在象棋里判负，所以一条最长杀局可以在盘面上没有将军的情况下结束。',
+  "The lines survive the rules a real game runs under. No position repeats, and the longest stretch without a capture is 27 moves, inside the 60-move limit. Chess's 549-move tablebase record is drawn by its own 50-move rule; these are not.":
+    '这些着法经得起实战规则的检验。没有局面重复，最长的无吃子段落为27回合，在60回合限着之内。国际象棋549步的残局库纪录会被它自己的50步规则判和；这几局不会。',
+  'A tablebase holds every legal position of one material class together with its exact distance to mate under best play. Once you have the table, the longest mate in the class is a fact about the class: no engine opinion, no sampling, no search that might have missed something. Chess has had these numbers for decades, and its records are famous enough to have their own genre of video.':
+    '残局库收录某一子力组合的每一个合法局面，以及双方最佳着法下该局面到将死的精确距离。有了这张表，该类残局中最长的杀局就是这一类的事实：不是引擎的看法，不是抽样，也不是可能漏掉什么的搜索。国际象棋几十年前就有了这些数字，它的纪录有名到自成一类视频。',
+  'Xiangqi has the numbers too, and almost nobody knows it. 象棋云库 ([chessdb.cn](https://www.chessdb.cn/), the Chinese chess cloud database) publishes a maximum-DTM table for 8,705 material classes, linked from its homepage and written only in Chinese; the deepest entry there is 马马士 against 马卒象象 at 759 plies, a forced win 380 moves long. The 116-move record against 士象全 has been in the literature since Wu, Liu and Hsu reported it at Computers and Games in 2004. What none of them publish is the game. The table gives you a FEN and an integer and stops, and the 2004 paper gives a move count. Neither shows the moves in between.':
+    '象棋也有这些数字，只是几乎没人知道。象棋云库（[chessdb.cn](https://www.chessdb.cn/)）公布了一张涵盖8,705类子力组合的最长杀着距离（DTM）表，首页有链接，只有中文版；表中最深的一项是马马士对马卒象象，759个半回合，即一盘380回合的必胜棋。对士象全的116回合纪录，自 Wu、Liu 和 Hsu 于2004年在 Computers and Games 会议上发表以来，一直见于文献。他们都没有公布的，是这盘棋本身。云库的表给出一个 FEN 和一个整数就结束了，2004年的论文给出一个回合数。两者都没有给出中间的着法。',
+  "So this page is the lines. We generated the tables ourselves with Nguyen Pham's [FelicityEgtb](https://github.com/nguyenpham/FelicityEgtb); that is also the only way to check a published number against anything.":
+    '所以这一页给出的就是着法。残局库是我们用 Nguyen Pham 的 [FelicityEgtb](https://github.com/nguyenpham/FelicityEgtb) 自己生成的；这也是拿已公布的数字去对照任何东西的唯一办法。',
+  'The records': '纪录',
+  'Every class below is the attacker against 士象全: a general with both advisors and both elephants, which is the standard full defence. Mate counts are moves, not plies, and both sides play perfectly: the winner mates as fast as the position allows, the loser holds out as long as it can.':
+    '下面每一类都是攻方对士象全：将带双士双象，即标准的全套防守。杀着步数以回合计，而非半回合，双方都走完美着法：胜方以局面允许的最快速度成杀，负方尽可能久地坚持。',
+  Attacker: '攻方',
+  'Longest win': '最长胜局',
+  'Ends in': '结局',
+  'Horse and soldier (马兵)': '马兵',
+  'Two cannons (双炮)': '双炮',
+  'Chariot with its own full guard, against the same (车仕相全)': '车仕相全',
+  'Cannon and horse (炮马)': '炮马',
+  'Chariot alone (单车)': '单车',
+  'Two horses (双马)': '双马',
+  'Two soldiers (双兵)': '双兵',
+  '[mate in 65](/study/uXu609QE/GuhYA0we)': '[65回合成杀](/study/uXu609QE/GuhYA0we)',
+  '[mate in 52](/study/uXu609QE/u0z3Pvce)': '[52回合成杀](/study/uXu609QE/u0z3Pvce)',
+  '[mate in 43](/study/uXu609QE/85yb318c)': '[43回合成杀](/study/uXu609QE/85yb318c)',
+  '[mate in 36](/study/uXu609QE/LM1vYAUC)': '[36回合成杀](/study/uXu609QE/LM1vYAUC)',
+  '[mate in 32](/study/uXu609QE/rLYsuFtE)': '[32回合成杀](/study/uXu609QE/rLYsuFtE)',
+  '[mate in 31](/study/uXu609QE/aEdsvwA6)': '[31回合成杀](/study/uXu609QE/aEdsvwA6)',
+  '[mate in 22](/study/uXu609QE/4neR0BI5)': '[22回合成杀](/study/uXu609QE/4neR0BI5)',
+  checkmate: '将死',
+  'A lone horse, a lone cannon and a lone soldier cannot win against the full defence at all. That is old knowledge, and the tables have it as a flat draw.':
+    '单马、单炮、单兵对士象全根本赢不了。这是老知识，残局库里也都是和棋。',
+  'Each line is a [chapter in a study](/study/uXu609QE). The chapters have no sidelines and nothing is missing: every other move by the loser reaches a position closer to mate, and every other move by the winner either throws the win away or takes longer. That is what makes the line the longest one.':
+    '每一条着法都是[一个研究中的一章](/study/uXu609QE)。各章没有变着，也没有遗漏：负方任何别的走法，所到局面离杀更近；胜方任何别的走法，不是失去胜势就是更慢。这正是它成为最长着法的原因。',
+  'A horse and a soldier against the full guard: mate in 65': '马兵对士象全：65回合',
+  'The longest of the seven, step by step. The other six are the next chapters of the same study.':
+    '七局中最长的一局，可逐着演示。另外六局是同一研究的后续各章。',
+  'Five of the seven end without a check': '七局中有五局不是以将军结束',
+  'In chess, a stalemated king is a draw, so every longest-mate line ends in checkmate. Xiangqi scores it the other way: a side with no legal move loses. The position is called 困毙, and the loser is usually not in check at all when it happens. By the end of these lines the defence has lost its advisors and elephants, and the general stands alone in the palace with nothing it can legally play.':
+    '在国际象棋里，逼和算和棋，所以每一条最长杀局都以将死告终。象棋的判法正相反：无着可走的一方判负。这种局面叫困毙，发生时负方通常根本没有被将军。在这几条着法的结尾，防守方的士象都已丢光，将独自留在九宫里，却没有一步合法着法可走。',
+  'That is the shape of five of these seven records, including the two longest. Sixty-five moves of manoeuvring, and the finish is a quiet move that takes the last point away.':
+    '这七项纪录中有五项是这种结局，包括最长的两项。六十五回合的周旋，最后一步是一着不带将的闲着，封住了最后一个点。',
+  'The last four moves of the mate in 65': '65回合杀局的最后四回合',
+  "Four moves from the end. The horse takes the last advisor and swings round to c10 while the black general shuffles between f9 and f10, the red general steps back a square to pass the move, and the horse's quiet move to d8 covers f9 and e10. Black is not in check and has no legal move.":
+    '离终局还有四回合。马吃掉最后一个士，绕到c10，黑将在f9和f10之间来回走；红帅退一步停着；最后马不带将地走到d8，控制住f9和e10。黑方没有被将军，却无着可走。',
+  'The rules the table does not know': '残局库不知道的规则',
+  "A tablebase knows legal positions and moves and nothing else. It has never heard of the repetition law or 自然限着, the rule that draws a game after 60 moves with no capture, so a table's headline number can be a line that could never be played out. That is what happened to chess's famous one: the 549-move mate in the 7-piece tables is drawn by the 50-move rule long before it lands.":
+    '残局库只知道合法局面和着法，别的一概不知。它不知道重复局面的规则，也不知道自然限着（60回合无吃子即判和的规则），所以表中的一个醒目数字，可能是一条实战中永远走不完的着法。国际象棋那个著名的纪录就是这样：七子残局库里的549步杀，远在成杀之前就会被50步规则判和。',
+  'These seven are not. We replayed each line against both rules: no position repeats in any of them, and the longest capture-free stretch is 27 moves, in 双炮 and in 车仕相全, well inside the 60-move limit.':
+    '这七局不是。我们用这两条规则逐一重放了每条着法：没有一局出现局面重复，最长的无吃子段落是27回合，出现在双炮和车仕相全两局中，远在60回合限着之内。',
+  'Checking against the published table': '与公布的表对照',
+  "象棋云库's table gives the deepest position in each class with Red to move; ours takes the deepest whoever is to move. Where those are the same question the two agree exactly: two soldiers 43 plies, cannon and soldier 131, horse and soldier 129, cannon and horse 71.":
+    '象棋云库的表给出每一类中红先的最深局面；我们的表取最深局面，不论轮到哪一方走。在两者问的是同一个问题时，结果完全一致：双兵43个半回合，炮兵131，马兵129，炮马71。',
+  "A maximum is not automatically a record, though. Cannon and soldier's 131 plies is the deepest number in the whole 士象全 group, but 象棋云库's own API, asked about that position, returns exactly one winning move, a cannon capture of an elephant, with every other move drawn and the position after it scoring 130. It is a capture followed by a 130-ply mate against a defence missing an elephant, which is why cannon and soldier is not in the table above.":
+    '不过，最大值不一定就是纪录。炮兵的131个半回合是整个士象全组里最深的数字，但拿象棋云库自己的 API 去查这个局面，返回的取胜着法只有一步，炮打象，其余着法都是和棋，吃子之后的局面得分是130。这其实是一步吃子加上一盘对缺一象的防守的130个半回合杀局，所以炮兵不在上面的表里。',
+  'What is missing': '还缺什么',
+  "Every class here has one side with nothing but a general and its guard. The interesting case is two attackers against a defence that also keeps material, 车马 against 车士象全 and its neighbours, where neither side is obliged to capture anything. That is where the 60-move rule would actually bite, and where a record might turn out to be unplayable in the way chess's is. It is also about 9 billion indices, which wants a machine with considerably more memory than a laptop.":
+    '这里的每一类，都有一方只剩将和士象。更有意思的情况是两个进攻子对一个同样保有子力的防守，比如车马对车士象全及其相近的组合，双方都没有非吃子不可的义务。60回合限着真正会起作用的正是这里，一项纪录也可能像国际象棋那样，实战中根本走不完。它也有大约90亿个索引，需要一台内存远大于笔记本电脑的机器。',
+  'Play through all seven': '逐着演示全部七局',
+  'The basic endgames': '基本残局',
   // chariot-cannon-repetition-key: machine-drafted 2026-10-07, not native-reviewed.
   'Chariot and cannon both start with C': '车和炮的英文都以 C 开头',
   'Chariot and cannon, both C': '车和炮，都是 C',
@@ -4682,6 +4754,75 @@ const ZH_HANS: Record<string, string> = {
 
 const ZH_HANT: Record<string, string> = {
   ...ZH_HANS,
+  // longest-forced-mates-xiangqi: machine-drafted 2026-10-08, not native-reviewed. Terms follow the study uXu609QE zh names and solver-audit (困斃, 象棋雲庫, 著法); the bare 困毙 table cells take the Traditional glyph.
+  'The Longest Forced Mates in Xiangqi': '象棋最長的必勝殺局',
+  'The Longest Forced Mates': '最長的必勝殺局',
+  'A horse and a soldier beat a general with both advisors and both elephants, and the slowest win in that endgame takes 65 moves. Seven records from xiangqi endgame tablebases, with the lines, and five of them end with the loser having no legal move.':
+    '馬兵能勝士象全，而這一殘局裡最慢的勝法要走65回合。七項出自象棋殘局庫的紀錄，附完整著法，其中五局以負方無著可走告終。',
+  'We generated xiangqi endgame tablebases for every one-and-two-attacker class against the full defence and pulled out the deepest position in each. The longest is a horse and a soldier: 65 moves of best play by both sides.':
+    '我們為一子和兩子進攻對士象全的每一類殘局生成了象棋殘局庫，並找出每一類中最深的局面。最長的是馬兵：雙方都走最佳著法，共65回合。',
+  'Five of the seven records end with the losing general having no legal move. That is 困毙, and in xiangqi it loses, so a longest-mate line can finish without a check on the board.':
+    '七項紀錄中有五項以負方無著可走告終。這就是困斃，在象棋裡判負，所以一條最長殺局可以在盤面上沒有將軍的情況下結束。',
+  "The lines survive the rules a real game runs under. No position repeats, and the longest stretch without a capture is 27 moves, inside the 60-move limit. Chess's 549-move tablebase record is drawn by its own 50-move rule; these are not.":
+    '這些著法經得起實戰規則的檢驗。沒有局面重複，最長的無吃子段落為27回合，在60回合限著之內。國際象棋549步的殘局庫紀錄會被它自己的50步規則判和；這幾局不會。',
+  'A tablebase holds every legal position of one material class together with its exact distance to mate under best play. Once you have the table, the longest mate in the class is a fact about the class: no engine opinion, no sampling, no search that might have missed something. Chess has had these numbers for decades, and its records are famous enough to have their own genre of video.':
+    '殘局庫收錄某一子力組合的每一個合法局面，以及雙方最佳著法下該局面到將死的精確距離。有了這張表，該類殘局中最長的殺局就是這一類的事實：不是引擎的看法，不是抽樣，也不是可能漏掉什麼的搜尋。國際象棋幾十年前就有了這些數字，它的紀錄有名到自成一類影片。',
+  'Xiangqi has the numbers too, and almost nobody knows it. 象棋云库 ([chessdb.cn](https://www.chessdb.cn/), the Chinese chess cloud database) publishes a maximum-DTM table for 8,705 material classes, linked from its homepage and written only in Chinese; the deepest entry there is 马马士 against 马卒象象 at 759 plies, a forced win 380 moves long. The 116-move record against 士象全 has been in the literature since Wu, Liu and Hsu reported it at Computers and Games in 2004. What none of them publish is the game. The table gives you a FEN and an integer and stops, and the 2004 paper gives a move count. Neither shows the moves in between.':
+    '象棋也有這些數字，只是幾乎沒人知道。象棋雲庫（[chessdb.cn](https://www.chessdb.cn/)）公佈了一張涵蓋8,705類子力組合的最長殺著距離（DTM）表，首頁有連結，只有中文版；表中最深的一項是馬馬士對馬卒象象，759個半回合，即一盤380回合的必勝棋。對士象全的116回合紀錄，自 Wu、Liu 和 Hsu 於2004年在 Computers and Games 會議上發表以來，一直見於文獻。他們都沒有公佈的，是這盤棋本身。雲庫的表給出一個 FEN 和一個整數就結束了，2004年的論文給出一個回合數。兩者都沒有給出中間的著法。',
+  "So this page is the lines. We generated the tables ourselves with Nguyen Pham's [FelicityEgtb](https://github.com/nguyenpham/FelicityEgtb); that is also the only way to check a published number against anything.":
+    '所以這一頁給出的就是著法。殘局庫是我們用 Nguyen Pham 的 [FelicityEgtb](https://github.com/nguyenpham/FelicityEgtb) 自己生成的；這也是拿已公佈的數字去對照任何東西的唯一辦法。',
+  'The records': '紀錄',
+  'Every class below is the attacker against 士象全: a general with both advisors and both elephants, which is the standard full defence. Mate counts are moves, not plies, and both sides play perfectly: the winner mates as fast as the position allows, the loser holds out as long as it can.':
+    '下面每一類都是攻方對士象全：將帶雙士雙象，即標準的全套防守。殺著步數以回合計，而非半回合，雙方都走完美著法：勝方以局面允許的最快速度成殺，負方盡可能久地堅持。',
+  Attacker: '攻方',
+  'Longest win': '最長勝局',
+  'Ends in': '結局',
+  'Horse and soldier (马兵)': '馬兵',
+  'Two cannons (双炮)': '雙炮',
+  'Chariot with its own full guard, against the same (车仕相全)': '車仕相全',
+  'Cannon and horse (炮马)': '炮馬',
+  'Chariot alone (单车)': '單車',
+  'Two horses (双马)': '雙馬',
+  'Two soldiers (双兵)': '雙兵',
+  '[mate in 65](/study/uXu609QE/GuhYA0we)': '[65回合成殺](/study/uXu609QE/GuhYA0we)',
+  '[mate in 52](/study/uXu609QE/u0z3Pvce)': '[52回合成殺](/study/uXu609QE/u0z3Pvce)',
+  '[mate in 43](/study/uXu609QE/85yb318c)': '[43回合成殺](/study/uXu609QE/85yb318c)',
+  '[mate in 36](/study/uXu609QE/LM1vYAUC)': '[36回合成殺](/study/uXu609QE/LM1vYAUC)',
+  '[mate in 32](/study/uXu609QE/rLYsuFtE)': '[32回合成殺](/study/uXu609QE/rLYsuFtE)',
+  '[mate in 31](/study/uXu609QE/aEdsvwA6)': '[31回合成殺](/study/uXu609QE/aEdsvwA6)',
+  '[mate in 22](/study/uXu609QE/4neR0BI5)': '[22回合成殺](/study/uXu609QE/4neR0BI5)',
+  checkmate: '將死',
+  'A lone horse, a lone cannon and a lone soldier cannot win against the full defence at all. That is old knowledge, and the tables have it as a flat draw.':
+    '單馬、單炮、單兵對士象全根本贏不了。這是老知識，殘局庫裡也都是和棋。',
+  'Each line is a [chapter in a study](/study/uXu609QE). The chapters have no sidelines and nothing is missing: every other move by the loser reaches a position closer to mate, and every other move by the winner either throws the win away or takes longer. That is what makes the line the longest one.':
+    '每一條著法都是[一個研究中的一章](/study/uXu609QE)。各章沒有變著，也沒有遺漏：負方任何別的走法，所到局面離殺更近；勝方任何別的走法，不是失去勝勢就是更慢。這正是它成為最長著法的原因。',
+  'A horse and a soldier against the full guard: mate in 65': '馬兵對士象全：65回合',
+  'The longest of the seven, step by step. The other six are the next chapters of the same study.':
+    '七局中最長的一局，可逐著演示。另外六局是同一研究的後續各章。',
+  'Five of the seven end without a check': '七局中有五局不是以將軍結束',
+  'In chess, a stalemated king is a draw, so every longest-mate line ends in checkmate. Xiangqi scores it the other way: a side with no legal move loses. The position is called 困毙, and the loser is usually not in check at all when it happens. By the end of these lines the defence has lost its advisors and elephants, and the general stands alone in the palace with nothing it can legally play.':
+    '在國際象棋裡，逼和算和棋，所以每一條最長殺局都以將死告終。象棋的判法正相反：無著可走的一方判負。這種局面叫困斃，發生時負方通常根本沒有被將軍。在這幾條著法的結尾，防守方的士象都已丟光，將獨自留在九宮裡，卻沒有一步合法著法可走。',
+  'That is the shape of five of these seven records, including the two longest. Sixty-five moves of manoeuvring, and the finish is a quiet move that takes the last point away.':
+    '這七項紀錄中有五項是這種結局，包括最長的兩項。六十五回合的周旋，最後一步是一著不帶將的閒著，封住了最後一個點。',
+  'The last four moves of the mate in 65': '65回合殺局的最後四回合',
+  "Four moves from the end. The horse takes the last advisor and swings round to c10 while the black general shuffles between f9 and f10, the red general steps back a square to pass the move, and the horse's quiet move to d8 covers f9 and e10. Black is not in check and has no legal move.":
+    '離終局還有四回合。馬吃掉最後一個士，繞到c10，黑將在f9和f10之間來回走；紅帥退一步停著；最後馬不帶將地走到d8，控制住f9和e10。黑方沒有被將軍，卻無著可走。',
+  'The rules the table does not know': '殘局庫不知道的規則',
+  "A tablebase knows legal positions and moves and nothing else. It has never heard of the repetition law or 自然限着, the rule that draws a game after 60 moves with no capture, so a table's headline number can be a line that could never be played out. That is what happened to chess's famous one: the 549-move mate in the 7-piece tables is drawn by the 50-move rule long before it lands.":
+    '殘局庫只知道合法局面和著法，別的一概不知。它不知道重複局面的規則，也不知道自然限著（60回合無吃子即判和的規則），所以表中的一個醒目數字，可能是一條實戰中永遠走不完的著法。國際象棋那個著名的紀錄就是這樣：七子殘局庫裡的549步殺，遠在成殺之前就會被50步規則判和。',
+  'These seven are not. We replayed each line against both rules: no position repeats in any of them, and the longest capture-free stretch is 27 moves, in 双炮 and in 车仕相全, well inside the 60-move limit.':
+    '這七局不是。我們用這兩條規則逐一重放了每條著法：沒有一局出現局面重複，最長的無吃子段落是27回合，出現在雙炮和車仕相全兩局中，遠在60回合限著之內。',
+  'Checking against the published table': '與公佈的表對照',
+  "象棋云库's table gives the deepest position in each class with Red to move; ours takes the deepest whoever is to move. Where those are the same question the two agree exactly: two soldiers 43 plies, cannon and soldier 131, horse and soldier 129, cannon and horse 71.":
+    '象棋雲庫的表給出每一類中紅先的最深局面；我們的表取最深局面，不論輪到哪一方走。在兩者問的是同一個問題時，結果完全一致：雙兵43個半回合，炮兵131，馬兵129，炮馬71。',
+  "A maximum is not automatically a record, though. Cannon and soldier's 131 plies is the deepest number in the whole 士象全 group, but 象棋云库's own API, asked about that position, returns exactly one winning move, a cannon capture of an elephant, with every other move drawn and the position after it scoring 130. It is a capture followed by a 130-ply mate against a defence missing an elephant, which is why cannon and soldier is not in the table above.":
+    '不過，最大值不一定就是紀錄。炮兵的131個半回合是整個士象全組裡最深的數字，但拿象棋雲庫自己的 API 去查這個局面，返回的取勝著法只有一步，炮打象，其餘著法都是和棋，吃子之後的局面得分是130。這其實是一步吃子加上一盤對缺一象的防守的130個半回合殺局，所以炮兵不在上面的表裡。',
+  'What is missing': '還缺什麼',
+  "Every class here has one side with nothing but a general and its guard. The interesting case is two attackers against a defence that also keeps material, 车马 against 车士象全 and its neighbours, where neither side is obliged to capture anything. That is where the 60-move rule would actually bite, and where a record might turn out to be unplayable in the way chess's is. It is also about 9 billion indices, which wants a machine with considerably more memory than a laptop.":
+    '這裡的每一類，都有一方只剩將和士象。更有意思的情況是兩個進攻子對一個同樣保有子力的防守，比如車馬對車士象全及其相近的組合，雙方都沒有非吃子不可的義務。60回合限著真正會起作用的正是這裡，一項紀錄也可能像國際象棋那樣，實戰中根本走不完。它也有大約90億個索引，需要一台記憶體遠大於筆記型電腦的機器。',
+  'Play through all seven': '逐著演示全部七局',
+  'The basic endgames': '基本殘局',
+  困毙: '困斃',
   // chariot-cannon-repetition-key: machine-drafted 2026-10-07, not native-reviewed.
   'Chariot and cannon both start with C': '車和炮的英文都以 C 開頭',
   'Chariot and cannon, both C': '車和炮，都是 C',

@@ -853,13 +853,7 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     if (playCta) sheet.append(playCta);
   }
 
-  if (article.intro && article.intro.length > 0) {
-    const intro = document.createElement('div');
-    intro.className = 'article-intro';
-    for (const block of article.intro) intro.append(renderBlock(block, articleLang));
-    sheet.append(intro);
-  }
-
+  // First, like the blog's posts: the short version before anything else.
   if (article.tldr && article.tldr.length > 0) {
     const tldr = document.createElement('aside');
     tldr.className = 'article-tldr';
@@ -875,6 +869,13 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     }
     tldr.append(tldrHeading, tldrList);
     sheet.append(tldr);
+  }
+
+  if (article.intro && article.intro.length > 0) {
+    const intro = document.createElement('div');
+    intro.className = 'article-intro';
+    for (const block of article.intro) intro.append(renderBlock(block, articleLang));
+    sheet.append(intro);
   }
 
   const body = document.createElement('div');
