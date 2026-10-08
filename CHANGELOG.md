@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- Correspondence cards now always show you at the bottom with the board turned to your side, and the deadline bar sits next to the clock that is running ([a1db4208](https://github.com/brianhliou/mistboard/commit/a1db4208))
 - Live jieqi games show what each side's face-down pieces could still be and the chance of each, for both players and spectators, rated games included ([c746143c](https://github.com/brianhliou/mistboard/commit/c746143c))
 - The general glows red when it is in check, in xiangqi, jieqi, Storm the Fortress and Atomic Xiangqi ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
 - Jieqi move lists mark check (+) and checkmate (#) ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
@@ -54,6 +55,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- The longest forced mates in xiangqi: seven endgame tablebase records against the full guard, each played out in a study, in English and Chinese ([a1db4208](https://github.com/brianhliou/mistboard/commit/a1db4208))
 - Flip Jungle's skill ceiling joins the blog, KataGo's Jungle Chess page adds Misty's den-race tests, and the Pikafish reveal-bug page adds the September audit and its correction ([efb647e8](https://github.com/brianhliou/mistboard/commit/efb647e8))
 - a write-up of the repetition bug that let a chariot and cannon swap count as a repeated position, in English and Chinese ([efb647e8](https://github.com/brianhliou/mistboard/commit/efb647e8))
 - The xiangqi analysis board and game review show an exact tablebase in the book pane (every move's win, draw or loss and mate distance, from chessdb.cn) in covered endgames, and practice grades covered positions by it ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
@@ -126,6 +128,9 @@ Conventions:
 
 ### Site
 
+- Game emails have a new look, name the variant and opponent in the subject so each game gets its own thread, come in your site language, and link to your notification settings ([a1db4208](https://github.com/brianhliou/mistboard/commit/a1db4208))
+- The board menu has separate choices for layout, board colour (seven muted colours, with Jungle as a colour of the square grid), river text (楚河 漢界 or Mistboard) and start markers on the soldier and cannon points ([a1db4208](https://github.com/brianhliou/mistboard/commit/a1db4208))
+- Five new xiangqi piece sets, Lacquer, Wood, Book, Brush and Clerical; the letter and symbol sets are retired ([a1db4208](https://github.com/brianhliou/mistboard/commit/a1db4208))
 - The notification bell separates what is waiting on you from what is new, and correspondence cards show one clock, with the exact due time on hover ([c746143c](https://github.com/brianhliou/mistboard/commit/c746143c))
 - Engine champions page at /champions: the reigning champion engine for every game with a bot, the title history, and how any engine can challenge for a title ([c0374095](https://github.com/brianhliou/mistboard/commit/c0374095))
 - The source page credits Pikafish with links to pikafish.com, its weights license and its repository, and the analysis board's engine name links to pikafish.com ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
@@ -158,6 +163,9 @@ Conventions:
 
 ### Fixed
 
+- Duck Xiangqi rooms and reviews show the Duck Xiangqi marker instead of a duck emoji, Atomic and Crazyhouse Xiangqi show their own markers, and the duck no longer has a drop shadow ([a1db4208](https://github.com/brianhliou/mistboard/commit/a1db4208))
+- Opening someone else's live Fog game now says it is in progress and opens to everyone when it ends, instead of an error and an endless Connecting spinner ([a1db4208](https://github.com/brianhliou/mistboard/commit/a1db4208))
+- The Play a game window fits on a laptop screen without scrolling ([a1db4208](https://github.com/brianhliou/mistboard/commit/a1db4208))
 - Duck Xiangqi correspondence games now show Black's first move as your move, and no longer abort while Black still has time to reply ([c746143c](https://github.com/brianhliou/mistboard/commit/c746143c))
 - broadcast standings no longer count a playoff table's summary row as an extra game ([efb647e8](https://github.com/brianhliou/mistboard/commit/efb647e8))
 - on broadcast boards with only a result, the evaluation gauge now shows the winner, all Red for 1-0 and all Black for 0-1 ([efb647e8](https://github.com/brianhliou/mistboard/commit/efb647e8))
