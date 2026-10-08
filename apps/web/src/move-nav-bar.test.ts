@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createMoveNavBar,
@@ -179,5 +180,30 @@ describe('move-nav keyboard map', () => {
     expect(second.stepForward).not.toHaveBeenCalled();
     expect(second.toEnd).not.toHaveBeenCalled();
     controller.abort();
+  });
+});
+
+describe('move-nav bar review styling', () => {
+  const css = readFileSync('src/review/review-shell.css', 'utf8');
+  const block = (selector: string) => {
+    const start = css.indexOf(`${selector} {`);
+    expect(start, selector).toBeGreaterThanOrEqual(0);
+    return css.slice(start, css.indexOf('}', start));
+  };
+
+  it('closes the detached review bar as a bordered, rounded card on the band fill', () => {
+    // Detached below the analyse table (game review, analysis), the bar keeps the
+    // live band's tinted fill but needs its own full border and the panel's radius,
+    // or it reads as a bare pale strip on the page.
+    const card = block('.review-rail-mainwrap + .review-controls');
+    expect(card).toContain('border: 1px solid var(--site-border)');
+    expect(card).toContain('border-radius: 6px');
+    expect(card).not.toContain('background');
+  });
+
+  it('keeps the fused study strip open at the bottom', () => {
+    const fused = block('.review-rail-main > .review-controls');
+    expect(fused).toContain('border-bottom: 0');
+    expect(fused).not.toContain('border-radius');
   });
 });

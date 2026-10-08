@@ -843,6 +843,22 @@
   border-top-color: var(--site-border);
   border-bottom: 0;
 }
+/* Detached controls (game review, analysis): the bar sits below the analyse
+   table, as on lichess, so it closes itself as a small card with the panel's
+   border, radius and width. The fill and button states stay the band's own
+   (move-nav-bar.css), so it reads as the live room's tinted strip rather than a
+   bare one on the page. The outer buttons round with the card; the card cannot
+   clip them because the menu rises out of it. */
+.review-rail-mainwrap + .review-controls {
+  border: 1px solid var(--site-border);
+  border-radius: 6px;
+}
+.review-rail-mainwrap + .review-controls > .move-nav-bar__button:first-child {
+  border-radius: 5px 0 0 5px;
+}
+.review-rail-mainwrap + .review-controls > .move-nav-bar__button:last-of-type {
+  border-radius: 0 5px 5px 0;
+}
 
 /* On board-beside-table layouts the analyse table's bottom tracks the board's
    bottom (lichess): fixed to the board height, the move list flex-fills and
