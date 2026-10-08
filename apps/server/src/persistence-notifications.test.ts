@@ -1,7 +1,9 @@
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
   addForumPost,
   countIncomingChallenges,
   countNewFollowers,
+  createAccountSession,
   createCorrespondenceSeek,
   createForumTopic,
   createUser,
@@ -14,9 +16,14 @@ import {
   assert,
   definePersistenceTests,
   pg,
+  sha256,
   TEST_DATABASE_URL,
   test,
 } from './persistence-test-support.js';
+import {
+  type NotificationsPayload,
+  tryHandle as tryHandleNotifications,
+} from './routes/notifications.js';
 
 definePersistenceTests('notifications', () => {
   test('new-follower count is watermarked, and opening the bell clears it', async () => {
@@ -54,6 +61,64 @@ definePersistenceTests('notifications', () => {
       ['notif_fan_one', 'notif_target'],
     );
     assert.equal(await countNewFollowers('notif_target'), 1);
+  });
+
+  test('bell payload names the newest unseen followers, capped, minus blocked ones', async () => {
+    const now = new Date('2026-08-01T00:00:00Z');
+    await makeUser('notif_fowner', 'notiffowner', now);
+    // Seven followers, each a second newer than the last, all after the
+    // owner's now()-seeded watermark.
+    for (let index = 0; index < 7; index += 1) {
+      await makeUser(`notif_ffan${index}`, `notifffan${index}`, now);
+      assert.equal(
+        (await followUser({ actorId: `notif_ffan${index}`, targetHandle: 'notiffowner' })).ok,
+        true,
+      );
+      await runSql(
+        `UPDATE user_relations SET created_at = now() + make_interval(secs => $3::int)
+         WHERE actor_id = $1 AND target_id = $2`,
+        [`notif_ffan${index}`, 'notif_fowner', index + 1],
+      );
+    }
+    // The newest follower is blocked (legacy shape: blockUser would have
+    // severed the follow), the next newest has a private profile.
+    await runSql(
+      `INSERT INTO user_relations (actor_id, target_id, relation) VALUES ($1, $2, 'block')`,
+      ['notif_fowner', 'notif_ffan6'],
+    );
+    await runSql(`UPDATE users SET profile_visibility = 'private' WHERE id = 'notif_ffan5'`);
+
+    const cookie = await makeSessionCookie('notif_fowner');
+    const payload = await fetchNotifications(cookie);
+    // The badge and the rows agree: the blocked follower is in neither.
+    assert.equal(payload.newFollowers, 6);
+    assert.equal(await countNewFollowers('notif_fowner'), 6);
+    assert.deepEqual(
+      payload.followedBy.map((row) => [row.handle, row.displayName]),
+      [
+        [null, 'notifffan5'],
+        ['notifffan4', 'notifffan4'],
+        ['notifffan3', 'notifffan3'],
+        ['notifffan2', 'notifffan2'],
+        ['notifffan1', 'notifffan1'],
+      ],
+    );
+    assert.ok(
+      payload.followedBy.every((row) => !Number.isNaN(Date.parse(row.followedAt))),
+      'followedAt is an ISO timestamp',
+    );
+    assert.ok(!JSON.stringify(payload).includes('notif_ffan'), 'user ids never reach the client');
+
+    // The follower's own bell never lists the account they follow.
+    const fanPayload = await fetchNotifications(await makeSessionCookie('notif_ffan1'));
+    assert.equal(fanPayload.newFollowers, 0);
+    assert.deepEqual(fanPayload.followedBy, []);
+
+    // Opening the bell advances the watermark past every row.
+    await markNotificationsSeen('notif_fowner', 'followers', new Date(Date.now() + 60_000));
+    const after = await fetchNotifications(cookie);
+    assert.equal(after.newFollowers, 0);
+    assert.deepEqual(after.followedBy, []);
   });
 
   test('unread forum count covers other people in the topics you watch', async () => {
@@ -204,6 +269,42 @@ async function makeUser(id: string, handle: string, now: Date): Promise<void> {
     displayName: handle,
     now,
   });
+}
+
+async function makeSessionCookie(userId: string): Promise<string> {
+  const sessionId = `sess_${userId}`;
+  const token = `tok_${userId}`;
+  await createAccountSession({
+    id: sessionId,
+    userId,
+    tokenHash: sha256(token),
+    expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+  });
+  return `mistboard_session=${sessionId}.${token}`;
+}
+
+async function fetchNotifications(cookie: string): Promise<NotificationsPayload> {
+  let status: number | null = null;
+  let body = '';
+  const response = {
+    writeHead(code: number) {
+      status = code;
+      return response;
+    },
+    end(chunk?: string) {
+      body += chunk ?? '';
+      return response;
+    },
+  };
+  const handled = await tryHandleNotifications(
+    {},
+    { method: 'GET', headers: { cookie } } as unknown as IncomingMessage,
+    response as unknown as ServerResponse,
+    '/api/notifications',
+  );
+  assert.equal(handled, true);
+  assert.equal(status, 200);
+  return JSON.parse(body) as NotificationsPayload;
 }
 
 async function runSql(sql: string, params: unknown[] = []): Promise<void> {

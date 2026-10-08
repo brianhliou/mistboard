@@ -378,8 +378,10 @@ export {
 } from './persistence-lobby-activity.js';
 export type {
   ForumWatchNotification,
+  NewFollowerNotification,
   NotificationWatermarkKind,
   UnreadWatchedForumTopics,
+  UnseenNewFollowers,
 } from './persistence-notifications.js';
 export {
   countIncomingChallenges,
@@ -388,6 +390,7 @@ export {
   isNotificationWatermarkKind,
   markNotificationsSeen,
   unreadWatchedForumTopics,
+  unseenNewFollowers,
 } from './persistence-notifications.js';
 export type {
   PatronStanding,
@@ -437,6 +440,8 @@ export {
 export type { PuzzleStreakOptions } from './persistence-puzzle-streak.js';
 export { getPuzzleStreak } from './persistence-puzzle-streak.js';
 export type {
+  FollowerListEntry,
+  FollowerListPage,
   FollowResult,
   RelationListEntry,
   RelationListPage,
@@ -451,6 +456,7 @@ export {
   followUser,
   hasBlock,
   hasFollow,
+  listFollowers,
   listFollowingIds,
   listRelations,
   unblockUser,

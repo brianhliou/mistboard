@@ -15,7 +15,9 @@
 // so putting them on the row every session-load fetches would add width to the
 // hottest query in the app for no reader.
 
+import { linkableHandleSql } from './persistence-correspondence-seeks.js';
 import { getPool } from './persistence-db.js';
+import { visibleFollowerSql } from './persistence-relations.js';
 
 export type NotificationWatermarkKind = 'followers' | 'forum-replies';
 
@@ -28,20 +30,63 @@ export function isNotificationWatermarkKind(value: unknown): value is Notificati
   return value === 'followers' || value === 'forum-replies';
 }
 
-// Follows pointed AT this user since they last opened the bell. Count only:
-// nothing here exposes which accounts they are, which keeps 069's "no public
-// followers list" posture intact.
+// Follows pointed AT this user since they last opened the bell. Only the
+// followed account ever reads this (the private Followers list, 2026-10-08),
+// and it counts exactly the accounts that list would show (visibleFollowerSql).
 export async function countNewFollowers(userId: string): Promise<number> {
-  const { rows } = await getPool().query<{ count: string }>(
-    `SELECT count(*)::text AS count
+  return (await unseenNewFollowers(userId, { limit: 1 })).total;
+}
+
+export type NewFollowerNotification = {
+  // Null unless the follower's profile may be linked (linkableHandleSql).
+  handle: string | null;
+  displayName: string;
+  followedAt: Date;
+};
+
+export type UnseenNewFollowers = {
+  // Every unseen follow; the badge counts these.
+  total: number;
+  // The newest of them, capped by the caller, for one bell row each.
+  followers: NewFollowerNotification[];
+};
+
+// The bell's new-follower rows: follows since the followers watermark, newest
+// first, filtered like the Followers list so a row never names someone the
+// list hides (blocked or closed accounts).
+export async function unseenNewFollowers(
+  userId: string,
+  options: { limit?: number } = {},
+): Promise<UnseenNewFollowers> {
+  const limit = Math.max(1, Math.min(20, Math.floor(options.limit ?? 5)));
+  const { rows } = await getPool().query<{
+    handle: string | null;
+    display_name: string;
+    created_at: Date;
+    total: number;
+  }>(
+    `SELECT ${linkableHandleSql('f')} AS handle,
+            COALESCE(NULLIF(f.display_name, ''), f.handle) AS display_name,
+            r.created_at, (count(*) OVER ())::int AS total
      FROM user_relations r
      JOIN users u ON u.id = $1
+     JOIN users f ON f.id = r.actor_id
      WHERE r.target_id = $1
        AND r.relation = 'follow'
-       AND r.created_at > u.followers_seen_at`,
-    [userId],
+       AND r.created_at > u.followers_seen_at
+       AND ${visibleFollowerSql('r', 'f')}
+     ORDER BY r.created_at DESC, f.handle ASC
+     LIMIT $2::int`,
+    [userId, limit],
   );
-  return Number(rows[0]?.count ?? 0);
+  return {
+    total: rows[0]?.total ?? 0,
+    followers: rows.map((row) => ({
+      handle: row.handle,
+      displayName: row.display_name,
+      followedAt: row.created_at,
+    })),
+  };
 }
 
 export type ForumWatchNotification = {

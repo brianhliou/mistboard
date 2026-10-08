@@ -2,9 +2,12 @@
 //   POST/DELETE /api/users/:handle/follow
 //   POST/DELETE /api/users/:handle/block
 //   GET /api/relations/following
+//   GET /api/relations/followers
 //   GET /api/relations/blocks
 // All signed-in-only. Lists are self-only: there is no public followers or
-// following surface, matching the lichess privacy posture. Mutations return
+// following surface, matching the lichess privacy posture. The followers list
+// (2026-10-08) takes no handle at all, so it can only ever answer "who follows
+// me". Mutations return
 // the viewer's fresh relation to the target so the client can render state
 // without a profile refetch.
 
@@ -125,6 +128,34 @@ export async function tryHandle(
       playing: stats.playingUserIds.has(entry.userId),
     }));
     writeJson(response, 200, { players, count: players.length });
+    return true;
+  }
+
+  // Followers (2026-10-08): accounts following the signed-in viewer, newest
+  // first, minus anyone the viewer blocked. Keyed only by the session, so no
+  // request can name another account's followers. Lean rows (no ratings or
+  // game totals): the list answers "who", and a private follower's handle is
+  // withheld (linkableHandleSql) so the client renders the name unlinked.
+  if (pathname === '/api/relations/followers') {
+    if (!requireMethod(request, response, 'GET')) return true;
+    if (!requirePersistence(response)) return true;
+    const user = await currentAccountUser(request);
+    if (!user) {
+      writeJson(response, 401, { error: 'not_signed_in' });
+      return true;
+    }
+    const offset = clampInt(parsedUrl.searchParams.get('offset'), 0, 0, Number.MAX_SAFE_INTEGER);
+    const limit = clampInt(parsedUrl.searchParams.get('limit'), 30, 1, LIST_PAGE_MAX);
+    const page = await persistence.listFollowers(user.id, offset, limit);
+    writeJson(response, 200, {
+      entries: page.entries.map((entry) => ({
+        handle: entry.handle,
+        displayName: entry.displayName,
+        title: entry.title,
+        createdAt: entry.createdAt.toISOString(),
+      })),
+      total: page.total,
+    });
     return true;
   }
 

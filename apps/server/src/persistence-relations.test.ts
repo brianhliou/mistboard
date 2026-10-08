@@ -8,6 +8,7 @@ import {
   followUser,
   getUserByAccountSession,
   hasBlock,
+  listFollowers,
   listFollowingIds,
   listRelations,
   recordGameEnd,
@@ -338,6 +339,107 @@ definePersistenceTests('relations', () => {
     assert.deepEqual(bob!.bestRating, { variant: 'fog', eloRating: 1900, provisional: true });
     assert.equal(bob!.gamesTotal, 0);
     assert.equal(bob!.lastSeenAt, null, 'no recorded activity renders as null, not an error');
+  });
+
+  test('followers list is self-only, newest first, and leaves out blocked and closed followers', async () => {
+    const t0 = new Date('2026-07-01T00:00:00Z');
+    const at = (hours: number) => new Date(t0.getTime() + hours * 60 * 60 * 1000);
+    for (const [id, handle] of [
+      ['rel_fl_owner', 'flowner'],
+      ['rel_fl_old', 'flold'],
+      ['rel_fl_new', 'flnew'],
+      ['rel_fl_priv', 'flpriv'],
+      ['rel_fl_blocked', 'flblocked'],
+      ['rel_fl_closed', 'flclosed'],
+      ['rel_fl_other', 'flother'],
+    ] as const) {
+      await makeUser(id, handle, t0);
+    }
+    const follow = async (actorId: string, targetHandle: string, now: Date) =>
+      assert.equal((await followUser({ actorId, targetHandle, now })).ok, true);
+    await follow('rel_fl_old', 'flowner', at(0));
+    await follow('rel_fl_priv', 'flowner', at(1));
+    await follow('rel_fl_new', 'flowner', at(2));
+    await follow('rel_fl_blocked', 'flowner', at(3));
+    await follow('rel_fl_closed', 'flowner', at(4));
+    // Edges that are not follows OF the owner must stay out of the owner's list:
+    // the owner's own follow, and someone else's follower.
+    await follow('rel_fl_owner', 'flother', at(0));
+    await follow('rel_fl_old', 'flother', at(5));
+
+    await runSql(`UPDATE users SET profile_visibility = 'private' WHERE id = 'rel_fl_priv'`);
+    // blockUser severs the reverse follow, so a blocked follower cannot arise
+    // through the API today. Write the legacy shape (both edges present)
+    // directly: the list must still hide them.
+    await runSql(
+      `INSERT INTO user_relations (actor_id, target_id, relation, created_at)
+       VALUES ('rel_fl_owner', 'rel_fl_blocked', 'block', $1)`,
+      [at(6)],
+    );
+    // Closure deletes relations; a stale row for a closed account stays hidden.
+    await runSql(`UPDATE users SET closed_at = $1 WHERE id = 'rel_fl_closed'`, [at(7)]);
+
+    const page = await listFollowers('rel_fl_owner', 0, 30);
+    assert.equal(page.total, 3);
+    assert.deepEqual(
+      page.entries.map((entry) => [entry.handle, entry.displayName]),
+      [
+        ['flnew', 'flnew'],
+        // Private profile: named, but the handle is withheld so it never links.
+        [null, 'flpriv'],
+        ['flold', 'flold'],
+      ],
+    );
+    const second = await listFollowers('rel_fl_owner', 1, 1);
+    assert.equal(second.total, 3);
+    assert.deepEqual(
+      second.entries.map((entry) => entry.displayName),
+      ['flpriv'],
+    );
+
+    const fetchFollowers = async (cookie: string | null, query = '') => {
+      const response = captureResponse();
+      const handled = await tryHandleRelationsRoute(
+        {} as unknown as HttpApiContext,
+        { method: 'GET', headers: cookie ? { cookie } : {} } as unknown as IncomingMessage,
+        response,
+        '/api/relations/followers',
+        new URL(`http://localhost/api/relations/followers${query}`),
+      );
+      assert.equal(handled, true);
+      return response;
+    };
+
+    const anonymous = await fetchFollowers(null);
+    assert.equal(anonymous.status, 401);
+
+    const owner = await fetchFollowers(await makeSessionCookie('rel_fl_owner'));
+    assert.equal(owner.status, 200);
+    const ownerBody = JSON.parse(owner.body) as {
+      entries: Array<{ handle: string | null; displayName: string; createdAt: string }>;
+      total: number;
+    };
+    assert.equal(ownerBody.total, 3);
+    assert.deepEqual(
+      ownerBody.entries.map((entry) => entry.handle),
+      ['flnew', null, 'flold'],
+    );
+    assert.equal(ownerBody.entries[0]?.createdAt, at(2).toISOString());
+    assert.ok(!owner.body.includes('rel_fl_'), 'user ids never reach the client');
+
+    // Another account cannot read the owner's followers, even by naming them:
+    // the endpoint has no handle parameter and answers for the session only.
+    const other = await fetchFollowers(await makeSessionCookie('rel_fl_other'), '?handle=flowner');
+    assert.equal(other.status, 200);
+    const otherBody = JSON.parse(other.body) as {
+      entries: Array<{ handle: string | null }>;
+      total: number;
+    };
+    assert.deepEqual(
+      otherBody.entries.map((entry) => entry.handle),
+      ['flold', 'flowner'],
+    );
+    assert.equal(otherBody.total, 2);
   });
 
   test('session validation bumps users.last_seen_at with a five-minute throttle', async () => {

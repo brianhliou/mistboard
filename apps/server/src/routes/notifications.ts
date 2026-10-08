@@ -41,6 +41,14 @@ export type SeekExpiryNotificationJson = {
   ttlDays: number;
 };
 
+// One new follower, newest first. handle is null when the follower's profile
+// may not be linked (linkableHandleSql); the row then names them without a link.
+export type NewFollowerNotificationJson = {
+  handle: string | null;
+  displayName: string;
+  followedAt: string;
+};
+
 export type ForumWatchNotificationJson = {
   topicId: string;
   slug: string;
@@ -51,13 +59,16 @@ export type ForumWatchNotificationJson = {
 };
 
 // The bell payload: every count, plus the per-topic rows behind forumTopics
-// (capped, most recently active first) so the panel can deep-link each one.
+// (capped, most recently active first) so the panel can deep-link each one,
+// and the newest followers behind newFollowers (capped the same way).
 export type NotificationsPayload = NotificationCounts & {
+  followedBy: NewFollowerNotificationJson[];
   forumWatched: ForumWatchNotificationJson[];
   seekExpired: SeekExpiryNotificationJson[];
 };
 
 const FORUM_BELL_ROWS = 5;
+const FOLLOWER_BELL_ROWS = 5;
 const SEEK_EXPIRY_BELL_ROWS = 3;
 const SEEK_TTL_DAYS = Math.round(persistence.CORRESPONDENCE_SEEK_TTL_MS / DAY_MS);
 
@@ -102,7 +113,9 @@ export async function tryHandle(
           .listCorrespondenceGamesForUser(user.id)
           .then((games) => games.reduce((count, game) => count + (game.isYourMove ? 1 : 0), 0)),
       ),
-      countOrZero(persistence.countNewFollowers(user.id)),
+      persistence
+        .unseenNewFollowers(user.id, { limit: FOLLOWER_BELL_ROWS })
+        .catch((): persistence.UnseenNewFollowers => ({ total: 0, followers: [] })),
       persistence
         .unreadWatchedForumTopics(user.id, { limit: FORUM_BELL_ROWS })
         .catch((): persistence.UnreadWatchedForumTopics => ({ total: 0, topics: [] })),
@@ -115,7 +128,12 @@ export async function tryHandle(
     const payload: NotificationsPayload = {
       inboxUnread,
       correspondenceYourMove,
-      newFollowers,
+      newFollowers: newFollowers.total,
+      followedBy: newFollowers.followers.map((follower) => ({
+        handle: follower.handle,
+        displayName: follower.displayName,
+        followedAt: follower.followedAt.toISOString(),
+      })),
       forumTopics: forumWatched.total,
       incomingChallenges,
       forumWatched: forumWatched.topics,
