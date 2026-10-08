@@ -312,11 +312,9 @@ export function parseComposeSpec(spec) {
   return columns;
 }
 
-const VARIANT_NOTES = {
-  baseline: 'Today: no odds anywhere on the page.',
-  a: 'Labelled pool row beside each seat ("N face-down could be:"): a piece icon per unseen role with its count badge and its percentage printed under it.',
-  b: 'Hover or tap any face-down piece: a popover with its side’s odds (open over one of the seat’s own pieces in the shot), plus a slim pool row.',
-  c: 'A table in the game-info rail (below the board on a phone): percent and count per piece type, one column per side.',
+const COLUMN_NOTES = {
+  baseline: 'Before: no odds anywhere on the page.',
+  odds: 'Labelled pool row beside each seat ("N face-down could be:"): a piece icon per unseen role with its count badge and its percentage printed under it.',
 };
 
 // Side by side: one section per state present in the first (reference) run,
@@ -342,7 +340,7 @@ export function renderComparisonHtml({ columns, generatedAt }) {
         .map((c) => {
           const entry = byId(c, state.id);
           const lines = (entry?.facts ?? []).filter((line) =>
-            /^(Page odds|Popover|Table|Board top|Expected)/.test(line),
+            /^(Page odds|Board top|Expected)/.test(line),
           );
           return lines.length
             ? `<li><strong>${escapeHtml(c.label)}</strong><ul>${lines.map((l) => `<li>${escapeHtml(l)}</li>`).join('')}</ul></li>`
@@ -361,7 +359,7 @@ export function renderComparisonHtml({ columns, generatedAt }) {
   const legend = columns
     .map(
       (c) =>
-        `<li><strong>${escapeHtml(c.label)}</strong>: ${escapeHtml(VARIANT_NOTES[c.label] ?? '')}</li>`,
+        `<li><strong>${escapeHtml(c.label)}</strong>: ${escapeHtml(COLUMN_NOTES[c.label] ?? '')}</li>`,
     )
     .join('');
   return `<!doctype html>
@@ -395,8 +393,8 @@ h1 { font-size: 24px; margin: 0 0 4px; }
 </head>
 <body>
 <main>
-<h1>Jieqi live reveal odds: three variants</h1>
-<p class="lede">The same live rooms as the baseline, opened with <code>?revealOdds=a|b|c</code>. Every number on these pages is computed in the browser from the seat's own PlayerView, so it can only restate what that player was already shown. Click a shot for full size.</p>
+<h1>Jieqi live reveal odds: before and after</h1>
+<p class="lede">The same live rooms, one column per run. Every number on these pages is computed in the browser from the seat's own PlayerView, so it can only restate what that player was already shown. Click a shot for full size.</p>
 <p class="meta">Generated ${escapeHtml(generatedAt)}.</p>
 <ul class="legend">${legend}</ul>
 ${sections}

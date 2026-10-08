@@ -90,14 +90,3 @@ export function jieqiRevealOdds(view: RevealOddsView): RevealOdds {
 export function formatRevealPercent(probability: number): string {
   return `${Math.round(probability * 100)}%`;
 }
-
-export type RevealOddsVariant = 'a' | 'b' | 'c';
-
-/**
- * The UI variant from `?revealOdds=a|b|c` (a pick-one trial for Brian). Anything
- * else, including no flag, is the planned default, a.
- */
-export function revealOddsVariantFrom(search: string): RevealOddsVariant {
-  const value = new URLSearchParams(search).get('revealOdds');
-  return value === 'b' || value === 'c' ? value : 'a';
-}

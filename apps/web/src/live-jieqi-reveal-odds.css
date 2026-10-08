@@ -1,24 +1,12 @@
-/* Live jieqi reveal odds (live-jieqi-reveal-odds.ts). Every band here is
-   RESERVED: a row keeps its height whether or not it has anything to show, and
-   the popover is an overlay, so the board and the rail never move with the
-   odds (the 2026-09-20 rule in live-review.css .rail-material). */
+/* Live jieqi reveal odds (live-jieqi-reveal-odds.ts). Each row is a RESERVED
+   band: it keeps its height whether or not it has anything to show, so the
+   board and the rail never move with the odds (the 2026-09-20 rule in
+   live-review.css .rail-material). */
 
-.reveal-odds-row {
-  --reveal-chip: 20px;
-
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-height: calc(var(--reveal-chip) + 4px);
-  padding: 2px 0;
-  overflow: visible;
-  white-space: nowrap;
-}
-
-/* a: a labelled block, sized like part of the seat's area rather than a
+/* A labelled block, sized like part of the seat's area rather than a
    footnote: the label line, then the icons with the percentage printed under
    each. The band reserves all three lines (label, icon, percent). */
-.reveal-odds-row--a {
+.reveal-odds-row {
   --reveal-chip: clamp(28px, calc((100cqw - 50px) / 6), 38px);
 
   display: grid;
@@ -26,6 +14,9 @@
   align-content: start;
   row-gap: 3px;
   min-height: calc(var(--reveal-chip) + 2.45rem);
+  padding: 2px 0;
+  overflow: visible;
+  white-space: nowrap;
 }
 
 .reveal-odds-row--top {
@@ -43,28 +34,18 @@
   min-width: 0;
 }
 
-.reveal-odds-row__lead,
-.reveal-odds-row__note {
-  flex: 0 0 auto;
-  font-size: 0.72rem;
-  color: var(--site-muted);
-  font-variant-numeric: tabular-nums;
-}
-
 .reveal-odds-row__lead {
-  min-width: 5.6em;
-  font-weight: 600;
-}
-
-.reveal-odds-row--a .reveal-odds-row__lead {
-  min-width: 0;
+  flex: 0 0 auto;
   font-size: 0.84rem;
+  font-weight: 600;
   color: var(--site-text);
+  font-variant-numeric: tabular-nums;
 }
 
 /* The uncertain side's "N taken unseen": its own fact, so a pill at the end of
    the label line rather than more grey text. */
-.reveal-odds-row--a .reveal-odds-row__note {
+.reveal-odds-row__note {
+  flex: 0 0 auto;
   margin-left: auto;
   padding: 1px 7px;
   border-radius: 999px;
@@ -72,15 +53,11 @@
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--site-text);
+  font-variant-numeric: tabular-nums;
 }
 
 .reveal-odds-row__pieces {
   display: flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.reveal-odds-row--a .reveal-odds-row__pieces {
   align-items: flex-start;
   gap: 6px;
 }
@@ -108,250 +85,20 @@
 }
 
 .reveal-odds-chip .captures-count-badge {
-  min-width: 12px;
-  height: 12px;
-  font-size: 9px;
+  min-width: 14px;
+  height: 14px;
+  font-size: 10px;
   right: -3px;
   bottom: -3px;
 }
 
-.reveal-odds-row--a .reveal-odds-chip .captures-count-badge {
-  min-width: 14px;
-  height: 14px;
-  font-size: 10px;
-}
-
-/* a's percentage: always printed under its icon (no hover, no tap). */
+/* The percentage: always printed under its icon (no hover, no tap). */
 .reveal-odds-chip__pct {
   font-size: 0.8rem;
   font-weight: 700;
   line-height: 1.2;
   color: var(--site-text);
   font-variant-numeric: tabular-nums;
-}
-
-/* ── d: by army ────────────────────────────────────────────────────────────
-   Each block is one ink: a's "could be" row, then a quieter "Lost" line of the
-   same ink's captured pieces, smaller and dimmed, so what may still be on the
-   board reads apart from what is gone. The unseen losses are the board's
-   face-down back, last on the line, beside "N unseen": they are the slots the
-   percentages above share. Both lines reserve their band. */
-.reveal-odds-row--d {
-  --reveal-lost: 28px;
-
-  display: grid;
-  grid-template-rows: auto auto;
-  row-gap: 4px;
-}
-
-.reveal-odds-army__lost {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-height: calc(var(--reveal-lost) + 2px);
-}
-
-.reveal-odds-army__label,
-.reveal-odds-army__unseen {
-  flex: 0 0 auto;
-  font-size: 0.75rem;
-  color: var(--site-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.reveal-odds-army__label {
-  min-width: 2.6em;
-  font-weight: 600;
-}
-
-.reveal-odds-army__pieces {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.reveal-odds-army__piece {
-  position: relative;
-  display: block;
-  width: var(--reveal-lost);
-  height: var(--reveal-lost);
-  line-height: 0;
-}
-
-.reveal-odds-army__piece svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-  opacity: 0.65;
-}
-
-.reveal-odds-army__piece--unseen {
-  margin-left: 4px;
-}
-
-.reveal-odds-army__piece .captures-count-badge {
-  min-width: 12px;
-  height: 12px;
-  font-size: 9px;
-  right: -3px;
-  bottom: -3px;
-}
-
-/* d hides the seat trays: its blocks carry the same pieces, grouped by ink. */
-.live-review__cluster .game-console > .captures-strip[data-reveal-odds-army="hidden"] {
-  display: none;
-}
-
-/* ── b: the board popover ──────────────────────────────────────────────── */
-
-.reveal-odds-pop {
-  position: absolute;
-  z-index: 6;
-  transform: translate(-50%, 0);
-  min-width: 150px;
-  padding: 6px 8px 7px;
-  border: 1px solid var(--site-border, #d6d0c4);
-  border-radius: 8px;
-  background: var(--site-panel, #ffffff);
-  color: var(--site-text, #1f1d1a);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
-  pointer-events: none;
-}
-
-.reveal-odds-pop[data-place="above"] {
-  transform: translate(-50%, -100%);
-}
-
-.reveal-odds-pop[hidden] {
-  display: none;
-}
-
-.reveal-odds-pop__title {
-  margin-bottom: 4px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--site-muted);
-  white-space: nowrap;
-}
-
-.reveal-odds-pop__grid {
-  display: grid;
-  grid-template-columns: repeat(3, auto);
-  gap: 4px 10px;
-}
-
-.reveal-odds-pop__cell {
-  display: grid;
-  grid-template-columns: 22px auto;
-  grid-template-rows: auto auto;
-  column-gap: 4px;
-  align-items: center;
-}
-
-.reveal-odds-pop__piece {
-  grid-row: 1 / span 2;
-  width: 22px;
-  height: 22px;
-}
-
-.reveal-odds-pop__piece svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.reveal-odds-pop__pct {
-  font-size: 0.8rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.1;
-}
-
-.reveal-odds-pop__count,
-.reveal-odds-pop__note {
-  font-size: 0.68rem;
-  color: var(--site-muted);
-  font-variant-numeric: tabular-nums;
-  line-height: 1.1;
-}
-
-.reveal-odds-pop__note {
-  margin-top: 4px;
-}
-
-/* ── c: the table in the game-info rail ────────────────────────────────── */
-
-.reveal-odds-table__summary {
-  cursor: pointer;
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.reveal-odds-table__grid {
-  width: 100%;
-  margin-top: 6px;
-  border-collapse: collapse;
-  font-size: 0.8rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.reveal-odds-table__grid th,
-.reveal-odds-table__grid td {
-  padding: 3px 4px;
-  text-align: right;
-  font-weight: 400;
-}
-
-.reveal-odds-table__grid tbody th {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  text-align: left;
-}
-
-.reveal-odds-table__grid thead th {
-  vertical-align: bottom;
-  border-bottom: 1px solid var(--site-border, #d6d0c4);
-}
-
-.reveal-odds-table__grid tbody tr + tr > * {
-  border-top: 1px solid color-mix(in srgb, var(--site-border, #d6d0c4) 50%, transparent);
-}
-
-.reveal-odds-table__ink {
-  display: block;
-  font-weight: 600;
-}
-
-.reveal-odds-table__grid thead th[data-ink="red"] .reveal-odds-table__ink {
-  color: #b91c1c;
-}
-
-.reveal-odds-table__sub,
-.reveal-odds-table__count,
-.reveal-odds-table__grid tfoot td {
-  font-size: 0.72rem;
-  color: var(--site-muted);
-}
-
-.reveal-odds-table__count {
-  margin-left: 5px;
-}
-
-.reveal-odds-table__grid td.is-empty {
-  color: var(--site-muted);
-}
-
-.reveal-odds-table__piece {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-}
-
-.reveal-odds-table__piece svg {
-  display: block;
-  width: 100%;
-  height: 100%;
 }
 
 /* Phone: the seat lines are one flex row each (live-review.css, max-width
@@ -362,28 +109,11 @@
    regardless of bundle order. */
 @media (max-width: 799px) {
   .live-review__cluster .game-console > .reveal-odds-row {
-    --reveal-chip: 18px;
+    --reveal-chip: 30px;
 
     flex: 0 0 100%;
     margin: 0;
     padding: 0 2px;
-  }
-
-  .live-review__cluster .game-console > .reveal-odds-row--a {
-    --reveal-chip: 30px;
-  }
-
-  .live-review__cluster .game-console > .reveal-odds-row--d {
-    --reveal-lost: 24px;
-  }
-
-  .live-review__cluster .game-console > .reveal-odds-row--d .reveal-odds-row--a {
-    --reveal-chip: 30px;
-  }
-
-  /* d: the second army block (the opponent's) starts a little apart. */
-  .live-review__cluster .game-console > .reveal-odds-row--d.reveal-odds-row--top {
-    margin-top: 6px;
   }
 
   .live-review__cluster .game-console > .reveal-odds-row--top {

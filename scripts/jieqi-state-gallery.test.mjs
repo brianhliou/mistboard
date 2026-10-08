@@ -233,17 +233,22 @@ test('the comparison page puts each run side by side and keeps only the odds fac
     columns: [
       { label: 'baseline', prefix: '../gallery', entries: [entry('a', ''), entry('z', '')] },
       {
-        label: 'a',
-        prefix: 'a',
+        label: 'odds',
+        prefix: 'odds',
         entries: [
-          entry('a', 'a', ['Page odds, top row: x', 'Page move list: []'], ['desktop', 'mobile']),
+          entry(
+            'a',
+            'odds',
+            ['Page odds, top row: x', 'Page move list: []'],
+            ['desktop', 'mobile'],
+          ),
         ],
       },
     ],
   });
   assert.match(html, /src="\.\.\/gallery\/state-a-desktop\.png"/);
-  assert.match(html, /src="a\/state-a-desktop\.png"/);
-  assert.match(html, /src="a\/state-a-mobile\.png"/);
+  assert.match(html, /src="odds\/state-a-desktop\.png"/);
+  assert.match(html, /src="odds\/state-a-mobile\.png"/);
   assert.match(html, /Page odds, top row: x/);
   assert.ok(!html.includes('Page move list'), 'only odds facts are listed');
   assert.ok(!html.includes('id="state-z"'), 'a state no other run shot is left out');

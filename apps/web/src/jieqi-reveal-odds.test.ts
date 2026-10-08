@@ -12,12 +12,7 @@ import {
   jieqiHomeSquares,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
-import {
-  formatRevealPercent,
-  jieqiRevealOdds,
-  type RevealOdds,
-  revealOddsVariantFrom,
-} from './jieqi-reveal-odds.js';
+import { formatRevealPercent, jieqiRevealOdds, type RevealOdds } from './jieqi-reveal-odds.js';
 
 // The reveal odds are an in-game aid in rated play, so they must be bookkeeping
 // from the viewer's own view and nothing else (CLAUDE.md "In-game aids bar").
@@ -163,14 +158,9 @@ describe('jieqiRevealOdds counting', () => {
     }
   });
 
-  it('formats whole percents and reads the variant flag, defaulting to a', () => {
+  it('formats whole percents', () => {
     expect(formatRevealPercent(1 / 3)).toBe('33%');
     expect(formatRevealPercent(0.125)).toBe('13%');
-    expect(revealOddsVariantFrom('')).toBe('a');
-    expect(revealOddsVariantFrom('?revealOdds=b')).toBe('b');
-    expect(revealOddsVariantFrom('?x=1&revealOdds=c')).toBe('c');
-    expect(revealOddsVariantFrom('?revealOdds=d')).toBe('a');
-    expect(revealOddsVariantFrom('?revealOdds=A')).toBe('a');
   });
 });
 

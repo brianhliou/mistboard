@@ -34,11 +34,7 @@ import {
   renderJieqiBoardSvg,
 } from './live-jieqi-render.js';
 import { rebuildFinishedJieqiHistory } from './live-jieqi-replay-history.js';
-import {
-  liveRevealOddsVariantFrom,
-  mountRevealOdds,
-  type RevealOddsMount,
-} from './live-jieqi-reveal-odds.js';
+import { mountRevealOdds, type RevealOddsMount } from './live-jieqi-reveal-odds.js';
 import {
   maybePlayJieqiSnapshotSound,
   resetJieqiSoundState,
@@ -203,19 +199,11 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
     core = ctx;
     installJieqiBoardStyles();
     installJieqiBoardInteraction(ctx.refs);
-    revealOdds = mountRevealOdds(
-      ctx.refs,
-      liveRevealOddsVariantFrom(window.location.search),
-      () => {
-        const pieceSet = readStoredXiangqiPieceSet();
-        return ({ color, role, faceDown }) =>
-          renderXiangqiPieceGlyphed(
-            { color, role },
-            pieceSet,
-            faceDown ? { ariaLabel: '', shrouded: true, shroudedStyle: 'back' } : { ariaLabel: '' },
-          );
-      },
-    );
+    revealOdds = mountRevealOdds(ctx.refs, () => {
+      const pieceSet = readStoredXiangqiPieceSet();
+      return ({ color, role }) =>
+        renderXiangqiPieceGlyphed({ color, role }, pieceSet, { ariaLabel: '' });
+    });
     // Hot-reload the viewer's xiangqi piece set mid-game (board + captured pool
     // render from the stored set); mirrors the chess family's appearance hook.
     window.addEventListener(xiangqiAppearanceChangedEvent, ctx.renderAll);
@@ -437,12 +425,7 @@ function renderCapturedPools(liveRefs: LiveRefs, view: JieqiWireView | null): vo
 // spectator's public view) at the ply on screen, so a scrub shows the odds as
 // they stood then and nothing reads past what this viewer was sent.
 function renderRevealOdds(view: JieqiWireView | null): void {
-  const seat = core?.state.seat;
-  revealOdds?.render({
-    view,
-    orientation: orientationFor(view),
-    seat: isJieqiColor(seat) ? seat : null,
-  });
+  revealOdds?.render({ view, orientation: orientationFor(view) });
 }
 
 // Exported for unit testing the material data path (revealed identity vs an

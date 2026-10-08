@@ -20,14 +20,13 @@
 // shot seat's token (localStorage key mistboard.seatToken.<roomId>, value
 // {"seat","token"}) to open a room by hand. Flags: --states a,c,f (subset),
 // --no-shots (rooms and manifest only), --api (default: web port + 1),
-// --reveal-odds a|b|c|army (open the room with ?revealOdds=, the live
-// reveal-odds UI variant; a, c and army always show their numbers, b opens one
-// face-down piece's popover),
-// --mobile f,g (also shoot these states at 390 px).
+// --mobile f,g (also shoot these states at 390 px). Each state's facts list
+// the reveal-odds rows read off the page beside the odds expected from the
+// seat's view (expectedRevealOdds), so a mismatch shows on the page.
 //
 // Side-by-side page from finished runs (no dev pair needed):
 //
-//   node scripts/jieqi-state-gallery.mjs --compose baseline=<dir>,a=<dir>,b=<dir> --out <dir>
+//   node scripts/jieqi-state-gallery.mjs --compose baseline=<dir>,odds=<dir> --out <dir>
 //
 // Each <dir> is a previous --out; the first column is the reference.
 //
@@ -65,7 +64,6 @@ function parseArgs(argv) {
     states: null,
     shots: true,
     out: 'tmp/jieqi-state-gallery',
-    revealOdds: null,
     mobile: [],
     compose: null,
   };
@@ -84,12 +82,7 @@ function parseArgs(argv) {
         .split(',')
         .map((s) => s.trim());
     else if (arg === '--no-shots') options.shots = false;
-    else if (arg === '--reveal-odds') {
-      options.revealOdds = next();
-      if (!['a', 'b', 'c', 'army'].includes(options.revealOdds)) {
-        throw new Error(`--reveal-odds wants a, b, c or army, got ${options.revealOdds}`);
-      }
-    } else if (arg === '--mobile')
+    else if (arg === '--mobile')
       options.mobile = next()
         .split(',')
         .map((s) => s.trim());
@@ -237,34 +230,8 @@ function readPage() {
         (el) => el.getAttribute('aria-label'),
       ),
       notes: [...document.querySelectorAll('.reveal-odds-row__note')].map(text),
-      lost: [
-        ...document.querySelectorAll('.reveal-odds-row [aria-label].reveal-odds-army__lost'),
-      ].map(
-        (el) =>
-          `${el.closest('.reveal-odds-row--top') ? 'top' : 'bottom'}: ${el.getAttribute('aria-label')}`,
-      ),
-      popover: text(document.querySelector('.reveal-odds-pop:not([hidden])')),
-      table: [...document.querySelectorAll('.reveal-odds-table__grid tr')].map(text),
     },
   };
-}
-
-// Open the variant's on-demand surface so the shot shows it: b's popover over
-// one of the seat's own face-down pieces (a and c print every number already).
-// A phone taps (b's tap also selects the piece, as it would for a player).
-async function openRevealOdds(page, variant, width, view, seat) {
-  const mobile = width === 'mobile';
-  if (variant === 'b') {
-    const square = Object.entries(view.board ?? {})
-      .filter(([, piece]) => piece?.faceDown && piece.color === seat)
-      .map(([sq]) => sq)
-      .sort()[0];
-    if (!square) return;
-    const hit = page.locator(`.jieqi-live-board [data-square="${square}"]`);
-    if (mobile) await hit.tap();
-    else await hit.hover();
-  }
-  await page.waitForTimeout(250);
 }
 
 async function shoot(browser, targets, outDir, state, result, options) {
@@ -295,8 +262,7 @@ async function shoot(browser, targets, outDir, state, result, options) {
       { roomId: result.roomId, seat: state.seat, seatToken: token },
     );
     const page = await context.newPage();
-    const query = options.revealOdds ? `?revealOdds=${options.revealOdds}` : '';
-    await page.goto(`${targets.web}/room/${result.roomId}${query}`);
+    await page.goto(`${targets.web}/room/${result.roomId}`);
     await page.locator('.jieqi-live-board svg.jieqi-piece').first().waitFor({
       state: 'visible',
       timeout: STEP_TIMEOUT_MS,
@@ -306,9 +272,6 @@ async function shoot(browser, targets, outDir, state, result, options) {
       .locator('.round-table__player--bottom', { hasText: 'You' })
       .waitFor({ timeout: STEP_TIMEOUT_MS });
     await page.waitForTimeout(600);
-    if (options.revealOdds) {
-      await openRevealOdds(page, options.revealOdds, width, result.view, state.seat);
-    }
     const pageValues = await page.evaluate(readPage);
     if (!readout) readout = pageValues;
     else readout.boardTopMobile = pageValues.boardTop;
@@ -335,13 +298,9 @@ function factsFor(state, result, readout) {
       `Page move list: [${readout.moveList.join(' ') || 'empty'}]. Face-down pool panel: ${readout.hiddenPoolChildren ? `${readout.hiddenPoolChildren} rows` : 'empty'}.`,
     );
     const odds = readout.revealOdds;
-    if (odds && (odds.top.length || odds.bottom.length || odds.table.length || odds.popover)) {
-      if (odds.top.length) facts.push(`Page odds, top row: ${odds.top.join('; ')}.`);
-      if (odds.bottom.length) facts.push(`Page odds, bottom row: ${odds.bottom.join('; ')}.`);
-      if (odds.popover) facts.push(`Popover: ${odds.popover}.`);
-      if (odds.lost?.length) facts.push(`Lost lines: ${odds.lost.join('; ')}.`);
-      if (odds.table.length) facts.push(`Table: ${odds.table.join(' | ')}.`);
-    }
+    if (odds.top.length) facts.push(`Page odds, top row: ${odds.top.join('; ')}.`);
+    if (odds.bottom.length) facts.push(`Page odds, bottom row: ${odds.bottom.join('; ')}.`);
+    if (odds.notes.length) facts.push(`Page odds notes: ${odds.notes.join('; ')}.`);
     if (readout.boardTop !== undefined) {
       facts.push(
         `Board top: ${readout.boardTop}px desktop${readout.boardTopMobile !== undefined ? `, ${readout.boardTopMobile}px at 390` : ''}.`,
@@ -405,7 +364,6 @@ async function main() {
       const entry = {
         id: state.id,
         title: state.title,
-        revealOdds: options.revealOdds,
         scenario: state.scenario,
         reading: state.reading,
         seat: state.seat,
@@ -431,7 +389,7 @@ async function main() {
   } finally {
     await browser?.close();
   }
-  const command = `node scripts/jieqi-state-gallery.mjs --web ${targets.web} --out ${options.out}${options.states ? ` --states ${options.states.join(',')}` : ''}${options.revealOdds ? ` --reveal-odds ${options.revealOdds}` : ''}${options.mobile.length ? ` --mobile ${options.mobile.join(',')}` : ''}`;
+  const command = `node scripts/jieqi-state-gallery.mjs --web ${targets.web} --out ${options.out}${options.states ? ` --states ${options.states.join(',')}` : ''}${options.mobile.length ? ` --mobile ${options.mobile.join(',')}` : ''}`;
   writeFileSync(
     resolve(outDir, 'manifest.json'),
     `${JSON.stringify({ entries, rooms: manifest }, null, 2)}\n`,
