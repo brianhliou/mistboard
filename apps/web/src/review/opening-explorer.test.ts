@@ -138,6 +138,54 @@ describe('opening explorer', () => {
     expect(String(fetchSpy.mock.calls[1]?.[0])).not.toContain(encodeURIComponent(START_KEY));
   });
 
+  it('asks once stepping settles, not once per ply, and serves a cached position at once', async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchSpy = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        jsonResponse(payload()),
+      );
+      vi.stubGlobal('fetch', fetchSpy);
+
+      const explorer = createOpeningExplorer({ settleMs: 250 });
+      document.body.append(explorer.el);
+      explorer.setActive(true);
+      // A held arrow key: five plies inside the settle window, plus a re-render
+      // of the last one, which must not restart or cancel the pending lookup.
+      let state = createInitialXiangqiState('t');
+      const line: Array<[string, string]> = [
+        ['h3', 'e3'],
+        ['h10', 'g8'],
+        ['h1', 'g3'],
+        ['i10', 'h10'],
+      ];
+      explorer.setState(state);
+      for (const [from, to] of line) {
+        await vi.advanceTimersByTimeAsync(60);
+        state = applyStandardXiangqiMove(state, { from, to } as XiangqiMove);
+        explorer.setState(state);
+      }
+      explorer.setState(state);
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(explorer.el.textContent).toContain('Loading opening statistics');
+
+      await vi.advanceTimersByTimeAsync(250);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(explorer.el.querySelectorAll('.opening-explorer__row')).toHaveLength(2);
+
+      // Back to the start (uncached: settles, asks once), then forward to the
+      // settled position again: cached, so it renders with no new request.
+      explorer.setState(createInitialXiangqiState('t'));
+      await vi.advanceTimersByTimeAsync(250);
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      explorer.setState(state);
+      expect(explorer.el.querySelectorAll('.opening-explorer__row')).toHaveLength(2);
+      await vi.advanceTimersByTimeAsync(250);
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('queries nothing until its tab is on screen', async () => {
     const fetchSpy = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
       jsonResponse(payload()),

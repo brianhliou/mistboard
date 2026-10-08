@@ -1,6 +1,7 @@
 import './game-shell.css';
 import { t } from './i18n/catalog.js';
-import { REPLAY_ICON_ANALYSIS, REPLAY_ICON_FLIP, REPLAY_STEPS } from './replay-icons.js';
+import { createMoveNavBar, syncMoveNavMenu } from './move-nav-bar.js';
+import { REPLAY_ICON_ANALYSIS, REPLAY_ICON_FLIP } from './replay-icons.js';
 
 export type GameTableRefs = {
   actionSection: HTMLElement;
@@ -40,7 +41,7 @@ export function moveListScroller(list: HTMLElement): HTMLElement {
 }
 
 /**
- * Points the toolbar's microscope at the review page, or hides it (null) while
+ * Points the bar menu's Analyse row at the review page, or hides it (null) while
  * the game is still being played. `anchor` is any element inside the console.
  */
 export function setReplayAnalysisHref(anchor: HTMLElement, href: string | null): void {
@@ -48,12 +49,15 @@ export function setReplayAnalysisHref(anchor: HTMLElement, href: string | null):
     .closest('.game-console')
     ?.querySelector<HTMLAnchorElement>('[data-replay-analysis]');
   if (!link) return;
-  link.hidden = href === null;
+  const hidden = href === null;
   if (href !== null && link.getAttribute('href') !== href) link.href = href;
+  if (link.hidden === hidden) return;
+  link.hidden = hidden;
+  syncMoveNavMenu(link);
 }
 
 /**
- * Shows the toolbar's flip button and runs `onFlip` on press, or hides it (null)
+ * Shows the bar menu's Flip row and runs `onFlip` on press, or hides it (null)
  * for a room whose board cannot flip. `anchor` is any element in the console.
  */
 export function setReplayFlipHandler(anchor: HTMLElement, onFlip: (() => void) | null): void {
@@ -63,6 +67,7 @@ export function setReplayFlipHandler(anchor: HTMLElement, onFlip: (() => void) |
   if (!button) return;
   button.hidden = onFlip === null;
   button.onclick = onFlip;
+  syncMoveNavMenu(button);
 }
 
 /** The flip shortcut: a bare `f` outside text inputs, as on the review pages. */
@@ -82,7 +87,7 @@ export function isFlipShortcut(event: KeyboardEvent): boolean {
  * Behavior stays route-owned, while the player rows, replay controls, move
  * region, actions, clocks, and captures keep one DOM contract and one CSS skin.
  */
-export function createGameTable(): GameTable {
+export function createGameTable(opts: { navMenu?: boolean } = {}): GameTable {
   const el = document.createElement('section');
   el.className = 'panel-section game-console';
   el.innerHTML = `
@@ -91,7 +96,7 @@ export function createGameTable(): GameTable {
     <div class="round-table__box">
       <div data-player-top class="round-table__player round-table__player--top"></div>
       <div class="replay-console">
-        <div data-replay-controls class="replay-controls"></div>
+        <div data-replay-controls></div>
         <div data-game-table-moves class="game-table-moves">
           <ol data-move-list class="move-list"></ol>
           <div data-game-result class="game-result" hidden></div>
@@ -115,40 +120,33 @@ export function createGameTable(): GameTable {
     <p data-clocks-note class="clocks-pregame-note" hidden></p>
   `;
 
-  // Built, not inlined in the template above, so the room toolbar draws the same
-  // four arrows as the standalone replay panel (replay-icons.ts) instead of the
-  // ASCII text it used to render.
-  const controls = el.querySelector<HTMLDivElement>('[data-replay-controls]');
-  // The microscope leads the band (lichess), hidden until the game is finished
-  // (setReplayAnalysisHref): no analysis while a game is being played.
-  const analysis = document.createElement('a');
-  analysis.dataset.replayAnalysis = '';
-  analysis.className = 'replay-analysis';
-  analysis.hidden = true;
-  analysis.title = t('live.reviewThisMove');
-  analysis.setAttribute('aria-label', t('live.reviewThisMove'));
-  analysis.innerHTML = REPLAY_ICON_ANALYSIS;
-  controls?.append(analysis);
-  for (const step of REPLAY_STEPS) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.dataset.replay = step.action;
-    button.title = step.title;
-    button.setAttribute('aria-label', step.label);
-    button.innerHTML = step.icon;
-    controls?.append(button);
-  }
-  // Flip closes the band (lichess's slot), hidden until a room that can flip its
-  // board wires it (setReplayFlipHandler).
-  const flip = document.createElement('button');
-  flip.type = 'button';
-  flip.dataset.replayFlip = '';
-  flip.className = 'replay-flip';
-  flip.hidden = true;
-  flip.title = `${t('review.flipBoard')} (f)`;
-  flip.setAttribute('aria-label', t('review.flipBoard'));
-  flip.innerHTML = REPLAY_ICON_FLIP;
-  controls?.append(flip);
+  // The shared move-nav bar (#523): first / prev / next / last / ☰, the last
+  // glowing while scrubbed back from the live position. The ☰ holds Flip (shown
+  // once a room that can flip its board wires it, setReplayFlipHandler) and
+  // Analyse (shown once the game is finished, setReplayAnalysisHref: no analysis
+  // while a game is being played). TV has neither, so it drops the ☰.
+  const bar = createMoveNavBar({
+    liveGlow: true,
+    menuPlacement: 'down',
+    menu: opts.navMenu !== false,
+    menuItems: [
+      {
+        label: t('review.flipBoard'),
+        icon: REPLAY_ICON_FLIP,
+        dataset: { replayFlip: '' },
+        hidden: true,
+      },
+      {
+        label: t('live.reviewThisMove'),
+        icon: REPLAY_ICON_ANALYSIS,
+        href: '',
+        dataset: { replayAnalysis: '' },
+        hidden: true,
+      },
+    ],
+  });
+  bar.el.dataset.replayControls = '';
+  el.querySelector('[data-replay-controls]')?.replaceWith(bar.el);
 
   const refs = {
     actionSection: el.querySelector<HTMLElement>('[data-action-section]'),

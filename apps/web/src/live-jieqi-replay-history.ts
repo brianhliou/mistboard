@@ -1,9 +1,20 @@
-// Per-ply replay history for a FINISHED jieqi room, rebuilt from what the room
-// already sent this client (the replayHistory hook in variant-tenant/live-client).
+// Per-ply replay history for a jieqi room, rebuilt from what the room already
+// sent this client (the replayHistory hook in variant-tenant/live-client), so a
+// cold join or reload can step back through every ply.
 //
-// Why only finished: the deal is a server secret, stripped from room-created, so
-// a live client cannot replay its own event log through the kernel. Once the
-// game is over the room serves the truth view instead (roomViewPolicy): every
+// LIVE rooms (rebuildLiveJieqiHistory, #523): the deal is a server secret,
+// stripped from room-created, but this client does not need it. Every piece
+// that has moved is face-up on the served board or sits in the captured list
+// with its role (a moved piece is revealed, so its capture is public), and every
+// piece that has never moved is still on its home square. The only roles the
+// served view lacks are the ones this viewer never knew: a face-down piece on
+// the board, or a dark capture made by the other side. Those enter the deal as
+// undetermined placeholders, and the per-ply projection (getJieqiPlayerView for
+// the seat, getJieqiPublicView for a spectator) masks exactly those, so no ply
+// shows a role the served view did not. The final ply must reproduce the served
+// board AND captured list, or the rebuild is dropped.
+//
+// FINISHED rooms (rebuildFinishedJieqiHistory): once the game is over the room serves the truth view instead (roomViewPolicy): every
 // piece on the board with its real role, and every captured piece with its role.
 // That is enough to recover the deal. Follow each starting piece through the
 // public move list to where it ended up, on a square or in the n-th capture, and
@@ -26,6 +37,7 @@ import {
   applyJieqiMove,
   createInitialJieqiState,
   getJieqiPlayerView,
+  getJieqiPublicView,
   type JieqiColor,
   type JieqiDeal,
   type JieqiGameState,
@@ -70,6 +82,43 @@ export function rebuildFinishedJieqiHistory(
   return snapshots;
 }
 
+/**
+ * Per-ply history for a LIVE room from the viewer's own served view and the
+ * public move list. `seat` is the viewer's colour, or null for a spectator.
+ * Null when the room is not being played or the view and moves do not fit.
+ */
+export function rebuildLiveJieqiHistory(
+  moves: readonly JieqiMove[],
+  view: JieqiWireView,
+  seat: JieqiColor | null,
+): TenantReplaySnapshot<JieqiWireView>[] | null {
+  if (view.status.type !== 'playing') return null;
+  if (moves.length === 0) return null;
+  const deal = recoverJieqiDeal(moves, view, 'live');
+  if (!deal) return null;
+  let state: JieqiGameState;
+  try {
+    state = createInitialJieqiState(view.id, deal);
+  } catch {
+    return null;
+  }
+  const project = (at: JieqiGameState): JieqiWireView =>
+    (seat
+      ? { ...getJieqiPlayerView(at, seat), legalMoves: [] }
+      : getJieqiPublicView(at)) as JieqiWireView;
+  const snapshots: TenantReplaySnapshot<JieqiWireView>[] = [{ ply: 0, view: project(state) }];
+  for (const move of moves) {
+    const next = applyJieqiMove(state, move);
+    if (next === state) return null;
+    state = next;
+    snapshots.push({ ply: snapshots.length, view: project(state) });
+  }
+  const last = snapshots[snapshots.length - 1]!.view;
+  if (!sameBoard(last.board, view.board)) return null;
+  if (!sameCaptures(last.captured, view.captured)) return null;
+  return snapshots;
+}
+
 function projectPly(state: JieqiGameState, perspective: JieqiColor): JieqiWireView {
   return {
     ...getJieqiPlayerView(state, perspective),
@@ -86,6 +135,21 @@ function projectPly(state: JieqiGameState, perspective: JieqiColor): JieqiWireVi
 export function recoverJieqiDealFromFinish(
   moves: readonly JieqiMove[],
   view: Pick<JieqiWireView, 'board' | 'captured'>,
+): JieqiDeal | null {
+  return recoverJieqiDeal(moves, view, 'finished');
+}
+
+/**
+ * The deal as far as `view` knows it. 'finished' reads a truth view, where only
+ * a never-determined piece is face-down (marked unknown). 'live' reads a served
+ * masked view: a face-down piece is one that has not moved (it must still be on
+ * its home square) and its role is unknown to this viewer, as is a dark capture
+ * listed with role null. Unknown roles become undetermined placeholders.
+ */
+function recoverJieqiDeal(
+  moves: readonly JieqiMove[],
+  view: Pick<JieqiWireView, 'board' | 'captured'>,
+  source: 'finished' | 'live',
 ): JieqiDeal | null {
   // Every piece is named by the square it started on.
   const start = createInitialJieqiState('deal-recovery').board;
@@ -109,7 +173,8 @@ export function recoverJieqiDealFromFinish(
     const entry = view.board[square];
     if (!entry || entry.color !== start[origin]?.color) return null;
     if (entry.faceDown) {
-      if ((entry as { unknown?: unknown }).unknown !== true) return null;
+      if (source === 'live' ? origin !== square : (entry as { unknown?: unknown }).unknown !== true)
+        return null;
       roleOf.set(origin, null);
     } else {
       roleOf.set(origin, entry.role);
@@ -155,5 +220,13 @@ function sameBoard(a: JieqiWireView['board'], b: JieqiWireView['board']): boolea
     if (!left || !right) return false;
     if (left.color !== right.color || left.faceDown !== right.faceDown) return false;
     return left.faceDown || right.faceDown || left.role === right.role;
+  });
+}
+
+function sameCaptures(a: JieqiWireView['captured'], b: JieqiWireView['captured']): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((entry, index) => {
+    const other = b[index];
+    return !!other && entry.owner === other.owner && (entry.role ?? null) === (other.role ?? null);
   });
 }

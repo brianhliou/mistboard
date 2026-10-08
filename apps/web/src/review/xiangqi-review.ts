@@ -33,7 +33,7 @@ import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
 import { bestMoveArrow, engineArrowsFromLines } from './engine/engine-arrows.js';
 import type { NodeShape } from './game-tree.js';
 import { type HoverArrowTone, hoverArrowStyle } from './hover-arrow.js';
-import { createOpeningExplorer } from './opening-explorer.js';
+import { createOpeningExplorer, OPENING_EXPLORER_SETTLE_MS } from './opening-explorer.js';
 import {
   mountTreeReview,
   type TreePresentation,
@@ -213,9 +213,10 @@ export function xiangqiTablebaseEnabled(config: { tablebasePanel?: boolean }): b
 function xiangqiOpeningExplorer(
   withTablebase: boolean,
 ): NonNullable<XiangqiReviewConfig['explorer']> {
-  const explorer = createOpeningExplorer(
-    withTablebase ? { tablebase: createXiangqiTablebasePanel() } : {},
-  );
+  const explorer = createOpeningExplorer({
+    settleMs: OPENING_EXPLORER_SETTLE_MS,
+    ...(withTablebase ? { tablebase: createXiangqiTablebasePanel() } : {}),
+  });
   return {
     el: explorer.el,
     setTruth: (truth) => explorer.setState(truth),

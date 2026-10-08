@@ -84,7 +84,7 @@ describe('Jungle postgame page', () => {
     // arrow keys move the ply, so the bounds flip. (The old scrubber's "Ply X of
     // Y" status was removed with the lichess control bar.)
     const nav = (label: string) =>
-      root.querySelector<HTMLButtonElement>(`.review-controls__nav[aria-label="${label}"]`);
+      root.querySelector<HTMLButtonElement>(`.move-nav-bar__button[aria-label="${label}"]`);
     // Opens at the final ply (1 of 1): next/last disabled.
     expect(nav('Next move')?.disabled).toBe(true);
     expect(nav('Previous move')?.disabled).toBe(false);

@@ -115,7 +115,7 @@ describe('Banqi postgame page', () => {
 
     const assign = vi.spyOn(window.location, 'assign').mockImplementation(() => {});
     const item = (label: string) =>
-      [...root.querySelectorAll<HTMLButtonElement>('.review-menu__item')].find(
+      [...root.querySelectorAll<HTMLButtonElement>('.move-nav-menu__item')].find(
         (b) => b.textContent?.trim() === label,
       );
     // "Analyse from here" carries the six-field DEALT fen: the analysis board
@@ -149,7 +149,7 @@ describe('Banqi postgame page', () => {
     // start; the shared review layout binds the keyboard on the mount root. (The
     // scrubber's "Ply X of Y" status was removed with the lichess control bar.)
     const nav = (label: string) =>
-      root.querySelector<HTMLButtonElement>(`.review-controls__nav[aria-label="${label}"]`);
+      root.querySelector<HTMLButtonElement>(`.move-nav-bar__button[aria-label="${label}"]`);
     // Opens at the final ply (1 of 1): next/last disabled.
     expect(nav('Next move')?.disabled).toBe(true);
     expect(nav('Previous move')?.disabled).toBe(false);

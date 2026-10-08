@@ -1272,11 +1272,15 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     });
   }
   if (config.studyExport) {
-    menuItems.push({ label: 'Study', icon: REVIEW_MENU_ICONS.study, onClick: () => saveAsStudy() });
+    menuItems.push({
+      label: t('review.menuStudy'),
+      icon: REVIEW_MENU_ICONS.study,
+      onClick: () => saveAsStudy(),
+    });
   }
   if (config.allowClearMoves) {
     menuItems.push({
-      label: 'Clear moves',
+      label: t('review.clearMoves'),
       icon: REVIEW_MENU_ICONS.clear,
       onClick: () => clearMoves(),
     });

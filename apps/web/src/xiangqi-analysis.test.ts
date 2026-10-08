@@ -165,9 +165,10 @@ describe('mountXiangqiAnalysisPage', () => {
     // listed must be live.
     const root = freshRoot();
     mountXiangqiAnalysis(root, [...OPENING]);
-    const items = [...root.querySelectorAll<HTMLButtonElement>('.review-menu__item')];
+    const items = [...root.querySelectorAll<HTMLButtonElement>('.move-nav-menu__item')];
     expect(items.map((b) => b.textContent?.trim())).toEqual([
       'Flip board',
+      'Opening explorer',
       'Study',
       'Clear moves',
       'Board editor',
@@ -180,7 +181,7 @@ describe('mountXiangqiAnalysisPage', () => {
     const root = freshRoot();
     mountXiangqiAnalysis(root, [...OPENING]);
     const assign = vi.spyOn(window.location, 'assign').mockImplementation(() => {});
-    const editor = [...root.querySelectorAll<HTMLButtonElement>('.review-menu__item')].find((b) =>
+    const editor = [...root.querySelectorAll<HTMLButtonElement>('.move-nav-menu__item')].find((b) =>
       b.textContent?.includes('Board editor'),
     );
     editor?.click();
@@ -194,19 +195,34 @@ describe('mountXiangqiAnalysisPage', () => {
     root.remove();
   });
 
-  it('carries no dead toolbar buttons', () => {
-    // The original pin was "the disabled placeholders are gone". The rule it
-    // encodes is that a control bar never shows a button with nothing behind it,
-    // so the opening explorer's toggle — added WITH its implementation — is
-    // allowed, and must be live.
+  it('carries no dead toolbar buttons, and the book starts open', () => {
+    // The rule: a control bar never shows a button with nothing behind it. The
+    // bar is the five move-nav columns; the opening book is a menu row (#523),
+    // open by default, and toggling it closes and reopens the pane.
     const root = freshRoot();
     mountXiangqiAnalysis(root, [...OPENING]);
-    const tools = [...root.querySelectorAll<HTMLButtonElement>('.review-controls__tool')];
-    expect(tools.every((tool) => !tool.disabled)).toBe(true);
-    expect(tools.map((tool) => tool.getAttribute('aria-label'))).toEqual(['Opening explorer']);
-    // The nav cluster and the menu button survive.
-    expect(root.querySelectorAll('.review-controls__nav').length).toBeGreaterThan(0);
-    expect(root.querySelector('.review-controls__menu-button')).not.toBeNull();
+    const bar = root.querySelector('.review-controls.move-nav-bar');
+    expect(bar).not.toBeNull();
+    const columns = [...(bar?.querySelectorAll<HTMLButtonElement>(':scope > button') ?? [])];
+    expect(columns.map((b) => b.dataset.replay ?? 'menu')).toEqual([
+      'first',
+      'prev',
+      'next',
+      'latest',
+      'menu',
+    ]);
+    expect(bar?.hasAttribute('data-live-glow')).toBe(false);
+    const book = root.querySelector<HTMLButtonElement>('[data-review-explorer]');
+    const pane = root.querySelector<HTMLElement>('.opening-explorer');
+    expect(pane?.hidden).toBe(false);
+    root.querySelector<HTMLButtonElement>('.move-nav-bar__menu-button')?.click();
+    expect(book?.getAttribute('aria-pressed')).toBe('true');
+    book?.click();
+    expect(pane?.hidden).toBe(true);
+    root.querySelector<HTMLButtonElement>('.move-nav-bar__menu-button')?.click();
+    expect(book?.getAttribute('aria-pressed')).toBe('false');
+    book?.click();
+    expect(pane?.hidden).toBe(false);
     root.remove();
   });
 
@@ -214,7 +230,7 @@ describe('mountXiangqiAnalysisPage', () => {
     const root = freshRoot();
     mountXiangqiAnalysis(root, [...OPENING]);
     expect(root.querySelector('.move-tree')?.textContent).toContain('h3-e3');
-    const clear = [...root.querySelectorAll<HTMLButtonElement>('.review-menu__item')].find((b) =>
+    const clear = [...root.querySelectorAll<HTMLButtonElement>('.move-nav-menu__item')].find((b) =>
       b.textContent?.includes('Clear moves'),
     );
     clear?.click();

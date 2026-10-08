@@ -1,8 +1,7 @@
-// Lichess-style playback control bar that sits BELOW the move-list box (not inside
-// it): the four ply-nav buttons in the middle, and a hamburger that opens a menu
-// overlay over the move list. Replaces the plain in-box scrubber on the xiangqi
-// review surface; the shared linear scrubber (review-layout.ts) is untouched for
-// the other variants.
+// The review pages' playback bar: the shared move-nav bar (move-nav-bar.ts,
+// #523) under the move list, its ☰ menu opening UPWARD over the list
+// (lichess). Every per-variant review, study, analysis board and finished
+// broadcast board draws this one bar; only the menu rows differ.
 //
 // Every control here is live. Placeholder affordances were removed 2026-07-23
 // (two disabled toolbar buttons + four muted menu rows); the bar advertises only
@@ -10,28 +9,23 @@
 
 import { BookOpenText, createElement } from 'lucide';
 import { t } from '../i18n/catalog.js';
-import './review-controls.css';
+import { createMoveNavBar, type MoveNavMenuItem } from '../move-nav-bar.js';
 
-export type ReviewMenuItem = {
-  /** A function for an item whose wording depends on state it toggles (Reveal /
-   *  Hide). Re-read every time the menu opens, which is enough: clicking an item
-   *  closes the overlay, so a stale label is never left on screen. */
-  label: string | (() => string);
-  icon: string; // inline SVG markup
-  onClick?: () => void;
-};
+export type ReviewMenuItem = MoveNavMenuItem;
 
 export type ReviewControlsOptions = {
-  /** Removes the page-wide Escape listener when the review is destroyed. */
+  /** Removes the page-wide listeners (Escape, outside click) on teardown. */
   signal?: AbortSignal;
   onFirst(): void;
   onPrevious(): void;
   onNext(): void;
   onLast(): void;
-  /** Menu overlay rows (2-col grid). Flip lives here on the review surface. */
+  /** Menu rows (2-col grid). Flip leads; the opening book follows it. */
   menuItems: ReviewMenuItem[];
-  /** Opening-explorer toggle in the left tools cluster. Omitted on surfaces with
-   *  no corpus behind them, which is why the button is not a permanent fixture. */
+  /** The opening book, a toggle row in the menu. Omitted on surfaces with no
+   *  corpus behind them. The book starts OPEN (#523: a reader should see what
+   *  was played here without hunting for it), so this is called with true while
+   *  the bar is built. */
   onToggleExplorer?(open: boolean): void;
 };
 
@@ -40,182 +34,55 @@ export type ReviewControls = {
   setBounds(state: { atStart: boolean; atEnd: boolean }): void;
 };
 
-// Minimal inline icons (currentColor). Kept tiny; the CSS sizes them.
-const ICONS = {
-  first:
-    '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 5h2v14H6zM19 5v14l-9-7z"/></svg>',
-  previous:
-    '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M15 5v14l-9-7z"/></svg>',
-  next: '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M9 5v14l9-7z"/></svg>',
-  last: '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16 5h2v14h-2zM5 5v14l9-7z"/></svg>',
-  menu: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
-} as const;
-
-// A control-bar button carrying a Lucide glyph (designer-drawn, MIT), for tools
-// that deserve a real icon rather than an inline path. Same shell as iconButton.
-function lucideButton(
-  icon: Parameters<typeof createElement>[0],
-  label: string,
-  className: string,
-): HTMLButtonElement {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = className;
-  button.setAttribute('aria-label', label);
-  button.title = label;
-  const svg = createElement(icon);
-  svg.setAttribute('width', '18');
-  svg.setAttribute('height', '18');
-  svg.setAttribute('aria-hidden', 'true');
-  button.append(svg);
-  return button;
-}
-
-function iconButton(icon: string, label: string, className: string): HTMLButtonElement {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = className;
-  button.setAttribute('aria-label', label);
-  button.title = label;
-  button.innerHTML = icon;
-  return button;
-}
-
 export function createReviewControls(opts: ReviewControlsOptions): ReviewControls {
-  const el = document.createElement('div');
-  el.className = 'review-controls';
-
-  // The left cluster held two permanently-disabled placeholders (opening
-  // explorer, practice with computer). Cut 2026-07-23 with the menu's muted
-  // entries: neither had a surface behind it, and a control bar of dead buttons
-  // costs trust on every visit. The explorer is restored below WITH its
-  // implementation, and only on surfaces that pass a handler; practice with
-  // computer stays cut until it has one too.
-
-  // Center cluster: ply navigation.
-  const first = iconButton(ICONS.first, 'First move', 'review-controls__nav');
-  const previous = iconButton(ICONS.previous, 'Previous move', 'review-controls__nav');
-  const next = iconButton(ICONS.next, 'Next move', 'review-controls__nav');
-  const last = iconButton(ICONS.last, 'Last move', 'review-controls__nav');
-  first.addEventListener('click', opts.onFirst);
-  previous.addEventListener('click', opts.onPrevious);
-  next.addEventListener('click', opts.onNext);
-  last.addEventListener('click', opts.onLast);
-
-  // Right: hamburger toggles the menu overlay.
-  const menuButton = iconButton(ICONS.menu, 'Menu', 'review-controls__menu-button');
-  menuButton.setAttribute('aria-expanded', 'false');
-
-  // Left: tools. Empty when a surface offers none, which still centres the nav
-  // cluster against the menu button on the right.
-  const left = document.createElement('div');
-  left.className = 'review-controls__group review-controls__group--tools';
-  if (opts.onToggleExplorer) {
-    const explorerButton = lucideButton(BookOpenText, 'Opening explorer', 'review-controls__tool');
-    explorerButton.setAttribute('aria-pressed', 'false');
-    explorerButton.addEventListener('click', () => {
-      const open = explorerButton.getAttribute('aria-pressed') !== 'true';
-      explorerButton.setAttribute('aria-pressed', String(open));
-      explorerButton.classList.toggle('review-controls__tool--on', open);
-      opts.onToggleExplorer?.(open);
+  const menuItems = [...opts.menuItems];
+  const onToggleExplorer = opts.onToggleExplorer;
+  if (onToggleExplorer) {
+    let explorerOpen = true;
+    // Right after Flip: the two things a reader reaches for most.
+    menuItems.splice(Math.min(1, menuItems.length), 0, {
+      label: t('underboard.explorer'),
+      icon: REVIEW_MENU_ICONS.book,
+      dataset: { reviewExplorer: '' },
+      pressed: () => explorerOpen,
+      onClick: () => {
+        explorerOpen = !explorerOpen;
+        onToggleExplorer(explorerOpen);
+      },
     });
-    left.append(explorerButton);
+    onToggleExplorer(true);
   }
-  const center = document.createElement('div');
-  center.className = 'review-controls__group review-controls__group--nav';
-  center.append(first, previous, next, last);
-  const rightGroup = document.createElement('div');
-  rightGroup.className = 'review-controls__group review-controls__group--menu';
-  rightGroup.append(menuButton);
-
-  const menu = buildMenuOverlay(opts.menuItems, () => closeMenu());
-  const overlay = menu.el;
-  el.append(left, center, rightGroup, overlay);
-
-  function openMenu(): void {
-    menu.refreshLabels();
-    overlay.hidden = false;
-    menuButton.classList.add('review-controls__menu-button--open');
-    menuButton.setAttribute('aria-expanded', 'true');
-  }
-  function closeMenu(): void {
-    overlay.hidden = true;
-    menuButton.classList.remove('review-controls__menu-button--open');
-    menuButton.setAttribute('aria-expanded', 'false');
-  }
-  menuButton.addEventListener('click', () => (overlay.hidden ? openMenu() : closeMenu()));
-  document.addEventListener(
-    'keydown',
-    (event) => {
-      if (event.key === 'Escape' && !overlay.hidden) closeMenu();
-    },
-    opts.signal ? { signal: opts.signal } : undefined,
-  );
-
-  return {
-    el,
-    setBounds({ atStart, atEnd }) {
-      first.disabled = atStart;
-      previous.disabled = atStart;
-      next.disabled = atEnd;
-      last.disabled = atEnd;
-    },
-  };
+  const bar = createMoveNavBar({
+    className: 'review-controls',
+    menuPlacement: 'up',
+    menuTitle: t('review.analysisBoard'),
+    menuItems,
+    onFirst: opts.onFirst,
+    onPrev: opts.onPrevious,
+    onNext: opts.onNext,
+    onLast: opts.onLast,
+    ...(opts.signal ? { signal: opts.signal } : {}),
+  });
+  return { el: bar.el, setBounds: bar.setBounds };
 }
 
-function buildMenuOverlay(
-  items: ReviewMenuItem[],
-  onAction: () => void,
-): { el: HTMLElement; refreshLabels(): void } {
-  const overlay = document.createElement('div');
-  overlay.className = 'review-menu';
-  overlay.hidden = true;
-
-  const header = document.createElement('div');
-  header.className = 'review-menu__header';
-  header.textContent = t('review.analysisBoard');
-
-  const grid = document.createElement('div');
-  grid.className = 'review-menu__grid';
-  const labels: Array<{ el: HTMLElement; item: ReviewMenuItem }> = [];
-  for (const item of items) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'review-menu__item';
-    const icon = document.createElement('span');
-    icon.className = 'review-menu__item-icon';
-    icon.innerHTML = item.icon;
-    const label = document.createElement('span');
-    label.className = 'review-menu__item-label';
-    label.textContent = menuItemLabel(item);
-    labels.push({ el: label, item });
-    button.append(icon, label);
-    if (item.onClick) {
-      button.addEventListener('click', () => {
-        item.onClick?.();
-        onAction();
-      });
-    }
-    grid.append(button);
-  }
-
-  overlay.append(header, grid);
-  return {
-    el: overlay,
-    refreshLabels() {
-      for (const entry of labels) entry.el.textContent = menuItemLabel(entry.item);
-    },
-  };
-}
-
-function menuItemLabel(item: ReviewMenuItem): string {
-  return typeof item.label === 'function' ? item.label() : item.label;
+function lucideMarkup(icon: Parameters<typeof createElement>[0]): string {
+  if (typeof document === 'undefined') return '';
+  const svg = createElement(icon);
+  svg.setAttribute('width', '20');
+  svg.setAttribute('height', '20');
+  svg.setAttribute('aria-hidden', 'true');
+  return svg.outerHTML;
 }
 
 /** Icon set for the menu items, so callers don't hand-write SVG. One entry per
  *  item that EXISTS — the editor/learn/continue/settings icons were dropped with
  *  their placeholder menu entries on 2026-07-23. */
 export const REVIEW_MENU_ICONS = {
+  // The opening book (Lucide BookOpenText, designer-drawn, MIT).
+  get book(): string {
+    return lucideMarkup(BookOpenText);
+  },
   flip: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>',
   study:
     '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>',

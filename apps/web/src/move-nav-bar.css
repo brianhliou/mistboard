@@ -1,0 +1,185 @@
+/* The shared move-nav bar (move-nav-bar.ts, #523): the live room's band, lifted
+   out of the round-table scope so every surface draws the same strip. Five
+   equal columns, flat buttons, bold filled transport marks. */
+.move-nav-bar {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  background: var(--site-panel-soft);
+  border-top: 1px solid var(--site-border-soft);
+  border-bottom: 1px solid var(--site-border-soft);
+}
+
+.move-nav-bar > .move-nav-bar__button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 38px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  /* Nav arrows read as live controls, not disabled chrome: the body text tone,
+     lifting to --site-heading on hover. */
+  color: var(--site-text);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.move-nav-bar > .move-nav-bar__button svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.move-nav-bar > .move-nav-bar__button:hover:not(:disabled),
+.move-nav-bar > .move-nav-bar__button:focus-visible {
+  background: var(--site-panel, var(--site-surface));
+  color: var(--site-heading);
+  outline: none;
+}
+
+.move-nav-bar > .move-nav-bar__button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Live surfaces only (data-live-glow): Last is disabled at the live position,
+   so an enabled Last is exactly the scrubbed-back state, and it lights in the
+   brand colour as the one way back. Review bars never carry the attribute. */
+.move-nav-bar[data-live-glow] > [data-replay="latest"]:not(:disabled) {
+  background: var(--site-accent-soft);
+  color: var(--site-accent-strong, var(--site-accent));
+}
+
+.move-nav-bar > .move-nav-bar__menu-button[aria-expanded="true"],
+.move-nav-bar > .move-nav-bar__menu-button[aria-expanded="true"]:hover {
+  background: var(--site-accent, #237960);
+  color: var(--site-on-accent, #fff);
+}
+
+/* Touch floor: stepping through moves is the primary interaction on a phone. */
+@media (pointer: coarse) {
+  .move-nav-bar > .move-nav-bar__button {
+    height: 44px;
+  }
+}
+
+/* Compact density (phase 3: embeds, article steppers): the same five buttons,
+   untinted, sitting on whatever card holds them. */
+.move-nav-bar--compact {
+  background: transparent;
+  border-bottom: 0;
+  border-top: 1px solid var(--site-border);
+}
+
+.move-nav-bar--compact > .move-nav-bar__button:hover:not(:disabled) {
+  background: var(--site-hover, var(--site-panel));
+}
+
+/* The menu covers the move list: it drops down from a bar above the list (live
+   room) and rises from a bar below it (review). */
+.move-nav-menu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  max-height: 70vh;
+  overflow-y: auto;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius, 10px);
+  background: var(--site-panel, var(--site-surface));
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+}
+
+.move-nav-menu--down {
+  top: calc(100% + 4px);
+}
+
+.move-nav-menu--up {
+  bottom: calc(100% + 4px);
+}
+
+.move-nav-menu[hidden] {
+  display: none;
+}
+
+.move-nav-menu__header {
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--site-on-accent, #fff);
+  background: var(--site-accent, #237960);
+}
+
+.move-nav-menu__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  padding: 6px;
+}
+
+.move-nav-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 10px;
+  border: 0;
+  border-radius: var(--site-radius-sm, 8px);
+  background: transparent;
+  color: var(--site-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.move-nav-menu__item[hidden] {
+  display: none;
+}
+
+.move-nav-menu__item:hover,
+.move-nav-menu__item:focus-visible {
+  background: var(--site-hover, var(--site-surface));
+  color: var(--site-heading);
+  outline: none;
+}
+
+.move-nav-menu__item-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--site-muted);
+}
+
+.move-nav-menu__item-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* A toggle row that is on (the opening book while it is open). */
+.move-nav-menu__item--on {
+  background: var(--site-accent-soft);
+  color: var(--site-accent-strong, var(--site-accent));
+}
+
+.move-nav-menu__item--on .move-nav-menu__item-icon {
+  color: inherit;
+}
+
+/* A bar with no extras (TV): four columns, no dead ☰. */
+.move-nav-bar--no-menu {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}

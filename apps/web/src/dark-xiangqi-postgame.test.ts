@@ -90,8 +90,8 @@ describe('Dark Xiangqi postgame page', () => {
     // the menu is closed). Flipping re-orients the board.
     const truthSvg = () => boardHost().querySelector('.xq-live-svg')?.innerHTML ?? '';
     const beforeFlip = truthSvg();
-    const menuFlip = [...root.querySelectorAll<HTMLButtonElement>('.review-menu__item')].find((b) =>
-      b.textContent?.includes('Flip board'),
+    const menuFlip = [...root.querySelectorAll<HTMLButtonElement>('.move-nav-menu__item')].find(
+      (b) => b.textContent?.includes('Flip board'),
     );
     menuFlip?.click();
     expect(truthSvg()).not.toBe(beforeFlip);
@@ -109,7 +109,7 @@ describe('Dark Xiangqi postgame page', () => {
     expect(currentSan()).toBe('b8-b7');
 
     root
-      .querySelector<HTMLButtonElement>('.review-controls__nav[aria-label="Previous move"]')
+      .querySelector<HTMLButtonElement>('.move-nav-bar__button[aria-label="Previous move"]')
       ?.click();
     expect(currentSan()).toBe('b3-b4');
   });

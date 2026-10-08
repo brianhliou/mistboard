@@ -1695,7 +1695,7 @@ function buildWatchSection(feed: WatchFeed | null): WatchSection {
   // ── Right rail: the shared room game table, with watch-owned behavior ──
   const right = document.createElement('div');
   right.className = 'watch-right';
-  const gameTable = createGameTable();
+  const gameTable = createGameTable({ navMenu: false });
   gameTable.el.classList.add('watch-game-table');
   right.append(gameTable.el);
 

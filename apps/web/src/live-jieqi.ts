@@ -33,7 +33,10 @@ import {
   jieqiPieceGhostSvg,
   renderJieqiBoardSvg,
 } from './live-jieqi-render.js';
-import { rebuildFinishedJieqiHistory } from './live-jieqi-replay-history.js';
+import {
+  rebuildFinishedJieqiHistory,
+  rebuildLiveJieqiHistory,
+} from './live-jieqi-replay-history.js';
 import {
   maybePlayJieqiSnapshotSound,
   resetJieqiSoundState,
@@ -225,17 +228,18 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
         ctx.events.filter(isJieqiMoveEvent).length,
       ),
   },
-  // A FINISHED room only: its truth view plus the public move log recover the
-  // deal, so a cold join or reload gets every ply back (live-jieqi-replay-history).
-  // A live room returns null here and keeps incremental capture: its deal is a
-  // server secret and its views stay masked.
+  // A cold join or reload gets every ply back (live-jieqi-replay-history). A
+  // FINISHED room recovers the whole deal from its truth view; a LIVE room
+  // rebuilds from this viewer's own masked view, so a role it never saw stays
+  // masked on every ply.
   replayHistory: {
-    rebuild: ({ events, view, state }) =>
-      rebuildFinishedJieqiHistory(
-        events.filter(isJieqiMoveEvent).map((event) => event.move),
-        view,
-        isJieqiColor(state.seat) ? state.seat : view.perspective,
-      ),
+    rebuild: ({ events, view, state }) => {
+      const moves = events.filter(isJieqiMoveEvent).map((event) => event.move);
+      const seat = isJieqiColor(state.seat) ? state.seat : null;
+      return view.status.type === 'finished'
+        ? rebuildFinishedJieqiHistory(moves, view, seat ?? view.perspective)
+        : rebuildLiveJieqiHistory(moves, view, seat);
+    },
   },
 });
 

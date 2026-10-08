@@ -769,7 +769,7 @@
    clocks stay (the live payload carries a timeline and the server clock; the
    rail reads both off the live handle), so a live game on /watch reads like
    the room does. */
-.watch-live-mode .watch-game-table .replay-controls {
+.watch-live-mode .watch-game-table .move-nav-bar {
   display: none;
 }
 

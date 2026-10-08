@@ -837,11 +837,11 @@
   border-top: 1px solid var(--site-border);
 }
 /* Playback controls fused into the box as its last strip (study surface, see
-   review-layout.ts): a hairline divides them from the move list and they carry
-   the box's bottom inset instead of the page-background bar's. */
+   review-layout.ts): the box's own hairline divides them from the move list,
+   and the box edge closes them, so the band drops its bottom rule. */
 .review-rail-main > .review-controls {
-  border-top: 1px solid var(--site-border);
-  padding: 4px 2px;
+  border-top-color: var(--site-border);
+  border-bottom: 0;
 }
 
 /* On board-beside-table layouts the analyse table's bottom tracks the board's

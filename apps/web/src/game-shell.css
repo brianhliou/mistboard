@@ -92,89 +92,7 @@
   display: none;
 }
 
-/* Replay scrub toolbar: the band that separates the top seat row from the move
-   list (lichess round anatomy). --site-surface was the page background, so the
-   band was invisible and the four arrows floated in dead space; --site-panel-soft
-   tints against the box in both themes, and the hairlines close the band. */
-.round-table__box .replay-controls {
-  /* Columns follow the controls present: the microscope is hidden until the
-     game is finished, and a hidden item must not hold an empty fifth column. */
-  grid-template-columns: none;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
-  gap: 0;
-  background: var(--site-panel-soft);
-  border-top: 1px solid var(--site-border-soft);
-  border-bottom: 1px solid var(--site-border-soft);
-}
-
-.round-table__box .replay-controls button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 38px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  /* Nav arrows read as live controls, not disabled chrome: step up from
-     --site-muted to the body text tone (hover still lifts to --site-heading). */
-  color: var(--site-text);
-  font-size: 13px;
-  line-height: 1;
-}
-
-.round-table__box .replay-controls .replay-analysis {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 38px;
-  color: var(--site-text);
-}
-
-.round-table__box .replay-controls .replay-analysis[hidden],
-.round-table__box .replay-controls .replay-flip[hidden] {
-  display: none;
-}
-
-.round-table__box .replay-controls .replay-analysis:hover,
-.round-table__box .replay-controls .replay-analysis:focus-visible {
-  background: var(--site-panel, var(--site-surface));
-  color: var(--site-heading);
-}
-
-.round-table__box .replay-controls .replay-analysis svg,
-.round-table__box .replay-controls button svg {
-  display: block;
-  width: 20px;
-  height: 20px;
-}
-
-/* Stepped back from the latest position: the jump-to-latest arrow lights up in
-   the brand colour instead of a "Viewing replay" notice (lichess glows it the
-   same way), so the one way back is the obvious thing to press. The button is
-   disabled at the latest position, so this is exactly the scrubbed state. */
-.round-table__box .replay-controls button[data-replay="latest"]:not(:disabled) {
-  background: var(--site-accent-soft);
-  color: var(--site-accent-strong, var(--site-accent));
-}
-
-/* Touch floor: these arrows step through a live or watched game, so on a phone
-   they take a fingertip instead of the desktop console's dense 28px row. */
-@media (pointer: coarse) {
-  .round-table__box .replay-controls button {
-    height: 44px;
-  }
-}
-
-.round-table__box .replay-controls button:hover:not(:disabled),
-.round-table__box .replay-controls button:focus-visible {
-  background: var(--site-panel, var(--site-surface));
-  color: var(--site-heading);
-}
-
-.round-table__box .replay-controls button:disabled {
-  opacity: 0.35;
-}
+/* The replay band itself is the shared move-nav bar (move-nav-bar.css, #523). */
 
 /* Live move window: roughly four full-move rows, scrolling within (lichess
    parity); the base .move-list fixed height keeps serving other surfaces.
@@ -1227,7 +1145,7 @@
     max-height: 60px;
   }
 
-  .debug-shell .replay-controls button,
+  .debug-shell .move-nav-bar > .move-nav-bar__button,
   .debug-shell .room-actions a,
   .debug-shell .room-actions button,
   .debug-shell .share-room input,
@@ -1235,7 +1153,7 @@
     min-height: 32px;
   }
 
-  .debug-shell .replay-controls button {
+  .debug-shell .move-nav-bar > .move-nav-bar__button {
     height: 32px;
   }
 
