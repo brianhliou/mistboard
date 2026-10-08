@@ -3069,6 +3069,16 @@ a.article-meta-author:hover .article-meta-author-name {
   border-radius: 6px;
 }
 
+/* Charts are transparent SVGs drawn for the page ground, so on the dark
+   backdrop their ink had nothing behind it. Every zoomed figure gets the page's
+   own ground; a screenshot just gains a thin frame of it. */
+.article-lightbox .article-lightbox-frame img,
+.article-lightbox .article-lightbox-frame svg {
+  box-sizing: border-box;
+  padding: 12px;
+  background: var(--site-bg);
+}
+
 .article-lightbox-caption {
   margin: 0.6rem 0 0;
   color: #eee;

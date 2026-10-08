@@ -157,6 +157,19 @@ export const duckXiangqiGameTreeArticle: Article = {
       ],
     },
     {
+      heading: 'One small rule makes xiangqi a new game',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'The board, the pieces and the way they move are all xiangqi’s, so a xiangqi player can sit down and play Duck Xiangqi straight away. The duck still changes almost everything under them. Opening theory stops after the first move, because every line in it assumes there is no duck. And the game is harder for the kind of engine that plays it now. Classical search, the alpha-beta search Fairy-Stockfish runs, pays for every extra choice at every turn it looks ahead, which is why the depth gap grows with the budget.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'We don’t know yet what strong Duck Xiangqi looks like. Some placements are pure technique, like the duck on e8 that takes away eight replies. Others might be aimed at the player rather than the position: a duck on a quiet point that invites one move, or a duck that blocks the line your opponent is watching while the real threat is somewhere else. An engine that sees 14 turns ahead finds the first kind. The second kind will show up only in games between strong players.',
+        },
+      ],
+    },
+    {
       heading: 'How we counted',
       blocks: [
         {
