@@ -193,12 +193,7 @@ export type DuckXiangqiPlayerView = {
   legalPieceMoves: { from: DuckXiangqiSquare; to: DuckXiangqiSquare }[];
   status: DuckXiangqiGameStatus;
   moveNumber: number;
-  /**
-   * Named `lastMove`, not `lastTurn`, on purpose: the shared last-move renderer
-   * and the generic tenant plumbing both read `lastMove`, and the kernel's state
-   * field is `lastTurn`. Translating here keeps that mismatch in one place
-   * instead of every consumer.
-   */
+  /** The piece half of the last turn, for the shared last-move renderer. */
   lastMove?: { from: DuckXiangqiSquare; to: DuckXiangqiSquare };
   /** Where the duck stood before the last turn, so the board can mark it. */
   lastDuck?: DuckXiangqiSquare;
@@ -211,7 +206,15 @@ export type DuckXiangqiGameState = {
   duck?: DuckXiangqiSquare;
   status: DuckXiangqiGameStatus;
   moveNumber: number;
-  lastTurn?: DuckXiangqiTurn;
+  /**
+   * The last whole turn (piece move plus duck). It must be named `lastMove`:
+   * the generic tenant lifecycle reads `state.lastMove` to tell "the first
+   * mover has not moved" from "the second mover owes move 1". Named
+   * `lastTurn`, it read as undefined forever, so after Red's first turn the
+   * correspondence deadline still named Red, anchored at seat fill, and the
+   * sweeper aborted the game while Black still had time to answer.
+   */
+  lastMove?: DuckXiangqiTurn;
   positionCounts: Record<string, number>;
   /** Plies since the last capture. See D8. */
   progressPlies: number;
@@ -889,7 +892,7 @@ export function applyDuckXiangqiTurn(
       duck: state.duck,
       status: { type: 'finished', winner: mover, reason: 'general-captured' },
       moveNumber: fullMoveNumberAfter(state.moveNumber, mover),
-      lastTurn: turn,
+      lastMove: turn,
       progressPlies: 0,
     };
   }
@@ -900,7 +903,7 @@ export function applyDuckXiangqiTurn(
     duck: turn.duckTo ?? undefined,
     status: { type: 'playing', turn: oppositeDuckXiangqiColor(mover) },
     moveNumber: fullMoveNumberAfter(state.moveNumber, mover),
-    lastTurn: turn,
+    lastMove: turn,
     // A capture is irreversible, so it resets the clock AND makes every earlier
     // position unreachable - keeping their counts would let a repetition fire
     // across a capture, which is not a repetition.
@@ -942,7 +945,7 @@ export function getDuckXiangqiPlayerView(
   state: DuckXiangqiGameState,
   perspective: DuckXiangqiColor,
 ): DuckXiangqiPlayerView {
-  const turn = state.lastTurn;
+  const turn = state.lastMove;
   return {
     id: state.id,
     perspective,
