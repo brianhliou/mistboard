@@ -143,12 +143,12 @@ function duckLayer(
   // Authored in the same 100-unit piece box as every disc on this board, so the
   // duck scales with the pieces instead of being sized on its own.
   // On top of the set's own frame: a thick bright-gold ring, so the duck
-  // separates from the cream discs around it and from the cream board, and a
-  // soft drop shadow, so it sits ON the board like a token rather than in it.
+  // separates from the cream discs around it and from the cream board. No drop
+  // shadow: it was the board's only 3D effect and read as out of place beside
+  // the flat pieces (Brian, 2026-10-08).
   return [
-    `<defs><filter id="dkx-duck-shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="2.5" stdDeviation="2.4" flood-color="#2a1a00" flood-opacity="0.5"/></filter></defs>`,
     `<g class="dkx-duck${landed ? ' dkx-duck--landed' : ''}" data-duck-square="${duck}" aria-label="duck">`,
-    `<g transform="translate(${p.x - size / 2},${p.y - size / 2}) scale(${size / 100})" filter="url(#dkx-duck-shadow)">`,
+    `<g transform="translate(${p.x - size / 2},${p.y - size / 2}) scale(${size / 100})">`,
     duckTokenMarks(resolved),
     `</g>`,
     `</g>`,
