@@ -48,7 +48,6 @@ const ALLOWED: Record<string, Reason> = {
   'videos-data.ts': 'content', // third-party video titles
   // visitor-facing debt
   'replay-board.ts': '#464',
-  'replay-icons.ts': '#464',
   'review/move-tree.ts': '#464',
   'review/opening-explorer.ts': '#464',
   'review/xiangqi-gamebook.ts': '#464',

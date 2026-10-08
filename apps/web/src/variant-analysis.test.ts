@@ -62,7 +62,7 @@ const clickSquare = (root: HTMLElement, square: string): void => {
   hit.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 };
 const menuItem = (root: HTMLElement, label: string): HTMLButtonElement | undefined =>
-  [...root.querySelectorAll<HTMLButtonElement>('.review-menu__item')].find(
+  [...root.querySelectorAll<HTMLButtonElement>('.move-nav-menu__item')].find(
     (b) => b.textContent?.trim() === label,
   );
 

@@ -18,6 +18,7 @@ import { reviewOpenedProps, track } from '../analytics.js';
 import { attachBoardResizeGrip, currentBoardScale, restoreBoardScale } from '../board-resize.js';
 import { createGameFavoriteButton } from '../game-favorite.js';
 import { t } from '../i18n/catalog.js';
+import { installMoveNavKeyboard } from '../move-nav-bar.js';
 import { createReviewControls, REVIEW_MENU_ICONS } from './review-controls.js';
 import { type BoardStageHandle, type BoardStageSlot, createBoardStage } from './review-stage.js';
 import '../seat-disc-ink.css';
@@ -515,85 +516,9 @@ export function mountReviewLayout(root: HTMLElement, adapter: ReviewLayoutAdapte
 }
 
 // Global playback keys (arrows anywhere on the page, lichess-style), ignoring
-// typing targets. Shared by the linear scrubber and the tree nav.
-export function installReviewKeyboard(
-  handlers: {
-    stepBack(): void;
-    stepForward(): void;
-    toStart(): void;
-    toEnd(): void;
-    /** Optional: `f` flips the board. Surfaces without a flip (Mistboard TV,
-     *  whose only orientation control is the fog POV toggle) omit it, and `f`
-     *  keeps its default behavior there. */
-    flip?(): void;
-    /** Optional: when this returns false the whole listener stands down for that
-     *  keypress, so arrows keep scrolling the page on a surface with nothing to
-     *  step through (TV's live-follow board owns no ply). */
-    enabled?(): boolean;
-    /** Optional: dismiss a transient chooser (the tree surface's variation picker). */
-    escape?(): void;
-    /** Optional: `a` toggles the engine's on-board arrows (lichess parity). Only
-     *  the tree surface draws them, so the linear controller omits this. */
-    toggleArrows?(): void;
-    /** Optional: Space plays the current local engine's top move. Returns false
-     *  while the engine is off or has no legal fresh result, preserving normal
-     *  Space behavior in those states. */
-    playBestMove?(): boolean;
-  },
-  /** Optional abort signal to remove the listener (e.g. when a surface re-mounts). */
-  signal?: AbortSignal,
-): void {
-  document.addEventListener(
-    'keydown',
-    (event) => {
-      if (event.metaKey || event.ctrlKey || event.altKey) return;
-      if (handlers.enabled && !handlers.enabled()) return;
-      const target = event.target as HTMLElement | null;
-      if (
-        target &&
-        (target.isContentEditable ||
-          target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.tagName === 'SELECT')
-      ) {
-        return;
-      }
-      if (event.key === 'ArrowLeft') {
-        event.preventDefault();
-        handlers.stepBack();
-      } else if (event.key === 'ArrowRight') {
-        event.preventDefault();
-        handlers.stepForward();
-      } else if (event.key === 'ArrowUp' || event.key === 'Home') {
-        event.preventDefault();
-        handlers.toStart();
-      } else if (event.key === 'ArrowDown' || event.key === 'End') {
-        event.preventDefault();
-        handlers.toEnd();
-      } else if ((event.key === 'f' || event.key === 'F') && handlers.flip) {
-        event.preventDefault();
-        handlers.flip();
-      } else if ((event.key === 'a' || event.key === 'A') && handlers.toggleArrows) {
-        event.preventDefault();
-        handlers.toggleArrows();
-      } else if (
-        (event.key === ' ' || event.code === 'Space') &&
-        !event.repeat &&
-        handlers.playBestMove &&
-        // Let focused controls keep native Space activation (notably the engine
-        // switch and settings gear). Inputs/selects already returned above.
-        !target?.closest('button, a, [role="button"]') &&
-        handlers.playBestMove()
-      ) {
-        event.preventDefault();
-      } else if (event.key === 'Escape' && handlers.escape) {
-        event.preventDefault();
-        handlers.escape();
-      }
-    },
-    { signal },
-  );
-}
+// typing targets. The one move-nav key map lives with the bar (move-nav-bar.ts,
+// #523); this name stays for the review surfaces and TV that install it.
+export const installReviewKeyboard = installMoveNavKeyboard;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Board sizing (viewport-fill). Shared by every scaffold consumer.

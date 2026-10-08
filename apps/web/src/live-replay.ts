@@ -10,6 +10,7 @@
 import type { GameEvent, PlayerView } from '@mistboard/game';
 import { ownPieceCount, playSound, soundForMove, soundForOwnMove } from './live-sound.js';
 import { liveState } from './live-state.js';
+import { moveNavKeyAction } from './move-nav-bar.js';
 import { isColor } from './web-utils.js';
 
 let onStateChange: () => void = () => {};
@@ -279,24 +280,6 @@ function soundForOwnReplayMove(
   return event.capturedRole === 'king' ? 'king-capture' : 'capture';
 }
 
-function replayActionForKey(key: string): string | null {
-  if (key === 'ArrowLeft') return 'prev';
-  if (key === 'ArrowRight') return 'next';
-  if (key === 'ArrowUp') return 'first';
-  if (key === 'ArrowDown') return 'latest';
-  return null;
-}
-
-function isEditableKeyboardTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  if (target.isContentEditable) return true;
-  return (
-    target instanceof HTMLInputElement ||
-    target instanceof HTMLTextAreaElement ||
-    target instanceof HTMLSelectElement
-  );
-}
-
 export function replayControlDisabled(action: string): boolean {
   const history = replayHistoryIndexes();
   if (history.length === 0) return action !== 'latest';
@@ -336,11 +319,9 @@ export function handleReplayButtonClick(action: string): void {
 }
 
 export function handleReplayKeyboard(event: KeyboardEvent): void {
-  if (event.defaultPrevented || event.metaKey || event.altKey || event.ctrlKey || event.shiftKey)
-    return;
-  if (isEditableKeyboardTarget(event.target)) return;
-
-  const action = replayActionForKey(event.key);
+  // The one move-nav key map (#523): ←/→, ↑/Home, ↓/End; it stands down for
+  // modifiers, typing targets and a key another listener already handled.
+  const action = moveNavKeyAction(event);
   if (!action || replayControlDisabled(action)) return;
 
   event.preventDefault();

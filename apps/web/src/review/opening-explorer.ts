@@ -95,7 +95,16 @@ export type OpeningExplorerHoverTone = 'book' | XiangqiTablebaseOutcome;
 export type OpeningExplorerOptions = {
   /** Exact endgame table shown in place of the book for covered positions. */
   tablebase?: XiangqiTablebasePanel;
+  /** Wait this long after the position last changed before asking the server
+   *  (book or tablebase). The book is open by default on review pages (#523),
+   *  so holding an arrow key would otherwise send one request per ply; a
+   *  position already in the cache still renders at once. 0 asks immediately. */
+  settleMs?: number;
 };
+
+/** The review pages' settle delay: long enough to swallow a held arrow key,
+ *  short enough that one step still reads as instant. */
+export const OPENING_EXPLORER_SETTLE_MS = 250;
 
 const MAX_ROWS = 12;
 /** Below this many decided games the result bar is shown, but de-emphasized. */
@@ -106,6 +115,7 @@ const MIN_BAND_PERCENT_FOR_LABEL = 18;
 
 export function createOpeningExplorer(options: OpeningExplorerOptions = {}): OpeningExplorer {
   const tablebase = options.tablebase ?? null;
+  const settleMs = options.settleMs ?? 0;
   const el = document.createElement('section');
   el.className = 'opening-explorer';
   el.setAttribute('aria-label', 'Opening explorer');
@@ -168,6 +178,15 @@ export function createOpeningExplorer(options: OpeningExplorerOptions = {}): Ope
     | null = null;
   /** True while the pane is waiting on the tablebase for the current position. */
   let awaitingTablebase = false;
+  /** The pending lookup while stepping has not yet settled (settleMs). */
+  let settleTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function clearSettle(): boolean {
+    if (!settleTimer) return false;
+    clearTimeout(settleTimer);
+    settleTimer = null;
+    return true;
+  }
 
   tablebase?.onPlayMove((move) => playMove?.(move));
   tablebase?.onHoverMove((move, result) => hoverMove?.(move, move ? result : null));
@@ -179,7 +198,7 @@ export function createOpeningExplorer(options: OpeningExplorerOptions = {}): Ope
     if (!active) {
       // An unanswered position is forgotten, so reopening on it asks again
       // instead of returning early on a key it never finished loading.
-      if (inFlight || awaitingTablebase) currentKey = null;
+      if (clearSettle() || inFlight || awaitingTablebase) currentKey = null;
       inFlight?.abort();
       inFlight = null;
       awaitingTablebase = false;
@@ -203,6 +222,7 @@ export function createOpeningExplorer(options: OpeningExplorerOptions = {}): Ope
   function show(state: XiangqiGameState | null): void {
     currentState = state;
     if (!state) {
+      clearSettle();
       currentKey = null;
       awaitingTablebase = false;
       void tablebase?.setState(null);
@@ -211,11 +231,29 @@ export function createOpeningExplorer(options: OpeningExplorerOptions = {}): Ope
       return;
     }
     const key = standardXiangqiPositionKey(state);
+    // The same position again (a re-render) leaves a pending lookup alone.
     if (key === currentKey) return;
+    clearSettle();
     currentKey = key;
     inFlight?.abort();
     inFlight = null;
 
+    if (settleMs > 0 && !cache.has(key)) {
+      // Still stepping: clear the last position's rows (so they cannot be
+      // clicked against this board) and ask once the board has stopped moving.
+      awaitingTablebase = false;
+      void tablebase?.setState(null);
+      showLoading();
+      settleTimer = setTimeout(() => {
+        settleTimer = null;
+        if (currentKey === key) lookUp(state, key);
+      }, settleMs);
+      return;
+    }
+    lookUp(state, key);
+  }
+
+  function lookUp(state: XiangqiGameState, key: string): void {
     if (tablebase && state.status.type === 'playing' && isXiangqiTablebaseCandidate(state)) {
       // Ask the tablebase first; the book waits. Hiding the book now keeps the
       // previous position's book rows from being clicked while the answer is out.
@@ -242,16 +280,21 @@ export function createOpeningExplorer(options: OpeningExplorerOptions = {}): Ope
     }
     const controller = new AbortController();
     inFlight = controller;
-    status.hidden = false;
-    status.textContent = 'Loading opening statistics...';
-    table.replaceChildren();
-    topGames.replaceChildren();
+    showLoading();
     void fetchExplorer(key, controller.signal).then((data) => {
       if (controller.signal.aborted || currentKey !== key) return;
       inFlight = null;
       if (data) cache.set(key, data);
       render(data);
     });
+  }
+
+  function showLoading(): void {
+    book.hidden = false;
+    status.hidden = false;
+    status.textContent = 'Loading opening statistics...';
+    table.replaceChildren();
+    topGames.replaceChildren();
   }
 
   function render(data: ExplorerResponse | null): void {

@@ -12,6 +12,7 @@ import {
   applyJieqiMove,
   createInitialJieqiState,
   getJieqiPlayerView,
+  getJieqiPublicView,
   type JieqiColor,
   type JieqiGameState,
   type JieqiMove,
@@ -25,6 +26,7 @@ import { JIEQI_SAMPLE_GAME } from './jieqi-sample-game.js';
 import type { JieqiWireView } from './live-jieqi.js';
 import {
   rebuildFinishedJieqiHistory,
+  rebuildLiveJieqiHistory,
   recoverJieqiDealFromFinish,
 } from './live-jieqi-replay-history.js';
 import type { TenantLiveEvent } from './variant-tenant/live-client.js';
@@ -251,8 +253,47 @@ describe('cold join to a finished jieqi room', () => {
   });
 });
 
-describe('cold join to a LIVE jieqi room is unchanged (hidden-info regression)', () => {
-  it('holds only the masked view it was sent: no rebuild, no stepping', async () => {
+// #523: a seated player who reloaded a LIVE room saw "last" lit and could not
+// step back: the client kept only the served view, so its stepper had one ply.
+// The rebuild uses only what that view already shows plus the public move list,
+// so every ply must equal what this viewer saw live: the masked board and the
+// captured list as THIS seat (or a spectator) knows it, never a role it lacked.
+describe('cold join to a LIVE jieqi room steps back through every ply (hidden-info regression)', () => {
+  it('rebuilds every ply as this seat saw it: masked board, and only the captures it can name', () => {
+    const served = seatView(STATES[PLIES]!, 'black');
+    // Dark captures this seat cannot name: the rebuild must keep them masked.
+    expect(served.captured.some((entry) => entry.role === null)).toBe(true);
+    const snapshots = rebuildLiveJieqiHistory(MOVES, served, 'black');
+    expect(snapshots).toHaveLength(PLIES + 1);
+    for (const [ply, snapshot] of (snapshots ?? []).entries()) {
+      const saw = getJieqiPlayerView(STATES[ply]!, 'black');
+      expect(snapshot.ply).toBe(ply);
+      expect(snapshot.view.board).toEqual(saw.board);
+      expect(snapshot.view.captured).toEqual(saw.captured);
+      expect(snapshot.view.legalMoves).toEqual([]);
+    }
+  });
+
+  it('rebuilds a spectator from the public view, never a seat view', () => {
+    const served = getJieqiPublicView(STATES[PLIES]!) as JieqiWireView;
+    const snapshots = rebuildLiveJieqiHistory(MOVES, served, null);
+    expect(snapshots).toHaveLength(PLIES + 1);
+    for (const [ply, snapshot] of (snapshots ?? []).entries()) {
+      const saw = getJieqiPublicView(STATES[ply]!);
+      expect(snapshot.view.board).toEqual(saw.board);
+      expect(snapshot.view.captured).toEqual(saw.captured);
+    }
+    // A spectator handed a seat's view does not fit the public projection.
+    expect(rebuildLiveJieqiHistory(MOVES, seatView(STATES[PLIES]!, 'red'), null)).toBeNull();
+  });
+
+  it('drops a rebuild whose moves do not reach the served view', () => {
+    const served = seatView(STATES[PLIES]!, 'black');
+    expect(rebuildLiveJieqiHistory(MOVES.slice(0, -1), served, 'black')).toBeNull();
+    expect(rebuildLiveJieqiHistory(MOVES, truthView(resigned(STATES[PLIES]!)), 'black')).toBeNull();
+  });
+
+  it('a seated player reloading at ply 29 can step back, with "last" off at the live position', async () => {
     const options = await mount();
     const served = seatView(STATES[PLIES]!, 'black');
     options.applyHello(
@@ -260,23 +301,53 @@ describe('cold join to a LIVE jieqi room is unchanged (hidden-info regression)',
     );
     options.render();
 
-    // The board is exactly the served masked view: face-down pieces stay hidden.
+    expect(moveCells()).toHaveLength(PLIES);
     expect(boardOnScreen()).toEqual(expectedMasked(STATES[PLIES]!));
     expect(Object.values(boardOnScreen()).some((label) => label.includes('hidden'))).toBe(true);
-    expect(controlButton('prev').disabled).toBe(true);
-    expect(controlButton('first').disabled).toBe(true);
+    // At the live position there is nothing to return to: "last" is off, not lit.
+    expect(controlButton('latest').disabled).toBe(true);
+    expect(controlButton('prev').disabled).toBe(false);
+    expect(controlButton('first').disabled).toBe(false);
     expect(reviewHref()).toBeNull();
+
+    for (let ply = PLIES - 1; ply >= 0; ply -= 1) {
+      controlButton('prev').click();
+      expect(boardOnScreen()).toEqual(expectedMasked(STATES[ply]!));
+    }
+    expect(controlButton('prev').disabled).toBe(true);
+    // Scrubbed back: now "last" lights as the way home.
+    expect(controlButton('latest').disabled).toBe(false);
+    controlButton('latest').click();
+    expect(boardOnScreen()).toEqual(expectedMasked(STATES[PLIES]!));
   });
 
-  it('a spectator cold join likewise keeps the public view', async () => {
+  it('a spectator cold join steps back too', async () => {
     const options = await mount();
-    const served = { ...seatView(STATES[PLIES]!, 'red'), legalMoves: [] } as JieqiWireView;
+    const served = getJieqiPublicView(STATES[PLIES]!) as JieqiWireView;
     options.applyHello(
       frame('hello', { seat: 'spectator', state: served, events: [CREATED, ...moveEvents(PLIES)] }),
     );
     options.render();
     expect(boardOnScreen()).toEqual(expectedMasked(STATES[PLIES]!));
-    expect(controlButton('prev').disabled).toBe(true);
+    expect(controlButton('latest').disabled).toBe(true);
+    controlButton('first').click();
+    expect(boardOnScreen()).toEqual(expectedMasked(STATES[0]!));
+  });
+
+  it('keeps the single served view, every control off, when the moves do not reach it', async () => {
+    const options = await mount();
+    options.applyHello(
+      frame('hello', {
+        seat: 'black',
+        state: seatView(STATES[PLIES]!, 'black'),
+        events: [CREATED, ...moveEvents(PLIES - 1)],
+      }),
+    );
+    options.render();
+    expect(boardOnScreen()).toEqual(expectedMasked(STATES[PLIES]!));
+    for (const action of ['first', 'prev', 'next', 'latest']) {
+      expect(controlButton(action).disabled).toBe(true);
+    }
   });
 });
 

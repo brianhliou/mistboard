@@ -231,29 +231,6 @@
   text-align: right;
 }
 
-/* The control bar's tool cluster: the book toggle that opens this panel. */
-.review-controls__tool {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 6px;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--site-muted);
-  cursor: pointer;
-}
-
-.review-controls__tool:hover {
-  color: var(--site-text);
-  background: var(--site-zebra);
-}
-
-.review-controls__tool--on {
-  color: var(--site-accent-strong, var(--site-text));
-  background: var(--site-accent-soft, var(--site-zebra));
-}
-
 @media (max-width: 720px) {
   .opening-explorer__columns,
   .opening-explorer__row {
