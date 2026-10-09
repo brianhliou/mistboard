@@ -14,7 +14,6 @@ import {
 } from './xiangqi-piece-sets.js';
 import {
   DEFAULT_XIANGQI_RIVER_TEXT,
-  normalizeXiangqiRiverText,
   XIANGQI_RIVER_TEXTS,
   type XiangqiRiverText,
 } from './xiangqi-river-text.js';
@@ -127,6 +126,19 @@ export function inferredXiangqiPieceSet(
   if (locale === 'zh-Hans' || locale === 'zh-Hant') return 'traditional';
   if (country && HANZI_PIECE_COUNTRIES.has(country)) return 'traditional';
   return defaultXiangqiPieceSet;
+}
+
+// The river caption follows the same audience as the pieces (Brian, 2026-10-08:
+// "On for Chinese readers. By default."): whoever starts on hanzi pieces also
+// starts with 楚河 漢界 in the river; everyone else starts with none. Like the
+// piece set, nothing stored means "follow this", so a pick always wins.
+export function inferredXiangqiRiverText(
+  locale: Locale = currentLocale(),
+  country: string | null = viewerCountry(),
+): XiangqiRiverText {
+  return inferredXiangqiPieceSet(locale, country) === 'traditional'
+    ? 'classic'
+    : DEFAULT_XIANGQI_RIVER_TEXT;
 }
 
 // An explicit pick is stored; no stored value means "follow the inference",
@@ -278,9 +290,12 @@ export function readStoredXiangqiRiverText(): XiangqiRiverText {
       return preview as XiangqiRiverText;
     }
     migrateLegacyBoardThemes();
-    return normalizeXiangqiRiverText(window.localStorage.getItem(xiangqiRiverTextStorageKey));
+    const stored = window.localStorage.getItem(xiangqiRiverTextStorageKey);
+    return XIANGQI_RIVER_TEXTS.includes(stored as XiangqiRiverText)
+      ? (stored as XiangqiRiverText)
+      : inferredXiangqiRiverText();
   } catch {
-    return DEFAULT_XIANGQI_RIVER_TEXT;
+    return inferredXiangqiRiverText();
   }
 }
 

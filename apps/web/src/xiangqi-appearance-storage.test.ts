@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   inferredXiangqiPieceSet,
+  inferredXiangqiRiverText,
   normalizeXiangqiBoardLayout,
   normalizeXiangqiBoardTheme,
   normalizeXiangqiPieceSet,
@@ -258,6 +259,23 @@ describe('xiangqi board colour, river text and start marker storage', () => {
     }
     storage.setItem('mistboard.xiangqiRiverText', 'wordart');
     expect(readStoredXiangqiRiverText()).toBe('off');
+  });
+
+  it('starts Chinese readers on the classic inscription without storing it', () => {
+    expect(inferredXiangqiRiverText('en', null)).toBe('off');
+    expect(inferredXiangqiRiverText('en', 'US')).toBe('off');
+    expect(inferredXiangqiRiverText('zh-Hans', null)).toBe('classic');
+    expect(inferredXiangqiRiverText('zh-Hant', null)).toBe('classic');
+    for (const country of ['CN', 'TW', 'HK', 'MO', 'SG', 'MY', 'VN']) {
+      expect(inferredXiangqiRiverText('en', country)).toBe('classic');
+    }
+    const storage = installLocalStorage();
+    document.cookie = 'mb_cc=TW';
+    expect(readStoredXiangqiRiverText()).toBe('classic');
+    expect(storage.getItem('mistboard.xiangqiRiverText')).toBeNull();
+    writeStoredXiangqiRiverText('off');
+    expect(readStoredXiangqiRiverText()).toBe('off');
+    document.cookie = 'mb_cc=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
   });
 
   it('shows start markers by default and remembers turning them off', () => {
