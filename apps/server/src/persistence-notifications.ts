@@ -15,7 +15,7 @@
 // so putting them on the row every session-load fetches would add width to the
 // hottest query in the app for no reader.
 
-import { linkableHandleSql } from './persistence-correspondence-seeks.js';
+import { linkableHandleSql, seekExpirySql } from './persistence-correspondence-seeks.js';
 import { getPool } from './persistence-db.js';
 import { visibleFollowerSql } from './persistence-relations.js';
 
@@ -201,13 +201,15 @@ export async function unreadWatchedForumTopics(
 
 // Directed correspondence challenges still awaiting this user's answer. Live
 // state, not a feed: an unanswered challenge stays counted until it is accepted,
-// declined, or expires.
+// declined, or expires. Same live filter as listChallengesForUser (the
+// /correspondence "Challenges for you" list the bell links to), so the badge
+// never counts a challenge the list leaves out.
 export async function countIncomingChallenges(userId: string): Promise<number> {
   const { rows } = await getPool().query<{ count: string }>(
     `SELECT count(*)::text AS count
      FROM correspondence_seeks
      WHERE target_user_id = $1
-       AND (expires_at IS NULL OR expires_at > now())`,
+       AND ${seekExpirySql()} > now()`,
     [userId],
   );
   return Number(rows[0]?.count ?? 0);

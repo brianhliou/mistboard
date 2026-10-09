@@ -456,10 +456,20 @@
   height: 100%;
 }
 
-.current-game-seek-action {
+/* A seek card's buttons get the bottom row to themselves, full width like an
+   in-progress card's Play, so the seat row above keeps the whole name. */
+.current-game-seek-actions {
+  display: flex;
+  min-width: 0;
+}
+
+/* Two classes, so it beats .correspondence-ghost's flex: none whatever order
+   the stylesheets bundle in. */
+.current-game-seek-actions > .current-game-seek-action {
   position: relative;
   z-index: 2;
-  flex: none;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 /* Accept on someone else's seek (seek-accept.ts): a button when signed in, a

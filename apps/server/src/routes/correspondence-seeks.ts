@@ -300,6 +300,8 @@ async function listIncomingChallenges(
       rated: seek.rated === true,
       challengerName: seek.creatorName,
       challengerHandle: seek.creatorHandle ?? null,
+      // A directed challenge always stores its own expiry; the card shows it.
+      expiresAt: seek.expiresAt?.toISOString() ?? null,
       createdAt: seek.createdAt.toISOString(),
     })),
   });

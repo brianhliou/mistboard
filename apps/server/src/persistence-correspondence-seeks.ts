@@ -29,7 +29,7 @@ export const CORRESPONDENCE_SEEK_TTL_MS = 14 * DAY_MS;
 // the cap, the accept gate (through getCorrespondenceSeek) and the sweep use
 // this one expression, so "expired" cannot mean different things in different
 // places. The interpolated value is a numeric constant, never request input.
-function seekExpirySql(alias = ''): string {
+export function seekExpirySql(alias = ''): string {
   return `COALESCE(${alias}expires_at, ${alias}created_at + interval '${CORRESPONDENCE_SEEK_TTL_MS} milliseconds')`;
 }
 

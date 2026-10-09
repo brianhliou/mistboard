@@ -119,6 +119,29 @@ describe('/games seek card', () => {
     expect(meta('random')).toContain('random colors');
   });
 
+  it("puts Accept in its own bottom row, not beside the poster's name", () => {
+    const card = buildGamesSeekCard({ ...seek, preferredColor: 'random' }, { signedIn: true });
+    const accept = card.querySelector('.current-game-seek-accept');
+    expect(accept?.closest('.current-game-seat')).toBeNull();
+    const row = accept?.closest('.current-game-seek-actions');
+    expect(row?.parentElement).toBe(card);
+    expect(row?.previousElementSibling?.classList.contains('current-game-meta')).toBe(true);
+  });
+
+  it("turns the board to the accepter's side when the poster picked one; random stays", () => {
+    const view = (preferredColor: string) => {
+      const card = buildGamesSeekCard({ ...seek, preferredColor }, { signedIn: true });
+      const seats = [...card.querySelectorAll(':scope > .current-game-seat')];
+      return {
+        emptySeatAtBottom: seats[1]?.classList.contains('is-empty-seat') ?? false,
+        perspective: card.querySelector<HTMLElement>('.current-game-board')?.dataset.perspective,
+      };
+    };
+    expect(view('first')).toEqual({ emptySeatAtBottom: true, perspective: 'second' });
+    expect(view('second')).toEqual({ emptySeatAtBottom: true, perspective: 'first' });
+    expect(view('random')).toEqual({ emptySeatAtBottom: false, perspective: undefined });
+  });
+
   it('keeps your own seek leading to /correspondence with no Accept', () => {
     const card = buildGamesSeekCard({ ...seek, isMine: true }, { signedIn: true });
     expect(card.querySelector('a.current-game-open')?.getAttribute('href')).toBe('/correspondence');

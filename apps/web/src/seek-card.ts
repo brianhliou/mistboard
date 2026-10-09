@@ -2,7 +2,9 @@
 // the same frame as an in-progress card (seat, board, seat, meta) so a seek
 // reads as a game waiting for its second player. The board is the variant's
 // starting position (start-position-board.ts); the empty seat says who is
-// missing. Styles live in current-games.css, which both pages load.
+// missing. Its buttons get a row of their own under the meta, so the seat row
+// holds only the name and never truncates it. Styles live in current-games.css,
+// which both pages load.
 
 import { displayLiveName, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
@@ -24,8 +26,9 @@ export type SeekCardSeek = {
 export type SeekCardOptions = {
   // Where the whole card leads; null when an action button is the only way in.
   href: string | null;
-  // The bottom-right control (Accept or a sign-in link, from seek-accept.ts;
-  // your own seek's Copy link and Cancel).
+  // The card's controls (Accept or a sign-in link, from seek-accept.ts; your
+  // own seek's Copy link and Cancel; a challenge's Accept and Decline), in a
+  // full-width row at the bottom of the card.
   action?: HTMLElement | null;
   // A line under the meta (an accept error); hidden until it has text.
   status?: HTMLElement | null;
@@ -38,9 +41,15 @@ export type SeekCardOptions = {
   details?: readonly string[];
   badge?: boolean;
   // The seat the start board is drawn for: your own seek, from the side you
-  // asked for. Omitted for someone else's seek, so a fog variant keeps its tile
-  // (start-position-board.ts) and an open one is drawn from the first side.
+  // asked for; someone else's seek or challenge, from the side you would take
+  // when the poster picked theirs (a fog variant then draws that seat's own
+  // start view). Omitted when the side is random, so a fog variant keeps its
+  // tile (start-position-board.ts) and the board is drawn from the first side.
   side?: SeatSide;
+  // The empty seat is the viewer's (a challenge to you, or a seek whose side
+  // you would take is known): it goes at the bottom with the poster on top, as
+  // every in-progress card puts "You" at the bottom.
+  waitingAtBottom?: boolean;
 };
 
 export function buildSeekCard(seek: SeekCardSeek, options: SeekCardOptions): HTMLElement {
@@ -108,10 +117,6 @@ export function buildSeekCard(seek: SeekCardSeek, options: SeekCardOptions): HTM
     ),
   );
   seat.append(who);
-  if (options.action) {
-    options.action.classList.add('current-game-seek-action');
-    seat.append(options.action);
-  }
 
   const meta = document.createElement('div');
   meta.className = 'current-game-meta';
@@ -131,7 +136,15 @@ export function buildSeekCard(seek: SeekCardSeek, options: SeekCardOptions): HTM
   if (options.badge !== false) meta.append(buildKindBadge('seek'));
   meta.append(chip, text);
 
-  article.append(waiting, board, seat, meta);
+  if (options.waitingAtBottom) article.append(seat, board, waiting, meta);
+  else article.append(waiting, board, seat, meta);
+  if (options.action) {
+    const actions = document.createElement('div');
+    actions.className = 'current-game-seek-actions';
+    options.action.classList.add('current-game-seek-action');
+    actions.append(options.action);
+    article.append(actions);
+  }
   if (options.status) article.append(options.status);
   return article;
 }

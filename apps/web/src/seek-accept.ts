@@ -9,6 +9,7 @@ import { trackCorrespondenceSeekAccepted } from './analytics.js';
 import { firstMoverColorName, secondMoverColorName } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
+import type { SeatSide } from './seat-start-view.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 
 export type SeekAcceptSurface =
@@ -158,5 +159,13 @@ export function accepterColorLabel(gameSpecId: string, color: string | undefined
     return t('challenge.youPlayColor', { color: secondMoverColorName(gameSpecId) });
   if (color === 'second')
     return t('challenge.youPlayColor', { color: firstMoverColorName(gameSpecId) });
+  return null;
+}
+
+// The seat the ACCEPTER would take on someone else's seek, when the poster
+// picked a side; null for random (no seat is decided until the game starts).
+export function accepterSide(color: string | undefined): SeatSide | null {
+  if (color === 'first') return 'second';
+  if (color === 'second') return 'first';
   return null;
 }

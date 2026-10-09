@@ -65,7 +65,7 @@ import { currentLocale } from './i18n/locale.js';
 import { playerNameEl, profileTargetFor } from './profile-link.js';
 import { formatGameTime, profileGameHref } from './profile-ui.js';
 import type { ReplayHandle } from './replay.js';
-import { accepterColorLabel, buildSeekAcceptAction } from './seek-accept.js';
+import { accepterColorLabel, accepterSide, buildSeekAcceptAction } from './seek-accept.js';
 import { buildKindBadge, buildSeekCard } from './seek-card.js';
 import { specIdForShowcaseVariant } from './showcase-dispatch.js';
 import { buildNav, buildNotice } from './site-shell.js';
@@ -863,7 +863,17 @@ export function buildGamesSeekCard(
     surface: 'games',
   });
   const side = accepterColorLabel(seek.gameSpecId, seek.preferredColor);
-  return buildSeekCard(seek, { action, details: side ? [side] : [], href: null, status });
+  // A picked side: the board turns to the seat you would take, which sits at
+  // the bottom. Random keeps the first side with the poster below.
+  const seat = accepterSide(seek.preferredColor);
+  return buildSeekCard(seek, {
+    action,
+    details: side ? [side] : [],
+    href: null,
+    side: seat ?? undefined,
+    status,
+    waitingAtBottom: seat !== null,
+  });
 }
 
 // null = the seek board is unavailable (correspondence disabled, or an error).

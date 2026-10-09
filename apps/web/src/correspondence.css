@@ -143,13 +143,16 @@
   background: var(--site-warning-border);
 }
 
-/* Your own seek: Copy link and Cancel share the seat row with "You". */
+/* A seek card's button pair (your Copy link and Cancel, a challenge's Accept
+   and Decline): split the card's action row evenly. */
 .correspondence-own-actions {
   display: flex;
   gap: 6px;
 }
 
 .correspondence-own-actions .correspondence-ghost {
+  flex: 1 1 0;
+  min-width: 0;
   min-height: 30px;
   padding: 0 10px;
   font-size: 0.78rem;
@@ -782,19 +785,10 @@
     font-size: 0.72rem;
   }
 
-  .correspondence-grid .current-game-seek-action {
-    flex: 1 1 100%;
-  }
-
   .correspondence-grid .correspondence-ghost {
     min-height: 30px;
     padding: 0 6px;
     font-size: 0.75rem;
-  }
-
-  .correspondence-own-actions .correspondence-ghost {
-    flex: 1 1 0;
-    min-width: 0;
   }
 
   .correspondence-grid .correspondence-card-play {
