@@ -20,6 +20,7 @@ import {
 } from '@mistboard/game';
 import { track } from './analytics.js';
 import type { ArticleLang } from './article-i18n.js';
+import { articleAnalysisLoader } from './article-replay-analysis.js';
 import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
 import './board-glyph-marker.css';
 import './embed/embed-credit.css';
@@ -37,6 +38,7 @@ import { type XiangqiBoardGeometry, xiangqiBoardPoint } from './xiangqi-board-ge
 import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle, xiangqiNotationChangedEvent } from './xiangqi-notation.js';
 import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
+import type { ReplayChartSource } from './xiangqi-replay-chart.js';
 import { xiangqiDiagramRiverText } from './xiangqi-river-text.js';
 
 // Geometry/colours mirror the static xiangqi diagrams in articles-data.ts so
@@ -180,6 +182,14 @@ export type XiangqiReplaySpec = {
 /** Where an article board's analysis link points. */
 export function broadcastBoardHref(boardId: string): string {
   return `/broadcast/xiangqi/board/${encodeURIComponent(boardId)}`;
+}
+
+/** Where a board's advantage chart comes from: the broadcast archive when the
+ *  spec names a board, else a precomputed file for this exact record, else none. */
+function replayChartSource(spec: XiangqiReplaySpec): ReplayChartSource | null {
+  if (spec.boardId) return { boardId: spec.boardId };
+  const load = articleAnalysisLoader(spec);
+  return load ? { load } : null;
 }
 
 /** Board ids as the broadcast archive mints them: lowercase words joined by
@@ -623,14 +633,16 @@ export function mountXiangqiReplay(
   resultFoot.className = 'xq-replay-result';
 
   // The game's advantage chart, for a board whose game is in the broadcast
-  // archive (see xiangqi-replay-chart.ts). The slot is placed now at the chart's
-  // full height, so a chart arriving later moves nothing on the page; it is
-  // dropped again if the game turns out to have no stored analysis. Without
+  // archive or has a precomputed analysis file (see xiangqi-replay-chart.ts).
+  // The slot is placed now at the chart's full height, so a chart arriving later
+  // moves nothing on the page; it is dropped again if the game turns out to have
+  // no stored analysis, or one that does not match the record. Without
   // IntersectionObserver there is no lazy load, so there is no slot either.
   // A reader who hid the graph (the menu's "Hide eval graph", one setting for
   // every article board) gets no slot and no fetch: the card is its old height.
+  const chartSource = replayChartSource(spec);
   let chartSlot: HTMLElement | null = null;
-  if (spec.boardId && typeof IntersectionObserver === 'function') {
+  if (chartSource && typeof IntersectionObserver === 'function') {
     chartSlot = document.createElement('div');
     chartSlot.className = 'xq-replay-chart';
   }
@@ -1300,9 +1312,9 @@ export function mountXiangqiReplay(
     return `${n}${isFirst ? '.' : '\u2026'} ${labels[ply - 1] ?? ''}`;
   };
 
-  async function loadChart(boardId: string, slot: HTMLElement): Promise<void> {
+  async function loadChart(source: ReplayChartSource, slot: HTMLElement): Promise<void> {
     const mod = await import('./xiangqi-replay-chart.js');
-    const analysis = await mod.loadReplayChartAnalysis(boardId, total);
+    const analysis = await mod.loadReplayChartAnalysis(source, total);
     if (destroyed) return;
     if (!analysis) {
       // No stored analysis: give the reserved height back, for good.
@@ -1344,15 +1356,15 @@ export function mountXiangqiReplay(
   let chartRequested = false;
   function watchChart(): void {
     const slot = chartSlot;
-    const boardId = spec.boardId;
-    if (!slot || !boardId || chartRequested || chartObserver || !chartShown()) return;
+    const source = chartSource;
+    if (!slot || !source || chartRequested || chartObserver || !chartShown()) return;
     chartObserver = new IntersectionObserver(
       (entries) => {
         if (!entries.some((entry) => entry.isIntersecting)) return;
         chartObserver?.disconnect();
         chartObserver = null;
         chartRequested = true;
-        loadChart(boardId, slot).catch(() => {
+        loadChart(source, slot).catch(() => {
           if (!destroyed) dropChart();
         });
       },

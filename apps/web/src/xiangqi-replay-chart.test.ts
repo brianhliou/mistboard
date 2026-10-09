@@ -1,5 +1,6 @@
 import { createInitialXiangqiState } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { articleAnalysisLoader } from './article-replay-analysis.js';
 import type { GameAnalysis, XiangqiGameAnalysisResponse } from './review/game-analysis.js';
 import {
   EVAL_GRAPH_STORAGE_KEY,
@@ -140,7 +141,7 @@ async function mountVisible(
 
 describe('loadReplayChartAnalysis (data path)', () => {
   it('GETs the stored broadcast analysis and returns it when it covers every ply', async () => {
-    const analysis = await loadReplayChartAnalysis(BOARD_ID, 4);
+    const analysis = await loadReplayChartAnalysis({ boardId: BOARD_ID }, 4);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0]!;
     expect(url).toBe(ANALYSIS_PATH);
@@ -151,30 +152,92 @@ describe('loadReplayChartAnalysis (data path)', () => {
 
   it('is null when nothing is stored yet (204)', async () => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
-    expect(await loadReplayChartAnalysis(BOARD_ID, 4)).toBeNull();
+    expect(await loadReplayChartAnalysis({ boardId: BOARD_ID }, 4)).toBeNull();
   });
 
   it('is null on a server error or a network failure', async () => {
     fetchMock.mockResolvedValueOnce(new Response('nope', { status: 500 }));
-    expect(await loadReplayChartAnalysis(BOARD_ID, 4)).toBeNull();
+    expect(await loadReplayChartAnalysis({ boardId: BOARD_ID }, 4)).toBeNull();
     fetchMock.mockRejectedValueOnce(new TypeError('offline'));
-    expect(await loadReplayChartAnalysis(BOARD_ID, 4)).toBeNull();
+    expect(await loadReplayChartAnalysis({ boardId: BOARD_ID }, 4)).toBeNull();
   });
 
   it('is null when the series does not match the article record ply for ply', async () => {
     // A longer or shorter record would put the cursor on the wrong move.
     fetchMock.mockResolvedValueOnce(jsonResponse(analysisBody(36)));
-    expect(await loadReplayChartAnalysis(BOARD_ID, 4)).toBeNull();
+    expect(await loadReplayChartAnalysis({ boardId: BOARD_ID }, 4)).toBeNull();
     const gappy = analysisBody(4);
     gappy.plies.splice(2, 1, { ...gappy.plies[2]!, ply: 7 });
     fetchMock.mockResolvedValueOnce(jsonResponse(gappy));
-    expect(await loadReplayChartAnalysis(BOARD_ID, 4)).toBeNull();
+    expect(await loadReplayChartAnalysis({ boardId: BOARD_ID }, 4)).toBeNull();
   });
 
   it('accepts an injected fetcher', async () => {
     const fetcher = vi.fn(async () => null as GameAnalysis | null);
-    expect(await loadReplayChartAnalysis(BOARD_ID, 4, fetcher)).toBeNull();
+    expect(await loadReplayChartAnalysis({ boardId: BOARD_ID }, 4, fetcher)).toBeNull();
     expect(fetcher).toHaveBeenCalledWith('xiangqi-broadcasts', BOARD_ID);
+  });
+});
+
+describe('loadReplayChartAnalysis (precomputed file)', () => {
+  it('reads the shipped file, never the network, and returns it when it covers every ply', async () => {
+    const load = vi.fn(async () => analysisBody(4));
+    const analysis = await loadReplayChartAnalysis({ load }, 4);
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(analysis?.engineId).toBe('pikafish-xiangqi-analysis@5');
+    expect(analysis?.evals.map((e) => e.ply)).toEqual([0, 1, 2, 3, 4]);
+  });
+
+  it('is null when the file does not match the article record ply for ply', async () => {
+    expect(await loadReplayChartAnalysis({ load: async () => analysisBody(36) }, 4)).toBeNull();
+    expect(await loadReplayChartAnalysis({ load: async () => analysisBody(3) }, 4)).toBeNull();
+    const gappy = analysisBody(4);
+    gappy.plies.splice(2, 1, { ...gappy.plies[2]!, ply: 7 });
+    expect(await loadReplayChartAnalysis({ load: async () => gappy }, 4)).toBeNull();
+  });
+
+  it('is null when the file is missing, malformed or fails to load', async () => {
+    expect(await loadReplayChartAnalysis({ load: async () => null }, 4)).toBeNull();
+    const malformed = { engineId: 'x', depth: 1 } as unknown as XiangqiGameAnalysisResponse;
+    expect(await loadReplayChartAnalysis({ load: async () => malformed }, 4)).toBeNull();
+    const failing = async (): Promise<XiangqiGameAnalysisResponse> => {
+      throw new Error('chunk failed to load');
+    };
+    expect(await loadReplayChartAnalysis({ load: failing }, 4)).toBeNull();
+  });
+});
+
+describe('article board advantage chart (precomputed file, mount)', () => {
+  // A real article record with a shipped file: the manual line on the xiangqi
+  // rules page (25 plies). No boardId, so no network.
+  const manualLine: XiangqiReplaySpec = {
+    iccs: 'h2e2 h7e7 h0g2 h9g7 i0i1 i9h9 i1d1 h9h3 d1d8 b9a7 a0a1 b7b0 b2b7 g7h9 e2e6 f9e8 a1d1 e9f9 d8d9 e8d9 d1f1 e7f7 f1f7 f9e9 b7e7',
+    red: 'Red',
+    black: 'Black',
+    event: 'Classic manual, 1632',
+    resultText: '1-0',
+    annotations: { byPly: {} },
+  };
+
+  it('reserves the slot and draws the chart from the file once visible', async () => {
+    expect(articleAnalysisLoader(manualLine)).not.toBeNull();
+    mount(host, manualLine);
+    expect(slot()).not.toBeNull();
+    expect(host.querySelector('a.xq-replay-analysis-link')).toBeNull();
+    FakeIntersectionObserver.instances[0]!.intersect();
+    await vi.waitFor(() =>
+      expect(host.querySelector('.xq-replay-chart .advantage-chart')).not.toBeNull(),
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('gets no slot when the record differs from the analysed one by a single move', () => {
+    const changed = { ...manualLine, iccs: manualLine.iccs.replace(/ b7e7$/, ' b7b9') };
+    expect(articleAnalysisLoader(changed)).toBeNull();
+    mount(host, changed);
+    expect(slot()).toBeNull();
+    expect(FakeIntersectionObserver.instances).toHaveLength(0);
   });
 });
 
@@ -272,7 +335,7 @@ describe('article board advantage chart (mount)', () => {
     expect(col.querySelector('.advantage-chart')).not.toBeNull();
   });
 
-  it('has no slot and no observer without a board id', () => {
+  it('has no slot and no observer without a board id or an analysis file', () => {
     const { boardId: _omit, ...noBoard } = spec;
     mount(host, noBoard);
     expect(slot()).toBeNull();

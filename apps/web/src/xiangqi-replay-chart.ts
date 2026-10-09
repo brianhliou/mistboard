@@ -1,10 +1,13 @@
-// The game's advantage chart under an article replay board (a test, 2026-10-06).
+// The game's advantage chart under an article replay board (a test, 2026-10-06;
+// every article game since 2026-10-08).
 //
-// An article board whose game is in the broadcast archive (spec.boardId) can
-// show the eval swing without sending the reader to the board page: the SAME
-// chart the review and broadcast pages draw (review/advantage-chart.ts), fed by
-// the SAME stored analysis (GET /api/xiangqi-broadcasts/games/<id>/analysis,
-// which never starts an engine pass). Nothing here draws a chart of its own.
+// The SAME chart the review and broadcast pages draw (review/advantage-chart.ts),
+// fed by the SAME engine pass. Nothing here draws a chart of its own. Two sources:
+// - a board whose game is in the broadcast archive (spec.boardId) reads the stored
+//   analysis (GET /api/xiangqi-broadcasts/games/<id>/analysis, which never starts
+//   an engine pass);
+// - any other article game reads a precomputed file of the same analysis, shipped
+//   with the site (article-replay-analysis.ts).
 //
 // Loaded with a dynamic import from xiangqi-replay.ts once the board nears the
 // viewport, so the chart's code and CSS stay out of the article chunk and out of
@@ -12,21 +15,32 @@
 
 import { winPercentK, type XiangqiGameState } from '@mistboard/game';
 import { type AdvantageChart, createAdvantageChart } from './review/advantage-chart.js';
-import { fetchCachedGameAnalysis, type GameAnalysis } from './review/game-analysis.js';
+import {
+  computeGameAnalysis,
+  fetchCachedGameAnalysis,
+  type GameAnalysis,
+  type XiangqiGameAnalysisResponse,
+} from './review/game-analysis.js';
 import { xiangqiGamePhases } from './review/xiangqi-phases.js';
 
 /** Route segment of the broadcast analysis endpoint (`/api/<this>/games/<id>/analysis`). */
 export const BROADCAST_ANALYSIS_ROUTE = 'xiangqi-broadcasts';
 
+/** Where an article board's analysis comes from: the archive, or a shipped file. */
+export type ReplayChartSource =
+  | { boardId: string }
+  | { load: () => Promise<XiangqiGameAnalysisResponse | null> };
+
 /**
- * The stored analysis of an article board's game, or null when there is nothing
- * to draw: no analysis yet (204), an error, a network failure, or a series that
+ * The analysis of an article board's game, or null when there is nothing to
+ * draw: no analysis yet (204), an error, a network failure, or a series that
  * does not cover this board's moves one for one. The last guard matters because
  * the article carries its own copy of the record: an eval series of a different
  * length would put the cursor on the wrong move, which is worse than no chart.
+ * It holds for both sources; a shipped file is checked like a fetched row.
  */
 export async function loadReplayChartAnalysis(
-  boardId: string,
+  source: ReplayChartSource,
   totalPlies: number,
   fetchAnalysis: (
     route: string,
@@ -35,7 +49,12 @@ export async function loadReplayChartAnalysis(
 ): Promise<GameAnalysis | null> {
   let analysis: GameAnalysis | null;
   try {
-    analysis = await fetchAnalysis(BROADCAST_ANALYSIS_ROUTE, boardId);
+    if ('boardId' in source) {
+      analysis = await fetchAnalysis(BROADCAST_ANALYSIS_ROUTE, source.boardId);
+    } else {
+      const body = await source.load();
+      analysis = body && Array.isArray(body.plies) ? computeGameAnalysis(body) : null;
+    }
   } catch {
     return null;
   }
