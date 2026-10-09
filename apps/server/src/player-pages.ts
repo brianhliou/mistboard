@@ -25,7 +25,7 @@ import {
 } from './player-reference.js';
 import { escapeHtml } from './study-page-body.js';
 
-export const PLAYER_OG_IMAGE_VERSION = 1;
+export const PLAYER_OG_IMAGE_VERSION = 2;
 
 /** Games listed in a player's crawler body, newest first. */
 const BODY_GAME_CAP = 60;

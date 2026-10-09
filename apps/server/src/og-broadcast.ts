@@ -20,7 +20,7 @@ import { resolvePositionOg } from './og-position.js';
 import { createPngCache, redirectToDefault, svgToPng, writePng } from './og-raster.js';
 import * as persistence from './persistence.js';
 
-export const BROADCAST_OG_IMAGE_VERSION = 1;
+export const BROADCAST_OG_IMAGE_VERSION = 2;
 
 const cache = createPngCache(64);
 
@@ -214,7 +214,7 @@ export async function serveBroadcastBoardOgImage(
     return;
   }
   const tour = await persistence.getXiangqiBroadcastTour(board.tourSlug);
-  const art = staticDir ? await loadCardArt(staticDir) : new Map<string, string>();
+  const art = staticDir ? await loadCardArt(staticDir) : new Map();
   const redScore = seatScore(board.result, 'red');
   const blackScore = seatScore(board.result, 'black');
   const svg = renderBoardCard(resolved.board, art, {

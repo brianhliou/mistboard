@@ -13,7 +13,11 @@
 // information (fog, face-down pieces) is public. The embed route and the image
 // apply the same gate on their own side.
 
-import { exportFormatsForVariant, type GameExportFormat } from '@mistboard/game';
+import {
+  exportFormatsForVariant,
+  GAME_IMAGE_VERSION,
+  type GameExportFormat,
+} from '@mistboard/game';
 import { gameEmbedCode } from '../embed-code.js';
 import { variantDisplayLabel } from '../game-display.js';
 import { t } from '../i18n/catalog.js';
@@ -32,11 +36,12 @@ export function gameExportLinks(
 }
 
 /** The game's board card (`/og/game/:id.png`, the image its share previews
- *  use), saved as mistboard-<id>.png. */
+ *  use), saved as mistboard-<id>.png. Versioned like the og:image URL: the PNG
+ *  is cached immutable, so an unversioned link keeps serving an old look. */
 export function gameImageLink(roomId: string): DownloadLink {
   return {
     text: t('underboard.image'),
-    href: `/og/game/${encodeURIComponent(roomId)}.png`,
+    href: `/og/game/${encodeURIComponent(roomId)}.png?v=${GAME_IMAGE_VERSION}`,
     filename: `mistboard-${roomId}.png`,
   };
 }

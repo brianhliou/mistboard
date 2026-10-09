@@ -143,7 +143,7 @@ test('a player page names the player in both scripts, the standing and the recor
     'Xiangqi grandmaster for Zhejiang. CXA points 3,105, #1 of 50 men (2025-12-28 list). 12 games in the Mistboard archive (6 wins, 5 draws, 1 loss).',
   );
   assert.equal(page.meta.urlPath, '/players/meng-fanrui');
-  assert.match(page.meta.imagePath ?? '', /^\/og\/player\/meng-fanrui\.png\?v=1&k=[0-9a-f]{12}$/);
+  assert.match(page.meta.imagePath ?? '', /^\/og\/player\/meng-fanrui\.png\?v=2&k=[0-9a-f]{12}$/);
   assert.doesNotMatch(page.meta.description, /—/);
   // The body a crawler reads: both scripts, the team link, the list lines, the
   // game as a link and the opponent's page.
