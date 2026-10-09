@@ -974,12 +974,11 @@ export function buildProfileIdentity(
   if (patronBadge) metaParts.push(patronBadge);
 
   if (metaParts.length > 0) {
+    // A row of pills: each pill is its own box, so no separator between them
+    // (a ' · ' text node sat on the text baseline, not the pills' centre line).
     const meta = document.createElement('p');
-    meta.className = 'profile-header-meta';
-    metaParts.forEach((part, index) => {
-      if (index > 0) meta.append(document.createTextNode(' · '));
-      meta.append(part);
-    });
+    meta.className = 'profile-header-meta profile-header-badges';
+    meta.append(...metaParts);
     identity.append(meta);
   }
 

@@ -475,14 +475,14 @@ function buildBotIdentity(bot: BotProfile, gameSpecId: string): HTMLElement {
   identity.append(heading);
 
   const meta = document.createElement('p');
-  meta.className = 'profile-header-meta';
+  meta.className = 'profile-header-meta profile-header-badges';
   const badge = document.createElement('span');
   badge.className = 'profile-role-badge profile-role-bot';
   badge.textContent = t('watch.botBadge');
   const owner = document.createElement('span');
   owner.className = 'profile-role-badge profile-role-owner';
   owner.textContent = bot.ownerType === 'system' ? 'First-party' : 'Community';
-  meta.append(badge, document.createTextNode(' · '), owner);
+  meta.append(badge, owner);
   identity.append(meta);
 
   const counts = document.createElement('div');

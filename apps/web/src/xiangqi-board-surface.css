@@ -120,3 +120,61 @@
   mix-blend-mode: multiply;
   pointer-events: none;
 }
+
+/* River text (gear > Board > River text, xiangqiSurfaceRiver). Both captions are
+   always drawn and the root data attribute picks which one shows (app-base.css:
+   --xq-river-label-display / --xq-river-brand-display). These rules lived in
+   live-xiangqi.css, which the fortress routes never import, so a board that
+   only takes the surface would have shown both captions at once. Sizes are in
+   board units for the standard board's 60-unit cell; --xq-river-scale (set by
+   xiangqiSurfaceRiver) keeps the caption the same share of the river on a
+   board drawn at another cell size (jieqi and fortress use 72). */
+.xq-surface .xq-live-river,
+.xq-surface .xq-live-river text {
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.xq-surface .xq-live-river text {
+  dominant-baseline: central;
+  fill: var(--xq-live-ink, #5a3a14);
+  font-family: ui-serif, Georgia, serif;
+  font-size: calc(22px * var(--xq-river-scale, 1));
+  font-weight: 700;
+  letter-spacing: calc(4px * var(--xq-river-scale, 1));
+  text-anchor: middle;
+}
+
+.xq-surface .xq-live-river-label {
+  display: var(--xq-river-label-display, none);
+}
+
+/* The wordmark: the same ink as 楚河 漢界, in title case, large enough to fill
+   the river as the hanzi do, lightly tracked. 32px and 0.04em are what
+   xiangqi-board-surface.ts centres against (BRAND_FONT_SIZE,
+   XIANGQI_RIVER_BRAND_TRACKING). Style 'a' is a serif; the alternate 'b'
+   (?xqRiverStyle=b) is the nav's wordmark, Noto Sans in lower case. */
+.xq-surface .xq-live-river-brand {
+  display: var(--xq-river-brand-display, none);
+}
+
+.xq-surface .xq-live-river text.xq-live-river-brand {
+  font-size: calc(32px * var(--xq-river-scale, 1));
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+:root[data-xiangqi-river-style="b"] .xq-surface .xq-live-river text.xq-live-river-brand {
+  font-family: "Noto Sans", ui-sans-serif, system-ui, sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+}
+
+/* The square grid's river is a narrow band: no room for a caption without
+   covering the pieces beside it, so neither shows there. */
+.xq-surface--cell .xq-live-river-label,
+.xq-surface--cell .xq-live-river-brand {
+  display: none;
+}

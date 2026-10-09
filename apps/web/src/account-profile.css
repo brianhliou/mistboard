@@ -1212,6 +1212,24 @@
   vertical-align: 1px;
 }
 
+/* A line of pills only (profile and bot headers): one flex row, every pill
+   centred on it and the same height, so a pill with an icon (Patron) and a
+   text-only pill (Admin) share a top and a bottom. The gap replaces the old
+   ' · ' separators. */
+.profile-header-meta.profile-header-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.profile-header-badges .profile-role-badge {
+  box-sizing: border-box;
+  height: 20px;
+  margin-left: 0;
+  vertical-align: middle;
+}
+
 .profile-role-badge {
   display: inline-flex;
   align-items: center;
@@ -1623,7 +1641,10 @@
 .profile-rating-games {
   color: var(--site-muted);
   font-size: 12px;
-  line-height: 1.2;
+  /* Room for descenders: overflow is hidden (for the ellipsis), so at 1.2 the
+     tail of the "g" in "games" was cut off. At 1.4 the box matches the
+     italic "Unrated" beside it; a row grows by under a pixel. */
+  line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
