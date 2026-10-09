@@ -12,7 +12,7 @@
 // not end finished. A live fog game has no card and no meta.
 
 import type { ServerResponse } from 'node:http';
-import { winPercent } from '@mistboard/game';
+import { GAME_IMAGE_VERSION, winPercent } from '@mistboard/game';
 import { type CardArt, loadCardArt, renderBoardCard } from './og-card-board.js';
 import { serveGameOgImage } from './og-image.js';
 import { isPositionOgVariant, positionOgVariantLabel, resolvePositionOg } from './og-position.js';
@@ -28,10 +28,9 @@ import {
   variantTenantForRoomId,
 } from './variant-tenant/registry.js';
 
-/** Bumped when the card's LOOK changes so scrapers holding an old PNG under the
- *  immutable Cache-Control re-fetch. The content is fixed per game (finished,
- *  immutable), so nothing else ever needs a bump. */
-export const TENANT_GAME_OG_IMAGE_VERSION = 1;
+/** The card's version (@mistboard/game GAME_IMAGE_VERSION, which the review
+ *  page's image download shares). */
+export const TENANT_GAME_OG_IMAGE_VERSION = GAME_IMAGE_VERSION;
 
 /** Smallest eval swing, in win% points for the side that moved, that counts as
  *  the turning point. Lichess's "mistake" threshold (analysis.ts moveJudgment);
@@ -292,7 +291,7 @@ export async function serveTenantGameOgImage(
     redirectToDefault(response);
     return;
   }
-  const art = staticDir ? await loadCardArt(staticDir) : new Map<string, string>();
+  const art = staticDir ? await loadCardArt(staticDir) : new Map();
   const svg = await renderTenantGameCard(entry, store, art);
   const png = await svgToPng(svg);
   cache.set(key, png);

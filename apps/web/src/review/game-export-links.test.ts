@@ -1,4 +1,4 @@
-import { EMBED_DEFAULT_HEIGHT, EMBED_DEFAULT_WIDTH } from '@mistboard/game';
+import { EMBED_DEFAULT_HEIGHT, EMBED_DEFAULT_WIDTH, GAME_IMAGE_VERSION } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import { gameExportShareExtra } from './game-export-links.js';
 
@@ -23,7 +23,8 @@ describe('the finished game share rows', () => {
     expect(rows('xiangqi', 'xq_abc').links).toEqual([
       ['PGN', '/api/games/xq_abc/export.pgn', 'mistboard-xq_abc.pgn'],
       ['JSON', '/api/games/xq_abc/export.json', 'mistboard-xq_abc.json'],
-      ['Image', '/og/game/xq_abc.png', 'mistboard-xq_abc.png'],
+      // Versioned like the og:image URL, so a look change reaches past the CDN.
+      ['Image', `/og/game/xq_abc.png?v=${GAME_IMAGE_VERSION}`, 'mistboard-xq_abc.png'],
     ]);
     // The hidden-piece variants offer PGN too since their movetext names every
     // reveal (#484); a JSON-only variant still gets its image.

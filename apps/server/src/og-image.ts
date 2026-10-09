@@ -226,7 +226,7 @@ const ARTICLE_POSITION_KEY: Record<string, string> = {
  *  page meta now appends ?v= (server-static-pages.ts). */
 //  v3 (2026-09-25): Chinese characters in a title render (Noto Sans SC in
 //  og-raster.ts); the player cards had shown them as empty boxes.
-export const ARTICLE_OG_IMAGE_VERSION = 3;
+export const ARTICLE_OG_IMAGE_VERSION = 4;
 
 /** A rules page's start-position card, or null when the slug has none. */
 function rulesPositionCard(slug: string, title: string, art: CardArt): string | null {
@@ -303,7 +303,7 @@ export async function serveArticleOgImage(params: {
 //  v3 (2026-09-12): the live board and the site's default piece set, board at
 //  full height with the title beside it (og-card-board.ts). */
 //  v4 (2026-09-25): Chinese study and chapter titles render instead of boxes.
-export const STUDY_OG_IMAGE_VERSION = 4;
+export const STUDY_OG_IMAGE_VERSION = 5;
 
 // Per-composition share card: the chapter's own starting diagram plus its name.
 // A 排局 IS its diagram, so a link to one composition should preview that
@@ -350,7 +350,7 @@ export async function serveStudyOgImage(params: {
   // The caption column beside a 9x10 board is ~530px: about 22 half-width
   // characters a line at the card's title size, three lines at most.
   const lines = fitStudyTitleLines(chapter.name, 22, 3);
-  const art = params.staticDir ? await loadCardArt(params.staticDir) : new Map<string, string>();
+  const art = params.staticDir ? await loadCardArt(params.staticDir) : new Map();
   const board: PositionOgBoard = {
     kind: 'intersection',
     files: 9,

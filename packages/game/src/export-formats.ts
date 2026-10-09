@@ -52,3 +52,12 @@ export function isGameExportVariant(variant: string): variant is GameExportVaria
 export function exportFormatsForVariant(variant: string): readonly GameExportFormat[] {
   return isGameExportVariant(variant) ? GAME_EXPORT_FORMATS[variant] : [];
 }
+
+/** Version of the game's board image (`/og/game/:id.png`), shared by the
+ *  tenant game card's og:image URL and the review page's image download (a chess
+ *  room's legacy card keeps its own GAME_OG_IMAGE_VERSION). Bumped when the
+ *  card's LOOK changes: the PNG is served immutable for a year, so the scraper
+ *  and the CDN (which keys on the query) re-fetch only under a new `?v=`. The
+ *  content is fixed per game (finished, immutable), so nothing else needs one.
+ *  2: piece art drawn from a halving within 2x of its output size (it aliased). */
+export const GAME_IMAGE_VERSION = 2;

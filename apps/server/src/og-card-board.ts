@@ -18,7 +18,10 @@
 //                   via renderBoardComposition.
 // Piece art is the same PNG the browser loads, embedded as a data URI from the
 // web build (loadCardArt). Without the art (no dist, a missing file) a piece
-// falls back to the baked traditional glyph so the card still draws.
+// falls back to the baked traditional glyph so the card still draws. The art is
+// 512-1024 px and a card draws it at ~100-200 px; resvg cannot shrink a raster
+// that far cleanly, so each file is embedded from the halving (artHref) within
+// 2x of the size it lands at in the PNG.
 //
 // Layout rule (2026-09-12): a board card gives the board the full card height;
 // caption text lives in the horizontal margin beside it, never under it.
@@ -43,6 +46,7 @@ import {
 } from '@mistboard/game';
 import type { PositionOgBoard } from './og-position.js';
 import { escapeXml, OG_FONT, OG_HEIGHT, OG_WIDTH } from './og-primitives.js';
+import { halvePng, OG_CARD_ZOOM, pngSize } from './og-raster.js';
 
 // ── Card frame ────────────────────────────────────────────────────────────────
 
@@ -62,7 +66,13 @@ export const CARD_BG = '#0f1115';
 
 type Ink = 'red' | 'black';
 
-export type CardArt = ReadonlyMap<string, string>;
+/** One resolution of an art file: its longer side in pixels and its data URI. */
+export type ArtLevel = { readonly px: number; readonly uri: string };
+/** Each art file as its halvings, largest (the file itself) first. */
+export type CardArt = ReadonlyMap<string, readonly ArtLevel[]>;
+
+/** The smallest halving kept: no card draws a piece under ~100 px. */
+const MIN_ART_PX = 64;
 
 const XIANGQI_ROLES = [
   'general',
@@ -106,12 +116,20 @@ export function loadCardArt(staticDir: string): Promise<CardArt> {
   let pending = artByDir.get(staticDir);
   if (!pending) {
     pending = (async () => {
-      const art = new Map<string, string>();
+      const art = new Map<string, readonly ArtLevel[]>();
       await Promise.all(
         cardArtPaths().map(async (relPath) => {
           try {
-            const buf = await fs.readFile(resolve(staticDir, relPath));
-            art.set(relPath, `data:image/png;base64,${buf.toString('base64')}`);
+            let png: Buffer = await fs.readFile(resolve(staticDir, relPath));
+            const levels: ArtLevel[] = [];
+            for (;;) {
+              const { width, height } = pngSize(png);
+              const px = Math.max(width, height);
+              levels.push({ px, uri: `data:image/png;base64,${png.toString('base64')}` });
+              if (px / 2 < MIN_ART_PX) break;
+              png = await halvePng(png);
+            }
+            art.set(relPath, levels);
           } catch {
             // absent: fallback glyph
           }
@@ -122,6 +140,19 @@ export function loadCardArt(staticDir: string): Promise<CardArt> {
     artByDir.set(staticDir, pending);
   }
   return pending;
+}
+
+/** The art file's data URI for an image `units` wide in the card's SVG: the
+ *  smallest halving at least as large as the image lands in the PNG, so resvg
+ *  never shrinks it by 2x or more (it aliases past that). Undefined when the
+ *  file is not loaded. */
+export function artHref(art: CardArt, relPath: string, units: number): string | undefined {
+  const levels = art.get(relPath);
+  if (!levels?.length) return undefined;
+  const need = units * OG_CARD_ZOOM;
+  let pick = levels[0]!;
+  for (const level of levels) if (level.px >= need) pick = level;
+  return pick.uri;
 }
 
 /** Forget loaded art (tests). */
@@ -246,10 +277,11 @@ function internationalDisc(ink: Ink): string {
   return `<circle cx="50" cy="50" r="46" fill="${DISC_FACE}" stroke="${DISC_RING[ink]}" stroke-width="2.8"/>`;
 }
 
-function artImage(art: CardArt, relPath: string, role: string): string | null {
-  const uri = art.get(relPath);
-  if (!uri) return null;
+/** `size` is the piece's box in card units (`piece()` scales the 100-unit box to it). */
+function artImage(art: CardArt, relPath: string, role: string, size: number): string | null {
   const f = FRAMES[role] ?? FRAMES.soldier!;
+  const uri = artHref(art, relPath, (Math.max(f.w, f.h) / 100) * size);
+  if (!uri) return null;
   return `<image href="${uri}" x="${f.x}" y="${f.y}" width="${f.w}" height="${f.h}" preserveAspectRatio="xMidYMid meet"/>`;
 }
 
@@ -264,8 +296,13 @@ function glyphInner(ink: Ink, glyph: string): string {
 
 /** A revealed xiangqi-family piece in the international set, or the
  *  traditional glyph disc when its art is not loaded. */
-function xiangqiPiece(art: CardArt, ink: Ink, role: string, artRole: string): string {
-  const image = artImage(art, `piece-sets/xiangqi/international/${ink}-${artRole}.png`, artRole);
+function xiangqiPiece(art: CardArt, ink: Ink, role: string, artRole: string, size: number): string {
+  const image = artImage(
+    art,
+    `piece-sets/xiangqi/international/${ink}-${artRole}.png`,
+    artRole,
+    size,
+  );
   if (image) return `${internationalDisc(ink)}${image}`;
   return glyphInner(ink, TRADITIONAL[ink][role] ?? (role === 'treasure' ? '寶' : '?'));
 }
@@ -276,8 +313,8 @@ function backInner(ink: Ink): string {
   return `<circle cx="50" cy="50" r="43" fill="${b.fill}" stroke="${b.stroke}" stroke-width="3"/>`;
 }
 
-function duckInner(art: CardArt): string {
-  const uri = art.get('piece-sets/xiangqi/animal-dobutsu/duck.png');
+function duckInner(art: CardArt, size: number): string {
+  const uri = artHref(art, 'piece-sets/xiangqi/animal-dobutsu/duck.png', 0.84 * size);
   const image = uri
     ? `<image href="${uri}" x="8" y="8" width="84" height="84" preserveAspectRatio="xMidYMid meet"/>`
     : `<text x="50" y="50" text-anchor="middle" dominant-baseline="central" font-family="${OG_FONT}" font-size="30" font-weight="700" fill="${DUCK_RING}">DUCK</text>`;
@@ -352,7 +389,7 @@ function renderIntersection(
         g.px(pc.file),
         g.py(pc.rank),
         g.pieceSize,
-        xiangqiPiece(art, pc.color, pc.role, artRole),
+        xiangqiPiece(art, pc.color, pc.role, artRole, g.pieceSize),
       ),
     );
   }
@@ -360,9 +397,17 @@ function renderIntersection(
     const cx = g.px(extra.file);
     const cy = g.py(extra.rank);
     if (extra.kind === 'face-down') parts.push(piece(cx, cy, g.pieceSize, backInner(extra.ink)));
-    else if (extra.kind === 'duck') parts.push(piece(cx, cy, g.pieceSize, duckInner(art)));
+    else if (extra.kind === 'duck')
+      parts.push(piece(cx, cy, g.pieceSize, duckInner(art, g.pieceSize)));
     else
-      parts.push(piece(cx, cy, g.pieceSize, xiangqiPiece(art, extra.ink, 'treasure', 'treasure')));
+      parts.push(
+        piece(
+          cx,
+          cy,
+          g.pieceSize,
+          xiangqiPiece(art, extra.ink, 'treasure', 'treasure', g.pieceSize),
+        ),
+      );
   }
   parts.push('</g>');
   return parts.join('');
@@ -417,7 +462,8 @@ function renderGrid(
       );
     } else if (tile.mark.kind === 'glyph') {
       const role = roleOfGlyph(tile.mark.glyph) ?? 'soldier';
-      parts.push(piece(x, y, PIECE_RATIO * cell, xiangqiPiece(art, tile.ink, role, role)));
+      const size = PIECE_RATIO * cell;
+      parts.push(piece(x, y, size, xiangqiPiece(art, tile.ink, role, role, size)));
     } else {
       parts.push(jungleToken(art, x, y, 0.87 * cell, tile.ink, roleOfJungleName(tile.mark.text)));
     }
@@ -446,7 +492,7 @@ function jungleToken(
   ink: Ink,
   role: JunglePieceRole,
 ): string {
-  const uri = art.get(`piece-sets/jungle/dobutsu/${ink}-${role}.png`);
+  const uri = artHref(art, `piece-sets/jungle/dobutsu/${ink}-${role}.png`, size);
   const inner = uri
     ? `<image href="${uri}" x="${cx - size / 2}" y="${cy - size / 2}" width="${size}" height="${size}" preserveAspectRatio="xMidYMid meet"/>`
     : `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-family="${OG_FONT}" font-size="${size * 0.3}" font-weight="700" fill="${JUNGLE.ring[ink]}">${escapeXml(role[0]!.toUpperCase() + role.slice(1))}</text>`;
@@ -621,7 +667,7 @@ function seatToken(
 ): string {
   if (ink === 'white') return chessKing('white', cx, cy);
   if (jungle) return jungleToken(art, cx, cy, TOKEN_SIZE, ink, 'lion');
-  return piece(cx, cy, TOKEN_SIZE, xiangqiPiece(art, ink, 'general', 'general'));
+  return piece(cx, cy, TOKEN_SIZE, xiangqiPiece(art, ink, 'general', 'general', TOKEN_SIZE));
 }
 
 function chessKing(color: 'white' | 'black', cx: number, cy: number): string {

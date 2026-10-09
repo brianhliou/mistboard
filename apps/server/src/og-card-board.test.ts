@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { resolve } from 'node:path';
 import test from 'node:test';
 import {
+  artHref,
   boardSize,
   CARD_BOARD_HEIGHT,
   CARD_BOARD_MAX_WIDTH,
@@ -12,6 +13,7 @@ import {
   resetCardArt,
 } from './og-card-board.js';
 import { resolvePositionOg, startPositionFen } from './og-position.js';
+import { OG_CARD_ZOOM, pngSize } from './og-raster.js';
 
 // The web's public/ dir carries the same piece art dist does (Vite copies it),
 // so the tests can load the real files without a build.
@@ -80,6 +82,72 @@ test('with the site art loaded, the international set draws; without it, the gly
   assert.ok(!glyphs.includes('data:image/png'), 'no art, no image');
   assert.ok(glyphs.includes('<path d='), 'baked glyph paths instead');
   resetCardArt();
+});
+
+/** Every embedded art image on a card: the PNG's pixel width and the width it
+ *  lands at in the rasterised card (its SVG width, times the scale of the
+ *  piece() group it sits in, times the raster zoom). */
+function embeddedArt(svg: string): { png: number; drawn: number }[] {
+  const out: { png: number; drawn: number }[] = [];
+  const image = /<image href="data:image\/png;base64,([A-Za-z0-9+/=]+)"[^>]*? width="([\d.]+)"/g;
+  for (const m of svg.matchAll(image)) {
+    const before = svg.slice(Math.max(0, m.index - 400), m.index);
+    const group = /scale\(([\d.]+)\)">(?:<circle[^>]*\/>)?$/.exec(before);
+    const scale = group ? Number(group[1]) : 1;
+    out.push({
+      png: pngSize(Buffer.from(m[1]!, 'base64')).width,
+      drawn: Number(m[2]) * scale * OG_CARD_ZOOM,
+    });
+  }
+  return out;
+}
+
+// The jieqi game card shipped stair-stepped pieces (2026-10-08): the 1024 px art
+// went into resvg whole and was shrunk ~9x in one bicubic step, which skips most
+// source pixels. Each image must come from a halving within 2x of its output.
+test('card art is embedded within 2x of the size it is drawn at, on every family', async () => {
+  resetCardArt();
+  const art = await loadCardArt(WEB_PUBLIC);
+  const players = {
+    top: { name: 'Black', ink: 'black' as const, score: '0' },
+    bottom: { name: 'Red', ink: 'red' as const, score: '1' },
+    variant: 'Card',
+  };
+  const cards: [Parameters<typeof startPositionFen>[0], string?][] = [
+    ['xiangqi'],
+    ['jieqi'],
+    ['jungle'],
+    // Banqi starts face-down; a mid-game position has revealed tiles (the
+    // width-capped 8x4 grid draws the largest pieces of any card).
+    ['banqi', 'X1X2r1X/2XGX1X1/X1s1XX1X/1XXX2XX r A2E2R1H2C1S3a1e1h1c1 3 12'],
+  ];
+  for (const [variant, fen] of cards) {
+    const resolved = resolvePositionOg(variant, fen ?? startPositionFen(variant));
+    assert.ok(resolved, `${variant} resolves`);
+    const svg = renderBoardCard(resolved.board, art, { players });
+    const images = embeddedArt(svg);
+    assert.ok(images.length > 0, `${variant}: art embedded`);
+    for (const { png, drawn } of images) {
+      assert.ok(
+        png >= drawn,
+        `${variant}: ${png} px art drawn at ${drawn.toFixed(0)} px is upscaled`,
+      );
+      assert.ok(png < 2 * drawn, `${variant}: ${png} px art drawn at ${drawn.toFixed(0)} px`);
+    }
+  }
+  resetCardArt();
+});
+
+test('artHref picks the smallest halving at least as large as the output', () => {
+  const levels = [1024, 512, 256, 128, 64].map((px) => ({ px, uri: `u${px}` }));
+  const art = new Map([['a.png', levels]]);
+  const at = (units: number) => artHref(art, 'a.png', units);
+  assert.equal(at(60), 'u128', '120 px out: the 128 halving');
+  assert.equal(at(64), 'u128', 'exactly 128 px out');
+  assert.equal(at(65), 'u256');
+  assert.equal(at(10), 'u64', 'never below the smallest level');
+  assert.equal(at(900), 'u1024', 'past the source: the source');
+  assert.equal(artHref(art, 'missing.png', 60), undefined);
 });
 
 test('a jieqi face-down piece is the live back disc with no art and no glyph', async () => {

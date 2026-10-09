@@ -73,7 +73,7 @@ import { createPngCache, redirectToDefault, svgToPng, writePng } from './og-rast
  *  FEN is in the URL. */
 // v2 (2026-09-12): the live board and the site's default piece set, board at full
 // height with the caption beside it (og-card-board.ts).
-export const POSITION_OG_IMAGE_VERSION = 2;
+export const POSITION_OG_IMAGE_VERSION = 3;
 
 /** Variants with a position card, i.e. the /analysis and /editor catalog. Slugs
  *  double as GameSpecIds. Order is the analysis dropdown's. */
@@ -564,7 +564,7 @@ export async function servePositionOgImage(params: {
     redirectToDefault(response);
     return;
   }
-  const art = params.staticDir ? await loadCardArt(params.staticDir) : new Map<string, string>();
+  const art = params.staticDir ? await loadCardArt(params.staticDir) : new Map();
   const png = await svgToPng(renderPositionOgSvg(resolved, art));
   cache.set(key, png);
   writePng(response, png, 'MISS');

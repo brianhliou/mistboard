@@ -71,6 +71,9 @@ const FONT_FILES = ['NotoSans-Regular.ttf', 'NotoSans-Bold.ttf', 'NotoSansSC-Bol
   (file) => resolve(dirname(fileURLToPath(import.meta.url)), '..', 'assets', 'fonts', file),
 );
 
+/** The zoom every OG card is rasterised at (svgToPng's default). */
+export const OG_CARD_ZOOM = 2;
+
 // Render at 2x the SVG's nominal dimensions so the resulting PNG stays crisp
 // on retina displays and survives scraper recompression.
 /**
@@ -87,7 +90,11 @@ const FONT_FILES = ['NotoSans-Regular.ttf', 'NotoSans-Bold.ttf', 'NotoSansSC-Bol
  * manuals (each its own cache key) paged loop-lag warnings for a minute at a
  * time. Only the PNG encode (`asPng`, ~30 ms) still runs on the loop.
  */
-export async function svgToPng(svg: string, background = '#0f1115', zoom = 2): Promise<Buffer> {
+export async function svgToPng(
+  svg: string,
+  background = '#0f1115',
+  zoom = OG_CARD_ZOOM,
+): Promise<Buffer> {
   const image = await renderAsync(svg, {
     background,
     fitTo: { mode: 'zoom', value: zoom },
@@ -97,5 +104,26 @@ export async function svgToPng(svg: string, background = '#0f1115', zoom = 2): P
       defaultFontFamily: 'Noto Sans',
     },
   });
+  return image.asPng();
+}
+
+/** A PNG's pixel size, read from its IHDR chunk (bytes 16-23). */
+export function pngSize(png: Buffer): { width: number; height: number } {
+  return { width: png.readUInt32BE(16), height: png.readUInt32BE(20) };
+}
+
+/**
+ * Halve a PNG with resvg. resvg samples an embedded raster with a fixed
+ * bicubic kernel and no mipmaps, so drawing a 1024 px piece at ~120 px skips
+ * most source pixels and the strokes come out stair-stepped (a jieqi game card,
+ * 2026-10-08). One 2x step at a time stays within what the kernel can average;
+ * chained, the halvings are the mip levels a raster must be drawn from.
+ */
+export async function halvePng(png: Buffer): Promise<Buffer> {
+  const { width, height } = pngSize(png);
+  const w = Math.max(1, Math.round(width / 2));
+  const h = Math.max(1, Math.round(height / 2));
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><image href="data:image/png;base64,${png.toString('base64')}" width="${w}" height="${h}" preserveAspectRatio="none"/></svg>`;
+  const image = await renderAsync(svg, { font: { loadSystemFonts: false } });
   return image.asPng();
 }
