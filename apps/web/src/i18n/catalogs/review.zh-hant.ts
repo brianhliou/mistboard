@@ -677,6 +677,7 @@ export const ZH_HANT_REVIEW = {
   'underboard.explorer': '開局庫',
   'underboard.gameInfo': '對局資訊',
   'underboard.moveTimes': '用時',
+  'underboard.moveTimesBySide': '雙方各自用時',
   'underboard.crosstable': '對陣表',
   'underboard.shareExport': '分享與匯出',
   'underboard.download': '下載',

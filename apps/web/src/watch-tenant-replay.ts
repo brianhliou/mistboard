@@ -26,6 +26,7 @@ import { createGameHeaderStrip } from './replay-meta.js';
 import type { MoveListEntry } from './review/move-list.js';
 import { seatDiscEl } from './seat-disc.js';
 import {
+  MOVE_ENDED_TERMINATIONS,
   projectShowcaseClock,
   reconstructShowcaseClocks,
   type ShowcaseClockPair,
@@ -51,21 +52,6 @@ const SHOWCASE_END_HOLD_MS = 4000;
 // Playback re-reads the wall clock this often: lands the next ply on time and ticks
 // the mover's clock (live or replay) at one second per second.
 const PLAYBACK_TICK_MS = 100;
-// Terminations a MOVE produces. The move that ends a game this way earns no
-// increment; a game that ended any other way (resignation, timeout, abandonment)
-// ended after its last move, which did earn one.
-const MOVE_ENDED_TERMINATIONS: ReadonlySet<string> = new Set([
-  'king-captured',
-  'general-captured',
-  'checkmate',
-  'no-legal-moves',
-  'stalemate',
-  'repetition',
-  'progress-clock',
-  'race',
-  'chasing',
-  'dead-position',
-]);
 
 // The postgame fields the shared TV chrome reads; every tenant postgame response
 // carries these (the adapter's Postgame type extends this).

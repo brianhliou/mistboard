@@ -677,6 +677,7 @@ export const ZH_HANS_REVIEW = {
   'underboard.explorer': '开局库',
   'underboard.gameInfo': '对局信息',
   'underboard.moveTimes': '用时',
+  'underboard.moveTimesBySide': '双方各自用时',
   'underboard.crosstable': '对阵表',
   'underboard.shareExport': '分享与导出',
   'underboard.download': '下载',

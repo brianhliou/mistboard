@@ -19,6 +19,7 @@ import { mountDarkChessReview } from './review/dark-chess-review.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
 import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
+import { moveClocksFromEvents } from './review/move-clocks.js';
 import { analysisHref, editorHref } from './review/position-links.js';
 import { CHESS_SEAT_COLORS } from './review/review-seat-colors.js';
 import { isLikelySignedIn } from './signed-in-state.js';
@@ -133,6 +134,7 @@ export function mountDarkChessPostgame(
     // Underboard parity with the xiangqi-family siblings (lichess anatomy):
     // Move times, Crosstable, and Share & export carrying the PGN/JSON downloads.
     moveTimes: moveTimesFromEvents(events, moveEvents),
+    moveClocks: moveClocksFromEvents(events),
     // Name the seats at the board. The meta card carries the pairing too, but it
     // sits below the fold on a normal viewport, so without these a reader sees a
     // board and has to scroll past it to learn who is playing.

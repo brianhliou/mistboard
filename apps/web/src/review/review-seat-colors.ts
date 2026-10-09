@@ -1,3 +1,5 @@
+import { t } from '../i18n/catalog.js';
+
 /**
  * The two analysis SLOTS are always named 'red'/'black' -- they are move-order
  * positions, not colours -- and this maps a slot to the ink it actually renders as.
@@ -26,3 +28,10 @@ export function reviewColorForSeat(
 
 /** The chess family: the first-mover seat plays White, the second Black. */
 export const CHESS_SEAT_COLORS: ReviewSeatColors = { red: 'white', black: 'black' };
+
+/** The word for an ink ("Red", "Black", "White"), as the accuracy summary and the
+ *  move-times totals both label a side. */
+export function reviewInkLabel(ink: ReviewInk): string {
+  if (ink === 'white') return t('summary.white');
+  return ink === 'red' ? t('summary.red') : t('summary.black');
+}

@@ -31,6 +31,7 @@ import {
 } from './review/jieqi-decisions.js';
 import { mountJieqiReview } from './review/jieqi-review.js';
 import { recoverJieqiDeal } from './review/jieqi-tree-adapter.js';
+import { reviewMoveClocks } from './review/move-clocks.js';
 import { analysisHref, editorHref } from './review/position-links.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
@@ -202,6 +203,7 @@ function renderPostgame(root: HTMLElement, postgame: JieqiPostgameResponse): voi
     details,
     moves,
     moveTimes: hasMoveTimes ? moveTimes : undefined,
+    moveClocks: hasMoveTimes ? reviewMoveClocks(postgame) : undefined,
     // Name the seats at the board. The meta card carries the pairing too, but it
     // sits below the fold on a normal viewport, so without these a reader sees a
     // board and has to scroll past it to learn who is playing.

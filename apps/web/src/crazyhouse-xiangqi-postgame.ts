@@ -20,6 +20,7 @@ import { crosstableConfig } from './review/crosstable.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
 import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
+import { reviewMoveClocks } from './review/move-clocks.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
 import { setBoardFamily } from './theme.js';
@@ -183,6 +184,7 @@ export function crazyhouseXiangqiReviewConfig(
     details,
     moves,
     moveTimes: hasMoveTimes ? moveTimes : undefined,
+    moveClocks: hasMoveTimes ? reviewMoveClocks(postgame) : undefined,
     // The magnifier in the finished room lands here: open on the result, not
     // on an empty board the reader has to fast-forward through.
     initialPosition: 'end',

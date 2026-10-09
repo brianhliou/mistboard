@@ -8,6 +8,7 @@ import {
 import { gameOutcome, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { reviewSeatProfiles } from './profile-link.js';
+import { reviewMoveClocks } from './review/move-clocks.js';
 import { analysisHref, editorHref } from './review/position-links.js';
 import './game-shell.css';
 import './live-xiangqi.css';
@@ -159,6 +160,7 @@ function renderPostgame(root: HTMLElement, postgame: DarkXiangqiPostgameResponse
     details,
     moves,
     moveTimes: hasMoveTimes ? moveTimes : undefined,
+    moveClocks: hasMoveTimes ? reviewMoveClocks(postgame) : undefined,
     // Name the seats at the board. The meta card carries the pairing too, but it
     // sits below the fold on a normal viewport, so without these a reader sees a
     // board and has to scroll past it to learn who is playing.

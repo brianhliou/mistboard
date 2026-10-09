@@ -11,6 +11,7 @@ import {
   type XiangqiMove,
 } from '@mistboard/game';
 import { reviewSeatProfiles } from './profile-link.js';
+import { reviewMoveClocks } from './review/move-clocks.js';
 import { analysisHref, editorHref } from './review/position-links.js';
 import { DEFAULT_STUDY_VARIANT } from './study-catalog.js';
 import './game-shell.css';
@@ -162,6 +163,7 @@ function renderPostgame(root: HTMLElement, postgame: XiangqiPostgameResponse): v
     // so it matches the server truth); the server per-ply snapshots are unused.
     moves,
     moveTimes: hasMoveTimes ? moveTimes : undefined,
+    moveClocks: hasMoveTimes ? reviewMoveClocks(postgame) : undefined,
     // Name the seats at the board. The meta card carries the pairing too, but it
     // sits below the fold on a normal viewport, so without these a reader sees a
     // board and has to scroll past it to learn who is playing.

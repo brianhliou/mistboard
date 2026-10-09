@@ -406,17 +406,83 @@
 
 /* Move times: per-ply bars, colored by side, growing from a shared baseline. */
 .review-move-times {
+  /* The frame for the clock layer, the cursor and the hover readout. */
+  position: relative;
   display: flex;
   align-items: flex-end;
   gap: 1px;
   height: 140px;
   padding: 4px 0;
   border-bottom: 1px solid var(--site-border);
+  cursor: crosshair;
 }
 .review-move-times__bar {
+  /* Positioned so the bars paint over the clock layer behind them. */
+  position: relative;
   flex: 1 1 0;
   min-width: 1px;
   border-radius: 1px 1px 0 0;
+  transition: opacity 80ms linear;
+}
+/* Hover: the hovered bar stays full strength and the rest step back, so the bar
+   the readout names is the one the eye lands on. */
+.review-move-times--hovering .review-move-times__bar:not(.review-move-times__bar--hovered) {
+  opacity: 0.5;
+}
+/* The ply cursor: the advantage chart's hairline, in the same accent. */
+.review-move-times__cursor {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  width: 1px;
+  margin-left: -0.5px;
+  background: var(--site-brand-accent);
+  opacity: 0.85;
+  pointer-events: none;
+}
+.review-move-times__cursor[hidden] {
+  display: none;
+}
+/* Remaining clocks behind the bars (move-times-chart.ts): centre = zero, the
+   first seat's clock from the top edge, the second seat's from the bottom. A
+   quiet layer: the bars are the subject, the clocks are context. */
+.review-move-times__clocks {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 0;
+  width: 100%;
+  height: calc(100% - 8px);
+  pointer-events: none;
+}
+.review-move-times__clock-area {
+  fill: currentColor;
+  fill-opacity: 0.12;
+  stroke: none;
+}
+.review-move-times__clock-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-opacity: 0.45;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.review-move-times__clock-mid {
+  stroke: var(--site-border);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.review-move-times__clock--red {
+  color: var(--seat-first-ink, #c0563f);
+}
+.review-move-times__clock--black {
+  color: var(--seat-second-ink, #34302e);
+}
+/* White ink on the light panel is invisible at a wash's opacity, so the white
+   clock takes the white bar's outline tone. */
+.review-move-times__clock--white {
+  color: #b8b1a5;
 }
 /* The family's inks (seat-disc-ink.css), so a jungle game's second seat is Blue
    and a dark-theme Black bar is the charcoal that shows on the dark panel. */
@@ -441,6 +507,19 @@
   font-size: 12px;
   color: var(--site-muted);
   text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.review-move-times__total {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+/* Each side's total carries its bar ink, so the caption names the bars. */
+.review-move-times__swatch {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
 }
 
 /* Share & export rows: label · read-only field · copy button. */

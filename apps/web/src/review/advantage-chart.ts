@@ -7,6 +7,7 @@
 import { winPercent } from '@mistboard/game';
 import '../seat-disc-ink.css';
 import './advantage-chart.css';
+import { attachChartScrub, createChartTip, showChartTip } from './chart-scrub.js';
 import { formatEval } from './engine/eval-format.js';
 import type { GamePhases, PlyEval } from './game-analysis.js';
 import { type ReviewSeatColors, reviewColorForSeat } from './review-seat-colors.js';
@@ -284,9 +285,7 @@ export function createAdvantageChart(
 
   // Hover readout (lichess: the chart scrubs under the pointer and names the move
   // it is over, so you can read the game's shape without clicking through it).
-  const tip = document.createElement('div');
-  tip.className = 'advantage-chart__tip';
-  tip.hidden = true;
+  const tip = createChartTip('advantage-chart__tip');
   plot.append(tip);
 
   // Legend (hidden until the luck overlay is set): explains solid vs dashed.
@@ -298,34 +297,24 @@ export function createAdvantageChart(
     '<span class="advantage-chart__legend-item"><span class="advantage-chart__legend-swatch advantage-chart__legend-swatch--ghost"></span>If reveals ran average</span>';
   el.append(legend);
 
-  /** Nearest ply under a client x, or null when the chart has no layout yet
-   *  (offscreen, or a jsdom test). */
-  function plyAtClientX(clientX: number): number | null {
-    const box = chart.getBoundingClientRect();
-    if (box.width === 0) return null;
-    const frac = Math.max(0, Math.min(1, (clientX - box.left) / box.width));
-    return Math.round(frac * maxPly);
-  }
-
-  el.addEventListener('click', (event) => {
-    const ply = plyAtClientX(event.clientX);
-    if (ply != null) opts.onJump(ply);
-  });
-
   /** `selectedPly` is where the board actually is; the cursor borrows it while a
    *  pointer is over the chart and gets it back on the way out. Without the
    *  split, a hover would silently redefine "current ply" and the cursor would
    *  come to rest wherever the pointer happened to leave. */
-  chart.addEventListener('pointermove', (event) => {
-    const ply = plyAtClientX(event.clientX);
-    if (ply == null) return;
-    moveCursor(ply);
-    showTip(ply);
-  });
-  chart.addEventListener('pointerleave', () => {
-    moveCursor(selectedPly);
-    tip.hidden = true;
-    dot.classList.remove('advantage-chart__dot--on');
+  attachChartScrub({
+    surface: chart,
+    clickTarget: el,
+    plyAt: (fraction) => Math.round(fraction * maxPly),
+    onHover: (ply) => {
+      moveCursor(ply);
+      showTip(ply);
+    },
+    onLeave: () => {
+      moveCursor(selectedPly);
+      tip.hidden = true;
+      dot.classList.remove('advantage-chart__dot--on');
+    },
+    onJump: opts.onJump,
   });
 
   function showTip(ply: number): void {
@@ -338,27 +327,14 @@ export function createAdvantageChart(
     // Same formatter as the move list's eval column right beside the chart: two
     // readings of one number must not disagree about its scale.
     const score = formatEval(point.cp, point.mate);
-    const move = opts.moveLabel?.(ply) ?? null;
-    tip.replaceChildren();
-    if (move) {
-      const label = document.createElement('span');
-      label.className = 'advantage-chart__tip-move';
-      label.textContent = move;
-      tip.append(label);
-    }
-    const value = document.createElement('span');
-    value.className = 'advantage-chart__tip-eval';
-    value.textContent = score;
-    tip.append(value);
-    tip.hidden = false;
-    // Anchor to the cursor, and slide the box back over itself as it approaches
-    // the right edge so it stays inside the frame without a measure-and-clamp.
-    const bias = ply / maxPly;
-    tip.style.left = `${(bias * 100).toFixed(3)}%`;
-    tip.style.transform = `translateX(${(-bias * 100).toFixed(1)}%)`;
-    // Sit in the half the curve is NOT in. Pinned to the top, the readout covered
-    // the very peaks it was there to explain.
-    tip.classList.toggle('advantage-chart__tip--low', yOf(point) < VIEW_H / 2);
+    showChartTip(tip, {
+      move: opts.moveLabel?.(ply) ?? null,
+      value: score,
+      at: ply / maxPly,
+      // Sit in the half the curve is NOT in. Pinned to the top, the readout
+      // covered the very peaks it was there to explain.
+      low: yOf(point) < VIEW_H / 2,
+    });
   }
 
   let selectedPly = 0;

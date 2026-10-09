@@ -204,11 +204,8 @@
   border-top-style: dashed;
   border-top-color: color-mix(in srgb, var(--site-text) 55%, transparent);
 }
-/* Hover readout: the ply under the pointer, named and scored. The chart is
-   otherwise a shape with no numbers on it, so this is where it becomes readable
-   move by move. Anchored to the cursor and pinned inside the frame at both ends
-   (see showTip), which is why it takes a percentage transform rather than a
-   fixed offset. */
+/* The dot marks the hovered ply ON the curve, so the shared hover readout
+   (chart-scrub.css) is anchored to a point rather than floating over the field. */
 .advantage-chart__dot {
   fill: var(--advantage-accent);
   stroke: var(--site-bg);
@@ -239,35 +236,4 @@
 /* While marks are up, the curve steps back so the rings read as the subject. */
 .advantage-chart--marked .advantage-chart__line {
   opacity: 0.55;
-}
-.advantage-chart__tip {
-  position: absolute;
-  top: 6px;
-  z-index: 1;
-  display: flex;
-  gap: 7px;
-  align-items: baseline;
-  padding: 3px 7px;
-  border: 1px solid var(--site-border);
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--site-panel) 92%, transparent);
-  color: var(--site-text);
-  font-size: 11px;
-  line-height: 1.4;
-  white-space: nowrap;
-  pointer-events: none;
-}
-.advantage-chart__tip--low {
-  top: auto;
-  bottom: 6px;
-}
-.advantage-chart__tip[hidden] {
-  display: none;
-}
-.advantage-chart__tip-move {
-  font-weight: 600;
-}
-.advantage-chart__tip-eval {
-  color: var(--site-muted);
-  font-variant-numeric: tabular-nums;
 }

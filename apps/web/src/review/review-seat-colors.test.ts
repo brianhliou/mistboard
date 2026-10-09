@@ -32,6 +32,7 @@ describe('ink coverage across the review surfaces', () => {
   const INKS: ReviewInk[] = ['red', 'black', 'white'];
   const surfaces: ReadonlyArray<[string, string, string]> = [
     ['move-time bar', 'src/review/review-shell.css', '.review-move-times__bar--'],
+    ['move-time clock', 'src/review/review-shell.css', '.review-move-times__clock--'],
     ['advantage area', 'src/review/advantage-chart.css', '.advantage-chart__area--'],
     ['advantage zone', 'src/review/advantage-chart.css', '.advantage-chart__zone--'],
   ];

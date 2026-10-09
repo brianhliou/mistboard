@@ -32,6 +32,22 @@ export function showcaseResultMarks(result: string): { first: string; second: st
 
 export type ShowcaseClockPair = { first: number; second: number };
 
+// Terminations a MOVE produces. The move that ends a game this way earns no
+// increment; a game that ended any other way (resignation, timeout, abandonment)
+// ended after its last move, which did earn one.
+export const MOVE_ENDED_TERMINATIONS: ReadonlySet<string> = new Set([
+  'king-captured',
+  'general-captured',
+  'checkmate',
+  'no-legal-moves',
+  'stalemate',
+  'repetition',
+  'progress-clock',
+  'race',
+  'chasing',
+  'dead-position',
+]);
+
 // Plies played while the clock is still frozen (each side's first move). Two-seat
 // tenants arm on the second mover's first move, so plies 1 and 2 are free.
 export const SHOWCASE_PREARM_PLIES = 2;

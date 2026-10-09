@@ -20,7 +20,12 @@ import {
   type PlayerAnalysis,
   playerPhaseAccuracies,
 } from './game-analysis.js';
-import { type ReviewInk, type ReviewSeatColors, reviewColorForSeat } from './review-seat-colors.js';
+import {
+  type ReviewInk,
+  type ReviewSeatColors,
+  reviewColorForSeat,
+  reviewInkLabel,
+} from './review-seat-colors.js';
 
 /** Optional real player names; fall back to the side colors for anonymous games. */
 export type AnalysisSummaryLabels = { red?: string; black?: string };
@@ -63,7 +68,7 @@ export function createAnalysisSummary(
     options?.phases ? playerPhaseAccuracies(analysis, options.phases, mover) : {};
   el.append(
     playerBlock(
-      labels?.red || colorLabel(firstColor),
+      labels?.red || reviewInkLabel(firstColor),
       firstColor,
       'red',
       analysis.red,
@@ -75,7 +80,7 @@ export function createAnalysisSummary(
   if (options?.onLearn) el.append(learnButton(options.onLearn, options.learnActive ?? false));
   el.append(
     playerBlock(
-      labels?.black || colorLabel(secondColor),
+      labels?.black || reviewInkLabel(secondColor),
       secondColor,
       'black',
       analysis.black,
@@ -85,11 +90,6 @@ export function createAnalysisSummary(
     ),
   );
   return el;
-}
-
-function colorLabel(color: ReviewInk): string {
-  if (color === 'white') return t('summary.white');
-  return color === 'red' ? t('summary.red') : t('summary.black');
 }
 
 function learnButton(onLearn: () => void, active: boolean): HTMLElement {
