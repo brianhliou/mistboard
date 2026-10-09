@@ -23,11 +23,15 @@ const chapter = (key: keyof typeof CHAPTER) => `${STUDY}/${CHAPTER[key]}`;
 const embed = (key: keyof typeof CHAPTER, ply?: number) =>
   `/embed/study/${STUDY_ID}/${CHAPTER[key]}${ply === undefined ? '' : `?ply=${ply}`}`;
 
-// The horse-and-soldier line is 129 plies. Ply 122 is four red moves from the
-// end: the horse takes the last advisor, swings to c10, the red general passes
-// with e3-e2, and c10-d8 leaves the bare general on f10 with no legal move.
-// Replayed through the kernel from the chapter's stored line (2026-10-08).
-const HORSE_SOLDIER_FINISH_PLY = 122;
+// The two-cannons line is 104 plies, Black to move first (root FEN below).
+// Ply 95 is five red moves from the end: e1xe8 takes the last elephant, the f2
+// cannon goes round by b2 to b9, e8-e9 steps under the general, and the quiet
+// e9-c9 leaves the general on d10 with no legal move and not in check. The
+// section embeds this chapter rather than the horse-and-soldier one above, so
+// the page shows two different records (Brian, 2026-10-09). Replayed through
+// the kernel from the chapter's stored line (prod, 2026-10-09);
+// longest-forced-mates.test.ts carries the line and checks every claim.
+export const TWO_CANNONS_FINISH_PLY = 95;
 
 // The horse-and-soldier record's start, copied from the chapter's stored
 // rootFen (GuhYA0we). The card draws it through the kernel's FEN reader, never
@@ -147,14 +151,14 @@ export const longestForcedMatesXiangqiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'That is the shape of five of these seven records, including the two longest. Sixty-five moves of manoeuvring, and the finish is a quiet move that takes the last point away.',
+          text: 'That is the shape of five of these seven records, including the two longest. Here is the second longest, two cannons against the full guard, from five moves before the end: 52 moves of manoeuvring, and the last one is a quiet move that leaves the general no square to go to.',
         },
         {
           kind: 'embed',
-          path: embed('horseSoldier', HORSE_SOLDIER_FINISH_PLY),
-          title: 'The last four moves of the mate in 65',
+          path: embed('twoCannons', TWO_CANNONS_FINISH_PLY),
+          title: 'Two cannons against the full guard: the last five moves of the mate in 52',
           caption:
-            "Four moves from the end. The horse takes the last advisor and swings round to c10 while the black general shuffles between f9 and f10, the red general steps back a square to pass the move, and the horse's quiet move to d8 covers f9 and e10. Black is not in check and has no legal move.",
+            'Five moves from the end. The cannon on e1 takes the last elephant on e8, the other cannon swings from f2 round to b9, and the e8 cannon steps up to e9 under the general, which runs to d10. Then the quiet e9-c9: the b9 cannon now fires over it into d9, and the open e-file means e10 would face the red general. Black is not in check and has no legal move.',
           aspect: [702, 700],
         } as ArticleBlock,
       ],

@@ -234,11 +234,12 @@ const ZH_HANS: Record<string, string> = {
   'Five of the seven end without a check': '七局中有五局不是以将军结束',
   'In chess, a stalemated king is a draw, so every longest-mate line ends in checkmate. Xiangqi scores it the other way: a side with no legal move loses. The position is called 困毙, and the loser is usually not in check at all when it happens. By the end of these lines the defence has lost its advisors and elephants, and the general stands alone in the palace with nothing it can legally play.':
     '在国际象棋里，逼和算和棋，所以每一条最长杀局都以将死告终。象棋的判法正相反：无着可走的一方判负。这种局面叫困毙，发生时负方通常根本没有被将军。在这几条着法的结尾，防守方的士象都已丢光，将独自留在九宫里，却没有一步合法着法可走。',
-  'That is the shape of five of these seven records, including the two longest. Sixty-five moves of manoeuvring, and the finish is a quiet move that takes the last point away.':
-    '这七项纪录中有五项是这种结局，包括最长的两项。六十五回合的周旋，最后一步是一着不带将的闲着，封住了最后一个点。',
-  'The last four moves of the mate in 65': '65回合杀局的最后四回合',
-  "Four moves from the end. The horse takes the last advisor and swings round to c10 while the black general shuffles between f9 and f10, the red general steps back a square to pass the move, and the horse's quiet move to d8 covers f9 and e10. Black is not in check and has no legal move.":
-    '离终局还有四回合。马吃掉最后一个士，绕到c10，黑将在f9和f10之间来回走；红帅退一步停着；最后马不带将地走到d8，控制住f9和e10。黑方没有被将军，却无着可走。',
+  'That is the shape of five of these seven records, including the two longest. Here is the second longest, two cannons against the full guard, from five moves before the end: 52 moves of manoeuvring, and the last one is a quiet move that leaves the general no square to go to.':
+    '这七项纪录中有五项是这种结局，包括最长的两项。下面是第二长的一项，双炮对士象全，从终局前五回合开始：五十二回合的周旋，最后一步是一着不带将的闲着，让将无处可走。',
+  'Two cannons against the full guard: the last five moves of the mate in 52':
+    '双炮对士象全：52回合杀局的最后五回合',
+  'Five moves from the end. The cannon on e1 takes the last elephant on e8, the other cannon swings from f2 round to b9, and the e8 cannon steps up to e9 under the general, which runs to d10. Then the quiet e9-c9: the b9 cannon now fires over it into d9, and the open e-file means e10 would face the red general. Black is not in check and has no legal move.':
+    '离终局还有五回合。e1的炮吃掉e8上最后一个象，另一只炮从f2经b2绕到b9，e8的炮再进到e9，贴在将的下方，黑将走到d10。随后是不带将的闲着e9-c9：b9的炮隔着它打到d9，而e线已经打开，将若走e10就会与红帅照面。黑方没有被将军，却无着可走。',
   'The rules the table does not know': '残局库不知道的规则',
   "A tablebase knows legal positions and moves and nothing else. It has never heard of the repetition law or 自然限着, the rule that draws a game after 60 moves with no capture, so a table's headline number can be a line that could never be played out. That is what happened to chess's famous one: the 549-move mate in the 7-piece tables is drawn by the 50-move rule long before it lands.":
     '残局库只知道合法局面和着法，别的一概不知。它不知道重复局面的规则，也不知道自然限着（60回合无吃子即判和的规则），所以表中的一个醒目数字，可能是一条实战中永远走不完的着法。国际象棋那个著名的纪录就是这样：七子残局库里的549步杀，远在成杀之前就会被50步规则判和。',
@@ -4817,11 +4818,12 @@ const ZH_HANT: Record<string, string> = {
   'Five of the seven end without a check': '七局中有五局不是以將軍結束',
   'In chess, a stalemated king is a draw, so every longest-mate line ends in checkmate. Xiangqi scores it the other way: a side with no legal move loses. The position is called 困毙, and the loser is usually not in check at all when it happens. By the end of these lines the defence has lost its advisors and elephants, and the general stands alone in the palace with nothing it can legally play.':
     '在國際象棋裡，逼和算和棋，所以每一條最長殺局都以將死告終。象棋的判法正相反：無著可走的一方判負。這種局面叫困斃，發生時負方通常根本沒有被將軍。在這幾條著法的結尾，防守方的士象都已丟光，將獨自留在九宮裡，卻沒有一步合法著法可走。',
-  'That is the shape of five of these seven records, including the two longest. Sixty-five moves of manoeuvring, and the finish is a quiet move that takes the last point away.':
-    '這七項紀錄中有五項是這種結局，包括最長的兩項。六十五回合的周旋，最後一步是一著不帶將的閒著，封住了最後一個點。',
-  'The last four moves of the mate in 65': '65回合殺局的最後四回合',
-  "Four moves from the end. The horse takes the last advisor and swings round to c10 while the black general shuffles between f9 and f10, the red general steps back a square to pass the move, and the horse's quiet move to d8 covers f9 and e10. Black is not in check and has no legal move.":
-    '離終局還有四回合。馬吃掉最後一個士，繞到c10，黑將在f9和f10之間來回走；紅帥退一步停著；最後馬不帶將地走到d8，控制住f9和e10。黑方沒有被將軍，卻無著可走。',
+  'That is the shape of five of these seven records, including the two longest. Here is the second longest, two cannons against the full guard, from five moves before the end: 52 moves of manoeuvring, and the last one is a quiet move that leaves the general no square to go to.':
+    '這七項紀錄中有五項是這種結局，包括最長的兩項。下面是第二長的一項，雙炮對士象全，從終局前五回合開始：五十二回合的周旋，最後一步是一著不帶將的閒著，讓將無處可走。',
+  'Two cannons against the full guard: the last five moves of the mate in 52':
+    '雙炮對士象全：52回合殺局的最後五回合',
+  'Five moves from the end. The cannon on e1 takes the last elephant on e8, the other cannon swings from f2 round to b9, and the e8 cannon steps up to e9 under the general, which runs to d10. Then the quiet e9-c9: the b9 cannon now fires over it into d9, and the open e-file means e10 would face the red general. Black is not in check and has no legal move.':
+    '離終局還有五回合。e1的炮吃掉e8上最後一個象，另一隻炮從f2經b2繞到b9，e8的炮再進到e9，貼在將的下方，黑將走到d10。隨後是不帶將的閒著e9-c9：b9的炮隔著它打到d9，而e線已經打開，將若走e10就會與紅帥照面。黑方沒有被將軍，卻無著可走。',
   'The rules the table does not know': '殘局庫不知道的規則',
   "A tablebase knows legal positions and moves and nothing else. It has never heard of the repetition law or 自然限着, the rule that draws a game after 60 moves with no capture, so a table's headline number can be a line that could never be played out. That is what happened to chess's famous one: the 549-move mate in the 7-piece tables is drawn by the 50-move rule long before it lands.":
     '殘局庫只知道合法局面和著法，別的一概不知。它不知道重複局面的規則，也不知道自然限著（60回合無吃子即判和的規則），所以表中的一個醒目數字，可能是一條實戰中永遠走不完的著法。國際象棋那個著名的紀錄就是這樣：七子殘局庫裡的549步殺，遠在成殺之前就會被50步規則判和。',
