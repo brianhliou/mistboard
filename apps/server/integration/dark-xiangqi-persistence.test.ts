@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test, { after, before } from 'node:test';
 import pg from 'pg';
 import { runMigrations } from '../src/migrate.js';
+import { TENANT_LIVE_GAME_NO_SEAT_REASON } from '../src/variant-tenant/ws.js';
 import {
   connectClient,
   startTestServer,
@@ -87,7 +88,7 @@ if (!testDbUrl) {
       await uncredentialed.closed;
       assert.equal(uncredentialed.isClosed(), true);
       assert.equal(uncredentialed.closeCode(), 1008);
-      assert.equal(uncredentialed.closeReason(), 'private room');
+      assert.equal(uncredentialed.closeReason(), TENANT_LIVE_GAME_NO_SEAT_REASON);
     });
 
     const hydratedRed = await connectClient({
