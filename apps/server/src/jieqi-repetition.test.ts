@@ -3,17 +3,23 @@
  * and the generic runtime: the verdict a live room reaches is the verdict event
  * replay reaches, rooms created before the rule replay to the end they had, and
  * the repetition bookkeeping (keyed on true identities) never reaches a client.
+ * Then the bots' draw guard: a bot scoring a win does not walk into these draws.
  */
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   createInitialJieqiState,
+  DEFAULT_NO_CAPTURE_PLY_LIMIT,
+  getJieqiLegalMoves,
   JIEQI_SPEC_ID,
   type JieqiDeal,
   type JieqiMove,
   type JieqiPieceRole,
+  jieqiMoveToPikafishUci,
 } from '@mistboard/game';
+import { guardJieqiRuleEnding, jieqiRuleEndingRisk } from './jieqi-draw-guard.js';
+import { JIEQI_ABJCHESS_ENGINE_ID } from './jieqi-engine.js';
 import {
   enforcesRepetition,
   getJieqiClientView,
@@ -21,7 +27,13 @@ import {
   jieqiClientEventFor,
   jieqiTenant,
 } from './jieqi-tenant.js';
-import { createTenantRuntimeRoom, replayTenantEvents } from './variant-tenant/runtime.js';
+import { playJieqiEngineMoveIfReady } from './server-jieqi-engine.js';
+import type { UciEval } from './uci-engine-harness.js';
+import {
+  createTenantRuntimeRoom,
+  createTenantRuntimeRoomFromEvents,
+  replayTenantEvents,
+} from './variant-tenant/runtime.js';
 import type { TenantRoomEvent } from './variant-tenant/tenant.js';
 
 process.env.MISTBOARD_JIEQI_ENABLED = 'true';
@@ -142,4 +154,180 @@ test('the kernel default (no marker, no setup flag) matches the tenant for a mis
   const fromTenant = jieqiTenant.rules.createInitialState('jq_none', undefined);
   const fromKernel = createInitialJieqiState('jq_none', undefined, { repetition: true });
   assert.deepEqual(fromTenant, fromKernel);
+});
+
+// ── The draw guard (jieqi-draw-guard.ts) ────────────────────────────────────
+//
+// The engines search under xiangqi's chase rule, where the side repeating a
+// chase loses; ours draws it. On 10-06 and 10-07 AB-JChess drew four games it
+// scored as mate in 1 or +300, each completed by the human's reply. After the
+// example opening, black's e8-g6 and red's b6-a6 shuffle with no check.
+const SHUFFLE = 'e8-g6 b6-a6 g6-e8 a6-b6 e8-g6 b6-a6';
+const toUci = (token: string) => {
+  const [from, to] = token.split('-');
+  return jieqiMoveToPikafishUci({ from, to } as JieqiMove);
+};
+const engineSays = (best: string, score: { cp?: number; mate?: number }): UciEval => ({
+  best,
+  cp: score.cp ?? null,
+  mate: score.mate ?? null,
+  depth: 20,
+});
+
+function stateAfter(line: string) {
+  return replayTenantEvents(jieqiTenant, roomEvents('jq_guard', MARKED_SETUP, line)).state;
+}
+
+test('the guard knows a shuffle the human can close as a draw by repetition', () => {
+  const state = stateAfter(`${EXAMPLE_OPENING} ${SHUFFLE}`);
+  assert.equal(state.status.type, 'playing');
+  assert.deepEqual(jieqiRuleEndingRisk(state, { from: 'g6', to: 'e8' } as JieqiMove), {
+    outcome: 'draw',
+    reason: 'repetition',
+    via: 'reply',
+  });
+  // The same move one cycle earlier closes nothing yet.
+  const earlier = stateAfter(`${EXAMPLE_OPENING} e8-g6 b6-a6`);
+  assert.equal(jieqiRuleEndingRisk(earlier, { from: 'g6', to: 'e8' } as JieqiMove), null);
+  // The bot's own move completing the threefold (red to move, a6-b6).
+  const own = stateAfter(`${EXAMPLE_OPENING} ${SHUFFLE} g6-e8`);
+  assert.deepEqual(jieqiRuleEndingRisk(own, { from: 'a6', to: 'b6' } as JieqiMove), {
+    outcome: 'draw',
+    reason: 'repetition',
+    via: 'move',
+  });
+});
+
+test('a winning bot does not step into the repetition: it re-searches without it', async () => {
+  const state = stateAfter(`${EXAMPLE_OPENING} ${SHUFFLE}`);
+  const searched: (readonly string[])[] = [];
+  const result = await guardJieqiRuleEnding({
+    state,
+    search: engineSays(toUci('g6-e8'), { mate: 1 }),
+    research: async (searchMoves) => {
+      searched.push(searchMoves);
+      return engineSays(toUci('a7-a6'), { cp: 240 });
+    },
+  });
+  assert.equal(searched.length, 1, 'one re-search');
+  assert.ok(!searched[0]!.includes(toUci('g6-e8')), 'the drawing move is excluded');
+  assert.ok(searched[0]!.includes(toUci('a7-a6')));
+  assert.equal(result.best, toUci('a7-a6'));
+  assert.equal(result.replaced, true);
+  assert.equal(result.reason, 'avoided-draw');
+  assert.equal(result.detail?.engine_move, toUci('g6-e8'));
+});
+
+test('a bot that is not winning takes the repetition, and no re-search runs', async () => {
+  const state = stateAfter(`${EXAMPLE_OPENING} ${SHUFFLE}`);
+  for (const score of [{ cp: 0 }, { cp: -80 }, { cp: 150 }, { mate: -3 }]) {
+    let researched = false;
+    const result = await guardJieqiRuleEnding({
+      state,
+      search: engineSays(toUci('g6-e8'), score),
+      research: async () => {
+        researched = true;
+        return engineSays(toUci('a7-a6'), { cp: 0 });
+      },
+    });
+    assert.equal(researched, false, JSON.stringify(score));
+    assert.equal(result.best, toUci('g6-e8'));
+    assert.equal(result.reason, null);
+  }
+});
+
+test('the draw stands when every alternative is clearly worse than it', async () => {
+  const state = stateAfter(`${EXAMPLE_OPENING} ${SHUFFLE}`);
+  const result = await guardJieqiRuleEnding({
+    state,
+    search: engineSays(toUci('g6-e8'), { cp: 324 }),
+    research: async () => engineSays(toUci('a7-a6'), { cp: -400 }),
+  });
+  assert.equal(result.best, toUci('g6-e8'));
+  assert.equal(result.replaced, false);
+  assert.equal(result.reason, 'kept-draw-alternatives-worse');
+  // A failed re-search never costs the move either.
+  const failed = await guardJieqiRuleEnding({
+    state,
+    search: engineSays(toUci('g6-e8'), { cp: 324 }),
+    research: async () => {
+      throw new Error('engine died');
+    },
+  });
+  assert.equal(failed.best, toUci('g6-e8'));
+  assert.equal(failed.reason, 'kept-research-failed');
+});
+
+test('near the no-capture limit a winning bot keeps only the moves that reset the clock', async () => {
+  // The 10-06 draw: AB-JChess scored mate in 1 at clock 118 and played a quiet move;
+  // any quiet reply then drew on the 120-ply clock.
+  const base = stateAfter(`${EXAMPLE_OPENING} e8-g6 b6-a6`);
+  const state = { ...base, noCaptureClock: DEFAULT_NO_CAPTURE_PLY_LIMIT - 2 };
+  assert.deepEqual(jieqiRuleEndingRisk(state, { from: 'g6', to: 'e8' } as JieqiMove), {
+    outcome: 'draw',
+    reason: 'no-capture-clock',
+    via: 'reply',
+  });
+  let allowed: readonly string[] = [];
+  const result = await guardJieqiRuleEnding({
+    state,
+    search: engineSays(toUci('g6-e8'), { mate: 1 }),
+    research: async (searchMoves) => {
+      allowed = searchMoves;
+      return engineSays(searchMoves[0]!, { cp: 300 });
+    },
+  });
+  const captures = getJieqiLegalMoves(state)
+    .filter((move) => state.board[move.to] !== undefined)
+    .map(jieqiMoveToPikafishUci);
+  assert.ok(captures.length > 0);
+  assert.deepEqual([...allowed].sort(), [...captures].sort(), 'only captures avoid the clock');
+  assert.equal(result.replaced, true);
+  // One ply later the bot's own quiet move is the draw.
+  const last = { ...base, noCaptureClock: DEFAULT_NO_CAPTURE_PLY_LIMIT - 1 };
+  assert.deepEqual(jieqiRuleEndingRisk(last, { from: 'g6', to: 'e8' } as JieqiMove), {
+    outcome: 'draw',
+    reason: 'no-capture-clock',
+    via: 'move',
+  });
+});
+
+test('live: the served bot plays the re-searched move and the decision artifact says why', async () => {
+  const roomId = 'jq_guard_live';
+  const events: JieqiRoomEvent[] = [
+    { type: 'room-created', at: 1, roomId, gameSpecId: JIEQI_SPEC_ID, setup: MARKED_SETUP },
+    { type: 'seat-assigned', at: 2, roomId, clientId: 'human', seat: 'red' },
+    { type: 'seat-assigned', at: 3, roomId, clientId: JIEQI_ABJCHESS_ENGINE_ID, seat: 'black' },
+    ...roomEvents(roomId, MARKED_SETUP, `${EXAMPLE_OPENING} ${SHUFFLE}`).filter(
+      (event) => event.type === 'move-played',
+    ),
+  ];
+  const hydrated = createTenantRuntimeRoomFromEvents(jieqiTenant, events);
+  if (!hydrated.ok) throw new Error(hydrated.error);
+  const room = hydrated.room as unknown as Parameters<typeof playJieqiEngineMoveIfReady>[1];
+  const appended: JieqiRoomEvent[] = [];
+  const ctx = {
+    appendEvent: async (_room: unknown, event: JieqiRoomEvent) => {
+      appended.push(event);
+      return appended.length;
+    },
+    broadcastEventAppended: () => {},
+  } as unknown as Parameters<typeof playJieqiEngineMoveIfReady>[0];
+  const calls: { searchMoves?: readonly string[] }[] = [];
+  await playJieqiEngineMoveIfReady(ctx, room, async (_engineId, _fen, opts) => {
+    calls.push(opts);
+    return opts.searchMoves
+      ? engineSays(toUci('a7-a6'), { cp: 260 })
+      : engineSays(toUci('g6-e8'), { mate: 1 });
+  });
+  assert.equal(calls.length, 2, 'the search, then one re-search');
+  assert.ok(calls[1]!.searchMoves && !calls[1]!.searchMoves.includes(toUci('g6-e8')));
+  const played = appended.find((event) => event.type === 'move-played');
+  assert.ok(played && played.type === 'move-played');
+  assert.deepEqual(played.move, { from: 'a7', to: 'a6' });
+  const decision = room.pendingDebugArtifacts?.at(-1)?.payload as Record<string, unknown>;
+  assert.equal(decision.move, toUci('a7-a6'));
+  assert.equal(decision.engine_move, toUci('g6-e8'));
+  assert.equal(decision.guard_replaced, true);
+  assert.equal(decision.guard_reason, 'avoided-draw');
 });

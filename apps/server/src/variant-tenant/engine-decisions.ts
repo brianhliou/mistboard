@@ -109,6 +109,10 @@ export type LiveEngineDecisionInput = {
   legalCount?: number;
   /** A guard or fallback replaced the engine's own move with a different one. */
   guardReplaced?: boolean;
+  /** Why a guard acted (or chose not to replace the move); null when it did nothing. */
+  guardReason?: string | null;
+  /** The guard's own record (what it excluded, the re-search it ran). */
+  guardDetail?: Record<string, unknown> | null;
 };
 
 /**
@@ -157,6 +161,8 @@ export function buildLiveEngineDecisionPayload(
     move: input.move,
     engine_move: search?.best ?? null,
     guard_replaced: input.guardReplaced ?? false,
+    guard_reason: input.guardReason ?? null,
+    guard_detail: input.guardDetail ?? null,
     failed_closed: input.move === null,
     // What the SERVER allotted this move, against what the tier is configured
     // for below and what the search actually spent further down. Those three
