@@ -65,6 +65,7 @@ import { currentLocale } from './i18n/locale.js';
 import { playerNameEl, profileTargetFor } from './profile-link.js';
 import { formatGameTime, profileGameHref } from './profile-ui.js';
 import type { ReplayHandle } from './replay.js';
+import { accepterColorLabel, buildSeekAcceptAction } from './seek-accept.js';
 import { buildKindBadge, buildSeekCard } from './seek-card.js';
 import { specIdForShowcaseVariant } from './showcase-dispatch.js';
 import { buildNav, buildNotice } from './site-shell.js';
@@ -84,7 +85,7 @@ const FINISH_WAIT_MS = 30_000;
 // Start a finished board's fetch a little before its tile scrolls into view.
 const FINISHED_MOUNT_MARGIN = '300px';
 
-type CorrespondenceSeek = {
+export type CorrespondenceSeek = {
   id: string;
   gameSpecId: string;
   daysPerMove: number;
@@ -92,6 +93,8 @@ type CorrespondenceSeek = {
   creatorHandle?: string | null;
   rated?: boolean;
   isMine?: boolean;
+  // Move order the poster picked: 'first' | 'second' | 'random'.
+  preferredColor?: string;
 };
 
 type CardState = {
@@ -305,9 +308,7 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
     return list.map((seek) => {
       let card = seekCards.get(seek.id);
       if (!card) {
-        card = buildSeekCard(seek, {
-          href: seek.isMine ? '/correspondence' : `/challenge/${encodeURIComponent(seek.id)}`,
-        });
+        card = buildGamesSeekCard(seek);
         seekCards.set(seek.id, card);
       }
       return card;
@@ -840,6 +841,30 @@ function asFeaturedGame(game: CurrentGame): FeaturedGame {
 // ---------------------------------------------------------------------------
 // Seeks + finished games
 // ---------------------------------------------------------------------------
+
+// Your own seek leads to /correspondence, where it is managed. Someone else's
+// is accepted right on the card (seek-accept.ts) and lands in the room; the card
+// already shows its terms, so it no longer opens the /challenge page.
+export function buildGamesSeekCard(
+  seek: CorrespondenceSeek,
+  options: { signedIn?: boolean; navigate?: (url: string) => void } = {},
+): HTMLElement {
+  if (seek.isMine) return buildSeekCard(seek, { href: '/correspondence' });
+  const status = document.createElement('p');
+  status.className = 'current-game-seek-status';
+  status.setAttribute('role', 'status');
+  status.hidden = true;
+  const action = buildSeekAcceptAction({
+    className: 'current-game-seek-accept',
+    navigate: options.navigate,
+    seek,
+    signedIn: options.signedIn,
+    status,
+    surface: 'games',
+  });
+  const side = accepterColorLabel(seek.gameSpecId, seek.preferredColor);
+  return buildSeekCard(seek, { action, details: side ? [side] : [], href: null, status });
+}
 
 // null = the seek board is unavailable (correspondence disabled, or an error).
 async function fetchSeeks(): Promise<CorrespondenceSeek[] | null> {

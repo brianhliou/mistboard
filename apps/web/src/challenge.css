@@ -2,12 +2,58 @@
    tracks the light/dark theme like the rest of the client. */
 
 .challenge-card {
-  max-width: 520px;
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+  max-width: 600px;
   margin: 32px auto;
   padding: 24px;
   border: 1px solid var(--site-border);
   border-radius: var(--site-radius);
   background: var(--site-surface);
+}
+
+.challenge-body {
+  min-width: 0;
+}
+
+/* The variant's starting position, as on the seek's /games card. */
+.challenge-board {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 9 / 10;
+  border-radius: 6px;
+  background: var(--site-panel);
+  overflow: hidden;
+}
+
+.challenge-board-label {
+  padding: 8px;
+  color: var(--site-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.challenge-board-frame,
+.challenge-board-frame svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@media (max-width: 520px) {
+  .challenge-card {
+    grid-template-columns: minmax(0, 1fr);
+    margin: 16px;
+    padding: 16px;
+  }
+
+  .challenge-board {
+    width: min(220px, 100%);
+    margin: 0 auto;
+  }
 }
 
 .challenge-heading {

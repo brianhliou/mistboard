@@ -35,7 +35,7 @@ import {
   DAYS_PER_MOVE_OPTIONS,
   getStandardXiangqiPlayerView,
 } from '@mistboard/game';
-import { trackCorrespondenceSeekAccepted, trackCorrespondenceSeekPosted } from './analytics.js';
+import { trackCorrespondenceSeekPosted } from './analytics.js';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import {
   type CorrespondenceGame,
@@ -83,6 +83,7 @@ import type { DarkXiangqiWireView } from './live-dark-xiangqi.js';
 import { appendWithNameNode, playerNameEl, profileTargetFor } from './profile-link.js';
 import { isCorrespondenceRatedModeEnabled, onRatedModeChange } from './rated-flag.js';
 import type { ReplayHandle } from './replay.js';
+import { accepterColorLabel, buildSeekAcceptAction } from './seek-accept.js';
 import { buildSeekCard } from './seek-card.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { formatDayClock } from './web-utils.js';
@@ -944,65 +945,28 @@ function buildOpenSeekCard(ctx: PageContext, host: HTMLElement, seek: OpenSeek):
   const error = document.createElement('p');
   error.className = 'correspondence-row-error correspondence-seek-error';
   error.hidden = true;
-  const challengePath = `/challenge/${encodeURIComponent(seek.id)}`;
-  if (!ctx.signedIn) {
-    // Correspondence needs an account: Accept signs in, then lands on this
-    // seek's challenge page with its own Accept.
-    const accept = document.createElement('a');
-    accept.className = 'correspondence-ghost';
-    const params = new URLSearchParams({ tab: 'login', referrer: challengePath });
-    accept.href = localizedHref(`/account?${params.toString()}`);
-    accept.title = t('correspondence.signInToAccept');
-    accept.textContent = t('correspondence.accept');
-    return buildSeekCard(seek, { action: accept, href: challengePath, status: error });
-  }
-
-  const accept = document.createElement('button');
-  accept.type = 'button';
-  accept.className = 'correspondence-ghost';
-  accept.textContent = t('correspondence.accept');
-  accept.addEventListener('click', () => {
-    accept.disabled = true;
-    error.hidden = true;
-    void fetch(`/api/correspondence/seeks/${encodeURIComponent(seek.id)}/accept`, {
-      method: 'POST',
-    })
-      .then(async (res) => {
-        const body = (await res.json().catch(() => null)) as {
-          url?: string;
-          error?: string;
-        } | null;
-        if (res.ok && body?.url) {
-          trackCorrespondenceSeekAccepted({
-            daysPerMove: seek.daysPerMove,
-            gameSpecId: seek.gameSpecId,
-            surface: 'correspondence',
-          });
-          location.href = body.url;
-          return;
-        }
-        error.textContent =
-          body?.error === 'seek_taken' || body?.error === 'seek_not_found'
-            ? t('challenge.alreadyAccepted')
-            : body?.error === 'challenge_expired'
-              ? t('challenge.expired')
-              : t('challenge.couldNotAccept');
-        error.hidden = false;
-        accept.disabled = false;
-        // A seek someone else took is gone; re-read the board.
-        if (body?.error === 'seek_taken' || body?.error === 'seek_not_found') {
-          void fetchOpenSeeks().then((feed) => {
-            if (ctx.isConnected()) renderOpenSeeks(ctx, host, feed);
-          });
-        }
-      })
-      .catch(() => {
-        error.textContent = t('challenge.couldNotAccept');
-        error.hidden = false;
-        accept.disabled = false;
+  // Accept in place (seek-accept.ts): signed in it goes straight to the room,
+  // signed out it signs in and comes back to the seek's /challenge page.
+  const accept = buildSeekAcceptAction({
+    className: 'correspondence-ghost',
+    // A seek someone else took is gone; re-read the board.
+    onGone: () => {
+      void fetchOpenSeeks().then((feed) => {
+        if (ctx.isConnected()) renderOpenSeeks(ctx, host, feed);
       });
+    },
+    seek,
+    signedIn: ctx.signedIn,
+    status: error,
+    surface: 'correspondence',
   });
-  return buildSeekCard(seek, { action: accept, href: challengePath, status: error });
+  const side = accepterColorLabel(seek.gameSpecId, seek.preferredColor);
+  return buildSeekCard(seek, {
+    action: accept,
+    details: side ? [side] : [],
+    href: `/challenge/${encodeURIComponent(seek.id)}`,
+    status: error,
+  });
 }
 
 // ---------------------------------------------------------------------------

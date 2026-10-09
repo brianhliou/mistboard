@@ -24,7 +24,8 @@ export type SeekCardSeek = {
 export type SeekCardOptions = {
   // Where the whole card leads; null when an action button is the only way in.
   href: string | null;
-  // The bottom-right control (Accept, a sign-in link); omitted on /games.
+  // The bottom-right control (Accept or a sign-in link, from seek-accept.ts;
+  // your own seek's Copy link and Cancel).
   action?: HTMLElement | null;
   // A line under the meta (an accept error); hidden until it has text.
   status?: HTMLElement | null;

@@ -449,7 +449,7 @@ export function trackCorrespondenceSeekPosted(props: {
 export function trackCorrespondenceSeekAccepted(props: {
   gameSpecId: string;
   daysPerMove: number;
-  surface: 'correspondence' | 'challenge' | 'home-button';
+  surface: 'correspondence' | 'challenge' | 'games' | 'home-lobby' | 'home-panel' | 'home-button';
 }): void {
   track('correspondence_seek_accepted', props);
 }

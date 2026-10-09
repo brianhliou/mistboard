@@ -788,6 +788,11 @@
   color: var(--site-accent-strong);
 }
 
+.landing-lobby-join:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .landing-lobby-join.is-mine {
   opacity: 0.55;
   cursor: default;
