@@ -56,6 +56,23 @@ export type OpenSeek = {
   rated?: boolean;
 };
 
+// A directed challenge someone sent THIS player, as served by GET
+// /api/correspondence/seeks/incoming (live ones only, newest first). The bell's
+// "N challenges waiting for you" counts the same rows.
+export type IncomingChallenge = {
+  id: string;
+  gameSpecId: string;
+  daysPerMove: number;
+  // The CHALLENGER's side; the card names the other one (accepterColorLabel).
+  preferredColor: SeekPreferredColor;
+  rated?: boolean;
+  challengerName: string | null;
+  // Profile handle, sent only for an open, non-private account (fail-closed).
+  challengerHandle?: string | null;
+  expiresAt?: string | null;
+  createdAt: string;
+};
+
 // One invitation THIS player sent, as served by GET /api/correspondence/seeks/mine.
 // Unlike the public board this includes link and directed challenges, which is
 // the point: before #353 a link challenge appeared nowhere its creator could see

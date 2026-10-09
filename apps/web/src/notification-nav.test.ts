@@ -350,6 +350,10 @@ describe('notification nav', () => {
     expect(
       challengesNotificationSource.read(counts({ incomingChallenges: 1 })).entries[0]?.label,
     ).toBe('1 challenge waiting for you');
+    // It lands on the list of those challenges, not the top of the inbox.
+    expect(
+      challengesNotificationSource.read(counts({ incomingChallenges: 2 })).entries[0]?.href,
+    ).toBe('/correspondence#incoming');
   });
 
   it('keeps quiet rather than showing a zero row for the new sources', () => {

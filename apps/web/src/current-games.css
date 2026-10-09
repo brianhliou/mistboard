@@ -456,10 +456,65 @@
   height: 100%;
 }
 
-.current-game-seek-action {
+/* A seek card's buttons get the bottom row to themselves, full width like an
+   in-progress card's Play, so the seat row above keeps the whole name. */
+.current-game-seek-actions {
+  display: flex;
+  min-width: 0;
+}
+
+/* Two classes, so it beats .correspondence-ghost's flex: none whatever order
+   the stylesheets bundle in. */
+.current-game-seek-actions > .current-game-seek-action {
   position: relative;
   z-index: 2;
-  flex: none;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Accept on someone else's seek (seek-accept.ts): a button when signed in, a
+   sign-in link when not. */
+.current-game-seek-accept {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--current-games-kind-seek);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--current-games-kind-seek) 14%, transparent);
+  color: var(--site-heading);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.current-game-seek-accept:hover,
+.current-game-seek-accept:focus-visible {
+  background: color-mix(in srgb, var(--current-games-kind-seek) 28%, transparent);
+}
+
+.current-game-seek-accept:focus-visible {
+  outline: 2px solid var(--site-accent-strong);
+  outline-offset: 2px;
+}
+
+.current-game-seek-accept:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.current-game-seek-status {
+  margin: 0;
+  color: var(--site-warning-text);
+  font-size: 0.78rem;
+}
+
+.current-game-seek-status[hidden] {
+  display: none;
 }
 
 .current-game-open {

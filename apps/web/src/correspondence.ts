@@ -4,7 +4,9 @@
 //   top   "Start a game", a full-width bar (variant, days per move, opponent:
 //         anyone / a link, your side; one row on a desktop, stacked on a
 //         phone). A challenge to one player starts on their profile.
-//   main  "Waiting for an opponent" (your own seeks, Copy link / Cancel),
+//   main  "Challenges for you" (directed challenges sent to you, Accept /
+//         Decline; the bell's challenge row lands here, #incoming), then
+//         "Waiting for an opponent" (your own seeks, Copy link / Cancel),
 //         "Your move" cards (board, seats, time left on the seat to move, a
 //         deadline bar, Play your move), "Waiting on opponent" cards, and
 //         "Open seeks" (other players', with Accept).
@@ -14,7 +16,8 @@
 // create an account. Correspondence needs an account; that stays.
 //
 // Data: GET /api/correspondence/games (the inbox), GET /api/correspondence/seeks
-// (the public board), GET /api/correspondence/seeks/mine (your challenges), and
+// (the public board), GET /api/correspondence/seeks/mine (your challenges),
+// GET /api/correspondence/seeks/incoming (challenges to you), and
 // GET /api/games/current for the boards. That feed is public and already lists
 // every correspondence game in play; it carries a board payload only for games
 // it calls 'open', so this page draws exactly what any spectator of an
@@ -35,7 +38,7 @@ import {
   DAYS_PER_MOVE_OPTIONS,
   getStandardXiangqiPlayerView,
 } from '@mistboard/game';
-import { trackCorrespondenceSeekAccepted, trackCorrespondenceSeekPosted } from './analytics.js';
+import { trackCorrespondenceSeekPosted } from './analytics.js';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import {
   type CorrespondenceGame,
@@ -47,6 +50,7 @@ import {
   deadlineUrgency,
   heroBoardGame,
   type InboxBoardSide,
+  type IncomingChallenge,
   inboxBoardSide,
   inboxTileKind,
   indexByRoom,
@@ -80,14 +84,19 @@ import {
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, localizedHref } from './i18n/locale.js';
 import type { DarkXiangqiWireView } from './live-dark-xiangqi.js';
+import { refreshNotifications } from './notification-nav.js';
 import { appendWithNameNode, playerNameEl, profileTargetFor } from './profile-link.js';
 import { isCorrespondenceRatedModeEnabled, onRatedModeChange } from './rated-flag.js';
 import type { ReplayHandle } from './replay.js';
+import { accepterColorLabel, accepterSide, buildSeekAcceptAction } from './seek-accept.js';
 import { buildSeekCard } from './seek-card.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { formatDayClock } from './web-utils.js';
 
 const TICK_MS = 30_000;
+// The "Challenges for you" section's id; the bell's challenge row links to it
+// (notification-nav.ts).
+const INCOMING_ANCHOR = 'incoming';
 
 type OpenSeeksFeed = { status: 'ok'; seeks: OpenSeek[] } | { status: 'disabled' | 'error' };
 
@@ -156,10 +165,19 @@ function buildSignedIn(
   const main = document.createElement('div');
   main.className = 'correspondence-main';
 
-  // Your own open seeks and challenges lead the card column: right after the
-  // homepage button posts one, it is the only thing on the page that is yours,
-  // and in the side column under the form it read as a footnote (Brian,
-  // 2026-10-03). Hidden while you have none.
+  // Challenges other players sent you lead the page: they wait on your answer,
+  // and the bell's "N challenges waiting for you" lands here (#incoming). Before
+  // #528 nothing on the page listed them. Hidden while there are none.
+  const incoming = document.createElement('section');
+  incoming.className = 'correspondence-section correspondence-incoming';
+  incoming.id = INCOMING_ANCHOR;
+  incoming.hidden = true;
+  main.append(incoming);
+
+  // Your own open seeks and challenges come next: right after the homepage
+  // button posts one, it is the only thing on the page that is yours, and in
+  // the side column under the form it read as a footnote (Brian, 2026-10-03).
+  // Hidden while you have none.
   const challenges = document.createElement('section');
   challenges.className = 'correspondence-section correspondence-own-seeks';
   challenges.hidden = true;
@@ -200,12 +218,29 @@ function buildSignedIn(
     }
   }
 
+  // "No games yet" says nothing new under a seek that is waiting or a challenge
+  // to answer.
+  let ownCount = 0;
+  let incomingCount = 0;
+  const syncEmpty = (): void => {
+    if (empty) empty.hidden = ownCount + incomingCount > 0;
+  };
   const refreshChallenges = (): void => {
     void renderChallenges(challenges, (count) => {
-      // "No games yet" says nothing new under a seek that is waiting.
-      if (empty) empty.hidden = count > 0;
+      ownCount = count;
+      syncEmpty();
     });
   };
+  void renderIncomingChallenges(incoming, (count) => {
+    incomingCount = count;
+    syncEmpty();
+  }).then(() => {
+    // The bell links to /correspondence#incoming; the section is drawn after
+    // the page loads, so the browser's own jump to the anchor found nothing.
+    if (location.hash === `#${INCOMING_ANCHOR}` && !incoming.hidden && incoming.isConnected) {
+      incoming.scrollIntoView({ block: 'start' });
+    }
+  });
   const seekHost = document.createElement('section');
   seekHost.className = 'correspondence-section';
   renderOpenSeeks(ctx, seekHost, seeksFeed);
@@ -944,65 +979,33 @@ function buildOpenSeekCard(ctx: PageContext, host: HTMLElement, seek: OpenSeek):
   const error = document.createElement('p');
   error.className = 'correspondence-row-error correspondence-seek-error';
   error.hidden = true;
-  const challengePath = `/challenge/${encodeURIComponent(seek.id)}`;
-  if (!ctx.signedIn) {
-    // Correspondence needs an account: Accept signs in, then lands on this
-    // seek's challenge page with its own Accept.
-    const accept = document.createElement('a');
-    accept.className = 'correspondence-ghost';
-    const params = new URLSearchParams({ tab: 'login', referrer: challengePath });
-    accept.href = localizedHref(`/account?${params.toString()}`);
-    accept.title = t('correspondence.signInToAccept');
-    accept.textContent = t('correspondence.accept');
-    return buildSeekCard(seek, { action: accept, href: challengePath, status: error });
-  }
-
-  const accept = document.createElement('button');
-  accept.type = 'button';
-  accept.className = 'correspondence-ghost';
-  accept.textContent = t('correspondence.accept');
-  accept.addEventListener('click', () => {
-    accept.disabled = true;
-    error.hidden = true;
-    void fetch(`/api/correspondence/seeks/${encodeURIComponent(seek.id)}/accept`, {
-      method: 'POST',
-    })
-      .then(async (res) => {
-        const body = (await res.json().catch(() => null)) as {
-          url?: string;
-          error?: string;
-        } | null;
-        if (res.ok && body?.url) {
-          trackCorrespondenceSeekAccepted({
-            daysPerMove: seek.daysPerMove,
-            gameSpecId: seek.gameSpecId,
-            surface: 'correspondence',
-          });
-          location.href = body.url;
-          return;
-        }
-        error.textContent =
-          body?.error === 'seek_taken' || body?.error === 'seek_not_found'
-            ? t('challenge.alreadyAccepted')
-            : body?.error === 'challenge_expired'
-              ? t('challenge.expired')
-              : t('challenge.couldNotAccept');
-        error.hidden = false;
-        accept.disabled = false;
-        // A seek someone else took is gone; re-read the board.
-        if (body?.error === 'seek_taken' || body?.error === 'seek_not_found') {
-          void fetchOpenSeeks().then((feed) => {
-            if (ctx.isConnected()) renderOpenSeeks(ctx, host, feed);
-          });
-        }
-      })
-      .catch(() => {
-        error.textContent = t('challenge.couldNotAccept');
-        error.hidden = false;
-        accept.disabled = false;
+  // Accept in place (seek-accept.ts): signed in it goes straight to the room,
+  // signed out it signs in and comes back to the seek's /challenge page.
+  const accept = buildSeekAcceptAction({
+    className: 'correspondence-ghost',
+    // A seek someone else took is gone; re-read the board.
+    onGone: () => {
+      void fetchOpenSeeks().then((feed) => {
+        if (ctx.isConnected()) renderOpenSeeks(ctx, host, feed);
       });
+    },
+    seek,
+    signedIn: ctx.signedIn,
+    status: error,
+    surface: 'correspondence',
   });
-  return buildSeekCard(seek, { action: accept, href: challengePath, status: error });
+  const side = accepterColorLabel(seek.gameSpecId, seek.preferredColor);
+  // The poster picked a side: draw the board from the one you would take, your
+  // empty seat at the bottom. Random keeps the first side and the poster below.
+  const seat = accepterSide(seek.preferredColor);
+  return buildSeekCard(seek, {
+    action: accept,
+    details: side ? [side] : [],
+    href: `/challenge/${encodeURIComponent(seek.id)}`,
+    side: seat ?? undefined,
+    status: error,
+    waitingAtBottom: seat !== null,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -1053,9 +1056,161 @@ export async function renderChallenges(
   host.replaceChildren(...children);
 }
 
+// ---------------------------------------------------------------------------
+// Challenges for you
+// ---------------------------------------------------------------------------
+
+// Directed challenges other players sent you, from GET
+// /api/correspondence/seeks/incoming: the same live rows the bell counts
+// (persistence countIncomingChallenges / listChallengesForUser share one expiry
+// filter). Each is a seek card with Accept (straight into the game) and
+// Decline. The section shows only while one is waiting; a failed read hides it
+// too, since an error line at the top of the page for a list that is usually
+// empty says more than it knows.
+export async function renderIncomingChallenges(
+  host: HTMLElement,
+  onCount?: (count: number) => void,
+  options: IncomingChallengeOptions = {},
+): Promise<void> {
+  const resp = await fetch('/api/correspondence/seeks/incoming').catch(() => null);
+  const body = resp?.ok
+    ? ((await resp.json().catch(() => null)) as { challenges?: IncomingChallenge[] } | null)
+    : null;
+  const challenges = Array.isArray(body?.challenges) ? body.challenges : [];
+  onCount?.(challenges.length);
+  host.hidden = challenges.length === 0;
+  if (challenges.length === 0) {
+    host.replaceChildren();
+    return;
+  }
+  const section = buildSection(t('correspondence.challengesForYou'), challenges.length);
+  const count = section.querySelector<HTMLElement>('.correspondence-count');
+  const grid = buildGrid('correspondence-incoming-grid');
+  let left = challenges.length;
+  // A declined or vanished challenge leaves the list without a refetch; the
+  // last one takes the section with it.
+  const remove = (card: HTMLElement): void => {
+    if (!card.isConnected) return;
+    card.remove();
+    left -= 1;
+    onCount?.(left);
+    if (count) count.textContent = String(left);
+    if (left === 0) {
+      host.hidden = true;
+      host.replaceChildren();
+    }
+  };
+  for (const challenge of challenges) {
+    grid.append(buildIncomingChallengeCard(challenge, remove, options));
+  }
+  host.replaceChildren(...section.childNodes, grid);
+}
+
+// Someone's challenge to you as a seek card: the challenger on top, the empty
+// seat waiting for you at the bottom, the board from your side when the
+// challenger picked theirs (random draws the first side), the side you would
+// play in the meta and Accept and Decline under it. The card opens the
+// challenge's own page.
+export type IncomingChallengeOptions = {
+  // Test seam for Accept's navigation (seek-accept.ts).
+  navigate?: (url: string) => void;
+};
+
+export function buildIncomingChallengeCard(
+  challenge: IncomingChallenge,
+  onRemove: (card: HTMLElement) => void,
+  options: IncomingChallengeOptions = {},
+): HTMLElement {
+  const error = document.createElement('p');
+  error.className = 'correspondence-row-error correspondence-seek-error';
+  error.hidden = true;
+
+  const actions = document.createElement('div');
+  actions.className = 'correspondence-own-actions';
+  let card: HTMLElement | null = null;
+  const removeCard = (): void => {
+    if (card) onRemove(card);
+    void refreshNotifications();
+  };
+  const accept = buildSeekAcceptAction({
+    className: 'correspondence-ghost',
+    navigate: options.navigate,
+    // Withdrawn, expired or already taken: it cannot be answered any more.
+    onGone: removeCard,
+    seek: challenge,
+    signedIn: true,
+    status: error,
+    surface: 'correspondence',
+    visibility: 'private',
+  });
+  const decline = document.createElement('button');
+  decline.type = 'button';
+  decline.className = 'correspondence-ghost is-quiet';
+  decline.textContent = t('challenge.decline');
+  decline.addEventListener('click', () => {
+    decline.disabled = true;
+    error.hidden = true;
+    void fetch(`/api/correspondence/seeks/${encodeURIComponent(challenge.id)}/decline`, {
+      method: 'POST',
+    })
+      .then((res) => {
+        // 404: the challenger withdrew it or it lapsed; gone either way.
+        if (res.ok || res.status === 404) {
+          removeCard();
+          return;
+        }
+        throw new Error(`decline ${res.status}`);
+      })
+      .catch(() => {
+        decline.disabled = false;
+        error.textContent = t('correspondence.couldNotDecline');
+        error.hidden = false;
+      });
+  });
+  actions.append(accept, decline);
+
+  const details: string[] = [];
+  const side = accepterColorLabel(challenge.gameSpecId, challenge.preferredColor);
+  if (side) details.push(side);
+  const remaining = challenge.expiresAt
+    ? deadlineRemainingMs(challenge.expiresAt, Date.now())
+    : null;
+  if (remaining !== null && remaining > 0) {
+    details.push(t('correspondence.expiresIn', { time: formatDayClock(remaining) }));
+  }
+  const challenger = displayLiveName(challenge.challengerName, t('games.anonymous'));
+  card = buildSeekCard(
+    {
+      creatorHandle: challenge.challengerHandle ?? null,
+      creatorName: challenge.challengerName,
+      daysPerMove: challenge.daysPerMove,
+      gameSpecId: challenge.gameSpecId,
+      id: challenge.id,
+      rated: challenge.rated === true,
+    },
+    {
+      action: actions,
+      ariaLabel: t('correspondence.challengeFrom', {
+        name: challenger,
+        variant: variantDisplayLabel(challenge.gameSpecId),
+      }),
+      badge: false,
+      details,
+      href: `/challenge/${encodeURIComponent(challenge.id)}`,
+      side: accepterSide(challenge.preferredColor) ?? undefined,
+      status: error,
+      waiting: document.createTextNode(t('correspondence.waitingForYou')),
+      waitingAtBottom: true,
+    },
+  );
+  card.classList.add('is-incoming');
+  return card;
+}
+
 // Your own seek as a seek card (seek-card.ts, the same card as Open seeks):
 // the empty seat says who it is waiting for (a directed challenge links its
-// recipient by handle, fail-closed), your seat carries Copy link and Cancel.
+// recipient by handle, fail-closed); Copy link and Cancel sit in the card's
+// action row.
 export function buildOwnSeekCard(seek: OutgoingSeek, onChange: () => void): HTMLElement {
   const variant = variantDisplayLabel(seek.gameSpecId);
   let waiting: Node;

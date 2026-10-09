@@ -50,6 +50,7 @@ import { playerNameEl, profileTargetFor } from './profile-link.js';
 import { rememberedPveEngine } from './pve-memory.js';
 import { isCorrespondenceRatedModeEnabled, isRatedModeEnabled } from './rated-flag.js';
 import { postThroughRestart } from './room-create-retry.js';
+import { buildSeekAcceptAction } from './seek-accept.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildUiIcon, type UiIconName } from './ui-icon.js';
 import { renderVariantMarker } from './variant-markers.js';
@@ -1445,7 +1446,11 @@ export async function fetchCorrespondenceSeeks(): Promise<LobbyCorrespondenceFee
   return { status: 'ok', seeks: Array.isArray(data.seeks) ? data.seeks : [] };
 }
 
-export function corrSeekRow(seek: LobbyCorrespondenceSeek, locale: Locale): HTMLElement {
+export function corrSeekRow(
+  seek: LobbyCorrespondenceSeek,
+  locale: Locale,
+  options: { signedIn?: boolean } = {},
+): HTMLElement {
   // Correspondence seeks carry a creator name and no rating, so they keep their
   // own four-column grammar (player / game / pace / action) rather than the
   // real-time table's five.
@@ -1470,10 +1475,16 @@ export function corrSeekRow(seek: LobbyCorrespondenceSeek, locale: Locale): HTML
     mine.textContent = t('lobby.yours', {}, locale);
     row.append(who, game, time, mine);
   } else {
-    const join = document.createElement('a');
-    join.className = 'landing-lobby-join';
-    join.href = `/challenge/${encodeURIComponent(seek.id)}`;
-    join.textContent = t('play.join', {}, locale);
+    // Join accepts in place and lands in the room (seek-accept.ts); signed out
+    // it signs in and comes back to the seek's /challenge page.
+    const join = buildSeekAcceptAction({
+      className: 'landing-lobby-join',
+      label: t('play.join', {}, locale),
+      locale,
+      seek,
+      signedIn: options.signedIn,
+      surface: 'home-lobby',
+    });
     row.append(who, game, time, join);
   }
   return row;

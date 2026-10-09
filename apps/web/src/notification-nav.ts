@@ -277,7 +277,9 @@ export const challengesNotificationSource: NotificationSource = {
       entries: [
         {
           label: `${count} ${plural(count, 'challenge', 'challenges')} waiting for you`,
-          href: '/correspondence',
+          // The "Challenges for you" section, which lists the same rows
+          // (correspondence.ts INCOMING_ANCHOR).
+          href: '/correspondence#incoming',
           kind: 'challenge',
         },
       ],

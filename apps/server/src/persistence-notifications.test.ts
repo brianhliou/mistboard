@@ -8,6 +8,7 @@ import {
   createForumTopic,
   createUser,
   followUser,
+  listChallengesForUser,
   listForumCategories,
   markNotificationsSeen,
   unreadWatchedForumTopics,
@@ -257,6 +258,34 @@ definePersistenceTests('notifications', () => {
       ['notif_seek_live'],
     );
     assert.equal(await countIncomingChallenges('notif_challenged'), 0);
+  });
+
+  test('incoming-challenge count uses the list filter, board TTL included', async () => {
+    const now = new Date('2026-08-01T00:00:00Z');
+    await makeUser('notif_ttl_target', 'notifttltarget', now);
+    await makeUser('notif_ttl_sender', 'notifttlsender', now);
+    // A directed row with no stored expiry (written before challenges carried
+    // one) lapses on the board TTL like every other read, so the bell agrees
+    // with the "Challenges for you" list instead of counting it forever.
+    await createCorrespondenceSeek({
+      id: 'notif_seek_no_expiry',
+      creatorUserId: 'notif_ttl_sender',
+      gameSpecId: 'xiangqi',
+      daysPerMove: 3,
+      preferredColor: 'random',
+      targetUserId: 'notif_ttl_target',
+      visibility: 'private',
+      expiresAt: null,
+    });
+    assert.equal(await countIncomingChallenges('notif_ttl_target'), 1);
+    assert.equal((await listChallengesForUser('notif_ttl_target')).length, 1);
+
+    await runSql(
+      `UPDATE correspondence_seeks SET created_at = now() - interval '30 days' WHERE id = $1`,
+      ['notif_seek_no_expiry'],
+    );
+    assert.equal((await listChallengesForUser('notif_ttl_target')).length, 0);
+    assert.equal(await countIncomingChallenges('notif_ttl_target'), 0);
   });
 });
 

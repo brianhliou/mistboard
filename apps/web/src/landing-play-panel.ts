@@ -42,6 +42,7 @@ import { type ProfileTarget, playerNameEl, profileTargetFor } from './profile-li
 import './landing-play-panel.css';
 import { rememberedPveEngine } from './pve-memory.js';
 import { isCorrespondenceRatedModeEnabled, isRatedModeEnabled } from './rated-flag.js';
+import { buildSeekAcceptAction } from './seek-accept.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { renderVariantMarker } from './variant-markers.js';
 import { variantMiniIdForGameSpec } from './variants.js';
@@ -723,11 +724,16 @@ export function buildPlayPanel(
         action.className = 'pp-yours';
         action.textContent = t('lobby.panelYours', {}, locale);
       } else {
-        const link = document.createElement('a');
-        link.className = 'pp-act';
-        link.href = `/challenge/${encodeURIComponent(seek.id)}`;
-        link.textContent = t('play.join', {}, locale);
-        action = link;
+        // Join accepts in place and lands in the room, like the live offers
+        // above (seek-accept.ts); signed out it signs in first.
+        action = buildSeekAcceptAction({
+          className: 'pp-act',
+          label: t('play.join', {}, locale),
+          locale,
+          seek,
+          signedIn,
+          surface: 'home-panel',
+        });
       }
       rows.push(
         offerRow(
