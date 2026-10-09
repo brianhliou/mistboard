@@ -1250,29 +1250,49 @@
   flex: 1 1 auto;
   min-height: 0;
 }
-/* The book pops the explorer up over the BOTTOM of the moves box, not the whole
-   column: the top of the move list stays visible above it, the explorer fills
-   the lower portion and scrolls on its own, and the top border + shadow read as
-   a panel that rose over the list. Toggling the book hides it (see the [hidden]
-   rule in opening-explorer.css), restoring the full move list. */
-.review-rail-overlay {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  top: auto;
-  height: 62%;
-  max-height: 62%;
-  z-index: 6;
+/* The book opens the explorer (or the endgame table that stands in for it) as
+   the bottom section of the moves box, not a panel over it: the box keeps its
+   board-height footprint, the explorer takes at most 40% of it and scrolls the
+   rest of its rows and the top games inside, and the move list flexes into
+   whatever is left, so the current move is never hidden under it. Few rows
+   shrink it to fit. One border wraps both: the moves part drops its bottom
+   corners and the explorer closes the box, its square top edge flush against
+   the list. Selectors carry the wrapper so they outrank .opening-explorer's own
+   border and max-height whatever the bundle order. Toggling the book hides it
+   (the [hidden] rule in opening-explorer.css), restoring the full move list. */
+.review-rail-mainwrap > .review-rail-overlay {
+  flex: 0 1 auto;
+  min-height: 0;
   overflow-y: auto;
-  border-top: 1px solid var(--site-border);
-  border-radius: 6px 6px 0 0;
-  box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.16);
+  border: 1px solid var(--site-border);
+  border-top: 0;
+  border-radius: 0 0 6px 6px;
 }
-/* Footer host: the same "rose over the bottom of the list" grammar as the
-   explorer, but sized to its content and pinned to the box's bottom edge, which
-   is the board's bottom line. Retro mode's box mounts here. Transparent to
-   pointer input while empty so the move list underneath stays clickable. */
+.review-rail-mainwrap:has(> .review-rail-overlay:not([hidden])) > .review-rail-main {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+@media (min-width: 800px) {
+  .review-shell__right .review-rail-mainwrap:has(> .review-rail-overlay:not([hidden])) {
+    height: calc(var(--uni-board-width) / var(--uni-board-aspect, 1));
+  }
+  .review-shell__right
+    .review-rail-mainwrap:has(> .review-rail-overlay:not([hidden]))
+    > .review-rail-main {
+    flex: 1 1 0;
+    height: auto;
+  }
+  .review-shell__right .review-rail-mainwrap > .review-rail-overlay {
+    max-height: 40%;
+  }
+  .review-shell__cluster--gauge .review-shell__right .review-rail-mainwrap > .review-rail-overlay {
+    border-bottom-left-radius: 0;
+  }
+}
+/* Footer host: a panel that rises over the bottom of the list, sized to its
+   content and pinned to the box's bottom edge, which is the board's bottom
+   line. Retro mode's box mounts here. Transparent to pointer input while empty
+   so the move list underneath stays clickable. */
 .review-rail-footer {
   position: absolute;
   left: 0;

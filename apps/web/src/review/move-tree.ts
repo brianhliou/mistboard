@@ -131,6 +131,21 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
   const rows = document.createElement('ol');
   rows.className = 'review-move-list__rows';
   panel.append(rows);
+  // When the list's box shrinks (the opening explorer opening below it, or its
+  // rows landing and growing it), keep the current move in view; otherwise the
+  // highlighted ply sits below the fold until the next step. Shrinks only, so a
+  // list growing back never yanks a reader who scrolled away.
+  if (typeof ResizeObserver !== 'undefined') {
+    let lastHeight = 0;
+    new ResizeObserver(() => {
+      const height = rows.clientHeight;
+      const shrank = height < lastHeight;
+      lastHeight = height;
+      if (!shrank) return;
+      const current = rows.querySelector<HTMLElement>('.review-move-list__move--current');
+      if (current) revealInScroller(current);
+    }).observe(rows);
+  }
 
   // path key → its move cell, rebuilt each render.
   let cells = new Map<string, HTMLButtonElement>();
