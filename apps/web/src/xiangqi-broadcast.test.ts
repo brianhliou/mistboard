@@ -1377,6 +1377,41 @@ describe('mountXiangqiBroadcastBoard (finished board on the review shell)', () =
       { surface: 'board', tour_slug: 't', round_id: 'r', board_status: 'complete', locale: 'en' },
     ]);
   });
+
+  it("marks a record-less sibling in the board page's game list as nothing to open", async () => {
+    const noRecord = fixtureBoard({
+      n: 3,
+      red: '吴宗翰',
+      redEn: 'Wu Zonghan',
+      black: '郑彦隆',
+      blackEn: 'Zheng Yanlong',
+      moves: [],
+      status: 'complete',
+      result: '0-1',
+    });
+    stubFetchJson((url) =>
+      url.includes('/api/xiangqi/broadcasts/boards/')
+        ? COMPLETE
+        : { ...ROUND, boards: [COMPLETE.board, noRecord] },
+    );
+    stubEventSource();
+
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastBoard(root, 't-r-b1');
+
+    const rows = [...root.querySelectorAll<HTMLElement>('.xqb-side-rail .xqb-rail-row')];
+    expect(rows).toHaveLength(2);
+    const [current, sibling] = rows;
+    // The open board stays the marked, ordinary row.
+    expect(current?.classList.contains('xqb-rail-row-current')).toBe(true);
+    expect(current?.querySelector('.xqb-rail-no-record')).toBeNull();
+    expect(sibling?.tagName).toBe('DIV');
+    expect(sibling?.hasAttribute('href')).toBe(false);
+    expect(sibling?.querySelector('a, button, [tabindex]')).toBeNull();
+    expect(sibling?.classList.contains('xqb-rail-row-no-record')).toBe(true);
+    expect(sibling?.querySelector('.xqb-rail-no-record')?.textContent).toBe('No record published');
+    expect(sibling?.textContent).toContain('Wu Zonghan');
+  });
 });
 
 describe('broadcastPageForPath (in-place navigation)', () => {
@@ -1673,6 +1708,25 @@ describe("results-only boards (a round page's pairing and result, no moves)", ()
     const rows = [...root.querySelectorAll('.xqb-rail-row')];
     expect(rows.map((row) => row.tagName)).toEqual(['A', 'DIV']);
     expect(rows[1]?.classList.contains('xqb-rail-row-no-moves')).toBe(true);
+    // The game list says which rows open before the cursor does: the
+    // record-less row is dimmed under the grid card's caption, has no href
+    // and takes no focus; the played row is a plain link.
+    const [playedRow, noRecordRow] = rows as HTMLElement[];
+    expect(noRecordRow?.classList.contains('xqb-rail-row-no-record')).toBe(true);
+    expect(noRecordRow?.querySelector('.xqb-rail-no-record')?.textContent).toBe(
+      'No record published',
+    );
+    expect(noRecordRow?.hasAttribute('href')).toBe(false);
+    expect(noRecordRow?.hasAttribute('tabindex')).toBe(false);
+    expect(noRecordRow?.querySelector('a, button, [tabindex]')).toBeNull();
+    // Players and result still show.
+    expect(noRecordRow?.textContent).toContain('Zheng Yanlong');
+    expect(
+      [...(noRecordRow?.querySelectorAll('.xqb-score') ?? [])].map((node) => node.textContent),
+    ).toEqual(['1', '0']);
+    expect(playedRow?.getAttribute('href')).toBe('/broadcast/xiangqi/board/t-r-b1');
+    expect(playedRow?.classList.contains('xqb-rail-row-no-record')).toBe(false);
+    expect(playedRow?.querySelector('.xqb-rail-no-record')).toBeNull();
   });
 
   it('an individual championship is not read as team matches', async () => {
