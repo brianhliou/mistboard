@@ -123,6 +123,24 @@ test('back-and-forth chase: the chaser may not repeat a position a third time', 
   assert.ok(hasMove(legal, mv('h1', 'g1')));
 });
 
+test('the view carries the forbidden chase only for the seat to move', () => {
+  const s = playAll(redToMove(openBoard(), mv('e2', 'd2')), repeat(SHUTTLE, 2));
+  const third = SHUTTLE[0]!;
+  assert.deepEqual(getBanqiPlayerView(s, 'red').forbiddenMoves, [third]);
+  assert.ok(!('forbiddenMoves' in getBanqiPlayerView(s, 'black')), 'not on the waiting seat');
+  // Before the third occurrence is in reach, nothing is forbidden and the field is absent.
+  const early = playAll(redToMove(openBoard(), mv('e2', 'd2')), SHUTTLE);
+  assert.ok(!('forbiddenMoves' in getBanqiPlayerView(early, 'red')));
+  // A legacy-rule game never carries it, even at the same position.
+  const legacy = playAll(redToMove(openBoard(), mv('e2', 'd2'), null), [
+    ...SHUTTLE,
+    ...SHUTTLE.slice(0, 3),
+  ]);
+  const legacyAtThird = applyBanqiMove(legacy, SHUTTLE[3]!);
+  assert.equal(legacyAtThird.status.type, 'playing');
+  assert.ok(!('forbiddenMoves' in getBanqiPlayerView(legacyAtThird, 'red')));
+});
+
 test('legacy rule (off): the same shuttle is a threefold draw on ply 9', () => {
   let s = redToMove(openBoard(), mv('e2', 'd2'), null);
   let plies = 0;

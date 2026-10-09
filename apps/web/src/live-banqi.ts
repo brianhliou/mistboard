@@ -31,7 +31,12 @@ import { banqiEnabled } from './feature-flags.js';
 import { renderHiddenPoolPanel } from './hidden-pool-panel.js';
 import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
 import { t } from './i18n/catalog.js';
-import { banqiClickResult } from './live-banqi-interaction.js';
+import {
+  type BanqiChaseBubble,
+  createBanqiChaseBubble,
+  noticeReadMs,
+} from './live-banqi-chase-bubble.js';
+import { banqiClickResult, banqiForbiddenMove } from './live-banqi-interaction.js';
 import {
   animateBanqiBoardMove,
   BANQI_PIECE_PX,
@@ -92,6 +97,9 @@ export type BanqiWireView = {
   lastMove?: BanqiMove;
   // The 長捉 rule the game is played under; absent on a pre-rule game (rule off).
   chaseRule?: BanqiChaseRule;
+  // The seat to move's board moves the 長捉 rule forbids right now; absent when
+  // none, on the other seat's view, and for spectators.
+  forbiddenMoves?: BanqiMove[];
 };
 
 type BanqiMoveEvent = TenantMovePlayed<BanqiSeat, BanqiMove>;
@@ -105,6 +113,13 @@ let annotations: BoardAnnotations | null = null;
 // The square a piece is being dragged from (its piece is lifted off the board so
 // only the floating ghost shows). Null when not dragging.
 let draggingFrom: BanqiSquare | null = null;
+// The move the player tried that the 長捉 rule forbids: its ply and the cross's
+// square. The notice is a bubble on the board over that square, up until the
+// next selection, a move, a ply change, a click elsewhere, or noticeReadMs.
+// Null when no notice is up.
+let chaseNotice: { ply: number; square: BanqiSquare; from: BanqiSquare | null } | null = null;
+let chaseNoticeTimer: ReturnType<typeof setTimeout> | null = null;
+let chaseBubble: BanqiChaseBubble | null = null;
 // Snapshot extras that ride the frame (read by the chrome + play-again body).
 let roomMode: 'pve' | 'pvp' = 'pvp';
 let pveEngineId: string | null = null;
@@ -179,6 +194,7 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
   resetState: () => {
     selectedSquare = null;
     draggingFrom = null;
+    clearChaseNotice();
     roomMode = 'pvp';
     pveEngineId = null;
   },
@@ -204,7 +220,9 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
     const undone = pending.prevView?.lastMove;
     if (undone) animateBanqiBoardMove(liveRefs.board, undone, { reverse: true });
   },
-  renderExtras: (refs, view) => renderCapturedPools(refs, view),
+  renderExtras: (refs, view) => {
+    renderCapturedPools(refs, view);
+  },
   onDisabled: (refs) => {
     // renderCapturedPools ran before the enabled guard in the original, so it
     // paints even when the flag is off; then the selection clears.
@@ -213,6 +231,7 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
   },
   setup: (ctx) => {
     core = ctx;
+    chaseBubble = createBanqiChaseBubble(ctx.refs.board);
     installBanqiBoardStyles();
     installBanqiBoardInteraction(ctx.refs);
     placeHiddenPoolUnderBoard(ctx.refs);
@@ -227,6 +246,7 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
       clearSelection: () => {
         selectedSquare = null;
         draggingFrom = null;
+        clearChaseNotice();
         if (core) renderBoard(core.refs, core.displayedView());
       },
     });
@@ -306,15 +326,54 @@ function renderBoard(liveRefs: LiveRefs, view: BanqiWireView | null): void {
     legalMoves: selectedSquare
       ? view.legalMoves.filter((move) => move.from === selectedSquare && move.to !== move.from)
       : [],
+    forbiddenMoves: selectedSquare ? (view.forbiddenMoves ?? []) : [],
   });
   // Click + drag are delegated to the persistent board container once at mount
   // (installBanqiBoardInteraction), so they survive these innerHTML re-renders.
+  syncChaseNotice(view);
+}
+
+// The 長捉 bubble rides the board: a new ply, a finished game or a step back
+// into the replay ends it; otherwise it re-anchors to the redrawn cross.
+function syncChaseNotice(view: BanqiWireView): void {
+  if (!chaseNotice) return;
+  if (view.status.type !== 'playing' || view.ply !== chaseNotice.ply || !core?.replay.isLive()) {
+    clearChaseNotice();
+    return;
+  }
+  chaseBubble?.sync();
+}
+
+function showChaseNotice(view: BanqiWireView, square: BanqiSquare, from: BanqiSquare | null): void {
+  chaseNotice = { ply: view.ply, square, from };
+  if (chaseNoticeTimer) clearTimeout(chaseNoticeTimer);
+  chaseNoticeTimer = setTimeout(
+    () => {
+      chaseNoticeTimer = null;
+      clearChaseNotice();
+    },
+    noticeReadMs(t('live.banqiChaseForbidden')),
+  );
+}
+
+function clearChaseNotice(): void {
+  if (chaseNoticeTimer) clearTimeout(chaseNoticeTimer);
+  chaseNoticeTimer = null;
+  chaseNotice = null;
+  chaseBubble?.clear();
 }
 
 function handleSquareClick(view: BanqiWireView, square: BanqiSquare): void {
   if (!core?.replay.isLive() || core.connection() !== 'connected') return;
   const result = banqiClickResult(view, core.state.seat, selectedSquare, square);
   if (result.kind === 'noop') return;
+  if (result.kind === 'forbidden') {
+    // Nothing is sent: the selection stays so the cross stays in view, and the
+    // bubble over it says why the move did not happen.
+    showChaseNotice(view, square, selectedSquare);
+    return;
+  }
+  clearChaseNotice();
   if (result.kind === 'select') {
     selectedSquare = result.square;
     return;
@@ -349,6 +408,9 @@ function installBanqiBoardInteraction(liveRefs: LiveRefs): void {
       if (!view) return;
       handleSquareClick(view, square as BanqiSquare);
       renderBoard(liveRefs, view);
+      // Shown after the render so it anchors to the cross just drawn.
+      if (chaseNotice)
+        chaseBubble?.show(chaseNotice.square, chaseNotice.from, t('live.banqiChaseForbidden'));
     },
     canDragFrom: (square) => canDragBanqiPiece(square as BanqiSquare),
     ghostHtml: (square) => {
@@ -388,13 +450,21 @@ function dropBanqiPiece(liveRefs: LiveRefs, from: BanqiSquare, to: BanqiSquare |
       : undefined;
   if (move && view && core) {
     selectedSquare = null;
+    clearChaseNotice();
     if (core.send({ type: 'move', from: move.from, to: move.to })) {
       playSound(soundForOwnBanqiMove(view, move));
     }
+  } else if (to && view && banqiForbiddenMove(view, from, to)) {
+    // Dropped on a 長捉 cross: keep the piece selected and say why.
+    selectedSquare = from;
+    showChaseNotice(view, to, from);
   } else {
     selectedSquare = null;
+    clearChaseNotice();
   }
   if (core?.state.view) renderBoard(liveRefs, core.state.view);
+  if (chaseNotice)
+    chaseBubble?.show(chaseNotice.square, chaseNotice.from, t('live.banqiChaseForbidden'));
 }
 
 // ── Material: captured pools + the face-down pool ────────────────────────────

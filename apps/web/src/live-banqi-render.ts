@@ -94,6 +94,9 @@ export type BanqiBoardRenderOptions = {
   // Board moves of the selected piece (flips excluded — a face-down tile is
   // clicked directly to flip, so it needs no target dot).
   legalMoves?: readonly BanqiMove[];
+  // Moves of the selected piece that the 長捉 rule forbids (view.forbiddenMoves):
+  // each destination gets a red cross where its dot would be. Interactive only.
+  forbiddenMoves?: readonly BanqiMove[];
   pieceSet?: XiangqiPieceSet;
   // While dragging, render the origin as a dim source shadow.
   draggingFrom?: BanqiSquare | null;
@@ -293,6 +296,16 @@ function selectionRing(selection: BanqiSquare | null): string {
 // fills 90% of its cell. Same radius in the static and interactive layers.
 const CAPTURE_RING_R = PIECE_SIZE / 2;
 const HINT_DOT_R = 10;
+// Half the arm span of the 長捉 cross: a little wider than the dot it replaces, so
+// it reads as a mark rather than a smudge, still well inside the empty cell.
+const FORBIDDEN_CROSS_HALF = 9;
+
+// A red cross where a legal-move dot would be: the move exists, but the 長捉 rule
+// forbids it right now. Chase moves are quiet, so the cell is always empty.
+function forbiddenCross(x: number, y: number): string {
+  const h = FORBIDDEN_CROSS_HALF;
+  return `<path class="banqi-hint-forbidden" d="M${x - h} ${y - h}L${x + h} ${y + h}M${x + h} ${y - h}L${x - h} ${y + h}"/>`;
+}
 
 // Drawn ABOVE the piece layer, where the interactive hit layer draws the same
 // marks: a capture ring sits around the target piece, and under the pieces it
@@ -346,7 +359,11 @@ function lastMoveMarkers(view: BanqiPlayerView): string {
   );
 }
 
-function hitLayerWithTargets(moves: readonly BanqiMove[], view?: BanqiPlayerView): string {
+function hitLayerWithTargets(
+  moves: readonly BanqiMove[],
+  view?: BanqiPlayerView,
+  forbiddenMoves: readonly BanqiMove[] = [],
+): string {
   const targets = new Map<BanqiSquare, { capture: boolean }>();
   if (view) {
     for (const move of moves) {
@@ -354,9 +371,13 @@ function hitLayerWithTargets(moves: readonly BanqiMove[], view?: BanqiPlayerView
       targets.set(move.to, { capture: !!occupant && !occupant.faceDown });
     }
   }
+  const forbidden = new Set(forbiddenMoves.map((move) => move.to));
   return ALL_BANQI_SQUARES.map((square) => {
     const { x, y } = cellCenter(square);
     const target = targets.get(square);
+    if (!target && forbidden.has(square)) {
+      return `<g data-square="${square}" data-forbidden-move="true" class="banqi-hit banqi-hit--forbidden">${forbiddenCross(x, y)}<rect x="${x - HIT_HALF}" y="${y - HIT_HALF}" width="${HIT_HALF * 2}" height="${HIT_HALF * 2}"/></g>`;
+    }
     const marker = target
       ? target.capture
         ? `<circle class="banqi-hint-capture" cx="${x}" cy="${y}" r="${CAPTURE_RING_R}"/>`
@@ -380,6 +401,11 @@ export function renderBanqiBoardSvg(
   const moves = options.selectedSquare
     ? (options.legalMoves ?? []).filter((m) => m.from === options.selectedSquare)
     : [];
+  const forbiddenMoves = options.selectedSquare
+    ? (options.forbiddenMoves ?? []).filter(
+        (m) => m.from === options.selectedSquare && m.to !== m.from,
+      )
+    : [];
   return `
     <svg class="banqi-board" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Banqi board">
       <rect class="banqi-board-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}" rx="${boardCornerRadius(WIDTH)}"/>
@@ -390,7 +416,7 @@ export function renderBanqiBoardSvg(
       ${options.interactive ? '' : moveHints(view, moves)}
       <g class="banqi-board-markers xq-live-markers" aria-hidden="true" pointer-events="none">${(options.markers ?? []).map(banqiMarkerSvg).join('')}</g>
       <g class="banqi-board-arrows xq-live-arrows" aria-hidden="true" pointer-events="none">${(options.arrows ?? []).map(banqiArrowSvg).join('')}</g>
-      ${options.interactive ? hitLayerWithTargets(moves, view) : ''}
+      ${options.interactive ? hitLayerWithTargets(moves, view, forbiddenMoves) : ''}
     </svg>
   `;
 }
@@ -428,6 +454,17 @@ export const BANQI_BOARD_CSS = `
     .banqi-hint-capture {
       fill: none; stroke: rgba(31, 111, 91, 0.85); stroke-width: 4.5; pointer-events: none;
     }
+    /* The 長捉 cross. The board surface keeps its wood colour in both site themes
+       (it follows the board theme, not light/dark), so one red reads on all of
+       them; the token lets a board theme override it. */
+    .banqi-hint-forbidden {
+      fill: none;
+      stroke: var(--banqi-forbidden-mark, rgba(178, 34, 28, 0.85));
+      stroke-width: 4;
+      stroke-linecap: round;
+      pointer-events: none;
+    }
+    .banqi-hit.banqi-hit--forbidden rect { cursor: not-allowed; }
     .banqi-target-hover {
       fill: rgba(31, 111, 91, 0.3);
       opacity: 0;

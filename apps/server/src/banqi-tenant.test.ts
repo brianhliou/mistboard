@@ -216,3 +216,40 @@ test('every banqi kernel end reason maps to a persistable GameTermination', () =
   // The no-progress draw specifically — the reason that was being dropped.
   assert.equal(banqiTenant.persistence.termination('no-progress'), 'progress-clock');
 });
+
+test('the 長捉 forbidden moves reach the seat to move only, never a spectator', () => {
+  // Red's advisor shuttles c3/c2 after black's chariot on d2/d3; after two loops
+  // the next c3-c2 would repeat a position a third time.
+  let state: Parameters<typeof getBanqiClientView>[0] = {
+    id: 'bq_chase_view',
+    board: {
+      c3: { color: 'red', role: 'advisor', faceDown: false },
+      d2: { color: 'black', role: 'chariot', faceDown: false },
+      h1: { color: 'red', role: 'soldier', faceDown: false },
+      a4: { color: 'black', role: 'soldier', faceDown: false },
+      f4: { color: 'black', role: 'horse', faceDown: true },
+    },
+    status: { type: 'playing', turn: 'red' },
+    ply: 10,
+    firstColor: 'red',
+    moveNumber: 6,
+    noProgressClock: 0,
+    repCounts: {},
+    captures: [],
+    lastMove: { from: 'e2', to: 'd2' },
+  };
+  const shuttle: BanqiMove[] = [
+    { from: 'c3', to: 'c2' },
+    { from: 'd2', to: 'd3' },
+    { from: 'c2', to: 'c3' },
+    { from: 'd3', to: 'd2' },
+  ];
+  for (const move of [...shuttle, ...shuttle]) state = applyBanqiMove(state, move);
+
+  const red = getBanqiClientView(state, { id: 'r', seat: 'red', solo: false });
+  assert.deepEqual(red.forbiddenMoves, [{ from: 'c3', to: 'c2' }]);
+  const black = getBanqiClientView(state, { id: 'b', seat: 'black', solo: false });
+  assert.ok(!('forbiddenMoves' in black), 'the waiting seat gets none');
+  const spectator = getBanqiClientView(state, { id: 's', seat: 'spectator', solo: false });
+  assert.ok(!('forbiddenMoves' in spectator), 'a spectator gets none');
+});

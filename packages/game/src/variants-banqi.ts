@@ -180,6 +180,12 @@ export type BanqiPlayerView = {
   // from its deal passes it back as BanqiRules (banqiRulesFromView). Absent means
   // the rule is off, so a game created before it shipped replays as it was played.
   chaseRule?: BanqiChaseRule;
+  // The board moves the 長捉 rule takes away from this seat right now (see
+  // "Perpetual chase"), so the client can mark them instead of silently not
+  // offering them. Present only on the seat to move's own view, and only when
+  // non-empty. Derived from public information (face-up pieces, occupancy and the
+  // move list); it says nothing about any face-down tile.
+  forbiddenMoves?: BanqiMove[];
 };
 
 // ── Geometry (8×4, self-contained — NOT the 9×10 xiangqi helpers) ────────────
@@ -873,7 +879,18 @@ export function getBanqiPlayerView(state: BanqiGameState, seat: BanqiSeat): Banq
     moveNumber: state.moveNumber,
     lastMove: state.lastMove,
     ...chaseRuleViewField(state),
+    ...forbiddenMovesViewField(state, seat),
   };
+}
+
+/** The view's `forbiddenMoves` field: the seat to move's own, and only when non-empty. */
+function forbiddenMovesViewField(
+  state: BanqiGameState,
+  seat: BanqiSeat,
+): { forbiddenMoves?: BanqiMove[] } {
+  if (state.status.type !== 'playing' || banqiSeatToMove(state) !== seat) return {};
+  const forbidden = getBanqiForbiddenChaseMoves(state);
+  return forbidden.length > 0 ? { forbiddenMoves: forbidden } : {};
 }
 
 /**

@@ -481,6 +481,7 @@ export const ZH_HANT_PLAY = {
   'live.checkTitle': '將軍',
   'live.atomicCheckYour': '你的將帥下一步可能被吃或被炸。這樣的重複將軍會判負。',
   'live.atomicCheckColor': '{color}的將帥下一步可能被吃或被炸。這樣的重複將軍會判負。',
+  'live.banqiChaseForbidden': '長捉：這步棋會讓同一局面第三次出現。請走別的著法。',
   'lobby.panelTabComputer': '與電腦對弈',
   'lobby.panelTabPerson': '與真人對弈',
   'lobby.panelPlayAgain': '再來一局',

@@ -481,6 +481,7 @@ export const ZH_HANS_PLAY = {
   'live.checkTitle': '将军',
   'live.atomicCheckYour': '你的将帅下一步可能被吃或被炸。这样的重复将军会判负。',
   'live.atomicCheckColor': '{color}的将帅下一步可能被吃或被炸。这样的重复将军会判负。',
+  'live.banqiChaseForbidden': '长捉：这步棋会让同一局面第三次出现。请走别的着法。',
   'lobby.panelTabComputer': '与电脑对弈',
   'lobby.panelTabPerson': '与真人对弈',
   'lobby.panelPlayAgain': '再来一局',

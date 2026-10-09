@@ -75,5 +75,6 @@ function replay(
 }
 
 function projectPly(state: BanqiGameState, perspective: BanqiSeat): BanqiWireView {
-  return { ...getBanqiPlayerView(state, perspective), legalMoves: [] } as BanqiWireView;
+  const { forbiddenMoves: _live, ...view } = getBanqiPlayerView(state, perspective);
+  return { ...view, legalMoves: [] } as BanqiWireView;
 }

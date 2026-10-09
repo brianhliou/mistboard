@@ -125,8 +125,11 @@ export function getBanqiClientView(
   // symmetric hidden-identity, so either seat's masked view IS the public view;
   // it differs per seat only in the candidate moves, which a spectator has no
   // use for. The deal stays hidden exactly as it is from the players.
+  // The 長捉 forbidden moves are the seat to move's own move hints, so they go
+  // with legalMoves.
   if (client.seat === 'spectator') {
-    return { ...getBanqiPlayerView(state, BANQI_SEATS[0]), legalMoves: [] };
+    const { forbiddenMoves: _seatOnly, ...view } = getBanqiPlayerView(state, BANQI_SEATS[0]);
+    return { ...view, legalMoves: [] };
   }
   return getBanqiPlayerView(state, client.seat);
 }
@@ -141,7 +144,7 @@ export function getBanqiClientView(
 // reconstructed a whole deal from exactly that public data to build the rules
 // page (commit f2ad3e9). The room was the last surface still withholding it.
 export function getBanqiTruthView(state: BanqiGameState): BanqiPlayerView {
-  const base = getBanqiPlayerView(state, BANQI_SEATS[0]);
+  const { forbiddenMoves: _seatOnly, ...base } = getBanqiPlayerView(state, BANQI_SEATS[0]);
   const board: BanqiPlayerView['board'] = {};
   for (const [square, piece] of Object.entries(state.board)) {
     if (!piece) continue;
