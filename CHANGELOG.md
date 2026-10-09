@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- The play panel's live player count has its own line, and the inbox message box grows as you type ([105d81c7](https://github.com/brianhliou/mistboard/commit/105d81c7))
 - Every Chinese chess board draws one soft shadow under its pieces, with a Piece shadow switch in Board appearance ([ce868b07](https://github.com/brianhliou/mistboard/commit/ce868b07))
 - Chinese-reading players start with 楚河 漢界 in the river ([ce868b07](https://github.com/brianhliou/mistboard/commit/ce868b07))
 - Start a game on /correspondence is now a bar across the top, so more of your games fit on each row ([ce868b07](https://github.com/brianhliou/mistboard/commit/ce868b07))
@@ -58,6 +59,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- Every game board in a blog article now has the engine's advantage chart under it; click the chart to jump to a move ([105d81c7](https://github.com/brianhliou/mistboard/commit/105d81c7))
 - Game studies list each game as players, date and result, grouped by event, with Chinese event names in English ([ce868b07](https://github.com/brianhliou/mistboard/commit/ce868b07))
 - Tony Fung 冯家俊's page now covers his Asian Individual Championship win in Manila, Hong Kong's first, with the final against Wang Yubo on the board ([ce868b07](https://github.com/brianhliou/mistboard/commit/ce868b07))
 - The longest forced mates in xiangqi: seven endgame tablebase records against the full guard, each played out in a study, in English and Chinese ([a1db4208](https://github.com/brianhliou/mistboard/commit/a1db4208))
@@ -87,6 +89,8 @@ Conventions:
 
 ### Watching and review
 
+- Move times draws each side's thinking time above and below a centre line with both clocks behind it, names the move and both clocks on hover, and totals each side's time ([105d81c7](https://github.com/brianhliou/mistboard/commit/105d81c7))
+- Broadcast game lists mark the boards that have no published record ([105d81c7](https://github.com/brianhliou/mistboard/commit/105d81c7))
 - The opening explorer now takes at most 40% of the move column, so more moves stay visible ([ce868b07](https://github.com/brianhliou/mistboard/commit/ce868b07))
 - Review pages, studies and live rooms share one move bar, with flip, the opening book and analysis in its menu, and a live jieqi room can step back after a reload ([c746143c](https://github.com/brianhliou/mistboard/commit/c746143c))
 - 2026 North American Xiangqi Championship (Houston), all 9 rounds with 75 game records from dpxq ([efb647e8](https://github.com/brianhliou/mistboard/commit/efb647e8))
@@ -126,6 +130,7 @@ Conventions:
 
 ### Community
 
+- The homepage chat announces only wins over a top bot, one line per player a day ([105d81c7](https://github.com/brianhliou/mistboard/commit/105d81c7))
 - You can now see who follows you: the bell names each new follower, and a private Followers tab sits beside Following on your Friends page ([c746143c](https://github.com/brianhliou/mistboard/commit/c746143c))
 - The contribute page asks players who read Chinese to review one rules page or lesson of the machine translation, and every Chinese rules page links to it ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
 - The leaderboard shows every speed that has rated players, provisional ratings marked with ? ([99752abc](https://github.com/brianhliou/mistboard/commit/99752abc))
@@ -169,6 +174,10 @@ Conventions:
 
 ### Fixed
 
+- Starting another game withdraws your open seek, so no one is matched with a player who already left ([105d81c7](https://github.com/brianhliou/mistboard/commit/105d81c7))
+- Jieqi bots that are winning no longer walk into a repetition draw ([105d81c7](https://github.com/brianhliou/mistboard/commit/105d81c7))
+- Share and download images of games are sharp again; the pieces were blurry ([105d81c7](https://github.com/brianhliou/mistboard/commit/105d81c7))
+- Results-only team league broadcasts show the right players on every board ([105d81c7](https://github.com/brianhliou/mistboard/commit/105d81c7))
 - River text now shows on Jieqi and Fortress boards; profile badges line up and the "games" count is no longer clipped ([ce868b07](https://github.com/brianhliou/mistboard/commit/ce868b07))
 - The homepage and Watch board leave a live game after a minute without a move instead of sitting on an abandoned game until the clock runs out ([ce868b07](https://github.com/brianhliou/mistboard/commit/ce868b07))
 - Your own Fog Xiangqi and Fog Chess seeks show your side's board, and every seek is drawn from the side you chose ([ce868b07](https://github.com/brianhliou/mistboard/commit/ce868b07))
