@@ -392,6 +392,7 @@ export async function currentGameBoardPayload(
     composition: game.composition,
     gameSpecId: game.gameSpecId,
     lastActivityAt: game.lastActivityAt ?? 0,
+    lastMoveAt: game.lastActivityAt ?? 0,
     players: game.players.map((player) => ({
       color: player.color,
       isEngine: player.isEngine,

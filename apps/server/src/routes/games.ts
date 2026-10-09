@@ -296,7 +296,11 @@ export async function tryHandle(
       return true;
     }
     const now = new Date();
-    const featured = electLiveTvFeatured(channelId, collectLiveTvCandidates(ctx, now.getTime()));
+    const featured = electLiveTvFeatured(
+      channelId,
+      collectLiveTvCandidates(ctx, now.getTime()),
+      now.getTime(),
+    );
     if (!featured) {
       writeJson(response, 200, { channel: channelId, featured: null, now: now.toISOString() });
       return true;
