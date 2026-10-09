@@ -26,6 +26,8 @@ Conventions:
 
 ### Playing
 
+- Banqi forbids a chasing move that would repeat a position a third time (長捉), so a chase can no longer force a repetition draw; the forbidden move shows as a red cross, with a note on the board when you press it ([411963fd](https://github.com/brianhliou/mistboard/commit/411963fd))
+- Accept an open correspondence game right from /games and the homepage; each card says which side you play, and a shared seek page now says who is looking for a game ([411963fd](https://github.com/brianhliou/mistboard/commit/411963fd))
 - The play panel's live player count has its own line, and the inbox message box grows as you type ([105d81c7](https://github.com/brianhliou/mistboard/commit/105d81c7))
 - Every Chinese chess board draws one soft shadow under its pieces, with a Piece shadow switch in Board appearance ([ce868b07](https://github.com/brianhliou/mistboard/commit/ce868b07))
 - Chinese-reading players start with 楚河 漢界 in the river ([ce868b07](https://github.com/brianhliou/mistboard/commit/ce868b07))
@@ -89,6 +91,7 @@ Conventions:
 
 ### Watching and review
 
+- Finished games on /games show each player's name above or below the board on their own side, so long names fit ([411963fd](https://github.com/brianhliou/mistboard/commit/411963fd))
 - Move times draws each side's thinking time above and below a centre line with both clocks behind it, names the move and both clocks on hover, and totals each side's time ([105d81c7](https://github.com/brianhliou/mistboard/commit/105d81c7))
 - Broadcast game lists mark the boards that have no published record ([105d81c7](https://github.com/brianhliou/mistboard/commit/105d81c7))
 - The opening explorer now takes at most 40% of the move column, so more moves stay visible ([ce868b07](https://github.com/brianhliou/mistboard/commit/ce868b07))
@@ -174,6 +177,9 @@ Conventions:
 
 ### Fixed
 
+- Fog Xiangqi, Fog Chess, banqi and Flip Jungle games keep your move history after a reload, so you can click back through earlier moves and see the board as you saw it then ([411963fd](https://github.com/brianhliou/mistboard/commit/411963fd))
+- Challenges sent to you now appear at the top of /correspondence with Accept and Decline, and the bell's challenge count opens them ([411963fd](https://github.com/brianhliou/mistboard/commit/411963fd))
+- The longest forced mates article no longer shows the same game twice; its 困毙 section now plays the end of the two cannons mate in 52 ([411963fd](https://github.com/brianhliou/mistboard/commit/411963fd))
 - Starting another game withdraws your open seek, so no one is matched with a player who already left ([105d81c7](https://github.com/brianhliou/mistboard/commit/105d81c7))
 - Jieqi bots that are winning no longer walk into a repetition draw ([105d81c7](https://github.com/brianhliou/mistboard/commit/105d81c7))
 - Share and download images of games are sharp again; the pieces were blurry ([105d81c7](https://github.com/brianhliou/mistboard/commit/105d81c7))
