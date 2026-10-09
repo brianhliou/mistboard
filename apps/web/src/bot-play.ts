@@ -1,4 +1,5 @@
 import { type GameStartSource, rememberGameStartSource } from './game-start-source.js';
+import { withdrawLobbySeeks } from './lobby-seek-registry.js';
 import { rememberPveEngine } from './pve-memory.js';
 import { postThroughRestart } from './room-create-retry.js';
 
@@ -15,6 +16,10 @@ export type BotPlayRequest = {
 };
 
 export async function createBotGame(request: BotPlayRequest): Promise<string> {
+  // A seek still open on this page would pair the next joiner into a room
+  // nobody enters once this tab leaves for the bot game.
+  const withdrawing = withdrawLobbySeeks();
+  if (withdrawing) await withdrawing;
   const response = await postThroughRestart('/api/rooms', {
     method: 'POST',
     headers: { accept: 'application/json', 'content-type': 'application/json' },
