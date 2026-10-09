@@ -532,7 +532,7 @@ describe('activity rows', () => {
       activity('g', 0, { handle: null, opponent: 'Fairy-Stockfish Level 8' }),
       'en',
     );
-    expect(guestWin.textContent).toBe('A guest beat top bot Fairy-Stockfish Level 8 at Xiangqi');
+    expect(guestWin.textContent).toBe('A guest beat Fairy-Stockfish Level 8, a top Xiangqi bot');
     expect([...guestWin.querySelectorAll('strong')].map((el) => el.textContent)).toEqual([
       'Fairy-Stockfish Level 8',
     ]);
@@ -543,7 +543,7 @@ describe('activity rows', () => {
       activity('st', 0, { handle: null, opponent: 'Pikafish', count: 3 }),
       'en',
     );
-    expect(streak.textContent).toBe('A guest beat top bot Pikafish at Xiangqi 3 times');
+    expect(streak.textContent).toBe('A guest beat Pikafish, a top Xiangqi bot, 3 times');
 
     // A day's wins over more than one top bot or variant name neither.
     const mixed = document.createElement('a');
