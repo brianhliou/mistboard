@@ -26,6 +26,9 @@ Conventions:
 
 ### Playing
 
+- Every Chinese chess board draws one soft shadow under its pieces, with a Piece shadow switch in Board appearance ([ce868b07](https://github.com/brianhliou/mistboard/commit/ce868b07))
+- Chinese-reading players start with 楚河 漢界 in the river ([ce868b07](https://github.com/brianhliou/mistboard/commit/ce868b07))
+- Start a game on /correspondence is now a bar across the top, so more of your games fit on each row ([ce868b07](https://github.com/brianhliou/mistboard/commit/ce868b07))
 - Correspondence cards now always show you at the bottom with the board turned to your side, and the deadline bar sits next to the clock that is running ([a1db4208](https://github.com/brianhliou/mistboard/commit/a1db4208))
 - Live jieqi games show what each side's face-down pieces could still be and the chance of each, for both players and spectators, rated games included ([c746143c](https://github.com/brianhliou/mistboard/commit/c746143c))
 - The general glows red when it is in check, in xiangqi, jieqi, Storm the Fortress and Atomic Xiangqi ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
@@ -55,6 +58,8 @@ Conventions:
 
 ### Learning and puzzles
 
+- Game studies list each game as players, date and result, grouped by event, with Chinese event names in English ([ce868b07](https://github.com/brianhliou/mistboard/commit/ce868b07))
+- Tony Fung 冯家俊's page now covers his Asian Individual Championship win in Manila, Hong Kong's first, with the final against Wang Yubo on the board ([ce868b07](https://github.com/brianhliou/mistboard/commit/ce868b07))
 - The longest forced mates in xiangqi: seven endgame tablebase records against the full guard, each played out in a study, in English and Chinese ([a1db4208](https://github.com/brianhliou/mistboard/commit/a1db4208))
 - Flip Jungle's skill ceiling joins the blog, KataGo's Jungle Chess page adds Misty's den-race tests, and the Pikafish reveal-bug page adds the September audit and its correction ([efb647e8](https://github.com/brianhliou/mistboard/commit/efb647e8))
 - a write-up of the repetition bug that let a chariot and cannon swap count as a repeated position, in English and Chinese ([efb647e8](https://github.com/brianhliou/mistboard/commit/efb647e8))
@@ -82,6 +87,7 @@ Conventions:
 
 ### Watching and review
 
+- The opening explorer now takes at most 40% of the move column, so more moves stay visible ([ce868b07](https://github.com/brianhliou/mistboard/commit/ce868b07))
 - Review pages, studies and live rooms share one move bar, with flip, the opening book and analysis in its menu, and a live jieqi room can step back after a reload ([c746143c](https://github.com/brianhliou/mistboard/commit/c746143c))
 - 2026 North American Xiangqi Championship (Houston), all 9 rounds with 75 game records from dpxq ([efb647e8](https://github.com/brianhliou/mistboard/commit/efb647e8))
 - broadcast games published without their moves now say "No record published" on the board ([efb647e8](https://github.com/brianhliou/mistboard/commit/efb647e8))
@@ -163,6 +169,9 @@ Conventions:
 
 ### Fixed
 
+- River text now shows on Jieqi and Fortress boards; profile badges line up and the "games" count is no longer clipped ([ce868b07](https://github.com/brianhliou/mistboard/commit/ce868b07))
+- The homepage and Watch board leave a live game after a minute without a move instead of sitting on an abandoned game until the clock runs out ([ce868b07](https://github.com/brianhliou/mistboard/commit/ce868b07))
+- Your own Fog Xiangqi and Fog Chess seeks show your side's board, and every seek is drawn from the side you chose ([ce868b07](https://github.com/brianhliou/mistboard/commit/ce868b07))
 - Duck Xiangqi rooms and reviews show the Duck Xiangqi marker instead of a duck emoji, Atomic and Crazyhouse Xiangqi show their own markers, and the duck no longer has a drop shadow ([a1db4208](https://github.com/brianhliou/mistboard/commit/a1db4208))
 - Opening someone else's live Fog game now says it is in progress and opens to everyone when it ends, instead of an error and an endless Connecting spinner ([a1db4208](https://github.com/brianhliou/mistboard/commit/a1db4208))
 - The Play a game window fits on a laptop screen without scrolling ([a1db4208](https://github.com/brianhliou/mistboard/commit/a1db4208))
