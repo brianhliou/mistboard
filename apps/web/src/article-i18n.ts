@@ -1161,11 +1161,11 @@ const ZH_HANS: Record<string, string> = {
   // 士角炮). Shared keys (Round, Opponent, Colour, Result, Red, Black, Win, Draw,
   // Event, Dates, W, D, L, League qualifier, Five Rams Cup, Guangzhou, How he plays,
   // Meng Fanrui, Open the study, His games in the archive) already exist above.
-  "Tony Fung 冯家俊, Hong Kong's world championship finalist: games and analysis":
-    '冯家俊，打进世锦赛决赛的香港棋手：对局与分析',
+  "Tony Fung 冯家俊, Hong Kong's first Asian xiangqi champion: games and analysis":
+    '冯家俊，香港首位亚洲象棋个人冠军：对局与分析',
   'Tony Fung 冯家俊': '冯家俊',
-  "Hong Kong's 2022 world championship finalist, with nine points from ten in this year's qualifier for China's top league. His last fourteen months and the 2022 run, five games on the board, 47 games analysed.":
-    '打进 2022 年世锦赛决赛的香港棋手，今年象甲预选赛十分拿下九分。他最近十四个月和 2022 年的决赛之路，盘面上五盘对局，47 局附引擎分析。',
+  "Hong Kong's first Asian individual champion and its 2022 world championship finalist. His last fifteen months and the 2022 run, six games on the board, 50 games analysed.":
+    '香港首位亚洲象棋个人冠军，也是 2022 年打进世锦赛决赛的香港棋手。他最近十五个月和 2022 年的决赛之路，盘面上六盘对局，50 局附引擎分析。',
   'Tony Fung in a white Hong Kong team shirt.': '身穿白色香港队服的冯家俊。',
   'English-speaking xiangqi players, and Hong Kong players who follow him through the Hong Kong association and the local sports press.':
     '说英语的象棋棋友，以及通过香港象棋总会和本地体育媒体关注他的香港棋友。',
@@ -1173,21 +1173,36 @@ const ZH_HANS: Record<string, string> = {
     '冯家俊身穿白色香港队服，一只手搭在棋盘边上，对着镜头微笑。',
   'Tony Fung in September 2023, before the Asian Games. Photo: Mr.C / Sportsoho.':
     '2023 年 9 月亚运会前的冯家俊。图片：Mr.C / Sportsoho 运动版图。',
-  "Tony Fung 冯家俊 is a world championship finalist for Hong Kong. In 2022 he went through eight rounds of the World Xiangqi Championship with one loss and reached the final, and second place equalled Hong Kong's best result at the event. In August 2026 he scored nine points out of ten in the qualifier for China's top league, four wins and a draw, the best individual score there, shared with Cao Yanlei.":
-    '冯家俊是打进过世锦赛决赛的香港棋手。2022 年世界象棋锦标赛，他八轮只输一盘，打进决赛，拿到的亚军追平了香港在这项赛事的最好成绩。2026 年 8 月，他在中国象甲联赛的预选赛十分拿下九分，四胜一和，是那里最好的个人成绩，与曹岩磊并列。',
+  "Tony Fung 冯家俊 is the Asian champion. In October 2026 he won the Asian Individual Championship in Manila, beating China's Wang Yubo in a blitz playoff, the first Hong Kong player to win it. In 2022 he went through eight rounds of the World Xiangqi Championship with one loss and reached the final, and second place equalled Hong Kong's best result at the event. In August 2026 he scored nine points out of ten in the qualifier for China's top league, four wins and a draw, the best individual score there, shared with Cao Yanlei.":
+    '冯家俊是亚洲冠军。2026 年 10 月，他在马尼拉的亚洲象棋个人锦标赛夺冠，在超快棋加赛中击败中国的王禹博，是第一位拿下这项冠军的香港棋手。2022 年世界象棋锦标赛，他八轮只输一盘，打进决赛，拿到的亚军追平了香港在这项赛事的最好成绩。2026 年 8 月，他在中国象甲联赛的预选赛十分拿下九分，四胜一和，是那里最好的个人成绩，与曹岩磊并列。',
   "He was born in 1998 and has played for Hong Kong since he was 18. At the 2023 Asian Games in Hangzhou he was in the team that won bronze in the mixed team event, Hong Kong's first xiangqi medal at the Games. In April 2025 he won the Hong Kong Open for the first time, beating Cheng Yin Lung in the final. The WXF lists him as an International Master, and Hong Kong's own association lists him among its Hong Kong Grandmasters.":
     '他生于 1998 年，18 岁起代表香港出赛。2023 年杭州亚运会，他所在的香港队拿下象棋混合团体铜牌，这是香港在亚运会上的第一枚象棋奖牌。2025 年 4 月他首次夺得全港个人赛冠军，决赛击败郑彦隆。世界象棋联合会把他列为国际大师，香港本地的象棋总会则把他列入香港特级大师名册。',
-  'This page is his last fourteen months and the 2022 run to the final, with five of his games on the board. I ran the 47 games we hold through the same engine analysis Mistboard gives your own games.':
-    '这一页写的是他最近十四个月，以及 2022 年打进决赛的那一路，盘面上有他的五盘对局。我们收录的 47 盘对局，我都用 Mistboard 给你的对局做的同一套引擎分析跑过一遍。',
-  '**He is hardest to beat with red.** Since July 2025 he has lost two of his twenty-one red games, both on one day of an open qualifier in Shanghai.':
-    '**执红他最难被击败。** 2025 年 7 月以来，他二十一盘执红只输了两盘，都是在上海一项海选赛的同一天输的。',
-  '**He has no single opening.** His 25 red games here start four different ways, with the central cannon, the Palcorner Cannon, a horse or a soldier, and each of them comes up at least five times.':
-    '**他没有固定的开局。** 这里他的 25 盘执红对局有四种开法：中炮、士角炮、起马或进兵，每一种都至少出现五次。',
+  'This page is his last fifteen months and the 2022 run to the final, with six of his games on the board. I ran the 50 games we hold through the same engine analysis Mistboard gives your own games.':
+    '这一页写的是他最近十五个月，以及 2022 年打进决赛的那一路，盘面上有他的六盘对局。我们收录的 50 盘对局，我都用 Mistboard 给你的对局做的同一套引擎分析跑过一遍。',
+  '**He is hardest to beat with red.** Since July 2025 he has lost two of his twenty-three red games, both on one day of an open qualifier in Shanghai.':
+    '**执红他最难被击败。** 2025 年 7 月以来，他二十三盘执红只输了两盘，都是在上海一项海选赛的同一天输的。',
+  '**He has no single opening.** His 27 red games here start four different ways, with the central cannon, the Palcorner Cannon, a horse or a soldier, and each of them comes up at least five times.':
+    '**他没有固定的开局。** 这里他的 27 盘执红对局有四种开法：中炮、士角炮、起马或进兵，每一种都至少出现五次。',
   '**He plays the long game.** Talking to Sportsoho in 2023, he said that neither he nor his senior Wong Hok Him is the kind of player who goes for the kill from the opening; both like to draw a game out and keep the threat hidden, a needle in the cotton. His longest win here ran 81 moves.':
     '**他下长棋。** 2023 年接受 Sportsoho 运动版图采访时，他说自己和师兄黄学谦都不是一开局就搏杀的类型，两人都喜欢把战线拉长，把威胁藏起来，绵里藏针。他在这里最长的一盘胜局走了 81 回合。',
   'Asian Individual Championship, Manila': '亚洲象棋个人锦标赛，马尼拉',
-  'He is in Manila this week for the [21st Asian Individual Championship](/broadcast/xiangqi/2026-asian-individual-men), which runs to 8 October. His games there will be added to this page when it ends.':
-    '这周他在马尼拉参加[第 21 届亚洲象棋个人锦标赛](/broadcast/xiangqi/2026-asian-individual-men)，比赛到 10 月 8 日结束。赛事结束后，他在那里的对局会补进这一页。',
+  'Lin Zichong, Singapore': '林子冲，新加坡',
+  'Wang Yubo, China': '王禹博，中国',
+  'Liu Daxiang, East Malaysia': '刘大湘，东马来西亚',
+  'Quang Nguyen, Australia': 'Quang Nguyen，澳大利亚',
+  'Cheng Yudong, China': '程宇东，中国',
+  'Lại Lý Huynh, Vietnam': '赖理兄，越南',
+  'Final, rapid': '决赛，快棋',
+  'Final, blitz': '决赛，超快棋',
+  "His Asian Individual Championship, round by round. Records for rounds one to six have not been published; the final's three games are in the study.":
+    '他的亚洲个人锦标赛，逐轮战绩。第一到第六轮的棋谱尚未公布；决赛的三盘对局在研究里。',
+  "Tony Fung Ga Zen vs Wang Yubo, 2026 Asian Individual Championship, final, blitz playoff, 6 October 2026. Fung won with red in 60 moves. The board opens after black's move 38, with Fung to move.":
+    '冯家俊对王禹博，2026 亚洲象棋个人锦标赛决赛，超快棋加赛，2026 年 10 月 6 日。冯家俊执红 60 回合取胜。棋盘从黑方第 38 回合之后开始，轮到冯家俊走。',
+  '2026 Asian Individual Championship, final, blitz playoff':
+    '2026 亚洲象棋个人锦标赛，决赛，超快棋加赛',
+  'Oct 2–8, 2026': '2026年10月2–8日',
+  "Fung won the [21st Asian Individual Championship](/broadcast/xiangqi/2026-asian-individual-men) in Manila, from 2 to 8 October, and did not lose a game. No Hong Kong player had won it before. In the final he met Wang Yubo, China's national champion of 2025, whom he had drawn with in round two. They drew the classical game and the rapid playoff, and Fung won the blitz playoff. Cheng Yudong of China was third, and Lại Lý Huynh, also unbeaten, was fourth.":
+    '冯家俊在马尼拉赢得[第 21 届亚洲象棋个人锦标赛](/broadcast/xiangqi/2026-asian-individual-men)，比赛从 10 月 2 日打到 8 日，他一盘未输。此前没有香港棋手拿过这项冠军。决赛他对上 2025 年全国冠军、中国的王禹博，两人在第二轮已经下和过一次。慢棋和快棋加赛都是和棋，冯家俊在超快棋加赛中取胜。中国的程宇东获得第三，同样不败的赖理兄排名第四。',
   'China league qualifier, Hangzhou': '象甲预选赛，杭州',
   "Teams outside China's top league play a qualifier to get in. Hong Kong sent a team to Hangzhou from 17 to 19 August, and Fung played all five rounds. He won four and drew the other, on the first day. Zhejiang Mintai and Cao Yanlei's Shanghai Jiahong went through.":
     '不在象甲联赛的队伍要打预选赛才能进入联赛。8 月 17 日至 19 日，香港派队到杭州参赛，冯家俊五轮全部上场，赢了四盘，另一盘是第一天的和棋。最后晋级的是浙江民泰和曹岩磊所在的上海嘉弘。',
@@ -1241,11 +1256,11 @@ const ZH_HANS: Record<string, string> = {
   '2022 World Xiangqi Championship, round 8': '2022 世界象棋锦标赛，第 8 轮',
   'Lại Lý Huynh, who won the title in 2025 and has [his own page](/blog/lai-ly-huynh), drew with Fung in round six, and again at the Asian Games a year later.':
     '2025 年夺冠的赖理兄也有[自己的专页](/blog/lai-ly-huynh)，他在第六轮与冯家俊弈和，一年后在亚运会上两人又下成和棋。',
-  'All 47 games': '全部 47 局',
-  "Every game on this page is in a Mistboard study with the engine's judgments and lines, and 10 of them are in the broadcast archive with the site's analysis.":
-    '本页的每一盘都在 Mistboard 的一个研究里，附引擎的判断和变化；其中 10 盘也在直播档案里，附网站的分析。',
-  "Sources: game records from dpxq.com, which may not hold every game of an event; the 2022 results from the Chinese Xiangqi Association's report on Sina and from China News Service; the Five Rams Cup qualifier from Yangcheng Evening News; the Asian Games from Sing Tao; the Hong Kong Open from HK01 and Sportsroad; analysis by Pikafish through Mistboard's review pipeline, October 2026.":
-    '资料来源：棋谱来自 dpxq.com，该数据库不一定收齐每项赛事的全部对局；2022 年的成绩来自新浪刊发的中国象棋协会报道和中新网；五羊杯选拔赛来自《羊城晚报》；亚运会来自《星岛》；全港个人赛来自 HK01 和体路 Sportsroad；分析由 Pikafish 经 Mistboard 的复盘流程完成，2026 年 10 月。',
+  'All 50 games': '全部 50 局',
+  "Every game on this page is in a Mistboard study with the engine's judgments and lines, and 13 of them are in the broadcast archive with the site's analysis.":
+    '本页的每一盘都在 Mistboard 的一个研究里，附引擎的判断和变化；其中 13 盘也在直播档案里，附网站的分析。',
+  "Sources: game records from dpxq.com, which may not hold every game of an event; the 2022 results from the Chinese Xiangqi Association's report on Sina and from China News Service; the Five Rams Cup qualifier from Yangcheng Evening News; the Asian Games from Sing Tao; the 2026 Asian Individual Championship from HK01, Sing Tao and Bongda Plus; the Hong Kong Open from HK01 and Sportsroad; analysis by Pikafish through Mistboard's review pipeline, October 2026.":
+    '资料来源：棋谱来自 dpxq.com，该数据库不一定收齐每项赛事的全部对局；2022 年的成绩来自新浪刊发的中国象棋协会报道和中新网；五羊杯选拔赛来自《羊城晚报》；亚运会来自《星岛》；2026 年亚洲象棋个人锦标赛来自 HK01、《星岛》和 Bongda Plus；全港个人赛来自 HK01 和体路 Sportsroad；分析由 Pikafish 经 Mistboard 的复盘流程完成，2026 年 10 月。',
   'Tony Fung Ga Zen': '冯家俊',
   'Chao Yi-fan': '赵奕帆',
   'Cheng Yin Lung': '郑彦隆',
@@ -5729,11 +5744,11 @@ const ZH_HANT: Record<string, string> = {
   // lai-ly-huynh's. Mainland players' names stay simplified and come from the spread
   // (王大禹, 吕皓, 王禹博, 程宇东); Hong Kong and Taiwan players convert (馮家俊, 黃學謙,
   // 鄭彥隆, 趙奕帆), as do 賴理兄 and the place names. Cup is 盃, as on the other pages.
-  "Tony Fung 冯家俊, Hong Kong's world championship finalist: games and analysis":
-    '馮家俊，打進世錦賽決賽的香港棋手：對局與分析',
+  "Tony Fung 冯家俊, Hong Kong's first Asian xiangqi champion: games and analysis":
+    '馮家俊，香港首位亞洲象棋個人冠軍：對局與分析',
   'Tony Fung 冯家俊': '馮家俊',
-  "Hong Kong's 2022 world championship finalist, with nine points from ten in this year's qualifier for China's top league. His last fourteen months and the 2022 run, five games on the board, 47 games analysed.":
-    '打進 2022 年世錦賽決賽的香港棋手，今年象甲預選賽十分拿下九分。他最近十四個月和 2022 年的決賽之路，盤面上五盤對局，47 局附引擎分析。',
+  "Hong Kong's first Asian individual champion and its 2022 world championship finalist. His last fifteen months and the 2022 run, six games on the board, 50 games analysed.":
+    '香港首位亞洲象棋個人冠軍，也是 2022 年打進世錦賽決賽的香港棋手。他最近十五個月和 2022 年的決賽之路，盤面上六盤對局，50 局附引擎分析。',
   'Tony Fung in a white Hong Kong team shirt.': '身穿白色香港隊服的馮家俊。',
   'English-speaking xiangqi players, and Hong Kong players who follow him through the Hong Kong association and the local sports press.':
     '說英語的象棋棋友，以及透過香港象棋總會和本地體育媒體關注他的香港棋友。',
@@ -5741,21 +5756,35 @@ const ZH_HANT: Record<string, string> = {
     '馮家俊身穿白色香港隊服，一隻手搭在棋盤邊上，對著鏡頭微笑。',
   'Tony Fung in September 2023, before the Asian Games. Photo: Mr.C / Sportsoho.':
     '2023 年 9 月亞運會前的馮家俊。圖片：Mr.C / Sportsoho 運動版圖。',
-  "Tony Fung 冯家俊 is a world championship finalist for Hong Kong. In 2022 he went through eight rounds of the World Xiangqi Championship with one loss and reached the final, and second place equalled Hong Kong's best result at the event. In August 2026 he scored nine points out of ten in the qualifier for China's top league, four wins and a draw, the best individual score there, shared with Cao Yanlei.":
-    '馮家俊是打進過世錦賽決賽的香港棋手。2022 年世界象棋錦標賽，他八輪只輸一盤，打進決賽，拿到的亞軍追平了香港在這項賽事的最好成績。2026 年 8 月，他在中國象甲聯賽的預選賽十分拿下九分，四勝一和，是那裡最好的個人成績，與曹岩磊並列。',
+  "Tony Fung 冯家俊 is the Asian champion. In October 2026 he won the Asian Individual Championship in Manila, beating China's Wang Yubo in a blitz playoff, the first Hong Kong player to win it. In 2022 he went through eight rounds of the World Xiangqi Championship with one loss and reached the final, and second place equalled Hong Kong's best result at the event. In August 2026 he scored nine points out of ten in the qualifier for China's top league, four wins and a draw, the best individual score there, shared with Cao Yanlei.":
+    '馮家俊是亞洲冠軍。2026 年 10 月，他在馬尼拉的亞洲象棋個人錦標賽奪冠，在超快棋加賽中擊敗中國的王禹博，是第一位拿下這項冠軍的香港棋手。2022 年世界象棋錦標賽，他八輪只輸一盤，打進決賽，拿到的亞軍追平了香港在這項賽事的最好成績。2026 年 8 月，他在中國象甲聯賽的預選賽十分拿下九分，四勝一和，是那裡最好的個人成績，與曹岩磊並列。',
   "He was born in 1998 and has played for Hong Kong since he was 18. At the 2023 Asian Games in Hangzhou he was in the team that won bronze in the mixed team event, Hong Kong's first xiangqi medal at the Games. In April 2025 he won the Hong Kong Open for the first time, beating Cheng Yin Lung in the final. The WXF lists him as an International Master, and Hong Kong's own association lists him among its Hong Kong Grandmasters.":
     '他生於 1998 年，18 歲起代表香港出賽。2023 年杭州亞運會，他所在的香港隊拿下象棋混合團體銅牌，這是香港在亞運會上的第一枚象棋獎牌。2025 年 4 月他首次奪得全港個人賽冠軍，決賽擊敗鄭彥隆。世界象棋聯合會把他列為國際大師，香港本地的象棋總會則把他列入香港特級大師名冊。',
-  'This page is his last fourteen months and the 2022 run to the final, with five of his games on the board. I ran the 47 games we hold through the same engine analysis Mistboard gives your own games.':
-    '這一頁寫的是他最近十四個月，以及 2022 年打進決賽的那一路，盤面上有他的五盤對局。我們收錄的 47 盤對局，我都用 Mistboard 給你的對局做的同一套引擎分析跑過一遍。',
-  '**He is hardest to beat with red.** Since July 2025 he has lost two of his twenty-one red games, both on one day of an open qualifier in Shanghai.':
-    '**執紅他最難被擊敗。** 2025 年 7 月以來，他二十一盤執紅只輸了兩盤，都是在上海一項海選賽的同一天輸的。',
-  '**He has no single opening.** His 25 red games here start four different ways, with the central cannon, the Palcorner Cannon, a horse or a soldier, and each of them comes up at least five times.':
-    '**他沒有固定的開局。** 這裡他的 25 盤執紅對局有四種開法：中炮、士角炮、起馬或進兵，每一種都至少出現五次。',
+  'This page is his last fifteen months and the 2022 run to the final, with six of his games on the board. I ran the 50 games we hold through the same engine analysis Mistboard gives your own games.':
+    '這一頁寫的是他最近十五個月，以及 2022 年打進決賽的那一路，盤面上有他的六盤對局。我們收錄的 50 盤對局，我都用 Mistboard 給你的對局做的同一套引擎分析跑過一遍。',
+  '**He is hardest to beat with red.** Since July 2025 he has lost two of his twenty-three red games, both on one day of an open qualifier in Shanghai.':
+    '**執紅他最難被擊敗。** 2025 年 7 月以來，他二十三盤執紅只輸了兩盤，都是在上海一項海選賽的同一天輸的。',
+  '**He has no single opening.** His 27 red games here start four different ways, with the central cannon, the Palcorner Cannon, a horse or a soldier, and each of them comes up at least five times.':
+    '**他沒有固定的開局。** 這裡他的 27 盤執紅對局有四種開法：中炮、士角炮、起馬或進兵，每一種都至少出現五次。',
   '**He plays the long game.** Talking to Sportsoho in 2023, he said that neither he nor his senior Wong Hok Him is the kind of player who goes for the kill from the opening; both like to draw a game out and keep the threat hidden, a needle in the cotton. His longest win here ran 81 moves.':
     '**他下長棋。** 2023 年接受 Sportsoho 運動版圖採訪時，他說自己和師兄黃學謙都不是一開局就搏殺的類型，兩人都喜歡把戰線拉長，把威脅藏起來，綿裡藏針。他在這裡最長的一盤勝局走了 81 回合。',
   'Asian Individual Championship, Manila': '亞洲象棋個人錦標賽，馬尼拉',
-  'He is in Manila this week for the [21st Asian Individual Championship](/broadcast/xiangqi/2026-asian-individual-men), which runs to 8 October. His games there will be added to this page when it ends.':
-    '這週他在馬尼拉參加[第 21 屆亞洲象棋個人錦標賽](/broadcast/xiangqi/2026-asian-individual-men)，比賽到 10 月 8 日結束。賽事結束後，他在那裡的對局會補進這一頁。',
+  'Lin Zichong, Singapore': '林子沖，新加坡',
+  'Wang Yubo, China': '王禹博，中國',
+  'Liu Daxiang, East Malaysia': '劉大湘，東馬來西亞',
+  'Quang Nguyen, Australia': 'Quang Nguyen，澳洲',
+  'Cheng Yudong, China': '程宇東，中國',
+  'Lại Lý Huynh, Vietnam': '賴理兄，越南',
+  'Final, rapid': '決賽，快棋',
+  'Final, blitz': '決賽，超快棋',
+  "His Asian Individual Championship, round by round. Records for rounds one to six have not been published; the final's three games are in the study.":
+    '他的亞洲個人錦標賽，逐輪戰績。第一到第六輪的棋譜尚未公佈；決賽的三盤對局在研究裡。',
+  "Tony Fung Ga Zen vs Wang Yubo, 2026 Asian Individual Championship, final, blitz playoff, 6 October 2026. Fung won with red in 60 moves. The board opens after black's move 38, with Fung to move.":
+    '馮家俊對王禹博，2026 亞洲象棋個人錦標賽決賽，超快棋加賽，2026 年 10 月 6 日。馮家俊執紅 60 回合取勝。棋盤從黑方第 38 回合之後開始，輪到馮家俊走。',
+  '2026 Asian Individual Championship, final, blitz playoff':
+    '2026 亞洲象棋個人錦標賽，決賽，超快棋加賽',
+  "Fung won the [21st Asian Individual Championship](/broadcast/xiangqi/2026-asian-individual-men) in Manila, from 2 to 8 October, and did not lose a game. No Hong Kong player had won it before. In the final he met Wang Yubo, China's national champion of 2025, whom he had drawn with in round two. They drew the classical game and the rapid playoff, and Fung won the blitz playoff. Cheng Yudong of China was third, and Lại Lý Huynh, also unbeaten, was fourth.":
+    '馮家俊在馬尼拉贏得[第 21 屆亞洲象棋個人錦標賽](/broadcast/xiangqi/2026-asian-individual-men)，比賽從 10 月 2 日打到 8 日，他一盤未輸。此前沒有香港棋手拿過這項冠軍。決賽他對上 2025 年全國冠軍、中國的王禹博，兩人在第二輪已經下和過一次。慢棋和快棋加賽都是和棋，馮家俊在超快棋加賽中取勝。中國的程宇東獲得第三，同樣不敗的賴理兄排名第四。',
   'China league qualifier, Hangzhou': '象甲預選賽，杭州',
   "Teams outside China's top league play a qualifier to get in. Hong Kong sent a team to Hangzhou from 17 to 19 August, and Fung played all five rounds. He won four and drew the other, on the first day. Zhejiang Mintai and Cao Yanlei's Shanghai Jiahong went through.":
     '不在象甲聯賽的隊伍要打預選賽才能進入聯賽。8 月 17 日至 19 日，香港派隊到杭州參賽，馮家俊五輪全部上場，贏了四盤，另一盤是第一天的和棋。最後晉級的是浙江民泰和曹岩磊所在的上海嘉弘。',
@@ -5798,10 +5827,10 @@ const ZH_HANT: Record<string, string> = {
   '2022 World Xiangqi Championship, round 8': '2022 世界象棋錦標賽，第 8 輪',
   'Lại Lý Huynh, who won the title in 2025 and has [his own page](/blog/lai-ly-huynh), drew with Fung in round six, and again at the Asian Games a year later.':
     '2025 年奪冠的賴理兄也有[自己的專頁](/blog/lai-ly-huynh)，他在第六輪與馮家俊弈和，一年後在亞運會上兩人又下成和棋。',
-  "Every game on this page is in a Mistboard study with the engine's judgments and lines, and 10 of them are in the broadcast archive with the site's analysis.":
-    '本頁的每一盤都在 Mistboard 的一個研究裡，附引擎的判斷和變化；其中 10 盤也在直播檔案裡，附網站的分析。',
-  "Sources: game records from dpxq.com, which may not hold every game of an event; the 2022 results from the Chinese Xiangqi Association's report on Sina and from China News Service; the Five Rams Cup qualifier from Yangcheng Evening News; the Asian Games from Sing Tao; the Hong Kong Open from HK01 and Sportsroad; analysis by Pikafish through Mistboard's review pipeline, October 2026.":
-    '資料來源：棋譜來自 dpxq.com，該資料庫不一定收齊每項賽事的全部對局；2022 年的成績來自新浪刊發的中國象棋協會報導和中新網；五羊盃選拔賽來自《羊城晚報》；亞運會來自《星島》；全港個人賽來自 HK01 和體路 Sportsroad；分析由 Pikafish 經 Mistboard 的復盤流程完成，2026 年 10 月。',
+  "Every game on this page is in a Mistboard study with the engine's judgments and lines, and 13 of them are in the broadcast archive with the site's analysis.":
+    '本頁的每一盤都在 Mistboard 的一個研究裡，附引擎的判斷和變化；其中 13 盤也在直播檔案裡，附網站的分析。',
+  "Sources: game records from dpxq.com, which may not hold every game of an event; the 2022 results from the Chinese Xiangqi Association's report on Sina and from China News Service; the Five Rams Cup qualifier from Yangcheng Evening News; the Asian Games from Sing Tao; the 2026 Asian Individual Championship from HK01, Sing Tao and Bongda Plus; the Hong Kong Open from HK01 and Sportsroad; analysis by Pikafish through Mistboard's review pipeline, October 2026.":
+    '資料來源：棋譜來自 dpxq.com，該資料庫不一定收齊每項賽事的全部對局；2022 年的成績來自新浪刊發的中國象棋協會報導和中新網；五羊盃選拔賽來自《羊城晚報》；亞運會來自《星島》；2026 年亞洲象棋個人錦標賽來自 HK01、《星島》和 Bongda Plus；全港個人賽來自 HK01 和體路 Sportsroad；分析由 Pikafish 經 Mistboard 的復盤流程完成，2026 年 10 月。',
   'Tony Fung Ga Zen': '馮家俊',
   'Chao Yi-fan': '趙奕帆',
   'Cheng Yin Lung': '鄭彥隆',

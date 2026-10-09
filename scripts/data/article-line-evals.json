@@ -1568,5 +1568,160 @@
     "cp": -245,
     "mate": null,
     "symbol": "∓"
+  },
+  "tony-fung-ga-zen:0:30": {
+    "cp": 39,
+    "mate": null,
+    "symbol": "⩲"
+  },
+  "tony-fung-ga-zen:0:31": {
+    "cp": 101,
+    "mate": null,
+    "symbol": "±"
+  },
+  "tony-fung-ga-zen:0:40": {
+    "cp": 73,
+    "mate": null,
+    "symbol": "⩲"
+  },
+  "tony-fung-ga-zen:0:44": {
+    "cp": 135,
+    "mate": null,
+    "symbol": "±"
+  },
+  "tony-fung-ga-zen:0:51": {
+    "cp": 178,
+    "mate": null,
+    "symbol": "±"
+  },
+  "tony-fung-ga-zen:0:55": {
+    "cp": 111,
+    "mate": null,
+    "symbol": "±"
+  },
+  "tony-fung-ga-zen:0:76": {
+    "cp": 50,
+    "mate": null,
+    "symbol": "⩲"
+  },
+  "tony-fung-ga-zen:0:86": {
+    "cp": 347,
+    "mate": null,
+    "symbol": "+−"
+  },
+  "tony-fung-ga-zen:0:116": {
+    "cp": 399,
+    "mate": null,
+    "symbol": "+−"
+  },
+  "tony-fung-ga-zen:1:26": {
+    "cp": 57,
+    "mate": null,
+    "symbol": "⩲"
+  },
+  "tony-fung-ga-zen:2:32": {
+    "cp": 42,
+    "mate": null,
+    "symbol": "⩲"
+  },
+  "tony-fung-ga-zen:2:33": {
+    "cp": 317,
+    "mate": null,
+    "symbol": "+−"
+  },
+  "tony-fung-ga-zen:2:34": {
+    "cp": 339,
+    "mate": null,
+    "symbol": "+−"
+  },
+  "tony-fung-ga-zen:2:40": {
+    "cp": 307,
+    "mate": null,
+    "symbol": "+−"
+  },
+  "tony-fung-ga-zen:2:72": {
+    "cp": 435,
+    "mate": null,
+    "symbol": "+−"
+  },
+  "tony-fung-ga-zen:2:76": {
+    "cp": 576,
+    "mate": null,
+    "symbol": "+−"
+  },
+  "tony-fung-ga-zen:3:79": {
+    "cp": -18,
+    "mate": null,
+    "symbol": "="
+  },
+  "tony-fung-ga-zen:3:83": {
+    "cp": -85,
+    "mate": null,
+    "symbol": "⩱"
+  },
+  "tony-fung-ga-zen:3:93": {
+    "cp": -234,
+    "mate": null,
+    "symbol": "∓"
+  },
+  "tony-fung-ga-zen:3:132": {
+    "cp": -342,
+    "mate": null,
+    "symbol": "−+"
+  },
+  "tony-fung-ga-zen:3:141": {
+    "cp": -327,
+    "mate": null,
+    "symbol": "−+"
+  },
+  "tony-fung-ga-zen:4:15": {
+    "cp": 45,
+    "mate": null,
+    "symbol": "⩲"
+  },
+  "tony-fung-ga-zen:5:29": {
+    "cp": -23,
+    "mate": null,
+    "symbol": "="
+  },
+  "tony-fung-ga-zen:5:30": {
+    "cp": -111,
+    "mate": null,
+    "symbol": "∓"
+  },
+  "tony-fung-ga-zen:5:35": {
+    "cp": -12,
+    "mate": null,
+    "symbol": "="
+  },
+  "tony-fung-ga-zen:5:38": {
+    "cp": -122,
+    "mate": null,
+    "symbol": "∓"
+  },
+  "tony-fung-ga-zen:5:45": {
+    "cp": 17,
+    "mate": null,
+    "symbol": "="
+  },
+  "tony-fung-ga-zen:5:49": {
+    "cp": 28,
+    "mate": null,
+    "symbol": "="
+  },
+  "tony-fung-ga-zen:5:55": {
+    "cp": -220,
+    "mate": null,
+    "symbol": "∓"
+  },
+  "tony-fung-ga-zen:5:56": {
+    "cp": -293,
+    "mate": null,
+    "symbol": "−+"
+  },
+  "tony-fung-ga-zen:5:61": {
+    "cp": -245,
+    "mate": null,
+    "symbol": "∓"
   }
 }
