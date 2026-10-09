@@ -358,10 +358,12 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
     graded = exact ? 'tablebase' : 'engine';
     tablebaseOutcome = exact;
 
-    // A move that ends the game in the learner's favour is never a failure,
-    // however the curve reads it: delivering mate can look like a huge swing.
+    // A move that ends the game in a result the goal accepts is never a failure,
+    // however the curve reads it: delivering mate can look like a huge swing,
+    // and a finished position has no evaluation at all, so a move that completes
+    // a repetition draw read as leaving the drawing band and failed a held draw.
     const termination = config.termination(frame.truth, config.learner);
-    if (termination === 'learner-wins') {
+    if (termination !== 'none' && adjudicate() === 'success') {
       verdict = 'good';
       phase = 'success';
       return verdict;

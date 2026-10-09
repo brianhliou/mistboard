@@ -5,9 +5,11 @@
 // is closed while the engine is thinking.
 
 import {
+  applyStandardXiangqiMove,
   endgameEntryState,
   getStandardXiangqiLegalMoves,
   type PracticeGoal,
+  parseStandardXiangqiFen,
   XIANGQI_ENDGAME_CORPUS,
   type XiangqiGameState,
   xiangqiMoveToFsfUci,
@@ -448,4 +450,43 @@ test('a dismissed sign-in prompt stays dismissed for the session', async () => {
   await next.solve();
   expect(next.prompt()?.hidden, 'not again after dismissal').toBe(true);
   window.sessionStorage.clear();
+});
+
+test('a draw the engine reads as lost ends the run and is reported as a failure', async () => {
+  // Chapter hc6LmrOG/MyIZ3XSd (chariot vs the full defence, "draw in 15"),
+  // learner Black. The engine reads the learner's start as unclear (-120) and
+  // the position after their move as lost (-400), with no tablebase answer:
+  // the goal check ends the run in defeat. That ending used to report nothing,
+  // so a draw chapter could log starts and never an outcome.
+  const parsed = parseStandardXiangqiFen('2b1ka3/4a4/4b4/9/9/4R4/9/9/9/4K4 r - - 0 1');
+  if (!parsed.ok) throw new Error('bad fen');
+  const failures: { verdict: string; moves: number }[] = [];
+  const host = document.createElement('div');
+  const handle = mountXiangqiPractice(host, {
+    initialTruth: parsed.state,
+    goal: { kind: 'draw', moves: 15 },
+    orientation: 'black',
+    evaluate: async (truth) => {
+      if (truth.status.type !== 'playing') return { cp: null, mate: null, bestUci: null };
+      const redCp = truth.status.turn === 'red' ? 400 : 120;
+      const best = getStandardXiangqiLegalMoves(truth)[0];
+      return {
+        cp: truth.status.turn === 'red' ? redCp : -redCp,
+        mate: null,
+        bestUci: best ? xiangqiMoveToFsfUci(best) : null,
+      };
+    },
+    replyDelayMs: 0,
+    onFailed: (verdict, moves) => failures.push({ verdict, moves }),
+  });
+  await handle.ready();
+  expect(handle.view().phase).toBe('play');
+  // The defender opened with its first legal move; reply from there.
+  const opened = applyStandardXiangqiMove(
+    parsed.state,
+    getStandardXiangqiLegalMoves(parsed.state)[0]!,
+  );
+  await handle.play(getStandardXiangqiLegalMoves(opened)[0]!);
+  expect(handle.view().phase, 'the fake must actually end the run').toBe('defeat');
+  expect(failures).toEqual([{ verdict: 'defeat', moves: 1 }]);
 });

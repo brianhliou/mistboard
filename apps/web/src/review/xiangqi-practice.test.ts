@@ -9,9 +9,14 @@ import {
   createInitialXiangqiState,
   endgameEntryState,
   getStandardXiangqiLegalMoves,
+  isStandardXiangqiLegalMove,
   type PracticeGoal,
+  parsePracticeGoal,
+  parseStandardXiangqiFen,
   XIANGQI_ENDGAME_CORPUS,
   type XiangqiGameState,
+  type XiangqiMove,
+  xiangqiEndgamePracticeSets,
   xiangqiMoveToFsfUci,
 } from '@mistboard/game';
 import { beforeEach, expect, test } from 'vitest';
@@ -260,3 +265,86 @@ test("the position after a move is graded from the parent's table, with no secon
   expect(await uncovered.exactLater).toBeNull();
   expect(asked).toBe(1);
 });
+
+// ── Draw chapters conclude ───────────────────────────────────────────────────
+//
+// A "draw in 15" chapter is held by shuffling, and the natural way a shuffle
+// ends is the kernel's three-fold repetition draw. A run that ended on the
+// LEARNER's repeating move was graded as having left the drawing band (a
+// finished position has no evaluation, so it read as "unclear"), and a held draw
+// failed. Every draw chapter is driven here, not only the one a learner reported.
+
+/** Play `from -> to` back, or the first quiet move whose reverse stays legal. */
+function shuffleMove(truth: XiangqiGameState, last: XiangqiMove | undefined): XiangqiMove {
+  if (last) {
+    const back = { from: last.to, to: last.from };
+    if (isStandardXiangqiLegalMove(truth, back)) return back;
+  }
+  for (const move of getStandardXiangqiLegalMoves(truth)) {
+    if (truth.board[move.to]) continue;
+    const after = applyStandardXiangqiMove(truth, move);
+    if (after.status.type !== 'playing') continue;
+    return move;
+  }
+  throw new Error(`no quiet shuffle from ${JSON.stringify(truth.board)}`);
+}
+
+const drawChapters = xiangqiEndgamePracticeSets().flatMap((set) =>
+  set.chapters
+    .filter((chapter) => chapter.goal.startsWith('draw'))
+    .map((chapter) => ({ ...chapter, slug: set.slug })),
+);
+
+test('the corpus has draw chapters to drive', () => {
+  expect(drawChapters.length).toBeGreaterThan(5);
+});
+
+test.each(drawChapters.map((chapter) => [`${chapter.slug}/${chapter.id}`, chapter] as const))(
+  'draw chapter %s: a repetition completed by the learner holds the draw',
+  async (_label, chapter) => {
+    const parsed = parseStandardXiangqiFen(chapter.fen);
+    if (!parsed.ok) throw new Error(`bad fen ${chapter.fen}`);
+    const goal = parsePracticeGoal(chapter.goal);
+    if (!goal) throw new Error(`bad goal ${chapter.goal}`);
+    const learner = chapter.orientation;
+    const defenderLast: { move?: XiangqiMove } = {};
+
+    // Level from both sides, with no tablebase: the engine path alone must
+    // carry the result. The defender shuffles one piece back and forth.
+    const session = createPracticeSession(
+      xiangqiPracticeConfig({
+        goal,
+        learner,
+        initialTruth: parsed.state,
+        minReplyDelayMs: 0,
+        evaluate: async (truth) => {
+          if (truth.status.type !== 'playing') return { cp: null, mate: null, bestUci: null };
+          if (truth.status.turn === learner) {
+            return { cp: 0, mate: null, bestUci: null };
+          }
+          const move = shuffleMove(truth, defenderLast.move);
+          defenderLast.move = move;
+          return { cp: 0, mate: null, bestUci: xiangqiMoveToFsfUci(move) };
+        },
+      }),
+    );
+    await session.start();
+
+    // The learner shuffles too, so the position cycles every four plies; with
+    // the defender moving first, the learner's move is the one that repeats.
+    let mine: XiangqiMove | undefined;
+    let played = 0;
+    while (session.view().phase === 'play' && played < 40) {
+      mine = shuffleMove(session.truth(), mine);
+      expect(await session.attempt(mine)).not.toBe('invalid');
+      played += 1;
+    }
+    const truth = session.truth();
+    expect(
+      truth.status.type === 'finished' ? truth.status.reason : 'playing',
+      'the shuffle reaches the repetition draw before the move budget',
+    ).toBe('repetition');
+    expect(played, 'the learner made the repeating move').toBeLessThan(goal.moves ?? 99);
+    expect(session.view().phase, 'a drawn game is a held draw').toBe('success');
+  },
+);
