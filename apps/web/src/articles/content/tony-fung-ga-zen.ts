@@ -9,6 +9,73 @@ import type { Article } from '../types.js';
 // scripts/data/article-line-evals.json. Baked, not fetched: the page must not
 // depend on a study still existing.
 
+const G_M_144721: XiangqiReplaySpec = {
+  "iccs": "c3c4 b7c7 d0e1 b9a7 g3g4 a9b9 b2f2 h7d7 c0e2 h9g7 h2g2 i9h9 h0i2 g9e7 i0h0 h9h0 i2h0 b9b5 g2g6 c6c5 c4c5 b5c5 h0g2 c7c6 g2f4 c6g6 f4g6 a7c6 b0a2 c6e5 a0d0 d9e8 g6f4 e5f3 d0d5 c5d5 f4d5 e6e5 a2c3 g7e6 d5b6 d7d3 b6c8 e9d9 c8d6 e8d7 c3a4 c9a7 a4b6 f9e8 e1d2 f3h2 i3i4 d3d4 b6c4 a7c5 f2f6 h2f3 d6b7 a6a5 b7a5 d4i4 g4g5 f3g5 c4e5 g5h3 e0d0 d9e9 a5b7 h3f4 b7d6 f4d5 e3e4 d5c3 d0e0 i4h4 e5g6 h4h3 e4e5 h3a3 e5e6 a3a6 g6f4 i6i5 f6h6 i5i4 h6h1 e7g5 e2c4 i4h4 g0e2 c3a4 d6b7 c5e7 e6d6 a4c3 h1e1 a6a4 f4d3 a4a3 d3e5 c3b1 e1c1 a3e3 f0e1 e9f9 b7a5 b1a3 a5c6 a3b5 d6d7 e8d7 e5d7 b5d6 c4a2 h4h3 c6d8 f9e9 d8b7",
+  "red": "Tony Fung Ga Zen",
+  "black": "Wang Yubo",
+  "event": "2026 Asian Individual Championship, final, blitz playoff",
+  "resultText": "1-0",
+  "boardId": "2026-asian-individual-men-2026-asian-individual-men-r07-r07t01g3",
+  "annotations": {
+    "byPly": {
+      "30": {
+        "glyph": "?!",
+        "note": "inaccuracy: 5.1 win% given up, eval +0.99 after. The engine wanted the line in the sibling branch.",
+        "line": "f9e8 a0d0 a6a5 d0d6 d7a7 f2g2 e7g9 g6f4 g7f5 d6e6 a7a6 e6e4 c9e7 g2i2 c5b5 e4c4 c6e5 c4c0 a6a3 e3e4 e5d7 a2c3 b5c5 i2i6 a3i3 i6i9 e8f9 c0d0 c5c3 d0d7 c3f3 e4e5",
+        "lineEval": "⩲"
+      },
+      "31": {
+        "glyph": "?!",
+        "note": "inaccuracy: 6.3 win% given up, eval +0.30 after. The engine wanted the line in the sibling branch.",
+        "line": "g6i7 d9e8 i7g8 e9d9 e3e4 e5c6 f2f6 g7h5 f6h6 e7g9 h6g6 g9i7 a0b0 c6e7 g8e7 c9e7 g6a6 d9e9 b0b3 d7d9 a6i6 h5g7 i6h6 g7f5 h6h3 i7g9 a3a4 f5d6 b3b4 e6e5 e4e5 c5e5",
+        "lineEval": "±"
+      },
+      "40": {
+        "glyph": "?!",
+        "note": "inaccuracy: 5.6 win% given up, eval +1.18 after. The engine wanted the line in the sibling branch.",
+        "line": "g7h5 d5b6 h5i3 g0i2 i3h5 e2g0 d7d8 c3d5 e7c5 d5c7 a6a5 a3a4 a5a4 b6a4 c9a7 c7b9 d8d4 a4b6 a7c9 b9c7 d4d8 c7a6 h5g7 a6b4 g7e6 f2f1 f3g1 b4c6 d8d4 b6c8 e9d9 c6b8",
+        "lineEval": "⩲"
+      },
+      "44": {
+        "glyph": "?!",
+        "note": "inaccuracy: 5.6 win% given up, eval +1.81 after. The engine wanted the line in the sibling branch.",
+        "line": "d3d8 c3d5 e7c5 a3a4 e9d9 c8b6 i6i5 e1d2 e8f7 f2f1 f3g1 e0d0 e6c7 f1d1 d8d2 d1a1 c7d5 b6d5 d2d3 a1a3 d9e9 d5c7 f9e8 c7a6 c5e7 a6b4 d3d9 f0e1 e8d7 e1d2 d9d2 b4d3",
+        "lineEval": "±"
+      },
+      "51": {
+        "glyph": "?!",
+        "note": "inaccuracy: 8.2 win% given up, eval +1.21 after. The engine wanted the line in the sibling branch.",
+        "line": "a3a4 a7c9 g0i2 i6i5 e2g0 d3c3 e0d0 e5e4 d6e4 e6d4 d0e0 c3a3 b6d5 f3h2 f2f6 d4c2 e1d2 a3i3 f0e1 h2f3 g4g5 i5i4 g0e2 i4h4 g5g6 f3g1 e0f0 g1i2 d5b6 i3i8 g6g7 i2h0",
+        "lineEval": "±"
+      },
+      "55": {
+        "glyph": "?!",
+        "note": "inaccuracy: 5.9 win% given up, eval +0.40 after. The engine wanted the line in the sibling branch.",
+        "line": "f2f6 h2f3 b6c8 f3g1 e0e1 g1f3 e1e0 d4i4 c8a7 e5e4 d6e4 i4e4 e3e4 f3d2 e0d0 d2e4 f6a6 e6d4 a3a4 d4c2 d0d1 c2b4 a6e6 i6i5 a4a5 i5i4 f0e1 i4h4 a7c8 d9d8 e6b6 e8f7",
+        "lineEval": "±"
+      },
+      "76": {
+        "glyph": "??",
+        "note": "blunder: 29.5 win% given up, eval +4.19 after. The engine wanted the line in the sibling branch.",
+        "line": "c3d5 f0e1 i6i5 g0i2 i4i3 f6f5 d5c3 i2g4 i3a3 e5c4 e6g7 c4a3 g7f5 d6f5 c3e4 a3c4 e4g5 c4a5 e7c9 f5d6 g5e6 e2c4 c9a7 d6e4 e6f4 a5c6 f4g6 c6b8 e9f9 e1f2 c5e7",
+        "lineEval": "⩲"
+      },
+      "86": {
+        "glyph": "?!",
+        "note": "inaccuracy: 5.2 win% given up, eval +4.43 after. The engine wanted the line in the sibling branch.",
+        "line": "c3e4 h6h1 e4d6 e6d6 a6a9 f4d3 c5a7 h1e1 a9d9 e1e7 e9f9 e7a7 i5i4 d3f4 d9d6 a7a3 i4i3 a3f3 f9e9 g0i2 d6a6 f3e3 e9f9 f4h5 i3h3 h5g7 f9f8 e3c3",
+        "lineEval": "+−"
+      },
+      "116": {
+        "glyph": "?",
+        "note": "mistake: 11.8 win% given up, eval +7.15 after. The engine wanted the line in the sibling branch.",
+        "line": "e3d3 d7b6 h4h3 c1c3 h3h2 c3b3 d6e4 c6d8 f9f8 b3a3 f8e8 d8e6 e4c5 e6g7 e8e9 a2c4 h2g2 b6d5 c5b7 g7i8 b7a5 d5f4 a5b3 a3d3 b3c1 e0f0 c1d3 f4d3 e9d9 d3e5",
+        "lineEval": "+−"
+      }
+    }
+  }
+};
+
 const G_M_142503: XiangqiReplaySpec = {
   "iccs": "h2e2 b9c7 h0g2 h7f7 i0h0 h9g7 c3c4 i9i8 g3g4 i8d8 b2c2 d8d4 e2f2 d4g4 h0h2 e6e5 c0e2 g4d4 c2c0 b7b1 a0a1 a9b9 h2h1 b1b3 b0c2 b3c3 c0c3 c7e6 c3c6 d4d7 c6g6 g9i7 f2f6 b9b2 a1d1 d7e7 c2d4 f7f8 d4e6 g7e6 d1d6 f8g8 g6e6 e7f7 h1h6 b2b8 e3e4 g8g3 e4e5 g3b3 e5f5 b3b0 e2c0 b0b6 e6e2",
   "red": "Tony Fung Ga Zen",
@@ -212,12 +279,12 @@ export const tonyFungGaZenArticle: Article = {
   publisher: 'mistboard',
   boardFamily: 'xiangqi',
   title: "Tony Fung 冯家俊",
-  seoTitle: "Tony Fung 冯家俊, Hong Kong's world championship finalist: games and analysis",
-  summary: "Hong Kong's 2022 world championship finalist, with nine points from ten in this year's qualifier for China's top league. His last fourteen months and the 2022 run, five games on the board, 47 games analysed.",
+  seoTitle: "Tony Fung 冯家俊, Hong Kong's first Asian xiangqi champion: games and analysis",
+  summary: "Hong Kong's first Asian individual champion and its 2022 world championship finalist. His last fifteen months and the 2022 run, six games on the board, 50 games analysed.",
   showSummaryOnPage: false,
   status: "published",
   publishedAt: "2026-10-03",
-  updatedAt: "2026-10-03",
+  updatedAt: "2026-10-08",
   thumbnail: {
     kind: 'image',
     src: "/article-thumbs/tony-fung-2023-face.jpg",
@@ -234,7 +301,7 @@ export const tonyFungGaZenArticle: Article = {
     },
     {
       kind: 'paragraph',
-      text: "Tony Fung 冯家俊 is a world championship finalist for Hong Kong. In 2022 he went through eight rounds of the World Xiangqi Championship with one loss and reached the final, and second place equalled Hong Kong's best result at the event. In August 2026 he scored nine points out of ten in the qualifier for China's top league, four wins and a draw, the best individual score there, shared with Cao Yanlei.",
+      text: "Tony Fung 冯家俊 is the Asian champion. In October 2026 he won the Asian Individual Championship in Manila, beating China's Wang Yubo in a blitz playoff, the first Hong Kong player to win it. In 2022 he went through eight rounds of the World Xiangqi Championship with one loss and reached the final, and second place equalled Hong Kong's best result at the event. In August 2026 he scored nine points out of ten in the qualifier for China's top league, four wins and a draw, the best individual score there, shared with Cao Yanlei.",
     },
     {
       kind: 'paragraph',
@@ -242,7 +309,7 @@ export const tonyFungGaZenArticle: Article = {
     },
     {
       kind: 'paragraph',
-      text: "This page is his last fourteen months and the 2022 run to the final, with five of his games on the board. I ran the 47 games we hold through the same engine analysis Mistboard gives your own games.",
+      text: "This page is his last fifteen months and the 2022 run to the final, with six of his games on the board. I ran the 50 games we hold through the same engine analysis Mistboard gives your own games.",
     },
   ],
   sections: [
@@ -251,11 +318,11 @@ export const tonyFungGaZenArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: "**He is hardest to beat with red.** Since July 2025 he has lost two of his twenty-one red games, both on one day of an open qualifier in Shanghai.",
+          text: "**He is hardest to beat with red.** Since July 2025 he has lost two of his twenty-three red games, both on one day of an open qualifier in Shanghai.",
         },
         {
           kind: 'paragraph',
-          text: "**He has no single opening.** His 25 red games here start four different ways, with the central cannon, the Palcorner Cannon, a horse or a soldier, and each of them comes up at least five times.",
+          text: "**He has no single opening.** His 27 red games here start four different ways, with the central cannon, the Palcorner Cannon, a horse or a soldier, and each of them comes up at least five times.",
         },
         {
           kind: 'paragraph',
@@ -268,7 +335,20 @@ export const tonyFungGaZenArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: "He is in Manila this week for the [21st Asian Individual Championship](/broadcast/xiangqi/2026-asian-individual-men), which runs to 8 October. His games there will be added to this page when it ends.",
+          text: "Fung won the [21st Asian Individual Championship](/broadcast/xiangqi/2026-asian-individual-men) in Manila, from 2 to 8 October, and did not lose a game. No Hong Kong player had won it before. In the final he met Wang Yubo, China's national champion of 2025, whom he had drawn with in round two. They drew the classical game and the rapid playoff, and Fung won the blitz playoff. Cheng Yudong of China was third, and Lại Lý Huynh, also unbeaten, was fourth.",
+        },
+        {
+          kind: 'table',
+          headers: ["Round","Opponent","Colour","Result"],
+          rows: [["1","Lin Zichong, Singapore","Black","Win"],["2","Wang Yubo, China","Red","Draw"],["3","Liu Daxiang, East Malaysia","Black","Win"],["4","Quang Nguyen, Australia","Red","Win"],["5","Cheng Yudong, China","Black","Draw"],["6","Lại Lý Huynh, Vietnam","Red","Draw"],["Final","Wang Yubo, China","Red","Draw"],["Final, rapid","Wang Yubo, China","Black","Draw"],["Final, blitz","Wang Yubo, China","Red","Win"]],
+          highlightRows: [6,7,8],
+          compact: true,
+          caption: "His Asian Individual Championship, round by round. Records for rounds one to six have not been published; the final's three games are in the study.",
+        },
+        {
+          kind: 'xq-replay',
+          spec: { ...G_M_144721, startPly: 76, perspective: 'red' },
+          caption: "Tony Fung Ga Zen vs Wang Yubo, 2026 Asian Individual Championship, final, blitz playoff, 6 October 2026. Fung won with red in 60 moves. The board opens after black's move 38, with Fung to move.",
         },
       ],
     },
@@ -335,8 +415,8 @@ export const tonyFungGaZenArticle: Article = {
         {
           kind: 'table',
           headers: ["Event","Dates","W","D","L"],
-          rows: [["Shanghai Cup","Sep 9, 2026","0","1","1"],["League qualifier, Hangzhou","Aug 17–19, 2026","4","1","0"],["World Championship, Shanghai","Sep 22–27, 2025","4","4","1"],["National Games, mass-participation final, Shenzhen","Sep 5–7, 2025","1","4","0"],["Shanghai Cup, open qualifier","Aug 9–10, 2025","1","0","4"],["League qualifier","Jul 30–Aug 2, 2025","3","4","0"]],
-          highlightRows: [1],
+          rows: [["Asian Individual Championship, Manila","Oct 2–8, 2026","4","5","0"],["Shanghai Cup","Sep 9, 2026","0","1","1"],["League qualifier, Hangzhou","Aug 17–19, 2026","4","1","0"],["World Championship, Shanghai","Sep 22–27, 2025","4","4","1"],["National Games, mass-participation final, Shenzhen","Sep 5–7, 2025","1","4","0"],["Shanghai Cup, open qualifier","Aug 9–10, 2025","1","0","4"],["League qualifier","Jul 30–Aug 2, 2025","3","4","0"]],
+          highlightRows: [0,2],
           compact: true,
           caption: "The Five Rams Cup and the September 2025 World Rapid Open are left out: some of his games there are missing from our sources.",
         },
@@ -365,15 +445,15 @@ export const tonyFungGaZenArticle: Article = {
       ],
     },
     {
-      heading: "All 47 games",
+      heading: "All 50 games",
       blocks: [
         {
           kind: 'paragraph',
-          text: "Every game on this page is in a Mistboard study with the engine's judgments and lines, and 10 of them are in the broadcast archive with the site's analysis.",
+          text: "Every game on this page is in a Mistboard study with the engine's judgments and lines, and 13 of them are in the broadcast archive with the site's analysis.",
         },
         {
           kind: 'paragraph',
-          text: "Sources: game records from dpxq.com, which may not hold every game of an event; the 2022 results from the Chinese Xiangqi Association's report on Sina and from China News Service; the Five Rams Cup qualifier from Yangcheng Evening News; the Asian Games from Sing Tao; the Hong Kong Open from HK01 and Sportsroad; analysis by Pikafish through Mistboard's review pipeline, October 2026.",
+          text: "Sources: game records from dpxq.com, which may not hold every game of an event; the 2022 results from the Chinese Xiangqi Association's report on Sina and from China News Service; the Five Rams Cup qualifier from Yangcheng Evening News; the Asian Games from Sing Tao; the 2026 Asian Individual Championship from HK01, Sing Tao and Bongda Plus; the Hong Kong Open from HK01 and Sportsroad; analysis by Pikafish through Mistboard's review pipeline, October 2026.",
         },
         {
           kind: 'cta',
