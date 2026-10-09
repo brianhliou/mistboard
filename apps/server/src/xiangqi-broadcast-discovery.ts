@@ -15,6 +15,7 @@ import type { XiangqiBroadcastBoard } from '@mistboard/game';
 import {
   type DpxqPairing,
   dpxqPairingBoard,
+  pairingBoardNumber,
   pairingSourceBoardId,
 } from './xiangqi-broadcast-dpxq-pairings.js';
 import type { XiangqiBroadcastSourceFetch } from './xiangqi-broadcast-fetch.js';
@@ -494,9 +495,11 @@ export function buildStatedRoundManifestSources(input: {
   for (const pairing of pairings) {
     if (pairing.recordIds.length === 1) pairingByRecordId.set(pairing.recordIds[0]!, pairing);
   }
+  // A team league's table number repeats in every match, so it names no
+  // single pairing there: its records match by their row's link only.
   const singleGameTables = new Map<string, DpxqPairing>();
   for (const pairing of pairings) {
-    if (pairing.game !== undefined) continue;
+    if (pairing.game !== undefined || pairing.match !== undefined) continue;
     singleGameTables.set(`${pairing.roundNumber}:${pairing.table}`, pairing);
   }
   const recordId = (url: string) => url.match(/view_m_(\d+)\.html/i)?.[1];
@@ -543,7 +546,7 @@ export function buildStatedRoundManifestSources(input: {
     candidates.push({
       url: board.url,
       ...common(round),
-      boardNumber: pairing?.table ?? board.table ?? rank,
+      boardNumber: pairing ? pairingBoardNumber(pairing) : (board.table ?? rank),
       ...(pin ? { sourceBoardId: pin } : {}),
     });
   }
@@ -574,7 +577,7 @@ export function buildStatedRoundManifestSources(input: {
     resultsOnly.push({
       url: pairing.pageUrl,
       ...common(round),
-      boardNumber: pairing.table,
+      boardNumber: pairingBoardNumber(pairing),
       resultsOnly: board,
     });
   }
@@ -587,18 +590,39 @@ export function buildStatedRoundManifestSources(input: {
   const tablesWithGames = new Set<string>();
   for (const pairing of pairings) {
     if (pairing.game === undefined) continue;
-    const table = pairingSourceBoardId({ roundNumber: pairing.roundNumber, table: pairing.table });
+    const table = pairingSourceBoardId({
+      roundNumber: pairing.roundNumber,
+      table: pairing.table,
+      ...(pairing.match ? { match: pairing.match } : {}),
+    });
     tablesWithGames.add(`${pairing.roundNumber}:${table}`);
   }
   for (const row of stored) {
-    const table = row.sourceBoardId?.match(/^(r\d+t\d+)g\d+$/)?.[1];
+    const table = row.sourceBoardId?.match(/^(r\d+(?:m\d+)?t\d+)g\d+$/)?.[1];
     if (table && row.roundNumber !== undefined) tablesWithGames.add(`${row.roundNumber}:${table}`);
+  }
+  // A team league round read before its games were keyed by match holds
+  // boards keyed by table alone, each one some match's game at that table.
+  // Once the round's match-keyed boards are listed or stored they are the
+  // round, and every table-keyed results-only board in it is retired.
+  const roundsByMatch = new Set<number>();
+  for (const pairing of pairings) {
+    if (pairing.match !== undefined) roundsByMatch.add(pairing.roundNumber);
+  }
+  for (const row of stored) {
+    if (row.roundNumber !== undefined && /^r\d+m\d+t\d+/.test(row.sourceBoardId ?? '')) {
+      roundsByMatch.add(row.roundNumber);
+    }
   }
   const retirements: DiscoveryManifestSource[] = [];
   for (const row of stored) {
-    if (row.plies > 0 || row.roundNumber === undefined) continue;
-    if (!row.sourceBoardId || !/^r\d+t\d+$/.test(row.sourceBoardId)) continue;
-    if (!tablesWithGames.has(`${row.roundNumber}:${row.sourceBoardId}`)) continue;
+    if (row.plies > 0 || row.roundNumber === undefined || !row.sourceBoardId) continue;
+    const aggregate =
+      /^r\d+(?:m\d+)?t\d+$/.test(row.sourceBoardId) &&
+      tablesWithGames.has(`${row.roundNumber}:${row.sourceBoardId}`);
+    const unmatched =
+      /^r\d+t\d+(?:g\d+)?$/.test(row.sourceBoardId) && roundsByMatch.has(row.roundNumber);
+    if (!aggregate && !unmatched) continue;
     retirements.push({
       url: row.sourceUrl ?? row.id,
       ...common(roundFor(row.roundNumber)),

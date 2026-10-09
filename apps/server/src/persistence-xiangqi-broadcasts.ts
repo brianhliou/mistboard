@@ -520,20 +520,35 @@ async function retireResultsOnlyTwin(
 // table is stored: only a moveless aggregate-shaped board, and only while a
 // game board of its table exists in the same round, so a failed fetch of the
 // games leaves the aggregate standing until they land.
+//
+// The same step retires a team league's table-keyed board (`r01t02`, from a
+// read before games were keyed by match) once the round holds a match-keyed
+// board (`r01m03t02`): its table number named some match's game, whichever
+// was read last. Again only moveless, and only while the replacement exists.
 export async function retireSupersededXiangqiBroadcastAggregateOn(
   client: Queryable,
   input: { tourSlug: string; roundId: string; boardId: string },
 ): Promise<XiangqiBroadcastBoardUpdateResult> {
-  const { rows } = await client.query<{ id: string; source_board_id: string }>(
+  const { rows } = await client.query<{ id: string; source_board_id: string; by_match: boolean }>(
     `DELETE FROM xiangqi_broadcast_boards AS agg
       WHERE agg.id = $1 AND agg.tour_slug = $2 AND agg.round_id = $3
         AND agg.ply_count = 0
-        AND agg.source_board_id ~ '^r[0-9]+t[0-9]+$'
-        AND EXISTS (
+        AND (
+          (agg.source_board_id ~ '^r[0-9]+(m[0-9]+)?t[0-9]+$'
+            AND EXISTS (
+              SELECT 1 FROM xiangqi_broadcast_boards AS game
+               WHERE game.round_id = agg.round_id
+                 AND game.source_board_id ~ ('^' || agg.source_board_id || 'g[0-9]+$')))
+          OR (agg.source_board_id ~ '^r[0-9]+t[0-9]+(g[0-9]+)?$'
+            AND EXISTS (
+              SELECT 1 FROM xiangqi_broadcast_boards AS game
+               WHERE game.round_id = agg.round_id
+                 AND game.source_board_id ~ '^r[0-9]+m[0-9]+t[0-9]+')))
+      RETURNING agg.id, agg.source_board_id,
+        NOT EXISTS (
           SELECT 1 FROM xiangqi_broadcast_boards AS game
            WHERE game.round_id = agg.round_id
-             AND game.source_board_id ~ ('^' || agg.source_board_id || 'g[0-9]+$'))
-      RETURNING agg.id, agg.source_board_id`,
+             AND game.source_board_id ~ ('^' || agg.source_board_id || 'g[0-9]+$')) AS by_match`,
     [input.boardId, input.tourSlug, input.roundId],
   );
   const row = rows[0];
@@ -547,7 +562,9 @@ export async function retireSupersededXiangqiBroadcastAggregateOn(
     sourceBoardId: row.source_board_id,
     severity: 'info',
     kind: 'superseded',
-    message: `retired ${row.id}: the table's per-game boards replace its aggregate row`,
+    message: row.by_match
+      ? `retired ${row.id}: the round's match-keyed boards replace its table-keyed row`
+      : `retired ${row.id}: the table's per-game boards replace its aggregate row`,
     payload: { retiredBoardId: row.id },
   });
   return { ok: true, boardId: row.id, status: 'retired', plyCount: 0 };

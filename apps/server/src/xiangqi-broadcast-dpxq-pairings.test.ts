@@ -80,6 +80,55 @@ test("the women's round page reads the same way", () => {
   assert.equal(page.pairings[1]!.result, '0-1');
 });
 
+test('a team league numbers its tables per match, so each game is keyed by its match', () => {
+  // 2026 women's league (dpxq 12776) round 1: five team matches, tables 1-3
+  // each, and two level matches add playoff tables (4, and 4-6). Keyed by
+  // round and table alone, its 19 games collapsed into six boards.
+  const page = parseDpxqRoundPage(fixture('round_12776_1-womens-league-2026-r01.html'));
+  assert.ok(page);
+  assert.equal(page.roundNumber, 1);
+  assert.equal(page.roundCount, 10);
+  assert.equal(page.pairings.length, 19);
+  assert.equal(new Set(page.pairings.map(pairingSourceBoardId)).size, 19);
+  assert.deepEqual(
+    page.pairings.map((pairing) => pairing.match),
+    [1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 5, 5, 5],
+  );
+  assert.deepEqual(
+    page.pairings.map((pairing) => pairing.table),
+    [1, 2, 3, 1, 2, 3, 1, 2, 3, 4, 1, 2, 3, 4, 5, 6, 1, 2, 3],
+  );
+  const first = page.pairings[0]!;
+  assert.equal(first.red.name, '刘钰');
+  assert.equal(first.black.name, '黄蕾蕾');
+  assert.equal(first.matchName, '河北体彩队-上海荣棋象棋队');
+  assert.equal(pairingSourceBoardId(first), 'r01m01t01');
+  // Match 4 (常州 v 杭州燃气) is the one whose playoff tables the old key
+  // stored over the other matches' boards.
+  assert.equal(pairingSourceBoardId(page.pairings[15]!), 'r01m04t06');
+  assert.equal(page.pairings[15]!.red.name, '赵冠芳');
+  assert.equal(page.pairings[11]!.matchName, '常州明都枫泽队-杭州燃气集团队');
+
+  const board = dpxqPairingBoard({
+    tourSlug: '2026-womens-xiangqi-league',
+    roundId: '2026-womens-xiangqi-league-r01',
+    pairing: page.pairings[4]!,
+    sourceUrl: roundPageUrl('12776', 1),
+  });
+  assert.equal(board.sourceBoardId, 'r01m02t02');
+  // Board numbers run down the page, so a round reads match by match.
+  assert.equal(board.boardNumber, 5);
+  assert.deepEqual(board.details, { match: '龙江体彩象棋队-成都队', table: 2 });
+  assert.equal(validateXiangqiBroadcastBoard(board).ok, true);
+});
+
+test('an individual event keeps its round-and-table key', () => {
+  const page = parseDpxqRoundPage(fixture('round_9503_1-asian-2024-men-r01.html'));
+  assert.ok(page);
+  assert.ok(page.pairings.every((pairing) => pairing.match === undefined));
+  assert.equal(pairingSourceBoardId(page.pairings[2]!), 'r01t03');
+});
+
 test('a page with nothing paired yet, or a team layout, is no pairings', () => {
   // dpxq's page for a tour before round 1: 第00轮 and no table.
   assert.equal(

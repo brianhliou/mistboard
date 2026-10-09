@@ -10,10 +10,13 @@
 // dpxq-tour provider merges them with the game list so every paired board
 // exists, with its result, whether or not its moves are ever published.
 //
-// Only the individual layout (table#table_geren) is read. A team event's round
-// page is laid out by match, and team events are already covered by their
-// records; parsing a second layout would be a second, untested source of the
-// same facts.
+// Only the individual layout (table#table_geren) is read. A team league's
+// individual table lists its games match by match, numbering tables from 1 in
+// each, so a game there is keyed by match as well as table: keyed by round and
+// table alone, the 2026 women's league round 1 (19 games, no records) stored
+// six boards, each overwritten by the next match's game at that table. Each
+// row's id names its match (r_<match>_<row>_<n>); an individual event's rows
+// carry -1 or 0 there.
 
 import {
   XIANGQI_BROADCAST_SCHEMA,
@@ -35,8 +38,17 @@ export type DpxqPairingSide = { name: string; federation?: string };
 
 export type DpxqPairing = {
   roundNumber: number;
-  /** 台次: the table, which is the board number on the page. */
+  /** 台次: the table, which is the board number on the page; in a team
+   *  league, the table within its match. */
   table: number;
+  /** A team league's match, 1-based in page order; unset for an individual
+   *  event. */
+  match?: number;
+  /** The match as the page pairs its teams, "河北体彩队-上海荣棋象棋队". */
+  matchName?: string;
+  /** Position down the page (1-based), set with `match`: a team league's
+   *  board number, since its tables repeat in every match. */
+  order?: number;
   /**
    * Set only when the table played more than one game in the round (the 2024
    * final: 第1局 slow, 第2局 rapid). The page lists those games under an
@@ -174,6 +186,9 @@ export function parseDpxqRoundPage(html: string): DpxqRoundPage | null {
   // The main row of the table currently being read, so the games listed
   // under an aggregate row inherit its table number and replace it.
   let lastMain: { pairing: DpxqPairing; index: number } | null = null;
+  // dpxq's match id -> the match's place on the page, and its name from its
+  // first row ("河北体彩队-上海荣棋象棋队").
+  const matches = new Map<string, { index: number; name?: string }>();
 
   for (const row of table.matchAll(/<tr([^>]*)>([\s\S]*?)<\/tr>/gi)) {
     const attrs = row[1] ?? '';
@@ -210,6 +225,8 @@ export function parseDpxqRoundPage(html: string): DpxqRoundPage | null {
       pairings.push({
         roundNumber,
         table: lastMain.pairing.table,
+        ...(lastMain.pairing.match ? { match: lastMain.pairing.match } : {}),
+        ...(lastMain.pairing.matchName ? { matchName: lastMain.pairing.matchName } : {}),
         ...(Number.isInteger(game) && game > 0 ? { game } : {}),
         ...(kind ? { kind } : {}),
         red,
@@ -225,9 +242,22 @@ export function parseDpxqRoundPage(html: string): DpxqRoundPage | null {
       lastMain = null;
       continue;
     }
+    const matchId = attrs.match(/\bid\s*=\s*["']?r_(\d+)_/i)?.[1];
+    let match: { index: number; name?: string } | undefined;
+    if (matchId && Number(matchId) > 0) {
+      match = matches.get(matchId);
+      if (!match) {
+        const name =
+          red.federation && black.federation ? `${red.federation}-${black.federation}` : undefined;
+        match = { index: matches.size + 1, ...(name ? { name } : {}) };
+        matches.set(matchId, match);
+      }
+    }
     const pairing: DpxqPairing = {
       roundNumber,
       table: tableNumber,
+      ...(match ? { match: match.index } : {}),
+      ...(match?.name ? { matchName: match.name } : {}),
       red,
       black,
       result: resultFromDpxqScore(resultCell.text),
@@ -237,19 +267,37 @@ export function parseDpxqRoundPage(html: string): DpxqRoundPage | null {
     lastMain = { pairing, index: pairings.length - 1 };
   }
 
+  // One match is no grouping: a two-team match series keeps its
+  // round-and-table key, and its stored boards stay where they are.
+  pairings.forEach((pairing, index) => {
+    if (matches.size > 1) {
+      pairing.order = index + 1;
+    } else {
+      delete pairing.match;
+      delete pairing.matchName;
+    }
+  });
   return { roundNumber, roundCount, pairings };
 }
 
-/** `r07t01`, `r07t01g2`: unique within a tour, which the store requires of a
- *  source board id, and stable across polls because the page's round and
- *  table are. */
+/** `r07t01`, `r07t01g2`, and `r01m04t02` in a team league: unique within a
+ *  tour, which the store requires of a source board id, and stable across
+ *  polls because the page's round, match order and table are. */
 export function pairingSourceBoardId(pairing: {
   roundNumber: number;
   table: number;
+  match?: number;
   game?: number;
 }): string {
   const pad = (n: number) => String(n).padStart(2, '0');
-  return `r${pad(pairing.roundNumber)}t${pad(pairing.table)}${pairing.game ? `g${pairing.game}` : ''}`;
+  const match = pairing.match ? `m${pad(pairing.match)}` : '';
+  return `r${pad(pairing.roundNumber)}${match}t${pad(pairing.table)}${pairing.game ? `g${pairing.game}` : ''}`;
+}
+
+/** The board number a pairing shows under: its table, or in a team league
+ *  its place down the page. */
+export function pairingBoardNumber(pairing: DpxqPairing): number {
+  return pairing.order ?? pairing.table;
 }
 
 /** A pairing board with no moves: the result, or `scheduled` until there is one. */
@@ -267,7 +315,7 @@ export function dpxqPairingBoard(input: {
     tourSlug: input.tourSlug,
     roundId: input.roundId,
     sourceBoardId,
-    boardNumber: pairing.table,
+    boardNumber: pairingBoardNumber(pairing),
     red: { ...pairing.red },
     black: { ...pairing.black },
     status: pairing.result === '*' ? 'scheduled' : 'complete',
@@ -275,6 +323,7 @@ export function dpxqPairingBoard(input: {
     moves: [],
     sourceUrl: input.sourceUrl,
     details: {
+      ...(pairing.matchName ? { match: pairing.matchName } : {}),
       table: pairing.table,
       ...(pairing.game ? { game: pairing.game } : {}),
       ...(pairing.kind ? { kind: pairing.kind } : {}),
