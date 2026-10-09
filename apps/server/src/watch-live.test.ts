@@ -18,7 +18,9 @@ import {
   collectLiveTvCandidates,
   electLiveTvFeatured,
   LIVE_TV_FRESH_WINDOW_MS,
+  LIVE_TV_STALL_MS,
   LIVE_TV_TOP_CHANNEL_ID,
+  liveTvStallMs,
   registerLiveWatchPayloadBuilder,
   resetLiveTvFeaturedForTest,
 } from './watch-live.js';
@@ -417,6 +419,7 @@ test('elector: pvp outranks pve; hysteresis holds within a tier; pool empty clea
   let featured = electLiveTvFeatured(
     LIVE_TV_TOP_CHANNEL_ID,
     collectLiveTvCandidates(context(), NOW),
+    NOW,
   );
   assert.equal(featured?.roomId, 'fko_a');
 
@@ -429,16 +432,28 @@ test('elector: pvp outranks pve; hysteresis holds within a tier; pool empty clea
       seats: { black: `${FAKE_ENGINE_PREFIX}x`, red: 'c2' },
     }),
   );
-  featured = electLiveTvFeatured(LIVE_TV_TOP_CHANNEL_ID, collectLiveTvCandidates(context(), NOW));
+  featured = electLiveTvFeatured(
+    LIVE_TV_TOP_CHANNEL_ID,
+    collectLiveTvCandidates(context(), NOW),
+    NOW,
+  );
   assert.equal(featured?.roomId, 'fko_a');
 
   // A live PvP game takes the hero over any engine game.
   openRooms.set('fko_pvp', tenantRoom({ id: 'fko_pvp', lastEventAt: NOW - 9_000 }));
-  featured = electLiveTvFeatured(LIVE_TV_TOP_CHANNEL_ID, collectLiveTvCandidates(context(), NOW));
+  featured = electLiveTvFeatured(
+    LIVE_TV_TOP_CHANNEL_ID,
+    collectLiveTvCandidates(context(), NOW),
+    NOW,
+  );
   assert.equal(featured?.roomId, 'fko_pvp');
 
   openRooms.clear();
-  featured = electLiveTvFeatured(LIVE_TV_TOP_CHANNEL_ID, collectLiveTvCandidates(context(), NOW));
+  featured = electLiveTvFeatured(
+    LIVE_TV_TOP_CHANNEL_ID,
+    collectLiveTvCandidates(context(), NOW),
+    NOW,
+  );
   assert.equal(featured, null);
 });
 
@@ -452,6 +467,7 @@ function candidate(args: {
   gameSpecId: string;
   composition: 'pvp' | 'pve';
   lastActivityAt: number;
+  timeControl?: unknown;
 }): Parameters<typeof electLiveTvFeatured>[1][number] {
   return {
     roomId: args.roomId,
@@ -463,66 +479,174 @@ function candidate(args: {
     rated: false,
     startedAt: NOW - 60_000,
     lastActivityAt: args.lastActivityAt,
-    timeControl: null,
+    lastMoveAt: args.lastActivityAt,
+    timeControl: args.timeControl ?? null,
     clock: null,
   };
 }
 
 test('elector: standard xiangqi takes the hero over a fresher non-xiangqi game at equal composition', () => {
   resetLiveTvFeaturedForTest();
-  const featured = electLiveTvFeatured(LIVE_TV_TOP_CHANNEL_ID, [
-    candidate({
-      roomId: 'jungle',
-      gameSpecId: 'jungle-flip',
-      composition: 'pve',
-      lastActivityAt: NOW - 1_000,
-    }),
-    candidate({
-      roomId: 'xq',
-      gameSpecId: 'xiangqi',
-      composition: 'pve',
-      lastActivityAt: NOW - 30_000,
-    }),
-  ]);
+  const featured = electLiveTvFeatured(
+    LIVE_TV_TOP_CHANNEL_ID,
+    [
+      candidate({
+        roomId: 'jungle',
+        gameSpecId: 'jungle-flip',
+        composition: 'pve',
+        lastActivityAt: NOW - 1_000,
+      }),
+      candidate({
+        roomId: 'xq',
+        gameSpecId: 'xiangqi',
+        composition: 'pve',
+        lastActivityAt: NOW - 30_000,
+      }),
+    ],
+    NOW,
+  );
   assert.equal(featured?.roomId, 'xq');
 });
 
 test('elector: the flagship bonus never lifts a xiangqi engine game over a human game', () => {
   resetLiveTvFeaturedForTest();
-  const featured = electLiveTvFeatured(LIVE_TV_TOP_CHANNEL_ID, [
-    candidate({
-      roomId: 'xq-bot',
-      gameSpecId: 'xiangqi',
-      composition: 'pve',
-      lastActivityAt: NOW - 1_000,
-    }),
-    candidate({
-      roomId: 'jungle-humans',
-      gameSpecId: 'jungle-flip',
-      composition: 'pvp',
-      lastActivityAt: NOW - 30_000,
-    }),
-  ]);
+  const featured = electLiveTvFeatured(
+    LIVE_TV_TOP_CHANNEL_ID,
+    [
+      candidate({
+        roomId: 'xq-bot',
+        gameSpecId: 'xiangqi',
+        composition: 'pve',
+        lastActivityAt: NOW - 1_000,
+      }),
+      candidate({
+        roomId: 'jungle-humans',
+        gameSpecId: 'jungle-flip',
+        composition: 'pvp',
+        lastActivityAt: NOW - 30_000,
+      }),
+    ],
+    NOW,
+  );
   assert.equal(featured?.roomId, 'jungle-humans');
 });
 
 test('elector: on a variant-filtered channel the flagship bonus cancels and recency still wins', () => {
   resetLiveTvFeaturedForTest();
-  const featured = electLiveTvFeatured('jungle-flip', [
-    candidate({
-      roomId: 'old',
-      gameSpecId: 'jungle-flip',
-      composition: 'pve',
-      lastActivityAt: NOW - 30_000,
-    }),
-    candidate({
-      roomId: 'fresh',
-      gameSpecId: 'jungle-flip',
-      composition: 'pve',
-      lastActivityAt: NOW - 1_000,
-    }),
-  ]);
+  const featured = electLiveTvFeatured(
+    'jungle-flip',
+    [
+      candidate({
+        roomId: 'old',
+        gameSpecId: 'jungle-flip',
+        composition: 'pve',
+        lastActivityAt: NOW - 30_000,
+      }),
+      candidate({
+        roomId: 'fresh',
+        gameSpecId: 'jungle-flip',
+        composition: 'pve',
+        lastActivityAt: NOW - 1_000,
+      }),
+    ],
+    NOW,
+  );
   assert.equal(featured?.roomId, 'fresh');
+});
+
+// A player who walks away leaves the room live until the flag (~10 minutes at
+// 10+5), and the hysteresis above used to hold the board on it the whole time
+// (2026-10-08: four abandoned 2-19 ply games froze the homepage). A game with no
+// move past the stall bar loses the board, sticky pick included.
+const TEN_FIVE = { initialMs: 600_000, incrementMs: 5_000 };
+
+test('elector: a stalled featured game gives the board to a fresh one in the same tier', () => {
+  resetLiveTvFeaturedForTest();
+  const abandoned = candidate({
+    roomId: 'abandoned',
+    gameSpecId: 'xiangqi',
+    composition: 'pve',
+    lastActivityAt: NOW - 5_000,
+    timeControl: TEN_FIVE,
+  });
+  assert.equal(electLiveTvFeatured(LIVE_TV_TOP_CHANNEL_ID, [abandoned], NOW)?.roomId, 'abandoned');
+
+  const later = NOW + LIVE_TV_STALL_MS;
+  const fresh = candidate({
+    roomId: 'fresh',
+    gameSpecId: 'xiangqi',
+    composition: 'pve',
+    lastActivityAt: later - 1_000,
+    timeControl: TEN_FIVE,
+  });
+  const featured = electLiveTvFeatured(LIVE_TV_TOP_CHANNEL_ID, [abandoned, fresh], later);
+  assert.equal(featured?.roomId, 'fresh');
+});
+
+test('elector: a stalled sole candidate features nothing, on every channel', () => {
+  resetLiveTvFeaturedForTest();
+  const abandoned = candidate({
+    roomId: 'abandoned',
+    gameSpecId: 'jungle-flip',
+    composition: 'pvp',
+    lastActivityAt: NOW - LIVE_TV_STALL_MS - 1,
+    timeControl: TEN_FIVE,
+  });
+  assert.equal(electLiveTvFeatured(LIVE_TV_TOP_CHANNEL_ID, [abandoned], NOW), null);
+  assert.equal(electLiveTvFeatured('jungle-flip', [abandoned], NOW), null);
+});
+
+test('elector: a game still moving inside the stall bar stays sticky', () => {
+  resetLiveTvFeaturedForTest();
+  const current = candidate({
+    roomId: 'current',
+    gameSpecId: 'xiangqi',
+    composition: 'pve',
+    lastActivityAt: NOW - 1_000,
+    timeControl: TEN_FIVE,
+  });
+  assert.equal(electLiveTvFeatured(LIVE_TV_TOP_CHANNEL_ID, [current], NOW)?.roomId, 'current');
+  const later = NOW + LIVE_TV_STALL_MS - 2_000;
+  const fresher = candidate({
+    roomId: 'fresher',
+    gameSpecId: 'xiangqi',
+    composition: 'pve',
+    lastActivityAt: later - 500,
+    timeControl: TEN_FIVE,
+  });
+  const featured = electLiveTvFeatured(LIVE_TV_TOP_CHANNEL_ID, [current, fresher], later);
+  assert.equal(featured?.roomId, 'current');
+});
+
+test('stall bar: a slow pace scales it so a thinking player keeps the board', () => {
+  assert.equal(liveTvStallMs(null), LIVE_TV_STALL_MS);
+  assert.equal(liveTvStallMs(TEN_FIVE), LIVE_TV_STALL_MS);
+  const thirty = { initialMs: 1_800_000, incrementMs: 0 };
+  assert.equal(liveTvStallMs(thirty), 135_000);
+  resetLiveTvFeaturedForTest();
+  const thinking = candidate({
+    roomId: 'thinking',
+    gameSpecId: 'xiangqi',
+    composition: 'pvp',
+    lastActivityAt: NOW - 100_000,
+    timeControl: thirty,
+  });
+  assert.equal(electLiveTvFeatured(LIVE_TV_TOP_CHANNEL_ID, [thinking], NOW)?.roomId, 'thinking');
+});
+
+// Seat joins, reconnects and clock pauses append events without moving the
+// board; the stall clock reads the last MOVE, not the last event.
+test('a candidate stalls on its last move, not its last event', () => {
+  const room = tenantRoom({ id: 'fko_rejoin', lastEventAt: NOW - 120_000 });
+  openRooms.set('fko_rejoin', {
+    ...room,
+    events: [...(room.events ?? []), { type: 'seat-assigned', at: NOW - 1_000 }],
+  });
+  const candidates = collectLiveTvCandidates(context(), NOW);
+  assert.equal(candidates.length, 1);
+  assert.equal(candidates[0]!.lastActivityAt, NOW - 1_000);
+  assert.equal(candidates[0]!.lastMoveAt, NOW - 120_000);
+  assert.equal(electLiveTvFeatured(LIVE_TV_TOP_CHANNEL_ID, candidates, NOW), null);
 });
 
 test('GET /api/watch/live: empty pool answers featured null', async () => {
