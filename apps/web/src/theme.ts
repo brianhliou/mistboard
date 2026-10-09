@@ -11,6 +11,7 @@ import {
   readStoredXiangqiBoardLayout,
   readStoredXiangqiBoardTheme,
   readStoredXiangqiPieceSet,
+  readStoredXiangqiPieceShadow,
   readStoredXiangqiRiverStyle,
   readStoredXiangqiRiverText,
   readStoredXiangqiStartMarkers,
@@ -18,6 +19,7 @@ import {
   writeStoredXiangqiBoardLayout,
   writeStoredXiangqiNotation,
   writeStoredXiangqiPieceSet,
+  writeStoredXiangqiPieceShadow,
   writeStoredXiangqiRiverText,
   writeStoredXiangqiStartMarkers,
   type XiangqiBoardLayout,
@@ -43,6 +45,7 @@ export {
   readStoredXiangqiBoardColor,
   readStoredXiangqiBoardLayout,
   readStoredXiangqiPieceSet,
+  readStoredXiangqiPieceShadow,
   readStoredXiangqiRiverText,
   readStoredXiangqiStartMarkers,
 } from './xiangqi-appearance-storage.js';
@@ -169,6 +172,7 @@ export function initializeThemeSettings(): void {
   applyXiangqiRiverText(readStoredXiangqiRiverText());
   applyXiangqiRiverStyle(readStoredXiangqiRiverStyle());
   applyXiangqiStartMarkers(readStoredXiangqiStartMarkers());
+  applyXiangqiPieceShadow(readStoredXiangqiPieceShadow());
   applyXiangqiPieceSet(readStoredXiangqiPieceSet());
   if (!document.documentElement.dataset.boardFamily) {
     document.documentElement.dataset.boardFamily = defaultBoardFamily;
@@ -198,6 +202,7 @@ function watchForXiangqiAppearanceInOtherDocuments(): void {
     applyXiangqiRiverText(readStoredXiangqiRiverText());
     applyXiangqiRiverStyle(readStoredXiangqiRiverStyle());
     applyXiangqiStartMarkers(readStoredXiangqiStartMarkers());
+    applyXiangqiPieceShadow(readStoredXiangqiPieceShadow());
     applyXiangqiPieceSet(readStoredXiangqiPieceSet());
     syncThemeControls();
     dispatchXiangqiAppearanceChanged();
@@ -305,6 +310,12 @@ function applyXiangqiStartMarkers(on: boolean): void {
   document.documentElement.dataset.xiangqiStartMarkers = on ? 'on' : 'off';
 }
 
+/** The piece renderers read this (xiangqiPieceShadowEnabled) and app-base.css
+ *  hides a shadow a board drew before the switch went off. */
+function applyXiangqiPieceShadow(on: boolean): void {
+  document.documentElement.dataset.xiangqiPieceShadow = on ? 'on' : 'off';
+}
+
 /** Mirrors the coordinate preference onto the root so CSS can pick the matching
  *  board aspect. The label gutter is only reserved when labels are shown, so the
  *  board is a different rectangle in each state and the host slot has to agree
@@ -383,6 +394,14 @@ export function setXiangqiRiverTextPreference(text: XiangqiRiverText): void {
 export function setXiangqiStartMarkersPreference(on: boolean): void {
   applyXiangqiStartMarkers(on);
   writeStoredXiangqiStartMarkers(on);
+  syncThemeControls();
+  dispatchXiangqiAppearanceChanged();
+}
+
+export function setXiangqiPieceShadowPreference(on: boolean): void {
+  endXiangqiAppearancePreview('xqShadow');
+  applyXiangqiPieceShadow(on);
+  writeStoredXiangqiPieceShadow(on);
   syncThemeControls();
   dispatchXiangqiAppearanceChanged();
 }
@@ -659,6 +678,9 @@ function syncThemeControls(): void {
   });
   document.querySelectorAll<HTMLInputElement>('input[data-xq-start-markers]').forEach((input) => {
     input.checked = readStoredXiangqiStartMarkers();
+  });
+  document.querySelectorAll<HTMLInputElement>('input[data-xq-piece-shadow]').forEach((input) => {
+    input.checked = readStoredXiangqiPieceShadow();
   });
   document.querySelectorAll<HTMLInputElement>('input[data-sound-volume]').forEach((input) => {
     input.value = String(Math.round(effectiveVolume * 100));

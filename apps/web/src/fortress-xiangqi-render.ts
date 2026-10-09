@@ -58,6 +58,7 @@ import {
   isAssetPieceSet,
   renderXiangqiPieceGlyphed,
   type XiangqiPieceSet,
+  xiangqiPieceDiscShadow,
 } from './xiangqi-piece-sets.js';
 
 // Bespoke SVG renderer for the 7x8 Fortress Xiangqi board. Perfect information
@@ -265,7 +266,7 @@ export function fortressXiangqiPieceGhostSvg(
 ): string {
   const set = pieceSet ?? readStoredXiangqiPieceSet();
   const inner = renderFortressXiangqiPiece(piece, set, PIECE_SIZE / 2, PIECE_SIZE / 2, false, null);
-  return `<svg width="${PIECE_SIZE}" height="${PIECE_SIZE}" viewBox="0 0 ${PIECE_SIZE} ${PIECE_SIZE}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`;
+  return `<svg width="${PIECE_SIZE}" height="${PIECE_SIZE}" viewBox="0 0 ${PIECE_SIZE} ${PIECE_SIZE}" overflow="visible" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`;
 }
 
 // A 100x100 piece glyph (no position) for inline use — the reserve/pocket tiles.
@@ -444,7 +445,10 @@ function treasureDisc(
   className: string,
 ): string {
   const styleAttr = set === 'international-flat' ? ' style="filter:none"' : '';
-  return `<svg class="${className}"${styleAttr} x="${x}" y="${y}" width="${PIECE_SIZE}" height="${PIECE_SIZE}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${color} treasure">${treasureInnerMarks(color, set)}</svg>`;
+  // The same disc shadow as the six shared pieces beside it.
+  const shadow = xiangqiPieceDiscShadow(set);
+  const overflowAttr = shadow ? ' overflow="visible"' : '';
+  return `<svg class="${className}"${styleAttr} x="${x}" y="${y}" width="${PIECE_SIZE}" height="${PIECE_SIZE}"${overflowAttr} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${color} treasure">${shadow}${treasureInnerMarks(color, set)}</svg>`;
 }
 
 function selectionRing(
@@ -632,9 +636,9 @@ export function installFortressXiangqiBoardStyles(): void {
     .fxq-hit--target:hover .fxq-hint-capture {
       opacity: 0;
     }
+    /* The disc shadow is drawn into each piece (xiangqiPieceShadowMarks). */
     .fxq-piece {
       pointer-events: none;
-      filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2));
     }
     .fxq-piece--drag-source {
       opacity: 0.34;

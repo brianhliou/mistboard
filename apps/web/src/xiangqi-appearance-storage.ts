@@ -14,7 +14,6 @@ import {
 } from './xiangqi-piece-sets.js';
 import {
   DEFAULT_XIANGQI_RIVER_TEXT,
-  normalizeXiangqiRiverText,
   XIANGQI_RIVER_TEXTS,
   type XiangqiRiverText,
 } from './xiangqi-river-text.js';
@@ -127,6 +126,19 @@ export function inferredXiangqiPieceSet(
   if (locale === 'zh-Hans' || locale === 'zh-Hant') return 'traditional';
   if (country && HANZI_PIECE_COUNTRIES.has(country)) return 'traditional';
   return defaultXiangqiPieceSet;
+}
+
+// The river caption follows the same audience as the pieces (Brian, 2026-10-08:
+// "On for Chinese readers. By default."): whoever starts on hanzi pieces also
+// starts with 楚河 漢界 in the river; everyone else starts with none. Like the
+// piece set, nothing stored means "follow this", so a pick always wins.
+export function inferredXiangqiRiverText(
+  locale: Locale = currentLocale(),
+  country: string | null = viewerCountry(),
+): XiangqiRiverText {
+  return inferredXiangqiPieceSet(locale, country) === 'traditional'
+    ? 'classic'
+    : DEFAULT_XIANGQI_RIVER_TEXT;
 }
 
 // An explicit pick is stored; no stored value means "follow the inference",
@@ -278,9 +290,12 @@ export function readStoredXiangqiRiverText(): XiangqiRiverText {
       return preview as XiangqiRiverText;
     }
     migrateLegacyBoardThemes();
-    return normalizeXiangqiRiverText(window.localStorage.getItem(xiangqiRiverTextStorageKey));
+    const stored = window.localStorage.getItem(xiangqiRiverTextStorageKey);
+    return XIANGQI_RIVER_TEXTS.includes(stored as XiangqiRiverText)
+      ? (stored as XiangqiRiverText)
+      : inferredXiangqiRiverText();
   } catch {
-    return DEFAULT_XIANGQI_RIVER_TEXT;
+    return inferredXiangqiRiverText();
   }
 }
 
@@ -331,12 +346,43 @@ export function writeStoredXiangqiStartMarkers(on: boolean): void {
   }
 }
 
-/** The URL preview hooks (?xqLayout=, ?xqBoardColor=, ?xqRiver=) win over the
+// Piece shadow (2026-10-08): the soft shadow drawn under every disc piece
+// (xiangqiPieceShadowMarks). On by default; like the start markers, only an
+// explicit pick is stored, so nothing is written until the reader flips it.
+const xiangqiPieceShadowStorageKey = 'mistboard.xiangqiPieceShadow';
+const defaultXiangqiPieceShadow = true;
+
+export function readStoredXiangqiPieceShadow(): boolean {
+  try {
+    // QA/share hook: `?xqShadow=off` previews the switch without saving it.
+    const preview = new URLSearchParams(window.location.search).get('xqShadow');
+    if (preview === 'on') return true;
+    if (preview === 'off') return false;
+    const stored = window.localStorage.getItem(xiangqiPieceShadowStorageKey);
+    if (stored === 'on') return true;
+    if (stored === 'off') return false;
+    return defaultXiangqiPieceShadow;
+  } catch {
+    return defaultXiangqiPieceShadow;
+  }
+}
+
+export function writeStoredXiangqiPieceShadow(on: boolean): void {
+  try {
+    window.localStorage.setItem(xiangqiPieceShadowStorageKey, on ? 'on' : 'off');
+  } catch {
+    // The root attribute still updates for the current page.
+  }
+}
+
+/** The URL preview hooks (?xqLayout=, ?xqBoardColor=, ?xqRiver=, ?xqShadow=) win over the
  *  stored pick, so a pick made on a preview link has to end the preview, or the
  *  gear would keep showing the previewed option as selected while the board
  *  shows the pick (Brian's 2026-10-08 review: the river-text selection "stuck"
  *  on a ?xqRiver= link). Drops the parameter from the address in place. */
-export function endXiangqiAppearancePreview(param: 'xqLayout' | 'xqBoardColor' | 'xqRiver'): void {
+export function endXiangqiAppearancePreview(
+  param: 'xqLayout' | 'xqBoardColor' | 'xqRiver' | 'xqShadow',
+): void {
   try {
     const url = new URL(window.location.href);
     if (!url.searchParams.has(param)) return;

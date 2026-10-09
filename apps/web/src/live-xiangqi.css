@@ -342,8 +342,18 @@
 }
 
 .xq-piece {
-  filter: drop-shadow(0 3px 4px rgba(35, 27, 18, 0.25));
   pointer-events: none;
+}
+
+/* Disc pieces carry their shadow in their own markup (xiangqiPieceShadowMarks).
+   The disc-less animal heads have no disc to shadow, so they keep the soft CSS
+   drop shadow that follows their outline; the Piece shadow switch drops it. */
+.xq-piece--bare-animal {
+  filter: drop-shadow(0 3px 4px rgba(35, 27, 18, 0.25));
+}
+
+:root[data-xiangqi-piece-shadow="off"] .xq-piece--bare-animal {
+  filter: none;
 }
 
 .xq-piece--drag-source {

@@ -133,6 +133,9 @@ export type XiangqiPieceRenderOptions = {
   // International set only (that is where the asset ships); other sets fall back
   // to the plain soldier glyph/art.
   crossed?: boolean;
+  // The soft shadow under the disc (xiangqiPieceShadowMarks). Defaults to the
+  // reader's "Piece shadow" switch; disc-less sets never draw one.
+  shadow?: boolean;
 };
 
 export function xiangqiGlyph(
@@ -180,12 +183,17 @@ export function renderXiangqiPieceGlyphed(
       : opts.className;
   const classAttr = className ? ` class="${escapeAttr(className)}"` : '';
   const styleAttr = set === 'international-flat' && !opts.shrouded ? ' style="filter:none"' : '';
+  const shadow = xiangqiPieceDiscShadow(set, opts);
+  // The shadow falls a little below the 100-unit box, which a nested <svg>
+  // clips by default. Only disc sets draw one, and their art sits well inside
+  // the box, so letting it overflow uncovers nothing else.
+  const overflowAttr = shadow ? ' overflow="visible"' : '';
   const posAttrs =
-    opts.size !== undefined || opts.x !== undefined || opts.y !== undefined
+    (opts.size !== undefined || opts.x !== undefined || opts.y !== undefined
       ? ` x="${opts.x ?? 0}" y="${opts.y ?? 0}" width="${opts.size ?? 100}" height="${opts.size ?? 100}"`
-      : '';
+      : '') + overflowAttr;
   if (isAssetPieceSet(set)) {
-    const open = `<svg${classAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`;
+    const open = `<svg${classAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">${shadow}`;
     if (!opts.shrouded) {
       return `${open}${assetImageMark(assetPieceHref(set, piece.color, piece.role))}</svg>`;
     }
@@ -198,6 +206,7 @@ export function renderXiangqiPieceGlyphed(
   if (opts.shrouded && opts.shroudedStyle === 'back') {
     return [
       `<svg${classAttr}${styleAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
+      shadow,
       pieceBackMark(piece.color),
       `</svg>`,
     ].join('');
@@ -210,6 +219,7 @@ export function renderXiangqiPieceGlyphed(
   if (opts.shrouded && (set === 'international' || set === 'international-flat')) {
     return [
       `<svg${classAttr}${styleAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
+      shadow,
       internationalDiscMark(piece.color),
       glyphMark('?', colorHex),
       `</svg>`,
@@ -220,6 +230,7 @@ export function renderXiangqiPieceGlyphed(
   if (opts.shrouded && (isAnimalPieceSet(set) || set === 'animal-flat')) {
     return [
       `<svg${classAttr}${styleAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
+      shadow,
       animalDiscMark(),
       glyphMark('?', colorHex),
       animalRingMark(piece.color),
@@ -229,6 +240,7 @@ export function renderXiangqiPieceGlyphed(
   if (!opts.shrouded && set === 'international') {
     return [
       `<svg${classAttr}${styleAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
+      shadow,
       internationalDiscMark(piece.color),
       internationalImageMark(internationalPieceHref(piece, opts.crossed), piece.role),
       `</svg>`,
@@ -244,6 +256,7 @@ export function renderXiangqiPieceGlyphed(
   if (!opts.shrouded && isAnimalPieceSet(set)) {
     return [
       `<svg${classAttr}${styleAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
+      shadow,
       animalDiscMark(),
       `<image href="${escapeAttr(animalPieceHref(piece, set))}" x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid meet"/>`,
       animalRingMark(piece.color),
@@ -262,11 +275,87 @@ export function renderXiangqiPieceGlyphed(
     : cjkGlyphMark(xiangqiGlyph(set, piece.color, piece.role), colorHex);
   return [
     `<svg${classAttr}${styleAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
+    shadow,
     `<circle cx="50" cy="50" r="46" fill="${baseFill}" stroke="${colorHex}" stroke-width="${ringWidth}"/>`,
     `<circle cx="50" cy="50" r="38" fill="none" stroke="${colorHex}" stroke-width="1.5"/>`,
     inner,
     `</svg>`,
   ].join('');
+}
+
+// PIECE SHADOW (2026-10-08). One soft shadow under every disc piece, on every
+// xiangqi-family board, so the sets stop disagreeing (three different CSS
+// drop-shadows before this, and none at all on Duck and the replay board).
+// Drawn as four stacked, offset circles of low opacity rather than a CSS
+// `filter: drop-shadow`: a filter is an offscreen surface and a blur per piece,
+// about 32 of them per board, and the stack is a few static shapes with a
+// feathered edge. Nothing animates. The "Piece shadow" switch in the gear's Board
+// panel turns it off (root data-xiangqi-piece-shadow, stamped by theme.ts); every
+// board re-renders on an appearance change, and app-base.css hides a shadow a
+// board drew before the switch flipped.
+export const XIANGQI_PIECE_SHADOW = {
+  /** Downward offset, in the 100-unit piece box. */
+  dy: 3.5,
+  /** Radii of the stacked circles relative to the disc's outer edge. */
+  spread: [2, 1, 0, -1] as readonly number[],
+  /** Fill opacity of each circle; four of them stack to about 0.22 under the disc. */
+  opacity: 0.06,
+  color: '#231b12',
+} as const;
+
+/** Whether the reader's "Piece shadow" switch is on. On wherever there is no
+ *  document (tests, server-side renders) and before theme.ts stamps the root. */
+export function xiangqiPieceShadowEnabled(): boolean {
+  return (
+    typeof document === 'undefined' || document.documentElement.dataset.xiangqiPieceShadow !== 'off'
+  );
+}
+
+/** The shadow under a disc of outer radius `radius` centred on (cx, cy), in
+ *  units where the piece box is `box` wide (100 for the piece box itself). */
+export function xiangqiPieceShadowMarks(radius: number, cx = 50, cy = 50, box = 100): string {
+  const k = box / 100;
+  const { dy, spread, opacity, color } = XIANGQI_PIECE_SHADOW;
+  // One translate on the group instead of cx/cy on every circle: an article
+  // diagram draws this under every piece, and its markup budget is per board.
+  const circles = spread.map((s) => `<circle r="${frameValue(radius + s * k)}"/>`).join('');
+  return `<g class="xq-piece-shadow" fill="${color}" fill-opacity="${opacity}" transform="translate(${frameValue(cx)} ${frameValue(cy + dy * k)})">${circles}</g>`;
+}
+
+/** The shadow a piece of this set draws under its disc in the 100-unit box, or
+ *  '' when the switch is off or the set has no disc. For callers that draw a disc
+ *  of their own in a set's style (the Fortress Treasure); give the <svg> that
+ *  holds it overflow="visible", as renderXiangqiPieceGlyphed does. */
+export function xiangqiPieceDiscShadow(
+  set: XiangqiPieceSet,
+  opts: Pick<XiangqiPieceRenderOptions, 'shrouded' | 'shroudedStyle' | 'shadow'> = {},
+): string {
+  if (!(opts.shadow ?? xiangqiPieceShadowEnabled())) return '';
+  const radius = xiangqiPieceDiscRadius(set, opts);
+  return radius === null ? '' : xiangqiPieceShadowMarks(radius);
+}
+
+// The outer radius of the disc a set draws (stroke included), in the 100-unit
+// box, or null for the disc-less sets, which get no disc shadow.
+function xiangqiPieceDiscRadius(
+  set: XiangqiPieceSet,
+  opts: Pick<XiangqiPieceRenderOptions, 'shrouded' | 'shroudedStyle'>,
+): number | null {
+  // The asset files are normalised to a radius-45 disc (see ASSET_SETS).
+  if (isAssetPieceSet(set)) return 45;
+  // pieceBackMark: r 43 with a 3-unit stroke.
+  if (opts.shrouded && opts.shroudedStyle === 'back') return 44.5;
+  if (set === 'international' || set === 'international-flat') {
+    // internationalDiscMark: r 46 with a 2.8 stroke. The chess-style figures
+    // stand on no disc, so only their fog "?" token (drawn on the disc) gets one.
+    return set === 'international' || opts.shrouded ? 47.4 : null;
+  }
+  // animalDiscMark: r 48.5; the disc-less heads only on their "?" token.
+  if (isAnimalPieceSet(set) || set === 'animal-flat') {
+    return set === 'animal-dobutsu' || opts.shrouded ? 48.5 : null;
+  }
+  // The drawn glyph disc: r 46 with a 2.5 stroke.
+  return 47.25;
 }
 
 // Chinese piece characters draw from baked Noto Sans CJK SC Bold outlines (the
@@ -418,8 +507,8 @@ const ASSET_SETS: Record<AssetXiangqiPieceSet, AssetSetSpec> = {
   lacquer: { version: 1, ink: { red: '#ffffff', black: '#ffffff' }, neutralBack: null },
   wood: { version: 1, ink: { red: '#ae1d04', black: '#1e1e1a' }, neutralBack: 'red' },
   book: { version: 1, ink: { red: '#ff0000', black: '#000000' }, neutralBack: null },
-  brush: { version: 1, ink: { red: '#ff0000', black: '#005500' }, neutralBack: 'red' },
-  clerical: { version: 1, ink: { red: '#ff0101', black: '#005500' }, neutralBack: 'red' },
+  brush: { version: 2, ink: { red: '#ff0000', black: '#005500' }, neutralBack: 'red' },
+  clerical: { version: 2, ink: { red: '#ff0101', black: '#005500' }, neutralBack: 'red' },
 };
 
 function assetPieceHref(

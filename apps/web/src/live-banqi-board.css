@@ -99,18 +99,18 @@
 .banqi-lastmove-flip.banqi-lastmove--black {
   stroke: rgba(11, 23, 35, 0.44);
 }
+/* The disc shadow is drawn into each piece and back (xiangqiPieceShadowMarks). */
 .banqi-piece {
   pointer-events: none;
-  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2));
 }
 .banqi-back {
   pointer-events: none;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3));
 }
 .banqi-drag-source {
   opacity: 0.34;
 }
-.banqi-back circle {
+/* The disc only: the shadow's circles sit inside a group of their own. */
+.banqi-back > circle {
   fill: #2f8f6b;
   stroke: #184a38;
   stroke-width: 2;

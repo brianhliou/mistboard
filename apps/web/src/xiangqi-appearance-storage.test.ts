@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   inferredXiangqiPieceSet,
+  inferredXiangqiRiverText,
   normalizeXiangqiBoardLayout,
   normalizeXiangqiBoardTheme,
   normalizeXiangqiPieceSet,
@@ -9,12 +10,14 @@ import {
   readStoredXiangqiBoardTheme,
   readStoredXiangqiNotation,
   readStoredXiangqiPieceSet,
+  readStoredXiangqiPieceShadow,
   readStoredXiangqiRiverText,
   readStoredXiangqiStartMarkers,
   writeStoredXiangqiBoardColor,
   writeStoredXiangqiBoardLayout,
   writeStoredXiangqiNotation,
   writeStoredXiangqiPieceSet,
+  writeStoredXiangqiPieceShadow,
   writeStoredXiangqiRiverText,
   writeStoredXiangqiStartMarkers,
 } from './xiangqi-appearance-storage.js';
@@ -258,6 +261,23 @@ describe('xiangqi board colour, river text and start marker storage', () => {
     expect(readStoredXiangqiRiverText()).toBe('off');
   });
 
+  it('starts Chinese readers on the classic inscription without storing it', () => {
+    expect(inferredXiangqiRiverText('en', null)).toBe('off');
+    expect(inferredXiangqiRiverText('en', 'US')).toBe('off');
+    expect(inferredXiangqiRiverText('zh-Hans', null)).toBe('classic');
+    expect(inferredXiangqiRiverText('zh-Hant', null)).toBe('classic');
+    for (const country of ['CN', 'TW', 'HK', 'MO', 'SG', 'MY', 'VN']) {
+      expect(inferredXiangqiRiverText('en', country)).toBe('classic');
+    }
+    const storage = installLocalStorage();
+    document.cookie = 'mb_cc=TW';
+    expect(readStoredXiangqiRiverText()).toBe('classic');
+    expect(storage.getItem('mistboard.xiangqiRiverText')).toBeNull();
+    writeStoredXiangqiRiverText('off');
+    expect(readStoredXiangqiRiverText()).toBe('off');
+    document.cookie = 'mb_cc=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  });
+
   it('shows start markers by default and remembers turning them off', () => {
     installLocalStorage();
     expect(readStoredXiangqiStartMarkers()).toBe(true);
@@ -265,6 +285,36 @@ describe('xiangqi board colour, river text and start marker storage', () => {
     expect(readStoredXiangqiStartMarkers()).toBe(false);
     writeStoredXiangqiStartMarkers(true);
     expect(readStoredXiangqiStartMarkers()).toBe(true);
+  });
+
+  it('draws the piece shadow by default without storing it, and remembers turning it off', () => {
+    const storage = installLocalStorage();
+    expect(readStoredXiangqiPieceShadow()).toBe(true);
+    // Reading the default writes nothing: a later change of default reaches
+    // every browser that never chose.
+    expect(storage.getItem('mistboard.xiangqiPieceShadow')).toBeNull();
+    writeStoredXiangqiPieceShadow(false);
+    expect(storage.getItem('mistboard.xiangqiPieceShadow')).toBe('off');
+    expect(readStoredXiangqiPieceShadow()).toBe(false);
+    writeStoredXiangqiPieceShadow(true);
+    expect(storage.getItem('mistboard.xiangqiPieceShadow')).toBe('on');
+    expect(readStoredXiangqiPieceShadow()).toBe(true);
+    storage.setItem('mistboard.xiangqiPieceShadow', 'sometimes');
+    expect(readStoredXiangqiPieceShadow()).toBe(true);
+  });
+
+  it('previews the piece shadow from ?xqShadow= without saving it', () => {
+    const storage = installLocalStorage();
+    window.history.replaceState({}, '', '/?xqShadow=off');
+    expect(readStoredXiangqiPieceShadow()).toBe(false);
+    writeStoredXiangqiPieceShadow(true);
+    // The preview still wins over a stored pick until a click ends it.
+    expect(readStoredXiangqiPieceShadow()).toBe(false);
+    window.history.replaceState({}, '', '/?xqShadow=on');
+    storage.setItem('mistboard.xiangqiPieceShadow', 'off');
+    expect(readStoredXiangqiPieceShadow()).toBe(true);
+    window.history.replaceState({}, '', '/');
+    expect(readStoredXiangqiPieceShadow()).toBe(false);
   });
 });
 

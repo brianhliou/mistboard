@@ -1293,7 +1293,8 @@
   white-space: nowrap;
 }
 
-.appearance-submenu[data-key="board"] .xq-start-markers-field {
+.appearance-submenu[data-key="board"] .xq-start-markers-field,
+.appearance-submenu[data-key="board"] .xq-piece-shadow-field {
   padding: 0 12px 12px;
 }
 

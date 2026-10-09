@@ -342,6 +342,15 @@
 :root[data-xiangqi-river-text="brand"] {
   --xq-river-brand-display: inline;
 }
+/* Piece shadow (gear > Board > Piece shadow): drawn into every disc piece
+   (xiangqiPieceShadowMarks); a board rendered before the switch went off still
+   hides it. A dragged piece is lifted: the drag ghost's own drop-shadow
+   (styles.css) stands in for the contact shadow, which would otherwise ride
+   along under it. */
+:root[data-xiangqi-piece-shadow="off"] .xq-piece-shadow,
+.board-drag-ghost .xq-piece-shadow {
+  display: none;
+}
 /* Jungle: the children's board. A lawn of two greens and a deep green ink; the
    rugs and the painted river are drawn by xiangqi-board-surface.ts. */
 :root[data-xiangqi-board-theme="jungle"] {
