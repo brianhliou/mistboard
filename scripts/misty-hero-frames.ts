@@ -33,6 +33,7 @@ import {
   type JungleFlipDeal,
   type JungleFlipSquare,
   type JungleSquare,
+  LEGACY_BANQI_RULES,
 } from '@mistboard/game';
 import {
   type JungleFlipRenderBoard,
@@ -111,7 +112,12 @@ function jungleFlipFrames(game: SelfPlayGame): string[] {
 
 function banqiFrames(game: SelfPlayGame): string[] {
   if (!game.deal) throw new Error('banqi game is missing its deal');
-  let state = createInitialBanqiState(`hero-${game.seed}`, game.deal as BanqiDeal);
+  // MistyBanqi plays without the 長捉 rule, so its self-play records do too.
+  let state = createInitialBanqiState(
+    `hero-${game.seed}`,
+    game.deal as BanqiDeal,
+    LEGACY_BANQI_RULES,
+  );
   // Banqi is symmetric information, so either seat's view is the same picture; the
   // view carries the last-move marks the renderer draws.
   const render = (): string => renderBanqiBoardSvg(getBanqiPlayerView(state, 'red'), 'red');

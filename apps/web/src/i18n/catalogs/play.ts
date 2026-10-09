@@ -508,6 +508,8 @@ export const EN_PLAY = {
     'Your general can be taken or blown up next move. A repeated check like this loses.',
   'live.atomicCheckColor':
     '{color}’s general can be taken or blown up next move. A repeated check like this loses.',
+  'live.banqiChaseForbidden':
+    'Perpetual chase (長捉): this move would repeat the position a third time. Play another move.',
   'lobby.panelTabComputer': 'Play the computer',
   'lobby.panelTabPerson': 'Play a person',
   'lobby.panelPlayAgain': 'Play again',
@@ -813,4 +815,5 @@ export const CRITICAL_PLAY_I18N_KEYS = [
   'live.checkTitle',
   'live.atomicCheckYour',
   'live.atomicCheckColor',
+  'live.banqiChaseForbidden',
 ] as const satisfies readonly PlayI18nKey[];

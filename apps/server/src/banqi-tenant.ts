@@ -26,14 +26,13 @@ import {
   applyBanqiMove,
   BANQI_SEATS,
   BANQI_SPEC_ID,
-  type BanqiDeal,
   type BanqiGameState,
   type BanqiMove,
   type BanqiPlayerView,
   type BanqiSeat,
   type BanqiSquare,
-  createBanqiDeal,
-  createInitialBanqiState,
+  createBanqiSetup,
+  createBanqiStateFromSetup,
   getBanqiPlayerView,
   isBanqiLegalMove,
   oppositeBanqiSeat,
@@ -91,14 +90,13 @@ function cryptoRng(): number {
   return randomInt(0, RNG_RANGE) / RNG_RANGE;
 }
 
-// Reconstruct a deal from the persisted room-created setup. createInitialBanqiState
-// fully validates it (throws on a corrupt multiset); this only shape-checks the
-// container. Returns undefined when absent so the kernel falls back to its default
-// deal — that path is only hit by the runtime's throwaway seed projection (the
-// room-created event always carries the real crypto deal for live rooms/replay).
-function asBanqiDeal(setup: unknown): BanqiDeal | undefined {
-  return Array.isArray(setup) ? (setup as BanqiDeal) : undefined;
-}
+// The persisted room-created setup is the deal plus the rules the room was created
+// under (BanqiSetup: since the 長捉 rule shipped, 2026-10, new rooms record
+// `chaseRule`). A room created before it stored the bare deal array and replays
+// with the rule off, so its moves and its repetition draw replay as played
+// (readBanqiSetup fails closed: no stamp means the old rules). createInitialBanqiState
+// validates the deal (throws on a corrupt multiset). An absent setup is only the
+// runtime's throwaway seed projection; it gets the standard deal and current rules.
 
 // Identity is hidden, position is not: moves are public to both seats and to a
 // spectator (banqi is SYMMETRIC: a flip reveals to everyone at once, so the
@@ -127,8 +125,11 @@ export function getBanqiClientView(
   // symmetric hidden-identity, so either seat's masked view IS the public view;
   // it differs per seat only in the candidate moves, which a spectator has no
   // use for. The deal stays hidden exactly as it is from the players.
+  // The 長捉 forbidden moves are the seat to move's own move hints, so they go
+  // with legalMoves.
   if (client.seat === 'spectator') {
-    return { ...getBanqiPlayerView(state, BANQI_SEATS[0]), legalMoves: [] };
+    const { forbiddenMoves: _seatOnly, ...view } = getBanqiPlayerView(state, BANQI_SEATS[0]);
+    return { ...view, legalMoves: [] };
   }
   return getBanqiPlayerView(state, client.seat);
 }
@@ -143,7 +144,7 @@ export function getBanqiClientView(
 // reconstructed a whole deal from exactly that public data to build the rules
 // page (commit f2ad3e9). The room was the last surface still withholding it.
 export function getBanqiTruthView(state: BanqiGameState): BanqiPlayerView {
-  const base = getBanqiPlayerView(state, BANQI_SEATS[0]);
+  const { forbiddenMoves: _seatOnly, ...base } = getBanqiPlayerView(state, BANQI_SEATS[0]);
   const board: BanqiPlayerView['board'] = {};
   for (const [square, piece] of Object.entries(state.board)) {
     if (!piece) continue;
@@ -160,8 +161,8 @@ export const banqiTenant: BanqiTenant = {
   enabled: banqiEnabled,
   oppositeColor: oppositeBanqiSeat,
   rules: {
-    createInitialState: (roomId, setup) => createInitialBanqiState(roomId, asBanqiDeal(setup)),
-    createSetup: () => createBanqiDeal(cryptoRng),
+    createInitialState: (roomId, setup) => createBanqiStateFromSetup(roomId, setup),
+    createSetup: () => createBanqiSetup(cryptoRng),
     applyMove: (state, move) => applyBanqiMove(state, move),
     isLegalMove: isBanqiLegalMove,
     finish: (state, winner, reason) => ({

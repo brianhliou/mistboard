@@ -1,0 +1,65 @@
+/* The 長捉 notice bubble over the banqi board (live-banqi-chase-bubble.ts). It
+   overlays the board stage, so nothing around the board moves when it shows,
+   and it never takes a tap. Dark glass with light text: it has to read on the
+   cream board, the green face-down discs and either piece ink, and the board
+   keeps its own colours in both site themes, so the bubble does too. */
+.banqi-chase-bubble {
+  --banqi-chase-bubble-bg: rgb(28 24 20 / 88%);
+  --banqi-chase-bubble-text: #fbf6ec;
+  --banqi-chase-bubble-accent: rgb(232 110 98);
+  --banqi-chase-caret-x: 50%;
+
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 16;
+  box-sizing: border-box;
+  width: max-content;
+  /* A short reading width, and never wider than the board (set from JS). */
+  max-width: min(320px, var(--banqi-chase-board-max, 90%));
+  padding: 6px 11px;
+  border-radius: 9px;
+  border-left: 3px solid var(--banqi-chase-bubble-accent);
+  color: var(--banqi-chase-bubble-text);
+  background: var(--banqi-chase-bubble-bg);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 28%);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+  text-wrap: pretty;
+  pointer-events: none;
+  animation: banqi-chase-bubble-in 160ms ease-out both;
+}
+
+/* The caret: points down at the square, or up when the bubble hangs below it. */
+.banqi-chase-bubble::after {
+  content: "";
+  position: absolute;
+  left: var(--banqi-chase-caret-x);
+  top: 100%;
+  border: 6px solid transparent;
+  border-top-color: var(--banqi-chase-bubble-bg);
+  transform: translateX(-50%);
+}
+
+.banqi-chase-bubble--below::after {
+  top: auto;
+  bottom: 100%;
+  border-top-color: transparent;
+  border-bottom-color: var(--banqi-chase-bubble-bg);
+}
+
+@keyframes banqi-chase-bubble-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .banqi-chase-bubble {
+    animation: none;
+  }
+}

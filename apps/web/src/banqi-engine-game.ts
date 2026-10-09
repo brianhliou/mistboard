@@ -26,7 +26,7 @@ export const BANQI_CONVERSION_GAME: {
   event: 'Human vs engine · mistboard.com',
   outcome: 'Draw by repetition · MistyBanqi up 10 pieces to 2',
   result:
-    "MistyBanqi (Red) is up ten pieces to two, a trivially won position, but its evaluation gives no reward for converting a win over holding material, so it shuffles instead of pressing and the game is drawn by threefold repetition. If you're losing on material against it, this is the escape: herd a strong piece into a perpetual chase and it may let the draw happen.",
+    "MistyBanqi (Red) is up ten pieces to two, a trivially won position, but its evaluation gives no reward for converting a win over holding material, so it shuffles instead of pressing and the game is drawn by threefold repetition. If you're losing on material against it, keep the game going: it may shuffle its own way into a draw.",
   // 32-tile deal in ALL_BANQI_SQUARES order (a1..h1, a2..h4); reveals follow it.
   deal: [
     { color: 'red', role: 'elephant' },

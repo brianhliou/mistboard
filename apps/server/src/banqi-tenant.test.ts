@@ -11,10 +11,11 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   applyBanqiMove,
+  BANQI_CHASE_RULE,
   BANQI_SPEC_ID,
-  type BanqiDeal,
   type BanqiMove,
   type BanqiSeat,
+  type BanqiSetup,
   createBanqiDeal,
   createInitialBanqiState,
   getBanqiLegalMoves,
@@ -34,17 +35,21 @@ function seeded(seed: number): () => number {
   };
 }
 
-test('banqi room creation mints and persists a server-secret deal', () => {
+test('banqi room creation mints and persists a server-secret deal, stamped with its rules', () => {
   const created = createTenantRuntimeRoom(banqiTenant, 'bq_deal', { now: 1 });
   if (!created.ok) throw new Error(created.error);
 
   const event = created.room.events[0];
   if (event.type !== 'room-created') throw new Error('expected room-created first');
-  const setup = event.setup as BanqiDeal | undefined;
+  const setup = event.setup as BanqiSetup | undefined;
   assert.ok(setup, 'room-created carries the deal');
-  assert.equal(setup.length, 32);
-  assert.equal(setup.filter((p) => p.color === 'red').length, 16);
-  assert.equal(setup.filter((p) => p.color === 'black').length, 16);
+  assert.equal(setup.deal.length, 32);
+  assert.equal(setup.deal.filter((p) => p.color === 'red').length, 16);
+  assert.equal(setup.deal.filter((p) => p.color === 'black').length, 16);
+  // A new room records the 長捉 rule it is played under, so a later rule change
+  // cannot rewrite how it replays.
+  assert.equal(setup.chaseRule, BANQI_CHASE_RULE);
+  assert.equal(created.room.projection.state.chaseRule, BANQI_CHASE_RULE);
 });
 
 test('the deal is stripped from room-created before any client sees it', () => {
@@ -96,14 +101,20 @@ test('a full banqi game replays through the runtime identically to the kernel', 
   const roomId = 'bq_game';
   const deal = createBanqiDeal(seeded(7)); // a fixed deal makes the line reproducible
   const events: TenantRoomEvent<BanqiSeat, BanqiMove, typeof BANQI_SPEC_ID>[] = [
-    { type: 'room-created', at: 1, roomId, gameSpecId: BANQI_SPEC_ID, setup: deal },
+    {
+      type: 'room-created',
+      at: 1,
+      roomId,
+      gameSpecId: BANQI_SPEC_ID,
+      setup: { deal, chaseRule: BANQI_CHASE_RULE },
+    },
     { type: 'seat-assigned', at: 2, roomId, clientId: 'a', seat: 'red' },
     { type: 'seat-assigned', at: 3, roomId, clientId: 'b', seat: 'black' },
   ];
 
   // Drive a deterministic line with the kernel (first legal move each ply),
   // recording the move-played events keyed by the SEAT to move.
-  let kernelState = createInitialBanqiState(roomId, deal);
+  let kernelState = createInitialBanqiState(roomId, deal, { chaseRule: BANQI_CHASE_RULE });
   let at = 4;
   let plies = 0;
   while (kernelState.status.type === 'playing' && plies < 60) {
@@ -204,4 +215,41 @@ test('every banqi kernel end reason maps to a persistable GameTermination', () =
   }
   // The no-progress draw specifically — the reason that was being dropped.
   assert.equal(banqiTenant.persistence.termination('no-progress'), 'progress-clock');
+});
+
+test('the 長捉 forbidden moves reach the seat to move only, never a spectator', () => {
+  // Red's advisor shuttles c3/c2 after black's chariot on d2/d3; after two loops
+  // the next c3-c2 would repeat a position a third time.
+  let state: Parameters<typeof getBanqiClientView>[0] = {
+    id: 'bq_chase_view',
+    board: {
+      c3: { color: 'red', role: 'advisor', faceDown: false },
+      d2: { color: 'black', role: 'chariot', faceDown: false },
+      h1: { color: 'red', role: 'soldier', faceDown: false },
+      a4: { color: 'black', role: 'soldier', faceDown: false },
+      f4: { color: 'black', role: 'horse', faceDown: true },
+    },
+    status: { type: 'playing', turn: 'red' },
+    ply: 10,
+    firstColor: 'red',
+    moveNumber: 6,
+    noProgressClock: 0,
+    repCounts: {},
+    captures: [],
+    lastMove: { from: 'e2', to: 'd2' },
+  };
+  const shuttle: BanqiMove[] = [
+    { from: 'c3', to: 'c2' },
+    { from: 'd2', to: 'd3' },
+    { from: 'c2', to: 'c3' },
+    { from: 'd3', to: 'd2' },
+  ];
+  for (const move of [...shuttle, ...shuttle]) state = applyBanqiMove(state, move);
+
+  const red = getBanqiClientView(state, { id: 'r', seat: 'red', solo: false });
+  assert.deepEqual(red.forbiddenMoves, [{ from: 'c3', to: 'c2' }]);
+  const black = getBanqiClientView(state, { id: 'b', seat: 'black', solo: false });
+  assert.ok(!('forbiddenMoves' in black), 'the waiting seat gets none');
+  const spectator = getBanqiClientView(state, { id: 's', seat: 'spectator', solo: false });
+  assert.ok(!('forbiddenMoves' in spectator), 'a spectator gets none');
 });

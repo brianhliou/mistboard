@@ -38,6 +38,19 @@
   stroke-width: 4.5;
   pointer-events: none;
 }
+/* The 長捉 cross. The board surface keeps its wood colour in both site themes
+   (it follows the board theme, not light/dark), so one red reads on all of
+   them; the token lets a board theme override it. */
+.banqi-hint-forbidden {
+  fill: none;
+  stroke: var(--banqi-forbidden-mark, rgba(178, 34, 28, 0.85));
+  stroke-width: 4;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+.banqi-hit.banqi-hit--forbidden rect {
+  cursor: not-allowed;
+}
 .banqi-target-hover {
   fill: rgba(31, 111, 91, 0.3);
   opacity: 0;

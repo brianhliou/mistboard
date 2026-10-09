@@ -67,6 +67,14 @@ const baseAnnouncements: Announcement[] = [
     cta: 'Read the article',
   },
   {
+    date: '2026-10-09',
+    kind: 'update',
+    headline: 'Banqi: a chase can no longer force a repetition draw.',
+    body: 'In banqi a player could chase the same piece back and forth until the position came up three times and the game was drawn. Now a chasing move may not make a position appear for the third time, so the chasing side has to play something else, and a repetition caused by a chase is never a draw. A chase that drives a piece onto new squares is not affected. Games started before the change keep the old rules.',
+    href: '/rules/banqi',
+    cta: 'Read the rules',
+  },
+  {
     date: '2026-10-08',
     kind: 'update',
     headline: 'Jieqi games now show what your face-down pieces could be.',

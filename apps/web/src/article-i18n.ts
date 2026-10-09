@@ -959,8 +959,8 @@ const ZH_HANS: Record<string, string> = {
     '[将死](/watch?channel=jieqi&game=jq_dee4dda3-b78b-4c02-954d-01b954df94f6)',
   "A related blind spot involves the general. Only a soldier, the other general or a cannon's jump can take it, so a boxed-in general is in danger from one piece at a time, and the engine is slow to make room for one cornered. It will sometimes march a piece off to the far side of the board while a lone enemy soldier walks up and traps it. Same gap as the draw above: the evaluation has no real sense of a slow, quiet threat building several moves away.":
     '另一个相关的盲点跟将有关。只有卒、对方的将或炮的跳吃拿得下它，所以被围住的将一次只怕一种子，而引擎很慢才会替被逼到角落的将腾出空间。它有时候会把一颗子调到棋盘另一头，同时一颗孤零零的敌方卒走过来把它困死。跟上面那个和棋是同一个缺口：这套评估函数对于好几步之外慢慢成形的安静威胁，没有什么感觉。',
-  "There's an upshot for you here. If you're losing on material, you're not necessarily lost: herd one of its strong pieces into a perpetual chase, and MistyBanqi may walk into the draw it can't see it should decline. It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":
-    '这对你是有好处的。如果你子力落后，不代表就输了：把它一颗强子引进长捉，MistyBanqi 可能就走进那个它看不出该拒绝的和棋。这种事多到可以量：引擎自我对弈的 200 盘里，[每六盘就有一盘和棋](/blog/banqi-statistics)，其中一半曾经走到赢定的局面。',
+  "There's an upshot for you here. If you're losing on material, you're not necessarily lost: MistyBanqi may shuffle into a repetition draw it can't see it should decline. It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":
+    '这对你是有好处的。如果你子力落后，不代表就输了：MistyBanqi 可能来回挪子，走进那个它看不出该拒绝的重复和棋。这种事多到可以量：引擎自我对弈的 200 盘里，[每六盘就有一盘和棋](/blog/banqi-statistics)，其中一半曾经走到赢定的局面。',
   '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
     '[MistyBanqi](/blog/mistybanqi) 自我对弈，每步搜索一千万个节点，是本站机器人的三倍棋力。用箭头一步步看。[配套研究](/study/FsA5sowX)收了这批棋的全部二十盘，一盘一章，附上每盘怎么走完的注记。同一批棋里的两百盘被整理成数字，放在[用数字看暗棋](/blog/banqi-statistics)：领先多少才算安全，一盘棋什么时候就定了。',
   // cao-yanlei (zh-Hans), machine-drafted 2026-09-25, not native-reviewed. Mainland
@@ -1717,8 +1717,8 @@ const ZH_HANS: Record<string, string> = {
   'Draw by repetition · MistyBanqi up 10 pieces to 2': '重复局面和棋 · MistyBanqi 十子对两子领先',
   'MistyBanqi wins · the opponent is left with no piece to move':
     'MistyBanqi 获胜 · 对手已无子可走',
-  "MistyBanqi (Red) is up ten pieces to two, a trivially won position, but its evaluation gives no reward for converting a win over holding material, so it shuffles instead of pressing and the game is drawn by threefold repetition. If you're losing on material against it, this is the escape: herd a strong piece into a perpetual chase and it may let the draw happen.":
-    'MistyBanqi（红方）以十子对两子领先，是一个轻松赢定的局面，但它的评估并不会因为「把优势转化为胜利」而比「守住子力」给更高的分，于是它只来回挪子、不去逼抢，最终因三次重复局面被判和棋。如果你对它子力落后，这就是脱身之道：用长捉缠住一枚大子，它也许就放任和棋发生。',
+  "MistyBanqi (Red) is up ten pieces to two, a trivially won position, but its evaluation gives no reward for converting a win over holding material, so it shuffles instead of pressing and the game is drawn by threefold repetition. If you're losing on material against it, keep the game going: it may shuffle its own way into a draw.":
+    'MistyBanqi（红方）以十子对两子领先，是一个轻松赢定的局面，但它的评估并不会因为「把优势转化为胜利」而比「守住子力」给更高的分，于是它只来回挪子、不去逼抢，最终因三次重复局面被判和棋。如果你对它子力落后，别放弃：它也许会来回挪子，自己走进和棋。',
   'MistyBanqi (the first player) won this one outright, leaving the opponent with nothing to move. Banqi swings hard with the flips: it fell behind on material early here, then calculated its way back and cleared the board. Grinding down a position like this, capture by capture, is the strong half of its game.':
     'MistyBanqi（先手）干净利落地赢下了这盘，让对手无子可走。暗棋的局势随翻子剧烈起伏：这盘里它开局子力落后，随后凭计算一步步扳回，把对手清光。像这样一子一子地碾下去，是它棋力强的那一半。',
 
@@ -2099,6 +2099,8 @@ const ZH_HANS: Record<string, string> = {
     '当对手轮到自己却无棋可走时，你获胜——通常是因为敌方棋子被全部吃光，有时则是被困死、无路可走。这里的将不是王棋：吃掉它只是进展，而非胜利，棋局会一直进行到一方被吃光或被困死为止。',
   'Mistboard draws a game two ways: 40 plies (single moves) with no flip or capture, or threefold repetition, the same position three times. A flip or capture resets both counters because it changes the position irreversibly.':
     'Mistboard 有两种自动和棋：连续 40 个半回合没有翻子或吃子，或同一局面出现三次。翻子或吃子会不可逆地改变局面，因此会重置两个计数。',
+  'A chase (長捉) is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not make a position appear for the third time with a chase; it must play something else, unless it has no other legal move. A repetition caused by a chase is never a draw, because the chased piece cannot stay put without being taken. A chase that keeps driving a piece onto new squares is not limited.':
+    '捉子（长捉）指既不翻子也不吃子、走完后能吃掉对方刚走动那枚棋子的一步棋，不论那枚棋子有没有根。捉子的一方不能用捉子让同一局面第三次出现，必须改走别的着法，除非没有其他合法着法。由捉子造成的重复局面一律不判和，因为被捉的棋子不走就会被吃。不断把对方棋子赶到新位置的捉子不受限制。',
   'Play MistyBanqi': '对战 MistyBanqi',
   'Challenge a friend': '挑战好友',
   'Three rules give the game its character: the rat captures the elephant, only the rat can swim, and the lion and tiger leap the rivers.':
@@ -5376,8 +5378,8 @@ const ZH_HANT: Record<string, string> = {
   'Jungle Chess rules': '鬥獸棋規則',
   '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
     '[MistyBanqi](/blog/mistybanqi) 自我對弈，每步搜尋一千萬個節點，是本站機器人的三倍棋力。用箭頭一步步看。[配套研究](/study/FsA5sowX)收了這批棋的全部二十盤，一盤一章，附上每盤怎麼走完的註記。同一批棋裡的兩百盤被整理成數字，放在[用數字看暗棋](/blog/banqi-statistics)：領先多少才算安全，一盤棋什麼時候就定了。',
-  "There's an upshot for you here. If you're losing on material, you're not necessarily lost: herd one of its strong pieces into a perpetual chase, and MistyBanqi may walk into the draw it can't see it should decline. It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":
-    '這對你是有好處的。如果你子力落後，不代表就輸了：把它一顆強子引進長捉，MistyBanqi 可能就走進那個它看不出該拒絕的和棋。這種事多到可以量：引擎自我對弈的 200 盤裡，[每六盤就有一盤和棋](/blog/banqi-statistics)，其中一半曾經走到贏定的局面。',
+  "There's an upshot for you here. If you're losing on material, you're not necessarily lost: MistyBanqi may shuffle into a repetition draw it can't see it should decline. It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":
+    '這對你是有好處的。如果你子力落後，不代表就輸了：MistyBanqi 可能來回挪子，走進那個它看不出該拒絕的重複和棋。這種事多到可以量：引擎自我對弈的 200 盤裡，[每六盤就有一盤和棋](/blog/banqi-statistics)，其中一半曾經走到贏定的局面。',
   "A related blind spot involves the general. Only a soldier, the other general or a cannon's jump can take it, so a boxed-in general is in danger from one piece at a time, and the engine is slow to make room for one cornered. It will sometimes march a piece off to the far side of the board while a lone enemy soldier walks up and traps it. Same gap as the draw above: the evaluation has no real sense of a slow, quiet threat building several moves away.":
     '另一個相關的盲點跟將有關。只有卒、對方的將或砲的跳吃拿得下它，所以被圍住的將一次只怕一種子，而引擎很慢才會替被逼到角落的將騰出空間。它有時候會把一顆子調到棋盤另一頭，同時一顆孤零零的敵方卒走過來把它困死。跟上面那個和棋是同一個缺口：這套評估函數對於好幾步之外慢慢成形的安靜威脅，沒有什麼感覺。',
   // one-thousand-games: machine-drafted 2026-10-01, not native-reviewed. Variant names follow the
@@ -6371,8 +6373,8 @@ const ZH_HANT: Record<string, string> = {
   'Draw by repetition · MistyBanqi up 10 pieces to 2': '重複局面和棋 · MistyBanqi 十子對兩子領先',
   'MistyBanqi wins · the opponent is left with no piece to move':
     'MistyBanqi 獲勝 · 對手已無子可走',
-  "MistyBanqi (Red) is up ten pieces to two, a trivially won position, but its evaluation gives no reward for converting a win over holding material, so it shuffles instead of pressing and the game is drawn by threefold repetition. If you're losing on material against it, this is the escape: herd a strong piece into a perpetual chase and it may let the draw happen.":
-    'MistyBanqi（紅方）以十子對兩子領先，是一個輕鬆贏定的局面，但它的評估並不會因為「把優勢轉化為勝利」而比「守住子力」給更高的分，於是它只來回挪子、不去逼搶，最終因三次重複局面被判和棋。如果你對它子力落後，這就是脫身之道：用長捉纏住一枚大子，它也許就放任和棋發生。',
+  "MistyBanqi (Red) is up ten pieces to two, a trivially won position, but its evaluation gives no reward for converting a win over holding material, so it shuffles instead of pressing and the game is drawn by threefold repetition. If you're losing on material against it, keep the game going: it may shuffle its own way into a draw.":
+    'MistyBanqi（紅方）以十子對兩子領先，是一個輕鬆贏定的局面，但它的評估並不會因為「把優勢轉化為勝利」而比「守住子力」給更高的分，於是它只來回挪子、不去逼搶，最終因三次重複局面被判和棋。如果你對它子力落後，別放棄：它也許會來回挪子，自己走進和棋。',
   'MistyBanqi (the first player) won this one outright, leaving the opponent with nothing to move. Banqi swings hard with the flips: it fell behind on material early here, then calculated its way back and cleared the board. Grinding down a position like this, capture by capture, is the strong half of its game.':
     'MistyBanqi（先手）乾淨俐落地贏下了這盤，讓對手無子可走。暗棋的局勢隨翻子劇烈起伏：這盤裡它開局子力落後，隨後憑計算一步步扳回，把對手清光。像這樣一子一子地輾下去，是它棋力強的那一半。',
 
@@ -6748,6 +6750,8 @@ const ZH_HANT: Record<string, string> = {
     '當對手輪到自己卻無棋可走時，你獲勝——通常是因為敵方棋子被全部吃光，有時則是被困死、無路可走。這裡的將不是王棋：吃掉它只是進展，而非勝利，棋局會一直進行到一方被吃光或被困死為止。',
   'Mistboard draws a game two ways: 40 plies (single moves) with no flip or capture, or threefold repetition, the same position three times. A flip or capture resets both counters because it changes the position irreversibly.':
     'Mistboard 有兩種自動和棋：連續 40 個半回合沒有翻子或吃子，或同一局面出現三次。翻子或吃子會不可逆地改變局面，因此會重置兩個計數。',
+  'A chase (長捉) is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not make a position appear for the third time with a chase; it must play something else, unless it has no other legal move. A repetition caused by a chase is never a draw, because the chased piece cannot stay put without being taken. A chase that keeps driving a piece onto new squares is not limited.':
+    '捉子（長捉）指既不翻子也不吃子、走完後能吃掉對方剛走動那枚棋子的一步棋，不論那枚棋子有沒有根。捉子的一方不能用捉子讓同一局面第三次出現，必須改走別的著法，除非沒有其他合法著法。由捉子造成的重複局面一律不判和，因為被捉的棋子不走就會被吃。不斷把對方棋子趕到新位置的捉子不受限制。',
   'Play MistyBanqi': '對戰 MistyBanqi',
   'Challenge a friend': '挑戰好友',
   'Three rules give the game its character: the rat captures the elephant, only the rat can swim, and the lion and tiger leap the rivers.':

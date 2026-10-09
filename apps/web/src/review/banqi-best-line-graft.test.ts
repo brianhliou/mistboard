@@ -67,17 +67,22 @@ describe('banqi best-line graft', () => {
     const root = document.createElement('div');
     document.body.append(root);
 
-    mountBanqiReview(root, 'room-graft', STANDARD_BANQI_DEAL, {
-      ariaLabel: 'test',
-      title: 'Banqi',
-      summary: 'test',
-      moves: [played],
-      analysis: {
-        requestLabel: 'Analyse',
-        fetchCached: async () => analysis,
-        run: async () => analysis,
+    mountBanqiReview(
+      root,
+      'room-graft',
+      { deal: STANDARD_BANQI_DEAL, rules: {} },
+      {
+        ariaLabel: 'test',
+        title: 'Banqi',
+        summary: 'test',
+        moves: [played],
+        analysis: {
+          requestLabel: 'Analyse',
+          fetchCached: async () => analysis,
+          run: async () => analysis,
+        },
       },
-    });
+    );
 
     await vi.waitFor(
       () => {
@@ -101,17 +106,22 @@ describe('banqi best-line graft', () => {
     const root = document.createElement('div');
     document.body.append(root);
 
-    mountBanqiReview(root, 'room-badge', STANDARD_BANQI_DEAL, {
-      ariaLabel: 'test',
-      title: 'Banqi',
-      summary: 'test',
-      moves: [played],
-      analysis: {
-        requestLabel: 'Analyse',
-        fetchCached: async () => analysis,
-        run: async () => analysis,
+    mountBanqiReview(
+      root,
+      'room-badge',
+      { deal: STANDARD_BANQI_DEAL, rules: {} },
+      {
+        ariaLabel: 'test',
+        title: 'Banqi',
+        summary: 'test',
+        moves: [played],
+        analysis: {
+          requestLabel: 'Analyse',
+          fetchCached: async () => analysis,
+          run: async () => analysis,
+        },
       },
-    });
+    );
 
     // Jump to the blunder: the badge rides the move that led to the current node.
     await vi.waitFor(

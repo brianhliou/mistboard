@@ -176,6 +176,10 @@ export const banqiArticle: Article = {
           kind: 'paragraph',
           text: 'Mistboard draws a game two ways: 40 plies (single moves) with no flip or capture, or threefold repetition, the same position three times. A flip or capture resets both counters because it changes the position irreversibly.',
         },
+        {
+          kind: 'paragraph',
+          text: 'A chase (長捉) is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not make a position appear for the third time with a chase; it must play something else, unless it has no other legal move. A repetition caused by a chase is never a draw, because the chased piece cannot stay put without being taken. A chase that keeps driving a piece onto new squares is not limited.',
+        },
       ],
     },
     {

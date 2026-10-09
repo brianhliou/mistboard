@@ -35,6 +35,10 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-10-09 (banqi chase rule) ── 长捉 / 翻子 / 三次重复 follow the banqi rules article.
+  'Banqi: a chase can no longer force a repetition draw.': '暗棋：长捉不能再逼成重复和棋。',
+  'In banqi a player could chase the same piece back and forth until the position came up three times and the game was drawn. Now a chasing move may not make a position appear for the third time, so the chasing side has to play something else, and a repetition caused by a chase is never a draw. A chase that drives a piece onto new squares is not affected. Games started before the change keep the old rules.':
+    '以前在暗棋里，一方可以来回捉同一枚棋子，直到同一局面出现三次而判和。现在捉子不能让同一局面第三次出现，捉子的一方必须改走别的着法，由捉子造成的重复局面也一律不判和。把对方棋子赶到新位置的捉子不受影响。规则更新前开始的对局仍按旧规则进行。',
   // ── 2026-10-09 (longest forced mates) ── 困毙 / 半回合 / 研究 follow the longest-forced-mates-xiangqi article text.
   'The longest forced mates in xiangqi, played out move by move.': '象棋最长的必胜杀局，逐着演示。',
   'A horse and a soldier against a general with both advisors and both elephants takes 65 moves to mate with best play on both sides, the longest of seven records pulled from xiangqi endgame tablebases. Every line is a chapter in a study you can step through, and five of the seven end with the loser having no legal move rather than in checkmate.':
@@ -468,6 +472,10 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-10-09 (banqi chase rule) ── 長捉 / 翻子 / 三次重複 follow the banqi rules article.
+  'Banqi: a chase can no longer force a repetition draw.': '暗棋：長捉不能再逼成重複和棋。',
+  'In banqi a player could chase the same piece back and forth until the position came up three times and the game was drawn. Now a chasing move may not make a position appear for the third time, so the chasing side has to play something else, and a repetition caused by a chase is never a draw. A chase that drives a piece onto new squares is not affected. Games started before the change keep the old rules.':
+    '以前在暗棋裡，一方可以來回捉同一枚棋子，直到同一局面出現三次而判和。現在捉子不能讓同一局面第三次出現，捉子的一方必須改走別的著法，由捉子造成的重複局面也一律不判和。把對方棋子趕到新位置的捉子不受影響。規則更新前開始的對局仍按舊規則進行。',
   // ── 2026-10-09 (longest forced mates) ── 困斃 / 半回合 / 研究 follow the longest-forced-mates-xiangqi article text.
   'The longest forced mates in xiangqi, played out move by move.': '象棋最長的必勝殺局，逐著演示。',
   'A horse and a soldier against a general with both advisors and both elephants takes 65 moves to mate with best play on both sides, the longest of seven records pulled from xiangqi endgame tablebases. Every line is a chapter in a study you can step through, and five of the seven end with the loser having no legal move rather than in checkmate.':
