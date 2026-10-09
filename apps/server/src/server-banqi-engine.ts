@@ -156,7 +156,7 @@ const FALLBACK_CAPTURE_ORDER = [
 
 /**
  * The move the bot plays when the engine keeps choosing a move the 長捉 (perpetual
- * chase) limit forbids, i.e. a MistyBanqi build that ignores `searchmoves`. Resigning
+ * chase) rule forbids, i.e. a MistyBanqi build that ignores `searchmoves`. Resigning
  * there would hand a chased player a win the rule never meant to award, so this picks
  * a legal move instead: the most valuable capture, else a quiet board move, else a
  * flip. Crude on purpose; it only runs on that version skew, and it reads nothing
@@ -190,9 +190,9 @@ export async function playBanqiEngineMoveIfReady(
   if (remainingMs !== null && remainingMs <= 0) return;
 
   const { fen, moves, gameMoves } = banqiEngineRepWindow(room);
-  // 長捉 limit: when it takes a move away, restrict the engine's root to the moves
-  // still legal. Engine-side legality knows nothing of the limit, so without this the
-  // engine would pick the forbidden extension, the kernel would refuse it, and the
+  // 長捉 rule: when it takes a move away, restrict the engine's root to the moves
+  // still legal. Engine-side legality knows nothing of the rule, so without this the
+  // engine would pick the forbidden repeat, the kernel would refuse it, and the
   // bot would resign below.
   const state = room.projection.state;
   const forbidden = getBanqiForbiddenChaseMoves(state);
@@ -266,7 +266,7 @@ export async function playBanqiEngineMoveIfReady(
           rejected: [...forbiddenUci],
           played: chosen ? banqiMoveToEngineUci(chosen) : null,
         },
-        'Banqi engine ignored searchmoves and chose a chase move past the limit; playing a fallback',
+        'Banqi engine ignored searchmoves and chose a chase move the 長捉 rule forbids; playing a fallback',
       );
     }
   }

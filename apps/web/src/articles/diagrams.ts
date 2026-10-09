@@ -2771,7 +2771,7 @@ function banqiMoveFromToken(token: string): BanqiMove | null {
 }
 
 export function banqiReplayViewAt(deal: BanqiDeal, moves: string, ply: number): BanqiPlayerView {
-  // A recorded engine game from before the 長捉 limit: replay it with the limit off.
+  // A recorded engine game from before the 長捉 rule: replay it with the rule off.
   let state = createInitialBanqiState('banqi-engine-thumbnail', deal, LEGACY_BANQI_RULES);
   const parsedMoves = moves.trim().split(/\s+/).map(banqiMoveFromToken);
   for (const move of parsedMoves.slice(0, ply)) {

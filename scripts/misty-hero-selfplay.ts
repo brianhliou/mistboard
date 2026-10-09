@@ -336,7 +336,7 @@ async function playJungle(
 
 async function playBanqi(spec: EngineSpec, seed: number, maxPlies: number): Promise<SelfPlayGame> {
   const deal = createBanqiDeal(seededRng(seed));
-  // MistyBanqi plays without the 長捉 limit, so its self-play records do too.
+  // MistyBanqi plays without the 長捉 rule, so its self-play records do too.
   let state = createInitialBanqiState(`hero-${seed}`, deal, LEGACY_BANQI_RULES);
   const history: BanqiGameState[] = [state];
   const uciMoves: string[] = [];

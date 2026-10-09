@@ -91,9 +91,9 @@ function cryptoRng(): number {
 }
 
 // The persisted room-created setup is the deal plus the rules the room was created
-// under (BanqiSetup: since the 長捉 limit shipped, 2026-10, new rooms record
-// `chaseLimit`). A room created before it stored the bare deal array and replays
-// with the limit off, so its moves and its repetition draw replay as played
+// under (BanqiSetup: since the 長捉 rule shipped, 2026-10, new rooms record
+// `chaseRule`). A room created before it stored the bare deal array and replays
+// with the rule off, so its moves and its repetition draw replay as played
 // (readBanqiSetup fails closed: no stamp means the old rules). createInitialBanqiState
 // validates the deal (throws on a corrupt multiset). An absent setup is only the
 // runtime's throwaway seed projection; it gets the standard deal and current rules.

@@ -26,11 +26,10 @@
 //     top of the ladder and is captured outright. Win = the side to move has no
 //     legal move (subsumes all-pieces-captured). Draws: the 40-ply no-progress
 //     clock (resets on capture OR flip) and threefold position repetition.
-//   - Perpetual chase (長捉) limit: one piece may chase the same fleeing enemy
-//     piece at most BANQI_CHASE_LIMIT times in a row; the move that would extend
-//     the stretch is then illegal (unless it is the only legal move). Positions
-//     inside a chase stretch do not count toward the repetition draw, so a chase
-//     cannot reach threefold before the limit bites. See "Perpetual chase" below.
+//   - Perpetual chase (長捉) rule: a chase move may not make a position appear
+//     for the third time (unless it is the only legal move), and a repetition
+//     caused by a chase is never a draw. A chase that keeps finding new squares
+//     is not limited. See "Perpetual chase" below.
 //
 // TWO AXES (same red/black values, distinct concepts):
 //   - BanqiColor ('red'|'black') = a piece's INK (its glyph colour). Pieces, the
@@ -117,13 +116,9 @@ export type BanqiCapture = {
   role: BanqiPieceRole;
 };
 
-// One side's running chase stretch (see "Perpetual chase" below). Squares are
-// where the two pieces stand NOW, updated as they move.
-export type BanqiChaseStretch = {
-  chaser: BanqiSquare; // the chasing piece
-  target: BanqiSquare; // the chased (fleeing) enemy piece
-  count: number; // consecutive chase moves so far
-};
+// The 長捉 rule a game is played under (see "Perpetual chase" below). One value
+// today; a string, not a boolean, so a later revision can be stamped beside it.
+export type BanqiChaseRule = 'repetition';
 
 export type BanqiGameState = {
   id: string;
@@ -138,17 +133,18 @@ export type BanqiGameState = {
   // Plies since the last capture OR flip. Powers the no-progress draw.
   noProgressClock: number;
   // (positionKey → times seen) within the current no-progress window; cleared on
-  // any capture/flip (those are irreversible). Powers the repetition draw.
+  // any capture/flip (those are irreversible). Every position is counted, chase
+  // or not; the repetition draw and the 長捉 rule both read it.
   repCounts: Record<string, number>;
   captures: BanqiCapture[];
   lastMove?: BanqiMove;
-  // Running chase stretches, keyed by the CHASING seat (at most one each).
-  // Derived from public information only (face-up pieces + the move list), and
-  // never sent to clients: the view's legalMoves already omit a forbidden move.
-  chases?: Partial<Record<BanqiSeat, BanqiChaseStretch>>;
-  // Max chase moves in one stretch. undefined = BANQI_CHASE_LIMIT; null = the
-  // limit is off (no forbidden moves, chase positions count for repetition).
-  chaseLimit?: number | null;
+  // If the last move was a chase, the square of the piece it chased (so the next
+  // move can be recognised as fleeing it). Derived from public information only
+  // (face-up pieces + the move list), and never sent to clients.
+  chasedSquare?: BanqiSquare;
+  // The 長捉 rule. undefined = the current rule ('repetition'); null = off (no
+  // forbidden moves, every threefold repetition draws), for older games.
+  chaseRule?: BanqiChaseRule | null;
 };
 
 // ── Player view (symmetric mask; same board for both seats + spectators) ──────
@@ -179,11 +175,11 @@ export type BanqiPlayerView = {
   firstColor: BanqiColor | null;
   moveNumber: number;
   lastMove?: BanqiMove;
-  // The 長捉 limit this game is played under, present only while the rule is in
+  // The 長捉 rule this game is played under, present only while the rule is in
   // force. Public (a rule, not a secret): a client that replays a finished game
   // from its deal passes it back as BanqiRules (banqiRulesFromView). Absent means
   // the rule is off, so a game created before it shipped replays as it was played.
-  chaseLimit?: number;
+  chaseRule?: BanqiChaseRule;
 };
 
 // ── Geometry (8×4, self-contained — NOT the 9×10 xiangqi helpers) ────────────
@@ -266,9 +262,8 @@ export function banqiCanCapture(attacker: BanqiPieceRole, target: BanqiPieceRole
 
 export const DEFAULT_NO_PROGRESS_PLY_LIMIT = 40;
 export const DEFAULT_REPETITION_DRAW_COUNT = 3;
-// 長捉 limit: chase moves one piece may make in a row on the same fleeing enemy
-// piece before the next one becomes illegal. 暗棋2 uses 7; FunTown/Baike use 10.
-export const BANQI_CHASE_LIMIT = 7;
+// The 長捉 rule every new game is played under.
+export const BANQI_CHASE_RULE: BanqiChaseRule = 'repetition';
 
 export const BANQI_PIECE_COUNTS: Record<BanqiPieceRole, number> = {
   general: 1,
@@ -350,35 +345,35 @@ export function oppositeBanqiSeat(seat: BanqiSeat): BanqiSeat {
 // Rules are stamped per game, not read from today's constants: a stored game is
 // its event log replayed through this kernel, and applyBanqiMove ignores a move
 // the rules call illegal, so a game played before a rule change must replay under
-// the rules it was played with. The 長捉 limit (2026-10) is the first such rule.
+// the rules it was played with. The 長捉 rule (2026-10) is the first such rule.
 
 /** Rule parameters for one game. Omitted fields take the current defaults. */
 export type BanqiRules = {
-  /** 長捉 limit; null = off (rooms created before the rule shipped). */
-  chaseLimit?: number | null;
+  /** 長捉 rule; null = off (rooms created before the rule shipped). */
+  chaseRule?: BanqiChaseRule | null;
 };
 
-/** The rules every stored game created before the 長捉 limit was played under. */
-export const LEGACY_BANQI_RULES: Readonly<Required<BanqiRules>> = { chaseLimit: null };
+/** The rules every stored game created before the 長捉 rule was played under. */
+export const LEGACY_BANQI_RULES: Readonly<Required<BanqiRules>> = { chaseRule: null };
 
 /**
- * The server-secret room-created setup for a room created since the 長捉 limit
- * shipped: the deal plus the limit the room is played under. A room created before
+ * The server-secret room-created setup for a room created since the 長捉 rule
+ * shipped: the deal plus the rule the room is played under. A room created before
  * it stored the bare deal array (BanqiDeal), which reads as LEGACY_BANQI_RULES.
  */
-export type BanqiSetup = { deal: BanqiDeal; chaseLimit: number | null };
+export type BanqiSetup = { deal: BanqiDeal; chaseRule: BanqiChaseRule | null };
 
 /** What a room-created event may hold: a current setup or a pre-rule bare deal. */
 export type BanqiStoredSetup = BanqiSetup | BanqiDeal;
 
 /** A fresh setup for a new room: a random deal under the current rules. */
 export function createBanqiSetup(rng: () => number): BanqiSetup {
-  return { deal: createBanqiDeal(rng), chaseLimit: BANQI_CHASE_LIMIT };
+  return { deal: createBanqiDeal(rng), chaseRule: BANQI_CHASE_RULE };
 }
 
 /**
  * Read a stored setup, failing closed: a bare deal array, or a setup object whose
- * limit is missing or malformed, is a pre-rule game (chase limit off), never the
+ * rule is missing or unknown, is a pre-rule game (chase rule off), never the
  * current rule. Only an absent setup (no stored game: tests, the runtime's seed
  * projection) gets the current defaults.
  */
@@ -386,13 +381,12 @@ export function readBanqiSetup(setup: unknown): { deal?: BanqiDeal; rules: Banqi
   if (setup === undefined || setup === null) return { rules: {} };
   if (Array.isArray(setup)) return { deal: setup as BanqiDeal, rules: { ...LEGACY_BANQI_RULES } };
   if (typeof setup === 'object') {
-    const candidate = setup as { deal?: unknown; chaseLimit?: unknown };
-    const limit = candidate.chaseLimit;
-    const chaseLimit =
-      typeof limit === 'number' && Number.isInteger(limit) && limit > 0 ? limit : null;
+    const candidate = setup as { deal?: unknown; chaseRule?: unknown };
+    const chaseRule: BanqiChaseRule | null =
+      candidate.chaseRule === 'repetition' ? candidate.chaseRule : null;
     return {
       ...(Array.isArray(candidate.deal) ? { deal: candidate.deal as BanqiDeal } : {}),
-      rules: { chaseLimit },
+      rules: { chaseRule },
     };
   }
   return { rules: { ...LEGACY_BANQI_RULES } };
@@ -406,17 +400,17 @@ export function createBanqiStateFromSetup(gameId: string, setup: unknown): Banqi
 
 /**
  * The rules a finished game's view says it was played under, for a client that
- * replays it from the deal. A view without `chaseLimit` is a game with the limit
- * off (fail closed: never replay an old game under the new rule).
+ * replays it from the deal. A view without a known `chaseRule` is a game with the
+ * rule off (fail closed: never replay an old game under the new rule).
  */
-export function banqiRulesFromView(view: Pick<BanqiPlayerView, 'chaseLimit'>): BanqiRules {
-  return { chaseLimit: view.chaseLimit ?? null };
+export function banqiRulesFromView(view: Pick<BanqiPlayerView, 'chaseRule'>): BanqiRules {
+  return { chaseRule: view.chaseRule === 'repetition' ? view.chaseRule : null };
 }
 
 /**
  * `rules` defaults to the current rules, which is right only for a fresh game. A
  * caller replaying a stored or recorded game passes the rules it was played under
- * (LEGACY_BANQI_RULES for any record made before the 長捉 limit). Every non-test
+ * (LEGACY_BANQI_RULES for any record made before the 長捉 rule). Every non-test
  * call site passes `rules` explicitly; apps/server/src/banqi-rules-stamp.test.ts
  * enforces that.
  */
@@ -440,7 +434,7 @@ export function createInitialBanqiState(
     noProgressClock: 0,
     repCounts: {},
     captures: [],
-    ...(rules.chaseLimit !== undefined ? { chaseLimit: rules.chaseLimit } : {}),
+    ...(rules.chaseRule !== undefined ? { chaseRule: rules.chaseRule } : {}),
   };
 }
 
@@ -573,12 +567,12 @@ export function getBanqiLegalMoves(state: BanqiGameState): BanqiMove[] {
   const forbidden = forbiddenChaseMoves(state, moves);
   if (forbidden.length === 0) return moves;
   const allowed = moves.filter((m) => !forbidden.includes(m));
-  // No loss by rule edge: if extending the chase is all the chaser can do, it stays legal.
+  // No loss by rule edge: if repeating the chase is all the chaser can do, it stays legal.
   return allowed.length > 0 ? allowed : moves;
 }
 
 /**
- * The moves the 長捉 limit takes away from the side to move right now (empty when
+ * The moves the 長捉 rule takes away from the side to move right now (empty when
  * none, or when they are its only moves and so stay legal). The bot driver passes
  * the remaining legal moves to the engine as its root move list.
  */
@@ -602,26 +596,43 @@ export function isBanqiLegalMove(state: BanqiGameState, move: BanqiMove): boolea
 // A CHASE MOVE is a quiet move (no flip, no capture) after which the moved piece
 // could capture, under the normal capture rules (ladder, soldier takes general,
 // cannon over a screen), the enemy piece that moved on the previous ply. Whether
-// that target is protected does not matter. A CHASE STRETCH is consecutive chase
-// moves by one piece on one target, the target fleeing in between; any flip, any
-// capture, or any other move by either side ends it. Once a stretch holds the
-// limit, the chaser's move that would extend it is illegal, unless it is the only
-// legal move. The threat test reads only face-up pieces and square occupancy,
-// both public, so the rule leaks nothing about the deal.
+// that target is protected does not matter. A FLEE is a move of the piece the
+// previous ply chased. The threat test reads only face-up pieces and square
+// occupancy, both public, so the rule leaks nothing about the deal.
 //
-// Repetition: a position reached by a chase move, or by the target fleeing a live
-// stretch, is not counted toward threefold. Otherwise a chase cycle of 2 or 4
-// squares repeats long before 7 chases, and the chaser would keep the draw the
-// limit exists to take away. Positions reached by any other move count as before.
+// Why repetition and not a count: a chase that cycles (back and forth, or round a
+// 2x2 block) repeats the position, and in banqi the chased side cannot deviate
+// without losing the piece, so under plain threefold the chaser alone decided
+// whether the game was drawn. A chase that herds the target onto new squares
+// never repeats and is a fair way to win a piece, so it is not limited.
+//
+// The rule (BanqiChaseRule 'repetition'):
+//   1. A chase move that would make its resulting position appear for the third
+//      time (DEFAULT_REPETITION_DRAW_COUNT) is illegal, unless the side to move
+//      has no other legal move.
+//   2. Every position is counted in repCounts, but a position reached by a chase
+//      move, or by a flee, never ends the game by repetition. A position reached
+//      by any other move draws at its third occurrence, as before.
+//
+// Mutual chase (一捉一): a move that is both a flee and a chase (the chased piece
+// moves to a square from which it threatens its chaser) is treated as an ordinary
+// move: not restricted, and a repetition it reaches draws. When each side is
+// chasing the other neither is the forcing side; xiangqi allows 一捉一 too, and a
+// draw there is acceptable. On a banqi board only two cannons on one line can do
+// this (the chased cannon steps along the line and still attacks over the screen):
+// a non-cannon target can never land next to its chaser in one step.
+//
+// The rule off (chaseRule null, every game before 2026-10): no move is forbidden
+// and every threefold repetition draws.
 
-function chaseLimitOf(state: BanqiGameState): number | null {
-  return state.chaseLimit === undefined ? BANQI_CHASE_LIMIT : state.chaseLimit;
+function chaseRuleOf(state: BanqiGameState): BanqiChaseRule | null {
+  return state.chaseRule === undefined ? BANQI_CHASE_RULE : state.chaseRule;
 }
 
-/** The view's `chaseLimit` field: present only while the limit is in force. */
-function chaseLimitViewField(state: BanqiGameState): { chaseLimit?: number } {
-  const limit = chaseLimitOf(state);
-  return limit === null ? {} : { chaseLimit: limit };
+/** The view's `chaseRule` field: present only while the rule is in force. */
+function chaseRuleViewField(state: BanqiGameState): { chaseRule?: BanqiChaseRule } {
+  const rule = chaseRuleOf(state);
+  return rule === null ? {} : { chaseRule: rule };
 }
 
 /** Can the face-up piece on `from` capture the face-up enemy on `target` on `board`? */
@@ -633,6 +644,14 @@ function banqiThreatens(board: BanqiBoard, from: BanqiSquare, target: BanqiSquar
   return pseudoBoardDests(board, from).includes(target);
 }
 
+/** `board` after the quiet move `move` (no flip, no capture). */
+function boardAfterQuietMove(board: BanqiBoard, move: BanqiMove): BanqiBoard {
+  const next: BanqiBoard = { ...board };
+  next[move.to] = next[move.from];
+  delete next[move.from];
+  return next;
+}
+
 /**
  * If `move` is a chase move in `state`, the square of the piece it chases (the
  * enemy piece that moved on the previous ply); else null. `move` must be legal.
@@ -642,52 +661,33 @@ function chaseTargetOf(state: BanqiGameState, move: BanqiMove): BanqiSquare | nu
   if (state.board[move.to]) return null; // capture
   const last = state.lastMove;
   if (!last || last.from === last.to) return null; // nothing moved last ply
-  const board: BanqiBoard = { ...state.board };
-  board[move.to] = board[move.from];
-  delete board[move.from];
+  const board = boardAfterQuietMove(state.board, move);
   return banqiThreatens(board, move.to, last.to) ? last.to : null;
 }
 
-/** Moves (from `moves`) that would push the mover's stretch past the limit. */
-function forbiddenChaseMoves(state: BanqiGameState, moves: BanqiMove[]): BanqiMove[] {
-  const limit = chaseLimitOf(state);
-  if (limit === null) return [];
-  const stretch = state.chases?.[banqiSeatToMove(state)];
-  if (!stretch || stretch.count < limit) return [];
-  return moves.filter(
-    (m) => m.from === stretch.chaser && chaseTargetOf(state, m) === stretch.target,
-  );
+/** How `move` relates to a chase: the two kinds the rule singles out, or neither. */
+function chaseKindOf(state: BanqiGameState, move: BanqiMove): 'chase' | 'flee' | null {
+  const chases = chaseTargetOf(state, move) !== null;
+  const flees = state.chasedSquare !== undefined && move.from === state.chasedSquare;
+  if (chases === flees) return null; // neither, or a mutual chase (ordinary move)
+  return chases ? 'chase' : 'flee';
 }
 
 /**
- * The chase stretches after `move` (legal, quiet or not) is played in `state`,
- * and whether the resulting position belongs to a stretch (so is kept out of the
- * repetition count).
+ * Chase moves (from `moves`) whose resulting position would reach threefold. Uses
+ * DEFAULT_REPETITION_DRAW_COUNT: no live caller overrides the draw count.
  */
-function nextChases(
-  state: BanqiGameState,
-  move: BanqiMove,
-): { chases: Partial<Record<BanqiSeat, BanqiChaseStretch>>; inChase: boolean } {
-  if (move.from === move.to || state.board[move.to]) return { chases: {}, inChase: false };
-  const mover = banqiSeatToMove(state);
-  const opponent = oppositeBanqiSeat(mover);
-  const chases: Partial<Record<BanqiSeat, BanqiChaseStretch>> = {};
-  let inChase = false;
-  // The opponent's stretch lives on only if its target fled with this move.
-  const theirs = state.chases?.[opponent];
-  if (theirs && move.from === theirs.target) {
-    chases[opponent] = { ...theirs, target: move.to };
-    inChase = true;
-  }
-  // The mover's own stretch: extended, started afresh, or ended.
-  const target = chaseTargetOf(state, move);
-  if (target !== null) {
-    const mine = state.chases?.[mover];
-    const extends_ = mine !== undefined && mine.chaser === move.from && mine.target === target;
-    chases[mover] = { chaser: move.to, target, count: extends_ ? mine.count + 1 : 1 };
-    inChase = true;
-  }
-  return { chases, inChase };
+function forbiddenChaseMoves(state: BanqiGameState, moves: BanqiMove[]): BanqiMove[] {
+  if (chaseRuleOf(state) === null) return [];
+  return moves.filter((m) => {
+    if (chaseKindOf(state, m) !== 'chase') return false;
+    const key = banqiPositionKeyOf(
+      boardAfterQuietMove(state.board, m),
+      state.ply + 1,
+      state.firstColor,
+    );
+    return (state.repCounts[key] ?? 0) + 1 >= DEFAULT_REPETITION_DRAW_COUNT;
+  });
 }
 
 // ── Repetition key ───────────────────────────────────────────────────────────
@@ -698,14 +698,18 @@ function nextChases(
  * excluded too. Mirrors the engine's position_key for golden parity.
  */
 function banqiPositionKey(state: BanqiGameState): string {
+  return banqiPositionKeyOf(state.board, state.ply, state.firstColor);
+}
+
+function banqiPositionKeyOf(board: BanqiBoard, ply: number, firstColor: BanqiColor | null): string {
   const sqkey = ALL_BANQI_SQUARES.map((square) => {
-    const piece = state.board[square];
+    const piece = board[square];
     if (!piece) return '.';
     if (piece.faceDown) return 'x';
     const letter = ROLE_TO_LETTER[piece.role];
     return piece.color === 'red' ? letter : letter.toLowerCase();
   }).join('');
-  return `${sqkey}|${state.ply % 2}|${state.firstColor ?? '?'}`;
+  return `${sqkey}|${ply % 2}|${firstColor ?? '?'}`;
 }
 
 // ── Apply move + terminal detection ──────────────────────────────────────────
@@ -719,11 +723,12 @@ function computeBanqiStatus(
   state: BanqiGameState,
   limit: number,
   repLimit: number,
+  repetitionCanDraw = true,
 ): BanqiGameStatus {
   // Draw clocks are checked before no-legal-move, matching the engine's result().
   if (state.noProgressClock >= limit)
     return { type: 'finished', winner: null, reason: 'no-progress' };
-  if ((state.repCounts[banqiPositionKey(state)] ?? 0) >= repLimit) {
+  if (repetitionCanDraw && (state.repCounts[banqiPositionKey(state)] ?? 0) >= repLimit) {
     return { type: 'finished', winner: null, reason: 'repetition' };
   }
   if (enumerateBanqiMoves(state).length === 0) {
@@ -810,7 +815,9 @@ export function applyBanqiMove(
   const moveNumber = Math.floor(ply / 2) + 1;
   // A flip/capture is irreversible → fresh repetition window; else carry counts.
   const repCounts = irreversible ? {} : { ...state.repCounts };
-  const chase = nextChases(state, move);
+  // Read before the board changes: what this move chases, and its chase kind.
+  const chased = irreversible ? null : chaseTargetOf(state, move);
+  const kind = irreversible ? null : chaseKindOf(state, move);
 
   const next: BanqiGameState = {
     ...state,
@@ -822,17 +829,17 @@ export function applyBanqiMove(
     repCounts,
     captures,
     lastMove: move,
-    chases: chase.chases,
     status: { type: 'playing', turn: ply % 2 === 0 ? 'red' : 'black' },
   };
+  delete next.chasedSquare;
+  if (chased !== null) next.chasedSquare = chased;
 
-  // A position inside a chase stretch is kept out of the repetition count (see
-  // "Perpetual chase"), unless the limit is switched off for this game.
-  if (!chase.inChase || chaseLimitOf(state) === null) {
-    const key = banqiPositionKey(next);
-    next.repCounts[key] = (next.repCounts[key] ?? 0) + 1;
-  }
-  next.status = computeBanqiStatus(next, limit, repLimit);
+  // Every position is counted; one reached by a chase or a flee never draws by
+  // repetition (see "Perpetual chase"), unless the rule is off for this game.
+  const key = banqiPositionKey(next);
+  next.repCounts[key] = (next.repCounts[key] ?? 0) + 1;
+  const repetitionCanDraw = kind === null || chaseRuleOf(state) === null;
+  next.status = computeBanqiStatus(next, limit, repLimit, repetitionCanDraw);
   return next;
 }
 
@@ -865,7 +872,7 @@ export function getBanqiPlayerView(state: BanqiGameState, seat: BanqiSeat): Banq
     firstColor: state.firstColor,
     moveNumber: state.moveNumber,
     lastMove: state.lastMove,
-    ...chaseLimitViewField(state),
+    ...chaseRuleViewField(state),
   };
 }
 
@@ -892,6 +899,6 @@ export function banqiTruthView(state: BanqiGameState): BanqiPlayerView {
     firstColor: state.firstColor,
     moveNumber: state.moveNumber,
     lastMove: state.lastMove,
-    ...chaseLimitViewField(state),
+    ...chaseRuleViewField(state),
   };
 }

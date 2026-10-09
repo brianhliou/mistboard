@@ -88,7 +88,7 @@ function parseMove(token: string): BanqiMove {
 
 /** Replay a game and describe it from what the kernel reports. */
 function describe(game: SelfPlayGame, index: number): StudyGame {
-  // MistyBanqi plays without the 長捉 limit, so its self-play records do too.
+  // MistyBanqi plays without the 長捉 rule, so its self-play records do too.
   const start = createInitialBanqiState(`study-${game.seed}`, game.deal, LEGACY_BANQI_RULES);
   let state: BanqiGameState = start;
   const tokens = game.moves.trim().split(/\s+/);

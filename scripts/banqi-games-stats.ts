@@ -92,7 +92,7 @@ function parseMove(token: string): BanqiMove {
 }
 
 function replay(game: SelfPlayGame): Row {
-  // MistyBanqi plays without the 長捉 limit, so its self-play records do too.
+  // MistyBanqi plays without the 長捉 rule, so its self-play records do too.
   let state: BanqiGameState = createInitialBanqiState(
     `s-${game.seed}`,
     game.deal,

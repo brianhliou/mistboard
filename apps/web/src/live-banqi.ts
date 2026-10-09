@@ -17,6 +17,7 @@
 // the captured pool groups by bound ink, not by seat name.
 
 import type {
+  BanqiChaseRule,
   BanqiColor,
   BanqiGameStatus,
   BanqiMove,
@@ -89,8 +90,8 @@ export type BanqiWireView = {
   firstColor: BanqiColor | null;
   moveNumber: number;
   lastMove?: BanqiMove;
-  // The 長捉 limit the game is played under; absent on a pre-rule game (limit off).
-  chaseLimit?: number;
+  // The 長捉 rule the game is played under; absent on a pre-rule game (rule off).
+  chaseRule?: BanqiChaseRule;
 };
 
 type BanqiMoveEvent = TenantMovePlayed<BanqiSeat, BanqiMove>;

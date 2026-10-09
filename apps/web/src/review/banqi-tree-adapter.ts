@@ -57,8 +57,8 @@ export function recoverBanqiDeal(revealed: BanqiPlayerView): BanqiDeal {
 }
 
 /** A finished game's start: the recovered deal and the rules it was played under
- *  (banqiRulesFromView on the postgame view; a game from before the 長捉 limit has
- *  it off, and replaying it under the limit would drop its chase moves). */
+ *  (banqiRulesFromView on the postgame view; a game from before the 長捉 rule has
+ *  it off, and replaying it under the rule could drop its chase moves). */
 export type BanqiReviewStart = { deal: BanqiDeal; rules: BanqiRules };
 
 /** Build a banqi tree adapter over a recovered deal. `mode: 'perfect-info'` — with

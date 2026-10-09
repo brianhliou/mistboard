@@ -193,8 +193,8 @@ function renderPostgame(root: HTMLElement, postgame: BanqiPostgameResponse): voi
   });
 
   root.replaceChildren(buildNav());
-  // The final view says whether the game was played under the 長捉 limit (absent:
-  // a game from before it, replayed with the limit off as it was played).
+  // The final view says whether the game was played under the 長捉 rule (absent:
+  // a game from before it, replayed with the rule off as it was played).
   const start = { deal, rules: banqiRulesFromView(postgame.view) };
   mountBanqiReview(root, postgame.game.roomId, start, {
     pageClassName: 'banqi-review',

@@ -219,7 +219,7 @@ export function banqiEngineVersion(clientId: string | undefined): string | null 
 // the moves to seed its repetition history — so it avoids/seeks threefold (perpetual-chase)
 // draws instead of shuffling into them blind. Omit for the prior FEN-only behavior.
 // `searchMoves`: restrict the root to these moves (UCI `go … searchmoves`). The driver
-// sends it only when the 長捉 limit takes a move away (getBanqiForbiddenChaseMoves), as the
+// sends it only when the 長捉 rule takes a move away (getBanqiForbiddenChaseMoves), as the
 // full list of moves still legal. MistyBanqi 0.2.6+ honours it; older builds ignore the
 // token, which the driver's validation and chase fallback cover.
 export type BanqiEngineOptions = {

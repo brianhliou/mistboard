@@ -78,8 +78,8 @@ export const banqiEveAdapter: VariantEveAdapter<
   search: (engineId, _history, opts, context) => {
     const events = context.events as readonly BanqiEvent[];
     const window = banqiEveEngineWindow(events);
-    // The 長捉 limit, as the live loop applies it: restrict the root to the legal moves
-    // when the limit takes one away (an older engine ignores it and the game aborts).
+    // The 長捉 rule, as the live loop applies it: restrict the root to the legal moves
+    // when the rule takes one away (an older engine ignores it and the game aborts).
     const state = replayTenantEvents(banqiTenant, events).state;
     const searchMoves =
       getBanqiForbiddenChaseMoves(state).length > 0

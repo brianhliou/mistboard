@@ -178,7 +178,7 @@ export const banqiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'A chase (長捉) is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. One piece may chase the same piece at most 7 moves in a row; after that its side must play some other move, unless it has no other legal move. Positions inside a chase do not count toward the repetition draw, so chasing forever cannot force a draw.',
+          text: 'A chase (長捉) is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not make a position appear for the third time with a chase; it must play something else, unless it has no other legal move. A repetition caused by a chase is never a draw, because the chased piece cannot stay put without being taken. A chase that keeps driving a piece onto new squares is not limited.',
         },
       ],
     },

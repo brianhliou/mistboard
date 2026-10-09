@@ -1,15 +1,14 @@
 /**
- * Banqi PvE and the 長捉 (perpetual chase) limit: the bot never plays a chase move
- * past the limit. The driver restricts the engine's root with `searchmoves` when the
- * limit takes a move away, and if the engine ignores that (an older MistyBanqi), it
- * plays a legal fallback instead of resigning.
+ * Banqi PvE and the 長捉 (perpetual chase) rule: the bot never plays a chase move
+ * that repeats a position for the third time. The driver restricts the engine's root
+ * with `searchmoves` when the rule takes a move away, and if the engine ignores that
+ * (an older MistyBanqi), it plays a legal fallback instead of resigning.
  */
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   applyBanqiMove,
-  BANQI_CHASE_LIMIT,
   type BanqiGameState,
   type BanqiMove,
   getBanqiForbiddenChaseMoves,
@@ -23,12 +22,12 @@ import {
   playBanqiEngineMoveIfReady,
 } from './server-banqi-engine.js';
 
-const ROOM_ID = 'banqi_chase_limit';
+const ROOM_ID = 'banqi_chase_rule';
 const ENGINE_ID = 'misty-banqi';
 
 // The bot (red seat, red ink) shuttles its advisor c3/c2 after a black chariot that
-// shuttles d2/d3, BANQI_CHASE_LIMIT times; red is to move with the stretch full.
-function botAtChaseLimit(): BanqiGameState {
+// shuttles d2/d3, `loops` times; after two, its next c3-c2 would be a third repeat.
+function botChasing(loops = 2): BanqiGameState {
   let s: BanqiGameState = {
     id: ROOM_ID,
     board: {
@@ -55,12 +54,12 @@ function botAtChaseLimit(): BanqiGameState {
     { from: 'd2', to: 'd3' },
     { from: 'd3', to: 'd2' },
   ];
-  for (let i = 0; i < BANQI_CHASE_LIMIT; i += 1) {
+  for (let i = 0; i < loops * 2; i += 1) {
     s = applyBanqiMove(s, red[i % 2]!);
     s = applyBanqiMove(s, black[i % 2]!);
   }
   assert.equal(s.status.type, 'playing');
-  assert.equal(s.chases?.red?.count, BANQI_CHASE_LIMIT);
+  assert.equal(s.ply, 10 + loops * 4);
   return s;
 }
 
@@ -89,8 +88,8 @@ function search(best: string) {
 
 const uciSet = (moves: BanqiMove[]) => new Set(moves.map(banqiMoveToEngineUci));
 
-test('banqi bot at the chase limit: searchmoves carries exactly the legal moves', async () => {
-  const state = botAtChaseLimit();
+test('banqi bot whose chase would repeat a third time: searchmoves carries exactly the legal moves', async () => {
+  const state = botChasing();
   const forbidden = uciSet(getBanqiForbiddenChaseMoves(state));
   assert.ok(forbidden.size > 0);
   const { room, ctx, appended } = fixture(state);
@@ -119,15 +118,15 @@ test('banqi bot at the chase limit: searchmoves carries exactly the legal moves'
   assert.ok(!forbidden.has(banqiMoveToEngineUci(appended[0]!.move!)));
 });
 
-test('banqi bot at the chase limit: an engine that ignores searchmoves gets a legal fallback, not a resignation', async () => {
-  const state = botAtChaseLimit();
+test('banqi bot whose chase would repeat a third time: an engine that ignores searchmoves gets a legal fallback, not a resignation', async () => {
+  const state = botChasing();
   const forbidden = uciSet(getBanqiForbiddenChaseMoves(state));
   const { room, ctx, appended } = fixture(state);
   const favourite = [...forbidden][0]!;
   let calls = 0;
   const provider: BanqiEngineMoveProvider = async () => {
     calls += 1;
-    return search(favourite); // old binary: always the forbidden extension
+    return search(favourite); // old binary: always the forbidden repeat
   };
 
   await playBanqiEngineMoveIfReady(ctx as never, room as never, provider);
@@ -143,12 +142,10 @@ test('banqi bot at the chase limit: an engine that ignores searchmoves gets a le
   assert.ok(uciSet(getBanqiLegalMoves(state)).has(played));
 });
 
-test('banqi bot below the chase limit: no searchmoves, the engine move is played', async () => {
-  // Same position under a limit one higher: the next chase is still legal.
-  const s: BanqiGameState = { ...botAtChaseLimit(), chaseLimit: BANQI_CHASE_LIMIT + 1 };
+test('banqi bot whose chase repeats only a second time: no searchmoves, the engine move is played', async () => {
+  const s = botChasing(1);
   assert.deepEqual(getBanqiForbiddenChaseMoves(s), []);
-  const chase: BanqiMove =
-    BANQI_CHASE_LIMIT % 2 === 0 ? { from: 'c3', to: 'c2' } : { from: 'c2', to: 'c3' };
+  const chase: BanqiMove = { from: 'c3', to: 'c2' };
   const { room, ctx, appended } = fixture(s);
   const seen: Array<readonly string[] | undefined> = [];
   const provider: BanqiEngineMoveProvider = async (_id, _fen, opts) => {
@@ -158,19 +155,19 @@ test('banqi bot below the chase limit: no searchmoves, the engine move is played
   await playBanqiEngineMoveIfReady(ctx as never, room as never, provider);
   assert.deepEqual(seen, [undefined]);
   assert.deepEqual(appended[0]?.move, chase);
-  assert.equal(applyBanqiMove(s, chase).chases?.red?.count, BANQI_CHASE_LIMIT + 1);
+  assert.equal(applyBanqiMove(s, chase).chasedSquare, 'd2', 'it was a chase');
 });
 
 test('the chase fallback never picks a forbidden move and prefers a capture', () => {
-  const state = botAtChaseLimit();
+  const state = botChasing();
   const forbidden = uciSet(getBanqiForbiddenChaseMoves(state));
   const move = banqiChaseFallbackMove(state)!;
   assert.ok(!forbidden.has(banqiMoveToEngineUci(move)));
   assert.notEqual(move.from, move.to, 'a board move over a blind flip');
 
   // With a black soldier beside the advisor, the fallback takes it.
-  const advisor = BANQI_CHASE_LIMIT % 2 === 0 ? 'c3' : 'c2';
-  const prey = BANQI_CHASE_LIMIT % 2 === 0 ? 'b3' : 'b2';
+  const advisor = 'c3';
+  const prey = 'b3';
   assert.equal(state.board[advisor]?.role, 'advisor');
   const withPrey: BanqiGameState = {
     ...state,

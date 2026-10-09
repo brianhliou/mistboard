@@ -1,11 +1,11 @@
 /**
  * Every place that builds a banqi game state says which rules it is played under.
  *
- * The 長捉 (perpetual chase) limit shipped in 2026-10, and a stored banqi game is
+ * The 長捉 (perpetual chase) rule shipped in 2026-10, and a stored banqi game is
  * its event log replayed through the kernel. applyBanqiMove silently ignores a
- * move the rules call illegal, so a game played before the limit and replayed
- * under it drops its 8th chase move and replays to a different board (and a
- * repetition draw replays as still playing). Each room records its rules in the
+ * move the rules call illegal, so a game played before the rule and replayed
+ * under it can drop a chase move that repeated a position a third time and replay
+ * to a different board (and a chase repetition draw replays as still playing). Each room records its rules in the
  * room-created setup (createBanqiSetup / readBanqiSetup), and every replay path
  * must carry them through.
  *
@@ -107,7 +107,7 @@ test('every banqi state built from a deal outside a fresh game passes its rules'
     unstamped.map((s) => `${s.file}:${s.line}`),
     [],
     'pass the rules the game was played under (readBanqiSetup, banqiRulesFromView, ' +
-      'LEGACY_BANQI_RULES for a record from before the 長捉 limit), or add a fresh-game ' +
+      'LEGACY_BANQI_RULES for a record from before the 長捉 rule), or add a fresh-game ' +
       'call site to FRESH_GAME_CALL_SITES with the reason',
   );
 });

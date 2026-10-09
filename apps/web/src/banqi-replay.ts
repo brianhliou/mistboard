@@ -161,7 +161,7 @@ export function mountBanqiReplay(
     .filter((m): m is BanqiMove => m !== null);
 
   // Replay once; cache every position so stepping is instant.
-  // Article records were played before the 長捉 limit, so they replay with it off.
+  // Article records were played before the 長捉 rule, so they replay with it off.
   const states: BanqiGameState[] = [
     createInitialBanqiState('banqi-replay', spec.deal, LEGACY_BANQI_RULES),
   ];

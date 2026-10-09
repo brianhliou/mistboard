@@ -1,16 +1,15 @@
-// The banqi perpetual-chase (長捉) limit: kernel legality, resets, the only-move
-// exception, and how chase positions interact with the repetition draw.
-//
-// Every scenario runs at the shipped BANQI_CHASE_LIMIT and at the other counts
-// Brian may pick (3/5/10), set per state through `chaseLimit`, so changing the
-// constant cannot silently break the rule.
+// The banqi perpetual-chase (長捉) rule: a chase move may not make a position
+// appear for the third time (unless it is the only legal move), and a repetition
+// caused by a chase, or by fleeing one, never draws. Chases that keep finding new
+// squares are never restricted; ordinary shuffles still draw by threefold.
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   applyBanqiMove,
-  BANQI_CHASE_LIMIT,
+  BANQI_CHASE_RULE,
   type BanqiBoard,
+  type BanqiChaseRule,
   type BanqiColor,
   type BanqiGameState,
   type BanqiMove,
@@ -22,8 +21,6 @@ import {
   getBanqiPlayerView,
   isBanqiLegalMove,
 } from './variants-banqi.js';
-
-const LIMITS = [...new Set([BANQI_CHASE_LIMIT, 3, 5, 7, 10])];
 
 function up(color: BanqiColor, role: BanqiPieceRole): BanqiPiece {
   return { color, role, faceDown: false };
@@ -38,8 +35,12 @@ function mv(from: BanqiSquare, to: BanqiSquare): BanqiMove {
 }
 
 // Red seat owns red ink and is to move; black's `lastMove` just arrived.
-function redToMove(board: BanqiBoard, lastMove: BanqiMove, chaseLimit: number | null) {
-  const state: BanqiGameState = {
+function redToMove(
+  board: BanqiBoard,
+  lastMove: BanqiMove,
+  chaseRule: BanqiChaseRule | null = BANQI_CHASE_RULE,
+): BanqiGameState {
+  return {
     id: 'chase',
     board,
     status: { type: 'playing', turn: 'red' },
@@ -50,9 +51,8 @@ function redToMove(board: BanqiBoard, lastMove: BanqiMove, chaseLimit: number | 
     repCounts: {},
     captures: [],
     lastMove,
-    chaseLimit,
+    chaseRule,
   };
-  return state;
 }
 
 function play(state: BanqiGameState, move: BanqiMove): BanqiGameState {
@@ -62,16 +62,39 @@ function play(state: BanqiGameState, move: BanqiMove): BanqiGameState {
   return next;
 }
 
+/** Play `moves` in order, asserting the game is still on after each one. */
+function playAll(state: BanqiGameState, moves: BanqiMove[]): BanqiGameState {
+  let s = state;
+  for (const [i, m] of moves.entries()) {
+    s = play(s, m);
+    assert.equal(s.status.type, 'playing', `ply ${i + 1} (${m.from}${m.to}) ended the game`);
+  }
+  return s;
+}
+
 function hasMove(moves: BanqiMove[], move: BanqiMove): boolean {
   return moves.some((m) => m.from === move.from && m.to === move.to);
 }
 
-// Open-board chase: a red advisor shuttles c3/c2 after a black chariot that
-// shuttles d2/d3. Each red step lands next to the chariot (advisor > chariot);
-// each black step lands diagonal to the advisor. A 4-ply cycle, so without the
-// repetition carve-out it would be a threefold draw by the third chase.
-const RED_CHASE = [mv('c3', 'c2'), mv('c2', 'c3')];
-const BLACK_FLEE = [mv('d2', 'd3'), mv('d3', 'd2')];
+function repeat<T>(items: T[], times: number): T[] {
+  return Array.from({ length: times }, () => items).flat();
+}
+
+/** The repetition key `move` lands on (the key the apply step increments). */
+function keyAfter(state: BanqiGameState, move: BanqiMove): string {
+  const next = applyBanqiMove(state, move);
+  const key = Object.keys(next.repCounts).find(
+    (k) => (next.repCounts[k] ?? 0) !== (state.repCounts[k] ?? 0),
+  );
+  assert.ok(key, 'move changed no repetition count');
+  return key;
+}
+
+// Back-and-forth chase on an open board: a red advisor shuttles c3/c2 after a
+// black chariot that shuttles d2/d3. Each red step lands next to the chariot
+// (advisor > chariot); each black step lands diagonal to the advisor. A 4-ply
+// cycle; the third chase that would repeat is on ply 9.
+const SHUTTLE = [mv('c3', 'c2'), mv('d2', 'd3'), mv('c2', 'c3'), mv('d3', 'd2')];
 
 function openBoard(extra: BanqiBoard = {}): BanqiBoard {
   return {
@@ -83,218 +106,249 @@ function openBoard(extra: BanqiBoard = {}): BanqiBoard {
   };
 }
 
-/** Play `n` chase moves (each followed by the flee); returns the state with red to move. */
-function chaseTimes(state: BanqiGameState, n: number, startIndex = 0): BanqiGameState {
-  let s = state;
-  for (let i = 0; i < n; i += 1) {
-    s = play(s, RED_CHASE[(startIndex + i) % 2]!);
-    assert.equal(s.status.type, 'playing', `chase ${i + 1} ended the game`);
-    s = play(s, BLACK_FLEE[(startIndex + i) % 2]!);
-    assert.equal(s.status.type, 'playing', `flee ${i + 1} ended the game`);
-  }
-  return s;
-}
-
-for (const limit of LIMITS) {
-  test(`limit ${limit}: the move that would extend a full chase stretch is not legal`, () => {
-    const start = redToMove(openBoard(), mv('e2', 'd2'), limit);
-    const beforeLimit = chaseTimes(start, limit - 1);
-    const next = RED_CHASE[(limit - 1) % 2]!;
-    assert.ok(hasMove(getBanqiLegalMoves(beforeLimit), next), 'chase move legal below the limit');
-    assert.deepEqual(getBanqiForbiddenChaseMoves(beforeLimit), []);
-
-    const atLimit = chaseTimes(start, limit);
-    assert.equal(atLimit.chases?.red?.count, limit);
-    const forbidden = RED_CHASE[limit % 2]!;
-    const legal = getBanqiLegalMoves(atLimit);
-    assert.ok(!hasMove(legal, forbidden), 'extending chase omitted from legal moves');
-    assert.equal(isBanqiLegalMove(atLimit, forbidden), false);
-    // Validation refuses it: applying returns the state unchanged.
-    assert.equal(applyBanqiMove(atLimit, forbidden), atLimit);
-    // The other square next to the target is an extension too, also refused.
-    const sideways = limit % 2 === 0 ? mv('c3', 'd3') : mv('c2', 'd2');
-    assert.ok(hasMove(getBanqiForbiddenChaseMoves(atLimit), sideways));
-    assert.equal(isBanqiLegalMove(atLimit, sideways), false);
-    // The client sees the same list: its view's legalMoves omit both.
-    const view = getBanqiPlayerView(atLimit, 'red');
-    assert.ok(!hasMove(view.legalMoves, forbidden));
-    assert.ok(!hasMove(view.legalMoves, sideways));
-    // Moving the chaser elsewhere, or another piece, stays legal.
-    assert.ok(hasMove(legal, { from: 'h1', to: 'g1' }));
-  });
-
-  test(`limit ${limit}: a chase stretch does not reach the repetition draw`, () => {
-    const atLimit = chaseTimes(redToMove(openBoard(), mv('e2', 'd2'), limit), limit);
-    assert.equal(atLimit.status.type, 'playing');
-    assert.equal(atLimit.chases?.red?.count, limit);
-  });
-
-  test(`limit ${limit}: a flip, a capture or another move resets the stretch`, () => {
-    // Leave the advisor on c2 and the chariot on d3 (an odd number of chases).
-    // Three, not `limit`: two full stretches would run into the 40-ply clock.
-    const k = 3;
-    for (const reset of [mv('f4', 'f4'), mv('h1', 'g1')]) {
-      const board = openBoard({ f4: down('red', 'horse') });
-      let s = chaseTimes(redToMove(board, mv('e2', 'd2'), limit), k);
-      assert.equal(s.chases?.red?.count, k);
-      s = play(s, reset); // a flip, or another piece's move, instead of chasing
-      assert.equal(s.chases?.red, undefined);
-      s = play(s, mv('d3', 'e3'));
-      s = play(s, reset.from === 'h1' ? mv('g1', 'h1') : mv('h1', 'g1'));
-      s = play(s, mv('e3', 'd3')); // back, not next to the advisor on c2
-      s = play(s, mv('c2', 'c3')); // a chase again: a NEW stretch
-      assert.equal(s.chases?.red?.count, 1);
-      s = play(s, BLACK_FLEE[1]!);
-      s = chaseTimes(s, limit - 1);
-      assert.equal(s.chases?.red?.count, limit, 'a full fresh stretch is allowed');
-      assert.ok(getBanqiForbiddenChaseMoves(s).length > 0);
-    }
-
-    // Capture: the chariot flees by taking a red soldier; the stretch ends, and
-    // the next threat starts a new one.
-    let s = chaseTimes(
-      redToMove(openBoard({ e2: up('red', 'soldier') }), mv('d1', 'd2'), limit),
-      2,
-    );
-    s = play(s, RED_CHASE[0]!);
-    assert.equal(s.chases?.red?.count, 3);
-    s = play(s, mv('d2', 'e2')); // chariot takes the soldier
-    assert.deepEqual(s.chases, {});
-    s = play(s, mv('c2', 'd2'));
-    assert.equal(s.chases?.red?.count, 1);
-
-    // The target not fleeing (black moves another piece) ends the stretch too.
-    s = chaseTimes(redToMove(openBoard(), mv('e2', 'd2'), limit), 1);
-    s = play(s, RED_CHASE[1]!);
-    assert.equal(s.chases?.red?.count, 2);
-    s = play(s, mv('a4', 'a3'));
-    assert.equal(s.chases?.red, undefined);
-  });
-
-  test(`limit ${limit}: the extension stays legal when it is the chaser's only move`, () => {
-    // Red's lone advisor in the corner chases a chariot shuttling b1/b2. With the
-    // advisor on a1 and the chariot on b2, both a2 and b1 extend the chase and red
-    // has nothing else, so both stay legal (no loss by rule edge).
-    const oddStart = limit % 2 === 1;
-    const board: BanqiBoard = oddStart
-      ? { a2: up('red', 'advisor'), b1: up('black', 'chariot') }
-      : { a1: up('red', 'advisor'), b2: up('black', 'chariot') };
-    let s = redToMove(board, oddStart ? mv('c1', 'b1') : mv('c2', 'b2'), limit);
-    const redSteps = [mv('a2', 'a1'), mv('a1', 'a2')];
-    const blackSteps = [mv('b1', 'b2'), mv('b2', 'b1')];
-    const offset = oddStart ? 0 : 1;
-    for (let i = 0; i < limit; i += 1) {
-      s = play(s, redSteps[(i + offset) % 2]!);
-      s = play(s, blackSteps[(i + offset) % 2]!);
-    }
-    assert.equal(s.board.a1?.role, 'advisor');
-    assert.equal(s.board.b2?.role, 'chariot');
-    assert.equal(s.chases?.red?.count, limit);
-    const legal = getBanqiLegalMoves(s);
-    assert.ok(hasMove(legal, mv('a1', 'a2')));
-    assert.ok(hasMove(legal, mv('a1', 'b1')));
-    assert.deepEqual(getBanqiForbiddenChaseMoves(s), []);
-    assert.ok(isBanqiLegalMove(s, mv('a1', 'a2')));
-  });
-
-  test(`limit ${limit}: a protected target still counts`, () => {
-    // Black's general guards d2 and an advisor guards d3: taking the chariot would
-    // cost the advisor, but threatening it is still a chase.
-    const board = openBoard({ e2: up('black', 'general'), e3: up('black', 'advisor') });
-    const atLimit = chaseTimes(redToMove(board, mv('d1', 'd2'), limit), limit);
-    assert.equal(atLimit.chases?.red?.count, limit);
-    assert.equal(isBanqiLegalMove(atLimit, RED_CHASE[limit % 2]!), false);
-  });
-
-  test(`limit ${limit}: a cannon chasing over a screen is limited too`, () => {
-    // Face-down tiles on b2 and b3 are screens. The red cannon shuttles c2/c3 and
-    // threatens the black horse on a2/a3 by jumping the tile between them.
-    const board: BanqiBoard = {
-      c2: up('red', 'cannon'),
-      a3: up('black', 'horse'),
-      b2: down('black', 'soldier'),
-      b3: down('red', 'soldier'),
-      h4: up('black', 'soldier'),
-    };
-    let s = redToMove(board, mv('a4', 'a3'), limit);
-    const redSteps = [mv('c2', 'c3'), mv('c3', 'c2')];
-    const blackSteps = [mv('a3', 'a2'), mv('a2', 'a3')];
-    for (let i = 0; i < limit; i += 1) {
-      s = play(s, redSteps[i % 2]!);
-      assert.equal(s.chases?.red?.count, i + 1);
-      s = play(s, blackSteps[i % 2]!);
-      assert.equal(s.status.type, 'playing');
-    }
-    const next = redSteps[limit % 2]!;
-    assert.equal(isBanqiLegalMove(s, next), false);
-    assert.ok(!hasMove(getBanqiLegalMoves(s), next));
-    // The flips stay available.
-    assert.ok(hasMove(getBanqiLegalMoves(s), mv('b2', 'b2')));
-  });
-}
-
-test('a soldier chasing the general counts (soldier takes general)', () => {
-  const board: BanqiBoard = {
-    c3: up('red', 'soldier'),
-    d2: up('black', 'general'),
-    h1: up('red', 'soldier'),
-    a4: up('black', 'soldier'),
-  };
-  const s = chaseTimes(redToMove(board, mv('e2', 'd2'), BANQI_CHASE_LIMIT), BANQI_CHASE_LIMIT);
-  assert.equal(s.chases?.red?.count, BANQI_CHASE_LIMIT);
-  assert.equal(isBanqiLegalMove(s, RED_CHASE[BANQI_CHASE_LIMIT % 2]!), false);
+test('back-and-forth chase: the chaser may not repeat a position a third time', () => {
+  const s = playAll(redToMove(openBoard(), mv('e2', 'd2')), repeat(SHUTTLE, 2));
+  const third = SHUTTLE[0]!;
+  assert.equal(s.status.type, 'playing', 'the chase never drew');
+  assert.deepEqual(getBanqiForbiddenChaseMoves(s), [third]);
+  assert.ok(!hasMove(getBanqiLegalMoves(s), third), 'omitted from legal moves');
+  assert.equal(isBanqiLegalMove(s, third), false);
+  assert.equal(applyBanqiMove(s, third), s, 'validation refuses it');
+  // The client sees the same list.
+  assert.ok(!hasMove(getBanqiPlayerView(s, 'red').legalMoves, third));
+  // A chase to a NEW square, another move by the chaser, or another piece is fine.
+  const legal = getBanqiLegalMoves(s);
+  assert.ok(hasMove(legal, mv('c3', 'd3')), 'chasing from a new square');
+  assert.ok(hasMove(legal, mv('c3', 'b3')));
+  assert.ok(hasMove(legal, mv('h1', 'g1')));
 });
 
-test('a move next to a piece it cannot take is not a chase', () => {
-  // A chariot cannot take an advisor, so shuttling next to it never counts.
-  const board: BanqiBoard = {
-    c3: up('red', 'chariot'),
-    d2: up('black', 'advisor'),
-    h1: up('red', 'soldier'),
-    a4: up('black', 'soldier'),
-  };
-  const s = play(redToMove(board, mv('e2', 'd2'), BANQI_CHASE_LIMIT), mv('c3', 'c2'));
-  assert.equal(s.chases?.red, undefined);
-});
-
-test('without the limit the same chase shuttle is a threefold draw', () => {
-  // Control for the carve-out: with the limit off, chase positions count and the
-  // shuttle draws on the ninth ply, before even five chases.
+test('legacy rule (off): the same shuttle is a threefold draw on ply 9', () => {
   let s = redToMove(openBoard(), mv('e2', 'd2'), null);
   let plies = 0;
   while (s.status.type === 'playing' && plies < 40) {
-    const i = Math.floor(plies / 2) % 2;
-    s = applyBanqiMove(s, plies % 2 === 0 ? RED_CHASE[i]! : BLACK_FLEE[i]!);
+    assert.deepEqual(getBanqiForbiddenChaseMoves(s), []);
+    s = applyBanqiMove(s, SHUTTLE[plies % 4]!);
+    plies += 1;
+  }
+  assert.equal(s.status.type === 'finished' && s.status.reason, 'repetition');
+  assert.equal(plies, 9);
+  assert.ok(!('chaseRule' in getBanqiPlayerView(s, 'red')), 'no rule on a legacy view');
+});
+
+test('cyclic chase round a 2x2 block is stopped at the third occurrence', () => {
+  // The chariot runs round b2-c2-c3-b3, always to the corner diagonal to the
+  // advisor; the advisor follows one corner behind. An 8-ply cycle.
+  const board: BanqiBoard = {
+    b2: up('red', 'advisor'),
+    c3: up('black', 'chariot'),
+    h1: up('red', 'soldier'),
+    h4: up('black', 'soldier'),
+  };
+  const cycle = [
+    mv('b2', 'c2'),
+    mv('c3', 'b3'),
+    mv('c2', 'c3'),
+    mv('b3', 'b2'),
+    mv('c3', 'b3'),
+    mv('b2', 'c2'),
+    mv('b3', 'b2'),
+    mv('c2', 'c3'),
+  ];
+  const s = playAll(redToMove(board, mv('d3', 'c3')), repeat(cycle, 2));
+  assert.equal(s.ply, 10 + 16);
+  assert.equal(isBanqiLegalMove(s, cycle[0]!), false);
+  assert.deepEqual(getBanqiForbiddenChaseMoves(s), [cycle[0]!]);
+  // The other way round the block is a new position, so it is open.
+  assert.ok(isBanqiLegalMove(s, mv('b2', 'b3')));
+
+  // Under the legacy rule the same cycle draws on its 17th ply.
+  const legacy = playAll(redToMove(board, mv('d3', 'c3'), null), repeat(cycle, 2));
+  const drawn = applyBanqiMove(legacy, cycle[0]!);
+  assert.equal(drawn.status.type === 'finished' && drawn.status.reason, 'repetition');
+});
+
+test('a herding chase onto new squares is never restricted', () => {
+  // The chariot runs along rank 1 and back down rank 2; the advisor follows one
+  // square behind. 13 chases, every position new.
+  const path: BanqiSquare[] = [
+    'a1',
+    'b1',
+    'c1',
+    'd1',
+    'e1',
+    'f1',
+    'g1',
+    'h1',
+    'h2',
+    'g2',
+    'f2',
+    'e2',
+    'd2',
+    'c2',
+    'b2',
+  ];
+  let s = redToMove(
+    { a2: up('red', 'advisor'), b1: up('black', 'chariot'), h4: up('red', 'soldier') },
+    mv('b2', 'b1'),
+  );
+  s = play(s, mv('a2', 'a1'));
+  let chases = 1;
+  for (let i = 1; i + 1 < path.length; i += 1) {
+    s = play(s, mv(path[i]!, path[i + 1]!)); // the chariot flees ahead
+    assert.equal(s.status.type, 'playing');
+    assert.deepEqual(getBanqiForbiddenChaseMoves(s), []);
+    s = play(s, mv(path[i - 1]!, path[i]!)); // the advisor follows: a chase
+    assert.equal(s.chasedSquare, path[i + 1]);
+    assert.equal(s.status.type, 'playing');
+    chases += 1;
+  }
+  assert.ok(chases >= 12, `only ${chases} chases`);
+});
+
+test('a chase that is the only legal move stays legal and does not draw', () => {
+  // Red's lone advisor in the corner chases a chariot. Two loops (via a2, then
+  // via b1) leave both of the advisor's moves from a1 a third occurrence, and it
+  // has no other move, so both stay legal.
+  const loopA = [mv('a1', 'a2'), mv('b2', 'b1'), mv('a2', 'a1'), mv('b1', 'b2')];
+  const loopB = [mv('a1', 'b1'), mv('b2', 'a2'), mv('b1', 'a1'), mv('a2', 'b2')];
+  const start = redToMove({ a1: up('red', 'advisor'), b2: up('black', 'chariot') }, mv('c2', 'b2'));
+  const s = playAll(start, [...loopA, ...loopB, ...loopA, ...loopB]);
+  assert.equal(s.board.a1?.role, 'advisor');
+  assert.equal(s.board.b2?.role, 'chariot');
+  assert.deepEqual(getBanqiForbiddenChaseMoves(s), []);
+  const legal = getBanqiLegalMoves(s);
+  assert.equal(legal.length, 2);
+  assert.ok(hasMove(legal, mv('a1', 'a2')));
+  assert.ok(hasMove(legal, mv('a1', 'b1')));
+  // Played, it reaches the third occurrence and the game goes on.
+  const next = play(s, mv('a1', 'a2'));
+  assert.equal(next.status.type, 'playing');
+});
+
+test('a flee that reaches a third occurrence does not draw', () => {
+  // A prelude reaches the chase's start position by ordinary moves, so the
+  // chariot's flee back to d2 is its third occurrence in the second loop.
+  const board: BanqiBoard = {
+    c3: up('red', 'advisor'),
+    d1: up('black', 'chariot'),
+    h2: up('red', 'soldier'),
+    a4: up('black', 'soldier'),
+  };
+  // Ordinary moves into openBoard()'s position, which is counted once.
+  const s = playAll(redToMove(board, mv('a3', 'a4')), [mv('h2', 'h1'), mv('d1', 'd2')]);
+  assert.equal(s.chasedSquare, undefined);
+  const afterLoops = playAll(s, repeat(SHUTTLE, 2)); // the last flee is occurrence 3
+  assert.equal(afterLoops.status.type, 'playing');
+  assert.equal(Math.max(...Object.values(afterLoops.repCounts)), 3);
+  // The chaser's repeat is still refused.
+  assert.equal(isBanqiLegalMove(afterLoops, SHUTTLE[0]!), false);
+
+  // The legacy rule draws on exactly that flee.
+  let legacy: BanqiGameState = { ...s, chaseRule: null };
+  for (const m of repeat(SHUTTLE, 2)) legacy = applyBanqiMove(legacy, m);
+  assert.equal(legacy.status.type === 'finished' && legacy.status.reason, 'repetition');
+  assert.equal(legacy.ply, afterLoops.ply);
+});
+
+test('an ordinary shuffle with no chase still draws by threefold repetition', () => {
+  const board: BanqiBoard = {
+    c3: up('red', 'advisor'),
+    f3: up('black', 'chariot'),
+    h1: up('red', 'soldier'),
+    a4: up('black', 'soldier'),
+  };
+  let s = redToMove(board, mv('a3', 'a4'));
+  const cycle = [mv('h1', 'g1'), mv('a4', 'a3'), mv('g1', 'h1'), mv('a3', 'a4')];
+  let plies = 0;
+  while (s.status.type === 'playing' && plies < 40) {
+    s = applyBanqiMove(s, cycle[plies % 4]!);
     plies += 1;
   }
   assert.equal(s.status.type === 'finished' && s.status.reason, 'repetition');
   assert.equal(plies, 9);
 });
 
-test('a non-chase shuffle still draws by threefold repetition', () => {
-  // The advisor steps next to the chariot (a one-move chase), the chariot steps
-  // away, the advisor steps back (not a chase), the chariot returns. The
-  // positions after the last two steps count, so the cycle draws as before.
+test('a cannon chasing over a screen is held to the same rule', () => {
+  // Face-down tiles on b2 and b3 are screens. The red cannon shuttles c2/c3 and
+  // threatens the black horse on a2/a3 by jumping the tile between them.
   const board: BanqiBoard = {
-    b2: up('red', 'advisor'),
-    d2: up('black', 'chariot'),
-    h1: up('red', 'soldier'),
-    a4: up('black', 'soldier'),
+    c2: up('red', 'cannon'),
+    a3: up('black', 'horse'),
+    b2: down('black', 'soldier'),
+    b3: down('red', 'soldier'),
+    h4: up('black', 'soldier'),
   };
-  let s = redToMove(board, mv('d1', 'd2'), BANQI_CHASE_LIMIT);
-  const cycle = [mv('b2', 'c2'), mv('d2', 'e2'), mv('c2', 'b2'), mv('e2', 'd2')];
-  let i = 0;
-  while (s.status.type === 'playing' && i < 40) {
-    s = applyBanqiMove(s, cycle[i % 4]!);
-    i += 1;
-  }
-  assert.equal(s.status.type === 'finished' && s.status.reason, 'repetition');
-  assert.ok(i < 40);
+  const cycle = [mv('c2', 'c3'), mv('a3', 'a2'), mv('c3', 'c2'), mv('a2', 'a3')];
+  const s = playAll(redToMove(board, mv('a4', 'a3')), repeat(cycle, 2));
+  assert.equal(s.chasedSquare, undefined); // the horse's flee is not a chase
+  assert.equal(isBanqiLegalMove(s, cycle[0]!), false);
+  assert.ok(!hasMove(getBanqiLegalMoves(s), cycle[0]!));
+  assert.ok(hasMove(getBanqiLegalMoves(s), mv('b2', 'b2')), 'flips stay available');
 });
 
-test('the limit default comes from BANQI_CHASE_LIMIT when a state does not set one', () => {
-  const start: BanqiGameState = { ...redToMove(openBoard(), mv('e2', 'd2'), null) };
-  delete start.chaseLimit;
-  const atLimit = chaseTimes(start, BANQI_CHASE_LIMIT);
-  assert.equal(isBanqiLegalMove(atLimit, RED_CHASE[BANQI_CHASE_LIMIT % 2]!), false);
+test('a mutual chase (two cannons on a line) is an ordinary move', () => {
+  // Red's cannon steps to a1 and attacks black's cannon on d1 over the b1 tile.
+  // Black's cannon steps back to e1: a flee that still attacks red's cannon, so
+  // it is a chase too. That mutual move is not restricted, and a third
+  // occurrence it reaches is a threefold draw.
+  const board: BanqiBoard = {
+    a2: up('red', 'cannon'),
+    b1: down('red', 'soldier'),
+    d1: up('black', 'cannon'),
+    h4: up('red', 'soldier'),
+    h3: up('black', 'soldier'),
+  };
+  const s = play(redToMove(board, mv('d2', 'd1')), mv('a2', 'a1'));
+  assert.equal(s.chasedSquare, 'd1', "red's step is a chase");
+  const mutual = mv('d1', 'e1');
+  const seeded: BanqiGameState = { ...s, repCounts: { ...s.repCounts, [keyAfter(s, mutual)]: 2 } };
+  assert.deepEqual(getBanqiForbiddenChaseMoves(seeded), []);
+  const drawn = play(seeded, mutual);
+  assert.equal(drawn.chasedSquare, 'a1', 'it threatens the red cannon');
+  assert.equal(drawn.status.type === 'finished' && drawn.status.reason, 'repetition');
+
+  // Contrast: a plain flee seeded the same way does not draw.
+  const flee = mv('d1', 'd2');
+  const fleeSeeded: BanqiGameState = {
+    ...s,
+    repCounts: { ...s.repCounts, [keyAfter(s, flee)]: 2 },
+  };
+  assert.equal(play(fleeSeeded, flee).status.type, 'playing');
+});
+
+test('a protected target still counts as chased', () => {
+  // Black's general guards d2 and an advisor guards d3.
+  const board = openBoard({ e2: up('black', 'general'), e3: up('black', 'advisor') });
+  const s = playAll(redToMove(board, mv('d1', 'd2')), repeat(SHUTTLE, 2));
+  assert.equal(isBanqiLegalMove(s, SHUTTLE[0]!), false);
+});
+
+test('a soldier chasing the general counts (soldier takes general)', () => {
+  const board = openBoard({ c3: up('red', 'soldier'), d2: up('black', 'general') });
+  const s = playAll(redToMove(board, mv('e2', 'd2')), repeat(SHUTTLE, 2));
+  assert.equal(isBanqiLegalMove(s, SHUTTLE[0]!), false);
+});
+
+test('a move next to a piece it cannot take is not a chase', () => {
+  // A chariot cannot take an advisor, so shuttling next to it repeats as an
+  // ordinary shuffle and draws.
+  const board = openBoard({ c3: up('red', 'chariot'), d2: up('black', 'advisor') });
+  let s = play(redToMove(board, mv('e2', 'd2')), mv('c3', 'c2'));
+  assert.equal(s.chasedSquare, undefined);
+  s = redToMove(board, mv('e2', 'd2'));
+  let plies = 0;
+  while (s.status.type === 'playing' && plies < 40) {
+    s = applyBanqiMove(s, SHUTTLE[plies % 4]!);
+    plies += 1;
+  }
+  assert.equal(s.status.type === 'finished' && s.status.reason, 'repetition');
+});
+
+test('a state without a chaseRule plays under BANQI_CHASE_RULE', () => {
+  const start = redToMove(openBoard(), mv('e2', 'd2'));
+  delete start.chaseRule;
+  const s = playAll(start, repeat(SHUTTLE, 2));
+  assert.equal(isBanqiLegalMove(s, SHUTTLE[0]!), false);
+  assert.equal(getBanqiPlayerView(s, 'red').chaseRule, BANQI_CHASE_RULE);
 });

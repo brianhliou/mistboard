@@ -55,7 +55,7 @@ function replay(
 ): TenantReplaySnapshot<BanqiWireView>[] | null {
   let state: BanqiGameState;
   try {
-    // The finished view carries the 長捉 limit the game was played under.
+    // The finished view carries the 長捉 rule the game was played under.
     state = createInitialBanqiState(view.id, deal, banqiRulesFromView(view));
   } catch {
     return null; // not a valid piece set

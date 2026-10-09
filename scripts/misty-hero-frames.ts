@@ -112,7 +112,7 @@ function jungleFlipFrames(game: SelfPlayGame): string[] {
 
 function banqiFrames(game: SelfPlayGame): string[] {
   if (!game.deal) throw new Error('banqi game is missing its deal');
-  // MistyBanqi plays without the 長捉 limit, so its self-play records do too.
+  // MistyBanqi plays without the 長捉 rule, so its self-play records do too.
   let state = createInitialBanqiState(
     `hero-${game.seed}`,
     game.deal as BanqiDeal,

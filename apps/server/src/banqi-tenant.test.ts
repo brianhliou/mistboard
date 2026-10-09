@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   applyBanqiMove,
-  BANQI_CHASE_LIMIT,
+  BANQI_CHASE_RULE,
   BANQI_SPEC_ID,
   type BanqiMove,
   type BanqiSeat,
@@ -46,10 +46,10 @@ test('banqi room creation mints and persists a server-secret deal, stamped with 
   assert.equal(setup.deal.length, 32);
   assert.equal(setup.deal.filter((p) => p.color === 'red').length, 16);
   assert.equal(setup.deal.filter((p) => p.color === 'black').length, 16);
-  // A new room records the 長捉 limit it is played under, so a later rule change
+  // A new room records the 長捉 rule it is played under, so a later rule change
   // cannot rewrite how it replays.
-  assert.equal(setup.chaseLimit, BANQI_CHASE_LIMIT);
-  assert.equal(created.room.projection.state.chaseLimit, BANQI_CHASE_LIMIT);
+  assert.equal(setup.chaseRule, BANQI_CHASE_RULE);
+  assert.equal(created.room.projection.state.chaseRule, BANQI_CHASE_RULE);
 });
 
 test('the deal is stripped from room-created before any client sees it', () => {
@@ -106,7 +106,7 @@ test('a full banqi game replays through the runtime identically to the kernel', 
       at: 1,
       roomId,
       gameSpecId: BANQI_SPEC_ID,
-      setup: { deal, chaseLimit: BANQI_CHASE_LIMIT },
+      setup: { deal, chaseRule: BANQI_CHASE_RULE },
     },
     { type: 'seat-assigned', at: 2, roomId, clientId: 'a', seat: 'red' },
     { type: 'seat-assigned', at: 3, roomId, clientId: 'b', seat: 'black' },
@@ -114,7 +114,7 @@ test('a full banqi game replays through the runtime identically to the kernel', 
 
   // Drive a deterministic line with the kernel (first legal move each ply),
   // recording the move-played events keyed by the SEAT to move.
-  let kernelState = createInitialBanqiState(roomId, deal, { chaseLimit: BANQI_CHASE_LIMIT });
+  let kernelState = createInitialBanqiState(roomId, deal, { chaseRule: BANQI_CHASE_RULE });
   let at = 4;
   let plies = 0;
   while (kernelState.status.type === 'playing' && plies < 60) {
