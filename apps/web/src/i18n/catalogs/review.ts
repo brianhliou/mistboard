@@ -737,6 +737,7 @@ export const EN_REVIEW = {
   'underboard.explorer': 'Opening explorer',
   'underboard.gameInfo': 'Game info',
   'underboard.moveTimes': 'Move times',
+  'underboard.moveTimesBySide': 'Time spent by each side',
   'underboard.crosstable': 'Crosstable',
   'underboard.shareExport': 'Share & export',
   'underboard.download': 'Download',

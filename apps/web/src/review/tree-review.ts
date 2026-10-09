@@ -23,6 +23,7 @@ import { winPercent, winPercentK } from '@mistboard/game';
 import { ASSESSMENT_GLYPH } from '../assessment-glyphs.js';
 import { t } from '../i18n/catalog.js';
 import { type ProfileTarget, playerNameEl } from '../profile-link.js';
+import type { ShowcaseClockPair } from '../showcase-clock.js';
 import type { StudyVariantId } from '../study-catalog.js';
 import { displayComment } from '../study-i18n.js';
 import {
@@ -73,6 +74,7 @@ import {
 } from './game-tree.js';
 import { defaultFormatBestMove } from './move-advice.js';
 import { type MoveGlyphTone, moveGlyphTone } from './move-glyph.js';
+import { createMoveTimesChart } from './move-times-chart.js';
 import { createMoveTree, type MoveTree, type MoveTreeAnnotation, pathKey } from './move-tree.js';
 import { createRetro, type RetroController, type RetroHost, type RetroSide } from './retro.js';
 import { createRetroPanel, type RetroPanel } from './retro-panel.js';
@@ -451,6 +453,10 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
   /** Per-ply elapsed milliseconds (index 0 = ply 1). When present, a "Move times"
    *  underboard tab renders a per-move bar chart. Only real games supply it. */
   moveTimes?: number[];
+  /** Remaining clocks per ply for the Move times clock overlay (series[0] = the
+   *  start, series[p] = after ply p; `first` = the first mover). Absent = untimed,
+   *  and the bars draw alone. Build it with `reviewMoveClocks`. */
+  moveClocks?: ShowcaseClockPair[];
   /** Real player names — label the accuracy summary and crosstable stub. Absent =
    *  the side's displayed ink is used. */
   players?: { red?: string; black?: string };
@@ -1623,13 +1629,29 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         },
       })
     : null;
+  // Move times scrubs like the advantage chart: same move labels, same jump.
+  const moveTimesChart =
+    config.moveTimes && config.moveTimes.length > 0
+      ? createMoveTimesChart(config.moveTimes, {
+          seatColors: config.seatColors,
+          ...(config.moveClocks ? { clocks: config.moveClocks } : {}),
+          moveLabel: (ply) => {
+            const node = mainlineNodes()[ply];
+            return node?.parent ? plyMoveLabel(node) : null;
+          },
+          onJump: (ply) => {
+            const target = mainlineNodes()[ply];
+            if (target) go(tree.pathTo(target));
+          },
+        })
+      : null;
   const underboardEl = underboardPanel(underboardBody, {
     hasAnalysis: Boolean(config.analysis),
     about: config.aboutTab,
     tools: annotationEditor?.tabs,
     provenance: config.provenance,
     ...(config.initialUnderboardTab ? { initialTabId: config.initialUnderboardTab } : {}),
-    moveTimes: config.moveTimes,
+    ...(moveTimesChart ? { moveTimesChart } : {}),
     seatColors: config.seatColors,
     players: config.showCrosstable ? (config.players ?? {}) : undefined,
     ...(config.crosstable ? { crosstable: config.crosstable } : {}),
@@ -1935,6 +1957,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       }
     }
     chart?.setPly(node.ply);
+    moveTimesChart?.setPly(node.ply);
     config.onLineChange?.(movesTo(node));
   }
 
