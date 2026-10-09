@@ -1,6 +1,6 @@
-// Move times (lichess "Move times"): one bar per ply, coloured by side, growing
-// from a shared baseline and scaled to the slowest move. Odd plies belong to the
-// first seat, even plies to the second.
+// Move times (lichess "Move times"): one bar per ply, coloured by side and
+// scaled to the slowest move, mirrored about a centre line: the first seat's
+// bars (odd plies) grow up from it, the second seat's (even plies) down.
 //
 // Behind the bars, when the game had a real clock, each side's REMAINING clock is
 // drawn the way lichess draws it: a centre line is zero, the first seat's clock
@@ -67,8 +67,10 @@ export function createMoveTimesChart(
   const heightOf = (ms: number): number => Math.max(2, Math.round((ms / max) * 100));
   const bars = times.map((ms, i) => {
     const bar = document.createElement('div');
-    bar.className = `review-move-times__bar review-move-times__bar--${inkOf(i + 1)}`;
-    bar.style.height = `${heightOf(ms)}%`;
+    const dir = i % 2 === 0 ? 'up' : 'down';
+    bar.className = `review-move-times__bar review-move-times__bar--${dir} review-move-times__bar--${inkOf(i + 1)}`;
+    // Half the frame each way: the slowest move reaches an edge.
+    bar.style.height = `${heightOf(ms) / 2}%`;
     chart.append(bar);
     return bar;
   });
@@ -125,8 +127,8 @@ export function createMoveTimesChart(
         ? `${reviewInkLabel(firstInk)} ${formatClock(clock.first)} · ${reviewInkLabel(secondInk)} ${formatClock(clock.second)}`
         : null,
       at: columnCentre(ply),
-      // A tall bar reaches the top of the frame, where the readout sits.
-      low: heightOf(times[ply - 1] ?? 0) > 55,
+      // A tall first-seat bar reaches the top of the frame, where the readout sits.
+      low: ply % 2 === 1 && heightOf(times[ply - 1] ?? 0) > 55,
     });
   }
 

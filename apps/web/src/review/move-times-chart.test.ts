@@ -26,6 +26,18 @@ const hoveredIndex = (el: HTMLElement): number =>
   );
 const ys = (points: string[]): number[] => points.map((point) => Number(point.split(',')[1]));
 
+describe('move times bars', () => {
+  it('mirrors the sides about the centre: the first seat up, the second down', () => {
+    const chart = createMoveTimesChart(times);
+    const bars = [...chart.el.querySelectorAll<HTMLElement>('.review-move-times__bar')];
+    expect(
+      bars.map((bar) => (bar.classList.contains('review-move-times__bar--up') ? 'up' : 'down')),
+    ).toEqual(['up', 'down', 'up', 'down', 'up']);
+    // Half the frame each way: the slowest move (75s) reaches an edge.
+    expect(bars[2]?.style.height).toBe('50%');
+  });
+});
+
 describe('move times hover', () => {
   it('snaps the pointer to the bar column under it, at any height', () => {
     const chart = createMoveTimesChart(times, { moveLabel: (ply) => `m${ply}` });

@@ -404,25 +404,35 @@
   color: var(--site-fg, inherit);
 }
 
-/* Move times: per-ply bars, colored by side, growing from a shared baseline. */
+/* Move times: per-ply bars, colored by side, mirrored about a centre line (the
+   first seat's up, the second seat's down), as lichess draws them. */
 .review-move-times {
   /* The frame for the clock layer, the cursor and the hover readout. */
   position: relative;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 1px;
   height: 140px;
   padding: 4px 0;
-  border-bottom: 1px solid var(--site-border);
+  /* The centre line, drawn here so an untimed game (no clock layer) has it too. */
+  background: linear-gradient(var(--site-border), var(--site-border)) center / 100% 1px no-repeat;
   cursor: crosshair;
 }
 .review-move-times__bar {
-  /* Positioned so the bars paint over the clock layer behind them. */
+  /* Positioned so the bars paint over the clock layer behind them. Centred on
+     the mid line, then shifted half their own height off it. */
   position: relative;
   flex: 1 1 0;
   min-width: 1px;
-  border-radius: 1px 1px 0 0;
   transition: opacity 80ms linear;
+}
+.review-move-times__bar--up {
+  transform: translateY(-50%);
+  border-radius: 1px 1px 0 0;
+}
+.review-move-times__bar--down {
+  transform: translateY(50%);
+  border-radius: 0 0 1px 1px;
 }
 /* Hover: the hovered bar stays full strength and the rest step back, so the bar
    the readout names is the one the eye lands on. */
