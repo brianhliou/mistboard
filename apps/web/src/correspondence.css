@@ -4,7 +4,9 @@
 
 .correspondence-shell {
   width: 100%;
-  max-width: 1180px;
+  /* The homepage's width (landing.css): the cards get the whole row now that
+     Start a game is a bar above them. The signed-out pitch keeps 1180px. */
+  max-width: 1360px;
   margin: 0 auto;
   padding: 28px 16px 64px;
   display: flex;
@@ -33,29 +35,19 @@
   font-size: 0.9rem;
 }
 
-/* Main column + side panel; the side drops under the main column when the
-   two cannot both have their minimum width (phones, narrow tablets). */
-.correspondence-layout {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 28px;
-}
-
-.correspondence-main {
-  flex: 999 1 560px;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-}
-
-.correspondence-side {
-  flex: 1 1 320px;
+/* Start a game, full width under the header; the card sections follow. */
+.correspondence-top {
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 24px;
+}
+
+.correspondence-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
 }
 
 .correspondence-section {
@@ -257,17 +249,78 @@
 
 /* ---- Start a game ------------------------------------------------------------------- */
 
+/* A bar: the heading, then the controls in one row on a desktop with Post seek
+   at its end, wrapping at medium widths; the helper line and the post status
+   sit under the row. A phone stacks it (max-width: 640px below). */
 .correspondence-start {
-  padding: 18px;
+  padding: 14px 18px 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
 }
 
 .correspondence-start-form {
   display: flex;
-  flex-direction: column;
-  gap: 14px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 16px;
+}
+
+.correspondence-start-form > .correspondence-field {
+  flex: 1 1 150px;
+  min-width: 0;
+}
+
+.correspondence-start-form > .correspondence-field:first-child {
+  flex: 1.4 1 200px;
+}
+
+.correspondence-start-form > .correspondence-btn {
+  flex: none;
+  align-self: flex-end;
+  min-height: 40px;
+}
+
+/* Under the row, whatever wrapped: shown after the button though the DOM keeps
+   them before it, so a phone (stacked, below) reads the hint before posting. */
+.correspondence-start-form > .correspondence-hint,
+.correspondence-start-form > .correspondence-form-status {
+  order: 1;
+  flex: 1 1 100%;
+}
+
+.correspondence-seg button {
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .correspondence-start-form {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .correspondence-start-form > .correspondence-field,
+  .correspondence-start-form > .correspondence-field:first-child {
+    flex: none;
+  }
+
+  .correspondence-start-form > .correspondence-hint,
+  .correspondence-start-form > .correspondence-form-status {
+    order: 0;
+    flex: none;
+  }
+
+  .correspondence-start-form > .correspondence-btn {
+    align-self: flex-start;
+  }
+
+  /* On a phone your games come first once you have any; the form follows,
+     as it did when it was a side column. With no games it stays on top. */
+  .correspondence-shell.has-games > .correspondence-top {
+    order: 1;
+  }
 }
 
 .correspondence-field {
@@ -419,6 +472,7 @@
 /* ---- Signed out: the pitch --------------------------------------------------------- */
 
 .correspondence-shell.is-signed-out {
+  max-width: 1180px;
   gap: 48px;
 }
 
@@ -779,7 +833,8 @@
     padding: 8px;
   }
 
-  .correspondence-btn {
+  .correspondence-btn,
+  .correspondence-start-form > .correspondence-btn {
     align-self: stretch;
   }
 }

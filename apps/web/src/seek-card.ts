@@ -7,6 +7,7 @@
 import { displayLiveName, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { playerNameEl, profileTargetFor } from './profile-link.js';
+import type { SeatSide } from './seat-start-view.js';
 import { renderStartPositionSvg } from './start-position-board.js';
 
 export type SeekCardSeek = {
@@ -35,6 +36,10 @@ export type SeekCardOptions = {
   ariaLabel?: string;
   details?: readonly string[];
   badge?: boolean;
+  // The seat the start board is drawn for: your own seek, from the side you
+  // asked for. Omitted for someone else's seek, so a fog variant keeps its tile
+  // (start-position-board.ts) and an open one is drawn from the first side.
+  side?: SeatSide;
 };
 
 export function buildSeekCard(seek: SeekCardSeek, options: SeekCardOptions): HTMLElement {
@@ -73,7 +78,8 @@ export function buildSeekCard(seek: SeekCardSeek, options: SeekCardOptions): HTM
   label.textContent = variant;
   placeholder.append(label);
   board.append(placeholder);
-  void renderStartPositionSvg(seek.gameSpecId)
+  if (options.side) board.dataset.perspective = options.side;
+  void renderStartPositionSvg(seek.gameSpecId, options.side)
     .then((svg) => {
       if (!svg || !board.isConnected) return;
       const frame = document.createElement('div');
