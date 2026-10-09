@@ -385,7 +385,7 @@
 .inbox-composer {
   display: flex;
   gap: 24px;
-  align-items: center;
+  align-items: flex-end;
   padding: 22px 36px;
   border-top: 1px solid var(--site-border);
   background: var(--site-zebra2);
@@ -396,15 +396,20 @@
   min-width: 0;
   resize: none;
   min-height: 54px;
-  max-height: 150px;
+  max-height: 220px;
+  overflow-y: hidden;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: 27px;
   background: var(--site-panel);
   color: var(--site-text);
   font: inherit;
   font-size: 16px;
   line-height: 1.35;
   padding: 16px 22px;
+}
+
+.inbox-input.is-multiline {
+  border-radius: 18px;
 }
 
 .inbox-input:focus {
