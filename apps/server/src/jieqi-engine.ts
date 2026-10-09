@@ -658,6 +658,9 @@ export type JieqiEngineOptions = {
   rng?: () => number;
   /** The binary (JieqiEngineTier.engine); omitted = PikaJieQi. */
   engine?: 'ab-jchess';
+  /** Restrict the root to these moves (UCI `go … searchmoves`); the draw guard's
+   *  re-search (jieqi-draw-guard.ts). Omitted or empty = every legal move. */
+  searchMoves?: readonly string[];
 };
 
 // Stockfish's Skill Level, applied outside the engine. Stockfish (search.cpp,
@@ -728,6 +731,7 @@ export async function jieqiLiveEngineMove(
     moves?: readonly string[];
     newGame?: boolean;
     rng?: () => number;
+    searchMoves?: readonly string[];
   } = {},
 ): Promise<UciEval> {
   const tier = jieqiEngineTierFor(engineId);
@@ -748,6 +752,7 @@ export async function jieqiLiveEngineMove(
       skill: tier.skill,
       rng: opts.rng,
       engine: tier.engine,
+      searchMoves: opts.searchMoves,
     });
   } finally {
     release();
@@ -764,11 +769,15 @@ export function buildJieqiLiveInitCommands(engine?: 'ab-jchess'): string[] {
 
 /** The `go` line for a live move: a depth cap (if any) stops the search early for the
  *  weaker tiers; movetime bounds latency on the deep tiers. `go depth N movetime T`
- *  halts at whichever hits first. */
+ *  halts at whichever hits first. `searchmoves` goes last: both engines' UCI parsers
+ *  read every token after it as a move. */
 export function buildJieqiGoCommand(opts: JieqiEngineOptions = {}): string {
   const movetimeMs = opts.movetimeMs ?? 500;
   const depth = opts.depth !== undefined ? Math.max(1, Math.floor(opts.depth)) : null;
-  return depth === null ? `go movetime ${movetimeMs}` : `go depth ${depth} movetime ${movetimeMs}`;
+  const go =
+    depth === null ? `go movetime ${movetimeMs}` : `go depth ${depth} movetime ${movetimeMs}`;
+  const searchMoves = opts.searchMoves ?? [];
+  return searchMoves.length > 0 ? `${go} searchmoves ${searchMoves.join(' ')}` : go;
 }
 
 /** The exact UCI block a live bot move amounts to, in the order a warm session sends

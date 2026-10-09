@@ -29,6 +29,7 @@ import {
   resolveValidatedEngineMove,
 } from './engine-move-guard.js';
 import { budgetForMove } from './engine-time-budget.js';
+import { guardJieqiRuleEnding, type JieqiDrawGuardResult } from './jieqi-draw-guard.js';
 import {
   isJieqiEngineClientId,
   JIEQI_ENGINE_VERSION,
@@ -190,6 +191,8 @@ export type JieqiEngineMoveProvider = (
     budgetAfterWait?: (waitedMs: number) => number;
     moves?: readonly string[];
     newGame?: boolean;
+    /** The draw guard's re-search: restrict the root to these moves. */
+    searchMoves?: readonly string[];
   },
 ) => Promise<UciEval>;
 
@@ -212,6 +215,20 @@ export function jieqiLiveMoveBudgetMs(input: {
     reserveMs: CLOCK_SAFETY_MS,
     floorMs: MIN_MOVETIME_MS,
   }).computeBudgetMs;
+}
+
+/**
+ * The draw guard's re-search budget: half of what the clock allocator would give a
+ * fresh move once the first search's time is off the clock. Half, because the
+ * re-search is the second search on one turn and runs over a narrowed root.
+ */
+export function jieqiDrawGuardBudgetMs(input: {
+  ceilingMs: number;
+  remainingMs: number | null;
+  incrementMs: number;
+  waitedMs: number;
+}): number {
+  return Math.max(MIN_MOVETIME_MS, Math.floor(jieqiLiveMoveBudgetMs(input) / 2));
 }
 
 export async function playJieqiEngineMoveIfReady(
@@ -245,7 +262,9 @@ export async function playJieqiEngineMoveIfReady(
   // than silently substituting a threat-blind legal move.
   const startedAt = Date.now();
   const newGame = gameMoves.length <= 1;
+  const stateAtTurn = room.projection.state;
   let lastSearch: UciEval | null = null;
+  let guard: JieqiDrawGuardResult | null = null;
   const {
     chosen: validated,
     attempts,
@@ -260,7 +279,24 @@ export async function playJieqiEngineMoveIfReady(
         newGame,
       });
       lastSearch = search;
-      return search.best;
+      // The engines search under xiangqi's chase rule; ours draws a chase. Keep a
+      // bot that scores a win from stepping into a rule draw (jieqi-draw-guard.ts).
+      guard = await guardJieqiRuleEnding({
+        state: stateAtTurn,
+        search,
+        research: (searchMoves) => {
+          const elapsedMs = Date.now() - startedAt;
+          const budget = (waitedMs: number) =>
+            jieqiDrawGuardBudgetMs({ ...budgetInput, waitedMs: elapsedMs + waitedMs });
+          return moveProvider(engineId, fen, {
+            movetimeMs: budget(0),
+            budgetAfterWait: budget,
+            moves,
+            searchMoves,
+          });
+        },
+      });
+      return guard.best;
     },
     validate: (uci) => {
       const parsed = pikafishUciToJieqiMove(uci);
@@ -324,6 +360,22 @@ export async function playJieqiEngineMoveIfReady(
   }
 
   reportEngineMoveOk();
+  // Assigned inside requestMove, which control-flow narrowing does not follow.
+  const drawGuard = guard as JieqiDrawGuardResult | null;
+  if (drawGuard?.reason) {
+    logger.info(
+      {
+        kind: 'jieqi_engine_draw_guard',
+        room_id: room.id,
+        engine_id: engineId,
+        ply: gameMoves.length,
+        reason: drawGuard.reason,
+        replaced: drawGuard.replaced,
+        detail: drawGuard.detail,
+      },
+      'Jieqi draw guard judged the engine move',
+    );
+  }
   logger.info(
     {
       kind: 'jieqi_engine_move_ok',
@@ -366,12 +418,17 @@ export async function playJieqiEngineMoveIfReady(
         movetimeMs: tier.movetimeMs,
         ...(tier.depth === undefined ? {} : { depth: tier.depth }),
       },
+      // The engine's own search: with guard_replaced, `engine_move` is the move the
+      // guard turned down and `guard_detail` carries the re-search that replaced it.
       search: lastSearch,
       thinkTimeMs: Date.now() - startedAt,
       attempts,
       move: jieqiMoveToPikafishUci(validated),
       fen,
       legalCount: getJieqiLegalMoves(room.projection.state).length,
+      guardReplaced: drawGuard?.replaced ?? false,
+      guardReason: drawGuard?.reason ?? null,
+      guardDetail: drawGuard?.detail ?? null,
     }),
   );
   const seq = await ctx.appendEvent(room, event);

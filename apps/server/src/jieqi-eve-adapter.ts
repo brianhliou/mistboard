@@ -6,8 +6,9 @@
 // xiangqi). And the engine is not fed a move list: it gets the redacted FEN window
 // the live room builds (jieqiEngineWindowFromEvents), through the same
 // jieqiLiveEngineMove, so the Skill Level pick a rated bot makes is the one a
-// served bot makes. The live path has no guard or pre-search scan, so neither
-// does this.
+// served bot makes. The live path's one guard, the draw guard (jieqi-draw-guard.ts),
+// runs here too with the same re-search, so a rated bot avoids the rule draws a
+// served one avoids; there is no pre-search scan.
 
 import {
   createJieqiDeal,
@@ -17,12 +18,15 @@ import {
   type JieqiGameState,
   type JieqiMove,
 } from '@mistboard/game';
+import { guardJieqiRuleEnding } from './jieqi-draw-guard.js';
 import { JIEQI_RANDOM_ENGINE_ID, jieqiEngineTierFor, jieqiLiveEngineMove } from './jieqi-engine.js';
 import { jieqiMoveToPikafishUci, pikafishUciToJieqiMove } from './jieqi-fen.js';
 import type { JieqiEvent } from './jieqi-runtime.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import { jieqiEngineWindowFromEvents } from './server-jieqi-engine.js';
 import type { VariantEveAdapter } from './variant-eve.js';
+import { replayTenantEvents } from './variant-tenant/runtime.js';
+import type { TenantRoomEvent } from './variant-tenant/tenant.js';
 
 /** A [0,1) stream from a 63-bit seed (the EvE loop's LCG), for a reproducible deal. */
 export function seededUnitRng(seed: bigint): () => number {
@@ -55,7 +59,7 @@ export const jieqiEveAdapter: VariantEveAdapter<
     if (!parsed) return null;
     return legalMoves.find((m) => m.from === parsed.from && m.to === parsed.to) ?? null;
   },
-  search: (engineId, _history, opts, context) => {
+  search: async (engineId, _history, opts, context) => {
     const seat = context.color as JieqiColor;
     const window = jieqiEngineWindowFromEvents(
       context.events as readonly JieqiEvent[],
@@ -64,10 +68,26 @@ export const jieqiEveAdapter: VariantEveAdapter<
         throw new Error('jieqi EvE game has no room-created event');
       },
     );
-    return jieqiLiveEngineMove(engineId, window.fen, {
+    const search = await jieqiLiveEngineMove(engineId, window.fen, {
       movetimeMs: opts.movetimeMs,
       moves: window.moves,
       newGame: window.gameMoves.length <= 1,
     });
+    const state = replayTenantEvents(
+      jieqiTenant,
+      context.events as readonly TenantRoomEvent<JieqiColor, JieqiMove, typeof JIEQI_SPEC_ID>[],
+    ).state;
+    const guarded = await guardJieqiRuleEnding({
+      state,
+      search,
+      // Untimed, so half the tier's movetime: the live path's re-search share.
+      research: (searchMoves) =>
+        jieqiLiveEngineMove(engineId, window.fen, {
+          movetimeMs: Math.max(50, Math.floor(opts.movetimeMs / 2)),
+          moves: window.moves,
+          searchMoves,
+        }),
+    });
+    return guarded.search;
   },
 };

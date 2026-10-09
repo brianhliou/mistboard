@@ -247,6 +247,15 @@ test('the live block is the session handshake followed by position and go', () =
   assert.equal(buildJieqiGoCommand({ movetimeMs: 1_200, depth: 10 }), 'go depth 10 movetime 1200');
 });
 
+test('the draw guard re-search restricts the root with searchmoves, last on the go line', () => {
+  // Both engines' UCI parsers read every token after `searchmoves` as a move.
+  assert.equal(
+    buildJieqiGoCommand({ movetimeMs: 2_000, depth: 13, searchMoves: ['a6a5', 'b0c2'] }),
+    'go depth 13 movetime 2000 searchmoves a6a5 b0c2',
+  );
+  assert.equal(buildJieqiGoCommand({ movetimeMs: 2_000, searchMoves: [] }), 'go movetime 2000');
+});
+
 test('pickSkillMove: full strength among near-equal moves, weak levels drift to worse ones', () => {
   const line = (index: number, move: string, cp: number) => ({
     index,
