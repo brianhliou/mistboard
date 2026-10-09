@@ -4,30 +4,32 @@
 // ~50 games finished daily (2026-10-03); these rows put that play in the box.
 //
 // What qualifies, newest first, within ACTIVITY_WINDOW_MS:
-//   bot-win   a person (account or guest) beat a bot of level MIN_BOT_LEVEL or
-//             above in a counted PvE game, so the row reads as earned (Brian,
-//             2026-10-03); a bot with no level in its name (Pikafish, Misty,
-//             KataGo) is a top bot and always qualifies
+//   bot-win   a person (account or guest) beat the top of a bot ladder in a
+//             counted PvE game: a named slot (Misty, Pikafish, AB-JChess,
+//             KataGo) or a ladder's highest level (Fairy-Stockfish Level 8),
+//             per isTopOfLadderBot in first-party-bots.ts. Level 4 and up
+//             qualified until 2026-10-08, when 127 wins in a week made 39
+//             lines, four guests 71 of the wins, and the lines read as easily
+//             earned (Brian).
 //   study     a public study was created
 // Losses, draws and aborts never appear, and neither do PvP results: a PvP
 // win names the person who lost (Brian, 2026-10-03). A bot is the only
 // opponent the feed may name. A seat whose account is closed or
 // private has no public handle, so its game is skipped rather than shown as a
-// guest. Back-to-back wins by the same seat over the same bot in the same
-// variant collapse into one row with a `count` (on 2026-10-03, 16 of 20 rows
-// read "A guest beat Pikafish Level 4 at Jieqi"). Counted-game rules (excluded accounts, ply floor, launch date) come
-// from persistence-counted-games.ts like every other aggregate.
+// guest. A seat (account id or guest device id) gets at most one row per UTC
+// day: all its top wins that day, interleaved or not, become the newest win's
+// row with a `count`; when they span more than one bot or variant the row
+// names neither. Counted-game rules (excluded accounts, ply floor, launch date)
+// come from persistence-counted-games.ts like every other aggregate.
 
 import { crosstableReviewUrl } from './crosstable-review-url.js';
+import { topOfLadderBotIds } from './first-party-bots.js';
 import { countedHumanGame } from './persistence-counted-games.js';
 import { getPool, isInitialized } from './persistence-db.js';
 
 export const ACTIVITY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 const GAME_EVENT_LIMIT = 20;
-// Rows read before collapsing repeats, so a streak does not starve the window.
-const GAME_ROW_LIMIT = 80;
 const STUDY_EVENT_LIMIT = 3;
-export const MIN_BOT_LEVEL = 4;
 
 export type LobbyActivityEvent = {
   id: string;
@@ -38,7 +40,8 @@ export type LobbyActivityEvent = {
   opponent?: string;
   gameSpecId?: string;
   title?: string;
-  /** Wins this row stands for when consecutive repeats collapsed; absent = 1. */
+  /** The seat's top wins that day this row stands for; absent = 1. When they
+   *  span more than one bot or variant, `opponent` is absent. */
   count?: number;
 };
 
@@ -51,6 +54,8 @@ type GameEventRow = {
   winner_handle: string | null;
   loser_type: string;
   loser_name: string;
+  day_wins: number;
+  day_mixed: boolean;
 };
 
 type StudyEventRow = {
@@ -59,15 +64,6 @@ type StudyEventRow = {
   created_at: Date;
   owner_handle: string;
 };
-
-// The ladder level lives only in the bot seat's name ('Fairy-Stockfish Level 6',
-// subject id 'pikafish-level-3'); no column stores it.
-function botLevel(alias: string): string {
-  return `COALESCE(
-    substring(${alias}.display_name from 'Level ([0-9]+)'),
-    substring(${alias}.subject_id from 'level-([0-9]+)')
-  )::int`;
-}
 
 function publicHandle(alias: string): string {
   return `${alias}.closed_at IS NULL AND ${alias}.profile_visibility <> 'private'`;
@@ -78,29 +74,47 @@ export async function listLobbyActivity(now = new Date()): Promise<LobbyActivity
   const since = new Date(now.getTime() - ACTIVITY_WINDOW_MS);
   const pool = getPool();
   const [games, studies] = await Promise.all([
+    // One row per seat per UTC day (the newest win), carrying the day's win
+    // count and whether its wins span more than one bot or variant. A seat with
+    // no id (a guest row from before device ids) is its own seat per game.
     pool.query<GameEventRow>(
-      `SELECT g.room_id, g.variant, g.ended_at,
-              w.subject_type AS winner_type, w.subject_id AS winner_id,
-              wu.handle AS winner_handle,
-              l.subject_type AS loser_type, l.display_name AS loser_name
-         FROM games g
-         JOIN game_participants w
-           ON w.game_id = g.room_id AND g.result = w.color || '-wins'
-         JOIN game_participants l
-           ON l.game_id = g.room_id AND l.color <> w.color
-         LEFT JOIN users wu
-           ON w.subject_type = 'user' AND wu.id = w.subject_id AND ${publicHandle('wu')}
-        WHERE ${countedHumanGame('g')}
-          AND g.ended_at >= $1
-          AND g.visibility <> 'private'
-          AND g.result IN ('white-wins', 'black-wins', 'red-wins')
-          AND g.mode = 'pve'
-          AND l.subject_type IN ('bot', 'engine-version')
-          AND COALESCE(${botLevel('l')}, ${MIN_BOT_LEVEL}) >= ${MIN_BOT_LEVEL}
-          AND (w.subject_type = 'guest' OR wu.handle IS NOT NULL)
-        ORDER BY g.ended_at DESC, g.room_id
+      `SELECT room_id, variant, ended_at, winner_type, winner_id, winner_handle,
+              loser_type, loser_name, day_wins, day_mixed
+         FROM (
+           SELECT g.room_id, g.variant, g.ended_at,
+                  w.subject_type AS winner_type, w.subject_id AS winner_id,
+                  wu.handle AS winner_handle,
+                  l.subject_type AS loser_type, l.display_name AS loser_name,
+                  row_number() OVER seat_day AS seat_day_rank,
+                  (count(*) OVER seat_day)::int AS day_wins,
+                  (min(l.display_name || '|' || g.variant) OVER seat_day
+                     <> max(l.display_name || '|' || g.variant) OVER seat_day) AS day_mixed
+             FROM games g
+             JOIN game_participants w
+               ON w.game_id = g.room_id AND g.result = w.color || '-wins'
+             JOIN game_participants l
+               ON l.game_id = g.room_id AND l.color <> w.color
+             LEFT JOIN users wu
+               ON w.subject_type = 'user' AND wu.id = w.subject_id AND ${publicHandle('wu')}
+            WHERE ${countedHumanGame('g')}
+              AND g.ended_at >= $1
+              AND g.visibility <> 'private'
+              AND g.result IN ('white-wins', 'black-wins', 'red-wins')
+              AND g.mode = 'pve'
+              AND l.subject_type = 'bot'
+              AND l.subject_id = ANY($3::text[])
+              AND (w.subject_type = 'guest' OR wu.handle IS NOT NULL)
+           WINDOW seat_day AS (
+             PARTITION BY w.subject_type, COALESCE(w.subject_id, g.room_id),
+                          (g.ended_at AT TIME ZONE 'UTC')::date
+             ORDER BY g.ended_at DESC, g.room_id
+             ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+           )
+         ) wins
+        WHERE seat_day_rank = 1
+        ORDER BY ended_at DESC, room_id
         LIMIT $2`,
-      [since, GAME_ROW_LIMIT],
+      [since, GAME_EVENT_LIMIT, topOfLadderBotIds()],
     ),
     pool.query<StudyEventRow>(
       `SELECT s.id, s.name, s.created_at, u.handle AS owner_handle
@@ -114,7 +128,11 @@ export async function listLobbyActivity(now = new Date()): Promise<LobbyActivity
       [since, STUDY_EVENT_LIMIT],
     ),
   ]);
-  const events: LobbyActivityEvent[] = collapseRepeats(games.rows).slice(0, GAME_EVENT_LIMIT);
+  const events: LobbyActivityEvent[] = [];
+  for (const row of games.rows) {
+    const event = gameEvent(row);
+    if (event) events.push(event);
+  }
   for (const row of studies.rows) {
     events.push({
       id: `act_study_${row.id}`,
@@ -126,30 +144,6 @@ export async function listLobbyActivity(now = new Date()): Promise<LobbyActivity
     });
   }
   return events.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-}
-
-// Rows arrive newest first. A run of wins by one seat (account id or guest
-// device id, which never leaves the server) over one bot in one variant becomes
-// the newest win's row with the run's length. A different winner, bot or
-// variant in between ends the run.
-function collapseRepeats(rows: GameEventRow[]): LobbyActivityEvent[] {
-  const events: LobbyActivityEvent[] = [];
-  let runKey: string | null = null;
-  for (const row of rows) {
-    const event = gameEvent(row);
-    if (!event) continue;
-    const key = row.winner_id
-      ? `${row.winner_type}:${row.winner_id}|${row.loser_name}|${row.variant}`
-      : null;
-    const last = events[events.length - 1];
-    if (key && key === runKey && last) {
-      last.count = (last.count ?? 1) + 1;
-      continue;
-    }
-    events.push(event);
-    runKey = key;
-  }
-  return events;
 }
 
 export function gameEvent(row: GameEventRow): LobbyActivityEvent | null {
@@ -165,7 +159,8 @@ export function gameEvent(row: GameEventRow): LobbyActivityEvent | null {
     ...base,
     kind: 'bot-win',
     handle: row.winner_type === 'guest' ? null : row.winner_handle,
-    opponent: row.loser_name,
+    ...(row.day_mixed ? {} : { opponent: row.loser_name }),
+    ...(row.day_wins > 1 ? { count: row.day_wins } : {}),
   };
 }
 

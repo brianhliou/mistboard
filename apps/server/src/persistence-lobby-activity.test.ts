@@ -11,23 +11,25 @@ import {
 } from './persistence-test-support.js';
 
 definePersistenceTests('lobby activity', () => {
-  test('listLobbyActivity collapses back-to-back wins by one seat over one bot', async () => {
+  test('listLobbyActivity gives a seat one row per UTC day, however its wins interleave', async () => {
     const now = new Date('2026-10-03T12:00:00.000Z');
     const minutesAgo = (m: number) => new Date(now.getTime() - m * 60 * 1000);
     const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
     await client.connect();
     try {
-      // [room, guest device, bot, minutesAgo]: device-a wins three in a row and
-      // collapses; device-b's win, then a different bot, each end a run.
-      const wins: [string, string, string, number][] = [
-        ['run-a1', 'device-a', 'Pikafish Level 4', 10],
-        ['run-a2', 'device-a', 'Pikafish Level 4', 20],
-        ['run-a3', 'device-a', 'Pikafish Level 4', 30],
-        ['run-b1', 'device-b', 'Pikafish Level 4', 40],
-        ['run-a4', 'device-a', 'Pikafish Level 5', 50],
-        ['run-a5', 'device-a', 'Pikafish Level 4', 60],
+      // [room, guest device, bot id, bot name, minutesAgo]. Today device-a
+      // beats AB-JChess three times around device-b's win and a lower-rung
+      // win; yesterday (13+ hours ago) it beat AB-JChess once and Pikafish once.
+      const wins: [string, string, string, string, number][] = [
+        ['day-a1', 'device-a', 'ab-jchess', 'AB-JChess', 10],
+        ['day-b1', 'device-b', 'ab-jchess', 'AB-JChess', 20],
+        ['day-a2', 'device-a', 'ab-jchess', 'AB-JChess', 30],
+        ['day-a-low', 'device-a', 'pikafish-level-7', 'Pikafish Level 7', 40],
+        ['day-a3', 'device-a', 'ab-jchess', 'AB-JChess', 50],
+        ['day-a4', 'device-a', 'ab-jchess', 'AB-JChess', 13 * 60],
+        ['day-a5', 'device-a', 'pikafish', 'Pikafish', 14 * 60],
       ];
-      for (const [room, device, bot, ago] of wins) {
+      for (const [room, device, botId, botName, ago] of wins) {
         await client.query(
           `INSERT INTO games
              (room_id, variant, result, termination, ply_count, started_at, ended_at,
@@ -38,8 +40,8 @@ definePersistenceTests('lobby activity', () => {
         );
         await client.query(
           `INSERT INTO game_participants (game_id, color, subject_type, subject_id, display_name)
-           VALUES ($1, 'red', 'guest', $2, 'Guest'), ($1, 'black', 'bot', 'pikafish', $3)`,
-          [room, device, bot],
+           VALUES ($1, 'red', 'guest', $2, 'Guest'), ($1, 'black', 'bot', $3, $4)`,
+          [room, device, botId, botName],
         );
       }
     } finally {
@@ -49,19 +51,19 @@ definePersistenceTests('lobby activity', () => {
     const events = await listLobbyActivity(now);
 
     assert.deepEqual(
-      events.map((e) => [e.id, e.opponent, e.count ?? 1]),
+      events.map((e) => [e.id, e.opponent ?? null, e.count ?? 1]),
       [
-        ['act_game_run-a1', 'Pikafish Level 4', 3],
-        ['act_game_run-b1', 'Pikafish Level 4', 1],
-        ['act_game_run-a4', 'Pikafish Level 5', 1],
-        ['act_game_run-a5', 'Pikafish Level 4', 1],
+        ['act_game_day-a1', 'AB-JChess', 3],
+        ['act_game_day-b1', 'AB-JChess', 1],
+        // Two bots in one day: the row names neither.
+        ['act_game_day-a4', null, 2],
       ],
     );
     // Device ids stay on the server.
     assert.ok(!JSON.stringify(events).includes('device-'));
   });
 
-  test('listLobbyActivity shows earned human wins and new public studies, nothing else', async () => {
+  test('listLobbyActivity shows wins over the top of a ladder and new public studies, nothing else', async () => {
     const now = new Date('2026-10-03T12:00:00.000Z');
     const hoursAgo = (hours: number) => new Date(now.getTime() - hours * 60 * 60 * 1000);
     const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
@@ -89,6 +91,8 @@ definePersistenceTests('lobby activity', () => {
         ['act-old', 'xiangqi', 'red-wins', 'pve', 'public', 40, hoursAgo(8 * 24)],
         ['act-low-level', 'xiangqi', 'red-wins', 'pve', 'public', 40, hoursAgo(11)],
         ['act-low-level-id', 'jieqi', 'red-wins', 'pve', 'public', 40, hoursAgo(12)],
+        ['act-level-7', 'xiangqi', 'red-wins', 'pve', 'public', 40, hoursAgo(11.5)],
+        ['act-pikafish-7', 'jieqi', 'red-wins', 'pve', 'public', 40, hoursAgo(11.6)],
         ['act-misty', 'jungle', 'red-wins', 'pve', 'public', 40, hoursAgo(13)],
       ];
       for (const [room, variant, result, mode, visibility, plies, endedAt] of games) {
@@ -107,12 +111,12 @@ definePersistenceTests('lobby activity', () => {
           'act-guest-beats-bot',
           'black',
           'bot',
-          'fairy-stockfish-level-4',
-          'Fairy-Stockfish Level 4',
+          'fairy-stockfish-level-8',
+          'Fairy-Stockfish Level 8',
           null,
         ],
         ['act-fox-beats-bot', 'red', 'user', 'act-fox', 'Fox', null],
-        ['act-fox-beats-bot', 'black', 'bot', 'pikafish-level-6', 'Pikafish Level 6', null],
+        ['act-fox-beats-bot', 'black', 'bot', 'ab-jchess', 'AB-JChess', null],
         ['act-bot-beats-fox', 'red', 'user', 'act-fox', 'Fox', null],
         ['act-bot-beats-fox', 'black', 'bot', 'pikafish-level-6', 'Pikafish Level 6', null],
         ['act-rated', 'red', 'user', 'act-kaoru', 'Kaoru', 1540],
@@ -142,6 +146,11 @@ definePersistenceTests('lobby activity', () => {
         ],
         ['act-low-level-id', 'red', 'guest', 'device-3', 'Guest', null],
         ['act-low-level-id', 'black', 'bot', 'pikafish-level-2', 'Pikafish', null],
+        // One rung below the top of each numbered ladder.
+        ['act-level-7', 'red', 'guest', 'device-4', 'Guest', null],
+        ['act-level-7', 'black', 'bot', 'fairy-stockfish-level-7', 'Fairy-Stockfish Level 7', null],
+        ['act-pikafish-7', 'red', 'guest', 'device-5', 'Guest', null],
+        ['act-pikafish-7', 'black', 'bot', 'pikafish-level-7', 'Pikafish Level 7', null],
         ['act-misty', 'red', 'user', 'act-fox', 'Fox', null],
         ['act-misty', 'black', 'bot', 'misty', 'Misty', null],
       ];
@@ -174,7 +183,7 @@ definePersistenceTests('lobby activity', () => {
         href: '/xiangqi/game/act-guest-beats-bot',
         gameSpecId: 'xiangqi',
         handle: null,
-        opponent: 'Fairy-Stockfish Level 4',
+        opponent: 'Fairy-Stockfish Level 8',
       },
       {
         id: 'act_game_act-fox-beats-bot',
@@ -183,7 +192,7 @@ definePersistenceTests('lobby activity', () => {
         href: '/jieqi/game/act-fox-beats-bot',
         gameSpecId: 'jieqi',
         handle: 'fox',
-        opponent: 'Pikafish Level 6',
+        opponent: 'AB-JChess',
       },
       {
         id: 'act_game_act-misty',

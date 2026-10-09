@@ -25,6 +25,9 @@ export type FirstPartyBotProfile = {
   /** gameSpecId -> engine id currently fronted for that variant. */
   engines: Readonly<Record<string, string>>;
   defaultGameSpecId: string;
+  /** The rung on a numbered ladder; absent for a named slot (Misty, Pikafish,
+   *  AB-JChess, KataGo), which is always the top of its ladder. */
+  ladderLevel?: number;
   /** Retired engine ids whose games attribute to this bot. */
   attributionEngineIds?: readonly string[];
   /** Pre-consolidation bot ids that must keep resolving (old rooms' pveBotId,
@@ -43,6 +46,7 @@ function pikafishJieqiLevelProfile(level: number): FirstPartyBotProfile {
     displayName: `Pikafish Level ${level}`,
     engines: { jieqi: `pikafish-jieqi-level-${level}` },
     defaultGameSpecId: 'jieqi',
+    ladderLevel: level,
   };
 }
 
@@ -81,6 +85,7 @@ function fairyStockfishLevelProfile(level: number): FirstPartyBotProfile {
       'crazyhouse-xiangqi': `fairy-stockfish-crazyhouse-xiangqi-level-${level}`,
     },
     defaultGameSpecId: 'xiangqi',
+    ladderLevel: level,
     legacyBotIds: [`fairy-stockfish-xiangqi-level-${level}`, ...(legacy ? [legacy.botId] : [])],
     ...(legacy ? { attributionEngineIds: [legacy.engineId] } : {}),
   };
@@ -191,6 +196,26 @@ for (const bot of FIRST_PARTY_BOT_PROFILES) {
 
 export function firstPartyBotForId(botId: string): FirstPartyBotProfile | null {
   return botById.get(botId) ?? null;
+}
+
+// Both numbered ladders top out at Level 8: Fairy-Stockfish Level 8, and for
+// the jieqi ladder, whose numbered rungs stop at 7, Pikafish itself.
+const LADDER_TOP_LEVEL = Math.max(...FAIRY_STOCKFISH_LEVELS);
+
+/**
+ * Whether a bot id is the top of its ladder: a named slot (no level), or the
+ * highest numbered level. Canonical ids only; a pre-consolidation id names an
+ * old tier, not today's top. The homepage chat announces wins over these bots
+ * and no others (Brian, 2026-10-08: a win line should not feel easily earned).
+ */
+export function isTopOfLadderBot(botId: string): boolean {
+  const bot = botById.get(botId);
+  if (!bot || bot.id !== botId) return false;
+  return bot.ladderLevel === undefined || bot.ladderLevel === LADDER_TOP_LEVEL;
+}
+
+export function topOfLadderBotIds(): string[] {
+  return FIRST_PARTY_BOT_PROFILES.map((bot) => bot.id).filter(isTopOfLadderBot);
 }
 
 export function firstPartyBotForEngine(engineId: string): FirstPartyBotProfile | null {
