@@ -8,6 +8,7 @@ import {
   panelPersonPaces,
   playPanelEnabled,
 } from './landing-play-panel.js';
+import { openLobbySeekCount, withdrawLobbySeeks } from './lobby-seek-registry.js';
 import { setRatedModeEnabled } from './rated-flag.js';
 import { setResolvedSignedIn } from './signed-in-state.js';
 
@@ -453,6 +454,146 @@ describe('homepage play panel', () => {
     expect(specs.length).toBeGreaterThan(1);
     expect(specs).toEqual(orderPanelSpecs(specs));
     expect(specs[0]).toBe('xiangqi');
+  });
+
+  // Prod, 2026-10-09: a guest's seek outlived the bot game the same tab
+  // started, and the next joiner was seated in a room nobody entered.
+  describe('an open seek', () => {
+    type Call = { url: string; method: string; keepalive: boolean };
+    const lobbyFetch = (opts: { post?: Promise<Response>; poll?: () => Response } = {}) => {
+      const calls: Call[] = [];
+      const fn = vi.fn(async (input: string, init?: RequestInit) => {
+        calls.push({ url: input, method: init?.method ?? 'GET', keepalive: !!init?.keepalive });
+        if (input === '/api/lobby' && init?.method === 'POST') {
+          return (
+            opts.post ??
+            Response.json(
+              { status: 'waiting', ticketId: 't1', pollAfterMs: 60_000 },
+              { status: 202 },
+            )
+          );
+        }
+        if (input === '/api/lobby/t1' && !init?.method && opts.poll) return opts.poll();
+        if (input === '/api/rooms') return Response.json({ url: '/room/bot-1' }, { status: 201 });
+        return Response.json({ ok: true });
+      });
+      vi.stubGlobal('fetch', fn);
+      const index = (url: string, method: string): number =>
+        calls.findIndex((c) => c.url === url && c.method === method);
+      const deletes = (): Call[] => calls.filter((c) => c.method === 'DELETE');
+      return { calls, index, deletes };
+    };
+    const settle = async (ms = 0): Promise<void> => {
+      await vi.advanceTimersByTimeAsync(ms);
+      await flush();
+    };
+    const seek = async (board: HTMLElement): Promise<void> => {
+      row(board, 'xiangqi', 'person').querySelector<HTMLButtonElement>('.pp-act')!.click();
+      await settle();
+    };
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+    afterEach(async () => {
+      await withdrawLobbySeeks();
+    });
+
+    it('withdraws the seek before a bot row starts its game', async () => {
+      const net = lobbyFetch();
+      const board = buildPlayPanel('en', { hydrate: false });
+      document.body.append(board);
+      await seek(board);
+      expect(board.querySelector<HTMLElement>('.pp-search')?.hidden).toBe(false);
+
+      row(board, 'jieqi').querySelector<HTMLButtonElement>('.pp-act')!.click();
+      await settle();
+
+      const del = net.index('/api/lobby/t1', 'DELETE');
+      expect(del).toBeGreaterThanOrEqual(0);
+      expect(del).toBeLessThan(net.index('/api/rooms', 'POST'));
+      expect(net.calls[del]?.keepalive).toBe(true);
+      expect(board.querySelector<HTMLElement>('.pp-search')?.hidden).toBe(true);
+      expect(openLobbySeekCount()).toBe(0);
+    });
+
+    it('withdraws the seek before Play again starts its game', async () => {
+      localStorage.setItem(
+        'mistboard.playPanel.v1',
+        JSON.stringify({ last: { gameSpecId: 'jieqi', botId: 'pikafish-level-5', tc: '10m5' } }),
+      );
+      const net = lobbyFetch();
+      const board = buildPlayPanel('en', { hydrate: false });
+      document.body.append(board);
+      await seek(board);
+
+      board.querySelector<HTMLButtonElement>('.pp-feature-again .pp-act')!.click();
+      await settle();
+
+      const del = net.index('/api/lobby/t1', 'DELETE');
+      expect(del).toBeGreaterThanOrEqual(0);
+      expect(del).toBeLessThan(net.index('/api/rooms', 'POST'));
+    });
+
+    it('deletes a ticket whose POST was still in flight when a bot game started', async () => {
+      let answer!: (r: Response) => void;
+      const post = new Promise<Response>((resolve) => {
+        answer = resolve;
+      });
+      const net = lobbyFetch({ post });
+      const board = buildPlayPanel('en', { hydrate: false });
+      document.body.append(board);
+      await seek(board);
+      row(board, 'jieqi').querySelector<HTMLButtonElement>('.pp-act')!.click();
+      await settle();
+      expect(net.index('/api/rooms', 'POST')).toBe(-1);
+
+      answer(Response.json({ status: 'waiting', ticketId: 't1', pollAfterMs: 60_000 }));
+      await settle();
+
+      const del = net.index('/api/lobby/t1', 'DELETE');
+      expect(del).toBeGreaterThanOrEqual(0);
+      expect(del).toBeLessThan(net.index('/api/rooms', 'POST'));
+    });
+
+    it('withdraws the seek with a keepalive DELETE when the page goes away', async () => {
+      const net = lobbyFetch();
+      const board = buildPlayPanel('en', { hydrate: false });
+      document.body.append(board);
+      await seek(board);
+
+      window.dispatchEvent(new Event('pagehide'));
+      await settle();
+
+      expect(net.deletes()).toEqual([{ url: '/api/lobby/t1', method: 'DELETE', keepalive: true }]);
+    });
+
+    it('stops listening for pagehide once the seek is cancelled or matched', async () => {
+      const net = lobbyFetch();
+      const board = buildPlayPanel('en', { hydrate: false });
+      document.body.append(board);
+      await seek(board);
+      board.querySelector<HTMLButtonElement>('.pp-search-cancel')!.click();
+      await settle();
+      expect(net.deletes()).toHaveLength(1);
+      window.dispatchEvent(new Event('pagehide'));
+      await settle();
+      expect(net.deletes()).toHaveLength(1);
+
+      const matched = lobbyFetch({
+        post: Promise.resolve(
+          Response.json({ status: 'waiting', ticketId: 't1', pollAfterMs: 1_000 }),
+        ),
+        poll: () => Response.json({ status: 'matched', ticketId: 't1', url: '/room/r1' }),
+      });
+      await seek(board);
+      await settle(1_000);
+      expect(matched.index('/api/lobby/t1', 'GET')).toBeGreaterThanOrEqual(0);
+      window.dispatchEvent(new Event('pagehide'));
+      await settle();
+      expect(matched.deletes()).toEqual([]);
+      expect(openLobbySeekCount()).toBe(0);
+    });
   });
 
   it('is on by default; ?hero=lobby brings the old tabs back until ?hero=grid', () => {

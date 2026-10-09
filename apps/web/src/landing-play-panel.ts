@@ -629,13 +629,16 @@ export function buildPlayPanel(
   searchBar.append(searchStatus, searchCancel);
   personView.append(control, personScroll, searchBar);
 
-  const stopSearch = (): void => {
-    searching?.();
+  const endSearch = (): void => {
     searching = null;
     ownSeek = null;
     searchBar.querySelector('.landing-engine-offer')?.remove();
     searchBar.hidden = true;
     renderPersonRows();
+  };
+  const stopSearch = (): void => {
+    void searching?.();
+    endSearch();
   };
   searchCancel.addEventListener('click', stopSearch);
 
@@ -871,6 +874,9 @@ export function buildPlayPanel(
           undefined,
           {
             startSource: 'panel-person',
+            // Starting any other game from this page (a bot row, Play again, a
+            // Join) withdraws the seek; put the search bar away with it.
+            onWithdrawn: endSearch,
             ...(botId && landingVariantSupportsPve(gameSpecId)
               ? { botFallback: { botId, gameSpecId, preferredColor: 'random' as const } }
               : {}),

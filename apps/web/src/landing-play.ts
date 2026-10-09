@@ -45,6 +45,7 @@ import {
   landingXiangqiBotOffers,
   pveEngineIdForRememberedPick,
 } from './landing-bot-policy.js';
+import { registerLobbySeek, withdrawLobbySeeks } from './lobby-seek-registry.js';
 import { playerNameEl, profileTargetFor } from './profile-link.js';
 import { rememberedPveEngine } from './pve-memory.js';
 import { isCorrespondenceRatedModeEnabled, isRatedModeEnabled } from './rated-flag.js';
@@ -2473,6 +2474,8 @@ async function createCorrespondenceFromPlay(
   button.setAttribute('aria-busy', 'true');
   button.textContent = t('setup.creating', {}, locale);
   try {
+    const withdrawing = withdrawLobbySeeks();
+    if (withdrawing) await withdrawing;
     const response = await postThroughRestart('/api/rooms', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -3170,6 +3173,9 @@ async function createRoomFromPlay(
     status.textContent = mode === 'pve' ? t('setup.checkingEngineSeats', {}, locale) : '';
   }
   try {
+    // Any game this page starts ends the seeks it has open (lobby-seek-registry).
+    const withdrawing = withdrawLobbySeeks();
+    if (withdrawing) await withdrawing;
     while (true) {
       const response = await postThroughRestart(
         '/api/rooms',
@@ -3472,8 +3478,11 @@ export function joinLobbyFromPlay(
     /** The bot the 15 s "nobody came" offer starts when no engine id is given:
      *  the homepage panel names a public bot, not an engine. */
     botFallback?: BotPlayRequest;
+    /** This seek was withdrawn from outside (the page started another game),
+     *  so the caller can put its waiting UI away. */
+    onWithdrawn?: () => void;
   },
-): () => void {
+): () => Promise<void> {
   const controller = new AbortController();
   const originalText = button.textContent ?? '';
   const queueJoinedAt = Date.now();
@@ -3504,16 +3513,39 @@ export function joinLobbyFromPlay(
     status.hidden = false;
   };
 
-  const cancel = () => {
+  // keepalive: the DELETE usually races a navigation (a bot game, a closed
+  // tab), and an ordinary fetch is dropped when the page goes away.
+  const deleteTicket = (id: string): Promise<void> =>
+    fetch(`/api/lobby/${encodeURIComponent(id)}`, { method: 'DELETE', keepalive: true }).then(
+      () => undefined,
+      () => undefined,
+    );
+
+  // Leaving the page while waiting (a link, the back button, closing the tab)
+  // withdraws the seek; sendBeacon cannot DELETE, a keepalive fetch can.
+  const onPageHide = () => {
+    if (active && ticketId) void deleteTicket(ticketId);
+  };
+  let unregister: (() => void) | null = null;
+  const release = () => {
+    unregister?.();
+    unregister = null;
+    window.removeEventListener('pagehide', onPageHide);
+  };
+
+  let starting: Promise<void> = Promise.resolve();
+  let cancelled: Promise<void> | null = null;
+  const cancel = (): Promise<void> => {
+    if (cancelled) return cancelled;
     active = false;
+    release();
     controller.abort();
     if (pollTimer !== null) window.clearTimeout(pollTimer);
     clearOfferTimer();
-    if (ticketId) {
-      void fetch(`/api/lobby/${encodeURIComponent(ticketId)}`, { method: 'DELETE' }).catch(
-        () => {},
-      );
-    }
+    // Withdrawn while the POST was in flight: start() deletes the ticket the
+    // server made anyway once the response lands, so wait for that.
+    cancelled = ticketId ? deleteTicket(ticketId) : starting;
+    return cancelled;
   };
 
   // The seek's pace is a HUMAN pace; the bot the offer starts may not be able to
@@ -3539,23 +3571,27 @@ export function joinLobbyFromPlay(
   const acceptEngineOffer = (playButton: HTMLButtonElement) => {
     if (!hasFallback) return;
     track('lobby_engine_offer_accepted', { ...bucketProps, waitMs: Date.now() - queueJoinedAt });
-    cancel();
+    const withdrawn = cancel();
     rememberGameStartSource('engine-offer');
     if (engineId) {
-      void createRoomFromPlay(playButton, 'pve', engineId, engineSetup, status, locale);
+      void withdrawn.then(() =>
+        createRoomFromPlay(playButton, 'pve', engineId, engineSetup, status, locale),
+      );
       return;
     }
     if (!botFallback) return;
     playButton.disabled = true;
-    createBotGame({ ...botFallback, timeControl: engineSetup.timeControl }).then(
-      (url) => {
-        window.location.href = url;
-      },
-      () => {
-        playButton.disabled = false;
-        status.textContent = t('lobby.botStartFailed', {}, locale);
-      },
-    );
+    withdrawn
+      .then(() => createBotGame({ ...botFallback, timeControl: engineSetup.timeControl }))
+      .then(
+        (url) => {
+          window.location.href = url;
+        },
+        () => {
+          playButton.disabled = false;
+          status.textContent = t('lobby.botStartFailed', {}, locale);
+        },
+      );
   };
 
   const dismissEngineOffer = () => {
@@ -3621,6 +3657,7 @@ export function joinLobbyFromPlay(
 
   const redirectIfMatched = (ticket: LobbyTicketResponse): boolean => {
     if (ticket.status !== 'matched' || !ticket.url) return false;
+    release();
     track('lobby_match_found', { ...bucketProps, waitMs: Date.now() - queueJoinedAt });
     if (opts?.startSource) rememberGameStartSource(opts.startSource);
     window.location.href = ticket.url;
@@ -3660,10 +3697,13 @@ export function joinLobbyFromPlay(
     button.setAttribute('aria-busy', 'true');
     setButtonLabel(button, t('setup.waiting', {}, locale));
     status.textContent = t('setup.waitingForOpponent', {}, locale);
+    if (withdrawingPrior) await withdrawingPrior;
+    if (!active) return;
+    // Not aborted on cancel: the server makes the ticket whether or not this
+    // tab reads the answer, so the answer is needed to withdraw it.
     const response = await fetch('/api/lobby', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      signal: controller.signal,
       body: JSON.stringify({
         gameSpecId: setup.gameSpecId,
         timeControl: setup.timeControl,
@@ -3673,7 +3713,11 @@ export function joinLobbyFromPlay(
     if (!response.ok) throw new Error(`lobby join failed: ${response.status}`);
     const ticket = (await response.json()) as LobbyTicketResponse;
     track('lobby_queue_joined', bucketProps);
-    if (!active || redirectIfMatched(ticket)) return;
+    if (!active) {
+      if (ticket.status === 'waiting' && ticket.ticketId) await deleteTicket(ticket.ticketId);
+      return;
+    }
+    if (redirectIfMatched(ticket)) return;
     if (opts?.onNoInstantMatch) {
       // The joined offer was taken between the widget refresh and the click;
       // the POST silently created a NEW ticket. Don't leave the user in an
@@ -3686,13 +3730,21 @@ export function joinLobbyFromPlay(
     }
     if (!ticket.ticketId) throw new Error('lobby did not return a ticket');
     ticketId = ticket.ticketId;
+    window.addEventListener('pagehide', onPageHide);
     pollTimer = window.setTimeout(() => {
       void poll().catch(handleLobbyError);
     }, ticket.pollAfterMs ?? 1_000);
     scheduleEngineOffer();
   };
 
-  void start().catch(handleLobbyError);
+  // One seek per page: a new one (or a join) withdraws any seek still open, so
+  // the server can never pair this tab with itself or keep the old one listed.
+  const withdrawingPrior = withdrawLobbySeeks();
+  unregister = registerLobbySeek(() => {
+    opts?.onWithdrawn?.();
+    return cancel();
+  });
+  starting = start().catch(handleLobbyError);
   return cancel;
 }
 
