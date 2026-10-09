@@ -31,8 +31,8 @@ import {
   appendTenantRuntimeEvent,
   createTenantRuntimeRoomFromEvents,
   expireTenantClock,
+  tenantLiveHistoryExtras,
   tenantPlyAtEventIndex,
-  tenantSeatHistoryExtras,
   tenantSnapshotPayload,
 } from './variant-tenant/runtime.js';
 
@@ -83,7 +83,7 @@ function recordStep(
   // is kept out of the recorded fixture and checked by the invariants below.
   const histories: Record<string, unknown> = {};
   for (const seat of SEATS) {
-    histories[seat] = tenantSeatHistoryExtras(darkXiangqiTenant, room, {
+    histories[seat] = tenantLiveHistoryExtras(darkXiangqiTenant, room, {
       id: `client-${seat}`,
       seat,
       solo: false,
@@ -93,8 +93,8 @@ function recordStep(
 }
 
 // Per step, per seat: the seat-history half of that seat's hello frame
-// (tenantSeatHistoryExtras), as it would cross the wire.
-const helloHistories = new Map<string, Record<string, { seatHistory?: SeatHistory }>>();
+// (tenantLiveHistoryExtras), as it would cross the wire.
+const helloHistories = new Map<string, Record<string, { liveHistory?: SeatHistory }>>();
 type SeatHistory = Array<{ ply: number; view: WireSnapshot['state'] }>;
 
 function append(
@@ -466,7 +466,7 @@ test("dxq golden wire: a live seat hello carries only that seat's own history", 
         continue;
       }
       for (const seat of ['red', 'black'] as const) {
-        const history: SeatHistory | undefined = histories[seat]?.seatHistory;
+        const history: SeatHistory | undefined = histories[seat]?.liveHistory;
         assert.ok(history && history.length > 0, `${where}: ${seat} has no history`);
         liveSeatSteps += 1;
         // The tip is the seat's live snapshot view (legal moves aside).

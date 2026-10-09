@@ -357,7 +357,7 @@ describe('cold join to a LIVE Fog Xiangqi room is unchanged (hidden-info regress
 });
 
 // A LIVE seat after a reload (the correspondence case): the server's seated
-// hello carries that seat's own per-ply fog views (`seatHistory`, server
+// hello carries that seat's own per-ply fog views (`liveHistory`, server
 // dark-xiangqi-tenant darkXiangqiSeatHistory). Without it the client holds one
 // snapshot, and a move cell must not pretend it can jump.
 describe('cold load into a LIVE Fog Xiangqi room as a seat', () => {
@@ -399,7 +399,7 @@ describe('cold load into a LIVE Fog Xiangqi room as a seat', () => {
         seat: 'red',
         state: served,
         events: redEvents(),
-        seatHistory: redHistory(),
+        liveHistory: redHistory(),
       }),
     );
     options.render();
@@ -441,14 +441,14 @@ describe('cold load into a LIVE Fog Xiangqi room as a seat', () => {
       ply,
       view: seatView(ply, 'black'),
     }));
-    for (const seatHistory of [blackHistory, redHistory(MID - 1), [{ ply: 1, view: {} }]]) {
+    for (const liveHistory of [blackHistory, redHistory(MID - 1), [{ ply: 1, view: {} }]]) {
       const options = await mount();
       options.applyHello(
         frame('hello', {
           seat: 'red',
           state: seatView(MID, 'red'),
           events: redEvents(),
-          seatHistory,
+          liveHistory,
         }),
       );
       options.render();

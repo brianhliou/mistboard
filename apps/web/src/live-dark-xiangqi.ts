@@ -261,7 +261,7 @@ const client = createTenantLiveClient<XiangqiColor, DarkXiangqiWireView, Xiangqi
   //  - a FINISHED room serves the unredacted move log and the truth board, so a
   //    cold join or reload replays the whole game from the start position;
   //  - a LIVE seat's hello carries that seat's own per-ply fog views
-  //    (`seatHistory`), so a reload mid-game can still step back through every
+  //    (`liveHistory`), so a reload mid-game can still step back through every
   //    ply it saw. Every other frame (broadcast snapshots, a spectator's hello)
   //    returns null and keeps fog-safe incremental capture.
   replayHistory: {
@@ -269,7 +269,7 @@ const client = createTenantLiveClient<XiangqiColor, DarkXiangqiWireView, Xiangqi
       rebuildFinishedDarkXiangqiHistory(
         events.filter(isDarkXiangqiMoveEvent).map((event) => event.move),
         view,
-      ) ?? adoptLiveDarkXiangqiSeatHistory(frame.seatHistory, view, frame.seat),
+      ) ?? adoptLiveDarkXiangqiSeatHistory(frame.liveHistory, view, frame.seat),
   },
 });
 

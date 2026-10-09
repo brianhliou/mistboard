@@ -2,8 +2,9 @@
 // game back: every move in the list, a stepper that walks every ply, and a
 // review link at the final ply. Before the fix the client filed the final view
 // as ply 1 (it had captured nothing), so the list showed one move and REVIEW
-// GAME linked ?ply=1. A LIVE cold join must not change: its deal is a server
-// secret, so it keeps the single masked view it was sent.
+// GAME linked ?ply=1. A LIVE cold join never rebuilds: its deal is a server
+// secret, so it holds the masked view it was sent, plus the per-ply masked
+// views the server's hello may carry (`liveHistory`), installed as sent.
 //
 // Drives the real banqi room module (live-banqi.ts) through a stubbed socket,
 // with a real game: the rules article's sample deal and all of its moves.
@@ -295,5 +296,89 @@ describe('a banqi room that finishes live, without a reload', () => {
     expect(reviewHref()).toBe(`/banqi/game/${ROOM}?ply=${PLIES}`);
     moveCells()[MID - 1]!.click();
     expect(boardOnScreen()).toEqual(expectedMasked(STATES[MID]!));
+  });
+});
+
+// A LIVE room after a reload (the correspondence case): the deal is a server
+// secret, so the client cannot replay its log. The hello carries this viewer's
+// own per-ply masked views instead (`liveHistory`, server tenantPerPlyViews;
+// a spectator's are the public board). Each ply must show exactly the masked
+// board of that ply: a face-down tile stays face-down in every step.
+describe('cold load into a LIVE banqi room with the per-ply history', () => {
+  const EARLY = 5;
+  const historyFor = (seat: BanqiSeat, through = MID) =>
+    Array.from({ length: through + 1 }, (_, ply) => ({
+      ply,
+      view: { ...seatView(STATES[ply]!, seat), legalMoves: [] },
+    }));
+
+  for (const viewer of ['black', 'spectator'] as const) {
+    it(`as ${viewer === 'black' ? 'a seat' : 'a spectator'}: every move jumps to that ply, masked`, async () => {
+      const options = await mount();
+      // A spectator's history and live view are the red-perspective public board.
+      const perspective: BanqiSeat = viewer === 'spectator' ? 'red' : viewer;
+      const served =
+        viewer === 'spectator'
+          ? ({ ...seatView(STATES[MID]!, 'red'), legalMoves: [] } as BanqiWireView)
+          : seatView(STATES[MID]!, viewer);
+      const events = [CREATED, ...moveEvents(MID)];
+      options.applyHello(
+        frame('hello', {
+          seat: viewer,
+          state: served,
+          events,
+          liveHistory: historyFor(perspective),
+        }),
+      );
+      options.render();
+      // The broadcast snapshot after every join carries no history and must not
+      // drop the one just installed.
+      options.applySnapshot(frame('snapshot', { seat: viewer, state: served, events }));
+      options.render();
+
+      expect(moveCells()).toHaveLength(MID);
+      expect(reviewHref()).toBeNull();
+      const live = boardOnScreen();
+      expect(live).toEqual(expectedMasked(STATES[MID]!));
+
+      const early = moveCells()[EARLY - 1]!;
+      expect(early.tagName).toBe('BUTTON');
+      early.click();
+      expect(boardOnScreen()).toEqual(expectedMasked(STATES[EARLY]!));
+      expect(boardOnScreen()).not.toEqual(live);
+      // Face-down tiles stay face-down: most of the deal is still unflipped.
+      expect(Object.values(boardOnScreen()).filter((label) => label === '').length).toBeGreaterThan(
+        Object.values(live).filter((label) => label === '').length,
+      );
+
+      // Every ply, stepped from the start, is that ply's masked board.
+      controlButton('first').click();
+      expect(boardOnScreen()).toEqual(expectedMasked(STATES[0]!));
+      expect(Object.values(boardOnScreen()).every((label) => label === '')).toBe(true);
+      for (let ply = 1; ply <= MID; ply += 1) {
+        controlButton('next').click();
+        expect(boardOnScreen()).toEqual(expectedMasked(STATES[ply]!));
+      }
+      controlButton('first').click();
+      controlButton('latest').click();
+      expect(boardOnScreen()).toEqual(live);
+    });
+  }
+
+  it("ignores a history that is not this viewer's perspective or misses the live ply", async () => {
+    for (const liveHistory of [historyFor('red'), historyFor('black', MID - 1), [{ ply: 1 }]]) {
+      const options = await mount();
+      options.applyHello(
+        frame('hello', {
+          seat: 'black',
+          state: seatView(STATES[MID]!, 'black'),
+          events: [CREATED, ...moveEvents(MID)],
+          liveHistory,
+        }),
+      );
+      options.render();
+      expect(controlButton('prev').disabled).toBe(true);
+      expect(controlButton('first').disabled).toBe(true);
+    }
   });
 });

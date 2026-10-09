@@ -53,8 +53,8 @@ import {
   expireTenantClock,
   type TenantSnapshotPayload,
   tenantClockRemainingMs,
+  tenantLiveHistoryExtras,
   tenantPlyAtEventIndex,
-  tenantSeatHistoryExtras,
   tenantSnapshotPayload,
 } from './runtime.js';
 import {
@@ -297,10 +297,10 @@ export function createTenantWsRuntime<
       type: 'hello',
       clientId: client.id,
       ...(assignment.seatToken ? { seatToken: assignment.seatToken } : {}),
-      // A fog seat's own per-ply views, so a reload can step back through the
-      // game. Seated hello only: joinAsSpectator never sends it, and it never
-      // rides a broadcast snapshot (O(plies) views per client per move).
-      ...tenantSeatHistoryExtras(tenant, room, client),
+      // The seat's own per-ply views, so a reload can step back through a live
+      // hidden-info game. Hello only: it never rides a broadcast snapshot
+      // (O(plies) views per client per move).
+      ...tenantLiveHistoryExtras(tenant, room, client),
     });
     broadcastSnapshot(room);
     // PvE: once the human takes the empty seat, the engine (if it holds the
@@ -365,6 +365,10 @@ export function createTenantWsRuntime<
       ...transportSnapshotPayload(room, client),
       type: 'hello',
       clientId: client.id,
+      // A live spectator's per-ply public views where the visibility class
+      // shows spectators a board (hidden-identity: banqi, flip jungle); never
+      // for a 'dark' room (tenantLiveHistoryExtras gates on roomViewPolicy).
+      ...tenantLiveHistoryExtras(tenant, room, client),
     });
     // A spectator arriving doesn't change canonical state, but the connected-
     // client count did; keep observers' snapshots consistent.

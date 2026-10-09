@@ -29,6 +29,7 @@ import {
   replayGameEvents,
   variantForId,
 } from '@mistboard/game';
+import { darkChessLiveHistoryExtras } from './dark-chess-live-history.js';
 import { eventAppendedPayload, type SnapshotRoom, snapshotPayload } from './payloads.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -121,7 +122,19 @@ function recordStep(
     step.snapshots[probe.key] = snapshotFor(room, probe);
   }
   script.steps.push(step);
+  // The hello's live history rides beside the snapshot, not inside it, so it is
+  // kept out of the recorded fixture and checked by the invariants below.
+  const histories: Record<string, unknown> = {};
+  for (const probe of PROBES) {
+    histories[probe.key] = darkChessLiveHistoryExtras(room, probe.client);
+  }
+  helloHistories.set(`${script.id}/${label}`, JSON.parse(JSON.stringify(histories)));
 }
+
+// Per step, per probe: the live-history half of that client's hello frame
+// (server-ws-connection.ts), as it would cross the wire.
+type LiveHistory = Array<{ ply: number; view: WireSnapshot['state']; eventsLen: number }>;
+const helloHistories = new Map<string, Record<string, { liveHistory?: LiveHistory }>>();
 
 function append(script: GoldenScript, room: GoldenRoom, label: string, event: GameEvent): void {
   room.events.push(event);
@@ -491,4 +504,68 @@ test('dark chess golden wire: a finished room opens fully to a spectator', () =>
     }
   }
   assert.ok(finishedSteps > 0, 'no finished step in the scripts: this test asserted nothing');
+});
+
+test("dark chess golden wire: a live hello carries only the seat's own fog plies", () => {
+  // A seat's hello carries its own per-ply fog views (so a reload can step
+  // back); a spectator's never does, and neither does a finished room's (it
+  // reveals truth through the snapshot instead).
+  let liveSteps = 0;
+  for (const script of runAllScripts()) {
+    for (const step of script.steps) {
+      if (step.label === 'admin-probe') continue;
+      const where = `${script.id}/${step.label}`;
+      const histories = helloHistories.get(where);
+      assert.ok(histories, `${where}: no hello history recorded`);
+      assert.deepEqual(histories.spectator, {}, `${where}: spectator got a history`);
+      const snapshots = wireSnapshots(step);
+      if (isFinishedStep(step)) {
+        for (const seat of ['white', 'black'] as const) {
+          assert.deepEqual(histories[seat], {}, `${where}: finished room sent ${seat} a history`);
+        }
+        continue;
+      }
+      for (const seat of ['white', 'black'] as const) {
+        const history: LiveHistory | undefined = histories[seat]?.liveHistory;
+        const moves = snapshots.white!.events.filter((e) => e.type === 'move-played').length;
+        if (!history) {
+          // Only a room with no move yet has nothing to step back to.
+          assert.equal(moves, 0, `${where}: ${seat} has no history after a move`);
+          continue;
+        }
+        liveSteps += 1;
+        assert.deepEqual(
+          history.map((entry) => entry.ply),
+          history.map((_, index) => index),
+          `${where}: ${seat} plies are not 0..n`,
+        );
+        // The tip is the live position. Only the position: a later non-move
+        // event (a pause stamping the clock) changes the live view's other
+        // fields, and the client installs its live view as the tip anyway.
+        const tip: WireSnapshot['state'] = history.at(-1)!.view;
+        const liveView = snapshots[seat]!.state;
+        assert.deepStrictEqual(
+          [tip.board, tip.visibleSquares, tip.lastMove],
+          [liveView.board, liveView.visibleSquares, liveView.lastMove],
+          `${where}: ${seat} history tip is not its live position`,
+        );
+        let previousEventsLen = 0;
+        for (const { ply, view, eventsLen } of history) {
+          assert.deepStrictEqual(view.legalMoves, [], `${where}: ${seat} ply ${ply} legal moves`);
+          const visible = new Set(view.visibleSquares);
+          for (const [square, piece] of Object.entries(view.board)) {
+            if (piece.color === seat) continue;
+            assert.ok(
+              visible.has(square),
+              `${where}: ${seat} ply ${ply} shows a hidden opponent piece on ${square}`,
+            );
+          }
+          assert.ok(eventsLen >= previousEventsLen, `${where}: ${seat} ply ${ply} eventsLen`);
+          assert.ok(eventsLen <= snapshots[seat]!.events.length, `${where}: ${seat} ply ${ply}`);
+          previousEventsLen = eventsLen;
+        }
+      }
+    }
+  }
+  assert.ok(liveSteps > 0, 'no live step with a history: this test asserted nothing');
 });

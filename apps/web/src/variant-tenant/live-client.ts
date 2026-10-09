@@ -211,10 +211,11 @@ export type TenantReplayHistoryConfig<C extends string, V> = {
    * and must stay on incremental capture; never infer hidden state here.
    * One exception: a hidden-info tenant may rebuild a FINISHED room from the
    * truth view the server already serves it (jieqi: live-jieqi-replay-history),
-   * returning null for every unfinished view. A second: a LIVE fog seat may
-   * install the per-ply views the server built for that seat alone and sent in
-   * its hello (`frame.seatHistory`, Fog Xiangqi: live-dark-xiangqi-replay-history);
-   * it adopts them as sent and derives nothing.
+   * returning null for every unfinished view. A second: a LIVE hidden-info
+   * room may install the per-ply views the server built for this viewer alone
+   * and sent in its hello (`frame.liveHistory`, adoptLiveHistory in
+   * variant-tenant/live-history: Fog Xiangqi seats, banqi and Flip Jungle seats
+   * and spectators); it adopts them as sent and derives nothing.
    * Return null to keep the captured history (e.g. when an event fails to
    * replay through the kernel).
    */
@@ -223,9 +224,9 @@ export type TenantReplayHistoryConfig<C extends string, V> = {
     view: V;
     state: TenantLiveState<C, V>;
     /**
-     * The hello/snapshot frame being applied. A fog tenant reads the seat's own
-     * per-ply views from a seated hello (`seatHistory`, server-built, only ever
-     * that seat's views); every other frame lacks it.
+     * The hello/snapshot frame being applied. A hidden-info tenant reads the
+     * viewer's own per-ply views from its hello (`liveHistory`, server-built,
+     * only ever this viewer's views); every other frame lacks it.
      */
     frame: TenantLiveFrame<C, V>;
   }): TenantReplaySnapshot<V>[] | null;

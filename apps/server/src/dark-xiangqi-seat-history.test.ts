@@ -1,8 +1,8 @@
 /**
  * Hidden-info regression for the LIVE Fog Xiangqi seat history: the per-ply
  * views a seated player receives in its hello frame so that, after a reload,
- * it can step back through its own game (visibility.seatHistory,
- * tenantSeatHistoryExtras, ws.ts handleConnection).
+ * it can step back through its own game (visibility.liveHistory,
+ * tenantLiveHistoryExtras, ws.ts handleConnection).
  *
  * Pins, against the real tenant and the real WS runtime (fake socket, no DB):
  *   a. red's history is exactly what viewForClient served red at each ply
@@ -30,7 +30,7 @@ import {
 } from './dark-xiangqi-tenant.js';
 import {
   createTenantRuntimeRoomFromEvents,
-  tenantSeatHistoryExtras,
+  tenantLiveHistoryExtras,
 } from './variant-tenant/runtime.js';
 import { mintTenantSeatToken } from './variant-tenant/seat-session.js';
 import { createTenantWsRuntime } from './variant-tenant/ws.js';
@@ -235,7 +235,7 @@ test('seated red hello carries red history; black hello carries black, never red
     const redHello = redSocket.sent.find((frame) => frame.type === 'hello');
     assert.ok(redHello, 'red got a hello');
     assert.equal(redHello.seat, 'red');
-    const redHistory = redHello.seatHistory as Snapshot[];
+    const redHistory = redHello.liveHistory as Snapshot[];
     assert.equal(redHistory.length, MOVES + 1);
     assert.deepStrictEqual(
       redHistory,
@@ -258,7 +258,7 @@ test('seated red hello carries red history; black hello carries black, never red
     const blackHello = blackSocket.sent.find((frame) => frame.type === 'hello');
     assert.ok(blackHello);
     assert.equal(blackHello.seat, 'black');
-    const blackHistory = blackHello.seatHistory as Snapshot[];
+    const blackHistory = blackHello.liveHistory as Snapshot[];
     assert.equal(blackHistory.length, MOVES + 1);
     assert.ok(blackHistory.every((s) => s.view.perspective === 'black'));
     for (const [ply, snapshot] of blackHistory.entries()) {
@@ -269,7 +269,7 @@ test('seated red hello carries red history; black hello carries black, never red
     // follow each join) carries no history.
     for (const frame of [...redSocket.sent, ...blackSocket.sent]) {
       if (frame.type === 'hello') continue;
-      assert.equal('seatHistory' in frame, false, `${frame.type} frame carries history`);
+      assert.equal('liveHistory' in frame, false, `${frame.type} frame carries history`);
     }
   });
 });
@@ -284,7 +284,7 @@ test('a spectator and a seatless visitor get no seat history in any frame', asyn
     assert.ok(hello, 'the dev spectator was admitted');
     assert.equal(hello.seat, 'spectator');
     for (const frame of socket.sent) {
-      assert.equal('seatHistory' in frame, false, `spectator ${frame.type} carries history`);
+      assert.equal('liveHistory' in frame, false, `spectator ${frame.type} carries history`);
     }
   });
   // Production, anonymous, or a token that matches no seat: refused, no frame.
@@ -304,7 +304,7 @@ test('a spectator and a seatless visitor get no seat history in any frame', asyn
 test('the gate: spectators and finished or aborted rooms get nothing', () => {
   const room = hydrate(FULL_LOG);
   assert.deepEqual(
-    tenantSeatHistoryExtras(darkXiangqiTenant, room, {
+    tenantLiveHistoryExtras(darkXiangqiTenant, room, {
       id: 'spectator',
       seat: 'spectator',
       solo: false,
@@ -312,8 +312,8 @@ test('the gate: spectators and finished or aborted rooms get nothing', () => {
     {},
   );
   assert.equal(
-    tenantSeatHistoryExtras(darkXiangqiTenant, room, { id: 'r', seat: 'red', solo: false })
-      .seatHistory?.length,
+    tenantLiveHistoryExtras(darkXiangqiTenant, room, { id: 'r', seat: 'red', solo: false })
+      .liveHistory?.length,
     MOVES + 1,
   );
   const status = room.projection.state.status as { turn: 'red' | 'black' };
@@ -329,7 +329,7 @@ test('the gate: spectators and finished or aborted rooms get nothing', () => {
   for (const closed of [finished, aborted]) {
     for (const seat of ['red', 'black'] as const) {
       assert.deepEqual(
-        tenantSeatHistoryExtras(darkXiangqiTenant, closed, { id: seat, seat, solo: false }),
+        tenantLiveHistoryExtras(darkXiangqiTenant, closed, { id: seat, seat, solo: false }),
         {},
       );
     }

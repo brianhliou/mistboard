@@ -9,6 +9,7 @@
  */
 
 import type { Color, GameEvent, GameSpecId, PlayerView } from '@mistboard/game';
+import { seedFogViewHistory } from './live-replay.js';
 import type {
   ConnectedSeats,
   DevViews,
@@ -61,6 +62,8 @@ type StateFrame = {
   };
   seatDisplayNames?: Partial<Record<Color, string>>;
   seatProfiles?: Partial<Record<Color, ProfileIdentity>>;
+  // Hello only, a live Fog Chess seat: its own per-ply views (seedFogViewHistory).
+  liveHistory?: unknown;
 };
 
 type RematchStateMessage = {
@@ -133,6 +136,9 @@ function applyStateFrame(generic: TenantSocketFrame): void {
     // Snapshot/hello replace the event log wholesale; the array was already
     // filtered server-side for this seat.
     liveState.events = frame.events ?? [];
+    // A live Fog Chess seat's hello carries its own per-ply views, so a reload
+    // can step back through the game (live-replay seedFogViewHistory).
+    if (frame.type === 'hello') seedFogViewHistory(frame.liveHistory);
   }
   if (liveState.gameSpecId !== 'dark-xiangqi') {
     _maybePlaySnapshotSound(liveState.events, liveState.state);

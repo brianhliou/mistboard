@@ -21,7 +21,7 @@
 // view.
 //
 // A LIVE seat cannot rebuild anything, but it does not have to: the server
-// sends a seated hello its own per-ply views (`seatHistory`, built by the same
+// sends a seated hello its own per-ply views (`liveHistory`, built by the same
 // per-seat view builder that served each ply live; never the other color, never
 // truth, never to a spectator). adoptLiveDarkXiangqiSeatHistory validates that
 // list against the live view and installs it as sent, deriving nothing.
@@ -36,6 +36,7 @@ import {
   type XiangqiSquare,
 } from '@mistboard/game';
 import type { DarkXiangqiWireView } from './live-dark-xiangqi.js';
+import { adoptLiveHistory } from './variant-tenant/live-history.js';
 import type { TenantReplaySnapshot } from './variant-tenant/replay-controller.js';
 
 const ALL_SQUARES: XiangqiSquare[] = Array.from({ length: 90 }, (_, index) => {
@@ -82,34 +83,20 @@ export function playingDarkXiangqiPly(view: DarkXiangqiWireView): number {
 }
 
 /**
- * A live seat's history from its hello frame, or null to keep the captured
- * one. Accepted only when it is exactly what this seat should hold: the room is
- * playing, every snapshot is in this seat's perspective, plies run 0, 1, 2, ...
- * with no gap, and the last ply is the live view's ply (a stale or mismatched
- * list is dropped, never partially used). Frames without it (every broadcast
- * snapshot, a spectator's hello) return null.
+ * A live seat's history from its hello frame (`liveHistory`), or null to keep
+ * the captured one. The seat must hold a colour and the live view must be in
+ * its perspective; the list itself is checked by adoptLiveHistory (plies
+ * contiguous from 0, every view in the same perspective, the tip at the live
+ * ply). Frames without it (every broadcast snapshot) return null.
  */
 export function adoptLiveDarkXiangqiSeatHistory(
-  seatHistory: unknown,
+  liveHistory: unknown,
   view: DarkXiangqiWireView,
   seat: unknown,
 ): TenantReplaySnapshot<DarkXiangqiWireView>[] | null {
-  if (view.status.type !== 'playing') return null;
   if (seat !== 'red' && seat !== 'black') return null;
   if (view.perspective !== seat) return null;
-  if (!Array.isArray(seatHistory) || seatHistory.length === 0) return null;
-  const snapshots: TenantReplaySnapshot<DarkXiangqiWireView>[] = [];
-  for (const [index, entry] of seatHistory.entries()) {
-    if (!entry || typeof entry !== 'object') return null;
-    const { ply, view: plyView } = entry as { ply?: unknown; view?: unknown };
-    if (ply !== index) return null;
-    if (!plyView || typeof plyView !== 'object') return null;
-    const candidate = plyView as DarkXiangqiWireView;
-    if (candidate.perspective !== seat || typeof candidate.board !== 'object') return null;
-    snapshots.push({ ply: index, view: candidate });
-  }
-  if (snapshots.length - 1 !== playingDarkXiangqiPly(view)) return null;
-  return snapshots;
+  return adoptLiveHistory(liveHistory, view, playingDarkXiangqiPly(view));
 }
 
 function withCapture(captures: Captures, color: XiangqiColor, role: XiangqiPieceRole): Captures {

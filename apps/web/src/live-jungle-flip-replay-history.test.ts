@@ -1,8 +1,10 @@
 // A cold join (fresh load or reload) to a FINISHED Flip Jungle room must get the
 // whole game back: every move in the list, a stepper that walks every ply, and
 // a review link at the final ply. Before the fix a cold join held only the final
-// view, so the stepper went back one move at most. A LIVE cold join must not
-// change: its deal is a server secret, so it keeps the single masked view.
+// view, so the stepper went back one move at most. A LIVE cold join never
+// rebuilds: its deal is a server secret, so it holds the masked view it was
+// sent, plus the per-ply masked views the server's hello may carry
+// (`liveHistory`), installed as sent.
 //
 // Drives the real Flip Jungle room module (live-jungle-flip.ts) through a
 // stubbed socket. There is no sample game, so the game is seeded random play
@@ -309,5 +311,85 @@ describe('cold join to a LIVE Flip Jungle room is unchanged (hidden-info regress
     expect(Object.values(boardOnScreen())).toContain('');
     expect(controlButton('prev').disabled).toBe(true);
     expect(reviewHref()).toBeNull();
+  });
+});
+
+// A LIVE room after a reload (the correspondence case): the deal is a server
+// secret, so the client cannot replay its log. The hello carries this viewer's
+// own per-ply masked views instead (`liveHistory`, server tenantPerPlyViews;
+// a spectator's are the public board). Each ply must show exactly the masked
+// board of that ply: a face-down tile stays face-down in every step.
+describe('cold load into a LIVE Flip Jungle room with the per-ply history', () => {
+  const EARLY = 3;
+  const historyFor = (seat: JungleFlipSeat, through = MID) =>
+    Array.from({ length: through + 1 }, (_, ply) => ({
+      ply,
+      view: { ...seatView(GAME.states[ply]!, seat), legalMoves: [] },
+    }));
+
+  for (const viewer of ['black', 'spectator'] as const) {
+    it(`as ${viewer === 'black' ? 'a seat' : 'a spectator'}: every move jumps to that ply, masked`, async () => {
+      const options = await mount();
+      // A spectator's history and live view are the red-perspective public board.
+      const perspective: JungleFlipSeat = viewer === 'spectator' ? 'red' : viewer;
+      const served =
+        viewer === 'spectator'
+          ? ({ ...seatView(GAME.states[MID]!, 'red'), legalMoves: [] } as JungleFlipWireView)
+          : seatView(GAME.states[MID]!, viewer);
+      const events = [CREATED, ...moveEvents(MID)];
+      options.applyHello(
+        frame('hello', {
+          seat: viewer,
+          state: served,
+          events,
+          liveHistory: historyFor(perspective),
+        }),
+      );
+      options.render();
+      // The broadcast snapshot after every join carries no history and must not
+      // drop the one just installed.
+      options.applySnapshot(frame('snapshot', { seat: viewer, state: served, events }));
+      options.render();
+
+      expect(moveCells()).toHaveLength(MID);
+      expect(reviewHref()).toBeNull();
+      const live = boardOnScreen();
+      expect(live).toEqual(expectedMasked(GAME.states[MID]!));
+
+      const early = moveCells()[EARLY - 1]!;
+      expect(early.tagName).toBe('BUTTON');
+      early.click();
+      expect(boardOnScreen()).toEqual(expectedMasked(GAME.states[EARLY]!));
+      expect(boardOnScreen()).not.toEqual(live);
+      expect(Object.values(boardOnScreen())).toContain('');
+
+      // Every ply, stepped from the start, is that ply's masked board.
+      controlButton('first').click();
+      expect(boardOnScreen()).toEqual(expectedMasked(GAME.states[0]!));
+      expect(Object.values(boardOnScreen()).every((label) => label === '')).toBe(true);
+      for (let ply = 1; ply <= MID; ply += 1) {
+        controlButton('next').click();
+        expect(boardOnScreen()).toEqual(expectedMasked(GAME.states[ply]!));
+      }
+      controlButton('latest').click();
+      expect(boardOnScreen()).toEqual(live);
+    });
+  }
+
+  it("ignores a history that is not this viewer's perspective or misses the live ply", async () => {
+    for (const liveHistory of [historyFor('red'), historyFor('black', MID - 1), [{ ply: 1 }]]) {
+      const options = await mount();
+      options.applyHello(
+        frame('hello', {
+          seat: 'black',
+          state: seatView(GAME.states[MID]!, 'black'),
+          events: [CREATED, ...moveEvents(MID)],
+          liveHistory,
+        }),
+      );
+      options.render();
+      expect(controlButton('prev').disabled).toBe(true);
+      expect(controlButton('first').disabled).toBe(true);
+    }
   });
 });

@@ -251,7 +251,7 @@ export function darkXiangqiPlyViews(
   return history;
 }
 
-// A live seat's own history (visibility.seatHistory): its color only, never
+// A live seat's own history (visibility.liveHistory): its color only, never
 // truth, never the other seat. legalMoves are dropped: a scrubbed board takes
 // no input (touching it returns to live, which carries the live legal moves),
 // and they are about a third of each view's bytes on a long correspondence game.
@@ -430,7 +430,9 @@ export const darkXiangqiTenant: DarkXiangqiTenant = {
         state,
         darkXiangqiObservedCaptures(darkXiangqiCaptureLedger(events), 'truth'),
       ),
-    seatHistory: darkXiangqiSeatHistory,
+    // Seats only: a live Fog Xiangqi spectator is shown nothing.
+    liveHistory: (events, viewer) =>
+      viewer === 'spectator' ? [] : darkXiangqiSeatHistory(events, viewer),
   },
   engine: {
     terminalContext: 'fog-observation',

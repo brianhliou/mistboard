@@ -48,6 +48,7 @@ import {
   appendTenantRuntimeEvent,
   createTenantRuntimeRoomFromEvents,
   expireTenantClock,
+  tenantLiveHistoryExtras,
   tenantPlyAtEventIndex,
   tenantSnapshotPayload,
 } from './variant-tenant/runtime.js';
@@ -102,7 +103,23 @@ function recordStep(
   }
   for (const seat of SEATS) step.snapshots[seat] = snapshotFor(room, seat);
   script.steps.push(step);
+  // The hello's live history rides beside the snapshot, not inside it, so it is
+  // kept out of the recorded fixture and checked by the invariants below.
+  const histories: Record<string, unknown> = {};
+  for (const seat of SEATS) {
+    histories[seat] = tenantLiveHistoryExtras(banqiTenant, room, {
+      id: `client-${seat}`,
+      seat,
+      solo: false,
+    });
+  }
+  helloHistories.set(`${script.id}/${label}`, JSON.parse(JSON.stringify(histories)));
 }
+
+// Per step, per viewer: the live-history half of that viewer's hello frame
+// (tenantLiveHistoryExtras), as it would cross the wire.
+const helloHistories = new Map<string, Record<string, { liveHistory?: LiveHistory }>>();
+type LiveHistory = Array<{ ply: number; view: WireSnapshot['state'] }>;
 
 function append(
   script: GoldenScript,
@@ -557,4 +574,90 @@ test('banqi golden wire: snapshot marks room mode and omits chess-only wire keys
     assert.equal(snapshot.roomMode, 'pve', 'an engine-seated room is roomMode:pve');
     assert.equal(snapshot.pveEngineId, BANQI_DEFAULT_ENGINE_ID, 'and carries the engine id');
   }
+});
+
+test('banqi golden wire: a live hello carries only masked per-ply views, spectators included', () => {
+  // Banqi is hidden-identity: a live spectator is shown the public board
+  // (roomViewPolicy 'public-view'), so every viewer gets its own per-ply
+  // masked views. Each ply must be what the room served that viewer then: no
+  // face-down tile with an identity, nothing face-down live that an earlier ply
+  // shows face-up, no deal, and a closed room sends nothing.
+  let liveSteps = 0;
+  const dealRoles = JSON.stringify(GOLDEN_DEAL);
+  for (const script of runAllScripts()) {
+    for (const step of script.steps) {
+      const where = `${script.id}/${step.label}`;
+      const histories = helloHistories.get(where);
+      assert.ok(histories, `${where}: no hello history recorded`);
+      const snapshots = wireSnapshots(step);
+      const status = (snapshots.red!.state as { status?: { type?: string } }).status?.type;
+      if (status !== 'playing') {
+        for (const seat of SEATS) {
+          assert.deepEqual(histories[seat], {}, `${where}: closed room sent ${seat} a history`);
+        }
+        continue;
+      }
+      liveSteps += 1;
+      for (const seat of SEATS) {
+        const history: LiveHistory | undefined = histories[seat]?.liveHistory;
+        assert.ok(history && history.length > 0, `${where}: ${seat} has no history`);
+        assert.ok(
+          !JSON.stringify(history).includes(dealRoles),
+          `${where}: deal in ${seat}'s history`,
+        );
+        assert.ok(
+          !JSON.stringify(history).includes('"setup"'),
+          `${where}: setup in ${seat}'s history`,
+        );
+        assert.deepEqual(
+          history.map((entry) => entry.ply),
+          history.map((_, index) => index),
+          `${where}: ${seat} plies are not 0..n`,
+        );
+        // The tip is the viewer's live snapshot view (legal moves aside).
+        assert.deepStrictEqual(
+          history.at(-1)!.view,
+          { ...snapshots[seat]!.state, legalMoves: [] },
+          `${where}: ${seat} history tip is not its live view`,
+        );
+        const liveBoard = snapshots[seat]!.state.board;
+        for (const { ply, view } of history) {
+          assert.deepStrictEqual(
+            view.legalMoves,
+            [],
+            `${where}: ${seat} ply ${ply} has legal moves`,
+          );
+          for (const [square, entry] of Object.entries(view.board)) {
+            if (entry.faceDown) {
+              assert.deepStrictEqual(
+                Object.keys(entry),
+                ['faceDown'],
+                `${where}: ${seat} ply ${ply} face-down ${square} leaks an identity`,
+              );
+            } else {
+              // Face-down tiles never move, so a tile still face-down live was
+              // face-down at every earlier ply.
+              assert.ok(
+                !liveBoard[square]?.faceDown,
+                `${where}: ${seat} ply ${ply} shows ${square} face-up while it is face-down live`,
+              );
+            }
+          }
+        }
+      }
+      // Symmetric information: the spectator's plies are a seat's boards.
+      const red = histories.red!.liveHistory!;
+      const spectator = histories.spectator!.liveHistory!;
+      assert.equal(spectator.length, red.length);
+      for (const [ply, entry] of spectator.entries()) {
+        assert.deepStrictEqual(entry.view.board, red[ply]!.view.board, `${where}: ply ${ply}`);
+        assert.deepStrictEqual(
+          entry.view.captured,
+          red[ply]!.view.captured,
+          `${where}: ply ${ply}`,
+        );
+      }
+    }
+  }
+  assert.ok(liveSteps > 0, 'no live step in the scripts: this test asserted nothing');
 });
