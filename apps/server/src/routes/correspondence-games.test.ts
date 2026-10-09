@@ -5,7 +5,16 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { Board, Color, Move, PlayerView, Square } from '@mistboard/game';
+import type {
+  Board,
+  Color,
+  Move,
+  PlayerView,
+  Square,
+  XiangqiColor,
+  XiangqiMove,
+  XiangqiSquare,
+} from '@mistboard/game';
 import { correspondenceTimeControl } from '@mistboard/game';
 import {
   createDarkChessCorrespondenceGameForSeek,
@@ -13,7 +22,10 @@ import {
   darkChessTenantRooms,
 } from '../dark-chess-registration.js';
 import { darkChessTenant } from '../dark-chess-tenant.js';
+import { darkXiangqiRooms } from '../dark-xiangqi-registration.js';
+import { darkXiangqiTenant } from '../dark-xiangqi-tenant.js';
 import type { CorrespondenceGameSummary } from '../persistence-room-deadlines.js';
+import { correspondenceTenantForSpecId } from '../variant-tenant/registry.js';
 import { appendTenantRuntimeEvent, tenantSnapshotPayload } from '../variant-tenant/runtime.js';
 import {
   type CorrespondenceGamesDeps,
@@ -241,4 +253,132 @@ test('opponentHandle passes through, null when the read has none', async () => {
       [null, null],
     ],
   );
+});
+
+// Fog Xiangqi, on the opponent's turn: the card the inbox draws for a seat whose
+// opponent is to move (the "Waiting on opponent" list). A guard, like the Fog
+// Chess cases above: it passed before the 2026-10-08 seek-card change too.
+// 1.Che3 (central cannon) Hg8 2.Hc3: Black to move, so it is Alice's opponent's
+// turn on her card and Bob's own move on his.
+const XQ_MOVES: Array<{ color: XiangqiColor; move: XiangqiMove }> = [
+  { color: 'red', move: { from: 'h3', to: 'e3' } },
+  { color: 'black', move: { from: 'h10', to: 'g8' } },
+  { color: 'red', move: { from: 'b1', to: 'c3' } },
+];
+
+type FogXiangqiSeatView = {
+  perspective: XiangqiColor;
+  visibleSquares: XiangqiSquare[];
+  board: Partial<
+    Record<
+      string,
+      | { piece: { color: XiangqiColor; role: string }; shrouded: false }
+      | { color: XiangqiColor; shrouded: true }
+    >
+  >;
+};
+
+test('Fog Xiangqi, opponent to move: each seat gets its own redacted view, a non-participant none', async () => {
+  const tenant = correspondenceTenantForSpecId('dark-xiangqi');
+  assert.ok(tenant?.createCorrespondenceGameForSeek);
+  const flag = process.env.MISTBOARD_DARK_XIANGQI_ENABLED;
+  process.env.MISTBOARD_DARK_XIANGQI_ENABLED = 'true';
+  const created = await tenant
+    .createCorrespondenceGameForSeek({
+      timeControl: correspondenceTimeControl(3),
+      first: { userId: ALICE },
+      second: { userId: BOB },
+    })
+    .finally(() => {
+      if (flag === undefined) delete process.env.MISTBOARD_DARK_XIANGQI_ENABLED;
+      else process.env.MISTBOARD_DARK_XIANGQI_ENABLED = flag;
+    });
+  assert.ok(created.ok, created.ok ? '' : created.error);
+  const room = darkXiangqiRooms.get(created.room.id);
+  assert.ok(room);
+  try {
+    let at = Date.now();
+    for (const { color, move } of XQ_MOVES) {
+      at += 1_000;
+      const index = appendTenantRuntimeEvent(darkXiangqiTenant, room as never, {
+        type: 'move-played',
+        at,
+        roomId: room.id,
+        color,
+        move,
+      });
+      assert.notEqual(index, -1, `move ${move.from}${move.to} must be legal`);
+    }
+    const status = room.projection.state.status;
+    assert.equal(status.type === 'playing' ? status.turn : null, 'black');
+
+    const list = async (userId: string): Promise<CorrespondenceGameSummary[]> =>
+      (['red', 'black'] as const)
+        .filter((color) => room.seatTokens[color]?.userId === userId)
+        .map((color) => ({
+          roomId: room.id,
+          gameSpecId: room.gameSpecId,
+          mySeat: color,
+          isYourMove: color === 'black',
+          opponentName: null,
+          dueAt: new Date(Date.now() + 86_400_000),
+        }));
+    const deps: CorrespondenceGamesDeps = { list, seatBoard: correspondenceSeatBoard };
+    const truth = room.projection.state.board as Partial<
+      Record<string, { color: XiangqiColor; role: string }>
+    >;
+
+    for (const [user, seat] of [
+      [ALICE, 'red'],
+      [BOB, 'black'],
+    ] as const) {
+      const { games } = await correspondenceGamesForUser(user, deps);
+      assert.equal(games.length, 1);
+      assert.equal(games[0]?.isYourMove, seat === 'black');
+      const view = games[0]?.seatBoard as FogXiangqiSeatView | undefined;
+      assert.ok(view, `${seat} gets a seat board`);
+      assert.equal(view.perspective, seat);
+      const snapshot: unknown = tenantSnapshotPayload(darkXiangqiTenant, room as never, {
+        id: room.seatTokens[seat]?.clientId ?? `seat-board:${seat}`,
+        seat,
+        solo: false,
+      }).state;
+      assert.deepEqual(json(view), json(snapshot));
+
+      const visible = new Set<string>(view.visibleSquares);
+      for (const [square, entry] of Object.entries(view.board)) {
+        if (!entry) continue;
+        if (entry.shrouded) {
+          assert.deepEqual(Object.keys(entry).sort(), ['color', 'shrouded'], `${square} shroud`);
+          continue;
+        }
+        assert.ok(
+          entry.piece.color === seat || visible.has(square),
+          `${square} (${entry.piece.color} ${entry.piece.role}) is not visible to ${seat}`,
+        );
+      }
+      const hidden = Object.entries(truth).filter(
+        ([square, piece]) => piece && piece.color !== seat && !visible.has(square),
+      );
+      assert.ok(hidden.length > 0, `the position hides some opponent pieces from ${seat}`);
+      for (const [square] of hidden) {
+        const entry = view.board[square];
+        assert.ok(!entry || entry.shrouded, `${square} identity leaked to ${seat}`);
+      }
+    }
+
+    assert.deepEqual(await correspondenceGamesForUser(CAROL, deps), {
+      games: [],
+      yourMoveCount: 0,
+    });
+    for (const mySeat of ['spectator', 'white', '']) {
+      assert.equal(
+        await correspondenceSeatBoard({ roomId: room.id, gameSpecId: 'dark-xiangqi', mySeat }),
+        null,
+        `seat ${JSON.stringify(mySeat)}`,
+      );
+    }
+  } finally {
+    darkXiangqiRooms.clear();
+  }
 });

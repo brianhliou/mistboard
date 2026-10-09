@@ -6,27 +6,57 @@
 // then the seat view a player would get), drawn by the same renderer the live
 // game uses, so a seek card never carries a second copy of a start position.
 // Face-down variants (jieqi, banqi, flip jungle) draw face-down pieces, exactly
-// what a seated player sees before the first move. Fog variants and any id
-// without a renderer here return null; the caller keeps its marker or misty
-// tile. Each renderer is a dynamic import so the cards pay only for the
-// variants on screen.
+// what a seated player sees before the first move. Each renderer is a dynamic
+// import so the cards pay only for the variants on screen.
+//
+// `side` is the seat the board is drawn for: your own seek posted as Black
+// draws from Black's side. Fog variants draw only for a named seat, and then
+// only that seat's view (seat-start-view.ts); with no side (someone else's
+// seek on /games or the lobby) they return null and the caller keeps its tile,
+// since a non-participant has no seat view of hidden information. Banqi and
+// the jungle boards have no sides to turn to and stay as drawn. Any id without
+// a renderer here returns null.
 
-export async function renderStartPositionSvg(gameSpecId: string): Promise<string | null> {
+import type { SeatSide } from './seat-start-view.js';
+
+export async function renderStartPositionSvg(
+  gameSpecId: string,
+  side?: SeatSide,
+): Promise<string | null> {
   const id = `start-${gameSpecId}`;
+  const color = side === 'second' ? 'black' : 'red';
   switch (gameSpecId) {
     case 'xiangqi':
     case 'atomic-xiangqi':
     case 'duck-xiangqi':
     case 'crazyhouse-xiangqi':
-      return xiangqiFamilyStart(gameSpecId, id);
+      return xiangqiFamilyStart(gameSpecId, id, color);
+    case 'dark-xiangqi': {
+      if (!side) return null;
+      const [seat, render] = await Promise.all([
+        import('./seat-start-view.js'),
+        import('./live-dark-xiangqi.js'),
+      ]);
+      const view = seat.fogXiangqiSeatStartView(side, id);
+      return render.renderDarkXiangqiBoardSvg(view, view.perspective);
+    }
+    case 'dark-chess': {
+      if (!side) return null;
+      const [seat, render] = await Promise.all([
+        import('./seat-start-view.js'),
+        import('./dark-chess-render.js'),
+      ]);
+      const view = seat.fogChessSeatStartView(side, id);
+      return render.renderDarkChessBoardSvg(view, { perspective: view.perspective });
+    }
     case 'jieqi': {
       const [game, render] = await Promise.all([
         import('@mistboard/game'),
         import('./live-jieqi-render.js'),
       ]);
       render.installJieqiBoardStyles();
-      const view = game.getJieqiPlayerView(game.createInitialJieqiState(id), 'red');
-      return render.renderJieqiBoardSvg(view, 'red', { coordinates: false });
+      const view = game.getJieqiPlayerView(game.createInitialJieqiState(id), color);
+      return render.renderJieqiBoardSvg(view, color, { coordinates: false });
     }
     case 'banqi': {
       const [game, render] = await Promise.all([
@@ -45,9 +75,9 @@ export async function renderStartPositionSvg(gameSpecId: string): Promise<string
       render.installFortressXiangqiBoardStyles();
       const view = game.getFortressXiangqiPlayerView(
         game.createInitialFortressXiangqiState(id),
-        'red',
+        color,
       );
-      return render.renderFortressXiangqiBoardSvg(view, 'red', { coordinates: false });
+      return render.renderFortressXiangqiBoardSvg(view, color, { coordinates: false });
     }
     case 'jungle': {
       const [game, render] = await Promise.all([
@@ -75,20 +105,24 @@ export async function renderStartPositionSvg(gameSpecId: string): Promise<string
 // duck start from the xiangqi position (the duck enters on Red's first turn);
 // crazyhouse starts with the advisors and elephants in hand, so its kernel's
 // board is the one to draw.
-async function xiangqiFamilyStart(gameSpecId: string, id: string): Promise<string> {
+async function xiangqiFamilyStart(
+  gameSpecId: string,
+  id: string,
+  color: 'red' | 'black',
+): Promise<string> {
   const [game, render] = await Promise.all([
     import('@mistboard/game'),
     import('./xiangqi-board.js'),
     import('./live-xiangqi.css'),
   ]);
-  const view = game.getStandardXiangqiPlayerView(game.createInitialXiangqiState(id), 'red');
+  const view = game.getStandardXiangqiPlayerView(game.createInitialXiangqiState(id), color);
   const board =
     gameSpecId === 'crazyhouse-xiangqi'
       ? game.createInitialCrazyhouseXiangqiState(id).board
       : gameSpecId === 'atomic-xiangqi'
         ? game.createInitialAtomicXiangqiState(id).board
         : view.board;
-  return render.renderXiangqiBoardSvg({ ...view, board, legalMoves: [] }, 'red', {
+  return render.renderXiangqiBoardSvg({ ...view, board, legalMoves: [] }, color, {
     coordinates: false,
   });
 }

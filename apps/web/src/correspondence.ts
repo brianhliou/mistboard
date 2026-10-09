@@ -1,12 +1,13 @@
 // /correspondence: the correspondence inbox.
 //
-// Signed in, two columns (stacked on a phone):
-//   main  "Your move" cards (board, seats, time left on the seat to move, a
-//         deadline bar, Play your move) and "Waiting on opponent" cards.
-//   side  "Start a game" (variant, days per move, opponent: anyone / a link,
-//         your side). A challenge to one player starts on their profile.
-//   main  also leads with "Waiting for an opponent" (your own seeks, Copy link
-//         / Cancel) and ends with "Open seeks" (other players', with Accept).
+// Signed in, top to bottom:
+//   top   "Start a game", a full-width bar (variant, days per move, opponent:
+//         anyone / a link, your side; one row on a desktop, stacked on a
+//         phone). A challenge to one player starts on their profile.
+//   main  "Waiting for an opponent" (your own seeks, Copy link / Cancel),
+//         "Your move" cards (board, seats, time left on the seat to move, a
+//         deadline bar, Play your move), "Waiting on opponent" cards, and
+//         "Open seeks" (other players', with Accept).
 // Every list is a grid of the site's game cards (current-games.css).
 // Signed out: one line on what correspondence is, the open seeks read-only
 // (Accept goes through sign-in to the seek's /challenge page), and sign in /
@@ -147,14 +148,15 @@ function buildSignedIn(
   seeksFeed: OpenSeeksFeed,
 ): HTMLElement {
   const shell = buildShell(t('correspondence.subtitle'));
-  const layout = document.createElement('div');
-  layout.className = 'correspondence-layout';
+  // Start a game is a full-width bar under the header, and the card grids below
+  // it get the whole width: as a side column the form took a third of the page
+  // and left room for three cards a row at 2000px (Brian, 2026-10-08).
+  const top = document.createElement('div');
+  top.className = 'correspondence-top';
   const main = document.createElement('div');
   main.className = 'correspondence-main';
-  const side = document.createElement('aside');
-  side.className = 'correspondence-side';
 
-  // Your own open seeks and challenges lead the main column: right after the
+  // Your own open seeks and challenges lead the card column: right after the
   // homepage button posts one, it is the only thing on the page that is yours,
   // and in the side column under the form it read as a footnote (Brian,
   // 2026-10-03). Hidden while you have none.
@@ -212,15 +214,14 @@ function buildSignedIn(
     const soon = document.createElement('p');
     soon.className = 'correspondence-panel correspondence-quiet-panel';
     soon.textContent = t('lobby.corrComingSoon');
-    side.append(soon);
+    top.append(soon);
   } else {
     // A link can carry the form's terms (the bell's "post it again" row for a
     // lapsed seek); the form opens set to them and scrolls into view.
     const prefill = parseStartFormPrefill(location.search);
     const startForm = buildStartForm(refreshChallenges, prefill);
-    side.append(startForm);
-    // Open seeks are board cards now, too wide for the side column: they
-    // follow your own games in the main one.
+    top.append(startForm);
+    // Open seeks follow your own games.
     main.append(seekHost);
     refreshChallenges();
     if (prefill) {
@@ -230,8 +231,10 @@ function buildSignedIn(
     }
   }
 
-  layout.append(main, side);
-  shell.append(layout);
+  // A phone keeps today's order once you have games: your cards first, the
+  // form after them (correspondence.css). With none, the form leads.
+  shell.classList.toggle('has-games', data.games.length > 0);
+  shell.append(top, main);
   return shell;
 }
 
@@ -1136,6 +1139,9 @@ export function buildOwnSeekCard(seek: OutgoingSeek, onChange: () => void): HTML
       // A link or directed challenge opens its /challenge page (where the share
       // link lives); a public seek has no page of its own.
       href: seek.challengeUrl,
+      // Your seat's start board, your side at the bottom under "You". A random
+      // side has no seat yet, so it draws the first mover's.
+      side: seek.preferredColor === 'second' ? 'second' : 'first',
       waiting,
     },
   );
