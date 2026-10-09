@@ -50,6 +50,7 @@ export * from './xiangqi-endgame-corpus.js';
 export * from './xiangqi-endgame-hub.js';
 export * from './xiangqi-endgame-hub-checks.js';
 export * from './xiangqi-endgame-practice.js';
+export * from './xiangqi-event-names.js';
 export * from './xiangqi-exchange.js';
 export * from './xiangqi-import.js';
 export * from './xiangqi-judgment-comment.js';

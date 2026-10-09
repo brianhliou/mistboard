@@ -50,6 +50,9 @@ export type StudyRailActions = {
    *  lays a game position out as players + where in the game). Null keeps the
    *  name. The name stays the row's title either way. */
   chapterLabel?: (chapter: ChapterControlModel) => HTMLElement | null;
+  /** A small header to insert above a row, opening a run of chapters (a game
+   *  study's event). Null for no header. */
+  groupHeading?: (chapter: ChapterControlModel) => string | null;
 };
 
 export function buildStudyRail(
@@ -179,6 +182,16 @@ export function buildStudyRail(
       });
   };
   chapters.forEach((chapter, index) => {
+    const heading = actions.groupHeading?.(chapter) ?? null;
+    if (heading) {
+      // A label, not a chapter: presentation keeps it out of the list's count.
+      const group = document.createElement('li');
+      group.className = 'study-chapters__group';
+      group.setAttribute('role', 'presentation');
+      group.textContent = heading;
+      group.title = heading;
+      list.append(group);
+    }
     const row = document.createElement('li');
     row.className = 'study-chapters__row';
     row.dataset.chapterId = chapter.id;

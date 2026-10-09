@@ -14,6 +14,12 @@
 // Player names are romanized pinyin-style (surname first, given name joined),
 // with an overrides map for the established spellings of famous players.
 
+import {
+  ordinalEn,
+  parseChineseNumeral,
+  XIANGQI_EVENT_GLOSSARY,
+  XIANGQI_EVENT_NAME_OVERRIDES,
+} from '@mistboard/game';
 import { pinyin } from 'pinyin-pro';
 
 const PINYIN_OPTIONS = { toneType: 'none', type: 'array', nonZh: 'removed' } as const;
@@ -221,86 +227,11 @@ function federationPlayerName(zh: string, federation: string | undefined): strin
   return region ? FEDERATION_PLAYER_NAMES.get(`${region}:${zh}`) : undefined;
 }
 
-// Whole event names whose English the organiser fixes, where the glossary
-// would read differently: the host calls this one the North American Xiangqi
-// Championship, without the edition number dpxq's name carries.
-const EVENT_NAME_OVERRIDES = new Map<string, string>([
-  ['2026年第十届北美杯象棋锦标赛', '2026 North American Xiangqi Championship'],
-]);
-
-// Longest match wins; entries are sorted by key length at module init.
-const EVENT_GLOSSARY: Array<[string, string]> = [
-  // The North American Championship, as dpxq (北美杯) and its host (北美洲)
-  // name it.
-  ['北美杯', 'North American Cup'],
-  ['北美洲', 'North American'],
-  ['全国象棋团体赛', 'National Xiangqi Team Championship'],
-  ['全国象棋个人赛', 'National Xiangqi Individual Championship'],
-  ['象棋甲级联赛', 'Xiangqi Division A League'],
-  ['世界象棋锦标赛', 'World Xiangqi Championship'],
-  ['亚洲象棋锦标赛', 'Asian Xiangqi Championship'],
-  ['五羊杯', 'Five Rams Cup'],
-  // Found untranslated on the broadcast calendar (2026-09-23): the parts fell
-  // through to pinyin ("Geren", "Kuaiqi", "Dashi", "Haixuansai").
-  ['腾讯天天象棋', 'Tencent Tiantian Xiangqi'],
-  ['个人锦标赛', 'Individual Championship'],
-  ['大师公开赛', 'Masters Open'],
-  // The 2026 exhibitions and opens, found as pinyin on the second backfill
-  // (2026-09-24: "Guangdongshihu", "Shoujie", "Duikangsai").
-  ['广东十虎', 'Guangdong Ten Tigers'],
-  ['北京十杰', 'Beijing Top Ten'],
-  ['山东十好汉', 'Shandong Ten Heroes'],
-  ['重庆十强', 'Chongqing Top Ten'],
-  ['年轻大师联队', 'Young Masters Team'],
-  ['团体对抗赛', 'Team Match'],
-  ['对抗赛', 'Match'],
-  ['高新高港杯', 'Gaoxin Gaogang Cup'],
-  ['首届', '1st'],
-  // The 2026 spring invitationals, found as pinyin on the backfill
-  // (2026-09-24: "Dashishifanqizhan", "Dashileitaisai").
-  ['春丘大叶杯', 'Chunqiu Dayie Cup'],
-  ['大师十番棋战', 'Masters Ten-Game Match'],
-  ['十番棋战', 'Ten-Game Match'],
-  ['十番棋', 'Ten-Game Match'],
-  ['大师擂台赛', 'Masters Challenge'],
-  ['擂台赛', 'Challenge'],
-  ['快棋锦标赛', 'Rapid Championship'],
-  // The leagues read "Men Division A League" when 男子 glossed on its own.
-  ['男子甲级联赛', "Men's Division A League"],
-  ['女子甲级联赛', "Women's Division A League"],
-  // Sections a source files games under (the board's match field): the
-  // 五羊杯 veterans and its Hong Kong, Macau and Taiwan qualifier, and the two
-  // camps of the 春丘大叶杯 challenge, red general against black general.
-  ['港澳台组', 'Hong Kong, Macau and Taiwan'],
-  ['元老组', 'Veterans'],
-  ['红帅组', 'Team Red'],
-  ['黑将组', 'Team Black'],
-  ['海选赛', 'Qualifier'],
-  ['双人赛', 'Pairs'],
-  ['快棋', 'Rapid'],
-  ['女子组', 'Women'],
-  ['男子组', 'Men'],
-  ['公开组', 'Open'],
-  ['女子', 'Women'],
-  ['男子', 'Men'],
-  ['个人赛', 'Individual Championship'],
-  ['团体赛', 'Team Championship'],
-  ['锦标赛', 'Championship'],
-  ['冠军赛', 'Champions Tournament'],
-  ['邀请赛', 'Invitational'],
-  ['大师赛', 'Masters'],
-  ['预选赛', 'Qualifier'],
-  ['挑战赛', 'Challenge'],
-  ['公开赛', 'Open'],
-  ['联赛', 'League'],
-  ['中国象棋', 'Xiangqi'],
-  ['象棋', 'Xiangqi'],
-  ['全国', 'National'],
-  ['世界', 'World'],
-  ['亚洲', 'Asian'],
-  ['甲级', 'Division A'],
-  ['乙级', 'Division B'],
-];
+// The event glossary and the organiser-fixed names live in @mistboard/game
+// (xiangqi-event-names.ts), shared with the study page, which translates a
+// stored Chinese Event tag at read time.
+const EVENT_NAME_OVERRIDES = XIANGQI_EVENT_NAME_OVERRIDES;
+const EVENT_GLOSSARY: Array<[string, string]> = XIANGQI_EVENT_GLOSSARY.map(([zh, en]) => [zh, en]);
 
 // Team affiliations, which arrive whenever the source is a team competition
 // (甲级联赛 is one). Only the structural parts are glossed: the sponsor and the
@@ -628,61 +559,6 @@ export function romanizeXiangqiPlayerName(zh: string, federation?: string): stri
   return result.length > 0 ? result : undefined;
 }
 
-const CN_DIGITS: Record<string, number> = {
-  零: 0,
-  一: 1,
-  二: 2,
-  两: 2,
-  三: 3,
-  四: 4,
-  五: 5,
-  六: 6,
-  七: 7,
-  八: 8,
-  九: 9,
-};
-
-// Arabic digits or Chinese numerals up to 999 (十一 -> 11, 二十一 -> 21).
-function parseNumeral(text: string): number | undefined {
-  if (/^\d+$/.test(text)) return Number.parseInt(text, 10);
-  if (text.length === 0) return undefined;
-  let total = 0;
-  let rest = text;
-  const hundred = rest.indexOf('百');
-  if (hundred >= 0) {
-    const head = rest.slice(0, hundred);
-    const value = head.length > 0 ? CN_DIGITS[head] : 1;
-    if (value === undefined) return undefined;
-    total += value * 100;
-    rest = rest.slice(hundred + 1);
-    if (rest.startsWith('零')) rest = rest.slice(1);
-  }
-  const ten = rest.indexOf('十');
-  if (ten >= 0) {
-    const head = rest.slice(0, ten);
-    const value = head.length > 0 ? CN_DIGITS[head] : 1;
-    if (value === undefined) return undefined;
-    total += value * 10;
-    rest = rest.slice(ten + 1);
-  }
-  if (rest.length > 0) {
-    const value = CN_DIGITS[rest];
-    if (value === undefined) return undefined;
-    total += value;
-  }
-  return total > 0 || text === '零' ? total : undefined;
-}
-
-function ordinalEn(n: number): string {
-  const mod100 = n % 100;
-  if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
-  const mod10 = n % 10;
-  if (mod10 === 1) return `${n}st`;
-  if (mod10 === 2) return `${n}nd`;
-  if (mod10 === 3) return `${n}rd`;
-  return `${n}th`;
-}
-
 function matchNumberedUnit(
   text: string,
   index: number,
@@ -698,7 +574,7 @@ function matchNumberedUnit(
   if (numeral.length === 0) return undefined;
   for (const { unit, render } of units) {
     if (!text.startsWith(unit, cursor)) continue;
-    const value = parseNumeral(numeral);
+    const value = parseChineseNumeral(numeral);
     if (value === undefined) return undefined;
     return { en: render(value), length: cursor + unit.length - index };
   }

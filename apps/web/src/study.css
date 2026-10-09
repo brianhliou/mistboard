@@ -515,15 +515,15 @@
   color: var(--site-muted);
   font-style: italic;
 }
-/* The study description in the rail. Three text-lines exactly: the box must be a
+/* The study description in the rail. Two text-lines exactly: the box must be a
  * whole number of line boxes and take its spacing from margin, never padding,
  * or overflow:hidden clips past the clamp and a wrapped fourth line bleeds
  * through the bottom edge. Unclamps on hover/focus-within so the full text is
  * one gesture away without a control to maintain. */
 .study-review .review-info-card__summary {
   display: -webkit-box;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -953,4 +953,112 @@
   line-height: 1.3;
   color: var(--site-muted);
   font-weight: 400;
+}
+
+/* The study title one step under the review page's: a study name is a
+ * sentence ("Tony Fung 冯家俊: 47 games, the 2022 Worlds and July 2025 to
+ * September 2026") and at the review size it took four lines of the rail. */
+.study-review .review-info-card__title {
+  font-size: clamp(15px, 1.35vw, 17px);
+  line-height: 1.2;
+}
+
+/* One line of facts from the chapter tags under the title (games, span,
+ * the focus player's score); study-chapter-games.ts. */
+.study-page__games {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--site-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.study-page__games-part {
+  white-space: nowrap;
+}
+
+/* A game chapter's row (study-chapter-games.ts): players on one line, the
+ * date under it, the result as a chip on the right. Neither line wraps; an
+ * extreme name ellipsizes, and the full chapter name is the row's title. */
+.study-chapters__link:has(.study-game-line) {
+  align-items: center;
+}
+.study-game-line {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.study-game-line__text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.study-game-line__players,
+.study-game-line__meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.study-game-line__players {
+  font-weight: 400;
+}
+.study-game-line__player.is-winner {
+  font-weight: 650;
+}
+.study-game-line__meta {
+  font-size: 0.7rem;
+  line-height: 1.3;
+  color: var(--site-muted);
+  font-weight: 400;
+}
+/* Win and loss in the player pages' result colours (xiangqi-players.css
+ * .xqp-result-win/-loss), so a result reads the same across the site. */
+.study-game-line__result {
+  flex: 0 0 auto;
+  min-width: 2.4rem;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--site-border);
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+  color: var(--site-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.study-game-line__result[data-outcome="win"] {
+  border-color: transparent;
+  background: #1a7f64;
+  color: #fff;
+}
+.study-game-line__result[data-outcome="loss"] {
+  border-color: transparent;
+  background: #b3261e;
+  color: #fff;
+}
+.study-game-line__result[data-outcome="draw"] {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--site-muted) 30%, var(--site-panel, var(--site-bg)));
+  color: var(--site-text);
+}
+
+/* An event header between runs of game chapters. Sticky, so a reader deep in
+ * a long event still sees which one it is. */
+.study-chapters__group {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0.45rem 14px 0.2rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--site-muted);
+  background: var(--site-panel, var(--site-surface, var(--site-bg)));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

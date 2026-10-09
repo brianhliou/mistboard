@@ -39,6 +39,7 @@ import { mountJungleReplayBoard } from '../jungle-replay-board.js';
 import { replayStepperCopy } from '../replay-stepper-copy.js';
 import { reviewResultLabel } from '../review/game-review-meta.js';
 import { chapterAnnotations } from '../study-chapter-annotations.js';
+import { displayEventName } from '../study-chapter-games.js';
 import { type StudyChapterPayload, studyChapterToReplaySpec } from '../study-chapter-spec.js';
 import { seatInkFamily } from '../variant-seat-label.js';
 import { boardAspectForSpec } from '../watch-board-aspect.js';
@@ -194,7 +195,11 @@ export async function mountChapterEmbed(
   const isAtomic = chapter.variant === 'atomic-xiangqi';
   const copy = replayStepperCopy(undefined, 'xiangqi');
   await mountEmbedCard(root, {
-    header: spec.title ? `${spec.title} · ${spec.event}` : spec.event,
+    // A Chinese import stores its Event in Chinese; the header reads it in
+    // the page's language, as the study page does (study-chapter-games.ts).
+    header: spec.title
+      ? `${spec.title} · ${displayEventName(spec.event)}`
+      : displayEventName(spec.event),
     seats: {
       first: { name: spec.red, ink: 'red' },
       second: { name: spec.black, ink: 'black' },
@@ -279,7 +284,7 @@ async function mountBanqiEmbed(
     node = played;
   }
   const tags = chapter.tags ?? {};
-  const event = tags.event ?? chapter.name ?? 'Study';
+  const event = tags.event ? displayEventName(tags.event) : (chapter.name ?? 'Study');
   // The tags' result is seat-keyed (1-0 is the first mover), and a seat's ink
   // is whatever the first flip turned up, so the label names the seat.
   const result =
@@ -345,7 +350,7 @@ async function mountJungleEmbed(
   // comments, each move's first sideline (steppable), and the drawn shapes.
   const { moves, glyphs, notes, lines, assessments, shapes } = chapterAnnotations(chapter);
   const tags = chapter.tags ?? {};
-  const event = tags.event ?? chapter.name ?? 'Study';
+  const event = tags.event ? displayEventName(tags.event) : (chapter.name ?? 'Study');
   const result =
     tags.result === '1-0'
       ? reviewResultLabel('red-wins', 'jungle')
@@ -599,7 +604,7 @@ async function mountChessEmbed(
   // Chapter tags are the lowercase whitelist routes/studies.ts stores: `red` is
   // the first mover's seat (White here), as on every other variant.
   const tags = chapter.tags ?? {};
-  const event = tags.event ?? chapter.name ?? 'Study';
+  const event = tags.event ? displayEventName(tags.event) : (chapter.name ?? 'Study');
   // A PGN result tag reads as the localized winner line, as on every other
   // variant; a game that ended off the board (resignation, forfeit) has only
   // the tag to say how it ended. Any other tag text is shown as written.
