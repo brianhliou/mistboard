@@ -3047,6 +3047,16 @@ function sideRail(
         toMove: rowMover === 'black',
       }),
     );
+    if (resultsOnly && board.status === 'complete') {
+      // The grid card's caption, under the pair: the row is dimmed like the
+      // card's board, so it reads as nothing to open before the cursor finds
+      // it, and the caption is its accessible reason.
+      row.classList.add('xqb-rail-row-no-record');
+      const caption = document.createElement('span');
+      caption.className = 'xqb-rail-no-record';
+      caption.textContent = t('broadcast.noRecord');
+      players.append(caption);
+    }
     row.append(number, railGauge(board), players);
     if (board.status === 'live') row.classList.add('xqb-rail-row-live');
     list.append(row);

@@ -2909,12 +2909,31 @@ a.xqb-standings-name:focus-visible {
   background: transparent;
 }
 
-.xqb-rail-row-no-moves {
+/* The game list's row for the same pairing (2026-10-08): not a link, so no
+   hover at all (the old hover drew a border where the row had none), and a
+   finished one dimmed under the card's caption so the list says which rows
+   open before the cursor does. The open board's own row keeps its mark. */
+.xqb-rail-row-no-moves:not(.xqb-rail-row-current) {
   cursor: default;
 }
 
-.xqb-rail-row-no-moves:hover,
-.xqb-side-rail .xqb-rail-row-no-moves:hover {
-  border-color: var(--site-border-soft);
+.xqb-rail-row-no-moves:not(.xqb-rail-row-current):hover {
+  border-color: transparent;
   background: transparent;
+}
+
+.xqb-side-rail .xqb-rail-row-no-moves:not(.xqb-rail-row-current):hover {
+  border-color: var(--site-border-soft);
+}
+
+.xqb-rail-row-no-record:not(.xqb-rail-row-current)
+  :is(.xqb-rail-no, .xqb-rail-gauge, .xqb-card-seat) {
+  opacity: 0.5;
+}
+
+.xqb-rail-no-record {
+  color: var(--site-muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.3;
 }
