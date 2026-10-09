@@ -19,6 +19,12 @@
 // Each rebuilt ply is the TRUTH board at that ply (no fog), the same view the
 // finished room itself shows. The core swaps the last ply for the server's own
 // view.
+//
+// A LIVE seat cannot rebuild anything, but it does not have to: the server
+// sends a seated hello its own per-ply views (`liveHistory`, built by the same
+// per-seat view builder that served each ply live; never the other color, never
+// truth, never to a spectator). adoptLiveDarkXiangqiSeatHistory validates that
+// list against the live view and installs it as sent, deriving nothing.
 
 import {
   applyMove,
@@ -30,6 +36,7 @@ import {
   type XiangqiSquare,
 } from '@mistboard/game';
 import type { DarkXiangqiWireView } from './live-dark-xiangqi.js';
+import { adoptLiveHistory } from './variant-tenant/live-history.js';
 import type { TenantReplaySnapshot } from './variant-tenant/replay-controller.js';
 
 const ALL_SQUARES: XiangqiSquare[] = Array.from({ length: 90 }, (_, index) => {
@@ -64,6 +71,32 @@ export function rebuildFinishedDarkXiangqiHistory(
   }
   if (!sameBoard(state, view)) return null;
   return snapshots;
+}
+
+// The ply a playing view sits at: red moves first, so completed full moves
+// count two plies and black-to-move adds one. Shared with the room's capture
+// policy (live-dark-xiangqi replayCapture.plyForView).
+export function playingDarkXiangqiPly(view: DarkXiangqiWireView): number {
+  if (view.status.type !== 'playing') return 0;
+  const completedFullMoves = Math.max(0, view.moveNumber - 1);
+  return completedFullMoves * 2 + (view.status.turn === 'black' ? 1 : 0);
+}
+
+/**
+ * A live seat's history from its hello frame (`liveHistory`), or null to keep
+ * the captured one. The seat must hold a colour and the live view must be in
+ * its perspective; the list itself is checked by adoptLiveHistory (plies
+ * contiguous from 0, every view in the same perspective, the tip at the live
+ * ply). Frames without it (every broadcast snapshot) return null.
+ */
+export function adoptLiveDarkXiangqiSeatHistory(
+  liveHistory: unknown,
+  view: DarkXiangqiWireView,
+  seat: unknown,
+): TenantReplaySnapshot<DarkXiangqiWireView>[] | null {
+  if (seat !== 'red' && seat !== 'black') return null;
+  if (view.perspective !== seat) return null;
+  return adoptLiveHistory(liveHistory, view, playingDarkXiangqiPly(view));
 }
 
 function withCapture(captures: Captures, color: XiangqiColor, role: XiangqiPieceRole): Captures {

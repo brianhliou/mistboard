@@ -79,6 +79,61 @@ export function captureFogView(): void {
   lastCapturedFogPositionKey = positionKey;
 }
 
+/**
+ * A live Fog Chess seat's own per-ply views from its hello (`liveHistory`,
+ * server dark-chess-live-history.ts), installed as the fog history so a reload
+ * can step back through every ply it saw. The event log is fog-filtered, so
+ * the client cannot rebuild these itself; without them it held one snapshot
+ * and every earlier move was a dead click. Accepted only when it is exactly
+ * this seat's: a playing dark-chess room, every view in the seat's
+ * perspective, plies 0, 1, 2, ... with no gap, eventsLen never decreasing and
+ * within the held log, and the last ply is the live position. Otherwise the
+ * captured history is kept. Returns whether it was installed.
+ */
+export function seedFogViewHistory(liveHistory: unknown): boolean {
+  const live = liveState.state;
+  const seat = liveState.seat;
+  if (live?.variant !== 'dark-chess' || live.status.type !== 'playing') return false;
+  if (!isColor(seat) || live.perspective !== seat) return false;
+  if (!Array.isArray(liveHistory) || liveHistory.length < 2) return false;
+  const entries: Array<{ view: PlayerView; eventsLen: number }> = [];
+  let previousEventsLen = 0;
+  for (const [index, entry] of liveHistory.entries()) {
+    if (!entry || typeof entry !== 'object') return false;
+    const { ply, view, eventsLen } = entry as {
+      ply?: unknown;
+      view?: unknown;
+      eventsLen?: unknown;
+    };
+    if (ply !== index) return false;
+    if (!view || typeof view !== 'object') return false;
+    const candidate = view as PlayerView;
+    if (candidate.perspective !== seat || typeof candidate.board !== 'object') return false;
+    if (!Array.isArray(candidate.visibleSquares)) return false;
+    if (typeof eventsLen !== 'number' || eventsLen < previousEventsLen) return false;
+    if (eventsLen > liveState.events.length) return false;
+    previousEventsLen = eventsLen;
+    entries.push({ view: candidate, eventsLen });
+  }
+  const liveKey = fogReplayPositionKey(live);
+  if (fogReplayPositionKey(entries[entries.length - 1]!.view) !== liveKey) return false;
+
+  replayIndex = null;
+  fogViewHistory = new Map();
+  fogSnapshotToEventsLen = new Map();
+  for (const [index, { view, eventsLen }] of entries.entries()) {
+    // The tip is the server's live view itself (it carries the legal moves).
+    fogViewHistory.set(index, index === entries.length - 1 ? live : view);
+    fogSnapshotToEventsLen.set(index, eventsLen);
+  }
+  fogSnapshotSeq = entries.length;
+  // Snapshot 0 is the start position; the first move is snapshot 1.
+  fogFirstMoveSnapshotIndex = 1;
+  lastCapturedFogState = live;
+  lastCapturedFogPositionKey = liveKey;
+  return true;
+}
+
 function fogReplayPositionKey(view: PlayerView): string {
   const board = Object.entries(view.board)
     .sort(([a], [b]) => a.localeCompare(b))

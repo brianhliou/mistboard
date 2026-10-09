@@ -211,7 +211,11 @@ export type TenantReplayHistoryConfig<C extends string, V> = {
    * and must stay on incremental capture; never infer hidden state here.
    * One exception: a hidden-info tenant may rebuild a FINISHED room from the
    * truth view the server already serves it (jieqi: live-jieqi-replay-history),
-   * returning null for every unfinished view.
+   * returning null for every unfinished view. A second: a LIVE hidden-info
+   * room may install the per-ply views the server built for this viewer alone
+   * and sent in its hello (`frame.liveHistory`, adoptLiveHistory in
+   * variant-tenant/live-history: Fog Xiangqi seats, banqi and Flip Jungle seats
+   * and spectators); it adopts them as sent and derives nothing.
    * Return null to keep the captured history (e.g. when an event fails to
    * replay through the kernel).
    */
@@ -219,6 +223,12 @@ export type TenantReplayHistoryConfig<C extends string, V> = {
     events: readonly TenantLiveEvent[];
     view: V;
     state: TenantLiveState<C, V>;
+    /**
+     * The hello/snapshot frame being applied. A hidden-info tenant reads the
+     * viewer's own per-ply views from its hello (`liveHistory`, server-built,
+     * only ever this viewer's views); every other frame lacks it.
+     */
+    frame: TenantLiveFrame<C, V>;
   }): TenantReplaySnapshot<V>[] | null;
 };
 
@@ -475,10 +485,10 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   // kernel (perfect information only; fog logs are redacted) rebuild the full
   // per-ply history here. Event-appended frames keep the incremental capture
   // path — the server view that rides each event is captured as its ply.
-  function rebuildReplayHistory(): void {
+  function rebuildReplayHistory(frame: TenantLiveFrame<C, V>): void {
     const view = state.view;
     if (!config.replayHistory || !view) return;
-    const snapshots = config.replayHistory.rebuild({ events: state.events, view, state });
+    const snapshots = config.replayHistory.rebuild({ events: state.events, view, state, frame });
     if (!snapshots || snapshots.length === 0) return;
     // The server-sent view is authoritative for the latest ply: kernel replay
     // cannot derive non-move endings (resignation, timeout, abandonment).
@@ -594,11 +604,11 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       room,
       applyHello: (frame) => {
         applyFrame(frame as TenantLiveFrame<C, V>);
-        rebuildReplayHistory();
+        rebuildReplayHistory(frame as TenantLiveFrame<C, V>);
       },
       applySnapshot: (frame) => {
         applyFrame(frame as TenantLiveFrame<C, V>);
-        rebuildReplayHistory();
+        rebuildReplayHistory(frame as TenantLiveFrame<C, V>);
         config.onSnapshotApplied?.();
       },
       applyEvent: (frame) => applyEventFrame(frame as TenantLiveFrame<C, V>),
@@ -864,10 +874,12 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     // Only a ply this client can actually display is a jump target, matching the
     // chess shell (live-move-list.ts): a masked ply is one the server never sent
     // and an unplayed cell is empty, so offering either as a control would
-    // promise a position that does not exist here. The jump itself is fog-safe
-    // by construction — jumpToPly picks an index in the captured snapshot
-    // history and never reconstructs a view the server withheld.
-    const jumpable = played && !masked && !!text;
+    // promise a position that does not exist here. Nor is a played ply with no
+    // snapshot held: after a cold load a fog client may hold only the live ply,
+    // and a jump to a missing ply lands on a later one or on live, a dead click.
+    // The jump itself is fog-safe by construction: jumpToPly picks an index in
+    // the held snapshot history and never reconstructs a view the server withheld.
+    const jumpable = played && !masked && !!text && replay.hasPly(ply);
     const cell = document.createElement(jumpable ? 'button' : 'span');
     cell.className = [
       `${moveList.cellPrefix}__move`,

@@ -45,7 +45,7 @@ import {
 } from './banqi-engine.js';
 import { banqiEnabled } from './feature-flags.js';
 import type * as persistence from './persistence.js';
-import { tenantPveEngineId } from './variant-tenant/runtime.js';
+import { tenantPerPlyViews, tenantPveEngineId } from './variant-tenant/runtime.js';
 import type {
   TenantClientEvent,
   TenantRoomEvent,
@@ -183,6 +183,11 @@ export const banqiTenant: BanqiTenant = {
     clientEventFor: banqiClientEventFor,
     viewForClient: (state, client) => getBanqiClientView(state, client),
     truthView: (state) => getBanqiTruthView(state),
+    // A live room's per-ply views for a reload: the deal is a server secret, so
+    // the client cannot replay the log itself. Each ply is viewForClient's own
+    // masked view for this viewer (a spectator's is the public board), so no
+    // face-down identity crosses the wire that the live room did not already show.
+    liveHistory: (events, viewer) => tenantPerPlyViews(banqiTenant, events, viewer),
   },
   // Mark the MistyBanqi engine seat as always-present so the disconnect-forfeit
   // logic never forfeits it (a PvE engine has no WS client). Without this, the

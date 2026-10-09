@@ -61,6 +61,7 @@ import {
   type TenantLiveEvent,
   type TenantMovePlayed,
 } from './variant-tenant/live-client.js';
+import { adoptLiveHistory } from './variant-tenant/live-history.js';
 import type {
   TenantReasonKey,
   TenantSeatKey,
@@ -243,17 +244,25 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
     positionKey: replayPositionKey,
     plyForView: (view, ctx) => replayPlyForView(view, ctx.positionChanged, ctx.latestPly),
   },
-  // A FINISHED room only: its truth view plus the public move log recover the
-  // deal, so a cold join or reload gets every ply back (live-banqi-replay-history).
-  // A live room returns null here and keeps incremental capture: its deal is a
-  // server secret and its face-down tiles stay masked.
+  // A FINISHED room: its truth view plus the public move log recover the deal,
+  // so a cold join or reload gets every ply back (live-banqi-replay-history).
+  // A LIVE room cannot replay its log (the deal is a server secret), so it
+  // adopts the per-ply masked views the server sent in this viewer's hello
+  // (variant-tenant/live-history); face-down tiles stay masked in every ply.
   replayHistory: {
-    rebuild: ({ events, view, state }) =>
-      rebuildFinishedBanqiHistory(
-        events.filter(isBanqiMoveEvent).map((event) => event.move),
-        view,
-        isBanqiSeat(state.seat) ? state.seat : view.perspective,
-      ),
+    rebuild: ({ events, view, state, frame }) => {
+      const moves = events.filter(isBanqiMoveEvent).map((event) => event.move);
+      return (
+        rebuildFinishedBanqiHistory(
+          moves,
+          view,
+          isBanqiSeat(state.seat) ? state.seat : view.perspective,
+        ) ??
+        // A LIVE room: the hello carries this viewer's own per-ply masked views
+        // (server-built; a spectator's are the public board), installed as sent.
+        adoptLiveHistory(frame.liveHistory, view, moves.length)
+      );
+    },
   },
 });
 

@@ -355,10 +355,15 @@ describe('tenant live-client core', () => {
     });
     const rows = [...h.refs().moveList.querySelectorAll('li')];
     expect(rows).toHaveLength(1);
-    // Number cell stays a span; both played plies are jump buttons.
+    // Number cell stays a span. A cold hello holds one snapshot (ply 2), so
+    // only that ply is a jump button; ply 1 is played text with nowhere to go,
+    // and a button there was a dead click.
     expect(rows[0].querySelector('span')?.textContent).toBe('1.');
-    const cells = [...rows[0].querySelectorAll('button.move-jump')];
-    expect(cells.map((cell) => cell.textContent)).toEqual(['a1-a2', 'b1-b2']);
+    const cells = [...rows[0].querySelectorAll('.test-move-row__move')];
+    expect(cells.map((cell) => [cell.tagName, cell.textContent])).toEqual([
+      ['SPAN', 'a1-a2'],
+      ['BUTTON', 'b1-b2'],
+    ]);
   });
 
   it('scrubs to the clicked ply from the move list', () => {

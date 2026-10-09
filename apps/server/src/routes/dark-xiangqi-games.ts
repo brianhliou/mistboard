@@ -6,16 +6,13 @@ import {
   type XiangqiGameState,
 } from '@mistboard/game';
 import { darkXiangqiRooms } from './../dark-xiangqi-registration.js';
-import type {
-  DarkXiangqiEvent,
-  DarkXiangqiProjection,
-  DarkXiangqiRuntimeRoom,
-} from './../dark-xiangqi-runtime.js';
+import type { DarkXiangqiEvent, DarkXiangqiRuntimeRoom } from './../dark-xiangqi-runtime.js';
 import {
   buildDarkXiangqiGameSummary,
   type DarkXiangqiWirePlayerView,
   darkXiangqiCaptureLedger,
   darkXiangqiObservedCaptures,
+  darkXiangqiPlyViews,
   darkXiangqiTenant,
   darkXiangqiTruthView,
   getDarkXiangqiClientView,
@@ -23,11 +20,7 @@ import {
 import { darkXiangqiEnabled } from './../feature-flags.js';
 import * as persistence from './../persistence.js';
 import { LIVE_ENGINE_DECISION_ARTIFACT_TYPE } from './../persistence-game-lifecycle.js';
-import {
-  applyTenantEvent,
-  isTenantEventLog,
-  replayTenantEvents,
-} from './../variant-tenant/runtime.js';
+import { isTenantEventLog, replayTenantEvents } from './../variant-tenant/runtime.js';
 import {
   type HttpApiContext,
   isHttpAdminSession,
@@ -40,13 +33,6 @@ type DarkXiangqiPostgameViewKey = XiangqiColor | 'truth';
 
 type DarkXiangqiPostgameViews = Partial<
   Record<DarkXiangqiPostgameViewKey, DarkXiangqiWirePlayerView>
->;
-type DarkXiangqiPostgameSnapshot = {
-  ply: number;
-  view: DarkXiangqiWirePlayerView;
-};
-type DarkXiangqiPostgameHistory = Partial<
-  Record<DarkXiangqiPostgameViewKey, DarkXiangqiPostgameSnapshot[]>
 >;
 
 type DarkXiangqiPostgameMove = {
@@ -220,7 +206,7 @@ export async function darkXiangqiPostgameForApi(
     timeline: darkXiangqiPostgameTimeline(source.events),
     view: darkXiangqiTruthView(projection.state, darkXiangqiObservedCaptures(ledger, 'truth')),
     views: darkXiangqiPostgameViews(projection.state, ledger, latestMoveColor),
-    history: darkXiangqiPostgameHistory(source.events),
+    history: darkXiangqiPlyViews(source.events, ['truth', 'red', 'black']),
   };
 }
 
@@ -287,84 +273,6 @@ function darkXiangqiPostgameViews(
       ledger,
     ),
   };
-}
-
-function darkXiangqiPostgameHistory(
-  events: readonly DarkXiangqiEvent[],
-): DarkXiangqiPostgameHistory {
-  const created = events[0];
-  if (created?.type !== 'room-created') return {};
-  // Full ledger once; each ply's history entry gets the ledger truncated to
-  // captures that had happened by that ply, so a scrubbing client sees captures
-  // accumulate rather than the final tallies from the first frame.
-  const ledger = darkXiangqiCaptureLedger(events);
-  let projection = replayTenantEvents(darkXiangqiTenant, [created]);
-  let ply = 0;
-  let latestMoveColor: XiangqiColor | undefined;
-  const history = postgameHistoryViews(
-    projection,
-    ledgerThroughPly(ledger, ply),
-    ply,
-    latestMoveColor,
-  );
-
-  for (const event of events.slice(1)) {
-    projection = applyTenantEvent(darkXiangqiTenant, projection, event);
-    if (event.type !== 'move-played') continue;
-    ply += 1;
-    latestMoveColor = event.color;
-    appendPostgameHistoryViews(
-      history,
-      projection,
-      ledgerThroughPly(ledger, ply),
-      ply,
-      latestMoveColor,
-    );
-  }
-  return history;
-}
-
-// Captures that had occurred by the end of `ply` moves. A capture recorded at
-// plyIndex p happened on move p + 1, i.e. at ply p + 1, so it is visible once
-// ply > p.
-function ledgerThroughPly(ledger: readonly XiangqiCapture[], ply: number): XiangqiCapture[] {
-  return ledger.filter((capture) => capture.plyIndex < ply);
-}
-
-function postgameHistoryViews(
-  projection: DarkXiangqiProjection,
-  ledger: readonly XiangqiCapture[],
-  ply: number,
-  latestMoveColor?: XiangqiColor,
-): DarkXiangqiPostgameHistory {
-  const history: DarkXiangqiPostgameHistory = {};
-  appendPostgameHistoryViews(history, projection, ledger, ply, latestMoveColor);
-  return history;
-}
-
-function appendPostgameHistoryViews(
-  history: DarkXiangqiPostgameHistory,
-  projection: DarkXiangqiProjection,
-  ledger: readonly XiangqiCapture[],
-  ply: number,
-  latestMoveColor?: XiangqiColor,
-): void {
-  history.truth = [
-    ...(history.truth ?? []),
-    {
-      ply,
-      view: darkXiangqiTruthView(projection.state, darkXiangqiObservedCaptures(ledger, 'truth')),
-    },
-  ];
-  for (const color of ['red', 'black'] as const) {
-    const view = getDarkXiangqiClientView(
-      projection.state,
-      { id: `postgame-history-${color}-${ply}`, seat: color, solo: false },
-      latestMoveColor,
-      ledger,
-    );
-    history[color] = [...(history[color] ?? []), { ply, view }];
-  }
 }
 
 function darkXiangqiPostgameTimeline(

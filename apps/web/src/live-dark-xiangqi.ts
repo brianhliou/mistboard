@@ -30,7 +30,11 @@ import { type BoardPoint, boardLastMoveMarkersSvg } from './board-lastmove.js';
 import { tokenPieceSize } from './board-metrics.js';
 import { readDisplayPreferences } from './display-preferences.js';
 import { darkXiangqiEnabled } from './feature-flags.js';
-import { rebuildFinishedDarkXiangqiHistory } from './live-dark-xiangqi-replay-history.js';
+import {
+  adoptLiveDarkXiangqiSeatHistory,
+  playingDarkXiangqiPly,
+  rebuildFinishedDarkXiangqiHistory,
+} from './live-dark-xiangqi-replay-history.js';
 import {
   maybePlayDarkXiangqiSnapshotSound,
   resetDarkXiangqiSoundState,
@@ -248,24 +252,24 @@ const client = createTenantLiveClient<XiangqiColor, DarkXiangqiWireView, Xiangqi
   replayCapture: {
     positionKey: replayPositionKey,
     plyForView: (view, ctx) => {
-      if (view.status.type === 'playing') {
-        const completedFullMoves = Math.max(0, view.moveNumber - 1);
-        return completedFullMoves * 2 + (view.status.turn === 'black' ? 1 : 0);
-      }
+      if (view.status.type === 'playing') return playingDarkXiangqiPly(view);
       if (ctx.positionChanged && view.lastMove) return ctx.latestPly + 1;
       return ctx.latestPly;
     },
   },
-  // A FINISHED room only: it serves the unredacted move log and the truth board,
-  // so a cold join or reload replays the whole game from the start position
-  // (live-dark-xiangqi-replay-history). A live seat's fog view and a spectator's
-  // empty board return null here and keep fog-safe incremental capture.
+  // Two sources (live-dark-xiangqi-replay-history):
+  //  - a FINISHED room serves the unredacted move log and the truth board, so a
+  //    cold join or reload replays the whole game from the start position;
+  //  - a LIVE seat's hello carries that seat's own per-ply fog views
+  //    (`liveHistory`), so a reload mid-game can still step back through every
+  //    ply it saw. Every other frame (broadcast snapshots, a spectator's hello)
+  //    returns null and keeps fog-safe incremental capture.
   replayHistory: {
-    rebuild: ({ events, view }) =>
+    rebuild: ({ events, view, frame }) =>
       rebuildFinishedDarkXiangqiHistory(
         events.filter(isDarkXiangqiMoveEvent).map((event) => event.move),
         view,
-      ),
+      ) ?? adoptLiveDarkXiangqiSeatHistory(frame.liveHistory, view, frame.seat),
   },
 });
 

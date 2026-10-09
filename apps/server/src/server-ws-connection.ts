@@ -3,6 +3,7 @@ import type { IncomingMessage } from 'node:http';
 import type { VariantId } from '@mistboard/game';
 import type { WebSocket } from 'ws';
 import { currentAccountUser } from './account-session.js';
+import { darkChessLiveHistoryExtras } from './dark-chess-live-history.js';
 import { gateGameSpecRequest } from './game-spec-request-gate.js';
 import { parseVariantId } from './http-api.js';
 import { logger, wsCounters } from './obs.js';
@@ -238,6 +239,9 @@ export async function handleWebSocketConnection(
     type: 'hello',
     clientId: client.id,
     ...(assignment.seatToken ? { seatToken: assignment.seatToken } : {}),
+    // A live Fog Chess seat's own per-ply views, so a reload can step back
+    // through the game. Hello only, seated only (dark-chess-live-history.ts).
+    ...darkChessLiveHistoryExtras(room, client),
   });
   broadcastSnapshot(ctx.roomMgrCtx, room);
   maybeReplayRematchRedirect(ctx.rematchOrch, room, client);

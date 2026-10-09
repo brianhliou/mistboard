@@ -355,3 +355,105 @@ describe('cold join to a LIVE Fog Xiangqi room is unchanged (hidden-info regress
     expect(reviewHref()).toBeNull();
   });
 });
+
+// A LIVE seat after a reload (the correspondence case): the server's seated
+// hello carries that seat's own per-ply fog views (`liveHistory`, server
+// dark-xiangqi-tenant darkXiangqiSeatHistory). Without it the client holds one
+// snapshot, and a move cell must not pretend it can jump.
+describe('cold load into a LIVE Fog Xiangqi room as a seat', () => {
+  // What the server sends red: only red's own moves survive redaction.
+  const redEvents = () => [CREATED, ...moveEvents(MID).filter((event) => event.color === 'red')];
+  const redHistory = (through = MID) =>
+    Array.from({ length: through + 1 }, (_, ply) => ({
+      ply,
+      view: { ...seatView(ply, 'red'), legalMoves: [] },
+    }));
+  const jumpButtons = () => [
+    ...document.querySelectorAll<HTMLButtonElement>('.xiangqi-move-row__move.move-jump'),
+  ];
+  // An early red move, well before the live ply (asserted red in the first test).
+  const EARLY_RED_PLY = 3;
+
+  it('without a history only the held (live) ply is a jump target', async () => {
+    expect(GAME.colors[EARLY_RED_PLY - 1]).toBe('red');
+    const options = await mount();
+    const served = seatView(MID, 'red');
+    options.applyHello(frame('hello', { seat: 'red', state: served, events: redEvents() }));
+    options.render();
+
+    expect(document.querySelectorAll('.xiangqi-move-row__move.masked').length).toBeGreaterThan(0);
+    // Every older red move renders as plain text, not a dead button.
+    const buttons = jumpButtons();
+    expect(buttons.length).toBeLessThanOrEqual(1);
+    const earlyCell = moveCells()[EARLY_RED_PLY - 1]!;
+    expect(earlyCell.tagName).toBe('SPAN');
+    earlyCell.click();
+    expect(piecesOnScreen()).toEqual(seatLabels(served));
+  });
+
+  it('with the seat history every own move jumps to exactly that ply', async () => {
+    const options = await mount();
+    const served = seatView(MID, 'red');
+    options.applyHello(
+      frame('hello', {
+        seat: 'red',
+        state: served,
+        events: redEvents(),
+        liveHistory: redHistory(),
+      }),
+    );
+    options.render();
+    // The broadcast snapshot that follows every join carries no history and
+    // must not drop the one just installed.
+    options.applySnapshot(frame('snapshot', { seat: 'red', state: served, events: redEvents() }));
+    options.render();
+
+    const redPlies = GAME.colors
+      .slice(0, MID)
+      .flatMap((color, i) => (color === 'red' ? [i + 1] : []));
+    expect(jumpButtons()).toHaveLength(redPlies.length);
+    // Masked opponent plies stay placeholders, never controls.
+    for (const masked of document.querySelectorAll('.xiangqi-move-row__move.masked')) {
+      expect(masked.tagName).toBe('SPAN');
+    }
+
+    const before = piecesOnScreen();
+    expect(before).toEqual(seatLabels(served));
+    const earlyCell = moveCells()[EARLY_RED_PLY - 1]!;
+    expect(earlyCell.tagName).toBe('BUTTON');
+    earlyCell.click();
+    const early = seatView(EARLY_RED_PLY, 'red');
+    expect(piecesOnScreen()).toEqual(seatLabels(early));
+    expect(piecesOnScreen()).not.toEqual(before);
+    // The list re-renders on the jump; the clicked ply is the active one.
+    expect(moveCells()[EARLY_RED_PLY - 1]!.classList.contains('active')).toBe(true);
+    // Still fog: the history view shows only what red saw then.
+    expect(piecesOnScreen()).toContain('black hidden piece');
+
+    controlButton('first').click();
+    expect(piecesOnScreen()).toEqual(seatLabels(seatView(0, 'red')));
+    controlButton('latest').click();
+    expect(piecesOnScreen()).toEqual(seatLabels(served));
+  });
+
+  it("ignores a history that is not this seat's or does not reach the live ply", async () => {
+    const blackHistory = Array.from({ length: MID + 1 }, (_, ply) => ({
+      ply,
+      view: seatView(ply, 'black'),
+    }));
+    for (const liveHistory of [blackHistory, redHistory(MID - 1), [{ ply: 1, view: {} }]]) {
+      const options = await mount();
+      options.applyHello(
+        frame('hello', {
+          seat: 'red',
+          state: seatView(MID, 'red'),
+          events: redEvents(),
+          liveHistory,
+        }),
+      );
+      options.render();
+      expect(controlButton('prev').disabled).toBe(true);
+      expect(jumpButtons().length).toBeLessThanOrEqual(1);
+    }
+  });
+});

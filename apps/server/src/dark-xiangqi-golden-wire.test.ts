@@ -31,6 +31,7 @@ import {
   appendTenantRuntimeEvent,
   createTenantRuntimeRoomFromEvents,
   expireTenantClock,
+  tenantLiveHistoryExtras,
   tenantPlyAtEventIndex,
   tenantSnapshotPayload,
 } from './variant-tenant/runtime.js';
@@ -78,7 +79,23 @@ function recordStep(
     step.snapshots[seat] = snapshotFor(room, seat);
   }
   script.steps.push(step);
+  // The seated hello's history rides beside the snapshot, not inside it, so it
+  // is kept out of the recorded fixture and checked by the invariants below.
+  const histories: Record<string, unknown> = {};
+  for (const seat of SEATS) {
+    histories[seat] = tenantLiveHistoryExtras(darkXiangqiTenant, room, {
+      id: `client-${seat}`,
+      seat,
+      solo: false,
+    });
+  }
+  helloHistories.set(`${script.id}/${label}`, JSON.parse(JSON.stringify(histories)));
 }
+
+// Per step, per seat: the seat-history half of that seat's hello frame
+// (tenantLiveHistoryExtras), as it would cross the wire.
+const helloHistories = new Map<string, Record<string, { liveHistory?: SeatHistory }>>();
+type SeatHistory = Array<{ ply: number; view: WireSnapshot['state'] }>;
 
 function append(
   script: GoldenScript,
@@ -429,4 +446,48 @@ test('dxq golden wire: a finished room opens fully to a spectator', () => {
     }
   }
   assert.ok(finishedSteps > 0, 'no finished step in the scripts: this test asserted nothing');
+});
+
+test("dxq golden wire: a live seat hello carries only that seat's own history", () => {
+  let liveSeatSteps = 0;
+  for (const script of runAllScripts()) {
+    for (const step of script.steps) {
+      const where = `${script.id}/${step.label}`;
+      const histories = helloHistories.get(where);
+      assert.ok(histories, `${where}: no hello history recorded`);
+      // The spectator never gets one, live or not.
+      assert.deepEqual(histories.spectator, {}, `${where}: spectator got a seat history`);
+      const snapshots = wireSnapshots(step);
+      const status = (snapshots.red!.state as { status?: { type?: string } }).status?.type;
+      if (status !== 'playing') {
+        // Finished rooms reveal through the snapshot; aborted rooms have nothing.
+        assert.deepEqual(histories.red, {}, `${where}: closed room sent red a history`);
+        assert.deepEqual(histories.black, {}, `${where}: closed room sent black a history`);
+        continue;
+      }
+      for (const seat of ['red', 'black'] as const) {
+        const history: SeatHistory | undefined = histories[seat]?.liveHistory;
+        assert.ok(history && history.length > 0, `${where}: ${seat} has no history`);
+        liveSeatSteps += 1;
+        // The tip is the seat's live snapshot view (legal moves aside).
+        assert.deepStrictEqual(
+          history.at(-1)!.view,
+          { ...snapshots[seat]!.state, legalMoves: [] },
+          `${where}: ${seat} history tip is not its live view`,
+        );
+        for (const { ply, view } of history) {
+          assert.equal((view as { perspective?: string }).perspective, seat);
+          const visible = new Set(view.visibleSquares);
+          for (const [square, entry] of Object.entries(view.board)) {
+            if (entry.shrouded) {
+              assert.ok(!('piece' in entry), `${where} ply ${ply}: shrouded ${square} has a piece`);
+            } else if (entry.piece.color !== seat) {
+              assert.ok(visible.has(square), `${where} ply ${ply}: ${seat} sees hidden ${square}`);
+            }
+          }
+        }
+      }
+    }
+  }
+  assert.ok(liveSeatSteps > 0, 'no live seated step in the scripts: this test asserted nothing');
 });

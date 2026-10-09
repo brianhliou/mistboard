@@ -895,6 +895,102 @@ export function tenantSnapshotPayload<
   };
 }
 
+/**
+ * The viewer's own per-ply history for the HELLO frame (visibility.liveHistory),
+ * so a reload of a LIVE room can step back through every ply. Empty unless
+ * every gate holds:
+ *   - the tenant implements liveHistory (hidden-info tenants whose clients
+ *     cannot rebuild a live game from their redacted log; absence sends
+ *     nothing),
+ *   - the viewer is a COLOR seat (ws.ts calls this for a seat only after
+ *     assignTenantSeat authenticated the seat token or account) or a spectator
+ *     whom the visibility class lets see a live board at all: a 'dark' room's
+ *     live spectator is shown nothing (roomViewPolicy), so it gets no history
+ *     whatever the hook would return,
+ *   - the room is still playing: a finished room reveals truth through the
+ *     snapshot (and the client rebuilds from it), an aborted one has nothing
+ *     to replay.
+ * Hello only, not every snapshot: broadcastEventAppended builds a snapshot per
+ * client per move, and the history is O(plies) views.
+ */
+export function tenantLiveHistoryExtras<
+  Kind extends string,
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  View,
+  Spec extends string,
+>(
+  tenant: VariantTenant<Kind, C, M, State, View, Spec>,
+  room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
+  client: TenantSnapshotClient<C>,
+): { liveHistory?: Array<{ ply: number; view: View }> } {
+  const liveHistory = tenant.visibility.liveHistory;
+  if (!liveHistory) return {};
+  if (room.projection.state.status.type !== 'playing') return {};
+  const viewer = client.seat;
+  if (viewer === 'spectator') {
+    const spec = maybeGameSpecForId(tenant.gameSpecId);
+    if (!spec) return {};
+    if (roomViewPolicy(spec.visibility, false, 'spectator') === 'nothing') return {};
+  } else if (!tenant.colors.includes(viewer)) {
+    return {};
+  }
+  const history = liveHistory(room.events, viewer);
+  return history.length > 0 ? { liveHistory: history } : {};
+}
+
+/**
+ * The generic liveHistory builder: replay the log through the tenant and ask
+ * viewForClient, at ply 0 and after every move-played, for the view it would
+ * have served this viewer then (the log cut at that event). Hidden-info safe by
+ * construction: each entry is a view the same function already served, or
+ * would have served, this viewer live; nothing is derived from a later ply.
+ * legalMoves are dropped: a scrubbed board takes no input (touching it returns
+ * to live, which carries the live legal moves), and they are bytes per ply.
+ */
+export function tenantPerPlyViews<
+  Kind extends string,
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  View,
+  Spec extends string,
+>(
+  tenant: VariantTenant<Kind, C, M, State, View, Spec>,
+  events: readonly TenantRoomEvent<C, M, Spec>[],
+  viewer: TenantSeat<C>,
+): Array<{ ply: number; view: View }> {
+  const created = events[0];
+  if (created?.type !== 'room-created') return [];
+  const client: TenantSnapshotClient<C> = { id: `ply-view-${viewer}`, seat: viewer, solo: false };
+  const withoutLegalMoves = (view: View): View =>
+    view && typeof view === 'object' && 'legalMoves' in view
+      ? ({ ...view, legalMoves: [] } as View)
+      : view;
+  let projection = replayTenantEvents(tenant, [created]);
+  const history = [
+    {
+      ply: 0,
+      view: withoutLegalMoves(
+        tenant.visibility.viewForClient(projection.state, client, events.slice(0, 1)),
+      ),
+    },
+  ];
+  for (const [index, event] of events.entries()) {
+    if (index === 0) continue;
+    projection = applyTenantEvent(tenant, projection, event);
+    if (event.type !== 'move-played') continue;
+    history.push({
+      ply: history.length,
+      view: withoutLegalMoves(
+        tenant.visibility.viewForClient(projection.state, client, events.slice(0, index + 1)),
+      ),
+    });
+  }
+  return history;
+}
+
 /** Was this room made by a lobby match? Read off the durable room-created event. */
 export function tenantRoomIsLobbyMatch(room: { events: readonly { type: string }[] }): boolean {
   const first = room.events[0] as { type: string; lobbyMatch?: unknown } | undefined;

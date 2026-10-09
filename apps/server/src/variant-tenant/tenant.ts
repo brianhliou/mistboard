@@ -525,6 +525,25 @@ export type VariantTenant<
     // everything for them, and roomViewPolicy('open', …) is 'truth' at every
     // status regardless.
     truthView?(state: State, events: readonly TenantRoomEvent<C, M, Spec>[]): View;
+    // A viewer's own per-ply views (ply 0 = the start position, through the
+    // current ply) while the game is LIVE: exactly the views viewForClient
+    // served that viewer at each ply. Clients of hidden-info tenants cannot
+    // rebuild these from their redacted log (a fog seat sees no opponent move;
+    // a flip variant's deal is a server secret), so without it a reload could
+    // not step back through the game. The runtime sends it only in the hello
+    // of a connection to a playing room (tenantLiveHistoryExtras): a seat after
+    // its token or account is authenticated, a spectator only when the
+    // visibility class shows a live spectator a board at all ('dark' does not).
+    // Return [] for a viewer who gets none (a fog tenant's spectator). Never
+    // truth, never another seat's view.
+    //
+    // Optional and fail-closed: a tenant without it sends nothing. Perfect-info
+    // tenants do not need it: they rebuild per-ply views from their full log.
+    // tenantPerPlyViews (runtime.ts) is the generic builder.
+    liveHistory?(
+      events: readonly TenantRoomEvent<C, M, Spec>[],
+      viewer: TenantSeat<C>,
+    ): Array<{ ply: number; view: View }>;
   };
   engine?: {
     // Required declaration of how the live engine preserves history-dependent terminal

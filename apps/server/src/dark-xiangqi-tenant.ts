@@ -33,6 +33,7 @@ import { engineVersionDisplayName, isDarkXiangqiEngineClientId } from './engines
 import { darkXiangqiEnabled } from './feature-flags.js';
 import type * as persistence from './persistence.js';
 import { tenantParticipant } from './variant-tenant/events.js';
+import { applyTenantEvent, replayTenantEvents } from './variant-tenant/runtime.js';
 import type {
   TenantClientEvent,
   TenantRoomEvent,
@@ -193,6 +194,73 @@ export function darkXiangqiTruthView(
     lastMove: state.lastMove,
     captures,
   };
+}
+
+export type DarkXiangqiPlyViewKey = XiangqiColor | 'truth';
+export type DarkXiangqiPlySnapshot = { ply: number; view: DarkXiangqiWirePlayerView };
+export type DarkXiangqiPlyViews = Partial<Record<DarkXiangqiPlyViewKey, DarkXiangqiPlySnapshot[]>>;
+
+// Per-ply views (ply 0 = the start position, then one per move-played) for the
+// requested keys, replayed from the event log through the tenant. Each seat's
+// view at ply p is exactly what viewForClient served that seat after the p-th
+// move: the same builder, the capture ledger cut at p, and lastMove kept only
+// when that seat made move p. One function for the postgame route (all three
+// keys, finished games) and the live seat history (one color, playing games),
+// so the two cannot drift about what a seat saw at a ply.
+//
+// HIDDEN-INFO: callers choose the keys. 'truth' is the unredacted board and is
+// only ever requested for a FINISHED game (darkXiangqiPostgameForApi); the
+// live seat history asks for its own color alone (darkXiangqiSeatHistory).
+export function darkXiangqiPlyViews(
+  events: readonly TenantRoomEvent<XiangqiColor, XiangqiMove, DarkXiangqiSpecId>[],
+  keys: readonly DarkXiangqiPlyViewKey[],
+): DarkXiangqiPlyViews {
+  const created = events[0];
+  if (created?.type !== 'room-created') return {};
+  // Full ledger once; each ply gets the ledger truncated to captures that had
+  // happened by that ply, so a scrubbing client sees captures accumulate rather
+  // than the final tallies from the first frame.
+  const ledger = darkXiangqiCaptureLedger(events);
+  const history: DarkXiangqiPlyViews = {};
+  let projection = replayTenantEvents(darkXiangqiTenant, [created]);
+  let ply = 0;
+  let latestMoveColor: XiangqiColor | undefined;
+  const append = () => {
+    const captured = ledger.filter((capture) => capture.plyIndex < ply);
+    for (const key of keys) {
+      const view =
+        key === 'truth'
+          ? darkXiangqiTruthView(projection.state, darkXiangqiObservedCaptures(captured, 'truth'))
+          : getDarkXiangqiClientView(
+              projection.state,
+              { id: `ply-view-${key}-${ply}`, seat: key, solo: false },
+              latestMoveColor,
+              captured,
+            );
+      history[key] = [...(history[key] ?? []), { ply, view }];
+    }
+  };
+  append();
+  for (const event of events.slice(1)) {
+    projection = applyTenantEvent(darkXiangqiTenant, projection, event);
+    if (event.type !== 'move-played') continue;
+    ply += 1;
+    latestMoveColor = event.color;
+    append();
+  }
+  return history;
+}
+
+// A live seat's own history (visibility.liveHistory): its color only, never
+// truth, never the other seat. legalMoves are dropped: a scrubbed board takes
+// no input (touching it returns to live, which carries the live legal moves),
+// and they are about a third of each view's bytes on a long correspondence game.
+export function darkXiangqiSeatHistory(
+  events: readonly TenantRoomEvent<XiangqiColor, XiangqiMove, DarkXiangqiSpecId>[],
+  seat: XiangqiColor,
+): DarkXiangqiPlySnapshot[] {
+  const snapshots = darkXiangqiPlyViews(events, [seat])[seat] ?? [];
+  return snapshots.map(({ ply, view }) => ({ ply, view: { ...view, legalMoves: [] } }));
 }
 
 function allXiangqiSquares(): XiangqiSquare[] {
@@ -362,6 +430,9 @@ export const darkXiangqiTenant: DarkXiangqiTenant = {
         state,
         darkXiangqiObservedCaptures(darkXiangqiCaptureLedger(events), 'truth'),
       ),
+    // Seats only: a live Fog Xiangqi spectator is shown nothing.
+    liveHistory: (events, viewer) =>
+      viewer === 'spectator' ? [] : darkXiangqiSeatHistory(events, viewer),
   },
   engine: {
     terminalContext: 'fog-observation',
