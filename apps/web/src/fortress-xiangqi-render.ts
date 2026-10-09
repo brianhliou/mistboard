@@ -109,8 +109,10 @@ const FXQ_SURFACE: XiangqiSurfaceConfig = {
     rankMin: p.rankLo,
     rankMax: p.rankHi,
   })),
-  // No caption: this board's river is drawn as a tinted band, below.
+  // The intersection layout paints its own river band (riverBand, below); the
+  // shared surface adds only the caption the reader's River text choice picks.
   riverAfterRank: 4,
+  riverText: true,
 };
 
 export type FortressXiangqiBoardRenderOptions = {
@@ -183,7 +185,7 @@ export function renderFortressXiangqiBoardSvg(
            intersection layout keeps its original order, where the grid is only
            lines and the bands must sit beneath. -->
       <g class="fxq-grid">${xiangqiSurfaceGrid(surface, layout)}${xiangqiSurfacePalace(surface, perspective, layout)}</g>
-      ${cell ? xiangqiSurfaceRiver(surface, perspective, layout) : ''}
+      ${cell ? xiangqiSurfaceRiver(surface, perspective, layout) : `<g class="xq-live-river" aria-hidden="true" pointer-events="none">${xiangqiSurfaceRiver(surface, perspective, layout)}</g>`}
       ${cell ? `<g class="xq-live-palace-bands">${xiangqiSurfacePalaceBands(surface, perspective, layout)}</g>` : ''}
       ${coords ? `<g class="fxq-coords xq-live-coords" aria-hidden="true" pointer-events="none">${coords}</g>` : ''}
       ${lastMoveMarkers(view, perspective)}

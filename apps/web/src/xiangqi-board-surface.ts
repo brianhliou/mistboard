@@ -46,8 +46,10 @@ export interface XiangqiSurfaceConfig {
   /** The river sits between this rank and the next one up. Null for no river. */
   riverAfterRank: number | null;
   /** Draw the river captions on the intersection layout (xiangqi-river-text.ts:
-   *  the reader's River text choice picks which one shows). Omit for none:
-   *  jieqi, for one, keeps a bare river. */
+   *  the reader's River text choice picks which one shows, and 'off' hides both).
+   *  Every board with a river sets it: the choice is the reader's, so a board
+   *  that omits it silently ignores the setting (jieqi and fortress did until
+   *  2026-10-08). */
   riverText?: boolean;
   /** Points that get the printed start brackets (the cannons' and soldiers'
    *  starting points on a standard board). Omit for a board whose setup is not
@@ -321,9 +323,13 @@ function round(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-/** Font size of the brand caption, in board units (live-xiangqi.css agrees):
- *  the classic inscription's 22 times XIANGQI_RIVER_BRAND_SCALE. */
+/** Font size of the brand caption, in board units on the standard 60-unit cell
+ *  (xiangqi-board-surface.css agrees): the classic inscription's 22 times
+ *  XIANGQI_RIVER_BRAND_SCALE. */
 const BRAND_FONT_SIZE = 32;
+
+/** The cell size the caption CSS is written for (the standard board's). */
+const RIVER_TEXT_BASE_CELL = 60;
 
 /** The river: a caption on the intersection layout, a band on the square grid. */
 export function xiangqiSurfaceRiver(
@@ -344,13 +350,17 @@ export function xiangqiSurfaceRiver(
   const riverTop = margin + (rankCount - 1 - cfg.riverAfterRank) * cell;
   const y = riverTop + cell / 2;
   const x = margin + ((fileCount - 1) / 2) * cell;
-  // Both captions; CSS shows the chosen one (live-xiangqi.css). The brand is set
-  // larger than the hanzi, since Latin letters stand shorter in their em; the
-  // shift re-centres its trailing letter-spacing (XIANGQI_RIVER_BRAND_TRACKING).
-  const brandX = round(x + (BRAND_FONT_SIZE * XIANGQI_RIVER_BRAND_TRACKING) / 2);
+  // Both captions; CSS shows the chosen one (xiangqi-board-surface.css). The
+  // brand is set larger than the hanzi, since Latin letters stand shorter in
+  // their em; the shift re-centres its trailing letter-spacing
+  // (XIANGQI_RIVER_BRAND_TRACKING). A board drawn at another cell size scales
+  // both through --xq-river-scale, so the caption fills its river the same way.
+  const scale = round(cell / RIVER_TEXT_BASE_CELL);
+  const scaleAttr = scale === 1 ? '' : ` style="--xq-river-scale: ${scale}"`;
+  const brandX = round(x + (BRAND_FONT_SIZE * scale * XIANGQI_RIVER_BRAND_TRACKING) / 2);
   return `
-    <text class="xq-live-river-label" x="${x}" y="${y + 1}">${XIANGQI_RIVER_CLASSIC_TEXT}</text>
-    <text class="xq-live-river-brand" translate="no" x="${brandX}" y="${y + 1}">${XIANGQI_RIVER_BRAND_TEXT}</text>
+    <text class="xq-live-river-label"${scaleAttr} x="${x}" y="${y + 1}">${XIANGQI_RIVER_CLASSIC_TEXT}</text>
+    <text class="xq-live-river-brand"${scaleAttr} translate="no" x="${brandX}" y="${y + 1}">${XIANGQI_RIVER_BRAND_TEXT}</text>
   `;
 }
 

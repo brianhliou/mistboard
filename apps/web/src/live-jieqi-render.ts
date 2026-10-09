@@ -86,9 +86,10 @@ const JIEQI_SURFACE: XiangqiSurfaceConfig = {
     { fileMin: 3, fileMax: 5, rankMin: 1, rankMax: 3 },
     { fileMin: 3, fileMax: 5, rankMin: 8, rankMax: 10 },
   ],
-  // The river breaks the interior files. Jieqi carries no 楚河漢界 caption, so
-  // no riverText: the gap alone is the cue, as it was before this shared.
+  // The river breaks the interior files. Its caption follows the reader's River
+  // text choice, as on every other board with a river (off by default).
   riverAfterRank: 5,
+  riverText: true,
   // Jieqi deals its face-down pieces onto the standard points, so the printed
   // brackets mark the same places they do on a xiangqi board.
   startPoints: XIANGQI_START_POINTS,
@@ -187,12 +188,11 @@ export function renderJieqiBoardSvg(
   // cells are filled rects, so anything beneath them is invisible; the tint and
   // the river band have to sit on top to be seen at all.
   // Emitted only when they draw something. The intersection layout has neither a
-  // river tint nor palace bands (the gap and the diagonals are its cues), and an
-  // empty <g> would still put its class in the markup, which reads as a tint
-  // that is not there.
+  // river tint nor palace bands (the gap and the diagonals are its cues); its
+  // river group holds only the River text captions, which CSS shows or hides.
   const riverInner = xiangqiSurfaceRiver(surface, perspective, layout);
   const river = riverInner
-    ? `<g class="jieqi-river xq-live-river" aria-hidden="true" pointer-events="none">${riverInner}</g>`
+    ? `<g class="xq-live-river" aria-hidden="true" pointer-events="none">${riverInner}</g>`
     : '';
   const bandsInner =
     layout === 'cell' ? xiangqiSurfacePalaceBands(surface, perspective, layout) : '';
