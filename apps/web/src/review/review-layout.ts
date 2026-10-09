@@ -289,7 +289,8 @@ export function createReviewScaffold(
   // the bottom of the column, and unfused controls left a dead gap between the box
   // and the board line. There the controls become the box's last strip, and the box
   // bottom lands on the board bottom. Fusing requires no rail panel: the opening
-  // explorer overlays railMain and would cover controls fused inside it.
+  // explorer opens as the box's bottom section and would split fused controls
+  // from the board line.
   // Material rows change where the controls belong. With a pocket, the box that
   // tracks the board is [top pocket · moves · bottom pocket] and the controls sit
   // BELOW it (lichess crazyhouse), so fusing them into the moves strip would
@@ -305,10 +306,12 @@ export function createReviewScaffold(
       fuseNavigation ? config.navigation : null,
     ].filter((el): el is HTMLElement => el != null),
   );
-  // The rail panel (opening explorer) OVERLAYS the moves region rather than
-  // pushing it: a positioned wrapper holds railMain, and the panel absolutely
-  // fills it when open, scrolling on its own. Navigation stays a sibling below,
-  // so the scrub controls remain usable with the explorer open.
+  // The rail panel (opening explorer) is the bottom section of the moves box: a
+  // wrapper holds railMain and the panel, keeps the box's board-height footprint
+  // while the panel is open, and the panel (capped, scrolling on its own) takes
+  // its share from the move list (review-shell.css .review-rail-overlay).
+  // Navigation stays a sibling below, so the scrub controls remain usable with
+  // the explorer open.
   const railMainWrap = document.createElement('div');
   railMainWrap.className = 'review-rail-mainwrap';
   railMainWrap.append(railMain);
