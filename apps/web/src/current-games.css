@@ -867,7 +867,11 @@
   padding: 10px;
 }
 
-.current-game-finished-players {
+/* One row per player, above and below the board on the side their pieces
+   start from (placeFinishedSeats), each with the card's full width. */
+.current-game-finished-seat {
+  min-width: 0;
+  line-height: 1.3;
   font-weight: 600;
   color: var(--site-heading);
   white-space: nowrap;

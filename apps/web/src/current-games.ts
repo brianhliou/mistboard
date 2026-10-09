@@ -34,18 +34,23 @@
 // Pure logic (sections, urgency, tile kinds) lives in current-games-model.ts.
 
 import './current-games.css';
-import { type GameEvent, maybeGameSpecForId } from '@mistboard/game';
+import type { GameEvent } from '@mistboard/game';
 import {
+  type BoardSeat,
   type CurrentGame,
   type CurrentGamePlayer,
   type CurrentGamesResponse,
   deadlineFractionLeft,
+  FINISHED_BOARD_BOTTOM_SEAT,
+  FINISHED_BOARD_POV,
   FINISHED_POOL_URL,
+  finishedBoardTenantPov,
   finishedPoolDue,
   finishedTileKind,
   isLowClock,
   liveCardShowsHands,
   liveTileKind,
+  seatsTopToBottom,
   settleAwaitingFinish,
   splitSections,
 } from './current-games-model.js';
@@ -519,6 +524,7 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
       const { mountShowcaseBoard } = await import('./showcase-board.js');
       if (!isConnected() || !host.isConnected) return;
       const [first, second] = matchupSeats(game);
+      const tenantPov = finishedBoardTenantPov(game.variant);
       host.replaceChildren();
       const handle = await mountShowcaseBoard(
         host,
@@ -536,11 +542,11 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
             },
           },
           onLoadError: () => true,
-          pov: 'white',
+          pov: FINISHED_BOARD_POV,
           revealOnFinish: true,
           // A finished fog game is open to spectators: draw it with the fog off
           // (Fog Xiangqi; Fog Chess reveals through revealOnFinish).
-          ...(isFogSpec(game.variant) ? { tenantPov: 'truth' as const } : {}),
+          ...(tenantPov ? { tenantPov } : {}),
         },
       );
       if (!isConnected() || !host.isConnected) {
@@ -554,6 +560,9 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
       }
       entry.handle = handle;
       handle.jumpToPly?.(handle.plyCount?.() ?? game.plyCount);
+      // The names were placed for the expected orientation; the mounted board
+      // has the final word.
+      placeFinishedSeats(entry.tile, handle.bottomSeat?.() ?? FINISHED_BOARD_BOTTOM_SEAT);
     } catch (err) {
       console.warn('[current-games] finished board failed', err);
       host.replaceChildren(buildFogTile(variantDisplayLabel(game.variant), null));
@@ -856,10 +865,6 @@ async function fetchFinished(): Promise<FeaturedGame[]> {
   return body?.unlocked ?? [];
 }
 
-function isFogSpec(variant: string): boolean {
-  return maybeGameSpecForId(variant === 'fog' ? 'dark-chess' : variant)?.visibility === 'dark';
-}
-
 async function apiEventLoader(roomId: string): Promise<GameEvent[]> {
   const resp = await fetch(`/api/games/${encodeURIComponent(roomId)}/events`);
   if (!resp.ok) throw new Error(`failed to load events for ${roomId}: ${resp.status}`);
@@ -867,13 +872,15 @@ async function apiEventLoader(roomId: string): Promise<GameEvent[]> {
   return data.events;
 }
 
-function buildFinishedTile(game: FeaturedGame): HTMLElement {
+// A finished card: the player names above and below the final position, each
+// on the side of the board their pieces start from, so a long name gets the
+// card's full width; then the result and when it ended.
+export function buildFinishedTile(game: FeaturedGame): HTMLElement {
   const locale = currentLocale();
   const [first, second] = matchupSeats(game);
-  const matchup = namesMatchupLabel(
-    displayParticipantName(game, first),
-    displayParticipantName(game, second),
-  );
+  const firstName = displayParticipantName(game, first);
+  const secondName = displayParticipantName(game, second);
+  const matchup = namesMatchupLabel(firstName, secondName);
   const tile = document.createElement('a');
   tile.className = 'current-game-finished';
   tile.dataset.roomId = game.roomId;
@@ -886,10 +893,6 @@ function buildFinishedTile(game: FeaturedGame): HTMLElement {
   } else {
     board.classList.add('is-loading');
   }
-  const names = document.createElement('span');
-  names.className = 'current-game-finished-players';
-  names.textContent = matchup;
-  names.title = matchup;
   const line = document.createElement('span');
   line.className = 'current-game-finished-line';
   const result = document.createElement('span');
@@ -901,6 +904,35 @@ function buildFinishedTile(game: FeaturedGame): HTMLElement {
   when.className = 'current-game-finished-when';
   when.textContent = formatGameTime(game.endedAt, locale);
   line.append(result, when);
-  tile.append(board, names, line);
+  tile.append(
+    finishedSeatRow('first', first, firstName),
+    board,
+    finishedSeatRow('second', second, secondName),
+    line,
+  );
+  placeFinishedSeats(tile, FINISHED_BOARD_BOTTOM_SEAT);
   return tile;
+}
+
+function finishedSeatRow(seat: BoardSeat, color: string, name: string): HTMLElement {
+  const row = document.createElement('span');
+  row.className = 'current-game-finished-seat';
+  row.dataset.seat = seat;
+  row.dataset.color = color;
+  row.textContent = name;
+  row.title = name;
+  return row;
+}
+
+// Puts the bottom seat's name under the board and the other one over it.
+export function placeFinishedSeats(tile: HTMLElement, bottomSeat: BoardSeat): void {
+  const board = tile.querySelector<HTMLElement>(':scope > .current-game-board');
+  const rows = (['first', 'second'] as const).map((seat) =>
+    tile.querySelector<HTMLElement>(`:scope > .current-game-finished-seat[data-seat="${seat}"]`),
+  );
+  const [first, second] = rows;
+  if (!board || !first || !second) return;
+  const [top, bottom] = seatsTopToBottom([first, second], bottomSeat);
+  if (board.previousElementSibling !== top) board.before(top);
+  if (board.nextElementSibling !== bottom) board.after(bottom);
 }

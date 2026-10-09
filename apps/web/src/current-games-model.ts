@@ -146,6 +146,34 @@ export function finishedTileKind(variant: string): 'board' | 'fog' {
   return 'fog';
 }
 
+// How every "Just finished" thumbnail mounts (current-games.ts
+// mountFinishedBoard): the chess renderer turned to White, a fog game drawn
+// with the fog off (Fog Chess reveals through revealOnFinish instead), and any
+// other tenant left to its compact pick (the truth or as-played masked board,
+// turned to Red).
+export const FINISHED_BOARD_POV = 'white' as const;
+
+export function finishedBoardTenantPov(variant: string): 'truth' | null {
+  const spec = maybeGameSpecForId(variant === 'fog' ? 'dark-chess' : variant);
+  return spec?.visibility === 'dark' ? 'truth' : null;
+}
+
+// A seat in move order: 'first' is Red / White, 'second' Black.
+export type BoardSeat = 'first' | 'second';
+
+// The seat those settings put at the bottom of the thumbnail on every renderer:
+// the first mover (White on the chess path, Red on every tenant). The card's
+// names follow it until the board mounts, then follow the mounted board's own
+// bottomSeat() (current-games-finished-seats.test.ts pins the two together).
+export const FINISHED_BOARD_BOTTOM_SEAT: BoardSeat = 'first';
+
+// The two name rows of a finished card, top then bottom: the seat at the bottom
+// of the thumbnail goes below it, the other above.
+export function seatsTopToBottom<T>(seats: readonly [T, T], bottomSeat: BoardSeat): [T, T] {
+  const [first, second] = seats;
+  return bottomSeat === 'first' ? [second, first] : [first, second];
+}
+
 // "Just finished" reads the cross-variant feed without the Featured channel's
 // 20-ply bar: a game that leaves the wall must land here however short it was.
 export const FINISHED_POOL_URL = '/api/watch?channel=top&curated=0';
