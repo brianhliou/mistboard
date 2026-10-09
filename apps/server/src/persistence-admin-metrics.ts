@@ -2,6 +2,7 @@ import {
   bothSidesMoved,
   COUNTED_USER,
   countedAccountSeat,
+  countedAuthor,
   countedHumanGame,
   countedPlayerSeat,
   excludedSeatExists,
@@ -59,7 +60,10 @@ export interface AdminMetricsWeek {
   studiesCreated: number;
   studyChaptersCreated: number;
   practiceSolves: number;
+  /** Lobby chat lines. */
   chatLines: number;
+  /** Chat in game rooms: the players' room and the spectators' room. */
+  gameChatLines: number;
   dmMessages: number;
   correspondenceSeeks: number;
   newPatrons: number;
@@ -168,6 +172,7 @@ export async function getAdminMetrics(options: AdminMetricsOptions = {}): Promis
       studyChaptersCreated: act?.studyChaptersCreated ?? 0,
       practiceSolves: act?.practiceSolves ?? 0,
       chatLines: act?.chatLines ?? 0,
+      gameChatLines: act?.gameChatLines ?? 0,
       dmMessages: act?.dmMessages ?? 0,
       correspondenceSeeks: act?.correspondenceSeeks ?? 0,
       newPatrons: act?.newPatrons ?? 0,
@@ -464,11 +469,16 @@ type ActivityWeek = {
   studiesCreated: number;
   studyChaptersCreated: number;
   practiceSolves: number;
+  /** Lobby chat lines. */
   chatLines: number;
+  /** Chat in game rooms: the players' room and the spectators' room. */
+  gameChatLines: number;
   dmMessages: number;
   correspondenceSeeks: number;
   newPatrons: number;
 };
+
+const VISIBLE_CHAT_LINE = 'hidden_at IS NULL AND shadow = false';
 
 // One UNION of per-table weekly counts rather than eleven round trips. Each
 // arm is (week, metric, n); the map is assembled here.
@@ -498,7 +508,23 @@ async function collectActivityByWeek(
       arm('studiesCreated', 'studies', 'created_at'),
       arm('studyChaptersCreated', 'study_chapters', 'created_at'),
       arm('practiceSolves', 'practice_progress', 'solved_at'),
-      arm('chatLines', 'chat_lines', 'created_at', 'hidden_at IS NULL AND shadow = false'),
+      // Chat by room kind (routes/chat.ts names rooms 'lobby', 'player:<room>',
+      // 'game:<room>', 'study:<id>', 'broadcast:<slug>'). Lobby and game rooms
+      // are separate series; study and broadcast chat are neither. Until
+      // 2026-10-08 one unfiltered arm reported every room as "Lobby chat".
+      arm(
+        'chatLines',
+        'chat_lines',
+        'created_at',
+        `room = 'lobby' AND ${VISIBLE_CHAT_LINE} AND ${countedAuthor('author_account_id')}`,
+      ),
+      arm(
+        'gameChatLines',
+        'chat_lines',
+        'created_at',
+        `(room LIKE 'player:%' OR room LIKE 'game:%') AND ${VISIBLE_CHAT_LINE}
+         AND ${countedAuthor('author_account_id')}`,
+      ),
       arm('dmMessages', 'dm_messages', 'created_at'),
       arm('correspondenceSeeks', 'correspondence_seeks', 'created_at'),
       arm('newPatrons', 'users', 'patron_since', `patron_since IS NOT NULL AND ${COUNTED_USER}`),
@@ -517,6 +543,7 @@ async function collectActivityByWeek(
       studyChaptersCreated: 0,
       practiceSolves: 0,
       chatLines: 0,
+      gameChatLines: 0,
       dmMessages: 0,
       correspondenceSeeks: 0,
       newPatrons: 0,

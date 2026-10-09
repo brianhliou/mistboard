@@ -153,3 +153,13 @@ export function countedAccountSeat(participantsAlias = 'p'): string {
 
 // Row filter for counts over the users table itself.
 export const COUNTED_USER = `stats_excluded_at IS NULL`;
+
+// Row filter for rows an account wrote (chat lines): counted unless the author
+// is excluded. A NULL author (the account was deleted) still counts; the line
+// was a person's.
+export function countedAuthor(authorColumn: string): string {
+  return `NOT EXISTS (
+    SELECT 1 FROM users xa
+    WHERE xa.id = ${authorColumn} AND xa.stats_excluded_at IS NOT NULL
+  )`;
+}
