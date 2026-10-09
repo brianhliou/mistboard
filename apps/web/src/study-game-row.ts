@@ -9,6 +9,7 @@
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import { seatDiscEl } from './seat-disc.js';
+import { displayEventName } from './study-chapter-games.js';
 import { localizedChapterTags } from './study-i18n.js';
 
 export type GameRowChapter = {
@@ -84,7 +85,7 @@ export function gameCoachContext(
   if (!base?.red || !base.black) return null;
   const tags = localizedChapterTags(base, chapter.i18n, locale);
   const detail: string[] = [];
-  if (tags.event) detail.push(shortEvent(tags.event));
+  if (tags.event) detail.push(shortEvent(displayEventName(tags.event, locale)));
   const round = tags.round?.match(/(\d+)/)?.[1];
   if (round) detail.push(t('study.rowRound', { n: round }, locale));
   else if (tags.round) detail.push(tags.round);

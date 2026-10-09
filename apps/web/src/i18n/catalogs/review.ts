@@ -557,6 +557,12 @@ export const EN_REVIEW = {
   'study.gameDate': 'Date',
   'study.gameResult': 'Result',
   'study.gameSource': 'Source',
+  // A game chapter's rail row and the study's one-line summary of its games
+  // (study-chapter-games.ts). The score is from the study's focus player's side.
+  'study.gameVs': 'vs',
+  'study.gamesSummaryGames': '{count} games',
+  'study.gamesSummaryRange': '{from} to {to}',
+  'study.gamesSummaryScore': '{name} +{wins} ={draws} -{losses}',
   'study.errataTitle': 'Spotted a mistake?',
   'study.showMore': 'Show more',
   'study.indexMore': 'More studies',

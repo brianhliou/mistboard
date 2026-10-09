@@ -49,6 +49,13 @@ import {
 } from './study-catalog.js';
 import { openChapterDialog } from './study-chapter-dialog.js';
 import {
+  buildChapterGameRow,
+  chapterEventGroups,
+  displayEventName,
+  studyFocusPlayer,
+  studyGamesSummary,
+} from './study-chapter-games.js';
+import {
   buildStudyRail,
   type ChapterControlModel,
   type ChapterSettingsPatch,
@@ -701,9 +708,11 @@ function renderStudy(
       status: HTMLElement,
       asLearner = false,
       chapterLabel?: StudyRailActions['chapterLabel'],
+      groupHeading?: StudyRailActions['groupHeading'],
     ): HTMLElement =>
       buildStudyRail(asLearner ? learnerView : study, chapters, activeId, status, {
         ...(chapterLabel ? { chapterLabel } : {}),
+        ...(groupHeading ? { groupHeading } : {}),
         previousListScrollTop,
         onSwitch: switchTo,
         onAdd: addChapter,
@@ -876,6 +885,8 @@ function renderStudy(
       return;
     }
 
+    const gameFocus = studyFocusPlayer(chapters);
+    const eventGroups = chapterEventGroups(chapters);
     let handle: TreeReviewHandle | null = null;
     activeHandle = null;
     const status = statusSpan(study.isOwner);
@@ -973,7 +984,17 @@ function renderStudy(
             };
           })()
         : {}),
-      actions: rail(status),
+      // A chapter that is a whole game is laid out from its tags (players, date,
+      // a result chip), grouped under its event when the games span several.
+      actions: rail(
+        status,
+        false,
+        (model) => {
+          const full = chapters.find((entry) => entry.id === model.id);
+          return full ? buildChapterGameRow(full, gameFocus) : null;
+        },
+        (model) => eventGroups.get(model.id) ?? null,
+      ),
       aboutTab: { label: t('study.aboutTab'), body: aboutPanel(study, chapter) },
       // PGN download sits with FEN/Share/Moves rather than in the owner-only
       // settings menu: a study whose work cannot leave it is a trap, so every
@@ -1045,7 +1066,13 @@ function renderStudy(
     })
       .then((mounted) => {
         if (mountToken !== mountSeq) return;
-        attachStudyTitleRow(root, study.id, studyVariant(), studyActions(study, { clone: false }));
+        attachStudyTitleRow(
+          root,
+          study.id,
+          studyVariant(),
+          studyActions(study, { clone: false }),
+          studyGamesSummary(chapters),
+        );
         handle = mounted;
         activeHandle = mounted;
       })
@@ -1083,6 +1110,7 @@ function attachStudyTitleRow(
   studyId: string,
   variant: StudyVariantId,
   actions: HTMLElement[],
+  gamesLine: string | null = null,
 ): void {
   const title = root.querySelector<HTMLElement>('.review-info-card__title, .gamebook__title');
   if (!title) return;
@@ -1104,7 +1132,23 @@ function attachStudyTitleRow(
   const row = document.createElement('div');
   row.className = 'study-page__title-row';
   title.before(row);
-  copy.append(title, ...(hasSummary ? [summary] : []));
+  // The study's games in one line, from the chapter tags ("47 games · Oct 2022
+  // to Sep 2026 · Tony Fung Ga Zen +20 =17 -10"): what an import of one
+  // player's run is, before any chapter is opened.
+  const games = gamesLine ? document.createElement('p') : null;
+  if (games && gamesLine) {
+    games.className = 'study-page__games';
+    // Each part on one line, so a narrow rail breaks between "Sep 2026" and
+    // the player's score rather than inside the player's name.
+    gamesLine.split(' · ').forEach((part, index) => {
+      if (index > 0) games.append(' · ');
+      const span = document.createElement('span');
+      span.className = 'study-page__games-part';
+      span.textContent = part;
+      games.append(span);
+    });
+  }
+  copy.append(title, ...(games ? [games] : []), ...(hasSummary ? [summary] : []));
   row.append(...(thumbnail ? [thumbnail] : []), copy);
   if (hasSummary) attachSummaryToggle(copy, summary);
   // The actions take a full-width line UNDER the title copy (the row wraps),
@@ -1272,7 +1316,7 @@ export function gameDetails(chapter: ChapterDto): HTMLElement {
   list.className = 'study-about__game';
   const tags = localizedChapterTags(chapter.tags ?? {}, chapter.i18n);
   const rows: Array<[string, string]> = [
-    [t('study.gameEvent'), tags.event ?? ''],
+    [t('study.gameEvent'), tags.event ? displayEventName(tags.event) : ''],
     [t('study.gameDate'), tags.date ?? ''],
     [t('study.gameResult'), tags.result ?? ''],
   ];
