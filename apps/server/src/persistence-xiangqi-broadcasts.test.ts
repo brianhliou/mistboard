@@ -34,6 +34,7 @@ import {
   xiangqiBroadcastBoardStreamForApi,
   xiangqiBroadcastRoundStreamForApi,
 } from './routes/xiangqi-broadcasts.js';
+import { dpxqPairingBoard, parseDpxqRoundPage } from './xiangqi-broadcast-dpxq-pairings.js';
 import {
   pollXiangqiBroadcastSourceOnce,
   type XiangqiBroadcastSourceFetch,
@@ -596,6 +597,81 @@ definePersistenceTests('xiangqi broadcasts', () => {
     // Retired once: the next poll has nothing to do.
     const third = await poll(full);
     assert.equal(third.ok ? 'ok' : third.message, 'every listed board is already imported');
+  });
+
+  test('a team league round stored by table alone is re-filed by match, the old boards retired', async () => {
+    // The 2026 women's league (dpxq 12776) round 1: 19 games in five matches,
+    // no records. Keyed by round and table, prod held six boards, each the
+    // last match's game at that table. Replayed: the six as stored, then a
+    // poll that keys by match.
+    const dpxqFixture = (name: string) =>
+      readFileSync(fileURLToPath(new URL(`../fixtures/dpxq/${name}`, import.meta.url)), 'utf-8');
+    const slug = 'womens-league-2026';
+    const sourceUrl = `mistboard-discover://dpxq-tour?tour=12776&tourSlug=${slug}`;
+    const roundPage = dpxqFixture('round_12776_1-womens-league-2026-r01.html');
+    const roundId = `${slug}-r01`;
+    const parsed = parseDpxqRoundPage(roundPage)!;
+    // The old key: the last pairing read at each table wins.
+    const byTable = new Map<number, (typeof parsed.pairings)[number]>();
+    for (const pairing of parsed.pairings) byTable.set(pairing.table, pairing);
+    const stale = [...byTable.values()].map(({ match, matchName, order, ...pairing }) =>
+      dpxqPairingBoard({
+        tourSlug: slug,
+        roundId,
+        pairing,
+        sourceUrl: 'http://www.dpxq.com/hldcg/round_12776_1.html',
+      }),
+    );
+    assert.equal(stale.length, 6);
+    await importXiangqiBroadcastPack({
+      tour: {
+        schema: 'mistboard.xiangqi.broadcast.v1',
+        slug,
+        name: '2026年全国象棋女子甲级联赛',
+        sourceUrl,
+      },
+      rounds: [
+        {
+          schema: 'mistboard.xiangqi.broadcast.v1',
+          id: roundId,
+          tourSlug: slug,
+          name: 'Round 1',
+          sourceUrl: 'http://www.dpxq.com/hldcg/round_12776_1.html',
+        },
+      ],
+      boards: stale,
+    });
+    const page1Only = roundPage.replace(/最新对阵<\/a>\(\d+\)/, '最新对阵</a>(1)');
+    const poll = () =>
+      pollXiangqiBroadcastSourceOnce({
+        sourceUrl,
+        tourSlug: slug,
+        fetchImpl: multiSourceFetch({
+          'http://www.dpxq.com/hldcg/round_12776.html': page1Only,
+          'http://www.dpxq.com/hldcg/round_12776_1.html': page1Only,
+          'http://www.dpxq.com/hldcg/movelist_12776.html': '<html><body></body></html>',
+        }),
+        sourcePolicy: { allowedHosts: ['www.dpxq.com'], allowLocal: false },
+      });
+
+    const first = await poll();
+    assert.equal(first.ok, true, first.ok ? '' : first.message);
+    const boards = await listXiangqiBroadcastBoards(roundId);
+    const ids = boards.map((board) => board.sourceBoardId);
+    assert.equal(boards.length, 19, 'every game of the round, the six table-keyed boards retired');
+    assert.equal(
+      ids.some((id) => /^r01t/.test(id)),
+      false,
+    );
+    const tangDan = boards.find((board) => board.red.name === '唐丹')!;
+    assert.equal(tangDan.sourceBoardId, 'r01m03t01');
+    assert.equal(tangDan.result, '1-0');
+    assert.equal(tangDan.details?.match, '北京棋院-浙江泰顺队');
+    const logs = await listXiangqiBroadcastSyncLogs({ tourSlug: slug });
+    assert.equal(logs.filter((log) => log.kind === 'superseded').length, 6);
+
+    const second = await poll();
+    assert.equal(second.ok ? 'ok' : second.message, 'every listed board is already imported');
   });
 
   test('explicit correction can replace a non-prefix legal board update', async () => {
