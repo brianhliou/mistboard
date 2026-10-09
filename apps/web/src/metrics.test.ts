@@ -99,6 +99,7 @@ const week = (weekStart: string, overrides: Record<string, number> = {}) => ({
   studyChaptersCreated: 0,
   practiceSolves: 0,
   chatLines: 7,
+  gameChatLines: 2,
   dmMessages: 1,
   correspondenceSeeks: 0,
   newPatrons: 0,

@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setPostHogInstance } from './analytics.js';
+import { hasAppTranslation, loadAppI18nDomains, t } from './i18n/catalog.js';
+import { SUPPORTED_LOCALES } from './i18n/locale.js';
 import {
   type ActivityEvent,
   appendChatText,
@@ -507,21 +509,46 @@ function activity(id: string, ageMs: number, extra: Partial<ActivityEvent> = {})
 }
 
 describe('activity rows', () => {
+  it('has every bot-win template in en, zh-Hans and zh-Hant', async () => {
+    await loadAppI18nDomains();
+    const keys = ['chat.eventBotWin', 'chat.eventBotWinRepeat', 'chat.eventBotWinMixed'] as const;
+    expect(SUPPORTED_LOCALES).toEqual(['en', 'zh-Hans', 'zh-Hant']);
+    for (const locale of SUPPORTED_LOCALES) {
+      for (const key of keys) {
+        expect(hasAppTranslation(locale, key), `${locale}:${key}`).toBe(true);
+        const template = t(key, {}, locale);
+        expect(template).toContain('{who}');
+        expect(template.includes('{count}')).toBe(key !== 'chat.eventBotWin');
+        expect(template.includes('{bot}')).toBe(key !== 'chat.eventBotWinMixed');
+        expect(template).not.toContain('\u2014');
+      }
+    }
+  });
+
   it('writes each kind as a sentence with the bot in bold', () => {
     const guestWin = document.createElement('a');
     appendEventSentence(
       guestWin,
-      activity('g', 0, { handle: null, opponent: 'Fairy-Stockfish Level 4' }),
+      activity('g', 0, { handle: null, opponent: 'Fairy-Stockfish Level 8' }),
       'en',
     );
-    expect(guestWin.textContent).toBe('A guest beat Fairy-Stockfish Level 4 at Xiangqi');
+    expect(guestWin.textContent).toBe('A guest beat Fairy-Stockfish Level 8, a top Xiangqi bot');
     expect([...guestWin.querySelectorAll('strong')].map((el) => el.textContent)).toEqual([
-      'Fairy-Stockfish Level 4',
+      'Fairy-Stockfish Level 8',
     ]);
 
     const streak = document.createElement('a');
-    appendEventSentence(streak, activity('st', 0, { handle: null, count: 3 }), 'en');
-    expect(streak.textContent).toBe('A guest beat Pikafish Level 6 at Xiangqi 3 times');
+    appendEventSentence(
+      streak,
+      activity('st', 0, { handle: null, opponent: 'Pikafish', count: 3 }),
+      'en',
+    );
+    expect(streak.textContent).toBe('A guest beat Pikafish, a top Xiangqi bot, 3 times');
+
+    // A day's wins over more than one top bot or variant name neither.
+    const mixed = document.createElement('a');
+    appendEventSentence(mixed, activity('mx', 0, { opponent: undefined, count: 4 }), 'en');
+    expect(mixed.textContent).toBe('fox beat top bots 4 times');
 
     const study = document.createElement('a');
     appendEventSentence(

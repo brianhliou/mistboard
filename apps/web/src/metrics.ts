@@ -59,6 +59,7 @@ export type AdminMetricsWeek = {
   studyChaptersCreated: number;
   practiceSolves: number;
   chatLines: number;
+  gameChatLines: number;
   dmMessages: number;
   correspondenceSeeks: number;
   newPatrons: number;
@@ -569,10 +570,11 @@ function buildWeeklySections(admin: AdminMetrics, locale: Locale): HTMLElement[]
       'Community per week',
       [
         { key: 'chatLines', label: 'Lobby chat' },
+        { key: 'gameChatLines', label: 'Game chat' },
         { key: 'dmMessages', label: 'Direct messages' },
         { key: 'correspondenceSeeks', label: 'Correspondence seeks' },
       ],
-      'Lobby chat lines, direct messages, and correspondence seeks per week',
+      'Lobby chat lines, chat lines in game rooms (players and spectators), direct messages, and correspondence seeks per week',
     ),
   ];
 }
