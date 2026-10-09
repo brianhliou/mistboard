@@ -396,7 +396,12 @@ export function buildPlayPanel(
 
       const name = document.createElement('span');
       name.className = 'pp-name';
-      name.textContent = label;
+      // The live count sits on its own line under the label: inline, a long
+      // name (Crazyhouse Xiangqi) ellipsised it out of sight.
+      const labelText = document.createElement('span');
+      labelText.className = 'pp-name-label';
+      labelText.textContent = label;
+      name.append(labelText);
       const playing = document.createElement('em');
       playing.className = 'pp-playing';
       name.append(playing);

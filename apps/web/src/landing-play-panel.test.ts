@@ -360,6 +360,10 @@ describe('homepage play panel', () => {
     expect(board.querySelector('.pp-feature-waiting')?.textContent).toContain('Xiangqi');
     expect(board.querySelector('.pp-badge')?.textContent).toBe('1');
     expect(row(board, 'jieqi').querySelector('.pp-playing')?.textContent).toBe('3 playing');
+    // Its own line under the label, so a long name cannot ellipsise it away.
+    const jieqiName = row(board, 'jieqi').querySelector('.pp-name');
+    expect(jieqiName?.querySelector('.pp-name-label')?.textContent).toBe('Jieqi');
+    expect(jieqiName?.lastElementChild?.className).toBe('pp-playing');
     const person = row(board, 'xiangqi', 'person');
     expect(person.classList.contains('has-waiting')).toBe(true);
     expect(person.querySelector('.pp-waiting')?.textContent).toBe('1 waiting');
