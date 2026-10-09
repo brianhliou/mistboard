@@ -306,7 +306,7 @@ export function jieqiPieceGhostSvg(
         y: 0,
         size: PIECE_SIZE,
       });
-  return `<svg width="${PIECE_SIZE}" height="${PIECE_SIZE}" viewBox="0 0 ${PIECE_SIZE} ${PIECE_SIZE}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`;
+  return `<svg width="${PIECE_SIZE}" height="${PIECE_SIZE}" viewBox="0 0 ${PIECE_SIZE} ${PIECE_SIZE}" overflow="visible" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`;
 }
 
 // A piece whose identity the game never determined (an imported game's piece
@@ -509,7 +509,8 @@ export function installJieqiBoardStyles(): void {
     .jieqi-hit--target:hover .jieqi-hint-capture {
       opacity: 0;
     }
-    .jieqi-piece { pointer-events: none; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2)); }
+    /* The disc shadow is drawn into each piece (xiangqiPieceShadowMarks). */
+    .jieqi-piece { pointer-events: none; }
     .jieqi-piece--drag-source { opacity: 0.34; }
     .jieqi-hit rect { fill: transparent; cursor: pointer; }
   `;

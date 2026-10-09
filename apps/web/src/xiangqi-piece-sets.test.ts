@@ -1,8 +1,8 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { XIANGQI_GLYPH_PATHS } from '@mistboard/board-render';
 import type { XiangqiPiece } from '@mistboard/game';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import {
   type AssetXiangqiPieceSet,
   assetTreasureMarks,
@@ -16,6 +16,8 @@ import {
   XIANGQI_PIECE_SETS,
   xiangqiGlyph,
   xiangqiNeutralBackMarks,
+  xiangqiPieceDiscShadow,
+  xiangqiPieceShadowMarks,
   xiangqiPieceTilePreview,
   xiangqiPreviewGlyph,
 } from './xiangqi-piece-sets.js';
@@ -315,6 +317,15 @@ describe('asset piece sets', () => {
     'soldier',
   ] as const;
   const COLORS = ['red', 'black'] as const;
+  // The cache-busting ?v= per set; brush and clerical went to 2 when their
+  // baked disc shadow came out (2026-10-08).
+  const ASSET_VERSIONS: Record<AssetXiangqiPieceSet, number> = {
+    lacquer: 1,
+    wood: 1,
+    book: 1,
+    brush: 2,
+    clerical: 2,
+  };
   const publicDir = ['public', 'apps/web/public']
     .map((candidate) => resolve(process.cwd(), candidate))
     .find((candidate) => existsSync(`${candidate}/piece-sets/xiangqi`)) as string;
@@ -343,7 +354,9 @@ describe('asset piece sets', () => {
       for (const color of COLORS) {
         for (const role of ROLES) {
           const svg = renderXiangqiPieceGlyphed({ color, role }, set, {});
-          expect(hrefs(svg)).toEqual([`/piece-sets/xiangqi/${set}/${color}-${role}.svg?v=1`]);
+          expect(hrefs(svg)).toEqual([
+            `/piece-sets/xiangqi/${set}/${color}-${role}.svg?v=${ASSET_VERSIONS[set]}`,
+          ]);
           expect(fileExists(hrefs(svg)[0]!), `${set} ${color} ${role}`).toBe(true);
           expect(svg).toContain(`aria-label="${color} ${role}"`);
         }
@@ -351,14 +364,18 @@ describe('asset piece sets', () => {
           shrouded: true,
           shroudedStyle: 'back',
         });
-        expect(hrefs(back)).toEqual([`/piece-sets/xiangqi/${set}/${color}-back.svg?v=1`]);
+        expect(hrefs(back)).toEqual([
+          `/piece-sets/xiangqi/${set}/${color}-back.svg?v=${ASSET_VERSIONS[set]}`,
+        ]);
         expect(fileExists(hrefs(back)[0]!)).toBe(true);
         expect(back).not.toContain('general.svg');
         expect(back).not.toContain('?</text>');
         const question = renderXiangqiPieceGlyphed({ color, role: 'general' }, set, {
           shrouded: true,
         });
-        expect(hrefs(question)).toEqual([`/piece-sets/xiangqi/${set}/${color}-back.svg?v=1`]);
+        expect(hrefs(question)).toEqual([
+          `/piece-sets/xiangqi/${set}/${color}-back.svg?v=${ASSET_VERSIONS[set]}`,
+        ]);
         expect(question).toContain('>?</text>');
         expect(question).toContain(`aria-label="${color} hidden piece"`);
       }
@@ -367,7 +384,9 @@ describe('asset piece sets', () => {
     it(`${set}: Fortress treasure and duck draw on files that exist`, () => {
       for (const color of COLORS) {
         const treasure = assetTreasureMarks(set, color);
-        expect(hrefs(treasure)).toEqual([`/piece-sets/xiangqi/${set}/${color}-back.svg?v=1`]);
+        expect(hrefs(treasure)).toEqual([
+          `/piece-sets/xiangqi/${set}/${color}-back.svg?v=${ASSET_VERSIONS[set]}`,
+        ]);
         expect(treasure).toContain(`<path d="${XIANGQI_GLYPH_PATHS.寶}"`);
       }
       for (const href of hrefs(duckPieceMarks(set))) {
@@ -391,7 +410,92 @@ describe('asset piece sets', () => {
     expect(xiangqiNeutralBackMarks('traditional')).toBeNull();
     for (const set of ['wood', 'brush', 'clerical'] as const) {
       const marks = xiangqiNeutralBackMarks(set);
-      expect(marks && hrefs(marks)).toEqual([`/piece-sets/xiangqi/${set}/red-back.svg?v=1`]);
+      expect(marks && hrefs(marks)).toEqual([
+        `/piece-sets/xiangqi/${set}/red-back.svg?v=${ASSET_VERSIONS[set]}`,
+      ]);
+    }
+  });
+});
+
+describe('piece shadow', () => {
+  const general: XiangqiPiece = { color: 'red', role: 'general' };
+  const SHADOW = /<g class="xq-piece-shadow"/g;
+  const count = (svg: string) => (svg.match(SHADOW) ?? []).length;
+
+  afterEach(() => {
+    delete document.documentElement.dataset.xiangqiPieceShadow;
+  });
+
+  it('draws one shadow under every disc set, first, with the box opened for it', () => {
+    for (const { id } of XIANGQI_PIECE_SETS) {
+      if (id === 'international-flat' || id === 'animal-flat') continue;
+      const svg = renderXiangqiPieceGlyphed(general, id, { x: 0, y: 0, size: 56 });
+      expect(count(svg), id).toBe(1);
+      expect(svg, id).toContain('overflow="visible"');
+      // Under the disc: the shadow is the first thing inside the piece box.
+      expect(svg.indexOf('xq-piece-shadow'), id).toBeLessThan(
+        svg.search(/<(image|circle cx="50" cy="50")/),
+      );
+    }
+  });
+
+  it('draws none for the disc-less sets, except on their fog token disc', () => {
+    for (const id of ['international-flat', 'animal-flat'] as const) {
+      const face = renderXiangqiPieceGlyphed(general, id);
+      expect(count(face), id).toBe(0);
+      expect(face, id).not.toContain('overflow="visible"');
+      expect(count(renderXiangqiPieceGlyphed(general, id, { shrouded: true })), id).toBe(1);
+    }
+  });
+
+  it('draws it under the face-down backs too', () => {
+    for (const id of ['traditional', 'international', 'lacquer', 'wood'] as const) {
+      const back = renderXiangqiPieceGlyphed(general, id, {
+        shrouded: true,
+        shroudedStyle: 'back',
+      });
+      expect(count(back), id).toBe(1);
+    }
+  });
+
+  it('follows the switch on the root, and an explicit option wins', () => {
+    expect(count(renderXiangqiPieceGlyphed(general, 'traditional'))).toBe(1);
+    document.documentElement.dataset.xiangqiPieceShadow = 'off';
+    expect(count(renderXiangqiPieceGlyphed(general, 'traditional'))).toBe(0);
+    expect(count(renderXiangqiPieceGlyphed(general, 'lacquer'))).toBe(0);
+    expect(renderXiangqiPieceGlyphed(general, 'traditional')).not.toContain('overflow');
+    expect(xiangqiPieceDiscShadow('traditional')).toBe('');
+    expect(count(renderXiangqiPieceGlyphed(general, 'traditional', { shadow: true }))).toBe(1);
+    document.documentElement.dataset.xiangqiPieceShadow = 'on';
+    expect(count(renderXiangqiPieceGlyphed(general, 'traditional'))).toBe(1);
+    expect(count(renderXiangqiPieceGlyphed(general, 'traditional', { shadow: false }))).toBe(0);
+  });
+
+  it('is four stacked static circles below the disc, no filter', () => {
+    const marks = xiangqiPieceShadowMarks(45);
+    expect(marks.match(/<circle /g)).toHaveLength(4);
+    expect(marks).not.toMatch(/filter|animate/);
+    const [, cx, cy] = marks.match(/translate\(([\d.]+) ([\d.]+)\)/) ?? [];
+    expect(Number(cx)).toBe(50);
+    expect(Number(cy)).toBeGreaterThan(50);
+  });
+
+  it('no asset set bakes in a disc shadow of its own', () => {
+    // brush and clerical shipped a drop shadow on the disc (filter url(#c)),
+    // which doubled with the drawn one and ignored the switch.
+    const publicDir = ['public', 'apps/web/public']
+      .map((candidate) => resolve(process.cwd(), candidate))
+      .find((candidate) => existsSync(`${candidate}/piece-sets/xiangqi`)) as string;
+    for (const set of ['brush', 'clerical'] as const) {
+      for (const color of ['red', 'black'] as const) {
+        for (const role of ['general', 'soldier', 'back'] as const) {
+          const svg = readFileSync(
+            `${publicDir}/piece-sets/xiangqi/${set}/${color}-${role}.svg`,
+            'utf8',
+          );
+          expect(svg, `${set} ${color}-${role}`).not.toContain('filter="url(#c)"');
+        }
+      }
     }
   });
 });

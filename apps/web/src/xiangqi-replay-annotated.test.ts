@@ -427,14 +427,36 @@ test('nothing drawn for an edge-rank move escapes the board viewBox', () => {
   ];
   // The board content sits inside a <g transform="translate(PAD PAD)">, so the
   // circle coordinates below are already in the same space as the viewBox.
+  // A piece is a nested <svg> with its own 100-unit box; its circles are mapped
+  // into board space through that box (and the piece shadow's translate).
+  const boardSpace = (circle: SVGCircleElement): [number, number, number] => {
+    let cx = Number(circle.getAttribute('cx') ?? 0);
+    let cy = Number(circle.getAttribute('cy') ?? 0);
+    let r = Number(circle.getAttribute('r'));
+    const shift = circle.parentElement
+      ?.getAttribute('transform')
+      ?.match(/translate\(([-\d.]+) ([-\d.]+)\)/);
+    const piece = circle.closest('svg');
+    if (piece && piece !== svg) {
+      if (shift) {
+        cx += Number(shift[1]);
+        cy += Number(shift[2]);
+      }
+      const k = Number(piece.getAttribute('width')) / 100;
+      cx = Number(piece.getAttribute('x')) + cx * k;
+      cy = Number(piece.getAttribute('y')) + cy * k;
+      r *= k;
+    }
+    return [cx, cy, r];
+  };
   const circles = [...el.querySelectorAll('circle')];
   expect(circles.length).toBeGreaterThan(0);
+  expect(el.querySelectorAll('.xq-piece-shadow').length).toBeGreaterThan(0);
   for (const circle of circles) {
-    const cx = Number(circle.getAttribute('cx'));
-    const cy = Number(circle.getAttribute('cy'));
-    const r = Number(circle.getAttribute('r'));
+    const [cx, cy, r] = boardSpace(circle);
     if (!Number.isFinite(cx) || !Number.isFinite(cy) || !Number.isFinite(r)) continue;
-    const label = circle.getAttribute('class') ?? 'circle';
+    const label =
+      circle.parentElement?.getAttribute('class') ?? circle.getAttribute('class') ?? 'circle';
     expect(cx - r, `${label} crosses the left edge`).toBeGreaterThanOrEqual(-0.5);
     expect(cy - r, `${label} crosses the top edge`).toBeGreaterThanOrEqual(-0.5);
     expect(cx + r, `${label} crosses the right edge`).toBeLessThanOrEqual(vw + 0.5);

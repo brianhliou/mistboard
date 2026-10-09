@@ -10,7 +10,9 @@
 - Changes for Mistboard (2026-10-08), as AGPL section 5 asks: root `viewBox` set
   so the disc sits centred in the piece box; files renamed to
   `<color>-<role>.svg`; `*-back.svg` is the upstream `*_covered.svg`. Each file
-  carries a comment with its upstream path. Drawings unchanged; these SVGs are
+  carries a comment with its upstream path. The disc's baked drop shadow
+  (`filter="url(#c)"` on the disc circle) is removed, since Mistboard draws one
+  shadow under every set and the gear can turn it off. Drawings otherwise unchanged; these SVGs are
   their own source.
 - Not drawn by this set: crossed soldier (plain soldier is used), Fortress
   treasure and Duck Xiangqi duck (Mistboard draws them on this set's back).

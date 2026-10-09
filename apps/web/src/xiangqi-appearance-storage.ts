@@ -331,12 +331,43 @@ export function writeStoredXiangqiStartMarkers(on: boolean): void {
   }
 }
 
-/** The URL preview hooks (?xqLayout=, ?xqBoardColor=, ?xqRiver=) win over the
+// Piece shadow (2026-10-08): the soft shadow drawn under every disc piece
+// (xiangqiPieceShadowMarks). On by default; like the start markers, only an
+// explicit pick is stored, so nothing is written until the reader flips it.
+const xiangqiPieceShadowStorageKey = 'mistboard.xiangqiPieceShadow';
+const defaultXiangqiPieceShadow = true;
+
+export function readStoredXiangqiPieceShadow(): boolean {
+  try {
+    // QA/share hook: `?xqShadow=off` previews the switch without saving it.
+    const preview = new URLSearchParams(window.location.search).get('xqShadow');
+    if (preview === 'on') return true;
+    if (preview === 'off') return false;
+    const stored = window.localStorage.getItem(xiangqiPieceShadowStorageKey);
+    if (stored === 'on') return true;
+    if (stored === 'off') return false;
+    return defaultXiangqiPieceShadow;
+  } catch {
+    return defaultXiangqiPieceShadow;
+  }
+}
+
+export function writeStoredXiangqiPieceShadow(on: boolean): void {
+  try {
+    window.localStorage.setItem(xiangqiPieceShadowStorageKey, on ? 'on' : 'off');
+  } catch {
+    // The root attribute still updates for the current page.
+  }
+}
+
+/** The URL preview hooks (?xqLayout=, ?xqBoardColor=, ?xqRiver=, ?xqShadow=) win over the
  *  stored pick, so a pick made on a preview link has to end the preview, or the
  *  gear would keep showing the previewed option as selected while the board
  *  shows the pick (Brian's 2026-10-08 review: the river-text selection "stuck"
  *  on a ?xqRiver= link). Drops the parameter from the address in place. */
-export function endXiangqiAppearancePreview(param: 'xqLayout' | 'xqBoardColor' | 'xqRiver'): void {
+export function endXiangqiAppearancePreview(
+  param: 'xqLayout' | 'xqBoardColor' | 'xqRiver' | 'xqShadow',
+): void {
   try {
     const url = new URL(window.location.href);
     if (!url.searchParams.has(param)) return;

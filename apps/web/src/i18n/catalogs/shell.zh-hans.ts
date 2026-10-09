@@ -134,6 +134,7 @@ export const ZH_HANS_SHELL = {
   'prefs.riverText': '河界文字',
   'prefs.riverTextOff': '无',
   'prefs.startMarkers': '兵炮位标记',
+  'prefs.pieceShadow': '棋子阴影',
   'connection.status': '连接状态',
   'connection.ping': '延迟',
   'connection.server': '服务器',

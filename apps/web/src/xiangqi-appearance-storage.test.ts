@@ -9,12 +9,14 @@ import {
   readStoredXiangqiBoardTheme,
   readStoredXiangqiNotation,
   readStoredXiangqiPieceSet,
+  readStoredXiangqiPieceShadow,
   readStoredXiangqiRiverText,
   readStoredXiangqiStartMarkers,
   writeStoredXiangqiBoardColor,
   writeStoredXiangqiBoardLayout,
   writeStoredXiangqiNotation,
   writeStoredXiangqiPieceSet,
+  writeStoredXiangqiPieceShadow,
   writeStoredXiangqiRiverText,
   writeStoredXiangqiStartMarkers,
 } from './xiangqi-appearance-storage.js';
@@ -265,6 +267,36 @@ describe('xiangqi board colour, river text and start marker storage', () => {
     expect(readStoredXiangqiStartMarkers()).toBe(false);
     writeStoredXiangqiStartMarkers(true);
     expect(readStoredXiangqiStartMarkers()).toBe(true);
+  });
+
+  it('draws the piece shadow by default without storing it, and remembers turning it off', () => {
+    const storage = installLocalStorage();
+    expect(readStoredXiangqiPieceShadow()).toBe(true);
+    // Reading the default writes nothing: a later change of default reaches
+    // every browser that never chose.
+    expect(storage.getItem('mistboard.xiangqiPieceShadow')).toBeNull();
+    writeStoredXiangqiPieceShadow(false);
+    expect(storage.getItem('mistboard.xiangqiPieceShadow')).toBe('off');
+    expect(readStoredXiangqiPieceShadow()).toBe(false);
+    writeStoredXiangqiPieceShadow(true);
+    expect(storage.getItem('mistboard.xiangqiPieceShadow')).toBe('on');
+    expect(readStoredXiangqiPieceShadow()).toBe(true);
+    storage.setItem('mistboard.xiangqiPieceShadow', 'sometimes');
+    expect(readStoredXiangqiPieceShadow()).toBe(true);
+  });
+
+  it('previews the piece shadow from ?xqShadow= without saving it', () => {
+    const storage = installLocalStorage();
+    window.history.replaceState({}, '', '/?xqShadow=off');
+    expect(readStoredXiangqiPieceShadow()).toBe(false);
+    writeStoredXiangqiPieceShadow(true);
+    // The preview still wins over a stored pick until a click ends it.
+    expect(readStoredXiangqiPieceShadow()).toBe(false);
+    window.history.replaceState({}, '', '/?xqShadow=on');
+    storage.setItem('mistboard.xiangqiPieceShadow', 'off');
+    expect(readStoredXiangqiPieceShadow()).toBe(true);
+    window.history.replaceState({}, '', '/');
+    expect(readStoredXiangqiPieceShadow()).toBe(false);
   });
 });
 

@@ -166,10 +166,12 @@ describe('xiangqi endgames table', () => {
     }
   });
 
-  it('keeps each board lean (under 9 KB of markup)', () => {
+  // 9 KB until 2026-10-08; the piece shadow (xiangqiPieceShadowMarks) adds
+  // about 165 bytes per piece, 9.9 KB on the busiest row board.
+  it('keeps each board lean (under 11 KB of markup)', () => {
     for (const table of tables('en')) {
       for (const diagram of table.rowDiagrams ?? []) {
-        expect(diagram.svg().length).toBeLessThan(9000);
+        expect(diagram.svg().length).toBeLessThan(11000);
       }
     }
   });

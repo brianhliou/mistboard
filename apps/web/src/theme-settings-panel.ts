@@ -26,6 +26,7 @@ import {
   readStoredSiteTheme,
   readStoredSoundMuted,
   readStoredXiangqiBoardColor,
+  readStoredXiangqiPieceShadow,
   readStoredXiangqiRiverText,
   readStoredXiangqiStartMarkers,
   readXiangqiBoardChoice,
@@ -37,6 +38,7 @@ import {
   setXiangqiBoardColorPreference,
   setXiangqiNotationPreference,
   setXiangqiPieceSetPreference,
+  setXiangqiPieceShadowPreference,
   setXiangqiRiverTextPreference,
   setXiangqiStartMarkersPreference,
   showAppearanceView,
@@ -166,6 +168,7 @@ export function buildAppearanceMenu(options: AppearanceMenuOptions = {}): HTMLEl
       createXiangqiBoardColorField(locale),
       createXiangqiRiverTextField(locale),
       createXiangqiStartMarkersField(locale),
+      createXiangqiPieceShadowField(locale),
     );
   }
   addCategory('board', t('prefs.board', {}, locale), boardBody);
@@ -492,6 +495,22 @@ function createXiangqiStartMarkersField(locale: Locale): HTMLLabelElement {
   input.addEventListener('change', () => setXiangqiStartMarkersPreference(input.checked));
   const text = document.createElement('span');
   text.textContent = t('prefs.startMarkers', {}, locale);
+  field.append(input, text);
+  return field;
+}
+
+// The soft shadow under every disc piece (xiangqiPieceShadowMarks). Shown on both
+// layouts: unlike the start markers, every board draws it.
+function createXiangqiPieceShadowField(locale: Locale): HTMLLabelElement {
+  const field = document.createElement('label');
+  field.className = 'theme-control-check-field xq-piece-shadow-field';
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.dataset.xqPieceShadow = '';
+  input.checked = readStoredXiangqiPieceShadow();
+  input.addEventListener('change', () => setXiangqiPieceShadowPreference(input.checked));
+  const text = document.createElement('span');
+  text.textContent = t('prefs.pieceShadow', {}, locale);
   field.append(input, text);
   return field;
 }

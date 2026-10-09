@@ -25,6 +25,8 @@ import {
   renderXiangqiPieceGlyphed,
   type XiangqiPieceSet,
   xiangqiNeutralBackMarks,
+  xiangqiPieceShadowEnabled,
+  xiangqiPieceShadowMarks,
 } from './xiangqi-piece-sets.js';
 
 // Bespoke SVG renderer for the banqi board, drawn as the bottom HALF of a xiangqi
@@ -124,7 +126,7 @@ export function banqiPieceGhostSvg(
     y: 0,
     size: PIECE_SIZE,
   });
-  return `<svg width="${PIECE_SIZE}" height="${PIECE_SIZE}" viewBox="0 0 ${PIECE_SIZE} ${PIECE_SIZE}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`;
+  return `<svg width="${PIECE_SIZE}" height="${PIECE_SIZE}" viewBox="0 0 ${PIECE_SIZE} ${PIECE_SIZE}" overflow="visible" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`;
 }
 
 // A line intersection. `fileLine` 0..8 runs left→right (file a at the left);
@@ -198,13 +200,25 @@ function faceDownDisc(
   className = 'banqi-back',
 ): string {
   const marks = xiangqiNeutralBackMarks(pieceSet);
+  // The same disc shadow as the revealed pieces (xiangqiPieceShadowMarks).
+  const shadowOn = xiangqiPieceShadowEnabled();
   if (marks) {
     const x = cx - PIECE_SIZE / 2;
     const y = cy - PIECE_SIZE / 2;
-    return `<g class="${className}"><svg x="${x}" y="${y}" width="${PIECE_SIZE}" height="${PIECE_SIZE}" viewBox="0 0 100 100">${marks}</svg></g>`;
+    // The asset backs are normalised to a radius-45 disc, like the faces.
+    const shadow = shadowOn ? xiangqiPieceShadowMarks(45) : '';
+    const overflowAttr = shadow ? ' overflow="visible"' : '';
+    return `<g class="${className}"><svg x="${x}" y="${y}" width="${PIECE_SIZE}" height="${PIECE_SIZE}"${overflowAttr} viewBox="0 0 100 100">${shadow}${marks}</svg></g>`;
   }
   const r = PIECE_SIZE * 0.46;
-  return [`<g class="${className}">`, `<circle cx="${cx}" cy="${cy}" r="${r}"/>`, `</g>`].join('');
+  // The disc's outer edge includes its 2-unit stroke (.banqi-back > circle).
+  const shadow = shadowOn ? xiangqiPieceShadowMarks(r + 1, cx, cy, PIECE_SIZE) : '';
+  return [
+    `<g class="${className}">`,
+    shadow,
+    `<circle cx="${cx}" cy="${cy}" r="${r}"/>`,
+    `</g>`,
+  ].join('');
 }
 
 function pieceLayer(
@@ -457,10 +471,12 @@ export const BANQI_BOARD_CSS = `
     }
     .banqi-lastmove-flip.banqi-lastmove--red { stroke: rgba(143, 26, 20, 0.36); }
     .banqi-lastmove-flip.banqi-lastmove--black { stroke: rgba(11, 23, 35, 0.44); }
-    .banqi-piece { pointer-events: none; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2)); }
-    .banqi-back { pointer-events: none; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3)); }
+    /* The disc shadow is drawn into each piece and back (xiangqiPieceShadowMarks). */
+    .banqi-piece { pointer-events: none; }
+    .banqi-back { pointer-events: none; }
     .banqi-drag-source { opacity: 0.34; }
-    .banqi-back circle { fill: #2f8f6b; stroke: #184a38; stroke-width: 2; }
+    /* The disc only: the shadow's circles sit inside a group of their own. */
+    .banqi-back > circle { fill: #2f8f6b; stroke: #184a38; stroke-width: 2; }
     .banqi-hit rect { fill: transparent; cursor: pointer; }
   `;
 
