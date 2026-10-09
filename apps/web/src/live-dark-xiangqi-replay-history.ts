@@ -19,6 +19,12 @@
 // Each rebuilt ply is the TRUTH board at that ply (no fog), the same view the
 // finished room itself shows. The core swaps the last ply for the server's own
 // view.
+//
+// A LIVE seat cannot rebuild anything, but it does not have to: the server
+// sends a seated hello its own per-ply views (`seatHistory`, built by the same
+// per-seat view builder that served each ply live; never the other color, never
+// truth, never to a spectator). adoptLiveDarkXiangqiSeatHistory validates that
+// list against the live view and installs it as sent, deriving nothing.
 
 import {
   applyMove,
@@ -63,6 +69,46 @@ export function rebuildFinishedDarkXiangqiHistory(
     snapshots.push({ ply: snapshots.length, view: projectPly(state, captures, view) });
   }
   if (!sameBoard(state, view)) return null;
+  return snapshots;
+}
+
+// The ply a playing view sits at: red moves first, so completed full moves
+// count two plies and black-to-move adds one. Shared with the room's capture
+// policy (live-dark-xiangqi replayCapture.plyForView).
+export function playingDarkXiangqiPly(view: DarkXiangqiWireView): number {
+  if (view.status.type !== 'playing') return 0;
+  const completedFullMoves = Math.max(0, view.moveNumber - 1);
+  return completedFullMoves * 2 + (view.status.turn === 'black' ? 1 : 0);
+}
+
+/**
+ * A live seat's history from its hello frame, or null to keep the captured
+ * one. Accepted only when it is exactly what this seat should hold: the room is
+ * playing, every snapshot is in this seat's perspective, plies run 0, 1, 2, ...
+ * with no gap, and the last ply is the live view's ply (a stale or mismatched
+ * list is dropped, never partially used). Frames without it (every broadcast
+ * snapshot, a spectator's hello) return null.
+ */
+export function adoptLiveDarkXiangqiSeatHistory(
+  seatHistory: unknown,
+  view: DarkXiangqiWireView,
+  seat: unknown,
+): TenantReplaySnapshot<DarkXiangqiWireView>[] | null {
+  if (view.status.type !== 'playing') return null;
+  if (seat !== 'red' && seat !== 'black') return null;
+  if (view.perspective !== seat) return null;
+  if (!Array.isArray(seatHistory) || seatHistory.length === 0) return null;
+  const snapshots: TenantReplaySnapshot<DarkXiangqiWireView>[] = [];
+  for (const [index, entry] of seatHistory.entries()) {
+    if (!entry || typeof entry !== 'object') return null;
+    const { ply, view: plyView } = entry as { ply?: unknown; view?: unknown };
+    if (ply !== index) return null;
+    if (!plyView || typeof plyView !== 'object') return null;
+    const candidate = plyView as DarkXiangqiWireView;
+    if (candidate.perspective !== seat || typeof candidate.board !== 'object') return null;
+    snapshots.push({ ply: index, view: candidate });
+  }
+  if (snapshots.length - 1 !== playingDarkXiangqiPly(view)) return null;
   return snapshots;
 }
 

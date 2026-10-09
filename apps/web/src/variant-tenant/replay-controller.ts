@@ -30,6 +30,12 @@ export type TenantReplayController<View> = {
    * animation channel like every other control.
    */
   jumpToPly(ply: number): void;
+  /**
+   * Whether a snapshot is held at exactly this ply. A move-list cell is a jump
+   * target only then: after a cold load a fog client may hold just the live
+   * ply, and jumpToPly on a missing ply lands on a later one (or on live).
+   */
+  hasPly(ply: number): boolean;
   historyLength(): number;
   latestPly(): number;
   isLive(): boolean;
@@ -102,6 +108,10 @@ export function createTenantReplayController<View>(): TenantReplayController<Vie
     let index = history.findIndex((snapshot) => snapshot.ply >= ply);
     if (index === -1) index = history.length - 1;
     replayIndex = index >= history.length - 1 ? null : index;
+  }
+
+  function hasPly(ply: number): boolean {
+    return history.some((snapshot) => snapshot.ply === ply);
   }
 
   function historyLength(): number {
@@ -216,6 +226,7 @@ export function createTenantReplayController<View>(): TenantReplayController<Vie
     push,
     replaceHistory,
     jumpToPly,
+    hasPly,
     historyLength,
     latestPly,
     isLive,

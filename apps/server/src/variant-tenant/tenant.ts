@@ -525,6 +525,20 @@ export type VariantTenant<
     // everything for them, and roomViewPolicy('open', …) is 'truth' at every
     // status regardless.
     truthView?(state: State, events: readonly TenantRoomEvent<C, M, Spec>[]): View;
+    // A SEATED player's own per-ply views (ply 0 = the start position, through
+    // the current ply) while the game is LIVE: exactly the views viewForClient
+    // served that seat at each ply. Fog clients cannot rebuild these from their
+    // redacted log, so after a reload a fog seat could not step back through its
+    // own game. The runtime sends it only in the hello of a seat-authenticated
+    // connection to a playing room (tenantSeatHistoryExtras); never to a
+    // spectator, never for the other color, never truth.
+    //
+    // Optional and fail-closed: a tenant without it sends nothing. Perfect-info
+    // tenants do not need it: they rebuild per-ply views from their full log.
+    seatHistory?(
+      events: readonly TenantRoomEvent<C, M, Spec>[],
+      seat: C,
+    ): Array<{ ply: number; view: View }>;
   };
   engine?: {
     // Required declaration of how the live engine preserves history-dependent terminal

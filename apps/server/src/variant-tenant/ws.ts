@@ -54,6 +54,7 @@ import {
   type TenantSnapshotPayload,
   tenantClockRemainingMs,
   tenantPlyAtEventIndex,
+  tenantSeatHistoryExtras,
   tenantSnapshotPayload,
 } from './runtime.js';
 import {
@@ -296,6 +297,10 @@ export function createTenantWsRuntime<
       type: 'hello',
       clientId: client.id,
       ...(assignment.seatToken ? { seatToken: assignment.seatToken } : {}),
+      // A fog seat's own per-ply views, so a reload can step back through the
+      // game. Seated hello only: joinAsSpectator never sends it, and it never
+      // rides a broadcast snapshot (O(plies) views per client per move).
+      ...tenantSeatHistoryExtras(tenant, room, client),
     });
     broadcastSnapshot(room);
     // PvE: once the human takes the empty seat, the engine (if it holds the

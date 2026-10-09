@@ -895,6 +895,38 @@ export function tenantSnapshotPayload<
   };
 }
 
+/**
+ * The seat's own per-ply history for the HELLO frame of a seated connection
+ * (visibility.seatHistory). Empty unless every gate holds:
+ *   - the tenant implements seatHistory (fog tenants; absence sends nothing),
+ *   - the client holds a COLOR seat, never 'spectator' (ws.ts calls this only
+ *     after assignTenantSeat authenticated the seat token or account),
+ *   - the room is still playing: a finished room reveals truth through the
+ *     snapshot and the postgame route instead, an aborted one has nothing to
+ *     replay.
+ * Hello only, not every snapshot: broadcastEventAppended builds a snapshot per
+ * client per move, and the history is O(plies) views.
+ */
+export function tenantSeatHistoryExtras<
+  Kind extends string,
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  View,
+  Spec extends string,
+>(
+  tenant: VariantTenant<Kind, C, M, State, View, Spec>,
+  room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
+  client: TenantSnapshotClient<C>,
+): { seatHistory?: Array<{ ply: number; view: View }> } {
+  const seatHistory = tenant.visibility.seatHistory;
+  if (!seatHistory) return {};
+  const seat = client.seat;
+  if (seat === 'spectator' || !tenant.colors.includes(seat)) return {};
+  if (room.projection.state.status.type !== 'playing') return {};
+  return { seatHistory: seatHistory(room.events, seat) };
+}
+
 /** Was this room made by a lobby match? Read off the durable room-created event. */
 export function tenantRoomIsLobbyMatch(room: { events: readonly { type: string }[] }): boolean {
   const first = room.events[0] as { type: string; lobbyMatch?: unknown } | undefined;
