@@ -89,6 +89,8 @@ export type BanqiWireView = {
   firstColor: BanqiColor | null;
   moveNumber: number;
   lastMove?: BanqiMove;
+  // The 長捉 limit the game is played under; absent on a pre-rule game (limit off).
+  chaseLimit?: number;
 };
 
 type BanqiMoveEvent = TenantMovePlayed<BanqiSeat, BanqiMove>;

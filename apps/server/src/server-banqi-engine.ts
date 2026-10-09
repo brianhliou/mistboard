@@ -17,6 +17,7 @@ import {
   type BanqiGameState,
   type BanqiMove,
   type BanqiSeat,
+  getBanqiForbiddenChaseMoves,
   getBanqiLegalMoves,
   isBanqiLegalMove,
 } from '@mistboard/game';
@@ -134,8 +135,42 @@ export function scheduleBanqiEngineMove(ctx: BanqiEngineContext, room: BanqiEngi
 export type BanqiEngineMoveProvider = (
   engineId: string,
   fen: string,
-  opts: { nodes?: number; movetimeCapMs?: number; moves?: readonly string[] },
+  opts: {
+    nodes?: number;
+    movetimeCapMs?: number;
+    moves?: readonly string[];
+    searchMoves?: readonly string[];
+  },
 ) => Promise<UciEval>;
+
+// Capture preference for the chase fallback below (most valuable target first).
+const FALLBACK_CAPTURE_ORDER = [
+  'general',
+  'advisor',
+  'cannon',
+  'elephant',
+  'chariot',
+  'horse',
+  'soldier',
+] as const;
+
+/**
+ * The move the bot plays when the engine keeps choosing a move the 長捉 (perpetual
+ * chase) limit forbids, i.e. a MistyBanqi build that ignores `searchmoves`. Resigning
+ * there would hand a chased player a win the rule never meant to award, so this picks
+ * a legal move instead: the most valuable capture, else a quiet board move, else a
+ * flip. Crude on purpose; it only runs on that version skew, and it reads nothing
+ * hidden (flips are chosen blind, like any flip).
+ */
+export function banqiChaseFallbackMove(state: BanqiGameState): BanqiMove | null {
+  const legal = getBanqiLegalMoves(state);
+  const captures = legal.filter((m) => m.from !== m.to && state.board[m.to]);
+  for (const role of FALLBACK_CAPTURE_ORDER) {
+    const hit = captures.find((m) => state.board[m.to]?.role === role);
+    if (hit) return hit;
+  }
+  return legal.find((m) => m.from !== m.to) ?? legal[0] ?? null;
+}
 
 export async function playBanqiEngineMoveIfReady(
   ctx: BanqiEngineContext,
@@ -155,6 +190,14 @@ export async function playBanqiEngineMoveIfReady(
   if (remainingMs !== null && remainingMs <= 0) return;
 
   const { fen, moves, gameMoves } = banqiEngineRepWindow(room);
+  // 長捉 limit: when it takes a move away, restrict the engine's root to the moves
+  // still legal. Engine-side legality knows nothing of the limit, so without this the
+  // engine would pick the forbidden extension, the kernel would refuse it, and the
+  // bot would resign below.
+  const state = room.projection.state;
+  const forbidden = getBanqiForbiddenChaseMoves(state);
+  const searchMoves =
+    forbidden.length > 0 ? getBanqiLegalMoves(state).map(banqiMoveToEngineUci) : undefined;
   // Strength = the tier's NODE budget; this movetime is the latency CEILING + a
   // clock-aware time-pressure guard (shared allocator). Existing ceiling preserved —
   // behavior-neutral for untimed play; adds increment awareness + graceful shrink
@@ -183,6 +226,7 @@ export async function playBanqiEngineMoveIfReady(
         nodes: tier.nodes,
         movetimeCapMs,
         moves,
+        searchMoves,
       });
       lastSearch = search;
       return search.best;
@@ -209,7 +253,25 @@ export async function playBanqiEngineMoveIfReady(
   });
   if (aborted || !engineToMove(room, seat)) return;
 
-  if (validated === null) {
+  let chosen = validated;
+  if (chosen === null && forbidden.length > 0) {
+    const forbiddenUci = new Set(forbidden.map(banqiMoveToEngineUci));
+    if (attempts.length > 0 && attempts.every((a) => a.uci !== null && forbiddenUci.has(a.uci))) {
+      chosen = banqiChaseFallbackMove(state);
+      logger.warn(
+        {
+          kind: 'banqi_engine_chase_fallback',
+          room_id: room.id,
+          engine_id: engineId,
+          rejected: [...forbiddenUci],
+          played: chosen ? banqiMoveToEngineUci(chosen) : null,
+        },
+        'Banqi engine ignored searchmoves and chose a chase move past the limit; playing a fallback',
+      );
+    }
+  }
+
+  if (chosen === null) {
     // FAIL CLOSED: capture a complete replayable record, page, and resign. Banqi
     // is perfect-information at decision time (only future flips are hidden), so
     // a move the kernel rejects is a bug, not fog.
@@ -247,7 +309,7 @@ export async function playBanqiEngineMoveIfReady(
     at: Date.now(),
     roomId: room.id,
     color: seat,
-    move: validated,
+    move: chosen,
   };
   // Queue BEFORE the append: if this move ends the game, the tenant event writer
   // records the game end and flushes the queue inside that same append, and a
@@ -268,7 +330,7 @@ export async function playBanqiEngineMoveIfReady(
       search: lastSearch,
       thinkTimeMs: Date.now() - startedAt,
       attempts,
-      move: banqiMoveToEngineUci(validated),
+      move: banqiMoveToEngineUci(chosen),
       fen,
       legalCount: getBanqiLegalMoves(room.projection.state).length,
     }),

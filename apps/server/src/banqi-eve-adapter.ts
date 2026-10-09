@@ -15,7 +15,8 @@ import {
   type BanqiGameState,
   type BanqiMove,
   type BanqiSeat,
-  createBanqiDeal,
+  createBanqiSetup,
+  getBanqiForbiddenChaseMoves,
   getBanqiLegalMoves,
 } from '@mistboard/game';
 import {
@@ -66,7 +67,7 @@ export const banqiEveAdapter: VariantEveAdapter<
     const tier = engineId ? BANQI_TIERS.get(engineId) : undefined;
     return tier ? { id: tier.id, movetimeMs: tier.movetimeCapMs } : null;
   },
-  createSetup: (seed) => createBanqiDeal(seededUnitRng(seed)),
+  createSetup: (seed) => createBanqiSetup(seededUnitRng(seed)),
   legalMoves: getBanqiLegalMoves,
   moveToUci: banqiMoveToEngineUci,
   legalMoveForUci: (legalMoves, uci) => {
@@ -75,10 +76,19 @@ export const banqiEveAdapter: VariantEveAdapter<
     return legalMoves.find((m) => m.from === parsed.from && m.to === parsed.to) ?? null;
   },
   search: (engineId, _history, opts, context) => {
-    const window = banqiEveEngineWindow(context.events as readonly BanqiEvent[]);
+    const events = context.events as readonly BanqiEvent[];
+    const window = banqiEveEngineWindow(events);
+    // The 長捉 limit, as the live loop applies it: restrict the root to the legal moves
+    // when the limit takes one away (an older engine ignores it and the game aborts).
+    const state = replayTenantEvents(banqiTenant, events).state;
+    const searchMoves =
+      getBanqiForbiddenChaseMoves(state).length > 0
+        ? getBanqiLegalMoves(state).map(banqiMoveToEngineUci)
+        : undefined;
     return banqiLiveEngineMove(engineId, window.fen, {
       movetimeCapMs: opts.movetimeMs,
       moves: window.moves,
+      searchMoves,
     });
   },
   requiredCapability: 'banqi_engine',

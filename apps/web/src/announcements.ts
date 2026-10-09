@@ -67,6 +67,14 @@ const baseAnnouncements: Announcement[] = [
     cta: 'Read the article',
   },
   {
+    date: '2026-10-09',
+    kind: 'update',
+    headline: 'Banqi now limits a perpetual chase to 7 moves.',
+    body: 'In banqi a player could chase the same piece back and forth until the position came up three times and the game was drawn. Now one piece may chase the same piece at most 7 moves in a row, then its side has to play something else, and positions inside a chase no longer count toward the repetition draw. Games started before the change keep the old rules.',
+    href: '/rules/banqi',
+    cta: 'Read the rules',
+  },
+  {
     date: '2026-10-08',
     kind: 'update',
     headline: 'Jieqi games now show what your face-down pieces could be.',

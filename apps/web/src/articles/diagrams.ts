@@ -18,6 +18,7 @@ import {
   type GameState,
   getBanqiPlayerView,
   getPlayerView as getXiangqiPlayerView,
+  LEGACY_BANQI_RULES,
   type PieceRole,
   type Square,
   type XiangqiColor,
@@ -2770,7 +2771,8 @@ function banqiMoveFromToken(token: string): BanqiMove | null {
 }
 
 export function banqiReplayViewAt(deal: BanqiDeal, moves: string, ply: number): BanqiPlayerView {
-  let state = createInitialBanqiState('banqi-engine-thumbnail', deal);
+  // A recorded engine game from before the 長捉 limit: replay it with the limit off.
+  let state = createInitialBanqiState('banqi-engine-thumbnail', deal, LEGACY_BANQI_RULES);
   const parsedMoves = moves.trim().split(/\s+/).map(banqiMoveFromToken);
   for (const move of parsedMoves.slice(0, ply)) {
     if (move) state = applyBanqiMove(state, move);

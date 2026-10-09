@@ -1,10 +1,10 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
   BANQI_SPEC_ID,
-  type BanqiDeal,
   type BanqiMove,
   type BanqiPlayerView,
   type BanqiSeat,
+  type BanqiStoredSetup,
   banqiTruthView,
   getBanqiPlayerView,
   oppositeBanqiSeat,
@@ -142,15 +142,17 @@ export async function tryHandle(
 // a missing / non-banqi / unfinished game or a log with no deal.
 async function loadFinishedBanqiGameInputs(
   roomId: string,
-): Promise<{ deal: BanqiDeal; moves: BanqiMove[] } | null> {
+): Promise<{ deal: BanqiStoredSetup; moves: BanqiMove[] } | null> {
   const events = await persistence.loadRoomEvents<BanqiEvent>(roomId);
   if (!events || !isTenantEventLog(banqiTenant, events, roomId)) return null;
   const projection = replayTenantEvents(banqiTenant, events);
   if (projection.state.status.type !== 'finished') return null;
   const created = events[0];
+  // The stored setup as-is (deal + the rules the room was created under, or a
+  // pre-rule bare deal): analysis reads it the way the tenant's replay does.
   const deal =
     created && created.type === 'room-created'
-      ? (created.setup as BanqiDeal | undefined)
+      ? (created.setup as BanqiStoredSetup | undefined)
       : undefined;
   if (!deal) return null;
   const moves = events

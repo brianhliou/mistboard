@@ -31,15 +31,20 @@ class FakeBanqiWorker extends EventTarget {
 function mount() {
   const root = document.createElement('div');
   document.body.append(root);
-  const handle = mountBanqiReview(root, 'shortcut-test', STANDARD_BANQI_DEAL, {
-    reviewSurface: 'analysis',
-    ariaLabel: 'Banqi analysis',
-    title: 'Banqi',
-    summary: '',
-    moves: [],
-    initialPosition: 'start',
-    analysis: null,
-  });
+  const handle = mountBanqiReview(
+    root,
+    'shortcut-test',
+    { deal: STANDARD_BANQI_DEAL, rules: {} },
+    {
+      reviewSurface: 'analysis',
+      ariaLabel: 'Banqi analysis',
+      title: 'Banqi',
+      summary: '',
+      moves: [],
+      initialPosition: 'start',
+      analysis: null,
+    },
+  );
   return { root, handle };
 }
 

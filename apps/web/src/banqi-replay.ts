@@ -15,6 +15,7 @@ import {
   type BanqiSquare,
   createInitialBanqiState,
   getBanqiPlayerView,
+  LEGACY_BANQI_RULES,
 } from '@mistboard/game';
 import type { ArticleLang } from './article-i18n.js';
 import {
@@ -160,7 +161,10 @@ export function mountBanqiReplay(
     .filter((m): m is BanqiMove => m !== null);
 
   // Replay once; cache every position so stepping is instant.
-  const states: BanqiGameState[] = [createInitialBanqiState('banqi-replay', spec.deal)];
+  // Article records were played before the 長捉 limit, so they replay with it off.
+  const states: BanqiGameState[] = [
+    createInitialBanqiState('banqi-replay', spec.deal, LEGACY_BANQI_RULES),
+  ];
   for (const move of moves) {
     states.push(applyBanqiMove(states[states.length - 1]!, move));
   }

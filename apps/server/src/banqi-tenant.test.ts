@@ -11,10 +11,11 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   applyBanqiMove,
+  BANQI_CHASE_LIMIT,
   BANQI_SPEC_ID,
-  type BanqiDeal,
   type BanqiMove,
   type BanqiSeat,
+  type BanqiSetup,
   createBanqiDeal,
   createInitialBanqiState,
   getBanqiLegalMoves,
@@ -34,17 +35,21 @@ function seeded(seed: number): () => number {
   };
 }
 
-test('banqi room creation mints and persists a server-secret deal', () => {
+test('banqi room creation mints and persists a server-secret deal, stamped with its rules', () => {
   const created = createTenantRuntimeRoom(banqiTenant, 'bq_deal', { now: 1 });
   if (!created.ok) throw new Error(created.error);
 
   const event = created.room.events[0];
   if (event.type !== 'room-created') throw new Error('expected room-created first');
-  const setup = event.setup as BanqiDeal | undefined;
+  const setup = event.setup as BanqiSetup | undefined;
   assert.ok(setup, 'room-created carries the deal');
-  assert.equal(setup.length, 32);
-  assert.equal(setup.filter((p) => p.color === 'red').length, 16);
-  assert.equal(setup.filter((p) => p.color === 'black').length, 16);
+  assert.equal(setup.deal.length, 32);
+  assert.equal(setup.deal.filter((p) => p.color === 'red').length, 16);
+  assert.equal(setup.deal.filter((p) => p.color === 'black').length, 16);
+  // A new room records the 長捉 limit it is played under, so a later rule change
+  // cannot rewrite how it replays.
+  assert.equal(setup.chaseLimit, BANQI_CHASE_LIMIT);
+  assert.equal(created.room.projection.state.chaseLimit, BANQI_CHASE_LIMIT);
 });
 
 test('the deal is stripped from room-created before any client sees it', () => {
@@ -96,14 +101,20 @@ test('a full banqi game replays through the runtime identically to the kernel', 
   const roomId = 'bq_game';
   const deal = createBanqiDeal(seeded(7)); // a fixed deal makes the line reproducible
   const events: TenantRoomEvent<BanqiSeat, BanqiMove, typeof BANQI_SPEC_ID>[] = [
-    { type: 'room-created', at: 1, roomId, gameSpecId: BANQI_SPEC_ID, setup: deal },
+    {
+      type: 'room-created',
+      at: 1,
+      roomId,
+      gameSpecId: BANQI_SPEC_ID,
+      setup: { deal, chaseLimit: BANQI_CHASE_LIMIT },
+    },
     { type: 'seat-assigned', at: 2, roomId, clientId: 'a', seat: 'red' },
     { type: 'seat-assigned', at: 3, roomId, clientId: 'b', seat: 'black' },
   ];
 
   // Drive a deterministic line with the kernel (first legal move each ply),
   // recording the move-played events keyed by the SEAT to move.
-  let kernelState = createInitialBanqiState(roomId, deal);
+  let kernelState = createInitialBanqiState(roomId, deal, { chaseLimit: BANQI_CHASE_LIMIT });
   let at = 4;
   let plies = 0;
   while (kernelState.status.type === 'playing' && plies < 60) {

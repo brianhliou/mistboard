@@ -26,14 +26,13 @@ import {
   applyBanqiMove,
   BANQI_SEATS,
   BANQI_SPEC_ID,
-  type BanqiDeal,
   type BanqiGameState,
   type BanqiMove,
   type BanqiPlayerView,
   type BanqiSeat,
   type BanqiSquare,
-  createBanqiDeal,
-  createInitialBanqiState,
+  createBanqiSetup,
+  createBanqiStateFromSetup,
   getBanqiPlayerView,
   isBanqiLegalMove,
   oppositeBanqiSeat,
@@ -91,14 +90,13 @@ function cryptoRng(): number {
   return randomInt(0, RNG_RANGE) / RNG_RANGE;
 }
 
-// Reconstruct a deal from the persisted room-created setup. createInitialBanqiState
-// fully validates it (throws on a corrupt multiset); this only shape-checks the
-// container. Returns undefined when absent so the kernel falls back to its default
-// deal — that path is only hit by the runtime's throwaway seed projection (the
-// room-created event always carries the real crypto deal for live rooms/replay).
-function asBanqiDeal(setup: unknown): BanqiDeal | undefined {
-  return Array.isArray(setup) ? (setup as BanqiDeal) : undefined;
-}
+// The persisted room-created setup is the deal plus the rules the room was created
+// under (BanqiSetup: since the 長捉 limit shipped, 2026-10, new rooms record
+// `chaseLimit`). A room created before it stored the bare deal array and replays
+// with the limit off, so its moves and its repetition draw replay as played
+// (readBanqiSetup fails closed: no stamp means the old rules). createInitialBanqiState
+// validates the deal (throws on a corrupt multiset). An absent setup is only the
+// runtime's throwaway seed projection; it gets the standard deal and current rules.
 
 // Identity is hidden, position is not: moves are public to both seats and to a
 // spectator (banqi is SYMMETRIC: a flip reveals to everyone at once, so the
@@ -160,8 +158,8 @@ export const banqiTenant: BanqiTenant = {
   enabled: banqiEnabled,
   oppositeColor: oppositeBanqiSeat,
   rules: {
-    createInitialState: (roomId, setup) => createInitialBanqiState(roomId, asBanqiDeal(setup)),
-    createSetup: () => createBanqiDeal(cryptoRng),
+    createInitialState: (roomId, setup) => createBanqiStateFromSetup(roomId, setup),
+    createSetup: () => createBanqiSetup(cryptoRng),
     applyMove: (state, move) => applyBanqiMove(state, move),
     isLegalMove: isBanqiLegalMove,
     finish: (state, winner, reason) => ({

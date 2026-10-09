@@ -218,14 +218,29 @@ export function banqiEngineVersion(clientId: string | undefined): string | null 
 // `fen` is the position at that irreversible move (window start), and the engine replays
 // the moves to seed its repetition history — so it avoids/seeks threefold (perpetual-chase)
 // draws instead of shuffling into them blind. Omit for the prior FEN-only behavior.
+// `searchMoves`: restrict the root to these moves (UCI `go … searchmoves`). The driver
+// sends it only when the 長捉 limit takes a move away (getBanqiForbiddenChaseMoves), as the
+// full list of moves still legal. MistyBanqi 0.2.6+ honours it; older builds ignore the
+// token, which the driver's validation and chase fallback cover.
 export type BanqiEngineOptions = {
   nodes?: number;
   movetimeCapMs?: number;
   moves?: readonly string[];
+  searchMoves?: readonly string[];
 };
 
 export function buildBanqiPositionCommand(fen: string, moves: readonly string[] = []): string {
   return moves.length > 0 ? `position fen ${fen} moves ${moves.join(' ')}` : `position fen ${fen}`;
+}
+
+/** The `go` line; `searchmoves` goes last because the engine reads every token after it as a move. */
+export function buildBanqiGoCommand(
+  nodes: number,
+  movetimeCapMs: number,
+  searchMoves: readonly string[] = [],
+): string {
+  const go = `go nodes ${nodes} movetime ${movetimeCapMs}`;
+  return searchMoves.length > 0 ? `${go} searchmoves ${searchMoves.join(' ')}` : go;
 }
 
 /**
@@ -246,6 +261,7 @@ export async function banqiLiveEngineMove(
       nodes: opts.nodes ?? tier.nodes,
       movetimeCapMs: opts.movetimeCapMs ?? tier.movetimeCapMs,
       moves: opts.moves,
+      searchMoves: opts.searchMoves,
     });
   } finally {
     release();
@@ -323,7 +339,7 @@ export async function banqiEngineSearch(
     'ucinewgame',
     'isready',
     position,
-    `go nodes ${nodes} movetime ${movetimeCapMs}`,
+    buildBanqiGoCommand(nodes, movetimeCapMs, opts.searchMoves),
   ];
   const startedAt = Date.now();
   const result = await runUciEval({

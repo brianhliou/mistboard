@@ -25,6 +25,7 @@ import {
   type BanqiGameState,
   type BanqiMove,
   type BanqiSeat,
+  banqiRulesFromView,
   createInitialBanqiState,
   getBanqiPlayerView,
 } from '@mistboard/game';
@@ -54,7 +55,8 @@ function replay(
 ): TenantReplaySnapshot<BanqiWireView>[] | null {
   let state: BanqiGameState;
   try {
-    state = createInitialBanqiState(view.id, deal);
+    // The finished view carries the 長捉 limit the game was played under.
+    state = createInitialBanqiState(view.id, deal, banqiRulesFromView(view));
   } catch {
     return null; // not a valid piece set
   }

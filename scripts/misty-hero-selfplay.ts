@@ -43,6 +43,7 @@ import {
   jungleMoveToEngineUci,
   jungleRepSeedFens,
   jungleStateToEngineFen,
+  LEGACY_BANQI_RULES,
 } from '@mistboard/game';
 
 // ── The three shipped bots, at the strength the live site configures ─────────
@@ -335,7 +336,8 @@ async function playJungle(
 
 async function playBanqi(spec: EngineSpec, seed: number, maxPlies: number): Promise<SelfPlayGame> {
   const deal = createBanqiDeal(seededRng(seed));
-  let state = createInitialBanqiState(`hero-${seed}`, deal);
+  // MistyBanqi plays without the 長捉 limit, so its self-play records do too.
+  let state = createInitialBanqiState(`hero-${seed}`, deal, LEGACY_BANQI_RULES);
   const history: BanqiGameState[] = [state];
   const uciMoves: string[] = [];
   const moves: string[] = [];

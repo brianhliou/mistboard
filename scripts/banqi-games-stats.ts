@@ -14,6 +14,7 @@ import {
   type BanqiPieceRole,
   type BanqiSquare,
   createInitialBanqiState,
+  LEGACY_BANQI_RULES,
 } from '@mistboard/game';
 
 type SelfPlayGame = {
@@ -91,7 +92,12 @@ function parseMove(token: string): BanqiMove {
 }
 
 function replay(game: SelfPlayGame): Row {
-  let state: BanqiGameState = createInitialBanqiState(`s-${game.seed}`, game.deal);
+  // MistyBanqi plays without the 長捉 limit, so its self-play records do too.
+  let state: BanqiGameState = createInitialBanqiState(
+    `s-${game.seed}`,
+    game.deal,
+    LEGACY_BANQI_RULES,
+  );
   const tokens = game.moves.trim().split(/\s+/);
   let flips = 0;
   let captures = 0;
