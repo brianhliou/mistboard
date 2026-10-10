@@ -86,6 +86,30 @@ definePersistenceTests('feedback inbox', () => {
     assert.match(text.stdout, /\| The board flips when I open the game\./);
   });
 
+  test('a signed-in submission is stored and listed under its handle', async () => {
+    // Account ids are 'user_<uuid>' text, not UUIDs; a UUID user_id column
+    // rejected every signed-in insert.
+    await getPool().query(
+      `INSERT INTO users (id, email, email_verified_at, handle, display_name, profile_visibility)
+       VALUES ('user_0ec1c2b4-9a51-4bb6-9e0e-0d3f1c6a7b21', 'fox@example.com', now(),
+               'fox_player', 'Fox', 'public')`,
+    );
+    await insertFeedbackSubmission({
+      id: '44444444-4444-4444-8444-444444444444',
+      message: 'Fog xiangqi bot missed a capture.',
+      email: null,
+      path: '/play/fog-xiangqi',
+      userId: 'user_0ec1c2b4-9a51-4bb6-9e0e-0d3f1c6a7b21',
+      userAgent: 'test',
+      ipHash: null,
+    });
+    const listed = runScript('feedback-inbox.mjs', ['--json']);
+    assert.equal(listed.status, 0, listed.stderr);
+    const rows = JSON.parse(listed.stdout) as Array<Record<string, unknown>>;
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0]!.from, '@fox_player');
+  });
+
   test('the readout counts feedback and names new arrivals by path only', async () => {
     const runtime = {
       revision: 'r',
