@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
+  chunkReloadPending,
   clearChunkReloadAttempt,
   installGlobalChunkLoadRecovery,
   isChunkLoadError,
@@ -86,5 +87,25 @@ describe('installGlobalChunkLoadRecovery', () => {
     window.dispatchEvent(rearmed);
     expect(reloads).toHaveLength(1);
     expect(rearmed.defaultPrevented).toBe(true);
+  });
+
+  it('marks a reload pending only when it claims the one-shot', () => {
+    // Vite resolves the failed import() to undefined once the event is
+    // prevented, so callers that destructure the module throw before the
+    // reload lands. chunkReloadPending is how they (and error tracking) tell
+    // that throw apart from a real mount failure.
+    install(() => {});
+    expect(chunkReloadPending()).toBe(false);
+    window.dispatchEvent(new Event('vite:preloadError', { cancelable: true }));
+    expect(chunkReloadPending()).toBe(true);
+  });
+
+  it('leaves nothing pending when the one-shot was already spent', () => {
+    const error = new TypeError('Failed to fetch dynamically imported module: /assets/old.js');
+    expect(shouldReloadForChunkLoadError(error)).toBe(true);
+    install(() => {});
+    window.dispatchEvent(new Event('vite:preloadError', { cancelable: true }));
+    // No reload is coming, so the error that follows is real and must report.
+    expect(chunkReloadPending()).toBe(false);
   });
 });

@@ -488,20 +488,25 @@ export function buildHomeArticleCards(
     more.className = 'landing-row-more';
     more.href = localizedHref('/blog', locale);
     more.textContent = t('site.more', {}, locale);
+    // Autocapture is off, so a homepage link with no track() call is invisible
+    // in PostHog: this is the only way off the homepage into the blog index.
+    more.addEventListener('click', () => {
+      track('landing_row_more_clicked', { row, href: more.getAttribute('href') });
+    });
     header.append(more);
   }
   section.append(header);
   const carousel = document.createElement('div');
   carousel.className = 'landing-carousel';
 
-  const track = document.createElement('div');
-  track.className = 'landing-carousel-track';
-  for (const card of cards) track.append(card);
+  const carouselTrack = document.createElement('div');
+  carouselTrack.className = 'landing-carousel-track';
+  for (const card of cards) carouselTrack.append(card);
 
   const prev = carouselNavButton('prev', '‹', locale);
   const next = carouselNavButton('next', '›', locale);
 
-  carousel.append(prev, track, next);
+  carousel.append(prev, carouselTrack, next);
   section.append(carousel);
   return section;
 }

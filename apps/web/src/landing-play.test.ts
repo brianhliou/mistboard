@@ -8,6 +8,7 @@ import {
   roomCreationRequestBody,
   setRoomNavigator,
 } from './landing-play.js';
+import { resetLiveStatsCacheForTests } from './live-stats-client.js';
 import { setRatedModeEnabled } from './rated-flag.js';
 import { setResolvedSignedIn } from './signed-in-state.js';
 
@@ -24,6 +25,9 @@ const BASELINE_PICKER_SPECS = [
   'jungle',
   'jungle-flip',
 ];
+
+// /api/live-stats reads are shared through a module cache; start each test cold.
+beforeEach(() => resetLiveStatsCacheForTests());
 
 describe('landing play panel', () => {
   beforeEach(() => {
