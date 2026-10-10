@@ -762,6 +762,15 @@ export function interleaveByVariant(
   return out;
 }
 
+// The homepage airs a finished fog game at its recorded pace, so a
+// days-per-move game would sit on one ply for hours with frozen clocks. The
+// room-created event (seq 0) is the durable home of the time control.
+const NOT_CORRESPONDENCE_SQL = `NOT EXISTS (
+         SELECT 1 FROM events rc
+         WHERE rc.room_id = games.room_id AND rc.seq = 0
+           AND rc.payload->'timeControl' ? 'daysPerMove'
+       )`;
+
 // Recent substantial PvP, watch-style: any finish past the ply floor.
 async function queryShowcasePvp(
   limit: number,
@@ -779,6 +788,7 @@ async function queryShowcasePvp(
        AND EXISTS (
          SELECT 1 FROM events WHERE events.room_id = games.room_id LIMIT 1
        )
+       AND ${NOT_CORRESPONDENCE_SQL}
      ORDER BY games.ended_at DESC, games.room_id DESC
      LIMIT $2`,
     [CURATED_MIN_PLY, limit, variants],
@@ -805,6 +815,7 @@ async function queryShowcasePve(
        AND EXISTS (
          SELECT 1 FROM events WHERE events.room_id = games.room_id LIMIT 1
        )
+       AND ${NOT_CORRESPONDENCE_SQL}
      ORDER BY games.ended_at DESC, games.room_id DESC
      LIMIT $2`,
     [CURATED_MIN_PLY, limit, variants],
