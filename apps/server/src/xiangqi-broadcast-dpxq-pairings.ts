@@ -165,9 +165,29 @@ function side(cells: Cell[], nameAt: number, teamAt: number): DpxqPairingSide | 
 }
 
 /**
+ * The round a page shows and how many the tour has paired, read from its
+ * title and its 最新对阵(N) link. Null for "第00轮" (nothing paired yet).
+ *
+ * Kept apart from the pairings: a team league pairs its next round by team
+ * before the individual boards exist, so the latest round page can have no
+ * individual table while every earlier round has one (2026 women's league,
+ * round 10 paired by team on 2026-10-03).
+ */
+export function parseDpxqRoundPageHeader(
+  html: string,
+): Pick<DpxqRoundPage, 'roundNumber' | 'roundCount'> | null {
+  const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? '';
+  const roundNumber = Number(title.match(/第\s*0*(\d+)\s*轮/)?.[1]);
+  if (!Number.isInteger(roundNumber) || roundNumber < 1) return null;
+  const stated = Number(html.match(/最新对阵<\/a>\s*\(\s*(\d+)\s*\)/)?.[1]);
+  const roundCount = Number.isInteger(stated) && stated >= roundNumber ? stated : roundNumber;
+  return { roundNumber, roundCount };
+}
+
+/**
  * Read one round page. Returns null for a page with no individual pairings
- * table (a team event, or a tour that has paired nothing yet: dpxq serves
- * "第00轮" with no table then).
+ * table (a team event, a team league's round paired by team only so far, or a
+ * tour that has paired nothing yet: dpxq serves "第00轮" with no table then).
  */
 export function parseDpxqRoundPage(html: string): DpxqRoundPage | null {
   const tableStart = html.search(/<table[^>]*id\s*=\s*["']?table_geren/i);
@@ -175,11 +195,9 @@ export function parseDpxqRoundPage(html: string): DpxqRoundPage | null {
   const tableEnd = html.indexOf('</table>', tableStart);
   const table = html.slice(tableStart, tableEnd < 0 ? undefined : tableEnd);
 
-  const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? '';
-  const roundNumber = Number(title.match(/第\s*0*(\d+)\s*轮/)?.[1]);
-  if (!Number.isInteger(roundNumber) || roundNumber < 1) return null;
-  const stated = Number(html.match(/最新对阵<\/a>\s*\(\s*(\d+)\s*\)/)?.[1]);
-  const roundCount = Number.isInteger(stated) && stated >= roundNumber ? stated : roundNumber;
+  const header = parseDpxqRoundPageHeader(html);
+  if (!header) return null;
+  const { roundNumber, roundCount } = header;
 
   let columns: Columns | null = null;
   const pairings: DpxqPairing[] = [];

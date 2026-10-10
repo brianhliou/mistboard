@@ -364,6 +364,37 @@ export type StoredBoardRef = {
   details?: XiangqiBroadcastBoard['details'];
 };
 
+/**
+ * Rounds a provider that reads a page per round may skip: every stored board
+ * in them is finished, so a finished event costs one page a poll.
+ *
+ * Except a team league round still holding a moveless board keyed by table
+ * alone (`r01t02`) once the tour holds match-keyed boards (`r02m01t01`): it was
+ * stored before games were keyed by match, so each of its boards is whichever
+ * match's game at that table was read last. Its page must be read once more
+ * for the match-keyed boards that retire it (2026 women's league round 1: six
+ * collided boards for 19 games, settled, so the retirement never ran).
+ */
+export function settledStatedRounds(stored: readonly StoredBoardRef[]): Set<number> {
+  const byRound = new Map<number, StoredBoardRef[]>();
+  for (const row of stored) {
+    if (row.roundNumber === undefined) continue;
+    const rows = byRound.get(row.roundNumber) ?? [];
+    rows.push(row);
+    byRound.set(row.roundNumber, rows);
+  }
+  const tourByMatch = stored.some((row) => /^r\d+m\d+t\d+/.test(row.sourceBoardId ?? ''));
+  const settled = new Set<number>();
+  for (const [roundNumber, rows] of byRound) {
+    if (!rows.every((row) => row.status === 'complete')) continue;
+    const collided =
+      tourByMatch &&
+      rows.some((row) => row.plies === 0 && /^r\d+t\d+(?:g\d+)?$/.test(row.sourceBoardId ?? ''));
+    if (!collided) settled.add(roundNumber);
+  }
+  return settled;
+}
+
 export type StatedRoundManifestBuild =
   | {
       ok: true;

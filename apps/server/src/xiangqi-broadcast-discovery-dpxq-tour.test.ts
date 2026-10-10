@@ -10,6 +10,7 @@ import {
   NOTHING_NEW_MESSAGE,
   roundNumberFromRoundId,
   type StoredBoardRef,
+  settledStatedRounds,
 } from './xiangqi-broadcast-discovery.js';
 import {
   archiveBoardUrl,
@@ -266,6 +267,68 @@ test('a tour with pairings and no records yet still discovers its boards', async
   if (!result.ok) return;
   assert.equal(result.boards.length, 0);
   assert.equal(result.pairings?.length, 31);
+});
+
+// The 2026 women's league (dpxq tour 12776) after round 9: dpxq had paired
+// round 10 by team only, so the latest round page carries no individual table,
+// and every earlier round's results-only games went unread (2026-10-03 to
+// 10-10: "tour 12776 lists no game records yet" on every poll).
+test('a latest round paired by team only still leads to the earlier rounds', async () => {
+  const fetched: string[] = [];
+  const pages: Record<string, string> = {
+    [roundPageUrl('12776')]: dpxqFixture('round_12776-womens-league-2026-latest-r10.html'),
+    [roundPageUrl('12776', 1)]: dpxqFixture('round_12776_1-womens-league-2026-r01.html'),
+    [tourGameListUrl('12776')]: '<table></table>',
+  };
+  const result = await dpxqTourDiscoveryProvider.discover({
+    config: new URLSearchParams({ tour: '12776' }),
+    timeoutMs: 1000,
+    settledRounds: new Set([2]),
+    fetchImpl: async (url: string) => {
+      fetched.push(url);
+      const body = pages[url];
+      if (body === undefined) return new Response('missing', { status: 404 });
+      return new Response(body, { status: 200 });
+    },
+  });
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.boards.length, 0);
+  assert.equal(result.pairings?.length, 19);
+  assert.ok(result.pairings?.every((pairing) => pairing.pageUrl === roundPageUrl('12776', 1)));
+  // Rounds 1 and 3-9; 2 is settled, 10 is the latest page already read.
+  assert.deepEqual(
+    fetched.filter((url) => url.includes('round_')),
+    [
+      roundPageUrl('12776'),
+      ...[1, 3, 4, 5, 6, 7, 8, 9].map((round) => roundPageUrl('12776', round)),
+    ],
+  );
+});
+
+test('a finished round of table-keyed boards stays unsettled once the tour is keyed by match', () => {
+  const board = (roundNumber: number, sourceBoardId: string, plies = 0): StoredBoardRef => ({
+    id: `b-${sourceBoardId}`,
+    sourceBoardId,
+    roundNumber,
+    red: { name: 'a' },
+    black: { name: 'b' },
+    status: 'complete',
+    result: '1-0',
+    plies,
+  });
+  // Round 1 as stored before fb2cbd84: six table-keyed rows, all complete.
+  const roundOne = [1, 2, 3, 4, 5, 6].map((table) => board(1, `r01t0${table}`));
+  // An individual event's results-only rounds stay settled.
+  assert.deepEqual([...settledStatedRounds(roundOne)], [1]);
+  // Once any round is match-keyed, round 1 is read again so its boards retire.
+  const withMatches = [...roundOne, board(2, 'r02m01t01'), board(2, 'r02m01t02')];
+  assert.deepEqual([...settledStatedRounds(withMatches)], [2]);
+  // A table-keyed board with moves is a record, not a collision.
+  const recorded = [board(1, 'r01t01', 80), board(2, 'r02m01t01')];
+  assert.deepEqual([...settledStatedRounds(recorded)].sort(), [1, 2]);
+  // An unfinished round is never settled.
+  assert.deepEqual([...settledStatedRounds([{ ...board(3, 'r03m01t01'), status: 'live' }])], []);
 });
 
 async function asianBuild(stored: StoredBoardRef[] = [], completeUrls: Set<string> = new Set()) {
