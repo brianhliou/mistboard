@@ -26,6 +26,8 @@ Conventions:
 
 ### Playing
 
+- a browser that lists Chinese among its languages now starts on the Chinese-character pieces and river text, and the Traditional and Simplified tiles in the piece picker show the piece as the board draws it ([182cfd50](https://github.com/brianhliou/mistboard/commit/182cfd50))
+- a link to a correspondence seek that is gone now says whether it was taken (with a link to the game), withdrawn, declined or expired ([182cfd50](https://github.com/brianhliou/mistboard/commit/182cfd50))
 - Banqi forbids a chasing move that would repeat a position a third time (長捉), so a chase can no longer force a repetition draw; the forbidden move shows as a red cross, with a note on the board when you press it ([411963fd](https://github.com/brianhliou/mistboard/commit/411963fd))
 - Accept an open correspondence game right from /games and the homepage; each card says which side you play, and a shared seek page now says who is looking for a game ([411963fd](https://github.com/brianhliou/mistboard/commit/411963fd))
 - The play panel's live player count has its own line, and the inbox message box grows as you type ([105d81c7](https://github.com/brianhliou/mistboard/commit/105d81c7))
@@ -91,6 +93,7 @@ Conventions:
 
 ### Watching and review
 
+- the 2026 women's league broadcast reads every earlier round again, and round 1 shows each team match's games instead of six from the wrong matches ([182cfd50](https://github.com/brianhliou/mistboard/commit/182cfd50))
 - Finished games on /games show each player's name above or below the board on their own side, so long names fit ([411963fd](https://github.com/brianhliou/mistboard/commit/411963fd))
 - Move times draws each side's thinking time above and below a centre line with both clocks behind it, names the move and both clocks on hover, and totals each side's time ([105d81c7](https://github.com/brianhliou/mistboard/commit/105d81c7))
 - Broadcast game lists mark the boards that have no published record ([105d81c7](https://github.com/brianhliou/mistboard/commit/105d81c7))
