@@ -14,7 +14,12 @@ import {
 } from './../correspondence-start-email.js';
 import { correspondenceEnabled, correspondenceRatedEnabled } from './../feature-flags.js';
 import { logger } from './../obs.js';
-import type { SeekColorPreference, SeekVisibility, UserAccount } from './../persistence.js';
+import type {
+  CorrespondenceSeekOutcome,
+  SeekColorPreference,
+  SeekVisibility,
+  UserAccount,
+} from './../persistence.js';
 import * as persistence from './../persistence.js';
 import { notifySeekPosted, type SeekAlertNotice } from './../seek-alert-email.js';
 import { correspondenceTenantForSpecId } from './../variant-tenant/registry.js';
@@ -134,6 +139,63 @@ export function challengeViewModel(
     // Decline: only the named target of a still-live directed challenge.
     canDecline: isTarget && !expired,
   };
+}
+
+/** Why a /challenge/<id> link no longer opens, as the landing page shows it. */
+export type SeekGoneReason = 'taken' | 'withdrawn' | 'declined' | 'expired';
+
+export type SeekGoneView = {
+  reason: SeekGoneReason;
+  // Taken only: the game the accept created, and who took it.
+  roomId?: string;
+  accepterName?: string | null;
+  // Taken only: the viewer plays in that game (creator or accepter), so the page
+  // offers "Open game" rather than "Watch".
+  youPlay?: boolean;
+};
+
+/**
+ * Pure: what a closed seek's outcome (migration 165) may tell this viewer, or null
+ * when it must stay a plain 404. A public board seek was offered to everyone, so
+ * its fate is public. A private one (a direct or link challenge) is told only to
+ * the people involved: its creator, its named target, and whoever took it. A
+ * stranger holding a private link learns nothing, exactly as before #527.
+ */
+export function seekGoneView(
+  outcome: Pick<
+    CorrespondenceSeekOutcome,
+    | 'outcome'
+    | 'creatorUserId'
+    | 'targetUserId'
+    | 'visibility'
+    | 'roomId'
+    | 'accepterUserId'
+    | 'accepterName'
+  >,
+  viewerUserId: string,
+): SeekGoneView | null {
+  const isPublic = outcome.visibility === 'public' && outcome.targetUserId === null;
+  const youPlay = viewerUserId === outcome.creatorUserId || viewerUserId === outcome.accepterUserId;
+  const involved = youPlay || viewerUserId === outcome.targetUserId;
+  if (!isPublic && !involved) return null;
+  switch (outcome.outcome) {
+    case 'taken':
+      if (!outcome.roomId) return null;
+      return {
+        reason: 'taken',
+        roomId: outcome.roomId,
+        accepterName: outcome.accepterName,
+        youPlay,
+      };
+    case 'cancelled':
+      return { reason: 'withdrawn' };
+    case 'declined':
+      return { reason: 'declined' };
+    case 'expired':
+      return { reason: 'expired' };
+    default:
+      return null;
+  }
 }
 
 /** The ONE request these routes serve without an account: reading the public
@@ -642,6 +704,17 @@ async function acceptSeekResult(
     const status = created.error === 'disabled' ? 404 : 503;
     return { status: status, body: { error: created.error } };
   }
+  // A dead link to this seek can now say who took it and link the game (#527).
+  // Awaited but never fatal: the seated game is the durable outcome, so a failed
+  // write costs only the nicer dead-link copy, never the accept.
+  await persistence
+    .recordCorrespondenceSeekTaken({ seek, roomId: created.room.id, accepterUserId: user.id })
+    .catch((err: unknown) => {
+      logger.warn(
+        { err, seekId, roomId: created.room.id },
+        'correspondence accept: outcome write failed',
+      );
+    });
   // The creator posted this seek and left; nothing else will tell them it was
   // taken. Fire-and-forget on purpose: the seated game is the durable outcome,
   // so a mail provider outage must never turn a successful accept into an error
@@ -822,7 +895,10 @@ async function viewSeek(
 ): Promise<boolean> {
   const seek = await persistence.getCorrespondenceSeekListing(seekId);
   if (!seek) {
-    writeJson(response, 404, { error: 'seek_not_found' });
+    // Gone: say why when this viewer may know (#527), else the plain 404.
+    const gone = await seekGoneFor(seekId, user.id);
+    if (gone) writeJson(response, 410, { error: 'seek_gone', ...gone });
+    else writeJson(response, 404, { error: 'seek_not_found' });
     return true;
   }
   const view = challengeViewModel(seek, user.id, Date.now());
@@ -848,6 +924,15 @@ async function viewSeek(
   return true;
 }
 
+// A closed seek's outcome row first (migration 165); then the 161 expiry notice,
+// which only a public board seek ever has, for seeks swept before outcomes existed.
+async function seekGoneFor(seekId: string, viewerUserId: string): Promise<SeekGoneView | null> {
+  const outcome = await persistence.getCorrespondenceSeekOutcome(seekId);
+  if (outcome) return seekGoneView(outcome, viewerUserId);
+  if (await persistence.hasSeekExpiryNotice(seekId)) return { reason: 'expired' };
+  return null;
+}
+
 // The named target rejecting a directed challenge: deletes the seek. A link
 // challenge (no target) has no one to decline it — only its creator can cancel.
 async function declineChallenge(
@@ -864,7 +949,8 @@ async function declineChallenge(
     writeJson(response, 403, { error: 'not_your_challenge' });
     return true;
   }
-  await persistence.deleteCorrespondenceSeek(seekId);
+  // Target-scoped delete plus the 'declined' outcome, in one statement.
+  await persistence.closeCorrespondenceSeek(seekId, 'declined', user.id);
   writeJson(response, 200, { ok: true });
   return true;
 }
@@ -874,8 +960,9 @@ async function cancelSeek(
   seekId: string,
   response: ServerResponse,
 ): Promise<boolean> {
-  // Owner-scoped: deletes only when the seek belongs to this account.
-  const deleted = await persistence.deleteCorrespondenceSeek(seekId, user.id);
+  // Owner-scoped: deletes only when the seek belongs to this account, and records
+  // the 'cancelled' outcome in the same statement.
+  const deleted = await persistence.closeCorrespondenceSeek(seekId, 'cancelled', user.id);
   if (!deleted) {
     writeJson(response, 404, { error: 'seek_not_found' });
     return true;

@@ -292,6 +292,15 @@ export async function deleteExpiredCorrespondenceSeeks(now: Date = new Date()): 
        RETURNING id, creator_user_id, game_spec_id, days_per_move, preferred_color,
                  rated, created_at, visibility, target_user_id
      ),
+     outcomes AS (
+       -- Every lapsed seek, private challenges included, so a dead link can say
+       -- "Expired" (migration 165). Same statement as the delete, like the notice.
+       INSERT INTO correspondence_seek_outcomes
+         (seek_id, outcome, creator_user_id, target_user_id, visibility, at)
+       SELECT e.id, 'expired', e.creator_user_id, e.target_user_id, e.visibility, $1
+       FROM expired e
+       ON CONFLICT (seek_id) DO NOTHING
+     ),
      noticed AS (
        INSERT INTO correspondence_seek_expiry_notices
          (seek_id, user_id, game_spec_id, days_per_move, preferred_color, rated,
@@ -306,7 +315,8 @@ export async function deleteExpiredCorrespondenceSeeks(now: Date = new Date()): 
        ON CONFLICT (seek_id) DO NOTHING
      )
      -- A data-modifying CTE runs to completion whether or not the outer query
-     -- reads it, so the notices are written even though only the count is.
+     -- reads it, so the notices and outcomes are written even though only the
+     -- count is.
      SELECT (SELECT count(*) FROM expired)::int AS deleted`,
     [now],
   );
@@ -437,6 +447,131 @@ export async function deleteCorrespondenceSeek(id: string, ownerUserId?: string)
       )
     : await getPool().query('DELETE FROM correspondence_seeks WHERE id = $1', [id]);
   return (result.rowCount ?? 0) > 0;
+}
+
+// ── Outcomes (migration 165, #527) ─────────────────────────────────────────────
+// Every way a seek leaves correspondence_seeks leaves one row saying why, so a
+// dead /challenge/<id> link can say what happened instead of "no longer open".
+
+export type SeekOutcomeKind = 'taken' | 'cancelled' | 'declined' | 'expired';
+
+/** What happened to a closed seek, with the seek's parties kept for the privacy gate. */
+export type CorrespondenceSeekOutcome = {
+  seekId: string;
+  outcome: SeekOutcomeKind;
+  creatorUserId: string;
+  targetUserId: string | null;
+  visibility: SeekVisibility;
+  roomId: string | null;
+  accepterUserId: string | null;
+  // The accepter's display name (handle when unset); null unless taken.
+  accepterName: string | null;
+  at: Date;
+};
+
+/**
+ * Record that an accept seated a game for this seek. Called after the room exists,
+ * so a failed create leaves no "taken" row pointing at nothing. The first outcome
+ * for a seek wins; a second write is a no-op.
+ */
+export async function recordCorrespondenceSeekTaken(input: {
+  seek: Pick<CorrespondenceSeekRecord, 'id' | 'creatorUserId' | 'targetUserId' | 'visibility'>;
+  roomId: string;
+  accepterUserId: string;
+  at?: Date;
+}): Promise<void> {
+  await getPool().query(
+    `INSERT INTO correspondence_seek_outcomes
+       (seek_id, outcome, creator_user_id, target_user_id, visibility, room_id, accepter_user_id, at)
+     VALUES ($1, 'taken', $2, $3, $4, $5, $6, $7)
+     ON CONFLICT (seek_id) DO NOTHING`,
+    [
+      input.seek.id,
+      input.seek.creatorUserId,
+      input.seek.targetUserId,
+      input.seek.visibility,
+      input.roomId,
+      input.accepterUserId,
+      input.at ?? new Date(),
+    ],
+  );
+}
+
+/**
+ * Withdraw (the creator) or decline (a direct challenge's target) a seek: deletes
+ * the row and records why in one statement, so the outcome exists exactly when the
+ * delete happened. Returns whether a row was removed; the scope column makes the
+ * delete owner- or target-scoped, never open to anyone else.
+ */
+export async function closeCorrespondenceSeek(
+  id: string,
+  outcome: 'cancelled' | 'declined',
+  actorUserId: string,
+): Promise<boolean> {
+  // Fixed per outcome, never request input.
+  const scopeColumn = outcome === 'cancelled' ? 'creator_user_id' : 'target_user_id';
+  const { rows } = await getPool().query<{ deleted: number }>(
+    `WITH closed AS (
+       DELETE FROM correspondence_seeks WHERE id = $1 AND ${scopeColumn} = $2
+       RETURNING id, creator_user_id, target_user_id, visibility
+     ),
+     recorded AS (
+       INSERT INTO correspondence_seek_outcomes
+         (seek_id, outcome, creator_user_id, target_user_id, visibility)
+       SELECT id, $3, creator_user_id, target_user_id, visibility FROM closed
+       ON CONFLICT (seek_id) DO NOTHING
+     )
+     SELECT (SELECT count(*) FROM closed)::int AS deleted`,
+    [id, actorUserId, outcome],
+  );
+  return (rows[0]?.deleted ?? 0) > 0;
+}
+
+export async function getCorrespondenceSeekOutcome(
+  seekId: string,
+): Promise<CorrespondenceSeekOutcome | null> {
+  const { rows } = await getPool().query<{
+    seek_id: string;
+    outcome: SeekOutcomeKind;
+    creator_user_id: string;
+    target_user_id: string | null;
+    visibility: SeekVisibility;
+    room_id: string | null;
+    accepter_user_id: string | null;
+    accepter_name: string | null;
+    at: Date;
+  }>(
+    `SELECT o.seek_id, o.outcome, o.creator_user_id, o.target_user_id, o.visibility,
+            o.room_id, o.accepter_user_id, COALESCE(a.display_name, a.handle) AS accepter_name,
+            o.at
+     FROM correspondence_seek_outcomes o
+     LEFT JOIN users a ON a.id = o.accepter_user_id
+     WHERE o.seek_id = $1`,
+    [seekId],
+  );
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    seekId: row.seek_id,
+    outcome: row.outcome,
+    creatorUserId: row.creator_user_id,
+    targetUserId: row.target_user_id,
+    visibility: row.visibility,
+    roomId: row.room_id,
+    accepterUserId: row.accepter_user_id,
+    accepterName: row.accepter_name,
+    at: row.at,
+  };
+}
+
+/** Whether the sweep left an expiry notice (161) for this seek: only ever a public
+ *  board seek, so the fact is public. Covers seeks swept before migration 165. */
+export async function hasSeekExpiryNotice(seekId: string): Promise<boolean> {
+  const { rows } = await getPool().query(
+    'SELECT 1 FROM correspondence_seek_expiry_notices WHERE seek_id = $1',
+    [seekId],
+  );
+  return rows.length > 0;
 }
 
 /**

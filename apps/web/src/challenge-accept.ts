@@ -33,6 +33,19 @@ export type ChallengeView = {
   rated?: boolean;
 };
 
+/**
+ * The 410 body for a seek that has closed (server seekGoneView, #527). The server
+ * sends it only when this viewer may know: a public seek, or a private challenge
+ * the viewer was part of. Anyone else still gets the plain 404.
+ */
+export type SeekGone = {
+  reason: 'taken' | 'withdrawn' | 'declined' | 'expired';
+  roomId?: string;
+  accepterName?: string | null;
+  // Taken only: the viewer plays in the game, so the link opens it rather than watches it.
+  youPlay?: boolean;
+};
+
 function specLabel(gameSpecId: string): string {
   return variantDisplayLabel(gameSpecId);
 }
@@ -69,6 +82,11 @@ export async function mountChallengeAccept(root: HTMLElement, challengeId: strin
     shell(buildClosedNotice());
     return;
   }
+  if (res.status === 410) {
+    const gone = (await res.json().catch(() => null)) as SeekGone | null;
+    shell(buildGoneNotice(gone));
+    return;
+  }
   const view = (await res.json().catch(() => null)) as ChallengeView | null;
   if (!view) {
     shell(buildNotice(t('challenge.unavailable'), t('challenge.unavailableShortBody')));
@@ -82,6 +100,48 @@ export async function mountChallengeAccept(root: HTMLElement, challengeId: strin
 // challenge gets the same answer), so the copy fits a seek and a challenge.
 export function buildClosedNotice(): HTMLElement {
   const notice = buildNotice(t('challenge.notFound'), t('challenge.notFoundBody'));
+  notice.append(buildOpenGamesLink('challenge-btn'));
+  return notice;
+}
+
+// A 410 names what happened to the offer: taken (with the game), withdrawn,
+// declined or expired. Anything unrecognised falls back to the plain closed notice.
+export function buildGoneNotice(gone: SeekGone | null): HTMLElement {
+  switch (gone?.reason) {
+    case 'taken': {
+      if (!gone.roomId) return buildClosedNotice();
+      const notice = gone.youPlay
+        ? buildNotice(t('challenge.gameStarted'), t('challenge.gameStartedBody'))
+        : buildNotice(
+            gone.accepterName
+              ? t('challenge.takenBy', { name: gone.accepterName })
+              : t('challenge.takenBySomeone'),
+            t('challenge.takenBody'),
+          );
+      const game = document.createElement('a');
+      game.className = 'challenge-btn';
+      game.href = localizedHref(`/room/${encodeURIComponent(gone.roomId)}`);
+      game.textContent = gone.youPlay ? t('challenge.openGame') : t('challenge.watch');
+      notice.append(game);
+      if (!gone.youPlay) notice.append(buildOpenGamesLink('challenge-btn-secondary'));
+      return notice;
+    }
+    case 'withdrawn':
+      return withOpenGamesLink(buildNotice(t('challenge.withdrawn'), t('challenge.withdrawnBody')));
+    case 'declined':
+      return withOpenGamesLink(
+        buildNotice(t('challenge.declinedTitle'), t('challenge.declinedGoneBody')),
+      );
+    case 'expired':
+      return withOpenGamesLink(
+        buildNotice(t('challenge.expiredTitle'), t('challenge.expiredBody')),
+      );
+    default:
+      return buildClosedNotice();
+  }
+}
+
+function withOpenGamesLink(notice: HTMLElement): HTMLElement {
   notice.append(buildOpenGamesLink('challenge-btn'));
   return notice;
 }

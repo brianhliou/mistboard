@@ -6,6 +6,7 @@ import {
   challengeViewModel,
   openSeekPayload,
   parseSeekVisibility,
+  seekGoneView,
 } from './routes/correspondence-seeks.js';
 
 const T0 = 1_000_000; // fixed "now" for view-model tests
@@ -158,4 +159,83 @@ test('openSeekPayload: an anonymous reader owns nothing on the public board', ()
     openSeekPayload({ ...seek, creatorHandle: 'someone_h' }, null).creatorHandle,
     'someone_h',
   );
+});
+
+// #527: a dead seek link says what happened, but only to someone who may know.
+const goneBase = {
+  creatorUserId: 'creator',
+  targetUserId: null as string | null,
+  visibility: 'public' as const,
+  roomId: null as string | null,
+  accepterUserId: null as string | null,
+  accepterName: null as string | null,
+};
+
+test('seekGoneView: a public seek tells anyone who took it, and links the game', () => {
+  const taken = {
+    ...goneBase,
+    outcome: 'taken' as const,
+    roomId: 'room_1',
+    accepterUserId: 'accepter',
+    accepterName: 'Ann',
+  };
+  assert.deepEqual(seekGoneView(taken, 'stranger'), {
+    reason: 'taken',
+    roomId: 'room_1',
+    accepterName: 'Ann',
+    youPlay: false,
+  });
+  // The two players get "Open game" rather than "Watch".
+  assert.equal(seekGoneView(taken, 'creator')?.youPlay, true);
+  assert.equal(seekGoneView(taken, 'accepter')?.youPlay, true);
+});
+
+test('seekGoneView: withdrawn, declined and expired map to their reasons', () => {
+  assert.deepEqual(seekGoneView({ ...goneBase, outcome: 'cancelled' }, 'stranger'), {
+    reason: 'withdrawn',
+  });
+  assert.deepEqual(seekGoneView({ ...goneBase, outcome: 'expired' }, 'stranger'), {
+    reason: 'expired',
+  });
+  const declined = {
+    ...goneBase,
+    outcome: 'declined' as const,
+    visibility: 'private' as const,
+    targetUserId: 'target',
+  };
+  assert.deepEqual(seekGoneView(declined, 'creator'), { reason: 'declined' });
+  assert.deepEqual(seekGoneView(declined, 'target'), { reason: 'declined' });
+});
+
+test('seekGoneView: a private challenge stays a plain 404 to a stranger', () => {
+  const direct = {
+    ...goneBase,
+    visibility: 'private' as const,
+    targetUserId: 'target',
+  };
+  for (const outcome of ['taken', 'cancelled', 'declined', 'expired'] as const) {
+    const row = {
+      ...direct,
+      outcome,
+      roomId: outcome === 'taken' ? 'room_2' : null,
+      accepterUserId: outcome === 'taken' ? 'target' : null,
+      accepterName: outcome === 'taken' ? 'Tia' : null,
+    };
+    assert.equal(seekGoneView(row, 'stranger'), null, `direct ${outcome}`);
+    assert.notEqual(seekGoneView(row, 'creator'), null, `creator sees direct ${outcome}`);
+    assert.notEqual(seekGoneView(row, 'target'), null, `target sees direct ${outcome}`);
+  }
+  // A link challenge (private, no target): a stranger holding the link learns
+  // nothing; the creator and whoever took it do.
+  const link = {
+    ...goneBase,
+    visibility: 'private' as const,
+    outcome: 'taken' as const,
+    roomId: 'room_3',
+    accepterUserId: 'friend',
+    accepterName: 'Fay',
+  };
+  assert.equal(seekGoneView(link, 'stranger'), null);
+  assert.equal(seekGoneView(link, 'creator')?.reason, 'taken');
+  assert.equal(seekGoneView(link, 'friend')?.roomId, 'room_3');
 });
