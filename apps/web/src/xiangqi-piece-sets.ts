@@ -117,9 +117,7 @@ type ImageXiangqiPieceSet =
   | AssetXiangqiPieceSet;
 type AnimalXiangqiPieceSet = Extract<XiangqiPieceSet, 'animal-dobutsu'>;
 
-export type XiangqiPieceTilePreview =
-  | { kind: 'text'; text: string }
-  | { kind: 'svg'; markup: string };
+export type XiangqiPieceTilePreview = { kind: 'svg'; markup: string };
 
 export type XiangqiPieceRenderOptions = {
   ariaLabel?: string;
@@ -153,14 +151,13 @@ export function xiangqiPreviewGlyph(set: XiangqiPieceSet): string {
   return xiangqiGlyph(set, 'red', 'general');
 }
 
+// Every set previews as the board's own red general, so the character sets
+// show their disc and ring rather than a bare glyph on the tile.
 export function xiangqiPieceTilePreview(set: XiangqiPieceSet): XiangqiPieceTilePreview {
-  if (isImagePieceSet(set)) {
-    return {
-      kind: 'svg',
-      markup: renderXiangqiPieceGlyphed({ color: 'red', role: 'general' }, set),
-    };
-  }
-  return { kind: 'text', text: xiangqiPreviewGlyph(set) };
+  return {
+    kind: 'svg',
+    markup: renderXiangqiPieceGlyphed({ color: 'red', role: 'general' }, set),
+  };
 }
 
 export function renderXiangqiPieceGlyphed(

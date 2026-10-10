@@ -739,27 +739,18 @@
   background-size: 16px 16px;
 }
 
-/* Xiangqi piece tiles show a representative glyph centered on a neutral disc. */
+/* Xiangqi piece tiles show the set's red general on a neutral ground. */
 .theme-tile-preview-xqpiece {
   display: flex;
   align-items: center;
   justify-content: center;
   background: #f3e6c4;
-  color: #b91c1c;
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1;
 }
 .theme-tile-preview-xqpiece img,
 .theme-tile-preview-xqpiece svg {
   width: 100%;
   height: 100%;
   object-fit: contain;
-}
-
-.theme-tile-preview-xqpiece[data-id="traditional"],
-.theme-tile-preview-xqpiece[data-id="simplified"] {
-  font-size: 34px;
 }
 
 /* Fog previews: each shows the fog effect over a neutral dark-square

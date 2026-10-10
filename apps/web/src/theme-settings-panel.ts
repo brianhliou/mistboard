@@ -368,12 +368,7 @@ function createTileField<T extends string>(
     // Xiangqi piece tiles show a representative mark; the board tiles use
     // a CSS color swatch like the chess board tiles.
     if (kind === 'xqpiece') {
-      const xiangqiPreview = xiangqiPieceTilePreview(option.id as XiangqiPieceSet);
-      if (xiangqiPreview.kind === 'svg') {
-        preview.innerHTML = xiangqiPreview.markup;
-      } else {
-        preview.textContent = xiangqiPreview.text;
-      }
+      preview.innerHTML = xiangqiPieceTilePreview(option.id as XiangqiPieceSet).markup;
     }
     tile.append(preview);
 

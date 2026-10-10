@@ -276,8 +276,17 @@ describe('xiangqiPreviewGlyph', () => {
 });
 
 describe('xiangqiPieceTilePreview', () => {
-  it('uses text previews for glyph sets and SVG previews for image sets', () => {
-    expect(xiangqiPieceTilePreview('traditional')).toEqual({ kind: 'text', text: '帥' });
+  it('previews the character sets as a piece on its disc, not a bare glyph', () => {
+    const red = { color: 'red', role: 'general' } as const;
+    const traditional = xiangqiPieceTilePreview('traditional');
+    const simplified = xiangqiPieceTilePreview('simplified');
+    expect(traditional.markup).toBe(renderXiangqiPieceGlyphed(red, 'traditional'));
+    expect(simplified.markup).toBe(renderXiangqiPieceGlyphed(red, 'simplified'));
+    expect(traditional.markup).toContain('<circle cx="50" cy="50" r="46"');
+    expect(traditional.markup).not.toBe(simplified.markup);
+  });
+
+  it('uses the set art for image sets', () => {
     const international = xiangqiPieceTilePreview('international');
     expect(international.kind).toBe('svg');
     if (international.kind === 'svg') {
