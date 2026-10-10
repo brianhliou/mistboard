@@ -404,9 +404,9 @@ export function trackLocaleResolved(resolution: LocaleResolution): void {
     locale: resolution.locale,
     locale_source: resolution.source,
     browser_tag: resolution.browserTag,
-    // The piece set this visitor is defaulted to (locale, then country), so
-    // games started can be sliced by first-impression board without a
-    // per-browser storage read.
+    // The piece set this visitor is defaulted to (locale, language list, then
+    // country), so games started can be sliced by first-impression board
+    // without a per-browser storage read.
     piece_set_default: inferredXiangqiPieceSet(resolution.locale),
   });
 }

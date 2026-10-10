@@ -1,4 +1,9 @@
-import { currentLocale, type Locale } from './i18n/locale.js';
+import {
+  browserLanguageList,
+  currentLocale,
+  type Locale,
+  localeFromLanguageTag,
+} from './i18n/locale.js';
 import { viewerCountry } from './viewer-geo.js';
 import {
   DEFAULT_XIANGQI_BOARD_COLOR,
@@ -115,17 +120,31 @@ export function writeStoredXiangqiBoardLayout(layout: XiangqiBoardLayout): void 
 }
 
 // The piece set a browser gets before anyone picks one. Locale first (the
-// zh interface implies Chinese-reading pieces), then Cloudflare's country
-// cookie as the tiebreak for an English browser in a Chinese-reading region:
-// a lot of that traffic runs an en-US work laptop. Anything else keeps the
+// zh interface implies Chinese-reading pieces), then any Chinese entry in the
+// browser's language list (a Chinese reader on an English browser who added
+// Chinese as a second language, 2026-10-10), then Cloudflare's country cookie
+// as the tiebreak for an English browser in a Chinese-reading region: a lot of
+// that traffic runs an en-US work laptop. Anything else keeps the
 // international art.
 export function inferredXiangqiPieceSet(
   locale: Locale = currentLocale(),
   country: string | null = viewerCountry(),
+  languages: readonly string[] | null | undefined = browserLanguageList(),
 ): XiangqiPieceSet {
   if (locale === 'zh-Hans' || locale === 'zh-Hant') return 'traditional';
+  if (listsChineseLanguage(languages)) return 'traditional';
   if (country && HANZI_PIECE_COUNTRIES.has(country)) return 'traditional';
   return defaultXiangqiPieceSet;
+}
+
+// True when any listed language maps to a Chinese locale (zh-*, and yue, which
+// the locale resolver also reads as Chinese), at any position in the list.
+function listsChineseLanguage(languages: readonly string[] | null | undefined): boolean {
+  if (!languages) return false;
+  return languages.some((tag) => {
+    const locale = localeFromLanguageTag(tag);
+    return locale === 'zh-Hans' || locale === 'zh-Hant';
+  });
 }
 
 // The river caption follows the same audience as the pieces (Brian, 2026-10-08:
@@ -135,8 +154,9 @@ export function inferredXiangqiPieceSet(
 export function inferredXiangqiRiverText(
   locale: Locale = currentLocale(),
   country: string | null = viewerCountry(),
+  languages: readonly string[] | null | undefined = browserLanguageList(),
 ): XiangqiRiverText {
-  return inferredXiangqiPieceSet(locale, country) === 'traditional'
+  return inferredXiangqiPieceSet(locale, country, languages) === 'traditional'
     ? 'classic'
     : DEFAULT_XIANGQI_RIVER_TEXT;
 }

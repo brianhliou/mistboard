@@ -112,6 +112,41 @@ describe('xiangqi appearance storage normalization', () => {
     }
   });
 
+  it('infers hanzi pieces when Chinese appears anywhere in the language list', () => {
+    expect(inferredXiangqiPieceSet('en', null, ['en-US', 'zh-CN'])).toBe('traditional');
+    expect(inferredXiangqiPieceSet('en', 'US', ['en-US', 'zh-CN'])).toBe('traditional');
+    expect(inferredXiangqiPieceSet('en', 'US', ['en-US', 'fr', 'zh-Hant-TW'])).toBe('traditional');
+    expect(inferredXiangqiPieceSet('en', 'US', ['en-US', 'zh'])).toBe('traditional');
+    expect(inferredXiangqiRiverText('en', 'US', ['en-US', 'zh-CN'])).toBe('classic');
+    expect(inferredXiangqiPieceSet('en', 'US', ['en-US', 'fr'])).toBe('international');
+    expect(inferredXiangqiRiverText('en', 'US', ['en-US', 'fr'])).toBe('off');
+  });
+
+  it('falls back to locale and country when the language list is empty or missing', () => {
+    for (const languages of [[], null, undefined]) {
+      expect(inferredXiangqiPieceSet('en', 'US', languages)).toBe('international');
+      expect(inferredXiangqiPieceSet('en', 'TW', languages)).toBe('traditional');
+      expect(inferredXiangqiPieceSet('zh-Hans', null, languages)).toBe('traditional');
+    }
+  });
+
+  it('reads the browser language list but keeps a stored pick winning', () => {
+    Object.defineProperty(navigator, 'languages', {
+      configurable: true,
+      get: () => ['en-US', 'zh-CN'],
+    });
+    try {
+      const storage = installLocalStorage();
+      expect(readStoredXiangqiPieceSet()).toBe('traditional');
+      expect(storage.getItem('mistboard.xiangqiPieceSet')).toBeNull();
+      writeStoredXiangqiPieceSet('international');
+      expect(readStoredXiangqiPieceSet()).toBe('international');
+    } finally {
+      delete (navigator as unknown as Record<string, unknown>).languages;
+    }
+    expect(navigator.languages).not.toContain('zh-CN');
+  });
+
   it('follows the inference when nothing is stored', () => {
     const storage = installLocalStorage();
     expect(readStoredXiangqiPieceSet()).toBe('international');

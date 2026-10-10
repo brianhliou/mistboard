@@ -67,6 +67,14 @@ export function setStoredLocale(locale: Locale): void {
   }
 }
 
+// Every language the browser lists, in order. Empty outside a browser.
+export function browserLanguageList(): readonly string[] {
+  if (typeof navigator === 'undefined') return [];
+  const languages = navigator.languages ?? [];
+  if (languages.length > 0) return languages;
+  return navigator.language ? [navigator.language] : [];
+}
+
 export function browserLocale(): Locale | null {
   if (typeof navigator === 'undefined') return null;
   const languages = navigator.languages.length > 0 ? navigator.languages : [navigator.language];
