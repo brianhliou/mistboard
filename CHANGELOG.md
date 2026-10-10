@@ -177,6 +177,9 @@ Conventions:
 
 ### Fixed
 
+- feedback sent while signed in is saved again ([ba65cb2d](https://github.com/brianhliou/mistboard/commit/ba65cb2d))
+- the homepage viewer no longer replays one-move-a-day correspondence games ([ba65cb2d](https://github.com/brianhliou/mistboard/commit/ba65cb2d))
+- a hold-the-draw practice exercise now counts as solved when your move repeats the position, and an exercise lost to the engine is recorded as failed ([ba65cb2d](https://github.com/brianhliou/mistboard/commit/ba65cb2d))
 - Fog Xiangqi, Fog Chess, banqi and Flip Jungle games keep your move history after a reload, so you can click back through earlier moves and see the board as you saw it then ([411963fd](https://github.com/brianhliou/mistboard/commit/411963fd))
 - Challenges sent to you now appear at the top of /correspondence with Accept and Decline, and the bell's challenge count opens them ([411963fd](https://github.com/brianhliou/mistboard/commit/411963fd))
 - The longest forced mates article no longer shows the same game twice; its 困毙 section now plays the end of the two cannons mate in 52 ([411963fd](https://github.com/brianhliou/mistboard/commit/411963fd))
