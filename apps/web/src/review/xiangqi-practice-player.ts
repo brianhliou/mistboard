@@ -75,7 +75,7 @@ export interface XiangqiPracticeOptions {
   /** Called each time an attempt fails, with the grade that ended it. A surface
    *  where every learner blunders on move one is MISCALIBRATED rather than
    *  unused, and the two are indistinguishable in a completion count alone. */
-  onFailed?: (verdict: PracticeVerdict, moves: number) => void;
+  onFailed?: (verdict: PracticeVerdict | 'defeat', moves: number) => void;
   /**
    * Where a GUEST signs in, asked at solve time; undefined for a signed-in
    * learner. A guest's solve is not saved (the server drops it by design), so
@@ -456,6 +456,11 @@ export function mountXiangqiPractice(
     // punitive and a drill solve feel generic (learn course, 2026-07-15).
     if (view.phase === 'defeat' && lastPhase !== 'defeat') {
       playSound('learn-failure');
+      // A defeat ends the run as surely as a failed move does (a draw the
+      // engine reads as lost, a defender with no reply), so it is reported as a
+      // failure too. Without it a draw chapter that ended this way logged a
+      // start and nothing else, indistinguishable from a learner who left.
+      opts.onFailed?.('defeat', view.movesPlayed);
     }
     lastPhase = view.phase;
 
