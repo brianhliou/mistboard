@@ -674,6 +674,83 @@ definePersistenceTests('xiangqi broadcasts', () => {
     assert.equal(second.ok ? 'ok' : second.message, 'every listed board is already imported');
   });
 
+  test('the same league as prod held it: latest round paired by team only, round 1 settled', async () => {
+    // Prod after 2026-10-03: dpxq's latest round page was round 10, paired by
+    // team with no individual table, and round 1's six collided boards were all
+    // complete, so the round counted as settled. Every poll answered "lists no
+    // game records yet" and the six boards stayed until 10-10.
+    const dpxqFixture = (name: string) =>
+      readFileSync(fileURLToPath(new URL(`../fixtures/dpxq/${name}`, import.meta.url)), 'utf-8');
+    const slug = 'womens-league-2026-prod';
+    const sourceUrl = `mistboard-discover://dpxq-tour?tour=12776&tourSlug=${slug}`;
+    const roundOnePage = dpxqFixture('round_12776_1-womens-league-2026-r01.html');
+    const parsed = parseDpxqRoundPage(roundOnePage)!;
+    const byTable = new Map<number, (typeof parsed.pairings)[number]>();
+    for (const pairing of parsed.pairings) byTable.set(pairing.table, pairing);
+    const stale = [...byTable.values()].map(({ match, matchName, order, ...pairing }) =>
+      dpxqPairingBoard({
+        tourSlug: slug,
+        roundId: `${slug}-r01`,
+        pairing,
+        sourceUrl: 'http://www.dpxq.com/hldcg/round_12776_1.html',
+      }),
+    );
+    await importXiangqiBroadcastPack({
+      tour: {
+        schema: 'mistboard.xiangqi.broadcast.v1',
+        slug,
+        name: '2026年全国象棋女子甲级联赛',
+        sourceUrl,
+      },
+      rounds: [1, 2].map((n) => ({
+        schema: 'mistboard.xiangqi.broadcast.v1' as const,
+        id: `${slug}-r0${n}`,
+        tourSlug: slug,
+        name: `Round ${n}`,
+      })),
+      boards: stale,
+    });
+    const poll = () =>
+      pollXiangqiBroadcastSourceOnce({
+        sourceUrl,
+        tourSlug: slug,
+        fetchImpl: multiSourceFetch({
+          'http://www.dpxq.com/hldcg/round_12776.html': dpxqFixture(
+            'round_12776-womens-league-2026-latest-r10.html',
+          ),
+          'http://www.dpxq.com/hldcg/round_12776_1.html': roundOnePage,
+          'http://www.dpxq.com/hldcg/round_12776_2.html': dpxqFixture(
+            'round_12776_2-womens-league-2026-r02.html',
+          ),
+          'http://www.dpxq.com/hldcg/movelist_12776.html': '<html><body></body></html>',
+        }),
+        sourcePolicy: { allowedHosts: ['www.dpxq.com'], allowLocal: false },
+      });
+    const ids = async (round: number) =>
+      (await listXiangqiBroadcastBoards(`${slug}-r0${round}`)).map((b) => b.sourceBoardId);
+
+    // Round 2 lands keyed by match; round 1 is still settled for this pass.
+    const first = await poll();
+    assert.equal(first.ok, true, first.ok ? '' : first.message);
+    assert.equal((await ids(2)).length, 16);
+    assert.ok((await ids(2)).every((id) => /^r02m\d+t\d+$/.test(id)));
+
+    // The tour is now keyed by match, so round 1 is read again and re-filed.
+    const second = await poll();
+    assert.equal(second.ok, true, second.ok ? '' : second.message);
+    const roundOne = await ids(1);
+    assert.equal(roundOne.length, 19);
+    assert.equal(
+      roundOne.some((id) => /^r01t/.test(id)),
+      false,
+    );
+    const logs = await listXiangqiBroadcastSyncLogs({ tourSlug: slug });
+    assert.equal(logs.filter((log) => log.kind === 'superseded').length, 6);
+
+    const third = await poll();
+    assert.equal(third.ok ? 'ok' : third.message, 'every listed board is already imported');
+  });
+
   test('explicit correction can replace a non-prefix legal board update', async () => {
     const pack = await fixturePack();
     const fullBoard = (pack.boards as XiangqiBroadcastBoard[])[0]!;

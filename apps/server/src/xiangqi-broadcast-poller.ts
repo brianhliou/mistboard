@@ -24,10 +24,12 @@ import {
   type DiscoverySource,
   isXiangqiBroadcastDiscoveryUrl,
   NO_ACTIVE_ROUND_MESSAGE,
+  NOTHING_NEW_MESSAGE,
   parseXiangqiBroadcastDiscoverySource,
   resolveScheduledRound,
   roundNumberFromRoundId,
   type StoredBoardRef,
+  settledStatedRounds,
 } from './xiangqi-broadcast-discovery.js';
 import { registerDefaultXiangqiBroadcastDiscoveryProviders } from './xiangqi-broadcast-discovery-dpxq.js';
 
@@ -707,19 +709,9 @@ async function discoverStatedRounds(
 > {
   const completeUrls = new Set<string>();
   const stored: StoredBoardRef[] = [];
-  // Rounds whose every stored board is finished: a provider that reads a
-  // page per round skips them, so a finished event costs one page a poll.
-  const settledRounds = new Set<number>();
   for (const round of rounds) {
     const roundNumber = roundNumberFromRoundId(round.id);
     const boards = await listXiangqiBroadcastBoards(round.id);
-    if (
-      roundNumber !== undefined &&
-      boards.length > 0 &&
-      boards.every((board) => board.status === 'complete')
-    ) {
-      settledRounds.add(roundNumber);
-    }
     for (const board of boards) {
       // A complete board stored before game details existed is read once more
       // so its match, table and date arrive; after that it is final. A
@@ -746,6 +738,7 @@ async function discoverStatedRounds(
       });
     }
   }
+  const settledRounds = settledStatedRounds(stored);
 
   const discovered = await source.provider.discover({
     config: source.config,
@@ -756,6 +749,11 @@ async function discoverStatedRounds(
     spacingMs: context.leafSpacingMs,
   });
   if (!discovered.ok) {
+    // Every round the source names is stored and finished: the same answer as
+    // a manifest with nothing to apply, not a fault.
+    if (discovered.message === NOTHING_NEW_MESSAGE) {
+      return { ok: false, kind: 'source_malformed', message: discovered.message, quiet: true };
+    }
     // A source with nothing published yet is how every event looks before
     // (and often during) its first round. Quiet only while we hold no boards
     // for the tour: a source that empties after we stored games is a fault.

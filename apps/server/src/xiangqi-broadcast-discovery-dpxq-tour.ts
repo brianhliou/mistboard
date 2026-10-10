@@ -24,9 +24,11 @@ import type {
   DiscoveryProvider,
   DiscoveryProviderInput,
 } from './xiangqi-broadcast-discovery.js';
+import { NOTHING_NEW_MESSAGE } from './xiangqi-broadcast-discovery.js';
 import {
   type DpxqPairing,
   parseDpxqRoundPage,
+  parseDpxqRoundPageHeader,
   roundPageUrl,
 } from './xiangqi-broadcast-dpxq-pairings.js';
 
@@ -105,27 +107,37 @@ async function fetchText(
  * and filed 32 records; the next pass skipped every round page, and the rest
  * were keyed by their title). A page that cannot be read or parsed
  * contributes nothing: the game list still stands on its own.
+ *
+ * `settledSkipped` says the pages answered and named rounds this call left
+ * unread because they are settled: nothing new, rather than nothing there.
  */
 async function readPairings(
   input: DiscoveryProviderInput,
   tour: string,
   origin: string,
   pendingRounds: ReadonlySet<number>,
-): Promise<Array<DpxqPairing & { pageUrl: string }>> {
+): Promise<{ pairings: Array<DpxqPairing & { pageUrl: string }>; settledSkipped: boolean }> {
   const latestUrl = roundPageUrl(tour, undefined, origin);
   const latest = await fetchText(input, latestUrl);
-  if (!latest.ok) return [];
+  if (!latest.ok) return { pairings: [], settledSkipped: false };
   const page = parseDpxqRoundPage(latest.text);
-  if (!page) return [];
+  // A latest round with no individual table (a team league's next round,
+  // paired by team before its boards) still names the rounds before it.
+  const header = page ?? parseDpxqRoundPageHeader(latest.text);
+  if (!header) return { pairings: [], settledSkipped: false };
+  let settledSkipped = false;
   // The page's canonical per-round address, so a board's source link names
   // its round and does not move when the next round is paired.
-  const pairings = page.pairings.map((pairing) => ({
+  const pairings = (page?.pairings ?? []).map((pairing) => ({
     ...pairing,
-    pageUrl: roundPageUrl(tour, page.roundNumber, origin),
+    pageUrl: roundPageUrl(tour, header.roundNumber, origin),
   }));
-  for (let round = 1; round <= page.roundCount; round += 1) {
-    if (round === page.roundNumber) continue;
-    if (input.settledRounds?.has(round) && !pendingRounds.has(round)) continue;
+  for (let round = 1; round <= header.roundCount; round += 1) {
+    if (round === header.roundNumber) continue;
+    if (input.settledRounds?.has(round) && !pendingRounds.has(round)) {
+      settledSkipped = true;
+      continue;
+    }
     if (input.spacingMs) await new Promise((resolve) => setTimeout(resolve, input.spacingMs));
     const url = roundPageUrl(tour, round, origin);
     const fetched = await fetchText(input, url);
@@ -136,7 +148,7 @@ async function readPairings(
     if (!parsed || parsed.roundNumber !== round) continue;
     for (const pairing of parsed.pairings) pairings.push({ ...pairing, pageUrl: url });
   }
-  return pairings;
+  return { pairings, settledSkipped };
 }
 
 export const dpxqTourDiscoveryProvider: DiscoveryProvider = {
@@ -164,12 +176,20 @@ export const dpxqTourDiscoveryProvider: DiscoveryProvider = {
     }
 
     // `pairings=0` opts a tour out of the round pages (records only).
-    const pairings =
+    const { pairings, settledSkipped } =
       input.config.get('pairings') === '0'
-        ? []
+        ? { pairings: [], settledSkipped: false }
         : await readPairings(input, tour, origin, pendingRounds);
     if (!list.ok && pairings.length === 0) {
       return { ok: false, message: `tour game list unreachable: ${list.message}` };
+    }
+
+    // Every round with games is stored and finished, and the latest has none
+    // yet (a team league between rounds, or an event over with no records):
+    // nothing new, not a failing source.
+    // Before 2026-10-10 this logged source_fetch_error every poll.
+    if (games.length === 0 && pairings.length === 0 && settledSkipped) {
+      return { ok: false, message: NOTHING_NEW_MESSAGE, quiet: true };
     }
 
     if (games.length === 0 && pairings.length === 0) {

@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { buildChallengeCard, buildClosedNotice, type ChallengeView } from './challenge-accept.js';
+import {
+  buildChallengeCard,
+  buildClosedNotice,
+  buildGoneNotice,
+  type ChallengeView,
+} from './challenge-accept.js';
 import { buildGamesSeekCard } from './current-games.js';
 import { corrSeekRow } from './landing-play.js';
 import { buildSeekAcceptAction, seekAcceptErrorText, seekSignInHref } from './seek-accept.js';
@@ -235,5 +240,42 @@ describe('/challenge page copy', () => {
     const notice = buildClosedNotice();
     expect(notice.querySelector('h1')?.textContent).toBe('This game offer is no longer open');
     expect(notice.querySelector('a[href="/games"]')?.textContent).toBe('See open games');
+  });
+
+  // #527: the 410 body names what happened to the offer.
+  it('a 410 taken offer names who took it and links to watch the game', () => {
+    const notice = buildGoneNotice({ reason: 'taken', roomId: 'room_9', accepterName: 'Bo' });
+    expect(notice.querySelector('h1')?.textContent).toBe('Taken by Bo');
+    expect(notice.querySelector('a[href="/room/room_9"]')?.textContent).toBe('Watch');
+    expect(notice.querySelector('a[href="/games"]')?.textContent).toBe('See open games');
+  });
+
+  it('a 410 taken offer the viewer plays in opens the game instead', () => {
+    const notice = buildGoneNotice({ reason: 'taken', roomId: 'room_9', youPlay: true });
+    expect(notice.querySelector('h1')?.textContent).toBe('This game has started');
+    expect(notice.querySelector('a[href="/room/room_9"]')?.textContent).toBe('Open game');
+    expect(notice.querySelector('a[href="/games"]')).toBeNull();
+  });
+
+  it('a 410 withdrawn, declined or expired offer says so and links to open games', () => {
+    for (const [reason, title] of [
+      ['withdrawn', 'Withdrawn'],
+      ['declined', 'Declined'],
+      ['expired', 'Expired'],
+    ] as const) {
+      const notice = buildGoneNotice({ reason });
+      expect(notice.querySelector('h1')?.textContent).toBe(title);
+      expect(notice.querySelector('a[href="/games"]')?.textContent).toBe('See open games');
+      expect(notice.textContent).not.toContain('\u2014');
+    }
+  });
+
+  it('a 410 with no readable body falls back to the closed notice', () => {
+    expect(buildGoneNotice(null).querySelector('h1')?.textContent).toBe(
+      'This game offer is no longer open',
+    );
+    expect(
+      buildGoneNotice({ reason: 'taken', accepterName: 'Bo' }).querySelector('h1')?.textContent,
+    ).toBe('This game offer is no longer open');
   });
 });

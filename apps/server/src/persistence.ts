@@ -111,13 +111,16 @@ export {
 } from './persistence-correspondence-digest.js';
 export type {
   CorrespondenceSeekListing,
+  CorrespondenceSeekOutcome,
   CorrespondenceSeekRecord,
   SeekColorPreference,
   SeekExpiryNotice,
+  SeekOutcomeKind,
   SeekVisibility,
 } from './persistence-correspondence-seeks.js';
 export {
   CORRESPONDENCE_SEEK_TTL_MS,
+  closeCorrespondenceSeek,
   correspondenceStartRecipient,
   countOpenSeeksForUser,
   createCorrespondenceSeek,
@@ -126,10 +129,13 @@ export {
   findOpenDuplicatePublicSeek,
   getCorrespondenceSeek,
   getCorrespondenceSeekListing,
+  getCorrespondenceSeekOutcome,
+  hasSeekExpiryNotice,
   listChallengesForUser,
   listOpenCorrespondenceSeeks,
   listOutgoingSeeksForUser,
   markSeekExpiryNoticesSeen,
+  recordCorrespondenceSeekTaken,
   SEEK_EXPIRY_NOTICE_WINDOW_DAYS,
   unseenSeekExpiryNotices,
 } from './persistence-correspondence-seeks.js';
