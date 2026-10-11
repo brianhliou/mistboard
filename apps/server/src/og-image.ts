@@ -350,16 +350,13 @@ function articlePositionBoard(position: ArticleOgPosition): PositionOgBoard {
  *  tagline (it is what a crop or a 150px thumbnail loses first). What an
  *  article with no card of its own offers in its JSON-LD, the same as its
  *  og:image falls back to the wide site card. */
-export function renderDefaultOgAspectSvg(logoSvg: string, aspect: CardAspect): string {
+export function renderDefaultOgAspectSvg(logoHref: string, aspect: CardAspect): string {
   const { width, height } = CARD_ASPECT_FRAMES[aspect];
   const logoSize = Math.round(height * 0.4);
   const wordmarkSize = 56;
   const gap = 64;
   const top = (height - (logoSize + gap + wordmarkSize * 0.72)) / 2;
-  const logo = logoSvg.replace(
-    /^<svg[^>]*>/,
-    `<svg x="${(width - logoSize) / 2}" y="${top}" width="${logoSize}" height="${logoSize}" viewBox="0 0 1024 1024">`,
-  );
+  const logo = logoMarkImage(logoHref, (width - logoSize) / 2, top, logoSize);
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
     `<rect width="${width}" height="${height}" fill="${CARD_BG}"/>`,
@@ -478,7 +475,7 @@ async function serveArticleAspectImage(params: {
   }
   const svg = board
     ? renderBoardAspectCard(board, await loadCardArt(staticDir), aspect, pieceSet)
-    : renderDefaultOgAspectSvg(await fs.readFile(resolve(staticDir, 'logo.svg'), 'utf-8'), aspect);
+    : renderDefaultOgAspectSvg(await loadLogoMarkHref(staticDir), aspect);
   const png = await svgToPng(svg);
   cacheSet(key, png);
   writePng(response, png, 'MISS');
@@ -1083,10 +1080,26 @@ function renderStubSvg(game: persistence.GameRecord): string {
 
 // ── Default OG card: brand mark ───────────────────────────────────────────────
 //
+// The mark is logo-mark.png, the art the header, favicon and PWA icons draw,
+// never a vector copy. logo.svg and favicon.svg were hand-drawn copies whose
+// cloud was three circles and some rectangles, redrawn once (ec4c9a3b) and
+// still off; both were deleted 2026-10-11 so nothing reaches for them again.
+// Brian: "every so often this SVG slop comes out. The cloud looks wrong."
+
+/** logo-mark.png as a data URI, for an <image> on a card. */
+export async function loadLogoMarkHref(staticDir: string): Promise<string> {
+  const png = await fs.readFile(resolve(staticDir, 'logo-mark.png'));
+  return `data:image/png;base64,${png.toString('base64')}`;
+}
+
+function logoMarkImage(href: string, x: number, y: number, size: number): string {
+  return `<image href="${href}" x="${x}" y="${y}" width="${size}" height="${size}"/>`;
+}
+//
 // Logo, wordmark, tagline. Brian picked this over board-collage variants
 // (2026-06-10); per-game boards live on the article cards instead. The logo
-// SVG is passed in by the bake script (it lives at apps/web/public/logo.svg)
-// so this module needs no filesystem access. Re-run
+// is passed in by the bake script as a data URI of apps/web/public/logo-mark.png
+// (loadLogoMarkHref) so this module needs no filesystem access. Re-run
 // `npm run og:default --workspace @mistboard/server` to re-bake
 // `apps/web/public/og-image.png`, then bump the ?v= on the og:image meta in
 // apps/web/index.html so scrapers refetch.
@@ -1094,7 +1107,7 @@ function renderStubSvg(game: persistence.GameRecord): string {
 const FONT = OG_FONT;
 
 export function renderDefaultOgSvg(
-  logoSvg: string,
+  logoHref: string,
   copy: { wordmark: string; lines: string[]; note?: string } = {
     wordmark: 'MISTBOARD',
     lines: ['Chinese chess and original strategy games.'],
@@ -1103,10 +1116,7 @@ export function renderDefaultOgSvg(
 ): string {
   const logoSize = 200;
   const logoY = 96;
-  const logo = logoSvg.replace(
-    /^<svg[^>]*>/,
-    `<svg x="${(OG_WIDTH - logoSize) / 2}" y="${logoY}" width="${logoSize}" height="${logoSize}" viewBox="0 0 1024 1024">`,
-  );
+  const logo = logoMarkImage(logoHref, (OG_WIDTH - logoSize) / 2, logoY, logoSize);
   const wordmarkY = logoY + logoSize + 84;
   const parts = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">`,
