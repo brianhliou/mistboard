@@ -13,11 +13,16 @@ import generated from './article-meta.generated.json' with { type: 'json' };
 
 export type ArticleKind = 'rules' | 'article';
 
+/** The published zh titles, keyed by route prefix: present only for an article
+ *  whose translation is published (its zh pages exist). */
+export type ArticleZhTitles = { 'zh-hans': string; 'zh-hant': string };
+
 type GeneratedArticleMeta = {
   title: string;
   kind: ArticleKind;
   description: string;
   status: 'outline' | 'draft' | 'published';
+  zhTitles?: ArticleZhTitles;
 };
 
 const GENERATED = generated as Record<string, GeneratedArticleMeta>;
@@ -94,11 +99,11 @@ export function articleIsIndexable(slug: string): boolean {
 
 export const ARTICLE_META: Record<
   string,
-  { title: string; description: string; kind: ArticleKind }
+  { title: string; description: string; kind: ArticleKind; zhTitles?: ArticleZhTitles }
 > = Object.fromEntries(
-  Object.entries(GENERATED).map(([slug, { title, description, kind }]) => [
+  Object.entries(GENERATED).map(([slug, { title, description, kind, zhTitles }]) => [
     slug,
-    { title, description, kind },
+    { title, description, kind, ...(zhTitles ? { zhTitles } : {}) },
   ]),
 );
 

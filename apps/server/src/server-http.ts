@@ -5,8 +5,9 @@ import { articleIsRetired } from './article-meta.js';
 import { type HttpApiContext, handleApiRequest } from './http-api.js';
 import { INDEXNOW_KEY, isIndexNowKeyRequest } from './indexnow.js';
 import { serveBroadcastBoardOgImage } from './og-broadcast.js';
+import { isCardAspect } from './og-card-board.js';
 import { serveAnyGameOgImage } from './og-game-tenant.js';
-import { serveArticleOgImage, serveStudyOgImage } from './og-image.js';
+import { isArticleOgLang, serveArticleOgImage, serveStudyOgImage } from './og-image.js';
 import { servePlayerOgImage } from './og-player.js';
 import { servePositionOgImage } from './og-position.js';
 import * as persistence from './persistence.js';
@@ -317,6 +318,31 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
     if (articleOgMatch) {
       const slug = decodeURIComponent(articleOgMatch[1]!);
       const meta = ARTICLE_META[slug];
+      // ?aspect=16x9|4x3|1x1 asks for the JSON-LD shapes; anything else is a
+      // 400, never quietly the wide card under a URL that promised a square.
+      // ?lang=zh-hans|zh-hant asks for a zh page's card (hanzi pieces, the
+      // page's zh title); English is the absent parameter, so anything else is
+      // a 400 too, never quietly mapped to the nearest language.
+      const query = new URLSearchParams(url.slice(pathname.length));
+      const aspectParam = query.get('aspect');
+      if (aspectParam !== null && !isCardAspect(aspectParam)) {
+        response.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' });
+        response.end('aspect must be 16x9, 4x3 or 1x1');
+        return;
+      }
+      const langParam = query.get('lang');
+      if (langParam !== null && !isArticleOgLang(langParam)) {
+        response.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' });
+        response.end('lang must be zh-hans or zh-hant');
+        return;
+      }
+      const aspect = aspectParam ?? undefined;
+      const lang = langParam ?? undefined;
+      if ((aspect || lang) && !meta) {
+        response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+        response.end('no such article');
+        return;
+      }
       if (meta) {
         void serveArticleOgImage({
           slug,
@@ -324,11 +350,20 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
           kind: meta.kind,
           response,
           staticDir: options.staticDir,
+          ...(aspect ? { aspect } : {}),
+          ...(lang ? { lang } : {}),
+          ...(meta.zhTitles ? { zhTitles: meta.zhTitles } : {}),
         }).catch((err: Error) => {
           console.warn('article og render failed', err.message);
           if (!response.headersSent) {
-            response.writeHead(302, { location: '/og-image.png' });
-            response.end();
+            // An aspect or zh URL must not answer with the wide site card.
+            if (aspect || lang) {
+              response.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' });
+              response.end('render failed');
+            } else {
+              response.writeHead(302, { location: '/og-image.png' });
+              response.end();
+            }
           }
         });
       } else {

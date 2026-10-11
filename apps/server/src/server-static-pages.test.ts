@@ -24,6 +24,7 @@ import {
   serveSitemapIndex,
   serveSpaShellWithRoutePreloads,
   serveStudyPage,
+  setRobotsMeta,
   sitemapSectionFromPath,
 } from './server-static-pages.js';
 
@@ -60,6 +61,10 @@ function indexHtml(): string {
     '<html lang="en">',
     '<head>',
     '<title>Mistboard</title>',
+    // The shell's one robots tag, as in apps/web/index.html: noindex pages
+    // replace it (setRobotsMeta), so every noindex test below also proves the
+    // page ends with exactly one tag.
+    '<meta name="robots" content="max-image-preview:large" />',
     '<meta name="description" content="old">',
     '<meta property="og:title" content="old">',
     '<meta property="og:description" content="old">',
@@ -204,6 +209,45 @@ test('serveArticlePage leaves the Crazyhouse Xiangqi rules page indexable', asyn
   });
   assert.equal(response.status, 200);
   assert.doesNotMatch(response.body, /noindex/);
+  assert.deepEqual(robotsTags(response.body), ['max-image-preview:large']);
+});
+
+function robotsTags(html: string): string[] {
+  return [...html.matchAll(/<meta\s+name="robots"\s+content="([^"]*)"/g)].map((m) => m[1]!);
+}
+
+test('setRobotsMeta replaces the shell robots tag instead of adding a second', () => {
+  const html = setRobotsMeta(indexHtml(), 'noindex, follow');
+  assert.deepEqual(robotsTags(html), ['noindex, follow']);
+  // A page with no tag at all still gets one, in the head.
+  const bare = '<html><head><title>x</title></head><body></body></html>';
+  assert.equal(
+    setRobotsMeta(bare, 'noindex, nofollow'),
+    '<html><head><title>x</title><meta name="robots" content="noindex, nofollow"></head><body></body></html>',
+  );
+});
+
+test('a noindex page carries one robots tag and no image-preview directive', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const notFound = captureResponse();
+  await serveNotFoundShell({ response: notFound, staticDir });
+  assert.deepEqual(robotsTags(notFound.body), ['noindex, follow']);
+  const heldRules = captureResponse();
+  await serveArticlePage({
+    slug: 'shogi4',
+    base: 'rules',
+    response: heldRules,
+    publicHost: 'https://mistboard.test',
+    staticDir,
+  });
+  assert.deepEqual(robotsTags(heldRules.body), ['noindex, follow']);
+});
+
+test('the real shell lets search show a large image preview, in one robots tag', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const shell = await readFile(new URL('../../web/index.html', import.meta.url).pathname, 'utf-8');
+  assert.deepEqual(robotsTags(shell), ['max-image-preview:large']);
 });
 
 // Every localized surface must be reachable AND advertised. Before this the

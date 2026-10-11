@@ -16,12 +16,6 @@ import { createServer } from 'vite';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const distDir = resolve(__dirname, '..', 'dist');
-// Mirrors ARTICLE_OG_IMAGE_VERSION in apps/server/src/og-image.ts (the server
-// cannot be imported from the web build). Scrapers hold a card under its URL
-// with a year-long immutable max-age, so the LOOK of the card can only change
-// behind a new ?v=; og-image.test.ts pins the two numbers to each other.
-const ARTICLE_OG_IMAGE_VERSION = 4;
-
 const host = process.env.MISTBOARD_HOST ?? 'https://mistboard.com';
 
 // --- happy-dom globals (Node 26: some globals are read-only getters) ---------
@@ -359,6 +353,11 @@ try {
   const { articleIsLive, articleGoesLiveAt } = await server.ssrLoadModule(
     '/src/articles/publish-time.ts',
   );
+  // Card URLs (the ?v= and which slugs have aspect cards) mirror the server's
+  // renderer; og-image.test.ts pins the mirror.
+  const { articleOgImageUrl, articleStructuredDataImage } = await server.ssrLoadModule(
+    '/src/article-og-image.ts',
+  );
 
   // en + the two zh scripts. urlPrefix feeds canonical/hreflang URLs; htmlLang
   // sets <html lang> and JSON-LD inLanguage; langDir is the output-path segment.
@@ -597,11 +596,14 @@ try {
     const slug = encodeURIComponent(article.slug);
     // Rules docs are canonical under /rules/<slug>, everything else /blog/<slug>.
     const base = article.kind === 'rules' ? 'rules' : 'blog';
-    // OG card stays English for all variants for now (the card renderer has no
-    // CJK font; baking zh titles would render tofu). Localized variants and
-    // hreflang alternates exist only after the article crosses the explicit
-    // translation publication boundary.
-    const imageUrl = `${host}/og/article/${slug}.png?v=${ARTICLE_OG_IMAGE_VERSION}`;
+    // Localized variants and hreflang alternates exist only after the article
+    // crosses the explicit translation publication boundary.
+    // og:image stays the wide card; the JSON-LD offers 16:9, 4:3 and 1:1 too,
+    // because Google crops the wide one to a square in places and cuts its
+    // caption (src/article-og-image.ts). A zh page of a page whose card is a
+    // xiangqi-family board gets its own script's card (hanzi pieces, the zh
+    // title as caption, ?lang=); every other page's card stays English, so
+    // both URLs are per language below.
     const translationPublished = isArticleTranslationPublished(article.slug);
     const hreflang = translationGroupLinks(article);
 
@@ -611,6 +613,8 @@ try {
       const localized = v.lang ? translateArticle(article, v.lang) : article;
       const main = buildArticlePage(article.slug, v.lang ?? undefined);
       const url = `${host}${v.urlPrefix}/${base}/${slug}`;
+      const imageUrl = articleOgImageUrl(host, article.slug, v.lang);
+      const structuredImage = articleStructuredDataImage(host, article.slug, v.lang);
       let html = shell
         .replace('<html lang="en">', `<html lang="${v.htmlLang}">`)
         .replace('<div id="app"></div>', `<div id="app">${main.outerHTML}</div>`);
@@ -633,7 +637,7 @@ try {
         inLanguage: v.htmlLang,
         headline: localized.title,
         description: localized.summary,
-        image: imageUrl,
+        image: structuredImage,
         author: { '@type': 'Organization', name: 'Mistboard' },
         publisher: { '@type': 'Organization', name: 'Mistboard' },
         mainEntityOfPage: { '@type': 'WebPage', '@id': url },
@@ -680,15 +684,20 @@ try {
       // language relationship; the canonical consolidates query-param, SPA-shell,
       // and trailing-slash variants of THIS url into a single indexed page.
       const canonical = `<link rel="canonical" href="${url}" />`;
-      const robots =
-        article.kind === 'rules' && !rulesSlugPublicSurfaceEnabled(article.slug)
-          ? '<meta name="robots" content="noindex, follow" />'
-          : '';
+      // The shell carries the one robots tag (max-image-preview:large); a
+      // noindex page replaces it rather than adding a second.
+      if (article.kind === 'rules' && !rulesSlugPublicSurfaceEnabled(article.slug)) {
+        const shellRobots = /<meta\s+name="robots"\s+content="[^"]*"\s*\/?>/;
+        if (!shellRobots.test(html)) {
+          throw new Error('prerender: the shell lost its robots tag; noindex has nothing to set');
+        }
+        html = html.replace(shellRobots, '<meta name="robots" content="noindex, follow" />');
+      }
       const localeLinks = v.lang ? (localePreloadLinks[v.lang] ?? '') : '';
       const rssLink = article.kind === 'rules' ? '' : BLOG_RSS_LINK;
       html = html.replace(
         '</head>',
-        `${robots}${canonical}${hreflang}${rssLink}${ldScript}${articleAssetLinks}${localeLinks}</head>`,
+        `${canonical}${hreflang}${rssLink}${ldScript}${articleAssetLinks}${localeLinks}</head>`,
       );
 
       const dir = resolve(distDir, ...(v.langDir ? [v.langDir, base] : [base]));
