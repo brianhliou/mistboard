@@ -21,6 +21,7 @@ import {
 } from './analytics.js';
 import type { ArticleLang } from './article-i18n.js';
 import {
+  chunkReloadPending,
   clearChunkReloadAttempt,
   installGlobalChunkLoadRecovery,
   reloadForChunkLoadError,
@@ -168,7 +169,11 @@ if (phKey && phHost && import.meta.env.PROD && !isEmbedDocument) {
       // Chromium fires at window.onerror when an observer callback defers a
       // layout to the next frame; nothing breaks and it never reproduces on
       // Firefox/Safari. Filtering here keeps it out of Error Tracking entirely.
+      // Errors thrown while a stale-chunk reload is in flight are the reload's
+      // own side effect (lazy imports resolve undefined until it lands), so
+      // they are dropped too; the failed chunk itself is not an app defect.
       before_send: (event) => {
+        if (event?.event === '$exception' && chunkReloadPending()) return null;
         const message = event?.properties?.$exception_values?.[0];
         if (typeof message === 'string' && message.includes('ResizeObserver loop')) {
           return null;
@@ -1074,6 +1079,9 @@ async function mountOrReport(run: () => Promise<void>): Promise<void> {
     // than leave a half-mounted root, whether or not a reload follows (search
     // renderers may ignore the reload and index what is on screen).
     serverRender.restore();
+    // The global stale-chunk handler already started a reload, and that is why
+    // import() handed this mount undefined: no panel, no error report.
+    if (chunkReloadPending()) return;
     if (reloadForChunkLoadError(err)) return;
     // Surface the swallowed mount failure to Error Tracking. Without this the
     // friendly "Page failed to load" panel below is the ONLY trace of a broken

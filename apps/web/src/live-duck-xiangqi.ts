@@ -22,6 +22,7 @@ import {
   type DuckXiangqiBoardPhase,
   duckXiangqiBoardSvg,
   duckXiangqiClickResult,
+  installDuckXiangqiDrag,
   installDuckXiangqiGhost,
 } from './duck-xiangqi-board.js';
 // The xiangqi surface stylesheets. WITHOUT THESE the board ground, palace
@@ -49,7 +50,6 @@ import {
   drawnBoardOverlays,
   installBoardAnnotations,
 } from './variant-tenant/board-annotations.js';
-import { installBoardDrag } from './variant-tenant/board-drag.js';
 import {
   createTenantLiveClient,
   type TenantLiveClientContext,
@@ -66,6 +66,9 @@ let core: TenantLiveClientContext<DuckXiangqiColor, DuckXiangqiPlayerView> | nul
 // The whole two-phase turn, in one variable. `piece` is the ordinary state;
 // `duck` means a piece move is chosen, shown optimistically, and NOT yet sent.
 let phase: DuckXiangqiBoardPhase = { kind: 'piece', selected: null };
+// The point a drag has lifted its piece (or the duck) off, drawn empty while
+// the ghost follows the pointer.
+let lifted: DuckXiangqiSquare | null = null;
 let annotations: BoardAnnotations | null = null;
 let roomMode: 'pvp' | 'pve' = 'pvp';
 let forfeitDeadline: number | null = null;
@@ -148,6 +151,7 @@ const client = createTenantLiveClient<DuckXiangqiColor, DuckXiangqiPlayerView, D
   },
   resetState: () => {
     phase = { kind: 'piece', selected: null };
+    lifted = null;
     roomMode = 'pvp';
     forfeitDeadline = null;
     lastStatusType = null;
@@ -261,6 +265,7 @@ function renderBoard(liveRefs: LiveRefs, view: DuckXiangqiPlayerView | null): vo
     arrows: drawn.arrows,
     markers: drawn.markers,
     duckLanded,
+    lifted,
   });
 }
 
@@ -316,7 +321,9 @@ function installBoardInteraction(liveRefs: LiveRefs): void {
     board: liveRefs.board,
     active: () => {
       const view = core?.state.view;
-      return !!view && phase.kind === 'duck' && canInteract(view);
+      // Not while the duck itself is being dragged: the drag ghost is under the
+      // pointer and the snap disc marks the point, as for a dragged piece.
+      return !!view && phase.kind === 'duck' && lifted === null && canInteract(view);
     },
     isTarget: (square) => {
       const view = core?.state.view;
@@ -327,18 +334,28 @@ function installBoardInteraction(liveRefs: LiveRefs): void {
     layout: () => readStoredXiangqiBoardLayout(),
     pieceSet: () => undefined,
   });
-  installBoardDrag({
+  // Drag and click share one rule set: a drag resolves through the same click
+  // handler, so dropping a piece arms phase two and dropping the duck ends it.
+  installDuckXiangqiDrag({
     board: liveRefs.board,
-    ghostSizePx: 0,
-    onSquareClick: (square) => handleSquareClick(square as DuckXiangqiSquare),
-    // Click-only while the variant is hidden. Dragging a piece would have to
-    // ARM phase two rather than complete a move, which is a different gesture
-    // from every other board here; getting that wrong is worse than not having
-    // it, and it is purely additive later.
-    canDragFrom: () => false,
-    ghostHtml: () => null,
-    onDragStart: () => {},
-    onDrop: () => {},
+    view: () => {
+      const view = core?.state.view;
+      return view && canInteract(view) ? view : null;
+    },
+    seat: () => (isDuckColor(core?.state.seat) ? core.state.seat : null),
+    phase: () => phase,
+    setPhase: (next) => {
+      phase = next;
+    },
+    targets: () => {
+      const view = core?.state.view;
+      return view ? targetsForPhase(view) : [];
+    },
+    lift: (square) => {
+      lifted = square;
+      if (core?.state.view) renderBoard(liveRefs, core.state.view);
+    },
+    click: handleSquareClick,
   });
 }
 

@@ -13,6 +13,7 @@
 // values, and the block removes itself when the first read has nothing to show.
 
 import { t } from './i18n/catalog.js';
+import { fetchLiveStats } from './live-stats-client.js';
 
 // "N games in play" links to the current-games page (lichess does the same).
 // The two agree by construction: /api/live-stats counts rooms by the deploy
@@ -95,12 +96,12 @@ async function hydrateLandingActivity(
     }
   };
 
-  render(await fetchCounters());
+  render(await fetchCounters(pollMs));
   if (!hasTotals && !live) {
     box.remove();
     return;
   }
-  pollWhileVisible(box, async () => render(await fetchCounters()), pollMs);
+  pollWhileVisible(box, async () => render(await fetchCounters(pollMs)), pollMs);
 }
 
 // Re-run `tick` every `pollMs` while `box` is on the page and the tab is
@@ -197,16 +198,10 @@ function formatCount(n: number): string {
   return new Intl.NumberFormat('en-US').format(n);
 }
 
-async function fetchCounters(): Promise<Counters | null> {
+async function fetchCounters(maxAgeMs: number): Promise<Counters | null> {
   try {
-    const resp = await fetch('/api/live-stats');
-    if (!resp.ok) return null;
-    const data = (await resp.json()) as {
-      playing?: unknown;
-      totalCompletedGames?: unknown;
-      last30dCompletedGames?: unknown;
-    };
-    if (typeof data.playing !== 'number') return null;
+    const data = await fetchLiveStats({ maxAgeMs });
+    if (!data || typeof data.playing !== 'number') return null;
     const totals =
       typeof data.totalCompletedGames === 'number' && typeof data.last30dCompletedGames === 'number'
         ? {

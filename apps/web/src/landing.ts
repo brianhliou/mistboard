@@ -42,6 +42,7 @@ import {
 import { buildPlayPanel, playPanelEnabled } from './landing-play-panel.js';
 import { homepageShowcaseGames, pickHeroPovForGame } from './landing-showcase.js';
 import { type LandingTvMode, mountLandingTv } from './landing-tv.js';
+import { fetchLiveStats } from './live-stats-client.js';
 import { type GameMeta, mountReplay } from './replay.js';
 import { renderWatchReplaySkeleton } from './replay-skeleton.js';
 import { enginePanelsForReview, loadGameForReview } from './review.js';
@@ -299,11 +300,9 @@ export async function mountLanding(root: HTMLElement): Promise<void> {
     }
     // live-stats only paces the NEXT tick, so it runs in parallel with the pool
     // refresh instead of serializing a round-trip in front of it.
-    const playingPromise = fetch('/api/live-stats')
-      .then(async (resp) =>
-        resp.ok ? (((await resp.json()) as { playing?: number }).playing ?? 0) : 0,
-      )
-      .catch(() => 0);
+    const playingPromise = fetchLiveStats().then((data) =>
+      typeof data?.playing === 'number' ? data.playing : 0,
+    );
     const preloaded = firstRefreshTick ? await firstShowcaseLoad : null;
     firstRefreshTick = false;
     await refreshShowcasePool(preloaded);

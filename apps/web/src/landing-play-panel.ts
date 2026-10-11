@@ -40,6 +40,7 @@ import {
 } from './landing-play.js';
 import { type ProfileTarget, playerNameEl, profileTargetFor } from './profile-link.js';
 import './landing-play-panel.css';
+import { fetchLiveStats } from './live-stats-client.js';
 import { rememberedPveEngine } from './pve-memory.js';
 import { isCorrespondenceRatedModeEnabled, isRatedModeEnabled } from './rated-flag.js';
 import { buildSeekAcceptAction } from './seek-accept.js';
@@ -944,15 +945,10 @@ export function buildPlayPanel(
         .catch(() => {});
     };
     const refreshPlaying = (): void => {
-      void fetch('/api/live-stats', { headers: { accept: 'application/json' } })
-        .then((r) =>
-          r.ok ? (r.json() as Promise<{ playingBySpec?: Record<string, number> }>) : null,
-        )
-        .then((data) => {
-          playingBySpec = data?.playingBySpec ?? {};
-          paintPlaying();
-        })
-        .catch(() => {});
+      void fetchLiveStats().then((data) => {
+        playingBySpec = data?.playingBySpec ?? {};
+        paintPlaying();
+      });
     };
     // One-shot: which gated rungs this server can seat (playOptions[].playable).
     // A failure leaves them off, which is the safe side.

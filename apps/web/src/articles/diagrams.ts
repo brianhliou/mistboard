@@ -1595,6 +1595,110 @@ export function xqBoardSvg(opts: {
   ].join('');
 }
 
+// ── Card art: half a board ────────────────────────────────────────────────
+// One crop for every half-board card (blog index, homepage rows), so none clips
+// a corner piece or shows a sliver of the far bank. The river edge stops inside
+// the river band in both layouts (intersection: one file spacing wide; square
+// grid: a 10 gap past the cell edge, so 0.725 of a file spacing lands in it
+// either way). The back-rank edge takes the rest of the 16:10 box, which keeps
+// back-rank corner pieces clear of the date pill and featured star the index
+// lays over the card's top corners. The river label is hidden on the crop
+// (articles.css .xq-half-thumb): the cut would slice it.
+
+export const XQ_THUMB_ASPECT = 16 / 10;
+const XQ_HALF_THUMB_SIDE = 0.8; // file spacings beyond the a and i files
+const XQ_HALF_THUMB_RIVER = 0.725; // file spacings from the near bank into the river
+
+// The corner overlays on the blog index (articles.css .articles-index-card-date,
+// 72x19, and -author, the star, 28x19), plus 2px, at a 260px card media: the
+// card at a 700px window (measured 2026-10-10; the cards run 211 to 407 wide).
+// A piece disc under one is a clash. The 159px homepage cards on a phone are
+// too small to keep every corner clear at any useful board size.
+const XQ_THUMB_TAG_REF_WIDTH = 260;
+const XQ_THUMB_TAG_ZONES = [
+  { side: 'left', w: 74, h: 21 },
+  { side: 'right', w: 30, h: 21 },
+] as const;
+
+export type XqHalfBoardBox = { left: number; top: number; w: number; h: number };
+
+// The viewBox of a half-board card. `half` is the half on screen: 'top' is the
+// five ranks drawn at the top of the board for `perspective`.
+export function xqHalfBoardThumbnailBox(
+  half: 'top' | 'bottom',
+  perspective: XiangqiColor,
+  boardY = 28,
+): XqHalfBoardBox {
+  const blackOnTop = perspective === 'red';
+  const showsBlackHalf = half === 'top' ? blackOnTop : !blackOnTop;
+  const nearBank = showsBlackHalf ? 6 : 5;
+  const a = xqPoint(0, nearBank, perspective, 0, boardY);
+  const i = xqPoint(8, nearBank, perspective, 0, boardY);
+  const unit = Math.abs(i.x - a.x) / 8;
+  const w = (8 + 2 * XQ_HALF_THUMB_SIDE) * unit;
+  const h = w / XQ_THUMB_ASPECT;
+  const left = Math.min(a.x, i.x) - XQ_HALF_THUMB_SIDE * unit;
+  const top =
+    half === 'top' ? a.y + XQ_HALF_THUMB_RIVER * unit - h : a.y - XQ_HALF_THUMB_RIVER * unit;
+  return { left, top, w, h };
+}
+
+// Squares whose piece disc would sit under a corner overlay of the card.
+export function xqHalfBoardTagClashes(
+  squares: readonly XiangqiSquare[],
+  box: XqHalfBoardBox,
+  perspective: XiangqiColor,
+  boardY = 28,
+): XiangqiSquare[] {
+  const scale = box.w / XQ_THUMB_TAG_REF_WIDTH;
+  const r = xqPieceSize() / 2;
+  return squares.filter((square) => {
+    const { file, rank } = xqCoord(square);
+    const p = xqPoint(file, rank, perspective, 0, boardY);
+    return XQ_THUMB_TAG_ZONES.some((zone) => {
+      const zw = zone.w * scale;
+      const zh = zone.h * scale;
+      const x0 = zone.side === 'left' ? box.left : box.left + box.w - zw;
+      return p.x + r > x0 && p.x - r < x0 + zw && p.y + r > box.top && p.y - r < box.top + zh;
+    });
+  });
+}
+
+// A half-board card: the position drawn by xqBoardSvg, cropped to
+// xqHalfBoardThumbnailBox. A piece under a corner overlay is stamped on the svg
+// as data-tag-clash, which article-card-thumbnails.test.ts refuses. Overlays
+// position themselves with xqPoint(..., 0, 28), as for any xqBoardSvg at 0,0.
+export function xqHalfBoardThumbnailSvg(
+  opts: Omit<Parameters<typeof xqBoardSvg>[0], 'x' | 'y' | 'label' | 'boardOffset'> & {
+    half: 'top' | 'bottom';
+    ariaLabel: string;
+  },
+): string {
+  const { half, ariaLabel, ...boardOpts } = opts;
+  const perspective = boardOpts.perspective ?? boardOpts.view?.perspective ?? 'red';
+  const box = xqHalfBoardThumbnailBox(half, perspective);
+  // Only the shown half's pieces are drawn: the river is one file spacing wide,
+  // too narrow to leave room past the edge for both banks' discs, so a piece on
+  // the far bank would show as a sliver along the cut.
+  const showsBlackHalf = (half === 'top') === (perspective === 'red');
+  const shown = (square: string) => {
+    const rank = xqCoord(square as XiangqiSquare).rank;
+    return showsBlackHalf ? rank >= 6 : rank <= 5;
+  };
+  const keepHalf = <T,>(board: Partial<Record<XiangqiSquare, T>>) =>
+    Object.fromEntries(
+      Object.entries(board).filter(([square, piece]) => piece && shown(square)),
+    ) as Partial<Record<XiangqiSquare, T>>;
+  const state = { ...boardOpts.state, board: keepHalf(boardOpts.state.board) };
+  const view = boardOpts.view ? { ...boardOpts.view, board: keepHalf(boardOpts.view.board) } : undefined;
+  const occupied = Object.keys(view?.board ?? state.board) as XiangqiSquare[];
+  const clashes = xqHalfBoardTagClashes(occupied, box, perspective);
+  const clashAttr = clashes.length > 0 ? ` data-tag-clash="${clashes.join(' ')}"` : '';
+  const board = xqBoardSvg({ ...boardOpts, state, view, perspective, x: 0, y: 0, label: '' });
+  const { left, top, w, h } = box;
+  return `<svg class="xq-article-svg xq-half-thumb" viewBox="${left} ${top} ${w} ${h}" role="img" aria-label="${ariaLabel}"${clashAttr} xmlns="http://www.w3.org/2000/svg"><rect class="xq-diagram-bg" x="${left}" y="${top}" width="${w}" height="${h}"/>${board}</svg>`;
+}
+
 // ── Hands: pieces held off the board, drawn with the board ────────────────
 // The drop variants (Crazyhouse Xiangqi) need the position AND what each side
 // holds, or a diagram is ambiguous. One strip per side, the width of the board:

@@ -302,8 +302,9 @@ export const caoYanleiArticle: Article = {
   updatedAt: "2026-09-27",
   thumbnail: {
     kind: 'image',
-    src: "/article-thumbs/cao-yanlei-2024-face.jpg",
-    alt: "Cao Yanlei at the board.",
+    src: "/player-photos/cao-yanlei.jpg",
+    alt: "Portrait of Cao Yanlei.",
+    position: "center 12%",
   },
   audience: "English-speaking xiangqi players who have never had a way to follow the Chinese pro circuit.",
   readNext: ["yin-sheng"],

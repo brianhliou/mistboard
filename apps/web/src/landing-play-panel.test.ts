@@ -8,6 +8,7 @@ import {
   panelPersonPaces,
   playPanelEnabled,
 } from './landing-play-panel.js';
+import { resetLiveStatsCacheForTests } from './live-stats-client.js';
 import { openLobbySeekCount, withdrawLobbySeeks } from './lobby-seek-registry.js';
 import { setRatedModeEnabled } from './rated-flag.js';
 import { setResolvedSignedIn } from './signed-in-state.js';
@@ -36,6 +37,9 @@ function clickNext(el: HTMLElement, which: 'level' | 'clock', times = 1): void {
     el.querySelectorAll<HTMLButtonElement>(`.pp-step-${which} .pp-step-btn`)[1]!.click();
   }
 }
+
+// /api/live-stats reads are shared through a module cache; start each test cold.
+beforeEach(() => resetLiveStatsCacheForTests());
 
 describe('homepage play panel', () => {
   beforeEach(() => {

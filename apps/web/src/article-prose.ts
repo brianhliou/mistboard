@@ -100,6 +100,7 @@ const BLOCK_PROSE: {
   [K in ArticleBlock['kind']]: (block: Extract<ArticleBlock, { kind: K }>) => string[];
 } = {
   paragraph: (b) => [b.text],
+  note: (b) => [b.text],
   'sub-heading': (b) => [b.text],
   cta: (b) => b.buttons.map((button) => button.label),
   'static-boards': caption,

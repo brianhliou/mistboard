@@ -22,7 +22,9 @@
 //   ---                              front matter, `key: value` per line:
 //   slug: cao-yanlei                 slug, export, title, seoTitle, summary,
 //   ---                              status, updatedAt, publishedAt, thumbnail,
-//                                    thumbnailAlt, audience, readNext (comma list),
+//                                    thumbnailAlt, thumbnailPosition (CSS
+//                                    object-position for the card crop),
+//                                    audience, readNext (comma list),
 //                                    homeRow (deep-dives for a player page),
 //                                    player (his name as the specs spell it: every
 //                                    board opens from his side), short (the name
@@ -339,7 +341,7 @@ function emitBlock(b, n) {
 }
 
 const thumbnail = meta.thumbnail
-  ? `  thumbnail: {\n    kind: 'image',\n    src: ${q(meta.thumbnail)},\n${meta.thumbnailAlt ? `    alt: ${q(meta.thumbnailAlt)},\n` : ''}  },\n`
+  ? `  thumbnail: {\n    kind: 'image',\n    src: ${q(meta.thumbnail)},\n${meta.thumbnailAlt ? `    alt: ${q(meta.thumbnailAlt)},\n` : ''}${meta.thumbnailPosition ? `    position: ${q(meta.thumbnailPosition)},\n` : ''}  },\n`
   : '';
 const readNext = meta.readNext
   ? `  readNext: ${q(meta.readNext.split(',').map((s) => s.trim()))},\n`
