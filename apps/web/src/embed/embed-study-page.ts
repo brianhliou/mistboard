@@ -117,7 +117,17 @@ export async function mountEmbedStudy(
 export type EmbedCredit = { href: string; text: string };
 
 /** Where a chapter opens: the ply, and for fog chess which seat's view. */
-export type ChapterEmbedOptions = { startPly?: number | null; pov?: EmbedPov | null };
+export type ChapterEmbedOptions = {
+  startPly?: number | null;
+  pov?: EmbedPov | null;
+  /** The line embed's `arrows=1`: the move played from the opening frame
+   *  (`startPly`), drawn as an arrow on that frame only. Drawn by the jieqi
+   *  board; the other boards ignore it. */
+  openingMoveArrow?: boolean;
+  /** The line embed's `arrow=<move>`: the move drawn on the opening frame in
+   *  place of the one played from it. */
+  openingArrowMove?: string;
+};
 
 /** The variants this card can draw. A chapter of any other variant is refused
  *  by name: the old fallthrough drew it on the xiangqi board, which is how a
@@ -499,7 +509,7 @@ async function mountJieqiEmbed(
   root: HTMLElement,
   credit: EmbedCredit,
   chapter: StudyChapterPayload,
-  options: { startPly?: number | null },
+  options: { startPly?: number | null; openingMoveArrow?: boolean; openingArrowMove?: string },
 ): Promise<void> {
   const { moves, glyphs, notes, lines, assessments, shapes } = chapterAnnotations(chapter);
   const line = replayJieqiLine(chapter.root?.rootFen, moves);
@@ -532,6 +542,8 @@ async function mountJieqiEmbed(
           lines,
           assessments,
           shapes,
+          openingArrowPly: options.openingMoveArrow === true ? (options.startPly ?? 0) : undefined,
+          openingArrowMove: options.openingArrowMove,
         },
         hooks,
       ),

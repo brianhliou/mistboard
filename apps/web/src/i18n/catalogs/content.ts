@@ -62,7 +62,7 @@ export const EN_CONTENT = {
   'articles.tableOfContents': 'Table of contents',
   'articles.status.draft': 'Draft',
   'articles.status.outline': 'Outline',
-  'articles.tldr': 'TL;DR',
+  'articles.tldr': 'In short',
   'articles.readNext': 'Read next',
   'articles.playThisGame': 'Play {game}',
   'articles.playVsComputer': 'Play the computer',

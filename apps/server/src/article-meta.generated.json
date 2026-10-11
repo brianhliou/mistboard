@@ -167,6 +167,12 @@
     "description": "Play jieqi against the engine or a friend, free and without an account, then review the game with analysis that separates your choices from your luck.",
     "status": "published"
   },
+  "jieqi-puzzle-search": {
+    "title": "Looking for jieqi puzzles",
+    "kind": "article",
+    "description": "We searched 2,939 positions from 50 jieqi games for puzzles. 58 had one clearly best move and 15 of those turned on a hidden piece. None of the 15 passed the rules our xiangqi puzzles go through, and we stopped looking.",
+    "status": "published"
+  },
   "jungle": {
     "title": "Jungle Chess Rules (Dou Shou Qi, Animal Chess)",
     "kind": "rules",
