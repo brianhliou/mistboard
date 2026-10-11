@@ -35,6 +35,11 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-10-12 (banqi perpetual chase article) ── 长捉 / 重复局面 follow the banqi-perpetual-chase article.
+  'Why banqi needs a perpetual chase rule, shown with real games.':
+    '暗棋为什么需要长捉规则，用真实对局说明。',
+  'In banqi a chased piece often has only one safe square, so the chaser could force a draw by repetition. The article plays through the Mistboard games where that happened, compares what tournament rules and the popular apps do, and sets out our rule in full for anyone implementing it.':
+    '暗棋里被捉的子常常只有一个安全的格子，所以捉的一方可以靠重复局面逼和。这篇文章逐步重放 Mistboard 上发生过这种事的对局，比较比赛规则和常见应用的做法，并为要实现这条规则的人完整列出我们的规则。',
   // ── 2026-10-09 (banqi chase rule) ── 长捉 / 翻子 / 三次重复 follow the banqi rules article.
   'Banqi: a chase can no longer force a repetition draw.': '暗棋：长捉不能再逼成重复和棋。',
   'In banqi a player could chase the same piece back and forth until the position came up three times and the game was drawn. Now a chasing move may not make a position appear for the third time, so the chasing side has to play something else, and a repetition caused by a chase is never a draw. A chase that drives a piece onto new squares is not affected. Games started before the change keep the old rules.':
@@ -472,6 +477,11 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-10-12 (banqi perpetual chase article) ── 長捉 / 重複局面 follow the banqi-perpetual-chase article.
+  'Why banqi needs a perpetual chase rule, shown with real games.':
+    '暗棋為什麼需要長捉規則，用真實對局說明。',
+  'In banqi a chased piece often has only one safe square, so the chaser could force a draw by repetition. The article plays through the Mistboard games where that happened, compares what tournament rules and the popular apps do, and sets out our rule in full for anyone implementing it.':
+    '暗棋裡被捉的子常常只有一個安全的格子，所以捉的一方可以靠重複局面逼和。這篇文章逐步重放 Mistboard 上發生過這種事的對局，比較比賽規則和常見應用的做法，並為要實作這條規則的人完整列出我們的規則。',
   // ── 2026-10-09 (banqi chase rule) ── 長捉 / 翻子 / 三次重複 follow the banqi rules article.
   'Banqi: a chase can no longer force a repetition draw.': '暗棋：長捉不能再逼成重複和棋。',
   'In banqi a player could chase the same piece back and forth until the position came up three times and the game was drawn. Now a chasing move may not make a position appear for the third time, so the chasing side has to play something else, and a repetition caused by a chase is never a draw. A chase that drives a piece onto new squares is not affected. Games started before the change keep the old rules.':

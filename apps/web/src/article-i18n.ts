@@ -33,6 +33,9 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Machine-drafted 2026-10-09, not native-reviewed, locked with its English
+  // copy, which publishes in the same release.
+  'banqi-perpetual-chase',
   // Machine-drafted 2026-10-08, not native-reviewed, locked with its English
   // copy, which publishes in the same release (the brianhliou.com draft of
   // 2026-10-08, folded in before it was posted).
@@ -186,6 +189,143 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // banqi-perpetual-chase: machine-drafted 2026-10-11, not native-reviewed. Piece names follow banqi-statistics (将 士 象 车 马 炮 卒); a ply is 步.
+  'The Perpetual Chase Rule in Banqi': '暗棋长捉规则',
+  'Perpetual Chase in Banqi': '暗棋的长捉',
+  'A repeating chase can also go round a square of four. The chased piece runs round the corner, the chaser follows one step behind, and the board comes back every eight plies.':
+    '重复的长捉也可以绕着四个格子转。被捉的子绕着角落跑，捉的一方落后一步跟着，每八步棋盘就回到原样。',
+  'Herding chases are fine': '赶子的长捉没问题',
+  'From a game on Mistboard, 30 September 2026. The player’s general chased the bot’s advisor five times, from b2 to f3, where the player’s other advisor took it.':
+    '来自 Mistboard 上 2026 年 9 月 30 日的一盘棋。玩家的将把机器人的士追了五次，从 b2 一直追到 f3，在那里被玩家的另一个士吃掉。',
+  'What other rules say': '其他规则怎么说',
+  'Four rule sets and a reference work, as read in October 2026.':
+    '四套规则和一部参考资料，2026 年 10 月查阅。',
+  'Perpetual chase': '长捉',
+  'No-progress draw': '无进展判和',
+  '[TCGA computer banqi rules, Hsu (2019)](https://homepage.iis.sinica.edu.tw/~tshsu/tcg/2019/hwks/rules.pdf)':
+    '[TCGA 电脑暗棋比赛规则，Hsu（2019）](https://homepage.iis.sinica.edu.tw/~tshsu/tcg/2019/hwks/rules.pdf)',
+  'No chase rule. A position repeated three times draws.': '无长捉规定。同一局面出现三次判和。',
+  '60 plies': '60 步',
+  '[Chen, Shen and Hsu, ICGA Journal (2010)](https://homes.cs.washington.edu/~armin/ICGA2010.pdf)':
+    '[Chen、Shen、Hsu，《ICGA Journal》（2010）](https://homes.cs.washington.edu/~armin/ICGA2010.pdf)',
+  'No chase rule. Repeated positions draw.': '无长捉规定。局面重复判和。',
+  '40 plies': '40 步',
+  'No chasing the same piece 10 times in a row.': '不能连续 10 次追击同一颗子',
+  '50 plies': '50 步',
+  'Not mentioned.': '未提及',
+  'A chase move may not make a position appear for the third time.':
+    '一步捉不得让同一局面出现第三次。',
+  'Why not a move count': '为什么不用步数上限',
+  'Making the chaser lose, as xiangqi does, needs someone to judge what counts as a chase, and no banqi source uses it. Repetition needs no number and no judge. It stops a repeating chase at the repeat and leaves a chase that goes somewhere alone.':
+    '像象棋那样判捉的一方输，得有人判断什么算捉，而且没有一份暗棋资料采用。重复规则不需要数字，也不需要裁判。重复的长捉在重复时就被挡下，有进展的长捉则不受影响。',
+  advisor: '士',
+  soldier: '卒',
+  elephant: '象',
+  chariot: '车',
+  cannon: '炮',
+  general: '将',
+  'Banqi rules': '暗棋规则',
+  'THE ADVISOR RUNS FIVE TIMES': '士逃了五次',
+  'THE OTHER ADVISOR TAKES IT': '另一个士吃掉它',
+  'In banqi a chased piece often has one safe square, so a chase can go back and forth until the position repeats, and under plain threefold repetition the chaser alone decides the draw. Tournament rules allow it and apps cap the chase at 7 or 10 moves. Mistboard forbids the chase move that would repeat a position a third time, and leaves chases that go somewhere alone.':
+    '暗棋里被捉的子常常只有一个安全的格子，所以长捉可以来回走到局面重复；如果只按三次重复判和，和不和完全由捉的一方决定。比赛规则允许这样判和，应用则把长捉限在 7 次或 10 次。Mistboard 禁止会让同一局面第三次出现的那一步捉，把目标赶向别处的长捉则不去管它。',
+  'In a perpetual chase one piece attacks another move after move. In banqi the runner often has one safe square, so the two go back and forth until the position repeats.':
+    '长捉就是一颗子一步接一步地攻击另一颗子。在暗棋里，逃的一方常常只有一个安全的格子，于是两颗子来回走，直到局面重复。',
+  'The runner can’t stay put without being taken, so under plain threefold repetition the chaser alone decides whether the game is drawn.':
+    '逃的一方不动就会被吃，所以如果只按三次重复判和，和不和完全由捉的一方决定。',
+  'Mistboard forbids the chase move that would make a position appear for the third time. A chase that drives its target onto new squares never repeats, and the rule leaves it alone.':
+    'Mistboard 禁止会让同一局面第三次出现的那一步捉。把目标一路赶向新格子的长捉永远不会重复，这条规则不去管它。',
+  'Tournament rules draw on repetition, and apps cap a chase at 7 or 10 moves, which comes after the repetition in every chase draw we have seen.':
+    '比赛规则按重复局面判和，应用把长捉限在 7 次或 10 次，但在我们见过的每一盘长捉和棋里，这个上限都来得比重复晚。',
+  'A perpetual chase is one piece attacking another move after move while the other keeps running. In [banqi](/rules/banqi), Chinese dark chess, the runner often has a single safe square, so the two pieces go back and forth until the position repeats. Whether that should be a draw, and who gets to decide, is a question banqi rule sets answer in different ways.':
+    '长捉，就是一颗子一步接一步地攻击另一颗子，而被捉的子一直在逃。在[暗棋](/rules/banqi)里，逃的一方常常只有一个安全的格子，于是两颗子来回走，直到局面重复。这该不该算和棋、由谁来决定，各套暗棋规则的答案不一样。',
+  'Why banqi needs a chase rule': '暗棋为什么需要长捉规则',
+  'In chess a threefold repetition needs both players to keep repeating, and either of them can play something else. In banqi the chased piece can’t stay put without being taken, so it runs. With one safe square it shuttles back and forth as the chaser does, and the third repetition comes when the chaser wants it. In [the game below](/banqi/game/bq_391b54b2-eb4f-4a21-9ed0-f934aa4772cd) the player was far ahead and the bot had lost its general, so the draw saved the bot.':
+    '国际象棋的三次重复需要双方一直重复下去，任何一方都可以改走别的。暗棋里被捉的子不动就会被吃，所以只能逃。如果只有一个安全的格子，它就跟着捉的一方来回走，第三次重复什么时候出现，由捉的一方说了算。在[下面这盘棋](/banqi/game/bq_391b54b2-eb4f-4a21-9ed0-f934aa4772cd)里，玩家大幅领先，机器人的将也已经被吃，这盘和棋救了机器人。',
+  'Back and forth on two squares, from a game on Mistboard, 16 September 2026.':
+    '两格之间来回走，来自 Mistboard 上 2026 年 9 月 16 日的一盘棋。',
+  'The bot has just flipped g2 and turned up a red advisor beside the player’s black chariot. A chariot can’t take an advisor, which outranks it, and e1 and h1 hold its own soldiers, so f1 is its only free square.':
+    '机器人刚在 g2 翻出一颗红士，就在玩家的黑车旁边。士比车大，车吃不了它；e1 和 h1 都是车自己的卒，所以 f1 是它唯一的空格。',
+  'The advisor’s fourth chase brings the position round a third time, and under plain threefold repetition the game is drawn. Under Mistboard’s rule this move is forbidden, so the advisor would have to play something else.':
+    '士的第四次捉让局面第三次出现，如果只按三次重复判和，这盘就和了。按 Mistboard 的规则，这一步被禁止，士只能改走别的。',
+  'Round a square of four, in a constructed position. Every time the chariot runs it has one safe square.':
+    '绕着四格转，这是摆出来的局面。车每次逃都只有一个安全的格子。',
+  'The black advisor on a1 attacks the red chariot on a2. Face-down tiles on a3, b3, c2 and c1 close its other exits.':
+    'a1 的黑士攻击 a2 的红车。a3、b3、c2、c1 上的暗子挡住了车的其他出路。',
+  'The advisor’s fourth chase brings the board back where it started. Each lap repeats every position, so under plain threefold repetition the game is drawn early in the third lap. Under Mistboard’s rule, the chase move that would make a position appear for the third time is forbidden.':
+    '士的第四次捉让棋盘回到起点。每转一圈，每个局面都重复一次，所以如果只按三次重复判和，第三圈刚开始就会判和。按 Mistboard 的规则，会让局面第三次出现的那一步捉被禁止。',
+  'Some chases drive the target somewhere. Every move puts the target on a square it hasn’t stood on, so no position comes round again, and the chase ends when the target runs out of room or into another piece.':
+    '有些长捉是把目标往某个地方赶。每一步都让目标走到它没站过的格子，所以没有局面会再出现；目标无路可逃，或撞上另一颗子，这次长捉就结束了。',
+  'Winning a piece this way, as in [that game](/banqi/game/bq_795ec889-96d0-48f4-914f-6f1db438441a), is ordinary good play. A chase rule has to stop the repeating chase and leave this one alone.':
+    '像[那盘棋](/banqi/game/bq_795ec889-96d0-48f4-914f-6f1db438441a)这样赢下一颗子，是正常的好棋。长捉规则要挡的是重复的长捉，这一种应该放着不管。',
+  '[Chinese Dark Chess 2 app (Google Play)](https://play.google.com/store/apps/details?id=com.xidea.ChineseDarkChess2&hl=zh_TW)':
+    '[暗棋2 应用（Google Play）](https://play.google.com/store/apps/details?id=com.xidea.ChineseDarkChess2&hl=zh_TW)',
+  'No chasing the same piece more than 7 times in a row.': '不可连续长捉同一颗子超过 7 次。',
+  '[FunTown app](https://darkchess.funtown.com.tw/rules2.html)':
+    '[FunTown 戏谷 应用](https://darkchess.funtown.com.tw/rules2.html)',
+  '[Chinese Wikipedia, banqi](https://zh.wikipedia.org/zh-tw/%E6%9A%97%E6%A3%8B)':
+    '[中文维基百科：暗棋](https://zh.wikipedia.org/zh-tw/%E6%9A%97%E6%A3%8B)',
+  '50 moves with no flip or capture': '连续 50 步没有翻子或吃子',
+  Mistboard: 'Mistboard',
+  'A rule that makes the chaser lose comes from [xiangqi](/rules/xiangqi), where every piece is face up. Under the Asian rules for that game, chasing one piece without end is a forbidden move, and a side that keeps playing one must change it or lose, as [Chinese Wikipedia sets out](https://zh.wikipedia.org/wiki/%E9%95%B7%E6%89%93_(%E8%B1%A1%E6%A3%8B)). None of the banqi sources above makes the chaser lose.':
+    '捉的一方判负，这条规则来自[象棋](/rules/xiangqi)，象棋的棋子全都明着摆在棋盘上。按亚洲象棋规则，无休止地捉同一颗子是禁止着法，一直走禁止着法的一方必须变着，否则判负，[中文维基百科](https://zh.wikipedia.org/wiki/%E9%95%B7%E6%89%93_(%E8%B1%A1%E6%A3%8B))有整理。上面的暗棋资料没有一份判捉的一方输。',
+  'Mistboard’s rule': 'Mistboard 的规则',
+  'Mistboard keeps threefold repetition and the 40-ply no-progress draw, and adds one rule: **a chase move may not make a position appear for the third time.** The chaser has to play something else, unless it has no other legal move. A repetition that comes from anything other than a chase still draws.':
+    'Mistboard 保留三次重复和 40 步无进展判和，再加一条规则：**一步捉不得让同一局面出现第三次。** 捉的一方必须改走别的，除非没有其他合法着法。不是由捉造成的重复照样判和。',
+  'The apps count instead: once a piece has chased the same piece 7 times in a row, or 10, it must stop. The trouble is that the repetition comes first. In the two-square game above, the position came round a third time on the bot’s fourth chase move. A 7-move cap would still have allowed three more, so with threefold repetition in force the game is drawn exactly as before. In all eight repetition draws on Mistboard, the third repetition came between the third and sixth chase move, before either cap.':
+    '应用的做法是计数：一颗子连续捉同一颗子 7 次或 10 次之后，就必须停下。问题是重复会先来。在上面那盘两格来回的棋里，局面在机器人第四次捉时就第三次出现了。上限设 7 次的话，它还可以再捉三次，所以只要三次重复照样判和，这盘照样是和棋。Mistboard 上全部八盘重复和棋，第三次重复都出现在第三到第六次捉之间，比两种上限都早。',
+  'A count also treats a herding chase the same way, and stops it at the same number whether or not the target is about to run out of room. Players don’t agree on the number either. A Taiwanese player who wrote to us about one of these draws called a perpetual chase a clear foul and the count an open question: 7 is too few, he said, and a friend of his plays to 12.':
+    '计数对赶子的长捉也一视同仁，不管目标是不是快无路可逃，到了次数就叫停。玩家对数字也没有共识。一位台湾玩家为了其中一盘和棋写信给我们，他说长捉明显犯规，次数则还有得讨论：7 次太少，他有个朋友下到 12 次。',
+  'Why not make the chaser lose': '为什么不判捉的一方负',
+  'The rule in full': '完整规则',
+  'For anyone implementing it. The rule reads only what both players can see, so it works online or across a table.':
+    '写给要实现这条规则的人。规则只看双方都看得到的东西，所以网上或面对面都能用。',
+  Term: '术语',
+  Meaning: '含义',
+  'Chase move': '捉',
+  'A move with no flip or capture, after which the moved piece could capture the enemy piece that moved just before it. Cannon jumps count; whether the target is protected doesn’t matter.':
+    '不翻子也不吃子的一步，走完之后，刚走的那颗子能吃掉对方上一步刚走的那颗子。炮隔子吃也算；目标有没有被保护不影响。',
+  Flee: '逃',
+  'A move by the piece the previous move chased.': '上一步被捉的那颗子所走的一步。',
+  Position: '局面',
+  'Where each face-up piece stands, which squares hold face-down tiles, and whose move it is. Counts start over after every flip or capture.':
+    '每颗翻开的子在哪里、哪些格子有暗子、轮到哪一方走。每次翻子或吃子之后重新计数。',
+  Forbidden: '禁止',
+  'A chase move that would make a position appear for the third time.':
+    '会让同一局面第三次出现的一步捉。',
+  'Repetition draw': '重复和棋',
+  'A position reached by any move other than a chase or a flee draws on its third appearance.':
+    '由捉或逃以外的着法走出来的局面，第三次出现时判和。',
+  'Only move': '唯一着法',
+  'If every legal move is a forbidden chase, they all stay legal.':
+    '如果所有合法着法都是被禁止的捉，这些着法就全部保持合法。',
+  'Mutual chase': '一捉一',
+  'A flee that also attacks the chaser is an ordinary move. Only two cannons on one line can do this.':
+    '逃的同时又攻击追兵的一步，算作普通着法。只有同一条线上的两个炮做得到。',
+  'Unchanged: 40 plies with no flip or capture, chase moves included.':
+    '不变：连续 40 步没有翻子或吃子，捉也算在内。',
+  'Not covered': '尚未涵盖',
+  'A chaser switching between two targets. We will extend the rule if it comes up.':
+    '在两个目标之间轮流捉。如果对局里出现了，我们会扩充规则。',
+  'Before the rule': '规则之前',
+  'Until October 2026 Mistboard drew every threefold repetition. In 127 games people played against [MistyBanqi](/blog/mistybanqi), our bot, from July to early October, eight ended in a repetition draw, and the bot was the chaser in every one ([21 July](/banqi/game/bq_15a9801b-7f1b-4618-81ff-33c243adeead), [23 July](/banqi/game/bq_65458fb8-71d2-4e4c-86ca-823057fc9ac2), [28 July](/banqi/game/bq_1a550b3b-40b7-4184-86f4-16c479b926df), 16 September [three](/banqi/game/bq_8dbdd7ac-6612-4785-a7d9-73c0a0987e5e) [times](/banqi/game/bq_f7bc7130-e399-4a00-9609-baee9cad719f) [over](/banqi/game/bq_391b54b2-eb4f-4a21-9ed0-f934aa4772cd), [22 September](/banqi/game/bq_374af1fe-bb55-462d-a3d7-54970fd03f64), [2 October](/banqi/game/bq_879c07b6-b804-4a21-9d46-39febc900b90)). Replayed under the current rule, none of the eight is a draw, and no move a person played in any of the 127 games would have been forbidden.':
+    '2026 年 10 月之前，Mistboard 的三次重复一律判和。7 月到 10 月初，真人对我们的机器人 [MistyBanqi](/blog/mistybanqi) 下了 127 盘，其中八盘以重复局面判和，每一盘捉的一方都是机器人（[7 月 21 日](/banqi/game/bq_15a9801b-7f1b-4618-81ff-33c243adeead)、[7 月 23 日](/banqi/game/bq_65458fb8-71d2-4e4c-86ca-823057fc9ac2)、[7 月 28 日](/banqi/game/bq_1a550b3b-40b7-4184-86f4-16c479b926df)、9 月 16 日的[第一](/banqi/game/bq_8dbdd7ac-6612-4785-a7d9-73c0a0987e5e)、[第二](/banqi/game/bq_f7bc7130-e399-4a00-9609-baee9cad719f)、[第三盘](/banqi/game/bq_391b54b2-eb4f-4a21-9ed0-f934aa4772cd)、[9 月 22 日](/banqi/game/bq_374af1fe-bb55-462d-a3d7-54970fd03f64)、[10 月 2 日](/banqi/game/bq_879c07b6-b804-4a21-9d46-39febc900b90)）。按现行规则重放，这八盘没有一盘是和棋，127 盘里真人走过的每一步也都不会被禁止。',
+  'Is a perpetual chase a draw in banqi?': '暗棋的长捉算和棋吗？',
+  'It depends on the rule set. Tournament rules for computer banqi draw any position repeated three times, so a chase that repeats is a draw. On Mistboard it never is: the chase move that would bring a position round a third time is forbidden, and the chaser has to play something else.':
+    '看用哪套规则。电脑暗棋的比赛规则把同一局面出现三次判和，所以会重复的长捉就是和棋。在 Mistboard 上永远不是：会让局面第三次出现的那一步捉被禁止，捉的一方必须改走别的。',
+  'How many times can you chase a piece in banqi?': '暗棋里一颗子最多能捉几次？',
+  'Two popular apps set a cap: Chinese Dark Chess 2 at 7 chases of the same piece in a row, FunTown at 10. Mistboard has no count. A chase can run as long as it reaches new positions; only the move that would repeat a position a third time is forbidden.':
+    '两款常见的应用设了上限：暗棋2 是连续捉同一颗子 7 次，FunTown 是 10 次。Mistboard 不计次数。只要长捉一直走出新的局面，就可以一直捉下去；只有会让局面第三次出现的那一步被禁止。',
+  'What counts as a chase in banqi?': '暗棋里什么算捉？',
+  'On Mistboard, a move with no flip or capture after which the moved piece could capture the enemy piece that moved just before it. Cannon jumps count, and it doesn’t matter whether the target is protected.':
+    '在 Mistboard 上，不翻子也不吃子、走完后刚走的那颗子能吃掉对方上一步刚走的那颗子的一步。炮隔子吃也算，目标有没有被保护不影响。',
+  'Does the chaser lose in banqi?': '暗棋里长捉的一方会判负吗？',
+  'Not in any banqi rule set we found, and not on Mistboard. Losing for a perpetual chase comes from xiangqi, where someone has to judge what counts as a chase. On Mistboard the repeating move is simply not allowed.':
+    '我们找到的暗棋规则都不会，Mistboard 也不会。长捉判负来自象棋，那需要有人裁定什么算捉。在 Mistboard 上，会造成重复的那一步直接不能走。',
+  'How a chase ends': '长捉怎么结束',
+  'On Mistboard a chase can run as long as it is getting somewhere, and a good one wins a piece. What it can’t do is go round in a circle until the game is drawn: the move that would bring a position back a third time is off the table, so the chaser has to try something else, and the game goes on.':
+    '在 Mistboard 上，长捉只要还在推进，就可以一直捉下去，好的长捉能赢下一颗子。它不能做的，是绕圈子绕到和棋：会让局面第三次出现的那一步不能走，捉的一方只能另想办法，棋也就继续下去。',
+  'Perpetual Chase Rule in Banqi (Chinese Dark Chess)': '暗棋长捉规则与重复局面判和',
   // longest-forced-mates-xiangqi: machine-drafted 2026-10-08, not native-reviewed. Terms follow the study uXu609QE zh names and solver-audit (困毙, 半回合 for a ply, 回合 for a move).
   'The Longest Forced Mates in Xiangqi': '象棋最长的必胜杀局',
   'The Longest Forced Mates': '最长的必胜杀局',
@@ -959,8 +1099,8 @@ const ZH_HANS: Record<string, string> = {
     '[将死](/watch?channel=jieqi&game=jq_dee4dda3-b78b-4c02-954d-01b954df94f6)',
   "A related blind spot involves the general. Only a soldier, the other general or a cannon's jump can take it, so a boxed-in general is in danger from one piece at a time, and the engine is slow to make room for one cornered. It will sometimes march a piece off to the far side of the board while a lone enemy soldier walks up and traps it. Same gap as the draw above: the evaluation has no real sense of a slow, quiet threat building several moves away.":
     '另一个相关的盲点跟将有关。只有卒、对方的将或炮的跳吃拿得下它，所以被围住的将一次只怕一种子，而引擎很慢才会替被逼到角落的将腾出空间。它有时候会把一颗子调到棋盘另一头，同时一颗孤零零的敌方卒走过来把它困死。跟上面那个和棋是同一个缺口：这套评估函数对于好几步之外慢慢成形的安静威胁，没有什么感觉。',
-  "There's an upshot for you here. If you're losing on material, you're not necessarily lost: MistyBanqi may shuffle into a repetition draw it can't see it should decline. It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":
-    '这对你是有好处的。如果你子力落后，不代表就输了：MistyBanqi 可能来回挪子，走进那个它看不出该拒绝的重复和棋。这种事多到可以量：引擎自我对弈的 200 盘里，[每六盘就有一盘和棋](/blog/banqi-statistics)，其中一半曾经走到赢定的局面。',
+  "There's an upshot for you here. If you're losing on material, you're not necessarily lost: MistyBanqi may shuffle into a [repetition draw](/blog/banqi-perpetual-chase) it can't see it should decline. It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":
+    '这对你是有好处的。如果你子力落后，不代表就输了：MistyBanqi 可能来回挪子，走进那个它看不出该拒绝的[重复和棋](/blog/banqi-perpetual-chase)。这种事多到可以量：引擎自我对弈的 200 盘里，[每六盘就有一盘和棋](/blog/banqi-statistics)，其中一半曾经走到赢定的局面。',
   '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
     '[MistyBanqi](/blog/mistybanqi) 自我对弈，每步搜索一千万个节点，是本站机器人的三倍棋力。用箭头一步步看。[配套研究](/study/FsA5sowX)收了这批棋的全部二十盘，一盘一章，附上每盘怎么走完的注记。同一批棋里的两百盘被整理成数字，放在[用数字看暗棋](/blog/banqi-statistics)：领先多少才算安全，一盘棋什么时候就定了。',
   // cao-yanlei (zh-Hans), machine-drafted 2026-09-25, not native-reviewed. Mainland
@@ -2099,8 +2239,8 @@ const ZH_HANS: Record<string, string> = {
     '当对手轮到自己却无棋可走时，你获胜——通常是因为敌方棋子被全部吃光，有时则是被困死、无路可走。这里的将不是王棋：吃掉它只是进展，而非胜利，棋局会一直进行到一方被吃光或被困死为止。',
   'Mistboard draws a game two ways: 40 plies (single moves) with no flip or capture, or threefold repetition, the same position three times. A flip or capture resets both counters because it changes the position irreversibly.':
     'Mistboard 有两种自动和棋：连续 40 个半回合没有翻子或吃子，或同一局面出现三次。翻子或吃子会不可逆地改变局面，因此会重置两个计数。',
-  'A chase (長捉) is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not make a position appear for the third time with a chase; it must play something else, unless it has no other legal move. A repetition caused by a chase is never a draw, because the chased piece cannot stay put without being taken. A chase that keeps driving a piece onto new squares is not limited.':
-    '捉子（长捉）指既不翻子也不吃子、走完后能吃掉对方刚走动那枚棋子的一步棋，不论那枚棋子有没有根。捉子的一方不能用捉子让同一局面第三次出现，必须改走别的着法，除非没有其他合法着法。由捉子造成的重复局面一律不判和，因为被捉的棋子不走就会被吃。不断把对方棋子赶到新位置的捉子不受限制。',
+  'A chase (長捉) is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not make a position appear for the third time with a chase; it must play something else, unless it has no other legal move. A repetition caused by a chase is never a draw, because the chased piece cannot stay put without being taken. A chase that keeps driving a piece onto new squares is not limited. [Why the rule works this way](/blog/banqi-perpetual-chase), with games.':
+    '捉子（长捉）指既不翻子也不吃子、走完后能吃掉对方刚走动那枚棋子的一步棋，不论那枚棋子有没有根。捉子的一方不能用捉子让同一局面第三次出现，必须改走别的着法，除非没有其他合法着法。由捉子造成的重复局面一律不判和，因为被捉的棋子不走就会被吃。不断把对方棋子赶到新位置的捉子不受限制。[这条规则为什么这样定](/blog/banqi-perpetual-chase)，附对局。',
   'Play MistyBanqi': '对战 MistyBanqi',
   'Challenge a friend': '挑战好友',
   'Three rules give the game its character: the rat captures the elephant, only the rat can swim, and the lion and tiger leap the rivers.':
@@ -4772,6 +4912,143 @@ const ZH_HANS: Record<string, string> = {
 
 const ZH_HANT: Record<string, string> = {
   ...ZH_HANS,
+  // banqi-perpetual-chase: machine-drafted 2026-10-11, not native-reviewed. Piece names follow banqi-statistics (將 士 象 車 馬 砲 卒); a ply is 步.
+  'The Perpetual Chase Rule in Banqi': '暗棋長捉規則',
+  'Perpetual Chase in Banqi': '暗棋的長捉',
+  'A repeating chase can also go round a square of four. The chased piece runs round the corner, the chaser follows one step behind, and the board comes back every eight plies.':
+    '重複的長捉也可以繞著四個格子轉。被捉的子繞著角落跑，捉的一方落後一步跟著，每八步棋盤就回到原樣。',
+  'Herding chases are fine': '趕子的長捉沒問題',
+  'From a game on Mistboard, 30 September 2026. The player’s general chased the bot’s advisor five times, from b2 to f3, where the player’s other advisor took it.':
+    '來自 Mistboard 上 2026 年 9 月 30 日的一盤棋。玩家的將把機器人的士追了五次，從 b2 一直追到 f3，在那裡被玩家的另一個士吃掉。',
+  'What other rules say': '其他規則怎麼說',
+  'Four rule sets and a reference work, as read in October 2026.':
+    '四套規則和一部參考資料，2026 年 10 月查閱。',
+  'Perpetual chase': '長捉',
+  'No-progress draw': '無進展判和',
+  '[TCGA computer banqi rules, Hsu (2019)](https://homepage.iis.sinica.edu.tw/~tshsu/tcg/2019/hwks/rules.pdf)':
+    '[TCGA 電腦暗棋比賽規則，Hsu（2019）](https://homepage.iis.sinica.edu.tw/~tshsu/tcg/2019/hwks/rules.pdf)',
+  'No chase rule. A position repeated three times draws.': '無長捉規定。同一局面出現三次判和。',
+  '60 plies': '60 步',
+  '[Chen, Shen and Hsu, ICGA Journal (2010)](https://homes.cs.washington.edu/~armin/ICGA2010.pdf)':
+    '[Chen、Shen、Hsu，《ICGA Journal》（2010）](https://homes.cs.washington.edu/~armin/ICGA2010.pdf)',
+  'No chase rule. Repeated positions draw.': '無長捉規定。局面重複判和。',
+  '40 plies': '40 步',
+  'No chasing the same piece 10 times in a row.': '不能連續 10 次追擊同一顆子',
+  '50 plies': '50 步',
+  'Not mentioned.': '未提及',
+  'A chase move may not make a position appear for the third time.':
+    '一步捉不得讓同一局面出現第三次。',
+  'Why not a move count': '為什麼不用步數上限',
+  'Making the chaser lose, as xiangqi does, needs someone to judge what counts as a chase, and no banqi source uses it. Repetition needs no number and no judge. It stops a repeating chase at the repeat and leaves a chase that goes somewhere alone.':
+    '像象棋那樣判捉的一方輸，得有人判斷什麼算捉，而且沒有一份暗棋資料採用。重複規則不需要數字，也不需要裁判。重複的長捉在重複時就被擋下，有進展的長捉則不受影響。',
+  advisor: '士',
+  soldier: '卒',
+  elephant: '象',
+  chariot: '車',
+  cannon: '砲',
+  general: '將',
+  'Banqi rules': '暗棋規則',
+  'THE ADVISOR RUNS FIVE TIMES': '士逃了五次',
+  'THE OTHER ADVISOR TAKES IT': '另一個士吃掉它',
+  'In banqi a chased piece often has one safe square, so a chase can go back and forth until the position repeats, and under plain threefold repetition the chaser alone decides the draw. Tournament rules allow it and apps cap the chase at 7 or 10 moves. Mistboard forbids the chase move that would repeat a position a third time, and leaves chases that go somewhere alone.':
+    '暗棋裡被捉的子常常只有一個安全的格子，所以長捉可以來回走到局面重複；如果只按三次重複判和，和不和完全由捉的一方決定。比賽規則允許這樣判和，應用則把長捉限在 7 次或 10 次。Mistboard 禁止會讓同一局面第三次出現的那一步捉，把目標趕向別處的長捉則不去管它。',
+  'In a perpetual chase one piece attacks another move after move. In banqi the runner often has one safe square, so the two go back and forth until the position repeats.':
+    '長捉就是一顆子一步接一步地攻擊另一顆子。在暗棋裡，逃的一方常常只有一個安全的格子，於是兩顆子來回走，直到局面重複。',
+  'The runner can’t stay put without being taken, so under plain threefold repetition the chaser alone decides whether the game is drawn.':
+    '逃的一方不動就會被吃，所以如果只按三次重複判和，和不和完全由捉的一方決定。',
+  'Mistboard forbids the chase move that would make a position appear for the third time. A chase that drives its target onto new squares never repeats, and the rule leaves it alone.':
+    'Mistboard 禁止會讓同一局面第三次出現的那一步捉。把目標一路趕向新格子的長捉永遠不會重複，這條規則不去管它。',
+  'Tournament rules draw on repetition, and apps cap a chase at 7 or 10 moves, which comes after the repetition in every chase draw we have seen.':
+    '比賽規則按重複局面判和，應用把長捉限在 7 次或 10 次，但在我們見過的每一盤長捉和棋裡，這個上限都來得比重複晚。',
+  'A perpetual chase is one piece attacking another move after move while the other keeps running. In [banqi](/rules/banqi), Chinese dark chess, the runner often has a single safe square, so the two pieces go back and forth until the position repeats. Whether that should be a draw, and who gets to decide, is a question banqi rule sets answer in different ways.':
+    '長捉，就是一顆子一步接一步地攻擊另一顆子，而被捉的子一直在逃。在[暗棋](/rules/banqi)裡，逃的一方常常只有一個安全的格子，於是兩顆子來回走，直到局面重複。這該不該算和棋、由誰來決定，各套暗棋規則的答案不一樣。',
+  'Why banqi needs a chase rule': '暗棋為什麼需要長捉規則',
+  'In chess a threefold repetition needs both players to keep repeating, and either of them can play something else. In banqi the chased piece can’t stay put without being taken, so it runs. With one safe square it shuttles back and forth as the chaser does, and the third repetition comes when the chaser wants it. In [the game below](/banqi/game/bq_391b54b2-eb4f-4a21-9ed0-f934aa4772cd) the player was far ahead and the bot had lost its general, so the draw saved the bot.':
+    '國際象棋的三次重複需要雙方一直重複下去，任何一方都可以改走別的。暗棋裡被捉的子不動就會被吃，所以只能逃。如果只有一個安全的格子，它就跟著捉的一方來回走，第三次重複什麼時候出現，由捉的一方說了算。在[下面這盤棋](/banqi/game/bq_391b54b2-eb4f-4a21-9ed0-f934aa4772cd)裡，玩家大幅領先，機器人的將也已經被吃，這盤和棋救了機器人。',
+  'Back and forth on two squares, from a game on Mistboard, 16 September 2026.':
+    '兩格之間來回走，來自 Mistboard 上 2026 年 9 月 16 日的一盤棋。',
+  'The bot has just flipped g2 and turned up a red advisor beside the player’s black chariot. A chariot can’t take an advisor, which outranks it, and e1 and h1 hold its own soldiers, so f1 is its only free square.':
+    '機器人剛在 g2 翻出一顆紅士，就在玩家的黑車旁邊。士比車大，車吃不了它；e1 和 h1 都是車自己的卒，所以 f1 是它唯一的空格。',
+  'The advisor’s fourth chase brings the position round a third time, and under plain threefold repetition the game is drawn. Under Mistboard’s rule this move is forbidden, so the advisor would have to play something else.':
+    '士的第四次捉讓局面第三次出現，如果只按三次重複判和，這盤就和了。按 Mistboard 的規則，這一步被禁止，士只能改走別的。',
+  'Round a square of four, in a constructed position. Every time the chariot runs it has one safe square.':
+    '繞著四格轉，這是擺出來的局面。車每次逃都只有一個安全的格子。',
+  'The black advisor on a1 attacks the red chariot on a2. Face-down tiles on a3, b3, c2 and c1 close its other exits.':
+    'a1 的黑士攻擊 a2 的紅車。a3、b3、c2、c1 上的暗子擋住了車的其他出路。',
+  'The advisor’s fourth chase brings the board back where it started. Each lap repeats every position, so under plain threefold repetition the game is drawn early in the third lap. Under Mistboard’s rule, the chase move that would make a position appear for the third time is forbidden.':
+    '士的第四次捉讓棋盤回到起點。每轉一圈，每個局面都重複一次，所以如果只按三次重複判和，第三圈剛開始就會判和。按 Mistboard 的規則，會讓局面第三次出現的那一步捉被禁止。',
+  'Some chases drive the target somewhere. Every move puts the target on a square it hasn’t stood on, so no position comes round again, and the chase ends when the target runs out of room or into another piece.':
+    '有些長捉是把目標往某個地方趕。每一步都讓目標走到它沒站過的格子，所以沒有局面會再出現；目標無路可逃，或撞上另一顆子，這次長捉就結束了。',
+  'Winning a piece this way, as in [that game](/banqi/game/bq_795ec889-96d0-48f4-914f-6f1db438441a), is ordinary good play. A chase rule has to stop the repeating chase and leave this one alone.':
+    '像[那盤棋](/banqi/game/bq_795ec889-96d0-48f4-914f-6f1db438441a)這樣贏下一顆子，是正常的好棋。長捉規則要擋的是重複的長捉，這一種應該放著不管。',
+  '[Chinese Dark Chess 2 app (Google Play)](https://play.google.com/store/apps/details?id=com.xidea.ChineseDarkChess2&hl=zh_TW)':
+    '[暗棋2 應用（Google Play）](https://play.google.com/store/apps/details?id=com.xidea.ChineseDarkChess2&hl=zh_TW)',
+  'No chasing the same piece more than 7 times in a row.': '不可連續長捉同一顆子超過 7 次。',
+  '[FunTown app](https://darkchess.funtown.com.tw/rules2.html)':
+    '[FunTown 戲谷 應用](https://darkchess.funtown.com.tw/rules2.html)',
+  '[Chinese Wikipedia, banqi](https://zh.wikipedia.org/zh-tw/%E6%9A%97%E6%A3%8B)':
+    '[中文維基百科：暗棋](https://zh.wikipedia.org/zh-tw/%E6%9A%97%E6%A3%8B)',
+  '50 moves with no flip or capture': '連續 50 步沒有翻子或吃子',
+  Mistboard: 'Mistboard',
+  'A rule that makes the chaser lose comes from [xiangqi](/rules/xiangqi), where every piece is face up. Under the Asian rules for that game, chasing one piece without end is a forbidden move, and a side that keeps playing one must change it or lose, as [Chinese Wikipedia sets out](https://zh.wikipedia.org/wiki/%E9%95%B7%E6%89%93_(%E8%B1%A1%E6%A3%8B)). None of the banqi sources above makes the chaser lose.':
+    '捉的一方判負，這條規則來自[象棋](/rules/xiangqi)，象棋的棋子全都明著擺在棋盤上。按亞洲象棋規則，無休止地捉同一顆子是禁止著法，一直走禁止著法的一方必須變著，否則判負，[中文維基百科](https://zh.wikipedia.org/wiki/%E9%95%B7%E6%89%93_(%E8%B1%A1%E6%A3%8B))有整理。上面的暗棋資料沒有一份判捉的一方輸。',
+  'Mistboard’s rule': 'Mistboard 的規則',
+  'Mistboard keeps threefold repetition and the 40-ply no-progress draw, and adds one rule: **a chase move may not make a position appear for the third time.** The chaser has to play something else, unless it has no other legal move. A repetition that comes from anything other than a chase still draws.':
+    'Mistboard 保留三次重複和 40 步無進展判和，再加一條規則：**一步捉不得讓同一局面出現第三次。** 捉的一方必須改走別的，除非沒有其他合法著法。不是由捉造成的重複照樣判和。',
+  'The apps count instead: once a piece has chased the same piece 7 times in a row, or 10, it must stop. The trouble is that the repetition comes first. In the two-square game above, the position came round a third time on the bot’s fourth chase move. A 7-move cap would still have allowed three more, so with threefold repetition in force the game is drawn exactly as before. In all eight repetition draws on Mistboard, the third repetition came between the third and sixth chase move, before either cap.':
+    '應用的做法是計數：一顆子連續捉同一顆子 7 次或 10 次之後，就必須停下。問題是重複會先來。在上面那盤兩格來回的棋裡，局面在機器人第四次捉時就第三次出現了。上限設 7 次的話，它還可以再捉三次，所以只要三次重複照樣判和，這盤照樣是和棋。Mistboard 上全部八盤重複和棋，第三次重複都出現在第三到第六次捉之間，比兩種上限都早。',
+  'A count also treats a herding chase the same way, and stops it at the same number whether or not the target is about to run out of room. Players don’t agree on the number either. A Taiwanese player who wrote to us about one of these draws called a perpetual chase a clear foul and the count an open question: 7 is too few, he said, and a friend of his plays to 12.':
+    '計數對趕子的長捉也一視同仁，不管目標是不是快無路可逃，到了次數就叫停。玩家對數字也沒有共識。一位台灣玩家為了其中一盤和棋寫信給我們，他說長捉明顯犯規，次數則還有得討論：7 次太少，他有個朋友下到 12 次。',
+  'Why not make the chaser lose': '為什麼不判捉的一方負',
+  'The rule in full': '完整規則',
+  'For anyone implementing it. The rule reads only what both players can see, so it works online or across a table.':
+    '寫給要實作這條規則的人。規則只看雙方都看得到的東西，所以網上或面對面都能用。',
+  Term: '術語',
+  Meaning: '含義',
+  'Chase move': '捉',
+  'A move with no flip or capture, after which the moved piece could capture the enemy piece that moved just before it. Cannon jumps count; whether the target is protected doesn’t matter.':
+    '不翻子也不吃子的一步，走完之後，剛走的那顆子能吃掉對方上一步剛走的那顆子。砲隔子吃也算；目標有沒有被保護不影響。',
+  Flee: '逃',
+  'A move by the piece the previous move chased.': '上一步被捉的那顆子所走的一步。',
+  Position: '局面',
+  'Where each face-up piece stands, which squares hold face-down tiles, and whose move it is. Counts start over after every flip or capture.':
+    '每顆翻開的子在哪裡、哪些格子有暗子、輪到哪一方走。每次翻子或吃子之後重新計數。',
+  Forbidden: '禁止',
+  'A chase move that would make a position appear for the third time.':
+    '會讓同一局面第三次出現的一步捉。',
+  'Repetition draw': '重複和棋',
+  'A position reached by any move other than a chase or a flee draws on its third appearance.':
+    '由捉或逃以外的著法走出來的局面，第三次出現時判和。',
+  'Only move': '唯一著法',
+  'If every legal move is a forbidden chase, they all stay legal.':
+    '如果所有合法著法都是被禁止的捉，這些著法就全部保持合法。',
+  'Mutual chase': '一捉一',
+  'A flee that also attacks the chaser is an ordinary move. Only two cannons on one line can do this.':
+    '逃的同時又攻擊追兵的一步，算作普通著法。只有同一條線上的兩個砲做得到。',
+  'Unchanged: 40 plies with no flip or capture, chase moves included.':
+    '不變：連續 40 步沒有翻子或吃子，捉也算在內。',
+  'Not covered': '尚未涵蓋',
+  'A chaser switching between two targets. We will extend the rule if it comes up.':
+    '在兩個目標之間輪流捉。如果對局裡出現了，我們會擴充規則。',
+  'Before the rule': '規則之前',
+  'Until October 2026 Mistboard drew every threefold repetition. In 127 games people played against [MistyBanqi](/blog/mistybanqi), our bot, from July to early October, eight ended in a repetition draw, and the bot was the chaser in every one ([21 July](/banqi/game/bq_15a9801b-7f1b-4618-81ff-33c243adeead), [23 July](/banqi/game/bq_65458fb8-71d2-4e4c-86ca-823057fc9ac2), [28 July](/banqi/game/bq_1a550b3b-40b7-4184-86f4-16c479b926df), 16 September [three](/banqi/game/bq_8dbdd7ac-6612-4785-a7d9-73c0a0987e5e) [times](/banqi/game/bq_f7bc7130-e399-4a00-9609-baee9cad719f) [over](/banqi/game/bq_391b54b2-eb4f-4a21-9ed0-f934aa4772cd), [22 September](/banqi/game/bq_374af1fe-bb55-462d-a3d7-54970fd03f64), [2 October](/banqi/game/bq_879c07b6-b804-4a21-9d46-39febc900b90)). Replayed under the current rule, none of the eight is a draw, and no move a person played in any of the 127 games would have been forbidden.':
+    '2026 年 10 月之前，Mistboard 的三次重複一律判和。7 月到 10 月初，真人對我們的機器人 [MistyBanqi](/blog/mistybanqi) 下了 127 盤，其中八盤以重複局面判和，每一盤捉的一方都是機器人（[7 月 21 日](/banqi/game/bq_15a9801b-7f1b-4618-81ff-33c243adeead)、[7 月 23 日](/banqi/game/bq_65458fb8-71d2-4e4c-86ca-823057fc9ac2)、[7 月 28 日](/banqi/game/bq_1a550b3b-40b7-4184-86f4-16c479b926df)、9 月 16 日的[第一](/banqi/game/bq_8dbdd7ac-6612-4785-a7d9-73c0a0987e5e)、[第二](/banqi/game/bq_f7bc7130-e399-4a00-9609-baee9cad719f)、[第三盤](/banqi/game/bq_391b54b2-eb4f-4a21-9ed0-f934aa4772cd)、[9 月 22 日](/banqi/game/bq_374af1fe-bb55-462d-a3d7-54970fd03f64)、[10 月 2 日](/banqi/game/bq_879c07b6-b804-4a21-9d46-39febc900b90)）。按現行規則重放，這八盤沒有一盤是和棋，127 盤裡真人走過的每一步也都不會被禁止。',
+  'Is a perpetual chase a draw in banqi?': '暗棋的長捉算和棋嗎？',
+  'It depends on the rule set. Tournament rules for computer banqi draw any position repeated three times, so a chase that repeats is a draw. On Mistboard it never is: the chase move that would bring a position round a third time is forbidden, and the chaser has to play something else.':
+    '看用哪套規則。電腦暗棋的比賽規則把同一局面出現三次判和，所以會重複的長捉就是和棋。在 Mistboard 上永遠不是：會讓局面第三次出現的那一步捉被禁止，捉的一方必須改走別的。',
+  'How many times can you chase a piece in banqi?': '暗棋裡一顆子最多能捉幾次？',
+  'Two popular apps set a cap: Chinese Dark Chess 2 at 7 chases of the same piece in a row, FunTown at 10. Mistboard has no count. A chase can run as long as it reaches new positions; only the move that would repeat a position a third time is forbidden.':
+    '兩款常見的應用設了上限：暗棋2 是連續捉同一顆子 7 次，FunTown 是 10 次。Mistboard 不計次數。只要長捉一直走出新的局面，就可以一直捉下去；只有會讓局面第三次出現的那一步被禁止。',
+  'What counts as a chase in banqi?': '暗棋裡什麼算捉？',
+  'On Mistboard, a move with no flip or capture after which the moved piece could capture the enemy piece that moved just before it. Cannon jumps count, and it doesn’t matter whether the target is protected.':
+    '在 Mistboard 上，不翻子也不吃子、走完後剛走的那顆子能吃掉對方上一步剛走的那顆子的一步。砲隔子吃也算，目標有沒有被保護不影響。',
+  'Does the chaser lose in banqi?': '暗棋裡長捉的一方會判負嗎？',
+  'Not in any banqi rule set we found, and not on Mistboard. Losing for a perpetual chase comes from xiangqi, where someone has to judge what counts as a chase. On Mistboard the repeating move is simply not allowed.':
+    '我們找到的暗棋規則都不會，Mistboard 也不會。長捉判負來自象棋，那需要有人裁定什麼算捉。在 Mistboard 上，會造成重複的那一步直接不能走。',
+  'How a chase ends': '長捉怎麼結束',
+  'On Mistboard a chase can run as long as it is getting somewhere, and a good one wins a piece. What it can’t do is go round in a circle until the game is drawn: the move that would bring a position back a third time is off the table, so the chaser has to try something else, and the game goes on.':
+    '在 Mistboard 上，長捉只要還在推進，就可以一直捉下去，好的長捉能贏下一顆子。它不能做的，是繞圈子繞到和棋：會讓局面第三次出現的那一步不能走，捉的一方只能另想辦法，棋也就繼續下去。',
+  'Perpetual Chase Rule in Banqi (Chinese Dark Chess)': '暗棋長捉規則與重複局面判和',
   // longest-forced-mates-xiangqi: machine-drafted 2026-10-08, not native-reviewed. Terms follow the study uXu609QE zh names and solver-audit (困斃, 象棋雲庫, 著法); the bare 困毙 table cells take the Traditional glyph.
   'The Longest Forced Mates in Xiangqi': '象棋最長的必勝殺局',
   'The Longest Forced Mates': '最長的必勝殺局',
@@ -5378,8 +5655,8 @@ const ZH_HANT: Record<string, string> = {
   'Jungle Chess rules': '鬥獸棋規則',
   '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
     '[MistyBanqi](/blog/mistybanqi) 自我對弈，每步搜尋一千萬個節點，是本站機器人的三倍棋力。用箭頭一步步看。[配套研究](/study/FsA5sowX)收了這批棋的全部二十盤，一盤一章，附上每盤怎麼走完的註記。同一批棋裡的兩百盤被整理成數字，放在[用數字看暗棋](/blog/banqi-statistics)：領先多少才算安全，一盤棋什麼時候就定了。',
-  "There's an upshot for you here. If you're losing on material, you're not necessarily lost: MistyBanqi may shuffle into a repetition draw it can't see it should decline. It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":
-    '這對你是有好處的。如果你子力落後，不代表就輸了：MistyBanqi 可能來回挪子，走進那個它看不出該拒絕的重複和棋。這種事多到可以量：引擎自我對弈的 200 盤裡，[每六盤就有一盤和棋](/blog/banqi-statistics)，其中一半曾經走到贏定的局面。',
+  "There's an upshot for you here. If you're losing on material, you're not necessarily lost: MistyBanqi may shuffle into a [repetition draw](/blog/banqi-perpetual-chase) it can't see it should decline. It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":
+    '這對你是有好處的。如果你子力落後，不代表就輸了：MistyBanqi 可能來回挪子，走進那個它看不出該拒絕的[重複和棋](/blog/banqi-perpetual-chase)。這種事多到可以量：引擎自我對弈的 200 盤裡，[每六盤就有一盤和棋](/blog/banqi-statistics)，其中一半曾經走到贏定的局面。',
   "A related blind spot involves the general. Only a soldier, the other general or a cannon's jump can take it, so a boxed-in general is in danger from one piece at a time, and the engine is slow to make room for one cornered. It will sometimes march a piece off to the far side of the board while a lone enemy soldier walks up and traps it. Same gap as the draw above: the evaluation has no real sense of a slow, quiet threat building several moves away.":
     '另一個相關的盲點跟將有關。只有卒、對方的將或砲的跳吃拿得下它，所以被圍住的將一次只怕一種子，而引擎很慢才會替被逼到角落的將騰出空間。它有時候會把一顆子調到棋盤另一頭，同時一顆孤零零的敵方卒走過來把它困死。跟上面那個和棋是同一個缺口：這套評估函數對於好幾步之外慢慢成形的安靜威脅，沒有什麼感覺。',
   // one-thousand-games: machine-drafted 2026-10-01, not native-reviewed. Variant names follow the
@@ -6750,8 +7027,8 @@ const ZH_HANT: Record<string, string> = {
     '當對手輪到自己卻無棋可走時，你獲勝——通常是因為敵方棋子被全部吃光，有時則是被困死、無路可走。這裡的將不是王棋：吃掉它只是進展，而非勝利，棋局會一直進行到一方被吃光或被困死為止。',
   'Mistboard draws a game two ways: 40 plies (single moves) with no flip or capture, or threefold repetition, the same position three times. A flip or capture resets both counters because it changes the position irreversibly.':
     'Mistboard 有兩種自動和棋：連續 40 個半回合沒有翻子或吃子，或同一局面出現三次。翻子或吃子會不可逆地改變局面，因此會重置兩個計數。',
-  'A chase (長捉) is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not make a position appear for the third time with a chase; it must play something else, unless it has no other legal move. A repetition caused by a chase is never a draw, because the chased piece cannot stay put without being taken. A chase that keeps driving a piece onto new squares is not limited.':
-    '捉子（長捉）指既不翻子也不吃子、走完後能吃掉對方剛走動那枚棋子的一步棋，不論那枚棋子有沒有根。捉子的一方不能用捉子讓同一局面第三次出現，必須改走別的著法，除非沒有其他合法著法。由捉子造成的重複局面一律不判和，因為被捉的棋子不走就會被吃。不斷把對方棋子趕到新位置的捉子不受限制。',
+  'A chase (長捉) is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not make a position appear for the third time with a chase; it must play something else, unless it has no other legal move. A repetition caused by a chase is never a draw, because the chased piece cannot stay put without being taken. A chase that keeps driving a piece onto new squares is not limited. [Why the rule works this way](/blog/banqi-perpetual-chase), with games.':
+    '捉子（長捉）指既不翻子也不吃子、走完後能吃掉對方剛走動那枚棋子的一步棋，不論那枚棋子有沒有根。捉子的一方不能用捉子讓同一局面第三次出現，必須改走別的著法，除非沒有其他合法著法。由捉子造成的重複局面一律不判和，因為被捉的棋子不走就會被吃。不斷把對方棋子趕到新位置的捉子不受限制。[這條規則為什麼這樣定](/blog/banqi-perpetual-chase)，附對局。',
   'Play MistyBanqi': '對戰 MistyBanqi',
   'Challenge a friend': '挑戰好友',
   'Three rules give the game its character: the rat captures the elephant, only the rat can swim, and the lion and tiger leap the rivers.':

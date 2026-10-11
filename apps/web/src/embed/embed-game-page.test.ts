@@ -119,6 +119,14 @@ describe('fitBoardWidth', () => {
     // Stacked, the sheet is under the board and the floor does not apply.
     expect(fitBoardWidth({ width: 400, height: 700 }, 1, true, 276)).toBe(398);
   });
+
+  it('gives banqi a narrower sheet, so its wide board takes the room', () => {
+    // Banqi's longest move is `c3-b3`; the 46px the sheet gives up go to the board.
+    expect(embedRailWidthPx('banqi')).toBe(180);
+    expect(fitBoardWidth({ width: 760, height: 900 }, 2, false, 180)).toBe(
+      fitBoardWidth({ width: 760, height: 900 }, 2, false) + 46,
+    );
+  });
 });
 
 describe('mountEmbedGame', () => {

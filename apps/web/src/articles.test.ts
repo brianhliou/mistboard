@@ -60,6 +60,8 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      // The banqi perpetual-chase (長捉) rule, 2026-10-10.
+      '/blog/banqi-perpetual-chase',
       // The longest forced mates in xiangqi (tablebase records), 2026-10-09.
       '/blog/longest-forced-mates-xiangqi',
       // The Benedict Xiangqi design study, 2026-10-08, leads its date-mate on
@@ -293,6 +295,7 @@ describe('article public listing gates', () => {
     // (blog/concept) article without a homeRow appears, newest first, with no
     // curated list. Deep dives have their own row (next test).
     expect(hrefs).toEqual([
+      '/blog/banqi-perpetual-chase',
       '/blog/longest-forced-mates-xiangqi',
       '/blog/benedict-xiangqi',
       '/blog/xiangqi-endgames',
