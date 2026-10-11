@@ -93,6 +93,7 @@ Conventions:
 
 ### Watching and review
 
+- 75 pro player pages now show a portrait from the xiangqiqipu.com archive, credited and linked ([f04df5fc](https://github.com/brianhliou/mistboard/commit/f04df5fc))
 - the 2026 women's league broadcast reads every earlier round again, and round 1 shows each team match's games instead of six from the wrong matches ([182cfd50](https://github.com/brianhliou/mistboard/commit/182cfd50))
 - Finished games on /games show each player's name above or below the board on their own side, so long names fit ([411963fd](https://github.com/brianhliou/mistboard/commit/411963fd))
 - Move times draws each side's thinking time above and below a centre line with both clocks behind it, names the move and both clocks on hover, and totals each side's time ([105d81c7](https://github.com/brianhliou/mistboard/commit/105d81c7))
@@ -145,6 +146,7 @@ Conventions:
 
 ### Site
 
+- article cards show a clean half board, with no piece hidden under the date or the featured star ([f04df5fc](https://github.com/brianhliou/mistboard/commit/f04df5fc))
 - Game emails have a new look, name the variant and opponent in the subject so each game gets its own thread, come in your site language, and link to your notification settings ([a1db4208](https://github.com/brianhliou/mistboard/commit/a1db4208))
 - The board menu has separate choices for layout, board colour (seven muted colours, with Jungle as a colour of the square grid), river text (楚河 漢界 or Mistboard) and start markers on the soldier and cannon points ([a1db4208](https://github.com/brianhliou/mistboard/commit/a1db4208))
 - Five new xiangqi piece sets, Lacquer, Wood, Book, Brush and Clerical; the letter and symbol sets are retired ([a1db4208](https://github.com/brianhliou/mistboard/commit/a1db4208))
@@ -180,6 +182,8 @@ Conventions:
 
 ### Fixed
 
+- the homepage asks the server for live counts once instead of three times, and a page no longer reports an error while it reloads after a release ([f04df5fc](https://github.com/brianhliou/mistboard/commit/f04df5fc))
+- Duck Xiangqi pieces and the duck can be dragged with a ghost, like every other xiangqi board ([f04df5fc](https://github.com/brianhliou/mistboard/commit/f04df5fc))
 - feedback sent while signed in is saved again ([ba65cb2d](https://github.com/brianhliou/mistboard/commit/ba65cb2d))
 - the homepage viewer no longer replays one-move-a-day correspondence games ([ba65cb2d](https://github.com/brianhliou/mistboard/commit/ba65cb2d))
 - a hold-the-draw practice exercise now counts as solved when your move repeats the position, and an exercise lost to the engine is recorded as failed ([ba65cb2d](https://github.com/brianhliou/mistboard/commit/ba65cb2d))
