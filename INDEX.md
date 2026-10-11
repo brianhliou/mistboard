@@ -611,6 +611,8 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `learn-content.ts` | `/learn` static curriculum data and data-shape types: module list, chapter list, tutorial steps, endgame lesson metadata |
 | `learn.css` | `/learn` tutorial route styles loaded by `learn.ts` |
 | `articles.ts` | Articles page renderer and article thumbnail board mounting. Loads `articles.css` for article index/page/widget styles |
+| `article-card-thumbnails.test.ts` | Every published card on the blog index and homepage has art; half-board cards crop through `xqHalfBoardThumbnailSvg` and keep pieces out from under the date pill and star |
+| `article-card-preview.test.ts` | `npm run articles:cards`: writes the blog index's real cards at 211, 260 and 400px to one page in the temp dir (`ARTICLE_CARDS=slug,slug` narrows it); skipped in the normal run |
 | `article-thumbnail-locale.test.ts` | A thumbnail render thunk gets the page locale: the Pikafish card leads with the reader script (PIKAFISH in English, 皮卡鱼/皮卡魚 in Chinese) with the other name above it and its own tagline, and `renderArticleThumbnail` paints the locale it is passed rather than the ambient one |
 | `articles.css` | Article index, article page, and article interactive widget styles loaded by `articles.ts` |
 | `articles-data.ts` | Article content (large; content not code) |

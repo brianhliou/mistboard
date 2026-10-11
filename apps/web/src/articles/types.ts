@@ -540,6 +540,10 @@ type ArticleBase = {
   updatedAt?: string;
   tldr?: string[];
   intro?: ArticleBlock[];
+  // Card art, drawn in the 16:10 card media under a date pill (top left) and a
+  // star (top right). Half a xiangqi board goes through xqHalfBoardThumbnailSvg
+  // (articles/diagrams.ts): five whole ranks cut mid-river, corners checked
+  // against the tags. Judge any new card with `npm run articles:cards`.
   thumbnail?: ArticleThumbnail;
   // Which appearance family this article's diagrams belong to. Drives the
   // Settings board/piece pickers while the article is open (xiangqi diagrams

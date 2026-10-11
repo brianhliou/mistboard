@@ -1,5 +1,5 @@
 import { createInitialXiangqiState, type XiangqiGameState } from '@mistboard/game';
-import { XQ_CELL, xqBoardSvg, xqPoint } from '../diagrams.js';
+import { XQ_CELL, xqHalfBoardThumbnailSvg, xqPoint } from '../diagrams.js';
 import type { Article } from '../types.js';
 
 // A bug write-up (fe26e31c). Facts and where they come from:
@@ -31,10 +31,7 @@ after every move:
 const NEW_KEY = `# red chariot on a1: "a1:r.chariot"
 parts.append(sq + ":" + p.color[0] + "." + p.role)`;
 
-// 16:10 to match the card media box (.articles-index-card-media, 16/10).
-const THUMB_ASPECT = 16 / 10;
-
-// Card art: red's corner after the swap, a cannon on a1 and a chariot on b3,
+// Card art: Red's half after the swap, a cannon on a1 and a chariot on b3,
 // both ringed as in the article's figure.
 const SWAP_THUMBNAIL = (): string => {
   const start = createInitialXiangqiState('chariot-cannon-thumb');
@@ -43,24 +40,17 @@ const SWAP_THUMBNAIL = (): string => {
     board: { ...start.board, a1: start.board.b3, b3: start.board.a1 },
   };
   const boardY = 28; // xqBoardSvg draws the grid 28 below its y, under the title row.
-  const a1 = xqPoint(0, 1, 'red', 0, boardY);
-  const b3 = xqPoint(1, 3, 'red', 0, boardY);
-  const top = xqPoint(0, 4, 'red', 0, boardY).y - XQ_CELL * 0.6;
-  const bottom = a1.y + XQ_CELL * 0.6;
-  const h = bottom - top;
-  const w = h * THUMB_ASPECT;
-  const left = a1.x - XQ_CELL * 0.7;
-  const ring = (p: { x: number; y: number }) =>
-    `<circle cx="${p.x}" cy="${p.y}" r="${XQ_CELL * 0.52}" fill="none" stroke="#d99a1e" stroke-width="3"/>`;
-  const svg = xqBoardSvg({
+  const ring = (file: number, rank: number) => {
+    const p = xqPoint(file, rank, 'red', 0, boardY);
+    return `<circle cx="${p.x}" cy="${p.y}" r="${XQ_CELL * 0.52}" fill="none" stroke="#d99a1e" stroke-width="3"/>`;
+  };
+  return xqHalfBoardThumbnailSvg({
     state: swapped,
-    x: 0,
-    y: 0,
-    label: '',
+    half: 'bottom',
     perspective: 'red',
-    overlay: ring(a1) + ring(b3),
+    overlay: ring(0, 1) + ring(1, 3),
+    ariaLabel: "Red's chariot and cannon have traded squares: a cannon on a1 and a chariot on b3",
   });
-  return `<svg class="xq-article-svg" viewBox="${left} ${top} ${w} ${h}" role="img" aria-label="Red's chariot and cannon have traded squares: a cannon on a1 and a chariot on b3" xmlns="http://www.w3.org/2000/svg"><rect class="xq-diagram-bg" x="${left}" y="${top}" width="${w}" height="${h}"/>${svg}</svg>`;
 };
 
 export const chariotCannonRepetitionKeyArticle: Article = {

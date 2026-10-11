@@ -1,5 +1,5 @@
 import { type XiangqiSquare, xiangqiBoardFromDhtmlxqBinit } from '@mistboard/game';
-import { XQ_CELL, xqBoardSvg, xqPoint, xqVisionDemoState } from '../diagrams.js';
+import { xqHalfBoardThumbnailSvg, xqVisionDemoState } from '../diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
 // The audit's short account. Every finding is a chapter in the study, where the
@@ -36,33 +36,22 @@ export const RECORD_011 =
 // chariots Red gives up. solver-audit-thumbnail.test.ts replays it in the kernel.
 export const RECORD_011_KEY = { from: 'c8', to: 'c10' } as const;
 
-// 16:10 to match the card media box (.articles-index-card-media, 16/10).
-const THUMB_ASPECT = 16 / 10;
-
 // Card art: 第011局 at the diagram, cropped to Black's half where the whole
 // solution plays out, with the key drawn. Decoded by the kernel's own binit
 // reader from the record above, never a hand-placed board.
 export const SOLVER_AUDIT_THUMBNAIL = (): string => {
   const board = xiangqiBoardFromDhtmlxqBinit(RECORD_011);
   if (!board) throw new Error('solver-audit thumbnail: 第011局 binit did not decode');
-  const boardY = 28; // xqBoardSvg draws the grid 28 below its y, under the title row.
-  const pad = XQ_CELL * 0.6;
-  const left = xqPoint(0, 10, 'red', 0, boardY).x - pad;
-  const right = xqPoint(8, 10, 'red', 0, boardY).x + pad;
-  const w = right - left;
-  const h = w / THUMB_ASPECT;
-  const top = xqPoint(0, 10, 'red', 0, boardY).y - pad;
-  const svg = xqBoardSvg({
+  return xqHalfBoardThumbnailSvg({
     state: xqVisionDemoState('solver-audit-thumb', board),
-    x: 0,
-    y: 0,
-    label: '',
+    half: 'top',
     perspective: 'red',
     arrows: [
       { from: RECORD_011_KEY.from as XiangqiSquare, to: RECORD_011_KEY.to as XiangqiSquare },
     ],
+    ariaLabel:
+      "Composition 11 of the 1570 manual: Red's chariot on c8 goes to c10 with check, the first of two chariots Red gives up",
   });
-  return `<svg class="xq-article-svg" viewBox="${left} ${top} ${w} ${h}" role="img" aria-label="Composition 11 of the 1570 manual: Red\'s chariot on c8 goes to c10 with check, the first of two chariots Red gives up" xmlns="http://www.w3.org/2000/svg"><rect class="xq-diagram-bg" x="${left}" y="${top}" width="${w}" height="${h}"/>${svg}</svg>`;
 };
 
 export const solverAuditArticle: Article = {

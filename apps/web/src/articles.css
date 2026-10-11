@@ -1111,6 +1111,12 @@
 .xq-article-svg .xq-diagram-river-brand {
   display: var(--xq-river-brand-display, none);
 }
+/* A half-board card's edge cuts through the river, so the label would be
+   sliced (xqHalfBoardThumbnailSvg in articles/diagrams.ts). */
+.xq-article-svg.xq-half-thumb .xq-diagram-river-label,
+.xq-article-svg.xq-half-thumb .xq-diagram-river-brand {
+  display: none;
+}
 /* The alternate river wordmark (?xqRiverStyle=b; live-xiangqi.css has the why). */
 :root[data-xiangqi-river-style="b"] .xq-article-svg .xq-diagram-river-brand {
   font-family: "Noto Sans", ui-sans-serif, system-ui, sans-serif;
