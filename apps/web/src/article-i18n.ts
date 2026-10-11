@@ -33,6 +33,9 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Machine-drafted 2026-10-10, not native-reviewed, locked with its English
+  // copy, which publishes in the same release (jieqi readers are mostly Chinese).
+  'jieqi-puzzle-search',
   // Machine-drafted 2026-10-08, not native-reviewed, locked with its English
   // copy, which publishes in the same release (the brianhliou.com draft of
   // 2026-10-08, folded in before it was posted).
@@ -186,6 +189,140 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // jieqi-puzzle-search: machine-drafted 2026-10-10, not native-reviewed. Terms follow ab-jchess and jieqi-bot-wins (暗子, 翻子, 暗吃, 胜率, 访客, 皮卡鱼); 题目 for puzzle as in how-puzzle-mining-works.
+  'Looking for jieqi puzzles': '在揭棋里找题目',
+  'We searched 2,939 positions from 50 jieqi games for puzzles. 58 had one clearly best move and 15 of those turned on a hidden piece. None of the 15 passed the rules our xiangqi puzzles go through, and we stopped looking.':
+    '我们在 50 盘揭棋对局的 2,939 个局面里寻找题目。58 个局面有一步明显最好的着法，其中 15 个取决于一枚暗子。这 15 个没有一个通过我们象棋题目要过的规则，于是我们不再寻找。',
+  'We scored 2,939 positions from 50 jieqi games. 58 had one clearly best move, and 15 of those turned on a face-down piece.':
+    '我们给 50 盘揭棋对局中的 2,939 个局面打了分。58 个局面有一步明显最好的着法，其中 15 个取决于一枚暗子。',
+  'Four positions passed the rules our xiangqi puzzles go through, and none turns on a hidden piece. The hidden-piece answers were bets or moves the tile hardly touched.':
+    '有四个局面通过了我们象棋题目要过的规则，没有一个取决于暗子。取决于暗子的答案，要么是赌博，要么是暗子几乎无关的着法。',
+  'Skill shows in timing: a tile on its starting square moves as its home piece, so a capture it threatens can usually wait.':
+    '实力体现在时机上：停在原位的暗子按原位棋子的走法走，所以它威胁的吃子通常可以等一等。',
+  'In [jieqi](/rules/jieqi), every piece except the generals starts face down, and a piece shows what it is when it first moves. A xiangqi puzzle asks for a forced line, and in jieqi a forced line rarely gets past the first piece that turns over, because nobody knows yet what it will be.':
+    '在[揭棋](/rules/jieqi)里，除将帅以外的每一枚棋子开局时都是暗子，第一次走动时才亮出身份。象棋题目要求一条强制着法，而在揭棋里，强制着法很少能越过第一枚被翻开的棋子，因为谁也不知道它会是什么。',
+  'In October we asked a different question. If a jieqi puzzle is a decision under uncertainty, the way a poker hand is, does the game produce them? We have stopped looking, and the last section says what would make us start again.':
+    '10 月，我们换了一个问题。如果揭棋题目是一种不确定条件下的决策，就像一手扑克牌，那么这个棋会产生这样的题目吗？我们已经不再寻找，最后一节说明什么情况会让我们重新开始。',
+  'How we looked': '我们怎么找',
+  'We took the 50 most recent finished jieqi games on the site with 20 plies or more, 2,939 positions in all. All 50 were played on 8 October by guests against a bot: 34 against [AB-JChess](/blog/ab-jchess), 13 against Pikafish at level 2 and 3 against full-strength Pikafish.':
+    '我们取了本站最近 50 盘已结束、至少 20 个半回合的揭棋对局，共 2,939 个局面。50 盘都是 10 月 8 日访客对电脑下的：34 盘对 [AB-JChess](/blog/ab-jchess)，13 盘对 2 级皮卡鱼，3 盘对全强度皮卡鱼。',
+  "AB-JChess scored the candidate moves in every position. A move that turns a piece over was scored once for each piece it could be, and the scores were averaged, weighted by how many of each piece the side to move had not yet seen. The site's jieqi game review grades a reveal the same way, from only what the player could know.":
+    'AB-JChess 为每个局面的候选着法打分。一步会翻开棋子的着法，按它可能是的每种棋子各打一次分，再按走子方尚未见过的每种棋子的数量加权平均。本站的揭棋对局复盘也是这样给翻子评分的，只用棋手能知道的信息。',
+  'A position counted when the best move beat the second best by at least 15 points of winning chance, both at our standard depth and at four times that, with every move searched to at least one full ply.':
+    '一个局面要算数，最佳着法必须比次佳着法高出至少 15 个百分点的胜率，在我们的标准深度和四倍深度下都是如此，并且每步着法都至少搜索满一个半回合。',
+  'What turned up': '找到了什么',
+  '58 positions passed, from 24 of the 50 games. 43 of them are ordinary tactics with a quiet move as the answer, and 15 of those never touch a face-down piece in the first five plies of the line. They are xiangqi puzzles that happen to come from jieqi games.':
+    '有 58 个局面通过，来自 50 盘中的 24 盘。其中 43 个是普通战术，答案是一步不吃子的着法，这当中有 15 个在着法的前五个半回合里根本不碰暗子。它们是恰好出自揭棋对局的象棋题目。',
+  'The other 15 turn on a hidden piece, and they come in two kinds. Of the 58, 25 had a person to move, and the person found the answer 19 times.':
+    '另外 15 个取决于一枚暗子，分为两类。58 个局面中有 25 个轮到真人走，真人找到答案 19 次。',
+  'The lottery ticket': '彩票',
+  'The side to move is lost on every quiet move, and one tile could save it. We found five, all from lost positions, and the right answer usually loses.':
+    '走子方走任何不吃子的着法都输，只有一枚暗子能救。我们找到五个，都出自已输的局面，正确答案通常也会输。',
+  'Black to move. Black has two tiles left, and from where Black sits each could be a soldier, horse, chariot or cannon. The a10 tile moves as a chariot on its first move, whatever it is, so a10-a1 lands on the back rank. If it turns out to be a chariot it is mate; anything else and it is lost. That is one chance in four, 25%, against 2% for the next best move. Black played it and turned over a soldier.':
+    '黑方走。黑方还剩两枚暗子，从黑方的角度看，每一枚都可能是卒、马、车或炮。a10 的暗子第一步无论是什么都按车走，所以 a10-a1 落在底线上。如果翻出车就是杀棋；翻出别的就输。这是四分之一的机会，25%，而次佳着法只有 2%。黑方走了这步，翻出一个卒。',
+  'Lottery ticket: Black to move, the game as dealt': '彩票：黑方走，按实际发到的暗子',
+  "One chance in four was right for what Black could see, and the ticket was blank all the same. A piece taken face down leaves the board without being shown to its owner, so Black's count of unseen pieces still included two that were already gone.":
+    '从黑方能看到的信息来说，四分之一的机会是对的，可这张彩票照样没中。一枚被暗吃的棋子离开棋盘时不会亮给它的主人看，所以黑方算的未见棋子里，仍包括两枚早已不在的棋子。',
+  'Black piece not yet seen': '尚未见过的黑方棋子',
+  'Where it really was': '它实际在哪里',
+  'Taken face down by Red on its move 17': '红方在其第 17 回合暗吃',
+  'Taken face down by Red on its move 20': '红方在其第 20 回合暗吃',
+  'The tile on a10': 'a10 的暗子',
+  'The tile on i10': 'i10 的暗子',
+  'Four pieces for two tiles, so each tile was a chariot one time in four from where Black sat. The chariot had left the board 11 moves earlier.':
+    '两枚暗子对应四种棋子，所以从黑方的角度看，每一枚暗子是车的机会都是四分之一。而车早在 11 回合前就已离开棋盘。',
+  'The same move with a chariot dealt to a10: mate. This is the deal Black was playing for, and it was not possible in this game.':
+    '同一步棋，假如 a10 发到的是车：杀棋。这是黑方期待的发子，而在这盘棋里它不可能出现。',
+  'Lottery ticket: the same position if a10 were the chariot': '彩票：假如 a10 是车，同一局面',
+  "Black to move. a10-a1, taking Red's face-down piece, and a10-b10 turn over the same tile, a soldier or a chariot at even odds from where Black sat. If it is the chariot, a10-a1 wins 95 to 98% of the time whatever it captured, and a10-b10 48%. On average that is 49.2% against 24.1%. Black found it, and turned over a soldier: Red had taken Black's chariot face down on its second move.":
+    '黑方走。a10-a1 吃掉红方的暗子，a10-b10 也翻开同一枚暗子，从黑方的角度看，是卒还是车各占一半。如果是车，a10-a1 无论吃到什么都有 95% 到 98% 的胜率，a10-b10 则是 48%。平均下来是 49.2% 对 24.1%。黑方找到了这步，翻出一个卒：红方在第二回合就暗吃了黑方的车。',
+  'Double or nothing: Black to move, the game as played': '孤注一掷：黑方走，实战局面',
+  'A stored move': '留着的一步',
+  'A capture that wins whatever the tile turns out to be can wait: in the game below it stayed available for six turns. It works because a face-down tile moves as the piece whose starting square it stands on, so its first move, capture included, does not depend on the deal.':
+    '一步无论暗子翻出什么都能赢的吃子可以等：在下面这盘棋里，它在六个回合里一直都在。原因是暗子按它所在原位的棋子走法走，所以它的第一步，包括吃子，并不取决于发到什么。',
+  "In 46 of the 2,939 positions a face-down tile could make a capture that won whatever the tile turned out to be. They came from 22 such captures, and the same capture was often there turn after turn; one stayed on the board for eight of its owner's turns. Nine were played. Holding one was usually free: in all but two of the 46 positions another move came within 15 points of it, and those two are one capture on consecutive turns, shown further down.":
+    '在 2,939 个局面中，有 46 个局面里一枚暗子能吃子，而且无论翻出什么都赢。它们来自 22 次这样的吃子，同一个吃子常常一回合接一回合地留着；有一个在它主人的八个回合里一直都在。最后走出的有九次。留着通常不吃亏：46 个局面里，除两个以外，都有另一步着法与它相差不到 15 个百分点，而那两个是连续两回合里的同一个吃子，下文会展示。',
+  "Black to move. The i10 tile can run down the file as a chariot and take Red's i4 tile on this turn and each of the next five. Black plays elsewhere, the capture stays, and its score rises from 85% to 97%. Black takes on move 15; the tile is an elephant.":
+    '黑方走。i10 的暗子可以按车沿直线冲下去，在这一回合和接下来的五个回合里吃掉红方 i4 的暗子。黑方走别处，这个吃子一直留着，它的分数从 85% 升到 97%。黑方在第 15 回合吃掉；那枚暗子是象。',
+  'A stored capture: Black waits five turns, then takes': '留着的吃子：黑方等了五个回合才吃',
+  'Which tile': '翻哪一枚',
+  'The question is which face-down piece to move, and the right one works whatever it turns out to be. We found ten.':
+    '问题是走哪一枚暗子，而正确的那枚无论翻出什么都成立。我们找到十个。',
+  "In the example below Black threatens d5xd1 check, with mate on the next move. Four of Red's 38 moves stop it. c1-a3 is the best of them, and it works by getting out of the way: the a1 tile moves as a chariot, so with c1 empty it can take back on d1. The tile on c1 can be any of six pieces, and c1-a3 stops the mate for every one.":
+    '在下面的例子里，黑方威胁 d5xd1 将军，下一步就杀。红方的 38 步着法中有四步能挡住。c1-a3 是其中最好的，它靠让开来解：a1 的暗子按车走，所以 c1 空出来后它可以在 d1 吃回。c1 的暗子可能是六种棋子中的任何一种，而 c1-a3 对每一种都能解杀。',
+  'Red to move. c1-a3 stops the mate but leaves the a5 cannon hanging, and Black took it at once. The tile was an advisor. Only a chariot on a3 would have guarded a5.':
+    '红方走。c1-a3 解了杀，但留下 a5 的炮无人保护，黑方立刻吃掉了它。那枚暗子是仕。只有 a3 上是车才能保住 a5。',
+  'Which tile: Red to move, the game as played': '翻哪一枚：红方走，实战局面',
+  'c1 turns out to be': 'c1 翻出的是',
+  'Left face down': '仍是暗子',
+  "Black's best reply": '黑方最佳应着',
+  "Red's winning chance": '红方胜率',
+  'a10-b10': 'a10-b10',
+  d5xa5: 'd5xa5',
+  'After c1-a3, by what the tile turns out to be. Black takes the cannon unless the tile is a chariot, and is better in every case. c1-a3 is the best move in the position and still loses most of the time: 36% on average, against 13% for the next best.':
+    'c1-a3 之后，按暗子翻出的是什么分列。除非暗子是车，黑方都会吃掉炮，而且每种情况下黑方都更好。c1-a3 是这个局面的最佳着法，却多半还是输：平均 36%，次佳着法是 13%。',
+  'Held to the xiangqi puzzle rules': '用象棋题目的规则检验',
+  'Our [xiangqi puzzles](/blog/how-puzzle-mining-works) come from a miner with stricter rules. The opponent has just blundered, giving up 25 or more points of winning chance. The game was not already decided before that. After the right move the solver is winning, and after the second best move it is not.':
+    '我们的[象棋题目](/blog/how-puzzle-mining-works)来自一个规则更严格的挖掘器。对手刚刚走了一步败着，丢掉了 25 个百分点以上的胜率。在那之前，棋局还没有分出胜负。走出正确着法后解题方处于胜势，走出次佳着法则不然。',
+  Step: '步骤',
+  'Positions left': '剩余局面',
+  Scanned: '扫描',
+  "Passed the xiangqi miner's rules": '通过象棋挖掘器的规则',
+  'Mates in one dropped, as the miner does': '剔除一步杀，与挖掘器做法相同',
+  'Positions with a single legal move dropped': '剔除只有一步合法着法的局面',
+  'The same 2,939 positions through the rules our xiangqi puzzles pass.':
+    '同样的 2,939 个局面，经过我们象棋题目要过的规则。',
+  'A person was to move in three of the four and missed all three; the bot was to move in the fourth. None turns on a hidden piece. Every lottery ticket and every which-tile position failed, because the side to move was not winning or the opponent had not blundered.':
+    '四个局面中有三个轮到真人走，三个都没找到；第四个轮到电脑走。没有一个取决于暗子。每一张彩票、每一个翻哪一枚的局面都没通过，原因是走子方并不处于胜势，或者对手并没有走出败着。',
+  "Red to move. e3-f3 and the engine's line after it. The interest is mostly jieqi's: Red's revealed elephant and advisors stand outside the zones they could never leave in xiangqi.":
+    '红方走。e3-f3 以及引擎随后的着法。它的看点主要属于揭棋：红方已翻开的相和仕，站在象棋里永远离不开的区域之外。',
+  'Red to move: the first of four': '红方走：四个中的第一个',
+  "Red to move. i10-f10 and the engine's line, in which Black loses the chariot two moves later. No face-down piece is left on the board. Red played i10-i9 instead.":
+    '红方走。i10-f10 以及引擎的着法，黑方在两回合后丢车。棋盘上已经没有暗子。红方实战走了 i10-i9。',
+  'Red to move: the second of four': '红方走：四个中的第二个',
+  "Red to move. h10-h9 and the engine's line. It is ordinary xiangqi: a tile turns over only on the line's last move.":
+    '红方走。h10-h9 以及引擎的着法。这是普通的象棋：只在着法的最后一步才有暗子被翻开。',
+  'Red to move: the third of four': '红方走：四个中的第三个',
+  'Black to move. e7-f7 and mate in six, with no face-down piece left on the board. The bot played e3-c3 instead.':
+    '黑方走。e7-f7，六步杀，棋盘上已没有暗子。电脑实战走了 e3-c3。',
+  'Black to move: the fourth of four': '黑方走：四个中的第四个',
+  'Why we stopped': '我们为什么停下',
+  'The chart shows the problem. A lottery ticket is all or nothing: right because one deal in four wins outright, and usually lost. A which-tile answer scores about the same for every piece, because it meets the threat on the board and the tile hardly matters. A fair puzzle needs a single line that works, and a decision about a hidden piece rarely has one.':
+    '图表说明了问题。彩票是全有或全无：它之所以对，是因为四次发子中有一次直接获胜，而它通常会输。翻哪一枚的答案，对每种棋子的得分都差不多，因为它应对的是盘面上的威胁，暗子是什么几乎无关紧要。一道公平的题目需要一条成立的着法，而关于暗子的决定很少有这样一条。',
+  "The mover's winning chance after the answer, once for each piece the tile could be, from the two examples above. The dashed line is the average the review grades by.":
+    '解答之后走子方的胜率，按暗子可能是的每种棋子各算一次，取自上面两个例子。虚线是复盘据以评分的平均值。',
+  'We tried two ways round it. The first was to grade as if the face-down pieces were known, using the real deal. That gave 16 positions through the xiangqi rules: the same 15, plus one reveal that wins only because the tile was a cannon (100% for a cannon, 59 to 73% for anything else). A puzzle whose answer depends on what the solver cannot see is not one we would publish.':
+    '我们试了两种绕过去的办法。第一种是按暗子已知来评分，用真实的发子。这样有 16 个局面通过了象棋规则：同样的 15 个，加上一步只因为暗子是炮才赢的翻子（是炮为 100%，是别的则为 59% 到 73%）。答案取决于解题者看不见的东西，这样的题目我们不会发布。',
+  'The second was to look for reveals that win whatever comes up: the best move turns a tile over, every piece it could be scores 81% or more, and the next best move 60% or less. There were none in the 2,939 positions.':
+    '第二种是寻找无论翻出什么都赢的翻子：最佳着法翻开一枚暗子，它可能是的每种棋子得分都在 81% 以上，而次佳着法在 60% 以下。2,939 个局面里一个也没有。',
+  'The nearest thing to a fair jieqi puzzle we found is a stored capture, where the capture is certain and only the piece after it is luck.':
+    '我们找到的最接近公平的揭棋题目，是留着的吃子：吃子是确定的，只有吃完之后翻出的棋子靠运气。',
+  "Red to move. The h1 tile moves as a horse and takes Black's chariot on g3, and it does that whatever the tile is. Red's winning chance is 93 to 95% for each of the three pieces it could be, against 78% for the next best move. The bot, Pikafish at level 2, missed it two turns running. The tile was a chariot. It is the only capture of the 22 that beat the next best move by 15 points.":
+    '红方走。h1 的暗子按马走，吃掉黑方在 g3 的车，而且无论暗子是什么都能这样做。对它可能是的三种棋子，红方胜率都是 93% 到 95%，次佳着法则是 78%。电脑（2 级皮卡鱼）连续两回合都没看到。那枚暗子是车。在 22 次吃子中，它是唯一比次佳着法高出 15 个百分点的。',
+  'A capture that does not depend on the tile: Red to move': '不取决于暗子的吃子：红方走',
+  Limit: '限制',
+  'What it could change': '可能改变什么',
+  'One engine, AB-JChess, set every answer': '只有一个引擎 AB-JChess 决定所有答案',
+  'A second engine could disagree': '第二个引擎可能有不同看法',
+  'Only its top five to eight moves were scored': '只给它排名前五到八的着法打了分',
+  'An unscored move could narrow a gap': '一步未打分的着法可能缩小差距',
+  '50 games from one day, guests against a bot': '50 盘对局来自同一天，都是访客对电脑',
+  'Other games could turn up other positions': '其他对局可能出现其他局面',
+  'The bot was to move in half the positions': '一半局面轮到电脑走',
+  'Half of what we found no person faced': '我们找到的局面有一半没有真人面对过',
+  'What the 50 games say': '这 50 盘棋说明了什么',
+  'Jieqi does not produce puzzles the way xiangqi does. Four positions in 50 games passed our xiangqi rules, none of them about a hidden piece, and the hidden-piece answers were bets or moves the tile hardly touched.':
+    '揭棋产生题目的方式和象棋不一样。50 盘对局里有四个局面通过了我们的象棋规则，没有一个与暗子有关；取决于暗子的答案，要么是赌博，要么是暗子几乎无关的着法。',
+  'Skill shows in timing more than in guessing. A tile on its starting square moves as its home piece, so a capture it threatens is a move in reserve: play something else while it is safe, and take it before it can be blocked. When a tile must turn over, pick the one that holds whatever it is, and remember that your count of what it could be includes pieces your opponent took face down.':
+    '实力更多体现在时机上，而不是猜测上。停在原位的暗子按原位棋子的走法走，所以它威胁的吃子是一步留着备用的棋：趁它安全时先走别的，在它被挡住之前吃掉。必须翻开一枚暗子时，选那枚无论是什么都能撑住的，并且记住，你对它可能是什么的计算里，包含了对手暗吃掉的棋子。',
+  'We would look again for puzzles about that timing, with an answer that holds for every deal, in thousands of games where a person was to move, checked by a second engine. Until then, the hidden pieces in jieqi are something to play, not something to solve.':
+    '我们会为这种时机的题目再找一次：答案对每一种发子都成立，取自数千盘由真人走子的对局，并由第二个引擎检验。在那之前，揭棋里的暗子是拿来下的，不是拿来解的。',
+  'WINNING CHANCE BY WHAT THE TILE TURNS OUT TO BE': '按暗子翻出的棋子分列的胜率',
+  'Lottery ticket: a10-a1, Black to move': '彩票：a10-a1，黑方走',
+  'average 25%': '平均 25%',
+  'Which tile: c1-a3, Red to move': '翻哪一枚：c1-a3，红方走',
+  'average 36%': '平均 36%',
+  'Looking for jieqi puzzles: what 50 games turned up': '在揭棋里找题目：50 盘对局找到了什么',
   // longest-forced-mates-xiangqi: machine-drafted 2026-10-08, not native-reviewed. Terms follow the study uXu609QE zh names and solver-audit (困毙, 半回合 for a ply, 回合 for a move).
   'The Longest Forced Mates in Xiangqi': '象棋最长的必胜杀局',
   'The Longest Forced Mates': '最长的必胜杀局',
@@ -4772,6 +4909,140 @@ const ZH_HANS: Record<string, string> = {
 
 const ZH_HANT: Record<string, string> = {
   ...ZH_HANS,
+  // jieqi-puzzle-search: machine-drafted 2026-10-10, not native-reviewed. Terms follow ab-jchess and jieqi-bot-wins (暗子, 翻子, 暗吃, 勝率, 訪客, 皮卡魚, 覆盤, 著法).
+  'Looking for jieqi puzzles': '在揭棋裡找題目',
+  'We searched 2,939 positions from 50 jieqi games for puzzles. 58 had one clearly best move and 15 of those turned on a hidden piece. None of the 15 passed the rules our xiangqi puzzles go through, and we stopped looking.':
+    '我們在 50 盤揭棋對局的 2,939 個局面裡尋找題目。58 個局面有一步明顯最好的著法，其中 15 個取決於一枚暗子。這 15 個沒有一個通過我們象棋題目要過的規則，於是我們不再尋找。',
+  'We scored 2,939 positions from 50 jieqi games. 58 had one clearly best move, and 15 of those turned on a face-down piece.':
+    '我們給 50 盤揭棋對局中的 2,939 個局面打了分。58 個局面有一步明顯最好的著法，其中 15 個取決於一枚暗子。',
+  'Four positions passed the rules our xiangqi puzzles go through, and none turns on a hidden piece. The hidden-piece answers were bets or moves the tile hardly touched.':
+    '有四個局面通過了我們象棋題目要過的規則，沒有一個取決於暗子。取決於暗子的答案，要麼是賭博，要麼是暗子幾乎無關的著法。',
+  'Skill shows in timing: a tile on its starting square moves as its home piece, so a capture it threatens can usually wait.':
+    '實力體現在時機上：停在原位的暗子按原位棋子的走法走，所以它威脅的吃子通常可以等一等。',
+  'In [jieqi](/rules/jieqi), every piece except the generals starts face down, and a piece shows what it is when it first moves. A xiangqi puzzle asks for a forced line, and in jieqi a forced line rarely gets past the first piece that turns over, because nobody knows yet what it will be.':
+    '在[揭棋](/rules/jieqi)裡，除將帥以外的每一枚棋子開局時都是暗子，第一次走動時才亮出身份。象棋題目要求一條強制著法，而在揭棋裡，強制著法很少能越過第一枚被翻開的棋子，因為誰也不知道它會是什麼。',
+  'In October we asked a different question. If a jieqi puzzle is a decision under uncertainty, the way a poker hand is, does the game produce them? We have stopped looking, and the last section says what would make us start again.':
+    '10 月，我們換了一個問題。如果揭棋題目是一種不確定條件下的決策，就像一手撲克牌，那麼這個棋會產生這樣的題目嗎？我們已經不再尋找，最後一節說明什麼情況會讓我們重新開始。',
+  'How we looked': '我們怎麼找',
+  'We took the 50 most recent finished jieqi games on the site with 20 plies or more, 2,939 positions in all. All 50 were played on 8 October by guests against a bot: 34 against [AB-JChess](/blog/ab-jchess), 13 against Pikafish at level 2 and 3 against full-strength Pikafish.':
+    '我們取了本站最近 50 盤已結束、至少 20 個半回合的揭棋對局，共 2,939 個局面。50 盤都是 10 月 8 日訪客對電腦下的：34 盤對 [AB-JChess](/blog/ab-jchess)，13 盤對 2 級皮卡魚，3 盤對全強度皮卡魚。',
+  "AB-JChess scored the candidate moves in every position. A move that turns a piece over was scored once for each piece it could be, and the scores were averaged, weighted by how many of each piece the side to move had not yet seen. The site's jieqi game review grades a reveal the same way, from only what the player could know.":
+    'AB-JChess 為每個局面的候選著法評分。一步會翻開棋子的著法，按它可能是的每種棋子各打一次分，再按走子方尚未見過的每種棋子的數量加權平均。本站的揭棋對局覆盤也是這樣給翻子評分的，只用棋手能知道的資訊。',
+  'A position counted when the best move beat the second best by at least 15 points of winning chance, both at our standard depth and at four times that, with every move searched to at least one full ply.':
+    '一個局面要算數，最佳著法必須比次佳著法高出至少 15 個百分點的勝率，在我們的標準深度和四倍深度下都是如此，並且每步著法都至少搜索滿一個半回合。',
+  'What turned up': '找到了什麼',
+  '58 positions passed, from 24 of the 50 games. 43 of them are ordinary tactics with a quiet move as the answer, and 15 of those never touch a face-down piece in the first five plies of the line. They are xiangqi puzzles that happen to come from jieqi games.':
+    '有 58 個局面通過，來自 50 盤中的 24 盤。其中 43 個是普通戰術，答案是一步不吃子的著法，這當中有 15 個在著法的前五個半回合裡根本不碰暗子。它們是恰好出自揭棋對局的象棋題目。',
+  'The other 15 turn on a hidden piece, and they come in two kinds. Of the 58, 25 had a person to move, and the person found the answer 19 times.':
+    '另外 15 個取決於一枚暗子，分為兩類。58 個局面中有 25 個輪到真人走，真人找到答案 19 次。',
+  'The lottery ticket': '彩票',
+  'The side to move is lost on every quiet move, and one tile could save it. We found five, all from lost positions, and the right answer usually loses.':
+    '走子方走任何不吃子的著法都輸，只有一枚暗子能救。我們找到五個，都出自已輸的局面，正確答案通常也會輸。',
+  'Black to move. Black has two tiles left, and from where Black sits each could be a soldier, horse, chariot or cannon. The a10 tile moves as a chariot on its first move, whatever it is, so a10-a1 lands on the back rank. If it turns out to be a chariot it is mate; anything else and it is lost. That is one chance in four, 25%, against 2% for the next best move. Black played it and turned over a soldier.':
+    '黑方走。黑方還剩兩枚暗子，從黑方的角度看，每一枚都可能是卒、馬、車或炮。a10 的暗子第一步無論是什麼都按車走，所以 a10-a1 落在底線上。如果翻出車就是殺棋；翻出別的就輸。這是四分之一的機會，25%，而次佳著法只有 2%。黑方走了這步，翻出一個卒。',
+  'Lottery ticket: Black to move, the game as dealt': '彩票：黑方走，按實際發到的暗子',
+  "One chance in four was right for what Black could see, and the ticket was blank all the same. A piece taken face down leaves the board without being shown to its owner, so Black's count of unseen pieces still included two that were already gone.":
+    '從黑方能看到的資訊來說，四分之一的機會是對的，可這張彩票照樣沒中。一枚被暗吃的棋子離開棋盤時不會亮給它的主人看，所以黑方算的未見棋子裡，仍包括兩枚早已不在的棋子。',
+  'Black piece not yet seen': '尚未見過的黑方棋子',
+  'Where it really was': '它實際在哪裡',
+  'Taken face down by Red on its move 17': '紅方在其第 17 回合暗吃',
+  'Taken face down by Red on its move 20': '紅方在其第 20 回合暗吃',
+  'The tile on a10': 'a10 的暗子',
+  'The tile on i10': 'i10 的暗子',
+  'Four pieces for two tiles, so each tile was a chariot one time in four from where Black sat. The chariot had left the board 11 moves earlier.':
+    '兩枚暗子對應四種棋子，所以從黑方的角度看，每一枚暗子是車的機會都是四分之一。而車早在 11 回合前就已離開棋盤。',
+  'The same move with a chariot dealt to a10: mate. This is the deal Black was playing for, and it was not possible in this game.':
+    '同一步棋，假如 a10 發到的是車：殺棋。這是黑方期待的發子，而在這盤棋裡它不可能出現。',
+  'Lottery ticket: the same position if a10 were the chariot': '彩票：假如 a10 是車，同一局面',
+  "Black to move. a10-a1, taking Red's face-down piece, and a10-b10 turn over the same tile, a soldier or a chariot at even odds from where Black sat. If it is the chariot, a10-a1 wins 95 to 98% of the time whatever it captured, and a10-b10 48%. On average that is 49.2% against 24.1%. Black found it, and turned over a soldier: Red had taken Black's chariot face down on its second move.":
+    '黑方走。a10-a1 吃掉紅方的暗子，a10-b10 也翻開同一枚暗子，從黑方的角度看，是卒還是車各占一半。如果是車，a10-a1 無論吃到什麼都有 95% 到 98% 的勝率，a10-b10 則是 48%。平均下來是 49.2% 對 24.1%。黑方找到了這步，翻出一個卒：紅方在第二回合就暗吃了黑方的車。',
+  'Double or nothing: Black to move, the game as played': '孤注一擲：黑方走，實戰局面',
+  'A stored move': '留著的一步',
+  'A capture that wins whatever the tile turns out to be can wait: in the game below it stayed available for six turns. It works because a face-down tile moves as the piece whose starting square it stands on, so its first move, capture included, does not depend on the deal.':
+    '一步無論暗子翻出什麼都能贏的吃子可以等：在下面這盤棋裡，它在六個回合裡一直都在。原因是暗子按它所在原位的棋子走法走，所以它的第一步，包括吃子，並不取決於發到什麼。',
+  "In 46 of the 2,939 positions a face-down tile could make a capture that won whatever the tile turned out to be. They came from 22 such captures, and the same capture was often there turn after turn; one stayed on the board for eight of its owner's turns. Nine were played. Holding one was usually free: in all but two of the 46 positions another move came within 15 points of it, and those two are one capture on consecutive turns, shown further down.":
+    '在 2,939 個局面中，有 46 個局面裡一枚暗子能吃子，而且無論翻出什麼都贏。它們來自 22 次這樣的吃子，同一個吃子常常一回合接一回合地留著；有一個在它主人的八個回合裡一直都在。最後走出的有九次。留著通常不吃虧：46 個局面裡，除兩個以外，都有另一步著法與它相差不到 15 個百分點，而那兩個是連續兩回合裡的同一個吃子，下文會展示。',
+  "Black to move. The i10 tile can run down the file as a chariot and take Red's i4 tile on this turn and each of the next five. Black plays elsewhere, the capture stays, and its score rises from 85% to 97%. Black takes on move 15; the tile is an elephant.":
+    '黑方走。i10 的暗子可以按車沿直線衝下去，在這一回合和接下來的五個回合裡吃掉紅方 i4 的暗子。黑方走別處，這個吃子一直留著，它的分數從 85% 升到 97%。黑方在第 15 回合吃掉；那枚暗子是象。',
+  'A stored capture: Black waits five turns, then takes': '留著的吃子：黑方等了五個回合才吃',
+  'Which tile': '翻哪一枚',
+  'The question is which face-down piece to move, and the right one works whatever it turns out to be. We found ten.':
+    '問題是走哪一枚暗子，而正確的那枚無論翻出什麼都成立。我們找到十個。',
+  "In the example below Black threatens d5xd1 check, with mate on the next move. Four of Red's 38 moves stop it. c1-a3 is the best of them, and it works by getting out of the way: the a1 tile moves as a chariot, so with c1 empty it can take back on d1. The tile on c1 can be any of six pieces, and c1-a3 stops the mate for every one.":
+    '在下面的例子裡，黑方威脅 d5xd1 將軍，下一步就殺。紅方的 38 步著法中有四步能擋住。c1-a3 是其中最好的，它靠讓開來解：a1 的暗子按車走，所以 c1 空出來後它可以在 d1 吃回。c1 的暗子可能是六種棋子中的任何一種，而 c1-a3 對每一種都能解殺。',
+  'Red to move. c1-a3 stops the mate but leaves the a5 cannon hanging, and Black took it at once. The tile was an advisor. Only a chariot on a3 would have guarded a5.':
+    '紅方走。c1-a3 解了殺，但留下 a5 的炮無人保護，黑方立刻吃掉了它。那枚暗子是仕。只有 a3 上是車才能保住 a5。',
+  'Which tile: Red to move, the game as played': '翻哪一枚：紅方走，實戰局面',
+  'c1 turns out to be': 'c1 翻出的是',
+  'Left face down': '仍是暗子',
+  "Black's best reply": '黑方最佳應著',
+  "Red's winning chance": '紅方勝率',
+  'a10-b10': 'a10-b10',
+  d5xa5: 'd5xa5',
+  'After c1-a3, by what the tile turns out to be. Black takes the cannon unless the tile is a chariot, and is better in every case. c1-a3 is the best move in the position and still loses most of the time: 36% on average, against 13% for the next best.':
+    'c1-a3 之後，按暗子翻出的是什麼分列。除非暗子是車，黑方都會吃掉炮，而且每種情況下黑方都更好。c1-a3 是這個局面的最佳著法，卻多半還是輸：平均 36%，次佳著法是 13%。',
+  'Held to the xiangqi puzzle rules': '用象棋題目的規則檢驗',
+  'Our [xiangqi puzzles](/blog/how-puzzle-mining-works) come from a miner with stricter rules. The opponent has just blundered, giving up 25 or more points of winning chance. The game was not already decided before that. After the right move the solver is winning, and after the second best move it is not.':
+    '我們的[象棋題目](/blog/how-puzzle-mining-works)來自一個規則更嚴格的挖掘器。對手剛剛走了一步敗著，丟掉了 25 個百分點以上的勝率。在那之前，棋局還沒有分出勝負。走出正確著法後解題方處於勝勢，走出次佳著法則不然。',
+  Step: '步驟',
+  'Positions left': '剩餘局面',
+  Scanned: '掃描',
+  "Passed the xiangqi miner's rules": '通過象棋挖掘器的規則',
+  'Mates in one dropped, as the miner does': '剔除一步殺，與挖掘器做法相同',
+  'Positions with a single legal move dropped': '剔除只有一步合法著法的局面',
+  'The same 2,939 positions through the rules our xiangqi puzzles pass.':
+    '同樣的 2,939 個局面，經過我們象棋題目要過的規則。',
+  'A person was to move in three of the four and missed all three; the bot was to move in the fourth. None turns on a hidden piece. Every lottery ticket and every which-tile position failed, because the side to move was not winning or the opponent had not blundered.':
+    '四個局面中有三個輪到真人走，三個都沒找到；第四個輪到電腦走。沒有一個取決於暗子。每一張彩票、每一個翻哪一枚的局面都沒通過，原因是走子方並不處於勝勢，或者對手並沒有走出敗著。',
+  "Red to move. e3-f3 and the engine's line after it. The interest is mostly jieqi's: Red's revealed elephant and advisors stand outside the zones they could never leave in xiangqi.":
+    '紅方走。e3-f3 以及引擎隨後的著法。它的看點主要屬於揭棋：紅方已翻開的相和仕，站在象棋裡永遠離不開的區域之外。',
+  'Red to move: the first of four': '紅方走：四個中的第一個',
+  "Red to move. i10-f10 and the engine's line, in which Black loses the chariot two moves later. No face-down piece is left on the board. Red played i10-i9 instead.":
+    '紅方走。i10-f10 以及引擎的著法，黑方在兩回合後丟車。棋盤上已經沒有暗子。紅方實戰走了 i10-i9。',
+  'Red to move: the second of four': '紅方走：四個中的第二個',
+  "Red to move. h10-h9 and the engine's line. It is ordinary xiangqi: a tile turns over only on the line's last move.":
+    '紅方走。h10-h9 以及引擎的著法。這是普通的象棋：只在著法的最後一步才有暗子被翻開。',
+  'Red to move: the third of four': '紅方走：四個中的第三個',
+  'Black to move. e7-f7 and mate in six, with no face-down piece left on the board. The bot played e3-c3 instead.':
+    '黑方走。e7-f7，六步殺，棋盤上已沒有暗子。電腦實戰走了 e3-c3。',
+  'Black to move: the fourth of four': '黑方走：四個中的第四個',
+  'Why we stopped': '我們為什麼停下',
+  'The chart shows the problem. A lottery ticket is all or nothing: right because one deal in four wins outright, and usually lost. A which-tile answer scores about the same for every piece, because it meets the threat on the board and the tile hardly matters. A fair puzzle needs a single line that works, and a decision about a hidden piece rarely has one.':
+    '圖表說明了問題。彩票是全有或全無：它之所以對，是因為四次發子中有一次直接獲勝，而它通常會輸。翻哪一枚的答案，對每種棋子的得分都差不多，因為它應對的是盤面上的威脅，暗子是什麼幾乎無關緊要。一道公平的題目需要一條成立的著法，而關於暗子的決定很少有這樣一條。',
+  "The mover's winning chance after the answer, once for each piece the tile could be, from the two examples above. The dashed line is the average the review grades by.":
+    '解答之後走子方的勝率，按暗子可能是的每種棋子各算一次，取自上面兩個例子。虛線是覆盤據以評分的平均值。',
+  'We tried two ways round it. The first was to grade as if the face-down pieces were known, using the real deal. That gave 16 positions through the xiangqi rules: the same 15, plus one reveal that wins only because the tile was a cannon (100% for a cannon, 59 to 73% for anything else). A puzzle whose answer depends on what the solver cannot see is not one we would publish.':
+    '我們試了兩種繞過去的辦法。第一種是按暗子已知來評分，用真實的發子。這樣有 16 個局面通過了象棋規則：同樣的 15 個，加上一步只因為暗子是炮才贏的翻子（是炮為 100%，是別的則為 59% 到 73%）。答案取決於解題者看不見的東西，這樣的題目我們不會發布。',
+  'The second was to look for reveals that win whatever comes up: the best move turns a tile over, every piece it could be scores 81% or more, and the next best move 60% or less. There were none in the 2,939 positions.':
+    '第二種是尋找無論翻出什麼都贏的翻子：最佳著法翻開一枚暗子，它可能是的每種棋子得分都在 81% 以上，而次佳著法在 60% 以下。2,939 個局面裡一個也沒有。',
+  'The nearest thing to a fair jieqi puzzle we found is a stored capture, where the capture is certain and only the piece after it is luck.':
+    '我們找到的最接近公平的揭棋題目，是留著的吃子：吃子是確定的，只有吃完之後翻出的棋子靠運氣。',
+  "Red to move. The h1 tile moves as a horse and takes Black's chariot on g3, and it does that whatever the tile is. Red's winning chance is 93 to 95% for each of the three pieces it could be, against 78% for the next best move. The bot, Pikafish at level 2, missed it two turns running. The tile was a chariot. It is the only capture of the 22 that beat the next best move by 15 points.":
+    '紅方走。h1 的暗子按馬走，吃掉黑方在 g3 的車，而且無論暗子是什麼都能這樣做。對它可能是的三種棋子，紅方勝率都是 93% 到 95%，次佳著法則是 78%。電腦（2 級皮卡魚）連續兩回合都沒看到。那枚暗子是車。在 22 次吃子中，它是唯一比次佳著法高出 15 個百分點的。',
+  'A capture that does not depend on the tile: Red to move': '不取決於暗子的吃子：紅方走',
+  Limit: '限制',
+  'What it could change': '可能改變什麼',
+  'One engine, AB-JChess, set every answer': '只有一個引擎 AB-JChess 決定所有答案',
+  'A second engine could disagree': '第二個引擎可能有不同看法',
+  'Only its top five to eight moves were scored': '只給它排名前五到八的著法打了分',
+  'An unscored move could narrow a gap': '一步未評分的著法可能縮小差距',
+  '50 games from one day, guests against a bot': '50 盤對局來自同一天，都是訪客對電腦',
+  'Other games could turn up other positions': '其他對局可能出現其他局面',
+  'The bot was to move in half the positions': '一半局面輪到電腦走',
+  'Half of what we found no person faced': '我們找到的局面有一半沒有真人面對過',
+  'What the 50 games say': '這 50 盤棋說明了什麼',
+  'Jieqi does not produce puzzles the way xiangqi does. Four positions in 50 games passed our xiangqi rules, none of them about a hidden piece, and the hidden-piece answers were bets or moves the tile hardly touched.':
+    '揭棋產生題目的方式和象棋不一樣。50 盤對局裡有四個局面通過了我們的象棋規則，沒有一個與暗子有關；取決於暗子的答案，要麼是賭博，要麼是暗子幾乎無關的著法。',
+  'Skill shows in timing more than in guessing. A tile on its starting square moves as its home piece, so a capture it threatens is a move in reserve: play something else while it is safe, and take it before it can be blocked. When a tile must turn over, pick the one that holds whatever it is, and remember that your count of what it could be includes pieces your opponent took face down.':
+    '實力更多體現在時機上，而不是猜測上。停在原位的暗子按原位棋子的走法走，所以它威脅的吃子是一步留著備用的棋：趁它安全時先走別的，在它被擋住之前吃掉。必須翻開一枚暗子時，選那枚無論是什麼都能撐住的，並且記住，你對它可能是什麼的計算裡，包含了對手暗吃掉的棋子。',
+  'We would look again for puzzles about that timing, with an answer that holds for every deal, in thousands of games where a person was to move, checked by a second engine. Until then, the hidden pieces in jieqi are something to play, not something to solve.':
+    '我們會為這種時機的題目再找一次：答案對每一種發子都成立，取自數千盤由真人走子的對局，並由第二個引擎檢驗。在那之前，揭棋裡的暗子是拿來下的，不是拿來解的。',
+  'WINNING CHANCE BY WHAT THE TILE TURNS OUT TO BE': '按暗子翻出的棋子分列的勝率',
+  'Lottery ticket: a10-a1, Black to move': '彩票：a10-a1，黑方走',
+  'average 25%': '平均 25%',
+  'Which tile: c1-a3, Red to move': '翻哪一枚：c1-a3，紅方走',
+  'average 36%': '平均 36%',
+  'Looking for jieqi puzzles: what 50 games turned up': '在揭棋裡找題目：50 盤對局找到了什麼',
   // longest-forced-mates-xiangqi: machine-drafted 2026-10-08, not native-reviewed. Terms follow the study uXu609QE zh names and solver-audit (困斃, 象棋雲庫, 著法); the bare 困毙 table cells take the Traditional glyph.
   'The Longest Forced Mates in Xiangqi': '象棋最長的必勝殺局',
   'The Longest Forced Mates': '最長的必勝殺局',

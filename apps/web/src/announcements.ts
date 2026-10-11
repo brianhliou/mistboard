@@ -43,6 +43,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-10-11',
+    kind: 'article',
+    headline: 'Looking for jieqi puzzles: what 50 games turned up.',
+    body: 'We scored 2,939 positions from 50 jieqi games, looking for puzzles. Four passed the rules our xiangqi puzzles go through, and none of them turns on a face-down piece: the hidden-piece answers were bets, or moves the tile hardly touched. Where skill does show is in timing a capture a face-down piece can make whatever it turns out to be. Every example is on a board you can step through.',
+    href: '/blog/jieqi-puzzle-search',
+    cta: 'Read the article',
+  },
+  {
     date: '2026-10-10',
     kind: 'release',
     headline: 'Secrets of Strategy and the Dream of Divine Strategy are online.',
