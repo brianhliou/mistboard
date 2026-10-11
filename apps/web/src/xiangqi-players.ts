@@ -1014,6 +1014,8 @@ function renderPlayer(
     item.append(dt, dd);
     facts.append(item);
   };
+  const rankText = (rank: number, size: number | null | undefined): string =>
+    size ? t('broadcast.playerFactRankOf', { rank, size }) : `#${rank}`;
   const points = cxaPointsFor(player.name);
   const ratings = cxaRatingsFor(player.name);
   const lastPoints = points[points.length - 1];
@@ -1021,17 +1023,17 @@ function renderPlayer(
   if (lastPoints) {
     const list = CXA_POINTS_LISTS.find((l) => l.id === lastPoints.list);
     const size = list ? (lastPoints.group === 'women' ? list.women : list.men) : null;
-    fact('CXA points', String(lastPoints.points));
-    fact('Rank', size !== null ? `#${lastPoints.rank} of ${size}` : `#${lastPoints.rank}`);
+    fact(t('broadcast.playerFactPoints'), String(lastPoints.points));
+    fact(t('broadcast.playerFactRank'), rankText(lastPoints.rank, size));
   } else if (lastRating) {
     const list = CXA_LISTS.find((l) => l.id === lastRating.list);
     fact(
-      'Last rating',
+      t('broadcast.playerFactLastRating'),
       String(lastRating.rating),
       list ? `CXA 等级分, last list ${list.label}` : 'CXA 等级分',
     );
     if (lastRating.rank !== null) {
-      fact('Rank', list ? `#${lastRating.rank} of ${list.size}` : `#${lastRating.rank}`);
+      fact(t('broadcast.playerFactRank'), rankText(lastRating.rank, list?.size ?? null));
     }
   }
   const key = teamKey(player);
@@ -1039,8 +1041,9 @@ function renderPlayer(
     const team = document.createElement('a');
     team.className = 'xqp-fact-link';
     team.href = teamHref(key);
-    team.textContent = player.federationEn ?? player.federation;
-    fact('Team', team);
+    team.textContent =
+      currentLocale() === 'en' ? (player.federationEn ?? player.federation) : player.federation;
+    fact(t('broadcast.playerFactTeam'), team);
   }
   const group = cxaGroupFor(player.name);
   if (player.cxaOnly && group) {
@@ -1049,17 +1052,17 @@ function renderPlayer(
       t(group === 'women' ? 'broadcast.playerListWomen' : 'broadcast.playerListMen'),
     );
   }
-  fact('Born', profile?.born);
+  fact(t('broadcast.playerFactBorn'), profile?.born);
   if (player.games > 0) {
-    fact('Games', String(player.games), recordText(player));
-    fact('Score', `${scorePercent(player)}%`);
+    fact(t('broadcast.playerFactGames'), String(player.games), recordText(player));
+    fact(t('broadcast.playerFactScore'), `${scorePercent(player)}%`);
   }
   if (player.firstPlayedOn && player.lastPlayedOn) {
     const from = player.firstPlayedOn.slice(0, 4);
     const to = player.lastPlayedOn.slice(0, 4);
     fact(
-      'Seen',
-      from === to ? from : `${from} to ${to}`,
+      t('broadcast.playerFactSeen'),
+      from === to ? from : t('broadcast.playerFactSeenRange', { from, to }),
       `${player.firstPlayedOn} to ${player.lastPlayedOn}`,
     );
   }
