@@ -114,8 +114,7 @@ describe('article card thumbnails', () => {
   // A card that crops a xiangqi board by hand (its own viewBox window onto
   // xqBoardSvg) skips the half-board rules above. The known ones are other
   // shapes on purpose: Atomic zooms on one explosion, and Horde's full rank of
-  // soldiers on the near bank needs more headroom than the shared crop gives;
-  // the jieqi puzzle-search card crops full height for its a10-a1 arrow.
+  // soldiers on the near bank needs more headroom than the shared crop gives.
   it('crops half a xiangqi board only through the shared helper', () => {
     const handCropped: string[] = [];
     for (const article of articles) {
@@ -127,11 +126,6 @@ describe('article card thumbnails', () => {
       const [x, y] = (/viewBox="([^"]+)"/.exec(svg)?.[1] ?? '0 0').split(/\s+/).map(Number);
       if (x !== 0 || y !== 0) handCropped.push(article.slug);
     }
-    expect(handCropped.sort()).toEqual([
-      'atomic-xiangqi',
-      'atomic-xiangqi-build',
-      'horde-xiangqi',
-      'jieqi-puzzle-search',
-    ]);
+    expect(handCropped.sort()).toEqual(['atomic-xiangqi', 'atomic-xiangqi-build', 'horde-xiangqi']);
   });
 });

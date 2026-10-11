@@ -1,8 +1,8 @@
 import { parseJieqiFen, type XiangqiPiece, type XiangqiSquare } from '@mistboard/game';
 import {
-  XQ_CELL,
+  XQ_BOARD_H,
+  XQ_BOARD_W,
   xqBoardSvg,
-  xqPoint,
   xqStaticView,
   xqSvg,
   xqVisionDemoState,
@@ -285,9 +285,6 @@ function lineEmbed(line: JieqiPuzzleLine, title: string, caption: string): Artic
 const L = JIEQI_PUZZLE_LINES;
 const F = XIANGQI_RULES_FUNNEL;
 
-// 16:10 to match the card media box (.articles-index-card-media, 16/10).
-const THUMB_ASPECT = 16 / 10;
-
 // Card art: the lottery ticket as dealt, from Black's side, face-down tiles
 // drawn as backs and a10-a1 as the arrow. Built from the kernel's parse of the
 // same dealt FEN the embed replays, so the card cannot drift from the board.
@@ -302,24 +299,25 @@ export const JIEQI_PUZZLE_THUMBNAIL = (): string => {
     board[square as XiangqiSquare] = shown;
     view[square as XiangqiSquare] = { piece: shown, shrouded: piece.faceDown };
   }
-  const boardY = 28; // xqBoardSvg draws the grid 28 below its y, under the title row.
-  const pad = XQ_CELL * 0.6;
-  const top = xqPoint(0, 1, 'black', 0, boardY).y - pad;
-  const bottom = xqPoint(0, 10, 'black', 0, boardY).y + pad;
-  const h = bottom - top;
-  const w = h * THUMB_ASPECT;
-  const left = xqPoint(4, 5, 'black', 0, boardY).x - w / 2;
-  const svg = xqBoardSvg({
-    state: xqVisionDemoState('jieqi-puzzle-thumb', board),
-    view: xqStaticView('jieqi-puzzle-thumb-view', view, 'black'),
-    x: 0,
-    y: 0,
-    label: '',
-    perspective: 'black',
-    shroudedStyle: 'back',
-    arrows: [{ from: 'a10' as XiangqiSquare, to: 'a1' as XiangqiSquare }],
-  });
-  return `<svg class="xq-article-svg" viewBox="${left} ${top} ${w} ${h}" role="img" aria-label="Black's face-down tile on a10 running down the file to Red's back rank, a move that wins only if the tile is a chariot" xmlns="http://www.w3.org/2000/svg"><rect class="xq-diagram-bg" x="${left}" y="${top}" width="${w}" height="${h}"/>${svg}</svg>`;
+  // Drawn like the xiangqi endgames card: the whole board scaled into the
+  // 320x200 box, centred, with the board's own rounded background only.
+  const scale = 192 / (XQ_BOARD_H + 8);
+  const tx = (320 - XQ_BOARD_W * scale) / 2;
+  const body = [
+    `<rect x="0" y="0" width="${XQ_BOARD_W}" height="${XQ_BOARD_H}" rx="10" class="xq-diagram-bg"/>`,
+    xqBoardSvg({
+      state: xqVisionDemoState('jieqi-puzzle-thumb', board),
+      view: xqStaticView('jieqi-puzzle-thumb-view', view, 'black'),
+      x: 0,
+      y: 0,
+      label: '',
+      perspective: 'black',
+      shroudedStyle: 'back',
+      boardOffset: 0,
+      arrows: [{ from: 'a10' as XiangqiSquare, to: 'a1' as XiangqiSquare }],
+    }),
+  ].join('');
+  return `<svg class="xq-article-svg" viewBox="0 0 320 200" role="img" aria-label="Black's face-down tile on a10 running down the file to Red's back rank, a move that wins only if the tile is a chariot" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto"><g transform="translate(${tx.toFixed(1)} 4) scale(${scale.toFixed(4)})">${body}</g></svg>`;
 };
 
 export const jieqiPuzzleSearchArticle: Article = {
