@@ -33,10 +33,6 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
-  // Machine-drafted 2026-10-10, not native-reviewed, locked with its English
-  // copy, which publishes in the same release (the brianhliou.com draft,
-  // ported before it was posted).
-  'helpmates-in-xiangqi',
   // Machine-drafted 2026-10-08, not native-reviewed, locked with its English
   // copy, which publishes in the same release (the brianhliou.com draft of
   // 2026-10-08, folded in before it was posted).

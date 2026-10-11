@@ -192,7 +192,7 @@ export const helpmatesInXiangqiArticle: Article = {
     'In a helpmate both sides cooperate so Red can mate. A search found 164 helpmates in two for xiangqi; try the best ten, solutions hidden until you ask.',
   showSummaryOnPage: false,
   thumbnail: { kind: 'svg', svg: HELPMATE_THUMBNAIL },
-  status: 'published',
+  status: 'draft',
   publishedAt: '2026-10-15',
   audience:
     'Xiangqi players who like problems, and chess problemists who want to see their genres on a xiangqi board.',
