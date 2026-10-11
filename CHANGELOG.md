@@ -93,6 +93,7 @@ Conventions:
 
 ### Watching and review
 
+- a News entry announces the pro player photos ([048bd368](https://github.com/brianhliou/mistboard/commit/048bd368))
 - 75 pro player pages now show a portrait from the xiangqiqipu.com archive, credited and linked ([f04df5fc](https://github.com/brianhliou/mistboard/commit/f04df5fc))
 - the 2026 women's league broadcast reads every earlier round again, and round 1 shows each team match's games instead of six from the wrong matches ([182cfd50](https://github.com/brianhliou/mistboard/commit/182cfd50))
 - Finished games on /games show each player's name above or below the board on their own side, so long names fit ([411963fd](https://github.com/brianhliou/mistboard/commit/411963fd))
@@ -182,6 +183,8 @@ Conventions:
 
 ### Fixed
 
+- Chinese player pages show the stats under a player's name in Chinese, with the team's Chinese name ([048bd368](https://github.com/brianhliou/mistboard/commit/048bd368))
+- the jieqi puzzles article card shows the whole board, centred like the other cards ([048bd368](https://github.com/brianhliou/mistboard/commit/048bd368))
 - the homepage asks the server for live counts once instead of three times, and a page no longer reports an error while it reloads after a release ([f04df5fc](https://github.com/brianhliou/mistboard/commit/f04df5fc))
 - Duck Xiangqi pieces and the duck can be dragged with a ghost, like every other xiangqi board ([f04df5fc](https://github.com/brianhliou/mistboard/commit/f04df5fc))
 - feedback sent while signed in is saved again ([ba65cb2d](https://github.com/brianhliou/mistboard/commit/ba65cb2d))
