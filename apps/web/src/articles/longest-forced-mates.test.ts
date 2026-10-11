@@ -20,14 +20,17 @@ function blocksOf(article: (typeof articles)[number]): ArticleBlock[] {
 describe('article embeds', () => {
   // An embed of a game or study chapter carries the whole line and its move
   // list wherever it opens, so a second embed of the same one at a later ?ply=
-  // reads as the same board twice (longest-forced-mates, 2026-10-09).
+  // reads as the same board twice (longest-forced-mates, 2026-10-09). A line
+  // embed carries its position in the query, so its whole path is the record.
   it('never embeds the same game or chapter twice in one article', () => {
     const dupes: string[] = [];
     for (const article of articles) {
       const seen = new Set<string>();
       for (const block of blocksOf(article)) {
         if (block.kind !== 'embed') continue;
-        const target = block.path.split('?')[0] ?? block.path;
+        const target = block.path.startsWith('/embed/line/')
+          ? block.path
+          : (block.path.split('?')[0] ?? block.path);
         if (seen.has(target)) dupes.push(`${article.slug}: ${target}`);
         seen.add(target);
       }
