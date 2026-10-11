@@ -33,6 +33,7 @@ import {
   type XiangqiBoardMarker,
   xiangqiArrowSvg,
   xiangqiMarkerSvg,
+  xiangqiPieceGhostSvg,
 } from './xiangqi-board.js';
 import { xiangqiBoardPoint, xiangqiBoardViewBox } from './xiangqi-board-geometry.js';
 import {
@@ -54,6 +55,7 @@ const DUCK_SURFACE = {
 };
 
 import { boardLastMoveMarkersSvg } from './board-lastmove.js';
+import { installBoardDrag } from './variant-tenant/board-drag.js';
 import { renderXiangqiPiece } from './xiangqi-pieces.js';
 
 type Color = 'red' | 'black';
@@ -89,6 +91,12 @@ export type DuckXiangqiBoardState = {
    * review and postgame boards share this renderer and must never animate.
    */
   duckLanded?: boolean;
+  /**
+   * The point a drag has lifted its piece (or, in phase two, the duck) off.
+   * The token stays there faded (`xq-piece--drag-source`, the standard
+   * board's look) so the player can see where it came from.
+   */
+  lifted?: DuckXiangqiSquare | null;
 };
 
 /**
@@ -134,6 +142,7 @@ function duckLayer(
   layout: XiangqiBoardLayout,
   pieceSet: DuckXiangqiBoardState['pieceSet'],
   landed: boolean,
+  lifted: DuckXiangqiSquare | null,
 ): string {
   if (!duck) return '';
   const p = point(duck, perspective, layout);
@@ -148,7 +157,9 @@ function duckLayer(
   // shadow: it was the board's only 3D effect and read as out of place beside
   // the flat pieces (Brian, 2026-10-08).
   return [
-    `<g class="dkx-duck${landed ? ' dkx-duck--landed' : ''}" data-duck-square="${duck}" aria-label="duck">`,
+    // A dragged duck stays put, faded, as a dragged piece does on the standard
+    // board: Brian wants to see where it came from (2026-10-10).
+    `<g class="dkx-duck${landed ? ' dkx-duck--landed' : ''}${duck === lifted ? ' xq-piece--drag-source' : ''}" data-duck-square="${duck}" aria-label="duck">`,
     `<g transform="translate(${p.x - size / 2},${p.y - size / 2}) scale(${size / 100})">`,
     duckTokenMarks(resolved),
     `</g>`,
@@ -161,6 +172,7 @@ function pieceLayer(
   perspective: Color,
   layout: XiangqiBoardLayout,
   pieceSet: DuckXiangqiBoardState['pieceSet'],
+  lifted: DuckXiangqiSquare | null,
 ): string {
   const out: string[] = [];
   for (const square of SQUARES) {
@@ -169,7 +181,7 @@ function pieceLayer(
     const p = point(square, perspective, layout);
     const size = XIANGQI_LIVE_PIECE_SIZE;
     out.push(
-      `<g class="xq-piece-slot" data-piece-square="${square}" transform="translate(${p.x - size / 2},${p.y - size / 2})">`,
+      `<g class="xq-piece-slot${square === lifted ? ' xq-piece--drag-source' : ''}" data-piece-square="${square}" transform="translate(${p.x - size / 2},${p.y - size / 2})">`,
       // A soldier past the river draws the veteran art. This is the standard
       // 9x10 river, so the standard predicate applies (NOT the fortress one,
       // whose board is 7x8 and disagrees on rank 5 for both colours).
@@ -347,14 +359,26 @@ function lastMoveLayer(
   );
 }
 
-function clickLayer(perspective: Color, layout: XiangqiBoardLayout): string {
+function clickLayer(
+  perspective: Color,
+  layout: XiangqiBoardLayout,
+  hoverTargets: readonly DuckXiangqiSquare[],
+): string {
   // Every point is clickable; the pure decision function below works out what a
   // click means. Hit areas are uniform so a duck placement onto an empty point
   // is exactly as easy to hit as a piece.
+  //
+  // A target point carries the standard board's hover disc
+  // (`.xq-live-hit--target:hover .xq-live-target-hover`, live-xiangqi.css), so
+  // a dragged piece or duck shows the point it will snap to exactly as a piece
+  // dragged on the xiangqi board does.
   const half = XIANGQI_LIVE_PIECE_SIZE * 0.5;
+  const hover = new Set(hoverTargets);
   return SQUARES.map((square) => {
     const p = point(square, perspective, layout);
-    return `<rect class="dkx-click" data-square="${square}" x="${p.x - half}" y="${p.y - half}" width="${half * 2}" height="${half * 2}" fill="transparent"/>`;
+    const rect = `<rect class="dkx-click" data-square="${square}" x="${p.x - half}" y="${p.y - half}" width="${half * 2}" height="${half * 2}" fill="transparent"/>`;
+    if (!hover.has(square)) return rect;
+    return `<g class="xq-live-hit--target"><circle class="xq-live-target-hover" cx="${p.x}" cy="${p.y}" r="31"/>${rect}</g>`;
   }).join('');
 }
 
@@ -417,6 +441,12 @@ export function duckXiangqiBoardSvg(
     (square) => shown.board[square] === undefined && square !== view.duck,
   ).length;
   const duckAnywhere = state.phase.kind === 'duck' && state.targets.length >= emptyAfterMove;
+  // Snap discs: a selected or dragged piece's moves in phase one; in phase two
+  // only while the duck itself is being dragged; plain hover there already
+  // previews the duck at half weight (installDuckXiangqiGhost).
+  const duckLifted =
+    state.phase.kind === 'duck' && view.duck !== null && state.lifted === view.duck;
+  const hoverTargets = state.phase.kind === 'piece' || duckLifted ? state.targets : [];
 
   return `
     <svg class="xq-live-svg xq-live-svg--${layout} dkx-live-svg xq-surface xq-surface--${layout}" data-xiangqi-layout="${layout}" viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg">
@@ -428,15 +458,15 @@ export function duckXiangqiBoardSvg(
       <g class="xq-live-lastmove">${lastMoveLayer(view, perspective, layout)}</g>
       <g class="xq-live-selection">${selectionSvg}</g>
       <g class="dkx-live-targets">${state.interactive ? targetLayer(state.targets, state.phase, perspective, layout, duckAnywhere, shown.board) : ''}</g>
-      <g class="xq-live-pieces">${pieceLayer(shown, perspective, layout, state.pieceSet)}</g>
-      <g class="dkx-live-duck">${duckLayer(view.duck, perspective, layout, state.pieceSet, state.duckLanded === true)}</g>
+      <g class="xq-live-pieces">${pieceLayer(shown, perspective, layout, state.pieceSet, state.lifted ?? null)}</g>
+      <g class="dkx-live-duck">${duckLayer(view.duck, perspective, layout, state.pieceSet, state.duckLanded === true, state.lifted ?? null)}</g>
       <g class="dkx-duck-ghost" aria-hidden="true" pointer-events="none"></g>
       <g class="xq-live-markers" aria-hidden="true" pointer-events="none">${markerBand(state.markers ?? [], perspective, layout, 'point')}</g>
       <g class="xq-live-arrows" aria-hidden="true" pointer-events="none">${(state.arrows ?? [])
         .map((arrow) => xiangqiArrowSvg(arrow, perspective, layout))
         .join('')}</g>
       <g class="xq-live-glyphs" aria-hidden="true" pointer-events="none">${markerBand(state.markers ?? [], perspective, layout, 'glyph')}</g>
-      <g class="xq-live-clicks">${state.interactive ? clickLayer(perspective, layout) : ''}</g>
+      <g class="xq-live-clicks">${state.interactive ? clickLayer(perspective, layout, hoverTargets) : ''}</g>
     </svg>
   `;
 }
@@ -490,4 +520,101 @@ export function duckXiangqiClickResult(opts: {
   }
   if (piece && piece.color === seat) return { kind: 'select', square };
   return phase.selected ? { kind: 'clear' } : { kind: 'noop' };
+}
+
+// ── Drag ─────────────────────────────────────────────────────────────────────
+
+/**
+ * What a drag may lift from `square`: one of the mover's pieces in phase one,
+ * the duck itself in phase two (Brian, 2026-10-10: the duck is one more piece),
+ * or nothing.
+ */
+export function duckXiangqiDragSource(opts: {
+  view: DuckXiangqiPlayerView;
+  seat: Color | null;
+  phase: DuckXiangqiBoardPhase;
+  square: DuckXiangqiSquare;
+}): 'piece' | 'duck' | null {
+  const { view, seat, phase, square } = opts;
+  if (!seat || view.status.type !== 'playing' || view.status.turn !== seat) return null;
+  if (phase.kind === 'duck') return view.duck === square ? 'duck' : null;
+  const piece = view.board[square];
+  return piece && piece.color === seat ? 'piece' : null;
+}
+
+/** The duck token as a standalone SVG for the floating drag ghost. */
+export function duckXiangqiDuckGhostSvg(pieceSet?: XiangqiPieceSet): string {
+  // The ghost box is piece-sized (board-drag sizes every ghost the same), so the
+  // token is scaled up inside it to keep the duck's 10% lead over the pieces.
+  const s = DUCK_TOKEN_SCALE;
+  return [
+    '<svg viewBox="0 0 100 100" overflow="visible" xmlns="http://www.w3.org/2000/svg" aria-label="duck">',
+    `<g transform="translate(50 50) scale(${s}) translate(-50 -50)">`,
+    duckTokenMarks(pieceSet ?? readStoredXiangqiPieceSet()),
+    '</g></svg>',
+  ].join('');
+}
+
+/**
+ * Drag-to-move on the shared board-drag mechanics (variant-tenant/board-drag.ts),
+ * for the live room and the review board alike.
+ *
+ * A drag is the same gesture as the click it replaces and resolves through the
+ * caller's own click handler (`duckXiangqiClickResult`), so the two-phase turn
+ * has one set of rules: dropping a piece on a legal point ARMS phase two exactly
+ * as clicking it would (or completes the turn when it takes the general), and in
+ * phase two the duck on the board drags like a piece to its new point. Clicking
+ * still works for both: a tap below the drag threshold falls through to `click`.
+ */
+export function installDuckXiangqiDrag(opts: {
+  board: HTMLElement;
+  /** The position being played, or null whenever this seat may not act. */
+  view: () => DuckXiangqiPlayerView | null;
+  seat: (view: DuckXiangqiPlayerView) => Color | null;
+  phase: () => DuckXiangqiBoardPhase;
+  setPhase: (phase: DuckXiangqiBoardPhase) => void;
+  /** Legal destinations for the current phase (the board's own target list). */
+  targets: () => readonly DuckXiangqiSquare[];
+  /** Record the lifted point (or null to put it back) and repaint the board. */
+  lift: (square: DuckXiangqiSquare | null) => void;
+  /** The board's click handler: applies `duckXiangqiClickResult` and repaints. */
+  click: (square: DuckXiangqiSquare) => void;
+}): void {
+  const sourceAt = (square: DuckXiangqiSquare): 'piece' | 'duck' | null => {
+    const view = opts.view();
+    if (!view) return null;
+    return duckXiangqiDragSource({ view, seat: opts.seat(view), phase: opts.phase(), square });
+  };
+
+  installBoardDrag({
+    board: opts.board,
+    ghostSizePx: XIANGQI_LIVE_PIECE_SIZE,
+    onSquareClick: (square) => opts.click(square as DuckXiangqiSquare),
+    canDragFrom: (square) => sourceAt(square as DuckXiangqiSquare) !== null,
+    ghostHtml: (square) => {
+      const from = square as DuckXiangqiSquare;
+      const source = sourceAt(from);
+      if (source === 'duck') return duckXiangqiDuckGhostSvg();
+      const piece = source === 'piece' ? opts.view()?.board[from] : undefined;
+      if (!piece) return null;
+      return xiangqiPieceGhostSvg(piece as never, drawsCrossedSoldier(piece, coordOf(from).rank));
+    },
+    onDragStart: (square) => {
+      const from = square as DuckXiangqiSquare;
+      // Lifting a piece selects it, so the targets are its moves and the drop
+      // resolves exactly like a second click. Lifting the duck keeps phase two.
+      if (opts.phase().kind === 'piece') opts.setPhase({ kind: 'piece', selected: from });
+      opts.lift(from);
+    },
+    onDrop: (_from, to) => {
+      const dropped = to as DuckXiangqiSquare | null;
+      const hit = dropped !== null && opts.targets().includes(dropped);
+      // A missed piece drop snaps back unselected, as on the xiangqi board. A
+      // missed DUCK drop snaps only the duck back: the piece move stays made,
+      // since abandoning the whole turn for a slipped drag would punish it.
+      if (!hit && opts.phase().kind === 'piece') opts.setPhase({ kind: 'piece', selected: null });
+      opts.lift(null);
+      if (hit) opts.click(dropped);
+    },
+  });
 }
