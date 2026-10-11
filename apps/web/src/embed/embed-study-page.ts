@@ -53,6 +53,7 @@ import {
   embedPovPicker,
   embedRailWidthPx,
   mountEmbedCard,
+  type SolutionHiddenLabels,
 } from './embed-card.js';
 import type { EmbedStudyRoute } from './embed-route.js';
 import './embed.css';
@@ -103,6 +104,13 @@ export async function mountEmbedStudy(
     note(root, 'This chapter is not available.');
     return;
   }
+  // A problem's chapter name and comments tend to say the answer ("Two checks
+  // from one move"), so a hidden-solution frame is titled by the study and the
+  // chapter's number until the reveal; the number keeps several frames on one
+  // page apart. The tab title is only seen on a direct visit; it stays neutral.
+  const neutralTitle = payload.study?.name ?? 'Study';
+  const chapterNumber = (payload.chapters ?? []).indexOf(chapter) + 1;
+  const hidden = options.hideSolution === true;
   await mountChapterEmbed(
     root,
     {
@@ -110,14 +118,42 @@ export async function mountEmbedStudy(
       text: `${chapter.name ?? 'Study'} · mistboard.com`,
     },
     chapter,
-    options,
+    hidden
+      ? {
+          ...options,
+          solutionHiddenLabels: {
+            header: t('replay.solutionHiddenHeader', { study: neutralTitle, n: chapterNumber }),
+            credit: `${neutralTitle} · mistboard.com`,
+          },
+        }
+      : options,
   );
+  if (hidden) document.title = `${neutralTitle} · Mistboard`;
 }
 
 export type EmbedCredit = { href: string; text: string };
 
 /** Where a chapter opens: the ply, and for fog chess which seat's view. */
-export type ChapterEmbedOptions = { startPly?: number | null; pov?: EmbedPov | null };
+export type ChapterEmbedOptions = {
+  startPly?: number | null;
+  pov?: EmbedPov | null;
+  /** Cover the sheet and result until the reader asks (`?solution=hidden`). */
+  hideSolution?: boolean;
+  /** With hideSolution: the header and credit line shown until the reveal, in
+   *  place of the chapter name, which often names the idea. */
+  solutionHiddenLabels?: SolutionHiddenLabels;
+};
+
+function solutionCardOptions(options: ChapterEmbedOptions): {
+  hideSolution: boolean;
+  solutionHiddenLabels?: SolutionHiddenLabels;
+} {
+  if (options.hideSolution !== true) return { hideSolution: false };
+  return {
+    hideSolution: true,
+    ...(options.solutionHiddenLabels ? { solutionHiddenLabels: options.solutionHiddenLabels } : {}),
+  };
+}
 
 /** The variants this card can draw. A chapter of any other variant is refused
  *  by name: the old fallthrough drew it on the xiangqi board, which is how a
@@ -227,6 +263,7 @@ export async function mountChapterEmbed(
     // Clamped by the card against the real ply count, so an out-of-range
     // deep link opens at the end rather than on nothing.
     startPly: options.startPly ?? 0,
+    ...solutionCardOptions(options),
     mountBoard: async (host, hooks) =>
       isDuck
         ? mountDuckXiangqiReplayBoard(
@@ -268,7 +305,7 @@ async function mountBanqiEmbed(
   root: HTMLElement,
   credit: EmbedCredit,
   chapter: StudyChapterPayload,
-  options: { startPly?: number | null },
+  options: ChapterEmbedOptions,
 ): Promise<void> {
   const rootFen = chapter.root?.rootFen;
   if (!rootFen) {
@@ -311,6 +348,7 @@ async function mountBanqiEmbed(
     aspect: boardAspectForSpec('banqi'),
     railWidthPx: embedRailWidthPx('banqi'),
     startPly: options.startPly ?? 0,
+    ...solutionCardOptions(options),
     mountBoard: async (host, hooks) =>
       mountBanqiReplayBoard(host, { rootFen, moves, perspective: 'red' }, hooks),
   });
@@ -338,7 +376,7 @@ async function mountJungleEmbed(
   root: HTMLElement,
   credit: EmbedCredit,
   chapter: StudyChapterPayload,
-  options: { startPly?: number | null },
+  options: ChapterEmbedOptions,
 ): Promise<void> {
   const rootFen = chapter.root?.rootFen;
   if (!rootFen) {
@@ -349,6 +387,8 @@ async function mountJungleEmbed(
   // along, as on the study page: glyphs on the sheet and the board, verdicts,
   // comments, each move's first sideline (steppable), and the drawn shapes.
   const { moves, glyphs, notes, lines, assessments, shapes } = chapterAnnotations(chapter);
+  // A shape drawn on the start position is a hint, often the answer's arrow.
+  if (options.hideSolution) delete shapes[0];
   const tags = chapter.tags ?? {};
   const event = tags.event ? displayEventName(tags.event) : (chapter.name ?? 'Study');
   const result =
@@ -373,6 +413,7 @@ async function mountJungleEmbed(
     aspect: boardAspectForSpec('jungle'),
     railWidthPx: embedRailWidthPx('jungle'),
     startPly: options.startPly ?? 0,
+    ...solutionCardOptions(options),
     mountBoard: async (host, hooks) =>
       mountJungleReplayBoard(
         host,
@@ -424,7 +465,7 @@ async function mountFortressXiangqiEmbed(
   root: HTMLElement,
   credit: EmbedCredit,
   chapter: StudyChapterPayload,
-  options: { startPly?: number | null },
+  options: ChapterEmbedOptions,
 ): Promise<void> {
   const line = replayFortressXiangqiLine(chapter.root?.rootFen, mainlineTokens(chapter));
   if (!line) {
@@ -447,6 +488,7 @@ async function mountFortressXiangqiEmbed(
     aspect: embedColumnAspect('fortress-xiangqi'),
     railWidthPx: embedRailWidthPx('fortress-xiangqi'),
     startPly: options.startPly ?? 0,
+    ...solutionCardOptions(options),
     mountBoard: async (host, hooks) =>
       mountFortressXiangqiReplayBoard(host, line, { perspective: 'red' }, hooks),
   });
@@ -461,7 +503,7 @@ async function mountCrazyhouseXiangqiEmbed(
   root: HTMLElement,
   credit: EmbedCredit,
   chapter: StudyChapterPayload,
-  options: { startPly?: number | null },
+  options: ChapterEmbedOptions,
 ): Promise<void> {
   const line = replayCrazyhouseXiangqiLine(chapter.root?.rootFen, mainlineTokens(chapter));
   if (!line) {
@@ -482,6 +524,7 @@ async function mountCrazyhouseXiangqiEmbed(
     aspect: embedColumnAspect('crazyhouse-xiangqi'),
     railWidthPx: embedRailWidthPx('crazyhouse-xiangqi'),
     startPly: options.startPly ?? 0,
+    ...solutionCardOptions(options),
     mountBoard: async (host, hooks) =>
       mountCrazyhouseXiangqiReplayBoard(host, line, { perspective: 'red' }, hooks),
   });
@@ -499,9 +542,11 @@ async function mountJieqiEmbed(
   root: HTMLElement,
   credit: EmbedCredit,
   chapter: StudyChapterPayload,
-  options: { startPly?: number | null },
+  options: ChapterEmbedOptions,
 ): Promise<void> {
   const { moves, glyphs, notes, lines, assessments, shapes } = chapterAnnotations(chapter);
+  // A shape drawn on the start position is a hint, often the answer's arrow.
+  if (options.hideSolution) delete shapes[0];
   const line = replayJieqiLine(chapter.root?.rootFen, moves);
   if (!line) {
     note(root, 'This chapter has no dealt position to show.');
@@ -521,6 +566,7 @@ async function mountJieqiEmbed(
     aspect: boardAspectForSpec('jieqi'),
     railWidthPx: embedRailWidthPx('jieqi'),
     startPly: options.startPly ?? 0,
+    ...solutionCardOptions(options),
     mountBoard: async (host, hooks) =>
       mountJieqiReplayBoard(
         host,
@@ -547,7 +593,7 @@ async function mountJungleFlipEmbed(
   root: HTMLElement,
   credit: EmbedCredit,
   chapter: StudyChapterPayload,
-  options: { startPly?: number | null },
+  options: ChapterEmbedOptions,
 ): Promise<void> {
   const line = replayJungleFlipLine(chapter.root?.rootFen, mainlineTokens(chapter));
   if (!line) {
@@ -576,6 +622,7 @@ async function mountJungleFlipEmbed(
     aspect: boardAspectForSpec('jungle-flip'),
     railWidthPx: embedRailWidthPx('jungle-flip'),
     startPly: options.startPly ?? 0,
+    ...solutionCardOptions(options),
     mountBoard: async (host, hooks) => mountJungleFlipReplayBoard(host, line, hooks),
   });
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;
@@ -641,6 +688,7 @@ async function mountChessEmbed(
     aspect: boardAspectForSpec('chess'),
     railWidthPx: embedRailWidthPx('chess'),
     startPly: options.startPly ?? 0,
+    ...solutionCardOptions(options),
     mountBoard: async (host, hooks) => {
       board = mountChessReplayBoard(host, spec, hooks);
       board.setPov(pov);

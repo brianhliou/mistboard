@@ -238,3 +238,22 @@ export function embedPlyFromSearch(search: string): number | null {
 export function embedPovFromSearch(search: string): EmbedPov | null {
   return embedPov(new URLSearchParams(search).get('pov'));
 }
+
+/**
+ * `?solution=hidden` on a study or line embed: open on the start position with
+ * the score sheet, its comments and the result covered, so a reader can try
+ * the problem before reading the answer. The cover lifts on its button or on
+ * the first step forward. Anything else, or absent, shows the sheet as before.
+ */
+export function embedSolutionHiddenFromSearch(search: string): boolean {
+  return new URLSearchParams(search).get('solution') === 'hidden';
+}
+
+/** An embed path with `solution=hidden` added, for a host (an article's embed
+ *  block) that frames a problem without its answer. Keeps any query and hash. */
+export function embedPathWithSolutionHidden(path: string): string {
+  const hashAt = path.indexOf('#');
+  const base = hashAt >= 0 ? path.slice(0, hashAt) : path;
+  const hash = hashAt >= 0 ? path.slice(hashAt) : '';
+  return `${base}${base.includes('?') ? '&' : '?'}solution=hidden${hash}`;
+}

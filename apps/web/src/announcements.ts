@@ -43,6 +43,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-10-15',
+    kind: 'article',
+    headline: 'Helpmates in xiangqi: both sides cooperate, and Red mates in two.',
+    body: 'In a helpmate Black moves first and helps Red mate it. A search of every two-move helpmate on the xiangqi board found 164 sound ones, and the best of them look impossible: Red has a general and one piece against most of an army, and exactly one first move works. Ten are in the article with the solutions hidden, and all 164 are in a study.',
+    href: '/blog/helpmates-in-xiangqi',
+    cta: 'Read the article',
+  },
+  {
     date: '2026-10-10',
     kind: 'release',
     headline: 'Secrets of Strategy and the Dream of Divine Strategy are online.',

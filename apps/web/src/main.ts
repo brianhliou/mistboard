@@ -7,6 +7,7 @@ import {
   embedPlyFromSearch,
   embedPovFromSearch,
   embedRouteFromPath,
+  embedSolutionHiddenFromSearch,
   embedThemeFromSearch,
 } from './embed/embed-route.js';
 import './board-fog.css';
@@ -885,9 +886,11 @@ if (replaySample) {
   // `?pov=` opens a fog chess chapter in one seat's view; its picker still
   // switches.
   const studyPov = embedPovFromSearch(window.location.search);
+  // `?solution=hidden` covers the sheet until the reader asks: a problem chapter.
+  const hideSolution = embedSolutionHiddenFromSearch(window.location.search);
   void mountOrReport(() =>
     import('./embed/embed-study-page.js').then(({ mountEmbedStudy }) =>
-      mountEmbedStudy(appRoot, studyRoute, { startPly: studyPly, pov: studyPov }),
+      mountEmbedStudy(appRoot, studyRoute, { startPly: studyPly, pov: studyPov, hideSolution }),
     ),
   );
 } else if (embedRoute?.kind === 'game') {
@@ -919,7 +922,10 @@ if (replaySample) {
   const startPly = embedPlyFromSearch(window.location.search);
   void mountOrReport(() =>
     import('./embed/embed-line-page.js').then(({ mountEmbedLine }) =>
-      mountEmbedLine(appRoot, lineRoute, line, { startPly }),
+      mountEmbedLine(appRoot, lineRoute, line, {
+        startPly,
+        hideSolution: embedSolutionHiddenFromSearch(window.location.search),
+      }),
     ),
   );
 } else if (embedRoute?.kind === 'broadcast') {

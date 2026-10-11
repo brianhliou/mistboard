@@ -79,6 +79,7 @@ import {
 } from './crazyhouse-xiangqi-replay.js';
 import { type DuckXiangqiReplayController, mountDuckXiangqiReplay } from './duck-xiangqi-replay.js';
 import { autosizeEmbedFrame } from './embed/embed-autosize.js';
+import { embedPathWithSolutionHidden } from './embed/embed-route.js';
 import {
   type FortressXiangqiReplayController,
   mountFortressXiangqiReplay,
@@ -1969,7 +1970,7 @@ function renderEmbedBlock(block: EmbedBlock): HTMLElement {
   figure.className = 'article-figure article-figure-embed';
   const iframe = document.createElement('iframe');
   iframe.className = 'article-embed-frame';
-  iframe.src = block.path;
+  iframe.src = block.hideSolution ? embedPathWithSolutionHidden(block.path) : block.path;
   iframe.title = block.title;
   iframe.setAttribute('loading', 'lazy');
   const [w, h] = block.aspect ?? [EMBED_DEFAULT_WIDTH, EMBED_DEFAULT_HEIGHT];

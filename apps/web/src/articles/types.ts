@@ -325,6 +325,11 @@ export type EmbedBlock = {
   caption?: string;
   /** Frame aspect as [width, height]; defaults to the embed contract's 760x700. */
   aspect?: [number, number];
+  /** A study or line embed opens on the start position with the score sheet,
+   *  its comments and the result covered, so the reader tries the problem
+   *  first; a button or the first step forward reveals them. Rides to the
+   *  frame as `?solution=hidden`. */
+  hideSolution?: boolean;
 };
 
 /**

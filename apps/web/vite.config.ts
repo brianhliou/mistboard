@@ -4,10 +4,20 @@ import https from 'node:https';
 import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin, type ResolvedConfig } from 'vitest/config';
+import {
+  DEV_PUBLIC_STUDIES_ORIGIN,
+  localStudyMissing,
+  PUBLIC_STUDY_REQUEST_HEADERS,
+  publicStudiesEnabled,
+  publicStudyFallbackUrl,
+} from './src/dev-study-fallback';
 import { INCLUDE_DEV_PUBLIC_ARTIFACTS_ENV, shouldCopyPublicAsset } from './src/public-assets';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DEV_API_URL = process.env.MISTBOARD_DEV_API_URL ?? 'http://localhost:3001';
+const DEV_PUBLIC_STUDIES = publicStudiesEnabled(process.env);
+const DEV_PUBLIC_STUDIES_FROM =
+  process.env.MISTBOARD_DEV_PUBLIC_STUDIES_ORIGIN ?? DEV_PUBLIC_STUDIES_ORIGIN;
 const FEEDBACK_FILE = resolve(
   __dirname,
   '..',
@@ -128,6 +138,17 @@ function devApiProxyPlugin(): Plugin {
             },
           },
           (proxyRes) => {
+            // A study the local server lacks is read from the public site, so
+            // an article's study embeds preview locally (dev-study-fallback.ts:
+            // anonymous GET of public studies only; a local study always wins).
+            const publicUrl = DEV_PUBLIC_STUDIES
+              ? publicStudyFallbackUrl(req.method, req.url, DEV_PUBLIC_STUDIES_FROM)
+              : null;
+            if (publicUrl && localStudyMissing(proxyRes.statusCode ?? 502)) {
+              proxyRes.resume();
+              void servePublicStudy(publicUrl, res);
+              return;
+            }
             res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
             proxyRes.pipe(res);
           },
@@ -140,6 +161,24 @@ function devApiProxyPlugin(): Plugin {
       });
     },
   };
+}
+
+/** Answer a local study read with the public site's copy, headers trimmed to
+ *  the body's type and marked so a reader of the network tab can tell. */
+async function servePublicStudy(url: string, res: http.ServerResponse) {
+  try {
+    const upstream = await fetch(url, { headers: { ...PUBLIC_STUDY_REQUEST_HEADERS } });
+    const body = Buffer.from(await upstream.arrayBuffer());
+    res.writeHead(upstream.status, {
+      'content-type': upstream.headers.get('content-type') ?? 'application/json',
+      'cache-control': 'no-store',
+      'x-mistboard-dev-source': new URL(url).origin,
+    });
+    res.end(body);
+  } catch {
+    if (!res.headersSent) res.writeHead(502, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ error: 'dev_public_study_failed' }));
+  }
 }
 
 function copyFilteredPublicDirPlugin(): Plugin {

@@ -832,4 +832,7 @@ export const ZH_HANT_REVIEW = {
   'review.luckCard.bothEffect.lucky': '{side}勝率比平均結果高{points}個百分點',
   'review.luckCard.bothEffect.unlucky': '{side}勝率比平均結果低{points}個百分點',
   'review.luckCard.bothEffect.even': '{side}勝率與平均結果相當',
+  'replay.solutionHidden': '找出殺法。',
+  'replay.showSolution': '顯示答案',
+  'replay.solutionHiddenHeader': '{study} · 第{n}章',
 } satisfies Partial<Record<ReviewI18nKey, string>>;

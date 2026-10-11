@@ -52,7 +52,7 @@ export async function mountEmbedLine(
   root: HTMLElement,
   route: EmbedLineRoute,
   line: EmbedLineSpec,
-  options: { startPly?: number | null } = {},
+  options: { startPly?: number | null; hideSolution?: boolean } = {},
 ): Promise<void> {
   document.body.classList.add('embed-body');
   document.documentElement.dataset.embed = 'line';

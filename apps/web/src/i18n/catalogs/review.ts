@@ -900,6 +900,10 @@ export const EN_REVIEW = {
   'review.luckCard.bothEffect.unlucky':
     'Cost {side} {points} points of win chance vs. an average outcome',
   'review.luckCard.bothEffect.even': 'About as good for {side} as an average outcome',
+  'replay.solutionHidden': 'Find the mate.',
+  'replay.showSolution': 'Show the solution',
+  // A hidden-solution embed's header until the reveal: the study, then the chapter's number.
+  'replay.solutionHiddenHeader': '{study} · chapter {n}',
 } as const;
 
 export type ReviewI18nKey = keyof typeof EN_REVIEW;

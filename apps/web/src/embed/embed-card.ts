@@ -139,6 +139,15 @@ export type EmbedCardOptions = {
   startPly: number | null;
   /** Stamped on the card so seat-disc-ink.css can colour the family's discs. */
   inkFamily?: string | null;
+  /** A problem shown without its answer: the card opens on the start position
+   *  with the score sheet, its notes and the result covered by a prompt and a
+   *  button. The button, or any step past the start, lifts the cover for good.
+   *  Off by default; `?solution=hidden` on a study or line embed. */
+  hideSolution?: boolean;
+  /** With hideSolution: the header and credit text shown until the reveal, in
+   *  place of options.header and options.credit.text (a chapter name that
+   *  names the idea). The real ones come back with the sheet. */
+  solutionHiddenLabels?: SolutionHiddenLabels;
   mountBoard: (
     host: HTMLElement,
     hooks: { onPlyChange: (ply: number, maxPly: number) => void },
@@ -299,6 +308,9 @@ function seatRow(seat: EmbedSeat, side: 'first' | 'second'): SeatRow {
   return { el, clock };
 }
 
+/** The neutral header and credit text a hidden-solution card wears. */
+export type SolutionHiddenLabels = { header: string; credit: string };
+
 export async function mountEmbedCard(
   root: HTMLElement,
   options: EmbedCardOptions,
@@ -307,14 +319,15 @@ export async function mountEmbedCard(
   frame.className = 'embed-frame';
   const header = document.createElement('div');
   header.className = 'embed-card-header';
+  const hiddenLabels = options.hideSolution ? options.solutionHiddenLabels : undefined;
+  const headerTitle = document.createElement('span');
+  headerTitle.className = 'embed-card-header-title';
+  headerTitle.textContent = hiddenLabels?.header ?? options.header;
   if (options.headerControls) {
-    const title = document.createElement('span');
-    title.className = 'embed-card-header-title';
-    title.textContent = options.header;
     header.classList.add('embed-card-header--controls');
-    header.append(title, options.headerControls);
+    header.append(headerTitle, options.headerControls);
   } else {
-    header.textContent = options.header;
+    header.append(headerTitle);
   }
   const card = document.createElement('div');
   card.className = 'embed-card';
@@ -345,12 +358,50 @@ export async function mountEmbedCard(
   rail.append(railInner);
   card.append(boardCol, rail);
 
+  // The sheet stays built underneath (so it is current the moment it shows),
+  // hidden and inert: the moves, a study's comments under them, and the
+  // result foot all give the answer away. Stacked on a phone the rail is under
+  // the board, so the cover sits where the reader's thumb already is.
+  let solutionCover: HTMLElement | null = null;
+  // Armed once the card has landed on its start: a renderer that reports its
+  // own ply while mounting must not lift the cover before the reader acts.
+  let revealOnStep = false;
+  const revealSolution = (): void => {
+    if (!solutionCover) return;
+    solutionCover.remove();
+    solutionCover = null;
+    rail.classList.remove('embed-card-rail--solution-hidden');
+    railInner.inert = false;
+    railInner.removeAttribute('aria-hidden');
+    if (hiddenLabels) {
+      headerTitle.textContent = options.header;
+      credit.textContent = options.credit.text;
+    }
+  };
+  if (options.hideSolution) {
+    rail.classList.add('embed-card-rail--solution-hidden');
+    railInner.inert = true;
+    railInner.setAttribute('aria-hidden', 'true');
+    solutionCover = document.createElement('div');
+    solutionCover.className = 'embed-card-solution-cover';
+    const prompt = document.createElement('p');
+    prompt.className = 'embed-card-solution-prompt';
+    prompt.textContent = t('replay.solutionHidden');
+    const show = document.createElement('button');
+    show.type = 'button';
+    show.className = 'embed-card-solution-show';
+    show.textContent = t('replay.showSolution');
+    show.addEventListener('click', revealSolution);
+    solutionCover.append(prompt, show);
+    rail.append(solutionCover);
+  }
+
   const credit = document.createElement('a');
   credit.className = 'embed-credit';
   credit.href = options.credit.href;
   credit.target = '_blank';
   credit.rel = 'noopener';
-  credit.textContent = options.credit.text;
+  credit.textContent = hiddenLabels?.credit ?? options.credit.text;
   frame.append(header, card, credit);
   root.replaceChildren(frame);
 
@@ -369,7 +420,10 @@ export async function mountEmbedCard(
       line = null;
       moveList?.highlightLine(null);
     }
-    handle?.jumpToPly?.(clampPly(ply));
+    const target = clampPly(ply);
+    // Stepping forward is asking for the answer.
+    if (target > 0 && revealOnStep) revealSolution();
+    handle?.jumpToPly?.(target);
   };
 
   // The rows follow the board: whichever seat the board is drawn for sits
@@ -417,6 +471,7 @@ export async function mountEmbedCard(
   };
 
   const onPlyChange = (ply: number, max: number): void => {
+    if (ply > 0 && revealOnStep) revealSolution();
     currentPly = ply;
     maxPly = max;
     moveList?.update(ply, jump);
@@ -604,9 +659,11 @@ export async function mountEmbedCard(
 
   // Land on the requested ply, or the final position: a finished game's embed
   // opens on its result, and the reader steps back from there.
-  const start = options.startPly === null ? maxPly : options.startPly;
+  // A hidden solution opens on the problem itself, whatever ply was asked for.
+  const start = options.hideSolution ? 0 : options.startPly === null ? maxPly : options.startPly;
   if (handle.jumpToPly) jump(start);
   onPlyChange(handle.jumpToPly ? currentPly : clampPly(start), maxPly);
+  revealOnStep = true;
 
   // Serialised, so a second click waits for the first mount rather than
   // racing it into the same host.

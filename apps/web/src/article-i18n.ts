@@ -33,6 +33,10 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Machine-drafted 2026-10-10, not native-reviewed, locked with its English
+  // copy, which publishes in the same release (the brianhliou.com draft,
+  // ported before it was posted).
+  'helpmates-in-xiangqi',
   // Machine-drafted 2026-10-08, not native-reviewed, locked with its English
   // copy, which publishes in the same release (the brianhliou.com draft of
   // 2026-10-08, folded in before it was posted).
@@ -3045,6 +3049,101 @@ const ZH_HANS: Record<string, string> = {
   Pawn: '兵',
   'Pawn push': '仙人指路',
   'Crossed cannon': '过河炮',
+  // -- Helpmates in Xiangqi (helpmates-in-xiangqi): machine-drafted 2026-10-10, not native-reviewed.
+  // Terms follow the study 5CdUHFsq zh names (合作杀, 纯杀, 纯正杀, 炮架) and solver-audit (困毙, 排局). --
+  'Helpmates in Xiangqi': '象棋合作杀',
+  'In a helpmate both sides cooperate so Red can mate. A search found 164 helpmates in two for xiangqi; try the best ten, solutions hidden until you ask.':
+    '合作杀里，双方合作，让红方将死对方。搜索找出了164道两步合作杀；试解其中最好的十道，答案在你要求前保持隐藏。',
+  'A helpmate turns a problem inside out: both sides cooperate so that one side is mated in a stated number of moves. We searched one slice of it in xiangqi, helpmate in two with Black first and Red mating: 1,470 sound, 186 distinct, 164 after a re-proof.':
+    '合作杀把排局翻了个面：双方合作，让一方在规定步数内被将死。我们在象棋里搜索了其中一小块：两步合作杀，黑方先走，红方成杀。结果是1,470道无误，186道互不相同，复核后剩164道。',
+  "Xiangqi's own rules shape the genre. A general with no legal move has lost, which cost us 22 problems, and the cannon can mate over a screen Black supplies, as 19 of the 164 do.":
+    '象棋自己的规则塑造了这个体裁。将帅无子可走即判负（困毙），这让我们损失了22道题；炮可以借黑方送来的炮架成杀，164道中有19道如此。',
+  "The good ones look impossible. In one, Red has a general and a horse against twelve black pieces, and of Black's 45 legal first moves exactly one leads to mate.":
+    '好题看起来不可能。其中一道，红方只有帅和一马，对黑方十二子；黑方45种合法的第一步中，只有一种能导向杀局。',
+  'Black to move. Red has a general and a horse; Black has twelve pieces.':
+    '黑方先走。红方有帅和一马；黑方有十二子。',
+  "Two moves each later, mate. Black's horse went out and came back to e9, walling in its own general, and Red's horse reached f8.":
+    '双方各走两步后成杀。黑马出去又回到e9，堵住了自己的将；红马跳到f8。',
+  'In an ordinary [xiangqi](/rules/xiangqi) (Chinese chess) problem the two sides are enemies: Red plays, Black defends as well as it can, and Red wins anyway. A helpmate drops the fight. Both sides cooperate so that one of them is mated in a stated number of moves. The claim is not that the losing side cannot stop it; it is that out of everything both sides could play, this is the only line that works.':
+    '在普通的[象棋](/rules/xiangqi)排局里，双方是对手：红方进攻，黑方尽力防守，红方仍然取胜。合作杀放下了对抗。双方合作，让其中一方在规定步数内被将死。它要证明的不是被杀的一方挡不住，而是在双方所有可能的走法中，只有这一路行得通。',
+  'The genre is old in Western chess, where the usual form, written h#n, has Black move first and White mate on its nth move. That is a convention, not a limit: a helpmate can run to any length, and either side can move first or be mated. The classical xiangqi manuals never asked for one, so we asked whether it works on this board, starting with one narrow slice: helpmate in two, Black first, Red mates. Can a search compose sound ones, and are any of them worth solving?':
+    '合作杀在国际象棋里历史悠久，常见形式记作h#n：黑方先走，白方在第n步将杀。这只是惯例，不是限制：合作杀可以任意长，任何一方都可以先走，也可以是被杀的一方。古典象棋谱从未出过这类题，所以我们想知道它在这张棋盘上是否成立，并从很窄的一块开始：两步合作杀，黑先，红杀。搜索能否编出无误的题？其中有没有值得一解的？',
+  'Where this sits in the tradition': '它在传统中的位置',
+  'Xiangqi problem composition is the older tradition. The earliest known problem, Two Dragons Leave the Sea, is in a Southern Song encyclopedia dated to 1266. The classical manuals followed: a Ming collection of 550 problems in 1570, The Secret in the Orange in 1632, then the Qing collections, one of which (1801) holds the famous street problems such as Seven Stars Gathering ([a history of the manuals](https://www.xiangqi.com/articles/a-short-introduction-to-the-xiangqi-manuals-up-till-the-ming-dynasty)).':
+    '象棋排局是更古老的传统。已知最早的排局“二龙出海”，见于南宋类书《事林广记》，年代定为1266年。古典棋谱随后出现：1570年收局550则的《适情雅趣》，1632年的《橘中秘》，再到清代各谱，其中1801年的《竹香斋象戏谱》收有“七星聚会”等著名江湖排局（[棋谱简史](https://www.xiangqi.com/articles/a-short-introduction-to-the-xiangqi-manuals-up-till-the-ming-dynasty)）。',
+  'What runs through all of them is a fixed goal. Each problem names its result, a win or a draw, and the solver plays the losing side as well as it can be played. The Ming problems are nearly all wins; the Qing ones are mostly draws. The tradition grew by varying the position, generation after generation, rather than by varying what the solver is asked to do.':
+    '贯穿其中的是固定的目标。每道题都标明结果，胜或和，解题者替败方走出最顽强的应着。明代的题几乎都是胜局，清代的多为和局。这个传统靠一代代变换局面发展，而不是变换对解题者的要求。',
+  "Western composition went the other way: it kept the board and changed the goal. Max Lange published the first helpmate in 1854, with White moving first and more than one solution; Sam Loyd's of 1860 was the first with Black to move, and A. Barbe's of 1861 the first with a single solution ([the genre's history](https://en.wikipedia.org/wiki/Helpmate)). Selfmates, series movers and the rest came the same way. The helpmate is now the largest single section of the FIDE Album, the official anthology of the best problems: 2,539 of the 9,218 entries for 2010 to 2012 ([FIDE](https://www.fide.com/images/stories/NEWS_2017/FIDE_News/FIDE_Album_2010-2012_sample_pages.pdf)). Shogi took it up too: the cooperative mate is one of the most popular forms of its mating problems.":
+    '西方排局走了另一条路：保留棋盘，改变目标。马克斯·朗格于1854年发表了第一道合作杀，白方先走，且不止一解；萨姆·劳埃德1860年的题首次让黑方先走，A. 巴尔贝1861年的题首次只有唯一解（[该体裁的历史](https://en.wikipedia.org/wiki/Helpmate)）。自杀题、连续着法题等也都是这样来的。如今合作杀是国际棋联排局年鉴（FIDE Album，官方的优秀排局选集）中最大的单一类别：2010至2012年卷9,218则中占2,539则（[FIDE](https://www.fide.com/images/stories/NEWS_2017/FIDE_News/FIDE_Album_2010-2012_sample_pages.pdf)）。将棋也接受了它：合作杀是将棋诘将棋中最受欢迎的形式之一。',
+  "Henry Forsberg, 1935. The solution is 1. Qf6 Nc5 2. Qb2 Ra4 mate: the black queen walks to b2 to block its own king's last square, and the white rook mates. The problem is famous for its twins: put a rook, bishop, knight or pawn on a6 instead of the queen and each has its own single solution, five mates from one diagram.":
+    '亨利·福斯伯格，1935年。解法是 1. Qf6 Nc5 2. Qb2 Ra4 将杀（Q为后，N为马，R为车）：黑后走到b2，堵住自己王的最后一格，白车成杀。这道题以“孪生题”闻名：把a6的后换成车、象、马或兵，每一种都有各自的唯一解，一张图五种杀法。',
+  'A cooperative goal does not appear in the classical xiangqi manuals, and our search of modern Chinese sources found none, though that search was limited. Changing the goal is the one thing these problems bring to the board. If you know of earlier xiangqi helpmates, [tell us](/contact).':
+    '古典象棋谱中没有合作的目标，我们查阅的现代中文资料中也没有找到，不过查阅范围有限。改变目标，正是这些题给这张棋盘带来的新东西。如果你知道更早的象棋合作杀，请[告诉我们](/contact)。',
+  'Composing them': '如何编题',
+  'The generator is simple and the solver does the work. A position maker deals diagrams, either every placement of a few pieces or random armies from a profile that fixes how much material each side gets. The solver walks every cooperative line of two moves a side, Black first, and keeps a diagram only if exactly one line mates. The profiles that gave Black an army and Red one or two pieces produced most of what is worth looking at.':
+    '生成器很简单，主要靠求解器。局面生成器摆出图形：要么枚举少数几子的所有摆法，要么按设定双方子力的配置随机摆出阵容。求解器遍历双方各两步的所有合作走法，黑方先走，只保留恰好一路成杀的图形。给黑方整支军队、红方一两个子的配置，产出了大部分值得一看的题。',
+  'The pipeline, in outline.': '流程概览。',
+  Results: '结果',
+  'The search found 1,470 sound helpmates. Most were the same mate reached from a different setup, often a spectator piece one square over, so we grouped them by the final picture. That left **186 distinct mates**. The re-proof then removed 22, for a reason covered below, and **164 stand**.':
+    '搜索找到1,470道无误的合作杀。大多数是同一个杀形从不同的布局得到，往往只是一个旁观的子挪了一格，所以我们按最终杀形分组。剩下**186种不同的杀法**。复核又去掉了22道，原因见下文，**留下164道**。',
+  'Of the 164, 39 are pure mates, where no square around the mated general is covered twice, and 19 are model mates: pure, with every red piece on the board doing work.':
+    '164道中，39道是纯杀，即被杀一方将周围没有一格被重复控制；19道是纯正杀：既是纯杀，盘上每个红子又都在发挥作用。',
+  'Mate delivered by': '成杀的子',
+  Problems: '题数',
+  'The 164 problems that stand, by the red piece that gives the final check.':
+    '留下的164道题，按最后一步将军的红子分类。',
+  'The best ten': '最好的十道',
+  "Ten problems, one idea each. All 164 are in [the study](/study/5CdUHFsq), these ten first and the rest in ranked order. Every one is the slice we searched: Black, Red, Black, Red, and Red's second move mates.":
+    '十道题，各有一个主题。全部164道都在[这个研习](/study/5CdUHFsq)里，这十道在前，其余按排名排列。每一道都属于我们搜索的那一块：黑、红、黑、红，红方第二步成杀。',
+  'Red has a general and one soldier against seven black pieces, a chariot and both advisors among them. Find the square where a lone soldier can mate, then ask which black piece has to wall the general in.':
+    '红方只有帅和一兵，对黑方七子，其中有一车和双士。先找出孤兵能在哪一格成杀，再想想哪个黑子得去堵住自己的将。',
+  'Helpmate 1: a general and one soldier': '合作杀1：光帅一兵',
+  "Red has a general and a horse already in Black's camp; Black has twelve pieces. Black has 45 legal first moves, and exactly one of them leads to mate.":
+    '红方有帅和一匹已在黑方阵中的马；黑方有十二子。黑方有45种合法的第一步，只有一种能导向杀局。',
+  'Helpmate 2: one horse against twelve': '合作杀2：一马对十二子',
+  'A single red cannon against fifteen black pieces. A cannon cannot check without a screen, so look at which black piece can provide one.':
+    '一门红炮对黑方十五子。炮没有炮架就不能将军，所以要看哪个黑子能当炮架。',
+  'Helpmate 3: one cannon against fifteen': '合作杀3：一炮对十五子',
+  "A red chariot against twelve, with Black's back rank already thinned out. The question is which squares beside the black general need filling, and by what.":
+    '一辆红车对十二子，黑方底线已经空了一些。问题是黑将旁边哪些格子需要填上，用什么子填。',
+  'Helpmate 4: one chariot against twelve': '合作杀4：一车对十二子',
+  "A general and a horse against twelve again, the horse this time on h8, near a black chariot in the corner. The horse needs both of Red's moves.":
+    '又是帅和一马对十二子，这次马在h8，靠近角上的一辆黑车。这匹马要用掉红方的两步。',
+  'Helpmate 5: a horse on the right': '合作杀5：右翼一马',
+  "The fullest board of the ten: three red soldiers deep in Black's half against fourteen black pieces.":
+    '十道中子力最多的一局：三个红兵深入黑方半边，对黑方十四子。',
+  'Helpmate 6: eighteen pieces': '合作杀6：十八子',
+  'Six pieces: a general, cannon and soldier for Red, a general, cannon and horse for Black. Look at what the red cannon on e5 needs before it can give check.':
+    '六个子：红方帅、炮、兵，黑方将、炮、马。看看e5的红炮在将军之前需要什么。',
+  'Helpmate 7: six pieces': '合作杀7：六子',
+  "Black's general is already out of its back rank, with Red's soldier and cannon stacked on the g-file. Red's last move here does two jobs.":
+    '黑将已经离开底线，红兵和红炮叠在g路上。红方这里的最后一步一着两用。',
+  'Helpmate 8: six pieces again': '合作杀8：又是六子',
+  'Black has two chariots, a horse and a cannon on an open board, and 55 legal first moves. Red has one horse.':
+    '开阔的棋盘上黑方有双车、一马、一炮，第一步有55种合法走法。红方只有一马。',
+  'Helpmate 9: an open board': '合作杀9：开阔的棋盘',
+  "A general and one soldier against twelve, the soldier already on f8 beside Black's palace. Black's own pieces have to finish the cage.":
+    '帅和一兵对十二子，兵已在黑方九宫旁的f8。黑方得用自己的子把笼子合上。',
+  'Helpmate 10: one soldier against twelve': '合作杀10：一兵对十二子',
+  'What we learned': '我们学到了什么',
+  "**Xiangqi decides what counts as sound.** A general with no legal move has lost, so a helpmate can also end with the losing side not in check and simply nothing to play. Our composer tested only for checkmates. Re-proved under the real rule, 22 of the 186 had other lines it could not see, from 3 to 64 of them, and two could be mated in one. A soundness test ported from chess brings chess's idea of a finished game with it.":
+    '**象棋决定什么才算无误。**将帅无子可走即判负，所以合作杀也可以在被杀一方没有被将军、只是无棋可走时结束。我们的编题程序只检测了将死。按真正的规则复核后，186道中有22道另有程序没看到的路线，从3路到64路不等，其中两道一步就能杀。从国际象棋移植来的无误检验，也把国际象棋对“终局”的理解一并带了过来。',
+  '**The cannon is the theme chess cannot have.** It checks by jumping exactly one piece, and in a helpmate the mated side is cooperating, so Black can supply the screen. Nineteen of the 164 mate over a black screen. The facing-generals rule adds another: the red general can take squares from its own palace, as in the seventh problem.':
+    '**炮是国际象棋不可能有的主题。**炮隔一子将军，而在合作杀里被杀一方是合作的，所以黑方可以送上炮架。164道中有19道借黑方的炮架成杀。将帅不能对面的规则又添了一种：红帅可以从自己的九宫控制格子，比如第七道题。',
+  '**A pipeline count measures patience, not problems.** 1,470 became 186 once we grouped by the final picture. Without that step the corpus would have been mostly the same mates.':
+    '**流程的计数衡量的是耐心，不是题目。**按最终杀形分组后，1,470变成了186。没有这一步，题库里大部分都会是重复的杀法。',
+  'What is left to find': '还有什么可找',
+  'We searched one corner of the genre, and the rest is open. **Longer helpmates** first. Our search found almost no sound helpmates in three: a third move gives both sides many more ways to reach the same mate, so a generator has to aim at unique lines rather than deal and filter. How long can a sound xiangqi helpmate be: ten moves, twenty, a hundred? And can a search prove that a long one is the shortest of its kind, or that its line is the only one?':
+    '我们只搜索了这个体裁的一角，其余都还空着。首先是**更长的合作杀**。我们的搜索几乎没找到无误的三步合作杀：多一步，双方就有多得多的方法走到同一个杀形，所以生成器得直接瞄准唯一路线，而不是先摆后筛。无误的象棋合作杀最长能有多长：十步，二十步，一百步？搜索能否证明一道长题是同类中最短的，或者它的路线是唯一的？',
+  '**More impossible-looking ones**: the weakest red force against the most black, a lone soldier mating a full army. And **the other shapes of the genre**: Red moving first, and Red as the side that is mated. We have not searched either. If you find one, or a longer or stranger one than ours, we would love to see it: put it in [the forum](/forum), or write it up on your own blog and tell us where.':
+    '**更多看似不可能的题**：最弱的红方子力对最多的黑子，一个孤兵将死整支军队。还有**这个体裁的其他形式**：红方先走，以及红方作为被杀的一方。这两种我们都还没有搜索。如果你找到一道，或者比我们的更长、更奇的，我们很想看看：发到[论坛](/forum)，或者写在你自己的博客上并告诉我们在哪里。',
+  "What the slice already shows is that xiangqi does take helpmates, and they are not chess problems on a different board. The rules that make xiangqi what it is, the loss without a legal move, the cannon's screen, the facing generals, decide which problems are sound and how the best of them mate. A good one looks impossible because Red has almost nothing. It works because Black's army is the material the mate is built from: the walls, the screen, the squares filled in around its own general. That is the hope behind this work: to carry the genres Western composers invented onto the xiangqi board, find what is beautiful in them here, and in time find a helpmate good enough to make a xiangqi player stop and set it up for a friend.":
+    '这一小块已经表明，象棋容得下合作杀，而且它们不是换了张棋盘的国际象棋题。让象棋成为象棋的那些规则，困毙判负、炮架、将帅对面，决定了哪些题无误，也决定了最好的题如何成杀。好题看起来不可能，因为红方几乎什么都没有。它之所以成立，是因为黑方的大军正是构成杀局的材料：墙、炮架、自己将周围被填满的格子。这就是这项工作背后的希望：把西方排局家发明的体裁搬到象棋棋盘上，找出它们在这里的美，并且终有一天找到一道好到让象棋棋手停下来、摆给朋友看的合作杀。',
+  'Solve all 164': '解全部164道',
+  'The longest forced mates': '最长的连将杀',
+  'Helpmates in Xiangqi (Chinese Chess): 164 Two-Move Problems': '象棋合作杀：164道两步合作杀排局',
+  'Black to move, helpmate in 2': '黑先，两步合作杀',
+  'The mate': '杀局',
   // -- The xiangqi match-fixing case --
   // Machine-drafted 2026-08-30, not native-reviewed, same standing as the two
   'The Xiangqi Match-Fixing Case': '象棋假棋案',
@@ -6059,6 +6158,101 @@ const ZH_HANT: Record<string, string> = {
   'Rejected: two winning answers.': '拒絕：兩個都能贏的答案。',
   Solver: '解題方',
   Defence: '防守方',
+  // -- Helpmates in Xiangqi (helpmates-in-xiangqi): machine-drafted 2026-10-10, not native-reviewed.
+  // Terms follow the study 5CdUHFsq zh names (合作殺, 純殺, 純正殺, 炮架) and solver-audit (困斃, 排局). --
+  'Helpmates in Xiangqi': '象棋合作殺',
+  'In a helpmate both sides cooperate so Red can mate. A search found 164 helpmates in two for xiangqi; try the best ten, solutions hidden until you ask.':
+    '合作殺裡，雙方合作，讓紅方將死對方。搜尋找出了164道兩步合作殺；試解其中最好的十道，答案在你要求前保持隱藏。',
+  'A helpmate turns a problem inside out: both sides cooperate so that one side is mated in a stated number of moves. We searched one slice of it in xiangqi, helpmate in two with Black first and Red mating: 1,470 sound, 186 distinct, 164 after a re-proof.':
+    '合作殺把排局翻了個面：雙方合作，讓一方在規定步數內被將死。我們在象棋裡搜尋了其中一小塊：兩步合作殺，黑方先走，紅方成殺。結果是1,470道無誤，186道互不相同，複核後剩164道。',
+  "Xiangqi's own rules shape the genre. A general with no legal move has lost, which cost us 22 problems, and the cannon can mate over a screen Black supplies, as 19 of the 164 do.":
+    '象棋自己的規則塑造了這個體裁。將帥無子可走即判負（困斃），這讓我們損失了22道題；炮可以借黑方送來的炮架成殺，164道中有19道如此。',
+  "The good ones look impossible. In one, Red has a general and a horse against twelve black pieces, and of Black's 45 legal first moves exactly one leads to mate.":
+    '好題看起來不可能。其中一道，紅方只有帥和一馬，對黑方十二子；黑方45種合法的第一步中，只有一種能導向殺局。',
+  'Black to move. Red has a general and a horse; Black has twelve pieces.':
+    '黑方先走。紅方有帥和一馬；黑方有十二子。',
+  "Two moves each later, mate. Black's horse went out and came back to e9, walling in its own general, and Red's horse reached f8.":
+    '雙方各走兩步後成殺。黑馬出去又回到e9，堵住了自己的將；紅馬跳到f8。',
+  'In an ordinary [xiangqi](/rules/xiangqi) (Chinese chess) problem the two sides are enemies: Red plays, Black defends as well as it can, and Red wins anyway. A helpmate drops the fight. Both sides cooperate so that one of them is mated in a stated number of moves. The claim is not that the losing side cannot stop it; it is that out of everything both sides could play, this is the only line that works.':
+    '在普通的[象棋](/rules/xiangqi)排局裡，雙方是對手：紅方進攻，黑方盡力防守，紅方仍然取勝。合作殺放下了對抗。雙方合作，讓其中一方在規定步數內被將死。它要證明的不是被殺的一方擋不住，而是在雙方所有可能的走法中，只有這一路行得通。',
+  'The genre is old in Western chess, where the usual form, written h#n, has Black move first and White mate on its nth move. That is a convention, not a limit: a helpmate can run to any length, and either side can move first or be mated. The classical xiangqi manuals never asked for one, so we asked whether it works on this board, starting with one narrow slice: helpmate in two, Black first, Red mates. Can a search compose sound ones, and are any of them worth solving?':
+    '合作殺在西洋棋裡歷史悠久，常見形式記作h#n：黑方先走，白方在第n步將殺。這只是慣例，不是限制：合作殺可以任意長，任何一方都可以先走，也可以是被殺的一方。古典象棋譜從未出過這類題，所以我們想知道它在這張棋盤上是否成立，並從很窄的一塊開始：兩步合作殺，黑先，紅殺。搜尋能否編出無誤的題？其中有沒有值得一解的？',
+  'Where this sits in the tradition': '它在傳統中的位置',
+  'Xiangqi problem composition is the older tradition. The earliest known problem, Two Dragons Leave the Sea, is in a Southern Song encyclopedia dated to 1266. The classical manuals followed: a Ming collection of 550 problems in 1570, The Secret in the Orange in 1632, then the Qing collections, one of which (1801) holds the famous street problems such as Seven Stars Gathering ([a history of the manuals](https://www.xiangqi.com/articles/a-short-introduction-to-the-xiangqi-manuals-up-till-the-ming-dynasty)).':
+    '象棋排局是更古老的傳統。已知最早的排局「二龍出海」，見於南宋類書《事林廣記》，年代定為1266年。古典棋譜隨後出現：1570年收局550則的《適情雅趣》，1632年的《橘中秘》，再到清代各譜，其中1801年的《竹香齋象戲譜》收有「七星聚會」等著名江湖排局（[棋譜簡史](https://www.xiangqi.com/articles/a-short-introduction-to-the-xiangqi-manuals-up-till-the-ming-dynasty)）。',
+  'What runs through all of them is a fixed goal. Each problem names its result, a win or a draw, and the solver plays the losing side as well as it can be played. The Ming problems are nearly all wins; the Qing ones are mostly draws. The tradition grew by varying the position, generation after generation, rather than by varying what the solver is asked to do.':
+    '貫穿其中的是固定的目標。每道題都標明結果，勝或和，解題者替敗方走出最頑強的應著。明代的題幾乎都是勝局，清代的多為和局。這個傳統靠一代代變換局面發展，而不是變換對解題者的要求。',
+  "Western composition went the other way: it kept the board and changed the goal. Max Lange published the first helpmate in 1854, with White moving first and more than one solution; Sam Loyd's of 1860 was the first with Black to move, and A. Barbe's of 1861 the first with a single solution ([the genre's history](https://en.wikipedia.org/wiki/Helpmate)). Selfmates, series movers and the rest came the same way. The helpmate is now the largest single section of the FIDE Album, the official anthology of the best problems: 2,539 of the 9,218 entries for 2010 to 2012 ([FIDE](https://www.fide.com/images/stories/NEWS_2017/FIDE_News/FIDE_Album_2010-2012_sample_pages.pdf)). Shogi took it up too: the cooperative mate is one of the most popular forms of its mating problems.":
+    '西方排局走了另一條路：保留棋盤，改變目標。馬克斯·朗格於1854年發表了第一道合作殺，白方先走，且不止一解；薩姆·勞埃德1860年的題首次讓黑方先走，A. 巴爾貝1861年的題首次只有唯一解（[該體裁的歷史](https://en.wikipedia.org/wiki/Helpmate)）。自殺題、連續著法題等也都是這樣來的。如今合作殺是國際棋聯排局年鑑（FIDE Album，官方的優秀排局選集）中最大的單一類別：2010至2012年卷9,218則中占2,539則（[FIDE](https://www.fide.com/images/stories/NEWS_2017/FIDE_News/FIDE_Album_2010-2012_sample_pages.pdf)）。將棋也接受了它：合作殺是將棋詰將棋中最受歡迎的形式之一。',
+  "Henry Forsberg, 1935. The solution is 1. Qf6 Nc5 2. Qb2 Ra4 mate: the black queen walks to b2 to block its own king's last square, and the white rook mates. The problem is famous for its twins: put a rook, bishop, knight or pawn on a6 instead of the queen and each has its own single solution, five mates from one diagram.":
+    '亨利·福斯伯格，1935年。解法是 1. Qf6 Nc5 2. Qb2 Ra4 將殺（Q為皇后，N為騎士，R為城堡）：黑皇后走到b2，堵住自己國王的最後一格，白城堡成殺。這道題以「孿生題」聞名：把a6的皇后換成城堡、主教、騎士或兵，每一種都有各自的唯一解，一張圖五種殺法。',
+  'A cooperative goal does not appear in the classical xiangqi manuals, and our search of modern Chinese sources found none, though that search was limited. Changing the goal is the one thing these problems bring to the board. If you know of earlier xiangqi helpmates, [tell us](/contact).':
+    '古典象棋譜中沒有合作的目標，我們查閱的現代中文資料中也沒有找到，不過查閱範圍有限。改變目標，正是這些題給這張棋盤帶來的新東西。如果你知道更早的象棋合作殺，請[告訴我們](/contact)。',
+  'Composing them': '如何編題',
+  'The generator is simple and the solver does the work. A position maker deals diagrams, either every placement of a few pieces or random armies from a profile that fixes how much material each side gets. The solver walks every cooperative line of two moves a side, Black first, and keeps a diagram only if exactly one line mates. The profiles that gave Black an army and Red one or two pieces produced most of what is worth looking at.':
+    '生成器很簡單，主要靠求解器。局面生成器擺出圖形：要麼枚舉少數幾子的所有擺法，要麼按設定雙方子力的配置隨機擺出陣容。求解器遍歷雙方各兩步的所有合作走法，黑方先走，只保留恰好一路成殺的圖形。給黑方整支軍隊、紅方一兩個子的配置，產出了大部分值得一看的題。',
+  'The pipeline, in outline.': '流程概覽。',
+  Results: '結果',
+  'The search found 1,470 sound helpmates. Most were the same mate reached from a different setup, often a spectator piece one square over, so we grouped them by the final picture. That left **186 distinct mates**. The re-proof then removed 22, for a reason covered below, and **164 stand**.':
+    '搜尋找到1,470道無誤的合作殺。大多數是同一個殺形從不同的布局得到，往往只是一個旁觀的子挪了一格，所以我們按最終殺形分組。剩下**186種不同的殺法**。複核又去掉了22道，原因見下文，**留下164道**。',
+  'Of the 164, 39 are pure mates, where no square around the mated general is covered twice, and 19 are model mates: pure, with every red piece on the board doing work.':
+    '164道中，39道是純殺，即被殺一方將周圍沒有一格被重複控制；19道是純正殺：既是純殺，盤上每個紅子又都在發揮作用。',
+  'Mate delivered by': '成殺的子',
+  Problems: '題數',
+  'The 164 problems that stand, by the red piece that gives the final check.':
+    '留下的164道題，按最後一步將軍的紅子分類。',
+  'The best ten': '最好的十道',
+  "Ten problems, one idea each. All 164 are in [the study](/study/5CdUHFsq), these ten first and the rest in ranked order. Every one is the slice we searched: Black, Red, Black, Red, and Red's second move mates.":
+    '十道題，各有一個主題。全部164道都在[這個研習](/study/5CdUHFsq)裡，這十道在前，其餘按排名排列。每一道都屬於我們搜尋的那一塊：黑、紅、黑、紅，紅方第二步成殺。',
+  'Red has a general and one soldier against seven black pieces, a chariot and both advisors among them. Find the square where a lone soldier can mate, then ask which black piece has to wall the general in.':
+    '紅方只有帥和一兵，對黑方七子，其中有一車和雙士。先找出孤兵能在哪一格成殺，再想想哪個黑子得去堵住自己的將。',
+  'Helpmate 1: a general and one soldier': '合作殺1：光帥一兵',
+  "Red has a general and a horse already in Black's camp; Black has twelve pieces. Black has 45 legal first moves, and exactly one of them leads to mate.":
+    '紅方有帥和一匹已在黑方陣中的馬；黑方有十二子。黑方有45種合法的第一步，只有一種能導向殺局。',
+  'Helpmate 2: one horse against twelve': '合作殺2：一馬對十二子',
+  'A single red cannon against fifteen black pieces. A cannon cannot check without a screen, so look at which black piece can provide one.':
+    '一門紅炮對黑方十五子。炮沒有炮架就不能將軍，所以要看哪個黑子能當炮架。',
+  'Helpmate 3: one cannon against fifteen': '合作殺3：一炮對十五子',
+  "A red chariot against twelve, with Black's back rank already thinned out. The question is which squares beside the black general need filling, and by what.":
+    '一輛紅車對十二子，黑方底線已經空了一些。問題是黑將旁邊哪些格子需要填上，用什麼子填。',
+  'Helpmate 4: one chariot against twelve': '合作殺4：一車對十二子',
+  "A general and a horse against twelve again, the horse this time on h8, near a black chariot in the corner. The horse needs both of Red's moves.":
+    '又是帥和一馬對十二子，這次馬在h8，靠近角上的一輛黑車。這匹馬要用掉紅方的兩步。',
+  'Helpmate 5: a horse on the right': '合作殺5：右翼一馬',
+  "The fullest board of the ten: three red soldiers deep in Black's half against fourteen black pieces.":
+    '十道中子力最多的一局：三個紅兵深入黑方半邊，對黑方十四子。',
+  'Helpmate 6: eighteen pieces': '合作殺6：十八子',
+  'Six pieces: a general, cannon and soldier for Red, a general, cannon and horse for Black. Look at what the red cannon on e5 needs before it can give check.':
+    '六個子：紅方帥、炮、兵，黑方將、炮、馬。看看e5的紅炮在將軍之前需要什麼。',
+  'Helpmate 7: six pieces': '合作殺7：六子',
+  "Black's general is already out of its back rank, with Red's soldier and cannon stacked on the g-file. Red's last move here does two jobs.":
+    '黑將已經離開底線，紅兵和紅炮疊在g路上。紅方這裡的最後一步一著兩用。',
+  'Helpmate 8: six pieces again': '合作殺8：又是六子',
+  'Black has two chariots, a horse and a cannon on an open board, and 55 legal first moves. Red has one horse.':
+    '開闊的棋盤上黑方有雙車、一馬、一炮，第一步有55種合法走法。紅方只有一馬。',
+  'Helpmate 9: an open board': '合作殺9：開闊的棋盤',
+  "A general and one soldier against twelve, the soldier already on f8 beside Black's palace. Black's own pieces have to finish the cage.":
+    '帥和一兵對十二子，兵已在黑方九宮旁的f8。黑方得用自己的子把籠子合上。',
+  'Helpmate 10: one soldier against twelve': '合作殺10：一兵對十二子',
+  'What we learned': '我們學到了什麼',
+  "**Xiangqi decides what counts as sound.** A general with no legal move has lost, so a helpmate can also end with the losing side not in check and simply nothing to play. Our composer tested only for checkmates. Re-proved under the real rule, 22 of the 186 had other lines it could not see, from 3 to 64 of them, and two could be mated in one. A soundness test ported from chess brings chess's idea of a finished game with it.":
+    '**象棋決定什麼才算無誤。**將帥無子可走即判負，所以合作殺也可以在被殺一方沒有被將軍、只是無棋可走時結束。我們的編題程式只檢測了將死。按真正的規則複核後，186道中有22道另有程式沒看到的路線，從3路到64路不等，其中兩道一步就能殺。從西洋棋移植來的無誤檢驗，也把西洋棋對「終局」的理解一併帶了過來。',
+  '**The cannon is the theme chess cannot have.** It checks by jumping exactly one piece, and in a helpmate the mated side is cooperating, so Black can supply the screen. Nineteen of the 164 mate over a black screen. The facing-generals rule adds another: the red general can take squares from its own palace, as in the seventh problem.':
+    '**炮是西洋棋不可能有的主題。**炮隔一子將軍，而在合作殺裡被殺一方是合作的，所以黑方可以送上炮架。164道中有19道借黑方的炮架成殺。將帥不能對面的規則又添了一種：紅帥可以從自己的九宮控制格子，比如第七道題。',
+  '**A pipeline count measures patience, not problems.** 1,470 became 186 once we grouped by the final picture. Without that step the corpus would have been mostly the same mates.':
+    '**流程的計數衡量的是耐心，不是題目。**按最終殺形分組後，1,470變成了186。沒有這一步，題庫裡大部分都會是重複的殺法。',
+  'What is left to find': '還有什麼可找',
+  'We searched one corner of the genre, and the rest is open. **Longer helpmates** first. Our search found almost no sound helpmates in three: a third move gives both sides many more ways to reach the same mate, so a generator has to aim at unique lines rather than deal and filter. How long can a sound xiangqi helpmate be: ten moves, twenty, a hundred? And can a search prove that a long one is the shortest of its kind, or that its line is the only one?':
+    '我們只搜尋了這個體裁的一角，其餘都還空著。首先是**更長的合作殺**。我們的搜尋幾乎沒找到無誤的三步合作殺：多一步，雙方就有多得多的方法走到同一個殺形，所以生成器得直接瞄準唯一路線，而不是先擺後篩。無誤的象棋合作殺最長能有多長：十步，二十步，一百步？搜尋能否證明一道長題是同類中最短的，或者它的路線是唯一的？',
+  '**More impossible-looking ones**: the weakest red force against the most black, a lone soldier mating a full army. And **the other shapes of the genre**: Red moving first, and Red as the side that is mated. We have not searched either. If you find one, or a longer or stranger one than ours, we would love to see it: put it in [the forum](/forum), or write it up on your own blog and tell us where.':
+    '**更多看似不可能的題**：最弱的紅方子力對最多的黑子，一個孤兵將死整支軍隊。還有**這個體裁的其他形式**：紅方先走，以及紅方作為被殺的一方。這兩種我們都還沒有搜尋。如果你找到一道，或者比我們的更長、更奇的，我們很想看看：發到[論壇](/forum)，或者寫在你自己的部落格上並告訴我們在哪裡。',
+  "What the slice already shows is that xiangqi does take helpmates, and they are not chess problems on a different board. The rules that make xiangqi what it is, the loss without a legal move, the cannon's screen, the facing generals, decide which problems are sound and how the best of them mate. A good one looks impossible because Red has almost nothing. It works because Black's army is the material the mate is built from: the walls, the screen, the squares filled in around its own general. That is the hope behind this work: to carry the genres Western composers invented onto the xiangqi board, find what is beautiful in them here, and in time find a helpmate good enough to make a xiangqi player stop and set it up for a friend.":
+    '這一小塊已經表明，象棋容得下合作殺，而且它們不是換了張棋盤的西洋棋題。讓象棋成為象棋的那些規則，困斃判負、炮架、將帥對面，決定了哪些題無誤，也決定了最好的題如何成殺。好題看起來不可能，因為紅方幾乎什麼都沒有。它之所以成立，是因為黑方的大軍正是構成殺局的材料：牆、炮架、自己將周圍被填滿的格子。這就是這項工作背後的希望：把西方排局家發明的體裁搬到象棋棋盤上，找出它們在這裡的美，並且終有一天找到一道好到讓象棋棋手停下來、擺給朋友看的合作殺。',
+  'Solve all 164': '解全部164道',
+  'The longest forced mates': '最長的連將殺',
+  'Helpmates in Xiangqi (Chinese Chess): 164 Two-Move Problems': '象棋合作殺：164道兩步合作殺排局',
+  'Black to move, helpmate in 2': '黑先，兩步合作殺',
+  'The mate': '殺局',
   // -- The xiangqi match-fixing case --
   // champion pages. Player names stay in SIMPLIFIED for the Traditional reader:
   'The Xiangqi Match-Fixing Case': '象棋假棋案',

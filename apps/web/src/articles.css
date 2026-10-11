@@ -2076,6 +2076,12 @@
   width: 100%;
 }
 
+/* The block stretches to the column, so the caption (max-width 560px) would sit
+   at the left edge of a wider column; centre it the way a table caption sits. */
+.article-figure-code .article-figure-caption {
+  align-self: center;
+}
+
 .article-figure-table {
   align-items: stretch;
   width: 100%;
@@ -2294,7 +2300,12 @@
   overflow-x: auto;
   overflow-y: hidden;
   border: 1px solid #1f242b;
-  white-space: pre;
+  /* Long lines wrap instead of scrolling sideways: a scrollbar on a block that
+     is a few characters too wide reads as a fault, and on a phone every block
+     is. Newlines and indentation are kept; a token too long for the line
+     (a FEN, a URL) breaks where it must. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .article-code-block code {
