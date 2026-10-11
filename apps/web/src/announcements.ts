@@ -44,6 +44,14 @@ export type Announcement = {
 const baseAnnouncements: Announcement[] = [
   {
     date: '2026-10-11',
+    kind: 'update',
+    headline: 'Pro player pages now have photos.',
+    body: "Seventy-five of the pro players we follow now have a portrait on their page, from the xiangqiqipu.com archive, which gave us permission to use them; each photo links back to that player's page there. Every player page also has their games, results by event, openings and official CXA rating.",
+    href: '/players',
+    cta: 'Browse the pro players',
+  },
+  {
+    date: '2026-10-11',
     kind: 'article',
     headline: 'Looking for jieqi puzzles: what 50 games turned up.',
     body: 'We scored 2,939 positions from 50 jieqi games, looking for puzzles. Four passed the rules our xiangqi puzzles go through, and none of them turns on a face-down piece: the hidden-piece answers were bets, or moves the tile hardly touched. Where skill does show is in timing a capture a face-down piece can make whatever it turns out to be. Every example is on a board you can step through.',
