@@ -1347,8 +1347,10 @@ function rememberPendingMount(figure: HTMLElement, block: PendingBlock, lang?: A
   pendingMounts.set(figure, { block, lang });
 }
 
-function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElement {
+/** One body block as DOM. Exported for tests. */
+export function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElement {
   if (block.kind === 'paragraph') return paragraphNode(block.text);
+  if (block.kind === 'note') return noteNode(block.text);
   if (block.kind === 'sub-heading') return subHeadingNode(block);
   if (block.kind === 'static-boards') return renderStaticBoardsBlock(block);
   if (block.kind === 'cta') return renderCtaBlock(block);
@@ -2210,6 +2212,17 @@ function paragraphNode(text: string): HTMLParagraphElement {
   return p;
 }
 
+/** An editorial note: one paragraph of rich text in a bordered aside. */
+function noteNode(text: string): HTMLElement {
+  const aside = document.createElement('aside');
+  aside.className = 'article-note';
+  const p = document.createElement('p');
+  p.className = 'article-note-text';
+  appendRichText(p, text);
+  aside.append(p);
+  return aside;
+}
+
 // Lightweight inline parser. Recognizes Markdown-style `code`, [text](href) for
 // links, and **text** for bold. External link hrefs (http/https) open in a new
 // tab; internal hrefs (/foo, #foo) do not. Anything that isn't a recognized
@@ -2498,6 +2511,7 @@ export function renderArticleThumbnail(
     img.style.width = '100%';
     img.style.height = '100%';
     img.style.objectFit = 'cover';
+    if (thumb.position) img.style.objectPosition = thumb.position;
     img.style.display = 'block';
     wrap.replaceChildren(img);
     return wrap;

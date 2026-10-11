@@ -11,6 +11,8 @@ import {
   buildArticlesIndex,
   buildHomeArticleCards,
   buildRulesIndex,
+  renderArticleThumbnail,
+  renderBlock,
 } from './articles.js';
 import { articles } from './articles-data.js';
 import { rulesSlugPublicSurfaceEnabled } from './variant-public-surfaces.js';
@@ -968,5 +970,37 @@ describe('blog post read-next footer', () => {
     expect(articleStyles).toMatch(
       /@media \(max-width: \d+px\) \{\s*\.article-footer \.article-footer-list \{\s*grid-template-columns: 1fr/,
     );
+  });
+});
+
+describe('note block', () => {
+  it('renders one paragraph of rich text in a bordered aside', () => {
+    const el = renderBlock({
+      kind: 'note',
+      text: 'Spotted an error? [Tell us](/feedback) and we will **correct** it.',
+    });
+    expect(el.tagName).toBe('ASIDE');
+    expect(el.className).toBe('article-note');
+    const p = el.querySelector('p.article-note-text');
+    expect(p?.textContent).toBe('Spotted an error? Tell us and we will correct it.');
+    expect(p?.querySelector('a')?.getAttribute('href')).toBe('/feedback');
+    expect(p?.querySelector('strong')?.textContent).toBe('correct');
+  });
+
+  it('styles the note with neutral tokens, not a warning colour', () => {
+    const rule = articleStyles.match(/\.article-note \{[^}]*\}/)?.[0] ?? '';
+    expect(rule).toContain('var(--site-border-soft)');
+    expect(rule).not.toMatch(/warning|danger|error/);
+  });
+});
+
+describe('image thumbnail crop', () => {
+  it('applies an authored object-position', () => {
+    const wrap = renderArticleThumbnail({
+      kind: 'image',
+      src: '/player-photos/cao-yanlei.jpg',
+      position: 'center 12%',
+    });
+    expect(wrap.querySelector('img')?.style.objectPosition).toBe('center 12%');
   });
 });

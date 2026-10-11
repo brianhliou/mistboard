@@ -28,6 +28,11 @@ export type ParagraphBlock = { kind: 'paragraph'; text: string };
 
 export type SubHeadingBlock = { kind: 'sub-heading'; text: string };
 
+// An editorial note set apart from the body: a corrections invitation, a
+// sourcing remark. One short paragraph with the same inline markdown as a
+// paragraph ([text](href), **bold**, `code`), drawn as a quiet bordered aside.
+export type NoteBlock = { kind: 'note'; text: string };
+
 // Inline SVG composition of 1, 2, or 3 boards. Renderer wraps the composer
 // output in an <svg> with the given canvas dimensions and background.
 export type StaticBoardsBlock = {
@@ -392,6 +397,7 @@ export type ImageFigureBlock = {
 
 export type ArticleBlock =
   | ParagraphBlock
+  | NoteBlock
   | TableBlock
   | FaqBlock
   | ImageFigureBlock
@@ -458,6 +464,9 @@ export type ImageArticleThumbnail = {
   // a client route (e.g. '/blog'): use '/article-thumbs/misty.jpg'.
   src: string;
   alt?: string;
+  // CSS object-position for the cover crop, when the subject is off centre:
+  // a portrait in a landscape card keeps the face with 'center 12%'.
+  position?: string;
 };
 
 export type ArticleThumbnail = BoardArticleThumbnail | SvgArticleThumbnail | ImageArticleThumbnail;

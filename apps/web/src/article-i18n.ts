@@ -1055,7 +1055,7 @@ const ZH_HANS: Record<string, string> = {
   "Every game of the year is in a Mistboard study, with the engine's judgments and lines on each one, and 71 of the 75 are in the broadcast archive with the site's analysis. Sources: game records from dpxq.com, which may not hold every game of an event; analysis by Pikafish through Mistboard's review pipeline, September 2026.":
     '今年的每一盘都在 Mistboard 的一个研究里，每盘都有引擎的判断和变化；75 盘中有 71 盘也在直播档案里，附网站的分析。资料来源：棋谱来自 dpxq.com，该数据库不一定收齐每项赛事的全部对局；分析由 Pikafish 经 Mistboard 的复盘流程完成，2026 年 9 月。',
   'Cao Yanlei 曹岩磊: games, results, and analysis': '曹岩磊：对局、战绩与分析',
-  'Cao Yanlei at the board.': '对局中的曹岩磊。',
+  'Portrait of Cao Yanlei.': '曹岩磊肖像。',
   'Wang Yongqiang': '王永强',
   'Zhao Panwei': '赵攀伟',
   // lai-ly-huynh (zh-Hans), machine-drafted 2026-10-01, not native-reviewed. Mainland
@@ -3047,6 +3047,47 @@ const ZH_HANS: Record<string, string> = {
   'Crossed cannon': '过河炮',
   // -- The xiangqi match-fixing case --
   // Machine-drafted 2026-08-30, not native-reviewed, same standing as the two
+  'Between 2024 and 2026 the Chinese Xiangqi Association sanctioned 49 people for buying and selling games: 8 life bans, 37 timed bans and 4 reprimands.':
+    '2024到2026年间，中国象棋协会因买棋卖棋处罚了49人：终身禁赛8人，限期禁赛37人，通报批评4人。',
+  'Ten of the thirteen national champions since 2005 carry a ruling, including Wang Tianyi, the top-rated player from 2014 to 2023.':
+    '2005年以来的十三位全国冠军中，有十人受到处罚，其中包括2014到2023年间等级分第一的王天一。',
+  'A Hangzhou court convicted six grandmasters of bribery in September 2025. The charge was bribery, not gambling.':
+    '2025年9月，杭州一家法院以行贿受贿判决六名特级大师有罪。罪名是行贿受贿，不是赌博。',
+  'Engine cheating is alleged in every account and charged in none. No result or title has been struck from the record.':
+    '各方说法都提到用软件作弊，但没有一项指控涉及。至今没有任何成绩或称号被撤销。',
+  'This is our best reading of what has been published. If you know something here to be wrong or out of date, [tell us](/contact) and we will correct it.':
+    '本页是我们对已公开报道的最佳解读。如果你知道其中有错误或已过时的内容，请[告诉我们](/contact)，我们会更正。',
+  'Who’s who': '人物一览',
+  'The names that recur below. A ban is the association’s penalty and bars a player from competing; a prison term is the court’s.':
+    '下文反复出现的人物。禁赛是协会的处罚，禁止棋手参赛；徒刑是法院的判决。',
+  Person: '人物',
+  'Part in the case': '在案中的角色',
+  'Top-rated player 2014 to 2023; bought games': '2014至2023年等级分第一；买棋',
+  'Life ban; 2 years 9 months in prison': '终身禁赛；有期徒刑2年9个月',
+  'On the recorded calls; the go-between for most of Wang Tianyi’s payments':
+    '录音通话的一方；王天一大部分付款的中间人',
+  'Life ban; 1 year in prison': '终身禁赛；有期徒刑1年',
+  'The other voice on the recordings': '录音中的另一方',
+  'Banned 4 years 3 months; not charged': '禁赛4年3个月；未被起诉',
+  '2005 champion; one outlet reports he passed the recordings on':
+    '2005年冠军；有一家媒体报道录音由他转出',
+  'Life ban; 2 years 7 months in prison, appeal rejected': '终身禁赛；有期徒刑2年7个月，上诉被驳回',
+  '2007 champion': '2007年冠军',
+  'Life ban; 4 years 9 months in prison, the longest term': '终身禁赛；有期徒刑4年9个月，刑期最长',
+  'Xie Jing 谢靖, Xu Chao 徐超': '谢靖、徐超',
+  '2013 and 2017 champions': '2013年和2017年冠军',
+  'Life bans; 2 years 6 months in prison each': '均终身禁赛；各判有期徒刑2年6个月',
+  'Veteran player; alleged engine cheating for years, then accused an official by name':
+    '老将；多年来指称对手用软件作弊，随后实名举报一名官员',
+  'Not sanctioned': '未受处罚',
+  'Joined Liu Dahua’s accusation': '与柳大华联名举报',
+  'Banned 3 years': '禁赛3年',
+  'Guo Liping 郭莉萍': '郭莉萍',
+  'Official at the sport administration, named in the accusation':
+    '棋牌运动管理中心官员，被举报点名',
+  'Left the post in December 2024; not charged': '2024年12月去职；未被起诉',
+  'Ban from competing': '禁赛处罚',
+  'Prison term': '刑期',
   'The Xiangqi Match-Fixing Case': '象棋假棋案',
   'Xiangqi Match-Fixing: 录音门, the Bans, and the Convictions': '象棋假棋案：录音门、禁赛与判决',
   'Between 2024 and 2026 the Chinese Xiangqi Association sanctioned 49 people for buying and selling games, and a Hangzhou court convicted six grandmasters of bribery. What happened, why it paid, who ruled, and what is still unproven.':
@@ -3079,8 +3120,8 @@ const ZH_HANS: Record<string, string> = {
   'The spine of the case. Liu Dahua’s earlier private complaints are his own account rather than a documented date.':
     '本案的主线。柳大华更早的私下反映出自他本人的说法，并无确切日期可考。',
   'Two processes, one case': '两条并行的程序，同一起案件',
-  'The disciplinary track and the criminal track are separate. They ran on different timetables, and the six convicted are six of the forty-nine banned rather than a different group.':
-    '纪律处理与刑事追诉是两条独立的程序，时间表也不相同。被判刑的六人正是被处罚的四十九人中的六位，并非另一批人。',
+  'The disciplinary track and the criminal track are separate: the association can only bar a player from competing, and only the court can send one to prison. They ran on different timetables, and the six convicted are six of the forty-nine banned rather than a different group.':
+    '纪律处理与刑事追诉是两条独立的程序：协会只能禁止棋手参赛，只有法院才能判处徒刑。两者时间表也不相同。被判刑的六人正是被处罚的四十九人中的六位，并非另一批人。',
   'A third track went nowhere in public. Three officials left the chess and card centre while the case ran: its director Zhu Guoping 朱国平 and its discipline secretary Guo Yujun 郭玉军 in November 2024, and Guo Liping in December. No removal notice mentions this case, and no official has been reported as charged or sanctioned in connection with it.':
     '第三条线在公开层面没有下文。案件进行期间，棋牌运动管理中心有三名官员去职：主任朱国平与纪检书记郭玉军于2024年11月，郭莉萍于同年12月。没有一份免职通知提到本案，也没有任何官员被报道因此被追究或处罚。',
   'The Chinese Xiangqi Association has sanctioned 49 people in three batches: two in September 2024, forty-one in January 2025, and six in April 2026. That is 8 lifetime bans, 37 timed bans and 4 public reprimands. Revocation of the technical grade title accompanies 19 of the 45 bans rather than all of them. Only the three timed bans in the April 2026 notice carry published start and end dates, all running from 24 July 2024; the January notice publishes no dates at all, so when most of those bans expire is not a matter of public record.':
@@ -3088,7 +3129,6 @@ const ZH_HANS: Record<string, string> = {
   'The association published almost every name. Where a player also appears on the champion lists, his national title years are in the last column.':
     '协会公布了几乎每一个名字。若该棋手同时出现在冠军名单上，其全国冠军年份列在最后一栏。',
   Player: '棋手',
-  Penalty: '处罚',
   'National title': '全国冠军',
   'The 47 the association named. The other two were withheld because they were under 18 when the conduct occurred. Revocation of the technical grade title accompanies 19 of the 45 bans, not all of them.':
     '协会具名公布的47人。另外两人因涉案时未满18周岁而未公布姓名。45项禁赛中有19项同时撤销技术等级称号，并非全部。',
@@ -3097,9 +3137,8 @@ const ZH_HANS: Record<string, string> = {
   'Separately, the Shangcheng District People’s Court in Hangzhou convicted six grandmasters on 24 September 2025 of offering and accepting bribes as non-state functionaries, under Articles 163 and 164 of the criminal law. The Chinese press calls it the sport’s first criminal corruption case.':
     '另一条线上，杭州市上城区人民法院于2025年9月24日以对非国家工作人员行贿罪、非国家工作人员受贿罪判决六名特级大师有罪，依据刑法第163条与第164条。中文媒体称之为中国象棋反腐第一案。',
   Convicted: '被判刑者',
-  Sentence: '刑期',
-  'Reported from the 24 September 2025 verdict. No judgment text was released: these figures trace to the prosecution’s case, and only Hong Zhi’s was separately reported as a court outcome. Fines were imposed on Wang Tianyi and Zhao Xinxin; no amounts have ever been published.':
-    '据2025年9月24日宣判的报道整理。判决书未公开：这些数字源自检方的指控，其中只有洪智一项另有作为法院结果的报道。王天一与赵鑫鑫另被并处罚金，金额从未公布。',
+  'Reported from the 24 September 2025 verdict. The terms are 有期徒刑, fixed-term imprisonment; whether any was suspended has not been reported. No judgment text was released: these figures trace to the prosecution’s case, and only Hong Zhi’s was separately reported as a court outcome. Fines were imposed on Wang Tianyi and Zhao Xinxin; no amounts have ever been published.':
+    '据2025年9月24日宣判的报道整理。刑期均为有期徒刑，是否适用缓刑未见报道。判决书未公开：这些数字源自检方的指控，其中只有洪智一项另有作为法院结果的报道。王天一与赵鑫鑫另被并处罚金，金额从未公布。',
   'The strongest player in the world was buying': '最强的棋手是买家',
   'Wang Tianyi was China’s top-rated player from 2014 to 2023, known simply as 象棋第一人, the number one. The prosecution charged 22 separate acts of giving bribes totalling ¥942,000, against 2 acts of taking them totalling ¥116,000. Nineteen of the 22 payments ran through Wang Yuefei.':
     '王天一在2014到2023年间等级分居全国第一，被称为象棋第一人。检方指控他行贿22笔、合计94.2万元，受贿2笔、合计11.6万元。22笔中有19笔经由王跃飞。',
@@ -5644,7 +5683,7 @@ const ZH_HANT: Record<string, string> = {
   "Every game of the year is in a Mistboard study, with the engine's judgments and lines on each one, and 71 of the 75 are in the broadcast archive with the site's analysis. Sources: game records from dpxq.com, which may not hold every game of an event; analysis by Pikafish through Mistboard's review pipeline, September 2026.":
     '今年的每一盤都在 Mistboard 的一個研究裡，每盤都有引擎的判斷和變化；75 盤中有 71 盤也在直播檔案裡，附網站的分析。資料來源：棋譜來自 dpxq.com，該資料庫不一定收齊每項賽事的全部對局；分析由 Pikafish 經 Mistboard 的復盤流程完成，2026 年 9 月。',
   'Cao Yanlei 曹岩磊: games, results, and analysis': '曹岩磊：對局、戰績與分析',
-  'Cao Yanlei at the board.': '對局中的曹岩磊。',
+  'Portrait of Cao Yanlei.': '曹岩磊肖像。',
   'Wang Yongqiang': '王永强',
   'Zhao Panwei': '赵攀伟',
   'Meng Chen': '孟辰',
@@ -6061,6 +6100,47 @@ const ZH_HANT: Record<string, string> = {
   Defence: '防守方',
   // -- The xiangqi match-fixing case --
   // champion pages. Player names stay in SIMPLIFIED for the Traditional reader:
+  'Between 2024 and 2026 the Chinese Xiangqi Association sanctioned 49 people for buying and selling games: 8 life bans, 37 timed bans and 4 reprimands.':
+    '2024到2026年間，中國象棋協會因買棋賣棋處罰了49人：終身禁賽8人，限期禁賽37人，通報批評4人。',
+  'Ten of the thirteen national champions since 2005 carry a ruling, including Wang Tianyi, the top-rated player from 2014 to 2023.':
+    '2005年以來的十三位全國冠軍中，有十人受到處罰，其中包括2014到2023年間等級分第一的王天一。',
+  'A Hangzhou court convicted six grandmasters of bribery in September 2025. The charge was bribery, not gambling.':
+    '2025年9月，杭州一家法院以行賄受賄判決六名特級大師有罪。罪名是行賄受賄，不是賭博。',
+  'Engine cheating is alleged in every account and charged in none. No result or title has been struck from the record.':
+    '各方說法都提到用軟體作弊，但沒有一項指控涉及。至今沒有任何成績或稱號被撤銷。',
+  'This is our best reading of what has been published. If you know something here to be wrong or out of date, [tell us](/contact) and we will correct it.':
+    '本頁是我們對已公開報導的最佳解讀。如果你知道其中有錯誤或已過時的內容，請[告訴我們](/contact)，我們會更正。',
+  'Who’s who': '人物一覽',
+  'The names that recur below. A ban is the association’s penalty and bars a player from competing; a prison term is the court’s.':
+    '下文反覆出現的人物。禁賽是協會的處罰，禁止棋手參賽；徒刑是法院的判決。',
+  Person: '人物',
+  'Part in the case': '在案中的角色',
+  'Top-rated player 2014 to 2023; bought games': '2014至2023年等級分第一；買棋',
+  'Life ban; 2 years 9 months in prison': '終身禁賽；有期徒刑2年9個月',
+  'On the recorded calls; the go-between for most of Wang Tianyi’s payments':
+    '錄音通話的一方；王天一大部分付款的中間人',
+  'Life ban; 1 year in prison': '終身禁賽；有期徒刑1年',
+  'The other voice on the recordings': '錄音中的另一方',
+  'Banned 4 years 3 months; not charged': '禁賽4年3個月；未被起訴',
+  '2005 champion; one outlet reports he passed the recordings on':
+    '2005年冠軍；有一家媒體報導錄音由他轉出',
+  'Life ban; 2 years 7 months in prison, appeal rejected': '終身禁賽；有期徒刑2年7個月，上訴被駁回',
+  '2007 champion': '2007年冠軍',
+  'Life ban; 4 years 9 months in prison, the longest term': '終身禁賽；有期徒刑4年9個月，刑期最長',
+  'Xie Jing 谢靖, Xu Chao 徐超': '謝靖、徐超',
+  '2013 and 2017 champions': '2013年和2017年冠軍',
+  'Life bans; 2 years 6 months in prison each': '均終身禁賽；各判有期徒刑2年6個月',
+  'Veteran player; alleged engine cheating for years, then accused an official by name':
+    '老將；多年來指稱對手用軟體作弊，隨後實名舉報一名官員',
+  'Not sanctioned': '未受處罰',
+  'Joined Liu Dahua’s accusation': '與柳大華聯名舉報',
+  'Banned 3 years': '禁賽3年',
+  'Guo Liping 郭莉萍': '郭莉萍',
+  'Official at the sport administration, named in the accusation':
+    '棋牌運動管理中心官員，被舉報點名',
+  'Left the post in December 2024; not charged': '2024年12月去職；未被起訴',
+  'Ban from competing': '禁賽處罰',
+  'Prison term': '刑期',
   'The Xiangqi Match-Fixing Case': '象棋假棋案',
   'Xiangqi Match-Fixing: 录音门, the Bans, and the Convictions': '象棋假棋案：錄音門、禁賽與判決',
   'Between 2024 and 2026 the Chinese Xiangqi Association sanctioned 49 people for buying and selling games, and a Hangzhou court convicted six grandmasters of bribery. What happened, why it paid, who ruled, and what is still unproven.':
@@ -6093,8 +6173,8 @@ const ZH_HANT: Record<string, string> = {
   'The spine of the case. Liu Dahua’s earlier private complaints are his own account rather than a documented date.':
     '本案的主線。柳大华更早的私下反映出自他本人的說法，並無確切日期可考。',
   'Two processes, one case': '兩條並行的程序，同一起案件',
-  'The disciplinary track and the criminal track are separate. They ran on different timetables, and the six convicted are six of the forty-nine banned rather than a different group.':
-    '紀律處理與刑事追訴是兩條獨立的程序，時間表也不相同。被判刑的六人正是被處罰的四十九人中的六位，並非另一批人。',
+  'The disciplinary track and the criminal track are separate: the association can only bar a player from competing, and only the court can send one to prison. They ran on different timetables, and the six convicted are six of the forty-nine banned rather than a different group.':
+    '紀律處理與刑事追訴是兩條獨立的程序：協會只能禁止棋手參賽，只有法院才能判處徒刑。兩者時間表也不相同。被判刑的六人正是被處罰的四十九人中的六位，並非另一批人。',
   'A third track went nowhere in public. Three officials left the chess and card centre while the case ran: its director Zhu Guoping 朱国平 and its discipline secretary Guo Yujun 郭玉军 in November 2024, and Guo Liping in December. No removal notice mentions this case, and no official has been reported as charged or sanctioned in connection with it.':
     '第三條線在公開層面沒有下文。案件進行期間，棋牌運動管理中心有三名官員去職：主任朱国平與紀檢書記郭玉军於2024年11月，郭莉萍於同年12月。沒有一份免職通知提到本案，也沒有任何官員被報道因此被追究或處罰。',
   'The Chinese Xiangqi Association has sanctioned 49 people in three batches: two in September 2024, forty-one in January 2025, and six in April 2026. That is 8 lifetime bans, 37 timed bans and 4 public reprimands. Revocation of the technical grade title accompanies 19 of the 45 bans rather than all of them. Only the three timed bans in the April 2026 notice carry published start and end dates, all running from 24 July 2024; the January notice publishes no dates at all, so when most of those bans expire is not a matter of public record.':
@@ -6102,7 +6182,6 @@ const ZH_HANT: Record<string, string> = {
   'The association published almost every name. Where a player also appears on the champion lists, his national title years are in the last column.':
     '協會公布了幾乎每一個名字。若該棋手同時出現在冠軍名單上，其全國冠軍年份列在最後一欄。',
   Player: '棋手',
-  Penalty: '處罰',
   'National title': '全國冠軍',
   'The 47 the association named. The other two were withheld because they were under 18 when the conduct occurred. Revocation of the technical grade title accompanies 19 of the 45 bans, not all of them.':
     '協會具名公布的47人。另外兩人因涉案時未滿18周歲而未公布姓名。45項禁賽中有19項同時撤銷技術等級稱號，並非全部。',
@@ -6111,9 +6190,8 @@ const ZH_HANT: Record<string, string> = {
   'Separately, the Shangcheng District People’s Court in Hangzhou convicted six grandmasters on 24 September 2025 of offering and accepting bribes as non-state functionaries, under Articles 163 and 164 of the criminal law. The Chinese press calls it the sport’s first criminal corruption case.':
     '另一條線上，杭州市上城區人民法院於2025年9月24日以對非國家工作人員行賄罪、非國家工作人員受賄罪判決六名特級大師有罪，依據刑法第163條與第164條。中文媒體稱之為中國象棋反腐第一案。',
   Convicted: '被判刑者',
-  Sentence: '刑期',
-  'Reported from the 24 September 2025 verdict. No judgment text was released: these figures trace to the prosecution’s case, and only Hong Zhi’s was separately reported as a court outcome. Fines were imposed on Wang Tianyi and Zhao Xinxin; no amounts have ever been published.':
-    '據2025年9月24日宣判的報道整理。判決書未公開：這些數字源自檢方的指控，其中只有洪智一項另有作為法院結果的報道。王天一與赵鑫鑫另被併處罰金，金額從未公布。',
+  'Reported from the 24 September 2025 verdict. The terms are 有期徒刑, fixed-term imprisonment; whether any was suspended has not been reported. No judgment text was released: these figures trace to the prosecution’s case, and only Hong Zhi’s was separately reported as a court outcome. Fines were imposed on Wang Tianyi and Zhao Xinxin; no amounts have ever been published.':
+    '據2025年9月24日宣判的報導整理。刑期均為有期徒刑，是否適用緩刑未見報導。判決書未公開：這些數字源自檢方的指控，其中只有洪智一項另有作為法院結果的報導。王天一與趙鑫鑫另被併處罰金，金額從未公布。',
   'The strongest player in the world was buying': '最強的棋手是買家',
   'Wang Tianyi was China’s top-rated player from 2014 to 2023, known simply as 象棋第一人, the number one. The prosecution charged 22 separate acts of giving bribes totalling ¥942,000, against 2 acts of taking them totalling ¥116,000. Nineteen of the 22 payments ran through Wang Yuefei.':
     '王天一在2014到2023年間等級分居全國第一，被稱為象棋第一人。檢方指控他行賄22筆、合計94.2萬元，受賄2筆、合計11.6萬元。22筆中有19筆經由王跃飞。',
