@@ -5,6 +5,7 @@
 //
 //   node scripts/player-study.mjs --dir out/annot --names docs-private/players/yin-sheng/names.json \
 //     --name "Yin Sheng 尹昇: 31 games, Aug–Sep 2026" --player 尹昇
+//   node scripts/player-study.mjs ... --plan out/<slug>-study-plan.json [--public]
 //   node scripts/player-study.mjs ... --cookie ~/.mistboard-cookie --create
 //   node scripts/player-study.mjs ... --cookie ~/.mistboard-cookie --update <studyId>
 //
@@ -12,6 +13,10 @@
 // UNLISTED study to the account the cookie belongs to; --update syncs an existing
 // one by chapter name. The cookie is read from a file and used as a header, never
 // printed, never an argument.
+//
+// --plan writes the same study as a `study:edit` plan owned by @mistboard
+// instead of sending it: no cookie, no sign-in. Apply it with study:edit (dry run,
+// then --apply) through `railway run` (docs-private/players/README.md step 5b).
 //
 // Sibling of world-title-study.mjs: same tree shape, same NAGs, same judgment
 // sentence (so the study's comments translate), same version-guarded update.
@@ -29,7 +34,7 @@
 //     dated the 2026 league stage-one games 2029). Applied to ordering AND to
 //     the date tag: the study should say what happened, and 2029 has not.
 
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
@@ -46,6 +51,7 @@ const PLAYER = argOf('player');
 const BASE = argOf('base', 'https://mistboard.com');
 const CREATE = args.includes('--create');
 const UPDATE = argOf('update');
+const PLAN = argOf('plan');
 const STUDY_NAME = argOf('name');
 const STUDY_DESCRIPTION = argOf(
   'description',
@@ -375,8 +381,37 @@ async function main() {
     `\n${games.length} chapters, ${totalTranslated}/${totalComments} comments translated`,
   );
 
+  if (PLAN) {
+    const [first, ...rest] = games.map(chapterFor);
+    const chapter = ({ name, variant, orientation, root, tags, i18n }) => ({
+      name,
+      variant,
+      orientation,
+      tree: root,
+      tags,
+      i18n,
+    });
+    const plan = {
+      create: {
+        owner: 'mistboard',
+        name: STUDY_NAME,
+        description: STUDY_DESCRIPTION,
+        visibility: args.includes('--public') ? 'public' : 'unlisted',
+        chapter: chapter(first),
+      },
+      ops: rest.map((c) => {
+        const { variant: _variant, ...add } = chapter(c);
+        return { op: 'add', ...add };
+      }),
+    };
+    writeFileSync(PLAN, `${JSON.stringify(plan)}\n`);
+    console.log(`plan for @mistboard -> ${PLAN}; apply with study:edit (dry run, then --apply)`);
+    return;
+  }
   if (!CREATE && !UPDATE) {
-    console.log('dry run. --create writes a new unlisted study, --update <id> syncs one.');
+    console.log(
+      'dry run. --plan <file> writes a study:edit plan (no cookie); --create writes a new unlisted study, --update <id> syncs one.',
+    );
     return;
   }
   const cookie = readFileSync(argOf('cookie', join(homedir(), '.mistboard-cookie')), 'utf8').trim();
