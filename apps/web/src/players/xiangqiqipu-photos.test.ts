@@ -122,13 +122,17 @@ describe('xiangqiqipu.com player photos', () => {
     expect(link?.rel).toBe('noopener');
   });
 
-  it('gives Cao Yanlei the xiangqiqipu portrait, here and on his article card', async () => {
+  // His article card matches the photo on his article (Brian, 2026-10-11: the
+  // card and the page disagreed); his player page keeps the credited portrait.
+  it('gives Cao Yanlei the xiangqiqipu portrait here, his article photo on its card', async () => {
     expect(PLAYER_PROFILES['cao-yanlei']?.photo).toBeUndefined();
     expect(sourcedPhotoFor('cao-yanlei')?.photo).toBe('/player-photos/cao-yanlei.jpg');
     const { caoYanleiArticle } = await import('../articles/content/cao-yanlei.js');
     expect(caoYanleiArticle.thumbnail).toMatchObject({
       kind: 'image',
-      src: '/player-photos/cao-yanlei.jpg',
+      src: '/article-thumbs/cao-yanlei-2024-face.jpg',
     });
+    const figure = caoYanleiArticle.intro?.find((block) => block.kind === 'image-figure');
+    expect(figure).toMatchObject({ src: '/article-thumbs/cao-yanlei-2024.jpg' });
   });
 });
