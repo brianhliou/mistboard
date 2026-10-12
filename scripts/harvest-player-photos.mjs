@@ -9,7 +9,8 @@
 // <h1> must read the same name, and the men's/women's tab it is listed under
 // must agree with our events. Anything else is skipped and listed, never
 // guessed. Players with an authored photo (players/profiles.ts) are skipped:
-// the authored photo wins.
+// the authored photo wins. Players in OUTDATED_PHOTOS are skipped too: their
+// portrait there shows them years younger (a child or teen), so the tile stays.
 //
 // Politeness: sequential requests, one second apart, a clear User-Agent, and
 // images already on disk are not fetched again (--refresh re-fetches them).
@@ -42,6 +43,17 @@ const SITE = 'https://www.xiangqiqipu.com';
 const USER_AGENT = 'MistboardPlayerPhotos/1.0 (+https://mistboard.com/players)';
 const PERMISSION_DATE = '2026-10-11';
 const DELAY_MS = 1000;
+
+// Portraits too old to use: each shows the player as a child or teenager, and
+// the site gives no shoot date (uploads date from July 2020 or earlier).
+// Reviewed by eye 2026-10-11; never harvested again, even with --refresh.
+const OUTDATED_PHOTOS = new Map([
+  ['wang-jiarui', 'shows him as a teenager; born about 1998'],
+  ['wang-yuhang', 'shows him as a child; born about 2002'],
+  ['wang-zihan', 'shows her as a teenager; born about 2000'],
+  ['xu-wenzhang', 'shows him as a teenager; born about 2000'],
+  ['zuo-wenjing', 'shows her as a child; born 1993'],
+]);
 
 const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
@@ -262,6 +274,10 @@ async function main() {
     const player = ours[0];
     if (authored.has(player.slug)) {
       skipped.push(`${name} (${player.slug}): has an authored photo`);
+      continue;
+    }
+    if (OUTDATED_PHOTOS.has(player.slug)) {
+      skipped.push(`${name} (${player.slug}): ${OUTDATED_PHOTOS.get(player.slug)}`);
       continue;
     }
     const group = ourGroup(player);

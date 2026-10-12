@@ -73,6 +73,17 @@ describe('xiangqiqipu.com player photos', () => {
     expect(tile?.textContent).toBe('王');
   });
 
+  // Portraits that show the player as a child or teen (OUTDATED_PHOTOS in the
+  // harvest script, reviewed 2026-10-11): the tile stays, on the page and in rows.
+  it('never uses an outdated portrait', () => {
+    for (const slug of ['wang-jiarui', 'wang-yuhang', 'wang-zihan', 'xu-wenzhang', 'zuo-wenjing']) {
+      expect(sourcedPhotoFor(slug), slug).toBeNull();
+      expect(existsSync(join(PUBLIC_DIR, `player-photos/${slug}.jpg`)), slug).toBe(false);
+      const figure = playerPortrait({ slug, name: '王天一', nameEn: null });
+      expect(figure.querySelector('img'), slug).toBeNull();
+    }
+  });
+
   it('shows a sourced photo in a list row, lazily, at the tile size', () => {
     const entry = XIANGQIQIPU_PHOTOS[0];
     if (!entry) throw new Error('no photos');
