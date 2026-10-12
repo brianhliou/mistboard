@@ -43,6 +43,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-10-16',
+    kind: 'article',
+    headline: 'A player page for Zuo Wenjing.',
+    body: "The 2022 women's world champion, and a double gold medallist at the 2023 Asian Games. The page follows her title run in Kuching and her 2026 season, with five of her games on the board, in English and Chinese. All 32 of her games are in a study with the engine's judgments and lines.",
+    href: '/blog/zuo-wenjing',
+    cta: 'Read the article',
+  },
+  {
     date: '2026-10-11',
     kind: 'update',
     headline: 'Pro player pages now have photos.',

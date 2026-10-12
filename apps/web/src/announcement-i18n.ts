@@ -83,6 +83,9 @@ const ZH_HANS: Record<string, string> = {
   "Game chapters in Mistboard's own xiangqi studies now open with the advantage chart, the move marks and accuracy, as in a game review. Chapters set up from a position, such as compositions, have no chart. On the player pages, a board whose game is in the broadcast archive has the chart under it: click it to jump to any move, or hide it from the board menu.":
     'Mistboard 自己的象棋研习中，对局章节现在一打开就显示优势图、着法评注和准确率，和对局复盘一样。从摆好的局面开始的章节（例如排局）没有优势图。在棋手页面上，如果棋盘上的对局在直播档案里，棋盘下方会显示它的优势图：点击优势图可以跳到任意一步，也可以在棋盘菜单里隐藏它。',
   'See the Cao Yanlei page': '查看曹岩磊的页面',
+  'A player page for Zuo Wenjing.': '左文静有了自己的棋手页面。',
+  "The 2022 women's world champion, and a double gold medallist at the 2023 Asian Games. The page follows her title run in Kuching and her 2026 season, with five of her games on the board, in English and Chinese. All 32 of her games are in a study with the engine's judgments and lines.":
+    '2022 年女子世锦赛冠军，2023 年亚运会两枚金牌得主。页面讲述她在古晋的夺冠历程和 2026 赛季，棋盘上有她的五盘对局，提供英文和中文版。她的全部 32 盘对局都收在一个研习里，附引擎的判断和变化。',
   'A player page for Tony Fung.': '冯家俊有了自己的棋手页面。',
   "Hong Kong's 2022 world championship finalist, who scored nine points from ten in this year's qualifier for China's top league. The page follows his last fourteen months and his run to the 2022 final in Kuching, with five of his games on the board, in English and Chinese. All 47 of his games are in a study with the engine's judgments and lines.":
     '打进 2022 年世锦赛决赛的香港棋手，今年象甲预选赛十分拿下九分。页面讲述他最近十四个月的比赛和 2022 年在古晋打进决赛的经历，棋盘上有他的五盘对局，提供英文和中文版。他的全部 47 盘对局都收在一个研习里，附引擎的判断和变化。',
@@ -529,6 +532,9 @@ const ZH_HANT: Record<string, string> = {
   "Game chapters in Mistboard's own xiangqi studies now open with the advantage chart, the move marks and accuracy, as in a game review. Chapters set up from a position, such as compositions, have no chart. On the player pages, a board whose game is in the broadcast archive has the chart under it: click it to jump to any move, or hide it from the board menu.":
     'Mistboard 自己的象棋研習中，對局章節現在一打開就顯示優勢圖、著法評註和準確率，和對局復盤一樣。從擺好的局面開始的章節（例如排局）沒有優勢圖。在棋手頁面上，如果棋盤上的對局在直播檔案裡，棋盤下方會顯示它的優勢圖：點擊優勢圖可以跳到任意一步，也可以在棋盤選單裡隱藏它。',
   'See the Cao Yanlei page': '查看曹岩磊的頁面',
+  'A player page for Zuo Wenjing.': '左文静有了自己的棋手頁面。',
+  "The 2022 women's world champion, and a double gold medallist at the 2023 Asian Games. The page follows her title run in Kuching and her 2026 season, with five of her games on the board, in English and Chinese. All 32 of her games are in a study with the engine's judgments and lines.":
+    '2022 年女子世錦賽冠軍，2023 年亞運會兩枚金牌得主。頁面講述她在古晉的奪冠歷程和 2026 賽季，棋盤上有她的五盤對局，提供英文和中文版。她的全部 32 盤對局都收在一個研習裡，附引擎的判斷和變化。',
   'A player page for Tony Fung.': '馮家俊有了自己的棋手頁面。',
   "Hong Kong's 2022 world championship finalist, who scored nine points from ten in this year's qualifier for China's top league. The page follows his last fourteen months and his run to the 2022 final in Kuching, with five of his games on the board, in English and Chinese. All 47 of his games are in a study with the engine's judgments and lines.":
     '打進 2022 年世錦賽決賽的香港棋手，今年象甲預選賽十分拿下九分。頁面講述他最近十四個月的比賽和 2022 年在古晉打進決賽的經歷，棋盤上有他的五盤對局，提供英文和中文版。他的全部 47 盤對局都收在一個研習裡，附引擎的判斷和變化。',
