@@ -190,6 +190,17 @@ test('serveArticlePage marks an unlisted rules page as non-indexable', async () 
     assert.equal(response.status, 200, slug);
     assert.match(response.body, /<meta name="robots" content="noindex, follow">/, slug);
   }
+  // The Atomic Xiangqi launch post goes with its variant: up by URL, unindexed.
+  const post = captureResponse();
+  await serveArticlePage({
+    slug: 'atomic-xiangqi-build',
+    base: 'blog',
+    response: post,
+    publicHost: 'https://mistboard.test',
+    staticDir,
+  });
+  assert.equal(post.status, 200);
+  assert.match(post.body, /<meta name="robots" content="noindex, follow">/);
 });
 
 // Held back for polish on 2026-10-02 and public the same day: indexable now.
@@ -276,6 +287,9 @@ test('serveSitemap omits unlisted and retired rules while retaining public artic
   await writeFile(join(staticDir, 'zh-hans', 'rules', 'fortress-xiangqi.html'), '<h1>规则</h1>');
   await writeFile(join(staticDir, 'zh-hans', 'rules', 'crazyhouse-xiangqi.html'), '<h1>规则</h1>');
   await writeFile(join(staticDir, 'blog', 'misty.html'), '<h1>article</h1>');
+  await writeFile(join(staticDir, 'blog', 'atomic-xiangqi-build.html'), '<h1>article</h1>');
+  await mkdir(join(staticDir, 'zh-hant', 'blog'), { recursive: true });
+  await writeFile(join(staticDir, 'zh-hant', 'blog', 'atomic-xiangqi-build.html'), '<h1>文章</h1>');
   const response = captureResponse();
 
   await serveSitemap({
@@ -291,6 +305,7 @@ test('serveSitemap omits unlisted and retired rules while retaining public artic
   assert.match(response.body, /https:\/\/mistboard\.test\/rules\/crazyhouse-xiangqi/);
   assert.doesNotMatch(response.body, /shogi4|kriegspiel/);
   assert.doesNotMatch(response.body, /rules\/(fortress|atomic)-xiangqi/);
+  assert.doesNotMatch(response.body, /atomic-xiangqi-build/);
 });
 
 // Search Console reports indexing per submitted sitemap, so the index splits

@@ -16,14 +16,15 @@ import { articles } from './articles-data.js';
 // for an untagged article, the deep-dives row for one tagged homeRow.
 
 // What the row can ever show: published editorial articles in the interface's
-// own language that are not opted out of the index (articles.ts
-// isArticleListedInThisEnv).
+// own language that are not opted out of the index or marked noindex
+// (articles.ts isArticleListedInThisEnv).
 const listable = articles.filter(
   (article) =>
     article.status === 'published' &&
     article.kind !== 'rules' &&
     !article.sourceLang &&
-    article.showInIndex !== false,
+    article.showInIndex !== false &&
+    article.noindex !== true,
 );
 
 const HOUR_MS = 60 * 60 * 1000;

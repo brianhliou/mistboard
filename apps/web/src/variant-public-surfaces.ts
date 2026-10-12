@@ -92,6 +92,19 @@ export function rulesSlugPublicSurfaceEnabled(slug: string): boolean {
   return !isGameSpecId(gameSpecId) || variantPublicSurfaceEnabled(gameSpecId);
 }
 
+/** Whether a published page carries `noindex, follow`: a rules page whose
+ *  variant is off the public surfaces, or any article marked `noindex`. The
+ *  prerenderer stamps it and the server's sitemap mirrors it
+ *  (articleIsIndexable; articles-meta-sync.test.ts holds the two together). */
+export function articleIsNoindex(article: {
+  kind: string;
+  slug: string;
+  noindex?: boolean;
+}): boolean {
+  if (article.noindex === true) return true;
+  return article.kind === 'rules' && !rulesSlugPublicSurfaceEnabled(article.slug);
+}
+
 export function rulesHrefPublicSurfaceEnabled(href: string | undefined): boolean {
   const slug = rulesSlugFromHref(href);
   return slug === null || rulesSlugPublicSurfaceEnabled(slug);

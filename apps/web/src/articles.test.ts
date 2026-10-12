@@ -15,7 +15,7 @@ import {
   renderBlock,
 } from './articles.js';
 import { articles } from './articles-data.js';
-import { rulesSlugPublicSurfaceEnabled } from './variant-public-surfaces.js';
+import { articleIsNoindex, rulesSlugPublicSurfaceEnabled } from './variant-public-surfaces.js';
 
 const articleStyles = readFileSync('src/articles.css', 'utf8');
 
@@ -103,10 +103,9 @@ describe('article public listing gates', () => {
       '/blog/pikafish',
       // The first player page, dated 2026-09-21.
       '/blog/yin-sheng',
-      // The atomic-xiangqi launch note is dated 2026-09-16, the horde-xiangqi
-      // and anti-xiangqi write-ups 2026-09-15 and 2026-09-13, and this index
-      // is ordered by date alone.
-      '/blog/atomic-xiangqi-build',
+      // The horde-xiangqi and anti-xiangqi write-ups are dated 2026-09-15 and
+      // 2026-09-13, and this index is ordered by date alone. The atomic-xiangqi
+      // launch note (2026-09-16) is served by URL only since the variant retired.
       '/blog/horde-xiangqi',
       '/blog/anti-xiangqi',
       // Published with the variant on 2026-09-11, the same date as the
@@ -311,7 +310,6 @@ describe('article public listing gates', () => {
       '/blog/one-thousand-games',
       '/blog/banqi-statistics',
       '/blog/pikafish',
-      '/blog/atomic-xiangqi-build',
       '/blog/horde-xiangqi',
       '/blog/anti-xiangqi',
       '/blog/duck-xiangqi-strategy',
@@ -675,6 +673,39 @@ describe('rules variant sidebar', () => {
     expect(fortress.querySelector('a[href*="gameSpecId=crazyhouse-xiangqi"]')).not.toBeNull();
   });
 
+  // The Atomic Xiangqi launch post outlived its variant (retired 2026-10-11):
+  // its URL still answers, so inbound links land, but no surface offers it.
+  it('serves a noindex post by URL and lists it nowhere', () => {
+    vi.stubEnv('DEV', false);
+    const slug = 'atomic-xiangqi-build';
+    const post = articles.find((article) => article.slug === slug);
+    expect(post?.noindex).toBe(true);
+    expect(articleIsNoindex(post!)).toBe(true);
+    const page = buildArticlePage(slug);
+    expect(page.querySelector('h1')?.textContent).toBe(post?.title);
+    const href = `a[href="/blog/${slug}"]`;
+    expect(buildArticlesIndex().querySelector(href)).toBeNull();
+    for (const row of ['latest', 'deep-dives'] as const) {
+      expect(
+        buildHomeArticleCards(50, undefined, { ...NO_AGE_CUT, row })?.querySelector(href) ?? null,
+        row,
+      ).toBeNull();
+    }
+    const others = articles.filter(
+      (article) => article.kind === 'article' && article.slug !== slug && articleIsLive(article),
+    );
+    for (const other of others) {
+      expect(
+        buildArticlePage(other.slug).querySelector(`.article-footer ${href}`),
+        other.slug,
+      ).toBeNull();
+    }
+    // Only this post opts out; every other published post stays indexable.
+    expect(
+      articles.filter((article) => article.noindex === true).map((article) => article.slug),
+    ).toEqual([slug]);
+  });
+
   it('lists the elevated xiangqi variants (not the hidden mini trio) by default', () => {
     // Xiangqi pivot: the mini trio is de-listed; the rail leads with standard
     // Xiangqi as the open-info anchor.
@@ -877,6 +908,7 @@ describe('blog post read-next footer', () => {
           article.kind === 'article' &&
           articleIsLive(article) &&
           article.showInIndex !== false &&
+          article.noindex !== true &&
           article.publisher === 'mistboard',
       )
       .map((article) => article.slug);

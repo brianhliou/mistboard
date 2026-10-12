@@ -353,9 +353,7 @@ try {
   const { articles } = await server.ssrLoadModule('/src/articles-data.ts');
   const { isArticleTranslationPublished, translateArticle } =
     await server.ssrLoadModule('/src/article-i18n.ts');
-  const { rulesSlugPublicSurfaceEnabled } = await server.ssrLoadModule(
-    '/src/variant-public-surfaces.ts',
-  );
+  const { articleIsNoindex } = await server.ssrLoadModule('/src/variant-public-surfaces.ts');
   const { articleIsLive, articleGoesLiveAt } = await server.ssrLoadModule(
     '/src/articles/publish-time.ts',
   );
@@ -680,10 +678,9 @@ try {
       // language relationship; the canonical consolidates query-param, SPA-shell,
       // and trailing-slash variants of THIS url into a single indexed page.
       const canonical = `<link rel="canonical" href="${url}" />`;
-      const robots =
-        article.kind === 'rules' && !rulesSlugPublicSurfaceEnabled(article.slug)
-          ? '<meta name="robots" content="noindex, follow" />'
-          : '';
+      const robots = articleIsNoindex(article)
+        ? '<meta name="robots" content="noindex, follow" />'
+        : '';
       const localeLinks = v.lang ? (localePreloadLinks[v.lang] ?? '') : '';
       const rssLink = article.kind === 'rules' ? '' : BLOG_RSS_LINK;
       html = html.replace(
@@ -891,9 +888,12 @@ try {
 
   // blog/feed.xml: the posts as RSS, alongside the announcement feed at
   // /feed.xml. Published blog posts only, newest first; rules docs are
-  // reference pages, not posts, and drafts are not public.
+  // reference pages, not posts, and drafts are not public. An unlisted or
+  // noindex post is served by URL only, so it is not announced here either.
   const blogFeedEntries = published
-    .filter((entry) => entry.kind === 'article')
+    .filter(
+      (entry) => entry.kind === 'article' && entry.showInIndex !== false && entry.noindex !== true,
+    )
     .sort((a, b) => (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''));
   await fs.mkdir(resolve(distDir, 'blog'), { recursive: true });
   await fs.writeFile(

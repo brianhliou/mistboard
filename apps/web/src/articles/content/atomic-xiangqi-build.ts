@@ -10,9 +10,10 @@ import { relatedClosing } from '../diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
 // The launch piece: what decides a first game, in the shape of the duck
-// launch article. On the /blog index and in the sitemap since the variant was
-// listed (2026-09-17); linked from the rules page and the brianhliou.com post;
-// off the homepage row until the play menu opens (home-article-row.test.ts).
+// launch article. Listed and indexed from 2026-09-17; since the variant retired
+// (2026-10-11, Brian) it is served by URL only: off the /blog index, homepage
+// rows, related ring, blog feed and sitemap, and noindex in every language.
+// Inbound links (the rules page, the brianhliou.com post) still land.
 export const atomicXiangqiBuildArticle: Article = {
   slug: 'atomic-xiangqi-build',
   kind: 'article',
@@ -26,6 +27,7 @@ export const atomicXiangqiBuildArticle: Article = {
     'Chinese chess where a capture is an explosion. The rules take a minute. What decides your first game is the three points beside your general, the cannon that no longer clears a rank, and a chariot on your advisor file counting as check.',
   showSummaryOnPage: false,
   status: 'published',
+  noindex: true,
   publishedAt: '2026-09-16',
   audience:
     'Anyone who has just read the Atomic Xiangqi rules and is about to play, and xiangqi players wondering what an explosion does to a game they already know.',

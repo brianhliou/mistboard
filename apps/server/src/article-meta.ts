@@ -40,6 +40,9 @@ const NON_INDEXED_ARTICLE_SLUGS = new Set([
   'mahjong',
   'atomic-xiangqi',
   'fortress-xiangqi',
+  // The Atomic Xiangqi launch post, served by URL only since the variant
+  // retired (web side: `noindex: true` on the article).
+  'atomic-xiangqi-build',
 ]);
 
 // Rules pages for DELETED variants (docs-private/variant-retirement-plan.md,

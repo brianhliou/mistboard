@@ -134,7 +134,7 @@ function isArticleVisibleInThisEnv(article: Article): boolean {
 
 function isArticleListedInThisEnv(article: Article): boolean {
   if (!isArticleVisibleInThisEnv(article)) return false;
-  if (article.showInIndex === false) return false;
+  if (article.showInIndex === false || article.noindex === true) return false;
   // A page written in a language the interface does not speak never lists here.
   // The index is one reader's shelf, and a Vietnamese card in an English list is
   // noise to everyone: an English reader cannot read it, and a Vietnamese reader
