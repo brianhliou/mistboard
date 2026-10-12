@@ -51,6 +51,14 @@ const baseAnnouncements: Announcement[] = [
     cta: 'Read the article',
   },
   {
+    date: '2026-10-12',
+    kind: 'article',
+    headline: 'Why banqi needs a perpetual chase rule, shown with real games.',
+    body: 'In banqi a chased piece often has only one safe square, so the chaser could force a draw by repetition. The article plays through the Mistboard games where that happened, compares what tournament rules and the popular apps do, and sets out our rule in full for anyone implementing it.',
+    href: '/blog/banqi-perpetual-chase',
+    cta: 'Read the article',
+  },
+  {
     date: '2026-10-11',
     kind: 'update',
     headline: 'Pro player pages now have photos.',

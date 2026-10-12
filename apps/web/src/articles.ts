@@ -1878,7 +1878,8 @@ function renderRawSvgStepperBlock(block: RawSvgStepperBlock, lang?: ArticleLang)
       lang,
       title: block.header?.players,
       subtitle: block.header?.event,
-      wide,
+      // A game is one board, so its sheet sits beside it however wide it is.
+      wide: wide && !asGame,
     },
     {
       count: block.steps.length,

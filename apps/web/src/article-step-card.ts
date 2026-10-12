@@ -218,6 +218,9 @@ export function createStepCard(options: StepCardOptions, initial: StepCardGame):
 
   function paint(from: number | null): void {
     game.paint(board, index, from);
+    // A landscape board (banqi) takes the room a narrower sheet column frees.
+    const view = board.querySelector('svg')?.getAttribute('viewBox')?.split(/\s+/).map(Number);
+    el.classList.toggle('article-step-card--landscape', !!view && view[2]! / view[3]! > 1.2);
     status.textContent = `${index} / ${max()}`;
     if (moveList) {
       // The embed's foot: the game's result, standing, whatever ply is shown.

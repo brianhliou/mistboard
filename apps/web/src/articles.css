@@ -2493,6 +2493,13 @@
   width: calc(100% - 226px);
 }
 
+/* A landscape board (banqi) gets a narrower sheet column: its moves are short,
+   and every pixel of width is board. Before the container query below, which
+   stacks the card on a phone. */
+.article-step-card--landscape .embed-card-board {
+  width: calc(100% - 180px);
+}
+
 /* No seat rows (a stepped figure): the mat keeps the same inset above and
    below the board that it has at the sides. */
 .article-step-card .embed-card:not(.article-step-card-seated) .article-step-card-board {

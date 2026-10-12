@@ -66,6 +66,8 @@ describe('article public listing gates', () => {
       // Fortress and Atomic Xiangqi on hold for a redesign, scheduled for 2026-10-13
       // (DEV shows it early for review).
       '/blog/fortress-and-atomic-xiangqi-on-hold',
+      // The banqi perpetual-chase (長捉) rule, 2026-10-10.
+      '/blog/banqi-perpetual-chase',
       // The jieqi puzzle investigation write-up, 2026-10-10.
       '/blog/jieqi-puzzle-search',
       // The longest forced mates in xiangqi (tablebase records), 2026-10-09.
@@ -301,6 +303,7 @@ describe('article public listing gates', () => {
     // curated list. Deep dives have their own row (next test).
     expect(hrefs).toEqual([
       '/blog/fortress-and-atomic-xiangqi-on-hold',
+      '/blog/banqi-perpetual-chase',
       '/blog/jieqi-puzzle-search',
       '/blog/longest-forced-mates-xiangqi',
       '/blog/benedict-xiangqi',
