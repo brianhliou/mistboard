@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { isArticleTranslationPublished } from './article-i18n.js';
 import {
   BANQI_BOARD_W,
   BANQI_ENGINE_THUMBNAIL,
@@ -888,6 +889,31 @@ describe('blog post read-next footer', () => {
     expect(footer).not.toBeNull();
     expect(footer?.querySelector('.article-footer-heading')?.textContent).toBe('Read next');
     expect(footer?.querySelectorAll('.articles-index-card')).toHaveLength(3);
+  });
+
+  // An English-only post read with a zh UI: the heading and dates follow the UI,
+  // so the onward cards must too wherever the onward post has a zh version.
+  it('localizes onward cards on an English-only page read in zh', () => {
+    // DEV so the English-only draft renders; every published post has a zh version.
+    vi.stubEnv('DEV', true);
+    vi.stubGlobal('localStorage', { getItem: () => 'zh-Hans', setItem() {}, removeItem() {} });
+    try {
+      expect(isArticleTranslationPublished('fog-openings')).toBe(false);
+      const footer = buildArticlePage('fog-openings').querySelector('.article-footer');
+      expect(footer?.querySelector('.article-footer-heading')?.textContent).toBe('接着读');
+      let checked = 0;
+      for (const card of footer?.querySelectorAll('.articles-index-card') ?? []) {
+        const slug = card.getAttribute('href')?.split('/').pop() ?? '';
+        const target = articles.find((a) => a.slug === slug);
+        if (!target || !isArticleTranslationPublished(slug)) continue;
+        expect(card.getAttribute('href'), slug).toBe(`/zh-hans/blog/${slug}`);
+        expect(card.textContent, slug).not.toContain(target.title);
+        checked += 1;
+      }
+      expect(checked).toBeGreaterThan(0);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   // Rules docs already carry the variant rail as their onward path; a second
