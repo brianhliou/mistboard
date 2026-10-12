@@ -4,12 +4,7 @@
  * themes card, and the settings card (variant picker + auto-next).
  */
 
-import {
-  FORTRESS_XIANGQI_SPEC_ID,
-  puzzleShortCode,
-  XIANGQI_MOTIF_BY_ID,
-  XIANGQI_SPEC_ID,
-} from '@mistboard/game';
+import { puzzleShortCode, XIANGQI_MOTIF_BY_ID, XIANGQI_SPEC_ID } from '@mistboard/game';
 import { t } from '../i18n/catalog.js';
 import { currentLocale } from '../i18n/locale.js';
 import { seatDiscEl } from '../seat-disc.js';
@@ -226,7 +221,7 @@ function variantLabel(variant: PuzzleVariant): string {
 }
 
 function parseVariantFilter(value: string): PuzzleVariant {
-  return isPuzzleVariant(value) ? value : FORTRESS_XIANGQI_SPEC_ID;
+  return isPuzzleVariant(value) ? value : XIANGQI_SPEC_ID;
 }
 
 function puzzleInfoRow(

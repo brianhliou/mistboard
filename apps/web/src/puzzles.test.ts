@@ -182,8 +182,6 @@ describe('puzzles route', () => {
     expect(ratingCard?.textContent).not.toContain('0 solved of 1');
   });
 
-  // Skipped while only Fortress Xiangqi is surfaced (the variant picker is
-  // hidden). Restore when more than one variant is unhidden.
   it('plays a puzzle line and advances to the solved state', async () => {
     const drop = RED_MATE;
     const qualityEvents: Array<{ sessionId: string; event: string; vote?: string | null }> = [];
@@ -333,8 +331,7 @@ describe('puzzles route', () => {
     stubWindowLocalStorage(
       memoryStorage({ 'mistboard:puzzles:seen': JSON.stringify({ [blackDrop.id]: 1 }) }),
     );
-    // Winning-advantage puzzles (most of the Fortress corpus, Jungle material
-    // tactics) complete while the game is still in progress: the server reports
+    // Winning-advantage puzzles (Jungle material tactics) complete while the game is still in progress: the server reports
     // complete: true with a state whose status is still 'playing'. Reshape the
     // real attempt to that contract so the solved CTA is exercised against it.
     const solvedAttempt = attemptStandardXiangqiPuzzleLine(
@@ -916,8 +913,8 @@ describe('sourceGameLines', () => {
   });
 
   it('falls back to "From set <variant>" without attribution', () => {
-    expect(sourceGameLines({ variant: 'fortress-xiangqi' }).map((l) => l.textContent)).toEqual([
-      'From set Fortress Xiangqi',
+    expect(sourceGameLines({ variant: 'jungle' }).map((l) => l.textContent)).toEqual([
+      'From set Jungle Chess',
     ]);
     // A xiangqi puzzle with only {gameId, ply} and no names/event is not enough.
     expect(

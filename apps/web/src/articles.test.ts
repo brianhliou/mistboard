@@ -487,7 +487,6 @@ describe('article public listing gates', () => {
       'banqi',
       'jungle',
       'jungle-flip',
-      'fortress-xiangqi',
       'jieqi',
       'fog-xiangqi',
       'fog-chess',
@@ -643,16 +642,37 @@ describe('rules variant sidebar', () => {
     expect(hrefs.indexOf('/rules/jieqi')).toBeLessThan(hrefs.indexOf('/rules/banqi'));
     expect(hrefs.indexOf('/rules/banqi')).toBeLessThan(hrefs.indexOf('/rules/duck-xiangqi'));
     expect(hrefs.indexOf('/rules/duck-xiangqi')).toBeLessThan(
-      hrefs.indexOf('/rules/fortress-xiangqi'),
+      hrefs.indexOf('/rules/crazyhouse-xiangqi'),
     );
-    expect(hrefs.indexOf('/rules/fortress-xiangqi')).toBeLessThan(
+    expect(hrefs.indexOf('/rules/crazyhouse-xiangqi')).toBeLessThan(
       hrefs.indexOf('/rules/fog-xiangqi'),
     );
-    // Unlisted 2026-10-06 while its rules are reworked.
+    // Retired 2026-10-11: the pages stay up by URL, off the rail.
+    expect(nav?.querySelector('a[href="/rules/fortress-xiangqi"]')).toBeNull();
     expect(nav?.querySelector('a[href="/rules/atomic-xiangqi"]')).toBeNull();
     expect(hrefs.indexOf('/rules/fog-xiangqi')).toBeLessThan(hrefs.indexOf('/rules/fog-chess'));
     expect(hrefs.indexOf('/rules/fog-chess')).toBeLessThan(hrefs.indexOf('/rules/jungle'));
     expect(hrefs.indexOf('/rules/jungle')).toBeLessThan(hrefs.indexOf('/rules/jungle-flip'));
+  });
+
+  // Fortress and Atomic Xiangqi retired on 2026-10-11. Their rules pages stay
+  // readable by URL (no 410, no redirect; precedent /rules/shogi4) but nothing
+  // lists them and nothing offers a game the server would refuse.
+  it('keeps retired rules pages readable, unlisted and without a play row', () => {
+    const index = buildRulesIndex();
+    for (const slug of ['fortress-xiangqi', 'atomic-xiangqi']) {
+      expect(rulesSlugPublicSurfaceEnabled(slug), slug).toBe(false);
+      expect(index.querySelector(`a[href="/rules/${slug}"]`), slug).toBeNull();
+      const page = buildArticlePage(slug);
+      expect(page.querySelector('h1')?.textContent, slug).toBeTruthy();
+      expect(page.querySelector('.article-cta-row.article-play-cta'), slug).toBeNull();
+      expect(page.querySelector(`a[href*="gameSpecId=${slug}"]`), slug).toBeNull();
+      const rail = page.querySelector('.article-variant-sidebar');
+      expect(rail?.querySelector(`a[href="/rules/${slug}"]`) ?? null, slug).toBeNull();
+    }
+    // Fortress points its reader at the nearest live game instead.
+    const fortress = buildArticlePage('fortress-xiangqi');
+    expect(fortress.querySelector('a[href*="gameSpecId=crazyhouse-xiangqi"]')).not.toBeNull();
   });
 
   it('lists the elevated xiangqi variants (not the hidden mini trio) by default', () => {

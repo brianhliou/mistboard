@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { gameSpecForLegacyLiveRoom, type RoomTimeControl } from '@mistboard/game';
+import {
+  gameSpecForLegacyLiveRoom,
+  isRetiredGameSpec,
+  type RoomTimeControl,
+} from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
 import { ratedEnabled } from './../feature-flags.js';
 import { gateGameSpecRequest } from './../game-spec-request-gate.js';
@@ -62,6 +66,11 @@ export async function tryHandle(
     const registration =
       typeof body.gameSpecId === 'string' ? variantTenantForSpecId(body.gameSpecId) : null;
     if (registration) {
+      // A retired variant keeps its tenant for replays but joins no lobby.
+      if (isRetiredGameSpec(registration.gameSpecId)) {
+        writeJson(response, 410, { error: 'retired_game_spec' });
+        return true;
+      }
       if (!registration.enabled()) {
         writeJson(response, 404, { error: `${registration.errorPrefix}_disabled` });
         return true;

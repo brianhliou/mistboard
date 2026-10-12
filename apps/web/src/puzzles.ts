@@ -83,8 +83,8 @@ const REVEAL_STEP_MS = 650;
 
 // Variants surfaced in the Settings variant picker (order = display order; the
 // first is the default view). Standard Xiangqi (the mined real-game corpus,
-// the bet variant) is the only surfaced trainer. Fortress and Jungle stay in
-// the corpus + API for direct links, but are hidden from discovery for now.
+// the bet variant) is the only surfaced trainer. Jungle stays in the corpus +
+// API for direct links, but is hidden from discovery for now.
 // Add a spec id here to unhide it.
 const PUZZLE_VARIANT_FILTERS: readonly PuzzleVariantFilter[] = [XIANGQI_SPEC_ID];
 
@@ -337,7 +337,7 @@ export async function mountPuzzles(
   // drives variant selection and queue matching below.
   if (selectedId) selectedId = resolveToFullPuzzleId(selectedId, summaries);
   const directSummary = selectedId ? summaries.find((puzzle) => puzzle.id === selectedId) : null;
-  // A normal visit defaults to the surfaced variant (Fortress); a direct deep
+  // A normal visit defaults to the surfaced variant (Xiangqi); a direct deep
   // link into any puzzle still resolves so shared/bookmarked URLs keep working.
   if (directSummary) variantFilter = directSummary.variant;
   else if (!summaries.some((puzzle) => puzzle.variant === variantFilter) && summaries[0]) {
@@ -810,8 +810,8 @@ function playbackSolution(session: PuzzleSession, renderSession: () => void): vo
 }
 
 // The painted board inside a .puzzle-board column, across every variant adapter:
-// the drop/fortress shells wrap board plus reserves, the rest paint a board
-// element straight in. Falls back to the column so the grip still has something
+// a reserve shell (none since Fortress Xiangqi was retired, 2026-10-11) wraps
+// board plus reserves, the rest paint a board element straight in. Falls back to the column so the grip still has something
 // to measure if an adapter paints something new.
 function paintedPuzzleBoard(column: HTMLElement): HTMLElement {
   return (

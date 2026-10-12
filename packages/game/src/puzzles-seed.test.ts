@@ -13,8 +13,6 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import test from 'node:test';
 import {
-  FORTRESS_XIANGQI_PUZZLES,
-  FORTRESS_XIANGQI_SOURCE_GAMES,
   FORTRESS_XIANGQI_SPEC_ID,
   JUNGLE_PUZZLES,
   JUNGLE_SOURCE_GAMES,
@@ -38,10 +36,6 @@ function sha256(value: unknown): string {
 // pre-#183 unit suite pinned on the in-package JUNGLE_PUZZLES array: the seed
 // cut is byte-identical to what the server used to serve from TS modules.
 const REGISTRY_PINS: Record<SeedPuzzleRegistry, { count: number; hash: string }> = {
-  'fortress-xiangqi': {
-    count: 0,
-    hash: '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',
-  },
   jungle: {
     count: 109,
     hash: 'c6811543b08a2bed8aed4be4bf1bbd5cbc942054f8fe5de6a18c19783434e621',
@@ -53,7 +47,6 @@ const REGISTRY_PINS: Record<SeedPuzzleRegistry, { count: number; hash: string }>
 };
 
 const REGISTRY_VARIANTS: Record<SeedPuzzleRegistry, ReadonlySet<string>> = {
-  'fortress-xiangqi': new Set([FORTRESS_XIANGQI_SPEC_ID]),
   jungle: new Set([JUNGLE_SPEC_ID]),
   xiangqi: new Set([XIANGQI_SPEC_ID]),
 };
@@ -73,11 +66,18 @@ test('seed integrity: source-games count + content hash', () => {
     sha256(games.jungle),
     'bf96a5e9d57b790b36211e90580e46fed07d90e826aba6b944503453888fb044',
   );
-  assert.equal(games.fortressXiangqi.length, 0);
+});
+
+// Fortress Xiangqi was retired on 2026-10-11 and its puzzle registry deleted
+// (it had shipped none since 2026-09-03). Nothing in the seed may name it, so
+// the store's seed sync can never bring a Fortress puzzle back.
+test('the seed carries no Fortress Xiangqi registry or puzzle', () => {
+  assert.equal((SEED_PUZZLE_REGISTRIES as readonly string[]).includes('fortress-xiangqi'), false);
   assert.equal(
-    sha256(games.fortressXiangqi),
-    '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',
+    loadAllSeedPuzzles().some((puzzle) => (puzzle.variant as string) === FORTRESS_XIANGQI_SPEC_ID),
+    false,
   );
+  assert.deepEqual(Object.keys(loadSeedSourceGames()), ['jungle']);
 });
 
 test('seed puzzles carry the serving shape, registry-consistent variants, unique ids', () => {
@@ -118,7 +118,7 @@ test('loadAllSeedPuzzles preserves the registry concatenation (serving) order', 
 // make kernel/unit tests pass against content the server no longer serves.
 test('every fixture puzzle is a verbatim subset of the seed', () => {
   const seedById = new Map(loadAllSeedPuzzles().map((puzzle) => [puzzle.id, puzzle]));
-  const fixtures = [...FORTRESS_XIANGQI_PUZZLES, ...JUNGLE_PUZZLES, ...XIANGQI_PUZZLES];
+  const fixtures = [...JUNGLE_PUZZLES, ...XIANGQI_PUZZLES];
   assert.ok(fixtures.length > 0);
   for (const fixture of fixtures) {
     const seeded = seedById.get(fixture.id);
@@ -129,36 +129,26 @@ test('every fixture puzzle is a verbatim subset of the seed', () => {
 
 test('every fixture source game is a verbatim subset of the seed source games', () => {
   const games = loadSeedSourceGames();
-  const seedById = new Map(
-    [...games.jungle, ...games.fortressXiangqi].map((game) => [game.id, game]),
-  );
-  for (const fixture of [...JUNGLE_SOURCE_GAMES, ...FORTRESS_XIANGQI_SOURCE_GAMES]) {
+  const seedById = new Map(games.jungle.map((game) => [game.id, game]));
+  for (const fixture of JUNGLE_SOURCE_GAMES) {
     const seeded = seedById.get(fixture.id);
     assert.ok(seeded, `fixture source game ${fixture.id} is not in the seed`);
     assert.deepEqual(seeded, fixture, `fixture source game ${fixture.id} drifted from the seed`);
   }
 });
 
-// Referential integrity: every seeded Jungle/Fortress puzzle that points at a
+// Referential integrity: every seeded Jungle puzzle that points at a
 // self-play source game finds it in the seed. (Standard-xiangqi sourceGame ids
 // reference historical_xiangqi_games rows, not seed games; full replay
 // verification of the linkage lives in the corpus slowtest.)
 test('seed puzzle sourceGame references resolve within the seed source games', () => {
   const games = loadSeedSourceGames();
   const jungleIds = new Set(games.jungle.map((game) => game.id));
-  const fortressIds = new Set(games.fortressXiangqi.map((game) => game.id));
   for (const puzzle of loadSeedPuzzleRegistry('jungle')) {
     if (!('sourceGame' in puzzle) || !puzzle.sourceGame) continue;
     assert.ok(
       jungleIds.has(puzzle.sourceGame.gameId),
       `${puzzle.id} references missing jungle source game ${puzzle.sourceGame.gameId}`,
-    );
-  }
-  for (const puzzle of loadSeedPuzzleRegistry('fortress-xiangqi')) {
-    if (!('sourceGame' in puzzle) || !puzzle.sourceGame) continue;
-    assert.ok(
-      fortressIds.has(puzzle.sourceGame.gameId),
-      `${puzzle.id} references missing fortress source game ${puzzle.sourceGame.gameId}`,
     );
   }
 });

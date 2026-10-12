@@ -205,37 +205,6 @@
   height: 100%;
 }
 
-/* Drop reserve: one narrow column on the outer edge, both hands stacked. */
-.home-puzzle-reserve {
-  flex: 0 0 auto;
-  align-self: center;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.home-puzzle-widget .home-puzzle-hand {
-  --drop-mini-hand-piece-size: 26px;
-  --drop-mini-hand-tile-size: calc(var(--drop-mini-hand-piece-size) + 6px);
-  --drop-mini-hand-band-height: calc(var(--drop-mini-hand-piece-size) + 14px);
-  height: auto;
-  min-height: 0;
-  padding: 0;
-}
-
-.home-puzzle-hand .drop-mini-reserve-row {
-  flex-direction: column;
-  flex-wrap: nowrap;
-  width: auto;
-  min-height: 0;
-  gap: 5px;
-}
-
-.home-puzzle-hand .drop-mini-reserve-piece {
-  border-color: color-mix(in srgb, var(--site-border-soft) 64%, transparent);
-  background: color-mix(in srgb, var(--site-panel) 58%, transparent);
-}
-
 /* Captions inside the box, dressed as the viewer's seat rows one band up: the
    same line box, type size and weight as a seat name, left-aligned with the same
    4px inset, so the two boards read as one column of board + text bands. (They

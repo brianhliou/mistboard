@@ -14,7 +14,12 @@
  */
 
 import type { ClockPolicyKind, RoomTimeControl } from '@mistboard/game';
-import { clockPolicyKindFor, isAbortReason, maybeGameSpecForId } from '@mistboard/game';
+import {
+  clockPolicyKindFor,
+  isAbortReason,
+  isRetiredGameSpec,
+  maybeGameSpecForId,
+} from '@mistboard/game';
 import { countDeployGatingRooms } from '../deploy-gate.js';
 import {
   firstPartyBotForEngine,
@@ -286,6 +291,11 @@ export function createTenantRuntimeRoom<
   // room rather than discovering it mid-game.
   assertForfeitPolicy(tenant);
   if (!tenant.enabled()) return { ok: false, error: 'disabled' };
+  // The backstop for a retired spec: every path that starts a game (rooms,
+  // lobby matches, correspondence, rematches, bot-vs-bot) comes through here,
+  // while a game in progress rehydrates through createTenantRuntimeRoomFromEvents
+  // and is untouched. The routes answer 410 before they get this far.
+  if (isRetiredGameSpec(tenant.gameSpecId)) return { ok: false, error: 'disabled' };
 
   const now = options.now ?? Date.now();
   const setup = tenant.rules.createSetup?.();

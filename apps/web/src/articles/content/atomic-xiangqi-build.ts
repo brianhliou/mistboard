@@ -6,7 +6,7 @@ import {
   ATOMIC_XIANGQI_SOLDIER_PAIR,
   ATOMIC_XIANGQI_THUMBNAIL,
 } from '../../atomic-xiangqi-rules-diagrams.js';
-import { playClosing } from '../diagrams.js';
+import { relatedClosing } from '../diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
 // The launch piece: what decides a first game, in the shape of the duck
@@ -141,18 +141,12 @@ export const atomicXiangqiBuildArticle: Article = {
         },
       ],
     },
-    playClosing({
-      heading: 'Play it',
-      lead: 'Eight engine strengths, or a friend by invite link. The rules page has the whole thing with diagrams.',
-      playLabel: 'Play Atomic Xiangqi',
-      playHref: '/?play=computer&gameSpecId=atomic-xiangqi',
-      secondary: [
+    // Retired 2026-10-11: the piece stays up and indexed, without play buttons.
+    relatedClosing({
+      heading: 'Further reading',
+      lead: 'Atomic Xiangqi was retired on 2026-10-11: it no longer takes new games, and finished games still replay. The rules page has the whole thing with diagrams.',
+      links: [
         { label: 'Rules', href: '/rules/atomic-xiangqi', emphasis: 'secondary' },
-        {
-          label: 'Invite a friend',
-          href: '/?play=friend&gameSpecId=atomic-xiangqi',
-          emphasis: 'secondary',
-        },
         { label: 'The twelve engine games', href: '/study/dPKhvJKb', emphasis: 'secondary' },
       ],
     }),

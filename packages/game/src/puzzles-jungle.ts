@@ -1,6 +1,6 @@
 // Jungle (Dou Shou Qi / 斗兽棋) forced-win puzzle model + solver.
 //
-// Parallels puzzles-fortress-xiangqi.ts, but for the single Jungle variant
+// Parallels the deleted Fortress Xiangqi puzzle model, but for the single Jungle variant
 // (7x9, dens, water lakes, traps, animal-rank capture). Jungle has NO check or
 // checkmate: a game ends when a piece enters the opponent's den, the opponent
 // has no pieces left, or the opponent has no legal move (stalemate) — each with

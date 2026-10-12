@@ -27,12 +27,10 @@ import {
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
 import {
-  atomicXiangqiEnabled,
   banqiEnabled,
   crazyhouseXiangqiEnabled,
   darkXiangqiEnabled,
   duckXiangqiEnabled,
-  fortressXiangqiEnabled,
   jieqiEnabled,
   jungleEnabled,
   jungleFlipEnabled,
@@ -60,9 +58,7 @@ export interface VariantDef {
   miniId: VariantMiniId;
 }
 
-const fortressXiangqiOn = fortressXiangqiEnabled();
 const duckXiangqiOn = duckXiangqiEnabled();
-const atomicXiangqiOn = atomicXiangqiEnabled();
 const crazyhouseXiangqiOn = crazyhouseXiangqiEnabled();
 const xiangqiOn = xiangqiEnabled();
 const jieqiOn = jieqiEnabled();
@@ -174,29 +170,6 @@ export const VARIANTS: VariantDef[] = [
     onLeaderboard: crazyhouseXiangqiOn,
     onProfile: crazyhouseXiangqiOn,
   },
-  // Fortress: the authored open-information xiangqi product variant.
-  {
-    id: currentRatingVariantForSpec(FORTRESS_XIANGQI_SPEC_ID),
-    gameSpecId: fortressXiangqiSpec.id,
-    apiParam: FORTRESS_XIANGQI_SPEC_ID,
-    label: fortressXiangqiSpec.publicName,
-    miniId: 'fortress-xiangqi',
-    enabled: false,
-    onLeaderboard: fortressXiangqiOn,
-    onProfile: fortressXiangqiOn,
-  },
-  // Atomic: xiangqi where a capture explodes. Launched casual and rating-ready
-  // on the same terms as duck (migration 147); the lobby seek can be rated.
-  {
-    id: currentRatingVariantForSpec(ATOMIC_XIANGQI_SPEC_ID),
-    gameSpecId: atomicXiangqiSpec.id,
-    apiParam: ATOMIC_XIANGQI_SPEC_ID,
-    label: atomicXiangqiSpec.publicName,
-    miniId: 'atomic-xiangqi',
-    enabled: false,
-    onLeaderboard: atomicXiangqiOn,
-    onProfile: atomicXiangqiOn,
-  },
   // Full Fog Xiangqi (9x10): launched PvP-first (no bot, no open-seek lobby),
   // rating-ready like Jieqi/Banqi, and paired directly with Fog Chess.
   {
@@ -241,6 +214,33 @@ export const VARIANTS: VariantDef[] = [
     enabled: false,
     onLeaderboard: jungleFlipOn,
     onProfile: jungleFlipOn,
+  },
+  // Retired 2026-10-11, so off the canonical order and at the tail: the
+  // entries stay so labels and finished games resolve, and no rating surface
+  // lists them. Fortress: the authored open-information xiangqi variant.
+  {
+    id: currentRatingVariantForSpec(FORTRESS_XIANGQI_SPEC_ID),
+    gameSpecId: fortressXiangqiSpec.id,
+    apiParam: FORTRESS_XIANGQI_SPEC_ID,
+    label: fortressXiangqiSpec.publicName,
+    miniId: 'fortress-xiangqi',
+    enabled: false,
+    // Retired 2026-10-11: the pool's ratings are kept, not shown.
+    onLeaderboard: false,
+    onProfile: false,
+  },
+  // Atomic: xiangqi where a capture explodes. Launched casual and rating-ready
+  // on the same terms as duck (migration 147); the lobby seek can be rated.
+  {
+    id: currentRatingVariantForSpec(ATOMIC_XIANGQI_SPEC_ID),
+    gameSpecId: atomicXiangqiSpec.id,
+    apiParam: ATOMIC_XIANGQI_SPEC_ID,
+    label: atomicXiangqiSpec.publicName,
+    miniId: 'atomic-xiangqi',
+    enabled: false,
+    // Retired 2026-10-11: the pool's ratings are kept, not shown.
+    onLeaderboard: false,
+    onProfile: false,
   },
 ];
 

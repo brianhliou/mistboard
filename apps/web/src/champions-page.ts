@@ -113,7 +113,6 @@ export const TITLES: readonly Title[] = [
     nameKey: 'variant.crazyhouseXiangqi.name',
     ...FAIRY_STOCKFISH_L8,
   },
-  { gameId: 'fortress-xiangqi', nameKey: 'variant.fortressXiangqi.name', ...FAIRY_STOCKFISH_L8 },
   { gameId: 'dark-xiangqi', nameKey: 'variant.darkXiangqi.name', ...MISTY },
   { gameId: 'dark-chess', nameKey: 'variant.darkChess.name', ...MISTY },
   {
