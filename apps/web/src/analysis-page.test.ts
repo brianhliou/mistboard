@@ -55,35 +55,38 @@ describe('analysis page', () => {
 // at its own URL but is not OFFERED, so nothing advertises it before it
 // launches.
 //
-// Atomic Xiangqi pins the hidden half by name: unlisted 2026-10-06 while its
-// rules are reworked, so it is absent from the picker on any other board and
-// present on its own.
+// The retired variants pin the hidden half by name: Fortress and Atomic
+// Xiangqi (retired 2026-10-11) are absent from the picker on any other board
+// and present on their own, so a finished game's analysis link still opens.
 describe('analysis variant picker', () => {
-  it('offers every listed variant, from any board, and not the unlisted one', async () => {
+  it('offers every listed variant, from any board, and not the retired ones', async () => {
     const root = document.createElement('div');
     document.body.append(root);
     try {
       await mountAnalysisPage(root, 'xiangqi');
       const select = root.querySelector<HTMLSelectElement>('.analysis-variant-picker select');
       const offered = [...(select?.options ?? [])].map((option) => option.value);
-      expect(offered).not.toContain('atomic-xiangqi');
+      const retired = ['fortress-xiangqi', 'atomic-xiangqi'];
+      for (const id of retired) expect(offered).not.toContain(id);
       expect(offered).toEqual(
-        ANALYSIS_VARIANTS.map((variant) => variant.id).filter((id) => id !== 'atomic-xiangqi'),
+        ANALYSIS_VARIANTS.map((variant) => variant.id).filter((id) => !retired.includes(id)),
       );
     } finally {
       root.remove();
     }
   });
 
-  it('keeps an unlisted variant selected on its own board', async () => {
-    const root = document.createElement('div');
-    document.body.append(root);
-    try {
-      await mountAnalysisPage(root, 'atomic-xiangqi');
-      const select = root.querySelector<HTMLSelectElement>('.analysis-variant-picker select');
-      expect(select?.value).toBe('atomic-xiangqi');
-    } finally {
-      root.remove();
+  it('keeps a retired variant selected on its own board', async () => {
+    for (const id of ['fortress-xiangqi', 'atomic-xiangqi'] as const) {
+      const root = document.createElement('div');
+      document.body.append(root);
+      try {
+        await mountAnalysisPage(root, id);
+        const select = root.querySelector<HTMLSelectElement>('.analysis-variant-picker select');
+        expect(select?.value).toBe(id);
+      } finally {
+        root.remove();
+      }
     }
   });
 

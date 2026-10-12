@@ -216,6 +216,12 @@ export function createTenantRoomsRoute<
       writeJson(response, gate.httpStatus, { error: gate.error });
       return;
     }
+    // A retired spec keeps its tenant (finished games replay, live ones finish)
+    // but takes no new room: the gate's 410, before any seat or clock work.
+    if (gate.type === 'reject' && gate.error === 'retired_game_spec') {
+      writeJson(response, gate.httpStatus, { error: gate.error });
+      return;
+    }
 
     const mode = parseMode(body);
     const preferredColor = parsePreferred(body.preferredColor);

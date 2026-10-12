@@ -146,7 +146,6 @@ export const ZH_HANT_SHELL = {
   'homePuzzle.ariaLabel': '每日題目：{title}',
   'homePuzzle.title': '每日題目：{variant}',
   'homePuzzle.toPlay': '輪到{color}走',
-  'homePuzzle.reserve': '{color}儲備',
   'homeForum.heading': '活躍論壇話題',
   'homeForum.loading': '正在載入論壇。',
   'homeForum.empty': '尚無論壇話題。',

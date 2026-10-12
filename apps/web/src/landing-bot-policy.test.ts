@@ -27,13 +27,13 @@ describe('landing bot policy', () => {
     expect(after).toBe(before + 1);
   });
 
-  it('shows seven distinct variants and covers the full shelf in any two buckets', () => {
+  it('shows six distinct variants and covers the full shelf in any two buckets', () => {
     for (let bucket = 0; bucket < 3; bucket++) {
       const current = landingBotLineup(bucket);
       const next = landingBotLineup(bucket + 1);
 
-      expect(current).toHaveLength(7);
-      expect(new Set(current).size).toBe(7);
+      expect(current).toHaveLength(6);
+      expect(new Set(current).size).toBe(6);
       expect(new Set([...current, ...next])).toEqual(new Set(LANDING_BOT_GAME_SPEC_IDS));
     }
   });
@@ -49,8 +49,8 @@ describe('landing bot policy', () => {
       botName: 'Fairy-Stockfish Level 2',
       timeControlId: '10m5',
     });
-    // Fortress xiangqi keeps 3+2 for human games, but its bot game is 10+5.
-    expect(landingBotOffer('fortress-xiangqi')).toMatchObject({
+    // Duck xiangqi keeps 3+2 for human games, but its bot game is 10+5.
+    expect(landingBotOffer('duck-xiangqi')).toMatchObject({
       botId: 'fairy-stockfish-level-4',
       timeControlId: '10m5',
     });
@@ -96,7 +96,7 @@ describe('landing bot policy', () => {
     ).toMatchObject({ botId: 'fairy-stockfish-level-8', timeControlId: '10m5' });
     // Only xiangqi reads the memory; the other variants keep their fixed bot.
     expect(
-      landingBotOffer('fortress-xiangqi', { rememberedXiangqiBotId: 'fairy-stockfish-level-8' }),
+      landingBotOffer('duck-xiangqi', { rememberedXiangqiBotId: 'fairy-stockfish-level-8' }),
     ).toMatchObject({ botId: 'fairy-stockfish-level-4' });
   });
 
@@ -159,7 +159,7 @@ describe('landing bot policy', () => {
     ) => buckets.map((bucket) => landingLobbyBotOffer(gameSpecId, { bucket, allowedPaces })!);
 
     it('keeps a Fairy-Stockfish rung within one step of its tier and visits all three', () => {
-      for (const gameSpecId of ['fortress-xiangqi', 'duck-xiangqi', 'atomic-xiangqi']) {
+      for (const gameSpecId of ['duck-xiangqi', 'crazyhouse-xiangqi']) {
         const levels = rowsFor(gameSpecId).map((offer) => fairyStockfishLevel(offer.botId));
         expect(new Set(levels)).toEqual(new Set([3, 4, 5]));
         // Three consecutive buckets show three different rungs: a returning
@@ -201,12 +201,12 @@ describe('landing bot policy', () => {
     it('leaves the Quick Pairing offer untouched', () => {
       // The chip shows no name, so it cannot rotate (#365); only the row does.
       for (const bucket of buckets) {
-        expect(landingBotOffer('fortress-xiangqi')).toMatchObject({
+        expect(landingBotOffer('duck-xiangqi')).toMatchObject({
           botId: 'fairy-stockfish-level-4',
           timeControlId: '10m5',
         });
         expect(
-          landingLobbyBotOffer('fortress-xiangqi', { bucket, allowedPaces: ALL_PACES }),
+          landingLobbyBotOffer('duck-xiangqi', { bucket, allowedPaces: ALL_PACES }),
         ).not.toBeNull();
       }
     });
@@ -253,7 +253,7 @@ describe('landing bot policy', () => {
     expect(xiangqiPrimaryLevel('fairy-stockfish-xiangqi-level-7')).toBe(7);
     expect(xiangqiPrimaryLevel('fairy-stockfish-xiangqi-level-9')).toBe(5);
     // Other variants keep their ids untouched.
-    expect(pveEngineIdForRememberedPick('fortress-xiangqi', 'fairy-stockfish-level-5')).toBe(
+    expect(pveEngineIdForRememberedPick('duck-xiangqi', 'fairy-stockfish-level-5')).toBe(
       'fairy-stockfish-level-5',
     );
   });
@@ -301,10 +301,20 @@ describe('landing bot ladder (homepage play panel)', () => {
   });
 
   it('gives the other Fairy-Stockfish variants eight levels and no named top', () => {
-    for (const spec of ['fortress-xiangqi', 'duck-xiangqi', 'atomic-xiangqi']) {
+    for (const spec of ['duck-xiangqi', 'crazyhouse-xiangqi']) {
       expect(ids(spec)).toEqual(
         Array.from({ length: 8 }, (_, i) => `fairy-stockfish-level-${i + 1}`),
       );
+    }
+  });
+
+  it('offers no ladder, row or chip for a retired variant', () => {
+    for (const spec of ['fortress-xiangqi', 'atomic-xiangqi']) {
+      expect(ids(spec)).toEqual([]);
+      expect(landingBotOffer(spec)).toBeNull();
+      expect(landingLobbyBotOffer(spec, { bucket: 0, allowedPaces: ['10m5'] })).toBeNull();
+      expect(LANDING_BOT_GAME_SPEC_IDS).not.toContain(spec);
+      for (const bucket of [0, 1]) expect(landingBotLineup(bucket)).not.toContain(spec);
     }
   });
 
@@ -315,7 +325,7 @@ describe('landing bot ladder (homepage play panel)', () => {
         .map((rung) => rung.botId);
     expect(nnue('xiangqi')).toEqual(['fairy-stockfish-level-8', 'pikafish']);
     expect(nnue('jieqi')).toEqual(['ab-jchess']);
-    expect(nnue('fortress-xiangqi')).toEqual([]);
+    expect(nnue('duck-xiangqi')).toEqual([]);
     expect(nnue('banqi')).toEqual([]);
   });
 

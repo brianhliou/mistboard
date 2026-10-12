@@ -251,12 +251,13 @@ describe('correspondence side names', () => {
       banqi: 'First/Second',
       'duck-xiangqi': 'Red/Black',
       'crazyhouse-xiangqi': 'Red/Black',
-      'fortress-xiangqi': 'Red/Black',
-      'atomic-xiangqi': 'Red/Black',
       'dark-xiangqi': 'Red/Black',
       jungle: 'Red/Black',
       'jungle-flip': 'First/Second',
     });
+    // A retired variant left the create list, but a game in progress still
+    // names its sides.
+    expect(firstMoverColorName('fortress-xiangqi')).toBe('Red');
     expect(firstMoverColorName('no-such-spec')).toBe('White');
   });
 });

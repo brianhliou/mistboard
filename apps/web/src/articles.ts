@@ -106,7 +106,6 @@ import {
   isGameSpecId,
   rulesHrefPublicSurfaceEnabled,
   rulesSlugPublicSurfaceEnabled,
-  rulesSlugRetired,
   variantPublicSurfaceEnabled,
   variantSupportsPve,
 } from './variant-public-surfaces.js';
@@ -135,7 +134,7 @@ function isArticleVisibleInThisEnv(article: Article): boolean {
 
 function isArticleListedInThisEnv(article: Article): boolean {
   if (!isArticleVisibleInThisEnv(article)) return false;
-  if (article.showInIndex === false) return false;
+  if (article.showInIndex === false || article.noindex === true) return false;
   // A page written in a language the interface does not speak never lists here.
   // The index is one reader's shelf, and a Vietnamese card in an English list is
   // noise to everyone: an English reader cannot read it, and a Vietnamese reader
@@ -754,9 +753,6 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
   const locale = articleLocale(articleLang);
   if (!base) return buildArticleNotFound(locale);
   if (!isArticleVisibleInThisEnv(base)) return buildArticleNotFound(locale);
-  // The server serves 410 for a retired variant's rules page; a client-side
-  // navigation must not render what the server has declared gone.
-  if (base.kind === 'rules' && rulesSlugRetired(base.slug)) return buildArticleNotFound(locale);
   const article = articleLang ? translateArticle(base, articleLang) : base;
 
   const main = document.createElement('main');

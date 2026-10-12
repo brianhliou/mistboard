@@ -17,7 +17,8 @@ export const fortressXiangqiArticle: Article = {
   slug: 'fortress-xiangqi',
   boardFamily: 'xiangqi',
   kind: 'rules',
-  playableOnMistboard: true,
+  // Retired 2026-10-11: the page stays up by URL, unlisted and unindexed.
+  playableOnMistboard: false,
   title: 'Fortress Xiangqi Rules',
   summary:
     'A compact Xiangqi variant with captured pieces in reserve, piece drops, and one new piece: the Treasure.',
@@ -201,17 +202,20 @@ export const fortressXiangqiArticle: Article = {
         },
       ],
     },
+    // Retired 2026-10-11: the closing points at the nearest live game, Crazyhouse
+    // Xiangqi, which keeps the captured-pieces-come-back idea on the full board.
     playClosing({
       heading: 'Play on Mistboard',
-      lead: 'A piece you capture changes to your color and goes into your reserve, ready to drop back in. No account needed.',
-      playLabel: 'Play vs computer',
-      playHref: '/?play=computer&gameSpecId=fortress-xiangqi',
+      lead: 'Fortress Xiangqi is no longer open for new games; finished games still replay. Its nearest relative here is Crazyhouse Xiangqi: a piece you capture joins your hand and drops back in, on the full board. No account needed.',
+      playLabel: 'Play Crazyhouse Xiangqi',
+      playHref: '/?play=computer&gameSpecId=crazyhouse-xiangqi',
       secondary: [
         {
-          label: 'Challenge a friend',
-          href: '/?play=friend&gameSpecId=fortress-xiangqi',
+          label: 'Crazyhouse Xiangqi rules',
+          href: '/rules/crazyhouse-xiangqi',
           emphasis: 'secondary',
-        },        { label: 'Twenty engine games', href: '/study/NUVBVjFf', emphasis: 'secondary' },
+        },
+        { label: 'Twenty engine games', href: '/study/NUVBVjFf', emphasis: 'secondary' },
       ],
     }),
   ],

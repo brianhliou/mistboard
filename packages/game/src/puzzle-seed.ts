@@ -21,28 +21,19 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type {
-  FortressXiangqiPuzzle,
-  FortressXiangqiSourceGame,
-} from './puzzles-fortress-xiangqi.js';
 import type { JunglePuzzle, JungleSourceGame } from './puzzles-jungle.js';
 import type { XiangqiPuzzle } from './puzzles-xiangqi.js';
 
-export type SeedPuzzle = FortressXiangqiPuzzle | JunglePuzzle | XiangqiPuzzle;
+export type SeedPuzzle = JunglePuzzle | XiangqiPuzzle;
 
-export type SeedPuzzleRegistry = 'fortress-xiangqi' | 'jungle' | 'xiangqi';
+export type SeedPuzzleRegistry = 'jungle' | 'xiangqi';
 
 // Registry concatenation order. This is load-bearing for the serving contract:
 // it reproduces the pre-#183 aggregation order of the server's id resolution
-// (Fortress, then Jungle, then standard xiangqi; the retired mini registry
-// led it), so
-// the DB `seq` column and the /api/puzzles list ordering match what the old
-// in-memory arrays served byte for byte.
-export const SEED_PUZZLE_REGISTRIES: readonly SeedPuzzleRegistry[] = [
-  'fortress-xiangqi',
-  'jungle',
-  'xiangqi',
-];
+// (Jungle, then standard xiangqi; the retired mini and Fortress registries
+// led it), so the DB `seq` column and the /api/puzzles list ordering match
+// what the old in-memory arrays served.
+export const SEED_PUZZLE_REGISTRIES: readonly SeedPuzzleRegistry[] = ['jungle', 'xiangqi'];
 
 type SeedPuzzleFile = {
   format: string;
@@ -53,12 +44,11 @@ type SeedPuzzleFile = {
 type SeedSourceGamesFile = {
   format: string;
   registry: string;
-  games: Array<JungleSourceGame | FortressXiangqiSourceGame>;
+  games: JungleSourceGame[];
 };
 
 export type SeedSourceGames = {
   jungle: readonly JungleSourceGame[];
-  fortressXiangqi: readonly FortressXiangqiSourceGame[];
 };
 
 const PUZZLE_FORMAT = 'mistboard-puzzle-seed-v1';
@@ -103,22 +93,16 @@ export function loadAllSeedPuzzles(): readonly SeedPuzzle[] {
   return allPuzzlesCache;
 }
 
-// Full recorded source games the Jungle/Fortress tactics were mined from.
+// Full recorded source games the Jungle tactics were mined from.
 // (Standard-xiangqi puzzles reference historical_xiangqi_games rows instead
 // and carry denormalized attribution inline; they have no seed source games.)
 export function loadSeedSourceGames(): SeedSourceGames {
   if (!sourceGamesCache) {
     const jungle = JSON.parse(readSeedFile('source-games/jungle.json')) as SeedSourceGamesFile;
-    const fortress = JSON.parse(
-      readSeedFile('source-games/fortress-xiangqi.json'),
-    ) as SeedSourceGamesFile;
-    if (jungle.format !== SOURCE_GAMES_FORMAT || fortress.format !== SOURCE_GAMES_FORMAT) {
+    if (jungle.format !== SOURCE_GAMES_FORMAT) {
       throw new Error('puzzle source-games seed has unexpected format');
     }
-    sourceGamesCache = {
-      jungle: jungle.games as JungleSourceGame[],
-      fortressXiangqi: fortress.games as FortressXiangqiSourceGame[],
-    };
+    sourceGamesCache = { jungle: jungle.games };
   }
   return sourceGamesCache;
 }
@@ -133,7 +117,6 @@ export function seedPuzzleContentHash(): string {
       hash.update(readSeedFile(`puzzles/${registry}.json`));
     }
     hash.update(readSeedFile('source-games/jungle.json'));
-    hash.update(readSeedFile('source-games/fortress-xiangqi.json'));
     contentHashCache = hash.digest('hex');
   }
   return contentHashCache;

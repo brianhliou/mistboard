@@ -612,8 +612,6 @@ const ZH_HANS: Record<string, string> = {
     '解决它用了两条规则，缺一不可。炮击不爆炸，开局的那种兑换就没有了，垫挡仍然成立却不构成威胁；但车仍然可以来回跳，炮也仍然得跟过去。把爆炸威胁算作将军（见下一节），单独用也不起作用：只要垫挡的炮还能反打，双方每一步都在将军，而双方都在将军的重复局面判和。两条规则合在一起，来回跳就成了单方面的长将，判负。引擎也把它算作输棋，宁可落后大约四分之一个兵继续下。炮由此变成一枚用来兑换和垫挡的棋子，而不再是扫清一条横线的棋子；爆炸的其余部分全部不变。',
   'Every number on this page comes from engine games refereed by the rules kernel and played by a patched Fairy-Stockfish, and the two have to agree on every legal-move count before a number is read. The engine with ten times the nodes wins 29 of 32 games, at two strength levels, without losing one. Of the 44 first moves from the array, each played out at a million nodes a side, none wins for Red and three lose. None of the 19 repetition draws is a one-sided perpetual check. The [variant lab](https://github.com/brianhliou/mistboard/tree/main/scripts/variant-lab) has the kernel, the patch and the commands behind each number.':
     '本页的每一个数字都来自引擎对局：由规则内核裁判，由打过补丁的 Fairy-Stockfish 来下，两者必须在每一个合法着法数上完全一致，才开始读任何数字。节点数多十倍的引擎在两个强度档位上下了 32 盘，赢 29 盘，一盘未输。从开局阵势出发的 44 种第一步，每种都以双方各一百万节点下完，没有一种让红方获胜，有三种让红方输棋。19 盘重复局面和棋里，没有一盘是单方面的长将。[变体实验室](https://github.com/brianhliou/mistboard/tree/main/scripts/variant-lab)里有内核、补丁和每个数字背后的命令。',
-  'Play it against the engine at any of eight strengths, or against a friend with an invite link. The [launch note](/blog/atomic-xiangqi-build) is what decides a first game; the study has all twelve engine games, with every explosion marked and a note on the move that decided each.':
-    '和八个强度档位的引擎对弈，或者用邀请链接约朋友。[发布说明](/blog/atomic-xiangqi-build)讲的是第一盘棋的胜负由什么决定；研究里有全部十二盘引擎对局，每次爆炸都有标记，每盘的决定性一步都有注解。',
   // solver-audit blog merge (2026-10-07): machine-translated.
   '適情雅趣 第108局 争舟走渡 prints a mate in seven, thirteen plies. At Red’s first move the soldier can take the advisor beside the general instead, 兵四平五, and that mates in six. Nine of the 172 can be mated faster than printed.':
     '《適情雅趣》第108局 争舟走渡印的是七着杀，共十三步。红方第一着改用兵吃将旁边的士，兵四平五，六着就能成杀。172局中有9局存在比所印更快的杀法。',
@@ -2388,8 +2386,6 @@ const ZH_HANS: Record<string, string> = {
   "Rated games need an account. Casual games, the engine ladder and friend links don't.":
     '积分对局需要账户。休闲对局、引擎等级阶梯和好友链接都不需要。',
   'Find an opponent': '寻找对手',
-  'A piece you capture changes to your color and goes into your reserve, ready to drop back in. No account needed.':
-    '吃掉的棋子会变成你的颜色进入持子，随时可以打回棋盘。无需账户。',
   'A rat on land can take the elephant, and the elephant can never take a rat. No account needed.':
     '陆地上的老鼠可以吃大象，大象却永远不能吃老鼠。无需账户。',
   'When an animal takes an enemy of the same rank, both leave the board. No account needed.':
@@ -4364,8 +4360,17 @@ const ZH_HANS: Record<string, string> = {
     '本页背后的引擎对局之一：一千万节点的 Fairy-Stockfish 执红，对阵一百万节点的自己。第 6 回合红方已多出一个半兵，之后局面一直接近，直到黑方第 21 回合的 Hxf9：马吃 f9 的炮，而黑方自己的士就在旁边的 f10。爆炸带走了士，九宫白白少了一子，从此再没恢复：第 30 回合的 Cb9 让将失去了掩护，第 38 回合红车吃掉 d8 的炮，紧挨着 d9 的将。爆炸带走了将，连同 e8 的象。',
   'Atomic Xiangqi: an engine game decided by a self-blast in the palace':
     '原子象棋：一盘由九宫内自炸决定的引擎对局',
-  'Play Atomic Xiangqi': '下原子象棋',
   'The twelve engine games': '十二盘引擎对局',
+  // Retirement notes (2026-10-11), machine translation of English not yet signed off.
+  'Atomic Xiangqi is no longer open for new games; finished games still replay. The [launch note](/blog/atomic-xiangqi-build) is what decided a first game; the study has all twelve engine games, with every explosion marked and a note on the move that decided each.':
+    '原子象棋已不再开放新对局，已结束的对局仍可回放。[发布说明](/blog/atomic-xiangqi-build)讲的是第一盘棋的胜负由什么决定；研究里有全部十二盘引擎对局，每次爆炸都有标记，每盘的决定性一步都有注解。',
+  'Atomic Xiangqi was retired on 2026-10-11: it no longer takes new games, and finished games still replay. The rules page has the whole thing with diagrams.':
+    '原子象棋已于 2026-10-11 下线：不再接受新对局，已结束的对局仍可回放。规则页面配有图解，讲得完整。',
+  'Fortress Xiangqi is no longer open for new games; finished games still replay. Its nearest relative here is Crazyhouse Xiangqi: a piece you capture joins your hand and drops back in, on the full board. No account needed.':
+    '堡垒象棋已不再开放新对局，已结束的对局仍可回放。本站与它最接近的是疯狂屋象棋：吃掉的棋子进入你的持子，可以打回棋盘，用的是完整棋盘。无需账户。',
+  'Play Crazyhouse Xiangqi': '下疯狂屋象棋',
+  'Crazyhouse Xiangqi rules': '疯狂屋象棋规则',
+  'Further reading': '延伸阅读',
   'Atomic Xiangqi: What Decides Your First Game': '原子象棋：第一盘棋的胜负由什么决定',
   'Atomic Xiangqi Is Live: What Decides Your First Game':
     '原子象棋上线了：第一盘棋的胜负由什么决定',
@@ -4411,9 +4416,6 @@ const ZH_HANS: Record<string, string> = {
   'The bot takes a general on offer without thinking': '送到嘴边的将帅，电脑想都不想就吃',
   'The bot is Fairy-Stockfish with a patch for these rules, eight node-anchored levels, the same ladder the other xiangqi variants use. Its weaker levels are weakened by choosing a move other than the best one they found, and on the duck board that made a level-1 bot decline a general capture it could see. Here the loop checks for a move that removes the general before it asks the engine anything, so a general left next to a capturable piece is taken at every level. Weakness is in how the bot builds a position, not in whether it finishes one.':
     '电脑是加了这套规则补丁的 Fairy-Stockfish，八个以节点数锚定的等级，和其他象棋变体用的是同一套阶梯。较弱的等级是通过不走自己找到的最佳着法来削弱的，在鸭子象棋的棋盘上，这曾让一个 1 级电脑放弃了一次它看得见的吃将。这里的循环在向引擎提问之前会先检查有没有能移除将帅的着法，所以留在可吃棋子旁边的将帅，在每一个等级都会被吃掉。电脑的弱点在于它如何构筑局面，而不在于它会不会收官。',
-  'Eight engine strengths, or a friend by invite link. The rules page has the whole thing with diagrams.':
-    '八个引擎强度档位，或者用邀请链接约朋友。规则页面配有图解，讲得完整。',
-  'Invite a friend': '邀请朋友',
   // banqi capture table + FAQ, jungle FAQ (2026-09-17)
   'General 帥 / 將': '将帅：帅 / 将',
   'Advisor 仕 / 士': '士：仕 / 士',
@@ -5370,8 +5372,6 @@ const ZH_HANT: Record<string, string> = {
     '解決它用了兩條規則，缺一不可。炮擊不爆炸，開局的那種兌換就沒有了，墊擋仍然成立卻不構成威脅；但車仍然可以來回跳，炮也仍然得跟過去。把爆炸威脅算作將軍（見下一節），單獨用也不起作用：只要墊擋的炮還能反打，雙方每一步都在將軍，而雙方都在將軍的重複局面判和。兩條規則合在一起，來回跳就成了單方面的長將，判負。引擎也把它算作輸棋，寧可落後大約四分之一個兵繼續下。炮由此變成一枚用來兌換和墊擋的棋子，而不再是掃清一條橫線的棋子；爆炸的其餘部分全部不變。',
   'Every number on this page comes from engine games refereed by the rules kernel and played by a patched Fairy-Stockfish, and the two have to agree on every legal-move count before a number is read. The engine with ten times the nodes wins 29 of 32 games, at two strength levels, without losing one. Of the 44 first moves from the array, each played out at a million nodes a side, none wins for Red and three lose. None of the 19 repetition draws is a one-sided perpetual check. The [variant lab](https://github.com/brianhliou/mistboard/tree/main/scripts/variant-lab) has the kernel, the patch and the commands behind each number.':
     '本頁的每一個數字都來自引擎對局：由規則內核裁判，由打過補丁的 Fairy-Stockfish 來下，兩者必須在每一個合法著法數上完全一致，才開始讀任何數字。節點數多十倍的引擎在兩個強度檔位上下了 32 盤，贏 29 盤，一盤未輸。從開局陣勢出發的 44 種第一步，每種都以雙方各一百萬節點下完，沒有一種讓紅方獲勝，有三種讓紅方輸棋。19 盤重複局面和棋裡，沒有一盤是單方面的長將。[變體實驗室](https://github.com/brianhliou/mistboard/tree/main/scripts/variant-lab)裡有內核、補丁和每個數字背後的命令。',
-  'Play it against the engine at any of eight strengths, or against a friend with an invite link. The [launch note](/blog/atomic-xiangqi-build) is what decides a first game; the study has all twelve engine games, with every explosion marked and a note on the move that decided each.':
-    '和八個強度檔位的引擎對弈，或者用邀請連結約朋友。[釋出說明](/blog/atomic-xiangqi-build)講的是第一盤棋的勝負由什麼決定；研究裡有全部十二盤引擎對局，每次爆炸都有標記，每盤的決定性一步都有註解。',
   // solver-audit blog merge (2026-10-07): machine-translated.
   '適情雅趣 第108局 争舟走渡 prints a mate in seven, thirteen plies. At Red’s first move the soldier can take the advisor beside the general instead, 兵四平五, and that mates in six. Nine of the 172 can be mated faster than printed.':
     '《適情雅趣》第108局 爭舟走渡印的是七著殺，共十三步。紅方第一著改用兵吃將旁邊的士，兵四平五，六著就能成殺。172局中有9局存在比所印更快的殺法。',
@@ -8866,8 +8866,17 @@ const ZH_HANT: Record<string, string> = {
     '本頁背後的引擎對局之一：一千萬節點的 Fairy-Stockfish 執紅，對陣一百萬節點的自己。第 6 回合紅方已多出一個半兵，之後局面一直接近，直到黑方第 21 回合的 Hxf9：馬吃 f9 的炮，而黑方自己的士就在旁邊的 f10。爆炸帶走了士，九宮白白少了一子，從此再沒恢復：第 30 回合的 Cb9 讓將失去了掩護，第 38 回合紅車吃掉 d8 的炮，緊挨著 d9 的將。爆炸帶走了將，連同 e8 的象。',
   'Atomic Xiangqi: an engine game decided by a self-blast in the palace':
     '原子象棋：一盤由九宮內自炸決定的引擎對局',
-  'Play Atomic Xiangqi': '下原子象棋',
   'The twelve engine games': '十二盤引擎對局',
+  // Retirement notes (2026-10-11), machine translation of English not yet signed off.
+  'Atomic Xiangqi is no longer open for new games; finished games still replay. The [launch note](/blog/atomic-xiangqi-build) is what decided a first game; the study has all twelve engine games, with every explosion marked and a note on the move that decided each.':
+    '原子象棋已不再開放新對局，已結束的對局仍可回放。[釋出說明](/blog/atomic-xiangqi-build)講的是第一盤棋的勝負由什麼決定；研究裡有全部十二盤引擎對局，每次爆炸都有標記，每盤的決定性一步都有註解。',
+  'Atomic Xiangqi was retired on 2026-10-11: it no longer takes new games, and finished games still replay. The rules page has the whole thing with diagrams.':
+    '原子象棋已於 2026-10-11 下線：不再接受新對局，已結束的對局仍可回放。規則頁面配有圖解，講得完整。',
+  'Fortress Xiangqi is no longer open for new games; finished games still replay. Its nearest relative here is Crazyhouse Xiangqi: a piece you capture joins your hand and drops back in, on the full board. No account needed.':
+    '堡壘象棋已不再開放新對局，已結束的對局仍可回放。本站與它最接近的是瘋狂屋象棋：吃掉的棋子進入你的持子，可以打回棋盤，用的是完整棋盤。無需帳號。',
+  'Play Crazyhouse Xiangqi': '下瘋狂屋象棋',
+  'Crazyhouse Xiangqi rules': '瘋狂屋象棋規則',
+  'Further reading': '延伸閱讀',
   'Atomic Xiangqi: What Decides Your First Game': '原子象棋：第一盤棋的勝負由什麼決定',
   'Atomic Xiangqi Is Live: What Decides Your First Game':
     '原子象棋上線了：第一盤棋的勝負由什麼決定',
@@ -8913,9 +8922,6 @@ const ZH_HANT: Record<string, string> = {
   'The bot takes a general on offer without thinking': '送到嘴邊的將帥，電腦想都不想就吃',
   'The bot is Fairy-Stockfish with a patch for these rules, eight node-anchored levels, the same ladder the other xiangqi variants use. Its weaker levels are weakened by choosing a move other than the best one they found, and on the duck board that made a level-1 bot decline a general capture it could see. Here the loop checks for a move that removes the general before it asks the engine anything, so a general left next to a capturable piece is taken at every level. Weakness is in how the bot builds a position, not in whether it finishes one.':
     '電腦是加了這套規則補丁的 Fairy-Stockfish，八個以節點數錨定的等級，和其他象棋變體用的是同一套階梯。較弱的等級是透過不走自己找到的最佳著法來削弱的，在鴨子象棋的棋盤上，這曾讓一個 1 級電腦放棄了一次它看得見的吃將。這裡的循環在向引擎提問之前會先檢查有沒有能移除將帥的著法，所以留在可吃棋子旁邊的將帥，在每一個等級都會被吃掉。電腦的弱點在於它如何構築局面，而不在於它會不會收官。',
-  'Eight engine strengths, or a friend by invite link. The rules page has the whole thing with diagrams.':
-    '八個引擎強度檔位，或者用邀請連結約朋友。規則頁面配有圖解，講得完整。',
-  'Invite a friend': '邀請朋友',
   // banqi capture table + FAQ, jungle FAQ (2026-09-17)
   'General 帥 / 將': '將帥：帥 / 將',
   'Advisor 仕 / 士': '士：仕 / 士',
@@ -8991,8 +8997,6 @@ const ZH_HANT: Record<string, string> = {
   "Rated games need an account. Casual games, the engine ladder and friend links don't.":
     '積分對局需要帳號。休閒對局、引擎等級階梯和好友連結都不需要。',
   'Find an opponent': '尋找對手',
-  'A piece you capture changes to your color and goes into your reserve, ready to drop back in. No account needed.':
-    '吃掉的棋子會變成你的顏色進入持子，隨時可以打回棋盤。無需帳號。',
   'A rat on land can take the elephant, and the elephant can never take a rat. No account needed.':
     '陸地上的老鼠可以吃大象，大象卻永遠不能吃老鼠。無需帳號。',
   'When an animal takes an enemy of the same rank, both leave the board. No account needed.':

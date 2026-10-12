@@ -47,7 +47,6 @@ describe('/champions', () => {
       'banqi',
       'duck-xiangqi',
       'crazyhouse-xiangqi',
-      'fortress-xiangqi',
       'dark-xiangqi',
       'dark-chess',
       'jungle-flip',
@@ -62,7 +61,7 @@ describe('/champions', () => {
       expect(holder(game)?.textContent, game).toBe('Misty');
       expect(holder(game)?.getAttribute('href'), game).toBe('/bot/misty');
     }
-    for (const game of ['duck-xiangqi', 'crazyhouse-xiangqi', 'fortress-xiangqi']) {
+    for (const game of ['duck-xiangqi', 'crazyhouse-xiangqi']) {
       expect(holder(game)?.textContent, game).toBe('Fairy-Stockfish Level 8');
       expect(holder(game)?.getAttribute('href'), game).toBe('/bot/fairy-stockfish-level-8');
     }

@@ -30,14 +30,26 @@ const GENERATED = generated as Record<string, GeneratedArticleMeta>;
 // fails if the two disagree. A public variant's rules page held back for
 // polish goes here and in HIDDEN_RULES_SLUGS on the web side, and leaves both
 // sets together (/rules/crazyhouse-xiangqi did, 2026-10-02). /rules/atomic-
-// xiangqi is here while that variant is unlisted for its rules rework
-// (2026-10-06; web side `'atomic-xiangqi': false`).
-const NON_INDEXED_ARTICLE_SLUGS = new Set(['shogi4', 'mahjong', 'atomic-xiangqi']);
+// xiangqi (unlisted 2026-10-06) and /rules/fortress-xiangqi are here because
+// both variants retired on 2026-10-11: closed to new games, rules pages kept up
+// by URL like /rules/shogi4 (web side `false` for both). A retired variant's
+// rules page belongs here, not in RETIRED_RULES_SLUGS below, until its code is
+// deleted.
+const NON_INDEXED_ARTICLE_SLUGS = new Set([
+  'shogi4',
+  'mahjong',
+  'atomic-xiangqi',
+  'fortress-xiangqi',
+  // The Atomic Xiangqi launch post, served by URL only since the variant
+  // retired (web side: `noindex: true` on the article).
+  'atomic-xiangqi-build',
+]);
 
-// Rules pages for retired variants (docs-private/variant-retirement-plan.md,
-// #396; the spec side is runtimeStatus 'retired' in packages/game, the web
-// side VARIANT_PUBLIC_SURFACE_ENABLED in apps/web/src/variant-public-surfaces.ts).
-// The server answers 410 Gone for these paths (server-http.ts): the id is
+// Rules pages for DELETED variants (docs-private/variant-retirement-plan.md,
+// #396). A variant that is only retired (runtimeStatus 'retired' in
+// packages/game) keeps its rules page up, unindexed, and is listed in
+// NON_INDEXED_ARTICLE_SLUGS above instead; it moves here in the commit that
+// deletes its code. The server answers 410 Gone for these paths (server-http.ts): the id is
 // known and the page is not coming back, which is what a crawler should hear
 // rather than a 404 it will keep retrying. The set also keeps them out of the
 // sitemap. The content files go with their variants in Stage 2 of the plan;
@@ -63,7 +75,7 @@ const RETIRED_RULES_SLUGS = new Set([
   'shogi',
 ]);
 
-/** A rules page whose variant is retired: served as 410 Gone. */
+/** A rules page whose variant has been deleted: served as 410 Gone. */
 export function articleIsRetired(slug: string): boolean {
   return RETIRED_RULES_SLUGS.has(slug);
 }

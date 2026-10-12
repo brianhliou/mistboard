@@ -1,13 +1,42 @@
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import { isRetiredGameSpec } from '@mistboard/game';
 import { loadAllSeedPuzzles, seedPuzzleContentHash } from '@mistboard/game/puzzle-seed';
+import { createUser } from './persistence.js';
 import { getPool } from './persistence-db.js';
+import { getUserProfileByHandle } from './persistence-profiles.js';
+import { listAttemptedPuzzleIds, recordPuzzleAttempt } from './persistence-puzzle-ratings.js';
 import { getOrCreateDailyPuzzleSelection } from './persistence-puzzles.js';
 import { assert, definePersistenceTests, test } from './persistence-test-support.js';
+import { seedPuzzleRating } from './puzzle-rating.js';
 import {
   getPuzzleStore,
   RETIRED_VARIANT_HIDDEN_REASON,
   resetPuzzleStoreForTests,
 } from './puzzle-store.js';
+import type { HttpApiContext } from './routes/lib.js';
+import { tryHandle } from './routes/puzzles.js';
+
+async function getRoute(path: string): Promise<{ status: number | null; body: string }> {
+  const capture = { status: null as number | null, body: '' };
+  const response = {
+    writeHead(status: number) {
+      capture.status = status;
+      return response;
+    },
+    end(chunk?: string) {
+      capture.body += chunk ?? '';
+      return response;
+    },
+  } as unknown as ServerResponse;
+  const url = new URL(path, 'http://localhost');
+  const request = {
+    method: 'GET',
+    headers: {},
+    socket: { remoteAddress: '127.0.0.1' },
+  } as unknown as IncomingMessage;
+  await tryHandle({} as HttpApiContext, request, response, url.pathname, url);
+  return capture;
+}
 
 definePersistenceTests('daily puzzles', () => {
   test('persists and reuses the homepage daily puzzle assignment', async () => {
@@ -93,6 +122,79 @@ definePersistenceTests('daily puzzles', () => {
     assert.equal(store.puzzles.at(-1)?.id, 'xq-mined-test-row-1');
 
     await getPool().query(`DELETE FROM puzzles WHERE id = 'xq-mined-test-row-1'`);
+    resetPuzzleStoreForTests();
+  });
+  // Fortress Xiangqi was retired on 2026-10-11 and its puzzle registry deleted,
+  // but prod still holds its rows: mined puzzles, attempts, a rating pool, maybe
+  // a persisted daily. None of them may serve, and none may break a listing.
+  test('leftover Fortress puzzle rows are not served and break no listing', async () => {
+    const fortressId = 'fortress-xiangqi-mined-v2-001';
+    resetPuzzleStoreForTests();
+    await getPuzzleStore();
+    await getPool().query(
+      `INSERT INTO puzzles (id, variant, title, seq, goal_type, themes, solution_plies, data, source_kind, mined_at)
+       VALUES ($1, 'fortress-xiangqi', 'Leftover Fortress mate',
+               (SELECT max(seq) + 1 FROM puzzles), 'checkmate', '{checkmate}', 1,
+               $2, 'mined', now())
+       ON CONFLICT (id) DO NOTHING`,
+      [fortressId, JSON.stringify({ id: fortressId, variant: 'fortress-xiangqi' })],
+    );
+    await createUser({
+      id: 'fortress-solver',
+      email: 'fortress-solver@example.com',
+      emailVerifiedAt: new Date(),
+      handle: 'fortresssolver',
+      displayName: 'fortresssolver',
+      now: new Date(),
+    });
+    await recordPuzzleAttempt({
+      userId: 'fortress-solver',
+      puzzleId: fortressId,
+      variant: 'fortress-xiangqi',
+      solved: true,
+      rated: true,
+      seedRating: seedPuzzleRating(1),
+    });
+    await getPool().query(
+      `INSERT INTO puzzle_daily_selections (day, slot, variant, puzzle_id, source)
+       VALUES ('2026-10-01'::date, 'homepage', 'fortress-xiangqi', $1, 'auto')
+       ON CONFLICT (day, slot) DO UPDATE SET variant = EXCLUDED.variant, puzzle_id = EXCLUDED.puzzle_id`,
+      [fortressId],
+    );
+
+    // The store withholds the row, so every route answers its id with 404.
+    resetPuzzleStoreForTests();
+    const store = await getPuzzleStore();
+    assert.equal(store.byId.has(fortressId), false);
+    assert.equal(
+      store.puzzles.some((puzzle) => (puzzle.variant as string) === 'fortress-xiangqi'),
+      false,
+    );
+    const detail = await getRoute(`/api/puzzles/${fortressId}`);
+    assert.equal(detail.status, 404);
+    assert.deepEqual(JSON.parse(detail.body), { error: 'not_found' });
+
+    // The list still serves, and the attempted-id history still reads.
+    const list = await getRoute('/api/puzzles');
+    assert.equal(list.status, 200);
+    assert.deepEqual(await listAttemptedPuzzleIds('fortress-solver'), [fortressId]);
+
+    // The profile's puzzle-rating listing still returns with the stale pool in it
+    // (the web profile hides the retired variant's chip).
+    const profile = await getUserProfileByHandle('fortresssolver', null);
+    assert.ok(profile);
+    assert.deepEqual(
+      profile.puzzleRatings.map((rating) => rating.variant),
+      ['fortress-xiangqi'],
+    );
+
+    // A persisted Fortress daily is re-selected to a served puzzle, not thrown.
+    const daily = await getOrCreateDailyPuzzleSelection('2026-10-01', 'homepage');
+    assert.equal(daily.variant, 'xiangqi');
+    assert.equal(daily.source, 'auto-recovered');
+    assert.notEqual(daily.puzzleId, fortressId);
+
+    await getPool().query('DELETE FROM puzzles WHERE id = $1', [fortressId]);
     resetPuzzleStoreForTests();
   });
 });

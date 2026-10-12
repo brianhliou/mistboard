@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import test from 'node:test';
-import type { Color } from '@mistboard/game';
+import { type Color, isRetiredGameSpec } from '@mistboard/game';
 import { darkChessTenant } from '../dark-chess-tenant.js';
 import type { HttpApiContext } from '../routes/lib.js';
 import { tryHandle } from '../routes/lobby.js';
@@ -93,10 +93,14 @@ function withTenantFlags(fn: () => Promise<void>): Promise<void> {
 
 test('every tenant lobby match creates a room marked as a lobby match', async () => {
   await withTenantFlags(async () => {
+    // A retired tenant stays registered so its games replay, but takes no seek.
     const lobbyTenants = registeredVariantTenants().filter(
-      (registration) => registration.lobby !== null && registration.ownsSpecRouting,
+      (registration) =>
+        registration.lobby !== null &&
+        registration.ownsSpecRouting &&
+        !isRetiredGameSpec(registration.gameSpecId),
     );
-    assert.ok(lobbyTenants.length >= 10, `expected every lobby tenant, got ${lobbyTenants.length}`);
+    assert.ok(lobbyTenants.length >= 8, `expected every lobby tenant, got ${lobbyTenants.length}`);
     for (const registration of lobbyTenants) {
       assert.ok(registration.enabled(), `${registration.kind} must be enabled for the test`);
       const ctx = lobbyContext();
@@ -117,6 +121,7 @@ test('a room a tenant creates outside the lobby route is not marked', async () =
   await withTenantFlags(async () => {
     for (const registration of registeredVariantTenants()) {
       if (!registration.lobby || !registration.ownsSpecRouting) continue;
+      if (isRetiredGameSpec(registration.gameSpecId)) continue;
       const created = await registration.lobby.createRoom(tc, false);
       const room = registration.rooms.get(created.id) as
         | { events: readonly { type: string }[] }

@@ -4,6 +4,7 @@ import {
   buildLandingPlayPanel,
   buildLobbyRequestsWindow,
   type LandingRoomSetup,
+  landingPlayDeepLinkAccepts,
   maybeOpenPlayDeepLink,
   roomCreationRequestBody,
   setRoomNavigator,
@@ -19,7 +20,6 @@ const BASELINE_PICKER_SPECS = [
   'banqi',
   'duck-xiangqi',
   'crazyhouse-xiangqi',
-  'fortress-xiangqi',
   'dark-xiangqi',
   'dark-chess',
   'jungle',
@@ -277,10 +277,10 @@ describe('landing play panel', () => {
     expect(visibleVariantPickerSpecs()).toEqual(BASELINE_PICKER_SPECS);
     expect(selectedVariantSpec()).toBe('dark-chess');
 
-    selectModalVariant('fortress-xiangqi');
+    selectModalVariant('crazyhouse-xiangqi');
 
     expect(activeSetupSection()).toBe('time');
-    expect(selectedVariantSpec()).toBe('fortress-xiangqi');
+    expect(selectedVariantSpec()).toBe('crazyhouse-xiangqi');
   });
 
   it('opens a first-time player on the flagship variant, not the fog one', () => {
@@ -433,10 +433,11 @@ describe('landing play panel', () => {
     });
   }
 
-  // Atomic Xiangqi is off the play menu while its rules are reworked
-  // (2026-10-06), but the brianhliou.com post's "play the computer" link still
-  // opens setup on it and starts a bot game.
-  it('opens an unlisted variant from its deep link and starts the bot game', async () => {
+  // Fortress and Atomic Xiangqi retired on 2026-10-11. An old "play the
+  // computer" link (the brianhliou.com post) still opens setup, but on another
+  // variant: the dialog never names a retired one, and the server would refuse
+  // it anyway (410 retired_game_spec).
+  it('never starts a retired variant from its old deep link', async () => {
     const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
       if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
       if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/atomic_link' });
@@ -452,7 +453,10 @@ describe('landing play panel', () => {
     clickModalButton('Start game');
     await flushPromises();
 
-    expect(roomPostBody(fetchSpy)).toMatchObject({ mode: 'pve', gameSpecId: 'atomic-xiangqi' });
+    expect(roomPostBody(fetchSpy)).toMatchObject({ mode: 'pve' });
+    expect(roomPostBody(fetchSpy)).not.toMatchObject({ gameSpecId: 'atomic-xiangqi' });
+    expect(landingPlayDeepLinkAccepts('atomic-xiangqi')).toBe(false);
+    expect(landingPlayDeepLinkAccepts('fortress-xiangqi')).toBe(false);
   });
 
   it('keeps the coin flip on Challenge a friend, where it is the fairness rule', () => {
@@ -785,7 +789,7 @@ describe('landing play panel', () => {
     expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
   });
 
-  it('offers 1+1 for Fortress Xiangqi', () => {
+  it('offers 1+1 for Crazyhouse Xiangqi', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
@@ -794,7 +798,7 @@ describe('landing play panel', () => {
     document.body.append(panel);
 
     openPlaySetup(panel, 'Challenge a friend');
-    selectModalVariant('fortress-xiangqi');
+    selectModalVariant('crazyhouse-xiangqi');
 
     expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
   });
