@@ -201,8 +201,6 @@ export const EN_CONTENT = {
   'stats.allGames': 'All games',
   'stats.thisWeekSoFar': '{count} so far this week',
   'stats.byVariant': 'Games by variant',
-  'stats.byVariantRetiredNote':
-    "Games in retired variants count toward the total but aren't listed.",
   'stats.byMode': 'Games by mode',
   'stats.unavailableHeading': 'Statistics unavailable',
   'stats.unavailableBody': 'Could not load statistics. Try again shortly.',
@@ -407,7 +405,7 @@ export const EN_CONTENT = {
     'Start a game, choose a friend as the opponent, and send them the link. They open it and take the other seat.',
   'faq.playOtherQuestion': 'What else can I play?',
   'faq.playOtherAnswer':
-    'Jieqi and banqi, Jungle Chess and Flip Jungle, Atomic Xiangqi, and the games we design: Crazyhouse Xiangqi, Duck Xiangqi and Fog Xiangqi.',
+    'Jieqi and banqi, Jungle Chess and Flip Jungle, and the games we design: Crazyhouse Xiangqi, Duck Xiangqi and Fog Xiangqi.',
   'faq.playReviewQuestion': 'Can I review a game afterwards?',
   'faq.playReviewAnswer':
     'Yes. A finished xiangqi game opens in review, where the engine marks the moves that decided it.',
@@ -696,7 +694,6 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'stats.allGames',
   'stats.thisWeekSoFar',
   'stats.byVariant',
-  'stats.byVariantRetiredNote',
   'stats.byMode',
   'stats.unavailableHeading',
   'stats.unavailableBody',

@@ -180,11 +180,15 @@ Conventions:
 
 ### Removed
 
+- Fortress Xiangqi and Atomic Xiangqi are on hold for a redesign; finished games still replay ([8dd871c8](https://github.com/brianhliou/mistboard/commit/8dd871c8))
 - Atomic Xiangqi is off the play menu and listings while its rules are reworked; games, replays and the rules page stay up by link ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
 - Jieqi, Banqi and Flip Jungle are off the game data page until their files can show which piece each reveal turned out to be ([4ce02088](https://github.com/brianhliou/mistboard/commit/4ce02088))
 
 ### Fixed
 
+- five player pages no longer show a childhood portrait; they keep the character tile ([8dd871c8](https://github.com/brianhliou/mistboard/commit/8dd871c8))
+- read-next cards on an English-only post follow the Chinese interface ([8dd871c8](https://github.com/brianhliou/mistboard/commit/8dd871c8))
+- Cao Yanlei's article card shows the same photo as his page again ([8dd871c8](https://github.com/brianhliou/mistboard/commit/8dd871c8))
 - the homepage tagline lines up with the play panel, and the summary line no longer wraps on a stray dot ([ef9b8e53](https://github.com/brianhliou/mistboard/commit/ef9b8e53))
 - pro player photos credit the photo site by the name its owner asked for ([ef9b8e53](https://github.com/brianhliou/mistboard/commit/ef9b8e53))
 - Chinese player pages show the stats under a player's name in Chinese, with the team's Chinese name ([048bd368](https://github.com/brianhliou/mistboard/commit/048bd368))

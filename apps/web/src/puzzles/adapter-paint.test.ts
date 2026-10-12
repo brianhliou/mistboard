@@ -1,22 +1,17 @@
 /**
- * Paint smoke for the adapter board paths that puzzles.test.ts does not cover
- * (its flows drive Mini and standard Xiangqi): Jungle and Fortress
- * Xiangqi. Mounts the real page against a mocked API and asserts each
- * adapter's board (+ pockets, for Fortress) paints with interactive squares,
- * pinning the behavior across the puzzles.ts -> adapters split.
+ * Paint smoke for the adapter board path that puzzles.test.ts does not cover
+ * (its flows drive standard Xiangqi): Jungle. Mounts the real page against a
+ * mocked API and asserts the adapter's board paints with interactive squares,
+ * pinning the behavior across the puzzles.ts -> adapters split. Also pins how
+ * the page meets a puzzle id whose registry was deleted (Fortress Xiangqi,
+ * retired 2026-10-11): a fallback or "Puzzle not found", never a throw.
  */
 
-import {
-  createInitialFortressXiangqiState,
-  FORTRESS_XIANGQI_SPEC_ID,
-  type FortressXiangqiPuzzle,
-  JUNGLE_PUZZLES,
-  type JunglePuzzle,
-} from '@mistboard/game';
+import { JUNGLE_PUZZLES, type JunglePuzzle } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mountPuzzles } from '../puzzles.js';
 
-type CorpusPuzzle = JunglePuzzle | FortressXiangqiPuzzle;
+type CorpusPuzzle = JunglePuzzle;
 
 function publicSummary(puzzle: CorpusPuzzle) {
   return {
@@ -83,31 +78,55 @@ describe('puzzle adapter board painting', () => {
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(root.textContent).toContain(`${firstMove.from} selected.`);
   });
+});
 
-  it('paints the Fortress board inside its pocket shell', async () => {
-    // Built here, not taken from the corpus: Fortress ships no puzzles as of
-    // 2026-09-03. This test is about the adapter painting a board and its two
-    // pockets, so any well-formed puzzle serves — it never solves the line.
-    const puzzle: FortressXiangqiPuzzle = {
-      id: 'fortress-paint-fixture',
-      variant: FORTRESS_XIANGQI_SPEC_ID,
-      title: 'paint fixture',
-      initial: createInitialFortressXiangqiState('fortress-paint-fixture'),
-      solution: [{ from: 'e1', to: 'e4' }],
-      goal: { type: 'winning-advantage', winner: 'red', centipawns: 600 },
-      themes: ['chariot'],
-    } as FortressXiangqiPuzzle;
-    stubPuzzleApi(puzzle);
+// Fortress Xiangqi's puzzle registry was deleted with the variant (2026-10-11).
+// The server answers its ids with 404 and the list never carries them, but a
+// bookmark, a shared link, the attempted-id history or a back button still can.
+describe('a deleted puzzle id', () => {
+  const DELETED_ID = 'fortress-xiangqi-mined-v2-001';
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+    window.history.replaceState(null, '', '/');
+  });
+
+  function stubListWithout(puzzle: CorpusPuzzle): void {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url === '/api/puzzles') {
+          return json({ puzzles: [publicSummary(puzzle)], attemptedIds: [DELETED_ID] });
+        }
+        if (url === `/api/puzzles/${puzzle.id}`) return json({ puzzle: publicDetail(puzzle) });
+        return json({ error: 'not_found' }, 404);
+      }),
+    );
+  }
+
+  it('deep-linked at mount, falls back to the queue instead of throwing', async () => {
+    const puzzle = JUNGLE_PUZZLES[0]!;
+    stubListWithout(puzzle);
     const root = document.createElement('div');
 
+    await mountPuzzles(root, DELETED_ID);
+
+    expect(root.textContent).not.toContain('Puzzle not found');
+    expect(root.querySelectorAll('.puzzle-board [data-square]').length).toBe(63);
+  });
+
+  it('reached by back navigation, renders "Puzzle not found"', async () => {
+    const puzzle = JUNGLE_PUZZLES[0]!;
+    stubListWithout(puzzle);
+    const root = document.createElement('div');
+    document.body.append(root);
     await mountPuzzles(root, puzzle.id);
 
-    expect(root.querySelector('.fxq-board')).not.toBeNull();
-    const shell = root.querySelector('.puzzle-board-shell.puzzle-fortress-shell');
-    expect(shell).not.toBeNull();
-    expect(shell?.querySelector('[aria-label="Opponent reserve"]')).not.toBeNull();
-    expect(shell?.querySelector('[aria-label="Your reserve"]')).not.toBeNull();
-    // 7x8 grid of interactive hit targets.
-    expect(shell?.querySelectorAll('[data-square]').length).toBe(56);
+    window.history.pushState(null, '', `/puzzles/${DELETED_ID}`);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    await vi.waitFor(() => expect(root.textContent).toContain('Puzzle not found'));
   });
 });

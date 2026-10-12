@@ -51,6 +51,22 @@ const baseAnnouncements: Announcement[] = [
     cta: 'Read the article',
   },
   {
+    date: '2026-10-13',
+    kind: 'article',
+    headline: 'Fortress and Atomic Xiangqi are back on the drawing board.',
+    body: 'Both are on hold while we redesign them: no new games, but finished games still replay and the rules pages stay up. Fortress needs a smaller xiangqi that keeps the feel of the full game without drops taking over. Atomic needs a cannon that follows the same rule as every other piece. Until then, drops live in Crazyhouse Xiangqi.',
+    href: '/blog/fortress-and-atomic-xiangqi-on-hold',
+    cta: 'Read the article',
+  },
+  {
+    date: '2026-10-12',
+    kind: 'article',
+    headline: 'Why banqi needs a perpetual chase rule, shown with real games.',
+    body: 'In banqi a chased piece often has only one safe square, so the chaser could force a draw by repetition. The article plays through the Mistboard games where that happened, compares what tournament rules and the popular apps do, and sets out our rule in full for anyone implementing it.',
+    href: '/blog/banqi-perpetual-chase',
+    cta: 'Read the article',
+  },
+  {
     date: '2026-10-11',
     kind: 'update',
     headline: 'Pro player pages now have photos.',

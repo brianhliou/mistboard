@@ -15,14 +15,8 @@
  * fallback that maps an unknown id to another variant's board.
  */
 
-import {
-  FORTRESS_XIANGQI_SPEC_ID,
-  hasOwnKey,
-  JUNGLE_SPEC_ID,
-  XIANGQI_SPEC_ID,
-} from '@mistboard/game';
+import { hasOwnKey, JUNGLE_SPEC_ID, XIANGQI_SPEC_ID } from '@mistboard/game';
 import type { PuzzleBoardAdapter } from './adapter.js';
-import { fortressXiangqiPuzzleAdapter } from './fortress-xiangqi-adapter.js';
 import { junglePuzzleAdapter } from './jungle-adapter.js';
 import type { PuzzleVariant } from './variant-ids.js';
 import { xiangqiPuzzleAdapter } from './xiangqi-adapter.js';
@@ -30,7 +24,6 @@ import { xiangqiPuzzleAdapter } from './xiangqi-adapter.js';
 export { PUZZLE_VARIANT_IDS, type PuzzleVariant } from './variant-ids.js';
 
 const PUZZLE_BOARD_ADAPTERS: Record<PuzzleVariant, PuzzleBoardAdapter> = {
-  [FORTRESS_XIANGQI_SPEC_ID]: fortressXiangqiPuzzleAdapter,
   [JUNGLE_SPEC_ID]: junglePuzzleAdapter,
   [XIANGQI_SPEC_ID]: xiangqiPuzzleAdapter,
 };

@@ -106,7 +106,6 @@ import {
   isGameSpecId,
   rulesHrefPublicSurfaceEnabled,
   rulesSlugPublicSurfaceEnabled,
-  rulesSlugRetired,
   variantPublicSurfaceEnabled,
   variantSupportsPve,
 } from './variant-public-surfaces.js';
@@ -135,7 +134,7 @@ function isArticleVisibleInThisEnv(article: Article): boolean {
 
 function isArticleListedInThisEnv(article: Article): boolean {
   if (!isArticleVisibleInThisEnv(article)) return false;
-  if (article.showInIndex === false) return false;
+  if (article.showInIndex === false || article.noindex === true) return false;
   // A page written in a language the interface does not speak never lists here.
   // The index is one reader's shelf, and a Vietnamese card in an English list is
   // noise to everyone: an English reader cannot read it, and a Vietnamese reader
@@ -754,9 +753,6 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
   const locale = articleLocale(articleLang);
   if (!base) return buildArticleNotFound(locale);
   if (!isArticleVisibleInThisEnv(base)) return buildArticleNotFound(locale);
-  // The server serves 410 for a retired variant's rules page; a client-side
-  // navigation must not render what the server has declared gone.
-  if (base.kind === 'rules' && rulesSlugRetired(base.slug)) return buildArticleNotFound(locale);
   const article = articleLang ? translateArticle(base, articleLang) : base;
 
   const main = document.createElement('main');
@@ -941,10 +937,13 @@ function buildArticleFooter(article: Article, lang?: ArticleLang): HTMLElement |
   heading.className = 'article-footer-heading';
   heading.textContent = t('articles.readNext', {}, locale);
 
+  // An English-only page read with a zh UI still offers the zh version of each
+  // onward post that has one, as the heading and dates already follow the UI.
+  const cardLang = lang ?? (locale === 'zh-Hans' || locale === 'zh-Hant' ? locale : undefined);
   const list = document.createElement('ul');
   list.className = 'articles-index-list article-footer-list';
   for (const entry of related) {
-    list.append(articleCard(entry, lang, { showStarBadge: false }));
+    list.append(articleCard(entry, cardLang, { showStarBadge: false }));
   }
 
   footer.append(heading, list);
@@ -1879,7 +1878,8 @@ function renderRawSvgStepperBlock(block: RawSvgStepperBlock, lang?: ArticleLang)
       lang,
       title: block.header?.players,
       subtitle: block.header?.event,
-      wide,
+      // A game is one board, so its sheet sits beside it however wide it is.
+      wide: wide && !asGame,
     },
     {
       count: block.steps.length,

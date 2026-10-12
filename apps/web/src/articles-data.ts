@@ -12,6 +12,7 @@ import { banqiArticle } from './articles/content/banqi.js';
 import { banqiStatisticsArticle } from './articles/content/banqi-statistics.js';
 import { banqiEngineArticle } from './articles/content/banqi-engine.js';
 import { banqiLuckArticle } from './articles/content/banqi-luck.js';
+import { banqiPerpetualChaseArticle } from './articles/content/banqi-perpetual-chase.js';
 import { chessArticle } from './articles/content/chess.js';
 import { choiCoTuongVoiMayArticle } from './articles/content/choi-co-tuong-voi-may.js';
 import { coUpArticle } from './articles/content/co-up.js';
@@ -65,10 +66,12 @@ import { caoYanleiArticle } from './articles/content/cao-yanlei.js';
 import { laiLyHuynhArticle } from './articles/content/lai-ly-huynh.js';
 import { laiLyHuynhCoTuongArticle } from './articles/content/lai-ly-huynh-co-tuong.js';
 import { tonyFungGaZenArticle } from './articles/content/tony-fung-ga-zen.js';
+import { fortressAndAtomicXiangqiOnHoldArticle } from './articles/content/fortress-and-atomic-xiangqi-on-hold.js';
 import { zuoWenjingArticle } from './articles/content/zuo-wenjing.js';
 import articleSnapshotFog from './article-snapshot-fog.json' with { type: 'json' };
 
 export const articles: Article[] = [
+  fortressAndAtomicXiangqiOnHoldArticle,
   jieqiPuzzleSearchArticle,
   longestForcedMatesXiangqiArticle,
   xiangqiEndgamesArticle,
@@ -122,6 +125,7 @@ export const articles: Article[] = [
   banqiStatisticsArticle,
   banqiEngineArticle,
   banqiLuckArticle,
+  banqiPerpetualChaseArticle,
   flipJungleSkillCeilingArticle,
   puzzleMiningArticle,
   puzzleTwoAnswersArticle,

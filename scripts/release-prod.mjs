@@ -1193,6 +1193,8 @@ async function runSmoke({ deployRequired, headRevision }) {
   // on 2026-09-02 and resigned six real games before anyone knew, because
   // nothing here ever asked it for a move. scripts/pve-smoke-coverage.test.ts
   // fails the build if a PvE variant is added without landing in this list.
+  // Retired variants (Fortress and Atomic Xiangqi, 2026-10-11) take no new
+  // games, so a smoke that starts one can only fail; they are EXEMPT there.
   await runParallelSmokes([
     {
       label: 'prod engine smoke',
@@ -1200,19 +1202,9 @@ async function runSmoke({ deployRequired, headRevision }) {
       command: npmCommand('prod:smoke:engines', baseArgs()),
     },
     {
-      label: 'prod Fortress smoke',
-      tag: 'fortress',
-      command: npmCommand('prod:smoke:fortress', baseArgs()),
-    },
-    {
       label: 'prod Duck smoke',
       tag: 'duck',
       command: npmCommand('prod:smoke:duck', baseArgs()),
-    },
-    {
-      label: 'prod Atomic Xiangqi smoke',
-      tag: 'atomic',
-      command: npmCommand('prod:smoke:atomic', baseArgs()),
     },
     {
       label: 'prod Crazyhouse Xiangqi smoke',

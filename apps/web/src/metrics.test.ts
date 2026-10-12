@@ -227,6 +227,10 @@ describe('metrics page', () => {
       ...(variantSection?.querySelectorAll('.metrics-breakdown-label') ?? []),
     ].map((n) => n.textContent);
     expect(variantLabels).toEqual(['Xiangqi', 'Fog Xiangqi']);
+    // The server leaves retired variants' games out of every public number,
+    // so the breakdown carries no "retired games count toward the total" note.
+    expect(variantSection?.querySelector('p')).toBeNull();
+    expect(variantSection?.textContent).not.toContain('retired');
 
     expect(vi.mocked(fetch)).not.toHaveBeenCalledWith('/api/stats/admin', expect.anything());
   });

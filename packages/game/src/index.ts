@@ -24,7 +24,6 @@ export * from './notation.js';
 export * from './practice.js';
 export * from './practice-catalog.js';
 export * from './puzzle-short-code.js';
-export * from './puzzles-fortress-xiangqi.js';
 export * from './puzzles-jungle.js';
 export * from './puzzles-xiangqi.js';
 export * from './puzzles-xiangqi-difficulty.js';

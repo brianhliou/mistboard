@@ -50,12 +50,12 @@ describe('landing lobby bot seeks', () => {
       'fairy-stockfish-level-5|xiangqi',
       'fairy-stockfish-level-8|xiangqi',
       'pikafish-level-2|jieqi',
-      'fairy-stockfish-level-3|duck-xiangqi',
-      'fairy-stockfish-level-4|crazyhouse-xiangqi',
-      'fairy-stockfish-level-5|fortress-xiangqi',
+      'misty|banqi',
+      'fairy-stockfish-level-4|duck-xiangqi',
+      'fairy-stockfish-level-3|crazyhouse-xiangqi',
       'misty|dark-chess',
     ]);
-    // Atomic Xiangqi left the rotation when it was unlisted (2026-10-06).
+    // Fortress and Atomic Xiangqi left the rotation when they retired (2026-10-11).
     expect(new Set(signature).size).toBe(8);
     expect(new Set(seeds.map((seed) => seed.dataset.gameSpec)).size).toBe(6);
     // Every bot row advertises the bot default, 10+5, in every variant: it is
@@ -208,11 +208,11 @@ describe('landing lobby bot seeks', () => {
     expect(xiangqi?.textContent).toBe('—');
     expect(xiangqi?.getAttribute('data-pool-rating')).toBe('2450?');
     // Unmatched bots keep the placeholder rather than guessing a number.
-    const crazyhouse = panel.querySelector(
-      '.landing-lobby-seed[data-bot-id="fairy-stockfish-level-4"][data-game-spec="crazyhouse-xiangqi"] .landing-lobby-seed-rating',
+    const duck = panel.querySelector(
+      '.landing-lobby-seed[data-bot-id="fairy-stockfish-level-4"][data-game-spec="duck-xiangqi"] .landing-lobby-seed-rating',
     );
-    expect(crazyhouse?.textContent).toBe('—');
-    expect(crazyhouse?.getAttribute('title')).toBeNull();
+    expect(duck?.textContent).toBe('—');
+    expect(duck?.getAttribute('title')).toBeNull();
   });
 
   it('lists human seeks above the bots in one table with the same column grammar', async () => {
@@ -308,7 +308,6 @@ describe('landing lobby bot seeks', () => {
       'banqi',
       'duck-xiangqi',
       'crazyhouse-xiangqi',
-      'fortress-xiangqi',
       'dark-xiangqi',
       'dark-chess',
       'jungle',

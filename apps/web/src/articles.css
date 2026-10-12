@@ -1068,6 +1068,14 @@
   }
 }
 
+/* A strip of boards read left to right as one sequence (a move cycle), two by
+   two at every width: four in a row left each board too small to read. Two
+   classes so it outranks the stacking rule above. */
+.article-figure-row.article-figure-row--strip {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 10px;
+}
+
 /* Single xiangqi board: cap at its natural width instead of stretching to
    fill the article column. The SVG carries its natural width as the inline
    --xq-svg-width custom property. */
@@ -2483,6 +2491,13 @@
 
 .article-step-card .embed-card-board {
   width: calc(100% - 226px);
+}
+
+/* A landscape board (banqi) gets a narrower sheet column: its moves are short,
+   and every pixel of width is board. Before the container query below, which
+   stacks the card on a phone. */
+.article-step-card--landscape .embed-card-board {
+  width: calc(100% - 180px);
 }
 
 /* No seat rows (a stepped figure): the mat keeps the same inset above and

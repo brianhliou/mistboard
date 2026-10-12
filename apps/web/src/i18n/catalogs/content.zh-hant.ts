@@ -155,7 +155,6 @@ export const ZH_HANT_CONTENT = {
   'stats.allGames': '全部對局',
   'stats.thisWeekSoFar': '本週已完成 {count} 局',
   'stats.byVariant': '按變體統計',
-  'stats.byVariantRetiredNote': '已下線變體的對局計入總數，但不單獨列出。',
   'stats.byMode': '按模式統計',
   'stats.unavailableHeading': '統計暫不可用',
   'stats.unavailableBody': '無法載入統計資料，請稍後再試。',
@@ -213,7 +212,7 @@ export const ZH_HANT_CONTENT = {
   'faq.playFriendAnswer': '開始對局時選擇和朋友對弈，把連結傳給朋友，對方打開連結就能入座。',
   'faq.playOtherQuestion': '還有哪些玩法？',
   'faq.playOtherAnswer':
-    '揭棋、暗棋、鬥獸棋、翻翻棋、原子象棋，以及我們設計的遊戲：瘋狂屋象棋、鴨子象棋和迷霧象棋。',
+    '揭棋、暗棋、鬥獸棋、翻翻棋，以及我們設計的遊戲：瘋狂屋象棋、鴨子象棋和迷霧象棋。',
   'faq.playReviewQuestion': '下完可以復盤嗎？',
   'faq.playReviewAnswer': '可以。象棋對局結束後可以進入復盤，引擎會標出決定勝負的幾步。',
   'faq.darkChessQuestion': 'Mistboard 上可以玩什麼？',

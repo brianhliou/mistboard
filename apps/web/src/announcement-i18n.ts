@@ -35,6 +35,10 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-10-13 (Fortress and Atomic on hold) ── 堡垒象棋 / 原子象棋 / 疯狂屋象棋 / 打入 follow the launch entries.
+  'Fortress and Atomic Xiangqi are back on the drawing board.': '堡垒象棋和原子象棋回到设计阶段。',
+  'Both are on hold while we redesign them: no new games, but finished games still replay and the rules pages stay up. Fortress needs a smaller xiangqi that keeps the feel of the full game without drops taking over. Atomic needs a cannon that follows the same rule as every other piece. Until then, drops live in Crazyhouse Xiangqi.':
+    '两者都已暂停，等待重新设计：不能开新对局，但已完成的对局仍可回放，规则页面也保留。堡垒象棋需要做成一种更小、但仍有完整象棋手感的象棋，并且不让打入主导一切。原子象棋需要一门和其他棋子遵守同一条规则的炮。在那之前，打入可以在疯狂屋象棋里下。',
   // ── 2026-10-11 (player photos) ── 永乐象棋棋谱网 is the archive's own name for itself (the owner's wording, 2026-10-11).
   'Pro player pages now have photos.': '职业棋手页面现在有照片了。',
   "Seventy-five of the pro players we follow now have a portrait on their page, from the xiangqiqipu.com archive, which gave us permission to use them; each photo links back to that player's page there. Every player page also has their games, results by event, openings and official CXA rating.":
@@ -44,6 +48,11 @@ const ZH_HANS: Record<string, string> = {
   'Looking for jieqi puzzles: what 50 games turned up.': '在揭棋里找题目：50 盘对局找到了什么。',
   'We scored 2,939 positions from 50 jieqi games, looking for puzzles. Four passed the rules our xiangqi puzzles go through, and none of them turns on a face-down piece: the hidden-piece answers were bets, or moves the tile hardly touched. Where skill does show is in timing a capture a face-down piece can make whatever it turns out to be. Every example is on a board you can step through.':
     '我们给 50 盘揭棋对局中的 2,939 个局面打分，寻找题目。有四个局面通过了我们象棋题目要过的规则，没有一个取决于暗子：取决于暗子的答案，要么是赌博，要么是暗子几乎无关的着法。实力真正体现的地方，是一枚暗子无论翻出什么都能完成的吃子，何时去吃。每个例子都在可以逐着演示的棋盘上。',
+  // ── 2026-10-12 (banqi perpetual chase article) ── 长捉 / 重复局面 follow the banqi-perpetual-chase article.
+  'Why banqi needs a perpetual chase rule, shown with real games.':
+    '暗棋为什么需要长捉规则，用真实对局说明。',
+  'In banqi a chased piece often has only one safe square, so the chaser could force a draw by repetition. The article plays through the Mistboard games where that happened, compares what tournament rules and the popular apps do, and sets out our rule in full for anyone implementing it.':
+    '暗棋里被捉的子常常只有一个安全的格子，所以捉的一方可以靠重复局面逼和。这篇文章逐步重放 Mistboard 上发生过这种事的对局，比较比赛规则和常见应用的做法，并为要实现这条规则的人完整列出我们的规则。',
   // ── 2026-10-09 (banqi chase rule) ── 长捉 / 翻子 / 三次重复 follow the banqi rules article.
   'Banqi: a chase can no longer force a repetition draw.': '暗棋：长捉不能再逼成重复和棋。',
   'In banqi a player could chase the same piece back and forth until the position came up three times and the game was drawn. Now a chasing move may not make a position appear for the third time, so the chasing side has to play something else, and a repetition caused by a chase is never a draw. A chase that drives a piece onto new squares is not affected. Games started before the change keep the old rules.':
@@ -484,6 +493,10 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-10-13 (Fortress and Atomic on hold) ── 堡壘象棋 / 原子象棋 / 瘋狂屋象棋 / 打入 follow the launch entries.
+  'Fortress and Atomic Xiangqi are back on the drawing board.': '堡壘象棋和原子象棋回到設計階段。',
+  'Both are on hold while we redesign them: no new games, but finished games still replay and the rules pages stay up. Fortress needs a smaller xiangqi that keeps the feel of the full game without drops taking over. Atomic needs a cannon that follows the same rule as every other piece. Until then, drops live in Crazyhouse Xiangqi.':
+    '兩者都已暫停，等待重新設計：不能開新對局，但已完成的對局仍可回放，規則頁面也保留。堡壘象棋需要做成一種更小、但仍有完整象棋手感的象棋，並且不讓打入主導一切。原子象棋需要一門和其他棋子遵守同一條規則的炮。在那之前，打入可以在瘋狂屋象棋裡下。',
   // ── 2026-10-11 (player photos) ── 永樂象棋棋譜網 is the archive's own name for itself (the owner's wording, 2026-10-11).
   'Pro player pages now have photos.': '職業棋手頁面現在有照片了。',
   "Seventy-five of the pro players we follow now have a portrait on their page, from the xiangqiqipu.com archive, which gave us permission to use them; each photo links back to that player's page there. Every player page also has their games, results by event, openings and official CXA rating.":
@@ -493,6 +506,11 @@ const ZH_HANT: Record<string, string> = {
   'Looking for jieqi puzzles: what 50 games turned up.': '在揭棋裡找題目：50 盤對局找到了什麼。',
   'We scored 2,939 positions from 50 jieqi games, looking for puzzles. Four passed the rules our xiangqi puzzles go through, and none of them turns on a face-down piece: the hidden-piece answers were bets, or moves the tile hardly touched. Where skill does show is in timing a capture a face-down piece can make whatever it turns out to be. Every example is on a board you can step through.':
     '我們給 50 盤揭棋對局中的 2,939 個局面評分，尋找題目。有四個局面通過了我們象棋題目要過的規則，沒有一個取決於暗子：取決於暗子的答案，要麼是賭博，要麼是暗子幾乎無關的著法。實力真正體現的地方，是一枚暗子無論翻出什麼都能完成的吃子，何時去吃。每個例子都在可以逐著演示的棋盤上。',
+  // ── 2026-10-12 (banqi perpetual chase article) ── 長捉 / 重複局面 follow the banqi-perpetual-chase article.
+  'Why banqi needs a perpetual chase rule, shown with real games.':
+    '暗棋為什麼需要長捉規則，用真實對局說明。',
+  'In banqi a chased piece often has only one safe square, so the chaser could force a draw by repetition. The article plays through the Mistboard games where that happened, compares what tournament rules and the popular apps do, and sets out our rule in full for anyone implementing it.':
+    '暗棋裡被捉的子常常只有一個安全的格子，所以捉的一方可以靠重複局面逼和。這篇文章逐步重放 Mistboard 上發生過這種事的對局，比較比賽規則和常見應用的做法，並為要實作這條規則的人完整列出我們的規則。',
   // ── 2026-10-09 (banqi chase rule) ── 長捉 / 翻子 / 三次重複 follow the banqi rules article.
   'Banqi: a chase can no longer force a repetition draw.': '暗棋：長捉不能再逼成重複和棋。',
   'In banqi a player could chase the same piece back and forth until the position came up three times and the game was drawn. Now a chasing move may not make a position appear for the third time, so the chasing side has to play something else, and a repetition caused by a chase is never a draw. A chase that drives a piece onto new squares is not affected. Games started before the change keep the old rules.':

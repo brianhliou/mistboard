@@ -1,10 +1,5 @@
 import { createHash } from 'node:crypto';
-import {
-  FORTRESS_XIANGQI_SPEC_ID,
-  type FortressXiangqiPuzzle,
-  XIANGQI_SPEC_ID,
-  type XiangqiPuzzle,
-} from '@mistboard/game';
+import { XIANGQI_SPEC_ID, type XiangqiPuzzle } from '@mistboard/game';
 import type pg from 'pg';
 import { getPool, isInitialized } from './persistence-db.js';
 import { getPuzzleStore, type PuzzleStoreSnapshot } from './puzzle-store.js';
@@ -16,7 +11,7 @@ export const DAILY_PUZZLE_HOMEPAGE_SLOT = 'homepage';
 // committed seed, or the seed alone when persistence is off). Ids are
 // prefix-disjoint across the registries, so resolution dispatches on the
 // stored variant.
-type DailyPuzzle = FortressXiangqiPuzzle | XiangqiPuzzle;
+type DailyPuzzle = XiangqiPuzzle;
 
 export type DailyPuzzleSlot = typeof DAILY_PUZZLE_HOMEPAGE_SLOT;
 
@@ -50,12 +45,8 @@ type Queryable = {
   ): Promise<pg.QueryResult<T>>;
 };
 
-// The daily rotation draws from standard xiangqi. Fortress is hidden while the
-// variant is demoted and its puzzles await a re-mine with the per-ply
-// uniqueness gate (they ship the engine's top PV verbatim, so some "solutions"
-// are unforced). Restore the Fortress variant here when the re-mined corpus
-// lands. Add more variants to broaden the rotation; a variant with no stored
-// puzzles simply contributes nothing.
+// The daily rotation draws from standard xiangqi. Add more variants to broaden
+// the rotation; a variant with no stored puzzles simply contributes nothing.
 const DAILY_PUZZLE_VARIANTS: readonly string[] = [XIANGQI_SPEC_ID];
 
 // Variants a persisted daily row may resolve against. Broader than the current
@@ -63,11 +54,10 @@ const DAILY_PUZZLE_VARIANTS: readonly string[] = [XIANGQI_SPEC_ID];
 // matching the pre-#183 resolution). Mini and Drop Mini rows used to be here
 // for the days that predate the standard-xiangqi rotation; both variants are
 // retired and their puzzles withheld (migration 143), so such a row resolves
-// to nothing now, the same as any other withheld puzzle.
-const DAILY_RESOLVABLE_VARIANTS: ReadonlySet<string> = new Set([
-  FORTRESS_XIANGQI_SPEC_ID,
-  XIANGQI_SPEC_ID,
-]);
+// to nothing now, the same as any other withheld puzzle. Fortress Xiangqi went
+// the same way on 2026-10-11 (variant retired, puzzle registry deleted): a
+// persisted Fortress daily row resolves to nothing and the day is re-selected.
+const DAILY_RESOLVABLE_VARIANTS: ReadonlySet<string> = new Set([XIANGQI_SPEC_ID]);
 
 function isCurrentDailyVariant(variant: string): boolean {
   return DAILY_PUZZLE_VARIANTS.includes(variant);

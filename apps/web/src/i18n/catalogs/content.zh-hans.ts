@@ -155,7 +155,6 @@ export const ZH_HANS_CONTENT = {
   'stats.allGames': '全部对局',
   'stats.thisWeekSoFar': '本周已完成 {count} 局',
   'stats.byVariant': '按变体统计',
-  'stats.byVariantRetiredNote': '已下线变体的对局计入总数，但不单独列出。',
   'stats.byMode': '按模式统计',
   'stats.unavailableHeading': '统计暂不可用',
   'stats.unavailableBody': '无法加载统计数据，请稍后再试。',
@@ -213,7 +212,7 @@ export const ZH_HANS_CONTENT = {
   'faq.playFriendAnswer': '开始对局时选择和朋友对弈，把链接发给朋友，对方打开链接就能入座。',
   'faq.playOtherQuestion': '还有哪些玩法？',
   'faq.playOtherAnswer':
-    '揭棋、暗棋、斗兽棋、翻翻棋、原子象棋，以及我们设计的游戏：疯狂屋象棋、鸭子象棋和迷雾象棋。',
+    '揭棋、暗棋、斗兽棋、翻翻棋，以及我们设计的游戏：疯狂屋象棋、鸭子象棋和迷雾象棋。',
   'faq.playReviewQuestion': '下完可以复盘吗？',
   'faq.playReviewAnswer': '可以。象棋对局结束后可以进入复盘，引擎会标出决定胜负的几步。',
   'faq.darkChessQuestion': 'Mistboard 上可以玩什么？',

@@ -55,8 +55,6 @@ describe('web variant launch registry', () => {
     expect(prod.leaderboardVariants.map((v) => v.gameSpecId)).toEqual([
       DUCK_XIANGQI_SPEC_ID,
       CRAZYHOUSE_XIANGQI_SPEC_ID,
-      FORTRESS_XIANGQI_SPEC_ID,
-      ATOMIC_XIANGQI_SPEC_ID,
       DARK_CHESS_SPEC_ID,
       JUNGLE_SPEC_ID,
       JUNGLE_FLIP_SPEC_ID,
@@ -105,8 +103,6 @@ describe('web variant launch registry', () => {
       BANQI_SPEC_ID,
       DUCK_XIANGQI_SPEC_ID,
       CRAZYHOUSE_XIANGQI_SPEC_ID,
-      FORTRESS_XIANGQI_SPEC_ID,
-      ATOMIC_XIANGQI_SPEC_ID,
       DARK_XIANGQI_SPEC_ID,
       DARK_CHESS_SPEC_ID,
       JUNGLE_SPEC_ID,
@@ -118,8 +114,6 @@ describe('web variant launch registry', () => {
       BANQI_SPEC_ID,
       DUCK_XIANGQI_SPEC_ID,
       CRAZYHOUSE_XIANGQI_SPEC_ID,
-      FORTRESS_XIANGQI_SPEC_ID,
-      ATOMIC_XIANGQI_SPEC_ID,
       DARK_XIANGQI_SPEC_ID,
       DARK_CHESS_SPEC_ID,
       JUNGLE_SPEC_ID,
@@ -144,13 +138,19 @@ describe('web variant launch registry', () => {
       [BANQI_SPEC_ID, 'banqi'],
       [DUCK_XIANGQI_SPEC_ID, 'duck-xiangqi'],
       [CRAZYHOUSE_XIANGQI_SPEC_ID, 'crazyhouse-xiangqi'],
-      [FORTRESS_XIANGQI_SPEC_ID, 'fortress-xiangqi'],
-      [ATOMIC_XIANGQI_SPEC_ID, 'atomic-xiangqi'],
       [DARK_XIANGQI_SPEC_ID, 'dark-xiangqi'],
       [DARK_CHESS_SPEC_ID, 'fog'],
       [JUNGLE_SPEC_ID, 'jungle'],
       [JUNGLE_FLIP_SPEC_ID, 'jungle-flip'],
+      // Retired 2026-10-11: off the canonical order, kept at the tail so
+      // labels and finished games resolve, and on no rating surface.
+      [FORTRESS_XIANGQI_SPEC_ID, 'fortress-xiangqi'],
+      [ATOMIC_XIANGQI_SPEC_ID, 'atomic-xiangqi'],
     ]);
+    for (const id of [FORTRESS_XIANGQI_SPEC_ID, ATOMIC_XIANGQI_SPEC_ID]) {
+      expect(leaderboardVariants.map((v) => v.gameSpecId)).not.toContain(id);
+      expect(profileRatingVariants.map((v) => v.gameSpecId)).not.toContain(id);
+    }
   });
 
   it('shows Jieqi + Banqi + Reveal Chess on rating surfaces behind their flags, never in the lobby', async () => {
