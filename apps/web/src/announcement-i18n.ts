@@ -35,7 +35,7 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
-  // ── 2026-10-13 (Fortress and Atomic on hold) ── 堡垒象棋 / 原子象棋 / 疯狂屋象棋 / 打入 follow the launch entries. Machine-drafted ahead of the English sign-off; redo after Brian's edits.
+  // ── 2026-10-13 (Fortress and Atomic on hold) ── 堡垒象棋 / 原子象棋 / 疯狂屋象棋 / 打入 follow the launch entries.
   'Fortress and Atomic Xiangqi are back on the drawing board.': '堡垒象棋和原子象棋回到设计阶段。',
   'Both are on hold while we redesign them: no new games, but finished games still replay and the rules pages stay up. Fortress needs a smaller xiangqi that keeps the feel of the full game without drops taking over. Atomic needs a cannon that follows the same rule as every other piece. Until then, drops live in Crazyhouse Xiangqi.':
     '两者都已暂停，等待重新设计：不能开新对局，但已完成的对局仍可回放，规则页面也保留。堡垒象棋需要做成一种更小、但仍有完整象棋手感的象棋，并且不让打入主导一切。原子象棋需要一门和其他棋子遵守同一条规则的炮。在那之前，打入可以在疯狂屋象棋里下。',
@@ -485,7 +485,7 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
-  // ── 2026-10-13 (Fortress and Atomic on hold) ── 堡壘象棋 / 原子象棋 / 瘋狂屋象棋 / 打入 follow the launch entries. Machine-drafted ahead of the English sign-off; redo after Brian's edits.
+  // ── 2026-10-13 (Fortress and Atomic on hold) ── 堡壘象棋 / 原子象棋 / 瘋狂屋象棋 / 打入 follow the launch entries.
   'Fortress and Atomic Xiangqi are back on the drawing board.': '堡壘象棋和原子象棋回到設計階段。',
   'Both are on hold while we redesign them: no new games, but finished games still replay and the rules pages stay up. Fortress needs a smaller xiangqi that keeps the feel of the full game without drops taking over. Atomic needs a cannon that follows the same rule as every other piece. Until then, drops live in Crazyhouse Xiangqi.':
     '兩者都已暫停，等待重新設計：不能開新對局，但已完成的對局仍可回放，規則頁面也保留。堡壘象棋需要做成一種更小、但仍有完整象棋手感的象棋，並且不讓打入主導一切。原子象棋需要一門和其他棋子遵守同一條規則的炮。在那之前，打入可以在瘋狂屋象棋裡下。',
