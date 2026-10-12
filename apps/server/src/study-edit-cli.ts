@@ -32,6 +32,10 @@
 //       { "op": "add", "ref": "g7", "name": "Game 7", "tree": { "version": 1, … } },
 //       { "op": "delete", "chapter": "Sg3b9nXw" },
 //       { "op": "order", "chapters": ["RPLi9LsH", "ref:g7", …] } ] }
+// `delete-study` removes the whole study with its chapters. It must be the
+// plan's last op and `expect` the study's name, so a plan aimed at one study
+// cannot delete another (2026-10-11: a duplicate made by re-running a create).
+//       { "op": "delete-study", "expect": "DUPLICATE (delete) …" }
 // A `tree` is a SerializedTree, inline or a path relative to the plan file.
 // `order` must name every chapter the study has at that point in the plan.
 // `add` takes optional chapter `tags` (red, black, result, event, date, …).
@@ -59,6 +63,7 @@ import {
   addChapter,
   createStudy,
   deleteChapter,
+  deleteStudy,
   getStudyById,
   isStudyVisibility,
   renameChapter,
@@ -103,7 +108,8 @@ export type StudyEditOp =
       i18n?: Record<string, unknown>;
     }
   | { op: 'delete'; chapter: string }
-  | { op: 'order'; chapters: string[] };
+  | { op: 'order'; chapters: string[] }
+  | { op: 'delete-study'; expect: string };
 
 export type StudyCreateSpec = {
   owner: string;
@@ -220,6 +226,7 @@ export function checkPlan(
   const order = study.chapters.map((c) => c.id);
   const refs = new Set<string>();
   const lines: string[] = [];
+  let studyName = study.name;
   const known = (id: string, i: number) => {
     if (!names.has(id)) throw new Error(`op ${i + 1}: chapter ${id} is not in the study here`);
     return names.get(id)!;
@@ -235,7 +242,10 @@ export function checkPlan(
           throw new Error(`op ${i + 1}: visibility "${op.visibility}"`);
         }
         if (op.name !== undefined && !op.name.trim()) throw new Error(`op ${i + 1}: empty name`);
-        if (op.name !== undefined) lines.push(`study name: "${study.name}" -> "${op.name}"`);
+        if (op.name !== undefined) {
+          lines.push(`study name: "${studyName}" -> "${op.name}"`);
+          studyName = op.name.trim();
+        }
         if (op.description !== undefined) lines.push(`study description -> "${op.description}"`);
         if (op.visibility !== undefined) {
           lines.push(`study visibility: ${study.visibility} -> ${op.visibility}`);
@@ -297,6 +307,16 @@ export function checkPlan(
         if (order.length <= 1) throw new Error(`op ${i + 1}: a study keeps at least one chapter`);
         names.delete(op.chapter);
         order.splice(order.indexOf(op.chapter), 1);
+        return;
+      }
+      case 'delete-study': {
+        if (i !== plan.ops.length - 1) {
+          throw new Error(`op ${i + 1}: delete-study must be the plan's last op`);
+        }
+        if (op.expect !== studyName) {
+          throw new Error(`op ${i + 1}: the study is named "${studyName}", not "${op.expect}"`);
+        }
+        lines.push(`DELETE study ${study.id} "${studyName}" with its ${order.length} chapters`);
         return;
       }
       case 'order': {
@@ -452,6 +472,10 @@ export async function applyPlan(
         break;
       case 'order':
         must('order', await reorderStudyChapters(study.id, owner, op.chapters.map(idOf)));
+        break;
+      case 'delete-study':
+        if (!(await deleteStudy(study.id, owner)))
+          throw new Error(`delete-study: ${study.id} refused`);
         break;
     }
   }

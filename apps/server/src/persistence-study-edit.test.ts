@@ -141,4 +141,40 @@ definePersistenceTests('study edit', () => {
       [zh('一'), zh('二')],
     );
   });
+
+  test('delete-study removes the study only by its name, as the last op', async () => {
+    const study = await seed('edit-delete');
+    const site = ['edit-delete'];
+    await assert.rejects(
+      applyPlan(study, { study: study.id, ops: [{ op: 'delete-study', expect: 'Other' }] }, site),
+      /is named/,
+    );
+    await assert.rejects(
+      applyPlan(
+        study,
+        {
+          study: study.id,
+          ops: [
+            { op: 'delete-study', expect: study.name },
+            { op: 'study', name: 'Later' },
+          ],
+        },
+        site,
+      ),
+      /last op/,
+    );
+    assert.ok(await getStudyById(study.id));
+    await applyPlan(
+      study,
+      {
+        study: study.id,
+        ops: [
+          { op: 'study', name: 'DUPLICATE' },
+          { op: 'delete-study', expect: 'DUPLICATE' },
+        ],
+      },
+      site,
+    );
+    assert.equal(await getStudyById(study.id), null);
+  });
 });
