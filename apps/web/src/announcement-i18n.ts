@@ -35,10 +35,10 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
-  // ── 2026-10-11 (player photos) ── 中国象棋棋谱网 is the archive's own name.
+  // ── 2026-10-11 (player photos) ── 永乐象棋棋谱网 is the archive's own name for itself (the owner's wording, 2026-10-11).
   'Pro player pages now have photos.': '职业棋手页面现在有照片了。',
   "Seventy-five of the pro players we follow now have a portrait on their page, from the xiangqiqipu.com archive, which gave us permission to use them; each photo links back to that player's page there. Every player page also has their games, results by event, openings and official CXA rating.":
-    '我们关注的职业棋手中，有 75 位的页面现在有了照片，来自中国象棋棋谱网（xiangqiqipu.com），已获该站授权使用；每张照片都链接到该站这位棋手的页面。每个棋手页面还有他们的对局、各项赛事成绩、开局和中国象协官方等级分。',
+    '我们关注的职业棋手中，有 75 位的页面现在有了照片，来自永乐象棋棋谱网（xiangqiqipu.com），已获该站授权使用；每张照片都链接到该站这位棋手的页面。每个棋手页面还有他们的对局、各项赛事成绩、开局和中国象协官方等级分。',
   'Browse the pro players': '浏览职业棋手',
   // ── 2026-10-11 (jieqi puzzle search) ── 暗子 / 翻子 / 题目 follow the jieqi-puzzle-search article text.
   'Looking for jieqi puzzles: what 50 games turned up.': '在揭棋里找题目：50 盘对局找到了什么。',
@@ -481,10 +481,10 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
-  // ── 2026-10-11 (player photos) ── 中國象棋棋譜網 is the archive's own name.
+  // ── 2026-10-11 (player photos) ── 永樂象棋棋譜網 is the archive's own name for itself (the owner's wording, 2026-10-11).
   'Pro player pages now have photos.': '職業棋手頁面現在有照片了。',
   "Seventy-five of the pro players we follow now have a portrait on their page, from the xiangqiqipu.com archive, which gave us permission to use them; each photo links back to that player's page there. Every player page also has their games, results by event, openings and official CXA rating.":
-    '我們關注的職業棋手中，有 75 位的頁面現在有了照片，來自中國象棋棋譜網（xiangqiqipu.com），已獲該站授權使用；每張照片都連結到該站這位棋手的頁面。每個棋手頁面還有他們的對局、各項賽事成績、開局和中國象協官方等級分。',
+    '我們關注的職業棋手中，有 75 位的頁面現在有了照片，來自永樂象棋棋譜網（xiangqiqipu.com），已獲該站授權使用；每張照片都連結到該站這位棋手的頁面。每個棋手頁面還有他們的對局、各項賽事成績、開局和中國象協官方等級分。',
   'Browse the pro players': '瀏覽職業棋手',
   // ── 2026-10-11 (jieqi puzzle search) ── 暗子 / 翻子 / 題目 follow the jieqi-puzzle-search article text.
   'Looking for jieqi puzzles: what 50 games turned up.': '在揭棋裡找題目：50 盤對局找到了什麼。',
