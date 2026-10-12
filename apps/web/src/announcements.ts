@@ -43,6 +43,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-10-13',
+    kind: 'article',
+    headline: 'Why we retired Fortress and Atomic Xiangqi.',
+    body: 'Both are closed to new games; finished games still replay and the rules pages stay up. Fortress put drops, a smaller board, corner palaces and a new piece into one game, and the drops decided it. Atomic only stopped looping after we gave the cannon its own exception and added a repetition rule. If drops were what you liked, Crazyhouse Xiangqi has them on the normal board.',
+    href: '/blog/retiring-fortress-and-atomic-xiangqi',
+    cta: 'Read the article',
+  },
+  {
     date: '2026-10-11',
     kind: 'update',
     headline: 'Pro player pages now have photos.',

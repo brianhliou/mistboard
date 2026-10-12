@@ -35,6 +35,10 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-10-13 (Fortress and Atomic retired) ── 堡垒象棋 / 原子象棋 / 疯狂屋象棋 / 打入 follow the launch entries. Machine-drafted ahead of the English sign-off; redo after Brian's edits.
+  'Why we retired Fortress and Atomic Xiangqi.': '我们为什么下线堡垒象棋和原子象棋。',
+  'Both are closed to new games; finished games still replay and the rules pages stay up. Fortress put drops, a smaller board, corner palaces and a new piece into one game, and the drops decided it. Atomic only stopped looping after we gave the cannon its own exception and added a repetition rule. If drops were what you liked, Crazyhouse Xiangqi has them on the normal board.':
+    '两者都已不能开新对局；已完成的对局仍可回放，规则页面也保留。堡垒象棋把打入、更小的棋盘、角落里的九宫和一个新棋子放进了同一个游戏，而决定胜负的是打入。原子象棋要等我们给炮加了一条单独的例外、又加了一条重复局面规则之后，才不再陷入循环。如果你喜欢的是打入，疯狂屋象棋在标准棋盘上就有。',
   // ── 2026-10-11 (player photos) ── 中国象棋棋谱网 is the archive's own name.
   'Pro player pages now have photos.': '职业棋手页面现在有照片了。',
   "Seventy-five of the pro players we follow now have a portrait on their page, from the xiangqiqipu.com archive, which gave us permission to use them; each photo links back to that player's page there. Every player page also has their games, results by event, openings and official CXA rating.":
@@ -481,6 +485,10 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-10-13 (Fortress and Atomic retired) ── 堡壘象棋 / 原子象棋 / 瘋狂屋象棋 / 打入 follow the launch entries. Machine-drafted ahead of the English sign-off; redo after Brian's edits.
+  'Why we retired Fortress and Atomic Xiangqi.': '我們為什麼下線堡壘象棋和原子象棋。',
+  'Both are closed to new games; finished games still replay and the rules pages stay up. Fortress put drops, a smaller board, corner palaces and a new piece into one game, and the drops decided it. Atomic only stopped looping after we gave the cannon its own exception and added a repetition rule. If drops were what you liked, Crazyhouse Xiangqi has them on the normal board.':
+    '兩者都已不能開新對局；已完成的對局仍可回放，規則頁面也保留。堡壘象棋把打入、更小的棋盤、角落裡的九宮和一個新棋子放進了同一個遊戲，而決定勝負的是打入。原子象棋要等我們給炮加了一條單獨的例外、又加了一條重複局面規則之後，才不再陷入循環。如果你喜歡的是打入，瘋狂屋象棋在標準棋盤上就有。',
   // ── 2026-10-11 (player photos) ── 中國象棋棋譜網 is the archive's own name.
   'Pro player pages now have photos.': '職業棋手頁面現在有照片了。',
   "Seventy-five of the pro players we follow now have a portrait on their page, from the xiangqiqipu.com archive, which gave us permission to use them; each photo links back to that player's page there. Every player page also has their games, results by event, openings and official CXA rating.":

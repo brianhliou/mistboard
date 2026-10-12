@@ -65,9 +65,11 @@ import { caoYanleiArticle } from './articles/content/cao-yanlei.js';
 import { laiLyHuynhArticle } from './articles/content/lai-ly-huynh.js';
 import { laiLyHuynhCoTuongArticle } from './articles/content/lai-ly-huynh-co-tuong.js';
 import { tonyFungGaZenArticle } from './articles/content/tony-fung-ga-zen.js';
+import { retiringFortressAndAtomicXiangqiArticle } from './articles/content/retiring-fortress-and-atomic-xiangqi.js';
 import articleSnapshotFog from './article-snapshot-fog.json' with { type: 'json' };
 
 export const articles: Article[] = [
+  retiringFortressAndAtomicXiangqiArticle,
   jieqiPuzzleSearchArticle,
   longestForcedMatesXiangqiArticle,
   xiangqiEndgamesArticle,
