@@ -86,6 +86,9 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   // Machine-drafted 2026-10-03. The fourth player page; locked with its English
   // copy, which publishes in the same release.
   'tony-fung-ga-zen',
+  // Machine-drafted 2026-10-11, not native-reviewed. The fifth player page;
+  // locked with its English copy, which publishes in the same release.
+  'zuo-wenjing',
   // Machine-drafted 2026-09-03, not native-reviewed, locked the day the English
   // copy published. The openings article's dictionary was already complete and
   // waiting: the lock requires a PUBLISHED article, so it could not be listed
@@ -1402,6 +1405,118 @@ const ZH_HANS: Record<string, string> = {
   'Tony Fung Ga Zen': '冯家俊',
   'Chao Yi-fan': '赵奕帆',
   'Cheng Yin Lung': '郑彦隆',
+  // zuo-wenjing (zh-Hans), machine-drafted 2026-10-11, not native-reviewed. Mainland
+  // players' names stay in one form in both scripts, so the name-only keys and the
+  // dates live here and reach zh-Hant through the spread. Her Asian Games quote is
+  // the original Chinese from the Hubei Sports Bureau.
+  'Zuo Wenjing 左文静': '左文静',
+  'Zuo Wenjing': '左文静',
+  "The 2022 women's world champion and a double gold medallist at the 2023 Asian Games. Her title run in Kuching and her 2026 season, five games on the board, 32 games analysed.":
+    '2022 年女子世界冠军，2023 年亚运会两枚金牌得主。她在古晋的夺冠之路和她的 2026 赛季，盘面上五盘对局，32 局附引擎分析。',
+  'Zuo Wenjing smiling, holding up her Asian Games gold medal.': '左文静微笑着举起她的亚运会金牌。',
+  "English-speaking xiangqi players who follow the women's game. She has no public social account, so the page is found through search and the site.":
+    '关注女子象棋的说英语的棋友。她没有公开的社交账号，所以这一页靠搜索和本站被找到。',
+  "Zuo Wenjing won the 2022 women's world championship in Kuching with six wins and a draw, and two gold medals at the 2023 Asian Games.":
+    '左文静在古晋以六胜一和夺得 2022 年女子世界冠军，又在 2023 年亚运会上拿下两枚金牌。',
+  "In 2026 she went unbeaten through China's national team championship, six wins and a draw, and reached the Shanghai Cup semi-final.":
+    '2026 年她在全国象棋团体赛上保持不败，六胜一和，还打进了上海杯半决赛。',
+  'With red she opens with the elephant: 15 of her 22 red games here start that way.':
+    '执红她用飞相开局：这里她的 22 盘执红对局，有 15 盘这样开局。',
+  'Her median accuracy at the 2022 championship was 96, against 91.7 over her 26 games since December 2025.':
+    '她在 2022 年世锦赛的准确率中位数是 96，而 2025 年 12 月以来的 26 盘对局是 91.7。',
+  'Zuo Wenjing with her gold medal at the 2023 Asian Games in Hangzhou. Photo: Han Chuanhao / Xinhua.':
+    '2023 年杭州亚运会上手持金牌的左文静。图片：韩传号 / 新华社。',
+  'Zuo Wenjing in a white China team jacket, smiling through round glasses, holding flowers in one hand and her gold medal up in the other.':
+    '左文静身穿白色中国队外套，戴着圆框眼镜微笑，一只手拿着鲜花，另一只手举起金牌。',
+  "Zuo Wenjing 左文静 is the 2022 women's world xiangqi champion. In Kuching that October she won six of her seven games and drew the other, with her Chinese teammate Chen Xinglin, and won the last round to take the title. A year later, at the Asian Games in Hangzhou, she won two gold medals: the women's individual event, beating Wang Linna in the final, and the mixed team event with China.":
+    '左文静是 2022 年女子世界象棋冠军。那年十月在古晋，她七盘赢了六盘，另一盘与中国队友陈幸琳弈和，最后一轮获胜夺得冠军。一年后在杭州亚运会上，她拿下两枚金牌：一枚是女子个人赛，决赛击败王琳娜；另一枚是随中国队拿下的混合团体赛。',
+  'She was born in 1993 in Zibo, in Shandong, and plays for Hubei, which she joined as a child as a pupil of Liu Dahua. She became a national master in 2006 and a Chinese grandmaster in 2022, the year of her world title. The WXF lists her as an International Master.':
+    '她 1993 年生于山东淄博，代表湖北出赛，少年时加入湖北队，师从柳大华。2006 年获得全国大师称号，2022 年，也就是她夺得世界冠军的那一年，成为象棋特级大师。世界象棋联合会把她列为国际大师。',
+  'This page is her 2022 world championship and her season since December 2025, with five of her games on the board. I ran the 32 games we hold through the same engine analysis Mistboard gives your own games.':
+    '这一页写的是她的 2022 年世锦赛和她 2025 年 12 月以来的赛季，盘面上有她的五盘对局。我们收录的 32 盘对局，我都用 Mistboard 给你的对局做的同一套引擎分析跑过一遍。',
+  'How she plays': '她的棋风',
+  '**She opens with the elephant.** In 15 of her 22 red games here her first move brings an elephant to the centre, and she played it in three of her four red games at the 2022 championship.':
+    '**她用飞相开局。** 这里她的 22 盘执红对局中，有 15 盘第一步就是飞相；2022 年世锦赛她四盘执红，有三盘这样走。',
+  '**She was at her most accurate in Kuching.** Her median accuracy over the six championship games we hold is 96, against 91.7 over her 26 games since December 2025. In the last round, the game that decided the title, the engine marks no inaccuracy on any of her moves.':
+    '**她在古晋下得最精准。** 我们收录的六盘世锦赛对局，她的准确率中位数是 96，而 2025 年 12 月以来的 26 盘是 91.7。决定冠军归属的最后一轮，引擎没有给她的任何一步标出失准。',
+  "**Her opponents make the first mistake.** In 16 of her 20 wins here, the engine marks her opponent's first mistake before any of hers.":
+    '**对手先出错。** 这里她赢的 20 盘中有 16 盘，引擎标出的第一个错着出自对手，早于她的任何错着。',
+  'The title': '夺冠',
+  "The 17th World Xiangqi Championship was played in Kuching, in Sarawak, and the women's event ran over seven rounds from 24 to 29 October 2022. Zuo won her first four games, drew with Chen Xinglin in round five and won the last two. By then the title was certain to go to one of the two Chinese players. Zuo won her last game, against Peng Jou-An of Chinese Taipei, and the title with it.":
+    '第十七届世界象棋锦标赛在砂拉越的古晋举行，女子组 2022 年 10 月 24 日至 29 日赛七轮。左文静前四盘全胜，第五轮与陈幸琳弈和，最后两轮都赢了。那时冠军已注定落在两位中国棋手之一。最后一盘她击败中华台北的彭柔安，冠军也随之到手。',
+  'Lee Meng Ju, Chinese Taipei': '李孟儒，中华台北',
+  'Anna Yin Meixian, United States': 'Anna Yin Meixian，美国',
+  'Ngo Lan Huang': '吴兰香',
+  'Fiona Tan Min Fang, Singapore': '陈茗芳，新加坡',
+  'Chen Xinglin, China': '陈幸琳，中国',
+  'Nguyen Hoang Yen, Vietnam': '阮黄燕，越南',
+  'Nguyen Hoang Yen': '阮黄燕',
+  'Peng Jou-An, Chinese Taipei': '彭柔安，中华台北',
+  'Peng Jou-An': '彭柔安',
+  "Her 2022 World Championship, round by round. Names and federations as the WXF's game records give them; round three's federation is left out because other sources give a different one. The record of round one does not replay, so that game is on no board.":
+    '她的 2022 年世锦赛，逐轮战绩。姓名和所属协会依照世界象棋联合会棋谱集的写法；第三轮的协会没有列出，因为其他来源给出的不一样。第一轮的棋谱无法回放，所以那盘不在盘面上。',
+  "Nguyen Hoang Yen vs Zuo Wenjing, 2022 World Xiangqi Championship, women, round 6, 27 October 2022. Zuo won with black in 37 moves. The board opens after red's move 10, with Zuo to move.":
+    '阮黄燕对左文静，2022 世界象棋锦标赛女子组第 6 轮，2022 年 10 月 27 日。左文静执黑 37 回合取胜。棋盘从红方第 10 回合之后开始，轮到左文静走。',
+  '2022 World Xiangqi Championship, women, round 6': '2022 世界象棋锦标赛，女子组第 6 轮',
+  "Zuo Wenjing vs Peng Jou-An, 2022 World Xiangqi Championship, women, round 7, 29 October 2022. Zuo won with red in 32 moves. The board opens after black's move 17, with Zuo to move.":
+    '左文静对彭柔安，2022 世界象棋锦标赛女子组第 7 轮，2022 年 10 月 29 日。左文静执红 32 回合取胜。棋盘从黑方第 17 回合之后开始，轮到左文静走。',
+  '2022 World Xiangqi Championship, women, round 7': '2022 世界象棋锦标赛，女子组第 7 轮',
+  "Tony Fung of Hong Kong, who reached the men's final at the same championship, has [his own page](/blog/tony-fung-ga-zen).":
+    '在同一届世锦赛打进男子组决赛的香港棋手冯家俊，也有[自己的专页](/blog/tony-fung-ga-zen)。',
+  'Asian Games, Hangzhou': '杭州亚运会',
+  'At the 2023 Asian Games in Hangzhou she won the women\'s individual gold, beating Wang Linna in the final. Her second gold came in the mixed team event, where she played three games for China, won two and drew the other. "I\'m very happy to win two golds," she told the Hubei Sports Bureau. "It\'s my first time at an event this big. I got to see a lot of my idols, and to play against top players."':
+    '在 2023 年杭州亚运会上，她夺得女子个人赛金牌，决赛击败王琳娜。第二枚金牌来自混合团体赛，她为中国队下了三盘，两胜一和。她对湖北省体育局说：“获得2金很开心！我第一次参加这样的大型赛会，可以看到很多自己的偶像，还可以跟高手过招。”',
+  'Her 2026 season': '她的 2026 赛季',
+  'National Team Championship, Zhangjiakou': '全国象棋团体赛，张家口',
+  "The national team championship ran from 28 March to 2 April 2026. Zuo played all seven rounds for Hubei's women's team, drew the first with black against Huang Leilei and won the other six.":
+    '全国象棋团体赛于 2026 年 3 月 28 日至 4 月 2 日举行。左文静代表湖北女队打满七轮，首轮执黑与黄蕾蕾弈和，其余六轮全胜。',
+  'Huang Leilei': '黄蕾蕾',
+  'Fu Anxin': '傅安欣',
+  'Zhang Jiawen': '张佳雯',
+  'Jiang Yu': '姜瑀',
+  'Dong Yunan': '董毓男',
+  'Zhang Tingting': '张婷婷',
+  'Li Chao': '李超',
+  'Wu Dan': '吴丹',
+  'Her national team championship, round by round.': '她的全国团体赛，逐轮战绩。',
+  "Zuo Wenjing vs Fu Anxin, 2026 National Team Championship, women, 28 March 2026. Zuo won with red in 37 moves. The board opens after black's move 9, with Zuo to move.":
+    '左文静对傅安欣，2026 全国象棋团体赛女子组，2026 年 3 月 28 日。左文静执红 37 回合取胜。棋盘从黑方第 9 回合之后开始，轮到左文静走。',
+  '2026 National Team Championship, women': '2026 全国象棋团体赛，女子组',
+  'The [whole event](/broadcast/xiangqi/2026-womens-xiangqi-team-championship) is in the broadcast archive.':
+    '[整项赛事](/broadcast/xiangqi/2026-womens-xiangqi-team-championship)都在直播档案里。',
+  "At the Shanghai Cup, from 9 to 13 September, she reached the semi-final of the women's event and lost it to Wang Zihan of Hebei. We hold her four games with red there: two wins, a draw and that loss.":
+    '9 月 9 日至 13 日的上海杯，她打进女子组半决赛，负于河北的王子涵。我们收录了她在那里的四盘执红对局：两胜一和，以及那盘败局。',
+  "Zuo Wenjing vs Dong Yunan, 2026 Shanghai Cup, women, 10 September 2026. Zuo won with red in 34 moves. The board opens after black's move 24, with Zuo to move.":
+    '左文静对董毓男，2026 上海杯女子组，2026 年 9 月 10 日。左文静执红 34 回合取胜。棋盘从黑方第 24 回合之后开始，轮到左文静走。',
+  '2026 Shanghai Cup, women': '2026 上海杯，女子组',
+  "Women's league, Suifenhe": '女子甲级联赛，绥芬河',
+  "A week later she played two events back to back in Suifenhe: the qualifier for China's women's league, from 20 to 22 September, and then the first stage of the league itself, to 27 September. She scored five wins, a draw and a loss in the qualifier, the loss to Wang Linna, whom she had beaten for the Asian Games gold. In the league she won six, drew two and lost two, and in round five she played Wang Zihan twice, two weeks after the Shanghai semi-final, winning with black and drawing with red.":
+    '一周后，她在绥芬河接连参加两项赛事：先是 9 月 20 日至 22 日的全国象棋女子甲级联赛预选赛，接着是联赛本身的第一阶段，打到 9 月 27 日。预选赛她五胜一和一负，输给了王琳娜，正是她在亚运会金牌之战中击败的对手。联赛中她六胜两和两负，第五轮两次对阵王子涵，距上海杯半决赛只有两周，执黑取胜，执红弈和。',
+  "Zuo Wenjing vs Wu Dan, 2026 Women's League qualifier, 21 September 2026. Zuo won with red in 21 moves. The board opens after black's move 5, with Zuo to move.":
+    '左文静对吴丹，2026 全国象棋女子甲级联赛预选赛，2026 年 9 月 21 日。左文静执红 21 回合取胜。棋盘从黑方第 5 回合之后开始，轮到左文静走。',
+  "2026 Women's League qualifier": '2026 全国象棋女子甲级联赛预选赛',
+  'The [qualifier](/broadcast/xiangqi/2026-womens-league-qualifier) and the [league](/broadcast/xiangqi/2026-womens-xiangqi-league) are in the broadcast archive.':
+    '[预选赛](/broadcast/xiangqi/2026-womens-league-qualifier)和[联赛](/broadcast/xiangqi/2026-womens-xiangqi-league)都在直播档案里。',
+  'Every event with her full record': '成绩齐全的每项赛事',
+  "Women's league, first stage, Suifenhe": '女子甲级联赛第一阶段，绥芬河',
+  'Sep 23–27, 2026': '2026年9月23–27日',
+  "Women's league qualifier, Suifenhe": '女子甲级联赛预选赛，绥芬河',
+  'Sep 20–22, 2026': '2026年9月20–22日',
+  'Mar 28–Apr 2, 2026': '2026年3月28日–4月2日',
+  'World Championship, Kuching': '世锦赛，古晋',
+  'Oct 24–29, 2022': '2022年10月24–29日',
+  'Every event for which we hold all her results. The Shanghai Cup, the Xintai Cup, the July squad selection and the December 2025 national individual championship are left out: we hold only some of her games there.':
+    '我们收齐她全部成绩的每一项赛事。上海杯、新泰杯、七月的国家集训队选拔赛和 2025 年 12 月的全国象棋个人赛没有列入：我们只收录了她在那里的部分对局。',
+  'Where she stands': '她现在的位置',
+  "Her 2026 games are in the broadcast archive with the site's analysis, and her player page there has her results.":
+    '她的 2026 年对局都在直播档案里，附网站的分析；她在那里的棋手页面列有她的成绩。',
+  "Sources: game records from dpxq.com, which may not hold every game of an event, and for 2022 from the WXF's book of game records; the 2022 result from Xinhua and Viet Nam News; the Asian Games from Sina and the Hubei Sports Bureau, which with Chinese Wikipedia also gives her biography; the Shanghai Cup semi-final from The Paper; her titles from the WXF title list of December 2022 and China's national registration list of 2023; analysis by Pikafish through Mistboard's review pipeline, October 2026.":
+    '资料来源：棋谱来自 dpxq.com，该数据库不一定收齐每项赛事的全部对局，2022 年的棋谱来自世界象棋联合会的棋谱集；2022 年的成绩来自新华社和 Viet Nam News；亚运会来自新浪和湖北省体育局，她的生平也来自湖北省体育局和中文维基百科；上海杯半决赛来自澎湃新闻；她的称号来自世界象棋联合会 2022 年 12 月的称号名单和 2023 年的全国等级称号注册名单；分析由 Pikafish 经 Mistboard 的复盘流程完成，2026 年 10 月。',
+  "Four years after Kuching she still wins most of her games. She went through the spring's team championship without a loss, reached the last four in Shanghai, and won 11 of her 17 games across the two September league events. The world title has gone elsewhere since: to Tang Sinan in 2023 and to Tang Dan in 2025, and Tang Dan beat her at the national individual championship in Jinan in December 2025. What has not changed since 2022 is the opening: she still starts with the elephant, and her wins still come from the other side's first mistake.":
+    '古晋夺冠四年后，她仍然赢下大部分对局。春天的团体赛她一盘未输，在上海打进四强，九月的两项联赛赛事 17 盘赢了 11 盘。此后世界冠军另有归属：2023 年是唐思楠，2025 年是唐丹，唐丹还在 2025 年 12 月济南的全国象棋个人赛上击败了她。2022 年以来没有变的是开局：她仍然以飞相起手，她的胜局仍然来自对方的第一个错着。',
+  'Her games in the archive': '她在档案里的对局',
+  "Zuo Wenjing 左文静, the 2022 women's world xiangqi champion: games and analysis":
+    '左文静，2022 年女子世界象棋冠军：对局与分析',
   // yin-sheng (zh-Hans), machine-drafted 2026-09-21, not native-reviewed. Mainland
   // players' names stay in one form in both scripts.
   'Yin Sheng 尹昇: games, results, and analysis': '尹昇：对局、战绩与分析',
@@ -6148,6 +6263,104 @@ const ZH_HANT: Record<string, string> = {
   'Tony Fung Ga Zen': '馮家俊',
   'Chao Yi-fan': '趙奕帆',
   'Cheng Yin Lung': '鄭彥隆',
+  // zuo-wenjing (zh-Hant), machine-drafted 2026-10-11, not native-reviewed. After the
+  // spread, like tony-fung-ga-zen's. Mainland players' names stay simplified and come
+  // from the spread (左文静, 陈幸琳, 王琳娜, 王子涵, 唐丹 and her 2026 opponents);
+  // Taiwan, Singapore and Vietnam players convert (李孟儒, 陳茗芳, 阮黃燕, 吳蘭香),
+  // as do the place names. Cup is 盃, as on the other pages.
+  "The 2022 women's world champion and a double gold medallist at the 2023 Asian Games. Her title run in Kuching and her 2026 season, five games on the board, 32 games analysed.":
+    '2022 年女子世界冠軍，2023 年亞運會兩枚金牌得主。她在古晉的奪冠之路和她的 2026 賽季，盤面上五盤對局，32 局附引擎分析。',
+  'Zuo Wenjing smiling, holding up her Asian Games gold medal.': '左文静微笑著舉起她的亞運會金牌。',
+  "English-speaking xiangqi players who follow the women's game. She has no public social account, so the page is found through search and the site.":
+    '關注女子象棋的說英語的棋友。她沒有公開的社群帳號，所以這一頁靠搜尋和本站被找到。',
+  "Zuo Wenjing won the 2022 women's world championship in Kuching with six wins and a draw, and two gold medals at the 2023 Asian Games.":
+    '左文静在古晉以六勝一和奪得 2022 年女子世界冠軍，又在 2023 年亞運會上拿下兩枚金牌。',
+  "In 2026 she went unbeaten through China's national team championship, six wins and a draw, and reached the Shanghai Cup semi-final.":
+    '2026 年她在全國象棋團體賽上保持不敗，六勝一和，還打進了上海盃半決賽。',
+  'With red she opens with the elephant: 15 of her 22 red games here start that way.':
+    '執紅她用飛相開局：這裡她的 22 盤執紅對局，有 15 盤這樣開局。',
+  'Her median accuracy at the 2022 championship was 96, against 91.7 over her 26 games since December 2025.':
+    '她在 2022 年世錦賽的準確率中位數是 96，而 2025 年 12 月以來的 26 盤對局是 91.7。',
+  'Zuo Wenjing with her gold medal at the 2023 Asian Games in Hangzhou. Photo: Han Chuanhao / Xinhua.':
+    '2023 年杭州亞運會上手持金牌的左文静。圖片：韩传号 / 新華社。',
+  'Zuo Wenjing in a white China team jacket, smiling through round glasses, holding flowers in one hand and her gold medal up in the other.':
+    '左文静身穿白色中國隊外套，戴著圓框眼鏡微笑，一隻手拿著鮮花，另一隻手舉起金牌。',
+  "Zuo Wenjing 左文静 is the 2022 women's world xiangqi champion. In Kuching that October she won six of her seven games and drew the other, with her Chinese teammate Chen Xinglin, and won the last round to take the title. A year later, at the Asian Games in Hangzhou, she won two gold medals: the women's individual event, beating Wang Linna in the final, and the mixed team event with China.":
+    '左文静是 2022 年女子世界象棋冠軍。那年十月在古晉，她七盤贏了六盤，另一盤與中國隊友陈幸琳弈和，最後一輪獲勝奪得冠軍。一年後在杭州亞運會上，她拿下兩枚金牌：一枚是女子個人賽，決賽擊敗王琳娜；另一枚是隨中國隊拿下的混合團體賽。',
+  'She was born in 1993 in Zibo, in Shandong, and plays for Hubei, which she joined as a child as a pupil of Liu Dahua. She became a national master in 2006 and a Chinese grandmaster in 2022, the year of her world title. The WXF lists her as an International Master.':
+    '她 1993 年生於山東淄博，代表湖北出賽，少年時加入湖北隊，師從柳大华。2006 年獲得全國大師稱號，2022 年，也就是她奪得世界冠軍的那一年，成為象棋特級大師。世界象棋聯合會把她列為國際大師。',
+  'This page is her 2022 world championship and her season since December 2025, with five of her games on the board. I ran the 32 games we hold through the same engine analysis Mistboard gives your own games.':
+    '這一頁寫的是她的 2022 年世錦賽和她 2025 年 12 月以來的賽季，盤面上有她的五盤對局。我們收錄的 32 盤對局，我都用 Mistboard 給你的對局做的同一套引擎分析跑過一遍。',
+  'How she plays': '她的棋風',
+  '**She opens with the elephant.** In 15 of her 22 red games here her first move brings an elephant to the centre, and she played it in three of her four red games at the 2022 championship.':
+    '**她用飛相開局。** 這裡她的 22 盤執紅對局中，有 15 盤第一步就是飛相；2022 年世錦賽她四盤執紅，有三盤這樣走。',
+  '**She was at her most accurate in Kuching.** Her median accuracy over the six championship games we hold is 96, against 91.7 over her 26 games since December 2025. In the last round, the game that decided the title, the engine marks no inaccuracy on any of her moves.':
+    '**她在古晉下得最精準。** 我們收錄的六盤世錦賽對局，她的準確率中位數是 96，而 2025 年 12 月以來的 26 盤是 91.7。決定冠軍歸屬的最後一輪，引擎沒有給她的任何一步標出失準。',
+  "**Her opponents make the first mistake.** In 16 of her 20 wins here, the engine marks her opponent's first mistake before any of hers.":
+    '**對手先出錯。** 這裡她贏的 20 盤中有 16 盤，引擎標出的第一個錯著出自對手，早於她的任何錯著。',
+  'The title': '奪冠',
+  "The 17th World Xiangqi Championship was played in Kuching, in Sarawak, and the women's event ran over seven rounds from 24 to 29 October 2022. Zuo won her first four games, drew with Chen Xinglin in round five and won the last two. By then the title was certain to go to one of the two Chinese players. Zuo won her last game, against Peng Jou-An of Chinese Taipei, and the title with it.":
+    '第十七屆世界象棋錦標賽在砂拉越的古晉舉行，女子組 2022 年 10 月 24 日至 29 日賽七輪。左文静前四盤全勝，第五輪與陈幸琳弈和，最後兩輪都贏了。那時冠軍已註定落在兩位中國棋手之一。最後一盤她擊敗中華台北的彭柔安，冠軍也隨之到手。',
+  'Lee Meng Ju, Chinese Taipei': '李孟儒，中華台北',
+  'Anna Yin Meixian, United States': 'Anna Yin Meixian，美國',
+  'Ngo Lan Huang': '吳蘭香',
+  'Fiona Tan Min Fang, Singapore': '陳茗芳，新加坡',
+  'Chen Xinglin, China': '陈幸琳，中國',
+  'Nguyen Hoang Yen, Vietnam': '阮黃燕，越南',
+  'Nguyen Hoang Yen': '阮黃燕',
+  'Peng Jou-An, Chinese Taipei': '彭柔安，中華台北',
+  "Her 2022 World Championship, round by round. Names and federations as the WXF's game records give them; round three's federation is left out because other sources give a different one. The record of round one does not replay, so that game is on no board.":
+    '她的 2022 年世錦賽，逐輪戰績。姓名和所屬協會依照世界象棋聯合會棋譜集的寫法；第三輪的協會沒有列出，因為其他來源給出的不一樣。第一輪的棋譜無法回放，所以那盤不在盤面上。',
+  "Nguyen Hoang Yen vs Zuo Wenjing, 2022 World Xiangqi Championship, women, round 6, 27 October 2022. Zuo won with black in 37 moves. The board opens after red's move 10, with Zuo to move.":
+    '阮黃燕對左文静，2022 世界象棋錦標賽女子組第 6 輪，2022 年 10 月 27 日。左文静執黑 37 回合取勝。棋盤從紅方第 10 回合之後開始，輪到左文静走。',
+  '2022 World Xiangqi Championship, women, round 6': '2022 世界象棋錦標賽，女子組第 6 輪',
+  "Zuo Wenjing vs Peng Jou-An, 2022 World Xiangqi Championship, women, round 7, 29 October 2022. Zuo won with red in 32 moves. The board opens after black's move 17, with Zuo to move.":
+    '左文静對彭柔安，2022 世界象棋錦標賽女子組第 7 輪，2022 年 10 月 29 日。左文静執紅 32 回合取勝。棋盤從黑方第 17 回合之後開始，輪到左文静走。',
+  '2022 World Xiangqi Championship, women, round 7': '2022 世界象棋錦標賽，女子組第 7 輪',
+  "Tony Fung of Hong Kong, who reached the men's final at the same championship, has [his own page](/blog/tony-fung-ga-zen).":
+    '在同一屆世錦賽打進男子組決賽的香港棋手馮家俊，也有[自己的專頁](/blog/tony-fung-ga-zen)。',
+  'Asian Games, Hangzhou': '杭州亞運會',
+  'At the 2023 Asian Games in Hangzhou she won the women\'s individual gold, beating Wang Linna in the final. Her second gold came in the mixed team event, where she played three games for China, won two and drew the other. "I\'m very happy to win two golds," she told the Hubei Sports Bureau. "It\'s my first time at an event this big. I got to see a lot of my idols, and to play against top players."':
+    '在 2023 年杭州亞運會上，她奪得女子個人賽金牌，決賽擊敗王琳娜。第二枚金牌來自混合團體賽，她為中國隊下了三盤，兩勝一和。她對湖北省體育局說：「獲得2金很開心！我第一次參加這樣的大型賽會，可以看到很多自己的偶像，還可以跟高手過招。」',
+  'Her 2026 season': '她的 2026 賽季',
+  'National Team Championship, Zhangjiakou': '全國象棋團體賽，張家口',
+  "The national team championship ran from 28 March to 2 April 2026. Zuo played all seven rounds for Hubei's women's team, drew the first with black against Huang Leilei and won the other six.":
+    '全國象棋團體賽於 2026 年 3 月 28 日至 4 月 2 日舉行。左文静代表湖北女隊打滿七輪，首輪執黑與黄蕾蕾弈和，其餘六輪全勝。',
+  'Her national team championship, round by round.': '她的全國團體賽，逐輪戰績。',
+  "Zuo Wenjing vs Fu Anxin, 2026 National Team Championship, women, 28 March 2026. Zuo won with red in 37 moves. The board opens after black's move 9, with Zuo to move.":
+    '左文静對傅安欣，2026 全國象棋團體賽女子組，2026 年 3 月 28 日。左文静執紅 37 回合取勝。棋盤從黑方第 9 回合之後開始，輪到左文静走。',
+  '2026 National Team Championship, women': '2026 全國象棋團體賽，女子組',
+  'The [whole event](/broadcast/xiangqi/2026-womens-xiangqi-team-championship) is in the broadcast archive.':
+    '[整項賽事](/broadcast/xiangqi/2026-womens-xiangqi-team-championship)都在直播檔案裡。',
+  "At the Shanghai Cup, from 9 to 13 September, she reached the semi-final of the women's event and lost it to Wang Zihan of Hebei. We hold her four games with red there: two wins, a draw and that loss.":
+    '9 月 9 日至 13 日的上海盃，她打進女子組半決賽，負於河北的王子涵。我們收錄了她在那裡的四盤執紅對局：兩勝一和，以及那盤敗局。',
+  "Zuo Wenjing vs Dong Yunan, 2026 Shanghai Cup, women, 10 September 2026. Zuo won with red in 34 moves. The board opens after black's move 24, with Zuo to move.":
+    '左文静對董毓男，2026 上海盃女子組，2026 年 9 月 10 日。左文静執紅 34 回合取勝。棋盤從黑方第 24 回合之後開始，輪到左文静走。',
+  '2026 Shanghai Cup, women': '2026 上海盃，女子組',
+  "Women's league, Suifenhe": '女子甲級聯賽，綏芬河',
+  "A week later she played two events back to back in Suifenhe: the qualifier for China's women's league, from 20 to 22 September, and then the first stage of the league itself, to 27 September. She scored five wins, a draw and a loss in the qualifier, the loss to Wang Linna, whom she had beaten for the Asian Games gold. In the league she won six, drew two and lost two, and in round five she played Wang Zihan twice, two weeks after the Shanghai semi-final, winning with black and drawing with red.":
+    '一週後，她在綏芬河接連參加兩項賽事：先是 9 月 20 日至 22 日的全國象棋女子甲級聯賽預選賽，接著是聯賽本身的第一階段，打到 9 月 27 日。預選賽她五勝一和一負，輸給了王琳娜，正是她在亞運會金牌之戰中擊敗的對手。聯賽中她六勝兩和兩負，第五輪兩次對陣王子涵，距上海盃半決賽只有兩週，執黑取勝，執紅弈和。',
+  "Zuo Wenjing vs Wu Dan, 2026 Women's League qualifier, 21 September 2026. Zuo won with red in 21 moves. The board opens after black's move 5, with Zuo to move.":
+    '左文静對吴丹，2026 全國象棋女子甲級聯賽預選賽，2026 年 9 月 21 日。左文静執紅 21 回合取勝。棋盤從黑方第 5 回合之後開始，輪到左文静走。',
+  "2026 Women's League qualifier": '2026 全國象棋女子甲級聯賽預選賽',
+  'The [qualifier](/broadcast/xiangqi/2026-womens-league-qualifier) and the [league](/broadcast/xiangqi/2026-womens-xiangqi-league) are in the broadcast archive.':
+    '[預選賽](/broadcast/xiangqi/2026-womens-league-qualifier)和[聯賽](/broadcast/xiangqi/2026-womens-xiangqi-league)都在直播檔案裡。',
+  'Every event with her full record': '成績齊全的每項賽事',
+  "Women's league, first stage, Suifenhe": '女子甲級聯賽第一階段，綏芬河',
+  "Women's league qualifier, Suifenhe": '女子甲級聯賽預選賽，綏芬河',
+  'World Championship, Kuching': '世錦賽，古晉',
+  'Every event for which we hold all her results. The Shanghai Cup, the Xintai Cup, the July squad selection and the December 2025 national individual championship are left out: we hold only some of her games there.':
+    '我們收齊她全部成績的每一項賽事。上海盃、新泰盃、七月的國家集訓隊選拔賽和 2025 年 12 月的全國象棋個人賽沒有列入：我們只收錄了她在那裡的部分對局。',
+  'Where she stands': '她現在的位置',
+  "Her 2026 games are in the broadcast archive with the site's analysis, and her player page there has her results.":
+    '她的 2026 年對局都在直播檔案裡，附網站的分析；她在那裡的棋手頁面列有她的成績。',
+  "Sources: game records from dpxq.com, which may not hold every game of an event, and for 2022 from the WXF's book of game records; the 2022 result from Xinhua and Viet Nam News; the Asian Games from Sina and the Hubei Sports Bureau, which with Chinese Wikipedia also gives her biography; the Shanghai Cup semi-final from The Paper; her titles from the WXF title list of December 2022 and China's national registration list of 2023; analysis by Pikafish through Mistboard's review pipeline, October 2026.":
+    '資料來源：棋譜來自 dpxq.com，該資料庫不一定收齊每項賽事的全部對局，2022 年的棋譜來自世界象棋聯合會的棋譜集；2022 年的成績來自新華社和 Viet Nam News；亞運會來自新浪和湖北省體育局，她的生平也來自湖北省體育局和中文維基百科；上海盃半決賽來自澎湃新聞；她的稱號來自世界象棋聯合會 2022 年 12 月的稱號名單和 2023 年的全國等級稱號註冊名單；分析由 Pikafish 經 Mistboard 的復盤流程完成，2026 年 10 月。',
+  "Four years after Kuching she still wins most of her games. She went through the spring's team championship without a loss, reached the last four in Shanghai, and won 11 of her 17 games across the two September league events. The world title has gone elsewhere since: to Tang Sinan in 2023 and to Tang Dan in 2025, and Tang Dan beat her at the national individual championship in Jinan in December 2025. What has not changed since 2022 is the opening: she still starts with the elephant, and her wins still come from the other side's first mistake.":
+    '古晉奪冠四年後，她仍然贏下大部分對局。春天的團體賽她一盤未輸，在上海打進四強，九月的兩項聯賽賽事 17 盤贏了 11 盤。此後世界冠軍另有歸屬：2023 年是唐思楠，2025 年是唐丹，唐丹還在 2025 年 12 月濟南的全國象棋個人賽上擊敗了她。2022 年以來沒有變的是開局：她仍然以飛相起手，她的勝局仍然來自對方的第一個錯著。',
+  'Her games in the archive': '她在檔案裡的對局',
+  "Zuo Wenjing 左文静, the 2022 women's world xiangqi champion: games and analysis":
+    '左文静，2022 年女子世界象棋冠軍：對局與分析',
   // yin-sheng (zh-Hant), machine-drafted 2026-09-21, not native-reviewed. After the
   // spread, or the Simplified entries win (they did, for one deploy).
   'Yin Sheng 尹昇: games, results, and analysis': '尹昇：對局、戰績與分析',
