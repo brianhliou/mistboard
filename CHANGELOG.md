@@ -147,6 +147,8 @@ Conventions:
 
 ### Site
 
+- the About page drops its game totals; they live on the Statistics page ([ef9b8e53](https://github.com/brianhliou/mistboard/commit/ef9b8e53))
+- the updates page shows the last two months, with every month on a page of its own ([ef9b8e53](https://github.com/brianhliou/mistboard/commit/ef9b8e53))
 - article cards show a clean half board, with no piece hidden under the date or the featured star ([f04df5fc](https://github.com/brianhliou/mistboard/commit/f04df5fc))
 - Game emails have a new look, name the variant and opponent in the subject so each game gets its own thread, come in your site language, and link to your notification settings ([a1db4208](https://github.com/brianhliou/mistboard/commit/a1db4208))
 - The board menu has separate choices for layout, board colour (seven muted colours, with Jungle as a colour of the square grid), river text (楚河 漢界 or Mistboard) and start markers on the soldier and cannon points ([a1db4208](https://github.com/brianhliou/mistboard/commit/a1db4208))
@@ -183,6 +185,8 @@ Conventions:
 
 ### Fixed
 
+- the homepage tagline lines up with the play panel, and the summary line no longer wraps on a stray dot ([ef9b8e53](https://github.com/brianhliou/mistboard/commit/ef9b8e53))
+- pro player photos credit the photo site by the name its owner asked for ([ef9b8e53](https://github.com/brianhliou/mistboard/commit/ef9b8e53))
 - Chinese player pages show the stats under a player's name in Chinese, with the team's Chinese name ([048bd368](https://github.com/brianhliou/mistboard/commit/048bd368))
 - the jieqi puzzles article card shows the whole board, centred like the other cards ([048bd368](https://github.com/brianhliou/mistboard/commit/048bd368))
 - the homepage asks the server for live counts once instead of three times, and a page no longer reports an error while it reloads after a release ([f04df5fc](https://github.com/brianhliou/mistboard/commit/f04df5fc))
