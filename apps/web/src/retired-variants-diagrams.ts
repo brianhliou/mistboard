@@ -40,6 +40,7 @@ import {
   xqSvg,
   xqVisionDemoState,
 } from './articles/diagrams.js';
+import { BOARD_CORNER_RATIO } from './board-metrics.js';
 import {
   installFortressXiangqiBoardStyles,
   renderFortressXiangqiBoardSvg,
@@ -306,9 +307,18 @@ export const RETIRED_FORTRESS_DROP_MATE = () => {
     },
   );
   // The live board's class rule is width:100%; an article figure caps itself.
+  // The renderer leaves corner rounding to its host (the live board clips it),
+  // so the figure rounds itself on the shared curve: BOARD_CORNER_RATIO of the
+  // width on both axes, written as a percentage of each side.
+  const [, , vbW = 1, vbH = 1] = (/viewBox="([^"]+)"/.exec(svg)?.[1] ?? '0 0 1 1')
+    .trim()
+    .split(/\s+/)
+    .map(Number);
+  const rx = (BOARD_CORNER_RATIO * 100).toFixed(2);
+  const ry = ((BOARD_CORNER_RATIO * 100 * vbW) / vbH).toFixed(2);
   return svg.replace(
     '<svg ',
-    '<svg width="100%" style="max-width:420px;height:auto;display:block;margin:0 auto" ',
+    `<svg width="100%" style="max-width:420px;height:auto;display:block;margin:0 auto;overflow:hidden;border-radius:${rx}% / ${ry}%" `,
   );
 };
 
