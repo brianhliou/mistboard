@@ -1,6 +1,5 @@
 // Shared statistics rendering: the cumulative-activity SVG chart, the public
-// stats shape, and number/date formatting. Used by the /about platform-activity
-// section (pages-static.ts) and the dedicated /stats + /metrics pages
+// stats shape, and number/date formatting. Used by the /stats + /metrics pages
 // (metrics.ts) so every stats surface draws one identical chart.
 
 import './stats-charts.css';

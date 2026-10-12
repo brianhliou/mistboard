@@ -142,17 +142,6 @@ export const ZH_HANT_CONTENT = {
   'about.openSourceMiddle':
     '。任何人都可以閱讀規則程式碼、決定每位玩家能看到什麼的程式碼，以及網站的其餘部分。歡迎回報 bug、提交修正和文章草稿。授權與第三方鳴謝見 ',
   'about.openSourceSuffix': '。',
-  'about.activityHeading': '玩家對局活動',
-  'about.activityIntro':
-    '每一局下完的棋都會保存，可以隨時回放。這些統計只計算有人參與的對局：玩家對玩家和玩家對電腦。引擎之間的對局不計入。',
-  'about.activityLoading': '正在載入活動統計...',
-  'about.activityUnavailable': '暫時無法顯示對局統計。',
-  'about.activitySummaryTotal': '共 {total} 局已完成的對局',
-  'about.activitySummaryRecent': '，其中過去 30 天有 {count} 局',
-  'about.activityChartHeading': '面向玩家對局累計數',
-  'about.activityNoGames': '還沒有記錄完成的對局。',
-  'about.activityChartLabel': '{count} 局完成對局隨時間變化',
-  'about.activityFullStats': '完整統計',
   'stats.heading': '統計',
   'stats.lede':
     '這裡的對局量。計入人與人或人與引擎之間已完成的對局；引擎對引擎的比賽和測試對局不計入。',
@@ -170,7 +159,6 @@ export const ZH_HANT_CONTENT = {
   'stats.byMode': '按模式統計',
   'stats.unavailableHeading': '統計暫不可用',
   'stats.unavailableBody': '無法載入統計資料，請稍後再試。',
-  'about.modeSplit': '模式分布',
   'about.modePvp': '玩家對玩家',
   'about.modePve': '玩家對引擎',
   'source.heading': '原始碼',
