@@ -597,6 +597,22 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
       return;
     }
 
+    // One month of the announcement archive, prerendered like /feed. A month
+    // with no page (a typo, or one gone stale) gets the client shell, which
+    // renders the month from the bundle or falls back to /feed.
+    const newsMonth = /^\/feed\/(\d{4}-\d{2})$/.exec(pathname)?.[1];
+    if (newsMonth) {
+      void servePrerenderedPage({
+        response,
+        staticDir: options.staticDir,
+        file: `feed-${newsMonth}.html` as const,
+      }).catch(() => {
+        request.url = '/';
+        void serveHandler(request, response, { public: options.staticDir });
+      });
+      return;
+    }
+
     // The changelog, prerendered: the committed CHANGELOG.md is the whole page.
     if (pathname === '/changelog') {
       void servePrerenderedPage({

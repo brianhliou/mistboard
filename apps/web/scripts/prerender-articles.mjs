@@ -206,6 +206,7 @@ const ROUTE_PRELOADS = [
     pattern: '^/(?:about|source|contact|patron|faq|terms|privacy|feed|news)$',
     module: 'src/pages-static.ts',
   },
+  { pattern: '^/feed/\\d{4}-\\d{2}$', module: 'src/pages-static.ts' },
   { pattern: '^/changelog(?:/\\d{4}-\\d{2})?$', module: 'src/changelog-page.ts' },
 ];
 
@@ -952,6 +953,30 @@ try {
   );
   await fs.writeFile(resolve(distDir, 'feed.html'), newsHtml, 'utf-8');
   console.log('prerendered /feed (feed.html)');
+
+  // /feed/YYYY-MM: every month with an entry, the latest ones included, served
+  // by the server's /feed/:month route.
+  const { newsMonthIds } = await server.ssrLoadModule('/src/news-page.ts');
+  const { formatMonth: formatNewsMonth } = await server.ssrLoadModule('/src/month-label.ts');
+  const newsMonths = newsMonthIds();
+  for (const monthId of newsMonths) {
+    const label = formatNewsMonth(monthId, 'en');
+    let monthHtml = shell.replace(
+      '<div id="app"></div>',
+      `<div id="app" class="landing-page news-route">${renderNewsShellForPrerender(monthId)}</div>`,
+    );
+    monthHtml = injectPageMeta(monthHtml, {
+      title: `Updates: ${label} | Mistboard`,
+      description: `Every Mistboard announcement from ${label}: new variants, articles, features and changes to the site.`,
+      url: `${host}/feed/${monthId}`,
+    });
+    monthHtml = monthHtml.replace(
+      '</head>',
+      `<link rel="canonical" href="${host}/feed/${monthId}" />${newsAssetLinks}</head>`,
+    );
+    await fs.writeFile(resolve(distDir, `feed-${monthId}.html`), monthHtml, 'utf-8');
+  }
+  console.log(`prerendered ${newsMonths.length} /feed/YYYY-MM month pages`);
 
   // /changelog: CHANGELOG.md inlined at build time and rendered through the
   // same page module the client mounts, so the baked DOM is the page. Same

@@ -55,8 +55,25 @@ export async function mountNews(root: HTMLElement): Promise<void> {
   const locale = currentLocale();
   root.replaceChildren();
   root.classList.add('landing-page', 'news-route');
-  const { buildNewsPage } = await import('./news-page.js');
-  root.append(buildNav(locale), buildStaticPageLayout('news', buildNewsPage(locale), locale));
+  const { buildNewsPage, newsArchiveHrefForHash, newsMonthExists, newsMonthFromPath } =
+    await import('./news-page.js');
+  let monthId = newsMonthFromPath(globalThis.location?.pathname ?? '');
+  const hash = decodeURIComponent(globalThis.location?.hash ?? '').replace(/^#/, '');
+  // A /feed#<entry> link from before the entry moved to its month's page.
+  const archiveHref = !monthId && hash ? newsArchiveHrefForHash(hash) : null;
+  if (archiveHref) {
+    globalThis.location.replace(archiveHref);
+    return;
+  }
+  // An unknown month renders /feed, so the address says so too.
+  if (monthId && !newsMonthExists(monthId)) {
+    globalThis.history.replaceState(null, '', '/feed');
+    monthId = null;
+  }
+  root.append(
+    buildNav(locale),
+    buildStaticPageLayout('news', buildNewsPage(locale, monthId), locale),
+  );
 }
 
 export async function mountPatron(root: HTMLElement): Promise<void> {
