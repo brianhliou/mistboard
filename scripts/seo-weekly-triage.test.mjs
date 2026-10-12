@@ -314,3 +314,31 @@ test('a pull without window files says what is missing instead of guessing', () 
   assert.match(md, /\| Bing \| no data/);
   assert.ok(!md.includes('## Movers'));
 });
+
+test('worthALook reports Bing query moves, not only Google ones', () => {
+  const week = (rows) =>
+    new Map(
+      rows.map(([key, impressions, clicks, position]) => [key, { impressions, clicks, position }]),
+    );
+  const m = {
+    bingQueryMovers: movers(
+      week([
+        ['皮卡鱼象棋', 1351, 5, 7],
+        ['象棋在线', 0, 0, null],
+      ]),
+      week([
+        ['皮卡鱼象棋', 398, 0, 7],
+        ['象棋在线', 969, 17, 7],
+      ]),
+    ),
+  };
+  const lines = worthALook(m);
+  assert.match(
+    lines[0],
+    /^Bing query "皮卡鱼象棋" gained most: 1351 impressions vs 398 the week before, 5 clicks, position 7\.0\.$/,
+  );
+  assert.match(
+    lines[1],
+    /^Bing query "象棋在线" lost most: 0 impressions vs 969, position - \(was 7\.0\)\.$/,
+  );
+});

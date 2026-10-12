@@ -356,14 +356,28 @@ export function worthALook(m) {
       ? 'new this week, none in the 12 weeks before'
       : `vs ${g.prev.impressions} the week before`;
     out.push(
-      `Query "${g.key}" gained most: ${g.cur.impressions} impressions (${before}), ${plural(g.cur.clicks, 'click')}, position ${fmtPos(g.cur.position)}.`,
+      `Google query "${g.key}" gained most: ${g.cur.impressions} impressions (${before}), ${plural(g.cur.clicks, 'click')}, position ${fmtPos(g.cur.position)}.`,
     );
   }
   const l = m.queryMovers?.losers?.[0];
   if (l && l.dImpr <= -20) {
     seen.add(l.key);
     out.push(
-      `Query "${l.key}" lost most: ${l.cur.impressions} impressions vs ${l.prev.impressions}, position ${fmtPos(l.cur.position)} (was ${fmtPos(l.prev.position)}).`,
+      `Google query "${l.key}" lost most: ${l.cur.impressions} impressions vs ${l.prev.impressions}, position ${fmtPos(l.cur.position)} (was ${fmtPos(l.prev.position)}).`,
+    );
+  }
+  // Bing's zh queries move in the hundreds while Google's move in tens, so its
+  // bar is higher; its buckets are weekly, so "the week before" is exact.
+  const bg = m.bingQueryMovers?.gainers?.[0];
+  if (bg && bg.dImpr >= 50) {
+    out.push(
+      `Bing query "${bg.key}" gained most: ${bg.cur.impressions} impressions vs ${bg.prev.impressions} the week before, ${plural(bg.cur.clicks, 'click')}, position ${fmtPos(bg.cur.position)}.`,
+    );
+  }
+  const bl = m.bingQueryMovers?.losers?.[0];
+  if (bl && bl.dImpr <= -50) {
+    out.push(
+      `Bing query "${bl.key}" lost most: ${bl.cur.impressions} impressions vs ${bl.prev.impressions}, position ${fmtPos(bl.cur.position)} (was ${fmtPos(bl.prev.position)}).`,
     );
   }
   const op = (m.queryOpportunities ?? []).find((r) => !seen.has(r.key));
