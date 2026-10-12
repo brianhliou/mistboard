@@ -1,5 +1,6 @@
 import {
   RETIRED_ATOMIC_PARRY,
+  RETIRED_ATOMIC_SHUFFLE,
   RETIRED_FORTRESS_DROP_MATE,
   RETIRED_VARIANTS_THUMBNAIL,
 } from '../../retired-variants-diagrams.js';
@@ -10,7 +11,7 @@ import type { Article, ArticleBlock } from '../types.js';
 // (branch agent/retire-fortress-atomic) and are on hold for a redesign. Sources:
 // the Fortress rules page and docs-private/drop-game-lab/DESIGN-SPEC.md; the
 // Atomic launch post and the lab record behind scripts/gen-atomic-diagrams.mts.
-// Both figures are built through the rules kernels and assert their own claims
+// Every figure is built through the rules kernels and assert their own claims
 // (retired-variants-diagrams.ts).
 
 export const fortressAndAtomicXiangqiOnHoldArticle: Article = {
@@ -87,7 +88,23 @@ export const fortressAndAtomicXiangqiOnHoldArticle: Article = {
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: 'Every chariot attack could be answered this way. The chariot threatens, a cannon steps onto its file and threatens back through it, the chariot moves to the other file and the cannon follows. In engine games at full strength neither side could leave that loop. For the defender every other move lost at once, and the attacker who stepped away came out badly behind. Every best-play game also opened the same way, with each side’s cannon taking three pieces on move one.',
+          text: 'With a cannon able to parry every chariot attack, any attacker could force a draw with one simple pattern. The chariot threatens from one advisor file, a cannon blocks it and threatens back through it, the chariot hops to the other advisor file, and the cannon follows.',
+        },
+        {
+          kind: 'svg-row',
+          className: 'article-figure-row--strip',
+          items: [
+            { svg: RETIRED_ATOMIC_SHUFFLE[0], caption: '(a) Rd2' },
+            { svg: RETIRED_ATOMIC_SHUFFLE[1], caption: '(b) Cd6' },
+            { svg: RETIRED_ATOMIC_SHUFFLE[2], caption: '(c) Rf2' },
+            { svg: RETIRED_ATOMIC_SHUFFLE[3], caption: '(d) Cf6' },
+          ],
+          caption:
+            'Under the first rules. (a) Red’s chariot threatens to take the advisor on d10. (b) Black’s cannon blocks on d6 and, over the chariot, threatens d1. (c) The chariot hops to f2 and threatens f10. (d) The cannon follows to f6, and the position is (b) again on the other file. Two more moves bring back (b) itself.',
+        } as ArticleBlock,
+        {
+          kind: 'paragraph',
+          text: 'The defender has no choice, because every other move is mated at once by the chariot taking the advisor. A repetition rule couldn’t break it, because both sides are threatening on every move.',
         },
         {
           kind: 'paragraph',

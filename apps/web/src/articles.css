@@ -1068,6 +1068,22 @@
   }
 }
 
+/* A strip of small boards read left to right as one sequence (a move cycle).
+   Four in a row on a wide column, two by two on a phone: each board is a step,
+   not a case to study alone, so it can be smaller than a stacked figure. Two
+   classes so it outranks the stacking rule above. */
+.article-figure-row.article-figure-row--strip {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px 10px;
+}
+
+@media (max-width: 640px) {
+  .article-figure-row.article-figure-row--strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 10px;
+  }
+}
+
 /* Single xiangqi board: cap at its natural width instead of stretching to
    fill the article column. The SVG carries its natural width as the inline
    --xq-svg-width custom property. */

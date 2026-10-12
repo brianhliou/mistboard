@@ -27,6 +27,7 @@ import {
   isFortressXiangqiLegalMove,
   type XiangqiBoard,
   type XiangqiMove,
+  type XiangqiRuleConfig,
   type XiangqiRuleState,
   type XiangqiSquare,
 } from '@mistboard/game';
@@ -49,13 +50,14 @@ import {
 // The four-point design rules from the Atomic Xiangqi lab (the generator's
 // `kernel`): orthogonal blast, soldiers immune, facing rule on, perpetual check
 // loses, and a cannon shot that explodes like any capture.
-const fourPoint = createXiangqiRuleKernel({
+const FOUR_POINT_RULES: XiangqiRuleConfig = {
   facing: 'file',
   stalemate: 'loss',
   progressClock: 60,
   repetition: 'perpetualCheckLoses',
   blast: { shape: 'orthogonal', immune: ['soldier'], palaceContained: false },
-});
+};
+const fourPoint = createXiangqiRuleKernel(FOUR_POINT_RULES);
 
 function play(state: XiangqiRuleState, uci: string): XiangqiRuleState {
   const move = fourPoint.fromUci(state, uci);
@@ -145,6 +147,131 @@ export const RETIRED_VARIANTS_THUMBNAIL = () =>
 
 /** The squares the four-point shot clears, for the article test. */
 export const RETIRED_ATOMIC_PARRY_CLEARED: readonly XiangqiSquare[] = SHOT_GONE;
+
+// ── Atomic: the shuffle the first rules could not escape ─────────────────────
+// Same four-point kernel, cannon shots exploding. Black has closed its palace
+// with its own pieces (horse on e9, elephant on e8 blocking that horse's legs),
+// so the general cannot step out and nothing but the cannon can cover the
+// advisor files. Red's chariot threatens from d2; the cannon blocks on d6 and,
+// over the chariot, threatens d1; the chariot hops to f2; the cannon follows to
+// f6. Asserted below: every move is legal; at each chariot threat every other
+// Black move lets the chariot take the advisor and blow up the general; (d) is
+// (b) with the d and f files swapped, and two more moves bring back (b) itself;
+// every move of the cycle threatens the enemy general; and the kernel, with
+// perpetual check losing, still calls the loop a draw by repetition.
+const SHUFFLE_SETUP = [
+  'i1i2',
+  'b10c8',
+  'b1c3',
+  'c8e9',
+  'h1g3',
+  'c10e8',
+  'a4a5',
+  'h10g8',
+  'i4i5',
+  'b8b6',
+] as const;
+let shuffle = fourPoint.initial('retired-shuffle');
+for (const uci of SHUFFLE_SETUP) shuffle = play(shuffle, uci);
+const SHUFFLE_A = play(shuffle, 'i2d2');
+const SHUFFLE_B = play(SHUFFLE_A, 'b6d6');
+const SHUFFLE_C = play(SHUFFLE_B, 'd2f2');
+const SHUFFLE_D = play(SHUFFLE_C, 'd6f6');
+
+/** Black's only move that does not lose on the spot is `block`; every other
+ *  move lets the chariot on `chariot` take the advisor on `advisor`. */
+function assertOnlyBlock(
+  state: XiangqiRuleState,
+  block: string,
+  chariot: XiangqiSquare,
+  advisor: XiangqiSquare,
+) {
+  for (const move of fourPoint.legalMoves(state)) {
+    const uci = fourPoint.toUci(move);
+    const after = fourPoint.apply(state, move);
+    const take = fourPoint.fromUci(after, `${chariot}${advisor}`);
+    const won =
+      after.status.type === 'playing' && take && fourPoint.isLegal(after, take)
+        ? fourPoint.apply(after, take).status
+        : null;
+    const loses = won?.type === 'finished' && won.winner === 'red';
+    if (uci === block && loses)
+      throw new Error(`retired-variants diagram: ${block} should hold off R${chariot}x${advisor}`);
+    if (uci !== block && !loses)
+      throw new Error(`retired-variants diagram: ${uci} should lose to R${chariot}x${advisor}`);
+  }
+}
+assertOnlyBlock(SHUFFLE_A, 'b6d6', 'd2', 'd10');
+assertOnlyBlock(SHUFFLE_C, 'd6f6', 'f2', 'f10');
+
+const swapDF = (square: string) =>
+  square.startsWith('d')
+    ? `f${square.slice(1)}`
+    : square.startsWith('f')
+      ? `d${square.slice(1)}`
+      : square;
+const placement = (board: XiangqiBoard) =>
+  (Object.entries(board) as Array<[string, { color: string; role: string } | undefined]>)
+    .filter(([, piece]) => piece)
+    .map(([square, piece]) => `${square}:${piece?.color}${piece?.role}`)
+    .sort()
+    .join(' ');
+const mirroredB = Object.fromEntries(
+  Object.entries(SHUFFLE_B.board).map(([square, piece]) => [swapDF(square), piece]),
+) as XiangqiBoard;
+if (placement(SHUFFLE_D.board) !== placement(mirroredB))
+  throw new Error('retired-variants diagram: (d) should be (b) with the d and f files swapped');
+const shuffleBack = play(play(SHUFFLE_D, 'f2d2'), 'f6d6');
+if (placement(shuffleBack.board) !== placement(SHUFFLE_B.board))
+  throw new Error('retired-variants diagram: Rd2 Cd6 should bring back (b)');
+// The repetition rule at its strongest: the one Atomic launched with, where a
+// threat to blow up the general counts as check. Replay the line under it and
+// loop until the kernel calls the game. Every move of the cycle is a "check",
+// by both sides, so perpetual check names no loser and the loop is a draw.
+const lethal = createXiangqiRuleKernel({ ...FOUR_POINT_RULES, repetitionCheck: 'lethal' });
+let looped = lethal.initial('retired-shuffle-lethal');
+const loopLine = [...SHUFFLE_SETUP, 'i2d2', 'b6d6'];
+for (let i = 0; looped.status.type === 'playing' && i < 40; i += 1) {
+  const uci = loopLine[i] ?? ['d2f2', 'd6f6', 'f2d2', 'f6d6'][(i - loopLine.length) % 4] ?? '';
+  const move = lethal.fromUci(looped, uci);
+  if (!move || !lethal.isLegal(looped, move))
+    throw new Error(`retired-variants diagram: ${uci} should be legal in the shuffle`);
+  looped = lethal.apply(looped, move);
+}
+if (!looped.history.slice(SHUFFLE_SETUP.length + 1).every((entry) => entry.check))
+  throw new Error(
+    'retired-variants diagram: every move of the shuffle should threaten the general',
+  );
+if (
+  looped.status.type !== 'finished' ||
+  looped.status.winner !== null ||
+  looped.status.reason !== 'repetition'
+)
+  throw new Error('retired-variants diagram: the shuffle should end drawn by repetition');
+
+const STRIP_H = XQ_BOARD_H + 8;
+function stripBoard(id: string, board: XiangqiBoard, arrow: XiangqiMove): string {
+  return xqSvg(
+    XQ_BOARD_W,
+    STRIP_H,
+    xqBoardSvg({
+      state: xqVisionDemoState(id, board),
+      x: 0,
+      y: 0,
+      label: '',
+      boardOffset: 4,
+      perspective: 'red',
+      arrows: [arrow],
+    }),
+  );
+}
+
+export const RETIRED_ATOMIC_SHUFFLE = [
+  () => stripBoard('retired-shuffle-a', SHUFFLE_A.board, { from: 'd2', to: 'd10' }),
+  () => stripBoard('retired-shuffle-b', SHUFFLE_B.board, { from: 'd6', to: 'd1' }),
+  () => stripBoard('retired-shuffle-c', SHUFFLE_C.board, { from: 'f2', to: 'f10' }),
+  () => stripBoard('retired-shuffle-d', SHUFFLE_D.board, { from: 'f6', to: 'f1' }),
+] as const;
 
 // ── Fortress: the corner-palace drop mate ────────────────────────────────────
 // Red's general sits in its corner palace on a1. A black horse on c3 covers
