@@ -1,4 +1,10 @@
-// Board diagrams for the article on retiring Fortress and Atomic Xiangqi.
+// Board diagrams for the article on taking Fortress and Atomic Xiangqi back
+// to the drawing board.
+//
+// The Fortress figure is the corner-palace drop mate, built through the
+// Fortress kernel: the position before the drop must be legal with Red not in
+// check, the soldier drop must be legal, and the kernel must call the result
+// checkmate. The squares the arrows claim the horse covers are checked too.
 //
 // The parry figure is the one scripts/gen-atomic-diagrams.mts draws for the
 // variant-lab write-up ("3. The parry"): the same position, reached by the same
@@ -9,7 +15,16 @@
 // hand-listed. Every claim the article's caption makes is asserted at load.
 
 import {
+  applyFortressXiangqiMove,
   createXiangqiRuleKernel,
+  type FortressXiangqiBoard,
+  type FortressXiangqiGameState,
+  type FortressXiangqiSquare,
+  getFortressXiangqiLegalMoves,
+  getFortressXiangqiPlayerView,
+  isFortressXiangqiDropMove,
+  isFortressXiangqiGeneralInCheck,
+  isFortressXiangqiLegalMove,
   type XiangqiBoard,
   type XiangqiMove,
   type XiangqiRuleState,
@@ -26,6 +41,10 @@ import {
   xqSvg,
   xqVisionDemoState,
 } from './articles/diagrams.js';
+import {
+  installFortressXiangqiBoardStyles,
+  renderFortressXiangqiBoardSvg,
+} from './fortress-xiangqi-render.js';
 
 // The four-point design rules from the Atomic Xiangqi lab (the generator's
 // `kernel`): orthogonal blast, soldiers immune, facing rule on, perpetual check
@@ -126,3 +145,67 @@ export const RETIRED_VARIANTS_THUMBNAIL = () =>
 
 /** The squares the four-point shot clears, for the article test. */
 export const RETIRED_ATOMIC_PARRY_CLEARED: readonly XiangqiSquare[] = SHOT_GONE;
+
+// ── Fortress: the corner-palace drop mate ────────────────────────────────────
+// Red's general sits in its corner palace on a1. A black horse on c3 covers
+// both of its flight points, a2 and b1, and a soldier from Black's hand dropped
+// on a2 gives check from a point the general cannot take.
+const DROP_MATE_BEFORE: FortressXiangqiBoard = {
+  a1: { color: 'red', role: 'general' },
+  c3: { color: 'black', role: 'horse' },
+  g8: { color: 'black', role: 'general' },
+};
+const DROP_MATE_DROP = { drop: 'soldier', to: 'a2' } as const;
+const dropMateStart: FortressXiangqiGameState = {
+  id: 'retired-drop-mate',
+  board: DROP_MATE_BEFORE,
+  hands: { red: {}, black: { soldier: 1 } },
+  status: { type: 'playing', turn: 'black' },
+  moveNumber: 1,
+  positionCounts: {},
+};
+if (isFortressXiangqiGeneralInCheck(dropMateStart, 'red'))
+  throw new Error('retired-variants diagram: Red should not be in check before the drop');
+if (!isFortressXiangqiLegalMove(dropMateStart, DROP_MATE_DROP))
+  throw new Error('retired-variants diagram: the soldier drop on a2 should be legal');
+// The horse alone covers both flight points: with Red to move and no soldier
+// yet, neither a2 nor b1 is a legal step for the general.
+const horseCovers: FortressXiangqiSquare[] = ['a2', 'b1'];
+const redSteps = getFortressXiangqiLegalMoves({
+  ...dropMateStart,
+  status: { type: 'playing', turn: 'red' },
+})
+  .filter((move) => !isFortressXiangqiDropMove(move))
+  .map((move) => move.to);
+for (const square of horseCovers) {
+  if (redSteps.includes(square))
+    throw new Error(`retired-variants diagram: the c3 horse should cover ${square}`);
+}
+const dropMateAfter = applyFortressXiangqiMove(dropMateStart, DROP_MATE_DROP);
+if (
+  dropMateAfter.status.type !== 'finished' ||
+  dropMateAfter.status.winner !== 'black' ||
+  dropMateAfter.status.reason !== 'checkmate'
+)
+  throw new Error('retired-variants diagram: P@a2 should checkmate Red');
+
+export const RETIRED_FORTRESS_DROP_MATE = () => {
+  installFortressXiangqiBoardStyles();
+  const svg = renderFortressXiangqiBoardSvg(
+    getFortressXiangqiPlayerView(dropMateAfter, 'red'),
+    'red',
+    {
+      coordinates: false,
+      arrows: horseCovers.map((to) => ({ from: 'c3' as const, to })),
+      markers: [{ square: 'a2', kind: 'circle', className: 'xq-shape--green' }],
+    },
+  );
+  // The live board's class rule is width:100%; an article figure caps itself.
+  return svg.replace(
+    '<svg ',
+    '<svg width="100%" style="max-width:420px;height:auto;display:block;margin:0 auto" ',
+  );
+};
+
+/** The final position, for the article test. */
+export const RETIRED_FORTRESS_DROP_MATE_STATE: FortressXiangqiGameState = dropMateAfter;

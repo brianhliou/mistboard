@@ -62,9 +62,9 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
-      // Why Fortress and Atomic Xiangqi were retired, scheduled for 2026-10-13
+      // Fortress and Atomic Xiangqi on hold for a redesign, scheduled for 2026-10-13
       // (DEV shows it early for review).
-      '/blog/retiring-fortress-and-atomic-xiangqi',
+      '/blog/fortress-and-atomic-xiangqi-on-hold',
       // The jieqi puzzle investigation write-up, 2026-10-10.
       '/blog/jieqi-puzzle-search',
       // The longest forced mates in xiangqi (tablebase records), 2026-10-09.
@@ -300,7 +300,7 @@ describe('article public listing gates', () => {
     // (blog/concept) article without a homeRow appears, newest first, with no
     // curated list. Deep dives have their own row (next test).
     expect(hrefs).toEqual([
-      '/blog/retiring-fortress-and-atomic-xiangqi',
+      '/blog/fortress-and-atomic-xiangqi-on-hold',
       '/blog/jieqi-puzzle-search',
       '/blog/longest-forced-mates-xiangqi',
       '/blog/benedict-xiangqi',

@@ -45,9 +45,9 @@ const baseAnnouncements: Announcement[] = [
   {
     date: '2026-10-13',
     kind: 'article',
-    headline: 'Why we retired Fortress and Atomic Xiangqi.',
-    body: 'Both are closed to new games; finished games still replay and the rules pages stay up. Fortress put drops, a smaller board, corner palaces and a new piece into one game, and the drops decided it. Atomic only stopped looping after we gave the cannon its own exception and added a repetition rule. If drops were what you liked, Crazyhouse Xiangqi has them on the normal board.',
-    href: '/blog/retiring-fortress-and-atomic-xiangqi',
+    headline: 'Fortress and Atomic Xiangqi are back on the drawing board.',
+    body: 'Both are on hold while we redesign them: no new games, but finished games still replay and the rules pages stay up. Fortress needs a smaller xiangqi that keeps the feel of the full game without drops taking over. Atomic needs a cannon that follows the same rule as every other piece. Until then, drops live in Crazyhouse Xiangqi.',
+    href: '/blog/fortress-and-atomic-xiangqi-on-hold',
     cta: 'Read the article',
   },
   {

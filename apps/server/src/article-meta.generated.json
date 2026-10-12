@@ -125,6 +125,12 @@
     "description": "Fog Xiangqi is xiangqi under Fog of War. A piece you can't see can still block your horse, and a general with a clear file to the other general can capture it.",
     "status": "published"
   },
+  "fortress-and-atomic-xiangqi-on-hold": {
+    "title": "Back to the drawing board: Fortress and Atomic Xiangqi",
+    "kind": "article",
+    "description": "On 11 October we stopped new games of Fortress Xiangqi and Atomic Xiangqi so we can redesign them. In Fortress the drops took over a small board; Atomic only stopped looping after the cannon got its own exception. Finished games still replay.",
+    "status": "published"
+  },
   "fortress-xiangqi": {
     "title": "Fortress Xiangqi Rules",
     "kind": "rules",
@@ -261,12 +267,6 @@
     "title": "Puzzles with more than one solution",
     "kind": "article",
     "description": "A solver found a real mate and was told to try again. 382 served puzzles could do that. How the miner admitted them, the patch that half-fixed it, the rule lichess uses instead, and what came out of the corpus.",
-    "status": "published"
-  },
-  "retiring-fortress-and-atomic-xiangqi": {
-    "title": "Why we retired Fortress and Atomic Xiangqi",
-    "kind": "article",
-    "description": "On 11 October we closed Fortress Xiangqi and Atomic Xiangqi to new games. Fortress put four new ideas on one small board and the drops decided it; Atomic only stopped looping after we bolted an exception onto the cannon. Finished games still replay.",
     "status": "published"
   },
   "riverbank-cannon": {
