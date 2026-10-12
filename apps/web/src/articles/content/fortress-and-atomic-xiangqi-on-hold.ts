@@ -77,7 +77,7 @@ export const fortressAndAtomicXiangqiOnHoldArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'In the first version the cannon exploded like everything else, and that made it the best defender on the board. A cannon fires over exactly one piece, so a chariot attacking down a file beside the enemy general could be blocked by a cannon that then threatened back through it. With that parry, an attacker could often force a draw with one simple pattern.',
+          text: 'In the first version the cannon exploded too, which made it the perfect defender: it could block a chariot’s attack and threaten back through the chariot. An attacker could often force a draw this way.',
         },
         {
           kind: 'svg-row',
@@ -89,23 +89,23 @@ export const fortressAndAtomicXiangqiOnHoldArticle: Article = {
             { svg: RETIRED_ATOMIC_SHUFFLE[3], caption: '(d) Cf6' },
           ],
           caption:
-            'Under the first rules. (a) Red’s chariot threatens to take the advisor on d10. (b) Black’s cannon blocks on d6 and, over the chariot, threatens d1. (c) The chariot hops to f2 and threatens f10. (d) The cannon follows to f6, and the position is (b) again on the other file. Two more moves bring back (b) itself.',
+            'Under the first rules. (a) The chariot threatens the advisor on d10. (b) The cannon blocks and threatens d1 through the chariot. (c) The chariot switches files. (d) The cannon follows, and the cycle repeats.',
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: 'Once the palace is closed in by its own pieces, as it is here, the defender has no choice: every other move is mated at once by the chariot taking the advisor. A repetition rule couldn’t break it, because both sides are threatening on every move.',
+          text: 'With its palace closed in, as here, the defender has no other move, and a repetition rule can’t break the cycle because both sides threaten on every move.',
         },
         {
           kind: 'paragraph',
-          text: 'To launch it we added two rules. A cannon’s capture removes only the cannon and the piece it takes, with no blast around them. And a player who keeps a threat on the enemy general through every move of a repeated cycle loses, the way perpetual check loses in xiangqi. Either rule alone still left the loop.',
+          text: 'To launch it, we made a cannon’s capture remove only the cannon and its target, and made the side that keeps up a threat through a repeated cycle lose, like perpetual check in xiangqi.',
         },
         {
           kind: 'paragraph',
-          text: 'With both rules in, the engine games stopped looping, but the cannon now played by its own rule. It could take a piece on the point beside its own general, and only those two pieces left the board. A chariot or horse could not make that capture at all, because its blast would take its own general. A player only learns why the cannon is different by reading the rules page. We launched Atomic before we had a design that worked without that patch.',
+          text: 'That ended the loop, but left the cannon playing by its own rule: it alone can capture next to its own general. We launched before we had a design without that patch.',
         },
         {
           kind: 'paragraph',
-          text: 'A redesign has to give Atomic a cannon that follows the same rule as every other piece.',
+          text: 'A redesign needs a cannon that follows the same rule as every other piece.',
         },
       ],
     },
