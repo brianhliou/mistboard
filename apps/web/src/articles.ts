@@ -937,10 +937,13 @@ function buildArticleFooter(article: Article, lang?: ArticleLang): HTMLElement |
   heading.className = 'article-footer-heading';
   heading.textContent = t('articles.readNext', {}, locale);
 
+  // An English-only page read with a zh UI still offers the zh version of each
+  // onward post that has one, as the heading and dates already follow the UI.
+  const cardLang = lang ?? (locale === 'zh-Hans' || locale === 'zh-Hant' ? locale : undefined);
   const list = document.createElement('ul');
   list.className = 'articles-index-list article-footer-list';
   for (const entry of related) {
-    list.append(articleCard(entry, lang, { showStarBadge: false }));
+    list.append(articleCard(entry, cardLang, { showStarBadge: false }));
   }
 
   footer.append(heading, list);
