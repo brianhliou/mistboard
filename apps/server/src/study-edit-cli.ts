@@ -99,6 +99,8 @@ export type StudyEditOp =
       tree: unknown;
       orientation?: 'red' | 'black';
       tags?: Record<string, string>;
+      /** The chapter's translation overlay, e.g. { "zh-Hans": { "name": "…", "tags": { … } } }. */
+      i18n?: Record<string, unknown>;
     }
   | { op: 'delete'; chapter: string }
   | { op: 'order'; chapters: string[] };
@@ -114,6 +116,7 @@ export type StudyCreateSpec = {
     tree: unknown;
     orientation?: 'red' | 'black';
     tags?: Record<string, string>;
+    i18n?: Record<string, unknown>;
   };
 };
 
@@ -380,6 +383,7 @@ export async function applyCreate(
       orientation: chapter.orientation === 'black' ? 'black' : 'red',
       root: ensureDealtRoot(chapter.variant, chapter.tree),
       tags: parseChapterTags(chapter.tags),
+      ...(chapter.i18n === undefined ? {} : { i18n: chapter.i18n }),
     },
   });
   if (!created) throw new Error('create: persistence is not initialized');
@@ -436,6 +440,7 @@ export async function applyPlan(
             orientation: op.orientation === 'black' ? 'black' : 'red',
             root: ensureDealtRoot(variant, op.tree),
             ...(op.tags === undefined ? {} : { tags: parseChapterTags(op.tags) }),
+            ...(op.i18n === undefined ? {} : { i18n: op.i18n }),
           }),
         );
         if (added.ok && op.ref !== undefined) refIds.set(op.ref, added.chapter.id);
