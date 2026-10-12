@@ -1,10 +1,10 @@
 // Board diagrams for the article on taking Fortress and Atomic Xiangqi back
 // to the drawing board.
 //
-// The Fortress figure is the corner-palace drop mate, built through the
-// Fortress kernel: the position before the drop must be legal with Red not in
-// check, the soldier drop must be legal, and the kernel must call the result
-// checkmate. The squares the arrows claim the horse covers are checked too.
+// The Fortress figure is the drop mate that ends an engine self-play game,
+// replayed move by move through the Fortress kernel: every move must be legal,
+// the last must be a soldier drop, and the kernel must call the result
+// checkmate. The guard the arrow claims for the horse is checked too.
 //
 // The Atomic figure is a four-board strip of the chariot/cannon shuffle under
 // the lab's four-point design kernel, in which a cannon's capture explodes like
@@ -14,14 +14,14 @@
 
 import {
   applyFortressXiangqiMove,
+  createInitialFortressXiangqiState,
   createXiangqiRuleKernel,
   type FortressXiangqiBoard,
   type FortressXiangqiGameState,
   type FortressXiangqiSquare,
-  getFortressXiangqiLegalMoves,
+  fsfUciToFortressXiangqiMove,
   getFortressXiangqiPlayerView,
   isFortressXiangqiDropMove,
-  isFortressXiangqiGeneralInCheck,
   isFortressXiangqiLegalMove,
   type XiangqiBoard,
   type XiangqiMove,
@@ -252,48 +252,74 @@ export const RETIRED_VARIANTS_THUMBNAIL = () =>
     ariaLabel: 'Atomic Xiangqi: a cannon threatening to fire over the chariot onto d1',
   });
 
-// ── Fortress: the corner-palace drop mate ────────────────────────────────────
-// Red's general sits in its corner palace on a1. A black horse on c3 covers
-// both of its flight points, a2 and b1, and a soldier from Black's hand dropped
-// on a2 gives check from a point the general cannot take.
-const DROP_MATE_BEFORE: FortressXiangqiBoard = {
-  a1: { color: 'red', role: 'general' },
-  c3: { color: 'black', role: 'horse' },
-  g8: { color: 'black', role: 'general' },
-};
-const DROP_MATE_DROP = { drop: 'soldier', to: 'a2' } as const;
-const dropMateStart: FortressXiangqiGameState = {
-  id: 'retired-drop-mate',
-  board: DROP_MATE_BEFORE,
-  hands: { red: {}, black: { soldier: 1 } },
-  status: { type: 'playing', turn: 'black' },
-  moveNumber: 1,
-  positionCounts: {},
-};
-if (isFortressXiangqiGeneralInCheck(dropMateStart, 'red'))
-  throw new Error('retired-variants diagram: Red should not be in check before the drop');
-if (!isFortressXiangqiLegalMove(dropMateStart, DROP_MATE_DROP))
-  throw new Error('retired-variants diagram: the soldier drop on a2 should be legal');
-// The horse alone covers both flight points: with Red to move and no soldier
-// yet, neither a2 nor b1 is a legal step for the general.
-const horseCovers: FortressXiangqiSquare[] = ['a2', 'b1'];
-const redSteps = getFortressXiangqiLegalMoves({
-  ...dropMateStart,
-  status: { type: 'playing', turn: 'red' },
-})
-  .filter((move) => !isFortressXiangqiDropMove(move))
-  .map((move) => move.to);
-for (const square of horseCovers) {
-  if (redSteps.includes(square))
-    throw new Error(`retired-variants diagram: the c3 horse should cover ${square}`);
+// ── Fortress: a drop mate from an engine game ────────────────────────────────
+// A Fairy-Stockfish self-play game (depth 16, from a random book opening)
+// under the rules the site last ran: river-gated soldiers, the
+// Treasure kept on its own half. Black gives up a chariot on a2 so that Red's
+// own chariot takes it and walls in the general on a1, then drops a soldier on
+// b1. The horse on c3 guards b1, so the general cannot take it, and a2 is its
+// own piece: mate, with most of both armies still on the board. The figure
+// replays the whole game through the Fortress kernel, so every move is legal
+// under those rules and the kernel itself calls the end. The moves are in the
+// engine's notation, ten to a line.
+const ENGINE_GAME = [
+  'a2a3 d7d6 d1f3 c8c7 e1e4 c7c5 e4f4 d8f6 f3d1 c5b5',
+  'd1b3 b8d7 d2d3 a8c8 f1d2 c8c3 d2f3 c3d3 a1a2 P@e3',
+  'g1e1 b5e5 e1d1 d3d1 b3d1 e3f3 f2f3 N@c3 b1a1 e5a5',
+  'R@c2 a5a2 b2b3 a2g2 c2g2 Q@d8 C@a8 P@a4 a8a4 R@b1',
+  'a1a2 b1c1 f4g4 A@g6 g2d2 c1d1 d2d1 c3d1 R@d2 d6d5',
+  'a4f4 R@b1 g4g3 d7c5 P@c4 c5d7 a3a4 d5d4 d2d4 d1c3',
+  'g3c3 b1b3 N@d1 P@b2 d1b2 b3c3 d4d2 c3f3 f4d4 P@b3',
+  'a4a5 d7e5 P@d5 b3b2 d2b2 e5d3 b2d2 C@f2 P@c2 f2c2',
+  'd4d8 f6d8 P@c3 c2c4 Q@b2 C@f2 P@e4 P@b3 a2a1 b3b2',
+  'd2b2 d3c1 c3c4 f2f1 C@b1 f3a3 P@a2 c1d3 b1b7 N@c3',
+  'b2c2 a3a2 c2a2 P@b1',
+]
+  .join(' ')
+  .split(' ');
+const DROP_MATE_SQUARE: FortressXiangqiSquare = 'b1';
+let dropMateAfter = createInitialFortressXiangqiState('retired-drop-mate');
+for (const [ply, uci] of ENGINE_GAME.entries()) {
+  const move = fsfUciToFortressXiangqiMove(uci);
+  if (!move || !isFortressXiangqiLegalMove(dropMateAfter, move))
+    throw new Error(`retired-variants diagram: engine move ${ply + 1} (${uci}) is not legal`);
+  dropMateAfter = applyFortressXiangqiMove(dropMateAfter, move);
+  if (ply < ENGINE_GAME.length - 1 && dropMateAfter.status.type !== 'playing')
+    throw new Error(`retired-variants diagram: the game ended early, at move ${ply + 1}`);
 }
-const dropMateAfter = applyFortressXiangqiMove(dropMateStart, DROP_MATE_DROP);
+const lastMove = fsfUciToFortressXiangqiMove(ENGINE_GAME[ENGINE_GAME.length - 1] ?? '');
+if (!lastMove || !isFortressXiangqiDropMove(lastMove) || lastMove.to !== DROP_MATE_SQUARE)
+  throw new Error('retired-variants diagram: the last move should be the soldier drop on b1');
 if (
   dropMateAfter.status.type !== 'finished' ||
   dropMateAfter.status.winner !== 'black' ||
   dropMateAfter.status.reason !== 'checkmate'
 )
-  throw new Error('retired-variants diagram: P@a2 should checkmate Red');
+  throw new Error('retired-variants diagram: P@b1 should checkmate Red');
+// The caption's claims: the board is still busy, the general is on a1 with its
+// own chariot on a2, and the horse on c3 is what guards b1: lift it off the
+// final board and the general may take the soldier.
+if (Object.keys(dropMateAfter.board).length < 14)
+  throw new Error('retired-variants diagram: the mate should come with 14 or more pieces on');
+const at = (square: FortressXiangqiSquare) => dropMateAfter.board[square];
+if (
+  at('a1')?.role !== 'general' ||
+  at('a1')?.color !== 'red' ||
+  at('a2')?.role !== 'chariot' ||
+  at('a2')?.color !== 'red' ||
+  at('c3')?.role !== 'horse' ||
+  at('c3')?.color !== 'black'
+)
+  throw new Error('retired-variants diagram: expected the general a1, chariot a2, horse c3');
+const withoutHorse: FortressXiangqiGameState = {
+  ...dropMateAfter,
+  board: Object.fromEntries(
+    Object.entries(dropMateAfter.board).filter(([square]) => square !== 'c3'),
+  ) as FortressXiangqiBoard,
+  status: { type: 'playing', turn: 'red' },
+};
+if (!isFortressXiangqiLegalMove(withoutHorse, { from: 'a1', to: DROP_MATE_SQUARE }))
+  throw new Error('retired-variants diagram: without the c3 horse, Kxb1 should be legal');
 
 export const RETIRED_FORTRESS_DROP_MATE = () => {
   installFortressXiangqiBoardStyles();
@@ -302,8 +328,8 @@ export const RETIRED_FORTRESS_DROP_MATE = () => {
     'red',
     {
       coordinates: false,
-      arrows: horseCovers.map((to) => ({ from: 'c3' as const, to })),
-      markers: [{ square: 'a2', kind: 'circle', className: 'xq-shape--green' }],
+      arrows: [{ from: 'c3', to: DROP_MATE_SQUARE }],
+      markers: [{ square: DROP_MATE_SQUARE, kind: 'circle', className: 'xq-shape--green' }],
     },
   );
   // The live board's class rule is width:100%; an article figure caps itself.

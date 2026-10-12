@@ -50,13 +50,13 @@ export const fortressAndAtomicXiangqiOnHoldArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Each idea was worth trying. Together they made a game that was hard to learn, and the drops overwhelmed the rest. With the general boxed into a corner of a small board, one piece dropped beside it was often enough. The simplest case takes three pieces.',
+          text: 'Each idea was worth trying. Together they made a game that was hard to learn, and the drops overwhelmed the rest. With the general boxed into a corner of a small board, one piece dropped beside it was often enough. A typical engine game ended this way, with most of both armies still on the board.',
         },
         {
           kind: 'raw-svg',
           svg: RETIRED_FORTRESS_DROP_MATE,
           caption:
-            'Black drops a soldier from its hand on a2. The general on a1 cannot take it, because the horse on c3 guards a2, and it cannot step to b1, which the same horse covers. That is mate.',
+            'Black drops a soldier from its hand on b1, beside the general. With the horse on c3 guarding b1 and Red’s own chariot on a2, the general has nowhere to go, and that is mate.',
         } as ArticleBlock,
         {
           kind: 'paragraph',
