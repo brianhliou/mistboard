@@ -88,7 +88,7 @@ export const fortressAndAtomicXiangqiOnHoldArticle: Article = {
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: 'With a cannon able to parry every chariot attack, any attacker could force a draw with one simple pattern. The chariot threatens from one advisor file, a cannon blocks it and threatens back through it, the chariot hops to the other advisor file, and the cannon follows.',
+          text: 'With a cannon able to parry every chariot attack, an attacker could often force a draw with one simple pattern. The chariot threatens from one advisor file, a cannon blocks it and threatens back through it, the chariot hops to the other advisor file, and the cannon follows.',
         },
         {
           kind: 'svg-row',
@@ -104,7 +104,7 @@ export const fortressAndAtomicXiangqiOnHoldArticle: Article = {
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: 'The defender has no choice, because every other move is mated at once by the chariot taking the advisor. A repetition rule couldn’t break it, because both sides are threatening on every move.',
+          text: 'Once the palace is closed in by its own pieces, as it is here, the defender has no choice: every other move is mated at once by the chariot taking the advisor. A repetition rule couldn’t break it, because both sides are threatening on every move.',
         },
         {
           kind: 'paragraph',
