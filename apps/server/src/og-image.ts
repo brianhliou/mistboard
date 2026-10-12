@@ -25,7 +25,6 @@ import type { ArticleZhTitles } from './article-meta.js';
 import { SKILL_VS_LUCK_OG_SERIES } from './banqi-luck-og-data.js';
 import {
   CARD_ASPECT_FRAMES,
-  CARD_BG,
   type CardAspect,
   type CardPieceSet,
   loadCardArt,
@@ -359,7 +358,7 @@ export function renderDefaultOgAspectSvg(logoHref: string, aspect: CardAspect): 
   const logo = logoMarkImage(logoHref, (width - logoSize) / 2, top, logoSize);
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
-    `<rect width="${width}" height="${height}" fill="${CARD_BG}"/>`,
+    logoGlowBackground(width, height, top + logoSize / 2),
     logo,
     `<text x="${width / 2}" y="${top + logoSize + gap + wordmarkSize * 0.72}" text-anchor="middle" fill="#f3f4f6" font-family="${OG_FONT}" font-size="${wordmarkSize}" font-weight="800" letter-spacing="8">MISTBOARD</text>`,
     `</svg>`,
@@ -1092,8 +1091,39 @@ export async function loadLogoMarkHref(staticDir: string): Promise<string> {
   return `data:image/png;base64,${png.toString('base64')}`;
 }
 
+// Two fixes to the raster on a card (Brian, 2026-10-11: "a fuzzy whitish
+// outline ... a bit too grey and not enough pop"). The PNG was cut out of a
+// white background, so its edge carries a pale ring: erode the alpha by ~2.5
+// source px to drop it. Its greys (frame 53, tiles 65-69) sit too close to the
+// card's blue-black, so a gamma curve darkens them while the whites stay white,
+// and a soft glow behind the mark keeps the darker frame from sinking into the
+// background. Picked from a sheet over a light card, which pops hardest but is
+// a white flash in every dark-mode feed.
+const LOGO_MARK_GAMMA = 1.6;
+
 function logoMarkImage(href: string, x: number, y: number, size: number): string {
-  return `<image href="${href}" x="${x}" y="${y}" width="${size}" height="${size}"/>`;
+  const erode = (2.5 * size) / 512;
+  const tone = ['R', 'G', 'B']
+    .map((c) => `<feFunc${c} type="gamma" exponent="${LOGO_MARK_GAMMA}"/>`)
+    .join('');
+  return [
+    `<filter id="logo-mark" color-interpolation-filters="sRGB">`,
+    `<feMorphology in="SourceAlpha" operator="erode" radius="${erode}" result="inside"/>`,
+    `<feComposite in="SourceGraphic" in2="inside" operator="in" result="trimmed"/>`,
+    `<feComponentTransfer in="trimmed">${tone}</feComponentTransfer>`,
+    `</filter>`,
+    `<image href="${href}" x="${x}" y="${y}" width="${size}" height="${size}" filter="url(#logo-mark)"/>`,
+  ].join('');
+}
+
+/** The card's blue-black with a slate glow centred on the mark at `cy`. */
+function logoGlowBackground(width: number, height: number, cy: number): string {
+  return [
+    `<radialGradient id="logo-glow" cx="0.5" cy="${cy / height}" r="0.38">`,
+    `<stop offset="0" stop-color="#3a4150"/><stop offset="1" stop-color="#0f1115"/>`,
+    `</radialGradient>`,
+    `<rect width="${width}" height="${height}" fill="url(#logo-glow)"/>`,
+  ].join('');
 }
 //
 // Logo, wordmark, tagline. Brian picked this over board-collage variants
@@ -1120,7 +1150,7 @@ export function renderDefaultOgSvg(
   const wordmarkY = logoY + logoSize + 84;
   const parts = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">`,
-    `<rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="#0f1115"/>`,
+    logoGlowBackground(OG_WIDTH, OG_HEIGHT, logoY + logoSize / 2),
     logo,
     `<text x="${OG_WIDTH / 2}" y="${wordmarkY}" text-anchor="middle" fill="#f3f4f6" font-family="${FONT}" font-size="64" font-weight="800" letter-spacing="8">${escapeXml(copy.wordmark)}</text>`,
   ];
