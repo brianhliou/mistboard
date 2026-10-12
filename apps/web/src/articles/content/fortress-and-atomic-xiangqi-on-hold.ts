@@ -1,5 +1,4 @@
 import {
-  RETIRED_ATOMIC_PARRY,
   RETIRED_ATOMIC_SHUFFLE,
   RETIRED_FORTRESS_DROP_MATE,
   RETIRED_VARIANTS_THUMBNAIL,
@@ -78,17 +77,7 @@ export const fortressAndAtomicXiangqiOnHoldArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'In the first version the cannon exploded like everything else, and that made it the best defender on the board. A cannon fires over exactly one piece, so a chariot that came onto a file beside the enemy general could become the screen for the cannon behind it.',
-        },
-        {
-          kind: 'raw-svg',
-          svg: RETIRED_ATOMIC_PARRY,
-          caption:
-            'Under the first rules. Red’s chariot on d2 threatens to take the advisor on d10 and blow up the general beside it. Black shoots first. The cannon on d8 fires over that same chariot onto d1, and the blast takes the advisor, the elephant, the chariot and Red’s general.',
-        } as ArticleBlock,
-        {
-          kind: 'paragraph',
-          text: 'With a cannon able to parry every chariot attack, an attacker could often force a draw with one simple pattern. The chariot threatens from one advisor file, a cannon blocks it and threatens back through it, the chariot hops to the other advisor file, and the cannon follows.',
+          text: 'In the first version the cannon exploded like everything else, and that made it the best defender on the board. A cannon fires over exactly one piece, so a chariot attacking down a file beside the enemy general could be blocked by a cannon that then threatened back through it. With that parry, an attacker could often force a draw with one simple pattern.',
         },
         {
           kind: 'svg-row',

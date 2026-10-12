@@ -6,13 +6,11 @@
 // check, the soldier drop must be legal, and the kernel must call the result
 // checkmate. The squares the arrows claim the horse covers are checked too.
 //
-// The parry figure is the one scripts/gen-atomic-diagrams.mts draws for the
-// variant-lab write-up ("3. The parry"): the same position, reached by the same
-// three moves, under the same four-point design kernel, in which a cannon's
-// capture explodes like any other. It is drawn here with the site's diagram
-// toolkit so it follows the reader's piece set, and the blast squares are a
-// diff of the board before and after the kernel applies the shot, never
-// hand-listed. Every claim the article's caption makes is asserted at load.
+// The Atomic figure is a four-board strip of the chariot/cannon shuffle under
+// the lab's four-point design kernel, in which a cannon's capture explodes like
+// any other; the card thumbnail is its board (b), with the cannon's shot. Both
+// are drawn with the site's diagram toolkit so they follow the reader's piece
+// set, and every claim the article makes about them is asserted at load.
 
 import {
   applyFortressXiangqiMove,
@@ -73,27 +71,6 @@ function emptiedBy(before: XiangqiBoard, after: XiangqiBoard, move: XiangqiMove)
   );
 }
 
-// 1. Ra2 Cd8 2. Rd2: Red's chariot on d2 threatens Rxd10, which would explode
-// the advisor and the general beside it. Black is to move.
-let rush = fourPoint.initial('retired-parry');
-for (const uci of ['a1a2', 'b8d8', 'a2d2']) rush = play(rush, uci);
-const PARRY_BOARD = rush.board;
-const THREAT: XiangqiMove = { from: 'd2', to: 'd10' };
-const SHOT: XiangqiMove = { from: 'd8', to: 'd1' };
-if (rush.status.type !== 'playing' || rush.status.turn !== 'black')
-  throw new Error('retired-variants diagram: Black should be to move after 2. Rd2');
-const shotState = play(rush, 'd8d1');
-const SHOT_GONE = emptiedBy(PARRY_BOARD, shotState.board, SHOT);
-for (const square of ['d1', 'd2', 'e1'] as const) {
-  if (!SHOT_GONE.includes(square))
-    throw new Error(`retired-variants diagram: Cxd1 should remove ${square}`);
-}
-if (shotState.status.type !== 'finished' || shotState.status.winner !== 'black')
-  throw new Error('retired-variants diagram: Cxd1 should end the game for Black');
-
-const PAIR_W = XQ_BOARD_W * 2 + 28;
-const PAIR_GAP_X = XQ_BOARD_W + 28;
-const FIGURE_H = XQ_BOARD_H + 34;
 // xqBoardSvg draws its board at y + 28, under the label.
 const BOARD_Y_OFFSET = 28;
 
@@ -108,45 +85,6 @@ function blastRings(squares: readonly XiangqiSquare[], x0: number, y0: number): 
     })
     .join('');
 }
-
-export const RETIRED_ATOMIC_PARRY = () =>
-  xqSvg(
-    PAIR_W,
-    FIGURE_H,
-    xqBoardSvg({
-      state: xqVisionDemoState('retired-parry-threat', PARRY_BOARD),
-      x: 0,
-      y: 0,
-      label: '2. Rd2 THREATENS Rxd10',
-      perspective: 'red',
-      arrows: [THREAT],
-    }) +
-      xqBoardSvg({
-        state: xqVisionDemoState('retired-parry-shot', PARRY_BOARD),
-        x: PAIR_GAP_X,
-        y: 0,
-        label: '2...Cxd1 GETS THERE FIRST',
-        perspective: 'red',
-        arrows: [SHOT],
-        overlay: blastRings(SHOT_GONE, PAIR_GAP_X, 0),
-      }),
-  );
-
-// Card thumbnail: Red's half of the board at the moment of the shot, through
-// the shared half-board crop, with the arrow coming in from the black cannon
-// off the top edge and the four points the blast clears ringed.
-export const RETIRED_VARIANTS_THUMBNAIL = () =>
-  xqHalfBoardThumbnailSvg({
-    state: xqVisionDemoState('retired-thumb', PARRY_BOARD),
-    half: 'bottom',
-    perspective: 'red',
-    arrows: [SHOT],
-    overlay: blastRings(SHOT_GONE, 0, 0),
-    ariaLabel: 'Atomic Xiangqi: a cannon shot through the chariot onto d1',
-  });
-
-/** The squares the four-point shot clears, for the article test. */
-export const RETIRED_ATOMIC_PARRY_CLEARED: readonly XiangqiSquare[] = SHOT_GONE;
 
 // ── Atomic: the shuffle the first rules could not escape ─────────────────────
 // Same four-point kernel, cannon shots exploding. Black has closed its palace
@@ -166,9 +104,9 @@ const SHUFFLE_SETUP = [
   'c8e9',
   'h1g3',
   'c10e8',
-  'a4a5',
+  'c1e3',
   'h10g8',
-  'i4i5',
+  'a1a2',
   'b8b6',
 ] as const;
 let shuffle = fourPoint.initial('retired-shuffle');
@@ -201,6 +139,19 @@ function assertOnlyBlock(
       throw new Error(`retired-variants diagram: ${uci} should lose to R${chariot}x${advisor}`);
   }
 }
+// The threat in (a) is real: with Black to move skipped, Rxd10 is a legal
+// capture down an open file and it ends the game. (The parry figure this strip
+// replaced labelled a threat the cannon was already blocking.)
+const threatInA = fourPoint.parseFen(
+  fourPoint.fen(SHUFFLE_A).replace(' b ', ' w '),
+  'retired-shuffle-a-threat',
+);
+const rxd10 = threatInA && fourPoint.fromUci(threatInA, 'd2d10');
+if (!threatInA || !rxd10 || !fourPoint.isLegal(threatInA, rxd10))
+  throw new Error('retired-variants diagram: in (a) Rxd10 should be a legal capture');
+const afterRxd10 = fourPoint.apply(threatInA, rxd10).status;
+if (afterRxd10.type !== 'finished' || afterRxd10.winner !== 'red')
+  throw new Error('retired-variants diagram: in (a) Rxd10 should blow up the black general');
 assertOnlyBlock(SHUFFLE_A, 'b6d6', 'd2', 'd10');
 assertOnlyBlock(SHUFFLE_C, 'd6f6', 'f2', 'f10');
 
@@ -272,6 +223,33 @@ export const RETIRED_ATOMIC_SHUFFLE = [
   () => stripBoard('retired-shuffle-c', SHUFFLE_C.board, { from: 'f2', to: 'f10' }),
   () => stripBoard('retired-shuffle-d', SHUFFLE_D.board, { from: 'f6', to: 'f1' }),
 ] as const;
+
+// Card thumbnail: Red's half of board (b), through the shared half-board crop.
+// The cannon on d6 threatens to fire over the chariot onto d1; the arrow comes
+// in from off the top edge and the points that shot would clear are ringed.
+// The shot is played from (b) with Black to move, so the rings are a diff of
+// the kernel's own result and the shot must win.
+const SHOT: XiangqiMove = { from: 'd6', to: 'd1' };
+const shotFrom = fourPoint.parseFen(fourPoint.fen(SHUFFLE_B).replace(' w ', ' b '), 'retired-shot');
+if (!shotFrom) throw new Error('retired-variants diagram: (b) with Black to move should parse');
+const shotState = play(shotFrom, 'd6d1');
+const SHOT_GONE = emptiedBy(SHUFFLE_B.board, shotState.board, SHOT);
+for (const square of ['d1', 'd2', 'e1'] as const) {
+  if (!SHOT_GONE.includes(square))
+    throw new Error(`retired-variants diagram: Cxd1 should remove ${square}`);
+}
+if (shotState.status.type !== 'finished' || shotState.status.winner !== 'black')
+  throw new Error('retired-variants diagram: Cxd1 should end the game for Black');
+
+export const RETIRED_VARIANTS_THUMBNAIL = () =>
+  xqHalfBoardThumbnailSvg({
+    state: xqVisionDemoState('retired-thumb', SHUFFLE_B.board),
+    half: 'bottom',
+    perspective: 'red',
+    arrows: [SHOT],
+    overlay: blastRings(SHOT_GONE, 0, 0),
+    ariaLabel: 'Atomic Xiangqi: a cannon threatening to fire over the chariot onto d1',
+  });
 
 // ── Fortress: the corner-palace drop mate ────────────────────────────────────
 // Red's general sits in its corner palace on a1. A black horse on c3 covers
