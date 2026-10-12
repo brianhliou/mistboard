@@ -520,6 +520,11 @@ test('the announcement archive is indexable and answers on one URL', () => {
   assert.equal(legacyPageRedirect('/news'), '/feed');
   assert.equal(legacyPageRedirect('/news/'), '/feed');
   assert.equal(legacyPageRedirect('/feed'), null);
+  // Each month has its own page; only a well-formed month is a route.
+  assert.equal(isClientRoute('/feed/2026-09'), true);
+  assert.equal(isNoindexRoute('/feed/2026-09'), false);
+  assert.equal(isClientRoute('/feed/2026-9'), false);
+  assert.equal(isClientRoute('/feed/anything'), false);
 });
 
 test('isNoindexRoute ignores a trailing slash', () => {

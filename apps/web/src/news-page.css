@@ -97,3 +97,45 @@
   text-decoration: underline;
   outline: none;
 }
+
+/* The month row and month headings, the /changelog shape. */
+.news-page-months {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 0 0 8px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid var(--site-border-soft);
+  font-size: 14px;
+}
+
+.news-page-months-link {
+  color: var(--site-muted);
+  text-decoration: none;
+}
+
+/* On a month's own page, that month. */
+.news-page-months-link[aria-current="page"] {
+  color: var(--site-text);
+  font-weight: 600;
+}
+
+.news-page-months-link:hover {
+  color: var(--site-accent);
+  text-decoration: underline;
+}
+
+.news-page-month-heading {
+  margin: 24px 0 8px;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.news-page-month-anchor {
+  color: var(--site-heading);
+  text-decoration: none;
+}
+
+.news-page-month-anchor:hover {
+  text-decoration: underline;
+}

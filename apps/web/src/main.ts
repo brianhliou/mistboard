@@ -283,7 +283,12 @@ const articleSlug = articleSlugFromPath(path);
 const articleLang = articleLangFromPath(path);
 const articleIndexView = articleIndexViewFromPath(path);
 const wantsArticlesIndex = articleIndexView !== null || page === 'blog';
-const wantsNews = path === '/feed' || path === '/news' || page === 'feed' || page === 'news';
+const wantsNews =
+  path === '/feed' ||
+  /^\/feed\/\d{4}-\d{2}$/.test(path) ||
+  path === '/news' ||
+  page === 'feed' ||
+  page === 'news';
 const forumRedirectPostId = forumRedirectPostIdFromPath(path);
 const forumTopicId = forumTopicIdFromPath(path);
 const wantsForumReports = path === '/forum/reports';

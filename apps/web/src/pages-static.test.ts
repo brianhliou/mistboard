@@ -23,7 +23,7 @@ async function flushPromises(): Promise<void> {
   await Promise.resolve();
 }
 
-describe('about page platform activity', () => {
+describe('static pages', () => {
   beforeEach(() => {
     window.history.replaceState(null, '', '/about');
     document.body.innerHTML = '';
@@ -34,31 +34,14 @@ describe('about page platform activity', () => {
     document.body.innerHTML = '';
   });
 
-  it('hydrates public platform activity stats', async () => {
-    const fetchMock = vi.fn(async () => ({
-      ok: true,
-      json: async () => ({
-        generatedAt: '2026-05-29T12:00:00.000Z',
-        totalCompletedGames: 1234,
-        last30dCompletedGames: 56,
-        publicGames: 78,
-        modeTotals: { pvp: 42, pve: 31, eve: 9 },
-        dailyCompletedGames: [
-          { date: '2026-05-11', completedGames: 10, cumulativeGames: 10 },
-          { date: '2026-05-12', completedGames: 0, cumulativeGames: 10 },
-          { date: '2026-05-13', completedGames: 20, cumulativeGames: 30 },
-          { date: '2026-05-14', completedGames: 0, cumulativeGames: 30 },
-          { date: '2026-05-15', completedGames: 26, cumulativeGames: 56 },
-        ],
-      }),
-    }));
+  it('renders the about page without fetching game totals', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: false }));
     vi.stubGlobal('fetch', fetchMock);
 
     const root = document.createElement('main');
     document.body.append(root);
     mountAbout(root);
 
-    expect(root.textContent).toContain('Loading activity totals...');
     expect(root.querySelector('.static-page-rail')).not.toBeNull();
     expect(
       root.querySelector<HTMLAnchorElement>('.static-page-rail-link.active')?.textContent,
@@ -93,88 +76,24 @@ describe('about page platform activity', () => {
       'Thank you',
       'Is Mistboard lagging?',
     ]);
+    // Game totals live only on /stats (linked from the rail above); About
+    // neither fetches nor shows them.
     await flushPromises();
-
-    expect(fetchMock).toHaveBeenCalledWith('/api/stats/public', { credentials: 'same-origin' });
-    expect(root.textContent).toContain('Player game activity');
-    expect(root.textContent).toContain('finished games');
-    expect(root.textContent).toContain('1,234');
-    expect(root.textContent).toContain('last 30 days');
-    expect(root.textContent).toContain('Player vs player');
-    expect(root.textContent).not.toContain('Engine lab');
-    const pageText = root.textContent ?? '';
-    expect(pageText.indexOf('Open source foundation')).toBeLessThan(
-      pageText.indexOf('Player game activity'),
-    );
-    expect(root.querySelectorAll('.platform-activity-metric')).toHaveLength(0);
-    // The chart lives on /stats; the about section links there instead.
-    expect(root.querySelector('.platform-activity-chart')).toBeNull();
-    const more = root.querySelector<HTMLAnchorElement>('.platform-activity-more');
-    expect(more?.textContent).toBe('Full statistics');
-    expect(more?.getAttribute('href')).toBe('/stats');
-    const modeItems = root.querySelectorAll('.platform-activity-mode-item');
-    expect(modeItems).toHaveLength(2);
-    expect(modeItems[0]?.textContent).toBe('Player vs player 42');
-    expect(modeItems[1]?.textContent).toBe('Player vs engine 31');
-    expect(root.querySelector('.platform-activity-mode-list')?.getAttribute('aria-label')).toBe(
-      'Mode split',
-    );
-    expect(root.querySelector('.platform-activity-mode-heading')).toBeNull();
-    expect(root.querySelector('.platform-activity-markers')).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalledWith('/api/stats/public', expect.anything());
+    expect(root.querySelector('.platform-activity')).toBeNull();
+    expect(root.textContent).not.toContain('Player game activity');
   });
 
-  it('keeps the about page readable when stats are unavailable', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => ({ ok: false, status: 503 })),
-    );
-
-    const root = document.createElement('main');
-    document.body.append(root);
-    mountAbout(root);
-    await flushPromises();
-
-    expect(root.textContent).toContain("Game totals can't be shown right now.");
-    expect(root.textContent).toContain('Trust by design');
-  });
-
-  it('localizes Traditional Chinese about copy and activity stats', async () => {
+  it('localizes Traditional Chinese about copy', () => {
     window.history.replaceState(null, '', '/zh-hant/about');
-    const fetchMock = vi.fn(async () => ({
-      ok: true,
-      json: async () => ({
-        generatedAt: '2026-05-29T12:00:00.000Z',
-        totalCompletedGames: 1234,
-        last30dCompletedGames: 56,
-        publicGames: 78,
-        modeTotals: { pvp: 42, pve: 31, eve: 9 },
-        dailyCompletedGames: [
-          { date: '2026-05-11', completedGames: 10, cumulativeGames: 10 },
-          { date: '2026-05-12', completedGames: 0, cumulativeGames: 10 },
-          { date: '2026-05-13', completedGames: 20, cumulativeGames: 30 },
-        ],
-      }),
-    }));
-    vi.stubGlobal('fetch', fetchMock);
 
     const root = document.createElement('main');
     document.body.append(root);
     mountAbout(root);
-
-    expect(root.textContent).toContain('正在載入活動統計...');
-    await flushPromises();
 
     expect(root.querySelector('h1')?.textContent).toBe('關於 Mistboard');
     expect(root.textContent).toContain('以設計建立信任');
-    expect(root.textContent).toContain('玩家對局活動');
-    expect(root.textContent).toContain('共 1,234 局已完成的對局');
-    expect(root.textContent).toContain('過去 30 天有 56 局');
-    expect(root.textContent).toContain('玩家對玩家');
-    expect(root.textContent).toContain('玩家對引擎');
-    expect(root.querySelector('.platform-activity-mode-list')?.getAttribute('aria-label')).toBe(
-      '模式分布',
-    );
-    expect(root.querySelector('.platform-activity-more')?.textContent).toBe('完整統計');
+    expect(root.textContent).not.toContain('玩家對局活動');
   });
 
   it('localizes Traditional Chinese source page chrome', () => {

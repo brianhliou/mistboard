@@ -28,7 +28,7 @@ describe('xiangqiqipu.com player photos', () => {
       expect(entry.sourceUrl).toBe(
         `https://www.xiangqiqipu.com/Player/View-${entry.xiangqiqipuId}.html`,
       );
-      expect(entry.credit).toBe('中国象棋棋谱网');
+      expect(entry.credit).toBe('永乐象棋棋谱网');
       expect(entry.permission).toBe('2026-10-11');
       expect(entry.photo).toBe(`/player-photos/${entry.slug}.jpg`);
       const file = join(PUBLIC_DIR, entry.photo);
