@@ -102,7 +102,37 @@ const SERVER_FOG_BOARD: Board = {
 };
 
 // ── Per-slug OG / thumbnail positions ─────────────────────────────────────────
-const DARK_CHESS_START = darkChessVariant.createInitialState('dark-chess-rules-start');
+// No card or thumbnail shows the start position: at thumbnail size it reads as a
+// pattern, and a game under way invites the click (Brian, 2026-10-11). Each is
+// replayed here through the kernel, which throws on an illegal move, so the
+// board cannot drift into an impossible one. Castling is king-takes-rook.
+function replayChess(id: string, line: string): GameState {
+  let state = darkChessVariant.createInitialState(id);
+  for (const token of line.split(' ')) {
+    const turn = state.status.type === 'playing' ? state.status.turn : null;
+    const move = { from: token.slice(0, 2) as Square, to: token.slice(2, 4) as Square };
+    const legal =
+      turn !== null &&
+      darkChessVariant
+        .getLegalMoves(state, turn)
+        .some((m) => m.from === move.from && m.to === move.to);
+    if (!legal) throw new Error(`${id}: ${token} is not legal`);
+    state = darkChessVariant.applyMove(state, move);
+  }
+  return state;
+}
+
+// Giuoco Piano, the main line: 1.e4 e5 2.Nf3 Nc6 3.Bc4 Bc5 4.c3 Nf6 5.d4 exd4
+// 6.cxd4 Bb4+ 7.Bd2 Bxd2+ 8.Nbxd2 d5 9.exd5 Nxd5 10.Qb3 Nce7 11.O-O O-O.
+export const CHESS_CARD_LINE =
+  'e2e4 e7e5 g1f3 b8c6 f1c4 f8c5 c2c3 g8f6 d2d4 e5d4 c3d4 c5b4 c1d2 b4d2 b1d2 d7d5 ' +
+  'e4d5 f6d5 d1b3 c6e7 e1h1 e8h8';
+// The Scotch, Mieses Variation: 1.e4 e5 2.Nf3 Nc6 3.d4 exd4 4.Nxd4 Nf6 5.Nxc6 bxc6
+// 6.e5 Qe7 7.Qe2 Nd5 8.c4, seen through White's fog.
+export const FOG_CHESS_CARD_LINE =
+  'e2e4 e7e5 g1f3 b8c6 d2d4 e5d4 f3d4 g8f6 d4c6 b7c6 e4e5 d8e7 d1e2 f6d5 c2c4';
+const CHESS_CARD = replayChess('chess-card', CHESS_CARD_LINE);
+const FOG_CHESS_CARD = replayChess('fog-chess-card', FOG_CHESS_CARD_LINE);
 const CONE_QUEEN = demoState('cone-queen', CONE_QUEEN_BOARD);
 const DARK_CHESS_CONCEPTS = demoState('dark-chess-concepts-deduction', DARK_CHESS_CONCEPTS_BOARD);
 
@@ -123,14 +153,14 @@ export const SERVER_FOG_TRIPTYCH: {
 };
 
 export const ARTICLE_OG_POSITIONS: Record<string, ArticleOgPosition> = {
-  // The chess primer is perfect-information: the start position, no fog.
+  // The chess primer is perfect-information: a known opening, no fog.
   chess: {
-    pieces: boardToPieces(DARK_CHESS_START.board),
+    pieces: boardToPieces(CHESS_CARD.board),
     orientation: 'white',
   },
   'dark-chess': {
-    pieces: boardToPieces(DARK_CHESS_START.board),
-    fogSquares: fogFor(DARK_CHESS_START, 'white'),
+    pieces: boardToPieces(FOG_CHESS_CARD.board),
+    fogSquares: fogFor(FOG_CHESS_CARD, 'white'),
     orientation: 'white',
   },
   'dark-chess-concepts': {

@@ -31,12 +31,7 @@ import {
   renderBoardAspectCard,
   renderBoardCard,
 } from './og-card-board.js';
-import {
-  type PositionOgBoard,
-  type PositionOgVariant,
-  resolvePositionOg,
-  startPositionFen,
-} from './og-position.js';
+import { type PositionOgBoard, type PositionOgVariant, resolvePositionOg } from './og-position.js';
 import { escapeXml, OG_FONT, OG_HEIGHT, OG_WIDTH } from './og-primitives.js';
 import {
   createPngCache,
@@ -217,32 +212,119 @@ export const PIKAFISH_CARD_MOVES =
 export const PIKAFISH_CARD_FEN =
   'r1b1kabr1/4a1c2/1cn6/p1p1pR2p/6pn1/2P6/P3P1P1P/C1N1C1N2/9/1RBAKAB2 b - - 19 10';
 
+// No card shows a start position: a start reads as a pattern at thumbnail size,
+// and a game under way invites the click (Brian, 2026-10-11). Each card below is
+// a mid-game reached by a line og-image.test.ts replays move by move through the
+// variant's kernel and checks for legality, so no FEN can drift into an
+// impossible board. Xiangqi lines are in Chinese notation; the rest are kernel
+// squares (files a.., ranks from 1 on Red's side), `x@y` naming a duck's square
+// or a drop, and a square repeated (`b3b3`) a flip.
+
+// Same Direction Cannons, Straight Rook against Horizontal Rook (顺炮直车对横车),
+// played on by Pikafish to Black's 16th move: rooks across the river, a knight
+// on the rib, a rook exchange already made.
+export const XIANGQI_CARD_MOVES =
+  '炮二平五 炮8平5 马二进三 马8进7 车一平二 车9进1 马八进七 车9平4 兵七进一 车4进5 ' +
+  '相七进九 炮2平3 车二进五 马2进1 兵三进一 车1平2 马三进四 车4平3 车九平七 车2进6 ' +
+  '马四进六 车2退2 仕六进五 士6进5 炮五平四 卒1进1 炮四进一 炮5进4 马七进五 车3平5';
+export const XIANGQI_CARD_FEN =
+  '2bak1b2/4a4/n1c3n2/2p1p1p1p/pr1N3R1/2P3P2/P3rC2P/BC7/4A4/2R1KAB2 r - - 0 16';
+
+// Central Cannon against Reverse Palcorner Horses (中炮对反宫马), played on by
+// Pikafish: a cannon each deep in the other camp. The card fogs it as Red sees it.
+export const FOG_XIANGQI_CARD_MOVES =
+  '炮二平五 马2进3 马二进三 炮8平6 车一平二 马8进7 兵三进一 卒3进1 马八进九 象7进5 ' +
+  '炮八平六 车1平2 车九平八 炮2进4 马九退七 炮2退1 兵九进一 士6进5 车八进三 车9平6 ' +
+  '马七进九 炮2平4 车八进六 马3退2 炮五进四 炮6进6';
+export const FOG_XIANGQI_CARD_FEN =
+  '1nbakr3/4a4/4b1n2/p3C1p1p/2p6/P2c2P2/2P1P3P/N2C2N2/5c3/2BAKABR1 r - - 1 14';
+
+// A central-cannon opening on a shuffled deal (og-image.test.ts holds it): eight
+// pieces turned face up, three captures, the rest still face down.
+export const JIEQI_CARD_MOVES = 'h3e3 h8e8 h1g3 h10g8 c4c5 c7c6 c5c6 b8b1 a1b1 i10i9';
+export const JIEQI_CARD_FEN =
+  'xxxxkxx2/8r/4p1a2/x3x1x1x/2R6/9/X3X1X1X/1X2B1P2/9/1CXXKXX1X w R1A2C0P4N2B1r1a1c2p2n2b2 1 6';
+
+// Fairy-Stockfish self-play: both treasures out of the corner, a knight
+// exchanged and sitting in Red's hand, Red's rook in Black's half.
+export const FORTRESS_XIANGQI_CARD_MOVES =
+  'e1e4 b7b6 e4f4 d8f6 f2f3 b8c6 f1e3 c6e5 g1e1 c8c5 e3d5 a8c8 b2b3 g7g6 d5c3 e5c4 ' +
+  'e1e4 c5b5 a1b2 c4d6 c3d5 g8g7 b3b4 b5a5 e4e7 c8c5 d5e3 c5c7 a2a3 c7b7 f4d4 a5g5 ' +
+  'f3f4 f8g8 e7e6 g5c5 f4f5 g8f8 d4g4 g7g8 g4f4 d6c4 e3c4 g6g5';
+export const FORTRESS_XIANGQI_CARD_FEN =
+  '4akq/pr1p1p1/1p2Re1/2c2Pp/1PN2C1/P6/1Q1P2P/1KAE3[N] w - - 0 23';
+
+// Central cannon against Screen Horses, then Fairy-Stockfish self-play: Red's
+// cannon has taken a horse and the duck sits in front of Black's cannons.
+export const DUCK_XIANGQI_CARD_MOVES =
+  'h3e3@e6 h10g8@e5 h1g3@d5 b10c8@e6 i1h1@g6 d10e9@h3 b1c3@i8 b8b6@h5 ' +
+  'b3b5@g6 h8h6@h2 b5g5@g6 i10i8@h3 g5g8@h8 h6c6@c5';
+export const DUCK_XIANGQI_CARD_FEN =
+  'r1b1kab2/4a4/2n3C1r/p1p1p1p1p/1cc6/9/P1P1P1P1P/2N1C1N2/9/R1BAKABR1 w - - 1 8 c5';
+
+// A central-cannon opening, then Fairy-Stockfish self-play: a horse capture on
+// g5 blew both horses and Red's soldier off the board, and the gaps show it.
+export const ATOMIC_XIANGQI_CARD_MOVES =
+  'h3e3 h10g8 h1g3 i10h10 i1h1 b10c8 a1a2 a10a9 h1h7 g8e9 g4g5 e9f7 ' +
+  'e3f3 a9d9 b3d3 e10e9 g3f5 f7g5 d3d5 d9d6 a2f2 h8f8';
+export const ATOMIC_XIANGQI_CARD_FEN =
+  '2ba1abr1/4k4/1cn2c3/p1p1p1pRp/3r5/3C5/P1P1P3P/5C3/5R3/1NBAKAB2 w - - 4 12';
+
+// A central-cannon opening, then Fairy-Stockfish self-play: advisors dropped
+// out of hand onto open squares, a soldier dropped and recaptured.
+export const CRAZYHOUSE_XIANGQI_CARD_MOVES =
+  'h3e3 h10g8 h1g3 i10h10 b1c3 b10c8 a1d1 h10f10 i1h1 h8h10 g3e2 h10i10 A@f4 i10i4 ' +
+  'e3f3 A@f7 f4e3 f7e8 A@f4 A@f7 b3b5 i4i6 b5g5 g8e9 g5i5 P@b3 i5i7 b3c3 e2c3 i6e6';
+export const CRAZYHOUSE_XIANGQI_CARD_FEN =
+  'r3kr3/4n4/1cn1a4/p1p1pap1C/4c4/9/P1P1PAP2/2N1AC3/9/3RK2R1[BBPPnbb] w - - 1 16';
+
+// Elephants up the land files, leopards traded in the centre, Red's rat in the
+// water, and Black's rat beside Red's elephant: the one piece that can take it.
+export const JUNGLE_CARD_MOVES =
+  'g3g4 a7a6 c3d3 e7d7 d3d4 d7d6 g4g5 a6a5 d4d5 d6d5 e3d3 g7g6 a3a4 b8b7 a4b4 c7d7 g1g2 g9g8';
+export const JUNGLE_CARD_FEN = 't6/5dl/1c1w3/6r/e2p2E/1R5/3W3/1D3CT/L6 r 8 10';
+
+// On a shuffled deal (og-image.test.ts holds it): six tiles turned, a lion
+// taking a cat, the wolves trading off, nine tiles still face down.
+export const JUNGLE_FLIP_CARD_MOVES = 'b3b3 a3a3 b3a3 d3d3 c3c3 d3c3 d2d2 c2c2 b2b2';
+export const JUNGLE_FLIP_CARD_FEN = 'XXXX/L3/XDre/XXXX b R1C1P1T1E1d1p1t1l1 0 9';
+
 // Pages whose card is a position on the site board (og-card-board.ts), keyed by
-// the ARTICLE_META slug: the variant's start unless `fen` says otherwise. Mostly
-// rules pages; an article whose subject is a board game gets one too. The fog
-// xiangqi card shows Red's opening view: the kernel decides what Red can see,
-// never a hand list. These slugs used to be 'dark-*' and the cards silently
-// vanished at the dark->fog rename (2026-09-12 audit); the key here MUST be the
-// live slug. `hanzi` marks a xiangqi-family board, whose zh pages get the card
-// in the traditional set with a zh caption (ARTICLE_OG_ZH_SLUGS).
+// the ARTICLE_META slug. Mostly rules pages; an article whose subject is a board
+// game gets one too. The fog xiangqi card shows Red's view of its game: the
+// kernel decides what Red can see, never a hand list. These slugs used to be
+// 'dark-*' and the cards silently vanished at the dark->fog rename (2026-09-12
+// audit); the key here MUST be the live slug. `hanzi` marks a xiangqi-family
+// board, whose zh pages get the card in the traditional set with a zh caption
+// (ARTICLE_OG_ZH_SLUGS). `fen` is required: there is no start-position default.
 const BOARD_POSITION_CARDS: Record<
   string,
-  { variant: PositionOgVariant; fen?: string; redFog?: boolean; hanzi?: true }
+  { variant: PositionOgVariant; fen: string; redFog?: boolean; hanzi?: true }
 > = {
-  xiangqi: { variant: 'xiangqi', hanzi: true },
-  'fog-xiangqi': { variant: 'dark-xiangqi', redFog: true, hanzi: true },
-  jieqi: { variant: 'jieqi', hanzi: true },
+  xiangqi: { variant: 'xiangqi', fen: XIANGQI_CARD_FEN, hanzi: true },
+  'fog-xiangqi': {
+    variant: 'dark-xiangqi',
+    fen: FOG_XIANGQI_CARD_FEN,
+    redFog: true,
+    hanzi: true,
+  },
+  jieqi: { variant: 'jieqi', fen: JIEQI_CARD_FEN, hanzi: true },
   banqi: { variant: 'banqi', fen: BANQI_RULES_CARD_FEN, hanzi: true },
-  'fortress-xiangqi': { variant: 'fortress-xiangqi', hanzi: true },
-  'duck-xiangqi': { variant: 'duck-xiangqi', hanzi: true },
-  // Unlisted, but a rules link is still shared: the card is the standard
-  // array on the standard board, which is the array atomic starts from.
-  'atomic-xiangqi': { variant: 'atomic-xiangqi', hanzi: true },
-  // The kernel's start (startPositionFen): the standard array without its
-  // advisors and elephants, which start in hand.
-  'crazyhouse-xiangqi': { variant: 'crazyhouse-xiangqi', hanzi: true },
-  jungle: { variant: 'jungle' },
-  'jungle-flip': { variant: 'jungle-flip' },
+  'fortress-xiangqi': {
+    variant: 'fortress-xiangqi',
+    fen: FORTRESS_XIANGQI_CARD_FEN,
+    hanzi: true,
+  },
+  'duck-xiangqi': { variant: 'duck-xiangqi', fen: DUCK_XIANGQI_CARD_FEN, hanzi: true },
+  // Unlisted, but a rules link is still shared.
+  'atomic-xiangqi': { variant: 'atomic-xiangqi', fen: ATOMIC_XIANGQI_CARD_FEN, hanzi: true },
+  'crazyhouse-xiangqi': {
+    variant: 'crazyhouse-xiangqi',
+    fen: CRAZYHOUSE_XIANGQI_CARD_FEN,
+    hanzi: true,
+  },
+  jungle: { variant: 'jungle', fen: JUNGLE_CARD_FEN },
+  'jungle-flip': { variant: 'jungle-flip', fen: JUNGLE_FLIP_CARD_FEN },
   pikafish: { variant: 'xiangqi', fen: PIKAFISH_CARD_FEN, hanzi: true },
 };
 
@@ -304,16 +386,17 @@ export function articleOgImageUrl(host: string, slug: string, langPrefix?: strin
  *  (apps/web/src/article-og-image.ts); og-image.test.ts pins the two. */
 export const ARTICLE_OG_WIDE_ONLY_SLUGS: readonly string[] = Object.keys(CUSTOM_ARTICLE_OG_SVGS);
 
-/** The board a page's position card shows (its start position, or the entry's
- *  own), or null when the slug has none. */
+/** The board a page's position card shows, or null when the slug has none. */
 export function positionCardBoard(slug: string): PositionOgBoard | null {
   const entry = BOARD_POSITION_CARDS[slug];
   if (!entry) return null;
-  const resolved = resolvePositionOg(entry.variant, entry.fen ?? startPositionFen(entry.variant));
+  const resolved = resolvePositionOg(entry.variant, entry.fen);
   if (!resolved) return null;
   let board = resolved.board;
   if (entry.redFog && board.kind === 'intersection') {
-    const state = createInitialXiangqiState('og-card');
+    const parsed = parseStandardXiangqiFen(entry.fen, 'og-card');
+    if (!parsed.ok) return null;
+    const state = parsed.state;
     const visible = new Set(
       getXiangqiPlayerView(state, 'red').visibleSquares.map((square) => square as string),
     );

@@ -278,6 +278,207 @@ test('the banqi rules card is a game under way, not the face-down start', async 
   assert.equal(new Set(up.map((t) => (t.hidden ? null : t.ink))).size, 2, 'both inks face up');
 });
 
+test('no position card shows its variant at the start position', async () => {
+  const { positionCardBoard } = await import('./og-image.js');
+  const { resolvePositionOg, startPositionFen } = await import('./og-position.js');
+  const cards = {
+    xiangqi: 'xiangqi',
+    'fog-xiangqi': 'dark-xiangqi',
+    jieqi: 'jieqi',
+    banqi: 'banqi',
+    'fortress-xiangqi': 'fortress-xiangqi',
+    'duck-xiangqi': 'duck-xiangqi',
+    'atomic-xiangqi': 'atomic-xiangqi',
+    'crazyhouse-xiangqi': 'crazyhouse-xiangqi',
+    jungle: 'jungle',
+    'jungle-flip': 'jungle-flip',
+    pikafish: 'xiangqi',
+  } as const;
+  for (const [slug, variant] of Object.entries(cards)) {
+    const card = positionCardBoard(slug);
+    const start = resolvePositionOg(variant, startPositionFen(variant));
+    assert.ok(card && start, slug);
+    assert.notDeepEqual(card, start.board, `${slug} shows the start position`);
+  }
+});
+
+test('every mid-game rules card is a legal line, replayed by its kernel', async () => {
+  const og = await import('./og-image.js');
+  const g = await import('@mistboard/game');
+  const squares = (token: string) => {
+    const m = /^([a-z]\d+)([a-z]\d+)$/.exec(token);
+    assert.ok(m, token);
+    return { from: m[1], to: m[2] } as never;
+  };
+  // Replays a line, asserting each move is legal first: several kernels'
+  // apply functions return the state unchanged on an illegal move.
+  const replay = <S>(
+    name: string,
+    start: S,
+    line: string,
+    parse: (token: string) => never,
+    legal: (state: S, move: never) => boolean,
+    apply: (state: S, move: never) => S,
+  ): S => {
+    let state = start;
+    for (const token of line.split(' ')) {
+      const move = parse(token);
+      assert.ok(legal(state, move), `${name}: ${token} is legal`);
+      state = apply(state, move);
+    }
+    return state;
+  };
+
+  for (const [name, moves, fen, plies] of [
+    ['xiangqi', og.XIANGQI_CARD_MOVES, og.XIANGQI_CARD_FEN, 30],
+    ['fog-xiangqi', og.FOG_XIANGQI_CARD_MOVES, og.FOG_XIANGQI_CARD_FEN, 26],
+  ] as const) {
+    const imported = g.importXiangqiGame(moves);
+    assert.ok(!imported.error, imported.error);
+    assert.equal(imported.moves.length, plies, name);
+    let state = g.createInitialXiangqiState(name);
+    for (const move of imported.moves) {
+      assert.ok(g.isStandardXiangqiLegalMove(state, move), `${name}: ${move.from}${move.to}`);
+      state = g.applyStandardXiangqiMove(state, move);
+    }
+    assert.equal(g.standardXiangqiFen(state), fen, name);
+  }
+
+  // A shuffled deal, fixed here so the reveals are reproducible.
+  const jieqiDeal: import('@mistboard/game').JieqiDeal = {
+    red: [
+      'cannon',
+      'cannon',
+      'soldier',
+      'horse',
+      'advisor',
+      'horse',
+      'soldier',
+      'chariot',
+      'soldier',
+      'elephant',
+      'soldier',
+      'chariot',
+      'elephant',
+      'advisor',
+      'soldier',
+    ],
+    black: [
+      'cannon',
+      'soldier',
+      'advisor',
+      'chariot',
+      'soldier',
+      'soldier',
+      'soldier',
+      'soldier',
+      'horse',
+      'elephant',
+      'horse',
+      'elephant',
+      'cannon',
+      'advisor',
+      'chariot',
+    ],
+  };
+  const jieqi = replay(
+    'jieqi',
+    g.createInitialJieqiState('jieqi-card', jieqiDeal),
+    og.JIEQI_CARD_MOVES,
+    squares,
+    g.isJieqiLegalMove,
+    g.applyJieqiMove,
+  );
+  assert.equal(g.jieqiStateToPikafishFen(jieqi), og.JIEQI_CARD_FEN);
+
+  const fortress = replay(
+    'fortress',
+    g.createInitialFortressXiangqiState('fortress-card'),
+    og.FORTRESS_XIANGQI_CARD_MOVES,
+    squares,
+    g.isFortressXiangqiLegalMove,
+    g.applyFortressXiangqiMove,
+  );
+  assert.equal(g.fortressXiangqiEngineFen(fortress), og.FORTRESS_XIANGQI_CARD_FEN);
+
+  const duck = replay(
+    'duck',
+    g.createInitialDuckXiangqiState('duck-card'),
+    og.DUCK_XIANGQI_CARD_MOVES,
+    (token) => {
+      const [move, duckTo] = token.split('@');
+      return { ...(squares(move ?? '') as object), duckTo } as never;
+    },
+    g.isDuckXiangqiLegalTurn,
+    g.applyDuckXiangqiTurn,
+  );
+  assert.equal(g.duckXiangqiFen(duck), og.DUCK_XIANGQI_CARD_FEN);
+
+  const atomic = replay(
+    'atomic',
+    g.createInitialAtomicXiangqiState('atomic-card'),
+    og.ATOMIC_XIANGQI_CARD_MOVES,
+    squares,
+    g.isAtomicXiangqiLegalMove,
+    g.applyAtomicXiangqiMove,
+  );
+  assert.equal(g.atomicXiangqiFen(atomic), og.ATOMIC_XIANGQI_CARD_FEN);
+
+  const crazyhouse = replay(
+    'crazyhouse',
+    g.createInitialCrazyhouseXiangqiState('crazyhouse-card'),
+    og.CRAZYHOUSE_XIANGQI_CARD_MOVES,
+    (token) => {
+      const move = g.crazyhouseXiangqiMoveFromUci(token);
+      assert.ok(move, token);
+      return move as never;
+    },
+    g.isCrazyhouseXiangqiLegalMove,
+    g.applyCrazyhouseXiangqiMove,
+  );
+  assert.equal(g.crazyhouseXiangqiFen(crazyhouse), og.CRAZYHOUSE_XIANGQI_CARD_FEN);
+
+  const jungle = replay(
+    'jungle',
+    g.createInitialJungleState('jungle-card'),
+    og.JUNGLE_CARD_MOVES,
+    squares,
+    g.isJungleLegalMove,
+    g.applyJungleMove,
+  );
+  assert.equal(g.jungleStateToEngineFen(jungle), og.JUNGLE_CARD_FEN);
+
+  const flipDeal: import('@mistboard/game').JungleFlipDeal = (
+    [
+      ['red', 'leopard'],
+      ['black', 'tiger'],
+      ['red', 'cat'],
+      ['black', 'lion'],
+      ['red', 'tiger'],
+      ['red', 'dog'],
+      ['black', 'rat'],
+      ['black', 'elephant'],
+      ['black', 'cat'],
+      ['red', 'lion'],
+      ['red', 'wolf'],
+      ['black', 'wolf'],
+      ['black', 'leopard'],
+      ['red', 'elephant'],
+      ['red', 'rat'],
+      ['black', 'dog'],
+    ] as const
+  ).map(([color, role]) => ({ color, role }));
+  const flip = replay(
+    'jungle-flip',
+    g.createInitialJungleFlipState('jungle-flip-card', flipDeal),
+    og.JUNGLE_FLIP_CARD_MOVES,
+    squares,
+    g.isJungleFlipLegalMove,
+    g.applyJungleFlipMove,
+  );
+  assert.equal(g.jungleFlipStateToEngineFen(flip), og.JUNGLE_FLIP_CARD_FEN);
+});
+
 test("a zh page names its script's card; the English page and other boards do not", async () => {
   const { articleOgImageUrl } = await import('./og-image.js');
   const host = 'https://mistboard.com';
