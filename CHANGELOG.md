@@ -63,6 +63,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- Step-through boards in articles now slide the piece that moved (banqi chase, Benedict and Anti Xiangqi); fog of war boards stay still ([ba7d8d8a](https://github.com/brianhliou/mistboard/commit/ba7d8d8a))
 - Every game board in a blog article now has the engine's advantage chart under it; click the chart to jump to a move ([105d81c7](https://github.com/brianhliou/mistboard/commit/105d81c7))
 - Game studies list each game as players, date and result, grouped by event, with Chinese event names in English ([ce868b07](https://github.com/brianhliou/mistboard/commit/ce868b07))
 - Tony Fung 冯家俊's page now covers his Asian Individual Championship win in Manila, Hong Kong's first, with the final against Wang Yubo on the board ([ce868b07](https://github.com/brianhliou/mistboard/commit/ce868b07))
@@ -147,6 +148,8 @@ Conventions:
 
 ### Site
 
+- Pages load faster on return visits; built scripts and styles are now cached for a year ([ba7d8d8a](https://github.com/brianhliou/mistboard/commit/ba7d8d8a))
+- Links shared from a rules page now preview a game in progress, in square, 4:3 and 16:9 sizes, with Chinese cards in Chinese ([ba7d8d8a](https://github.com/brianhliou/mistboard/commit/ba7d8d8a))
 - the About page drops its game totals; they live on the Statistics page ([ef9b8e53](https://github.com/brianhliou/mistboard/commit/ef9b8e53))
 - the updates page shows the last two months, with every month on a page of its own ([ef9b8e53](https://github.com/brianhliou/mistboard/commit/ef9b8e53))
 - article cards show a clean half board, with no piece hidden under the date or the featured star ([f04df5fc](https://github.com/brianhliou/mistboard/commit/f04df5fc))
@@ -187,6 +190,8 @@ Conventions:
 
 ### Fixed
 
+- A bot move that timed out is now retried on a healthy engine worker instead of the one being restarted ([ba7d8d8a](https://github.com/brianhliou/mistboard/commit/ba7d8d8a))
+- The account menu's ping now times the server your games connect to, not the slower page path ([ba7d8d8a](https://github.com/brianhliou/mistboard/commit/ba7d8d8a))
 - five player pages no longer show a childhood portrait; they keep the character tile ([8ca17ae7](https://github.com/brianhliou/mistboard/commit/8ca17ae7))
 - read-next cards on an English-only post follow the Chinese interface ([8ca17ae7](https://github.com/brianhliou/mistboard/commit/8ca17ae7))
 - Cao Yanlei's article card shows the same photo as his page again ([8ca17ae7](https://github.com/brianhliou/mistboard/commit/8ca17ae7))
