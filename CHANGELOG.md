@@ -63,6 +63,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- Step-through boards in articles now slide the piece that moved (banqi chase, Benedict and Anti Xiangqi); fog of war boards stay still ([48b1258e](https://github.com/brianhliou/mistboard/commit/48b1258e))
 - Step-through boards in articles now slide the piece that moved (banqi chase, Benedict and Anti Xiangqi); fog of war boards stay still ([ba7d8d8a](https://github.com/brianhliou/mistboard/commit/ba7d8d8a))
 - Every game board in a blog article now has the engine's advantage chart under it; click the chart to jump to a move ([105d81c7](https://github.com/brianhliou/mistboard/commit/105d81c7))
 - Game studies list each game as players, date and result, grouped by event, with Chinese event names in English ([ce868b07](https://github.com/brianhliou/mistboard/commit/ce868b07))
@@ -148,6 +149,8 @@ Conventions:
 
 ### Site
 
+- Pages load faster on return visits; built scripts and styles are now cached for a year ([48b1258e](https://github.com/brianhliou/mistboard/commit/48b1258e))
+- Links shared from a rules page now preview a game in progress, in square, 4:3 and 16:9 sizes, with Chinese cards in Chinese ([48b1258e](https://github.com/brianhliou/mistboard/commit/48b1258e))
 - Pages load faster on return visits; built scripts and styles are now cached for a year ([ba7d8d8a](https://github.com/brianhliou/mistboard/commit/ba7d8d8a))
 - Links shared from a rules page now preview a game in progress, in square, 4:3 and 16:9 sizes, with Chinese cards in Chinese ([ba7d8d8a](https://github.com/brianhliou/mistboard/commit/ba7d8d8a))
 - the About page drops its game totals; they live on the Statistics page ([ef9b8e53](https://github.com/brianhliou/mistboard/commit/ef9b8e53))
@@ -190,6 +193,8 @@ Conventions:
 
 ### Fixed
 
+- A bot move that timed out is now retried on a healthy engine worker instead of the one being restarted ([48b1258e](https://github.com/brianhliou/mistboard/commit/48b1258e))
+- The account menu's ping now times the server your games connect to, not the slower page path ([48b1258e](https://github.com/brianhliou/mistboard/commit/48b1258e))
 - A bot move that timed out is now retried on a healthy engine worker instead of the one being restarted ([ba7d8d8a](https://github.com/brianhliou/mistboard/commit/ba7d8d8a))
 - The account menu's ping now times the server your games connect to, not the slower page path ([ba7d8d8a](https://github.com/brianhliou/mistboard/commit/ba7d8d8a))
 - five player pages no longer show a childhood portrait; they keep the character tile ([8ca17ae7](https://github.com/brianhliou/mistboard/commit/8ca17ae7))
