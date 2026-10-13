@@ -131,7 +131,8 @@ export interface XmjMeld {
   readonly claimed?: XmjTile;
 }
 
-function sortTiles(tiles: readonly XmjTile[]): XmjTile[] {
+/** Tiles in kind order (red before black, K A E R H C P). */
+export function xmjSortTiles(tiles: readonly XmjTile[]): XmjTile[] {
   return [...tiles].sort((a, b) => XMJ_TILE_KINDS.indexOf(a) - XMJ_TILE_KINDS.indexOf(b));
 }
 
@@ -370,8 +371,8 @@ export function xmjOtherSeat(seat: XmjSeatIndex): XmjSeatIndex {
 /** Deal from the front of the wall: dealer five, the other four (spec 3). */
 export function xmjDeal(wall: readonly XmjTile[], dealer: XmjSeatIndex): XmjHandState {
   if (wall.length !== 32) throw new Error(`xmjDeal: wall has ${wall.length} tiles, expected 32`);
-  const dealerHand = sortTiles(wall.slice(0, XMJ_DEALER_TILES));
-  const otherHand = sortTiles(wall.slice(XMJ_DEALER_TILES, XMJ_DEALER_TILES + XMJ_OTHER_TILES));
+  const dealerHand = xmjSortTiles(wall.slice(0, XMJ_DEALER_TILES));
+  const otherHand = xmjSortTiles(wall.slice(XMJ_DEALER_TILES, XMJ_DEALER_TILES + XMJ_OTHER_TILES));
   const hands: [XmjTile[], XmjTile[]] =
     dealer === 0 ? [dealerHand, otherHand] : [otherHand, dealerHand];
   return {
@@ -400,7 +401,7 @@ function drawFor(state: XmjHandState, seat: XmjSeatIndex): XmjHandState {
     ...state,
     wall,
     turn: seat,
-    hands: setSeat(state.hands, seat, sortTiles([...(state.hands[seat] ?? []), tile])),
+    hands: setSeat(state.hands, seat, xmjSortTiles([...(state.hands[seat] ?? []), tile])),
     draws: setSeat(state.draws, seat, (state.draws[seat] ?? 0) + 1),
     phase: { type: 'discard', mayWin: true, drawn: tile },
   };
@@ -441,7 +442,7 @@ export function xmjPass(state: XmjHandState): XmjHandState {
 }
 
 function sameTiles(a: readonly XmjTile[], b: readonly XmjTile[]): boolean {
-  return sortTiles(a).join() === sortTiles(b).join();
+  return xmjSortTiles(a).join() === xmjSortTiles(b).join();
 }
 
 /** Make a claim. Returns the state unchanged if the claim is not legal. */
@@ -457,7 +458,7 @@ export function xmjClaim(state: XmjHandState, claim: XmjClaim): XmjHandState {
   const pile = state.discards[discarder].slice(0, -1);
   const discards = setSeat(state.discards, discarder, pile);
   if (legal.kind === 'win') {
-    const concealed = sortTiles([...state.hands[seat], discard]);
+    const concealed = xmjSortTiles([...state.hands[seat], discard]);
     const score = xmjScore({
       concealed,
       melds: state.melds[seat],
@@ -478,7 +479,7 @@ export function xmjClaim(state: XmjHandState, claim: XmjClaim): XmjHandState {
   const hand = removeTiles(state.hands[seat], legal.fromHand) as XmjTile[];
   const meld: XmjMeld = {
     kind: legal.kind === 'pung' ? 'triplet' : 'sequence',
-    tiles: sortTiles([...legal.fromHand, discard]),
+    tiles: xmjSortTiles([...legal.fromHand, discard]),
     claimed: discard,
   };
   return {
