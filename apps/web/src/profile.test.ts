@@ -21,9 +21,12 @@ describe('profile ratings rail', () => {
     const section = buildProfileRatings([]);
 
     expect(section.textContent).toContain('Fog Chess');
-    // Atomic + Duck + Fortress + Crazyhouse + Flip Jungle + Jungle + Dark Chess
-    // (always-on) = 7 rows.
-    expect(section.querySelectorAll('.profile-rating-row-empty')).toHaveLength(7);
+    // Duck + Crazyhouse + Flip Jungle + Jungle + Dark Chess (always-on) = 5
+    // rows. Fortress and Atomic Xiangqi retired on 2026-10-11: their pools are
+    // kept but no profile lists them.
+    expect(section.querySelectorAll('.profile-rating-row-empty')).toHaveLength(5);
+    expect(section.textContent).not.toContain('Fortress Xiangqi');
+    expect(section.textContent).not.toContain('Atomic Xiangqi');
   });
 
   it('localizes Traditional Chinese profile ratings rows', async () => {
@@ -31,11 +34,11 @@ describe('profile ratings rail', () => {
     const { buildProfileRatings } = await import('./profile.js');
 
     // Xiangqi pivot: Drop Mini is off the rating grids; localize an on-grid row
-    // (Fortress Xiangqi) instead.
+    // (Crazyhouse Xiangqi) instead.
     const section = buildProfileRatings(
       [
         {
-          variant: 'fortress_xiangqi',
+          variant: 'crazyhouse_xiangqi',
           timeClass: 'blitz',
           eloRating: 1520,
           ratedGamesPlayed: 2,
@@ -47,7 +50,7 @@ describe('profile ratings rail', () => {
     );
 
     expect(section.querySelector('h2')?.textContent).toBe('評分');
-    expect(section.textContent).toContain('堡壘象棋');
+    expect(section.textContent).toContain('瘋狂屋象棋');
     expect(section.textContent).toContain('2 局計分對局');
   });
 
@@ -426,7 +429,7 @@ describe('profile ratings rail', () => {
         provisional: false,
       },
       {
-        variant: 'fortress_xiangqi',
+        variant: 'crazyhouse_xiangqi',
         timeClass: 'blitz',
         eloRating: 1520,
         ratedGamesPlayed: 2,
@@ -436,13 +439,13 @@ describe('profile ratings rail', () => {
     ]);
 
     const rows = [...section.querySelectorAll<HTMLElement>('.profile-rating-row')];
-    // Canonical registry order throughout (fortress before fog), with played
+    // Canonical registry order throughout (crazyhouse before fog), with played
     // rows undimmed and every never-played row dimmed.
     const { profileRatingVariants } = await import('./variants.js');
     expect(rows.map((row) => row.dataset.variant)).toEqual(
       profileRatingVariants.map((variant) => variant.id),
     );
-    const played = new Set(['fog', 'fortress_xiangqi']);
+    const played = new Set(['fog', 'crazyhouse_xiangqi']);
     for (const row of rows) {
       expect(row.classList.contains('profile-rating-row-empty')).toBe(
         !played.has(row.dataset.variant ?? ''),
@@ -565,14 +568,16 @@ describe('profile ratings rail', () => {
 
     await mountLeaderboard(root);
 
-    // Xiangqi pivot: Drop Mini is off the grids even with a ladder row;
-    // Fortress is an always-on ladder.
+    // Xiangqi pivot: Drop Mini is off the grids even with a ladder row, and so
+    // are the retired Fortress and Atomic Xiangqi pools (2026-10-11).
     expect(root.textContent).not.toContain('Drop Mini Xiangqi');
-    expect(root.textContent).toContain('Fortress Xiangqi');
+    expect(root.textContent).not.toContain('Fortress Xiangqi');
+    expect(root.textContent).not.toContain('Atomic Xiangqi');
+    expect(root.textContent).toContain('Crazyhouse Xiangqi');
     expect(root.textContent).toContain('Rated ladders across Mistboard variants.');
-    // 7 rated ladders (Dark Chess + always-on Jungle, Flip Jungle, Fortress,
-    // Duck, Atomic, Crazyhouse).
-    expect(root.querySelectorAll('.leaderboard-panel')).toHaveLength(7);
+    // 5 rated ladders (Dark Chess + always-on Jungle, Flip Jungle, Duck,
+    // Crazyhouse).
+    expect(root.querySelectorAll('.leaderboard-panel')).toHaveLength(5);
     expect(root.textContent).not.toContain('Active players');
     // One summary per live pace; correspondence stays off while its rated
     // switch is off.
@@ -717,8 +722,6 @@ describe('profile ratings rail', () => {
     expect(titles).toEqual([
       'Duck Xiangqi',
       'Crazyhouse Xiangqi',
-      'Fortress Xiangqi',
-      'Atomic Xiangqi',
       'Fog Chess',
       'Jungle Chess',
       'Flip Jungle',
@@ -766,11 +769,11 @@ describe('profile ratings rail', () => {
   it('localizes Traditional Chinese leaderboard chrome', async () => {
     window.history.replaceState(null, '', '/zh-hant/player');
     vi.stubEnv('DEV', false);
-    // (Fortress Xiangqi) instead.
+    // (Crazyhouse Xiangqi) instead.
     stubLeaderboardFetch({
       ladders: [
         {
-          variant: 'fortress_xiangqi',
+          variant: 'crazyhouse_xiangqi',
           leaderboard: [
             {
               rank: 1,
@@ -791,7 +794,7 @@ describe('profile ratings rail', () => {
 
     expect(root.querySelector('h1')?.textContent).toBe('排行榜');
     expect(root.textContent).toContain('Mistboard 各變體的等級分排行榜。');
-    expect(root.textContent).toContain('堡壘象棋');
+    expect(root.textContent).toContain('瘋狂屋象棋');
     expect(root.querySelector('.leaderboard-pace-heading')?.textContent).toBeTruthy();
     expect(root.textContent).not.toContain('活躍玩家');
     expect(root.querySelector('.leaderboard-online-heading')?.textContent).toBe('線上玩家');

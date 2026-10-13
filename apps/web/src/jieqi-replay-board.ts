@@ -34,6 +34,7 @@ import {
   type JieqiBoardMarker,
   renderJieqiBoardSvg,
 } from './live-jieqi-render.js';
+import { BEST_STYLE } from './review/engine/engine-arrows.js';
 import { moveGlyphTone } from './review/move-glyph.js';
 import {
   type ChapterShape,
@@ -58,6 +59,13 @@ export type JieqiReplayAnnotations = {
   assessments?: Record<number, string>;
   /** Shapes drawn on the position after `ply` mainline moves (0 = the root). */
   shapes?: Record<number, ChapterShape[]>;
+  /** Draw the mainline move played from this ply as an arrow, in the review's
+   *  best-move style, on that position only: the move a board is about, shown
+   *  on the frame it opens on. Every other position keeps the plain marks. */
+  openingArrowPly?: number;
+  /** The move drawn there instead of the one played from it, as a token
+   *  (`i10i4`): a capture the board is about that waits a few turns. */
+  openingArrowMove?: string;
 };
 
 // Squares are a1-i10, so a token is 4-6 characters and the rank may be two
@@ -137,6 +145,12 @@ function shapeOverlay(shapes: readonly ChapterShape[]): {
   return { arrows, markers };
 }
 
+/** The move about to be played, drawn as the review draws an engine's best
+ *  move (engine-arrows BEST_STYLE, `xq-arrow--best`). */
+export function nextMoveArrow(move: JieqiMove): JieqiBoardArrow {
+  return { from: move.from, to: move.to, ...BEST_STYLE, className: 'xq-arrow--best' };
+}
+
 /** The judgment badge on the square a move landed on, as the review board pins
  *  it (jieqi-review.ts moveGlyphMarker, the same tone function). */
 function glyphMarker(move: JieqiMove, glyph: string | undefined): JieqiBoardMarker[] {
@@ -201,6 +215,12 @@ export function mountJieqiReplayBoard(
     // The chapter's own shapes on this position, and the move's glyph on the
     // square it landed on: what the study page's board shows.
     const drawn = shapeOverlay(options.shapes?.[index] ?? []);
+    const next =
+      options.openingArrowPly === index
+        ? ((options.openingArrowMove ? tokenToMove(options.openingArrowMove) : null) ??
+          played[index])
+        : undefined;
+    if (next) drawn.arrows.push(nextMoveArrow(next));
     const last = index > 0 ? (played[index - 1] ?? null) : null;
     frame.innerHTML = renderJieqiBoardSvg(
       getJieqiPlayerView(states[index]!, perspective),

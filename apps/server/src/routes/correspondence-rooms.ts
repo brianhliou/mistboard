@@ -6,6 +6,7 @@ import {
   DAY_MS,
   DAYS_PER_MOVE_OPTIONS,
   type DaysPerMove,
+  isRetiredGameSpec,
   type RoomTimeControl,
 } from '@mistboard/game';
 import { correspondenceEnabled } from './../feature-flags.js';
@@ -82,6 +83,10 @@ export async function handleCorrespondenceCreate(
 ): Promise<void> {
   if (!correspondenceEnabled()) {
     writeJson(response, 404, { error: 'correspondence_disabled' });
+    return;
+  }
+  if (typeof body.gameSpecId === 'string' && isRetiredGameSpec(body.gameSpecId)) {
+    writeJson(response, 410, { error: 'retired_game_spec' });
     return;
   }
   // The matcher already narrows to dark chess; this is the fork-6 allowlist

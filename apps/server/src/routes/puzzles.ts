@@ -1,13 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
-  attemptFortressXiangqiPuzzleLine,
   attemptJunglePuzzleLine,
   attemptStandardXiangqiPuzzleLine,
-  FORTRESS_XIANGQI_SPEC_ID,
-  type FortressXiangqiMove,
-  type FortressXiangqiPuzzle,
-  fortressXiangqiPuzzleNextMove,
-  fortressXiangqiPuzzleSideToMove,
   JUNGLE_SPEC_ID,
   type JungleMove,
   type JunglePuzzle,
@@ -52,29 +46,25 @@ import { type HttpApiContext, readJsonBody, requireMethod, writeJson } from './l
 // insertion. The IP key stays only in process memory and is never persisted.
 const puzzleQualityRateLimiter = createAuthRateLimiter(300, 60_000);
 
-// The public puzzle surface spans the Fortress Xiangqi registry, the Jungle
-// registry, and the standard-xiangqi registry.
+// The public puzzle surface spans the Jungle registry and the standard-xiangqi
+// registry. Fortress Xiangqi's registry was deleted with the variant
+// (2026-10-11): its ids miss the store, so every route here answers them with
+// 404 not_found, and `?variant=fortress-xiangqi` is an invalid filter (400).
 // Content comes from the puzzle store (#183: the `puzzles` table, backed by
 // the committed seed; the seed alone when persistence is off). Ids are
 // prefix-disjoint across registries, so resolution scans one map, but every
 // behavioural branch dispatches on `variant` (fail-closed: a new registry
 // needs an explicit branch, not a fallthrough — the store already withholds
 // unknown variants from serving).
-export type PublicPuzzle = FortressXiangqiPuzzle | JunglePuzzle | XiangqiPuzzle;
-type PublicPuzzleVariant =
-  | typeof FORTRESS_XIANGQI_SPEC_ID
-  | typeof JUNGLE_SPEC_ID
-  | typeof XIANGQI_SPEC_ID;
-type PublicPuzzleMove = FortressXiangqiMove | JungleMove | XiangqiMove;
+export type PublicPuzzle = JunglePuzzle | XiangqiPuzzle;
+type PublicPuzzleVariant = typeof JUNGLE_SPEC_ID | typeof XIANGQI_SPEC_ID;
+type PublicPuzzleMove = JungleMove | XiangqiMove;
 
-// Fortress and Jungle are omitted from the discoverable pool (list + random)
-// while those puzzle surfaces are parked. Their puzzles stay resolvable by
-// id/short-code below (puzzleById scans the whole store), so existing links do
-// not hard-404. Remove a variant from this filter to surface it again.
-const UNDISCOVERABLE_PUZZLE_VARIANTS: ReadonlySet<string> = new Set([
-  FORTRESS_XIANGQI_SPEC_ID,
-  JUNGLE_SPEC_ID,
-]);
+// Jungle is omitted from the discoverable pool (list + random) while its
+// puzzle surface is parked. Its puzzles stay resolvable by id/short-code below
+// (puzzleById scans the whole store), so existing links do not hard-404.
+// Remove a variant from this filter to surface it again.
+const UNDISCOVERABLE_PUZZLE_VARIANTS: ReadonlySet<string> = new Set([JUNGLE_SPEC_ID]);
 
 function discoverablePuzzles(store: PuzzleStoreSnapshot): PublicPuzzle[] {
   return store.puzzles.filter((puzzle) => !UNDISCOVERABLE_PUZZLE_VARIANTS.has(puzzle.variant));
@@ -365,15 +355,11 @@ export async function puzzleById(id: string): Promise<PublicPuzzle | null> {
 function puzzleSideToMove(
   puzzle: PublicPuzzle,
 ): ReturnType<typeof standardXiangqiPuzzleSideToMove> {
-  if (puzzle.variant === FORTRESS_XIANGQI_SPEC_ID) return fortressXiangqiPuzzleSideToMove(puzzle);
   if (puzzle.variant === JUNGLE_SPEC_ID) return junglePuzzleSideToMove(puzzle);
   return standardXiangqiPuzzleSideToMove(puzzle);
 }
 
 function attemptPuzzle(puzzle: PublicPuzzle, moves: PublicPuzzleMove[]) {
-  if (puzzle.variant === FORTRESS_XIANGQI_SPEC_ID) {
-    return attemptFortressXiangqiPuzzleLine(puzzle, moves as FortressXiangqiMove[]);
-  }
   if (puzzle.variant === JUNGLE_SPEC_ID) {
     return attemptJunglePuzzleLine(puzzle, moves as JungleMove[]);
   }
@@ -384,9 +370,6 @@ function attemptPuzzle(puzzle: PublicPuzzle, moves: PublicPuzzleMove[]) {
 // scripted defender reply on odd). Reads `puzzle.solution` generically via the
 // per-variant helpers. Fail-closed: a new registry needs an explicit branch.
 function puzzleNextMove(puzzle: PublicPuzzle, playedPlyCount: number): PublicPuzzleMove | null {
-  if (puzzle.variant === FORTRESS_XIANGQI_SPEC_ID) {
-    return fortressXiangqiPuzzleNextMove(puzzle, playedPlyCount);
-  }
   if (puzzle.variant === JUNGLE_SPEC_ID) {
     return junglePuzzleNextMove(puzzle, playedPlyCount);
   }
@@ -501,9 +484,7 @@ async function recordOutcomeRating(
 
 function parsePuzzleVariant(value: string | null): PublicPuzzleVariant | null | 'invalid' {
   if (value === null || value === '') return null;
-  if (value === FORTRESS_XIANGQI_SPEC_ID || value === JUNGLE_SPEC_ID || value === XIANGQI_SPEC_ID) {
-    return value;
-  }
+  if (value === JUNGLE_SPEC_ID || value === XIANGQI_SPEC_ID) return value;
   return 'invalid';
 }
 
@@ -573,10 +554,6 @@ function parsePuzzleMoves(value: unknown): PublicPuzzleMove[] | null {
   for (const raw of value) {
     if (typeof raw !== 'object' || raw === null) return null;
     const move = raw as Record<string, unknown>;
-    if (typeof move.drop === 'string' && typeof move.to === 'string') {
-      moves.push({ drop: move.drop, to: move.to } as PublicPuzzleMove);
-      continue;
-    }
     if (typeof move.from === 'string' && typeof move.to === 'string') {
       moves.push({ from: move.from, to: move.to } as PublicPuzzleMove);
       continue;

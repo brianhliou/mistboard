@@ -53,9 +53,10 @@ import {
   type DuckXiangqiBoardPhase,
   duckXiangqiBoardSvg,
   duckXiangqiClickResult,
+  installDuckXiangqiDrag,
 } from '../duck-xiangqi-board.js';
 import { xiangqiAppearanceChangedEvent } from '../theme.js';
-import { installBoardDrag, installBoardDraw } from '../variant-tenant/board-drag.js';
+import { installBoardDraw } from '../variant-tenant/board-drag.js';
 import { installSelectionClickAway } from '../variant-tenant/selection-click-away.js';
 import {
   readStoredXiangqiBoardLayout,
@@ -125,7 +126,7 @@ type DuckBoardHandle = TreeBoardHandle<
  * and every rule it applies comes from the kernel or from
  * `duckXiangqiClickResult`.
  */
-function createDuckXiangqiInteractiveBoard(
+export function createDuckXiangqiInteractiveBoard(
   opts: TreeBoardFactoryOptions<DuckXiangqiTurn, DuckXiangqiPlayerView, DuckXiangqiColor>,
 ): DuckBoardHandle {
   // The half-made turn. `piece` is the ordinary state; `duck` means a piece move
@@ -138,6 +139,8 @@ function createDuckXiangqiInteractiveBoard(
   // the SAME position the piece move was chosen from.
   let view: DuckXiangqiPlayerView | null = null;
   let perspective: DuckXiangqiColor = 'red';
+  // The point a drag has lifted its piece (or the duck) off.
+  let lifted: DuckXiangqiSquare | null = null;
 
   /** Legal destinations for whichever half of the turn is being collected. */
   function targets(): readonly DuckXiangqiSquare[] {
@@ -162,6 +165,7 @@ function createDuckXiangqiInteractiveBoard(
       layout: duckBoardLayout(),
       arrows,
       markers,
+      lifted,
     });
   }
 
@@ -251,18 +255,21 @@ function createDuckXiangqiInteractiveBoard(
     paint();
   }
 
-  installBoardDrag({
+  // The same drag the live room installs, resolving through handleClick.
+  installDuckXiangqiDrag({
     board: opts.board,
-    ghostSizePx: 0,
-    onSquareClick: (square) => handleClick(square as DuckXiangqiSquare),
-    // Click-only, the same call the live room makes: a drag would have to ARM
-    // phase two rather than complete a move, which is a different gesture from
-    // every other board here. Getting that wrong is worse than not having it,
-    // and adding it later is purely additive.
-    canDragFrom: () => false,
-    ghostHtml: () => null,
-    onDragStart: () => {},
-    onDrop: () => {},
+    view: () => (view && opts.enabled() ? view : null),
+    seat: (current) => opts.seatFor(current),
+    phase: () => phase,
+    setPhase: (next) => {
+      phase = next;
+    },
+    targets,
+    lift: (square) => {
+      lifted = square;
+      paint();
+    },
+    click: handleClick,
   });
 
   const onDrawShape = opts.onDrawShape;

@@ -42,6 +42,7 @@ import {
 import { buildPlayPanel, playPanelEnabled } from './landing-play-panel.js';
 import { homepageShowcaseGames, pickHeroPovForGame } from './landing-showcase.js';
 import { type LandingTvMode, mountLandingTv } from './landing-tv.js';
+import { fetchLiveStats } from './live-stats-client.js';
 import { type GameMeta, mountReplay } from './replay.js';
 import { renderWatchReplaySkeleton } from './replay-skeleton.js';
 import { enginePanelsForReview, loadGameForReview } from './review.js';
@@ -299,11 +300,9 @@ export async function mountLanding(root: HTMLElement): Promise<void> {
     }
     // live-stats only paces the NEXT tick, so it runs in parallel with the pool
     // refresh instead of serializing a round-trip in front of it.
-    const playingPromise = fetch('/api/live-stats')
-      .then(async (resp) =>
-        resp.ok ? (((await resp.json()) as { playing?: number }).playing ?? 0) : 0,
-      )
-      .catch(() => 0);
+    const playingPromise = fetchLiveStats().then((data) =>
+      typeof data?.playing === 'number' ? data.playing : 0,
+    );
     const preloaded = firstRefreshTick ? await firstShowcaseLoad : null;
     firstRefreshTick = false;
     await refreshShowcasePool(preloaded);
@@ -687,24 +686,32 @@ function buildLandingStage(
   // One line under the tagline that answers what a 象棋在线 / "xiangqi online"
   // searcher checks first: is it the web version, is it free, can I play the
   // computer. The tagline says who the site is for; this says what it does.
-  // Each phrase is its own no-wrap span, so a narrow rail breaks between
-  // phrases (after a ·) and never inside one.
+  // Each phrase is a no-wrap item carrying the · before it, so a narrow rail
+  // breaks between phrases and never inside one. The list is shifted left by
+  // one separator width inside a clipping box, so the · that starts a wrapped
+  // line falls outside it: no line ever ends or starts on a stray dot.
   const playSummary = document.createElement('p');
   playSummary.className = 'landing-play-summary';
+  const playSummaryList = document.createElement('span');
+  playSummaryList.className = 'landing-play-summary-list';
   t('home.playSummary', {}, locale)
     .split(' · ')
     .forEach((phrase, index) => {
+      const item = document.createElement('span');
+      item.className = 'landing-play-summary-item';
       if (index > 0) {
         const sep = document.createElement('span');
         sep.className = 'landing-play-summary-sep';
         sep.textContent = '·';
-        playSummary.append(sep);
+        item.append(sep);
       }
       const span = document.createElement('span');
       span.className = 'landing-play-summary-phrase';
       span.textContent = phrase;
-      playSummary.append(span);
+      item.append(span);
+      playSummaryList.append(item);
     });
+  playSummary.append(playSummaryList);
   // Tagline and summary read as one unit, tighter to each other than to the
   // button below.
   const playIntro = document.createElement('div');

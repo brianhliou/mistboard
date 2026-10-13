@@ -303,7 +303,7 @@ export const caoYanleiArticle: Article = {
   thumbnail: {
     kind: 'image',
     src: "/article-thumbs/cao-yanlei-2024-face.jpg",
-    alt: "Cao Yanlei at the board.",
+    alt: "Portrait of Cao Yanlei.",
   },
   audience: "English-speaking xiangqi players who have never had a way to follow the Chinese pro circuit.",
   readNext: ["yin-sheng"],

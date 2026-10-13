@@ -33,6 +33,12 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Machine-drafted 2026-10-10, not native-reviewed, locked with its English
+  // copy, which publishes in the same release (jieqi readers are mostly Chinese).
+  'jieqi-puzzle-search',
+  // Machine-drafted 2026-10-09, not native-reviewed, locked with its English
+  // copy, which publishes in the same release.
+  'banqi-perpetual-chase',
   // Machine-drafted 2026-10-08, not native-reviewed, locked with its English
   // copy, which publishes in the same release (the brianhliou.com draft of
   // 2026-10-08, folded in before it was posted).
@@ -186,6 +192,277 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // jieqi-puzzle-search: machine-drafted 2026-10-10, not native-reviewed. Terms follow ab-jchess and jieqi-bot-wins (暗子, 翻子, 暗吃, 胜率, 访客, 皮卡鱼); 题目 for puzzle as in how-puzzle-mining-works.
+  'Looking for jieqi puzzles': '在揭棋里找题目',
+  'We searched 2,939 positions from 50 jieqi games for puzzles. 58 had one clearly best move and 15 of those turned on a hidden piece. None of the 15 passed the rules our xiangqi puzzles go through, and we stopped looking.':
+    '我们在 50 盘揭棋对局的 2,939 个局面里寻找题目。58 个局面有一步明显最好的着法，其中 15 个取决于一枚暗子。这 15 个没有一个通过我们象棋题目要过的规则，于是我们不再寻找。',
+  'We scored 2,939 positions from 50 jieqi games. 58 had one clearly best move, and 15 of those turned on a face-down piece.':
+    '我们给 50 盘揭棋对局中的 2,939 个局面打了分。58 个局面有一步明显最好的着法，其中 15 个取决于一枚暗子。',
+  'Four positions passed the rules our xiangqi puzzles go through, and none turns on a hidden piece. The hidden-piece answers were bets or moves the tile hardly touched.':
+    '有四个局面通过了我们象棋题目要过的规则，没有一个取决于暗子。取决于暗子的答案，要么是赌博，要么是暗子几乎无关的着法。',
+  'Skill shows in timing: a tile on its starting square moves as its home piece, so a capture it threatens can usually wait.':
+    '实力体现在时机上：停在原位的暗子按原位棋子的走法走，所以它威胁的吃子通常可以等一等。',
+  'In [jieqi](/rules/jieqi), every piece except the generals starts face down, and a piece shows what it is when it first moves. A xiangqi puzzle asks for a forced line, and in jieqi a forced line rarely gets past the first piece that turns over, because nobody knows yet what it will be.':
+    '在[揭棋](/rules/jieqi)里，除将帅以外的每一枚棋子开局时都是暗子，第一次走动时才亮出身份。象棋题目要求一条强制着法，而在揭棋里，强制着法很少能越过第一枚被翻开的棋子，因为谁也不知道它会是什么。',
+  'In October we asked a different question. If a jieqi puzzle is a decision under uncertainty, the way a poker hand is, does the game produce them? We have stopped looking, and the last section says what would make us start again.':
+    '10 月，我们换了一个问题。如果揭棋题目是一种不确定条件下的决策，就像一手扑克牌，那么这个棋会产生这样的题目吗？我们已经不再寻找，最后一节说明什么情况会让我们重新开始。',
+  'How we looked': '我们怎么找',
+  'We took the 50 most recent finished jieqi games on the site with 20 plies or more, 2,939 positions in all. All 50 were played on 8 October by guests against a bot: 34 against [AB-JChess](/blog/ab-jchess), 13 against Pikafish at level 2 and 3 against full-strength Pikafish.':
+    '我们取了本站最近 50 盘已结束、至少 20 个半回合的揭棋对局，共 2,939 个局面。50 盘都是 10 月 8 日访客对电脑下的：34 盘对 [AB-JChess](/blog/ab-jchess)，13 盘对 2 级皮卡鱼，3 盘对全强度皮卡鱼。',
+  "AB-JChess scored the candidate moves in every position. A move that turns a piece over was scored once for each piece it could be, and the scores were averaged, weighted by how many of each piece the side to move had not yet seen. The site's jieqi game review grades a reveal the same way, from only what the player could know.":
+    'AB-JChess 为每个局面的候选着法打分。一步会翻开棋子的着法，按它可能是的每种棋子各打一次分，再按走子方尚未见过的每种棋子的数量加权平均。本站的揭棋对局复盘也是这样给翻子评分的，只用棋手能知道的信息。',
+  'A position counted when the best move beat the second best by at least 15 points of winning chance, both at our standard depth and at four times that, with every move searched to at least one full ply.':
+    '一个局面要算数，最佳着法必须比次佳着法高出至少 15 个百分点的胜率，在我们的标准深度和四倍深度下都是如此，并且每步着法都至少搜索满一个半回合。',
+  'What turned up': '找到了什么',
+  '58 positions passed, from 24 of the 50 games. 43 of them are ordinary tactics with a quiet move as the answer, and 15 of those never touch a face-down piece in the first five plies of the line. They are xiangqi puzzles that happen to come from jieqi games.':
+    '有 58 个局面通过，来自 50 盘中的 24 盘。其中 43 个是普通战术，答案是一步不吃子的着法，这当中有 15 个在着法的前五个半回合里根本不碰暗子。它们是恰好出自揭棋对局的象棋题目。',
+  'The other 15 turn on a hidden piece, and they come in two kinds. Of the 58, 25 had a person to move, and the person found the answer 19 times.':
+    '另外 15 个取决于一枚暗子，分为两类。58 个局面中有 25 个轮到真人走，真人找到答案 19 次。',
+  'The lottery ticket': '彩票',
+  'The side to move is lost on every quiet move, and one tile could save it. We found five, all from lost positions, and the right answer usually loses.':
+    '走子方走任何不吃子的着法都输，只有一枚暗子能救。我们找到五个，都出自已输的局面，正确答案通常也会输。',
+  'Black to move. Black has two tiles left, and from where Black sits each could be a soldier, horse, chariot or cannon. The a10 tile moves as a chariot on its first move, whatever it is, so a10-a1 lands on the back rank. If it turns out to be a chariot it is mate; anything else and it is lost. That is one chance in four, 25%, against 2% for the next best move. Black played it and turned over a soldier.':
+    '黑方走。黑方还剩两枚暗子，从黑方的角度看，每一枚都可能是卒、马、车或炮。a10 的暗子第一步无论是什么都按车走，所以 a10-a1 落在底线上。如果翻出车就是杀棋；翻出别的就输。这是四分之一的机会，25%，而次佳着法只有 2%。黑方走了这步，翻出一个卒。',
+  'Lottery ticket: Black to move, the game as dealt': '彩票：黑方走，按实际发到的暗子',
+  "One chance in four was right for what Black could see, and the ticket was blank all the same. A piece taken face down leaves the board without being shown to its owner, so Black's count of unseen pieces still included two that were already gone.":
+    '从黑方能看到的信息来说，四分之一的机会是对的，可这张彩票照样没中。一枚被暗吃的棋子离开棋盘时不会亮给它的主人看，所以黑方算的未见棋子里，仍包括两枚早已不在的棋子。',
+  'Black piece not yet seen': '尚未见过的黑方棋子',
+  'Where it really was': '它实际在哪里',
+  'Taken face down by Red on its move 17': '红方在其第 17 回合暗吃',
+  'Taken face down by Red on its move 20': '红方在其第 20 回合暗吃',
+  'The tile on a10': 'a10 的暗子',
+  'The tile on i10': 'i10 的暗子',
+  'Four pieces for two tiles, so each tile was a chariot one time in four from where Black sat. The chariot had left the board 11 moves earlier.':
+    '两枚暗子对应四种棋子，所以从黑方的角度看，每一枚暗子是车的机会都是四分之一。而车早在 11 回合前就已离开棋盘。',
+  'The same move with a chariot dealt to a10: mate. This is the deal Black was playing for, and it was not possible in this game.':
+    '同一步棋，假如 a10 发到的是车：杀棋。这是黑方期待的发子，而在这盘棋里它不可能出现。',
+  'Lottery ticket: the same position if a10 were the chariot': '彩票：假如 a10 是车，同一局面',
+  "Black to move. a10-a1, taking Red's face-down piece, and a10-b10 turn over the same tile, a soldier or a chariot at even odds from where Black sat. If it is the chariot, a10-a1 wins 95 to 98% of the time whatever it captured, and a10-b10 48%. On average that is 49.2% against 24.1%. Black found it, and turned over a soldier: Red had taken Black's chariot face down on its second move.":
+    '黑方走。a10-a1 吃掉红方的暗子，a10-b10 也翻开同一枚暗子，从黑方的角度看，是卒还是车各占一半。如果是车，a10-a1 无论吃到什么都有 95% 到 98% 的胜率，a10-b10 则是 48%。平均下来是 49.2% 对 24.1%。黑方找到了这步，翻出一个卒：红方在第二回合就暗吃了黑方的车。',
+  'Double or nothing: Black to move, the game as played': '孤注一掷：黑方走，实战局面',
+  'A stored move': '留着的一步',
+  'A capture that wins whatever the tile turns out to be can wait: in the game below it stayed available for six turns. It works because a face-down tile moves as the piece whose starting square it stands on, so its first move, capture included, does not depend on the deal.':
+    '一步无论暗子翻出什么都能赢的吃子可以等：在下面这盘棋里，它在六个回合里一直都在。原因是暗子按它所在原位的棋子走法走，所以它的第一步，包括吃子，并不取决于发到什么。',
+  "In 46 of the 2,939 positions a face-down tile could make a capture that won whatever the tile turned out to be. They came from 22 such captures, and the same capture was often there turn after turn; one stayed on the board for eight of its owner's turns. Nine were played. Holding one was usually free: in all but two of the 46 positions another move came within 15 points of it, and those two are one capture on consecutive turns, shown further down.":
+    '在 2,939 个局面中，有 46 个局面里一枚暗子能吃子，而且无论翻出什么都赢。它们来自 22 次这样的吃子，同一个吃子常常一回合接一回合地留着；有一个在它主人的八个回合里一直都在。最后走出的有九次。留着通常不吃亏：46 个局面里，除两个以外，都有另一步着法与它相差不到 15 个百分点，而那两个是连续两回合里的同一个吃子，下文会展示。',
+  "Black to move. The i10 tile can run down the file as a chariot and take Red's i4 tile on this turn and each of the next five. Black plays elsewhere, the capture stays, and its score rises from 85% to 97%. Black takes on move 15; the tile is an elephant.":
+    '黑方走。i10 的暗子可以按车沿直线冲下去，在这一回合和接下来的五个回合里吃掉红方 i4 的暗子。黑方走别处，这个吃子一直留着，它的分数从 85% 升到 97%。黑方在第 15 回合吃掉；那枚暗子是象。',
+  'A stored capture: Black waits five turns, then takes': '留着的吃子：黑方等了五个回合才吃',
+  'Which tile': '翻哪一枚',
+  'The question is which face-down piece to move, and the right one works whatever it turns out to be. We found ten.':
+    '问题是走哪一枚暗子，而正确的那枚无论翻出什么都成立。我们找到十个。',
+  "In the example below Black threatens d5xd1 check, with mate on the next move. Four of Red's 38 moves stop it. c1-a3 is the best of them, and it works by getting out of the way: the a1 tile moves as a chariot, so with c1 empty it can take back on d1. The tile on c1 can be any of six pieces, and c1-a3 stops the mate for every one.":
+    '在下面的例子里，黑方威胁 d5xd1 将军，下一步就杀。红方的 38 步着法中有四步能挡住。c1-a3 是其中最好的，它靠让开来解：a1 的暗子按车走，所以 c1 空出来后它可以在 d1 吃回。c1 的暗子可能是六种棋子中的任何一种，而 c1-a3 对每一种都能解杀。',
+  'Red to move. c1-a3 stops the mate but leaves the a5 cannon hanging, and Black took it at once. The tile was an advisor. Only a chariot on a3 would have guarded a5.':
+    '红方走。c1-a3 解了杀，但留下 a5 的炮无人保护，黑方立刻吃掉了它。那枚暗子是仕。只有 a3 上是车才能保住 a5。',
+  'Which tile: Red to move, the game as played': '翻哪一枚：红方走，实战局面',
+  'c1 turns out to be': 'c1 翻出的是',
+  'Left face down': '仍是暗子',
+  "Black's best reply": '黑方最佳应着',
+  "Red's winning chance": '红方胜率',
+  'a10-b10': 'a10-b10',
+  d5xa5: 'd5xa5',
+  'After c1-a3, by what the tile turns out to be. Black takes the cannon unless the tile is a chariot, and is better in every case. c1-a3 is the best move in the position and still loses most of the time: 36% on average, against 13% for the next best.':
+    'c1-a3 之后，按暗子翻出的是什么分列。除非暗子是车，黑方都会吃掉炮，而且每种情况下黑方都更好。c1-a3 是这个局面的最佳着法，却多半还是输：平均 36%，次佳着法是 13%。',
+  'Held to the xiangqi puzzle rules': '用象棋题目的规则检验',
+  'Our [xiangqi puzzles](/blog/how-puzzle-mining-works) come from a miner with stricter rules. The opponent has just blundered, giving up 25 or more points of winning chance. The game was not already decided before that. After the right move the solver is winning, and after the second best move it is not.':
+    '我们的[象棋题目](/blog/how-puzzle-mining-works)来自一个规则更严格的挖掘器。对手刚刚走了一步败着，丢掉了 25 个百分点以上的胜率。在那之前，棋局还没有分出胜负。走出正确着法后解题方处于胜势，走出次佳着法则不然。',
+  Step: '步骤',
+  'Positions left': '剩余局面',
+  Scanned: '扫描',
+  "Passed the xiangqi miner's rules": '通过象棋挖掘器的规则',
+  'Mates in one dropped, as the miner does': '剔除一步杀，与挖掘器做法相同',
+  'Positions with a single legal move dropped': '剔除只有一步合法着法的局面',
+  'The same 2,939 positions through the rules our xiangqi puzzles pass.':
+    '同样的 2,939 个局面，经过我们象棋题目要过的规则。',
+  'A person was to move in three of the four and missed all three; the bot was to move in the fourth. None turns on a hidden piece. Every lottery ticket and every which-tile position failed, because the side to move was not winning or the opponent had not blundered.':
+    '四个局面中有三个轮到真人走，三个都没找到；第四个轮到电脑走。没有一个取决于暗子。每一张彩票、每一个翻哪一枚的局面都没通过，原因是走子方并不处于胜势，或者对手并没有走出败着。',
+  "Red to move. e3-f3 and the engine's line after it. The interest is mostly jieqi's: Red's revealed elephant and advisors stand outside the zones they could never leave in xiangqi.":
+    '红方走。e3-f3 以及引擎随后的着法。它的看点主要属于揭棋：红方已翻开的相和仕，站在象棋里永远离不开的区域之外。',
+  'Red to move: the first of four': '红方走：四个中的第一个',
+  "Red to move. i10-f10 and the engine's line, in which Black loses the chariot two moves later. No face-down piece is left on the board. Red played i10-i9 instead.":
+    '红方走。i10-f10 以及引擎的着法，黑方在两回合后丢车。棋盘上已经没有暗子。红方实战走了 i10-i9。',
+  'Red to move: the second of four': '红方走：四个中的第二个',
+  "Red to move. h10-h9 and the engine's line. It is ordinary xiangqi: a tile turns over only on the line's last move.":
+    '红方走。h10-h9 以及引擎的着法。这是普通的象棋：只在着法的最后一步才有暗子被翻开。',
+  'Red to move: the third of four': '红方走：四个中的第三个',
+  'Black to move. e7-f7 and mate in six, with no face-down piece left on the board. The bot played e3-c3 instead.':
+    '黑方走。e7-f7，六步杀，棋盘上已没有暗子。电脑实战走了 e3-c3。',
+  'Black to move: the fourth of four': '黑方走：四个中的第四个',
+  'Why we stopped': '我们为什么停下',
+  'The chart shows the problem. A lottery ticket is all or nothing: right because one deal in four wins outright, and usually lost. A which-tile answer scores about the same for every piece, because it meets the threat on the board and the tile hardly matters. A fair puzzle needs a single line that works, and a decision about a hidden piece rarely has one.':
+    '图表说明了问题。彩票是全有或全无：它之所以对，是因为四次发子中有一次直接获胜，而它通常会输。翻哪一枚的答案，对每种棋子的得分都差不多，因为它应对的是盘面上的威胁，暗子是什么几乎无关紧要。一道公平的题目需要一条成立的着法，而关于暗子的决定很少有这样一条。',
+  "The mover's winning chance after the answer, once for each piece the tile could be, from the two examples above. The dashed line is the average the review grades by.":
+    '解答之后走子方的胜率，按暗子可能是的每种棋子各算一次，取自上面两个例子。虚线是复盘据以评分的平均值。',
+  'We tried two ways round it. The first was to grade as if the face-down pieces were known, using the real deal. That gave 16 positions through the xiangqi rules: the same 15, plus one reveal that wins only because the tile was a cannon (100% for a cannon, 59 to 73% for anything else). A puzzle whose answer depends on what the solver cannot see is not one we would publish.':
+    '我们试了两种绕过去的办法。第一种是按暗子已知来评分，用真实的发子。这样有 16 个局面通过了象棋规则：同样的 15 个，加上一步只因为暗子是炮才赢的翻子（是炮为 100%，是别的则为 59% 到 73%）。答案取决于解题者看不见的东西，这样的题目我们不会发布。',
+  'The second was to look for reveals that win whatever comes up: the best move turns a tile over, every piece it could be scores 81% or more, and the next best move 60% or less. There were none in the 2,939 positions.':
+    '第二种是寻找无论翻出什么都赢的翻子：最佳着法翻开一枚暗子，它可能是的每种棋子得分都在 81% 以上，而次佳着法在 60% 以下。2,939 个局面里一个也没有。',
+  'The nearest thing to a fair jieqi puzzle we found is a stored capture, where the capture is certain and only the piece after it is luck.':
+    '我们找到的最接近公平的揭棋题目，是留着的吃子：吃子是确定的，只有吃完之后翻出的棋子靠运气。',
+  "Red to move. The h1 tile moves as a horse and takes Black's chariot on g3, and it does that whatever the tile is. Red's winning chance is 93 to 95% for each of the three pieces it could be, against 78% for the next best move. The bot, Pikafish at level 2, missed it two turns running. The tile was a chariot. It is the only capture of the 22 that beat the next best move by 15 points.":
+    '红方走。h1 的暗子按马走，吃掉黑方在 g3 的车，而且无论暗子是什么都能这样做。对它可能是的三种棋子，红方胜率都是 93% 到 95%，次佳着法则是 78%。电脑（2 级皮卡鱼）连续两回合都没看到。那枚暗子是车。在 22 次吃子中，它是唯一比次佳着法高出 15 个百分点的。',
+  'A capture that does not depend on the tile: Red to move': '不取决于暗子的吃子：红方走',
+  Limit: '限制',
+  'What it could change': '可能改变什么',
+  'One engine, AB-JChess, set every answer': '只有一个引擎 AB-JChess 决定所有答案',
+  'A second engine could disagree': '第二个引擎可能有不同看法',
+  'Only its top five to eight moves were scored': '只给它排名前五到八的着法打了分',
+  'An unscored move could narrow a gap': '一步未打分的着法可能缩小差距',
+  '50 games from one day, guests against a bot': '50 盘对局来自同一天，都是访客对电脑',
+  'Other games could turn up other positions': '其他对局可能出现其他局面',
+  'The bot was to move in half the positions': '一半局面轮到电脑走',
+  'Half of what we found no person faced': '我们找到的局面有一半没有真人面对过',
+  'What the 50 games say': '这 50 盘棋说明了什么',
+  'Jieqi does not produce puzzles the way xiangqi does. Four positions in 50 games passed our xiangqi rules, none of them about a hidden piece, and the hidden-piece answers were bets or moves the tile hardly touched.':
+    '揭棋产生题目的方式和象棋不一样。50 盘对局里有四个局面通过了我们的象棋规则，没有一个与暗子有关；取决于暗子的答案，要么是赌博，要么是暗子几乎无关的着法。',
+  'Skill shows in timing more than in guessing. A tile on its starting square moves as its home piece, so a capture it threatens is a move in reserve: play something else while it is safe, and take it before it can be blocked. When a tile must turn over, pick the one that holds whatever it is, and remember that your count of what it could be includes pieces your opponent took face down.':
+    '实力更多体现在时机上，而不是猜测上。停在原位的暗子按原位棋子的走法走，所以它威胁的吃子是一步留着备用的棋：趁它安全时先走别的，在它被挡住之前吃掉。必须翻开一枚暗子时，选那枚无论是什么都能撑住的，并且记住，你对它可能是什么的计算里，包含了对手暗吃掉的棋子。',
+  'We would look again for puzzles about that timing, with an answer that holds for every deal, in thousands of games where a person was to move, checked by a second engine. Until then, the hidden pieces in jieqi are something to play, not something to solve.':
+    '我们会为这种时机的题目再找一次：答案对每一种发子都成立，取自数千盘由真人走子的对局，并由第二个引擎检验。在那之前，揭棋里的暗子是拿来下的，不是拿来解的。',
+  'WINNING CHANCE BY WHAT THE TILE TURNS OUT TO BE': '按暗子翻出的棋子分列的胜率',
+  'Lottery ticket: a10-a1, Black to move': '彩票：a10-a1，黑方走',
+  'average 25%': '平均 25%',
+  'Which tile: c1-a3, Red to move': '翻哪一枚：c1-a3，红方走',
+  'average 36%': '平均 36%',
+  'Looking for jieqi puzzles: what 50 games turned up': '在揭棋里找题目：50 盘对局找到了什么',
+  // banqi-perpetual-chase: machine-drafted 2026-10-11, not native-reviewed. Piece names follow banqi-statistics (将 士 象 车 马 炮 卒); a ply is 步.
+  'The Perpetual Chase Rule in Banqi': '暗棋长捉规则',
+  'Perpetual Chase in Banqi': '暗棋的长捉',
+  'A repeating chase can also go round a square of four. The chased piece runs round the corner, the chaser follows one step behind, and the board comes back every eight plies.':
+    '重复的长捉也可以绕着四个格子转。被捉的子绕着角落跑，捉的一方落后一步跟着，每八步棋盘就回到原样。',
+  'Herding chases are fine': '赶子的长捉没问题',
+  'From a game on Mistboard, 30 September 2026. The player’s general chased the bot’s advisor five times, from b2 to f3, where the player’s other advisor took it.':
+    '来自 Mistboard 上 2026 年 9 月 30 日的一盘棋。玩家的将把机器人的士追了五次，从 b2 一直追到 f3，在那里被玩家的另一个士吃掉。',
+  'What other rules say': '其他规则怎么说',
+  'Four rule sets and a reference work, as read in October 2026.':
+    '四套规则和一部参考资料，2026 年 10 月查阅。',
+  'Perpetual chase': '长捉',
+  'No-progress draw': '无进展判和',
+  '[TCGA computer banqi rules, Hsu (2019)](https://homepage.iis.sinica.edu.tw/~tshsu/tcg/2019/hwks/rules.pdf)':
+    '[TCGA 电脑暗棋比赛规则，Hsu（2019）](https://homepage.iis.sinica.edu.tw/~tshsu/tcg/2019/hwks/rules.pdf)',
+  'No chase rule. A position repeated three times draws.': '无长捉规定。同一局面出现三次判和。',
+  '60 plies': '60 步',
+  '[Chen, Shen and Hsu, ICGA Journal (2010)](https://homes.cs.washington.edu/~armin/ICGA2010.pdf)':
+    '[Chen、Shen、Hsu，《ICGA Journal》（2010）](https://homes.cs.washington.edu/~armin/ICGA2010.pdf)',
+  'No chase rule. Repeated positions draw.': '无长捉规定。局面重复判和。',
+  '40 plies': '40 步',
+  'No chasing the same piece 10 times in a row.': '不能连续 10 次追击同一颗子',
+  '50 plies': '50 步',
+  'Not mentioned.': '未提及',
+  'A chase move may not make a position appear for the third time.':
+    '一步捉不得让同一局面出现第三次。',
+  'Why not a move count': '为什么不用步数上限',
+  'Making the chaser lose, as xiangqi does, needs someone to judge what counts as a chase, and no banqi source uses it. Repetition needs no number and no judge. It stops a repeating chase at the repeat and leaves a chase that goes somewhere alone.':
+    '像象棋那样判捉的一方输，得有人判断什么算捉，而且没有一份暗棋资料采用。重复规则不需要数字，也不需要裁判。重复的长捉在重复时就被挡下，有进展的长捉则不受影响。',
+  advisor: '士',
+  soldier: '卒',
+  elephant: '象',
+  chariot: '车',
+  cannon: '炮',
+  general: '将',
+  'Banqi rules': '暗棋规则',
+  'THE ADVISOR RUNS FIVE TIMES': '士逃了五次',
+  'THE OTHER ADVISOR TAKES IT': '另一个士吃掉它',
+  'In banqi a chased piece often has one safe square, so a chase can go back and forth until the position repeats, and under plain threefold repetition the chaser alone decides the draw. Tournament rules allow it and apps cap the chase at 7 or 10 moves. Mistboard forbids the chase move that would repeat a position a third time, and leaves chases that go somewhere alone.':
+    '暗棋里被捉的子常常只有一个安全的格子，所以长捉可以来回走到局面重复；如果只按三次重复判和，和不和完全由捉的一方决定。比赛规则允许这样判和，应用则把长捉限在 7 次或 10 次。Mistboard 禁止会让同一局面第三次出现的那一步捉，把目标赶向别处的长捉则不去管它。',
+  'In a perpetual chase one piece attacks another move after move. In banqi the runner often has one safe square, so the two go back and forth until the position repeats.':
+    '长捉就是一颗子一步接一步地攻击另一颗子。在暗棋里，逃的一方常常只有一个安全的格子，于是两颗子来回走，直到局面重复。',
+  'The runner can’t stay put without being taken, so under plain threefold repetition the chaser alone decides whether the game is drawn.':
+    '逃的一方不动就会被吃，所以如果只按三次重复判和，和不和完全由捉的一方决定。',
+  'Mistboard forbids the chase move that would make a position appear for the third time. A chase that drives its target onto new squares never repeats, and the rule leaves it alone.':
+    'Mistboard 禁止会让同一局面第三次出现的那一步捉。把目标一路赶向新格子的长捉永远不会重复，这条规则不去管它。',
+  'Tournament rules draw on repetition, and apps cap a chase at 7 or 10 moves, which comes after the repetition in every chase draw we have seen.':
+    '比赛规则按重复局面判和，应用把长捉限在 7 次或 10 次，但在我们见过的每一盘长捉和棋里，这个上限都来得比重复晚。',
+  'A perpetual chase is one piece attacking another move after move while the other keeps running. In [banqi](/rules/banqi), Chinese dark chess, the runner often has a single safe square, so the two pieces go back and forth until the position repeats. Whether that should be a draw, and who gets to decide, is a question banqi rule sets answer in different ways.':
+    '长捉，就是一颗子一步接一步地攻击另一颗子，而被捉的子一直在逃。在[暗棋](/rules/banqi)里，逃的一方常常只有一个安全的格子，于是两颗子来回走，直到局面重复。这该不该算和棋、由谁来决定，各套暗棋规则的答案不一样。',
+  'Why banqi needs a chase rule': '暗棋为什么需要长捉规则',
+  'In chess a threefold repetition needs both players to keep repeating, and either of them can play something else. In banqi the chased piece can’t stay put without being taken, so it runs. With one safe square it shuttles back and forth as the chaser does, and the third repetition comes when the chaser wants it. In [the game below](/banqi/game/bq_391b54b2-eb4f-4a21-9ed0-f934aa4772cd) the player was far ahead and the bot had lost its general, so the draw saved the bot.':
+    '国际象棋的三次重复需要双方一直重复下去，任何一方都可以改走别的。暗棋里被捉的子不动就会被吃，所以只能逃。如果只有一个安全的格子，它就跟着捉的一方来回走，第三次重复什么时候出现，由捉的一方说了算。在[下面这盘棋](/banqi/game/bq_391b54b2-eb4f-4a21-9ed0-f934aa4772cd)里，玩家大幅领先，机器人的将也已经被吃，这盘和棋救了机器人。',
+  'Back and forth on two squares, from a game on Mistboard, 16 September 2026.':
+    '两格之间来回走，来自 Mistboard 上 2026 年 9 月 16 日的一盘棋。',
+  'The bot has just flipped g2 and turned up a red advisor beside the player’s black chariot. A chariot can’t take an advisor, which outranks it, and e1 and h1 hold its own soldiers, so f1 is its only free square.':
+    '机器人刚在 g2 翻出一颗红士，就在玩家的黑车旁边。士比车大，车吃不了它；e1 和 h1 都是车自己的卒，所以 f1 是它唯一的空格。',
+  'The advisor’s fourth chase brings the position round a third time, and under plain threefold repetition the game is drawn. Under Mistboard’s rule this move is forbidden, so the advisor would have to play something else.':
+    '士的第四次捉让局面第三次出现，如果只按三次重复判和，这盘就和了。按 Mistboard 的规则，这一步被禁止，士只能改走别的。',
+  'Round a square of four, in a constructed position. Every time the chariot runs it has one safe square.':
+    '绕着四格转，这是摆出来的局面。车每次逃都只有一个安全的格子。',
+  'The black advisor on a1 attacks the red chariot on a2. Face-down tiles on a3, b3, c2 and c1 close its other exits.':
+    'a1 的黑士攻击 a2 的红车。a3、b3、c2、c1 上的暗子挡住了车的其他出路。',
+  'The advisor’s fourth chase brings the board back where it started. Each lap repeats every position, so under plain threefold repetition the game is drawn early in the third lap. Under Mistboard’s rule, the chase move that would make a position appear for the third time is forbidden.':
+    '士的第四次捉让棋盘回到起点。每转一圈，每个局面都重复一次，所以如果只按三次重复判和，第三圈刚开始就会判和。按 Mistboard 的规则，会让局面第三次出现的那一步捉被禁止。',
+  'Some chases drive the target somewhere. Every move puts the target on a square it hasn’t stood on, so no position comes round again, and the chase ends when the target runs out of room or into another piece.':
+    '有些长捉是把目标往某个地方赶。每一步都让目标走到它没站过的格子，所以没有局面会再出现；目标无路可逃，或撞上另一颗子，这次长捉就结束了。',
+  'Winning a piece this way, as in [that game](/banqi/game/bq_795ec889-96d0-48f4-914f-6f1db438441a), is ordinary good play. A chase rule has to stop the repeating chase and leave this one alone.':
+    '像[那盘棋](/banqi/game/bq_795ec889-96d0-48f4-914f-6f1db438441a)这样赢下一颗子，是正常的好棋。长捉规则要挡的是重复的长捉，这一种应该放着不管。',
+  '[Chinese Dark Chess 2 app (Google Play)](https://play.google.com/store/apps/details?id=com.xidea.ChineseDarkChess2&hl=zh_TW)':
+    '[暗棋2 应用（Google Play）](https://play.google.com/store/apps/details?id=com.xidea.ChineseDarkChess2&hl=zh_TW)',
+  'No chasing the same piece more than 7 times in a row.': '不可连续长捉同一颗子超过 7 次。',
+  '[FunTown app](https://darkchess.funtown.com.tw/rules2.html)':
+    '[FunTown 戏谷 应用](https://darkchess.funtown.com.tw/rules2.html)',
+  '[Chinese Wikipedia, banqi](https://zh.wikipedia.org/zh-tw/%E6%9A%97%E6%A3%8B)':
+    '[中文维基百科：暗棋](https://zh.wikipedia.org/zh-tw/%E6%9A%97%E6%A3%8B)',
+  '50 moves with no flip or capture': '连续 50 步没有翻子或吃子',
+  Mistboard: 'Mistboard',
+  'A rule that makes the chaser lose comes from [xiangqi](/rules/xiangqi), where every piece is face up. Under the Asian rules for that game, chasing one piece without end is a forbidden move, and a side that keeps playing one must change it or lose, as [Chinese Wikipedia sets out](https://zh.wikipedia.org/wiki/%E9%95%B7%E6%89%93_(%E8%B1%A1%E6%A3%8B)). None of the banqi sources above makes the chaser lose.':
+    '捉的一方判负，这条规则来自[象棋](/rules/xiangqi)，象棋的棋子全都明着摆在棋盘上。按亚洲象棋规则，无休止地捉同一颗子是禁止着法，一直走禁止着法的一方必须变着，否则判负，[中文维基百科](https://zh.wikipedia.org/wiki/%E9%95%B7%E6%89%93_(%E8%B1%A1%E6%A3%8B))有整理。上面的暗棋资料没有一份判捉的一方输。',
+  'Mistboard’s rule': 'Mistboard 的规则',
+  'Mistboard keeps threefold repetition and the 40-ply no-progress draw, and adds one rule: **a chase move may not make a position appear for the third time.** The chaser has to play something else, unless it has no other legal move. A repetition that comes from anything other than a chase still draws.':
+    'Mistboard 保留三次重复和 40 步无进展判和，再加一条规则：**一步捉不得让同一局面出现第三次。** 捉的一方必须改走别的，除非没有其他合法着法。不是由捉造成的重复照样判和。',
+  'The apps count instead: once a piece has chased the same piece 7 times in a row, or 10, it must stop. The trouble is that the repetition comes first. In the two-square game above, the position came round a third time on the bot’s fourth chase move. A 7-move cap would still have allowed three more, so with threefold repetition in force the game is drawn exactly as before. In all eight repetition draws on Mistboard, the third repetition came between the third and sixth chase move, before either cap.':
+    '应用的做法是计数：一颗子连续捉同一颗子 7 次或 10 次之后，就必须停下。问题是重复会先来。在上面那盘两格来回的棋里，局面在机器人第四次捉时就第三次出现了。上限设 7 次的话，它还可以再捉三次，所以只要三次重复照样判和，这盘照样是和棋。Mistboard 上全部八盘重复和棋，第三次重复都出现在第三到第六次捉之间，比两种上限都早。',
+  'A count also treats a herding chase the same way, and stops it at the same number whether or not the target is about to run out of room. Players don’t agree on the number either. A Taiwanese player who wrote to us about one of these draws called a perpetual chase a clear foul and the count an open question: 7 is too few, he said, and a friend of his plays to 12.':
+    '计数对赶子的长捉也一视同仁，不管目标是不是快无路可逃，到了次数就叫停。玩家对数字也没有共识。一位台湾玩家为了其中一盘和棋写信给我们，他说长捉明显犯规，次数则还有得讨论：7 次太少，他有个朋友下到 12 次。',
+  'Why not make the chaser lose': '为什么不判捉的一方负',
+  'The rule in full': '完整规则',
+  'For anyone implementing it. The rule reads only what both players can see, so it works online or across a table.':
+    '写给要实现这条规则的人。规则只看双方都看得到的东西，所以网上或面对面都能用。',
+  Term: '术语',
+  Meaning: '含义',
+  'Chase move': '捉',
+  'A move with no flip or capture, after which the moved piece could capture the enemy piece that moved just before it. Cannon jumps count; whether the target is protected doesn’t matter.':
+    '不翻子也不吃子的一步，走完之后，刚走的那颗子能吃掉对方上一步刚走的那颗子。炮隔子吃也算；目标有没有被保护不影响。',
+  Flee: '逃',
+  'A move by the piece the previous move chased.': '上一步被捉的那颗子所走的一步。',
+  Position: '局面',
+  'Where each face-up piece stands, which squares hold face-down tiles, and whose move it is. Counts start over after every flip or capture.':
+    '每颗翻开的子在哪里、哪些格子有暗子、轮到哪一方走。每次翻子或吃子之后重新计数。',
+  Forbidden: '禁止',
+  'A chase move that would make a position appear for the third time.':
+    '会让同一局面第三次出现的一步捉。',
+  'Repetition draw': '重复和棋',
+  'A position reached by any move other than a chase or a flee draws on its third appearance.':
+    '由捉或逃以外的着法走出来的局面，第三次出现时判和。',
+  'Only move': '唯一着法',
+  'If every legal move is a forbidden chase, they all stay legal.':
+    '如果所有合法着法都是被禁止的捉，这些着法就全部保持合法。',
+  'Mutual chase': '一捉一',
+  'A flee that also attacks the chaser is an ordinary move. Only two cannons on one line can do this.':
+    '逃的同时又攻击追兵的一步，算作普通着法。只有同一条线上的两个炮做得到。',
+  'Unchanged: 40 plies with no flip or capture, chase moves included.':
+    '不变：连续 40 步没有翻子或吃子，捉也算在内。',
+  'Not covered': '尚未涵盖',
+  'A chaser switching between two targets. We will extend the rule if it comes up.':
+    '在两个目标之间轮流捉。如果对局里出现了，我们会扩充规则。',
+  'Before the rule': '规则之前',
+  'Until October 2026 Mistboard drew every threefold repetition. In 127 games people played against [MistyBanqi](/blog/mistybanqi), our bot, from July to early October, eight ended in a repetition draw, and the bot was the chaser in every one ([21 July](/banqi/game/bq_15a9801b-7f1b-4618-81ff-33c243adeead), [23 July](/banqi/game/bq_65458fb8-71d2-4e4c-86ca-823057fc9ac2), [28 July](/banqi/game/bq_1a550b3b-40b7-4184-86f4-16c479b926df), 16 September [three](/banqi/game/bq_8dbdd7ac-6612-4785-a7d9-73c0a0987e5e) [times](/banqi/game/bq_f7bc7130-e399-4a00-9609-baee9cad719f) [over](/banqi/game/bq_391b54b2-eb4f-4a21-9ed0-f934aa4772cd), [22 September](/banqi/game/bq_374af1fe-bb55-462d-a3d7-54970fd03f64), [2 October](/banqi/game/bq_879c07b6-b804-4a21-9d46-39febc900b90)). Replayed under the current rule, none of the eight is a draw, and no move a person played in any of the 127 games would have been forbidden.':
+    '2026 年 10 月之前，Mistboard 的三次重复一律判和。7 月到 10 月初，真人对我们的机器人 [MistyBanqi](/blog/mistybanqi) 下了 127 盘，其中八盘以重复局面判和，每一盘捉的一方都是机器人（[7 月 21 日](/banqi/game/bq_15a9801b-7f1b-4618-81ff-33c243adeead)、[7 月 23 日](/banqi/game/bq_65458fb8-71d2-4e4c-86ca-823057fc9ac2)、[7 月 28 日](/banqi/game/bq_1a550b3b-40b7-4184-86f4-16c479b926df)、9 月 16 日的[第一](/banqi/game/bq_8dbdd7ac-6612-4785-a7d9-73c0a0987e5e)、[第二](/banqi/game/bq_f7bc7130-e399-4a00-9609-baee9cad719f)、[第三盘](/banqi/game/bq_391b54b2-eb4f-4a21-9ed0-f934aa4772cd)、[9 月 22 日](/banqi/game/bq_374af1fe-bb55-462d-a3d7-54970fd03f64)、[10 月 2 日](/banqi/game/bq_879c07b6-b804-4a21-9d46-39febc900b90)）。按现行规则重放，这八盘没有一盘是和棋，127 盘里真人走过的每一步也都不会被禁止。',
+  'Is a perpetual chase a draw in banqi?': '暗棋的长捉算和棋吗？',
+  'It depends on the rule set. Tournament rules for computer banqi draw any position repeated three times, so a chase that repeats is a draw. On Mistboard it never is: the chase move that would bring a position round a third time is forbidden, and the chaser has to play something else.':
+    '看用哪套规则。电脑暗棋的比赛规则把同一局面出现三次判和，所以会重复的长捉就是和棋。在 Mistboard 上永远不是：会让局面第三次出现的那一步捉被禁止，捉的一方必须改走别的。',
+  'How many times can you chase a piece in banqi?': '暗棋里一颗子最多能捉几次？',
+  'Two popular apps set a cap: Chinese Dark Chess 2 at 7 chases of the same piece in a row, FunTown at 10. Mistboard has no count. A chase can run as long as it reaches new positions; only the move that would repeat a position a third time is forbidden.':
+    '两款常见的应用设了上限：暗棋2 是连续捉同一颗子 7 次，FunTown 是 10 次。Mistboard 不计次数。只要长捉一直走出新的局面，就可以一直捉下去；只有会让局面第三次出现的那一步被禁止。',
+  'What counts as a chase in banqi?': '暗棋里什么算捉？',
+  'On Mistboard, a move with no flip or capture after which the moved piece could capture the enemy piece that moved just before it. Cannon jumps count, and it doesn’t matter whether the target is protected.':
+    '在 Mistboard 上，不翻子也不吃子、走完后刚走的那颗子能吃掉对方上一步刚走的那颗子的一步。炮隔子吃也算，目标有没有被保护不影响。',
+  'Does the chaser lose in banqi?': '暗棋里长捉的一方会判负吗？',
+  'Not in any banqi rule set we found, and not on Mistboard. Losing for a perpetual chase comes from xiangqi, where someone has to judge what counts as a chase. On Mistboard the repeating move is simply not allowed.':
+    '我们找到的暗棋规则都不会，Mistboard 也不会。长捉判负来自象棋，那需要有人裁定什么算捉。在 Mistboard 上，会造成重复的那一步直接不能走。',
+  'How a chase ends': '长捉怎么结束',
+  'On Mistboard a chase can run as long as it is getting somewhere, and a good one wins a piece. What it can’t do is go round in a circle until the game is drawn: the move that would bring a position back a third time is off the table, so the chaser has to try something else, and the game goes on.':
+    '在 Mistboard 上，长捉只要还在推进，就可以一直捉下去，好的长捉能赢下一颗子。它不能做的，是绕圈子绕到和棋：会让局面第三次出现的那一步不能走，捉的一方只能另想办法，棋也就继续下去。',
+  'Perpetual Chase Rule in Banqi (Chinese Dark Chess)': '暗棋长捉规则与重复局面判和',
   // longest-forced-mates-xiangqi: machine-drafted 2026-10-08, not native-reviewed. Terms follow the study uXu609QE zh names and solver-audit (困毙, 半回合 for a ply, 回合 for a move).
   'The Longest Forced Mates in Xiangqi': '象棋最长的必胜杀局',
   'The Longest Forced Mates': '最长的必胜杀局',
@@ -475,8 +752,6 @@ const ZH_HANS: Record<string, string> = {
     '解决它用了两条规则，缺一不可。炮击不爆炸，开局的那种兑换就没有了，垫挡仍然成立却不构成威胁；但车仍然可以来回跳，炮也仍然得跟过去。把爆炸威胁算作将军（见下一节），单独用也不起作用：只要垫挡的炮还能反打，双方每一步都在将军，而双方都在将军的重复局面判和。两条规则合在一起，来回跳就成了单方面的长将，判负。引擎也把它算作输棋，宁可落后大约四分之一个兵继续下。炮由此变成一枚用来兑换和垫挡的棋子，而不再是扫清一条横线的棋子；爆炸的其余部分全部不变。',
   'Every number on this page comes from engine games refereed by the rules kernel and played by a patched Fairy-Stockfish, and the two have to agree on every legal-move count before a number is read. The engine with ten times the nodes wins 29 of 32 games, at two strength levels, without losing one. Of the 44 first moves from the array, each played out at a million nodes a side, none wins for Red and three lose. None of the 19 repetition draws is a one-sided perpetual check. The [variant lab](https://github.com/brianhliou/mistboard/tree/main/scripts/variant-lab) has the kernel, the patch and the commands behind each number.':
     '本页的每一个数字都来自引擎对局：由规则内核裁判，由打过补丁的 Fairy-Stockfish 来下，两者必须在每一个合法着法数上完全一致，才开始读任何数字。节点数多十倍的引擎在两个强度档位上下了 32 盘，赢 29 盘，一盘未输。从开局阵势出发的 44 种第一步，每种都以双方各一百万节点下完，没有一种让红方获胜，有三种让红方输棋。19 盘重复局面和棋里，没有一盘是单方面的长将。[变体实验室](https://github.com/brianhliou/mistboard/tree/main/scripts/variant-lab)里有内核、补丁和每个数字背后的命令。',
-  'Play it against the engine at any of eight strengths, or against a friend with an invite link. The [launch note](/blog/atomic-xiangqi-build) is what decides a first game; the study has all twelve engine games, with every explosion marked and a note on the move that decided each.':
-    '和八个强度档位的引擎对弈，或者用邀请链接约朋友。[发布说明](/blog/atomic-xiangqi-build)讲的是第一盘棋的胜负由什么决定；研究里有全部十二盘引擎对局，每次爆炸都有标记，每盘的决定性一步都有注解。',
   // solver-audit blog merge (2026-10-07): machine-translated.
   '適情雅趣 第108局 争舟走渡 prints a mate in seven, thirteen plies. At Red’s first move the soldier can take the advisor beside the general instead, 兵四平五, and that mates in six. Nine of the 172 can be mated faster than printed.':
     '《適情雅趣》第108局 争舟走渡印的是七着杀，共十三步。红方第一着改用兵吃将旁边的士，兵四平五，六着就能成杀。172局中有9局存在比所印更快的杀法。',
@@ -959,8 +1234,8 @@ const ZH_HANS: Record<string, string> = {
     '[将死](/watch?channel=jieqi&game=jq_dee4dda3-b78b-4c02-954d-01b954df94f6)',
   "A related blind spot involves the general. Only a soldier, the other general or a cannon's jump can take it, so a boxed-in general is in danger from one piece at a time, and the engine is slow to make room for one cornered. It will sometimes march a piece off to the far side of the board while a lone enemy soldier walks up and traps it. Same gap as the draw above: the evaluation has no real sense of a slow, quiet threat building several moves away.":
     '另一个相关的盲点跟将有关。只有卒、对方的将或炮的跳吃拿得下它，所以被围住的将一次只怕一种子，而引擎很慢才会替被逼到角落的将腾出空间。它有时候会把一颗子调到棋盘另一头，同时一颗孤零零的敌方卒走过来把它困死。跟上面那个和棋是同一个缺口：这套评估函数对于好几步之外慢慢成形的安静威胁，没有什么感觉。',
-  "There's an upshot for you here. If you're losing on material, you're not necessarily lost: MistyBanqi may shuffle into a repetition draw it can't see it should decline. It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":
-    '这对你是有好处的。如果你子力落后，不代表就输了：MistyBanqi 可能来回挪子，走进那个它看不出该拒绝的重复和棋。这种事多到可以量：引擎自我对弈的 200 盘里，[每六盘就有一盘和棋](/blog/banqi-statistics)，其中一半曾经走到赢定的局面。',
+  "There's an upshot for you here. If you're losing on material, you're not necessarily lost: MistyBanqi may shuffle into a [repetition draw](/blog/banqi-perpetual-chase) it can't see it should decline. It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":
+    '这对你是有好处的。如果你子力落后，不代表就输了：MistyBanqi 可能来回挪子，走进那个它看不出该拒绝的[重复和棋](/blog/banqi-perpetual-chase)。这种事多到可以量：引擎自我对弈的 200 盘里，[每六盘就有一盘和棋](/blog/banqi-statistics)，其中一半曾经走到赢定的局面。',
   '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
     '[MistyBanqi](/blog/mistybanqi) 自我对弈，每步搜索一千万个节点，是本站机器人的三倍棋力。用箭头一步步看。[配套研究](/study/FsA5sowX)收了这批棋的全部二十盘，一盘一章，附上每盘怎么走完的注记。同一批棋里的两百盘被整理成数字，放在[用数字看暗棋](/blog/banqi-statistics)：领先多少才算安全，一盘棋什么时候就定了。',
   // cao-yanlei (zh-Hans), machine-drafted 2026-09-25, not native-reviewed. Mainland
@@ -1055,7 +1330,7 @@ const ZH_HANS: Record<string, string> = {
   "Every game of the year is in a Mistboard study, with the engine's judgments and lines on each one, and 71 of the 75 are in the broadcast archive with the site's analysis. Sources: game records from dpxq.com, which may not hold every game of an event; analysis by Pikafish through Mistboard's review pipeline, September 2026.":
     '今年的每一盘都在 Mistboard 的一个研究里，每盘都有引擎的判断和变化；75 盘中有 71 盘也在直播档案里，附网站的分析。资料来源：棋谱来自 dpxq.com，该数据库不一定收齐每项赛事的全部对局；分析由 Pikafish 经 Mistboard 的复盘流程完成，2026 年 9 月。',
   'Cao Yanlei 曹岩磊: games, results, and analysis': '曹岩磊：对局、战绩与分析',
-  'Cao Yanlei at the board.': '对局中的曹岩磊。',
+  'Portrait of Cao Yanlei.': '曹岩磊肖像。',
   'Wang Yongqiang': '王永强',
   'Zhao Panwei': '赵攀伟',
   // lai-ly-huynh (zh-Hans), machine-drafted 2026-10-01, not native-reviewed. Mainland
@@ -2099,8 +2374,8 @@ const ZH_HANS: Record<string, string> = {
     '当对手轮到自己却无棋可走时，你获胜——通常是因为敌方棋子被全部吃光，有时则是被困死、无路可走。这里的将不是王棋：吃掉它只是进展，而非胜利，棋局会一直进行到一方被吃光或被困死为止。',
   'Mistboard draws a game two ways: 40 plies (single moves) with no flip or capture, or threefold repetition, the same position three times. A flip or capture resets both counters because it changes the position irreversibly.':
     'Mistboard 有两种自动和棋：连续 40 个半回合没有翻子或吃子，或同一局面出现三次。翻子或吃子会不可逆地改变局面，因此会重置两个计数。',
-  'A chase (長捉) is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not make a position appear for the third time with a chase; it must play something else, unless it has no other legal move. A repetition caused by a chase is never a draw, because the chased piece cannot stay put without being taken. A chase that keeps driving a piece onto new squares is not limited.':
-    '捉子（长捉）指既不翻子也不吃子、走完后能吃掉对方刚走动那枚棋子的一步棋，不论那枚棋子有没有根。捉子的一方不能用捉子让同一局面第三次出现，必须改走别的着法，除非没有其他合法着法。由捉子造成的重复局面一律不判和，因为被捉的棋子不走就会被吃。不断把对方棋子赶到新位置的捉子不受限制。',
+  'A chase (長捉) is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not make a position appear for the third time with a chase; it must play something else, unless it has no other legal move. A repetition caused by a chase is never a draw, because the chased piece cannot stay put without being taken. A chase that keeps driving a piece onto new squares is not limited. [Why the rule works this way](/blog/banqi-perpetual-chase), with games.':
+    '捉子（长捉）指既不翻子也不吃子、走完后能吃掉对方刚走动那枚棋子的一步棋，不论那枚棋子有没有根。捉子的一方不能用捉子让同一局面第三次出现，必须改走别的着法，除非没有其他合法着法。由捉子造成的重复局面一律不判和，因为被捉的棋子不走就会被吃。不断把对方棋子赶到新位置的捉子不受限制。[这条规则为什么这样定](/blog/banqi-perpetual-chase)，附对局。',
   'Play MistyBanqi': '对战 MistyBanqi',
   'Challenge a friend': '挑战好友',
   'Three rules give the game its character: the rat captures the elephant, only the rat can swim, and the lion and tiger leap the rivers.':
@@ -2251,8 +2526,6 @@ const ZH_HANS: Record<string, string> = {
   "Rated games need an account. Casual games, the engine ladder and friend links don't.":
     '积分对局需要账户。休闲对局、引擎等级阶梯和好友链接都不需要。',
   'Find an opponent': '寻找对手',
-  'A piece you capture changes to your color and goes into your reserve, ready to drop back in. No account needed.':
-    '吃掉的棋子会变成你的颜色进入持子，随时可以打回棋盘。无需账户。',
   'A rat on land can take the elephant, and the elephant can never take a rat. No account needed.':
     '陆地上的老鼠可以吃大象，大象却永远不能吃老鼠。无需账户。',
   'When an animal takes an enemy of the same rank, both leave the board. No account needed.':
@@ -3142,6 +3415,47 @@ const ZH_HANS: Record<string, string> = {
   'The mate': '杀局',
   // -- The xiangqi match-fixing case --
   // Machine-drafted 2026-08-30, not native-reviewed, same standing as the two
+  'Between 2024 and 2026 the Chinese Xiangqi Association sanctioned 49 people for buying and selling games: 8 life bans, 37 timed bans and 4 reprimands.':
+    '2024到2026年间，中国象棋协会因买棋卖棋处罚了49人：终身禁赛8人，限期禁赛37人，通报批评4人。',
+  'Ten of the thirteen national champions since 2005 carry a ruling, including Wang Tianyi, the top-rated player from 2014 to 2023.':
+    '2005年以来的十三位全国冠军中，有十人受到处罚，其中包括2014到2023年间等级分第一的王天一。',
+  'A Hangzhou court convicted six grandmasters of bribery in September 2025. The charge was bribery, not gambling.':
+    '2025年9月，杭州一家法院以行贿受贿判决六名特级大师有罪。罪名是行贿受贿，不是赌博。',
+  'Engine cheating is alleged in every account and charged in none. No result or title has been struck from the record.':
+    '各方说法都提到用软件作弊，但没有一项指控涉及。至今没有任何成绩或称号被撤销。',
+  'This is our best reading of what has been published. If you know something here to be wrong or out of date, [tell us](/contact) and we will correct it.':
+    '本页是我们对已公开报道的最佳解读。如果你知道其中有错误或已过时的内容，请[告诉我们](/contact)，我们会更正。',
+  'Who’s who': '人物一览',
+  'The names that recur below. A ban is the association’s penalty and bars a player from competing; a prison term is the court’s.':
+    '下文反复出现的人物。禁赛是协会的处罚，禁止棋手参赛；徒刑是法院的判决。',
+  Person: '人物',
+  'Part in the case': '在案中的角色',
+  'Top-rated player 2014 to 2023; bought games': '2014至2023年等级分第一；买棋',
+  'Life ban; 2 years 9 months in prison': '终身禁赛；有期徒刑2年9个月',
+  'On the recorded calls; the go-between for most of Wang Tianyi’s payments':
+    '录音通话的一方；王天一大部分付款的中间人',
+  'Life ban; 1 year in prison': '终身禁赛；有期徒刑1年',
+  'The other voice on the recordings': '录音中的另一方',
+  'Banned 4 years 3 months; not charged': '禁赛4年3个月；未被起诉',
+  '2005 champion; one outlet reports he passed the recordings on':
+    '2005年冠军；有一家媒体报道录音由他转出',
+  'Life ban; 2 years 7 months in prison, appeal rejected': '终身禁赛；有期徒刑2年7个月，上诉被驳回',
+  '2007 champion': '2007年冠军',
+  'Life ban; 4 years 9 months in prison, the longest term': '终身禁赛；有期徒刑4年9个月，刑期最长',
+  'Xie Jing 谢靖, Xu Chao 徐超': '谢靖、徐超',
+  '2013 and 2017 champions': '2013年和2017年冠军',
+  'Life bans; 2 years 6 months in prison each': '均终身禁赛；各判有期徒刑2年6个月',
+  'Veteran player; alleged engine cheating for years, then accused an official by name':
+    '老将；多年来指称对手用软件作弊，随后实名举报一名官员',
+  'Not sanctioned': '未受处罚',
+  'Joined Liu Dahua’s accusation': '与柳大华联名举报',
+  'Banned 3 years': '禁赛3年',
+  'Guo Liping 郭莉萍': '郭莉萍',
+  'Official at the sport administration, named in the accusation':
+    '棋牌运动管理中心官员，被举报点名',
+  'Left the post in December 2024; not charged': '2024年12月去职；未被起诉',
+  'Ban from competing': '禁赛处罚',
+  'Prison term': '刑期',
   'The Xiangqi Match-Fixing Case': '象棋假棋案',
   'Xiangqi Match-Fixing: 录音门, the Bans, and the Convictions': '象棋假棋案：录音门、禁赛与判决',
   'Between 2024 and 2026 the Chinese Xiangqi Association sanctioned 49 people for buying and selling games, and a Hangzhou court convicted six grandmasters of bribery. What happened, why it paid, who ruled, and what is still unproven.':
@@ -3174,8 +3488,8 @@ const ZH_HANS: Record<string, string> = {
   'The spine of the case. Liu Dahua’s earlier private complaints are his own account rather than a documented date.':
     '本案的主线。柳大华更早的私下反映出自他本人的说法，并无确切日期可考。',
   'Two processes, one case': '两条并行的程序，同一起案件',
-  'The disciplinary track and the criminal track are separate. They ran on different timetables, and the six convicted are six of the forty-nine banned rather than a different group.':
-    '纪律处理与刑事追诉是两条独立的程序，时间表也不相同。被判刑的六人正是被处罚的四十九人中的六位，并非另一批人。',
+  'The disciplinary track and the criminal track are separate: the association can only bar a player from competing, and only the court can send one to prison. They ran on different timetables, and the six convicted are six of the forty-nine banned rather than a different group.':
+    '纪律处理与刑事追诉是两条独立的程序：协会只能禁止棋手参赛，只有法院才能判处徒刑。两者时间表也不相同。被判刑的六人正是被处罚的四十九人中的六位，并非另一批人。',
   'A third track went nowhere in public. Three officials left the chess and card centre while the case ran: its director Zhu Guoping 朱国平 and its discipline secretary Guo Yujun 郭玉军 in November 2024, and Guo Liping in December. No removal notice mentions this case, and no official has been reported as charged or sanctioned in connection with it.':
     '第三条线在公开层面没有下文。案件进行期间，棋牌运动管理中心有三名官员去职：主任朱国平与纪检书记郭玉军于2024年11月，郭莉萍于同年12月。没有一份免职通知提到本案，也没有任何官员被报道因此被追究或处罚。',
   'The Chinese Xiangqi Association has sanctioned 49 people in three batches: two in September 2024, forty-one in January 2025, and six in April 2026. That is 8 lifetime bans, 37 timed bans and 4 public reprimands. Revocation of the technical grade title accompanies 19 of the 45 bans rather than all of them. Only the three timed bans in the April 2026 notice carry published start and end dates, all running from 24 July 2024; the January notice publishes no dates at all, so when most of those bans expire is not a matter of public record.':
@@ -3183,7 +3497,6 @@ const ZH_HANS: Record<string, string> = {
   'The association published almost every name. Where a player also appears on the champion lists, his national title years are in the last column.':
     '协会公布了几乎每一个名字。若该棋手同时出现在冠军名单上，其全国冠军年份列在最后一栏。',
   Player: '棋手',
-  Penalty: '处罚',
   'National title': '全国冠军',
   'The 47 the association named. The other two were withheld because they were under 18 when the conduct occurred. Revocation of the technical grade title accompanies 19 of the 45 bans, not all of them.':
     '协会具名公布的47人。另外两人因涉案时未满18周岁而未公布姓名。45项禁赛中有19项同时撤销技术等级称号，并非全部。',
@@ -3192,9 +3505,8 @@ const ZH_HANS: Record<string, string> = {
   'Separately, the Shangcheng District People’s Court in Hangzhou convicted six grandmasters on 24 September 2025 of offering and accepting bribes as non-state functionaries, under Articles 163 and 164 of the criminal law. The Chinese press calls it the sport’s first criminal corruption case.':
     '另一条线上，杭州市上城区人民法院于2025年9月24日以对非国家工作人员行贿罪、非国家工作人员受贿罪判决六名特级大师有罪，依据刑法第163条与第164条。中文媒体称之为中国象棋反腐第一案。',
   Convicted: '被判刑者',
-  Sentence: '刑期',
-  'Reported from the 24 September 2025 verdict. No judgment text was released: these figures trace to the prosecution’s case, and only Hong Zhi’s was separately reported as a court outcome. Fines were imposed on Wang Tianyi and Zhao Xinxin; no amounts have ever been published.':
-    '据2025年9月24日宣判的报道整理。判决书未公开：这些数字源自检方的指控，其中只有洪智一项另有作为法院结果的报道。王天一与赵鑫鑫另被并处罚金，金额从未公布。',
+  'Reported from the 24 September 2025 verdict. The terms are 有期徒刑, fixed-term imprisonment; whether any was suspended has not been reported. No judgment text was released: these figures trace to the prosecution’s case, and only Hong Zhi’s was separately reported as a court outcome. Fines were imposed on Wang Tianyi and Zhao Xinxin; no amounts have ever been published.':
+    '据2025年9月24日宣判的报道整理。刑期均为有期徒刑，是否适用缓刑未见报道。判决书未公开：这些数字源自检方的指控，其中只有洪智一项另有作为法院结果的报道。王天一与赵鑫鑫另被并处罚金，金额从未公布。',
   'The strongest player in the world was buying': '最强的棋手是买家',
   'Wang Tianyi was China’s top-rated player from 2014 to 2023, known simply as 象棋第一人, the number one. The prosecution charged 22 separate acts of giving bribes totalling ¥942,000, against 2 acts of taking them totalling ¥116,000. Nineteen of the 22 payments ran through Wang Yuefei.':
     '王天一在2014到2023年间等级分居全国第一，被称为象棋第一人。检方指控他行贿22笔、合计94.2万元，受贿2笔、合计11.6万元。22笔中有19笔经由王跃飞。',
@@ -4283,8 +4595,17 @@ const ZH_HANS: Record<string, string> = {
     '本页背后的引擎对局之一：一千万节点的 Fairy-Stockfish 执红，对阵一百万节点的自己。第 6 回合红方已多出一个半兵，之后局面一直接近，直到黑方第 21 回合的 Hxf9：马吃 f9 的炮，而黑方自己的士就在旁边的 f10。爆炸带走了士，九宫白白少了一子，从此再没恢复：第 30 回合的 Cb9 让将失去了掩护，第 38 回合红车吃掉 d8 的炮，紧挨着 d9 的将。爆炸带走了将，连同 e8 的象。',
   'Atomic Xiangqi: an engine game decided by a self-blast in the palace':
     '原子象棋：一盘由九宫内自炸决定的引擎对局',
-  'Play Atomic Xiangqi': '下原子象棋',
   'The twelve engine games': '十二盘引擎对局',
+  // Retirement notes (2026-10-11), machine translation of English not yet signed off.
+  'Atomic Xiangqi is no longer open for new games; finished games still replay. The [launch note](/blog/atomic-xiangqi-build) is what decided a first game; the study has all twelve engine games, with every explosion marked and a note on the move that decided each.':
+    '原子象棋已不再开放新对局，已结束的对局仍可回放。[发布说明](/blog/atomic-xiangqi-build)讲的是第一盘棋的胜负由什么决定；研究里有全部十二盘引擎对局，每次爆炸都有标记，每盘的决定性一步都有注解。',
+  'Atomic Xiangqi was retired on 2026-10-11: it no longer takes new games, and finished games still replay. The rules page has the whole thing with diagrams.':
+    '原子象棋已于 2026-10-11 下线：不再接受新对局，已结束的对局仍可回放。规则页面配有图解，讲得完整。',
+  'Fortress Xiangqi is no longer open for new games; finished games still replay. Its nearest relative here is Crazyhouse Xiangqi: a piece you capture joins your hand and drops back in, on the full board. No account needed.':
+    '堡垒象棋已不再开放新对局，已结束的对局仍可回放。本站与它最接近的是疯狂屋象棋：吃掉的棋子进入你的持子，可以打回棋盘，用的是完整棋盘。无需账户。',
+  'Play Crazyhouse Xiangqi': '下疯狂屋象棋',
+  'Crazyhouse Xiangqi rules': '疯狂屋象棋规则',
+  'Further reading': '延伸阅读',
   'Atomic Xiangqi: What Decides Your First Game': '原子象棋：第一盘棋的胜负由什么决定',
   'Atomic Xiangqi Is Live: What Decides Your First Game':
     '原子象棋上线了：第一盘棋的胜负由什么决定',
@@ -4330,9 +4651,6 @@ const ZH_HANS: Record<string, string> = {
   'The bot takes a general on offer without thinking': '送到嘴边的将帅，电脑想都不想就吃',
   'The bot is Fairy-Stockfish with a patch for these rules, eight node-anchored levels, the same ladder the other xiangqi variants use. Its weaker levels are weakened by choosing a move other than the best one they found, and on the duck board that made a level-1 bot decline a general capture it could see. Here the loop checks for a move that removes the general before it asks the engine anything, so a general left next to a capturable piece is taken at every level. Weakness is in how the bot builds a position, not in whether it finishes one.':
     '电脑是加了这套规则补丁的 Fairy-Stockfish，八个以节点数锚定的等级，和其他象棋变体用的是同一套阶梯。较弱的等级是通过不走自己找到的最佳着法来削弱的，在鸭子象棋的棋盘上，这曾让一个 1 级电脑放弃了一次它看得见的吃将。这里的循环在向引擎提问之前会先检查有没有能移除将帅的着法，所以留在可吃棋子旁边的将帅，在每一个等级都会被吃掉。电脑的弱点在于它如何构筑局面，而不在于它会不会收官。',
-  'Eight engine strengths, or a friend by invite link. The rules page has the whole thing with diagrams.':
-    '八个引擎强度档位，或者用邀请链接约朋友。规则页面配有图解，讲得完整。',
-  'Invite a friend': '邀请朋友',
   // banqi capture table + FAQ, jungle FAQ (2026-09-17)
   'General 帥 / 將': '将帅：帅 / 将',
   'Advisor 仕 / 士': '士：仕 / 士',
@@ -4867,6 +5185,277 @@ const ZH_HANS: Record<string, string> = {
 
 const ZH_HANT: Record<string, string> = {
   ...ZH_HANS,
+  // jieqi-puzzle-search: machine-drafted 2026-10-10, not native-reviewed. Terms follow ab-jchess and jieqi-bot-wins (暗子, 翻子, 暗吃, 勝率, 訪客, 皮卡魚, 覆盤, 著法).
+  'Looking for jieqi puzzles': '在揭棋裡找題目',
+  'We searched 2,939 positions from 50 jieqi games for puzzles. 58 had one clearly best move and 15 of those turned on a hidden piece. None of the 15 passed the rules our xiangqi puzzles go through, and we stopped looking.':
+    '我們在 50 盤揭棋對局的 2,939 個局面裡尋找題目。58 個局面有一步明顯最好的著法，其中 15 個取決於一枚暗子。這 15 個沒有一個通過我們象棋題目要過的規則，於是我們不再尋找。',
+  'We scored 2,939 positions from 50 jieqi games. 58 had one clearly best move, and 15 of those turned on a face-down piece.':
+    '我們給 50 盤揭棋對局中的 2,939 個局面打了分。58 個局面有一步明顯最好的著法，其中 15 個取決於一枚暗子。',
+  'Four positions passed the rules our xiangqi puzzles go through, and none turns on a hidden piece. The hidden-piece answers were bets or moves the tile hardly touched.':
+    '有四個局面通過了我們象棋題目要過的規則，沒有一個取決於暗子。取決於暗子的答案，要麼是賭博，要麼是暗子幾乎無關的著法。',
+  'Skill shows in timing: a tile on its starting square moves as its home piece, so a capture it threatens can usually wait.':
+    '實力體現在時機上：停在原位的暗子按原位棋子的走法走，所以它威脅的吃子通常可以等一等。',
+  'In [jieqi](/rules/jieqi), every piece except the generals starts face down, and a piece shows what it is when it first moves. A xiangqi puzzle asks for a forced line, and in jieqi a forced line rarely gets past the first piece that turns over, because nobody knows yet what it will be.':
+    '在[揭棋](/rules/jieqi)裡，除將帥以外的每一枚棋子開局時都是暗子，第一次走動時才亮出身份。象棋題目要求一條強制著法，而在揭棋裡，強制著法很少能越過第一枚被翻開的棋子，因為誰也不知道它會是什麼。',
+  'In October we asked a different question. If a jieqi puzzle is a decision under uncertainty, the way a poker hand is, does the game produce them? We have stopped looking, and the last section says what would make us start again.':
+    '10 月，我們換了一個問題。如果揭棋題目是一種不確定條件下的決策，就像一手撲克牌，那麼這個棋會產生這樣的題目嗎？我們已經不再尋找，最後一節說明什麼情況會讓我們重新開始。',
+  'How we looked': '我們怎麼找',
+  'We took the 50 most recent finished jieqi games on the site with 20 plies or more, 2,939 positions in all. All 50 were played on 8 October by guests against a bot: 34 against [AB-JChess](/blog/ab-jchess), 13 against Pikafish at level 2 and 3 against full-strength Pikafish.':
+    '我們取了本站最近 50 盤已結束、至少 20 個半回合的揭棋對局，共 2,939 個局面。50 盤都是 10 月 8 日訪客對電腦下的：34 盤對 [AB-JChess](/blog/ab-jchess)，13 盤對 2 級皮卡魚，3 盤對全強度皮卡魚。',
+  "AB-JChess scored the candidate moves in every position. A move that turns a piece over was scored once for each piece it could be, and the scores were averaged, weighted by how many of each piece the side to move had not yet seen. The site's jieqi game review grades a reveal the same way, from only what the player could know.":
+    'AB-JChess 為每個局面的候選著法評分。一步會翻開棋子的著法，按它可能是的每種棋子各打一次分，再按走子方尚未見過的每種棋子的數量加權平均。本站的揭棋對局覆盤也是這樣給翻子評分的，只用棋手能知道的資訊。',
+  'A position counted when the best move beat the second best by at least 15 points of winning chance, both at our standard depth and at four times that, with every move searched to at least one full ply.':
+    '一個局面要算數，最佳著法必須比次佳著法高出至少 15 個百分點的勝率，在我們的標準深度和四倍深度下都是如此，並且每步著法都至少搜索滿一個半回合。',
+  'What turned up': '找到了什麼',
+  '58 positions passed, from 24 of the 50 games. 43 of them are ordinary tactics with a quiet move as the answer, and 15 of those never touch a face-down piece in the first five plies of the line. They are xiangqi puzzles that happen to come from jieqi games.':
+    '有 58 個局面通過，來自 50 盤中的 24 盤。其中 43 個是普通戰術，答案是一步不吃子的著法，這當中有 15 個在著法的前五個半回合裡根本不碰暗子。它們是恰好出自揭棋對局的象棋題目。',
+  'The other 15 turn on a hidden piece, and they come in two kinds. Of the 58, 25 had a person to move, and the person found the answer 19 times.':
+    '另外 15 個取決於一枚暗子，分為兩類。58 個局面中有 25 個輪到真人走，真人找到答案 19 次。',
+  'The lottery ticket': '彩票',
+  'The side to move is lost on every quiet move, and one tile could save it. We found five, all from lost positions, and the right answer usually loses.':
+    '走子方走任何不吃子的著法都輸，只有一枚暗子能救。我們找到五個，都出自已輸的局面，正確答案通常也會輸。',
+  'Black to move. Black has two tiles left, and from where Black sits each could be a soldier, horse, chariot or cannon. The a10 tile moves as a chariot on its first move, whatever it is, so a10-a1 lands on the back rank. If it turns out to be a chariot it is mate; anything else and it is lost. That is one chance in four, 25%, against 2% for the next best move. Black played it and turned over a soldier.':
+    '黑方走。黑方還剩兩枚暗子，從黑方的角度看，每一枚都可能是卒、馬、車或炮。a10 的暗子第一步無論是什麼都按車走，所以 a10-a1 落在底線上。如果翻出車就是殺棋；翻出別的就輸。這是四分之一的機會，25%，而次佳著法只有 2%。黑方走了這步，翻出一個卒。',
+  'Lottery ticket: Black to move, the game as dealt': '彩票：黑方走，按實際發到的暗子',
+  "One chance in four was right for what Black could see, and the ticket was blank all the same. A piece taken face down leaves the board without being shown to its owner, so Black's count of unseen pieces still included two that were already gone.":
+    '從黑方能看到的資訊來說，四分之一的機會是對的，可這張彩票照樣沒中。一枚被暗吃的棋子離開棋盤時不會亮給它的主人看，所以黑方算的未見棋子裡，仍包括兩枚早已不在的棋子。',
+  'Black piece not yet seen': '尚未見過的黑方棋子',
+  'Where it really was': '它實際在哪裡',
+  'Taken face down by Red on its move 17': '紅方在其第 17 回合暗吃',
+  'Taken face down by Red on its move 20': '紅方在其第 20 回合暗吃',
+  'The tile on a10': 'a10 的暗子',
+  'The tile on i10': 'i10 的暗子',
+  'Four pieces for two tiles, so each tile was a chariot one time in four from where Black sat. The chariot had left the board 11 moves earlier.':
+    '兩枚暗子對應四種棋子，所以從黑方的角度看，每一枚暗子是車的機會都是四分之一。而車早在 11 回合前就已離開棋盤。',
+  'The same move with a chariot dealt to a10: mate. This is the deal Black was playing for, and it was not possible in this game.':
+    '同一步棋，假如 a10 發到的是車：殺棋。這是黑方期待的發子，而在這盤棋裡它不可能出現。',
+  'Lottery ticket: the same position if a10 were the chariot': '彩票：假如 a10 是車，同一局面',
+  "Black to move. a10-a1, taking Red's face-down piece, and a10-b10 turn over the same tile, a soldier or a chariot at even odds from where Black sat. If it is the chariot, a10-a1 wins 95 to 98% of the time whatever it captured, and a10-b10 48%. On average that is 49.2% against 24.1%. Black found it, and turned over a soldier: Red had taken Black's chariot face down on its second move.":
+    '黑方走。a10-a1 吃掉紅方的暗子，a10-b10 也翻開同一枚暗子，從黑方的角度看，是卒還是車各占一半。如果是車，a10-a1 無論吃到什麼都有 95% 到 98% 的勝率，a10-b10 則是 48%。平均下來是 49.2% 對 24.1%。黑方找到了這步，翻出一個卒：紅方在第二回合就暗吃了黑方的車。',
+  'Double or nothing: Black to move, the game as played': '孤注一擲：黑方走，實戰局面',
+  'A stored move': '留著的一步',
+  'A capture that wins whatever the tile turns out to be can wait: in the game below it stayed available for six turns. It works because a face-down tile moves as the piece whose starting square it stands on, so its first move, capture included, does not depend on the deal.':
+    '一步無論暗子翻出什麼都能贏的吃子可以等：在下面這盤棋裡，它在六個回合裡一直都在。原因是暗子按它所在原位的棋子走法走，所以它的第一步，包括吃子，並不取決於發到什麼。',
+  "In 46 of the 2,939 positions a face-down tile could make a capture that won whatever the tile turned out to be. They came from 22 such captures, and the same capture was often there turn after turn; one stayed on the board for eight of its owner's turns. Nine were played. Holding one was usually free: in all but two of the 46 positions another move came within 15 points of it, and those two are one capture on consecutive turns, shown further down.":
+    '在 2,939 個局面中，有 46 個局面裡一枚暗子能吃子，而且無論翻出什麼都贏。它們來自 22 次這樣的吃子，同一個吃子常常一回合接一回合地留著；有一個在它主人的八個回合裡一直都在。最後走出的有九次。留著通常不吃虧：46 個局面裡，除兩個以外，都有另一步著法與它相差不到 15 個百分點，而那兩個是連續兩回合裡的同一個吃子，下文會展示。',
+  "Black to move. The i10 tile can run down the file as a chariot and take Red's i4 tile on this turn and each of the next five. Black plays elsewhere, the capture stays, and its score rises from 85% to 97%. Black takes on move 15; the tile is an elephant.":
+    '黑方走。i10 的暗子可以按車沿直線衝下去，在這一回合和接下來的五個回合裡吃掉紅方 i4 的暗子。黑方走別處，這個吃子一直留著，它的分數從 85% 升到 97%。黑方在第 15 回合吃掉；那枚暗子是象。',
+  'A stored capture: Black waits five turns, then takes': '留著的吃子：黑方等了五個回合才吃',
+  'Which tile': '翻哪一枚',
+  'The question is which face-down piece to move, and the right one works whatever it turns out to be. We found ten.':
+    '問題是走哪一枚暗子，而正確的那枚無論翻出什麼都成立。我們找到十個。',
+  "In the example below Black threatens d5xd1 check, with mate on the next move. Four of Red's 38 moves stop it. c1-a3 is the best of them, and it works by getting out of the way: the a1 tile moves as a chariot, so with c1 empty it can take back on d1. The tile on c1 can be any of six pieces, and c1-a3 stops the mate for every one.":
+    '在下面的例子裡，黑方威脅 d5xd1 將軍，下一步就殺。紅方的 38 步著法中有四步能擋住。c1-a3 是其中最好的，它靠讓開來解：a1 的暗子按車走，所以 c1 空出來後它可以在 d1 吃回。c1 的暗子可能是六種棋子中的任何一種，而 c1-a3 對每一種都能解殺。',
+  'Red to move. c1-a3 stops the mate but leaves the a5 cannon hanging, and Black took it at once. The tile was an advisor. Only a chariot on a3 would have guarded a5.':
+    '紅方走。c1-a3 解了殺，但留下 a5 的炮無人保護，黑方立刻吃掉了它。那枚暗子是仕。只有 a3 上是車才能保住 a5。',
+  'Which tile: Red to move, the game as played': '翻哪一枚：紅方走，實戰局面',
+  'c1 turns out to be': 'c1 翻出的是',
+  'Left face down': '仍是暗子',
+  "Black's best reply": '黑方最佳應著',
+  "Red's winning chance": '紅方勝率',
+  'a10-b10': 'a10-b10',
+  d5xa5: 'd5xa5',
+  'After c1-a3, by what the tile turns out to be. Black takes the cannon unless the tile is a chariot, and is better in every case. c1-a3 is the best move in the position and still loses most of the time: 36% on average, against 13% for the next best.':
+    'c1-a3 之後，按暗子翻出的是什麼分列。除非暗子是車，黑方都會吃掉炮，而且每種情況下黑方都更好。c1-a3 是這個局面的最佳著法，卻多半還是輸：平均 36%，次佳著法是 13%。',
+  'Held to the xiangqi puzzle rules': '用象棋題目的規則檢驗',
+  'Our [xiangqi puzzles](/blog/how-puzzle-mining-works) come from a miner with stricter rules. The opponent has just blundered, giving up 25 or more points of winning chance. The game was not already decided before that. After the right move the solver is winning, and after the second best move it is not.':
+    '我們的[象棋題目](/blog/how-puzzle-mining-works)來自一個規則更嚴格的挖掘器。對手剛剛走了一步敗著，丟掉了 25 個百分點以上的勝率。在那之前，棋局還沒有分出勝負。走出正確著法後解題方處於勝勢，走出次佳著法則不然。',
+  Step: '步驟',
+  'Positions left': '剩餘局面',
+  Scanned: '掃描',
+  "Passed the xiangqi miner's rules": '通過象棋挖掘器的規則',
+  'Mates in one dropped, as the miner does': '剔除一步殺，與挖掘器做法相同',
+  'Positions with a single legal move dropped': '剔除只有一步合法著法的局面',
+  'The same 2,939 positions through the rules our xiangqi puzzles pass.':
+    '同樣的 2,939 個局面，經過我們象棋題目要過的規則。',
+  'A person was to move in three of the four and missed all three; the bot was to move in the fourth. None turns on a hidden piece. Every lottery ticket and every which-tile position failed, because the side to move was not winning or the opponent had not blundered.':
+    '四個局面中有三個輪到真人走，三個都沒找到；第四個輪到電腦走。沒有一個取決於暗子。每一張彩票、每一個翻哪一枚的局面都沒通過，原因是走子方並不處於勝勢，或者對手並沒有走出敗著。',
+  "Red to move. e3-f3 and the engine's line after it. The interest is mostly jieqi's: Red's revealed elephant and advisors stand outside the zones they could never leave in xiangqi.":
+    '紅方走。e3-f3 以及引擎隨後的著法。它的看點主要屬於揭棋：紅方已翻開的相和仕，站在象棋裡永遠離不開的區域之外。',
+  'Red to move: the first of four': '紅方走：四個中的第一個',
+  "Red to move. i10-f10 and the engine's line, in which Black loses the chariot two moves later. No face-down piece is left on the board. Red played i10-i9 instead.":
+    '紅方走。i10-f10 以及引擎的著法，黑方在兩回合後丟車。棋盤上已經沒有暗子。紅方實戰走了 i10-i9。',
+  'Red to move: the second of four': '紅方走：四個中的第二個',
+  "Red to move. h10-h9 and the engine's line. It is ordinary xiangqi: a tile turns over only on the line's last move.":
+    '紅方走。h10-h9 以及引擎的著法。這是普通的象棋：只在著法的最後一步才有暗子被翻開。',
+  'Red to move: the third of four': '紅方走：四個中的第三個',
+  'Black to move. e7-f7 and mate in six, with no face-down piece left on the board. The bot played e3-c3 instead.':
+    '黑方走。e7-f7，六步殺，棋盤上已沒有暗子。電腦實戰走了 e3-c3。',
+  'Black to move: the fourth of four': '黑方走：四個中的第四個',
+  'Why we stopped': '我們為什麼停下',
+  'The chart shows the problem. A lottery ticket is all or nothing: right because one deal in four wins outright, and usually lost. A which-tile answer scores about the same for every piece, because it meets the threat on the board and the tile hardly matters. A fair puzzle needs a single line that works, and a decision about a hidden piece rarely has one.':
+    '圖表說明了問題。彩票是全有或全無：它之所以對，是因為四次發子中有一次直接獲勝，而它通常會輸。翻哪一枚的答案，對每種棋子的得分都差不多，因為它應對的是盤面上的威脅，暗子是什麼幾乎無關緊要。一道公平的題目需要一條成立的著法，而關於暗子的決定很少有這樣一條。',
+  "The mover's winning chance after the answer, once for each piece the tile could be, from the two examples above. The dashed line is the average the review grades by.":
+    '解答之後走子方的勝率，按暗子可能是的每種棋子各算一次，取自上面兩個例子。虛線是覆盤據以評分的平均值。',
+  'We tried two ways round it. The first was to grade as if the face-down pieces were known, using the real deal. That gave 16 positions through the xiangqi rules: the same 15, plus one reveal that wins only because the tile was a cannon (100% for a cannon, 59 to 73% for anything else). A puzzle whose answer depends on what the solver cannot see is not one we would publish.':
+    '我們試了兩種繞過去的辦法。第一種是按暗子已知來評分，用真實的發子。這樣有 16 個局面通過了象棋規則：同樣的 15 個，加上一步只因為暗子是炮才贏的翻子（是炮為 100%，是別的則為 59% 到 73%）。答案取決於解題者看不見的東西，這樣的題目我們不會發布。',
+  'The second was to look for reveals that win whatever comes up: the best move turns a tile over, every piece it could be scores 81% or more, and the next best move 60% or less. There were none in the 2,939 positions.':
+    '第二種是尋找無論翻出什麼都贏的翻子：最佳著法翻開一枚暗子，它可能是的每種棋子得分都在 81% 以上，而次佳著法在 60% 以下。2,939 個局面裡一個也沒有。',
+  'The nearest thing to a fair jieqi puzzle we found is a stored capture, where the capture is certain and only the piece after it is luck.':
+    '我們找到的最接近公平的揭棋題目，是留著的吃子：吃子是確定的，只有吃完之後翻出的棋子靠運氣。',
+  "Red to move. The h1 tile moves as a horse and takes Black's chariot on g3, and it does that whatever the tile is. Red's winning chance is 93 to 95% for each of the three pieces it could be, against 78% for the next best move. The bot, Pikafish at level 2, missed it two turns running. The tile was a chariot. It is the only capture of the 22 that beat the next best move by 15 points.":
+    '紅方走。h1 的暗子按馬走，吃掉黑方在 g3 的車，而且無論暗子是什麼都能這樣做。對它可能是的三種棋子，紅方勝率都是 93% 到 95%，次佳著法則是 78%。電腦（2 級皮卡魚）連續兩回合都沒看到。那枚暗子是車。在 22 次吃子中，它是唯一比次佳著法高出 15 個百分點的。',
+  'A capture that does not depend on the tile: Red to move': '不取決於暗子的吃子：紅方走',
+  Limit: '限制',
+  'What it could change': '可能改變什麼',
+  'One engine, AB-JChess, set every answer': '只有一個引擎 AB-JChess 決定所有答案',
+  'A second engine could disagree': '第二個引擎可能有不同看法',
+  'Only its top five to eight moves were scored': '只給它排名前五到八的著法打了分',
+  'An unscored move could narrow a gap': '一步未評分的著法可能縮小差距',
+  '50 games from one day, guests against a bot': '50 盤對局來自同一天，都是訪客對電腦',
+  'Other games could turn up other positions': '其他對局可能出現其他局面',
+  'The bot was to move in half the positions': '一半局面輪到電腦走',
+  'Half of what we found no person faced': '我們找到的局面有一半沒有真人面對過',
+  'What the 50 games say': '這 50 盤棋說明了什麼',
+  'Jieqi does not produce puzzles the way xiangqi does. Four positions in 50 games passed our xiangqi rules, none of them about a hidden piece, and the hidden-piece answers were bets or moves the tile hardly touched.':
+    '揭棋產生題目的方式和象棋不一樣。50 盤對局裡有四個局面通過了我們的象棋規則，沒有一個與暗子有關；取決於暗子的答案，要麼是賭博，要麼是暗子幾乎無關的著法。',
+  'Skill shows in timing more than in guessing. A tile on its starting square moves as its home piece, so a capture it threatens is a move in reserve: play something else while it is safe, and take it before it can be blocked. When a tile must turn over, pick the one that holds whatever it is, and remember that your count of what it could be includes pieces your opponent took face down.':
+    '實力更多體現在時機上，而不是猜測上。停在原位的暗子按原位棋子的走法走，所以它威脅的吃子是一步留著備用的棋：趁它安全時先走別的，在它被擋住之前吃掉。必須翻開一枚暗子時，選那枚無論是什麼都能撐住的，並且記住，你對它可能是什麼的計算裡，包含了對手暗吃掉的棋子。',
+  'We would look again for puzzles about that timing, with an answer that holds for every deal, in thousands of games where a person was to move, checked by a second engine. Until then, the hidden pieces in jieqi are something to play, not something to solve.':
+    '我們會為這種時機的題目再找一次：答案對每一種發子都成立，取自數千盤由真人走子的對局，並由第二個引擎檢驗。在那之前，揭棋裡的暗子是拿來下的，不是拿來解的。',
+  'WINNING CHANCE BY WHAT THE TILE TURNS OUT TO BE': '按暗子翻出的棋子分列的勝率',
+  'Lottery ticket: a10-a1, Black to move': '彩票：a10-a1，黑方走',
+  'average 25%': '平均 25%',
+  'Which tile: c1-a3, Red to move': '翻哪一枚：c1-a3，紅方走',
+  'average 36%': '平均 36%',
+  'Looking for jieqi puzzles: what 50 games turned up': '在揭棋裡找題目：50 盤對局找到了什麼',
+  // banqi-perpetual-chase: machine-drafted 2026-10-11, not native-reviewed. Piece names follow banqi-statistics (將 士 象 車 馬 砲 卒); a ply is 步.
+  'The Perpetual Chase Rule in Banqi': '暗棋長捉規則',
+  'Perpetual Chase in Banqi': '暗棋的長捉',
+  'A repeating chase can also go round a square of four. The chased piece runs round the corner, the chaser follows one step behind, and the board comes back every eight plies.':
+    '重複的長捉也可以繞著四個格子轉。被捉的子繞著角落跑，捉的一方落後一步跟著，每八步棋盤就回到原樣。',
+  'Herding chases are fine': '趕子的長捉沒問題',
+  'From a game on Mistboard, 30 September 2026. The player’s general chased the bot’s advisor five times, from b2 to f3, where the player’s other advisor took it.':
+    '來自 Mistboard 上 2026 年 9 月 30 日的一盤棋。玩家的將把機器人的士追了五次，從 b2 一直追到 f3，在那裡被玩家的另一個士吃掉。',
+  'What other rules say': '其他規則怎麼說',
+  'Four rule sets and a reference work, as read in October 2026.':
+    '四套規則和一部參考資料，2026 年 10 月查閱。',
+  'Perpetual chase': '長捉',
+  'No-progress draw': '無進展判和',
+  '[TCGA computer banqi rules, Hsu (2019)](https://homepage.iis.sinica.edu.tw/~tshsu/tcg/2019/hwks/rules.pdf)':
+    '[TCGA 電腦暗棋比賽規則，Hsu（2019）](https://homepage.iis.sinica.edu.tw/~tshsu/tcg/2019/hwks/rules.pdf)',
+  'No chase rule. A position repeated three times draws.': '無長捉規定。同一局面出現三次判和。',
+  '60 plies': '60 步',
+  '[Chen, Shen and Hsu, ICGA Journal (2010)](https://homes.cs.washington.edu/~armin/ICGA2010.pdf)':
+    '[Chen、Shen、Hsu，《ICGA Journal》（2010）](https://homes.cs.washington.edu/~armin/ICGA2010.pdf)',
+  'No chase rule. Repeated positions draw.': '無長捉規定。局面重複判和。',
+  '40 plies': '40 步',
+  'No chasing the same piece 10 times in a row.': '不能連續 10 次追擊同一顆子',
+  '50 plies': '50 步',
+  'Not mentioned.': '未提及',
+  'A chase move may not make a position appear for the third time.':
+    '一步捉不得讓同一局面出現第三次。',
+  'Why not a move count': '為什麼不用步數上限',
+  'Making the chaser lose, as xiangqi does, needs someone to judge what counts as a chase, and no banqi source uses it. Repetition needs no number and no judge. It stops a repeating chase at the repeat and leaves a chase that goes somewhere alone.':
+    '像象棋那樣判捉的一方輸，得有人判斷什麼算捉，而且沒有一份暗棋資料採用。重複規則不需要數字，也不需要裁判。重複的長捉在重複時就被擋下，有進展的長捉則不受影響。',
+  advisor: '士',
+  soldier: '卒',
+  elephant: '象',
+  chariot: '車',
+  cannon: '砲',
+  general: '將',
+  'Banqi rules': '暗棋規則',
+  'THE ADVISOR RUNS FIVE TIMES': '士逃了五次',
+  'THE OTHER ADVISOR TAKES IT': '另一個士吃掉它',
+  'In banqi a chased piece often has one safe square, so a chase can go back and forth until the position repeats, and under plain threefold repetition the chaser alone decides the draw. Tournament rules allow it and apps cap the chase at 7 or 10 moves. Mistboard forbids the chase move that would repeat a position a third time, and leaves chases that go somewhere alone.':
+    '暗棋裡被捉的子常常只有一個安全的格子，所以長捉可以來回走到局面重複；如果只按三次重複判和，和不和完全由捉的一方決定。比賽規則允許這樣判和，應用則把長捉限在 7 次或 10 次。Mistboard 禁止會讓同一局面第三次出現的那一步捉，把目標趕向別處的長捉則不去管它。',
+  'In a perpetual chase one piece attacks another move after move. In banqi the runner often has one safe square, so the two go back and forth until the position repeats.':
+    '長捉就是一顆子一步接一步地攻擊另一顆子。在暗棋裡，逃的一方常常只有一個安全的格子，於是兩顆子來回走，直到局面重複。',
+  'The runner can’t stay put without being taken, so under plain threefold repetition the chaser alone decides whether the game is drawn.':
+    '逃的一方不動就會被吃，所以如果只按三次重複判和，和不和完全由捉的一方決定。',
+  'Mistboard forbids the chase move that would make a position appear for the third time. A chase that drives its target onto new squares never repeats, and the rule leaves it alone.':
+    'Mistboard 禁止會讓同一局面第三次出現的那一步捉。把目標一路趕向新格子的長捉永遠不會重複，這條規則不去管它。',
+  'Tournament rules draw on repetition, and apps cap a chase at 7 or 10 moves, which comes after the repetition in every chase draw we have seen.':
+    '比賽規則按重複局面判和，應用把長捉限在 7 次或 10 次，但在我們見過的每一盤長捉和棋裡，這個上限都來得比重複晚。',
+  'A perpetual chase is one piece attacking another move after move while the other keeps running. In [banqi](/rules/banqi), Chinese dark chess, the runner often has a single safe square, so the two pieces go back and forth until the position repeats. Whether that should be a draw, and who gets to decide, is a question banqi rule sets answer in different ways.':
+    '長捉，就是一顆子一步接一步地攻擊另一顆子，而被捉的子一直在逃。在[暗棋](/rules/banqi)裡，逃的一方常常只有一個安全的格子，於是兩顆子來回走，直到局面重複。這該不該算和棋、由誰來決定，各套暗棋規則的答案不一樣。',
+  'Why banqi needs a chase rule': '暗棋為什麼需要長捉規則',
+  'In chess a threefold repetition needs both players to keep repeating, and either of them can play something else. In banqi the chased piece can’t stay put without being taken, so it runs. With one safe square it shuttles back and forth as the chaser does, and the third repetition comes when the chaser wants it. In [the game below](/banqi/game/bq_391b54b2-eb4f-4a21-9ed0-f934aa4772cd) the player was far ahead and the bot had lost its general, so the draw saved the bot.':
+    '國際象棋的三次重複需要雙方一直重複下去，任何一方都可以改走別的。暗棋裡被捉的子不動就會被吃，所以只能逃。如果只有一個安全的格子，它就跟著捉的一方來回走，第三次重複什麼時候出現，由捉的一方說了算。在[下面這盤棋](/banqi/game/bq_391b54b2-eb4f-4a21-9ed0-f934aa4772cd)裡，玩家大幅領先，機器人的將也已經被吃，這盤和棋救了機器人。',
+  'Back and forth on two squares, from a game on Mistboard, 16 September 2026.':
+    '兩格之間來回走，來自 Mistboard 上 2026 年 9 月 16 日的一盤棋。',
+  'The bot has just flipped g2 and turned up a red advisor beside the player’s black chariot. A chariot can’t take an advisor, which outranks it, and e1 and h1 hold its own soldiers, so f1 is its only free square.':
+    '機器人剛在 g2 翻出一顆紅士，就在玩家的黑車旁邊。士比車大，車吃不了它；e1 和 h1 都是車自己的卒，所以 f1 是它唯一的空格。',
+  'The advisor’s fourth chase brings the position round a third time, and under plain threefold repetition the game is drawn. Under Mistboard’s rule this move is forbidden, so the advisor would have to play something else.':
+    '士的第四次捉讓局面第三次出現，如果只按三次重複判和，這盤就和了。按 Mistboard 的規則，這一步被禁止，士只能改走別的。',
+  'Round a square of four, in a constructed position. Every time the chariot runs it has one safe square.':
+    '繞著四格轉，這是擺出來的局面。車每次逃都只有一個安全的格子。',
+  'The black advisor on a1 attacks the red chariot on a2. Face-down tiles on a3, b3, c2 and c1 close its other exits.':
+    'a1 的黑士攻擊 a2 的紅車。a3、b3、c2、c1 上的暗子擋住了車的其他出路。',
+  'The advisor’s fourth chase brings the board back where it started. Each lap repeats every position, so under plain threefold repetition the game is drawn early in the third lap. Under Mistboard’s rule, the chase move that would make a position appear for the third time is forbidden.':
+    '士的第四次捉讓棋盤回到起點。每轉一圈，每個局面都重複一次，所以如果只按三次重複判和，第三圈剛開始就會判和。按 Mistboard 的規則，會讓局面第三次出現的那一步捉被禁止。',
+  'Some chases drive the target somewhere. Every move puts the target on a square it hasn’t stood on, so no position comes round again, and the chase ends when the target runs out of room or into another piece.':
+    '有些長捉是把目標往某個地方趕。每一步都讓目標走到它沒站過的格子，所以沒有局面會再出現；目標無路可逃，或撞上另一顆子，這次長捉就結束了。',
+  'Winning a piece this way, as in [that game](/banqi/game/bq_795ec889-96d0-48f4-914f-6f1db438441a), is ordinary good play. A chase rule has to stop the repeating chase and leave this one alone.':
+    '像[那盤棋](/banqi/game/bq_795ec889-96d0-48f4-914f-6f1db438441a)這樣贏下一顆子，是正常的好棋。長捉規則要擋的是重複的長捉，這一種應該放著不管。',
+  '[Chinese Dark Chess 2 app (Google Play)](https://play.google.com/store/apps/details?id=com.xidea.ChineseDarkChess2&hl=zh_TW)':
+    '[暗棋2 應用（Google Play）](https://play.google.com/store/apps/details?id=com.xidea.ChineseDarkChess2&hl=zh_TW)',
+  'No chasing the same piece more than 7 times in a row.': '不可連續長捉同一顆子超過 7 次。',
+  '[FunTown app](https://darkchess.funtown.com.tw/rules2.html)':
+    '[FunTown 戲谷 應用](https://darkchess.funtown.com.tw/rules2.html)',
+  '[Chinese Wikipedia, banqi](https://zh.wikipedia.org/zh-tw/%E6%9A%97%E6%A3%8B)':
+    '[中文維基百科：暗棋](https://zh.wikipedia.org/zh-tw/%E6%9A%97%E6%A3%8B)',
+  '50 moves with no flip or capture': '連續 50 步沒有翻子或吃子',
+  Mistboard: 'Mistboard',
+  'A rule that makes the chaser lose comes from [xiangqi](/rules/xiangqi), where every piece is face up. Under the Asian rules for that game, chasing one piece without end is a forbidden move, and a side that keeps playing one must change it or lose, as [Chinese Wikipedia sets out](https://zh.wikipedia.org/wiki/%E9%95%B7%E6%89%93_(%E8%B1%A1%E6%A3%8B)). None of the banqi sources above makes the chaser lose.':
+    '捉的一方判負，這條規則來自[象棋](/rules/xiangqi)，象棋的棋子全都明著擺在棋盤上。按亞洲象棋規則，無休止地捉同一顆子是禁止著法，一直走禁止著法的一方必須變著，否則判負，[中文維基百科](https://zh.wikipedia.org/wiki/%E9%95%B7%E6%89%93_(%E8%B1%A1%E6%A3%8B))有整理。上面的暗棋資料沒有一份判捉的一方輸。',
+  'Mistboard’s rule': 'Mistboard 的規則',
+  'Mistboard keeps threefold repetition and the 40-ply no-progress draw, and adds one rule: **a chase move may not make a position appear for the third time.** The chaser has to play something else, unless it has no other legal move. A repetition that comes from anything other than a chase still draws.':
+    'Mistboard 保留三次重複和 40 步無進展判和，再加一條規則：**一步捉不得讓同一局面出現第三次。** 捉的一方必須改走別的，除非沒有其他合法著法。不是由捉造成的重複照樣判和。',
+  'The apps count instead: once a piece has chased the same piece 7 times in a row, or 10, it must stop. The trouble is that the repetition comes first. In the two-square game above, the position came round a third time on the bot’s fourth chase move. A 7-move cap would still have allowed three more, so with threefold repetition in force the game is drawn exactly as before. In all eight repetition draws on Mistboard, the third repetition came between the third and sixth chase move, before either cap.':
+    '應用的做法是計數：一顆子連續捉同一顆子 7 次或 10 次之後，就必須停下。問題是重複會先來。在上面那盤兩格來回的棋裡，局面在機器人第四次捉時就第三次出現了。上限設 7 次的話，它還可以再捉三次，所以只要三次重複照樣判和，這盤照樣是和棋。Mistboard 上全部八盤重複和棋，第三次重複都出現在第三到第六次捉之間，比兩種上限都早。',
+  'A count also treats a herding chase the same way, and stops it at the same number whether or not the target is about to run out of room. Players don’t agree on the number either. A Taiwanese player who wrote to us about one of these draws called a perpetual chase a clear foul and the count an open question: 7 is too few, he said, and a friend of his plays to 12.':
+    '計數對趕子的長捉也一視同仁，不管目標是不是快無路可逃，到了次數就叫停。玩家對數字也沒有共識。一位台灣玩家為了其中一盤和棋寫信給我們，他說長捉明顯犯規，次數則還有得討論：7 次太少，他有個朋友下到 12 次。',
+  'Why not make the chaser lose': '為什麼不判捉的一方負',
+  'The rule in full': '完整規則',
+  'For anyone implementing it. The rule reads only what both players can see, so it works online or across a table.':
+    '寫給要實作這條規則的人。規則只看雙方都看得到的東西，所以網上或面對面都能用。',
+  Term: '術語',
+  Meaning: '含義',
+  'Chase move': '捉',
+  'A move with no flip or capture, after which the moved piece could capture the enemy piece that moved just before it. Cannon jumps count; whether the target is protected doesn’t matter.':
+    '不翻子也不吃子的一步，走完之後，剛走的那顆子能吃掉對方上一步剛走的那顆子。砲隔子吃也算；目標有沒有被保護不影響。',
+  Flee: '逃',
+  'A move by the piece the previous move chased.': '上一步被捉的那顆子所走的一步。',
+  Position: '局面',
+  'Where each face-up piece stands, which squares hold face-down tiles, and whose move it is. Counts start over after every flip or capture.':
+    '每顆翻開的子在哪裡、哪些格子有暗子、輪到哪一方走。每次翻子或吃子之後重新計數。',
+  Forbidden: '禁止',
+  'A chase move that would make a position appear for the third time.':
+    '會讓同一局面第三次出現的一步捉。',
+  'Repetition draw': '重複和棋',
+  'A position reached by any move other than a chase or a flee draws on its third appearance.':
+    '由捉或逃以外的著法走出來的局面，第三次出現時判和。',
+  'Only move': '唯一著法',
+  'If every legal move is a forbidden chase, they all stay legal.':
+    '如果所有合法著法都是被禁止的捉，這些著法就全部保持合法。',
+  'Mutual chase': '一捉一',
+  'A flee that also attacks the chaser is an ordinary move. Only two cannons on one line can do this.':
+    '逃的同時又攻擊追兵的一步，算作普通著法。只有同一條線上的兩個砲做得到。',
+  'Unchanged: 40 plies with no flip or capture, chase moves included.':
+    '不變：連續 40 步沒有翻子或吃子，捉也算在內。',
+  'Not covered': '尚未涵蓋',
+  'A chaser switching between two targets. We will extend the rule if it comes up.':
+    '在兩個目標之間輪流捉。如果對局裡出現了，我們會擴充規則。',
+  'Before the rule': '規則之前',
+  'Until October 2026 Mistboard drew every threefold repetition. In 127 games people played against [MistyBanqi](/blog/mistybanqi), our bot, from July to early October, eight ended in a repetition draw, and the bot was the chaser in every one ([21 July](/banqi/game/bq_15a9801b-7f1b-4618-81ff-33c243adeead), [23 July](/banqi/game/bq_65458fb8-71d2-4e4c-86ca-823057fc9ac2), [28 July](/banqi/game/bq_1a550b3b-40b7-4184-86f4-16c479b926df), 16 September [three](/banqi/game/bq_8dbdd7ac-6612-4785-a7d9-73c0a0987e5e) [times](/banqi/game/bq_f7bc7130-e399-4a00-9609-baee9cad719f) [over](/banqi/game/bq_391b54b2-eb4f-4a21-9ed0-f934aa4772cd), [22 September](/banqi/game/bq_374af1fe-bb55-462d-a3d7-54970fd03f64), [2 October](/banqi/game/bq_879c07b6-b804-4a21-9d46-39febc900b90)). Replayed under the current rule, none of the eight is a draw, and no move a person played in any of the 127 games would have been forbidden.':
+    '2026 年 10 月之前，Mistboard 的三次重複一律判和。7 月到 10 月初，真人對我們的機器人 [MistyBanqi](/blog/mistybanqi) 下了 127 盤，其中八盤以重複局面判和，每一盤捉的一方都是機器人（[7 月 21 日](/banqi/game/bq_15a9801b-7f1b-4618-81ff-33c243adeead)、[7 月 23 日](/banqi/game/bq_65458fb8-71d2-4e4c-86ca-823057fc9ac2)、[7 月 28 日](/banqi/game/bq_1a550b3b-40b7-4184-86f4-16c479b926df)、9 月 16 日的[第一](/banqi/game/bq_8dbdd7ac-6612-4785-a7d9-73c0a0987e5e)、[第二](/banqi/game/bq_f7bc7130-e399-4a00-9609-baee9cad719f)、[第三盤](/banqi/game/bq_391b54b2-eb4f-4a21-9ed0-f934aa4772cd)、[9 月 22 日](/banqi/game/bq_374af1fe-bb55-462d-a3d7-54970fd03f64)、[10 月 2 日](/banqi/game/bq_879c07b6-b804-4a21-9d46-39febc900b90)）。按現行規則重放，這八盤沒有一盤是和棋，127 盤裡真人走過的每一步也都不會被禁止。',
+  'Is a perpetual chase a draw in banqi?': '暗棋的長捉算和棋嗎？',
+  'It depends on the rule set. Tournament rules for computer banqi draw any position repeated three times, so a chase that repeats is a draw. On Mistboard it never is: the chase move that would bring a position round a third time is forbidden, and the chaser has to play something else.':
+    '看用哪套規則。電腦暗棋的比賽規則把同一局面出現三次判和，所以會重複的長捉就是和棋。在 Mistboard 上永遠不是：會讓局面第三次出現的那一步捉被禁止，捉的一方必須改走別的。',
+  'How many times can you chase a piece in banqi?': '暗棋裡一顆子最多能捉幾次？',
+  'Two popular apps set a cap: Chinese Dark Chess 2 at 7 chases of the same piece in a row, FunTown at 10. Mistboard has no count. A chase can run as long as it reaches new positions; only the move that would repeat a position a third time is forbidden.':
+    '兩款常見的應用設了上限：暗棋2 是連續捉同一顆子 7 次，FunTown 是 10 次。Mistboard 不計次數。只要長捉一直走出新的局面，就可以一直捉下去；只有會讓局面第三次出現的那一步被禁止。',
+  'What counts as a chase in banqi?': '暗棋裡什麼算捉？',
+  'On Mistboard, a move with no flip or capture after which the moved piece could capture the enemy piece that moved just before it. Cannon jumps count, and it doesn’t matter whether the target is protected.':
+    '在 Mistboard 上，不翻子也不吃子、走完後剛走的那顆子能吃掉對方上一步剛走的那顆子的一步。砲隔子吃也算，目標有沒有被保護不影響。',
+  'Does the chaser lose in banqi?': '暗棋裡長捉的一方會判負嗎？',
+  'Not in any banqi rule set we found, and not on Mistboard. Losing for a perpetual chase comes from xiangqi, where someone has to judge what counts as a chase. On Mistboard the repeating move is simply not allowed.':
+    '我們找到的暗棋規則都不會，Mistboard 也不會。長捉判負來自象棋，那需要有人裁定什麼算捉。在 Mistboard 上，會造成重複的那一步直接不能走。',
+  'How a chase ends': '長捉怎麼結束',
+  'On Mistboard a chase can run as long as it is getting somewhere, and a good one wins a piece. What it can’t do is go round in a circle until the game is drawn: the move that would bring a position back a third time is off the table, so the chaser has to try something else, and the game goes on.':
+    '在 Mistboard 上，長捉只要還在推進，就可以一直捉下去，好的長捉能贏下一顆子。它不能做的，是繞圈子繞到和棋：會讓局面第三次出現的那一步不能走，捉的一方只能另想辦法，棋也就繼續下去。',
+  'Perpetual Chase Rule in Banqi (Chinese Dark Chess)': '暗棋長捉規則與重複局面判和',
   // longest-forced-mates-xiangqi: machine-drafted 2026-10-08, not native-reviewed. Terms follow the study uXu609QE zh names and solver-audit (困斃, 象棋雲庫, 著法); the bare 困毙 table cells take the Traditional glyph.
   'The Longest Forced Mates in Xiangqi': '象棋最長的必勝殺局',
   'The Longest Forced Mates': '最長的必勝殺局',
@@ -5155,8 +5744,6 @@ const ZH_HANT: Record<string, string> = {
     '解決它用了兩條規則，缺一不可。炮擊不爆炸，開局的那種兌換就沒有了，墊擋仍然成立卻不構成威脅；但車仍然可以來回跳，炮也仍然得跟過去。把爆炸威脅算作將軍（見下一節），單獨用也不起作用：只要墊擋的炮還能反打，雙方每一步都在將軍，而雙方都在將軍的重複局面判和。兩條規則合在一起，來回跳就成了單方面的長將，判負。引擎也把它算作輸棋，寧可落後大約四分之一個兵繼續下。炮由此變成一枚用來兌換和墊擋的棋子，而不再是掃清一條橫線的棋子；爆炸的其餘部分全部不變。',
   'Every number on this page comes from engine games refereed by the rules kernel and played by a patched Fairy-Stockfish, and the two have to agree on every legal-move count before a number is read. The engine with ten times the nodes wins 29 of 32 games, at two strength levels, without losing one. Of the 44 first moves from the array, each played out at a million nodes a side, none wins for Red and three lose. None of the 19 repetition draws is a one-sided perpetual check. The [variant lab](https://github.com/brianhliou/mistboard/tree/main/scripts/variant-lab) has the kernel, the patch and the commands behind each number.':
     '本頁的每一個數字都來自引擎對局：由規則內核裁判，由打過補丁的 Fairy-Stockfish 來下，兩者必須在每一個合法著法數上完全一致，才開始讀任何數字。節點數多十倍的引擎在兩個強度檔位上下了 32 盤，贏 29 盤，一盤未輸。從開局陣勢出發的 44 種第一步，每種都以雙方各一百萬節點下完，沒有一種讓紅方獲勝，有三種讓紅方輸棋。19 盤重複局面和棋裡，沒有一盤是單方面的長將。[變體實驗室](https://github.com/brianhliou/mistboard/tree/main/scripts/variant-lab)裡有內核、補丁和每個數字背後的命令。',
-  'Play it against the engine at any of eight strengths, or against a friend with an invite link. The [launch note](/blog/atomic-xiangqi-build) is what decides a first game; the study has all twelve engine games, with every explosion marked and a note on the move that decided each.':
-    '和八個強度檔位的引擎對弈，或者用邀請連結約朋友。[釋出說明](/blog/atomic-xiangqi-build)講的是第一盤棋的勝負由什麼決定；研究裡有全部十二盤引擎對局，每次爆炸都有標記，每盤的決定性一步都有註解。',
   // solver-audit blog merge (2026-10-07): machine-translated.
   '適情雅趣 第108局 争舟走渡 prints a mate in seven, thirteen plies. At Red’s first move the soldier can take the advisor beside the general instead, 兵四平五, and that mates in six. Nine of the 172 can be mated faster than printed.':
     '《適情雅趣》第108局 爭舟走渡印的是七著殺，共十三步。紅方第一著改用兵吃將旁邊的士，兵四平五，六著就能成殺。172局中有9局存在比所印更快的殺法。',
@@ -5473,8 +6060,8 @@ const ZH_HANT: Record<string, string> = {
   'Jungle Chess rules': '鬥獸棋規則',
   '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
     '[MistyBanqi](/blog/mistybanqi) 自我對弈，每步搜尋一千萬個節點，是本站機器人的三倍棋力。用箭頭一步步看。[配套研究](/study/FsA5sowX)收了這批棋的全部二十盤，一盤一章，附上每盤怎麼走完的註記。同一批棋裡的兩百盤被整理成數字，放在[用數字看暗棋](/blog/banqi-statistics)：領先多少才算安全，一盤棋什麼時候就定了。',
-  "There's an upshot for you here. If you're losing on material, you're not necessarily lost: MistyBanqi may shuffle into a repetition draw it can't see it should decline. It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":
-    '這對你是有好處的。如果你子力落後，不代表就輸了：MistyBanqi 可能來回挪子，走進那個它看不出該拒絕的重複和棋。這種事多到可以量：引擎自我對弈的 200 盤裡，[每六盤就有一盤和棋](/blog/banqi-statistics)，其中一半曾經走到贏定的局面。',
+  "There's an upshot for you here. If you're losing on material, you're not necessarily lost: MistyBanqi may shuffle into a [repetition draw](/blog/banqi-perpetual-chase) it can't see it should decline. It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":
+    '這對你是有好處的。如果你子力落後，不代表就輸了：MistyBanqi 可能來回挪子，走進那個它看不出該拒絕的[重複和棋](/blog/banqi-perpetual-chase)。這種事多到可以量：引擎自我對弈的 200 盤裡，[每六盤就有一盤和棋](/blog/banqi-statistics)，其中一半曾經走到贏定的局面。',
   "A related blind spot involves the general. Only a soldier, the other general or a cannon's jump can take it, so a boxed-in general is in danger from one piece at a time, and the engine is slow to make room for one cornered. It will sometimes march a piece off to the far side of the board while a lone enemy soldier walks up and traps it. Same gap as the draw above: the evaluation has no real sense of a slow, quiet threat building several moves away.":
     '另一個相關的盲點跟將有關。只有卒、對方的將或砲的跳吃拿得下它，所以被圍住的將一次只怕一種子，而引擎很慢才會替被逼到角落的將騰出空間。它有時候會把一顆子調到棋盤另一頭，同時一顆孤零零的敵方卒走過來把它困死。跟上面那個和棋是同一個缺口：這套評估函數對於好幾步之外慢慢成形的安靜威脅，沒有什麼感覺。',
   // one-thousand-games: machine-drafted 2026-10-01, not native-reviewed. Variant names follow the
@@ -5739,7 +6326,7 @@ const ZH_HANT: Record<string, string> = {
   "Every game of the year is in a Mistboard study, with the engine's judgments and lines on each one, and 71 of the 75 are in the broadcast archive with the site's analysis. Sources: game records from dpxq.com, which may not hold every game of an event; analysis by Pikafish through Mistboard's review pipeline, September 2026.":
     '今年的每一盤都在 Mistboard 的一個研究裡，每盤都有引擎的判斷和變化；75 盤中有 71 盤也在直播檔案裡，附網站的分析。資料來源：棋譜來自 dpxq.com，該資料庫不一定收齊每項賽事的全部對局；分析由 Pikafish 經 Mistboard 的復盤流程完成，2026 年 9 月。',
   'Cao Yanlei 曹岩磊: games, results, and analysis': '曹岩磊：對局、戰績與分析',
-  'Cao Yanlei at the board.': '對局中的曹岩磊。',
+  'Portrait of Cao Yanlei.': '曹岩磊肖像。',
   'Wang Yongqiang': '王永强',
   'Zhao Panwei': '赵攀伟',
   'Meng Chen': '孟辰',
@@ -6251,6 +6838,47 @@ const ZH_HANT: Record<string, string> = {
   'The mate': '殺局',
   // -- The xiangqi match-fixing case --
   // champion pages. Player names stay in SIMPLIFIED for the Traditional reader:
+  'Between 2024 and 2026 the Chinese Xiangqi Association sanctioned 49 people for buying and selling games: 8 life bans, 37 timed bans and 4 reprimands.':
+    '2024到2026年間，中國象棋協會因買棋賣棋處罰了49人：終身禁賽8人，限期禁賽37人，通報批評4人。',
+  'Ten of the thirteen national champions since 2005 carry a ruling, including Wang Tianyi, the top-rated player from 2014 to 2023.':
+    '2005年以來的十三位全國冠軍中，有十人受到處罰，其中包括2014到2023年間等級分第一的王天一。',
+  'A Hangzhou court convicted six grandmasters of bribery in September 2025. The charge was bribery, not gambling.':
+    '2025年9月，杭州一家法院以行賄受賄判決六名特級大師有罪。罪名是行賄受賄，不是賭博。',
+  'Engine cheating is alleged in every account and charged in none. No result or title has been struck from the record.':
+    '各方說法都提到用軟體作弊，但沒有一項指控涉及。至今沒有任何成績或稱號被撤銷。',
+  'This is our best reading of what has been published. If you know something here to be wrong or out of date, [tell us](/contact) and we will correct it.':
+    '本頁是我們對已公開報導的最佳解讀。如果你知道其中有錯誤或已過時的內容，請[告訴我們](/contact)，我們會更正。',
+  'Who’s who': '人物一覽',
+  'The names that recur below. A ban is the association’s penalty and bars a player from competing; a prison term is the court’s.':
+    '下文反覆出現的人物。禁賽是協會的處罰，禁止棋手參賽；徒刑是法院的判決。',
+  Person: '人物',
+  'Part in the case': '在案中的角色',
+  'Top-rated player 2014 to 2023; bought games': '2014至2023年等級分第一；買棋',
+  'Life ban; 2 years 9 months in prison': '終身禁賽；有期徒刑2年9個月',
+  'On the recorded calls; the go-between for most of Wang Tianyi’s payments':
+    '錄音通話的一方；王天一大部分付款的中間人',
+  'Life ban; 1 year in prison': '終身禁賽；有期徒刑1年',
+  'The other voice on the recordings': '錄音中的另一方',
+  'Banned 4 years 3 months; not charged': '禁賽4年3個月；未被起訴',
+  '2005 champion; one outlet reports he passed the recordings on':
+    '2005年冠軍；有一家媒體報導錄音由他轉出',
+  'Life ban; 2 years 7 months in prison, appeal rejected': '終身禁賽；有期徒刑2年7個月，上訴被駁回',
+  '2007 champion': '2007年冠軍',
+  'Life ban; 4 years 9 months in prison, the longest term': '終身禁賽；有期徒刑4年9個月，刑期最長',
+  'Xie Jing 谢靖, Xu Chao 徐超': '謝靖、徐超',
+  '2013 and 2017 champions': '2013年和2017年冠軍',
+  'Life bans; 2 years 6 months in prison each': '均終身禁賽；各判有期徒刑2年6個月',
+  'Veteran player; alleged engine cheating for years, then accused an official by name':
+    '老將；多年來指稱對手用軟體作弊，隨後實名舉報一名官員',
+  'Not sanctioned': '未受處罰',
+  'Joined Liu Dahua’s accusation': '與柳大華聯名舉報',
+  'Banned 3 years': '禁賽3年',
+  'Guo Liping 郭莉萍': '郭莉萍',
+  'Official at the sport administration, named in the accusation':
+    '棋牌運動管理中心官員，被舉報點名',
+  'Left the post in December 2024; not charged': '2024年12月去職；未被起訴',
+  'Ban from competing': '禁賽處罰',
+  'Prison term': '刑期',
   'The Xiangqi Match-Fixing Case': '象棋假棋案',
   'Xiangqi Match-Fixing: 录音门, the Bans, and the Convictions': '象棋假棋案：錄音門、禁賽與判決',
   'Between 2024 and 2026 the Chinese Xiangqi Association sanctioned 49 people for buying and selling games, and a Hangzhou court convicted six grandmasters of bribery. What happened, why it paid, who ruled, and what is still unproven.':
@@ -6283,8 +6911,8 @@ const ZH_HANT: Record<string, string> = {
   'The spine of the case. Liu Dahua’s earlier private complaints are his own account rather than a documented date.':
     '本案的主線。柳大华更早的私下反映出自他本人的說法，並無確切日期可考。',
   'Two processes, one case': '兩條並行的程序，同一起案件',
-  'The disciplinary track and the criminal track are separate. They ran on different timetables, and the six convicted are six of the forty-nine banned rather than a different group.':
-    '紀律處理與刑事追訴是兩條獨立的程序，時間表也不相同。被判刑的六人正是被處罰的四十九人中的六位，並非另一批人。',
+  'The disciplinary track and the criminal track are separate: the association can only bar a player from competing, and only the court can send one to prison. They ran on different timetables, and the six convicted are six of the forty-nine banned rather than a different group.':
+    '紀律處理與刑事追訴是兩條獨立的程序：協會只能禁止棋手參賽，只有法院才能判處徒刑。兩者時間表也不相同。被判刑的六人正是被處罰的四十九人中的六位，並非另一批人。',
   'A third track went nowhere in public. Three officials left the chess and card centre while the case ran: its director Zhu Guoping 朱国平 and its discipline secretary Guo Yujun 郭玉军 in November 2024, and Guo Liping in December. No removal notice mentions this case, and no official has been reported as charged or sanctioned in connection with it.':
     '第三條線在公開層面沒有下文。案件進行期間，棋牌運動管理中心有三名官員去職：主任朱国平與紀檢書記郭玉军於2024年11月，郭莉萍於同年12月。沒有一份免職通知提到本案，也沒有任何官員被報道因此被追究或處罰。',
   'The Chinese Xiangqi Association has sanctioned 49 people in three batches: two in September 2024, forty-one in January 2025, and six in April 2026. That is 8 lifetime bans, 37 timed bans and 4 public reprimands. Revocation of the technical grade title accompanies 19 of the 45 bans rather than all of them. Only the three timed bans in the April 2026 notice carry published start and end dates, all running from 24 July 2024; the January notice publishes no dates at all, so when most of those bans expire is not a matter of public record.':
@@ -6292,7 +6920,6 @@ const ZH_HANT: Record<string, string> = {
   'The association published almost every name. Where a player also appears on the champion lists, his national title years are in the last column.':
     '協會公布了幾乎每一個名字。若該棋手同時出現在冠軍名單上，其全國冠軍年份列在最後一欄。',
   Player: '棋手',
-  Penalty: '處罰',
   'National title': '全國冠軍',
   'The 47 the association named. The other two were withheld because they were under 18 when the conduct occurred. Revocation of the technical grade title accompanies 19 of the 45 bans, not all of them.':
     '協會具名公布的47人。另外兩人因涉案時未滿18周歲而未公布姓名。45項禁賽中有19項同時撤銷技術等級稱號，並非全部。',
@@ -6301,9 +6928,8 @@ const ZH_HANT: Record<string, string> = {
   'Separately, the Shangcheng District People’s Court in Hangzhou convicted six grandmasters on 24 September 2025 of offering and accepting bribes as non-state functionaries, under Articles 163 and 164 of the criminal law. The Chinese press calls it the sport’s first criminal corruption case.':
     '另一條線上，杭州市上城區人民法院於2025年9月24日以對非國家工作人員行賄罪、非國家工作人員受賄罪判決六名特級大師有罪，依據刑法第163條與第164條。中文媒體稱之為中國象棋反腐第一案。',
   Convicted: '被判刑者',
-  Sentence: '刑期',
-  'Reported from the 24 September 2025 verdict. No judgment text was released: these figures trace to the prosecution’s case, and only Hong Zhi’s was separately reported as a court outcome. Fines were imposed on Wang Tianyi and Zhao Xinxin; no amounts have ever been published.':
-    '據2025年9月24日宣判的報道整理。判決書未公開：這些數字源自檢方的指控，其中只有洪智一項另有作為法院結果的報道。王天一與赵鑫鑫另被併處罰金，金額從未公布。',
+  'Reported from the 24 September 2025 verdict. The terms are 有期徒刑, fixed-term imprisonment; whether any was suspended has not been reported. No judgment text was released: these figures trace to the prosecution’s case, and only Hong Zhi’s was separately reported as a court outcome. Fines were imposed on Wang Tianyi and Zhao Xinxin; no amounts have ever been published.':
+    '據2025年9月24日宣判的報導整理。刑期均為有期徒刑，是否適用緩刑未見報導。判決書未公開：這些數字源自檢方的指控，其中只有洪智一項另有作為法院結果的報導。王天一與趙鑫鑫另被併處罰金，金額從未公布。',
   'The strongest player in the world was buying': '最強的棋手是買家',
   'Wang Tianyi was China’s top-rated player from 2014 to 2023, known simply as 象棋第一人, the number one. The prosecution charged 22 separate acts of giving bribes totalling ¥942,000, against 2 acts of taking them totalling ¥116,000. Nineteen of the 22 payments ran through Wang Yuefei.':
     '王天一在2014到2023年間等級分居全國第一，被稱為象棋第一人。檢方指控他行賄22筆、合計94.2萬元，受賄2筆、合計11.6萬元。22筆中有19筆經由王跃飞。',
@@ -6940,8 +7566,8 @@ const ZH_HANT: Record<string, string> = {
     '當對手輪到自己卻無棋可走時，你獲勝——通常是因為敵方棋子被全部吃光，有時則是被困死、無路可走。這裡的將不是王棋：吃掉它只是進展，而非勝利，棋局會一直進行到一方被吃光或被困死為止。',
   'Mistboard draws a game two ways: 40 plies (single moves) with no flip or capture, or threefold repetition, the same position three times. A flip or capture resets both counters because it changes the position irreversibly.':
     'Mistboard 有兩種自動和棋：連續 40 個半回合沒有翻子或吃子，或同一局面出現三次。翻子或吃子會不可逆地改變局面，因此會重置兩個計數。',
-  'A chase (長捉) is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not make a position appear for the third time with a chase; it must play something else, unless it has no other legal move. A repetition caused by a chase is never a draw, because the chased piece cannot stay put without being taken. A chase that keeps driving a piece onto new squares is not limited.':
-    '捉子（長捉）指既不翻子也不吃子、走完後能吃掉對方剛走動那枚棋子的一步棋，不論那枚棋子有沒有根。捉子的一方不能用捉子讓同一局面第三次出現，必須改走別的著法，除非沒有其他合法著法。由捉子造成的重複局面一律不判和，因為被捉的棋子不走就會被吃。不斷把對方棋子趕到新位置的捉子不受限制。',
+  'A chase (長捉) is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not make a position appear for the third time with a chase; it must play something else, unless it has no other legal move. A repetition caused by a chase is never a draw, because the chased piece cannot stay put without being taken. A chase that keeps driving a piece onto new squares is not limited. [Why the rule works this way](/blog/banqi-perpetual-chase), with games.':
+    '捉子（長捉）指既不翻子也不吃子、走完後能吃掉對方剛走動那枚棋子的一步棋，不論那枚棋子有沒有根。捉子的一方不能用捉子讓同一局面第三次出現，必須改走別的著法，除非沒有其他合法著法。由捉子造成的重複局面一律不判和，因為被捉的棋子不走就會被吃。不斷把對方棋子趕到新位置的捉子不受限制。[這條規則為什麼這樣定](/blog/banqi-perpetual-chase)，附對局。',
   'Play MistyBanqi': '對戰 MistyBanqi',
   'Challenge a friend': '挑戰好友',
   'Three rules give the game its character: the rat captures the elephant, only the rat can swim, and the lion and tiger leap the rivers.':
@@ -8707,8 +9333,17 @@ const ZH_HANT: Record<string, string> = {
     '本頁背後的引擎對局之一：一千萬節點的 Fairy-Stockfish 執紅，對陣一百萬節點的自己。第 6 回合紅方已多出一個半兵，之後局面一直接近，直到黑方第 21 回合的 Hxf9：馬吃 f9 的炮，而黑方自己的士就在旁邊的 f10。爆炸帶走了士，九宮白白少了一子，從此再沒恢復：第 30 回合的 Cb9 讓將失去了掩護，第 38 回合紅車吃掉 d8 的炮，緊挨著 d9 的將。爆炸帶走了將，連同 e8 的象。',
   'Atomic Xiangqi: an engine game decided by a self-blast in the palace':
     '原子象棋：一盤由九宮內自炸決定的引擎對局',
-  'Play Atomic Xiangqi': '下原子象棋',
   'The twelve engine games': '十二盤引擎對局',
+  // Retirement notes (2026-10-11), machine translation of English not yet signed off.
+  'Atomic Xiangqi is no longer open for new games; finished games still replay. The [launch note](/blog/atomic-xiangqi-build) is what decided a first game; the study has all twelve engine games, with every explosion marked and a note on the move that decided each.':
+    '原子象棋已不再開放新對局，已結束的對局仍可回放。[釋出說明](/blog/atomic-xiangqi-build)講的是第一盤棋的勝負由什麼決定；研究裡有全部十二盤引擎對局，每次爆炸都有標記，每盤的決定性一步都有註解。',
+  'Atomic Xiangqi was retired on 2026-10-11: it no longer takes new games, and finished games still replay. The rules page has the whole thing with diagrams.':
+    '原子象棋已於 2026-10-11 下線：不再接受新對局，已結束的對局仍可回放。規則頁面配有圖解，講得完整。',
+  'Fortress Xiangqi is no longer open for new games; finished games still replay. Its nearest relative here is Crazyhouse Xiangqi: a piece you capture joins your hand and drops back in, on the full board. No account needed.':
+    '堡壘象棋已不再開放新對局，已結束的對局仍可回放。本站與它最接近的是瘋狂屋象棋：吃掉的棋子進入你的持子，可以打回棋盤，用的是完整棋盤。無需帳號。',
+  'Play Crazyhouse Xiangqi': '下瘋狂屋象棋',
+  'Crazyhouse Xiangqi rules': '瘋狂屋象棋規則',
+  'Further reading': '延伸閱讀',
   'Atomic Xiangqi: What Decides Your First Game': '原子象棋：第一盤棋的勝負由什麼決定',
   'Atomic Xiangqi Is Live: What Decides Your First Game':
     '原子象棋上線了：第一盤棋的勝負由什麼決定',
@@ -8754,9 +9389,6 @@ const ZH_HANT: Record<string, string> = {
   'The bot takes a general on offer without thinking': '送到嘴邊的將帥，電腦想都不想就吃',
   'The bot is Fairy-Stockfish with a patch for these rules, eight node-anchored levels, the same ladder the other xiangqi variants use. Its weaker levels are weakened by choosing a move other than the best one they found, and on the duck board that made a level-1 bot decline a general capture it could see. Here the loop checks for a move that removes the general before it asks the engine anything, so a general left next to a capturable piece is taken at every level. Weakness is in how the bot builds a position, not in whether it finishes one.':
     '電腦是加了這套規則補丁的 Fairy-Stockfish，八個以節點數錨定的等級，和其他象棋變體用的是同一套階梯。較弱的等級是透過不走自己找到的最佳著法來削弱的，在鴨子象棋的棋盤上，這曾讓一個 1 級電腦放棄了一次它看得見的吃將。這裡的循環在向引擎提問之前會先檢查有沒有能移除將帥的著法，所以留在可吃棋子旁邊的將帥，在每一個等級都會被吃掉。電腦的弱點在於它如何構築局面，而不在於它會不會收官。',
-  'Eight engine strengths, or a friend by invite link. The rules page has the whole thing with diagrams.':
-    '八個引擎強度檔位，或者用邀請連結約朋友。規則頁面配有圖解，講得完整。',
-  'Invite a friend': '邀請朋友',
   // banqi capture table + FAQ, jungle FAQ (2026-09-17)
   'General 帥 / 將': '將帥：帥 / 將',
   'Advisor 仕 / 士': '士：仕 / 士',
@@ -8832,8 +9464,6 @@ const ZH_HANT: Record<string, string> = {
   "Rated games need an account. Casual games, the engine ladder and friend links don't.":
     '積分對局需要帳號。休閒對局、引擎等級階梯和好友連結都不需要。',
   'Find an opponent': '尋找對手',
-  'A piece you capture changes to your color and goes into your reserve, ready to drop back in. No account needed.':
-    '吃掉的棋子會變成你的顏色進入持子，隨時可以打回棋盤。無需帳號。',
   'A rat on land can take the elephant, and the elephant can never take a rat. No account needed.':
     '陸地上的老鼠可以吃大象，大象卻永遠不能吃老鼠。無需帳號。',
   'When an animal takes an enemy of the same rank, both leave the board. No account needed.':

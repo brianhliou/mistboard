@@ -14,13 +14,11 @@
 import assert from 'node:assert/strict';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import test from 'node:test';
-import { type GameSpecId, ratingPoolForSpec } from '@mistboard/game';
-import { atomicXiangqiTenant } from '../atomic-xiangqi-tenant.js';
+import { type GameSpecId, isRetiredGameSpec, ratingPoolForSpec } from '@mistboard/game';
 import { banqiTenant } from '../banqi-tenant.js';
 import { crazyhouseXiangqiTenant } from '../crazyhouse-xiangqi-tenant.js';
 import { darkXiangqiTenant } from '../dark-xiangqi-tenant.js';
 import { duckXiangqiTenant } from '../duck-xiangqi-tenant.js';
-import { fortressXiangqiTenant } from '../fortress-xiangqi-tenant.js';
 import { jieqiTenant } from '../jieqi-tenant.js';
 import { jungleFlipTenant } from '../jungle-flip-tenant.js';
 import { jungleTenant } from '../jungle-tenant.js';
@@ -52,8 +50,16 @@ import type { TenantGameStateLike, TenantSeatTokenState, VariantTenant } from '.
 // 3+2: a rated pace on every tenant's lobby allowlist.
 const BLITZ = { initialMs: 180_000, incrementMs: 2_000 };
 
+// A retired tenant stays registered so its finished games replay, but it takes
+// no new room, so the create-path checks below skip it.
+function liveTenants(): VariantTenantRegistration[] {
+  return registeredVariantTenants().filter(
+    (registration) => !isRetiredGameSpec(registration.gameSpecId),
+  );
+}
+
 function lobbyTenants(): VariantTenantRegistration[] {
-  return registeredVariantTenants().filter((registration) => registration.lobby !== null);
+  return liveTenants().filter((registration) => registration.lobby !== null);
 }
 
 // Every tenant's launch flag follows MISTBOARD_<KIND>_ENABLED (feature-flags.ts).
@@ -200,7 +206,7 @@ async function withRatedOn<T>(run: () => Promise<T>): Promise<T> {
 // Registrations that own their spec's create route (not the correspondence-only
 // dark-chess slice, whose friend rooms are the legacy chess path).
 function routingTenants(): VariantTenantRegistration[] {
-  return registeredVariantTenants().filter((registration) => registration.ownsSpecRouting);
+  return liveTenants().filter((registration) => registration.ownsSpecRouting);
 }
 
 test('friend rooms: lobbyOffersRated is the lobby capability, per spec', () => {
@@ -360,8 +366,6 @@ type AnyTenant = VariantTenant<
 // when a new rated lobby is missing here, so the summary check cannot go stale.
 const RATED_LOBBY_TENANTS = [
   xiangqiTenant,
-  fortressXiangqiTenant,
-  atomicXiangqiTenant,
   crazyhouseXiangqiTenant,
   duckXiangqiTenant,
   jieqiTenant,

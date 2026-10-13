@@ -26,12 +26,14 @@ const STUDY_VARIANT_IDS = [
   'banqi',
   'duck-xiangqi',
   'crazyhouse-xiangqi',
-  'fortress-xiangqi',
-  'atomic-xiangqi',
   'dark-xiangqi',
   'dark-chess',
   'jungle',
   'jungle-flip',
+  // Retired 2026-10-11, off the canonical order so at the tail: existing
+  // studies in these variants keep opening.
+  'fortress-xiangqi',
+  'atomic-xiangqi',
   // Study-only standard chess (2026-09-20): a board (review/chess-review.ts)
   // and a FEN, no play route anywhere. Last, as an unlisted spec sorts.
   'chess',

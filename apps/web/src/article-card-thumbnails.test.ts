@@ -87,4 +87,45 @@ describe('article card thumbnails', () => {
     }
     expect(bare).toEqual([]);
   });
+
+  // Half-board cards go through xqHalfBoardThumbnailSvg, which stamps any piece
+  // that would sit under the date pill or the featured star (2026-10-10: corner
+  // pieces on the longest-mate and solver-audit cards were half covered).
+  it('no half-board card puts a piece under a corner overlay', () => {
+    const clashes: string[] = [];
+    let halfBoards = 0;
+    for (const article of articles) {
+      const thumb = article.thumbnail;
+      if (thumb?.kind !== 'svg') continue;
+      const svg = typeof thumb.svg === 'function' ? thumb.svg('en') : thumb.svg;
+      if (!svg.includes('xq-half-thumb')) continue;
+      halfBoards += 1;
+      const clash = /data-tag-clash="([^"]*)"/.exec(svg);
+      if (clash) clashes.push(`${article.slug}: ${clash[1]}`);
+    }
+    expect(halfBoards).toBeGreaterThanOrEqual(5);
+    // A bottom-half crop puts its near bank against the top edge, so a piece
+    // there sits under the pill whatever the margins. The Pikafish card's g6
+    // loses an 8x11px corner at a 260px card and is clear from about 300px
+    // (measured 2026-10-10). A new entry here is a new crop to rethink.
+    expect(clashes).toEqual(['pikafish-reveal-bug: g6']);
+  });
+
+  // A card that crops a xiangqi board by hand (its own viewBox window onto
+  // xqBoardSvg) skips the half-board rules above. The known ones are other
+  // shapes on purpose: Atomic zooms on one explosion, and Horde's full rank of
+  // soldiers on the near bank needs more headroom than the shared crop gives.
+  it('crops half a xiangqi board only through the shared helper', () => {
+    const handCropped: string[] = [];
+    for (const article of articles) {
+      const thumb = article.thumbnail;
+      if (thumb?.kind !== 'svg') continue;
+      const svg = typeof thumb.svg === 'function' ? thumb.svg('en') : thumb.svg;
+      if (!svg.includes('xq-diagram-line') && !svg.includes('xq-live-line')) continue;
+      if (svg.includes('xq-half-thumb')) continue;
+      const [x, y] = (/viewBox="([^"]+)"/.exec(svg)?.[1] ?? '0 0').split(/\s+/).map(Number);
+      if (x !== 0 || y !== 0) handCropped.push(article.slug);
+    }
+    expect(handCropped.sort()).toEqual(['atomic-xiangqi', 'atomic-xiangqi-build', 'horde-xiangqi']);
+  });
 });

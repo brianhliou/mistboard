@@ -141,14 +141,20 @@
   height: 46px;
 }
 
-.xqp-avatar-page {
-  width: 100%;
-  height: auto;
-  border-radius: var(--site-radius);
+/* A portrait in a square row slot: keep the face, which sits high. */
+img.xqp-avatar-row {
+  object-position: 50% 20%;
 }
 
-.xqp-avatar-page.xqp-avatar-tile {
-  aspect-ratio: 1;
+/* The hero portrait and the character tile share one slot: the photos'
+   own 4:5 shape (xiangqiqipu's are 267x331), so both kinds of page line up. */
+.xqp-avatar-page {
+  display: flex;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 5;
+  border-radius: var(--site-radius);
+  border: 1px solid var(--site-border-soft);
 }
 
 .xqp-avatar-tile {
@@ -159,6 +165,7 @@
 
 .xqp-avatar-page.xqp-avatar-tile {
   font-size: 64px;
+  font-weight: 600;
 }
 
 .xqp-empty {
@@ -169,11 +176,16 @@
 
 /* ---- player header ----------------------------------------------------- */
 
+/* One composed block: a 168px portrait (the photo slot, credit under it),
+   the name and a strip of key facts beside it, the ruling notice last. The
+   copy column is capped so the strip reads as one line, and centred on the
+   portrait (lifted by the credit's height) so a short one leaves no corner. */
 .xqp-header {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 24px;
-  padding: 12px 0 20px;
+  grid-template-columns: 168px minmax(0, 1fr);
+  align-items: start;
+  gap: 28px;
+  padding: 8px 0 24px;
   border-bottom: 1px solid var(--site-border-soft);
 }
 
@@ -181,28 +193,49 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  min-width: 0;
 }
 
 .xqp-portrait figcaption {
   font-size: 11px;
-  font-style: italic;
+  line-height: 1.35;
   color: var(--site-muted);
-  text-align: right;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+/* The site name never splits: on a narrow photo it drops whole to line two. */
+.xqp-photo-credit a {
+  display: inline-block;
+  /* The site name wraps as a whole under a narrow photo, never mid-name. */
+  white-space: nowrap;
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+  text-underline-offset: 2px;
+}
+
+.xqp-photo-credit a:hover {
+  color: var(--site-text);
 }
 
 .xqp-header-copy {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  align-items: flex-start;
+  align-self: center;
+  gap: 16px;
   min-width: 0;
+  max-width: 720px;
+  padding-bottom: 18px;
 }
 
 .xqp-h1 {
   margin: 0;
   color: var(--site-heading);
   font-size: 32px;
-  line-height: 1.1;
+  line-height: 1.15;
   font-weight: 700;
 }
 
@@ -215,35 +248,74 @@
   font-weight: 500;
 }
 
+/* Label over value, divided by hairlines, like the rating cards' heads. */
 .xqp-facts {
   margin: 0;
-  display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
-  gap: 6px 24px;
-  font-size: 15px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 0;
+}
+
+.xqp-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0 20px;
+  border-left: 1px solid var(--site-border-soft);
+}
+
+.xqp-fact:first-child {
+  padding-left: 0;
+  border-left: 0;
 }
 
 .xqp-facts dt {
   color: var(--site-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .xqp-facts dd {
   margin: 0;
-  color: var(--site-text);
+  color: var(--site-heading);
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
-/* The match-fixing ruling, when there is one: plain muted text under the
-   facts, the link in the site's link ink. No badge, no colour of alarm. */
+.xqp-fact-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.xqp-fact-link:hover {
+  color: var(--site-accent-strong);
+  text-decoration: underline;
+}
+
+/* The match-fixing ruling, when there is one: one sentence in the site's
+   warning notice, the link to the account of the case. Restrained: no icon,
+   no heading, the same weight as the copy around it. */
 .xqp-sanction {
-  margin: 10px 0 0;
-  max-width: 60ch;
-  color: var(--site-muted);
-  font-size: 14px;
+  margin: 0;
+  max-width: 62ch;
+  padding: 9px 12px;
+  border: 1px solid var(--site-warning-border);
+  border-radius: var(--site-radius-sm);
+  background: var(--site-warning-bg);
+  color: var(--site-warning-text);
+  font-size: 13.5px;
   line-height: 1.45;
 }
 
 .xqp-sanction a {
-  color: var(--site-accent-strong);
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
 }
 
 .xqp-header-actions {
@@ -424,13 +496,46 @@
 }
 
 @media (max-width: 640px) {
+  /* Photo and name side by side; the facts and the notice take the full
+     width under them, so neither is squeezed into the name's column. */
   .xqp-header {
-    grid-template-columns: 120px minmax(0, 1fr);
-    gap: 14px;
+    grid-template-columns: 104px minmax(0, 1fr);
+    gap: 14px 16px;
+    padding-bottom: 20px;
+  }
+
+  .xqp-header-copy {
+    display: contents;
+  }
+
+  .xqp-portrait {
+    grid-column: 1;
+    grid-row: 1;
   }
 
   .xqp-h1 {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
     font-size: 24px;
+  }
+
+  .xqp-facts,
+  .xqp-sanction,
+  .xqp-header-actions {
+    grid-column: 1 / -1;
+  }
+
+  .xqp-fact {
+    padding: 0 14px;
+  }
+
+  .xqp-facts dd {
+    font-size: 16px;
+  }
+
+  .xqp-avatar-page.xqp-avatar-tile {
+    font-size: 40px;
   }
 
   .xqp-index th:nth-child(3),
@@ -657,6 +762,18 @@ a.xqp-team:hover {
   margin-left: auto;
   color: var(--site-muted);
   font-variant-numeric: tabular-nums;
+}
+
+/* The list's one photo credit, at the end of the filter bar. */
+.xqp-list-credit {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.xqp-board > .xqp-list-credit {
+  padding: 12px 40px 16px;
 }
 
 .xqp-segmented {
@@ -1033,6 +1150,10 @@ a.xqp-team:hover {
 @media (max-width: 640px) {
   .xqp-filters {
     padding: 0 14px 14px;
+  }
+
+  .xqp-board > .xqp-list-credit {
+    padding: 10px 14px 14px;
   }
 
   .xqp-games-filters {

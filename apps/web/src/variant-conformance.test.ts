@@ -5,7 +5,9 @@ import {
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
   DAYS_PER_MOVE_OPTIONS,
   type GameSpecId,
+  isRetiredGameSpec,
   MAHJONG_SPEC_ID,
+  RETIRED_GAME_SPEC_IDS,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import {
@@ -62,6 +64,28 @@ describe('variant create-request conformance', () => {
         body.gameSpecId,
         `${tenant.gameSpecId}: roomCreationRequestBody dropped/changed the spec`,
       ).toBe(tenant.gameSpecId);
+    }
+  });
+});
+
+// Retired variants (Fortress and Atomic Xiangqi, 2026-10-11) leave the picker
+// and the correspondence list, but a stale request for one must still carry its
+// own id, so the server answers 410 retired_game_spec instead of the builder
+// quietly turning it into a dark-chess game.
+describe('retired variant conformance', () => {
+  it('no picker variant and no correspondence variant is retired', () => {
+    for (const tenant of pickerTenants) {
+      expect(isRetiredGameSpec(tenant.gameSpecId), tenant.gameSpecId).toBe(false);
+    }
+    for (const id of CORRESPONDENCE_ELIGIBLE_SPEC_IDS) {
+      expect(isRetiredGameSpec(id), id).toBe(false);
+    }
+  });
+
+  it('a retired spec still resolves to itself, never to dark chess', () => {
+    for (const id of RETIRED_GAME_SPEC_IDS) {
+      expect(roomCreationGameSpecId(setupFor(id as never)), id).toBe(id);
+      expect(roomCreationRequestBody('pvp', setupFor(id as never)).gameSpecId, id).toBe(id);
     }
   });
 });

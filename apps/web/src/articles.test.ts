@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { isArticleTranslationPublished } from './article-i18n.js';
 import {
   BANQI_BOARD_W,
   BANQI_ENGINE_THUMBNAIL,
@@ -11,9 +12,11 @@ import {
   buildArticlesIndex,
   buildHomeArticleCards,
   buildRulesIndex,
+  renderArticleThumbnail,
+  renderBlock,
 } from './articles.js';
 import { articles } from './articles-data.js';
-import { rulesSlugPublicSurfaceEnabled } from './variant-public-surfaces.js';
+import { articleIsNoindex, rulesSlugPublicSurfaceEnabled } from './variant-public-surfaces.js';
 
 const articleStyles = readFileSync('src/articles.css', 'utf8');
 
@@ -62,6 +65,13 @@ describe('article public listing gates', () => {
     expect(hrefs).toEqual([
       // Helpmates in xiangqi (composed helpmates in two), 2026-10-15.
       '/blog/helpmates-in-xiangqi',
+      // Fortress and Atomic Xiangqi on hold for a redesign, scheduled for 2026-10-13
+      // (DEV shows it early for review).
+      '/blog/fortress-and-atomic-xiangqi-on-hold',
+      // The banqi perpetual-chase (長捉) rule, 2026-10-10.
+      '/blog/banqi-perpetual-chase',
+      // The jieqi puzzle investigation write-up, 2026-10-10.
+      '/blog/jieqi-puzzle-search',
       // The longest forced mates in xiangqi (tablebase records), 2026-10-09.
       '/blog/longest-forced-mates-xiangqi',
       // The Benedict Xiangqi design study, 2026-10-08, leads its date-mate on
@@ -101,10 +111,9 @@ describe('article public listing gates', () => {
       '/blog/pikafish',
       // The first player page, dated 2026-09-21.
       '/blog/yin-sheng',
-      // The atomic-xiangqi launch note is dated 2026-09-16, the horde-xiangqi
-      // and anti-xiangqi write-ups 2026-09-15 and 2026-09-13, and this index
-      // is ordered by date alone.
-      '/blog/atomic-xiangqi-build',
+      // The horde-xiangqi and anti-xiangqi write-ups are dated 2026-09-15 and
+      // 2026-09-13, and this index is ordered by date alone. The atomic-xiangqi
+      // launch note (2026-09-16) is served by URL only since the variant retired.
       '/blog/horde-xiangqi',
       '/blog/anti-xiangqi',
       // Published with the variant on 2026-09-11, the same date as the
@@ -296,6 +305,9 @@ describe('article public listing gates', () => {
     // curated list. Deep dives have their own row (next test).
     expect(hrefs).toEqual([
       '/blog/helpmates-in-xiangqi',
+      '/blog/fortress-and-atomic-xiangqi-on-hold',
+      '/blog/banqi-perpetual-chase',
+      '/blog/jieqi-puzzle-search',
       '/blog/longest-forced-mates-xiangqi',
       '/blog/benedict-xiangqi',
       '/blog/xiangqi-endgames',
@@ -309,7 +321,6 @@ describe('article public listing gates', () => {
       '/blog/one-thousand-games',
       '/blog/banqi-statistics',
       '/blog/pikafish',
-      '/blog/atomic-xiangqi-build',
       '/blog/horde-xiangqi',
       '/blog/anti-xiangqi',
       '/blog/duck-xiangqi-strategy',
@@ -485,7 +496,6 @@ describe('article public listing gates', () => {
       'banqi',
       'jungle',
       'jungle-flip',
-      'fortress-xiangqi',
       'jieqi',
       'fog-xiangqi',
       'fog-chess',
@@ -641,16 +651,70 @@ describe('rules variant sidebar', () => {
     expect(hrefs.indexOf('/rules/jieqi')).toBeLessThan(hrefs.indexOf('/rules/banqi'));
     expect(hrefs.indexOf('/rules/banqi')).toBeLessThan(hrefs.indexOf('/rules/duck-xiangqi'));
     expect(hrefs.indexOf('/rules/duck-xiangqi')).toBeLessThan(
-      hrefs.indexOf('/rules/fortress-xiangqi'),
+      hrefs.indexOf('/rules/crazyhouse-xiangqi'),
     );
-    expect(hrefs.indexOf('/rules/fortress-xiangqi')).toBeLessThan(
+    expect(hrefs.indexOf('/rules/crazyhouse-xiangqi')).toBeLessThan(
       hrefs.indexOf('/rules/fog-xiangqi'),
     );
-    // Unlisted 2026-10-06 while its rules are reworked.
+    // Retired 2026-10-11: the pages stay up by URL, off the rail.
+    expect(nav?.querySelector('a[href="/rules/fortress-xiangqi"]')).toBeNull();
     expect(nav?.querySelector('a[href="/rules/atomic-xiangqi"]')).toBeNull();
     expect(hrefs.indexOf('/rules/fog-xiangqi')).toBeLessThan(hrefs.indexOf('/rules/fog-chess'));
     expect(hrefs.indexOf('/rules/fog-chess')).toBeLessThan(hrefs.indexOf('/rules/jungle'));
     expect(hrefs.indexOf('/rules/jungle')).toBeLessThan(hrefs.indexOf('/rules/jungle-flip'));
+  });
+
+  // Fortress and Atomic Xiangqi retired on 2026-10-11. Their rules pages stay
+  // readable by URL (no 410, no redirect; precedent /rules/shogi4) but nothing
+  // lists them and nothing offers a game the server would refuse.
+  it('keeps retired rules pages readable, unlisted and without a play row', () => {
+    const index = buildRulesIndex();
+    for (const slug of ['fortress-xiangqi', 'atomic-xiangqi']) {
+      expect(rulesSlugPublicSurfaceEnabled(slug), slug).toBe(false);
+      expect(index.querySelector(`a[href="/rules/${slug}"]`), slug).toBeNull();
+      const page = buildArticlePage(slug);
+      expect(page.querySelector('h1')?.textContent, slug).toBeTruthy();
+      expect(page.querySelector('.article-cta-row.article-play-cta'), slug).toBeNull();
+      expect(page.querySelector(`a[href*="gameSpecId=${slug}"]`), slug).toBeNull();
+      const rail = page.querySelector('.article-variant-sidebar');
+      expect(rail?.querySelector(`a[href="/rules/${slug}"]`) ?? null, slug).toBeNull();
+    }
+    // Fortress points its reader at the nearest live game instead.
+    const fortress = buildArticlePage('fortress-xiangqi');
+    expect(fortress.querySelector('a[href*="gameSpecId=crazyhouse-xiangqi"]')).not.toBeNull();
+  });
+
+  // The Atomic Xiangqi launch post outlived its variant (retired 2026-10-11):
+  // its URL still answers, so inbound links land, but no surface offers it.
+  it('serves a noindex post by URL and lists it nowhere', () => {
+    vi.stubEnv('DEV', false);
+    const slug = 'atomic-xiangqi-build';
+    const post = articles.find((article) => article.slug === slug);
+    expect(post?.noindex).toBe(true);
+    expect(articleIsNoindex(post!)).toBe(true);
+    const page = buildArticlePage(slug);
+    expect(page.querySelector('h1')?.textContent).toBe(post?.title);
+    const href = `a[href="/blog/${slug}"]`;
+    expect(buildArticlesIndex().querySelector(href)).toBeNull();
+    for (const row of ['latest', 'deep-dives'] as const) {
+      expect(
+        buildHomeArticleCards(50, undefined, { ...NO_AGE_CUT, row })?.querySelector(href) ?? null,
+        row,
+      ).toBeNull();
+    }
+    const others = articles.filter(
+      (article) => article.kind === 'article' && article.slug !== slug && articleIsLive(article),
+    );
+    for (const other of others) {
+      expect(
+        buildArticlePage(other.slug).querySelector(`.article-footer ${href}`),
+        other.slug,
+      ).toBeNull();
+    }
+    // Only this post opts out; every other published post stays indexable.
+    expect(
+      articles.filter((article) => article.noindex === true).map((article) => article.slug),
+    ).toEqual([slug]);
   });
 
   it('lists the elevated xiangqi variants (not the hidden mini trio) by default', () => {
@@ -855,6 +919,7 @@ describe('blog post read-next footer', () => {
           article.kind === 'article' &&
           articleIsLive(article) &&
           article.showInIndex !== false &&
+          article.noindex !== true &&
           article.publisher === 'mistboard',
       )
       .map((article) => article.slug);
@@ -886,6 +951,31 @@ describe('blog post read-next footer', () => {
     expect(footer).not.toBeNull();
     expect(footer?.querySelector('.article-footer-heading')?.textContent).toBe('Read next');
     expect(footer?.querySelectorAll('.articles-index-card')).toHaveLength(3);
+  });
+
+  // An English-only post read with a zh UI: the heading and dates follow the UI,
+  // so the onward cards must too wherever the onward post has a zh version.
+  it('localizes onward cards on an English-only page read in zh', () => {
+    // DEV so the English-only draft renders; every published post has a zh version.
+    vi.stubEnv('DEV', true);
+    vi.stubGlobal('localStorage', { getItem: () => 'zh-Hans', setItem() {}, removeItem() {} });
+    try {
+      expect(isArticleTranslationPublished('fog-openings')).toBe(false);
+      const footer = buildArticlePage('fog-openings').querySelector('.article-footer');
+      expect(footer?.querySelector('.article-footer-heading')?.textContent).toBe('接着读');
+      let checked = 0;
+      for (const card of footer?.querySelectorAll('.articles-index-card') ?? []) {
+        const slug = card.getAttribute('href')?.split('/').pop() ?? '';
+        const target = articles.find((a) => a.slug === slug);
+        if (!target || !isArticleTranslationPublished(slug)) continue;
+        expect(card.getAttribute('href'), slug).toBe(`/zh-hans/blog/${slug}`);
+        expect(card.textContent, slug).not.toContain(target.title);
+        checked += 1;
+      }
+      expect(checked).toBeGreaterThan(0);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   // Rules docs already carry the variant rail as their onward path; a second
@@ -971,5 +1061,37 @@ describe('blog post read-next footer', () => {
     expect(articleStyles).toMatch(
       /@media \(max-width: \d+px\) \{\s*\.article-footer \.article-footer-list \{\s*grid-template-columns: 1fr/,
     );
+  });
+});
+
+describe('note block', () => {
+  it('renders one paragraph of rich text in a bordered aside', () => {
+    const el = renderBlock({
+      kind: 'note',
+      text: 'Spotted an error? [Tell us](/feedback) and we will **correct** it.',
+    });
+    expect(el.tagName).toBe('ASIDE');
+    expect(el.className).toBe('article-note');
+    const p = el.querySelector('p.article-note-text');
+    expect(p?.textContent).toBe('Spotted an error? Tell us and we will correct it.');
+    expect(p?.querySelector('a')?.getAttribute('href')).toBe('/feedback');
+    expect(p?.querySelector('strong')?.textContent).toBe('correct');
+  });
+
+  it('styles the note with neutral tokens, not a warning colour', () => {
+    const rule = articleStyles.match(/\.article-note \{[^}]*\}/)?.[0] ?? '';
+    expect(rule).toContain('var(--site-border-soft)');
+    expect(rule).not.toMatch(/warning|danger|error/);
+  });
+});
+
+describe('image thumbnail crop', () => {
+  it('applies an authored object-position', () => {
+    const wrap = renderArticleThumbnail({
+      kind: 'image',
+      src: '/player-photos/cao-yanlei.jpg',
+      position: 'center 12%',
+    });
+    expect(wrap.querySelector('img')?.style.objectPosition).toBe('center 12%');
   });
 });

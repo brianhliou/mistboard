@@ -142,6 +142,13 @@ export type ChapterEmbedOptions = {
   /** With hideSolution: the header and credit line shown until the reveal, in
    *  place of the chapter name, which often names the idea. */
   solutionHiddenLabels?: SolutionHiddenLabels;
+  /** The line embed's `arrows=1`: the move played from the opening frame
+   *  (`startPly`), drawn as an arrow on that frame only. Drawn by the jieqi
+   *  board; the other boards ignore it. */
+  openingMoveArrow?: boolean;
+  /** The line embed's `arrow=<move>`: the move drawn on the opening frame in
+   *  place of the one played from it. */
+  openingArrowMove?: string;
 };
 
 function solutionCardOptions(options: ChapterEmbedOptions): {
@@ -578,6 +585,8 @@ async function mountJieqiEmbed(
           lines,
           assessments,
           shapes,
+          openingArrowPly: options.openingMoveArrow === true ? (options.startPly ?? 0) : undefined,
+          openingArrowMove: options.openingArrowMove,
         },
         hooks,
       ),

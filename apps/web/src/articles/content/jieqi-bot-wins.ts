@@ -1,17 +1,14 @@
 import { parseJieqiFen, type XiangqiPiece, type XiangqiSquare } from '@mistboard/game';
-import { XQ_CELL, xqBoardSvg, xqPoint, xqVisionDemoState } from '../diagrams.js';
+import { xqHalfBoardThumbnailSvg, xqVisionDemoState } from '../diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
-// Card art: the last position of the stalemate win (jq_53ead5f3, ply 126), a
-// full-bleed crop of Red's half of the board. The bot's general on d1 is not in
+// Card art: the last position of the stalemate win (jq_53ead5f3, ply 126),
+// Red's half of the board. The bot's general on d1 is not in
 // check and has nowhere to go: both of its points, d2 and e1, carry a cross.
 // Built from the kernel's own FEN parse; jieqi-bot-wins-thumbnail.test.ts
 // asserts Red really has no legal move here, so the card cannot drift from the
 // rule it shows.
 export const JIEQI_BOT_WINS_STALEMATE_FEN = '9/9/3k5/9/9/5p3/4n1p2/3p5/4p4/3K5 w - 0 64';
-
-// 16:10 to match the card media box (.articles-index-card-media, 16/10).
-const THUMB_ASPECT = 16 / 10;
 
 const JIEQI_BOT_WINS_THUMBNAIL = (): string => {
   const parsed = parseJieqiFen(JIEQI_BOT_WINS_STALEMATE_FEN);
@@ -20,25 +17,16 @@ const JIEQI_BOT_WINS_THUMBNAIL = (): string => {
   for (const [square, piece] of Object.entries(parsed.state.board)) {
     if (piece) board[square as XiangqiSquare] = { color: piece.color, role: piece.role };
   }
-  const boardY = 28; // xqBoardSvg draws the grid 28 below its y, under the title row.
-  // Ranks 1 to 5 with most of a cell of room above and below the pieces.
-  const top = xqPoint(4, 5, 'red', 0, boardY).y - XQ_CELL * 0.8;
-  const bottom = xqPoint(4, 1, 'red', 0, boardY).y + XQ_CELL * 0.8;
-  const h = bottom - top;
-  const w = h * THUMB_ASPECT;
-  const left = xqPoint(4, 1, 'red', 0, boardY).x - w / 2;
-  const svg = xqBoardSvg({
+  return xqHalfBoardThumbnailSvg({
     state: xqVisionDemoState('jieqi-bot-wins-thumb', board),
-    x: 0,
-    y: 0,
-    label: '',
+    half: 'bottom',
     perspective: 'red',
     dots: [
       { square: 'd2' as XiangqiSquare, blocked: true },
       { square: 'e1' as XiangqiSquare, blocked: true },
     ],
+    ariaLabel: "Red's general stalemated on d1",
   });
-  return `<svg class="xq-article-svg" viewBox="${left} ${top} ${w} ${h}" role="img" aria-label="Red's general stalemated on d1" xmlns="http://www.w3.org/2000/svg"><rect class="xq-diagram-bg" x="${left}" y="${top}" width="${w}" height="${h}"/>${svg}</svg>`;
 };
 
 // Games are finished rooms, so /embed/game shows every piece. Each opens at

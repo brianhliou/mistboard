@@ -5,6 +5,7 @@ import {
   DAY_MS,
   isCorrespondenceRatedSpec,
   isOfficialCorrespondenceTimeControl,
+  isRetiredGameSpec,
   type RoomTimeControl,
 } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
@@ -431,6 +432,10 @@ async function createSeekResult(
     return { status: 403, body: { error: 'play_disabled' } };
   }
   const gameSpecId = typeof body.gameSpecId === 'string' ? body.gameSpecId : DARK_CHESS_SPEC_ID;
+  // A retired variant takes no new games: the same 410 the request gate gives.
+  if (isRetiredGameSpec(gameSpecId)) {
+    return { status: 410, body: { error: 'retired_game_spec' } };
+  }
   // Fork-6 fail-closed allowlist — the same set the create route enforces.
   if (!CORRESPONDENCE_ELIGIBLE_SPECS.has(gameSpecId)) {
     return { status: 501, body: { error: 'correspondence_unsupported_spec' } };
@@ -643,6 +648,11 @@ async function acceptSeekResult(
   if (seek.expiresAt && seek.expiresAt.getTime() <= Date.now()) {
     return { status: 410, body: { error: 'challenge_expired' } };
   }
+  // A seek posted before its variant retired cannot start a game now; the row
+  // lapses on its own TTL like any other unanswered seek.
+  if (isRetiredGameSpec(seek.gameSpecId)) {
+    return { status: 410, body: { error: 'retired_game_spec' } };
+  }
   if (!CORRESPONDENCE_ELIGIBLE_SPECS.has(seek.gameSpecId)) {
     return { status: 501, body: { error: 'correspondence_unsupported_spec' } };
   }
@@ -789,7 +799,9 @@ export type QuickPairDeps = {
 function defaultQuickPairDeps(ctx: HttpApiContext): QuickPairDeps {
   return {
     correspondenceEnabled,
-    variantEnabled: (gameSpecId) => correspondenceTenantForSpecId(gameSpecId)?.enabled() === true,
+    variantEnabled: (gameSpecId) =>
+      !isRetiredGameSpec(gameSpecId) &&
+      correspondenceTenantForSpecId(gameSpecId)?.enabled() === true,
     listOwnSeeks: (userId) => persistence.listOutgoingSeeksForUser(userId),
     listBoardSeeks: () => persistence.listOpenCorrespondenceSeeks(),
     accept: (user, seekId) => acceptSeekResult(ctx, user, seekId),

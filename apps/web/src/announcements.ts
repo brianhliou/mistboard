@@ -43,6 +43,38 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-10-13',
+    kind: 'article',
+    headline: 'Fortress and Atomic Xiangqi are back on the drawing board.',
+    body: 'Both are on hold while we redesign them: no new games, but finished games still replay and the rules pages stay up. Fortress needs a smaller xiangqi that keeps the feel of the full game without drops taking over. Atomic needs a cannon that follows the same rule as every other piece. Until then, drops live in Crazyhouse Xiangqi.',
+    href: '/blog/fortress-and-atomic-xiangqi-on-hold',
+    cta: 'Read the article',
+  },
+  {
+    date: '2026-10-12',
+    kind: 'article',
+    headline: 'Why banqi needs a perpetual chase rule, shown with real games.',
+    body: 'In banqi a chased piece often has only one safe square, so the chaser could force a draw by repetition. The article plays through the Mistboard games where that happened, compares what tournament rules and the popular apps do, and sets out our rule in full for anyone implementing it.',
+    href: '/blog/banqi-perpetual-chase',
+    cta: 'Read the article',
+  },
+  {
+    date: '2026-10-11',
+    kind: 'update',
+    headline: 'Pro player pages now have photos.',
+    body: "Seventy-five of the pro players we follow now have a portrait on their page, from the xiangqiqipu.com archive, which gave us permission to use them; each photo links back to that player's page there. Every player page also has their games, results by event, openings and official CXA rating.",
+    href: '/players',
+    cta: 'Browse the pro players',
+  },
+  {
+    date: '2026-10-11',
+    kind: 'article',
+    headline: 'Looking for jieqi puzzles: what 50 games turned up.',
+    body: 'We scored 2,939 positions from 50 jieqi games, looking for puzzles. Four passed the rules our xiangqi puzzles go through, and none of them turns on a face-down piece: the hidden-piece answers were bets, or moves the tile hardly touched. Where skill does show is in timing a capture a face-down piece can make whatever it turns out to be. Every example is on a board you can step through.',
+    href: '/blog/jieqi-puzzle-search',
+    cta: 'Read the article',
+  },
+  {
     date: '2026-10-10',
     kind: 'release',
     headline: 'Secrets of Strategy and the Dream of Divine Strategy are online.',

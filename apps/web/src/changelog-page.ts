@@ -8,10 +8,13 @@ import './changelog-page.css';
 
 import { type ChangelogInline, type ChangelogMonth, changelogMonths } from './changelog-data.js';
 import { t } from './i18n/catalog.js';
-import { currentLocale, LOCALE_META, type Locale, localizedHref } from './i18n/locale.js';
+import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
+import { formatMonth } from './month-label.js';
 import { buildNav, GITHUB_URL } from './site-shell.js';
 import { proseExternalLink, proseHeading, proseLink, proseParagraph } from './static-page-dom.js';
 import { buildStaticPageLayout } from './static-page-shell.js';
+
+export { formatMonth };
 
 /**
  * How many months /changelog shows in full, newest first. Each older month has
@@ -187,17 +190,6 @@ function renderInline(part: ChangelogInline): Node {
       return link;
     }
   }
-}
-
-/** `2026-09` as "September 2026" (or 2026年9月), the lichess month label. */
-export function formatMonth(id: string, locale: Locale = currentLocale()): string {
-  const [year, month] = id.split('-').map(Number);
-  if (!year || !month) return id;
-  return new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString(LOCALE_META[locale].dateLocale, {
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
 }
 
 // The page is built before it is in the document, so a #2026-09 hash has

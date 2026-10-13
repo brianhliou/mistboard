@@ -107,7 +107,6 @@ import {
   isGameSpecId,
   rulesHrefPublicSurfaceEnabled,
   rulesSlugPublicSurfaceEnabled,
-  rulesSlugRetired,
   variantPublicSurfaceEnabled,
   variantSupportsPve,
 } from './variant-public-surfaces.js';
@@ -136,7 +135,7 @@ function isArticleVisibleInThisEnv(article: Article): boolean {
 
 function isArticleListedInThisEnv(article: Article): boolean {
   if (!isArticleVisibleInThisEnv(article)) return false;
-  if (article.showInIndex === false) return false;
+  if (article.showInIndex === false || article.noindex === true) return false;
   // A page written in a language the interface does not speak never lists here.
   // The index is one reader's shelf, and a Vietnamese card in an English list is
   // noise to everyone: an English reader cannot read it, and a Vietnamese reader
@@ -489,20 +488,25 @@ export function buildHomeArticleCards(
     more.className = 'landing-row-more';
     more.href = localizedHref('/blog', locale);
     more.textContent = t('site.more', {}, locale);
+    // Autocapture is off, so a homepage link with no track() call is invisible
+    // in PostHog: this is the only way off the homepage into the blog index.
+    more.addEventListener('click', () => {
+      track('landing_row_more_clicked', { row, href: more.getAttribute('href') });
+    });
     header.append(more);
   }
   section.append(header);
   const carousel = document.createElement('div');
   carousel.className = 'landing-carousel';
 
-  const track = document.createElement('div');
-  track.className = 'landing-carousel-track';
-  for (const card of cards) track.append(card);
+  const carouselTrack = document.createElement('div');
+  carouselTrack.className = 'landing-carousel-track';
+  for (const card of cards) carouselTrack.append(card);
 
   const prev = carouselNavButton('prev', '‹', locale);
   const next = carouselNavButton('next', '›', locale);
 
-  carousel.append(prev, track, next);
+  carousel.append(prev, carouselTrack, next);
   section.append(carousel);
   return section;
 }
@@ -750,9 +754,6 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
   const locale = articleLocale(articleLang);
   if (!base) return buildArticleNotFound(locale);
   if (!isArticleVisibleInThisEnv(base)) return buildArticleNotFound(locale);
-  // The server serves 410 for a retired variant's rules page; a client-side
-  // navigation must not render what the server has declared gone.
-  if (base.kind === 'rules' && rulesSlugRetired(base.slug)) return buildArticleNotFound(locale);
   const article = articleLang ? translateArticle(base, articleLang) : base;
 
   const main = document.createElement('main');
@@ -937,10 +938,13 @@ function buildArticleFooter(article: Article, lang?: ArticleLang): HTMLElement |
   heading.className = 'article-footer-heading';
   heading.textContent = t('articles.readNext', {}, locale);
 
+  // An English-only page read with a zh UI still offers the zh version of each
+  // onward post that has one, as the heading and dates already follow the UI.
+  const cardLang = lang ?? (locale === 'zh-Hans' || locale === 'zh-Hant' ? locale : undefined);
   const list = document.createElement('ul');
   list.className = 'articles-index-list article-footer-list';
   for (const entry of related) {
-    list.append(articleCard(entry, lang, { showStarBadge: false }));
+    list.append(articleCard(entry, cardLang, { showStarBadge: false }));
   }
 
   footer.append(heading, list);
@@ -1348,8 +1352,10 @@ function rememberPendingMount(figure: HTMLElement, block: PendingBlock, lang?: A
   pendingMounts.set(figure, { block, lang });
 }
 
-function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElement {
+/** One body block as DOM. Exported for tests. */
+export function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElement {
   if (block.kind === 'paragraph') return paragraphNode(block.text);
+  if (block.kind === 'note') return noteNode(block.text);
   if (block.kind === 'sub-heading') return subHeadingNode(block);
   if (block.kind === 'static-boards') return renderStaticBoardsBlock(block);
   if (block.kind === 'cta') return renderCtaBlock(block);
@@ -1873,7 +1879,8 @@ function renderRawSvgStepperBlock(block: RawSvgStepperBlock, lang?: ArticleLang)
       lang,
       title: block.header?.players,
       subtitle: block.header?.event,
-      wide,
+      // A game is one board, so its sheet sits beside it however wide it is.
+      wide: wide && !asGame,
     },
     {
       count: block.steps.length,
@@ -2211,6 +2218,17 @@ function paragraphNode(text: string): HTMLParagraphElement {
   return p;
 }
 
+/** An editorial note: one paragraph of rich text in a bordered aside. */
+function noteNode(text: string): HTMLElement {
+  const aside = document.createElement('aside');
+  aside.className = 'article-note';
+  const p = document.createElement('p');
+  p.className = 'article-note-text';
+  appendRichText(p, text);
+  aside.append(p);
+  return aside;
+}
+
 // Lightweight inline parser. Recognizes Markdown-style `code`, [text](href) for
 // links, and **text** for bold. External link hrefs (http/https) open in a new
 // tab; internal hrefs (/foo, #foo) do not. Anything that isn't a recognized
@@ -2499,6 +2517,7 @@ export function renderArticleThumbnail(
     img.style.width = '100%';
     img.style.height = '100%';
     img.style.objectFit = 'cover';
+    if (thumb.position) img.style.objectPosition = thumb.position;
     img.style.display = 'block';
     wrap.replaceChildren(img);
     return wrap;

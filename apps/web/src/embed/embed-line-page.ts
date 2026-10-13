@@ -17,6 +17,7 @@ const ANALYSIS_PATH: Record<EmbedLineRoute['variant'], string> = {
   'atomic-xiangqi': '/analysis/atomic-xiangqi',
   'crazyhouse-xiangqi': '/analysis/crazyhouse-xiangqi',
   banqi: '/analysis/banqi',
+  jieqi: '/analysis/jieqi',
   jungle: '/analysis/jungle',
   chess: '/rules/chess',
 };
@@ -39,7 +40,7 @@ export function lineToChapter(route: EmbedLineRoute, line: EmbedLineSpec): Study
     id: 'line',
     name: line.event ?? 'A line',
     variant: route.variant,
-    orientation: 'red',
+    orientation: line.orientation ?? 'red',
     tags,
     // A jungle line without a position starts from the setup, like a game; a
     // banqi line has no such default, its deal IS the position, so the card's
@@ -68,6 +69,10 @@ export async function mountEmbedLine(
     root,
     { href: ANALYSIS_PATH[route.variant], text: 'mistboard.com' },
     lineToChapter(route, line),
-    options,
+    {
+      ...options,
+      openingMoveArrow: line.arrows === true || Boolean(line.arrow),
+      openingArrowMove: line.arrow ?? undefined,
+    },
   );
 }

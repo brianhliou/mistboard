@@ -43,6 +43,9 @@ const RAIL_WIDTH_PX = 226;
 // in the duck half, 94px of text plus the cell's 12px of padding, twice, plus
 // the 34px number column and the list's own 26px of padding and border.
 const DUCK_RAIL_WIDTH_PX = 276;
+// Banqi writes the shortest coordinate move (`c3-b3`: one-digit ranks, 37px of
+// text at 15px) on the widest board (8x4), so its sheet gives the board 46px.
+const BANQI_RAIL_WIDTH_PX = 180;
 // The card's own border, left and right (or top and bottom when stacked).
 const CARD_BORDER_PX = 2;
 // The mat each board sits on (embed.css, .embed-card .embed-board
@@ -88,7 +91,9 @@ export function embedColumnAspect(specId: string | null | undefined): number {
  *  Same shape as boardAspectForSpec: cosmetic sizing, so an unknown id takes
  *  the default rather than throwing. */
 export function embedRailWidthPx(specId: string | null | undefined): number {
-  return specId === 'duck-xiangqi' ? DUCK_RAIL_WIDTH_PX : RAIL_WIDTH_PX;
+  if (specId === 'duck-xiangqi') return DUCK_RAIL_WIDTH_PX;
+  if (specId === 'banqi') return BANQI_RAIL_WIDTH_PX;
+  return RAIL_WIDTH_PX;
 }
 
 export type EmbedSeat = {

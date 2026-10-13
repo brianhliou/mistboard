@@ -1,7 +1,7 @@
 import { createUser } from './persistence.js';
 import { createStudy, getStudyById } from './persistence-studies.js';
 import { assert, definePersistenceTests, test } from './persistence-test-support.js';
-import { applyPlan, editableOwners } from './study-edit-cli.js';
+import { applyCreate, applyPlan, editableOwners } from './study-edit-cli.js';
 
 definePersistenceTests('study edit', () => {
   const now = new Date('2026-09-29T12:00:00.000Z');
@@ -114,5 +114,67 @@ definePersistenceTests('study edit', () => {
       'zh-Hans': { name: '未被推翻 · 一' },
       'zh-Hant': { name: '未被推翻 · 一' },
     });
+  });
+  // A player study carries each game's Chinese name and tags; a plan made by
+  // player-study.mjs --plan has to keep them through create and add.
+  test('create and add keep each chapter translation', async () => {
+    await seed('edit-i18n');
+    const zh = (name: string) => ({ 'zh-Hans': { name, tags: { red: '左文静' } } });
+    const created = await applyCreate(
+      {
+        owner: 'edit-i18n',
+        name: 'Games',
+        visibility: 'unlisted',
+        chapter: { name: 'One', variant: 'xiangqi', tree: tree('b3e3'), i18n: zh('一') },
+      },
+      ['edit-i18n'],
+    );
+    await applyPlan(
+      created,
+      { study: created.id, ops: [{ op: 'add', name: 'Two', tree: tree('c4c5'), i18n: zh('二') }] },
+      ['edit-i18n'],
+    );
+    const after = (await getStudyById(created.id))!;
+    assert.equal(after.visibility, 'unlisted');
+    assert.deepEqual(
+      after.chapters.map((c) => c.i18n),
+      [zh('一'), zh('二')],
+    );
+  });
+
+  test('delete-study removes the study only by its name, as the last op', async () => {
+    const study = await seed('edit-delete');
+    const site = ['edit-delete'];
+    await assert.rejects(
+      applyPlan(study, { study: study.id, ops: [{ op: 'delete-study', expect: 'Other' }] }, site),
+      /is named/,
+    );
+    await assert.rejects(
+      applyPlan(
+        study,
+        {
+          study: study.id,
+          ops: [
+            { op: 'delete-study', expect: study.name },
+            { op: 'study', name: 'Later' },
+          ],
+        },
+        site,
+      ),
+      /last op/,
+    );
+    assert.ok(await getStudyById(study.id));
+    await applyPlan(
+      study,
+      {
+        study: study.id,
+        ops: [
+          { op: 'study', name: 'DUPLICATE' },
+          { op: 'delete-study', expect: 'DUPLICATE' },
+        ],
+      },
+      site,
+    );
+    assert.equal(await getStudyById(study.id), null);
   });
 });

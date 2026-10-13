@@ -105,6 +105,7 @@ export const EMBED_LINE_VARIANTS = [
   'atomic-xiangqi',
   'crazyhouse-xiangqi',
   'banqi',
+  'jieqi',
   'jungle',
   'chess',
 ] as const;
@@ -115,7 +116,10 @@ export type EmbedLineRoute = { variant: EmbedLineVariant };
 /** `/embed/line/:variant`: a move list with no game or study behind it, carried
  *  in the query string (`?fen=` for a position other than the start, `?moves=`
  *  as comma- or space-separated tokens in the variant's own spelling, plus
- *  `red=`, `black=`, `event=`, `result=` for the card's chrome). */
+ *  `red=`, `black=`, `event=`, `result=` for the card's chrome, and
+ *  `orientation=black` to seat Black at the bottom, and `arrows=1` to draw the
+ *  opening move as an arrow on the opening frame only, or `arrow=<move>` to
+ *  draw a named move there instead; jieqi only for now). */
 export function embedLineRouteFromPath(pathname: string): EmbedLineRoute | null {
   const m = /^\/embed\/line\/([a-z-]{1,32})\/?$/.exec(pathname);
   if (!m) return null;
@@ -130,6 +134,14 @@ export type EmbedLineSpec = {
   black: string | null;
   event: string | null;
   result: string | null;
+  /** Which seat sits at the bottom of the board; Red unless `orientation=black`. */
+  orientation?: 'red' | 'black';
+  /** Draw the move played from the opening frame as an arrow on that frame (`arrows=1`). */
+  arrows?: boolean;
+  /** `arrow=i10i4`: the move the board is about when it is not the one played
+   *  next (a capture held in reserve). Drawn on the opening frame in place of
+   *  the played move; implies `arrows`. */
+  arrow?: string | null;
 };
 
 const LINE_TOKEN = /^[a-z0-9@+=#-]{2,12}$/i;
@@ -157,6 +169,9 @@ export function embedLineFromSearch(search: string): EmbedLineSpec {
     black: text('black', 80),
     event: text('event', 160),
     result: text('result', 20),
+    orientation: params.get('orientation') === 'black' ? 'black' : 'red',
+    arrows: params.get('arrows') === '1',
+    arrow: LINE_TOKEN.test(params.get('arrow') ?? '') ? params.get('arrow') : null,
   };
 }
 

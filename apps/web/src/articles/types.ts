@@ -28,6 +28,11 @@ export type ParagraphBlock = { kind: 'paragraph'; text: string };
 
 export type SubHeadingBlock = { kind: 'sub-heading'; text: string };
 
+// An editorial note set apart from the body: a corrections invitation, a
+// sourcing remark. One short paragraph with the same inline markdown as a
+// paragraph ([text](href), **bold**, `code`), drawn as a quiet bordered aside.
+export type NoteBlock = { kind: 'note'; text: string };
+
 // Inline SVG composition of 1, 2, or 3 boards. Renderer wraps the composer
 // output in an <svg> with the given canvas dimensions and background.
 export type StaticBoardsBlock = {
@@ -397,6 +402,7 @@ export type ImageFigureBlock = {
 
 export type ArticleBlock =
   | ParagraphBlock
+  | NoteBlock
   | TableBlock
   | FaqBlock
   | ImageFigureBlock
@@ -463,6 +469,9 @@ export type ImageArticleThumbnail = {
   // a client route (e.g. '/blog'): use '/article-thumbs/misty.jpg'.
   src: string;
   alt?: string;
+  // CSS object-position for the cover crop, when the subject is off centre:
+  // a portrait in a landscape card keeps the face with 'center 12%'.
+  position?: string;
 };
 
 export type ArticleThumbnail = BoardArticleThumbnail | SvgArticleThumbnail | ImageArticleThumbnail;
@@ -534,6 +543,13 @@ type ArticleBase = {
   // (chess). Hiding a whole variant from public surfaces, or
   // an unindexed rules page, is variant-public-surfaces.ts instead.
   showInIndex?: boolean;
+  // true serves the page by URL only: off every listing (index, homepage rows,
+  // related ring) like showInIndex: false, out of /blog/feed.xml and the
+  // sitemap, and stamped `noindex, follow` in every language. For a post whose
+  // subject is gone but whose inbound links should still land (the Atomic
+  // Xiangqi launch post, retired 2026-10-11). The server's
+  // NON_INDEXED_ARTICLE_SLUGS must carry the same slug (articles-meta-sync.test.ts).
+  noindex?: boolean;
   // Which homepage row the card sits in. Unset is the general row, so a new
   // article lands on the homepage with no second edit; 'deep-dives' moves it to
   // the row beneath (player pages and game deep dives).
@@ -545,6 +561,10 @@ type ArticleBase = {
   updatedAt?: string;
   tldr?: string[];
   intro?: ArticleBlock[];
+  // Card art, drawn in the 16:10 card media under a date pill (top left) and a
+  // star (top right). Half a xiangqi board goes through xqHalfBoardThumbnailSvg
+  // (articles/diagrams.ts): five whole ranks cut mid-river, corners checked
+  // against the tags. Judge any new card with `npm run articles:cards`.
   thumbnail?: ArticleThumbnail;
   // Which appearance family this article's diagrams belong to. Drives the
   // Settings board/piece pickers while the article is open (xiangqi diagrams

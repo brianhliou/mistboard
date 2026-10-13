@@ -26,6 +26,8 @@ const FRESH_GAME_CALL_SITES: Record<string, string> = {
   'apps/web/src/start-position-board.ts': 'the start diagram: no moves',
   'apps/web/src/variant-analysis.ts': 'a new random deal on the analysis board',
   'apps/server/src/og-position.ts': 'the start-position share card: no moves',
+  'apps/web/src/articles/banqi-chase-diagrams.ts':
+    'a composed position that teaches the current 長捉 rule, not a recorded game',
   'packages/game/src/hidden-piece-record.ts': 'the start FEN: no moves',
   'packages/game/src/start-fen.ts': 'a fresh dealt start position',
 };

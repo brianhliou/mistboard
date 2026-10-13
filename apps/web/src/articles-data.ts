@@ -12,6 +12,7 @@ import { banqiArticle } from './articles/content/banqi.js';
 import { banqiStatisticsArticle } from './articles/content/banqi-statistics.js';
 import { banqiEngineArticle } from './articles/content/banqi-engine.js';
 import { banqiLuckArticle } from './articles/content/banqi-luck.js';
+import { banqiPerpetualChaseArticle } from './articles/content/banqi-perpetual-chase.js';
 import { chessArticle } from './articles/content/chess.js';
 import { choiCoTuongVoiMayArticle } from './articles/content/choi-co-tuong-voi-may.js';
 import { coUpArticle } from './articles/content/co-up.js';
@@ -26,6 +27,7 @@ import { katagoJungleArticle } from './articles/content/katago-jungle.js';
 import { duckXiangqiGameTreeArticle } from './articles/content/duck-xiangqi-game-tree.js';
 import { solverAuditArticle } from './articles/content/solver-audit.js';
 import { jieqiBotWinsArticle } from './articles/content/jieqi-bot-wins.js';
+import { jieqiPuzzleSearchArticle } from './articles/content/jieqi-puzzle-search.js';
 import { oneThousandGamesArticle } from './articles/content/one-thousand-games.js';
 import { darkChessArticle } from './articles/content/dark-chess.js';
 import { darkChessConceptsArticle } from './articles/content/fog-chess-concepts.js';
@@ -65,10 +67,13 @@ import { caoYanleiArticle } from './articles/content/cao-yanlei.js';
 import { laiLyHuynhArticle } from './articles/content/lai-ly-huynh.js';
 import { laiLyHuynhCoTuongArticle } from './articles/content/lai-ly-huynh-co-tuong.js';
 import { tonyFungGaZenArticle } from './articles/content/tony-fung-ga-zen.js';
+import { fortressAndAtomicXiangqiOnHoldArticle } from './articles/content/fortress-and-atomic-xiangqi-on-hold.js';
 import articleSnapshotFog from './article-snapshot-fog.json' with { type: 'json' };
 
 export const articles: Article[] = [
   helpmatesInXiangqiArticle,
+  fortressAndAtomicXiangqiOnHoldArticle,
+  jieqiPuzzleSearchArticle,
   longestForcedMatesXiangqiArticle,
   xiangqiEndgamesArticle,
   duckXiangqiGameTreeArticle,
@@ -120,6 +125,7 @@ export const articles: Article[] = [
   banqiStatisticsArticle,
   banqiEngineArticle,
   banqiLuckArticle,
+  banqiPerpetualChaseArticle,
   flipJungleSkillCeilingArticle,
   puzzleMiningArticle,
   puzzleTwoAnswersArticle,

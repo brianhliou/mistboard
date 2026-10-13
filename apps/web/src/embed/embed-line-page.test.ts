@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { mountJieqiReplayBoard, replayJieqiLine } from '../jieqi-replay-board.js';
 import { lineToChapter, mountEmbedLine } from './embed-line-page.js';
 import { embedLineFromSearch } from './embed-route.js';
 
@@ -57,6 +58,86 @@ describe('mountEmbedLine', () => {
     await mountEmbedLine(root, { variant: 'jungle' }, embedLineFromSearch(''), {});
     expect(root.textContent).toContain('No moves to show');
     root.remove();
+  });
+
+  it('draws a jieqi line from a dealt position, seated as the query asks', async () => {
+    const root = document.createElement('div');
+    document.body.append(root);
+    // the deal rides in the sixth FEN field; a10 is a soldier that moves as the chariot it stands in for
+    const fen =
+      'x3k3x/9/5R3/4p4/4bnb1p/5N3/8X/2P2A1P1/4C4/4K3X_b_R0A0C0P0N0B2r0a0c0p1n1b0_0_28_pnBB';
+    const line = embedLineFromSearch(`?fen=${fen}&moves=a10a1&orientation=black`);
+    expect(line.orientation).toBe('black');
+    expect(lineToChapter({ variant: 'jieqi' }, line).orientation).toBe('black');
+    await mountEmbedLine(root, { variant: 'jieqi' }, line, {});
+    const moves = Array.from(root.querySelectorAll('.review-move-list__move')).map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(moves).toHaveLength(1);
+    expect(root.textContent).not.toContain('no dealt position');
+    expect(root.querySelector('a[href="/analysis/jieqi"]')).not.toBeNull();
+    // no arrow unless the frame asks for one
+    expect(root.querySelector('.xq-arrow--best')).toBeNull();
+    root.remove();
+  });
+
+  it('draws the move about to be played as an arrow when the frame asks (arrows=1)', async () => {
+    const fen =
+      'x3k3x/9/5R3/4p4/4bnb1p/5N3/8X/2P2A1P1/4C4/4K3X_b_R0A0C0P0N0B2r0a0c0p1n1b0_0_28_pnBB';
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedLine(
+      root,
+      { variant: 'jieqi' },
+      embedLineFromSearch(`?fen=${fen}&moves=a10a1&arrows=1`),
+      { startPly: 0 },
+    );
+    // one arrow, in the review's best-move style, on the position before a10-a1
+    expect(root.querySelectorAll('.xq-arrow--best')).toHaveLength(1);
+    root.remove();
+  });
+
+  it('draws the arrow on the opening frame only; stepping on shows the plain marks', () => {
+    // no face-down piece: i10-f10, g8-f8, e9xf8
+    const line = replayJieqiLine(
+      '8C/3kA4/6r2/B2N5/9/P4p2P/1A2Pn3/9/3K5/9 w R0A0C0P0N0B0r0a0c0p0n0b0 15 62 -',
+      ['i10f10', 'g8f8', 'e9f8'],
+    );
+    if (!line) throw new Error('line did not replay');
+    const host = document.createElement('div');
+    document.body.append(host);
+    const board = mountJieqiReplayBoard(host, line, { openingArrowPly: 1 });
+    const arrows = () => host.querySelectorAll('.xq-arrow--best').length;
+    expect(arrows()).toBe(0); // ply 0 is not the frame the board opens on
+    board.jumpToPly(1);
+    expect(arrows()).toBe(1); // the opening frame: g8-f8, the move it is about
+    board.jumpToPly(2);
+    expect(arrows()).toBe(0);
+    board.jumpToPly(3);
+    expect(arrows()).toBe(0);
+    board.destroy();
+    host.remove();
+  });
+
+  it('draws a named move on the opening frame in place of the one played (arrow=)', () => {
+    const line = replayJieqiLine(
+      '8C/3kA4/6r2/B2N5/9/P4p2P/1A2Pn3/9/3K5/9 w R0A0C0P0N0B0r0a0c0p0n0b0 15 62 -',
+      ['i10f10', 'g8f8'],
+    );
+    if (!line) throw new Error('line did not replay');
+    const host = document.createElement('div');
+    document.body.append(host);
+    const named = mountJieqiReplayBoard(host, line, {
+      openingArrowPly: 0,
+      openingArrowMove: 'i10i9',
+    });
+    const drawn = host.innerHTML;
+    named.destroy();
+    const played = mountJieqiReplayBoard(host, line, { openingArrowPly: 0 });
+    expect(host.querySelectorAll('.xq-arrow--best')).toHaveLength(1);
+    expect(host.innerHTML).not.toBe(drawn); // a different arrow: i10-i9, not i10-f10
+    played.destroy();
+    host.remove();
   });
 
   it('builds the chapter shape the study card reads: a single-child chain and the tags', () => {

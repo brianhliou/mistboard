@@ -397,6 +397,7 @@ export function isClientRoute(pathname: string): boolean {
     normalized === '/leaderboard' ||
     normalized === '/news' ||
     normalized === '/feed' ||
+    /^\/feed\/\d{4}-\d{2}$/.test(normalized) ||
     normalized === '/forum' ||
     normalized === '/forum/reports' ||
     normalized === '/forum/etiquette' ||

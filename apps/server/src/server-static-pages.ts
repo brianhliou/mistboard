@@ -882,13 +882,14 @@ export async function servePrerenderedPage(params: {
     | 'player.html'
     | 'learn-xiangqi.html'
     | 'feed.html'
+    | `feed-${string}.html`
     | 'changelog.html'
     | `changelog-${string}.html`
     | 'puzzles.html'
     | 'patron.html';
 }): Promise<void> {
   if (
-    SCHEDULE_DATED_PAGES.has(params.file) &&
+    (SCHEDULE_DATED_PAGES.has(params.file) || params.file.startsWith('feed-')) &&
     prerenderedIndexIsStale(await readArticleSchedule(params.staticDir))
   ) {
     throw new Error(`${params.file} predates a scheduled entry that is now live`);

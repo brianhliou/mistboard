@@ -43,6 +43,11 @@ import {
 } from './players/profiles.js';
 import { ratingHistoryFigure } from './players/rating-history-chart.js';
 import { MATCH_FIXING_ARTICLE_PATH, sanctionFor, sanctionSentence } from './players/sanctions.js';
+import {
+  type SourcedPlayerPhoto,
+  XIANGQIQIPU_CREDIT,
+  XIANGQIQIPU_PHOTOS,
+} from './players/xiangqiqipu-photos.js';
 import { seatDiscEl } from './seat-disc.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { type BroadcastRailItem, broadcastSectionLayout } from './xiangqi-broadcast-pages.js';
@@ -573,6 +578,9 @@ function renderIndex(players: PlayerRecord[]): HTMLElement & { main: HTMLElement
   }
   bar.append(count);
   panel.append(boardHead(title, search), bar, table);
+  // At the foot of the list, below the last row, as on a team page.
+  const credit = sourcedPhotosCredit(players);
+  if (credit) panel.append(credit);
   main.append(panel);
   return main;
 }
@@ -789,6 +797,8 @@ function renderTeam(team: TeamRecord): HTMLElement & { main: HTMLElement } {
   const panel = document.createElement('section');
   panel.className = 'xqp-board';
   panel.append(boardHead(title), playersTable(team.players, undefined, false));
+  const credit = sourcedPhotosCredit(team.players);
+  if (credit) panel.append(credit);
   main.append(panel);
   return main;
 }
@@ -797,13 +807,36 @@ function playerHref(player: Pick<PlayerRecord, 'slug'>): string {
   return `/players/${encodeURIComponent(player.slug)}`;
 }
 
-/** Photo when we have one, else a tile with the surname character. */
-function avatar(player: Pick<PlayerRecord, 'slug' | 'name'>, size: 'row' | 'page'): HTMLElement {
+const XIANGQIQIPU_SITE = 'https://www.xiangqiqipu.com/';
+
+const SOURCED_PHOTOS: ReadonlyMap<string, SourcedPlayerPhoto> = new Map(
+  XIANGQIQIPU_PHOTOS.map((photo) => [photo.slug, photo]),
+);
+
+/** A portrait from xiangqiqipu.com (players/xiangqiqipu-photos.ts), or null.
+ *  The authored photo in profiles.ts wins over it. */
+export function sourcedPhotoFor(slug: string): SourcedPlayerPhoto | null {
+  if (PLAYER_PROFILES[slug]?.photo) return null;
+  return SOURCED_PHOTOS.get(slug) ?? null;
+}
+
+/** The authored photo when we have one, else (in a list row) a sourced
+ *  photo, else a tile with the surname character. A list that shows sourced
+ *  photos carries one credit line for them (`sourcedPhotosCredit`); the page
+ *  hero credits its own (`playerPortrait`). */
+export function avatar(
+  player: Pick<PlayerRecord, 'slug' | 'name'>,
+  size: 'row' | 'page',
+): HTMLElement {
   const profile = PLAYER_PROFILES[player.slug];
-  if (profile?.photo) {
+  // A list row shows only xiangqiqipu photos: the list carries one credit line,
+  // to that site, so an authored photo from another source (尹昇's Sohu photo)
+  // would sit under the wrong credit. Authored photos stay on the player page.
+  const src = size === 'row' ? sourcedPhotoFor(player.slug)?.photo : profile?.photo;
+  if (src) {
     const img = document.createElement('img');
     img.className = `xqp-avatar xqp-avatar-${size}`;
-    img.src = profile.photo;
+    img.src = src;
     img.alt = '';
     img.loading = 'lazy';
     img.decoding = 'async';
@@ -814,6 +847,72 @@ function avatar(player: Pick<PlayerRecord, 'slug' | 'name'>, size: 'row' | 'page
   tile.textContent = Array.from(player.name)[0] ?? '';
   tile.setAttribute('aria-hidden', 'true');
   return tile;
+}
+
+/** The page hero's portrait: the authored photo with its credit, else a
+ *  sourced photo with the credit line its owner asked for (the site name,
+ *  linked to the player's page there), else the character tile. */
+export function playerPortrait(
+  player: Pick<PlayerRecord, 'slug' | 'name' | 'nameEn'>,
+): HTMLElement {
+  const figure = document.createElement('figure');
+  figure.className = 'xqp-portrait';
+  const profile = PLAYER_PROFILES[player.slug];
+  const sourced = sourcedPhotoFor(player.slug);
+  if (!sourced) {
+    figure.append(avatar(player, 'page'));
+    if (profile?.photoCredit) {
+      const cap = document.createElement('figcaption');
+      cap.textContent = `Credit: ${profile.photoCredit}`;
+      figure.append(cap);
+    }
+    return figure;
+  }
+  const img = document.createElement('img');
+  img.className = 'xqp-avatar xqp-avatar-page';
+  img.src = sourced.photo;
+  img.width = sourced.width;
+  img.height = sourced.height;
+  img.alt = t('broadcast.playerPhotoAlt', {
+    name: currentLocale() === 'en' ? displayName(player) : player.name,
+  });
+  img.decoding = 'async';
+  const cap = document.createElement('figcaption');
+  cap.className = 'xqp-photo-credit';
+  cap.append(...creditNodes('broadcast.playerPhotoCredit', sourced.credit, sourced.sourceUrl));
+  figure.append(img, cap);
+  return figure;
+}
+
+/** A credit template with the site name linked into its {source} slot; the
+ *  template carries the word order. */
+function creditNodes(
+  key: 'broadcast.playerPhotoCredit' | 'broadcast.playersPhotosCredit',
+  source: string,
+  href: string,
+): (string | HTMLElement)[] {
+  const link = document.createElement('a');
+  link.href = href;
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.textContent = source;
+  const MARK = '\u0001';
+  const [before = '', after = ''] = t(key, { source: MARK }).split(MARK);
+  return [before, link, after];
+}
+
+/** The one credit line a list of players carries for the xiangqiqipu.com
+ *  photos in its rows, or null when none of its players has one. */
+export function sourcedPhotosCredit(
+  players: readonly Pick<PlayerRecord, 'slug'>[],
+): HTMLElement | null {
+  if (!players.some((p) => sourcedPhotoFor(p.slug))) return null;
+  const line = document.createElement('p');
+  line.className = 'xqp-photo-credit xqp-list-credit';
+  line.append(
+    ...creditNodes('broadcast.playersPhotosCredit', XIANGQIQIPU_CREDIT, XIANGQIQIPU_SITE),
+  );
+  return line;
 }
 
 function titleTag(title: PlayerTitle | null): HTMLElement | null {
@@ -885,14 +984,7 @@ function renderPlayer(
 
   const header = document.createElement('section');
   header.className = 'xqp-header';
-  const figure = document.createElement('figure');
-  figure.className = 'xqp-portrait';
-  figure.append(avatar(player, 'page'));
-  if (profile?.photoCredit) {
-    const cap = document.createElement('figcaption');
-    cap.textContent = `Credit: ${profile.photoCredit}`;
-    figure.append(cap);
-  }
+  const figure = playerPortrait(player);
   const copy = document.createElement('div');
   copy.className = 'xqp-header-copy';
   const h1 = document.createElement('h1');
@@ -906,23 +998,52 @@ function renderPlayer(
     zh.textContent = player.name;
     h1.append(' ', zh);
   }
+  // The key facts as one strip of label-over-value pairs, from data the page
+  // already has: the current CXA standing first, then team, list, the archive.
   const facts = document.createElement('dl');
   facts.className = 'xqp-facts';
-  const fact = (label: string, value: string | Node | null | undefined): void => {
+  const fact = (label: string, value: string | Node | null | undefined, title?: string): void => {
     if (!value) return;
+    const item = document.createElement('div');
+    item.className = 'xqp-fact';
     const dt = document.createElement('dt');
     dt.textContent = label;
     const dd = document.createElement('dd');
     dd.append(value);
-    facts.append(dt, dd);
+    if (title) item.title = title;
+    item.append(dt, dd);
+    facts.append(item);
   };
+  const rankText = (rank: number, size: number | null | undefined): string =>
+    size ? t('broadcast.playerFactRankOf', { rank, size }) : `#${rank}`;
+  const points = cxaPointsFor(player.name);
+  const ratings = cxaRatingsFor(player.name);
+  const lastPoints = points[points.length - 1];
+  const lastRating = ratings[ratings.length - 1];
+  if (lastPoints) {
+    const list = CXA_POINTS_LISTS.find((l) => l.id === lastPoints.list);
+    const size = list ? (lastPoints.group === 'women' ? list.women : list.men) : null;
+    fact(t('broadcast.playerFactPoints'), String(lastPoints.points));
+    fact(t('broadcast.playerFactRank'), rankText(lastPoints.rank, size));
+  } else if (lastRating) {
+    const list = CXA_LISTS.find((l) => l.id === lastRating.list);
+    fact(
+      t('broadcast.playerFactLastRating'),
+      String(lastRating.rating),
+      list ? `CXA 等级分, last list ${list.label}` : 'CXA 等级分',
+    );
+    if (lastRating.rank !== null) {
+      fact(t('broadcast.playerFactRank'), rankText(lastRating.rank, list?.size ?? null));
+    }
+  }
   const key = teamKey(player);
   if (key && player.federation) {
     const team = document.createElement('a');
     team.className = 'xqp-fact-link';
     team.href = teamHref(key);
-    team.textContent = player.federationEn ?? player.federation;
-    fact('Team', team);
+    team.textContent =
+      currentLocale() === 'en' ? (player.federationEn ?? player.federation) : player.federation;
+    fact(t('broadcast.playerFactTeam'), team);
   }
   const group = cxaGroupFor(player.name);
   if (player.cxaOnly && group) {
@@ -931,24 +1052,30 @@ function renderPlayer(
       t(group === 'women' ? 'broadcast.playerListWomen' : 'broadcast.playerListMen'),
     );
   }
-  fact('Born', profile?.born);
+  fact(t('broadcast.playerFactBorn'), profile?.born);
   if (player.games > 0) {
-    fact('Archive', `${player.games} games, ${recordText(player)}, ${scorePercent(player)}%`);
+    fact(t('broadcast.playerFactGames'), String(player.games), recordText(player));
+    fact(t('broadcast.playerFactScore'), `${scorePercent(player)}%`);
   }
-  fact(
-    'Seen',
-    player.firstPlayedOn && player.lastPlayedOn
-      ? `${player.firstPlayedOn} to ${player.lastPlayedOn}`
-      : null,
-  );
+  if (player.firstPlayedOn && player.lastPlayedOn) {
+    const from = player.firstPlayedOn.slice(0, 4);
+    const to = player.lastPlayedOn.slice(0, 4);
+    fact(
+      t('broadcast.playerFactSeen'),
+      from === to ? from : t('broadcast.playerFactSeenRange', { from, to }),
+      `${player.firstPlayedOn} to ${player.lastPlayedOn}`,
+    );
+  }
   // No "All players" link: the rail's Pro players entry is the way back.
-  copy.append(h1, facts);
+  copy.append(h1);
+  if (facts.childElementCount > 0) copy.append(facts);
   // A player the match-fixing rulings named: the ruling in one neutral
   // sentence, linked to the account of the case, and nothing beyond it.
   const sanction = sanctionFor(player.name);
   if (sanction) {
     const note = document.createElement('p');
     note.className = 'xqp-sanction';
+    note.setAttribute('role', 'note');
     const link = document.createElement('a');
     link.href = MATCH_FIXING_ARTICLE_PATH;
     link.textContent = 'About the case';

@@ -1,5 +1,9 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildLandingActivity } from './landing-activity.js';
+import { resetLiveStatsCacheForTests } from './live-stats-client.js';
+
+// /api/live-stats reads are shared through a module cache; start each test cold.
+beforeEach(() => resetLiveStatsCacheForTests());
 
 describe('landing activity', () => {
   afterEach(() => {

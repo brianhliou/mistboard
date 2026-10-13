@@ -20,7 +20,7 @@ import type { TenantGameOrigin } from './tenant.js';
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { type HiddenPieceIdentity, isRetiredGameSpec, type RoomTimeControl } from '@mistboard/game';
+import type { HiddenPieceIdentity, RoomTimeControl } from '@mistboard/game';
 import type { WebSocket } from 'ws';
 import {
   censusDeployGate,
@@ -345,12 +345,12 @@ const registrationsByPrefix = new Map<string, VariantTenantRegistration>();
 let fallbackRoomLookup: (roomId: string) => boolean = () => false;
 
 export function registerVariantTenant(registration: VariantTenantRegistration): void {
-  // A retired spec (runtimeStatus 'retired' in packages/game) never registers:
-  // no routes, no room-id prefix claim, no watch channel, no seat for a bot.
-  // The tenant module stays on disk until its Stage 2 commit removes it
-  // (docs-private/variant-retirement-plan.md, #396); this is what makes the
-  // retirement take effect the moment the status flips, with no list to keep.
-  if (isRetiredGameSpec(registration.gameSpecId)) return;
+  // A retired spec (runtimeStatus 'retired' in packages/game) still registers:
+  // its routes are how a game in progress finishes and a finished game
+  // replays, exports and embeds. Retirement closes the doors instead: the
+  // request gate answers 410 and createTenantRuntimeRoom refuses a new room,
+  // and every listing reads isRetiredGameSpec. Until 2026-10-11 a retired spec
+  // skipped registration here, which took its replays down with it.
   const existing = registrationsByPrefix.get(registration.roomIdPrefix);
   if (existing && existing.kind !== registration.kind) {
     throw new Error(

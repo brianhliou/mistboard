@@ -9,20 +9,6 @@ import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav, GITHUB_URL } from './site-shell.js';
 import { buildStaticPageLayout } from './static-page-shell.js';
-import {
-  formatStatNumber as formatNumber,
-  type PublicSiteStats,
-  type PublicStatsMode,
-} from './stats-charts.js';
-
-const publicStatsModes: Array<{
-  key: PublicStatsMode;
-  labelKey: 'about.modePve' | 'about.modePvp';
-}> = [
-  { key: 'pvp', labelKey: 'about.modePvp' },
-  { key: 'pve', labelKey: 'about.modePve' },
-];
-
 export function mountAbout(root: HTMLElement): void {
   const locale = currentLocale();
   root.replaceChildren();
@@ -69,8 +55,25 @@ export async function mountNews(root: HTMLElement): Promise<void> {
   const locale = currentLocale();
   root.replaceChildren();
   root.classList.add('landing-page', 'news-route');
-  const { buildNewsPage } = await import('./news-page.js');
-  root.append(buildNav(locale), buildStaticPageLayout('news', buildNewsPage(locale), locale));
+  const { buildNewsPage, newsArchiveHrefForHash, newsMonthExists, newsMonthFromPath } =
+    await import('./news-page.js');
+  let monthId = newsMonthFromPath(globalThis.location?.pathname ?? '');
+  const hash = decodeURIComponent(globalThis.location?.hash ?? '').replace(/^#/, '');
+  // A /feed#<entry> link from before the entry moved to its month's page.
+  const archiveHref = !monthId && hash ? newsArchiveHrefForHash(hash) : null;
+  if (archiveHref) {
+    globalThis.location.replace(archiveHref);
+    return;
+  }
+  // An unknown month renders /feed, so the address says so too.
+  if (monthId && !newsMonthExists(monthId)) {
+    globalThis.history.replaceState(null, '', '/feed');
+    monthId = null;
+  }
+  root.append(
+    buildNav(locale),
+    buildStaticPageLayout('news', buildNewsPage(locale, monthId), locale),
+  );
 }
 
 export async function mountPatron(root: HTMLElement): Promise<void> {
@@ -307,7 +310,6 @@ function buildAbout(locale: Locale = currentLocale()): HTMLElement {
     t('about.openSourceSuffix', {}, locale),
   ]);
 
-  const platformActivity = buildPlatformActivity(locale);
   section.append(
     heading,
     lede,
@@ -323,129 +325,8 @@ function buildAbout(locale: Locale = currentLocale()): HTMLElement {
     engineP,
     oss1Heading,
     oss1P,
-    platformActivity,
   );
-  void hydratePlatformActivity(platformActivity, locale);
   return section;
-}
-
-function buildPlatformActivity(locale: Locale = currentLocale()): HTMLElement {
-  const section = document.createElement('section');
-  section.className = 'platform-activity';
-  section.id = 'platform-activity';
-  section.setAttribute('aria-labelledby', 'platform-activity-heading');
-
-  const heading = document.createElement('h2');
-  heading.id = 'platform-activity-heading';
-  heading.className = 'about-subheading';
-  heading.textContent = t('about.activityHeading', {}, locale);
-
-  const intro = aboutParagraph([t('about.activityIntro', {}, locale)]);
-
-  const body = document.createElement('div');
-  body.className = 'platform-activity-body';
-  body.setAttribute('aria-live', 'polite');
-  renderPlatformActivityLoading(body, locale);
-
-  section.append(heading, intro, body);
-  return section;
-}
-
-async function hydratePlatformActivity(
-  section: HTMLElement,
-  locale: Locale = currentLocale(),
-): Promise<void> {
-  const body = section.querySelector<HTMLElement>('.platform-activity-body');
-  if (!body) return;
-  try {
-    const stats = await fetchPublicStats();
-    renderPlatformActivityStats(body, stats, locale);
-  } catch {
-    renderPlatformActivityUnavailable(body, locale);
-  }
-}
-
-async function fetchPublicStats(): Promise<PublicSiteStats> {
-  const response = await fetch('/api/stats/public', { credentials: 'same-origin' });
-  if (!response.ok) throw new Error(`stats unavailable: ${response.status}`);
-  return (await response.json()) as PublicSiteStats;
-}
-
-function renderPlatformActivityLoading(body: HTMLElement, locale: Locale = currentLocale()): void {
-  const loading = document.createElement('p');
-  loading.className = 'platform-activity-status';
-  loading.textContent = t('about.activityLoading', {}, locale);
-  body.replaceChildren(loading);
-}
-
-function renderPlatformActivityUnavailable(
-  body: HTMLElement,
-  locale: Locale = currentLocale(),
-): void {
-  const status = document.createElement('p');
-  status.className = 'platform-activity-status';
-  status.textContent = t('about.activityUnavailable', {}, locale);
-  body.replaceChildren(status);
-}
-
-function renderPlatformActivityStats(
-  body: HTMLElement,
-  stats: PublicSiteStats,
-  locale: Locale = currentLocale(),
-): void {
-  const summary = document.createElement('p');
-  summary.className = 'platform-activity-summary';
-  summary.append(
-    document.createTextNode(
-      t(
-        'about.activitySummaryTotal',
-        { total: formatNumber(stats.totalCompletedGames, locale) },
-        locale,
-      ),
-    ),
-  );
-  if (stats.last30dCompletedGames > 0) {
-    summary.append(
-      document.createTextNode(
-        t(
-          'about.activitySummaryRecent',
-          { count: formatNumber(stats.last30dCompletedGames, locale) },
-          locale,
-        ),
-      ),
-    );
-  }
-  summary.append(document.createTextNode('. '));
-  // The chart lives on /stats now (one chart, one home); this section keeps
-  // the sentence and the split and points at the full page.
-  const more = aboutLink(t('about.activityFullStats', {}, locale), '/stats');
-  more.className = 'platform-activity-more';
-  summary.append(more);
-  body.replaceChildren(summary, buildModeSplit(stats.modeTotals, locale));
-}
-
-function buildModeSplit(
-  modeTotals: Record<PublicStatsMode, number>,
-  locale: Locale = currentLocale(),
-): HTMLElement {
-  const list = document.createElement('ul');
-  list.className = 'platform-activity-mode-list';
-  list.setAttribute('aria-label', t('about.modeSplit', {}, locale));
-  for (const mode of publicStatsModes) {
-    const item = document.createElement('li');
-    item.className = `platform-activity-mode-item mode-${mode.key}`;
-
-    const name = document.createElement('span');
-    name.textContent = `${t(mode.labelKey, {}, locale)} `;
-
-    const value = document.createElement('strong');
-    value.textContent = formatNumber(modeTotals[mode.key] ?? 0, locale);
-
-    item.append(name, value);
-    list.append(item);
-  }
-
-  return list;
 }
 
 function aboutSubheading(text: string): HTMLElement {

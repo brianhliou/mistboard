@@ -56,6 +56,12 @@ export const xiangqiMatchFixingArticle: Article = {
   audience:
     'Readers who have seen the ruling column on the champion lists and want to know what it covers.',
   thumbnail: { kind: 'svg', svg: MATCH_FIXING_THUMBNAIL },
+  tldr: [
+    'Between 2024 and 2026 the Chinese Xiangqi Association sanctioned 49 people for buying and selling games: 8 life bans, 37 timed bans and 4 reprimands.',
+    'Ten of the thirteen national champions since 2005 carry a ruling, including Wang Tianyi, the top-rated player from 2014 to 2023.',
+    'A Hangzhou court convicted six grandmasters of bribery in September 2025. The charge was bribery, not gambling.',
+    'Engine cheating is alleged in every account and charged in none. No result or title has been struck from the record.',
+  ],
   intro: [
     {
       kind: 'paragraph',
@@ -65,8 +71,38 @@ export const xiangqiMatchFixingArticle: Article = {
       kind: 'paragraph',
       text: 'It is assembled from Chinese-language reporting, which carries far more of it than the English coverage does. Where something is alleged rather than found, or charged rather than decided, this page says so.',
     },
+    {
+      kind: 'note',
+      text: 'This is our best reading of what has been published. If you know something here to be wrong or out of date, [tell us](/contact) and we will correct it.',
+    },
   ],
   sections: [
+    {
+      heading: 'Who\u2019s who',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'The names that recur below. A ban is the association\u2019s penalty and bars a player from competing; a prison term is the court\u2019s.',
+        },
+        {
+          kind: 'table',
+          compact: true,
+          wrap: true,
+          headers: ['Person', 'Part in the case', 'Outcome'],
+          rows: [
+            ['Wang Tianyi 王天一', 'Top-rated player 2014 to 2023; bought games', 'Life ban; 2 years 9 months in prison'],
+            ['Wang Yuefei 王跃飞', 'On the recorded calls; the go-between for most of Wang Tianyi\u2019s payments', 'Life ban; 1 year in prison'],
+            ['Hao Jichao 郝继超', 'The other voice on the recordings', 'Banned 4 years 3 months; not charged'],
+            ['Hong Zhi 洪智', '2005 champion; one outlet reports he passed the recordings on', 'Life ban; 2 years 7 months in prison, appeal rejected'],
+            ['Zhao Xinxin 赵鑫鑫', '2007 champion', 'Life ban; 4 years 9 months in prison, the longest term'],
+            ['Xie Jing 谢靖, Xu Chao 徐超', '2013 and 2017 champions', 'Life bans; 2 years 6 months in prison each'],
+            ['Liu Dahua 柳大华', 'Veteran player; alleged engine cheating for years, then accused an official by name', 'Not sanctioned'],
+            ['Dang Fei 党斐', 'Joined Liu Dahua\u2019s accusation', 'Banned 3 years'],
+            ['Guo Liping 郭莉萍', 'Official at the sport administration, named in the accusation', 'Left the post in December 2024; not charged'],
+          ],
+        },
+      ],
+    },
     {
       heading: 'Players paid each other to lose',
       blocks: [
@@ -138,7 +174,7 @@ export const xiangqiMatchFixingArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The disciplinary track and the criminal track are separate. They ran on different timetables, and the six convicted are six of the forty-nine banned rather than a different group.',
+          text: 'The disciplinary track and the criminal track are separate: the association can only bar a player from competing, and only the court can send one to prison. They ran on different timetables, and the six convicted are six of the forty-nine banned rather than a different group.',
         },
         {
           kind: 'paragraph',
@@ -152,7 +188,7 @@ export const xiangqiMatchFixingArticle: Article = {
           kind: 'table',
           compact: true,
           wrap: true,
-          headers: ['Player', 'Penalty', 'National title'],
+          headers: ['Player', 'Ban from competing', 'National title'],
           rows: [
             ['Wang Tianyi 王天一', 'Life', '2012, 2016, 2019, 2023'],
             ['Zhao Xinxin 赵鑫鑫', 'Life', '2007'],
@@ -217,7 +253,7 @@ export const xiangqiMatchFixingArticle: Article = {
           kind: 'table',
           compact: true,
           wrap: true,
-          headers: ['Convicted', 'Sentence'],
+          headers: ['Convicted', 'Prison term'],
           rows: [
             ['Zhao Xinxin 赵鑫鑫', '4 years 9 months'],
             ['Wang Tianyi 王天一', '2 years 9 months'],
@@ -227,7 +263,7 @@ export const xiangqiMatchFixingArticle: Article = {
             ['Wang Yuefei 王跃飞', '1 year'],
           ],
           caption:
-            'Reported from the 24 September 2025 verdict. No judgment text was released: these figures trace to the prosecution\u2019s case, and only Hong Zhi\u2019s was separately reported as a court outcome. Fines were imposed on Wang Tianyi and Zhao Xinxin; no amounts have ever been published.',
+            'Reported from the 24 September 2025 verdict. The terms are 有期徒刑, fixed-term imprisonment; whether any was suspended has not been reported. No judgment text was released: these figures trace to the prosecution\u2019s case, and only Hong Zhi\u2019s was separately reported as a court outcome. Fines were imposed on Wang Tianyi and Zhao Xinxin; no amounts have ever been published.',
         },
         {
           kind: 'paragraph',

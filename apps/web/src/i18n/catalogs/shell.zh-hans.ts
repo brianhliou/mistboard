@@ -146,7 +146,6 @@ export const ZH_HANS_SHELL = {
   'homePuzzle.ariaLabel': '每日题目：{title}',
   'homePuzzle.title': '每日题目：{variant}',
   'homePuzzle.toPlay': '轮到{color}走',
-  'homePuzzle.reserve': '{color}储备',
   'homeForum.heading': '活跃论坛话题',
   'homeForum.loading': '正在加载论坛。',
   'homeForum.empty': '暂无论坛话题。',

@@ -1,6 +1,6 @@
 import type { XiangqiPlayerView } from '@mistboard/game';
 import { parseJieqiFen, type XiangqiSquare } from '@mistboard/game';
-import { XQ_CELL, xqBoardSvg, xqPoint, xqStaticView, xqVisionDemoState } from '../diagrams.js';
+import { xqHalfBoardThumbnailSvg, xqStaticView, xqVisionDemoState } from '../diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
 // The follow-up the AB-JChess post promised (#497). Numbers and positions:
@@ -18,15 +18,12 @@ import type { Article, ArticleBlock } from '../types.js';
 // - AB-JChess: worst move in each of its 136 run7 losses, 60 reveals, 2 over-rated by
 //   15+ win points. Rigs: mistboard-engine lab, issue #497.
 
-// Card art: match game 108 after 24 plies, the moment the bet lost. Pikafish
-// (Black) moved the face-down piece on d10 up to e9, needing an advisor there to
+// Card art: match game 108 after 24 plies, the moment the bet lost, as Black's
+// half of the board seen from Black's side. Pikafish (Black) moved the face-down piece on d10 up to e9, needing an advisor there to
 // guard f10; it turned over a chariot, and Red's chariot on f9 mates on f10.
 // pikafish-reveal-bug-thumbnail.test.ts asserts the position and the mate.
 export const REVEAL_BUG_FEN =
   'xxx1kxxxx/4rR3/9/2x1x3x/6a2/2P1P1A1B/X5r2/4P1C2/3A1K3/c2b1X2X w R1C1B1a1c1p5n2b1 4 13';
-
-// 16:10 to match the card media box (.articles-index-card-media, 16/10).
-const THUMB_ASPECT = 16 / 10;
 
 const REVEAL_BUG_THUMBNAIL = (): string => {
   const parsed = parseJieqiFen(REVEAL_BUG_FEN);
@@ -39,29 +36,19 @@ const REVEAL_BUG_THUMBNAIL = (): string => {
       shrouded: piece.faceDown,
     };
   }
-  const boardY = 28; // xqBoardSvg draws the grid 28 below its y, under the title row.
-  // Black's palace corner from Black's side: ranks 10 (bottom) up to 8, centred
-  // between the e and f files, where the reveal and the mate happen.
-  const top = xqPoint(4, 8, 'black', 0, boardY).y - XQ_CELL * 0.6;
-  const bottom = xqPoint(4, 10, 'black', 0, boardY).y + XQ_CELL * 0.6;
-  const h = bottom - top;
-  const w = h * THUMB_ASPECT;
-  const centreX = (xqPoint(4, 10, 'black', 0, boardY).x + xqPoint(5, 10, 'black', 0, boardY).x) / 2;
-  const left = centreX - w / 2;
-  const svg = xqBoardSvg({
+  return xqHalfBoardThumbnailSvg({
     state: xqVisionDemoState('pikafish-reveal-bug-thumb', {}),
     view: xqStaticView('pikafish-reveal-bug-thumb', board),
-    x: 0,
-    y: 0,
-    label: '',
+    half: 'bottom',
     perspective: 'black',
     shroudedStyle: 'back',
     arrows: [
       { from: 'd10' as XiangqiSquare, to: 'e9' as XiangqiSquare },
       { from: 'f9' as XiangqiSquare, to: 'f10' as XiangqiSquare },
     ],
+    ariaLabel:
+      "Pikafish moves the face-down piece on d10 up to e9 and turns over a chariot, not the advisor it needed; Red's chariot mates on f10",
   });
-  return `<svg class="xq-article-svg" viewBox="${left} ${top} ${w} ${h}" role="img" aria-label="Pikafish moves the face-down piece on d10 up to e9 and turns over a chariot, not the advisor it needed; Red\'s chariot mates on f10" xmlns="http://www.w3.org/2000/svg"><rect class="xq-diagram-bg" x="${left}" y="${top}" width="${w}" height="${h}"/>${svg}</svg>`;
 };
 
 const FORK = 'https://github.com/brianhliou/pikafish-jieqi-wasm';

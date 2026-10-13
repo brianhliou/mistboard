@@ -23,7 +23,7 @@ import {
 } from './article-server-meta.js';
 import { articles } from './articles-data.js';
 import { SUPPORTED_LOCALES } from './i18n/locale.js';
-import { rulesSlugPublicSurfaceEnabled } from './variant-public-surfaces.js';
+import { articleIsNoindex, rulesSlugPublicSurfaceEnabled } from './variant-public-surfaces.js';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const generatedPath = resolve(repoRoot, SERVER_ARTICLE_META_FILE);
@@ -96,6 +96,22 @@ describe('sitemap indexability <-> public surface sync', () => {
     expect(mismatched, `sitemap and public surface disagree:\n${mismatched.join('\n')}`).toEqual(
       [],
     );
+  });
+
+  // Every published page, posts included: the prerendered robots tag
+  // (articleIsNoindex) and the server's sitemap (articleIsIndexable) must say
+  // the same thing. A post marked `noindex` (the Atomic Xiangqi launch note)
+  // needs its slug in NON_INDEXED_ARTICLE_SLUGS too.
+  it('a published page is sitemapped exactly when it is not noindex', () => {
+    const mismatched = articles
+      .filter((article) => !articleIsUnpublished(article.slug))
+      .filter((article) => articleIsIndexable(article.slug) === articleIsNoindex(article))
+      .map(
+        (article) =>
+          `${article.slug}: sitemap=${articleIsIndexable(article.slug)} ` +
+          `noindex=${articleIsNoindex(article)}`,
+      );
+    expect(mismatched, `sitemap and robots disagree:\n${mismatched.join('\n')}`).toEqual([]);
   });
 });
 

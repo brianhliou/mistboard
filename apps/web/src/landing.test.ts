@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   fetchPlayableEnginesOnce,
   loadPlayableEnginesWithRetry,
@@ -6,10 +6,14 @@ import {
   shouldUseBundledShowcaseDemos,
   watchHrefForTvGame,
 } from './landing.js';
+import { resetLiveStatsCacheForTests } from './live-stats-client.js';
 
 const ROSTER = [
   { id: 'python-v2-v1.0', name: 'Misty 1.0', familyName: 'Misty', kind: 'container' },
 ];
+
+// /api/live-stats reads are shared through a module cache; start each test cold.
+beforeEach(() => resetLiveStatsCacheForTests());
 
 describe('playable engines loading', () => {
   afterEach(() => {

@@ -22,7 +22,6 @@ import {
   DUCK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   type GameSpecId,
-  isRetiredGameSpec,
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
@@ -185,10 +184,9 @@ const hiddenFromMenu = () => false;
 // hiddenFromMenu (still linkable) and from a flag (still reachable in the lab).
 const retiredDeepLink = () => false;
 
-// Every tenant block, retired ones included; the retired ones are filtered
-// out below rather than deleted here, so retirement is the spec's status and
-// this file's blocks go one variant per commit (docs-private/variant-
-// retirement-plan.md, #396).
+// Every tenant block, retired ones included (see WEB_VARIANT_TENANTS below).
+// Deleting a retired variant's block is its own later commit
+// (docs-private/variant-retirement-plan.md, #396).
 const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
   {
     // Dark-chess correspondence rooms (server registration: correspondence
@@ -717,8 +715,10 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsTimeControl: true,
       },
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
-      offerInMenu: fortressXiangqiEnabled,
-      acceptsDeepLink: fortressXiangqiEnabled,
+      // Retired 2026-10-11: no menu entry and no deep link; the block stays for
+      // replays and for games already in progress.
+      offerInMenu: hiddenFromMenu,
+      acceptsDeepLink: retiredDeepLink,
       // Eight-level ladder (bot-consolidation 2026-07-21) mirroring the
       // standard-xiangqi FSF bots, ordered strongest-first like the xiangqi
       // picker. The retired amateur/strong/very-strong ids stay
@@ -849,8 +849,9 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsTimeControl: true,
       },
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
+      // Retired 2026-10-11 after five days unlisted: no deep link either.
       offerInMenu: hiddenFromMenu,
-      acceptsDeepLink: atomicXiangqiEnabled,
+      acceptsDeepLink: retiredDeepLink,
       // Eight-level Fairy-Stockfish ladder on the patched atomic binary, ordered
       // strongest-first like the other xiangqi pickers.
       engineOptions: [8, 7, 6, 5, 4, 3, 2, 1].map((level) => ({
@@ -978,9 +979,11 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
   },
 ];
 
-const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = ALL_WEB_VARIANT_TENANTS.filter(
-  (tenant) => !isRetiredGameSpec(tenant.gameSpecId),
-);
+// A retired spec's block stays registered (2026-10-11, Fortress and Atomic
+// Xiangqi): its routes are how a finished game replays and a game in progress
+// finishes. Retirement shows up as offerInMenu and acceptsDeepLink returning
+// false, and the server refuses a new game with 410 retired_game_spec.
+const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = ALL_WEB_VARIANT_TENANTS;
 
 export function webVariantTenants(): readonly WebVariantTenant[] {
   return WEB_VARIANT_TENANTS;

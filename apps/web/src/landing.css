@@ -62,6 +62,9 @@
     "puzzle forum  studies"
     "news   blogs  chat"
     "news   dives  chat";
+  /* The play panel's tab strip, fixed so the play rail can drop by exactly
+     this much and start level with the panel's card (2026-10-11). */
+  --landing-lobby-tabs-height: 40px;
   --landing-col-gap: clamp(10px, 0.9vw, 15px);
   --landing-row-gap: clamp(14px, 1.8vw, 24px);
   column-gap: var(--landing-col-gap);
@@ -205,37 +208,6 @@
   height: 100%;
 }
 
-/* Drop reserve: one narrow column on the outer edge, both hands stacked. */
-.home-puzzle-reserve {
-  flex: 0 0 auto;
-  align-self: center;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.home-puzzle-widget .home-puzzle-hand {
-  --drop-mini-hand-piece-size: 26px;
-  --drop-mini-hand-tile-size: calc(var(--drop-mini-hand-piece-size) + 6px);
-  --drop-mini-hand-band-height: calc(var(--drop-mini-hand-piece-size) + 14px);
-  height: auto;
-  min-height: 0;
-  padding: 0;
-}
-
-.home-puzzle-hand .drop-mini-reserve-row {
-  flex-direction: column;
-  flex-wrap: nowrap;
-  width: auto;
-  min-height: 0;
-  gap: 5px;
-}
-
-.home-puzzle-hand .drop-mini-reserve-piece {
-  border-color: color-mix(in srgb, var(--site-border-soft) 64%, transparent);
-  background: color-mix(in srgb, var(--site-panel) 58%, transparent);
-}
-
 /* Captions inside the box, dressed as the viewer's seat rows one band up: the
    same line box, type size and weight as a seat name, left-aligned with the same
    4px inset, so the two boards read as one column of board + text bands. (They
@@ -293,6 +265,25 @@
 
 .landing-play-column > .landing-event-banners {
   margin-top: auto;
+}
+
+.landing-lobby-board > .pp-tabs {
+  box-sizing: border-box;
+  height: var(--landing-lobby-tabs-height);
+}
+
+/* Beside the panel (two and three columns), the rail starts below the tab
+   strip so the tagline's cap height lines up with the card's top edge, not
+   with the tabs (Brian, 2026-10-11). Single column stacks, so no offset. */
+@media (min-width: 960px) {
+  .landing-play-column {
+    padding-top: var(--landing-lobby-tabs-height);
+  }
+
+  .landing-play-intro .landing-about {
+    text-box-trim: trim-start;
+    text-box-edge: cap alphabetic;
+  }
 }
 
 .landing-play-center {
@@ -2588,21 +2579,36 @@
   margin: 0;
 }
 
+/* The separator is a fixed-width box at the head of each item after the first;
+   the list sits one separator to the left inside a clipping paragraph, so a ·
+   that starts a wrapped line is cut off and none is left dangling at a line
+   end (2026-10-11). The first item pads in by the same width to stay flush. */
 .landing-play-summary {
-  display: flex;
-  flex-wrap: wrap;
-  column-gap: 0;
-  row-gap: 2px;
+  --landing-play-summary-sep-width: 1.2em;
   margin: 0;
+  overflow: hidden;
   font-size: 14px;
   line-height: 1.45;
   color: var(--site-muted, var(--site-text));
 }
 
-.landing-play-summary-phrase {
+.landing-play-summary-list {
+  display: flex;
+  flex-wrap: wrap;
+  row-gap: 2px;
+  margin-left: calc(-1 * var(--landing-play-summary-sep-width));
+}
+
+.landing-play-summary-item {
   white-space: nowrap;
 }
 
+.landing-play-summary-item:first-child {
+  padding-left: var(--landing-play-summary-sep-width);
+}
+
 .landing-play-summary-sep {
-  padding: 0 0.45em;
+  display: inline-block;
+  width: var(--landing-play-summary-sep-width);
+  text-align: center;
 }

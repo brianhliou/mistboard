@@ -142,17 +142,6 @@ export const ZH_HANS_CONTENT = {
   'about.openSourceMiddle':
     '。任何人都可以阅读规则代码、决定每位玩家能看到什么的代码，以及网站的其余部分。欢迎报告 bug、提交修复和文章草稿。许可和第三方鸣谢见 ',
   'about.openSourceSuffix': '。',
-  'about.activityHeading': '玩家对局活动',
-  'about.activityIntro':
-    '每一局下完的棋都会保存，可以随时回放。这些统计只计算有人参与的对局：玩家对玩家和玩家对电脑。引擎之间的对局不计入。',
-  'about.activityLoading': '正在加载活动统计...',
-  'about.activityUnavailable': '暂时无法显示对局统计。',
-  'about.activitySummaryTotal': '共 {total} 局已完成的对局',
-  'about.activitySummaryRecent': '，其中过去 30 天有 {count} 局',
-  'about.activityChartHeading': '面向玩家对局累计数',
-  'about.activityNoGames': '还没有记录完成的对局。',
-  'about.activityChartLabel': '{count} 局完成对局随时间变化',
-  'about.activityFullStats': '完整统计',
   'stats.heading': '统计',
   'stats.lede':
     '这里的对局量。计入人与人或人与引擎之间已完成的对局；引擎对引擎的比赛和测试对局不计入。',
@@ -166,11 +155,9 @@ export const ZH_HANS_CONTENT = {
   'stats.allGames': '全部对局',
   'stats.thisWeekSoFar': '本周已完成 {count} 局',
   'stats.byVariant': '按变体统计',
-  'stats.byVariantRetiredNote': '已下线变体的对局计入总数，但不单独列出。',
   'stats.byMode': '按模式统计',
   'stats.unavailableHeading': '统计暂不可用',
   'stats.unavailableBody': '无法加载统计数据，请稍后再试。',
-  'about.modeSplit': '模式分布',
   'about.modePvp': '玩家对玩家',
   'about.modePve': '玩家对引擎',
   'source.heading': '源代码',
@@ -225,7 +212,7 @@ export const ZH_HANS_CONTENT = {
   'faq.playFriendAnswer': '开始对局时选择和朋友对弈，把链接发给朋友，对方打开链接就能入座。',
   'faq.playOtherQuestion': '还有哪些玩法？',
   'faq.playOtherAnswer':
-    '揭棋、暗棋、斗兽棋、翻翻棋、原子象棋，以及我们设计的游戏：疯狂屋象棋、鸭子象棋和迷雾象棋。',
+    '揭棋、暗棋、斗兽棋、翻翻棋，以及我们设计的游戏：疯狂屋象棋、鸭子象棋和迷雾象棋。',
   'faq.playReviewQuestion': '下完可以复盘吗？',
   'faq.playReviewAnswer': '可以。象棋对局结束后可以进入复盘，引擎会标出决定胜负的几步。',
   'faq.darkChessQuestion': 'Mistboard 上可以玩什么？',

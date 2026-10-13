@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { isRetiredGameSpec } from '@mistboard/game';
+import { isRetiredGameSpec, RETIRED_GAME_SPEC_IDS } from '@mistboard/game';
 import { canServeLiveBoard } from '../server-policy.js';
 // Importing register-tenants registers every tenant (module-scope side effect
 // of each *-registration.ts module — the "one registry entry" of the tenant
@@ -16,12 +16,15 @@ import {
   variantTenantForSpecId,
 } from './registry.js';
 
-test('registry: retired specs never register', () => {
-  // registerVariantTenant drops a retired spec on the floor, so no route,
-  // prefix or watch channel exists for one even if a registration module
-  // still runs at boot.
-  for (const entry of registeredVariantTenants()) {
-    assert.equal(isRetiredGameSpec(entry.gameSpecId), false, entry.kind);
+test('registry: retired specs stay registered so their games replay', () => {
+  // Retiring a variant closes its create paths (410 retired_game_spec), not its
+  // tenant: the registration is what hydrates a live room after a restart and
+  // serves a finished game's review, PGN and embed. Dropping it at boot would
+  // take every game ever played in that variant with it.
+  const registered = new Set(registeredVariantTenants().map((entry) => entry.gameSpecId));
+  for (const id of RETIRED_GAME_SPEC_IDS) {
+    assert.ok(registered.has(id), `${id}: a retired tenant must stay registered`);
+    assert.equal(isRetiredGameSpec(id), true, id);
   }
 });
 

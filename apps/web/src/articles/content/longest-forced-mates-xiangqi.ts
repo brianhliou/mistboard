@@ -1,5 +1,5 @@
 import { parseStandardXiangqiFen } from '@mistboard/game';
-import { XQ_CELL, xqBoardSvg, xqPoint } from '../diagrams.js';
+import { xqHalfBoardThumbnailSvg } from '../diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
 // The longest forced mate in each one-and-two-attacker class against 士象全,
@@ -38,29 +38,18 @@ export const TWO_CANNONS_FINISH_PLY = 95;
 // a hand-placed board.
 export const HORSE_SOLDIER_RECORD_FEN = '2ba2b1P/9/3k1a3/N8/9/9/9/9/9/4K4 r - - 0 1';
 
-// 16:10 to match the card media box (.articles-index-card-media, 16/10).
-const THUMB_ASPECT = 16 / 10;
-
 // Card art: Black's half of the 65-move record's start, where every piece but
 // the red general stands.
 const LONGEST_MATE_THUMBNAIL = (): string => {
   const parsed = parseStandardXiangqiFen(HORSE_SOLDIER_RECORD_FEN, 'longest-mate-thumb');
   if (!parsed.ok) throw new Error(`longest-mate thumbnail: ${parsed.error}`);
-  const boardY = 28; // xqBoardSvg draws the grid 28 below its y, under the title row.
-  const pad = XQ_CELL * 0.6;
-  const left = xqPoint(0, 10, 'red', 0, boardY).x - pad;
-  const right = xqPoint(8, 10, 'red', 0, boardY).x + pad;
-  const w = right - left;
-  const h = w / THUMB_ASPECT;
-  const top = xqPoint(0, 10, 'red', 0, boardY).y - pad;
-  const svg = xqBoardSvg({
+  return xqHalfBoardThumbnailSvg({
     state: parsed.state,
-    x: 0,
-    y: 0,
-    label: '',
+    half: 'top',
     perspective: 'red',
+    ariaLabel:
+      'A red horse and soldier against a black general with both advisors and both elephants, the start of a 65-move forced mate',
   });
-  return `<svg class="xq-article-svg" viewBox="${left} ${top} ${w} ${h}" role="img" aria-label="A red horse and soldier against a black general with both advisors and both elephants, the start of a 65-move forced mate" xmlns="http://www.w3.org/2000/svg"><rect class="xq-diagram-bg" x="${left}" y="${top}" width="${w}" height="${h}"/>${svg}</svg>`;
 };
 
 export const longestForcedMatesXiangqiArticle: Article = {

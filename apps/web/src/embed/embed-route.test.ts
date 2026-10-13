@@ -30,6 +30,7 @@ describe('the TV, puzzle and analysis embed routes', () => {
   it('frame a bare line for the variants with a board on the card, and refuse the rest', () => {
     expect(embedLineRouteFromPath('/embed/line/jungle')).toEqual({ variant: 'jungle' });
     expect(embedLineRouteFromPath('/embed/line/banqi/')).toEqual({ variant: 'banqi' });
+    expect(embedLineRouteFromPath('/embed/line/jieqi')).toEqual({ variant: 'jieqi' });
     expect(embedLineRouteFromPath('/embed/line/crazyhouse-xiangqi')).toEqual({
       variant: 'crazyhouse-xiangqi',
     });
@@ -56,6 +57,18 @@ describe('the TV, puzzle and analysis embed routes', () => {
     // a token that is not move-shaped is dropped rather than passed to a kernel
     expect(embedLineFromSearch('?moves=a1b1,<script>,b1a1').moves).toEqual(['a1b1', 'b1a1']);
     expect(embedLineFromSearch('').moves).toEqual([]);
+    // Red sits at the bottom unless the frame asks for Black; anything else is Red
+    expect(embedLineFromSearch('').orientation).toBe('red');
+    expect(embedLineFromSearch('?orientation=black').orientation).toBe('black');
+    expect(embedLineFromSearch('?orientation=sideways').orientation).toBe('red');
+    // the next-move arrow is opt-in: only `arrows=1` turns it on
+    expect(embedLineFromSearch('').arrows).toBe(false);
+    expect(embedLineFromSearch('?arrows=1').arrows).toBe(true);
+    expect(embedLineFromSearch('?arrows=yes').arrows).toBe(false);
+    // a named move for the opening frame, shape-checked like a move token
+    expect(embedLineFromSearch('?arrow=i10i4').arrow).toBe('i10i4');
+    expect(embedLineFromSearch('?arrow=<b>').arrow).toBeNull();
+    expect(embedLineFromSearch('').arrow).toBeNull();
   });
 
   it('discriminate through embedRouteFromPath', () => {
