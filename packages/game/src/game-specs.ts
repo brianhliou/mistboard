@@ -11,10 +11,13 @@ export type BoardGeometryId =
   // Mahjong has no board. This dimension names the material instead: the 144
   // tiles, being the 136 core plus eight flowers. Forcing a geometry here would
   // be a fiction, and the honest alternative is to say what is actually shared.
-  | 'mahjong-144';
+  | 'mahjong-144'
+  // Xiangqi mahjong: 32 tiles, no board at all.
+  | 'xiangqi-mahjong-32';
 export type MovementRulesId =
   // Draw, discard, and claim out of turn. Nothing moves on a board.
   | 'mahjong-hk'
+  | 'xiangqi-mahjong'
   | 'orthodox-chess'
   | 'xiangqi'
   | 'banqi'
@@ -49,7 +52,9 @@ export type ObjectiveRulesId =
   | 'den-or-race'
   // Mahjong: assemble four sets and a pair from a concealed hand. No royal
   // piece, no capture, and no position to win on.
-  | 'four-sets-and-a-pair';
+  | 'four-sets-and-a-pair'
+  // Xiangqi mahjong: five tiles, one set and a pair.
+  | 'one-set-and-a-pair';
 // 'open' = perfect-information; 'dark' is
 // fog of war (positions hidden); 'hidden-identity' is jieqi/banqi (positions
 // public, piece identities hidden until revealed).
@@ -69,7 +74,9 @@ export type SetupRulesId =
   // Crazyhouse Xiangqi: xiangqi's array without advisors and elephants, which
   // start in each side's hand.
   | 'defenders-in-hand'
-  | 'mahjong-deal';
+  | 'mahjong-deal'
+  // Xiangqi mahjong: eight pre-shuffled walls, one per hand of the match.
+  | 'xiangqi-mahjong-deal';
 export type ReserveRulesId = 'none' | 'crazyhouse';
 export type DropPolicyId =
   | 'none'
@@ -108,6 +115,7 @@ export type RatingPoolBaseId =
   | 'jungle_flip'
   | 'fortress_xiangqi'
   | 'mahjong_hk'
+  | 'xiangqi_mahjong'
   | 'xiangqi'
   // Owes a user_ratings CHECK migration adding 'duck_xiangqi' before it is rated.
   | 'duck_xiangqi'
@@ -148,6 +156,9 @@ export type GameSpecId =
   // Hong Kong mahjong. Playable behind a server flag AND a per-account grant;
   // runtimeStatus is 'future' because nothing is built behind it yet.
   | 'mahjong'
+  // Xiangqi mahjong (象棋麻將), the 32-tile two-player Taiwan game. Playtest
+  // only: behind a server flag AND the per-account allowlist, like 'mahjong'.
+  | 'xiangqi-mahjong'
   // Standard chess, STUDY-ONLY (set 2026-09-20). Exists so chess studies can be
   // written, reviewed and embedded (the shallow-labels puzzles on the blog);
   // never playable here: no tenant on either side, the request gate answers
@@ -184,6 +195,7 @@ export const DARK_XIANGQI_SPEC_ID = 'dark-xiangqi' satisfies GameSpecId;
 export const JIEQI_SPEC_ID = 'jieqi' satisfies GameSpecId;
 export const BANQI_SPEC_ID = 'banqi' satisfies GameSpecId;
 export const MAHJONG_SPEC_ID = 'mahjong' satisfies GameSpecId;
+export const XIANGQI_MAHJONG_SPEC_ID = 'xiangqi-mahjong' satisfies GameSpecId;
 export const JUNGLE_SPEC_ID = 'jungle' satisfies GameSpecId;
 export const JUNGLE_FLIP_SPEC_ID = 'jungle-flip' satisfies GameSpecId;
 export const FORTRESS_XIANGQI_SPEC_ID = 'fortress-xiangqi' satisfies GameSpecId;
@@ -468,6 +480,25 @@ export const GAME_SPECS: readonly GameSpec[] = [
     // Xiangqi uses. 'future' was right while this was only a registered id, and
     // it is what greys the variant out in the play menu as "coming soon", which
     // is now the wrong statement about it.
+    runtimeStatus: 'live',
+  },
+  {
+    // Xiangqi mahjong (象棋麻將): the 32 xiangqi pieces as tiles, two players,
+    // five-tile hands of one set and a pair, an eight-hand match. Hidden
+    // and allowlisted: it exists for a playtest, and nobody who plays the game
+    // has checked it yet. Imports nothing from the HK mahjong package.
+    id: XIANGQI_MAHJONG_SPEC_ID,
+    publicName: 'Xiangqi Mahjong',
+    family: 'mahjong',
+    board: 'xiangqi-mahjong-32',
+    movement: 'xiangqi-mahjong',
+    objective: 'one-set-and-a-pair',
+    visibility: 'concealed-hands',
+    setup: 'xiangqi-mahjong-deal',
+    reserves: 'none',
+    dropPolicy: 'none',
+    ratingPoolBase: 'xiangqi_mahjong',
+    publicSurface: 'hidden',
     runtimeStatus: 'live',
   },
   {

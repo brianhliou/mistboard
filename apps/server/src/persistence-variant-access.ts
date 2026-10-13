@@ -24,7 +24,10 @@ type VariantAccessDatabase = pg.Pool | pg.PoolClient;
  * plays the game. Take a spec out of this list when that check has happened,
  * not when the build goes green.
  */
-export const ALLOWLISTED_GAME_SPEC_IDS = ['mahjong'] as const satisfies readonly GameSpecId[];
+export const ALLOWLISTED_GAME_SPEC_IDS = [
+  'mahjong',
+  'xiangqi-mahjong',
+] as const satisfies readonly GameSpecId[];
 
 const ALLOWLISTED: ReadonlySet<GameSpecId> = new Set(ALLOWLISTED_GAME_SPEC_IDS);
 

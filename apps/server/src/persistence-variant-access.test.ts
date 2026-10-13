@@ -28,12 +28,13 @@ const player = { id: 'user-1', accountRole: 'player' } as const;
 const other = { id: 'user-2', accountRole: 'player' } as const;
 const admin = { id: 'admin-1', accountRole: 'admin' } as const;
 
-test('mahjong is allowlisted; crazyhouse xiangqi (launched) and a normal variant are not', () => {
+test('both mahjongs are allowlisted; crazyhouse xiangqi (launched) and a normal variant are not', () => {
   assert.equal(isAllowlistedGameSpec('mahjong'), true);
+  assert.equal(isAllowlistedGameSpec('xiangqi-mahjong'), true);
   assert.equal(isAllowlistedGameSpec('crazyhouse-xiangqi'), false);
   assert.equal(isAllowlistedGameSpec('xiangqi'), false);
   assert.equal(isAllowlistedGameSpec('not-a-spec'), false);
-  assert.deepEqual([...ALLOWLISTED_GAME_SPEC_IDS], ['mahjong']);
+  assert.deepEqual([...ALLOWLISTED_GAME_SPEC_IDS], ['mahjong', 'xiangqi-mahjong']);
 });
 
 test('a non-allowlisted variant is allowed without touching the database', async () => {
