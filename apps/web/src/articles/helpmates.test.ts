@@ -6,6 +6,9 @@ import {
   type XiangqiGameState,
   type XiangqiSquare,
 } from '@mistboard/game';
+import { makeSfen, parseSfen } from 'shogiops/sfen';
+import { makeUsi, parsePieceName, parseUsi } from 'shogiops/util';
+import type { Position } from 'shogiops/variant/position';
 import { describe, expect, it } from 'vitest';
 import {
   HELPMATE_CHAPTER_IDS,
@@ -14,6 +17,10 @@ import {
   INTRO_FEN,
   INTRO_LINE,
   introMate,
+  type ShogiDiagram,
+  SHOGI_LINE,
+  SHOGI_START_SFEN,
+  shogiMate,
 } from './content/helpmates-in-xiangqi.js';
 import type { ArticleBlock, EmbedBlock } from './types.js';
 
@@ -225,5 +232,96 @@ describe('helpmates in xiangqi', () => {
     const svg = HELPMATE_THUMBNAIL();
     expect(svg).toContain('viewBox="0 0 ');
     expect(svg).toContain('aria-label=');
+  });
+});
+
+// The shogi example, proved in shogiops (the lishogi rules kernel), so the
+// diagrams and the prose's claims are checked against real shogi rules.
+function shogiPosition(sfen: string): Position {
+  return parseSfen('standard', sfen, false).unwrap();
+}
+
+function shogiMoves(pos: Position): string[] {
+  const ctx = pos.ctx();
+  const out: string[] = [];
+  for (const [from, dests] of pos.allMoveDests(ctx)) {
+    for (const to of dests) {
+      for (const promotion of [false, true]) {
+        const md = { from, to, promotion };
+        if (pos.isLegal(md, ctx)) out.push(makeUsi(md));
+      }
+    }
+  }
+  for (const [name, dests] of pos.allDropDests(ctx)) {
+    for (const to of dests) {
+      const md = { role: parsePieceName(name).role, to };
+      if (pos.isLegal(md, ctx)) out.push(makeUsi(md));
+    }
+  }
+  return out;
+}
+
+function shogiPlay(pos: Position, usi: string): Position {
+  const md = parseUsi(usi);
+  if (!md || !pos.isLegal(md)) throw new Error(`illegal ${usi}`);
+  const next = pos.clone();
+  next.play(md);
+  return next;
+}
+
+const isMate = (pos: Position): boolean => pos.outcome()?.result === 'checkmate';
+
+// Every line of `plies` moves, both sides cooperating, that ends in mate.
+function cooperativeMates(pos: Position, plies: number): string[] {
+  if (plies === 0) return isMate(pos) ? [''] : [];
+  if (pos.isEnd()) return [];
+  return shogiMoves(pos).flatMap((usi) =>
+    cooperativeMates(shogiPlay(pos, usi), plies - 1).map((rest) => `${usi} ${rest}`.trim()),
+  );
+}
+
+function diagramBoardSfen(diagram: ShogiDiagram): string {
+  const rows: string[] = [];
+  for (const rank of 'abcdefghi') {
+    let row = '';
+    let empty = 0;
+    for (let file = 9; file >= 1; file -= 1) {
+      const piece = diagram.board.get(`${file}${rank}`);
+      if (!piece) {
+        empty += 1;
+        continue;
+      }
+      if (empty) row += String(empty);
+      empty = 0;
+      const letter = piece.color === 'sente' ? piece.letter : piece.letter.toLowerCase();
+      row += `${piece.promoted ? '+' : ''}${letter}`;
+    }
+    rows.push(empty ? row + String(empty) : row);
+  }
+  return rows.join('/');
+}
+
+describe('helpmates article: the shogi cooperative mate', () => {
+  const start = shogiPosition(SHOGI_START_SFEN);
+
+  it('plays legally to checkmate, and the drawn mate is the kernel\'s', () => {
+    const end = SHOGI_LINE.reduce(shogiPlay, start);
+    expect(isMate(end)).toBe(true);
+    expect(diagramBoardSfen(shogiMate())).toBe(makeSfen(end).split(' ')[0]);
+    expect(shogiMate().hands.sente.get('L')).toBe(0);
+  });
+
+  it('is the only cooperative mate in three, with none in one', () => {
+    expect(cooperativeMates(start, 1)).toEqual([]);
+    expect(cooperativeMates(start, 3)).toEqual([SHOGI_LINE.join(' ')]);
+  });
+
+  it('a lance dropped farther from the king fails: the defender interposes', () => {
+    const afterTwo = SHOGI_LINE.slice(0, 2).reduce(shogiPlay, start);
+    for (const to of ['1e', '1f', '1g', '1h', '1i']) {
+      const pos = shogiPlay(afterTwo, `L*${to}`);
+      expect(pos.isCheck()).toBe(true);
+      expect(isMate(pos)).toBe(false);
+    }
   });
 });

@@ -147,7 +147,7 @@
     "title": "Helpmates in Xiangqi",
     "kind": "article",
     "description": "In a helpmate both sides cooperate so Red can mate. A search found 164 helpmates in two for xiangqi; try the best ten, solutions hidden until you ask.",
-    "status": "published"
+    "status": "draft"
   },
   "horde-xiangqi": {
     "title": "Horde on the Xiangqi Board: The River Is a Cliff",

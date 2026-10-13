@@ -163,6 +163,161 @@ const FORSBERG_MATE: Board = {
   g4: { color: 'white', role: 'king' },
 };
 
+// Shogi's cooperative mate, from Japanese Wikipedia's fairy tsume shogi page
+// (図1 ばか詰の例): gote king 2b, gote lance 2e, sente dragon 3d, sente with
+// nothing in hand and gote holding every other piece. Solution ▲25龍 △13玉
+// ▲14香. helpmates.test.ts replays it in shogiops (the lishogi rules kernel)
+// and proves it the only cooperative mate in three, with none in one.
+export const SHOGI_START_SFEN = '9/7k1/9/6+R2/7l1/9/9/9/9 b r2b4g4s4n3l18p 1';
+export const SHOGI_LINE: readonly string[] = ['3d2e', '2b1c', 'L*1d'];
+
+type ShogiColor = 'sente' | 'gote';
+type ShogiPiece = { color: ShogiColor; letter: string; promoted: boolean };
+export type ShogiDiagram = {
+  board: Map<string, ShogiPiece>;
+  hands: Record<ShogiColor, Map<string, number>>;
+  turn: ShogiColor;
+};
+
+const SHOGI_RANKS = 'abcdefghi';
+
+export function parseShogiSfen(sfen: string): ShogiDiagram {
+  const [placement, turn, hand] = sfen.split(' ');
+  const board = new Map<string, ShogiPiece>();
+  placement.split('/').forEach((row, r) => {
+    let file = 9;
+    for (const token of row.match(/\d|\+?[a-zA-Z]/g) ?? []) {
+      if (/\d/.test(token)) {
+        file -= Number(token);
+        continue;
+      }
+      const letter = token.replace('+', '');
+      board.set(`${file}${SHOGI_RANKS[r]}`, {
+        color: letter === letter.toUpperCase() ? 'sente' : 'gote',
+        letter: letter.toUpperCase(),
+        promoted: token.startsWith('+'),
+      });
+      file -= 1;
+    }
+  });
+  const hands: ShogiDiagram['hands'] = { sente: new Map(), gote: new Map() };
+  for (const [, count, letter] of hand.matchAll(/(\d*)([a-zA-Z])/g)) {
+    const color = letter === letter.toUpperCase() ? 'sente' : 'gote';
+    hands[color].set(letter.toUpperCase(), Number(count || 1));
+  }
+  return { board, hands, turn: turn === 'b' ? 'sente' : 'gote' };
+}
+
+// Moves pieces only; legality is the test's job (shogiops). A capture goes to
+// the mover's hand unpromoted, as in shogi.
+export function playShogiLine(start: ShogiDiagram, line: readonly string[]): ShogiDiagram {
+  const board = new Map(start.board);
+  const hands = { sente: new Map(start.hands.sente), gote: new Map(start.hands.gote) };
+  let turn = start.turn;
+  for (const usi of line) {
+    const drop = /^([A-Z])\*(\d[a-i])$/.exec(usi);
+    const move = /^(\d[a-i])(\d[a-i])(\+?)$/.exec(usi);
+    if (drop) {
+      const held = hands[turn].get(drop[1]) ?? 0;
+      if (held < 1 || board.has(drop[2])) throw new Error(`shogi: bad drop ${usi}`);
+      hands[turn].set(drop[1], held - 1);
+      board.set(drop[2], { color: turn, letter: drop[1], promoted: false });
+    } else if (move) {
+      const piece = board.get(move[1]);
+      const taken = board.get(move[2]);
+      if (!piece || piece.color !== turn || taken?.color === turn) {
+        throw new Error(`shogi: bad move ${usi}`);
+      }
+      if (taken) hands[turn].set(taken.letter, (hands[turn].get(taken.letter) ?? 0) + 1);
+      board.delete(move[1]);
+      board.set(move[2], { ...piece, promoted: piece.promoted || move[3] === '+' });
+    } else {
+      throw new Error(`shogi: bad usi ${usi}`);
+    }
+    turn = turn === 'sente' ? 'gote' : 'sente';
+  }
+  return { board, hands, turn };
+}
+
+const SG_CELL = 28;
+const SG_PAD = 16;
+const SG_BAND = 18;
+const SG_W = SG_PAD * 2 + 9 * SG_CELL;
+const SG_H = SG_W + SG_BAND * 2;
+
+function shogiCenter(square: string): { x: number; y: number } {
+  const file = Number(square[0]);
+  const rank = SHOGI_RANKS.indexOf(square[1]);
+  return {
+    x: SG_PAD + (9 - file) * SG_CELL + SG_CELL / 2,
+    y: SG_BAND + SG_PAD + rank * SG_CELL + SG_CELL / 2,
+  };
+}
+
+function shogiHandText(diagram: ShogiDiagram, color: ShogiColor): string {
+  const held = [...diagram.hands[color].values()].reduce((a, b) => a + b, 0);
+  return held === 0 ? 'nothing' : held >= 30 ? 'every other piece' : `${held} pieces`;
+}
+
+// A static 9x9 board: files 9 to 1 left to right, ranks a to i top to bottom,
+// sente playing up the board. Pieces are pentagons pointing at the enemy with
+// English letters ("+R" a dragon), since the reader is not assumed to read
+// the kanji. The last move, a drop, is marked by tinting its square.
+function shogiSvg(diagram: ShogiDiagram, label: string, mark?: string): string {
+  const left = SG_PAD;
+  const top = SG_BAND + SG_PAD;
+  const parts: string[] = [
+    `<rect x="0" y="${SG_BAND}" width="${SG_W}" height="${SG_W}" rx="8" class="xq-diagram-bg"/>`,
+  ];
+  if (mark) {
+    const c = shogiCenter(mark);
+    parts.push(
+      `<rect x="${c.x - SG_CELL / 2}" y="${c.y - SG_CELL / 2}" width="${SG_CELL}" height="${SG_CELL}" fill="#15781B" opacity="0.32"/>`,
+    );
+  }
+  for (let i = 0; i <= 9; i += 1) {
+    const at = i * SG_CELL;
+    parts.push(
+      `<line x1="${left}" y1="${top + at}" x2="${left + 9 * SG_CELL}" y2="${top + at}" class="xq-diagram-line" stroke-width="1"/>`,
+      `<line x1="${left + at}" y1="${top}" x2="${left + at}" y2="${top + 9 * SG_CELL}" class="xq-diagram-line" stroke-width="1"/>`,
+    );
+  }
+  for (let i = 0; i < 9; i += 1) {
+    parts.push(
+      `<text x="${left + i * SG_CELL + SG_CELL / 2}" y="${top - 5}" font-family="system-ui, sans-serif" font-size="9" class="xq-diagram-ink" text-anchor="middle">${9 - i}</text>`,
+      `<text x="${left + 9 * SG_CELL + 8}" y="${top + i * SG_CELL + SG_CELL / 2 + 3}" font-family="system-ui, sans-serif" font-size="9" class="xq-diagram-ink" text-anchor="middle">${SHOGI_RANKS[i]}</text>`,
+    );
+  }
+  for (const [square, piece] of diagram.board) {
+    const { x, y } = shogiCenter(square);
+    const flip = piece.color === 'gote' ? ` transform="rotate(180 ${x} ${y})"` : '';
+    parts.push(
+      `<polygon points="${x},${y - 12} ${x + 8},${y - 8} ${x + 10},${y + 11} ${x - 10},${y + 11} ${x - 8},${y - 8}" fill="#f6e7c1" stroke="#4b3c2a" stroke-width="1"${flip}/>`,
+      `<text x="${x}" y="${y + 5}" font-family="system-ui, sans-serif" font-size="${piece.promoted ? 10 : 12}" font-weight="700" fill="${piece.promoted ? '#b3261e' : '#2b2118'}" text-anchor="middle">${piece.promoted ? '+' : ''}${piece.letter}</text>`,
+    );
+  }
+  parts.push(
+    `<text x="${SG_W / 2}" y="12" font-family="system-ui, sans-serif" font-size="11" class="xq-diagram-outside-text" text-anchor="middle">Defender holds ${shogiHandText(diagram, 'gote')}</text>`,
+    `<text x="${SG_W / 2}" y="${SG_H - 4}" font-family="system-ui, sans-serif" font-size="11" class="xq-diagram-outside-text" text-anchor="middle">Attacker holds ${shogiHandText(diagram, 'sente')}</text>`,
+  );
+  return xqSvg(SG_W, SG_H, parts.join('')).replace('role="img"', `role="img" aria-label="${label}"`);
+}
+
+export const shogiStart = (): ShogiDiagram => parseShogiSfen(SHOGI_START_SFEN);
+export const shogiMate = (): ShogiDiagram => playShogiLine(shogiStart(), SHOGI_LINE);
+
+const SHOGI_START_SVG = (): string =>
+  shogiSvg(
+    shogiStart(),
+    'A shogi cooperative mate in three: the attacker has a dragon on 3d; the defender has a king on 2b and a lance on 2e',
+  );
+const SHOGI_MATE_SVG = (): string =>
+  shogiSvg(
+    shogiMate(),
+    'The mate: the defending king on 1c, the dragon on 2e, and the lance dropped on 1d',
+    SHOGI_LINE[SHOGI_LINE.length - 1].slice(-2),
+  );
+
 // Kept narrow (under 60 columns) with comments on their own lines, so the
 // block fits the article column on desktop and wraps cleanly on a phone.
 const PIPELINE = `for each diagram the position maker deals:
@@ -193,7 +348,7 @@ export const helpmatesInXiangqiArticle: Article = {
   showSummaryOnPage: false,
   thumbnail: { kind: 'svg', svg: HELPMATE_THUMBNAIL },
   status: 'draft',
-  publishedAt: '2026-10-15',
+  publishedAt: '2026-10-20',
   audience:
     'Xiangqi players who like problems, and chess problemists who want to see their genres on a xiangqi board.',
   readNext: ['solver-audit', 'longest-forced-mates-xiangqi'],
@@ -223,7 +378,7 @@ export const helpmatesInXiangqiArticle: Article = {
     },
     {
       kind: 'paragraph',
-      text: 'The genre is old in Western chess, where the usual form, written h#n, has Black move first and White mate on its nth move. That is a convention, not a limit: a helpmate can run to any length, and either side can move first or be mated. The classical xiangqi manuals never asked for one, so we asked whether it works on this board, starting with one narrow slice: helpmate in two, Black first, Red mates. Can a search compose sound ones, and are any of them worth solving?',
+      text: 'The genre is old in Western chess, where the usual form, written h#n, has Black move first and White mate on its nth move. That is a convention, not a limit: a helpmate can run to any length, and either side can move first or be mated. The classical xiangqi manuals ask for a win or a draw against the best defence, never for cooperation, so we asked whether a helpmate works on this board, starting with one narrow slice: helpmate in two, Black first, Red mates. Can a search compose sound ones, and are any of them worth solving?',
     },
   ],
   sections: [
@@ -240,7 +395,7 @@ export const helpmatesInXiangqiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: "Western composition went the other way: it kept the board and changed the goal. Max Lange published the first helpmate in 1854, with White moving first and more than one solution; Sam Loyd's of 1860 was the first with Black to move, and A. Barbe's of 1861 the first with a single solution ([the genre's history](https://en.wikipedia.org/wiki/Helpmate)). Selfmates, series movers and the rest came the same way. The helpmate is now the largest single section of the FIDE Album, the official anthology of the best problems: 2,539 of the 9,218 entries for 2010 to 2012 ([FIDE](https://www.fide.com/images/stories/NEWS_2017/FIDE_News/FIDE_Album_2010-2012_sample_pages.pdf)). Shogi took it up too: the cooperative mate is one of the most popular forms of its mating problems.",
+          text: "Western composition went the other way: it kept the board and changed the goal. Max Lange published the first helpmate in 1854, with White moving first and more than one solution; Sam Loyd's of 1860 was the first with Black to move, and A. Barbe's of 1861 the first with a single solution ([the genre's history](https://en.wikipedia.org/wiki/Helpmate)). Selfmates, series movers and the rest came the same way. The helpmate is now the largest single section of the FIDE Album, the official anthology of the best problems: 2,539 of the 9,218 entries for 2010 to 2012 ([FIDE](https://www.fide.com/images/stories/NEWS_2017/FIDE_News/FIDE_Album_2010-2012_sample_pages.pdf)).",
         },
         {
           kind: 'live-boards',
@@ -261,7 +416,30 @@ export const helpmatesInXiangqiArticle: Article = {
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: 'A cooperative goal does not appear in the classical xiangqi manuals, and our search of modern Chinese sources found none, though that search was limited. Changing the goal is the one thing these problems bring to the board. If you know of earlier xiangqi helpmates, [tell us](/contact).',
+          text: "Shogi took the idea from chess too. Its problemists call it bakazume, the cooperative mate: both sides work together to mate the defending king in the fewest moves, and, as in shogi's ordinary mating problems, the attacker moves first (in chess the mated side usually does), normally has no king on the board, and the defender holds every piece not in play. Fairy shogi problems with this goal were being published by the 1960s; in 1970 Kato Tetsu published one 163 moves long, and in 1971 the magazine Tsume Shogi Paradise began a regular series of them ([Japanese Wikipedia](https://ja.wikipedia.org/wiki/%E3%83%95%E3%82%A7%E3%82%A2%E3%83%AA%E3%83%BC%E8%A9%B0%E5%B0%86%E6%A3%8B)).",
+        },
+        {
+          kind: 'svg-row',
+          items: [
+            {
+              svg: SHOGI_START_SVG,
+              caption:
+                'Cooperative mate in three, attacker first. The attacker, playing up the board, has a dragon (+R, a promoted rook: it moves as a rook or one square diagonally). The defender has a king (K) and a lance (L: any distance straight ahead).',
+            },
+            {
+              svg: SHOGI_MATE_SVG,
+              caption:
+                'The dragon takes the lance on 2e with check, the king steps to 1c, and the attacker drops the captured lance on 1d. The dragon guards 1d and the whole 2-file, and the lance sees through the king to 1b.',
+            },
+          ],
+        },
+        {
+          kind: 'paragraph',
+          text: "The example on Japanese Wikipedia's page shows what the cooperative goal changes. Dropping the lance farther from the king on the 1-file looks just as good, but then the defender, who holds every spare piece, can drop one in between. An ordinary shogi problem discounts an interposition that is simply captured; a cooperative one counts it, so only 1d mates in three. Our search of the position agrees: it is the only cooperative mate in three, and there is none in one.",
+        },
+        {
+          kind: 'paragraph',
+          text: 'We have not found a xiangqi helpmate older than ours. Web searches in Chinese for the names chess problemists give the helpmate turned up chess problems and ordinary xiangqi mating patterns, never a cooperative xiangqi problem, and the classical manuals all ask for a win or a draw. If you know of an earlier one, [tell us](/contact).',
         },
       ],
     },

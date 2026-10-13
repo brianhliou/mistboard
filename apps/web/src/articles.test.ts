@@ -63,7 +63,7 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
-      // Helpmates in xiangqi (composed helpmates in two), 2026-10-15.
+      // Helpmates in xiangqi (composed helpmates in two), 2026-10-20.
       '/blog/helpmates-in-xiangqi',
       // Fortress and Atomic Xiangqi on hold for a redesign, scheduled for 2026-10-13
       // (DEV shows it early for review).
