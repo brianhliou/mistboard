@@ -167,6 +167,17 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
       response.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     }
 
+    // Vite's build output (/assets/<name>-<hash>.<ext>) names every file by its
+    // content, so a changed file is a new URL. With no Cache-Control the edge
+    // applied its 4h default and browsers revalidated each chunk on every
+    // visit, a round trip per file through a possibly distant edge. Only a
+    // successful response is marked: a 404 for a chunk asked of an instance
+    // that does not have it yet (a deploy swap) must not be pinned for a year.
+    // HTML, feeds and the sitemap keep their own (absent) headers.
+    if (isHashedBuildAssetPath(pathname)) {
+      setHeaderOnSuccess(response, 'Cache-Control', 'public, max-age=31536000, immutable');
+    }
+
     // Page navigations carry the viewer's country (Cloudflare's CF-IPCountry)
     // to the client as a readable cookie, so the nav can skip links that are
     // dead ends there (Discord in mainland China). setHeader survives the
@@ -807,6 +818,28 @@ export function robotsTxt(publicHost: string): string {
 // them from the /engine/:id admin document, which must stay non-isolated.
 export function isIsolatedEngineAssetPath(pathname: string): boolean {
   return /^\/engine\/[^/]+\//.test(pathname);
+}
+
+// A Vite build chunk: /assets/<name>-<hash>.<ext>, the hash 8 base64url
+// characters (Vite's default naming; vite.config.ts sets no override, and every
+// file the build writes under dist/assets carries one). Nothing else writes
+// into /assets (copyPublicDir is off), so the hash check is a second guard
+// rather than the only one.
+export function isHashedBuildAssetPath(pathname: string): boolean {
+  return /^\/assets\/[^/]+-[A-Za-z0-9_-]{8}\.[A-Za-z0-9]+$/.test(pathname);
+}
+
+// Set a header only if the response turns out to be a success (2xx or 304).
+// The static handler decides the status after this point, so the decision is
+// made at writeHead, which Node also calls for an implicit header flush.
+export function setHeaderOnSuccess(response: ServerResponse, name: string, value: string): void {
+  const writeHead = response.writeHead.bind(response) as (...args: unknown[]) => ServerResponse;
+  response.writeHead = ((statusCode: number, ...rest: unknown[]) => {
+    if ((statusCode >= 200 && statusCode < 300) || statusCode === 304) {
+      response.setHeader(name, value);
+    }
+    return writeHead(statusCode, ...rest);
+  }) as ServerResponse['writeHead'];
 }
 
 // A page navigation is an extensionless GET/HEAD whose Accept header asks for

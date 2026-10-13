@@ -22,6 +22,7 @@ import {
   deviceIdForBrowser,
   isPlayableSeat,
   resolveWebSocketBaseUrls,
+  SOCKET_HOST_SESSION_KEY,
   seatTokenForRoom,
   writeSeatTokenForRoom,
 } from '../live-state.js';
@@ -122,10 +123,6 @@ export const SOCKET_OPEN_TIMEOUT_MS = 6_000;
 // is back within a second, which one failed open cannot tell apart from a
 // host this browser will never reach.
 export const SOCKET_FALLBACK_AFTER_FAILED_OPENS = 2;
-// Once a tab has moved to the fallback host it stays there for the tab's
-// life, including across a rematch redirect, so the next room does not spend
-// another two failed opens rediscovering the same dead path.
-const SOCKET_HOST_SESSION_KEY = 'mistboard.socket.host';
 
 export function createTenantSocketClient(options: TenantSocketClientOptions): TenantSocketClient {
   let socketUrls = options.socketUrls ?? (options.socketUrl ? [options.socketUrl] : []);
@@ -359,9 +356,9 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
     if (message.type === 'pong') {
       latencyMs = Math.max(0, Date.now() - message.at);
       maybeSendLatencySample(latencyMs);
-      // No re-render: latency is only surfaced in degraded-connection labels,
-      // and a pong only arrives while connected, so the value is never on
-      // screen here. Rendering on every 5s ping is pure churn.
+      // No re-render: the value feeds the latency-sample telemetry and is
+      // never on screen (the account dropdown's PING times the socket host
+      // itself). Rendering on every 5s ping is pure churn.
       return;
     }
     if (message.type === 'server_restart_scheduled') {

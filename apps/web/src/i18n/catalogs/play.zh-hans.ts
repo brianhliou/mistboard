@@ -275,7 +275,6 @@ export const ZH_HANS_PLAY = {
   'live.timeClassClassical': '古典',
   'live.connectionLabel': '连接',
   'live.connConnected': '已连接',
-  'live.connConnectedWithLatency': '已连接 · {latency} 毫秒',
   'live.connReconnectingAttempt': '重新连接中 · 第 {attempt} 次',
   'live.connDisconnected': '已断开',
   'live.connRejected': '已拒绝',

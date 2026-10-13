@@ -1,8 +1,18 @@
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
-import { isIsolatedEngineAssetPath, isPageNavigationRequest, robotsTxt } from './server-http.js';
+import {
+  createHttpRequestHandler,
+  isHashedBuildAssetPath,
+  isIsolatedEngineAssetPath,
+  isPageNavigationRequest,
+  robotsTxt,
+} from './server-http.js';
 
 const HTML_ACCEPT = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8';
 
@@ -97,4 +107,51 @@ test('robots.txt keeps crawlers off the data downloads and nothing else under /a
     assert.ok(lines.includes(kept), kept);
   }
   assert.ok(lines.includes('Sitemap: https://mistboard.com/sitemap.xml'));
+});
+
+test('hashed build assets: only Vite-named files under /assets qualify', () => {
+  assert.equal(isHashedBuildAssetPath('/assets/index-CkdYnPwB.js'), true);
+  assert.equal(isHashedBuildAssetPath('/assets/account-profile-C4OBlOPq.css'), true);
+  assert.equal(isHashedBuildAssetPath('/assets/worker-a_b-C9d8.wasm'), true);
+  assert.equal(isHashedBuildAssetPath('/assets/readme.js'), false);
+  assert.equal(isHashedBuildAssetPath('/assets/nested/index-CkdYnPwB.js'), false);
+  assert.equal(isHashedBuildAssetPath('/index-CkdYnPwB.js'), false);
+  assert.equal(isHashedBuildAssetPath('/feed.xml'), false);
+});
+
+// Drives the real handler over a temp build: a hashed chunk is pinned for a
+// year, while the HTML that names the chunks (and a chunk this build lacks)
+// must never be.
+test('hashed build assets are served immutable; HTML and missing chunks are not', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await mkdir(join(staticDir, 'assets'), { recursive: true });
+  await writeFile(join(staticDir, 'index.html'), '<!doctype html><title>x</title>', 'utf-8');
+  await writeFile(join(staticDir, 'home.html'), '<!doctype html><title>home</title>', 'utf-8');
+  await writeFile(join(staticDir, 'assets', 'index-CkdYnPwB.js'), 'console.log(1);', 'utf-8');
+  const handler = createHttpRequestHandler({
+    staticDir,
+    publicHost: 'https://mistboard.com',
+    drainController: { isDraining: () => false },
+  } as unknown as Parameters<typeof createHttpRequestHandler>[0]);
+  const server = createServer(handler);
+  await new Promise<void>((done) => server.listen(0, '127.0.0.1', done));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  try {
+    const asset = await fetch(`${base}/assets/index-CkdYnPwB.js`);
+    assert.equal(asset.status, 200);
+    assert.equal(asset.headers.get('cache-control'), 'public, max-age=31536000, immutable');
+    await asset.text();
+
+    const missing = await fetch(`${base}/assets/index-Zz9Yy8Xx.js`);
+    assert.equal(missing.status, 404);
+    assert.equal(missing.headers.get('cache-control'), null);
+    await missing.text();
+
+    const page = await fetch(`${base}/`, { headers: { accept: 'text/html' } });
+    assert.equal(page.status, 200);
+    assert.equal(page.headers.get('cache-control'), null);
+    await page.text();
+  } finally {
+    await new Promise<void>((done) => server.close(() => done()));
+  }
 });

@@ -666,6 +666,24 @@ export function allowedWebSocketOrigins(
   return host ? new Set([`https://${host}`]) : new Set();
 }
 
+// The site's own pages, which read GET /api/ping from the socket host (a
+// different origin) so the account dropdown times the path games take.
+const SITE_ORIGINS = ['https://mistboard.com', 'https://www.mistboard.com'];
+
+// The Access-Control-Allow-Origin value for a cross-origin /api/ping: the
+// request's origin echoed when it is the site or an origin the socket already
+// accepts, else null (no header, so the browser withholds the response). Never
+// paired with Allow-Credentials: the probe sends no cookies.
+export function pingCorsAllowOrigin(
+  origin: string | undefined,
+  host: string | undefined,
+  env: RuntimeEnv = process.env,
+): string | null {
+  if (!origin) return null;
+  if (SITE_ORIGINS.includes(origin)) return origin;
+  return allowedWebSocketOrigins(host, env).has(origin) ? origin : null;
+}
+
 export function recordMessageTimestamp(
   timestamps: number[],
   now: number,

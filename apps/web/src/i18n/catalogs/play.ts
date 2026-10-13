@@ -202,7 +202,6 @@ export const EN_PLAY = {
   'live.timeClassClassical': 'Classical',
   'live.connectionLabel': 'Connection',
   'live.connConnected': 'Connected',
-  'live.connConnectedWithLatency': 'Connected · {latency}ms',
   'live.connReconnectingAttempt': 'Reconnecting · attempt {attempt}',
   'live.connDisconnected': 'Disconnected',
   'live.connRejected': 'Rejected',

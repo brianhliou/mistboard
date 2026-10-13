@@ -7,7 +7,7 @@ import * as persistence from '../persistence.js';
 import { onlinePresence, refreshPresence } from '../presence.js';
 import { PUBLIC_RATING_TIME_CLASS } from '../rating-buckets.js';
 import { readEventLoopLagMs } from '../server-event-loop-lag.js';
-import { getProxyTrustWarning } from '../server-policy.js';
+import { getProxyTrustWarning, pingCorsAllowOrigin } from '../server-policy.js';
 import { getCachedSiteTotals } from '../site-counters.js';
 import { aggregateEnginePoolStats } from '../uci-engine-harness.js';
 import {
@@ -62,12 +62,20 @@ export async function tryHandle(
     // Round-trip probe for the account dropdown's connection footer. The client
     // times the request for PING; `lagMs` is the server's event-loop lag for the
     // SERVER readout. Kept trivially cheap (no DB, no allocations) and no-store
-    // so it measures live latency rather than a cached response.
+    // so it measures live latency rather than a cached response. The dropdown
+    // calls it on the socket host, not the page's origin, so the site's own
+    // origins may read it cross-origin (a simple GET, no preflight, no
+    // credentials).
+    const allowOrigin = pingCorsAllowOrigin(request.headers.origin, request.headers.host);
     writeJson(
       response,
       200,
       { now: Date.now(), lagMs: readEventLoopLagMs() },
-      { 'cache-control': 'no-store' },
+      {
+        'cache-control': 'no-store',
+        vary: 'Origin',
+        ...(allowOrigin ? { 'access-control-allow-origin': allowOrigin } : {}),
+      },
     );
     return true;
   }
