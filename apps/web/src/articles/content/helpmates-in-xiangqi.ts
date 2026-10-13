@@ -259,10 +259,26 @@ function shogiHandText(diagram: ShogiDiagram, color: ShogiColor): string {
   return held === 0 ? 'nothing' : held >= 30 ? 'every other piece' : `${held} pieces`;
 }
 
+// Kanji as printed on shogi pieces (Brian, 2026-10-13: kanji over letters);
+// promoted pieces take their promoted glyph, in red. The prose and captions
+// name every piece in English, so the reader never needs to read these.
+const SHOGI_KANJI: Record<string, string> = {
+  K: '玉', R: '飛', B: '角', G: '金', S: '銀', N: '桂', L: '香', P: '歩',
+};
+const SHOGI_PROMOTED_KANJI: Record<string, string> = {
+  R: '龍', B: '馬', S: '全', N: '圭', L: '杏', P: 'と',
+};
+
+function shogiGlyph(piece: ShogiPiece): string {
+  const glyph = piece.promoted ? SHOGI_PROMOTED_KANJI[piece.letter] : SHOGI_KANJI[piece.letter];
+  if (!glyph) throw new Error(`shogi: no glyph for ${piece.promoted ? '+' : ''}${piece.letter}`);
+  return glyph;
+}
+
 // A static 9x9 board: files 9 to 1 left to right, ranks a to i top to bottom,
-// sente playing up the board. Pieces are pentagons pointing at the enemy with
-// English letters ("+R" a dragon), since the reader is not assumed to read
-// the kanji. The last move, a drop, is marked by tinting its square.
+// sente playing up the board. Pieces are pentagons pointing at the enemy, the
+// defender's turned upside down, glyph and all, as on a real board. The last
+// move, a drop, is marked by tinting its square.
 function shogiSvg(diagram: ShogiDiagram, label: string, mark?: string): string {
   const left = SG_PAD;
   const top = SG_BAND + SG_PAD;
@@ -292,8 +308,8 @@ function shogiSvg(diagram: ShogiDiagram, label: string, mark?: string): string {
     const { x, y } = shogiCenter(square);
     const flip = piece.color === 'gote' ? ` transform="rotate(180 ${x} ${y})"` : '';
     parts.push(
-      `<polygon points="${x},${y - 12} ${x + 8},${y - 8} ${x + 10},${y + 11} ${x - 10},${y + 11} ${x - 8},${y - 8}" fill="#f6e7c1" stroke="#4b3c2a" stroke-width="1"${flip}/>`,
-      `<text x="${x}" y="${y + 5}" font-family="system-ui, sans-serif" font-size="${piece.promoted ? 10 : 12}" font-weight="700" fill="${piece.promoted ? '#b3261e' : '#2b2118'}" text-anchor="middle">${piece.promoted ? '+' : ''}${piece.letter}</text>`,
+      `<g${flip}><polygon points="${x},${y - 12} ${x + 8},${y - 8} ${x + 10},${y + 11} ${x - 10},${y + 11} ${x - 8},${y - 8}" fill="#f6e7c1" stroke="#4b3c2a" stroke-width="1"/>`,
+      `<text x="${x}" y="${y + 6}" font-family="'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', 'Noto Serif CJK JP', serif" font-size="15" font-weight="700" fill="${piece.promoted ? '#b3261e' : '#2b2118'}" text-anchor="middle">${shogiGlyph(piece)}</text></g>`,
     );
   }
   parts.push(
@@ -311,7 +327,7 @@ const SHOGI_START_SVG = (): string =>
     shogiStart(),
     'A shogi cooperative mate in three: the attacker has a dragon on 3d; the defender has a king on 2b and a lance on 2e',
   );
-const SHOGI_MATE_SVG = (): string =>
+export const SHOGI_MATE_SVG = (): string =>
   shogiSvg(
     shogiMate(),
     'The mate: the defending king on 1c, the dragon on 2e, and the lance dropped on 1d',
@@ -424,7 +440,7 @@ export const helpmatesInXiangqiArticle: Article = {
             {
               svg: SHOGI_START_SVG,
               caption:
-                'Cooperative mate in three, attacker first. The attacker, playing up the board, has a dragon (+R, a promoted rook: it moves as a rook or one square diagonally). The defender has a king (K) and a lance (L: any distance straight ahead).',
+                'Cooperative mate in three, attacker first. The attacker, playing up the board, has a dragon on 3d, the red piece: a promoted rook, it moves as a rook or one square diagonally. The defender, whose pieces point down the board, has a king on 2b and a lance on 2e, which moves any distance straight ahead.',
             },
             {
               svg: SHOGI_MATE_SVG,

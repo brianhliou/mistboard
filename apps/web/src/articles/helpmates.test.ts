@@ -19,6 +19,7 @@ import {
   introMate,
   type ShogiDiagram,
   SHOGI_LINE,
+  SHOGI_MATE_SVG,
   SHOGI_START_SFEN,
   shogiMate,
 } from './content/helpmates-in-xiangqi.js';
@@ -309,6 +310,12 @@ describe('helpmates article: the shogi cooperative mate', () => {
     expect(isMate(end)).toBe(true);
     expect(diagramBoardSfen(shogiMate())).toBe(makeSfen(end).split(' ')[0]);
     expect(shogiMate().hands.sente.get('L')).toBe(0);
+  });
+
+  it('draws the mate in kanji, the dragon in its promoted glyph', () => {
+    const svg = SHOGI_MATE_SVG();
+    for (const glyph of ['玉', '龍', '香']) expect(svg).toContain(`>${glyph}</text>`);
+    expect(svg).not.toMatch(/>\+?[A-Z]<\/text>/);
   });
 
   it('is the only cooperative mate in three, with none in one', () => {
