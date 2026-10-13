@@ -34,6 +34,7 @@ import articleSnapshotFogBlack from '../article-snapshot-fog-black.json' with { 
 import { BANQI_CONVERSION_GAME } from '../banqi-engine-game.js';
 import { BANQI_SAMPLE_GAME } from '../banqi-sample-game.js';
 import { tokenPieceSize } from '../board-metrics.js';
+import { pieceSlot } from '../board-piece-slot.js';
 import type { XiangqiBoardLayout } from '../xiangqi-appearance-storage.js';
 import {
   type XiangqiBoardGeometry,
@@ -1479,9 +1480,10 @@ export function xqPiecesLayer(
           (drawsCrossedSoldier(piece as XiangqiPiece, rank) ||
             (veteranSoldiers && piece.role === 'soldier' && piece.color === 'red')),
       });
-      // Keyed by square so a stepping widget (horde-xiangqi-replay.ts) can find
-      // the piece that moved and glide it; a static figure ignores it.
-      return `<g class="xq-diagram-piece-slot" data-piece-square="${sq}">${pieceSvg}</g>`;
+      // Keyed by square, with its centre, so a stepping widget (the article step
+      // card, horde-xiangqi-replay.ts) can find the piece that moved and glide
+      // it; a static figure ignores it.
+      return pieceSlot(sq, { x, y }, pieceSvg, 'xq-diagram-piece-slot');
     })
     .join('');
 }
@@ -2890,9 +2892,11 @@ export function banqiPiecesFromView(view: BanqiPlayerView, x0: number, y0: numbe
       if (!entry) return '';
       const col = square.charCodeAt(0) - 97;
       const row = 4 - Number(square[1]);
-      return entry.faceDown
+      const piece = entry.faceDown
         ? banqiPiece({ shrouded: true }, col, row, x0, y0)
         : banqiPiece({ color: entry.color, role: entry.role }, col, row, x0, y0);
+      // Keyed so a step-through card can glide the piece that moved.
+      return pieceSlot(square, banqiCellCenter(col, row, x0, y0), piece, 'banqi-diagram-piece-slot');
     })
     .join('');
 }

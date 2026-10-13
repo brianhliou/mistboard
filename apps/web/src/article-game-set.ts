@@ -12,12 +12,9 @@ import {
   XQ_BOARD_H,
   XQ_BOARD_W,
   xqBoardSvg,
-  xqCoord,
-  xqPoint,
   xqSvg,
   xqVisionDemoState,
 } from './articles/diagrams.js';
-import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
 import { replayStepperCopy } from './replay-stepper-copy.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 
@@ -158,24 +155,6 @@ export function mountStepGameSet(
   picker.className = 'article-step-card-picker-wrap';
   picker.append(select, blurb);
 
-  function glide(
-    board: HTMLElement,
-    move: { from: XiangqiSquare; to: XiangqiSquare },
-    reverse: boolean,
-  ): void {
-    const duration = pieceAnimationDurationMs();
-    if (duration <= 0) return;
-    const settle = reverse ? move.from : move.to;
-    const origin = reverse ? move.to : move.from;
-    const slot = board.querySelector(`[data-piece-square="${settle}"]`);
-    if (!slot) return;
-    const o = xqCoord(origin);
-    const t = xqCoord(settle);
-    const from = xqPoint(o.file, o.rank, perspective, 0, 0);
-    const to = xqPoint(t.file, t.rank, perspective, 0, 0);
-    glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
-  }
-
   function gameFor(record: StepGameSetRecord): StepCardGame {
     const { moves, boards } = gameSetLine(set, record);
     const san = record.san ? record.san.split(' ') : null;
@@ -185,7 +164,7 @@ export function mountStepGameSet(
       );
     return {
       count: moves.length + 1,
-      paint(board, index, from) {
+      paint(board, index) {
         const last = index ? moves[index - 1]! : null;
         const marks = set.marks?.(record, index) ?? [];
         board.innerHTML = xqSvg(
@@ -203,12 +182,9 @@ export function mountStepGameSet(
             veteranSoldiers: record.veteran === true,
           }),
         );
-        if (from !== null && Math.abs(index - from) === 1) {
-          const forward = index > from;
-          const move = moves[(forward ? index : from) - 1];
-          if (move) glide(board, move, !forward);
-        }
       },
+      // The card glides a one-step move from the slots the board keys.
+      motion: (index) => moves[index - 1] ?? null,
       moves: moves.map((m, i) => ({ label: san?.[i] ?? `${m.from}-${m.to}` })),
       ...(record.firstMover === 'black' ? { firstMover: 'b' as const } : {}),
       intro: record.firstMover === 'black' ? copy.introSecond : copy.intro,

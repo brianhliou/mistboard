@@ -76,6 +76,7 @@ export const banqiPerpetualChaseArticle: Article = {
         },
         {
           kind: 'raw-svg-stepper',
+          gameSpecId: 'banqi',
           steps: BANQI_CHASE_BACK_AND_FORTH_STEPS,
           caption: 'Back and forth on two squares, from a game on Mistboard, 16 September 2026.',
         } as ArticleBlock,
@@ -86,6 +87,7 @@ export const banqiPerpetualChaseArticle: Article = {
         },
         {
           kind: 'raw-svg-stepper',
+          gameSpecId: 'banqi',
           steps: BANQI_CHASE_CYCLE_STEPS,
           caption:
             'Round a square of four, in a constructed position. Every time the chariot runs it has one safe square.',

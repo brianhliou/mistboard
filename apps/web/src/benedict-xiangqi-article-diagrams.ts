@@ -266,11 +266,18 @@ export function benedictSteps(
   id: string,
   frames: Frame[],
   notes: ReadonlyArray<string | undefined>,
-): Array<{ svg: () => string; narrative?: string; move?: string }> {
+): Array<{
+  svg: () => string;
+  narrative?: string;
+  move?: string;
+  motion?: { from: string; to: string };
+}> {
   return frames.map((frame, i) => ({
     svg: benedictFrame(`${id}-${i}`, frame),
     ...(notes[i] ? { narrative: notes[i] } : {}),
-    ...(frame.from && frame.to ? { move: `${frame.from}${frame.to}` } : {}),
+    ...(frame.from && frame.to
+      ? { move: `${frame.from}${frame.to}`, motion: { from: frame.from, to: frame.to } }
+      : {}),
   }));
 }
 

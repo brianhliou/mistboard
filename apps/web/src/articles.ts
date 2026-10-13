@@ -72,6 +72,7 @@ import {
   mountAtomicXiangqiReplay,
 } from './atomic-xiangqi-replay.js';
 import { type BanqiReplayController, mountBanqiReplay } from './banqi-replay.js';
+import { variantDiagramGlides } from './board-anim.js';
 import { type ChessReplayController, mountChessReplay } from './chess-replay.js';
 import {
   type CrazyhouseXiangqiReplayController,
@@ -1895,6 +1896,11 @@ function renderRawSvgStepperBlock(block: RawSvgStepperBlock, lang?: ArticleLang)
         : { narratives: block.steps.map((step) => step.narrative) }),
       ...(block.seats ? { seats: block.seats } : {}),
       ...(block.result ? { result: block.result } : {}),
+      // A step glides its mover only when the block names a variant that may
+      // show the move (board-anim.ts variantDiagramGlides); fog stays static.
+      ...(variantDiagramGlides(block.gameSpecId) && block.steps.some((step) => step.motion)
+        ? { motion: (index: number) => block.steps[index]?.motion ?? null }
+        : {}),
     },
   );
   figure.append(card.el);
