@@ -77,24 +77,49 @@ export function parseDpxqTourGameList(html: string): DpxqTourGame[] {
   return games;
 }
 
-async function fetchText(
-  input: DiscoveryProviderInput,
-  url: string,
-): Promise<{ ok: true; text: string } | { ok: false; message: string }> {
+type FetchedText = { ok: true; text: string } | { ok: false; message: string; transient: boolean };
+
+async function fetchText(input: DiscoveryProviderInput, url: string): Promise<FetchedText> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), input.timeoutMs);
   try {
     const response = await input.fetchImpl(url, { signal: controller.signal });
-    if (!response.ok) return { ok: false, message: `${url} responded ${response.status}` };
+    if (!response.ok) {
+      return {
+        ok: false,
+        message: `${url} responded ${response.status}`,
+        transient: response.status >= 500,
+      };
+    }
     return { ok: true, text: await response.text() };
   } catch (error) {
     return {
       ok: false,
       message: `${url}: ${error instanceof Error ? error.message : String(error)}`,
+      transient: true,
     };
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * The pages a poll cannot do without (the game list, the latest round page)
+ * get one more try after a timeout, a network error or a 5xx. A failed poll
+ * waits a whole interval, 30 minutes once the event is over, so one 10s
+ * timeout at 19:08Z on the 2026 women's league held its round repair back
+ * half an hour. A 404 is the page's answer and is not asked again.
+ */
+async function fetchTextRetryingOnce(
+  input: DiscoveryProviderInput,
+  url: string,
+): Promise<FetchedText> {
+  const first = await fetchText(input, url);
+  if (first.ok || !first.transient) return first;
+  if (input.retryBackoffMs) {
+    await new Promise((resolve) => setTimeout(resolve, input.retryBackoffMs));
+  }
+  return fetchText(input, url);
 }
 
 /**
@@ -118,7 +143,7 @@ async function readPairings(
   pendingRounds: ReadonlySet<number>,
 ): Promise<{ pairings: Array<DpxqPairing & { pageUrl: string }>; settledSkipped: boolean }> {
   const latestUrl = roundPageUrl(tour, undefined, origin);
-  const latest = await fetchText(input, latestUrl);
+  const latest = await fetchTextRetryingOnce(input, latestUrl);
   if (!latest.ok) return { pairings: [], settledSkipped: false };
   const page = parseDpxqRoundPage(latest.text);
   // A latest round with no individual table (a team league's next round,
@@ -164,7 +189,7 @@ export const dpxqTourDiscoveryProvider: DiscoveryProvider = {
     // The game list first: which rounds still have records to import decides
     // which settled round pages are worth reading again.
     const listUrl = tourGameListUrl(tour, origin);
-    const list = await fetchText(input, listUrl);
+    const list = await fetchTextRetryingOnce(input, listUrl);
     const games = list.ok ? parseDpxqTourGameList(list.text) : [];
     const pendingRounds = new Set<number>();
     const completeUrls = input.completeUrls;
