@@ -32,6 +32,7 @@ export const ARTICLE_OG_WIDE_ONLY_SLUGS: readonly string[] = [
   'how-puzzle-mining-works',
   'banqi-statistics',
   'one-thousand-games',
+  'zuo-wenjing',
 ];
 
 /** Mirrors ARTICLE_OG_ZH_SLUGS in apps/server/src/og-image.ts: pages whose
