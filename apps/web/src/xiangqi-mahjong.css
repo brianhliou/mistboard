@@ -1,0 +1,277 @@
+/*
+ * The xiangqi mahjong table: two seats facing each other across a centre
+ * strip. Tiles are bone in any light, like the Hong Kong table, so the red and
+ * black inks mean the same thing on a light page and a dark one. Copied, not
+ * shared, so either table can be removed alone.
+ */
+
+.live-route--xiangqi-mahjong {
+  --uni-board-aspect: 1.2;
+}
+
+.live-route--xiangqi-mahjong .live-review__cluster .board-stage,
+.live-route--xiangqi-mahjong .live-review__cluster .board-status {
+  aspect-ratio: auto;
+}
+
+.xiangqi-mahjong-live-board {
+  --xmj-tile-w: 46px;
+  --xmj-tile-h: 58px;
+  --xmj-face: #f7f4ea;
+  --xmj-edge: #d9d3c2;
+  --xmj-red: #b3261e;
+  --xmj-black: #1f1f1f;
+  --xmj-felt: #1f5c45;
+  --xmj-felt-edge: #164634;
+  --xmj-on-felt: #f1f5f2;
+  --xmj-accent: #f2c14e;
+  width: 100%;
+}
+
+.xmj-table {
+  background: var(--xmj-felt);
+  border: 1px solid var(--xmj-felt-edge);
+  border-radius: 14px;
+  padding: 16px;
+  color: var(--xmj-on-felt);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.xmj-seat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.xmj-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 14px;
+}
+
+.xmj-wind {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.xmj-name {
+  font-weight: 600;
+}
+
+.xmj-points {
+  opacity: 0.85;
+}
+
+.xmj-badge {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.14);
+}
+
+.xmj-badge--turn {
+  background: var(--xmj-accent);
+  color: #1f1f1f;
+}
+
+.xmj-rack {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  flex-wrap: wrap;
+  min-height: var(--xmj-tile-h);
+}
+
+.xmj-melds {
+  display: inline-flex;
+  gap: 10px;
+  margin-left: 16px;
+}
+
+.xmj-meld {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.xmj-tile {
+  box-sizing: border-box;
+  width: var(--xmj-tile-w);
+  height: var(--xmj-tile-h);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--xmj-face);
+  border: 1px solid var(--xmj-edge);
+  border-radius: 6px;
+  box-shadow: 0 2px 0 var(--xmj-edge);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0;
+  font-family: inherit;
+}
+
+.xmj-tile--red {
+  color: var(--xmj-red);
+}
+
+.xmj-tile--black {
+  color: var(--xmj-black);
+}
+
+.xmj-tile--back {
+  background: #2e7d6b;
+  border-color: #23614f;
+  box-shadow: 0 2px 0 #23614f;
+}
+
+.xmj-tile--sm {
+  width: 30px;
+  height: 38px;
+  font-size: 17px;
+  border-radius: 4px;
+}
+
+.xmj-tile--button {
+  cursor: pointer;
+  transition: transform 80ms ease;
+}
+
+.xmj-tile--button:hover,
+.xmj-tile--button:focus-visible {
+  transform: translateY(-6px);
+  outline: 2px solid var(--xmj-accent);
+  outline-offset: 1px;
+}
+
+.xmj-tile--drawn {
+  margin-left: 14px;
+}
+
+.xmj-tile--claimed {
+  box-shadow: 0 2px 0 var(--xmj-accent);
+}
+
+.xmj-tile--open {
+  outline: 2px solid var(--xmj-accent);
+}
+
+.xmj-pond {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  min-height: 38px;
+}
+
+.xmj-pond--empty {
+  align-items: center;
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.xmj-centre {
+  border-top: 1px solid rgb(255 255 255 / 0.15);
+  border-bottom: 1px solid rgb(255 255 255 / 0.15);
+  padding: 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.xmj-status {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.xmj-message {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 15px;
+}
+
+.xmj-note {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.xmj-score {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-width: 320px;
+  font-size: 14px;
+}
+
+.xmj-score li {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0;
+}
+
+.xmj-score__total {
+  border-top: 1px solid rgb(255 255 255 / 0.3);
+  font-weight: 700;
+}
+
+.xmj-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.xmj-action {
+  font: inherit;
+  font-size: 14px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid rgb(255 255 255 / 0.4);
+  background: transparent;
+  color: var(--xmj-on-felt);
+  cursor: pointer;
+}
+
+.xmj-action--primary {
+  background: var(--xmj-accent);
+  border-color: var(--xmj-accent);
+  color: #1f1f1f;
+  font-weight: 600;
+}
+
+.xmj-results {
+  border-collapse: collapse;
+  font-size: 13px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.xmj-results th,
+.xmj-results td {
+  text-align: left;
+  padding: 3px 8px 3px 0;
+  border-bottom: 1px solid rgb(255 255 255 / 0.12);
+}
+
+@media (max-width: 520px) {
+  .xiangqi-mahjong-live-board {
+    --xmj-tile-w: 38px;
+    --xmj-tile-h: 48px;
+  }
+
+  .xmj-tile {
+    font-size: 21px;
+  }
+
+  .xmj-melds {
+    margin-left: 8px;
+  }
+}

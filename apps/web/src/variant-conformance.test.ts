@@ -8,6 +8,7 @@ import {
   isRetiredGameSpec,
   MAHJONG_SPEC_ID,
   RETIRED_GAME_SPEC_IDS,
+  XIANGQI_MAHJONG_SPEC_ID,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import {
@@ -98,6 +99,7 @@ describe('variant correspondence conformance', () => {
   it('every picker variant offers every days-per-move pace, casual', () => {
     for (const tenant of pickerTenants) {
       if (tenant.gameSpecId === MAHJONG_SPEC_ID) continue;
+      if (tenant.gameSpecId === XIANGQI_MAHJONG_SPEC_ID) continue;
       expect(CORRESPONDENCE_ELIGIBLE_SPEC_IDS, tenant.gameSpecId).toContain(tenant.gameSpecId);
       const days = panelPersonPaces(tenant.gameSpecId as never, 'casual').filter(
         (pace) => pace.kind === 'days',
@@ -122,9 +124,10 @@ describe('variant correspondence conformance', () => {
 // marker id) while every other surface derived it from the spec. Both cards now
 // take only the spec and look the marker up in variants.ts; these pin that.
 describe('variant marker conformance', () => {
-  // Mahjong is behind a flag and never shown as a variant: no marker, no icon.
+  // Both mahjongs are behind a flag and never shown as a variant: no marker, no icon.
   const markedTenants = webVariantTenants().filter(
-    (tenant) => tenant.gameSpecId !== MAHJONG_SPEC_ID,
+    (tenant) =>
+      tenant.gameSpecId !== MAHJONG_SPEC_ID && tenant.gameSpecId !== XIANGQI_MAHJONG_SPEC_ID,
   );
 
   it('every tenant room resolves its OWN spec marker', () => {
