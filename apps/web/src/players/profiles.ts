@@ -52,6 +52,14 @@ export const PLAYER_PROFILES: Readonly<Record<string, PlayerProfile>> = {
     title: 'GM',
     profileHref: '/blog/lai-ly-huynh',
   },
+  'zuo-wenjing': {
+    // Han Chuanhao / Xinhua, 2023-10-07, after the Asian Games final (via ifeng).
+    // Her xiangqiqipu portrait is dropped as outdated (harvest OUTDATED_PHOTOS).
+    // profileHref goes in with the first ship after her page goes live (10-16).
+    photo: '/article-thumbs/zuo-wenjing-2023-face.jpg',
+    photoCredit: 'Han Chuanhao / Xinhua',
+    born: '1993',
+  },
   'tony-fung-ga-zen': {
     photo: '/article-thumbs/tony-fung-2023-face.jpg',
     photoCredit: 'Mr.C / Sportsoho',

@@ -183,6 +183,7 @@ const CUSTOM_ARTICLE_OG_SVGS: Record<
   'cao-yanlei': playerFaceOgSvg('article-thumbs/cao-yanlei-2024-face.jpg'),
   'lai-ly-huynh': playerFaceOgSvg('article-thumbs/lai-ly-huynh-2026-face.jpg'),
   'tony-fung-ga-zen': playerFaceOgSvg('article-thumbs/tony-fung-2023-face.jpg'),
+  'zuo-wenjing': playerFaceOgSvg('article-thumbs/zuo-wenjing-2023-face.jpg'),
   'xiangqi-champions': renderChampionsOgSvg,
   'xiangqi-world-championship': renderWorldTitleOgSvg,
   'how-puzzle-mining-works': renderPuzzleMiningOgSvg,

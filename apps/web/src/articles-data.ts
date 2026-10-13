@@ -67,6 +67,7 @@ import { laiLyHuynhArticle } from './articles/content/lai-ly-huynh.js';
 import { laiLyHuynhCoTuongArticle } from './articles/content/lai-ly-huynh-co-tuong.js';
 import { tonyFungGaZenArticle } from './articles/content/tony-fung-ga-zen.js';
 import { fortressAndAtomicXiangqiOnHoldArticle } from './articles/content/fortress-and-atomic-xiangqi-on-hold.js';
+import { zuoWenjingArticle } from './articles/content/zuo-wenjing.js';
 import articleSnapshotFog from './article-snapshot-fog.json' with { type: 'json' };
 
 export const articles: Article[] = [
@@ -101,6 +102,7 @@ export const articles: Article[] = [
   laiLyHuynhArticle,
   laiLyHuynhCoTuongArticle,
   tonyFungGaZenArticle,
+  zuoWenjingArticle,
   xiangqiMatchFixingArticle,
   xiangqiWorldChampionshipArticle,
   darkXiangqiArticle,

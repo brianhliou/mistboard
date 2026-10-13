@@ -63,6 +63,9 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      // The fifth player page, the 2022 women's world champion Zuo Wenjing,
+      // scheduled for 2026-10-16 (DEV shows it early for review).
+      '/blog/zuo-wenjing',
       // Fortress and Atomic Xiangqi on hold for a redesign, scheduled for 2026-10-13
       // (DEV shows it early for review).
       '/blog/fortress-and-atomic-xiangqi-on-hold',
@@ -347,6 +350,7 @@ describe('article public listing gates', () => {
 
     // No age cut on this row, so this holds whatever the date.
     expect(hrefs).toEqual([
+      '/blog/zuo-wenjing',
       '/blog/tony-fung-ga-zen',
       '/blog/lai-ly-huynh',
       '/blog/cao-yanlei',
