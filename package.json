@@ -124,6 +124,7 @@
     "prod:smoke:lite": "node scripts/prod-lite-smoke.mjs",
     "seo:render-audit": "node scripts/seo-render-audit.mjs",
     "seo:terms": "node scripts/seo-terms.mjs",
+    "seo:weekly": "node scripts/seo-weekly-triage.mjs",
     "prod:smoke:correspondence": "node scripts/prod-correspondence-smoke.mjs",
     "prod:smoke": "node scripts/prod-smoke.mjs",
     "prod:smoke:engines": "node scripts/prod-engine-smoke.mjs",
