@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test, { after, before } from 'node:test';
@@ -190,6 +190,72 @@ async function twoWaveWorkers(affinity: boolean) {
   } finally {
     pool.dispose();
   }
+}
+
+// A fake worker that hangs on a request while a shared counter is > 0 (writing
+// its pid to a file first, so the test knows which worker timed out), else
+// replies with its pid.
+const FAKE_WORKER_HANG = `
+import fs from 'node:fs';
+const stateFile = process.env.FAKE_WORKER_STATE;
+const hungPidFile = process.env.FAKE_WORKER_HUNG_PID;
+process.stdout.write(JSON.stringify({ kind: 'ready', engineId: 'fake', pid: process.pid }) + '\\n');
+let buf = '';
+process.stdin.on('data', (d) => {
+  buf += d.toString();
+  let i;
+  while ((i = buf.indexOf('\\n')) >= 0) {
+    const line = buf.slice(0, i).trim();
+    buf = buf.slice(i + 1);
+    if (!line) continue;
+    const req = JSON.parse(line);
+    let remaining = 0;
+    try { remaining = parseInt(fs.readFileSync(stateFile, 'utf8'), 10) || 0; } catch {}
+    if (remaining > 0) {
+      fs.writeFileSync(stateFile, String(remaining - 1));
+      fs.writeFileSync(hungPidFile, String(process.pid));
+      continue; // never reply: the pool request times out
+    }
+    process.stdout.write(JSON.stringify({
+      requestId: req.requestId,
+      ok: true,
+      response: { move: { from: 'e2', to: 'e4' }, engine: { id: 'fake' }, roomId: 'r', workerPid: process.pid },
+    }) + '\\n');
+  }
+});
+`;
+
+for (const size of [1, 2]) {
+  test(`R1-recover: a timed-out move is not retried on the worker being killed (size ${size})`, async () => {
+    const scriptFile = join(dir, 'hang-worker.mjs');
+    writeFileSync(scriptFile, FAKE_WORKER_HANG);
+    const stateFile = join(dir, `state-hang-${size}`);
+    const hungPidFile = join(dir, `hung-pid-${size}`);
+    writeFileSync(stateFile, '1'); // the first dispatch hangs → pool timeout
+    process.env.FAKE_WORKER_STATE = stateFile;
+    process.env.FAKE_WORKER_HUNG_PID = hungPidFile;
+    const pool = new PythonPool({
+      engineId: 'fake',
+      size,
+      pythonBin: process.execPath,
+      scriptPath: scriptFile,
+      cwd: dir,
+      workerSeed: 1,
+      readyTimeoutMs: 5_000,
+    });
+    await pool.start();
+    try {
+      // 300ms per-dispatch timeout: the first attempt hangs and times out; the
+      // retry must land on another worker (size 2) or wait for the dead slot's
+      // replacement (size 1), never on the worker being killed.
+      const res = await pool.chooseMove(PAYLOAD, 300);
+      const hungPid = Number(readFileSync(hungPidFile, 'utf8'));
+      assert.ok(hungPid > 0, 'the first attempt hung on a known worker');
+      assert.notEqual(pidOf(res), hungPid, 'the retry ran on a different worker process');
+    } finally {
+      pool.dispose();
+    }
+  });
 }
 
 test('affinity A/B: ON keeps each game on its worker; OFF bounces them (reversed waves)', async () => {
