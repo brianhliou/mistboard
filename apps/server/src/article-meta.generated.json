@@ -3,67 +3,111 @@
     "title": "AB-JChess, a stronger jieqi bot",
     "kind": "article",
     "description": "An open-source jieqi engine with its own neural network now sits above Pikafish Level 8. It beat full-strength Pikafish 248 to 136 in 400 games.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "AB-JChess：更强的揭棋电脑",
+      "zh-hant": "AB-JChess：更強的揭棋電腦"
+    }
   },
   "anti-xiangqi": {
     "title": "Antichess on the Xiangqi Board Is a Draw",
     "kind": "article",
     "description": "We put antichess on the xiangqi board and measured it before designing anything. Black has two moves to find in the opening, Red cannot go wrong, and then the palace keeps five pieces a side out of reach. Every other opening loses, 63 of them provably. We are publishing the measurement, not the variant.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "象棋棋盘上的反棋是和棋",
+      "zh-hant": "象棋棋盤上的反棋是和棋"
+    }
   },
   "atomic-xiangqi": {
     "title": "Atomic Xiangqi Rules",
     "kind": "rules",
     "description": "Xiangqi where a capture is an explosion. The capturer, the captured piece and the four neighbouring pieces go; soldiers survive; a cannon shot takes only its target; and a blast threat on the general is check.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "原子象棋规则",
+      "zh-hant": "原子象棋規則"
+    }
   },
   "atomic-xiangqi-build": {
     "title": "Atomic Xiangqi Is Live: What Decides Your First Game",
     "kind": "article",
     "description": "Chinese chess where a capture is an explosion. The rules take a minute. What decides your first game is the three points beside your general, the cannon that no longer clears a rank, and a chariot on your advisor file counting as check.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "原子象棋上线了：第一盘棋的胜负由什么决定",
+      "zh-hant": "原子象棋上線了：第一盤棋的勝負由什麼決定"
+    }
   },
   "banqi": {
     "title": "Banqi Rules (Chinese Dark Chess)",
     "kind": "rules",
     "description": "Banqi, also called Chinese dark chess or blind chess, is played face-down on half a xiangqi board. Pieces capture by rank, except that the soldier takes the general and the cannon jumps a screen to take anything.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "暗棋规则：玩法详解与免费在线对弈",
+      "zh-hant": "暗棋規則：玩法詳解與免費線上對弈"
+    }
   },
   "banqi-perpetual-chase": {
     "title": "The Perpetual Chase Rule in Banqi",
     "kind": "article",
     "description": "In banqi a chased piece often has one safe square, so a chase can go back and forth until the position repeats, and under plain threefold repetition the chaser alone decides the draw. Tournament rules allow it and apps cap the chase at 7 or 10 moves. Mistboard forbids the chase move that would repeat a position a third time, and leaves chases that go somewhere alone.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "暗棋长捉规则",
+      "zh-hant": "暗棋長捉規則"
+    }
   },
   "banqi-statistics": {
     "title": "Banqi by the Numbers",
     "kind": "article",
     "description": "MistyBanqi played itself 200 times at ten million nodes a move under the Taiwanese competition rules. On the engine’s own point scale, a lead under ten points is a coin flip at every stage of the game, and the side that loses its general first loses 87% of the time.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "用数字看暗棋",
+      "zh-hant": "用數字看暗棋"
+    }
   },
   "benedict-xiangqi": {
     "title": "Benedict Xiangqi: The First Mover Wins 78%",
     "kind": "article",
     "description": "We put Benedict Chess’s rule on the xiangqi board: nothing is captured, and every enemy piece your moved piece attacks joins you. The game has no endgame and no draws, and the first mover wins 78% of engine games, nearly all of it from one cannon move. The pie rule looks like the repair.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "本尼迪克特象棋：先手方胜率 78%",
+      "zh-hant": "本尼迪克特象棋：先手方勝率 78%"
+    }
   },
   "cao-yanlei": {
     "title": "Cao Yanlei 曹岩磊",
     "kind": "article",
     "description": "Beat the world champion 12 to 8 in a ten-game match in January, then the rest of his season through the first stage of China's top league. Six games on the board, all 75 analysed.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "曹岩磊",
+      "zh-hant": "曹岩磊"
+    }
   },
   "chariot-cannon-repetition-key": {
     "title": "Chariot and cannon both start with C",
     "kind": "article",
     "description": "A one-character bug in Mistboard's xiangqi repetition key let a game end in a threefold draw after a position had occurred only twice.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "车和炮的英文都以 C 开头",
+      "zh-hant": "車和炮的英文都以 C 開頭"
+    }
   },
   "chess": {
     "title": "Chess Rules",
     "kind": "rules",
     "description": "Standard chess rules, the primer behind Fog Chess: castling, promotion, en passant, the draw rules, and a famous game to play through.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "国际象棋规则",
+      "zh-hant": "國際象棋規則"
+    }
   },
   "choi-co-tuong-voi-may": {
     "title": "Chơi cờ tướng với máy: Pikafish trên Mistboard",
@@ -81,37 +125,61 @@
     "title": "Crazyhouse Xiangqi Rules",
     "kind": "rules",
     "description": "Xiangqi where a captured piece joins your hand and the advisors and elephants start there: drop a piece on any empty point, advisors and elephants on their own half, check and mate included.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "疯狂屋象棋规则",
+      "zh-hant": "瘋狂屋象棋規則"
+    }
   },
   "duck-xiangqi": {
     "title": "Duck Xiangqi Rules",
     "kind": "rules",
     "description": "Duck Chess on the xiangqi board. Every turn is a move and then a duck placement, the duck blocks and screens like a piece, and you win by capturing the general.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "鸭子象棋规则",
+      "zh-hant": "鴨子象棋規則"
+    }
   },
   "duck-xiangqi-game-tree": {
     "title": "One Duck Xiangqi move is worth two xiangqi moves",
     "kind": "article",
     "description": "Red’s first Duck Xiangqi turn reaches more positions than a full xiangqi move by each side. About half of them leave the opponent exactly the same choices, so a search can skip them. What is left still cuts how far an engine sees almost in half.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "鸭子象棋走一步，抵得上象棋走两步",
+      "zh-hant": "鴨子象棋走一步，抵得上象棋走兩步"
+    }
   },
   "duck-xiangqi-strategy": {
     "title": "Duck Xiangqi Strategy for Your First Game",
     "kind": "article",
     "description": "Chinese chess with one duck both players share. The rules take a minute to read. What decides your first game takes longer, starting with the fact that the duck you place is a cannon platform for your opponent and never for you.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "鸭子象棋攻略：你的第一盘",
+      "zh-hant": "鴨子象棋攻略：你的第一盤"
+    }
   },
   "flip-jungle-skill-ceiling": {
     "title": "Flip Jungle: 512 times the search still loses 23% of games",
     "kind": "article",
     "description": "Flip Jungle is 4×4 Jungle Chess with every animal face-down. A near-perfect engine shows how much skill survives the flips: 512 times the search buys about 242 Elo and still loses 23% of its games.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "翻翻棋：搜索量提升 512 倍，仍有 23% 的对局落败",
+      "zh-hant": "翻翻棋：搜尋量提升 512 倍，仍有 23% 的對局落敗"
+    }
   },
   "fog-chess": {
     "title": "Fog Chess Rules",
     "kind": "rules",
     "description": "Fog Chess is chess where you see only the squares your own pieces can reach. Nobody announces check, so a king is lost by being captured, and it can castle into an attack it can't see.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "迷雾国际象棋规则",
+      "zh-hant": "迷霧國際象棋規則"
+    }
   },
   "fog-chess-concepts": {
     "title": "Fog Chess Concepts",
@@ -129,7 +197,11 @@
     "title": "Fog Xiangqi Rules",
     "kind": "rules",
     "description": "Fog Xiangqi is xiangqi under Fog of War. A piece you can't see can still block your horse, and a general with a clear file to the other general can capture it.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "迷雾象棋规则",
+      "zh-hant": "迷霧象棋規則"
+    }
   },
   "fortress-and-atomic-xiangqi-on-hold": {
     "title": "Back to the drawing board: Fortress and Atomic Xiangqi",
@@ -141,67 +213,111 @@
     "title": "Fortress Xiangqi Rules",
     "kind": "rules",
     "description": "A compact Xiangqi variant with captured pieces in reserve, piece drops, and one new piece: the Treasure.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "堡垒象棋规则",
+      "zh-hant": "堡壘象棋規則"
+    }
   },
   "horde-xiangqi": {
     "title": "Horde on the Xiangqi Board: The River Is a Cliff",
     "kind": "article",
     "description": "We put Horde on the xiangqi board and measured it before building anything: twelve start arrays, two soldier rules, each played four times by an engine against itself. With xiangqi’s own soldier the army wins every game by one trick; give the soldier the crossed move from the start and the game becomes a siege that draws three times in four. We are publishing the measurement, not the variant.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "象棋棋盘上的部落棋：楚河汉界是一道悬崖",
+      "zh-hant": "象棋棋盤上的部落棋：楚河漢界是一道懸崖"
+    }
   },
   "how-puzzle-mining-works": {
     "title": "I built a xiangqi puzzle miner",
     "kind": "article",
     "description": "A miner that reads real xiangqi games, finds the moves people got wrong, and keeps the positions where exactly one move wins. About one blunder in nine survives it. Here is the algorithm, the code, and some of what it kept and threw away.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "我做了一个象棋题目挖掘器",
+      "zh-hant": "我做了一個象棋題目挖掘器"
+    }
   },
   "jieqi": {
     "title": "Jieqi Rules (Reveal Xiangqi)",
     "kind": "rules",
     "description": "Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, makes its first move as the piece whose point it stands on, then turns face-up.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "揭棋规则：玩法详解与免费在线对弈",
+      "zh-hant": "揭棋規則：玩法詳解與免費線上對弈"
+    }
   },
   "jieqi-bot-wins": {
     "title": "Fourteen wins against our jieqi bot",
     "kind": "article",
     "description": "Since August 23, people have played our jieqi bot 596 times and beaten it 14 times. Here is how those games were won, and seven new levels for everyone else.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "战胜我们揭棋电脑的 14 盘棋",
+      "zh-hant": "戰勝我們揭棋電腦的 14 盤棋"
+    }
   },
   "jieqi-openings": {
     "title": "What Strong Jieqi Players Believe About the Opening",
     "kind": "article",
     "description": "Jieqi has no opening book. It has an argument about the first move, running on Chinese forums among players with thousands of games, never written down in English. Why a face-down piece is a one-shot option you can waste, five openings ranked, and the pawn push weighed against the crossed cannon on all six reveals.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "高手眼中的揭棋开局",
+      "zh-hant": "高手眼中的揭棋開局"
+    }
   },
   "jieqi-platform": {
     "title": "Jieqi on Mistboard",
     "kind": "article",
     "description": "Play jieqi against the engine or a friend, free and without an account, then review the game with analysis that separates your choices from your luck.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "Mistboard 上的揭棋",
+      "zh-hant": "Mistboard 上的揭棋"
+    }
   },
   "jieqi-puzzle-search": {
     "title": "Looking for jieqi puzzles",
     "kind": "article",
     "description": "We searched 2,939 positions from 50 jieqi games for puzzles. 58 had one clearly best move and 15 of those turned on a hidden piece. None of the 15 passed the rules our xiangqi puzzles go through, and we stopped looking.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "在揭棋里找题目",
+      "zh-hant": "在揭棋裡找題目"
+    }
   },
   "jungle": {
     "title": "Jungle Chess Rules (Dou Shou Qi, Animal Chess)",
     "kind": "rules",
     "description": "Jungle Chess, also called Dou Shou Qi or Animal Chess, puts eight ranked animals on a 7 by 9 board, and the first to walk into the other's den wins. The rat, the lowest rank, can take the elephant, the highest.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "斗兽棋规则：玩法详解与免费在线对弈",
+      "zh-hant": "鬥獸棋規則：玩法詳解與免費線上對弈"
+    }
   },
   "jungle-flip": {
     "title": "Flip Jungle Rules (Flip Dou Shou Qi)",
     "kind": "rules",
     "description": "The 4×4 flip version of Jungle Chess, also called flip Dou Shou Qi or flip animal chess. Every animal starts face-down. Each turn you flip one or move one, and equal ranks trade off the board.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "翻翻棋规则：玩法详解与免费在线对弈",
+      "zh-hant": "翻翻棋規則：玩法詳解與免費線上對弈"
+    }
   },
   "katago-jungle": {
     "title": "KataGo, a stronger Jungle Chess bot",
     "kind": "article",
     "description": "A Jungle Chess engine that learned by playing itself now sits above Misty. In 200 games against Misty it won 82, lost none and drew 118.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "KataGo：更强的斗兽棋电脑",
+      "zh-hant": "KataGo：更強的鬥獸棋電腦"
+    }
   },
   "khai-cuoc-co-up": {
     "title": "Người chơi cờ úp giỏi tin gì về khai cuộc",
@@ -213,7 +329,11 @@
     "title": "Lại Lý Huynh 赖理兄",
     "kind": "article",
     "description": "The first world champion from outside China, unbeaten in Shanghai and winner of the final with black. His title run and the year since, five wins on the board, 38 games analysed.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "赖理兄",
+      "zh-hant": "賴理兄"
+    }
   },
   "lai-ly-huynh-co-tuong": {
     "title": "Lại Lý Huynh",
@@ -225,7 +345,11 @@
     "title": "The Longest Forced Mates in Xiangqi",
     "kind": "article",
     "description": "A horse and a soldier beat a general with both advisors and both elephants, and the slowest win in that endgame takes 65 moves. Seven records from xiangqi endgame tablebases, with the lines, and five of them end with the loser having no legal move.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "象棋最长的必胜杀局",
+      "zh-hant": "象棋最長的必勝殺局"
+    }
   },
   "luat-co-up": {
     "title": "Luật cờ úp",
@@ -243,120 +367,200 @@
     "title": "How Misty Plays",
     "kind": "article",
     "description": "Misty is Mistboard's Fog of War chess engine: how it sees, searches possible boards, avoids hidden catastrophes, and where the current version stands.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "Misty 是怎么下棋的",
+      "zh-hant": "Misty 是怎麼下棋的"
+    }
   },
   "mistybanqi": {
     "title": "How MistyBanqi Plays",
     "kind": "article",
     "description": "MistyBanqi is the engine you play in banqi on Mistboard: a classical search engine with a hand-written evaluation. How it thinks, and the blind spot worth knowing: it can draw a game it has already won.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "MistyBanqi 是怎么下棋的",
+      "zh-hant": "MistyBanqi 是怎麼下棋的"
+    }
   },
   "one-thousand-games": {
     "title": "1,000 games played",
     "kind": "article",
     "description": "Since June 1, people have finished 1,000 games on Mistboard, most of them in September. Thank you for playing.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "已下完 1,000 盘棋",
+      "zh-hant": "已下完 1,000 盤棋"
+    }
   },
   "pikafish": {
     "title": "Pikafish on Mistboard",
     "kind": "article",
     "description": "Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "皮卡鱼在线：在 Mistboard 上与皮卡鱼对弈",
+      "zh-hant": "皮卡魚線上：在 Mistboard 上與皮卡魚對弈"
+    }
   },
   "pikafish-reveal-bug": {
     "title": "Our Pikafish jieqi bot misjudged its reveals",
     "kind": "article",
     "description": "Our Pikafish jieqi bot rated some reveals far better than they were. Two bugs caused it. Both are fixed, at little or no cost in strength.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "我们的皮卡鱼揭棋电脑误判了翻子",
+      "zh-hant": "我們的皮卡魚揭棋電腦誤判了翻子"
+    }
   },
   "puzzles-with-more-than-one-solution": {
     "title": "Puzzles with more than one solution",
     "kind": "article",
     "description": "A solver found a real mate and was told to try again. 382 served puzzles could do that. How the miner admitted them, the patch that half-fixed it, the rule lichess uses instead, and what came out of the corpus.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "有不止一个答案的题目",
+      "zh-hant": "有不止一個答案的題目"
+    }
   },
   "riverbank-cannon": {
     "title": "The Riverbank Cannon Problem",
     "kind": "article",
     "description": "Red’s opening cannon reaches the riverbank first, one move from firing down any of five files, and in fog you never see it coming. Whether that breaks the game came down to one elephant move, one poisoned defense, and a coin flip we priced with the engine.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "巡河炮问题",
+      "zh-hant": "巡河炮問題"
+    }
   },
   "server-enforced-fog": {
     "title": "Programming Fog Chess with Server-Side Truth",
     "kind": "article",
     "description": "How Mistboard keeps hidden information on the server: canonical state, seat-scoped views, private live rooms, and public postgame review.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "用服务器端真实局面实现迷雾国际象棋",
+      "zh-hant": "用伺服器端真實局面實現迷霧國際象棋"
+    }
   },
   "shogi4": {
     "title": "Shogi4 (4×4 Shogi) Rules",
     "kind": "rules",
     "description": "The complete rules of Shogi4 (4x4 Shogi), Oca Studios' public-domain animal drop-shogi on a 4×4 board: how the Carp, Tapir, Raccoon-dog, Fox, and royal move, plus the friendly-jump, evolution, drops, and king-capture wins.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "Shogi4（4×4 将棋）规则",
+      "zh-hant": "Shogi4（4×4 將棋）規則"
+    }
   },
   "skill-vs-luck": {
     "title": "Separating Skill from Luck in Flip Games",
     "kind": "article",
     "description": "Half the moves in banqi, jieqi, and flip jungle are dice rolls, so a chess-style review blames you for variance. Mistboard’s game review splits every flip into the decision and the tile: luck-stripped accuracy, a luck line on the advantage graph, and what 52 human-versus-engine games say about who really earned their wins.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "把翻子棋的实力和运气分开",
+      "zh-hant": "把翻子棋的實力和運氣分開"
+    }
   },
   "solver-audit": {
     "title": "What the Solver Found in the Old Manuals",
     "kind": "article",
     "description": "We ran an exhaustive solver over every short continuous-check composition in 適情雅趣 (1570), 渊深海阔 (1808) and a modern collection: 172 problems, asking whether the printed solution is the only one. Forty-five are. Seventy have a second winning continuation somewhere in the tree, fourteen have a second first move, nine can be mated faster, and three records turned out to be corrupt: the position as recorded cannot be the one the composer meant.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "求解器在古谱里发现了什么",
+      "zh-hant": "求解器在古譜裡發現了什麼"
+    }
   },
   "titled-players": {
     "title": "Bring your title to Mistboard",
     "kind": "article",
     "description": "Verified titled players get a gold badge beside their name, a coaching page students can find, and a front page that will carry their work. Verification takes about two minutes.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "把你的头衔带到 Mistboard",
+      "zh-hant": "把你的頭銜帶到 Mistboard"
+    }
   },
   "tony-fung-ga-zen": {
     "title": "Tony Fung 冯家俊",
     "kind": "article",
     "description": "Hong Kong's first Asian individual champion and its 2022 world championship finalist. His last fifteen months and the 2022 run, six games on the board, 50 games analysed.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "冯家俊",
+      "zh-hant": "馮家俊"
+    }
   },
   "xiangqi": {
     "title": "Xiangqi Rules",
     "kind": "rules",
     "description": "The rules of xiangqi for chess players: the palace and river, cannon screens, facing generals, perpetual check, notation, and a famous game to play through. Playable on Mistboard against the Pikafish engine or a friend.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "象棋规则",
+      "zh-hant": "象棋規則"
+    }
   },
   "xiangqi-champions": {
     "title": "Every Xiangqi Champion",
     "kind": "article",
     "description": "Every winner of the Chinese national xiangqi championship since 1956, and an annotated game for thirteen of them. Plus the nine hundred years before the title existed, and the decade that has been struck from the record.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "历届全国象棋冠军",
+      "zh-hant": "歷屆全國象棋冠軍"
+    }
   },
   "xiangqi-endgames": {
     "title": "Xiangqi Basic Endgames: Which Material Wins and Which Draws",
     "kind": "article",
     "description": "Xiangqi basic endgames, which win and which draw: a table of 35 common endings with the result and the key idea for each, every result checked against the chessdb.cn tablebase, and every position ready to practice against the computer.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "象棋残局：哪些子力能赢，哪些只能和",
+      "zh-hant": "象棋殘局：哪些子力能贏，哪些只能和"
+    }
   },
   "xiangqi-match-fixing": {
     "title": "The Xiangqi Match-Fixing Case",
     "kind": "article",
     "description": "Between 2024 and 2026 the Chinese Xiangqi Association sanctioned 49 people for buying and selling games, and a Hangzhou court convicted six grandmasters of bribery. What happened, why it paid, who ruled, and what is still unproven.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "象棋假棋案",
+      "zh-hant": "象棋假棋案"
+    }
   },
   "xiangqi-world-championship": {
     "title": "The Xiangqi World Championship",
     "kind": "article",
     "description": "Every winner of the Xiangqi World Championship since 1990, why the Chinese national title is the harder one, and how a Vietnamese player took it out of China for the first time in 2025.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "世界象棋锦标赛",
+      "zh-hant": "世界象棋錦標賽"
+    }
   },
   "yin-sheng": {
     "title": "Yin Sheng 尹昇",
     "kind": "article",
     "description": "31 games without a loss across the league qualifier, the Shanghai Cup and the first league stage, August to September 2026. How he plays, five games on the board, all 31 analysed.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "尹昇",
+      "zh-hant": "尹昇"
+    }
   },
   "zuo-wenjing": {
     "title": "Zuo Wenjing 左文静",
     "kind": "article",
     "description": "The 2022 women's world champion and a double gold medallist at the 2023 Asian Games. Her title run in Kuching and her 2026 season, five games on the board, 32 games analysed.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "左文静",
+      "zh-hant": "左文静"
+    }
   }
 }

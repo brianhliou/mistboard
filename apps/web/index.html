@@ -11,6 +11,11 @@
       name="description"
       content="Play Chinese chess (xiangqi) online, free and in English. Server-enforced rules, engine analysis, puzzles, and a course from the first move."
     />
+    <!-- The page's one robots tag: lets search show a large image preview (the
+         Article JSON-LD offers 16:9, 4:3 and 1:1 cards). A noindex page has this
+         tag REPLACED, never a second one added (server-static-pages.ts
+         setRobotsMeta, prerender-articles.mjs). -->
+    <meta name="robots" content="max-image-preview:large" />
     <meta name="theme-color" content="#1f2521" />
     <link rel="icon" href="/logo-mark.png" type="image/png" sizes="512x512" />
     <!-- Announcement archive as RSS (built by prerender-articles.mjs), so a
@@ -31,7 +36,7 @@
       content="Chinese chess and original strategy games. Free and open source."
     />
     <meta property="og:url" content="https://mistboard.com/" />
-    <meta property="og:image" content="https://mistboard.com/og-image.png?v=8" />
+    <meta property="og:image" content="https://mistboard.com/og-image.png?v=9" />
     <meta property="og:image:alt" content="Mistboard: free online Chinese chess (xiangqi) in English" />
     <meta property="og:image:width" content="2400" />
     <meta property="og:image:height" content="1260" />
@@ -41,7 +46,7 @@
       name="twitter:description"
       content="Chinese chess and original strategy games. Free and open source."
     />
-    <meta name="twitter:image" content="https://mistboard.com/og-image.png?v=8" />
+    <meta name="twitter:image" content="https://mistboard.com/og-image.png?v=9" />
     <link rel="stylesheet" href="/src/board-interactions.css" />
     <script>
       (() => {

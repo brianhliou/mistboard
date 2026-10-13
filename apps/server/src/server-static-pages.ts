@@ -12,11 +12,7 @@ import { botPageMeta } from './bot-page-meta.js';
 import { botsDirectoryBody } from './bots-page-body.js';
 import { broadcastPageMeta } from './og-broadcast.js';
 import { type TenantGamePageMeta, tenantGamePageMeta } from './og-game-tenant.js';
-import {
-  ARTICLE_OG_IMAGE_VERSION,
-  GAME_OG_IMAGE_VERSION,
-  STUDY_OG_IMAGE_VERSION,
-} from './og-image.js';
+import { articleOgImageUrl, GAME_OG_IMAGE_VERSION, STUDY_OG_IMAGE_VERSION } from './og-image.js';
 import {
   isPositionOgVariant,
   POSITION_OG_IMAGE_VERSION,
@@ -415,6 +411,19 @@ const RENAMED_ARTICLE_SLUGS: Record<string, string> = {
   'duck-xiangqi-build': 'duck-xiangqi-strategy',
 };
 
+const ROBOTS_META = /<meta\s+name="robots"\s+content="[^"]*"\s*\/?>/;
+
+/** Sets the page's one robots tag. The shell carries `max-image-preview:large`
+ *  for indexable pages; a noindex page REPLACES that tag rather than adding a
+ *  second one, because crawlers merge every robots tag they find and two tags
+ *  is a page whose directives nobody wrote down in one place. */
+export function setRobotsMeta(html: string, content: string): string {
+  const tag = `<meta name="robots" content="${content}">`;
+  return ROBOTS_META.test(html)
+    ? html.replace(ROBOTS_META, tag)
+    : html.replace('</head>', `${tag}</head>`);
+}
+
 export function injectPageMeta(html: string, meta: PageMeta): string {
   let out = html
     .replace(/<title>[^<]*<\/title>/, `<title>${escapeHtml(meta.title)}</title>`)
@@ -616,7 +625,7 @@ export async function serveSpaShellWithRoutePreloads(params: {
     );
   }
   if (noindex) {
-    html = html.replace('</head>', '<meta name="robots" content="noindex, follow"></head>');
+    html = setRobotsMeta(html, 'noindex, follow');
   }
   if (links) html = html.replace('</head>', `${links}</head>`);
   // A client route that exists to answer a search (/bots) also carries its text
@@ -657,7 +666,7 @@ export async function serveGamePage(params: {
   // (SEO backlog D8, 2026-09-17 Search Console read). The page still serves and
   // still previews when shared. Tenant games live at /<variant>/game/:id and go
   // through serveSpaShellWithRoutePreloads, not here, so they are unaffected.
-  html = html.replace('</head>', '<meta name="robots" content="noindex, follow"></head>');
+  html = setRobotsMeta(html, 'noindex, follow');
 
   // /game/:id bypasses the isClientRoute shell path, so bake the route's chunk
   // preloads here too (the replay/board graph is the heaviest cold load).
@@ -796,7 +805,7 @@ export async function serveStudyPage(params: {
     // Unlisted means anyone with the link, not anyone with a search box: the
     // page still serves, it just stops advertising itself. `follow` because the
     // links on it are ordinary site links.
-    html = html.replace('</head>', '<meta name="robots" content="noindex, follow"></head>');
+    html = setRobotsMeta(html, 'noindex, follow');
   }
 
   const preloadLinks = await routePreloadLinksForPath({
@@ -822,9 +831,10 @@ export async function serveNotFoundShell(params: {
 }): Promise<void> {
   const indexPath = resolve(params.staticDir, 'index.html');
   let html = await fs.readFile(indexPath, 'utf-8');
-  html = html
-    .replace(/<title>[^<]*<\/title>/, '<title>Page not found · Mistboard</title>')
-    .replace('</head>', '<meta name="robots" content="noindex, follow"></head>');
+  html = setRobotsMeta(
+    html.replace(/<title>[^<]*<\/title>/, '<title>Page not found · Mistboard</title>'),
+    'noindex, follow',
+  );
   params.response.writeHead(404, { 'content-type': 'text/html; charset=utf-8' });
   params.response.end(html);
 }
@@ -838,9 +848,10 @@ export async function serveGoneShell(params: {
 }): Promise<void> {
   const indexPath = resolve(params.staticDir, 'index.html');
   let html = await fs.readFile(indexPath, 'utf-8');
-  html = html
-    .replace(/<title>[^<]*<\/title>/, '<title>Page retired · Mistboard</title>')
-    .replace('</head>', '<meta name="robots" content="noindex, nofollow"></head>');
+  html = setRobotsMeta(
+    html.replace(/<title>[^<]*<\/title>/, '<title>Page retired · Mistboard</title>'),
+    'noindex, nofollow',
+  );
   params.response.writeHead(410, { 'content-type': 'text/html; charset=utf-8' });
   params.response.end(html);
 }
@@ -1200,10 +1211,10 @@ export async function serveArticlePage(params: {
       title: `${article.title} | Mistboard`,
       description: article.description,
       url,
-      imageUrl: `${params.publicHost}/og/article/${encodeURIComponent(params.slug)}.png?v=${ARTICLE_OG_IMAGE_VERSION}`,
+      imageUrl: articleOgImageUrl(params.publicHost, params.slug, params.langPrefix),
     });
     if (!articleIsIndexable(params.slug)) {
-      html = html.replace('</head>', '<meta name="robots" content="noindex, follow"></head>');
+      html = setRobotsMeta(html, 'noindex, follow');
     }
   }
   params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });

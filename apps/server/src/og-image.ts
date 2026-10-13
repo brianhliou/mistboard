@@ -21,14 +21,17 @@ import {
   initialGameProjection,
   parseStandardXiangqiFen,
 } from '@mistboard/game';
+import type { ArticleZhTitles } from './article-meta.js';
 import { SKILL_VS_LUCK_OG_SERIES } from './banqi-luck-og-data.js';
-import { type CardArt, loadCardArt, renderBoardCard } from './og-card-board.js';
 import {
-  type PositionOgBoard,
-  type PositionOgVariant,
-  resolvePositionOg,
-  startPositionFen,
-} from './og-position.js';
+  CARD_ASPECT_FRAMES,
+  type CardAspect,
+  type CardPieceSet,
+  loadCardArt,
+  renderBoardAspectCard,
+  renderBoardCard,
+} from './og-card-board.js';
+import { type PositionOgBoard, type PositionOgVariant, resolvePositionOg } from './og-position.js';
 import { escapeXml, OG_FONT, OG_HEIGHT, OG_WIDTH } from './og-primitives.js';
 import {
   createPngCache,
@@ -191,27 +194,159 @@ const CUSTOM_ARTICLE_OG_SVGS: Record<
   'one-thousand-games': renderOneThousandGamesOgSvg,
 };
 
-// Rules pages whose card is the variant's start position on the site board
-// (og-card-board.ts), keyed by the ARTICLE_META slug. The fog xiangqi card shows
-// Red's opening view: the kernel decides what Red can see, never a hand list.
-// These slugs used to be 'dark-*' and the cards silently vanished at the
-// dark->fog rename (2026-09-12 audit); the key here MUST be the live slug.
-const RULES_POSITION_CARDS: Record<string, { variant: PositionOgVariant; redFog?: boolean }> = {
-  xiangqi: { variant: 'xiangqi' },
-  'fog-xiangqi': { variant: 'dark-xiangqi', redFog: true },
-  jieqi: { variant: 'jieqi' },
-  banqi: { variant: 'banqi' },
-  'fortress-xiangqi': { variant: 'fortress-xiangqi' },
-  'duck-xiangqi': { variant: 'duck-xiangqi' },
-  // Unlisted, but a rules link is still shared: the card is the standard
-  // array on the standard board, which is the array atomic starts from.
-  'atomic-xiangqi': { variant: 'atomic-xiangqi' },
-  // The kernel's start (startPositionFen): the standard array without its
-  // advisors and elephants, which start in hand.
-  'crazyhouse-xiangqi': { variant: 'crazyhouse-xiangqi' },
-  jungle: { variant: 'jungle' },
-  'jungle-flip': { variant: 'jungle-flip' },
+// Banqi's start is 32 face-down tiles, which at thumbnail size reads as a
+// pattern rather than a game (Brian, 2026-10-11). The card shows a game under
+// way instead: 13 tiles face up (both inks, both generals), 5 captured squares
+// empty, 14 still face down; the pool is what is left to turn, and the parser
+// checks it adds up. Red to move, with captures on the board.
+export const BANQI_RULES_CARD_FEN =
+  'XXrX1XHX/XgXS1cXX/X1GXsAX1/CXRhS1aX r A1E1R1H1C1S2a1e1r1c1s3 4 21';
+
+// The Pikafish page shows no position of its own, so its card is the one a
+// xiangqi player knows on sight: the Central Cannon with the rook across the
+// river against the Screen Horses (五九炮过河车对屏风马平炮兑车), after Red's
+// tenth move, 车九平八. Replayed legally from the start by the kernel in
+// og-image.test.ts, so the FEN cannot drift into an impossible board.
+export const PIKAFISH_CARD_MOVES =
+  '炮二平五 马8进7 马二进三 车9平8 车一平二 马2进3 兵七进一 卒7进1 车二进六 炮8平9 ' +
+  '车二平三 炮9退1 马八进七 士4进5 炮八平九 炮9平7 车三平四 马7进8 车九平八';
+export const PIKAFISH_CARD_FEN =
+  'r1b1kabr1/4a1c2/1cn6/p1p1pR2p/6pn1/2P6/P3P1P1P/C1N1C1N2/9/1RBAKAB2 b - - 19 10';
+
+// No card shows a start position: a start reads as a pattern at thumbnail size,
+// and a game under way invites the click (Brian, 2026-10-11). Each card below is
+// a mid-game reached by a line og-image.test.ts replays move by move through the
+// variant's kernel and checks for legality, so no FEN can drift into an
+// impossible board. Xiangqi lines are in Chinese notation; the rest are kernel
+// squares (files a.., ranks from 1 on Red's side), `x@y` naming a duck's square
+// or a drop, and a square repeated (`b3b3`) a flip.
+
+// Same Direction Cannons, Straight Rook against Horizontal Rook (顺炮直车对横车),
+// played on by Pikafish to Black's 16th move: rooks across the river, a knight
+// on the rib, a rook exchange already made.
+export const XIANGQI_CARD_MOVES =
+  '炮二平五 炮8平5 马二进三 马8进7 车一平二 车9进1 马八进七 车9平4 兵七进一 车4进5 ' +
+  '相七进九 炮2平3 车二进五 马2进1 兵三进一 车1平2 马三进四 车4平3 车九平七 车2进6 ' +
+  '马四进六 车2退2 仕六进五 士6进5 炮五平四 卒1进1 炮四进一 炮5进4 马七进五 车3平5';
+export const XIANGQI_CARD_FEN =
+  '2bak1b2/4a4/n1c3n2/2p1p1p1p/pr1N3R1/2P3P2/P3rC2P/BC7/4A4/2R1KAB2 r - - 0 16';
+
+// Central Cannon against Reverse Palcorner Horses (中炮对反宫马), played on by
+// Pikafish: a cannon each deep in the other camp. The card fogs it as Red sees it.
+export const FOG_XIANGQI_CARD_MOVES =
+  '炮二平五 马2进3 马二进三 炮8平6 车一平二 马8进7 兵三进一 卒3进1 马八进九 象7进5 ' +
+  '炮八平六 车1平2 车九平八 炮2进4 马九退七 炮2退1 兵九进一 士6进5 车八进三 车9平6 ' +
+  '马七进九 炮2平4 车八进六 马3退2 炮五进四 炮6进6';
+export const FOG_XIANGQI_CARD_FEN =
+  '1nbakr3/4a4/4b1n2/p3C1p1p/2p6/P2c2P2/2P1P3P/N2C2N2/5c3/2BAKABR1 r - - 1 14';
+
+// A central-cannon opening on a shuffled deal (og-image.test.ts holds it): eight
+// pieces turned face up, three captures, the rest still face down.
+export const JIEQI_CARD_MOVES = 'h3e3 h8e8 h1g3 h10g8 c4c5 c7c6 c5c6 b8b1 a1b1 i10i9';
+export const JIEQI_CARD_FEN =
+  'xxxxkxx2/8r/4p1a2/x3x1x1x/2R6/9/X3X1X1X/1X2B1P2/9/1CXXKXX1X w R1A2C0P4N2B1r1a1c2p2n2b2 1 6';
+
+// Fairy-Stockfish self-play: both treasures out of the corner, a knight
+// exchanged and sitting in Red's hand, Red's rook in Black's half.
+export const FORTRESS_XIANGQI_CARD_MOVES =
+  'e1e4 b7b6 e4f4 d8f6 f2f3 b8c6 f1e3 c6e5 g1e1 c8c5 e3d5 a8c8 b2b3 g7g6 d5c3 e5c4 ' +
+  'e1e4 c5b5 a1b2 c4d6 c3d5 g8g7 b3b4 b5a5 e4e7 c8c5 d5e3 c5c7 a2a3 c7b7 f4d4 a5g5 ' +
+  'f3f4 f8g8 e7e6 g5c5 f4f5 g8f8 d4g4 g7g8 g4f4 d6c4 e3c4 g6g5';
+export const FORTRESS_XIANGQI_CARD_FEN =
+  '4akq/pr1p1p1/1p2Re1/2c2Pp/1PN2C1/P6/1Q1P2P/1KAE3[N] w - - 0 23';
+
+// Central cannon against Screen Horses, then Fairy-Stockfish self-play: Red's
+// cannon has taken a horse and the duck sits in front of Black's cannons.
+export const DUCK_XIANGQI_CARD_MOVES =
+  'h3e3@e6 h10g8@e5 h1g3@d5 b10c8@e6 i1h1@g6 d10e9@h3 b1c3@i8 b8b6@h5 ' +
+  'b3b5@g6 h8h6@h2 b5g5@g6 i10i8@h3 g5g8@h8 h6c6@c5';
+export const DUCK_XIANGQI_CARD_FEN =
+  'r1b1kab2/4a4/2n3C1r/p1p1p1p1p/1cc6/9/P1P1P1P1P/2N1C1N2/9/R1BAKABR1 w - - 1 8 c5';
+
+// A central-cannon opening, then Fairy-Stockfish self-play: a horse capture on
+// g5 blew both horses and Red's soldier off the board, and the gaps show it.
+export const ATOMIC_XIANGQI_CARD_MOVES =
+  'h3e3 h10g8 h1g3 i10h10 i1h1 b10c8 a1a2 a10a9 h1h7 g8e9 g4g5 e9f7 ' +
+  'e3f3 a9d9 b3d3 e10e9 g3f5 f7g5 d3d5 d9d6 a2f2 h8f8';
+export const ATOMIC_XIANGQI_CARD_FEN =
+  '2ba1abr1/4k4/1cn2c3/p1p1p1pRp/3r5/3C5/P1P1P3P/5C3/5R3/1NBAKAB2 w - - 4 12';
+
+// A central-cannon opening, then Fairy-Stockfish self-play: advisors dropped
+// out of hand onto open squares, a soldier dropped and recaptured.
+export const CRAZYHOUSE_XIANGQI_CARD_MOVES =
+  'h3e3 h10g8 h1g3 i10h10 b1c3 b10c8 a1d1 h10f10 i1h1 h8h10 g3e2 h10i10 A@f4 i10i4 ' +
+  'e3f3 A@f7 f4e3 f7e8 A@f4 A@f7 b3b5 i4i6 b5g5 g8e9 g5i5 P@b3 i5i7 b3c3 e2c3 i6e6';
+export const CRAZYHOUSE_XIANGQI_CARD_FEN =
+  'r3kr3/4n4/1cn1a4/p1p1pap1C/4c4/9/P1P1PAP2/2N1AC3/9/3RK2R1[BBPPnbb] w - - 1 16';
+
+// Elephants up the land files, leopards traded in the centre, Red's rat in the
+// water, and Black's rat beside Red's elephant: the one piece that can take it.
+export const JUNGLE_CARD_MOVES =
+  'g3g4 a7a6 c3d3 e7d7 d3d4 d7d6 g4g5 a6a5 d4d5 d6d5 e3d3 g7g6 a3a4 b8b7 a4b4 c7d7 g1g2 g9g8';
+export const JUNGLE_CARD_FEN = 't6/5dl/1c1w3/6r/e2p2E/1R5/3W3/1D3CT/L6 r 8 10';
+
+// On a shuffled deal (og-image.test.ts holds it): six tiles turned, a lion
+// taking a cat, the wolves trading off, nine tiles still face down.
+export const JUNGLE_FLIP_CARD_MOVES = 'b3b3 a3a3 b3a3 d3d3 c3c3 d3c3 d2d2 c2c2 b2b2';
+export const JUNGLE_FLIP_CARD_FEN = 'XXXX/L3/XDre/XXXX b R1C1P1T1E1d1p1t1l1 0 9';
+
+// Pages whose card is a position on the site board (og-card-board.ts), keyed by
+// the ARTICLE_META slug. Mostly rules pages; an article whose subject is a board
+// game gets one too. The fog xiangqi card shows Red's view of its game: the
+// kernel decides what Red can see, never a hand list. These slugs used to be
+// 'dark-*' and the cards silently vanished at the dark->fog rename (2026-09-12
+// audit); the key here MUST be the live slug. `hanzi` marks a xiangqi-family
+// board, whose zh pages get the card in the traditional set with a zh caption
+// (ARTICLE_OG_ZH_SLUGS). `fen` is required: there is no start-position default.
+const BOARD_POSITION_CARDS: Record<
+  string,
+  { variant: PositionOgVariant; fen: string; redFog?: boolean; hanzi?: true }
+> = {
+  xiangqi: { variant: 'xiangqi', fen: XIANGQI_CARD_FEN, hanzi: true },
+  'fog-xiangqi': {
+    variant: 'dark-xiangqi',
+    fen: FOG_XIANGQI_CARD_FEN,
+    redFog: true,
+    hanzi: true,
+  },
+  jieqi: { variant: 'jieqi', fen: JIEQI_CARD_FEN, hanzi: true },
+  banqi: { variant: 'banqi', fen: BANQI_RULES_CARD_FEN, hanzi: true },
+  'fortress-xiangqi': {
+    variant: 'fortress-xiangqi',
+    fen: FORTRESS_XIANGQI_CARD_FEN,
+    hanzi: true,
+  },
+  'duck-xiangqi': { variant: 'duck-xiangqi', fen: DUCK_XIANGQI_CARD_FEN, hanzi: true },
+  // Unlisted, but a rules link is still shared.
+  'atomic-xiangqi': { variant: 'atomic-xiangqi', fen: ATOMIC_XIANGQI_CARD_FEN, hanzi: true },
+  'crazyhouse-xiangqi': {
+    variant: 'crazyhouse-xiangqi',
+    fen: CRAZYHOUSE_XIANGQI_CARD_FEN,
+    hanzi: true,
+  },
+  jungle: { variant: 'jungle', fen: JUNGLE_CARD_FEN },
+  'jungle-flip': { variant: 'jungle-flip', fen: JUNGLE_FLIP_CARD_FEN },
+  pikafish: { variant: 'xiangqi', fen: PIKAFISH_CARD_FEN, hanzi: true },
 };
+
+/** The page languages a card has its own version for, as route prefixes. */
+export const ARTICLE_OG_LANGS = ['zh-hans', 'zh-hant'] as const;
+export type ArticleOgLang = (typeof ARTICLE_OG_LANGS)[number];
+
+export function isArticleOgLang(value: string): value is ArticleOgLang {
+  return (ARTICLE_OG_LANGS as readonly string[]).includes(value);
+}
+
+/** Slugs whose card has a zh version per script (`?lang=zh-hans|zh-hant`):
+ *  the same board in the traditional (hanzi) set, captioned with the page's
+ *  own zh title. The site gives zh readers hanzi pieces by default (memory
+ *  piece_set_default_by_locale_settled); one card URL per page language lets
+ *  the card follow. Every one has published zh titles (og-image.test.ts).
+ *  Mirrored by the web build (apps/web/src/article-og-image.ts); og-image.test.ts
+ *  pins the two. */
+export const ARTICLE_OG_ZH_SLUGS: readonly string[] = Object.entries(BOARD_POSITION_CARDS)
+  .filter(([, entry]) => entry.hanzi)
+  .map(([slug]) => slug);
 
 // ARTICLE_OG_POSITIONS (board-render) is keyed by the chess positions' original
 // names, which the web's article thumbnails still use; the page slugs moved to
@@ -227,17 +362,42 @@ const ARTICLE_POSITION_KEY: Record<string, string> = {
  *  page meta now appends ?v= (server-static-pages.ts). */
 //  v3 (2026-09-25): Chinese characters in a title render (Noto Sans SC in
 //  og-raster.ts); the player cards had shown them as empty boxes.
-export const ARTICLE_OG_IMAGE_VERSION = 4;
+//  v5 (2026-10-11): banqi shows a game under way, not 32 face-down tiles, and
+//  its outline meets the board's rounded corner; a rules title with "Rules"
+//  mid-title (banqi, jieqi, jungle, flip jungle) no longer gets a second one;
+//  pikafish gets a board card instead of the site card. The ?lang= and
+//  ?aspect= URLs are new with v5, so no older URL ever named them.
+export const ARTICLE_OG_IMAGE_VERSION = 5;
 
-/** A rules page's start-position card, or null when the slug has none. */
-function rulesPositionCard(slug: string, title: string, art: CardArt): string | null {
-  const entry = RULES_POSITION_CARDS[slug];
+/** The page's wide card URL (og:image), as the server-rendered article shell
+ *  writes it. A zh page (`langPrefix` zh-hans / zh-hant) of a slug with a zh
+ *  card gets its own script's. The prerender writes the same URLs from the web
+ *  mirror. */
+export function articleOgImageUrl(host: string, slug: string, langPrefix?: string): string {
+  const base = `${host}/og/article/${encodeURIComponent(slug)}.png?v=${ARTICLE_OG_IMAGE_VERSION}`;
+  const lang = langPrefix?.toLowerCase();
+  return lang && isArticleOgLang(lang) && ARTICLE_OG_ZH_SLUGS.includes(slug)
+    ? `${base}&lang=${lang}`
+    : base;
+}
+
+/** Slugs whose card is hand-drawn (a chart, a timeline, a photo, an art
+ *  composition) and has no board to re-frame, so it has no aspect versions: the
+ *  Article JSON-LD keeps its one wide card. Mirrored by the web build
+ *  (apps/web/src/article-og-image.ts); og-image.test.ts pins the two. */
+export const ARTICLE_OG_WIDE_ONLY_SLUGS: readonly string[] = Object.keys(CUSTOM_ARTICLE_OG_SVGS);
+
+/** The board a page's position card shows, or null when the slug has none. */
+export function positionCardBoard(slug: string): PositionOgBoard | null {
+  const entry = BOARD_POSITION_CARDS[slug];
   if (!entry) return null;
-  const resolved = resolvePositionOg(entry.variant, startPositionFen(entry.variant));
+  const resolved = resolvePositionOg(entry.variant, entry.fen);
   if (!resolved) return null;
   let board = resolved.board;
   if (entry.redFog && board.kind === 'intersection') {
-    const state = createInitialXiangqiState('og-card');
+    const parsed = parseStandardXiangqiFen(entry.fen, 'og-card');
+    if (!parsed.ok) return null;
+    const state = parsed.state;
     const visible = new Set(
       getXiangqiPlayerView(state, 'red').visibleSquares.map((square) => square as string),
     );
@@ -256,7 +416,55 @@ function rulesPositionCard(slug: string, title: string, art: CardArt): string | 
       fog,
     };
   }
-  return renderBoardCard(board, art, { title: [title] });
+  return board;
+}
+
+/** A single chess position article's board. */
+function articlePositionBoard(position: ArticleOgPosition): PositionOgBoard {
+  return {
+    kind: 'chess',
+    pieces: position.pieces,
+    ...(position.fogSquares ? { fogSquares: position.fogSquares } : {}),
+    ...(position.orientation ? { orientation: position.orientation } : {}),
+  };
+}
+
+/** The site card re-framed for an aspect: logo and wordmark, centred, no
+ *  tagline (it is what a crop or a 150px thumbnail loses first). What an
+ *  article with no card of its own offers in its JSON-LD, the same as its
+ *  og:image falls back to the wide site card. */
+export function renderDefaultOgAspectSvg(logoHref: string, aspect: CardAspect): string {
+  const { width, height } = CARD_ASPECT_FRAMES[aspect];
+  const logoSize = Math.round(height * 0.4);
+  const wordmarkSize = 56;
+  const gap = 64;
+  const top = (height - (logoSize + gap + wordmarkSize * 0.72)) / 2;
+  const logo = logoMarkImage(logoHref, (width - logoSize) / 2, top, logoSize);
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+    logoGlowBackground(width, height, top + logoSize / 2),
+    logo,
+    `<text x="${width / 2}" y="${top + logoSize + gap + wordmarkSize * 0.72}" text-anchor="middle" fill="#f3f4f6" font-family="${OG_FONT}" font-size="${wordmarkSize}" font-weight="800" letter-spacing="8">MISTBOARD</text>`,
+    `</svg>`,
+  ].join('');
+}
+
+/** The wide card's title. Page H1s drift on the word "Rules" (some rules
+ *  pages carry it, some don't); the card says it once, so a shared rules link
+ *  always reads as one. A title that already has it anywhere keeps its own
+ *  ("Banqi Rules (Chinese Dark Chess)" had become "... Dark Chess) Rules"). */
+export function articleCardTitle(kind: 'rules' | 'article', title: string): string {
+  return kind === 'rules' && !/\bRules\b/.test(title) ? `${title} Rules` : title;
+}
+
+/** A zh card's title: the page's published zh title up to its full-width
+ *  colon. Several zh titles carry a search subtitle after it ("暗棋規則：玩法
+ *  詳解與免費線上對弈"); the card keeps the name ("暗棋規則"), as the English
+ *  card keeps "Banqi Rules (Chinese Dark Chess)". Every zh rules title already
+ *  says 规则 / 規則, so no suffix is added. */
+export function articleCardTitleZh(title: string): string {
+  const head = title.split('：')[0]!.trim();
+  return head || title;
 }
 
 export async function serveArticleOgImage(params: {
@@ -265,29 +473,92 @@ export async function serveArticleOgImage(params: {
   kind: 'rules' | 'article';
   response: ServerResponse;
   staticDir: string;
+  /** One of the JSON-LD shapes; absent for the wide og:image card. The route
+   *  rejects any other value before it gets here. */
+  aspect?: CardAspect;
+  /** A zh page's card: hanzi pieces and the page's zh title. Only a slug in
+   *  ARTICLE_OG_ZH_SLUGS with published zh titles has one; any other slug
+   *  answers 404 rather than its English card under a URL that promised zh. */
+  lang?: ArticleOgLang;
+  /** The article's published zh titles (ARTICLE_META), read when `lang` is set. */
+  zhTitles?: ArticleZhTitles;
 }): Promise<void> {
-  const { slug, kind, response, staticDir } = params;
-  const key = `article:v${ARTICLE_OG_IMAGE_VERSION}:${slug}`;
+  const { slug, kind, response, staticDir, aspect, lang } = params;
+  const zhTitle = lang ? params.zhTitles?.[lang] : undefined;
+  if (lang && (!ARTICLE_OG_ZH_SLUGS.includes(slug) || !zhTitle)) {
+    response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+    response.end(`no ${lang} card for ${slug}: it has no xiangqi-family board or no ${lang} page`);
+    return;
+  }
+  const pieceSet: CardPieceSet = lang ? 'traditional' : 'international';
+  const custom = CUSTOM_ARTICLE_OG_SVGS[slug];
+  const position = ARTICLE_OG_POSITIONS[ARTICLE_POSITION_KEY[slug] ?? slug];
+  const boardCard = BOARD_POSITION_CARDS[slug];
+  if (aspect) {
+    await serveArticleAspectImage({
+      slug,
+      aspect,
+      custom,
+      position,
+      response,
+      staticDir,
+      pieceSet,
+    });
+    return;
+  }
+  const key = `article:v${ARTICLE_OG_IMAGE_VERSION}:${slug}:${lang ?? 'en'}`;
   const cached = cacheGet(key);
   if (cached) {
     writePng(response, cached, 'HIT');
     return;
   }
-  const custom = CUSTOM_ARTICLE_OG_SVGS[slug];
-  const position = ARTICLE_OG_POSITIONS[ARTICLE_POSITION_KEY[slug] ?? slug];
-  const rules = RULES_POSITION_CARDS[slug];
-  if (!custom && !position && !rules) {
+  if (!custom && !position && !boardCard) {
     redirectToDefault(response);
     return;
   }
-  // Page H1s drift on the "Rules" suffix (some rules pages carry it, some
-  // don't); cards say it uniformly so a shared rules link always reads as one.
-  const title =
-    kind === 'rules' && !/\bRules$/.test(params.title) ? `${params.title} Rules` : params.title;
+  const title = zhTitle ? articleCardTitleZh(zhTitle) : articleCardTitle(kind, params.title);
   const art = await loadCardArt(staticDir);
+  const board = positionCardBoard(slug);
   const svg = custom
     ? await custom(title, { staticDir })
-    : (rulesPositionCard(slug, title, art) ?? renderArticleOgSvg(title, position!));
+    : board
+      ? renderBoardCard(board, art, { title: [title] }, pieceSet)
+      : renderArticleOgSvg(title, position!);
+  const png = await svgToPng(svg);
+  cacheSet(key, png);
+  writePng(response, png, 'MISS');
+}
+
+/** An aspect card: the page's board re-framed, or the site card re-framed for a
+ *  page with no card of its own. A hand-drawn card has none and 404s rather
+ *  than standing in a wide image under an aspect URL. */
+async function serveArticleAspectImage(params: {
+  slug: string;
+  aspect: CardAspect;
+  custom: unknown;
+  position: ArticleOgPosition | undefined;
+  response: ServerResponse;
+  staticDir: string;
+  pieceSet: CardPieceSet;
+}): Promise<void> {
+  const { slug, aspect, response, staticDir, pieceSet } = params;
+  if (params.custom) {
+    response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+    response.end(`no ${aspect} card for ${slug}: its card has no board to re-frame`);
+    return;
+  }
+  const board =
+    positionCardBoard(slug) ?? (params.position ? articlePositionBoard(params.position) : null);
+  // Cards with no board share one site card per aspect.
+  const key = `article:v${ARTICLE_OG_IMAGE_VERSION}:${aspect}:${board ? `${slug}:${pieceSet}` : '(site)'}`;
+  const cached = cacheGet(key);
+  if (cached) {
+    writePng(response, cached, 'HIT');
+    return;
+  }
+  const svg = board
+    ? renderBoardAspectCard(board, await loadCardArt(staticDir), aspect, pieceSet)
+    : renderDefaultOgAspectSvg(await loadLogoMarkHref(staticDir), aspect);
   const png = await svgToPng(svg);
   cacheSet(key, png);
   writePng(response, png, 'MISS');
@@ -875,13 +1146,7 @@ function renderServerFogOgSvg(title: string): string {
 }
 
 function renderArticleOgSvg(title: string, position: ArticleOgPosition): string {
-  const board: PositionOgBoard = {
-    kind: 'chess',
-    pieces: position.pieces,
-    ...(position.fogSquares ? { fogSquares: position.fogSquares } : {}),
-    ...(position.orientation ? { orientation: position.orientation } : {}),
-  };
-  return renderBoardCard(board, new Map(), { title: [title] });
+  return renderBoardCard(articlePositionBoard(position), new Map(), { title: [title] });
 }
 
 function renderStubSvg(game: persistence.GameRecord): string {
@@ -898,10 +1163,57 @@ function renderStubSvg(game: persistence.GameRecord): string {
 
 // ── Default OG card: brand mark ───────────────────────────────────────────────
 //
+// The mark is logo-mark.png, the art the header, favicon and PWA icons draw,
+// never a vector copy. logo.svg and favicon.svg were hand-drawn copies whose
+// cloud was three circles and some rectangles, redrawn once (ec4c9a3b) and
+// still off; both were deleted 2026-10-11 so nothing reaches for them again.
+// Brian: "every so often this SVG slop comes out. The cloud looks wrong."
+
+/** logo-mark.png as a data URI, for an <image> on a card. */
+export async function loadLogoMarkHref(staticDir: string): Promise<string> {
+  const png = await fs.readFile(resolve(staticDir, 'logo-mark.png'));
+  return `data:image/png;base64,${png.toString('base64')}`;
+}
+
+// Two fixes to the raster on a card (Brian, 2026-10-11: "a fuzzy whitish
+// outline ... a bit too grey and not enough pop"). The PNG was cut out of a
+// white background, so its edge carries a pale ring: erode the alpha by ~2.5
+// source px to drop it. Its greys (frame 53, tiles 65-69) sit too close to the
+// card's blue-black, so a gamma curve darkens them while the whites stay white,
+// and a soft glow behind the mark keeps the darker frame from sinking into the
+// background. Picked from a sheet over a light card, which pops hardest but is
+// a white flash in every dark-mode feed.
+const LOGO_MARK_GAMMA = 1.6;
+
+function logoMarkImage(href: string, x: number, y: number, size: number): string {
+  const erode = (2.5 * size) / 512;
+  const tone = ['R', 'G', 'B']
+    .map((c) => `<feFunc${c} type="gamma" exponent="${LOGO_MARK_GAMMA}"/>`)
+    .join('');
+  return [
+    `<filter id="logo-mark" color-interpolation-filters="sRGB">`,
+    `<feMorphology in="SourceAlpha" operator="erode" radius="${erode}" result="inside"/>`,
+    `<feComposite in="SourceGraphic" in2="inside" operator="in" result="trimmed"/>`,
+    `<feComponentTransfer in="trimmed">${tone}</feComponentTransfer>`,
+    `</filter>`,
+    `<image href="${href}" x="${x}" y="${y}" width="${size}" height="${size}" filter="url(#logo-mark)"/>`,
+  ].join('');
+}
+
+/** The card's blue-black with a slate glow centred on the mark at `cy`. */
+function logoGlowBackground(width: number, height: number, cy: number): string {
+  return [
+    `<radialGradient id="logo-glow" cx="0.5" cy="${cy / height}" r="0.38">`,
+    `<stop offset="0" stop-color="#3a4150"/><stop offset="1" stop-color="#0f1115"/>`,
+    `</radialGradient>`,
+    `<rect width="${width}" height="${height}" fill="url(#logo-glow)"/>`,
+  ].join('');
+}
+//
 // Logo, wordmark, tagline. Brian picked this over board-collage variants
 // (2026-06-10); per-game boards live on the article cards instead. The logo
-// SVG is passed in by the bake script (it lives at apps/web/public/logo.svg)
-// so this module needs no filesystem access. Re-run
+// is passed in by the bake script as a data URI of apps/web/public/logo-mark.png
+// (loadLogoMarkHref) so this module needs no filesystem access. Re-run
 // `npm run og:default --workspace @mistboard/server` to re-bake
 // `apps/web/public/og-image.png`, then bump the ?v= on the og:image meta in
 // apps/web/index.html so scrapers refetch.
@@ -909,7 +1221,7 @@ function renderStubSvg(game: persistence.GameRecord): string {
 const FONT = OG_FONT;
 
 export function renderDefaultOgSvg(
-  logoSvg: string,
+  logoHref: string,
   copy: { wordmark: string; lines: string[]; note?: string } = {
     wordmark: 'MISTBOARD',
     lines: ['Chinese chess and original strategy games.'],
@@ -918,14 +1230,11 @@ export function renderDefaultOgSvg(
 ): string {
   const logoSize = 200;
   const logoY = 96;
-  const logo = logoSvg.replace(
-    /^<svg[^>]*>/,
-    `<svg x="${(OG_WIDTH - logoSize) / 2}" y="${logoY}" width="${logoSize}" height="${logoSize}" viewBox="0 0 1024 1024">`,
-  );
+  const logo = logoMarkImage(logoHref, (OG_WIDTH - logoSize) / 2, logoY, logoSize);
   const wordmarkY = logoY + logoSize + 84;
   const parts = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">`,
-    `<rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="#0f1115"/>`,
+    logoGlowBackground(OG_WIDTH, OG_HEIGHT, logoY + logoSize / 2),
     logo,
     `<text x="${OG_WIDTH / 2}" y="${wordmarkY}" text-anchor="middle" fill="#f3f4f6" font-family="${FONT}" font-size="64" font-weight="800" letter-spacing="8">${escapeXml(copy.wordmark)}</text>`,
   ];

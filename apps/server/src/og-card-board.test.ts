@@ -206,3 +206,70 @@ test('a chess game card seats black at the top and white at the bottom behind th
   // Two kings in the column (cburnett paths), not xiangqi generals.
   assert.ok(!svg.includes('international/'), 'no xiangqi art on a chess card');
 });
+
+// Brian, on the banqi square card (2026-10-11): "the brown outline curvature is
+// not aligned with the lighter board color corner rounding". The outline is a
+// stroke inset by half its width over a rounded fill; with the fill's own rx
+// the two curves are not concentric and the fill pokes out at every corner.
+// Any inset stroked rect on a board must round at the fill's rx less its inset.
+// Concentric was not enough: a fill ending on the same outer edge as the stroke
+// antialiases there too and still showed a light sliver on the curve ("I'm
+// still seeing the light color of the board"), so the fill must end under the
+// stroke's centre line, where the stroke's outer half covers its soft edge.
+test('an inset board outline rounds concentric with the fill under it', () => {
+  const num = (attrs: string, name: string) => {
+    const m = new RegExp(`\\b${name}="([\\d.]+)"`).exec(attrs);
+    return m ? Number(m[1]) : undefined;
+  };
+  const cases: [Parameters<typeof startPositionFen>[0], string?][] = [
+    ['xiangqi'],
+    ['banqi'],
+    ['banqi', 'X1X2r1X/2XGX1X1/X1s1XX1X/1XXX2XX r A2E2R1H2C1S3a1e1h1c1 3 12'],
+    ['jungle'],
+    ['jungle-flip'],
+  ];
+  let outlines = 0;
+  for (const [variant, fen] of cases) {
+    const svg = renderBoardCard(board(variant, fen), new Map(), { title: ['Card'] });
+    const rects = [...svg.matchAll(/<rect ([^>]*)\/>/g)].map((m) => m[1]!);
+    const fill = rects.find((r) => !r.includes('fill="none"') && num(r, 'rx') !== undefined);
+    assert.ok(fill, `${variant}: rounded board fill`);
+    const fillRx = num(fill, 'rx')!;
+    for (const r of rects.filter((r) => r.includes('fill="none"') && num(r, 'rx') !== undefined)) {
+      const inset = num(r, 'x')!;
+      const sw = num(r, 'stroke-width')!;
+      assert.ok(Math.abs(inset - sw / 2) < 1e-9, `${variant}: outline inset by half its stroke`);
+      assert.ok(
+        Math.abs(num(fill, 'x')! - inset) < 1e-9,
+        `${variant}: fill edge ${num(fill, 'x')} should sit under the stroke centre ${inset}`,
+      );
+      assert.ok(
+        Math.abs(num(r, 'rx')! - fillRx) < 1e-9,
+        `${variant}: outline rx ${num(r, 'rx')} should match the fill's ${fillRx}`,
+      );
+      outlines += 1;
+    }
+  }
+  assert.ok(outlines >= 2, 'the banqi cards carry an outline to check');
+});
+
+// The zh rules pages' cards (lang=zh-hant|zh-hans) draw the site's traditional
+// set: the cream double-ring disc with the baked character outline, as the live
+// board does for a zh reader. No figurine art may leak in from the
+// international set, even with every art file loaded.
+test('the traditional card draws character discs and no international art', async () => {
+  const art = await loadCardArt(WEB_PUBLIC);
+  for (const [variant, fen] of [
+    ['xiangqi', undefined],
+    ['banqi', 'X1X2r1X/2XGX1X1/X1s1XX1X/1XXX2XX r A2E2R1H2C1S3a1e1h1c1 3 12'],
+  ] as const) {
+    const b = board(variant, fen);
+    const international = renderBoardCard(b, art, { title: ['Card'] });
+    const traditional = renderBoardCard(b, art, { title: ['Card'] }, 'traditional');
+    assert.match(international, /<image /, `${variant}: the default card carries the art`);
+    assert.doesNotMatch(traditional, /<image /, `${variant}: no art in the traditional card`);
+    // Both inner rings (r=38) per revealed piece, red and black inks both present.
+    assert.match(traditional, /r="38" fill="none" stroke="#b91c1c"/);
+    assert.match(traditional, /r="38" fill="none" stroke="#1f2937"/);
+  }
+});
