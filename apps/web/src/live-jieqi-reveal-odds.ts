@@ -99,6 +99,15 @@ export function mountRevealOdds(slots: RevealOddsSlots, glyph: () => PieceGlyph)
       const draw = glyph();
       renderPoolRow(top, odds?.[topInk] ?? null, draw);
       renderPoolRow(bottom, odds?.[bottomInk] ?? null, draw);
+      // A finished or aborted game has no odds left to show. The bands stay
+      // mounted but are marked so the phone layout can drop them (the
+      // post-game actions would otherwise start below the fold); while the
+      // game is on (or before a view arrives) they stay reserved.
+      const over = input.view != null && input.view.status.type !== 'playing';
+      for (const host of [top, bottom]) {
+        if (over) host.dataset.over = '';
+        else delete host.dataset.over;
+      }
     },
   };
 }
