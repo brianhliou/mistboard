@@ -57,6 +57,8 @@ export type DiscoveryProviderInput = {
   completeUrls?: ReadonlySet<string>;
   /** Pause between a provider's own page fetches (dpxq 503s on bursts). */
   spacingMs?: number;
+  /** Pause before a provider's one retry of a fetch that failed transiently. */
+  retryBackoffMs?: number;
 };
 
 export type DiscoveryProvider = {

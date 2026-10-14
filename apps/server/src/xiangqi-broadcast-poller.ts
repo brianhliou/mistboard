@@ -338,6 +338,8 @@ type PollContext = {
   tourSlug?: string;
   /** Pause between a manifest's page fetches; see LEAF_FETCH_SPACING_MS. */
   leafSpacingMs: number;
+  /** Pause before a discovery retry; see DISCOVERY_RETRY_BACKOFF_MS. */
+  retryBackoffMs: number;
 };
 
 // dpxq answers 503 to a burst: 33 requests in two seconds (one game list and a
@@ -346,6 +348,11 @@ type PollContext = {
 // near fifteen seconds. Only the real network gets it; an injected fetch (the
 // tests, the fake source server) has no one to be polite to.
 export const LEAF_FETCH_SPACING_MS = 400;
+
+// A discovery fetch that timed out or got a 5xx is tried once more after this
+// pause, which gives a busy dpxq a moment without holding the poll long. Like
+// the spacing above, only the real network waits.
+export const DISCOVERY_RETRY_BACKOFF_MS = 2_000;
 
 async function recordSourceError(
   context: Pick<PollContext, 'dryRun' | 'tourSlug'>,
@@ -747,6 +754,7 @@ async function discoverStatedRounds(
     settledRounds,
     completeUrls,
     spacingMs: context.leafSpacingMs,
+    retryBackoffMs: context.retryBackoffMs,
   });
   if (!discovered.ok) {
     // Every round the source names is stored and finished: the same answer as
@@ -986,6 +994,7 @@ export async function pollXiangqiBroadcastSourceOnce(input: {
     sourcePolicy: input.sourcePolicy ?? xiangqiBroadcastSourceUrlPolicyFromEnv(),
     ...(input.tourSlug ? { tourSlug: input.tourSlug } : {}),
     leafSpacingMs: input.leafSpacingMs ?? (input.fetchImpl ? 0 : LEAF_FETCH_SPACING_MS),
+    retryBackoffMs: input.fetchImpl ? 0 : DISCOVERY_RETRY_BACKOFF_MS,
   };
 
   const polled = await pollSourceOutcomes(context, input.sourceUrl);
