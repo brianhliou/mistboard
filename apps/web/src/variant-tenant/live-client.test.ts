@@ -880,10 +880,19 @@ describe('tenant game lifecycle analytics', () => {
       initialMs: 5 * 60_000,
       incrementMs: 5_000,
       time_class: 'rapid',
-      // Unknown on this stack, never guessed: the legacy stack reports a real
-      // value and a fabricated one here would silently pool with it.
-      rated: null,
+      rated: false,
     });
+  });
+
+  it('carries the room rated flag on game_started so rated starts can be counted', () => {
+    const h = createHarness({ gameSpecId: BANQI_SPEC_ID });
+    h.feedHello({
+      state: view({ status: { type: 'playing', turn: 'red' } }),
+      timeControl: { initialMs: 3 * 60_000, incrementMs: 2_000 },
+      rated: true,
+    });
+    expect(named('game_started')).toHaveLength(1);
+    expect(named('game_started')[0][1]).toMatchObject({ rated: true, time_class: 'blitz' });
   });
 
   it('emits game_finished once, with the winner and reason', () => {
