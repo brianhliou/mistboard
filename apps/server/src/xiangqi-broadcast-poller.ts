@@ -21,6 +21,7 @@ import {
 import {
   buildDiscoveryManifestSources,
   buildStatedRoundManifestSources,
+  completeSourceUrls,
   type DiscoverySource,
   isXiangqiBroadcastDiscoveryUrl,
   NO_ACTIVE_ROUND_MESSAGE,
@@ -707,23 +708,11 @@ async function discoverStatedRounds(
   | { ok: true; manifest: XiangqiBroadcastSourceManifest }
   | { ok: false; kind: XiangqiBroadcastPollErrorKind; message: string; quiet?: true }
 > {
-  const completeUrls = new Set<string>();
   const stored: StoredBoardRef[] = [];
   for (const round of rounds) {
     const roundNumber = roundNumberFromRoundId(round.id);
     const boards = await listXiangqiBroadcastBoards(round.id);
     for (const board of boards) {
-      // A complete board stored before game details existed is read once more
-      // so its match, table and date arrive; after that it is final. A
-      // results-only board has no moves to read, so its source never counts.
-      if (
-        board.status === 'complete' &&
-        board.sourceUrl &&
-        board.details &&
-        board.moves.length > 0
-      ) {
-        completeUrls.add(board.sourceUrl);
-      }
       stored.push({
         id: board.id,
         sourceBoardId: board.sourceBoardId,
@@ -739,6 +728,7 @@ async function discoverStatedRounds(
     }
   }
   const settledRounds = settledStatedRounds(stored);
+  const completeUrls = completeSourceUrls(stored);
 
   const discovered = await source.provider.discover({
     config: source.config,

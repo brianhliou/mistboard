@@ -375,6 +375,39 @@ export type StoredBoardRef = {
  * for the match-keyed boards that retire it (2026 women's league round 1: six
  * collided boards for 19 games, settled, so the retirement never ran).
  */
+/**
+ * The source pages the store already holds in full, so discovery can leave
+ * them out. A page counts only when every board read from it is complete,
+ * carries details and has moves: a WXF round article is one page for the
+ * whole round, and counting it done on its first finished game froze the
+ * rest of the round at whatever it had when that game ended. A dpxq record
+ * page is one board, so for it this is the old per-board rule.
+ */
+export function completeSourceUrls(
+  boards: ReadonlyArray<{
+    sourceUrl?: string | undefined;
+    status: string;
+    details?: unknown;
+    plies: number;
+  }>,
+): Set<string> {
+  const done = new Set<string>();
+  const open = new Set<string>();
+  for (const board of boards) {
+    if (!board.sourceUrl) continue;
+    // A complete board stored before game details existed is read once more
+    // so its match, table and date arrive; after that it is final. A
+    // results-only board has no moves to read, so its source never counts.
+    if (board.status === 'complete' && board.details && board.plies > 0) {
+      done.add(board.sourceUrl);
+    } else {
+      open.add(board.sourceUrl);
+    }
+  }
+  for (const url of open) done.delete(url);
+  return done;
+}
+
 export function settledStatedRounds(stored: readonly StoredBoardRef[]): Set<number> {
   const byRound = new Map<number, StoredBoardRef[]>();
   for (const row of stored) {

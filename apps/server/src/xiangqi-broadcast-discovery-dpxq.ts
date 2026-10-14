@@ -21,6 +21,7 @@ import {
   registerXiangqiBroadcastDiscoveryProvider,
 } from './xiangqi-broadcast-discovery.js';
 import { dpxqTourDiscoveryProvider } from './xiangqi-broadcast-discovery-dpxq-tour.js';
+import { wxfCategoryDiscoveryProvider } from './xiangqi-broadcast-discovery-wxf.js';
 
 const DPXQ_ORIGIN = 'http://www.dpxq.com';
 const ONLINE_PATH = '/hldcg/search/s_online.asp';
@@ -122,4 +123,5 @@ export const dpxqLiveDiscoveryProvider: DiscoveryProvider = {
 export function registerDefaultXiangqiBroadcastDiscoveryProviders(): void {
   registerXiangqiBroadcastDiscoveryProvider(dpxqLiveDiscoveryProvider);
   registerXiangqiBroadcastDiscoveryProvider(dpxqTourDiscoveryProvider);
+  registerXiangqiBroadcastDiscoveryProvider(wxfCategoryDiscoveryProvider);
 }
