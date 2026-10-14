@@ -37,13 +37,14 @@ test('no hand-drawn vector copy of the mark ships in public/', async () => {
 });
 
 // Brian, 2026-10-11: "a fuzzy whitish outline ... a bit too grey and not
-// enough pop." The mark's pale cut-out ring is eroded away, its greys are
-// darkened, and a glow sits behind it.
-test('the logo cards trim the mark edge, darken its greys and glow behind it', async () => {
+// enough pop." The raster's edge is clean since 2026-10-14 and carries a
+// deliberate light rim, so the card must not erode it; it darkens the greys
+// and glows behind the mark.
+test('the logo cards keep the mark edge, darken its greys and glow behind it', async () => {
   const href = await loadLogoMarkHref(WEB_PUBLIC);
   for (const svg of [renderDefaultOgSvg(href), renderDefaultOgAspectSvg(href, '1x1')]) {
-    assert.match(svg, /<feMorphology in="SourceAlpha" operator="erode"/);
-    assert.match(svg, /<feFuncR type="gamma" exponent="1\.6"\/>/);
+    assert.doesNotMatch(svg, /feMorphology/);
+    assert.match(svg, /<feFuncR type="gamma" exponent="1\.28"\/>/);
     assert.match(svg, /<image href="[^"]+"[^>]* filter="url\(#logo-mark\)"\/>/);
     assert.match(svg, /fill="url\(#logo-glow\)"/);
   }
