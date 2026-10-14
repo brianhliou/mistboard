@@ -171,14 +171,7 @@ export function renderCrosstable(
   scroller.append(table);
   root.append(scroller);
 
-  if (data.score.total <= 1) {
-    root.append(
-      note(
-        t('underboard.crosstableFirstGame', { a: a.name, b: b.name }),
-        'review-crosstable__note',
-      ),
-    );
-  } else if (data.score.total > data.games.length) {
+  if (data.score.total > data.games.length) {
     root.append(
       note(
         t('underboard.crosstableShowingLast', {

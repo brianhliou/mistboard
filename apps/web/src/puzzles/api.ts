@@ -112,10 +112,6 @@ async function throwIfPlayDisabled(response: Response): Promise<void> {
   if (body.error === 'play_disabled') throw new PuzzlePlayDisabledError('play disabled');
 }
 
-// Consecutive days with a puzzle solved, on the solver's own calendar; comes
-// back with a completed solve for signed-in users, absent for guests.
-export type PuzzleStreak = { current: number; best: number };
-
 export async function submitPuzzleAttempt(
   id: string,
   moves: readonly PuzzleMove[],
@@ -123,7 +119,6 @@ export async function submitPuzzleAttempt(
 ): Promise<{
   attempt: PuzzleAttempt;
   rating: PuzzleAttemptRating | null;
-  streak: PuzzleStreak | null;
 }> {
   const response = await fetch(`/api/puzzles/${encodeURIComponent(id)}/attempt`, {
     method: 'POST',
@@ -140,14 +135,9 @@ export async function submitPuzzleAttempt(
   const body = (await response.json()) as {
     attempt?: PuzzleAttempt;
     rating?: PuzzleAttemptRating;
-    streak?: Partial<PuzzleStreak>;
   };
   if (!body.attempt) throw new Error('Puzzle attempt response missing attempt.');
-  const streak =
-    body.streak && typeof body.streak.current === 'number' && typeof body.streak.best === 'number'
-      ? { current: body.streak.current, best: body.streak.best }
-      : null;
-  return { attempt: body.attempt, rating: body.rating ?? null, streak };
+  return { attempt: body.attempt, rating: body.rating ?? null };
 }
 
 // Fetch the full solution line (the reveal endpoint is the only route that

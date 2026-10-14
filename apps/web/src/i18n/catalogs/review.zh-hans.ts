@@ -700,7 +700,6 @@ export const ZH_HANS_REVIEW = {
   'underboard.crosstableUnavailable': '此对局没有可用的对阵记录。',
   'underboard.crosstableGuest': '对阵记录仅保留给已登录棋手和引擎，访客席位没有记录。',
   'underboard.crosstablePrivate': '其中一个席位为私密，因此没有公开记录。',
-  'underboard.crosstableFirstGame': '{a} 与 {b} 的首次对局。',
   'underboard.crosstableShowingLast': '显示最近 {shown} 局，共 {total} 局。',
   'annotate.comment': '评注',
   'annotate.glyphs': '符号',

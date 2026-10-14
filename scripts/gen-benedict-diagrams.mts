@@ -121,9 +121,11 @@ const localArt = (svg: string) =>
 
 // Cropping to Red's half plus the river and Black's soldier rank. The pieces on
 // rank 7 have to stay in shot: one of the balanced first moves lands there and
-// converts two of them, so a crop at the river would cut the point out.
+// converts two of them, so a crop at the river would cut the point out. The top
+// edge sits half a cell above that rank, in the gap between its pieces and the
+// cannons on rank 8; the old edge, 2px inside the soldiers, cut their tops (#547).
 const CROP_TOP_RANK = 7;
-const CROP_Y = 46 + (10 - CROP_TOP_RANK) * 31 + XQ_VIEWBOX_PAD - XQ_PIECE_SIZE / 2 + 2;
+const CROP_Y = 46 + (10 - CROP_TOP_RANK) * 31 + XQ_VIEWBOX_PAD - 31 / 2;
 const CROP_H = 28 + 315 + XQ_VIEWBOX_PAD - CROP_Y;
 
 /** One board, wrapped so it renders standalone. */

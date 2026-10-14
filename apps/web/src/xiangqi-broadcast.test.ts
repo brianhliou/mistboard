@@ -640,6 +640,36 @@ describe('broadcastRecordsCredit', () => {
       broadcastRecordsCredit([{ sourceUrl: 'mistboard-discover://dpxq-live?tourSlug=x' }]),
     ).toBeNull();
   });
+
+  // #541: the credit links the tour's own dpxq page, so a reader can check the
+  // record against its source; the visible text stays the host.
+  it("links dpxq's page for the tour when the tour is known", () => {
+    const boards = [{ sourceUrl: 'http://www.dpxq.com/hldcg/search/view_m_143671.html' }];
+    expect(
+      broadcastRecordsCredit(boards, {
+        slug: '2026-shanghai-cup',
+        sourceUrl: 'mistboard-discover://dpxq-tour?tour=12524&tourSlug=2026-shanghai-cup',
+      }),
+    ).toEqual({ host: 'dpxq.com', href: 'http://www.dpxq.com/hldcg/tour_12524.html' });
+    // A hand-imported tour has no discovery URL; the shared map names its tour.
+    expect(broadcastRecordsCredit(boards, { slug: '2026-north-american-championship' })).toEqual({
+      host: 'dpxq.com',
+      href: 'http://www.dpxq.com/hldcg/tour_12473.html',
+    });
+    // An unknown tour keeps the site link rather than guessing.
+    expect(broadcastRecordsCredit(boards, { slug: 'unknown-tour' })).toEqual({
+      host: 'dpxq.com',
+      href: 'http://www.dpxq.com',
+    });
+  });
+
+  it("never points another source's credit at a dpxq tour page", () => {
+    expect(
+      broadcastRecordsCredit([{ sourceUrl: 'https://example.org/game/1' }], {
+        slug: '2026-north-american-championship',
+      }),
+    ).toEqual({ host: 'example.org', href: 'https://example.org' });
+  });
 });
 
 describe('mountXiangqiBroadcastIndex (live and past zones)', () => {

@@ -302,7 +302,7 @@ export const BENEDICT_PIE_FRAMES: Array<() => string> = [
           perspective: 'red',
           arrows: [{ from: from as XiangqiSquare, to: to as XiangqiSquare }],
         }),
-      ).replace(/viewBox="0 0 ([\d.]+) [\d.]+"/, (_, w) => `viewBox="0 131 ${w} 216"`),
+      ).replace(/viewBox="0 0 ([\d.]+) [\d.]+"/, (_, w) => `viewBox="0 127.5 ${w} 219.5"`),
 );
 
 /** Red's 42 first moves and Red's score after each, three move/score pairs a

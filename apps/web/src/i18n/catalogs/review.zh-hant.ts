@@ -700,7 +700,6 @@ export const ZH_HANT_REVIEW = {
   'underboard.crosstableUnavailable': '此對局沒有可用的對陣記錄。',
   'underboard.crosstableGuest': '對陣記錄僅保留給已登入棋手和引擎，訪客席位沒有記錄。',
   'underboard.crosstablePrivate': '其中一個席位為私密，因此沒有公開記錄。',
-  'underboard.crosstableFirstGame': '{a} 與 {b} 的首次對局。',
   'underboard.crosstableShowingLast': '顯示最近 {shown} 局，共 {total} 局。',
   'annotate.comment': '評註',
   'annotate.glyphs': '符號',

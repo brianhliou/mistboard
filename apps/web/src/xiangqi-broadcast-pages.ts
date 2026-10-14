@@ -150,18 +150,16 @@ export function calendarEventRow(event: BroadcastCalendarEvent): HTMLElement {
       : event.status === 'upcoming'
         ? t('broadcast.statusUpcoming')
         : t('broadcast.statusFinished');
-  const link = document.createElement('a');
-  link.className = 'xqb-link';
+  row.append(when, what, status);
+  // Only an event we relay links anywhere: its Watch page. One we don't relay
+  // shows no link; the upstream page takes the reader off the site (#539).
   if (event.tourSlug) {
+    const link = document.createElement('a');
+    link.className = 'xqb-link';
     link.href = `/broadcast/xiangqi/${encodeURIComponent(event.tourSlug)}`;
     link.textContent = t('broadcast.watch');
-  } else if (event.sourceUrl) {
-    link.href = event.sourceUrl;
-    link.rel = 'noreferrer';
-    link.textContent = t('broadcast.source');
+    row.append(link);
   }
-  row.append(when, what, status);
-  if (link.href) row.append(link);
   return row;
 }
 
