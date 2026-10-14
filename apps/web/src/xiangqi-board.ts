@@ -621,6 +621,17 @@ export interface XiangqiInteractiveBoardOptions {
   /** Optional: the general to glow as in check for a display view, by the
    *  variant's own rule. Absent = never (the board has no notion of check). */
   checkSquare?: (view: StandardXiangqiPlayerView) => XiangqiSquare | null;
+  /** Optional: the points a hand piece may drop on, marked like move targets
+   *  (a drop variant with a hand piece selected: crazyhouse review). Read on
+   *  every render; absent or empty = none. */
+  dropTargets?: () => readonly XiangqiSquare[];
+  /** Optional: offered every enabled square click first. A drop variant takes
+   *  the click while a hand piece is selected (the drop itself) and returns
+   *  true; the board then drops its own selection and only re-renders. */
+  takeSquareClick?: (square: XiangqiSquare) => boolean;
+  /** Optional: a board piece was lifted by drag, so a drop variant can put its
+   *  selected hand piece back. */
+  onPieceDragStart?: () => void;
 }
 
 export interface XiangqiInteractiveBoard {
@@ -658,6 +669,7 @@ export function createXiangqiInteractiveBoard(
       markers,
       lastDropSquare: opts.lastDropSquare?.() ?? null,
       checkSquare: opts.checkSquare?.(view) ?? null,
+      ...(opts.dropTargets ? { dropTargets: opts.dropTargets() } : {}),
       ...(opts.coordinates === undefined ? {} : { coordinates: opts.coordinates }),
       ...(opts.coordinateStyle === undefined ? {} : { coordinateStyle: opts.coordinateStyle }),
     });
@@ -701,6 +713,11 @@ export function createXiangqiInteractiveBoard(
   }
 
   function handleClick(square: XiangqiSquare): void {
+    if (opts.enabled() && opts.takeSquareClick?.(square)) {
+      selectedSquare = null;
+      rerender();
+      return;
+    }
     if (opts.enabled()) {
       const view = opts.getInteractionView();
       if (view) {
@@ -754,6 +771,7 @@ export function createXiangqiInteractiveBoard(
       );
     },
     onDragStart: (from) => {
+      opts.onPieceDragStart?.();
       selectedSquare = from as XiangqiSquare;
       draggingFrom = from as XiangqiSquare;
       rerender();
