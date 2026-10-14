@@ -51,6 +51,14 @@ const baseAnnouncements: Announcement[] = [
     cta: 'Read the article',
   },
   {
+    date: '2026-10-14',
+    kind: 'update',
+    headline: 'Banqi now shows reveal odds.',
+    body: 'The face-down tally under a banqi board now gives the chance of each piece turning up on the next flip, counted only from what both players can already see. It is on for both players and spectators, rated games included. Banqi boards also show coordinates when Board coordinates is on in your display settings, and a finished room keeps the tally of what stayed face-down.',
+    href: '/?play=computer&gameSpecId=banqi',
+    cta: 'Play banqi',
+  },
+  {
     date: '2026-10-13',
     kind: 'article',
     headline: 'Fortress and Atomic Xiangqi are back on the drawing board.',

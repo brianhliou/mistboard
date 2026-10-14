@@ -48,6 +48,11 @@ const ZH_HANS: Record<string, string> = {
   'Looking for jieqi puzzles: what 50 games turned up.': '在揭棋里找题目：50 盘对局找到了什么。',
   'We scored 2,939 positions from 50 jieqi games, looking for puzzles. Four passed the rules our xiangqi puzzles go through, and none of them turns on a face-down piece: the hidden-piece answers were bets, or moves the tile hardly touched. Where skill does show is in timing a capture a face-down piece can make whatever it turns out to be. Every example is on a board you can step through.':
     '我们给 50 盘揭棋对局中的 2,939 个局面打分，寻找题目。有四个局面通过了我们象棋题目要过的规则，没有一个取决于暗子：取决于暗子的答案，要么是赌博，要么是暗子几乎无关的着法。实力真正体现的地方，是一枚暗子无论翻出什么都能完成的吃子，何时去吃。每个例子都在可以逐着演示的棋盘上。',
+  // ── 2026-10-14 (banqi reveal odds) ── 暗子 / 暗子概率 follow the banqi room's own strings.
+  'Banqi now shows reveal odds.': '暗棋现在显示暗子概率。',
+  'The face-down tally under a banqi board now gives the chance of each piece turning up on the next flip, counted only from what both players can already see. It is on for both players and spectators, rated games included. Banqi boards also show coordinates when Board coordinates is on in your display settings, and a finished room keeps the tally of what stayed face-down.':
+    '暗棋棋盘下方的暗子统计，现在会给出下一次翻开时每种棋子出现的概率，只根据双方都已看得到的信息计算。双方棋手和观战者都能看到，等级分对局也包括在内。在显示设置中打开“棋盘坐标”后，暗棋棋盘也会显示坐标；对局结束后，房间会保留最后仍是暗子的统计。',
+  'Play banqi': '下暗棋',
   // ── 2026-10-12 (banqi perpetual chase article) ── 长捉 / 重复局面 follow the banqi-perpetual-chase article.
   'Why banqi needs a perpetual chase rule, shown with real games.':
     '暗棋为什么需要长捉规则，用真实对局说明。',
@@ -506,6 +511,11 @@ const ZH_HANT: Record<string, string> = {
   'Looking for jieqi puzzles: what 50 games turned up.': '在揭棋裡找題目：50 盤對局找到了什麼。',
   'We scored 2,939 positions from 50 jieqi games, looking for puzzles. Four passed the rules our xiangqi puzzles go through, and none of them turns on a face-down piece: the hidden-piece answers were bets, or moves the tile hardly touched. Where skill does show is in timing a capture a face-down piece can make whatever it turns out to be. Every example is on a board you can step through.':
     '我們給 50 盤揭棋對局中的 2,939 個局面評分，尋找題目。有四個局面通過了我們象棋題目要過的規則，沒有一個取決於暗子：取決於暗子的答案，要麼是賭博，要麼是暗子幾乎無關的著法。實力真正體現的地方，是一枚暗子無論翻出什麼都能完成的吃子，何時去吃。每個例子都在可以逐著演示的棋盤上。',
+  // ── 2026-10-14 (banqi reveal odds) ── 暗子 / 暗子概率 follow the banqi room's own strings.
+  'Banqi now shows reveal odds.': '暗棋現在顯示暗子機率。',
+  'The face-down tally under a banqi board now gives the chance of each piece turning up on the next flip, counted only from what both players can already see. It is on for both players and spectators, rated games included. Banqi boards also show coordinates when Board coordinates is on in your display settings, and a finished room keeps the tally of what stayed face-down.':
+    '暗棋棋盤下方的暗子統計，現在會給出下一次翻開時每種棋子出現的機率，只根據雙方都已看得到的資訊計算。雙方棋手和觀戰者都能看到，等級分對局也包括在內。在顯示設定中打開「棋盤座標」後，暗棋棋盤也會顯示座標；對局結束後，房間會保留最後仍是暗子的統計。',
+  'Play banqi': '下暗棋',
   // ── 2026-10-12 (banqi perpetual chase article) ── 長捉 / 重複局面 follow the banqi-perpetual-chase article.
   'Why banqi needs a perpetual chase rule, shown with real games.':
     '暗棋為什麼需要長捉規則，用真實對局說明。',
