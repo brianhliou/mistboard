@@ -131,20 +131,32 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
     // WASM threads, which need SharedArrayBuffer and therefore cross-origin
     // isolation. Send COOP/COEP on exactly the review document routes (set here,
     // before the various index.html handlers below, which only writeHead a
-    // content-type and so preserve these). credentialless keeps our same-origin
-    // bundle/engine assets working without forcing CORP on every subresource,
-    // and leaves the rest of the site (patron's Stripe redirect, etc.)
-    // non-isolated. See docs-private/analysis-board-track.md.
+    // content-type and so preserve these), leaving the rest of the site
+    // (patron's Stripe redirect, etc.) non-isolated. See
+    // docs-private/analysis-board-track.md.
+    //
+    // COEP is require-corp, for every browser (#276). It was credentialless
+    // until 2026-10-14, and WebKit does not implement credentialless: it ignores
+    // the header, so every iPhone/iPad browser and desktop Safari stayed
+    // un-isolated and could never start the engine. require-corp isolates all
+    // three engines. It is one policy rather than a WebKit-only one on purpose:
+    // the SPA keeps this COEP across pushState navigations, so a cross-origin
+    // no-cors subresource anywhere on the site is blocked unless it sends CORP,
+    // and with one policy that breakage shows up in Chrome during development
+    // instead of only on the phones nobody tests on. The cross-origin loads the
+    // site makes all pass: posthog-js loads its extras with crossorigin=anonymous
+    // (us-assets answers ACAO *), and the Cloudflare beacon and YouTube
+    // thumbnails send CORP: cross-origin. server-http.test.ts pins the header.
     if (isReviewShellRoute(pathname)) {
       response.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-      response.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
+      response.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
     }
 
     // Ceval engines run as dedicated workers (Fairy-Stockfish additionally as
     // emscripten pthreads). A dedicated worker only becomes cross-origin
     // isolated (and can accept the SharedArrayBuffer memory the main thread
     // hands it) when its OWN script response carries COEP; the document's
-    // credentialless header does not extend to it, so the worker spawns
+    // header does not extend to it, so the worker spawns
     // un-isolated and dies (pthreads: an opaque "pthread sent an error";
     // Chrome on COEP documents: ERR_BLOCKED_BY_RESPONSE before the script
     // runs). Serve ALL vendored engine assets (/engine/<pkg>/<file>) with

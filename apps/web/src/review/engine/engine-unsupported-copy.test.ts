@@ -24,10 +24,10 @@ const UA = {
 describe('engineUnsupportedCopy', () => {
   it('never names Safari to Chrome, Firefox or Edge on an iPhone', () => {
     // The reported bug: Chrome on iPhone was told "Safari cannot run it yet".
-    // Every iOS browser is WebKit, so the platform is the constraint.
+    // Every iOS browser is WebKit, so the OS version is the constraint.
     for (const userAgent of [UA.iphoneChrome, UA.iphoneFirefox, UA.iphoneEdge, UA.iphoneSafari]) {
       const copy = engineUnsupportedCopy({ userAgent, maxTouchPoints: 5 });
-      expect(copy).toContain('iPhone and iPad');
+      expect(copy).toBe('Local engine needs iOS or iPadOS 15.2 or later.');
       expect(copy).not.toContain('Safari');
     }
   });
@@ -35,14 +35,13 @@ describe('engineUnsupportedCopy', () => {
   it('treats an iPad asking for the desktop site as an iPad, not desktop Safari', () => {
     expect(isAppleMobile({ userAgent: UA.ipadDesktopMode, maxTouchPoints: 5 })).toBe(true);
     expect(engineUnsupportedCopy({ userAgent: UA.ipadDesktopMode, maxTouchPoints: 5 })).toContain(
-      'iPhone and iPad',
+      'iPadOS',
     );
   });
 
-  it('names Safari only for desktop Safari, and points at a browser that works', () => {
+  it('names Safari only for desktop Safari, with the version that isolates', () => {
     const copy = engineUnsupportedCopy({ userAgent: UA.macSafari, maxTouchPoints: 0 });
-    expect(copy).toContain('Safari');
-    expect(copy).toContain('Chrome');
+    expect(copy).toBe('Local engine needs Safari 15.2 or later.');
   });
 
   it('stays generic for any other browser that cannot isolate', () => {

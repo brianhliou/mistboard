@@ -1,9 +1,9 @@
 // Curated video library at /videos, lichess.org/video style: a filterable grid
 // of verified English-first xiangqi videos. External (YouTube) cards link out in
 // a new tab instead of embedding: the dev server is cross-origin isolated
-// site-wide (COEP credentialless in vite.config.ts), which blocks YouTube
-// iframes (the embed document sends no COEP), while no-cors thumbnail <img> loads
-// are exactly what credentialless permits. Link-out behaves identically in dev
+// site-wide (COEP require-corp in vite.config.ts), which blocks YouTube
+// iframes (the embed document sends no COEP), while thumbnail <img> loads pass
+// because img.youtube.com sends CORP: cross-origin. Link-out behaves identically in dev
 // and prod; revisit lazy embeds only if the dev header scoping changes.
 //
 // The catalog filters on four axes (topic / level / game / spoken language) plus
