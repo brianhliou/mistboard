@@ -198,6 +198,8 @@ Conventions:
 
 ### Fixed
 
+- jieqi and banqi replays in Chinese articles load again ([4d86c768](https://github.com/brianhliou/mistboard/commit/4d86c768))
+- copying a challenge link no longer says Copied when the browser blocks the clipboard ([4d86c768](https://github.com/brianhliou/mistboard/commit/4d86c768))
 - the broadcast calendar shows no Source link for events we don't relay ([493549c0](https://github.com/brianhliou/mistboard/commit/493549c0))
 - dpxq credits on relayed tours link the tour's dpxq page ([493549c0](https://github.com/brianhliou/mistboard/commit/493549c0))
 - homepage play panel names no longer clip descenders ([493549c0](https://github.com/brianhliou/mistboard/commit/493549c0))
