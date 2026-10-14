@@ -10014,12 +10014,34 @@ const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {
   'zh-Hant': ZH_HANT,
 };
 
+// Fields that hold board geometry rather than prose. A dictionary key that
+// happens to equal a geometry token (the bare role names `advisor`, `general`
+// added for the banqi chase labels) must not rewrite a deal or a move list: on
+// 2026-10-13 that turned every zh jieqi and banqi replay deal into 士/将 roles
+// and the deal check threw. Values under these keys are copied untranslated.
+export const ARTICLE_GEOMETRY_KEYS: ReadonlySet<string> = new Set([
+  'deal',
+  'moves',
+  'role',
+  'color',
+  'square',
+  'squares',
+  'from',
+  'to',
+  'uci',
+  'fen',
+  'perspective',
+  'orientation',
+]);
+
 function deepTranslate<T>(value: T, dict: Record<string, string>): T {
-  if (typeof value === 'string') return (dict[value] ?? value) as T;
+  if (typeof value === 'string') return (hasOwnKey(dict, value) ? dict[value] : value) as T;
   if (Array.isArray(value)) return value.map((v) => deepTranslate(v, dict)) as T;
   if (value && typeof value === 'object') {
     const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(value)) out[k] = deepTranslate(v, dict);
+    for (const [k, v] of Object.entries(value)) {
+      out[k] = ARTICLE_GEOMETRY_KEYS.has(k) ? v : deepTranslate(v, dict);
+    }
     return out as T;
   }
   return value;
