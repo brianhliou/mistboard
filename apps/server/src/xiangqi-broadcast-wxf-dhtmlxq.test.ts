@@ -3,7 +3,10 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { replayXiangqiBroadcastBoard } from '@mistboard/game';
-import { convertWxfDhtmlXqPageToSnapshot } from './xiangqi-broadcast-wxf-dhtmlxq.js';
+import {
+  convertWxfDhtmlXqPageToSnapshot,
+  extractArticleTitle,
+} from './xiangqi-broadcast-wxf-dhtmlxq.js';
 
 const FIXTURE_PATH = fileURLToPath(
   new URL('../fixtures/wxf-dhtmlxq/2019-wxc-men-r1a-mini.html', import.meta.url),
@@ -92,4 +95,37 @@ test('a table number in the source id outranks an explicit boardNumber', () => {
     result.snapshot.boards.map((board) => board.boardNumber),
     [2, 6],
   );
+});
+
+// From 2024 WXF round pages wrap nothing but the site name in <title>
+// ("World Xiangqi Federation 世界象棋联合会 (WXF) - World Xiangqi Federation
+// 世界象棋联合会 (WXF)"). Stripping only the tail made the site name the tour
+// name and slug of every unpinned import (world-xiangqi-federation-wxf-…).
+test('a 2025 WXF round page is named by its own title, not the site name', () => {
+  const html = readFileSync(
+    fileURLToPath(
+      new URL('../fixtures/wxf-dhtmlxq/2025-wxc-men/article-1844.html', import.meta.url),
+    ),
+    'utf-8',
+  );
+  assert.equal(extractArticleTitle(html), '2025 世界象棋锦标赛 赛谱 男子组 第1轮');
+
+  const result = convertWxfDhtmlXqPageToSnapshot(html);
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.snapshot.tour.name, '2025 世界象棋锦标赛 赛谱 男子组 第1轮');
+  assert.doesNotMatch(result.snapshot.tour.slug, /world-xiangqi-federation/);
+
+  // With no og:title either, the frames' event tag names the tour.
+  const bare = html.replace(/<meta property="og:title"[^>]*>/, '');
+  assert.equal(extractArticleTitle(bare), undefined);
+  const fromEvent = convertWxfDhtmlXqPageToSnapshot(bare);
+  assert.equal(fromEvent.ok, true);
+  if (!fromEvent.ok) return;
+  assert.equal(fromEvent.snapshot.tour.name, '第19届世界象棋锦标赛＆第5届世青赛');
+  assert.doesNotMatch(fromEvent.snapshot.tour.slug, /world-xiangqi-federation/);
+});
+
+test('a 2019 WXF title keeps its article name', () => {
+  assert.equal(extractArticleTitle(fixtureHtml()), '2019 World Xiangqi Championship Men Round 01a');
 });
