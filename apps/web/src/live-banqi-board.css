@@ -17,6 +17,13 @@
 .banqi-board-bg {
   fill: var(--mini-xq-board-bg, #f0d6a4);
 }
+.banqi-coord {
+  fill: color-mix(in srgb, var(--mini-xq-grid, #5b4a32) 72%, transparent);
+  font-weight: 700;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
 .banqi-grid line {
   stroke: var(--mini-xq-grid, #5b4a32);
   stroke-width: 1.5;
