@@ -471,6 +471,7 @@ export const ZH_HANS_PLAY = {
   'result.selfDraw': '自摸',
   'result.onDiscard': '点炮胡',
   'live.stillFaceDown': '尚未翻开',
+  'live.faceDownAtEnd': '终局时未翻开',
   'live.allRevealed': '已全部翻开',
   'live.unknownCaptured': '其中 {count} 枚已被吃，不知是哪几枚',
   'live.revealOdds.title': '暗子概率',

@@ -1,6 +1,8 @@
 import type { HiddenPoolSide } from '@mistboard/game';
 import './hidden-pool-panel.css';
 import { t } from './i18n/catalog.js';
+import { formatRevealPercent } from './jieqi-reveal-odds.js';
+import './live-jieqi-reveal-odds.css';
 import { countBadge } from './review/captured-pool.js';
 
 // The "still face-down" panel for the flip variants: one row per ink listing the
@@ -24,16 +26,30 @@ export type HiddenPoolRow<Color extends string, Role extends string> = {
   side: HiddenPoolSide<Role>;
 };
 
+export type HiddenPoolPanelOptions = {
+  /** Replaces the default "Still face-down" caption. */
+  caption?: string;
+  /**
+   * Reveal odds (banqi, #542): print each disc's chance under it, count over
+   * `total`, the face-down tiles the pool is drawn from. Only for a pool that
+   * every face-down tile draws from alike; the caller decides when it applies.
+   */
+  odds?: { total: number };
+};
+
 export function renderHiddenPoolPanel<Color extends string, Role extends string>(
   host: HTMLElement,
   rows: ReadonlyArray<HiddenPoolRow<Color, Role>>,
   renderPiece: (entry: { color: Color; role: Role }) => string,
+  options: HiddenPoolPanelOptions = {},
 ): void {
   host.replaceChildren();
   if (rows.every((row) => row.side.total === 0)) return;
+  const odds = options.odds && options.odds.total > 0 ? options.odds : null;
+  host.classList.toggle('hidden-pool--odds', odds !== null);
   const caption = document.createElement('div');
   caption.className = 'hidden-pool__caption';
-  caption.textContent = t('live.stillFaceDown');
+  caption.textContent = options.caption ?? t('live.stillFaceDown');
   host.append(caption);
   for (const row of rows) {
     const line = document.createElement('div');
@@ -58,7 +74,19 @@ export function renderHiddenPoolPanel<Color extends string, Role extends string>
       span.setAttribute('aria-label', entry.count > 1 ? `${text} x${entry.count}` : text);
       span.innerHTML = renderPiece({ color: row.color, role: entry.role });
       if (entry.count > 1) span.append(countBadge(entry.count));
-      pieces.append(span);
+      if (!odds) {
+        pieces.append(span);
+        continue;
+      }
+      // The jieqi reveal-odds chip: the disc, its chance printed under it.
+      const chip = document.createElement('span');
+      chip.className = 'reveal-odds-chip hidden-pool__chip';
+      chip.dataset.role = entry.role;
+      const pct = document.createElement('span');
+      pct.className = 'reveal-odds-chip__pct';
+      pct.textContent = formatRevealPercent(entry.count / odds.total);
+      chip.append(span, pct);
+      pieces.append(chip);
     }
     line.append(pieces);
     if (row.side.unknownCaptured > 0) {

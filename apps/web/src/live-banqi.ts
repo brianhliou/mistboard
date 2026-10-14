@@ -25,8 +25,9 @@ import type {
   BanqiSeat,
   BanqiSquare,
 } from '@mistboard/game';
-import { banqiHiddenPool } from '@mistboard/game';
 import './live-xiangqi.css';
+import { banqiFaceDownAtEnd, banqiRevealOdds } from './banqi-reveal-odds.js';
+import { boardCoordinatesEnabled } from './display-preferences.js';
 import { banqiEnabled } from './feature-flags.js';
 import { renderHiddenPoolPanel } from './hidden-pool-panel.js';
 import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
@@ -330,6 +331,7 @@ function renderBoard(liveRefs: LiveRefs, view: BanqiWireView | null): void {
     interactive: true,
     selectedSquare,
     draggingFrom,
+    coordinates: boardCoordinatesEnabled(),
     // A face-down tile is clicked directly to flip, so the renderer wants only
     // the selected piece's board moves (it already excludes self-move flips).
     legalMoves: selectedSquare
@@ -488,7 +490,8 @@ function dropBanqiPiece(liveRefs: LiveRefs, from: BanqiSquare, to: BanqiSquare |
 // has unrevealed: public arithmetic (start minus revealed minus captured) that
 // the player would otherwise do by hand.
 function renderCapturedPools(liveRefs: LiveRefs, view: BanqiWireView | null): void {
-  renderBanqiMaterial(liveRefs, view, view ? viewerInkFor(view) : null);
+  const moves = (core?.state.events ?? []).filter(isBanqiMoveEvent).map((event) => event.move);
+  renderBanqiMaterial(liveRefs, view, view ? viewerInkFor(view) : null, moves);
 }
 
 // The viewer's INK (glyph colour), once the first flip binds it. Falls back to
@@ -503,10 +506,15 @@ function viewerInkFor(view: BanqiWireView): BanqiColor | null {
 // extraction rationale as live-banqi-render / live-banqi-interaction. `viewerInk`
 // is null before the opening flip binds it: nothing can have been captured yet,
 // and the pool rows fall back to red-then-black since no seat owns an ink.
+//
+// `moves` is the room's move log. A finished room's truth view has every tile
+// face up, which would empty the tally (#544); the log recovers which tiles were
+// still face-down when play ended, and the tally keeps showing those.
 export function renderBanqiMaterial(
   slots: Pick<LiveRefs, 'capturesTop' | 'capturesBottom' | 'hiddenPool'>,
   view: BanqiWireView | null,
   viewerInk: BanqiColor | null,
+  moves: readonly BanqiMove[] = [],
 ): void {
   slots.capturesTop.replaceChildren();
   slots.capturesBottom.replaceChildren();
@@ -526,14 +534,24 @@ export function renderBanqiMaterial(
   // Rows follow the board: the opponent's ink on top, the viewer's below.
   const top: BanqiColor = viewerInk === 'black' ? 'red' : viewerInk === 'red' ? 'black' : 'red';
   const bottom: BanqiColor = top === 'red' ? 'black' : 'red';
-  const pool = banqiHiddenPool(view);
+  const finished = view.status.type === 'finished';
+  const poolView = finished ? banqiFaceDownAtEnd(view, moves) : view;
+  if (!poolView) return;
+  const odds = banqiRevealOdds(poolView);
   renderHiddenPoolPanel(
     slots.hiddenPool,
     [
-      { color: top, label: banqiInkLabel(top), side: pool[top] },
-      { color: bottom, label: banqiInkLabel(bottom), side: pool[bottom] },
+      { color: top, label: banqiInkLabel(top), side: odds.pool[top] },
+      { color: bottom, label: banqiInkLabel(bottom), side: odds.pool[bottom] },
     ],
     glyph,
+    // While the game is on, each disc carries its reveal odds (#542); a finished
+    // game's tally is a record of what stayed hidden, so it carries none.
+    finished
+      ? { caption: t('live.faceDownAtEnd') }
+      : view.status.type === 'playing'
+        ? { caption: t('live.revealOdds.couldBe', { count: odds.total }), odds }
+        : {},
   );
 }
 
