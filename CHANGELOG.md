@@ -26,6 +26,9 @@ Conventions:
 
 ### Playing
 
+- banqi shows reveal odds on face-down pieces for both players and spectators, rated included ([493549c0](https://github.com/brianhliou/mistboard/commit/493549c0))
+- banqi boards show coordinates when Board coordinates is on ([493549c0](https://github.com/brianhliou/mistboard/commit/493549c0))
+- bigger captured pieces in the banqi room's right column ([493549c0](https://github.com/brianhliou/mistboard/commit/493549c0))
 - a browser that lists Chinese among its languages now starts on the Chinese-character pieces and river text, and the Traditional and Simplified tiles in the piece picker show the piece as the board draws it ([182cfd50](https://github.com/brianhliou/mistboard/commit/182cfd50))
 - a link to a correspondence seek that is gone now says whether it was taken (with a link to the game), withdrawn, declined or expired ([182cfd50](https://github.com/brianhliou/mistboard/commit/182cfd50))
 - Banqi forbids a chasing move that would repeat a position a third time (長捉), so a chase can no longer force a repetition draw; the forbidden move shows as a red cross, with a note on the board when you press it ([411963fd](https://github.com/brianhliou/mistboard/commit/411963fd))
@@ -186,6 +189,8 @@ Conventions:
 
 ### Removed
 
+- the puzzles streak line under Success! ([493549c0](https://github.com/brianhliou/mistboard/commit/493549c0))
+- the crosstable "First game between" line ([493549c0](https://github.com/brianhliou/mistboard/commit/493549c0))
 - Fortress Xiangqi and Atomic Xiangqi are on hold for a redesign; finished games still replay ([8ca17ae7](https://github.com/brianhliou/mistboard/commit/8ca17ae7))
 - Fortress Xiangqi and Atomic Xiangqi are on hold for a redesign; finished games still replay ([8dd871c8](https://github.com/brianhliou/mistboard/commit/8dd871c8))
 - Atomic Xiangqi is off the play menu and listings while its rules are reworked; games, replays and the rules page stay up by link ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
@@ -193,6 +198,12 @@ Conventions:
 
 ### Fixed
 
+- the broadcast calendar shows no Source link for events we don't relay ([493549c0](https://github.com/brianhliou/mistboard/commit/493549c0))
+- dpxq credits on relayed tours link the tour's dpxq page ([493549c0](https://github.com/brianhliou/mistboard/commit/493549c0))
+- homepage play panel names no longer clip descenders ([493549c0](https://github.com/brianhliou/mistboard/commit/493549c0))
+- the Benedict article's pie-rule diagrams show Black's soldiers in full ([493549c0](https://github.com/brianhliou/mistboard/commit/493549c0))
+- a finished banqi room keeps its face-down tally under the board, showing what stayed hidden at the end ([493549c0](https://github.com/brianhliou/mistboard/commit/493549c0))
+- a broadcast recovers from one dropped dpxq request instead of waiting half an hour for the next poll ([493549c0](https://github.com/brianhliou/mistboard/commit/493549c0))
 - A bot move that timed out is now retried on a healthy engine worker instead of the one being restarted ([48b1258e](https://github.com/brianhliou/mistboard/commit/48b1258e))
 - The account menu's ping now times the server your games connect to, not the slower page path ([48b1258e](https://github.com/brianhliou/mistboard/commit/48b1258e))
 - A bot move that timed out is now retried on a healthy engine worker instead of the one being restarted ([ba7d8d8a](https://github.com/brianhliou/mistboard/commit/ba7d8d8a))
@@ -293,6 +304,7 @@ Conventions:
 
 ### Technical
 
+- World Xiangqi Federation results pages can now feed a broadcast, as a backup relay source ([493549c0](https://github.com/brianhliou/mistboard/commit/493549c0))
 - The site now deploys without the AB-JChess network when its authors' release cannot be reached, hiding that bot until a later build fetches it ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
 - Signups are now located to the visitor's country in analytics, not the Cloudflare edge ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
 
