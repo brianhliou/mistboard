@@ -18,6 +18,7 @@
 //   npm run mobile:audit -- --device iphone --shots       # + one viewport shot per page
 //   npm run mobile:audit -- --list                        # the page list
 //   npm run mobile:audit -- --strict                      # exit 1 on any fail
+//   npm run mobile:audit -- --path study=/study/abc       # a page's URL on a local pair
 //
 // Output: tmp/mobile-audit/<stamp>/report.md and report.json (+ shots/).
 // Not wired into CI or the release gate (2026-10-14): the first run is a
@@ -133,6 +134,7 @@ function parseArgs(argv) {
     concurrency: 3,
     settleMs: 2500,
     navWaitMs: 10_000,
+    paths: new Map(),
   };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
@@ -160,7 +162,15 @@ function parseArgs(argv) {
     else if (a === '--list') args.list = true;
     else if (a === '--concurrency')
       args.concurrency = Math.max(1, Number.parseInt(next(), 10) || 1);
-    else if (a === '--settle-ms') args.settleMs = Math.max(0, Number.parseInt(next(), 10) || 0);
+    else if (a === '--path') {
+      // A local pair has no prod study slug and few long games in its recent
+      // feed: point a page at a row that exists there (--path study=/study/abc).
+      const v = next();
+      const eq = v.indexOf('=');
+      if (eq < 1 || !v.slice(eq + 1).startsWith('/'))
+        throw new Error(`--path wants <page>=/path (got ${v})`);
+      args.paths.set(v.slice(0, eq), v.slice(eq + 1));
+    } else if (a === '--settle-ms') args.settleMs = Math.max(0, Number.parseInt(next(), 10) || 0);
     else if (a === '--help' || a === '-h') {
       console.log(readHelp());
       process.exit(0);
@@ -173,6 +183,7 @@ function readHelp() {
   return [
     'npm run mobile:audit -- [--base URL] [--only a,b] [--device iphone|android|all]',
     '                        [--shots] [--strict] [--list] [--concurrency N] [--settle-ms MS]',
+    '                        [--path <page>=/path ...]   (override a page URL, e.g. on a local pair)',
     '',
     'Pages:',
     ...PAGES.map(
@@ -190,7 +201,7 @@ const ANALYTICS_HOST = /posthog|\/ingest\//i;
 
 async function auditPage(context, base, page, args, shotsDir, deviceKey) {
   const viewport = DEVICES[deviceKey].descriptor.viewport;
-  const path = page.path ?? (await page.resolve(base));
+  const path = args.paths.get(page.name) ?? page.path ?? (await page.resolve(base));
   if (!path)
     return {
       page: page.name,
