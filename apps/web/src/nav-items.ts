@@ -56,11 +56,17 @@ export function primaryNavItems(): NavItem[] {
   ];
 }
 
-// Top-nav Community dropdown (lichess-aligned order): Players (the leaderboard),
-// Coaches (the verified-coach directory), Friends (your following list), Forum,
-// Blog (the articles surface). Teams is deliberately deferred. Kept distinct
-// from communityRailItems(): the dropdown is the wide social entry, the rail is
-// the leaderboard/bots sub-nav.
+// Top-nav Community dropdown (lichess-aligned order): Leaderboard, Pro players
+// (the broadcast player pages at /players), Bots (the bot roster), Friends (your
+// following list), Forum, Blog (the articles surface). Teams is deliberately
+// deferred. Kept distinct from communityRailItems(): the dropdown is the wide
+// social entry, the rail is the leaderboard/bots sub-nav.
+//
+// The leaderboard entry was labelled "Players" until 2026-10-14, when Pro
+// players joined the menu: two "Players" entries pointing at /player and
+// /players would read as one page listed twice. Pro players and Bots had pages
+// but no menu path (Bots only in the rail, Pro players nowhere). Rating stats
+// stays rail-only: it is a one-variant histogram, not a destination.
 //
 // The Discord invite was here from 2026-08-27 and was pulled on 2026-08-28,
 // then out of the homepage footer and the forum home on 2026-08-31: not
@@ -91,7 +97,9 @@ export function playNavItems(): NavItem[] {
 
 export function communityNavItems(): NavItem[] {
   return [
-    { label: 'Players', labelKey: 'nav.players', href: '/player' },
+    { label: 'Leaderboard', labelKey: 'nav.leaderboard', href: '/player' },
+    { label: 'Pro players', labelKey: 'nav.proPlayers', href: '/players' },
+    { label: 'Bots', labelKey: 'nav.bots', href: '/bots' },
     { label: 'Friends', labelKey: 'nav.friends', href: '/following', signedInOnly: true },
     { label: 'Forum', labelKey: 'nav.forum', href: '/forum' },
     { label: 'Blog', labelKey: 'nav.blog', href: '/blog' },

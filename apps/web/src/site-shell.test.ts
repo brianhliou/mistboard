@@ -64,32 +64,37 @@ describe('site shell nav', () => {
     expect(correspondence?.textContent).toBe('Correspondence');
     expect(correspondence?.hidden).toBe(false);
     expect(nav.querySelector<HTMLAnchorElement>('a[href="/forum"]')?.textContent).toBe('Forum');
-    // Community dropdown: Players (the leaderboard), Friends, Forum, Blog. The
-    // title also links to /player, so scope item lookups to the panel.
+    // Community dropdown: Leaderboard, Pro players, Bots, Friends, Forum, Blog.
+    // The title also links to /player, so scope item lookups to the panel.
     const communityMenu = [...nav.querySelectorAll<HTMLElement>('.site-nav-menu')].find(
       (menu) => menu.querySelector('.site-nav-menu-toggle')?.textContent === 'Community',
     );
     const communityPanel = communityMenu?.querySelector<HTMLElement>('.site-nav-menu-panel');
-    expect(communityPanel?.querySelector<HTMLAnchorElement>('a[href="/player"]')?.textContent).toBe(
-      'Players',
-    );
+    // Friends is signed-in only, so it renders hidden here but stays in the DOM.
     expect(
-      communityPanel?.querySelector<HTMLAnchorElement>('a[href="/following"]')?.textContent,
-    ).toBe('Friends');
-    expect(communityPanel?.querySelector<HTMLAnchorElement>('a[href="/blog"]')?.textContent).toBe(
-      'Blog',
-    );
+      [...(communityPanel?.querySelectorAll<HTMLAnchorElement>('a') ?? [])].map((link) => [
+        link.getAttribute('href'),
+        link.textContent,
+      ]),
+    ).toEqual([
+      ['/player', 'Leaderboard'],
+      ['/players', 'Pro players'],
+      ['/bots', 'Bots'],
+      ['/following', 'Friends'],
+      ['/forum', 'Forum'],
+      ['/blog', 'Blog'],
+    ]);
     // The Discord invite was pulled from this dropdown on 2026-08-28. It is
     // still in the footer, so the assertion moves rather than disappearing.
     expect(communityPanel?.querySelector('a[href^="https://discord.gg/"]')).toBeNull();
-    // The Community title is a link to the player page, not just a toggle.
+    // The Community title is a link to the leaderboard, not just a toggle.
     const communityToggle = [
       ...nav.querySelectorAll<HTMLElement>('.site-nav-menu > .site-nav-menu-toggle'),
     ].find((el) => el.textContent === 'Community');
     expect(communityToggle?.tagName).toBe('A');
     expect((communityToggle as HTMLAnchorElement).getAttribute('href')).toBe('/player');
-    // /bots moved out of the top-nav dropdown into the community rail.
-    expect(nav.querySelector<HTMLAnchorElement>('a[href="/bots"]')).toBeNull();
+    // Rating stats stays in the community rail only.
+    expect(nav.querySelector('a[href="/player/rating-stats"]')).toBeNull();
 
     // Watch is a split menu: the title links to Mistboard TV (/watch) and the
     // panel lists Broadcasts first, then Mistboard TV explicitly.
@@ -142,6 +147,56 @@ describe('site shell nav', () => {
     expect(
       learnMenu?.querySelector<HTMLAnchorElement>('.site-nav-menu-toggle')?.getAttribute('href'),
     ).toBe('/rules');
+  });
+
+  // Each Community entry lights up on its own page and on the pages beneath it,
+  // and lights the Community title with it. /player and /players share a
+  // prefix, so each must light only its own entry.
+  it.each([
+    ['/player', '/player'],
+    ['/leaderboard', '/player'],
+    ['/player/rating-stats', '/player'],
+    ['/players', '/players'],
+    ['/players/teams', '/players'],
+    ['/players/wang-tianyi', '/players'],
+    ['/bots', '/bots'],
+    ['/bot/misty', '/bots'],
+  ])('marks the Community entry active on %s', (path, activeHref) => {
+    window.history.replaceState(null, '', path);
+    const nav = buildNav();
+    document.body.append(nav);
+    const communityMenu = [...nav.querySelectorAll<HTMLElement>('.site-nav-menu')].find(
+      (menu) => menu.querySelector('.site-nav-menu-toggle')?.textContent === 'Community',
+    );
+    const active = [
+      ...(communityMenu?.querySelectorAll<HTMLAnchorElement>('.site-nav-menu-panel a.active') ??
+        []),
+    ].map((link) => link.getAttribute('href'));
+    expect(active).toEqual([activeHref]);
+    expect(
+      communityMenu?.querySelector('.site-nav-menu-panel a.active')?.getAttribute('aria-current'),
+    ).toBe('page');
+    expect(
+      communityMenu?.querySelector('.site-nav-menu-toggle')?.classList.contains('active'),
+    ).toBe(true);
+  });
+
+  it('labels the new Community entries in both Chinese scripts', () => {
+    for (const [locale, labels] of [
+      ['zh-Hans', ['排行榜', '职业棋手', '机器人']],
+      ['zh-Hant', ['排行榜', '職業棋手', '機器人']],
+    ] as const) {
+      const nav = buildNav(locale);
+      const panel = [...nav.querySelectorAll<HTMLElement>('.site-nav-menu')]
+        .find((menu) => menu.querySelector('.site-nav-menu-toggle[href$="/player"]'))
+        ?.querySelector('.site-nav-menu-panel');
+      expect(
+        [...(panel?.querySelectorAll<HTMLAnchorElement>('a') ?? [])]
+          .slice(0, 3)
+          .map((link) => link.textContent),
+        locale,
+      ).toEqual(labels);
+    }
   });
 
   it('renders the admin menu only for a likely admin, and syncs it in and out', () => {
