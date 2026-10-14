@@ -21,6 +21,7 @@ import {
 } from './ceval.js';
 import '../../seat-disc-ink.css';
 import './engine-panel.css';
+import { engineUnsupportedCopy } from './engine-unsupported-copy.js';
 import type { EvalBar } from './eval-bar.js';
 import { formatEval, formatMistyEval } from './eval-format.js';
 import { isMistyCevalVariant } from './misty-ceval.js';
@@ -39,7 +40,7 @@ export interface EnginePanel {
    *  search to grade a try). Fires onToggle like a click would; a no-op when
    *  the engine is unsupported in this browser or already in that state. */
   setOn(next: boolean): void;
-  /** Whether this browser can run the local engine at all (Safari cannot). */
+  /** Whether this browser can run the local engine at all (WebKit cannot: #276). */
   supported: boolean;
   dispose(): void;
 }
@@ -370,8 +371,13 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
     // reloads changes that. Measured 2026-08-01, along with why switching to
     // require-corp is not the fix (memory: engine_safari_coep_wall). Cases where
     // a reload genuinely helps (a stale header-less cached document) are rare
-    // next to the browsers that simply cannot, so name the limitation.
-    sub.textContent = 'Local engine is unavailable in this browser. Safari cannot run it yet.';
+    // next to the browsers that simply cannot, so name the limitation. Every
+    // iPhone/iPad browser is WebKit, so the copy names the platform there, not
+    // Safari (engine-unsupported-copy.ts).
+    sub.textContent = engineUnsupportedCopy({
+      userAgent: navigator.userAgent,
+      maxTouchPoints: navigator.maxTouchPoints ?? 0,
+    });
   } else {
     toggle.addEventListener('click', () => (on ? turnOff() : turnOn()));
   }

@@ -28,6 +28,20 @@ describe('createEnginePanel onLines', () => {
     panel.dispose();
   });
 
+  it('tells Chrome on an iPhone it is the platform, not Safari', () => {
+    const ua = vi
+      .spyOn(navigator, 'userAgent', 'get')
+      .mockReturnValue(
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/139.0.7258.76 Mobile/15E148 Safari/604.1',
+      );
+    const panel = createEnginePanel({ variant: 'xiangqi' });
+    const text = panel.el.textContent ?? '';
+    expect(text).toContain('unavailable on iPhone and iPad');
+    expect(text).not.toContain('Safari');
+    panel.dispose();
+    ua.mockRestore();
+  });
+
   it('does not feed arrows from setPosition while the engine is unsupported/off', () => {
     const onLines = vi.fn();
     const panel = createEnginePanel({ variant: 'xiangqi', onLines });
