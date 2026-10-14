@@ -49,7 +49,7 @@ describe('landing correspondence card', () => {
     setResolvedSignedIn(undefined);
   });
 
-  it('state: a move owed outranks a waiting seek and links to the first such game', () => {
+  it('state: a move owed outranks a waiting seek; several owed link to the inbox', () => {
     expect(
       correspondenceCardState(
         {
@@ -61,7 +61,21 @@ describe('landing correspondence card', () => {
         },
         { seeks: [{ visibility: 'public', gameSpecId: 'jieqi', daysPerMove: 1 }] },
       ),
-    ).toEqual({ kind: 'your-move', count: 2, href: '/room/a' });
+    ).toEqual({ kind: 'your-move', count: 2, href: '/correspondence' });
+  });
+
+  it('state: exactly one move owed links straight to that game', () => {
+    expect(
+      correspondenceCardState(
+        {
+          games: [
+            { url: '/room/a', isYourMove: false },
+            { url: '/room/b', isYourMove: true },
+          ],
+        },
+        null,
+      ),
+    ).toEqual({ kind: 'your-move', count: 1, href: '/room/b' });
   });
 
   it('state: an open casual 1-day jieqi board seek is waiting; anything else is the offer', () => {
@@ -119,7 +133,7 @@ describe('landing correspondence card', () => {
     expect(href.searchParams.get('referrer')).toMatch(/^\/zh-hans\/?\?corr=jieqi$/);
   });
 
-  it('signed in: shows "Your move in N games" linking to the first game', async () => {
+  it('signed in: "Your move in 3 games" links to the inbox listing them all', async () => {
     setResolvedSignedIn(true);
     stubFetch({
       '/api/correspondence/games': {
@@ -127,6 +141,7 @@ describe('landing correspondence card', () => {
           games: [
             { url: '/room/jq_1', isYourMove: true },
             { url: '/room/jq_2', isYourMove: true },
+            { url: '/room/jq_3', isYourMove: true },
           ],
         },
       },
@@ -134,7 +149,27 @@ describe('landing correspondence card', () => {
     });
     const card = buildLandingCorrespondenceCard({ locale: 'en' });
     await vi.waitFor(() => expect(card.dataset.state).toBe('your-move'));
-    expect(card.querySelector('.landing-corr-title')?.textContent).toBe('Your move in 2 games');
+    expect(card.querySelector('.landing-corr-title')?.textContent).toBe('Your move in 3 games');
+    expect(card.querySelector('.landing-corr-subline')?.textContent).toBe(
+      'Correspondence: see your games',
+    );
+    expect(card.getAttribute('href')).toBe('/correspondence');
+  });
+
+  it('signed in: "Your move in 1 game" opens that game', async () => {
+    setResolvedSignedIn(true);
+    stubFetch({
+      '/api/correspondence/games': {
+        body: { games: [{ url: '/room/jq_1', isYourMove: true }] },
+      },
+      '/api/correspondence/seeks/mine': { body: { seeks: [] } },
+    });
+    const card = buildLandingCorrespondenceCard({ locale: 'en' });
+    await vi.waitFor(() => expect(card.dataset.state).toBe('your-move'));
+    expect(card.querySelector('.landing-corr-title')?.textContent).toBe('Your move in 1 game');
+    expect(card.querySelector('.landing-corr-subline')?.textContent).toBe(
+      'Correspondence: open your game',
+    );
     expect(card.getAttribute('href')).toBe('/room/jq_1');
   });
 

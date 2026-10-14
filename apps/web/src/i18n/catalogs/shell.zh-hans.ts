@@ -67,6 +67,7 @@ export const ZH_HANS_SHELL = {
   'home.corrYourMoveOne': '1 局轮到你走',
   'home.corrYourMoveMany': '{count} 局轮到你走',
   'home.corrYourMoveSubline': '通信对局：打开你的对局',
+  'home.corrYourMoveManySubline': '通信对局：查看你的对局',
   'home.corrWaiting': '等待对手',
   'home.corrWaitingSubline': '有人接受时，我们发邮件通知你。',
   'home.corrBusy': '正在为你找对局...',
