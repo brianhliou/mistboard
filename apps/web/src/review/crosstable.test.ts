@@ -92,16 +92,16 @@ describe('crosstable rendering', () => {
     );
   });
 
-  it('notes a truncated record and a first meeting', () => {
+  it('notes a truncated record and says nothing extra on a first meeting', () => {
     const truncated = record();
     truncated.score.total = 30;
     expect(renderCrosstable(truncated, 'r4').textContent).toContain('last 4 of 30');
     const first = record();
     first.score = { a: 0, b: 0, draws: 1, total: 1 };
     first.games = first.games.slice(0, 1);
-    expect(renderCrosstable(first, 'r4').textContent).toContain(
-      'First game between brian and Misty',
-    );
+    const el = renderCrosstable(first, 'r4');
+    expect(el.textContent).not.toContain('First game');
+    expect(el.querySelector('.review-crosstable__note')).toBeNull();
   });
 
   it('explains guest and private seats instead of showing a record', () => {

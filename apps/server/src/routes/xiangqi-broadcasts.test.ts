@@ -729,6 +729,28 @@ test('broadcast tour API credits the records source, which the payload has no bo
   // Boards with no provenance credit nobody, rather than crediting us.
   const unsourced = await xiangqiBroadcastTourForApi(tour.slug, deps());
   assert.equal(unsourced?.recordsSource, null);
+
+  // #541: a tour relayed from a known dpxq tour credits that tour's own page.
+  const dpxqTour = await xiangqiBroadcastTourForApi(
+    tour.slug,
+    deps({
+      getXiangqiBroadcastTour: async (slug) =>
+        slug === tour.slug
+          ? {
+              ...storedTour,
+              sourceUrl: `mistboard-discover://dpxq-tour?tour=12524&tourSlug=${tour.slug}`,
+            }
+          : null,
+      listXiangqiBroadcastBoards: async (roundId) =>
+        roundId === board.roundId
+          ? [{ ...storedBoard, sourceUrl: 'http://www.dpxq.com/hldcg/search/view_m_142519.html' }]
+          : [],
+    }),
+  );
+  assert.deepEqual(dpxqTour?.recordsSource, {
+    host: 'dpxq.com',
+    href: 'http://www.dpxq.com/hldcg/tour_12524.html',
+  });
 });
 
 test('broadcast tour API rounds carry board status counts for status icons', async () => {

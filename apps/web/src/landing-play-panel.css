@@ -169,8 +169,12 @@
   justify-content: center;
 }
 
+/* Both lines of a bot row's name sit inside .pp-name's overflow: hidden, so
+   each line box must hold the whole glyph: Noto Sans needs 1.36 and the CJK
+   fallback 1.45, and 1.2 cut the g of "1 playing" (#543). */
 .pp-name-label {
   overflow: hidden;
+  line-height: 1.5;
   text-overflow: ellipsis;
 }
 
@@ -178,7 +182,7 @@
   color: var(--pp-gold-text);
   font-size: 12px;
   font-style: normal;
-  line-height: 1.2;
+  line-height: 1.5;
 }
 
 .pp-playing:empty {

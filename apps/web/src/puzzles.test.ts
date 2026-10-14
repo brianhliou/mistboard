@@ -231,11 +231,9 @@ describe('puzzles route', () => {
       `/api/puzzles/${drop.id}/attempt`,
       expect.objectContaining({ method: 'POST' }),
     );
-    // No streak in the response (a guest): no streak line either.
-    expect(root.querySelector('.puzzle-solved-streak')).toBeNull();
   });
 
-  it('shows the puzzle streak the server sends back with a solve', async () => {
+  it('shows no streak line under Success even when the server sends one', async () => {
     const drop = RED_MATE;
     let timeZone: unknown = null;
     vi.stubGlobal(
@@ -262,9 +260,8 @@ describe('puzzles route', () => {
     await solveLine(root, drop);
 
     await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
-    expect(root.querySelector('.puzzle-solved-streak')?.textContent).toBe(
-      'Puzzle streak: 3 days (best 7 days)',
-    );
+    expect(root.querySelector('.puzzle-solved-streak')).toBeNull();
+    expect(root.textContent).not.toContain('Puzzle streak');
     // The attempt carries the browser's calendar so the server counts days
     // the way the solver does.
     expect(timeZone).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');

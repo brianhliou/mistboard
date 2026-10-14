@@ -137,6 +137,19 @@ describe('homepage play panel', () => {
     expect(panelCss).not.toMatch(/^\.pp-thumb \{/m);
   });
 
+  // #543: .pp-name clips its overflow, so a line box shorter than the font's
+  // glyph box (Noto Sans 1.36, CJK fallback 1.45) cuts descenders.
+  it('gives both name lines a line box tall enough for descenders', () => {
+    const panelCss = readFileSync('src/landing-play-panel.css', 'utf8');
+    for (const selector of ['.pp-name-label', '.pp-playing']) {
+      const block = panelCss.match(
+        new RegExp(`^${selector.replace('.', '\\.')} \\{([^}]*)\\}`, 'm'),
+      )?.[1];
+      const lineHeight = Number(block?.match(/line-height: ([\d.]+);/)?.[1]);
+      expect(lineHeight, selector).toBeGreaterThanOrEqual(1.45);
+    }
+  });
+
   it('covers the bot list on the person tab instead of removing it', () => {
     // The bot list sets the panel's height for both tabs, so it must stay in
     // flow: [hidden] is display:none !important site-wide.

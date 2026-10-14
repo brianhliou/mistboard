@@ -353,10 +353,6 @@ export const EN_PLAY = {
   'puzzle.success': 'Success!',
   // Streak line under the Success heading (signed-in solvers only; days on the
   // solver's own calendar).
-  'puzzle.streak': 'Puzzle streak: {days}',
-  'puzzle.streakBest': 'Puzzle streak: {days} (best {best})',
-  'puzzle.streakDays': '{count} days',
-  'puzzle.streakDaysOne': '1 day',
   'puzzle.voteThanks': 'Thanks for the feedback!',
   'puzzle.votePrompt': 'Did you like this puzzle?',
   'puzzle.voteUp': 'Puzzle was helpful',

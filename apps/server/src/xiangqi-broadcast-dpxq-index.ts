@@ -11,6 +11,7 @@
 // it had no 2026 edition. Seeding one stays a reviewed step: the event's grade
 // in xiangqi-broadcast-levels.ts decides who gets a player page.
 
+import { dpxqTourPageUrl, HAND_IMPORTED_DPXQ_TOURS } from '@mistboard/game';
 import type { XiangqiBroadcastSourceFetch } from './xiangqi-broadcast-fetch.js';
 
 export const DPXQ_TOUR_INDEX_URL = 'http://www.dpxq.com/hldcg/';
@@ -223,13 +224,9 @@ export type BroadcastCalendarEvent = {
   sourceUrl: string | null;
 };
 
-// Tours imported by hand, whose source URL names a game page rather than the
-// dpxq tour, mapped to that tour so the calendar lists each event once.
-// Reviewed in the same diff as the tour it maps, like the level grades.
-export const HAND_IMPORTED_DPXQ_TOURS: Readonly<Record<string, string>> = {
-  // 象甲"腾讯天天象棋"预选赛, Aug 17-19: 99 games pasted from movelist_12656.
-  '2026-league-qualifier': '12656',
-};
+// The hand-import map lives beside the records credit in @mistboard/game,
+// which links each tour's dpxq page by it.
+export { HAND_IMPORTED_DPXQ_TOURS };
 
 // How far back the calendar reaches for an event only dpxq lists: long enough
 // to cover a finished stage whose records are still arriving. An event we
@@ -286,7 +283,7 @@ export function buildBroadcastCalendar(input: {
       status:
         row.section === 'live' ? 'live' : row.section === 'upcoming' ? 'upcoming' : 'finished',
       tourSlug,
-      sourceUrl: `http://www.dpxq.com/hldcg/tour_${row.tourId}.html`,
+      sourceUrl: dpxqTourPageUrl(row.tourId),
     });
   }
   for (const tour of input.tours) {

@@ -761,7 +761,6 @@ export const EN_REVIEW = {
   'underboard.crosstableGuest':
     'Head-to-head records are kept for signed-in players and engines. Guest seats have no record.',
   'underboard.crosstablePrivate': 'One of these seats is private, so there is no public record.',
-  'underboard.crosstableFirstGame': 'First game between {a} and {b}.',
   'underboard.crosstableShowingLast': 'Showing the last {shown} of {total} games.',
   'annotate.comment': 'Comment',
   'annotate.glyphs': 'Glyphs',

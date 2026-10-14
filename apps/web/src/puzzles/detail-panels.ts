@@ -129,14 +129,6 @@ function solvedPanel(
 
   const title = document.createElement('h2');
   title.textContent = t('puzzle.success');
-  // The streak rides under the heading only when there is a run to show: a
-  // guest has none, and a zero would read as a rebuke on a fresh account.
-  const streak = session.streak && session.streak.current >= 1 ? session.streak : null;
-  const streakLine = streak ? document.createElement('p') : null;
-  if (streakLine && streak) {
-    streakLine.className = 'puzzle-solved-streak';
-    streakLine.textContent = puzzleStreakLine(streak);
-  }
 
   // Prominent primary CTA (lichess-style bar), in Mistboard's own accent. It
   // advances along the visit's rotated queue and is focused on solve (see
@@ -166,19 +158,8 @@ function solvedPanel(
   );
   feedbackRow.append(prompt, votes);
 
-  panel.append(title, ...(streakLine ? [streakLine] : []), cont, feedbackRow);
+  panel.append(title, cont, feedbackRow);
   return panel;
-}
-
-function puzzleStreakDays(count: number): string {
-  return count === 1 ? t('puzzle.streakDaysOne') : t('puzzle.streakDays', { count });
-}
-
-export function puzzleStreakLine(streak: { current: number; best: number }): string {
-  const days = puzzleStreakDays(streak.current);
-  return streak.best > streak.current
-    ? t('puzzle.streakBest', { days, best: puzzleStreakDays(streak.best) })
-    : t('puzzle.streak', { days });
 }
 
 // The thumb vote records a like/dislike and shows in-place feedback (the chosen
