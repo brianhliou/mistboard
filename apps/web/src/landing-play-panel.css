@@ -243,9 +243,12 @@
   text-align: center;
 }
 
+/* They clip for the ellipsis, so they need a taller line box than the 1.15 of
+   .pp-step-value or the descenders are cut (#543). */
 .pp-step-main,
 .pp-step-sub {
   overflow: hidden;
+  line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

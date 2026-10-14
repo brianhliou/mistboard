@@ -59,6 +59,7 @@
   min-width: 0;
 }
 
+/* Clips its overflow, so the line box must hold the glyph's descenders (#543). */
 .landing-event-banner-title {
   /* Tour names run long ("2026 National Xiangqi Men Division A League"): two
      lines, then an ellipsis, instead of one line that cut every name. */
@@ -68,7 +69,7 @@
   overflow: hidden;
   font-weight: 600;
   font-size: 15px;
-  line-height: 1.25;
+  line-height: 1.4;
   color: var(--site-heading);
 }
 
@@ -80,7 +81,7 @@
 .landing-event-banner-subtitle {
   overflow: hidden;
   font-size: 13px;
-  line-height: 1.3;
+  line-height: 1.4;
   color: var(--site-muted);
   text-overflow: ellipsis;
   white-space: nowrap;
