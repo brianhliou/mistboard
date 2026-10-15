@@ -480,6 +480,7 @@ export const ZH_HANT_PLAY = {
   'live.xmj.wonSelfDraw': '第 {hand} 手：{name}自摸',
   'live.xmj.wonDiscard': '第 {hand} 手：{name}胡牌',
   'live.xmj.exhausted': '第 {hand} 手：流局，牌牆已摸完。',
+  'live.xmj.handUnfinished': '第 {hand} 手未打完。',
   'live.xmj.set': '面子',
   'live.xmj.pair': '將眼',
   'live.xmj.fiveSoldiers': '五兵',

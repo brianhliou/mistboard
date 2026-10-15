@@ -462,8 +462,11 @@ function resultHtml(view: XmjPlayerView, options: XmjTableOptions): string {
       name: escapeHtml(names[phase.winner]),
     });
     body = `<div class="xmj-won">${winningHandHtml(phase.score, phase.winningTile)}</div>${taiHtml(phase.score)}`;
-  } else {
+  } else if (phase.type === 'exhausted') {
     title = t('live.xmj.exhausted', { hand });
+  } else {
+    // The match ended mid-hand (resignation, timeout): the foot names how.
+    title = t('live.xmj.handUnfinished', { hand });
   }
   let foot: string;
   if (view.status.type !== 'playing') {

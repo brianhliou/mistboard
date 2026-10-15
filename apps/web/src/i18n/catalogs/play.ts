@@ -504,6 +504,7 @@ export const EN_PLAY = {
   'live.xmj.wonSelfDraw': 'Hand {hand} to {name}, by self-draw',
   'live.xmj.wonDiscard': 'Hand {hand} to {name}, on a discard',
   'live.xmj.exhausted': 'Hand {hand}: no winner. The wall ran out.',
+  'live.xmj.handUnfinished': 'Hand {hand} was not finished.',
   'live.xmj.set': 'set',
   'live.xmj.pair': 'pair',
   'live.xmj.fiveSoldiers': 'five soldiers',

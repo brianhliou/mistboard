@@ -205,6 +205,18 @@ describe('xiangqi mahjong table', () => {
     expect(host.querySelector('.xmj-plate__facts')?.textContent).not.toContain('Hand');
   });
 
+  it('a match resigned mid-hand titles the hand unfinished, not a dead wall', () => {
+    const live = afterDiscard(['rH', 'rC', 'rP', 'bP', 'bP']);
+    const resigned: XmjRoomState = {
+      ...live,
+      status: { type: 'finished', winner: 'west', reason: 'resignation' },
+    };
+    const text =
+      doc(xiangqiMahjongTableHtml(xmjViewFor(resigned, 'east'), opts(false))).textContent ?? '';
+    expect(text).toContain('Hand 1 was not finished.');
+    expect(text).not.toContain('The wall ran out');
+  });
+
   it('signs scores with a real minus sign', () => {
     expect([signed(3), signed(-3), signed(0)]).toEqual(['+3', '\u22123', '0']);
   });
