@@ -15,7 +15,11 @@ import {
   roomModeAnalyticsProps,
   setPostHogInstance,
 } from './analytics.js';
-import { rememberCorrespondenceStartSource, rememberGameStartSource } from './game-start-source.js';
+import {
+  rememberCorrespondenceStartSource,
+  rememberGameStartSource,
+  resetTrackedGameStartsForTests,
+} from './game-start-source.js';
 
 describe('classifyTimeControl', () => {
   it('classifies bullet (1+0)', () => {
@@ -66,6 +70,8 @@ describe('createGameLifecycleTracker', () => {
 
   beforeEach(() => {
     capture.mockReset();
+    Object.defineProperty(window, 'localStorage', { configurable: true, value: memoryStorage() });
+    resetTrackedGameStartsForTests();
     // track() routes through the posthog instance; install a spy so emissions
     // are observable even outside PROD (enqueue runs the action immediately).
     setPostHogInstance({ capture, identify: vi.fn(), reset: vi.fn() });
@@ -109,12 +115,47 @@ describe('createGameLifecycleTracker', () => {
     expect(named('game_finished')).toHaveLength(0);
   });
 
-  it('re-arms the start transition after reset', () => {
+  it('re-arms the start transition after reset, for the next game', () => {
     const t = createGameLifecycleTracker();
     t.update({ statusType: 'playing', baseProps: base });
     t.reset();
-    t.update({ statusType: 'playing', baseProps: base });
+    t.update({ statusType: 'playing', baseProps: { ...base, gameId: 'g2' } });
     expect(named('game_started')).toHaveLength(2);
+  });
+
+  // #437: every reload of a seated live room is a fresh page with a fresh
+  // tracker whose first render is `playing`; each one counted as a start.
+  it('fires once per live game across page reloads and reconnects', () => {
+    const live = { ...base, time_class: 'blitz', rated: true };
+    createGameLifecycleTracker().update({ statusType: 'playing', baseProps: live });
+    // Reload: a fresh page, a fresh tracker, the same game.
+    createGameLifecycleTracker().update({ statusType: 'playing', baseProps: live });
+    // Same page re-initialised (initRender resets the tracker).
+    const t = createGameLifecycleTracker();
+    t.update({ statusType: 'playing', baseProps: live });
+    t.reset();
+    t.update({ statusType: 'playing', baseProps: live });
+    expect(named('game_started')).toHaveLength(1);
+    // Properties unchanged, so the dashboard series stays comparable.
+    expect(named('game_started')[0][1]).toMatchObject({ ...live, entry_source: 'none' });
+    // The next game (a rematch is a new room and a new id) still counts.
+    createGameLifecycleTracker().update({
+      statusType: 'playing',
+      baseProps: { ...live, gameId: 'g2' },
+    });
+    expect(named('game_started')).toHaveLength(2);
+  });
+
+  it('still dedupes within the page when storage is blocked', () => {
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      get() {
+        throw new Error('blocked');
+      },
+    });
+    createGameLifecycleTracker().update({ statusType: 'playing', baseProps: base });
+    createGameLifecycleTracker().update({ statusType: 'playing', baseProps: base });
+    expect(named('game_started')).toHaveLength(1);
   });
 
   it('keeps separate trackers from bleeding transitions into each other', () => {
@@ -161,6 +202,7 @@ describe('correspondence game_started', () => {
     capture.mockReset();
     Object.defineProperty(window, 'localStorage', { configurable: true, value: memoryStorage() });
     sessionStorage.clear();
+    resetTrackedGameStartsForTests();
     setPostHogInstance({ capture, identify: vi.fn(), reset: vi.fn() });
   });
 
@@ -207,12 +249,12 @@ describe('correspondence game_started', () => {
       baseProps: { gameId: 'live_1', game_spec: 'jieqi', time_class: 'blitz' },
     });
     expect(started().map(([, props]) => props.entry_source)).toEqual(['none', 'none']);
-    // Live games still fire on every fresh tracker, as before.
+    // A reload of the live game is not another start (#437).
     createGameLifecycleTracker().update({
       statusType: 'playing',
       baseProps: { gameId: 'live_1', game_spec: 'jieqi', time_class: 'blitz' },
     });
-    expect(started()).toHaveLength(3);
+    expect(started()).toHaveLength(2);
   });
 });
 
