@@ -186,6 +186,42 @@ describe('watch route copy helpers', () => {
     expect(watchQueueResultLabel({ ...base, variant: 'xiangqi' })).toBe('Red wins');
   });
 
+  // Xiangqi mahjong's east/west are bookkeeping: the label read "Draw" for every
+  // decided match (no branch matched 'east-wins'). It names the winning player.
+  it('names the winning player of a xiangqi mahjong match, never the seat', () => {
+    const base: FeaturedGame = {
+      blackName: null,
+      corpusId: null,
+      mode: 'pve',
+      plyCount: 60,
+      result: 'west-wins',
+      roomId: 'xmj_watch',
+      termination: 'checkmate',
+      variant: 'xiangqi-mahjong',
+      whiteName: null,
+      participants: [
+        {
+          color: 'east',
+          displayName: 'brianhliou',
+          subjectType: 'user',
+          subjectId: 'u_brian',
+          visibility: 'public',
+        },
+        {
+          color: 'west',
+          displayName: 'Xiangqi mahjong bot',
+          subjectType: 'bot',
+          subjectId: null,
+          visibility: 'public',
+        },
+      ],
+    };
+    expect(watchQueueResultLabel(base)).toBe('Xiangqi mahjong bot wins');
+    expect(watchQueueResultLabel({ ...base, result: 'east-wins' })).toBe('brianhliou wins');
+    expect(watchQueueResultLabel({ ...base, result: 'draw' })).toBe('Draw');
+    expect(watchQueueResultLabel({ ...base, participants: [] })).toBe('Guest wins');
+  });
+
   it('labels a Flip Jungle queue result by bound ink, in the family colour words', () => {
     const base: FeaturedGame = {
       blackName: null,

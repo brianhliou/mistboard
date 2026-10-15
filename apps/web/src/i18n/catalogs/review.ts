@@ -54,6 +54,7 @@ export const EN_REVIEW = {
   // Whole-phrase keys for the lines the watch page used to glue together in
   // English word order ("{color} wins", "{result} by {reason}", "{a} vs {b}").
   'watch.colorWins': '{color} wins',
+  'watch.won': 'Won',
   'watch.resultByReason': '{result} by {reason}',
   'watch.matchup': '{first} vs {second}',
   'watch.reviewMatchup': 'Review {matchup}',

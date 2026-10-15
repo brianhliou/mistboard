@@ -28,6 +28,7 @@ import {
   MAHJONG_SPEC_ID,
   type TimeControlId,
   variantDefaultTimeControl,
+  XIANGQI_MAHJONG_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
 import {
@@ -42,6 +43,7 @@ import {
   jungleFlipEnabled,
   mahjongEnabled,
   xiangqiEnabled,
+  xiangqiMahjongEnabled,
 } from '../feature-flags.js';
 import type { I18nKey } from '../i18n/catalog.js';
 import { JIEQI_FIRST_GAME_ENGINE_ID, XIANGQI_FIRST_GAME_ENGINE_ID } from '../landing-bot-policy.js';
@@ -174,6 +176,9 @@ const alwaysEnabled = () => true;
 // cannot open, and they would land as a spectator at an empty table with
 // nothing explaining why.
 const mahjongOffered = (): boolean => mahjongEnabled() && hasLikelyVariantGrant(MAHJONG_SPEC_ID);
+// Xiangqi mahjong is gated the same way, on its own flag and its own grant.
+const xiangqiMahjongOffered = (): boolean =>
+  xiangqiMahjongEnabled() && hasLikelyVariantGrant(XIANGQI_MAHJONG_SPEC_ID);
 // Retired/hidden from the play-menu picker (2026-07-03 xiangqi pivot,
 // project_xiangqi_pivot_track). Discoverability only: acceptsDeepLink stays live
 // so existing games + physical/kids deep links keep working, and the live client
@@ -974,6 +979,53 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       ],
       defaultEngineId: 'mahjong-efficiency',
       // No seat to give away: the server seats the other three itself.
+      hideColorPicker: true,
+    },
+  },
+  {
+    // Xiangqi mahjong (象棋麻將): 32 tiles, two players, a hand of five.
+    //
+    // PvE only and gated like Hong Kong mahjong: the build flag plus the
+    // server's per-account allowlist. It exists so Brian can play the rules
+    // against a bot and say whether the scoring is right, so nobody else is
+    // offered it, and no lobby or watch surface knows it exists.
+    gameSpecId: XIANGQI_MAHJONG_SPEC_ID,
+    roomIdPrefix: 'xmj_',
+    enabled: xiangqiMahjongEnabled,
+    pageTitleKey: 'variant.xiangqiMahjong.name',
+    loadLiveRoomClient: () =>
+      import('../live-xiangqi-mahjong.js').then(
+        ({ bootstrapXiangqiMahjongLiveRoom }) =>
+          () =>
+            bootstrapXiangqiMahjongLiveRoom(),
+      ),
+    landing: {
+      capabilities: {
+        firstColor: 'red',
+        firstGlyph: '東',
+        firstLabel: 'East',
+        secondColor: 'black',
+        secondGlyph: '西',
+        secondLabel: 'West',
+        neutralGlyphColor: true,
+        supportsRated: false,
+        supportsTimeControl: true,
+      },
+      timePresetIds: ['5m5', '10m5'],
+      // One predicate for both, as for Hong Kong mahjong.
+      offerInMenu: xiangqiMahjongOffered,
+      acceptsDeepLink: xiangqiMahjongOffered,
+      // Exactly one option: the dialog sends one global engine id, and a
+      // variant with no option of its own would ask the server for Misty.
+      engineOptions: [
+        {
+          id: 'xiangqi-mahjong-bot',
+          name: 'Xiangqi mahjong bot',
+          familyName: 'Mistboard',
+          kind: 'container',
+        },
+      ],
+      defaultEngineId: 'xiangqi-mahjong-bot',
       hideColorPicker: true,
     },
   },

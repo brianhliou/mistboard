@@ -213,6 +213,47 @@ describe('profile game rows', () => {
     expect(row.textContent).toContain('White');
   });
 
+  // Xiangqi mahjong seats are east/west, which only alternate the deal. The row
+  // scored an east win as a loss (it compared against 'white-wins'), named the
+  // opponent "White" and showed a "White" side pill.
+  it('scores and names a xiangqi mahjong row by player, never by seat', () => {
+    const seats = (result: string, playerColor: 'east' | 'west') =>
+      buildProfileGameRow(
+        game({
+          roomId: 'xmj_profile',
+          variant: 'xiangqi-mahjong',
+          result,
+          termination: 'checkmate',
+          playerColor,
+          participants: [
+            {
+              color: 'east',
+              displayName: 'brianhliou',
+              subjectType: 'user',
+              subjectId: 'u_brian',
+              visibility: 'public',
+            },
+            {
+              color: 'west',
+              displayName: 'Xiangqi mahjong bot',
+              subjectType: 'bot',
+              subjectId: null,
+              visibility: 'public',
+            },
+          ],
+        }),
+      );
+    const won = seats('east-wins', 'east');
+    expect(won.querySelector('.profile-game-outcome')?.textContent).toBe('Win');
+    expect(won.textContent).toContain('vs Xiangqi mahjong bot');
+    expect(won.querySelector('.profile-game-side')).toBeNull();
+    expect(won.textContent).not.toMatch(/White|Black|East|West/);
+    expect(seats('west-wins', 'east').querySelector('.profile-game-outcome')?.textContent).toBe(
+      'Loss',
+    );
+    expect(seats('west-wins', 'west').textContent).toContain('vs brianhliou');
+  });
+
   it('draws a game played under earlier rules as a tagged row with no link', () => {
     const base = game();
     const row = buildProfileGameRow(

@@ -23,7 +23,8 @@ const MARKER_PX = 1254;
 
 // Game specs that are deliberately not variants anywhere a marker is shown.
 // Adding to this list is a product decision, not a way to get a test green.
-const SPECS_WITHOUT_MARKER = ['chess', 'mahjong'];
+// Both mahjongs are allowlisted playtests with no public surface to mark.
+const SPECS_WITHOUT_MARKER = ['chess', 'mahjong', 'xiangqi-mahjong'];
 
 describe('variant markers', () => {
   it('has a marker for every variant id, and nothing else', () => {

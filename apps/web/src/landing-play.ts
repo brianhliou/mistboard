@@ -20,6 +20,7 @@ import {
   TIME_CONTROLS,
   type TimeClass,
   type TimeControlId,
+  XIANGQI_MAHJONG_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
 import {
@@ -120,7 +121,8 @@ export type LandingGameSpecId =
   | typeof DUCK_XIANGQI_SPEC_ID
   | typeof ATOMIC_XIANGQI_SPEC_ID
   | typeof CRAZYHOUSE_XIANGQI_SPEC_ID
-  | typeof MAHJONG_SPEC_ID;
+  | typeof MAHJONG_SPEC_ID
+  | typeof XIANGQI_MAHJONG_SPEC_ID;
 type LandingTimePresetId = TimeControlId;
 type LandingTimePreset = {
   id: LandingTimePresetId;
@@ -3419,11 +3421,13 @@ export function roomCreationGameSpecId(
   | typeof JUNGLE_FLIP_SPEC_ID
   | typeof FORTRESS_XIANGQI_SPEC_ID
   | typeof MAHJONG_SPEC_ID
+  | typeof XIANGQI_MAHJONG_SPEC_ID
   | typeof DUCK_XIANGQI_SPEC_ID
   | typeof ATOMIC_XIANGQI_SPEC_ID
   | typeof CRAZYHOUSE_XIANGQI_SPEC_ID
   | typeof XIANGQI_SPEC_ID {
   if (setup.gameSpecId === MAHJONG_SPEC_ID) return MAHJONG_SPEC_ID;
+  if (setup.gameSpecId === XIANGQI_MAHJONG_SPEC_ID) return XIANGQI_MAHJONG_SPEC_ID;
   if (setup.gameSpecId === XIANGQI_SPEC_ID) return XIANGQI_SPEC_ID;
   if (setup.gameSpecId === FORTRESS_XIANGQI_SPEC_ID) return FORTRESS_XIANGQI_SPEC_ID;
   if (setup.gameSpecId === DUCK_XIANGQI_SPEC_ID) return DUCK_XIANGQI_SPEC_ID;
@@ -3434,11 +3438,12 @@ export function roomCreationGameSpecId(
   if (setup.gameSpecId === JIEQI_SPEC_ID) return JIEQI_SPEC_ID;
   if (setup.gameSpecId === BANQI_SPEC_ID) return BANQI_SPEC_ID;
   if (setup.gameSpecId === DARK_XIANGQI_SPEC_ID) return DARK_XIANGQI_SPEC_ID;
-  // NOTE: this fallback is why a variant missing from the ladder above does not
-  // fail, it becomes DARK CHESS. Mahjong hit exactly that: the dialog selected
-  // it, sent the right clock and the right engine, and asked the server for a
-  // fog chess room. Every variant offered in the play menu needs a line here.
-  return DARK_CHESS_SPEC_ID;
+  if (setup.gameSpecId === DARK_CHESS_SPEC_ID) return DARK_CHESS_SPEC_ID;
+  // Fail closed: an unlisted variant used to fall through to dark chess, which
+  // asked the server for a fog chess room with the variant's own bot (Mahjong,
+  // then Xiangqi Mahjong). The never check makes a new union member a type error.
+  const unlisted: never = setup.gameSpecId;
+  throw new Error(`room creation has no game spec mapping for ${String(unlisted)}`);
 }
 
 async function readRoomCreationFailure(response: Response): Promise<RoomCreationFailure> {
