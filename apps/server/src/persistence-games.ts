@@ -877,6 +877,9 @@ export async function listWatchUnlockedGames(
        ${variantClause}
        ${modeClause}
        ${curatedClause}
+       -- Watch is a live TV surface; a days-per-move game replays as frozen
+       -- 00:00 clocks there (Brian, 2026-10-14), so it stays in its room.
+       AND ${NOT_CORRESPONDENCE_SQL}
        AND games.ended_at <= $2
        AND (
          -- A move-decided ending always closes on a move-played event, whatever the
@@ -929,6 +932,7 @@ export async function countWatchSealedGames(options: WatchSealedGameOptions = {}
        ${variantClause}
        ${modeClause}
        AND games.visibility <> 'private'
+       AND ${NOT_CORRESPONDENCE_SQL}
        AND last_events.type IN ('clock-started', 'move-played', 'resume')
        AND (last_events.payload->>'at')::bigint >= $1
        AND (last_events.payload->>'at')::bigint <= $2`,
