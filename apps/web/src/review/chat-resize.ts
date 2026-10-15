@@ -6,6 +6,8 @@
 const STORAGE_KEY = 'mistboard-game-chat-height';
 const MIN_HEIGHT = 180;
 const KEYBOARD_STEP = 24;
+// How far the ceiling probe grows the panel to see which ancestors follow it.
+const PROBE_STEP = 32;
 
 export function attachChatResize(panel: HTMLElement): HTMLElement {
   panel.classList.add('review-spectator-chat--resizable');
@@ -27,30 +29,55 @@ export function attachChatResize(panel: HTMLElement): HTMLElement {
   let dragStartY = 0;
   let dragStartHeight = 0;
 
-  // The ceiling is whatever the panel's PARENT has left over. That makes the
-  // parent's height a contract: it must be sized by the rail, not by the panel.
-  // A rail group that content-sizes around this panel (no siblings, no height of
-  // its own) turns the ceiling into a mirror of the current height, and the
-  // handle ratchets shut — each shrink lowers the ceiling to match, and nothing
-  // can grow back. Give the CHAT a height in that case, never the group.
+  // The ceiling is the room the panel could fill without overflowing a box
+  // whose height does not depend on the panel. Usually that box is the parent:
+  // what it has left over after the siblings. But a parent that content-sizes
+  // around the panel (no height of its own) leaves exactly the panel's current
+  // height over, and trusting it ratchets the handle shut: each shrink lowers
+  // the ceiling to match and nothing can grow back (#298). That reading is
+  // ambiguous with a panel that correctly flex-fills a definite parent, so in
+  // that case the panel is grown for one synchronous probe: ancestors that grow
+  // with it are content-sized, and the first one that holds still is the
+  // budget, capped by the viewport.
   const maxHeight = (): number => {
+    const viewportCeiling = Math.max(MIN_HEIGHT, window.innerHeight - 120);
     const parent = panel.parentElement;
-    if (!parent) return Math.max(MIN_HEIGHT, window.innerHeight - 120);
-    const parentHeight = parent.getBoundingClientRect().height;
-    if (parentHeight <= 0) return Math.max(MIN_HEIGHT, window.innerHeight - 120);
+    if (!parent) return viewportCeiling;
+    if (boxHeight(parent) <= 0) return viewportCeiling;
 
-    const siblings = Array.from(parent.children).filter(
-      (child): child is HTMLElement => child instanceof HTMLElement && child !== panel,
+    const available = leftoverFor(parent, panel);
+    const panelHeight = boxHeight(panel);
+    if (Math.abs(available - panelHeight) > 1) return Math.max(MIN_HEIGHT, available);
+
+    const chain = sizingAncestors(panel);
+    const before = chain.map(boxHeight);
+    const after = withProbeHeight(panelHeight + PROBE_STEP, () => chain.map(boxHeight));
+    const stableIndex = chain.findIndex(
+      (_ancestor, index) => Math.abs((after[index] ?? 0) - (before[index] ?? 0)) < 1,
     );
-    const visibleSiblings = siblings.filter(
-      (sibling) => sibling.getBoundingClientRect().height > 0,
-    );
-    const occupied = visibleSiblings.reduce(
-      (total, sibling) => total + sibling.getBoundingClientRect().height,
-      0,
-    );
-    const gap = Number.parseFloat(getComputedStyle(parent).gap) || 0;
-    return Math.max(MIN_HEIGHT, parentHeight - occupied - gap * visibleSiblings.length);
+    if (stableIndex === 0) return Math.max(MIN_HEIGHT, available);
+    if (stableIndex < 0) return viewportCeiling;
+
+    const stable = chain[stableIndex] as HTMLElement;
+    const grower = chain[stableIndex - 1] as HTMLElement;
+    const slack = leftoverFor(stable, grower) - (before[stableIndex - 1] ?? 0);
+    return clamp(panelHeight + slack, MIN_HEIGHT, viewportCeiling);
+  };
+
+  // Renders the panel at `height` just long enough to measure, then restores
+  // it. No frame runs in between, so nothing paints and no ResizeObserver sees it.
+  const withProbeHeight = <T>(height: number, measure: () => T): T => {
+    const hadManualClass = panel.classList.contains('review-spectator-chat--manual-height');
+    const previous = panel.style.getPropertyValue('--review-chat-manual-height');
+    panel.classList.add('review-spectator-chat--manual-height');
+    panel.style.setProperty('--review-chat-manual-height', `${Math.round(height)}px`);
+    try {
+      return measure();
+    } finally {
+      if (!hadManualClass) panel.classList.remove('review-spectator-chat--manual-height');
+      if (previous) panel.style.setProperty('--review-chat-manual-height', previous);
+      else panel.style.removeProperty('--review-chat-manual-height');
+    }
   };
 
   const setAriaHeight = (height: number): void => {
@@ -155,6 +182,36 @@ export function attachChatResize(panel: HTMLElement): HTMLElement {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+function boxHeight(element: Element): number {
+  return element.getBoundingClientRect().height;
+}
+
+// The height `child` could take inside `container`: the container's height
+// less its other visible children and the gaps between them.
+function leftoverFor(container: HTMLElement, child: HTMLElement): number {
+  const others = Array.from(container.children).filter(
+    (sibling): sibling is HTMLElement =>
+      sibling instanceof HTMLElement && sibling !== child && boxHeight(sibling) > 0,
+  );
+  const occupied = others.reduce((total, sibling) => total + boxHeight(sibling), 0);
+  const gap = Number.parseFloat(getComputedStyle(container).gap) || 0;
+  return boxHeight(container) - occupied - gap * others.length;
+}
+
+// Ancestors from the parent up to (not including) <body>; past that the page
+// itself scrolls, so the viewport is the only budget left.
+function sizingAncestors(panel: HTMLElement): HTMLElement[] {
+  const chain: HTMLElement[] = [];
+  for (
+    let node = panel.parentElement;
+    node && node !== document.body && node !== document.documentElement;
+    node = node.parentElement
+  ) {
+    chain.push(node);
+  }
+  return chain;
 }
 
 function readStoredHeight(): number | null {
