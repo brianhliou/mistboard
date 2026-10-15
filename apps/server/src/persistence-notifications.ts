@@ -19,15 +19,33 @@ import { linkableHandleSql, seekExpirySql } from './persistence-correspondence-s
 import { getPool } from './persistence-db.js';
 import { visibleFollowerSql } from './persistence-relations.js';
 
-export type NotificationWatermarkKind = 'followers' | 'forum-replies';
+// 'correspondence-finished' (167) is read by the /correspondence page's
+// "Recently finished" list, not the bell: it marks games that ended since the
+// player last opened the page.
+export type NotificationWatermarkKind = 'followers' | 'forum-replies' | 'correspondence-finished';
 
 const WATERMARK_COLUMNS: Record<NotificationWatermarkKind, string> = {
   followers: 'followers_seen_at',
   'forum-replies': 'forum_replies_seen_at',
+  'correspondence-finished': 'correspondence_finished_seen_at',
 };
 
 export function isNotificationWatermarkKind(value: unknown): value is NotificationWatermarkKind {
-  return value === 'followers' || value === 'forum-replies';
+  return typeof value === 'string' && Object.hasOwn(WATERMARK_COLUMNS, value);
+}
+
+// The watermark itself, or null for an unknown account.
+export async function notificationsSeenAt(
+  userId: string,
+  kind: NotificationWatermarkKind,
+): Promise<Date | null> {
+  // Column name from the closed map, as in markNotificationsSeen.
+  const column = WATERMARK_COLUMNS[kind];
+  const { rows } = await getPool().query<{ seen_at: Date }>(
+    `SELECT ${column} AS seen_at FROM users WHERE id = $1`,
+    [userId],
+  );
+  return rows[0]?.seen_at ?? null;
 }
 
 // Follows pointed AT this user since they last opened the bell. Only the

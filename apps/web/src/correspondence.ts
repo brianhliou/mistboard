@@ -8,8 +8,12 @@
 //         Decline; the bell's challenge row lands here, #incoming), then
 //         "Waiting for an opponent" (your own seeks, Copy link / Cancel),
 //         "Your move" cards (board, seats, time left on the seat to move, a
-//         deadline bar, Play your move), "Waiting on opponent" cards, and
-//         "Open seeks" (other players', with Accept).
+//         deadline bar, Play your move), "Waiting on opponent" cards,
+//         "Recently finished" (your games that ended in the last 14 days, as
+//         profile game rows: result, opponent, variant, how it ended, when,
+//         a "New" tag on one that ended since you last looked, and a link
+//         to your profile's full history), and "Open seeks" (other players',
+//         with Accept).
 // Every list is a grid of the site's game cards (current-games.css).
 // Signed out: one line on what correspondence is, the open seeks read-only
 // (Accept goes through sign-in to the seek's /challenge page), and sign in /
@@ -17,7 +21,8 @@
 //
 // Data: GET /api/correspondence/games (the inbox), GET /api/correspondence/seeks
 // (the public board), GET /api/correspondence/seeks/mine (your challenges),
-// GET /api/correspondence/seeks/incoming (challenges to you), and
+// GET /api/correspondence/seeks/incoming (challenges to you),
+// GET /api/correspondence/games/finished (recently finished), and
 // GET /api/games/current for the boards. That feed is public and already lists
 // every correspondence game in play; it carries a board payload only for games
 // it calls 'open', so this page draws exactly what any spectator of an
@@ -31,6 +36,7 @@
 // Correspondence tab; this page shows the same feed.
 
 import './current-games.css';
+import './account-profile.css';
 import './correspondence.css';
 import {
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
@@ -74,6 +80,7 @@ import {
   liveCardShowsHands,
 } from './current-games-model.js';
 import type { DarkChessBoardView } from './dark-chess-render.js';
+import type { FeaturedGame } from './game-display.js';
 import {
   displayLiveName,
   firstMoverColorName,
@@ -86,6 +93,7 @@ import { currentLocale, LOCALE_META, localizedHref } from './i18n/locale.js';
 import type { DarkXiangqiWireView } from './live-dark-xiangqi.js';
 import { refreshNotifications } from './notification-nav.js';
 import { appendWithNameNode, playerNameEl, profileTargetFor } from './profile-link.js';
+import { buildProfileGameRow } from './profile-ui.js';
 import { isCorrespondenceRatedModeEnabled, onRatedModeChange } from './rated-flag.js';
 import type { ReplayHandle } from './replay.js';
 import { accepterColorLabel, accepterSide, buildSeekAcceptAction } from './seek-accept.js';
@@ -218,13 +226,26 @@ function buildSignedIn(
     }
   }
 
-  // "No games yet" says nothing new under a seek that is waiting or a challenge
-  // to answer.
+  // Games that ended leave the lists above the moment they end; this says how
+  // they ended (Brian, 2026-10-14: a lost game simply vanished from the page).
+  // Hidden while there are none.
+  const finished = document.createElement('section');
+  finished.className = 'correspondence-section correspondence-finished';
+  finished.hidden = true;
+  main.append(finished);
+
+  // "No games yet" says nothing new under a seek that is waiting, a challenge
+  // to answer or a game that just finished.
   let ownCount = 0;
   let incomingCount = 0;
+  let finishedCount = 0;
   const syncEmpty = (): void => {
-    if (empty) empty.hidden = ownCount + incomingCount > 0;
+    if (empty) empty.hidden = ownCount + incomingCount + finishedCount > 0;
   };
+  void renderFinishedGames(finished, (count) => {
+    finishedCount = count;
+    syncEmpty();
+  });
   const refreshChallenges = (): void => {
     void renderChallenges(challenges, (count) => {
       ownCount = count;
@@ -1054,6 +1075,65 @@ export async function renderChallenges(
     }
   }
   host.replaceChildren(...children);
+}
+
+// ---------------------------------------------------------------------------
+// Recently finished
+// ---------------------------------------------------------------------------
+
+export type FinishedCorrespondenceGame = FeaturedGame & { isNew?: boolean };
+
+export type FinishedCorrespondenceResponse = {
+  games: FinishedCorrespondenceGame[];
+  windowDays: number;
+  historyHref: string;
+};
+
+// Your correspondence games that ended in the last two weeks, newest first
+// (server: routes/correspondence-games.ts, at most 10), drawn as the profile's
+// own game rows plus how each ended. A finished room reveals everything, so a
+// fog game's row says only what its finished replay already shows. A game that
+// ended since you last opened the page (and not by your own resignation or
+// winning move) carries a "New" tag; the page then marks the list seen, so the
+// tag shows once. Hidden when there are none, and when the read fails.
+export async function renderFinishedGames(
+  host: HTMLElement,
+  onCount?: (count: number) => void,
+): Promise<void> {
+  const resp = await fetch('/api/correspondence/games/finished').catch(() => null);
+  const body = resp?.ok
+    ? ((await resp.json().catch(() => null)) as FinishedCorrespondenceResponse | null)
+    : null;
+  const games = Array.isArray(body?.games) ? body.games : [];
+  onCount?.(games.length);
+  host.hidden = games.length === 0;
+  if (!body || games.length === 0) {
+    host.replaceChildren();
+    return;
+  }
+  const section = buildSection(t('correspondence.recentlyFinished'), games.length);
+  const list = document.createElement('ol');
+  list.className = 'profile-game-list correspondence-finished-list';
+  for (const game of games) {
+    list.append(buildProfileGameRow(game, { ending: true, isNew: game.isNew === true }));
+  }
+  const foot = document.createElement('p');
+  foot.className = 'correspondence-quiet correspondence-finished-foot';
+  const all = document.createElement('a');
+  all.href = localizedHref(body.historyHref);
+  all.textContent = t('correspondence.finishedAllGames');
+  foot.append(
+    document.createTextNode(`${t('correspondence.finishedWindow', { days: body.windowDays })} `),
+    all,
+  );
+  host.replaceChildren(...section.childNodes, list, foot);
+  if (games.some((game) => game.isNew === true)) {
+    void fetch('/api/notifications/seen', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ kind: 'correspondence-finished' }),
+    }).catch(() => undefined);
+  }
 }
 
 // ---------------------------------------------------------------------------

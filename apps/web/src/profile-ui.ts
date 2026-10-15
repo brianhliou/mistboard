@@ -9,6 +9,7 @@ import {
   type GameParticipant,
   matchupSeats,
   participantForColor,
+  terminationLabel,
   variantNameKeyForSpecId,
 } from './game-display.js';
 import { timeControlLabelForGame } from './game-meta.js';
@@ -165,7 +166,18 @@ export function buildProfileHeaderShell(opts: {
 // subject's seat). Works for a human or an engine seat alike.
 export function buildProfileGameRow(
   game: FeaturedGame,
-  opts: { locale?: Locale; neutral?: boolean; timeOnly?: boolean } = {},
+  opts: {
+    locale?: Locale;
+    neutral?: boolean;
+    timeOnly?: boolean;
+    // How the game ended (Checkmate, Resignation, Timeout) as a pill after the
+    // variant: the /correspondence "Recently finished" list, where it answers
+    // "what happened to my game".
+    ending?: boolean;
+    // A "New" tag beside the opponent: a game that ended since the player
+    // last looked (the same list).
+    isNew?: boolean;
+  } = {},
 ): HTMLElement {
   const locale = opts.locale ?? currentLocale();
   const neutral = opts.neutral === true;
@@ -248,6 +260,12 @@ export function buildProfileGameRow(
     : formatGameDate(game.endedAt, locale);
 
   topLine.append(opponent);
+  if (opts.isNew) {
+    const tag = document.createElement('span');
+    tag.className = 'profile-game-new';
+    tag.textContent = t('correspondence.finishedNew', {}, locale);
+    topLine.append(tag);
+  }
 
   // Only a head-to-head human (pvp) game can ever be rated; anything vs an
   // engine, EvE, or imported is casual by definition. Gate on mode first so a
@@ -268,6 +286,8 @@ export function buildProfileGameRow(
     variantPill.prepend(thumb);
   }
   details.append(variantPill);
+  const ending = opts.ending ? terminationLabel(game.termination, locale) : '';
+  if (ending) details.append(buildGameDetail(ending, 'profile-game-ending'));
   if (unavailable) {
     const tag = buildGameDetail(unavailable.label, 'profile-game-unavailable');
     tag.title = unavailable.title;

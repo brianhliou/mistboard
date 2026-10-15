@@ -421,10 +421,28 @@ function opponentFilterSql(param: string): string {
      )`;
 }
 
+// Filters only server callers set, never the profile route's query string.
+type UserGamesQueryFilters = ProfileGameFilters & {
+  /** Days-per-move games only (the /correspondence "Recently finished" list). */
+  correspondenceOnly?: boolean;
+  /** Games that ended strictly after this instant. */
+  endedAfter?: Date | null;
+};
+
+// A correspondence game, from the room-created event (seq 0), the durable home
+// of the time control: the same test the homepage showcase uses
+// (NOT_CORRESPONDENCE_SQL in persistence-games.ts). Read from the event rather
+// than games.initial_ms so a compressed dev allowance still counts.
+const CORRESPONDENCE_GAME_SQL = `AND EXISTS (
+         SELECT 1 FROM events rc
+         WHERE rc.room_id = games.room_id AND rc.seq = 0
+           AND rc.payload->'timeControl' ? 'daysPerMove'
+       )`;
+
 // WHERE fragments and their parameters for a filter set. `firstParam` is the
 // next free $n in the caller's query.
 function profileGameFilterSql(
-  filters: ProfileGameFilters,
+  filters: UserGamesQueryFilters,
   firstParam: number,
 ): { sql: string; params: unknown[] } {
   const clauses: string[] = [];
@@ -440,6 +458,11 @@ function profileGameFilterSql(
     params.push(filters.opponent);
     clauses.push(opponentFilterSql(`$${firstParam + params.length - 1}`));
   }
+  if (filters.correspondenceOnly) clauses.push(CORRESPONDENCE_GAME_SQL);
+  if (filters.endedAfter) {
+    params.push(filters.endedAfter);
+    clauses.push(`AND games.ended_at > $${firstParam + params.length - 1}`);
+  }
   return { sql: clauses.join('\n       '), params };
 }
 
@@ -454,7 +477,7 @@ async function queryUserGames(
   // Rating pool, result and opponent. The pool is compared against the stored
   // spec ids AND their legacy spellings, so a pool's older rows ('fog') are not
   // silently dropped from its own history.
-  filters: ProfileGameFilters = {},
+  filters: UserGamesQueryFilters = {},
 ): Promise<{ games: ProfileGameRecord[]; total: number }> {
   const filterSql = profileGameFilterSql(filters, 4);
   const { rows } = await getPool().query<{
@@ -520,6 +543,21 @@ async function queryUserGames(
     }),
   );
   return { games: await attachGameParticipants(games), total };
+}
+
+// The player's own correspondence games that ended after `since`, newest
+// first: the /correspondence page's "Recently finished" list. Same query and
+// row shape as the profile Games list, read as the owner (their private games
+// included, as on their own profile).
+export async function listRecentFinishedCorrespondenceGames(
+  userId: string,
+  options: { since: Date; limit: number },
+): Promise<ProfileGameRecord[]> {
+  const { games } = await queryUserGames(userId, true, 0, options.limit, {
+    correspondenceOnly: true,
+    endedAfter: options.since,
+  });
+  return games;
 }
 
 // First page of a profile: identity, bucketed ratings, and the newest games.

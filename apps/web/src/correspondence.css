@@ -95,6 +95,18 @@
   font-size: 0.88rem;
 }
 
+/* Recently finished: the profile's own game rows (account-profile.css), in one
+   bordered panel like the profile Games tab. */
+.correspondence-finished-list {
+  overflow: hidden;
+  border: 1px solid var(--site-border);
+  border-radius: 8px;
+}
+
+.correspondence-finished-foot a {
+  color: var(--site-accent);
+}
+
 .correspondence-quiet-panel,
 .correspondence-empty p {
   margin: 0;
