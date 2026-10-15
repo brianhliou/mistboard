@@ -691,6 +691,13 @@
 .review-import__error:empty {
   display: none;
 }
+/* Phones and tablets: iOS zooms the page into any field under 16px on focus,
+   and these are what you paste a FEN or a move list into. */
+@media (pointer: coarse) {
+  .review-import__field {
+    font-size: 16px;
+  }
+}
 
 /* Right-rail captured-material rows (lichess round: mat-top / mat-bot). Fixed
    compact tile size (not board-relative — the rail width is stable). Empty
@@ -1228,6 +1235,118 @@
   }
 }
 
+/* Touch rows in the move list (mobile audit 2026-10, issue 6: 26px rows).
+   36px keeps four rows in the 140px phone strip below. */
+@media (pointer: coarse) {
+  .review-shell .review-move-list__move {
+    min-height: 36px;
+    align-items: center;
+  }
+}
+
+/* col1 stack (review, analysis, study, broadcast): board, arrows, a short move
+   strip, then everything else. Without it the phone stack ran board, underboard
+   (tabs, chart, the analysis import), game meta, the whole move list, and only
+   then the arrows: a screen or more below the board, so you could not step
+   through a game and watch the board at once (mobile audit 2026-10,
+   board-nav-split on every template).
+
+   The center column and the right rail dissolve (display: contents) and every
+   piece takes a row by `order`; the scaffold tags each with data-col1-area
+   (review-layout.ts COL1_AREAS). Nothing moves in the DOM, so col2 and col3
+   are untouched. The scaffold alone sets the cluster class: the
+   live room and /watch share the cluster but put other things in its rails.
+   The embedded shell (broadcast) repeats this under its own container query
+   at the end of the file. */
+@media (max-width: 799px) {
+  .review-shell:not(.review-shell--embedded) .review-shell__cluster--col1-stack {
+    grid-template-areas: none;
+  }
+  .review-shell:not(.review-shell--embedded)
+    .review-shell__cluster--col1-stack
+    :is(
+      .review-shell__center,
+      .review-center-column,
+      .review-shell__right,
+      .review-shell__right > .review-rail-group
+    ) {
+    display: contents;
+  }
+  .review-shell:not(.review-shell--embedded)
+    .review-shell__cluster--col1-stack
+    :is([data-col1-area], .review-shell__left > .review-rail-group) {
+    grid-area: auto;
+    width: min(100%, 560px);
+    min-width: 0;
+  }
+  .review-shell:not(.review-shell--embedded)
+    .review-shell__cluster--col1-stack
+    :is([data-col1-area="board"], [data-col1-area="under"]) {
+    width: 100%;
+  }
+  .review-shell:not(.review-shell--embedded)
+    .review-shell__cluster--col1-stack
+    [data-col1-area="board"] {
+    order: 1;
+  }
+  .review-shell:not(.review-shell--embedded)
+    .review-shell__cluster--col1-stack
+    [data-col1-area="nav"] {
+    order: 2;
+  }
+  .review-shell:not(.review-shell--embedded)
+    .review-shell__cluster--col1-stack
+    [data-col1-area="moves"] {
+    order: 3;
+  }
+  .review-shell:not(.review-shell--embedded)
+    .review-shell__cluster--col1-stack
+    [data-col1-area="extra"] {
+    order: 4;
+  }
+  .review-shell:not(.review-shell--embedded)
+    .review-shell__cluster--col1-stack
+    [data-col1-area="under"] {
+    order: 5;
+  }
+  .review-shell:not(.review-shell--embedded)
+    .review-shell__cluster--col1-stack
+    .review-shell__left
+    > .review-rail-group {
+    order: 6;
+  }
+  .review-shell:not(.review-shell--embedded)
+    .review-shell__cluster--col1-stack
+    [data-col1-area="summary"] {
+    order: 7;
+  }
+  .review-shell:not(.review-shell--embedded)
+    .review-shell__cluster--col1-stack
+    .review-shell__left
+    > .review-rail-group--deferred {
+    order: 8;
+  }
+  /* The move strip: a few rows that scroll on their own; the list keeps the
+     current move in view inside its own scroller (move-list.ts). */
+  .review-shell:not(.review-shell--embedded)
+    .review-shell__cluster--col1-stack
+    .review-rail-main
+    .review-move-list__rows {
+    max-height: 140px;
+  }
+  /* A study fuses its arrows into the moves box as the last strip (see
+     review-layout.ts). On the stack they lead the box instead, so they still
+     sit right under the board. */
+  .review-shell:not(.review-shell--embedded)
+    .review-shell__cluster--col1-stack
+    .review-rail-main
+    > .review-controls {
+    order: -1;
+    border-top: 0;
+    border-bottom: 1px solid var(--site-border);
+  }
+}
+
 /* The board resize grip's own styles moved to board-resize.css, imported by
    board-resize.ts so every surface that mounts a grip is styled. */
 
@@ -1665,5 +1784,82 @@
 
   .review-shell--embedded .review-shell__cluster--gauge .review-shell__gauge {
     display: block;
+  }
+}
+
+/* The col1 stack (see "col1 stack" above) for the embedded shell (a broadcast
+   board), which goes to one column on its own container width rather than the
+   viewport's, so the same rules sit under the container query. */
+@container (max-width: 639.98px) {
+  .review-shell--embedded .review-shell__cluster--col1-stack {
+    grid-template-areas: none;
+  }
+  .review-shell--embedded
+    .review-shell__cluster--col1-stack
+    :is(
+      .review-shell__center,
+      .review-center-column,
+      .review-shell__right,
+      .review-shell__right > .review-rail-group
+    ) {
+    display: contents;
+  }
+  .review-shell--embedded
+    .review-shell__cluster--col1-stack
+    :is([data-col1-area], .review-shell__left > .review-rail-group) {
+    grid-area: auto;
+    width: 100%;
+    min-width: 0;
+  }
+  .review-shell--embedded
+    .review-shell__cluster--col1-stack
+    :is([data-col1-area="board"], [data-col1-area="under"]) {
+    width: 100%;
+  }
+  .review-shell--embedded .review-shell__cluster--col1-stack [data-col1-area="board"] {
+    order: 1;
+  }
+  .review-shell--embedded .review-shell__cluster--col1-stack [data-col1-area="nav"] {
+    order: 2;
+  }
+  .review-shell--embedded .review-shell__cluster--col1-stack [data-col1-area="moves"] {
+    order: 3;
+  }
+  .review-shell--embedded .review-shell__cluster--col1-stack [data-col1-area="extra"] {
+    order: 4;
+  }
+  .review-shell--embedded .review-shell__cluster--col1-stack [data-col1-area="under"] {
+    order: 5;
+  }
+  .review-shell--embedded
+    .review-shell__cluster--col1-stack
+    .review-shell__left
+    > .review-rail-group {
+    order: 6;
+  }
+  .review-shell--embedded .review-shell__cluster--col1-stack [data-col1-area="summary"] {
+    order: 7;
+  }
+  .review-shell--embedded
+    .review-shell__cluster--col1-stack
+    .review-shell__left
+    > .review-rail-group--deferred {
+    order: 8;
+  }
+  /* The move strip: a few rows that scroll on their own; the list keeps the
+     current move in view inside its own scroller (move-list.ts). */
+  .review-shell--embedded
+    .review-shell__cluster--col1-stack
+    .review-rail-main
+    .review-move-list__rows {
+    max-height: 140px;
+  }
+  /* A study fuses its arrows into the moves box as the last strip (see
+     review-layout.ts). On the stack they lead the box instead, so they still
+     sit right under the board. */
+  .review-shell--embedded .review-shell__cluster--col1-stack .review-rail-main > .review-controls {
+    order: -1;
+    border-top: 0;
+    border-bottom: 1px solid var(--site-border);
   }
 }
