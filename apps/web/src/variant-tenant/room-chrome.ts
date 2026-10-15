@@ -634,9 +634,10 @@ export function createTenantRoomChrome<C extends string>(
     if (view?.status.type === 'finished') {
       // Rematch / New opponent / Review game (postgame-panel.ts). Only a seated
       // player gets the first two: a spectator used to be offered "Play again",
-      // which opened a game of their own from someone else's room. Tenants have
-      // no mutual PvP rematch yet (rematchControls defaults to null), so a
-      // seated PvP player gets New opponent and Review.
+      // which opened a game of their own from someone else's room. A PvP seat
+      // gets the tenant's mutual rematch block (jieqi: tenant-rematch.ts);
+      // tenants without one (rematchControls defaults to null) get New
+      // opponent and Review.
       const seated = seatColor() !== null;
       const mode = ctx.roomMode();
       const rematch = !seated
