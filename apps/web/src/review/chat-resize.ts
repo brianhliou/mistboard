@@ -80,9 +80,14 @@ export function attachChatResize(panel: HTMLElement): HTMLElement {
     }
   };
 
+  // A drag reads the ceiling once, at pointerdown: the probe forces layout, and
+  // the box it measures does not change while the pointer moves.
+  let dragCeiling: number | null = null;
+  const ceiling = (): number => dragCeiling ?? maxHeight();
+
   const setAriaHeight = (height: number): void => {
     separator.setAttribute('aria-valuemin', String(MIN_HEIGHT));
-    separator.setAttribute('aria-valuemax', String(Math.round(maxHeight())));
+    separator.setAttribute('aria-valuemax', String(Math.round(ceiling())));
     separator.setAttribute('aria-valuenow', String(Math.round(height)));
   };
 
@@ -93,14 +98,14 @@ export function attachChatResize(panel: HTMLElement): HTMLElement {
       setAriaHeight(panel.getBoundingClientRect().height);
       return;
     }
-    const renderedHeight = clamp(preferredHeight, MIN_HEIGHT, maxHeight());
+    const renderedHeight = clamp(preferredHeight, MIN_HEIGHT, ceiling());
     panel.classList.add('review-spectator-chat--manual-height');
     panel.style.setProperty('--review-chat-manual-height', `${Math.round(renderedHeight)}px`);
     setAriaHeight(renderedHeight);
   };
 
   const chooseHeight = (height: number, persist = true): void => {
-    preferredHeight = Math.round(clamp(height, MIN_HEIGHT, maxHeight()));
+    preferredHeight = Math.round(clamp(height, MIN_HEIGHT, ceiling()));
     if (persist) writeStoredHeight(preferredHeight);
     renderPreferredHeight();
   };
@@ -116,6 +121,7 @@ export function attachChatResize(panel: HTMLElement): HTMLElement {
     event.preventDefault();
     dragStartY = event.clientY;
     dragStartHeight = panel.getBoundingClientRect().height;
+    dragCeiling = maxHeight();
     separator.setPointerCapture(event.pointerId);
     separator.classList.add('is-dragging');
     document.documentElement.classList.add('chat-resizing');
@@ -127,6 +133,7 @@ export function attachChatResize(panel: HTMLElement): HTMLElement {
   const endDrag = (event: PointerEvent): void => {
     if (separator.hasPointerCapture(event.pointerId))
       separator.releasePointerCapture(event.pointerId);
+    dragCeiling = null;
     if (preferredHeight !== null) writeStoredHeight(preferredHeight);
     separator.classList.remove('is-dragging');
     document.documentElement.classList.remove('chat-resizing');
