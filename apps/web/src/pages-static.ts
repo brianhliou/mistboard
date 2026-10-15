@@ -142,31 +142,37 @@ const INDEX_PATH_PREFIX: Record<Locale, string> = {
 
 const ARTICLES_INDEX_PRERENDER_META: IndexPrerenderMeta = {
   en: {
-    title: 'Articles | Mistboard',
-    description: 'Long-form writing on original strategy games, rules, and engine research.',
+    title: 'Xiangqi and Variant Articles | Mistboard',
+    description:
+      'Long-form articles on xiangqi (Chinese chess) and its variants: rules explained, champions and players, engine research, puzzles, and how Mistboard is built.',
   },
   'zh-Hans': {
-    title: '文章 | Mistboard',
-    description: '原创策略游戏的文章、规则说明与引擎工作。',
+    title: '象棋与变体文章 | Mistboard',
+    description:
+      '关于象棋（中国象棋）及其变体的长文：规则详解、历届冠军与棋手、引擎研究、残局题目，以及 Mistboard 是怎样做出来的。',
   },
   'zh-Hant': {
-    title: '文章 | Mistboard',
-    description: '原創策略遊戲的文章、規則說明與引擎工作。',
+    title: '象棋與變體文章 | Mistboard',
+    description:
+      '關於象棋（中國象棋）及其變體的長文：規則詳解、歷屆冠軍與棋手、引擎研究、殘局題目，以及 Mistboard 是怎樣做出來的。',
   },
 };
 
 const RULES_INDEX_PRERENDER_META: IndexPrerenderMeta = {
   en: {
-    title: 'Rules | Mistboard',
-    description: 'Reference rules for Mistboard games, classic bases, and Fog of War variants.',
+    title: 'Xiangqi and Variant Rules | Mistboard',
+    description:
+      'Full rules for every game on Mistboard: xiangqi (Chinese chess), jieqi, banqi, Jungle and chess, plus Fog of War, atomic, duck and other xiangqi variants.',
   },
   'zh-Hans': {
-    title: '规则 | Mistboard',
-    description: 'Mistboard 游戏、经典基础规则与战争迷雾变体的规则参考。',
+    title: '象棋与变体规则 | Mistboard',
+    description:
+      'Mistboard 上每一种棋的完整规则：象棋（中国象棋）、揭棋、暗棋、斗兽棋和国际象棋，以及迷雾、原子、鸭子等各种象棋变体。',
   },
   'zh-Hant': {
-    title: '規則 | Mistboard',
-    description: 'Mistboard 遊戲、經典基礎規則與戰爭迷霧變體的規則參考。',
+    title: '象棋與變體規則 | Mistboard',
+    description:
+      'Mistboard 上每一種棋的完整規則：象棋（中國象棋）、揭棋、暗棋、鬥獸棋和國際象棋，以及迷霧、原子、鴨子等各種象棋變體。',
   },
 };
 

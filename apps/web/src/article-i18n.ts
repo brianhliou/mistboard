@@ -491,7 +491,7 @@ const ZH_HANS: Record<string, string> = {
   'The Longest Forced Mates in Xiangqi': '象棋最长的必胜杀局',
   'The Longest Forced Mates': '最长的必胜杀局',
   'A horse and a soldier beat a general with both advisors and both elephants, and the slowest win in that endgame takes 65 moves. Seven records from xiangqi endgame tablebases, with the lines, and five of them end with the loser having no legal move.':
-    '马兵能胜士象全，而这一残局里最慢的胜法要走65回合。七项出自象棋残局库的纪录，附完整着法，其中五局以负方无着可走告终。',
+    '马和兵联手就能胜士象全，而这一残局里最慢的胜法要走65回合。这里收录七项出自象棋残局库的纪录，每项都附完整着法，其中五项以负方无着可走告终。',
   'We generated xiangqi endgame tablebases for every one-and-two-attacker class against the full defence and pulled out the deepest position in each. The longest is a horse and a soldier: 65 moves of best play by both sides.':
     '我们为一子和两子进攻对士象全的每一类残局生成了象棋残局库，并找出每一类中最深的局面。最长的是马兵：双方都走最佳着法，共65回合。',
   'Five of the seven records end with the losing general having no legal move. That is 困毙, and in xiangqi it loses, so a longest-mate line can finish without a check on the board.':
@@ -562,7 +562,7 @@ const ZH_HANS: Record<string, string> = {
   'A xiangqi threefold repetition bug: the chariot and the cannon shared a key':
     '象棋三次重复局面判定的一个错误：车和炮被记成了同一个字母',
   "A one-character bug in Mistboard's xiangqi repetition key let a game end in a threefold draw after a position had occurred only twice.":
-    'Mistboard 象棋重复局面键里一个只差一个字符的错误，让一个局面只出现两次，对局就被判为三次重复和棋。',
+    'Mistboard 象棋重复局面判定所用的键里，有一个只差一个字符的错误：一个局面明明只出现了两次，对局却被判为三次重复和棋。',
   'Our xiangqi repetition key labelled each piece by the first letter of its role, so the chariot and the cannon were both `c`. Swapping a chariot and a cannon left the key unchanged, so a game could be drawn by threefold repetition after only two.':
     '我们的象棋重复局面键用棋子角色英文名的首字母来标记每个棋子，于是车（chariot）和炮（cannon）都是 `c`。车和炮互换位置后，键不变，所以一个局面只出现两次，对局就可能被判为三次重复和棋。',
   'The fix writes out the role name. Fog Chess had the same bug with the king and the knight. No finished game changes result.':
@@ -984,7 +984,7 @@ const ZH_HANS: Record<string, string> = {
   // pikafish-reveal-bug: machine-drafted 2026-10-02, not native-reviewed.
   'Our Pikafish jieqi bot misjudged its reveals': '我们的皮卡鱼揭棋电脑误判了翻子',
   'Our Pikafish jieqi bot rated some reveals far better than they were. Two bugs caused it. Both are fixed, at little or no cost in strength.':
-    '我们的皮卡鱼揭棋电脑把一些翻子评得远比实际要好。原因是两个错误。两个都已修复，棋力几乎没有损失。',
+    '我们的皮卡鱼揭棋电脑把一些翻子评估得远比实际要好，原因是两个错误。两个错误都已修复，修复后棋力只有很小的损失，或者完全没有损失。',
   'In [jieqi](/rules/jieqi), turning over a face-down piece is a bet. You know which pieces it could be, and not which one it is. Our Pikafish bot, the engine behind Levels 1 to 8, priced some of those bets far too well. It would turn over a piece that gets mated for most of what it could be, and rate the move as winning.':
     '在[揭棋](/rules/jieqi)里，翻开一个暗子就是一次下注。你知道它可能是哪些棋子，但不知道究竟是哪一个。我们的皮卡鱼电脑，也就是第 1 到第 8 级背后的引擎，把其中一些赌注估得太好了。它会翻开一个在大多数可能下都会被将死的棋子，还把这步棋评为胜势。',
   'We found it on October 2, while writing the [AB-JChess post](/blog/ab-jchess). The fix is live for every level and for the engine you can run on the analysis board.':
@@ -1091,7 +1091,7 @@ const ZH_HANS: Record<string, string> = {
   '1,000 games played': '已下完 1,000 盘棋',
   'Mistboard passes 1,000 games': 'Mistboard 突破 1,000 盘对局',
   'Since June 1, people have finished 1,000 games on Mistboard, most of them in September. Thank you for playing.':
-    '从 6 月 1 日起，棋友们在 Mistboard 上下完了 1,000 盘棋，大部分是在 9 月下的。感谢大家来下棋。',
+    '从 6 月 1 日起，棋友们已经在 Mistboard 上下完了 1,000 盘棋，其中大部分是在 9 月下的。感谢每一位来这里下棋的棋友。',
   'Mistboard passed 1,000 finished games this week. A game counts once both sides have moved and it ends, against another person or a bot. Engine matches and our test accounts are left out, and counting started on June 1.':
     'Mistboard 本周下完的棋突破了 1,000 盘。一盘棋只要双方都走过棋并且下完，就计为一盘，不论对手是人还是电脑。引擎之间的对局和我们的测试账号不计在内，计数从 6 月 1 日开始。',
   'The Mistboard statistics page: 1,000 games played, games per week climbing from a handful in June to nearly 400 in the week of September 21, jieqi far ahead by variant, and almost every game against a bot.':
@@ -1290,7 +1290,7 @@ const ZH_HANS: Record<string, string> = {
   'League, stage one': '象甲第一阶段',
   'Sep 14–18': '9月14–18日',
   "Beat the world champion 12 to 8 in a ten-game match in January, then the rest of his season through the first stage of China's top league. Six games on the board, all 75 analysed.":
-    '一月的十局番棋以 12 比 8 击败世界冠军，之后一路打到中国象甲联赛第一阶段。盘面上六局，全部 75 局附引擎分析。',
+    '一月在十局番棋中以 12 比 8 击败世界冠军，之后是他整个赛季的对局，直到中国象甲联赛第一阶段。棋盘上展示六局，全部 75 局都附有分析。',
   'Cao Yanlei at the board. Photo: 象棋字典 via Sohu.':
     '对局中的曹岩磊。图片：象棋字典，经搜狐转载。',
   'Cao Yanlei in a dark suit and white shirt, looking down at the pieces during a tournament game.':
@@ -1910,7 +1910,7 @@ const ZH_HANS: Record<string, string> = {
   // Drives the localized <title>; not covered by the prose test, so it is easy to miss.
   'For titled xiangqi and chess players': '致象棋与国际象棋的头衔棋手',
   'Verified titled players get a gold badge beside their name, a coaching page students can find, and a front page that will carry their work. Verification takes about two minutes.':
-    '通过认证的头衔棋手，名字旁会显示金色徽章，可以开设让学员找得到的教练主页，作品也有机会登上首页。认证大约只需两分钟。',
+    '通过认证的头衔棋手，名字旁会显示金色徽章，可以开设让学员找得到的教练主页，首页今后也会刊登他们的作品。认证大约只需要两分钟。',
   'Verified titled players get a gold badge beside their name, a coaching page students can find, and a front page that will carry their work. Verification takes about two minutes: start at [mistboard.com/verify-title](/verify-title).':
     '通过认证的头衔棋手，名字旁会显示金色徽章，可以开设让学员找得到的教练主页，作品也有机会登上首页。认证大约只需两分钟：请前往 [mistboard.com/verify-title](/verify-title)。',
   'Mistboard accepts WXF and CXA titles (XGM, XIM, XNM, XWGM, XWIM) and FIDE titles (GM, IM, FM, CM, WGM, WIM, WFM, WCM). Link your federation profile, give your real name, note the results behind the claim, and an admin reviews it personally.':
@@ -1937,10 +1937,11 @@ const ZH_HANS: Record<string, string> = {
   'Ask me something first': '有问题先问我',
   // -- Fortress Xiangqi --
   'Fortress Xiangqi Rules': '堡垒象棋规则',
+  'Fortress Xiangqi Rules: Drops and the Treasure': '堡垒象棋规则：打入与新棋子「宝」',
   'Shigenobu Kusumoto, working in Osaka, invented Mini Xiangqi in 1973. A Japanese designer took a Chinese game and built it a smaller board, the same move he made for his own country’s game with minishogi. Fortress Xiangqi runs that trade in the other direction. Shogi has had drops for centuries and xiangqi never has, so this is what xiangqi looks like when it borrows them.':
     '楠本茂信在大阪发明了小象棋，时间是 1973 年。一位日本设计者拿起一款中国棋，为它造了一张更小的棋盘，正如他为本国的将棋做过五五将棋。堡垒象棋把这趟交流反向跑了一遍。将棋有打入已有数百年，象棋从来没有，这就是象棋借来打入之后的样子。',
-  'A compact Xiangqi variant with captured pieces in reserve, piece drops, and one new piece: the Treasure.':
-    '一种紧凑的象棋变体，带有持子、打入，以及一个新棋子「宝」。',
+  'A compact xiangqi variant on a 7 by 8 board, with the two palaces in opposite corners. Captured pieces go to your reserve and drop back as your own, and one new piece joins: the Treasure.':
+    '一种紧凑的象棋变体：棋盘为 7×8，双方九宫位于相对的两角。吃掉的棋子进入你的持子，可以作为己方棋子打回棋盘；另外还加入一个新棋子「宝」。',
   'Fortress Xiangqi is a compact [Xiangqi](/rules/xiangqi) variant designed by Brian H. Liou in 2026 as a Mistboard original. It keeps the familiar pieces, adds one new piece called the Treasure, and gives each player an open reserve. Capture an enemy piece and you can later drop it back as your own.':
     '堡垒象棋是 Brian H. Liou 于 2026 年为 Mistboard 原创设计的紧凑型[象棋](/rules/xiangqi)变体。它保留熟悉的棋子，加入一个名为「宝」的新棋子，并让双方拥有公开持子。吃掉敌子后，可以在之后将它作为己方棋子打回棋盘。',
   'Captured material stays in the game, so every exchange changes both the board and the reserves. A defensive trade now may supply the attacker you need later.':
@@ -2138,7 +2139,7 @@ const ZH_HANS: Record<string, string> = {
   "Misty is Mistboard's Fog of War chess engine: how it sees, searches possible boards, avoids hidden catastrophes, and where the current version stands.":
     'Misty 是 Mistboard 的迷雾国际象棋引擎：它如何观察、搜索可能局面、避开隐藏灾难，以及当前版本处在什么水平。',
   'How Mistboard keeps hidden information on the server: canonical state, seat-scoped views, private live rooms, and public postgame review.':
-    'Mistboard 如何把隐藏信息留在服务器端：规范真实局面、按座位投影视野、私密实时房间，以及公开的赛后复盘。',
+    'Mistboard 如何把隐藏信息留在服务器端：服务器保存规范的真实局面，按座位投影各方的视野，实时对局房间保持私密，赛后复盘则公开。',
 
   // -- Shared rules-page headings --
   'Board and setup': '棋盘与布局',
@@ -2313,6 +2314,7 @@ const ZH_HANS: Record<string, string> = {
 
   // -- Chess primer --
   'Chess Rules': '国际象棋规则',
+  'Chess Rules: Castling, Promotion and En Passant': '国际象棋规则：王车易位、升变与吃过路兵',
   'Chess is a two-player strategy game played for centuries. It descends from the Indian game chaturanga of around the 6th century and reached Europe through Persia and the Islamic world; its modern form, with the long-range queen and bishop, took shape in Europe in the late 1400s.':
     '国际象棋是一种已有数百年历史的双人策略游戏。它源自约公元 6 世纪的印度游戏恰图兰加，经由波斯和伊斯兰世界传入欧洲；其现代形式（拥有远程的后和象）于 15 世纪末在欧洲成形。',
   'Board setup': '棋盘布置',
@@ -2571,17 +2573,17 @@ const ZH_HANS: Record<string, string> = {
   // point of seoTitle -- 'fog of war chess' is what players type.
   'Fog of War Chess Rules': '迷雾国际象棋规则',
   "Fog Chess is chess where you see only the squares your own pieces can reach. Nobody announces check, so a king is lost by being captured, and it can castle into an attack it can't see.":
-    '迷雾国际象棋就是只能看到己方棋子可及格子的国际象棋。没有人提示将军，王被吃掉即负，王也可能易位到自己看不见的攻击之下。',
+    '迷雾国际象棋就是只能看到己方棋子所能到达的格子的国际象棋。没有人提示将军，所以王要被吃掉才算输，王也可能易位到自己看不见的攻击之下。',
   "[Fog Chess](https://en.wikipedia.org/wiki/Dark_chess) is Mistboard's public name for dark chess, also called Fog of War chess. Jens Bæk Nielsen and Torben Osted invented it in 1989. It is the implicit-fog version of the idea: no umpire, no scan action. Each side's visibility is derived from where its pieces can legally move.":
     '[迷雾国际象棋](https://en.wikipedia.org/wiki/Dark_chess)是 Mistboard 对 dark chess / Fog of War chess 的公开名称。Jens Bæk Nielsen 与 Torben Osted 于 1989 年发明了它。它属于隐式迷雾：没有裁判，也没有侦察动作。每一方的视野完全由己方棋子的合法走法范围推导而来。',
   'Xiangqi, also known as Chinese chess, took its modern form in China during the Song dynasty (960 to 1279), when the cannon joined the board. Its ancestors run back several centuries earlier, and it shares a common root with chess, shogi, and janggi in the older Indian game chaturanga. It is now among the most widely played board games in the world.':
     '象棋的现代形态在宋代（960 至 1279 年）的中国成型，炮也在这一时期加入棋盘。它的前身可以追溯到更早几个世纪，并与国际象棋、将棋、朝鲜象棋同源于更古老的印度游戏恰图兰卡。今天它是世界上参与人数最多的棋类游戏之一。',
   'Fog Xiangqi Rules': '迷雾象棋规则',
-  'Fog of War Xiangqi Rules': '迷雾象棋规则',
+  'Fog of War Xiangqi Rules': '迷雾象棋规则：战争迷雾下的象棋',
   'Brian H. Liou designed Fog Xiangqi in 2026 as a Mistboard original. Fog of War has been played on the chess board since Jens Bæk Nielsen and Torben Osted invented dark chess in 1989, and chess.com runs it as a standard variant today. Nobody had carried it across to xiangqi. The cannon is the piece that makes it strange. It captures only by jumping over another piece, so under fog you are firing at something you cannot see, across a screen you are not certain is still there.':
     '迷雾象棋由 Brian H. Liou 于 2026 年设计，是 Mistboard 的原创变体。战争迷雾早在 1989 年就由 Jens Bæk Nielsen 和 Torben Osted 发明的「黑棋」引入国际象棋，如今也是 chess.com 的常规变体，却从未有人把它移植到象棋上。真正让它变得奇特的是炮。炮只能隔子吃子，所以在迷雾中，你既看不见目标，也无法确定炮架是否还在。',
   "Fog Xiangqi is xiangqi under Fog of War. A piece you can't see can still block your horse, and a general with a clear file to the other general can capture it.":
-    '迷雾象棋是战争迷雾下的象棋。看不见的棋子照样可以蹩你的马腿；一方将帅若与对方之间的直线无子阻挡，就可以直接擒获。',
+    '迷雾象棋就是战争迷雾下的象棋。你看不见的棋子照样可以蹩你的马腿；一方的将帅若与对方将帅之间的直线上没有棋子阻挡，就可以直接把对方将帅吃掉。',
   'Fog Xiangqi is xiangqi under Fog of War. Pieces keep their normal movement, but unseen enemy pieces stay hidden and danger is not announced. Capture the general to win.':
     '迷雾象棋是在战争迷雾下对弈的象棋。棋子保留正常走法，但看不见的敌方棋子会被隐藏，危险不会被提示。擒获将帅即获胜。',
   'If Xiangqi is new to you, start with [Xiangqi Rules](/rules/xiangqi). If you already play xiangqi, the sections below explain only what fog changes.':
@@ -2593,7 +2595,7 @@ const ZH_HANS: Record<string, string> = {
   'Use [Xiangqi Rules](/rules/xiangqi) for the base game. This page covers what changes.':
     '基础规则请参考[象棋规则](/rules/xiangqi)。本页只说明变化之处。',
   'Standard chess rules, the primer behind Fog Chess: castling, promotion, en passant, the draw rules, and a famous game to play through.':
-    '普通国际象棋规则，也就是迷雾国际象棋背后的基础：王车易位、升变、吃过路兵、和棋规则，以及一盘可逐步回放的名局。',
+    '普通国际象棋的规则，也是迷雾国际象棋背后的基础：王车易位、升变、吃过路兵、各种和棋规则，以及一盘可以逐步回放的著名对局。',
   'Chess is the open-information base game. Add Fog of War for Fog Chess, where enemy pieces outside your vision disappear and the king falls by capture.':
     '国际象棋是信息公开的底层游戏。为它加上战争迷雾，便得到迷雾国际象棋：你视野之外的敌方棋子会消失，而王由被吃而落败。',
   'Read Fog Chess': '阅读迷雾国际象棋',
@@ -2615,11 +2617,11 @@ const ZH_HANS: Record<string, string> = {
     '斗兽棋的 4×4 翻面版本，又称翻翻棋。所有动物开局均背面朝上。每回合翻开一枚或走动一枚，等级相同的双方同归于尽、一起离场。',
   'Jieqi Rules (Reveal Xiangqi)': '揭棋规则：玩法详解与免费在线对弈',
   'Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, makes its first move as the piece whose point it stands on, then turns face-up.':
-    '揭棋规则详解：除将帅外的棋子都隐藏身份，首次按所在起始位置的棋子走法行棋，然后翻开并按真实身份行棋。',
+    '揭棋是一种暗子玩法的中国象棋变体，这里详解它的规则。除将帅外，所有棋子开局都背面朝上，第一步按所在位置原本棋子的走法行棋，走完即翻开，此后按真实身份行棋。',
   "Jieqi, also called Reveal Xiangqi, keeps xiangqi's board and checkmate goal, but hides every non-general piece. A dark piece first moves, attacks, and captures by the starting point it occupies. After that move, it reveals and plays by identity.":
     '揭棋保留象棋的棋盘和将死目标，但隐藏所有非将帅棋子的身份。暗子首次按它所在起始位置的棋子走法移动、攻击和吃子，走完后翻开，之后按真实身份行棋。',
   'Banqi, also called Chinese dark chess or blind chess, is played face-down on half a xiangqi board. Pieces capture by rank, except that the soldier takes the general and the cannon jumps a screen to take anything.':
-    '暗棋又称盲棋，在半张象棋棋盘上以背面朝上的棋子进行。棋子按等级吃子，例外是卒可以吃将，炮则隔一子跳吃任何棋子。',
+    '暗棋又称盲棋，在半张象棋棋盘上以背面朝上的棋子进行。棋子按等级吃子，但有两个例外：卒可以吃将，炮则隔着一个炮架跳吃任何棋子。',
   'Banqi, also called Chinese dark chess or blind chess, is a fast hidden-piece game played on half a xiangqi board. All thirty-two pieces begin shuffled and face-down. The first flip assigns colors. After that, each turn is a choice: flip a tile or move a revealed piece. Captures follow rank, except for the cannon.':
     '暗棋是在半张象棋棋盘上进行的快节奏隐藏棋子游戏。三十二枚棋子全部洗匀并背面朝上。第一次翻子决定双方颜色。之后每回合都在两种行动中选择：翻开棋子，或移动一枚已翻开的棋子。除炮外，吃子按等级进行。',
   'Although it uses [Xiangqi](/rules/xiangqi) pieces, it is a separate game: pieces move one square, the general is not royal, and face-down tiles cannot be captured. This page describes the exact rules used on Mistboard.':
@@ -3692,7 +3694,7 @@ const ZH_HANS: Record<string, string> = {
   // read that is not coming. Locked the same day its English copy published, so
   // any later English edit orphans a key here and fails the coverage test.
   'Play jieqi against the engine or a friend, free and without an account, then review the game with analysis that separates your choices from your luck.':
-    '免费和揭棋AI（皮卡鱼、AB-JChess）或朋友下揭棋，不用注册，下完还能复盘，分析会把你的选择和你的运气分开算。',
+    '免费和揭棋AI（皮卡鱼、AB-JChess）或朋友下揭棋，不用注册账号；下完还能复盘，分析会把你自己的选择和运气分开计算。',
   'Jieqi is [xiangqi](/rules/xiangqi) with every piece face-down. A piece moves as whatever normally starts on its square, then flips and keeps that identity for the rest of the game. You begin without knowing what anything is, including your own pieces. The [rules page](/rules/jieqi) has the details.':
     '揭棋就是把每个子都翻扣过去的[象棋](/rules/xiangqi)。暗子按它所在那个点原本摆的子走，走完就翻开，之后一直是翻出来的那个子。开局时你不知道任何一个子是什么，连自己的也不知道。[规则页](/rules/jieqi)有详细说明。',
   'It is a young game, out of Hong Kong and Guangdong, and it has spread over the last couple of decades mostly among Chinese and Vietnamese players. For what to actually open with, see [what strong players believe about the opening](/blog/jieqi-openings).':
@@ -3784,6 +3786,7 @@ const ZH_HANS: Record<string, string> = {
   'Black wins by checkmate · 73 moves': '黑方将死获胜 · 73 回合',
   // -- Duck Xiangqi --
   'Duck Xiangqi Rules': '鸭子象棋规则',
+  'Duck Xiangqi Rules: Duck Chess Meets Xiangqi': '鸭子象棋规则：当鸭子国际象棋遇上象棋',
   'Duck Chess on the xiangqi board. Every turn is a move and then a duck placement, the duck blocks and screens like a piece, and you win by capturing the general.':
     '把鸭子国际象棋搬到象棋盘上。每一回合都是先走一步棋，再放一次鸭子；鸭子像棋子一样挡路，也一样能当炮架；吃掉对方的将帅即获胜。',
   'Duck Xiangqi is [xiangqi](/rules/xiangqi) with a duck on the board. Every turn you make a legal xiangqi move, and then you move the duck to an empty point. Both halves are one turn, and neither of them is optional.':
@@ -4593,6 +4596,7 @@ const ZH_HANS: Record<string, string> = {
   'BLACK IS IN CHECK': '黑方被将军',
   'THE CORK: A CANNON IN FRONT OF THE CHARIOT': '塞子：车前面的炮',
   'Atomic Xiangqi Rules': '原子象棋规则',
+  'Atomic Xiangqi Rules: Every Capture Explodes': '原子象棋规则：每次吃子都会爆炸',
   'Xiangqi where a capture is an explosion. The capturer, the captured piece and the four neighbouring pieces go; soldiers survive; a cannon shot takes only its target; and a blast threat on the general is check.':
     '每次吃子都会爆炸的象棋。吃子的棋子、被吃的棋子和相邻四个点上的棋子一起消失；兵卒能在爆炸中幸存；炮的一击只带走目标；对将帅的爆炸威胁算作将军。',
   'Atomic Xiangqi is [xiangqi](/rules/xiangqi) with one change: a capture is an explosion. The piece that captures, the piece it takes, and every piece on the four points next to the capture are removed from the board. Soldiers survive an explosion. A general does not.':
@@ -5131,7 +5135,7 @@ const ZH_HANS: Record<string, string> = {
     '这盘棋是[配套研究](/study/nlZy4yNA)中的六盘之一，每盘都注明了决定胜负的打入。',
   'The six engine games': '六盘引擎对局',
   'Xiangqi where a captured piece joins your hand and the advisors and elephants start there: drop a piece on any empty point, advisors and elephants on their own half, check and mate included.':
-    '被吃的子归入吃子一方持子、士和象开局就在持子里的象棋：把持子打入任何一个空点，士和象限己方半盘，可以将军，也可以将死。',
+    '被吃掉的棋子归入吃子一方的持子、士和象开局就在持子里的象棋：持子可以打入任何一个空点，士和象只能打入己方半盘，打入的子可以将军，也可以将死。',
   'Everything else is xiangqi: the board, how the other pieces move, the general in its palace, the river, the rule that the two generals may not face each other on an open file, and the way a game ends.':
     '其余一切都是象棋：棋盘、其他棋子的走法、待在九宫里的将帅、河界、双方将帅不能在同一条直线上无子相隔地照面的规则，以及对局结束的方式。',
   'Each side begins with its two advisors and two elephants in hand, not on the board. The back rank reads chariot, horse, two empty points, the general, two empty points, horse, chariot. The cannons and soldiers stand where they always do.':
@@ -5552,7 +5556,7 @@ const ZH_HANT: Record<string, string> = {
   'The Longest Forced Mates in Xiangqi': '象棋最長的必勝殺局',
   'The Longest Forced Mates': '最長的必勝殺局',
   'A horse and a soldier beat a general with both advisors and both elephants, and the slowest win in that endgame takes 65 moves. Seven records from xiangqi endgame tablebases, with the lines, and five of them end with the loser having no legal move.':
-    '馬兵能勝士象全，而這一殘局裡最慢的勝法要走65回合。七項出自象棋殘局庫的紀錄，附完整著法，其中五局以負方無著可走告終。',
+    '馬和兵聯手就能勝士象全，而這一殘局裡最慢的勝法要走65回合。這裡收錄七項出自象棋殘局庫的紀錄，每項都附完整著法，其中五項以負方無著可走告終。',
   'We generated xiangqi endgame tablebases for every one-and-two-attacker class against the full defence and pulled out the deepest position in each. The longest is a horse and a soldier: 65 moves of best play by both sides.':
     '我們為一子和兩子進攻對士象全的每一類殘局生成了象棋殘局庫，並找出每一類中最深的局面。最長的是馬兵：雙方都走最佳著法，共65回合。',
   'Five of the seven records end with the losing general having no legal move. That is 困毙, and in xiangqi it loses, so a longest-mate line can finish without a check on the board.':
@@ -5624,7 +5628,7 @@ const ZH_HANT: Record<string, string> = {
   'A xiangqi threefold repetition bug: the chariot and the cannon shared a key':
     '象棋三次重複局面判定的一個錯誤：車和炮被記成了同一個字母',
   "A one-character bug in Mistboard's xiangqi repetition key let a game end in a threefold draw after a position had occurred only twice.":
-    'Mistboard 象棋重複局面鍵裡一個只差一個字元的錯誤，讓一個局面只出現兩次，對局就被判為三次重複和棋。',
+    'Mistboard 象棋重複局面判定所用的鍵裡，有一個只差一個字元的錯誤：一個局面明明只出現了兩次，對局卻被判為三次重複和棋。',
   'Our xiangqi repetition key labelled each piece by the first letter of its role, so the chariot and the cannon were both `c`. Swapping a chariot and a cannon left the key unchanged, so a game could be drawn by threefold repetition after only two.':
     '我們的象棋重複局面鍵用棋子角色英文名的首字母來標記每個棋子，於是車（chariot）和炮（cannon）都是 `c`。車和炮互換位置後，鍵不變，所以一個局面只出現兩次，對局就可能被判為三次重複和棋。',
   'The fix writes out the role name. Fog Chess had the same bug with the king and the knight. No finished game changes result.':
@@ -6047,7 +6051,7 @@ const ZH_HANT: Record<string, string> = {
   // pikafish-reveal-bug: machine-drafted 2026-10-02, not native-reviewed.
   'Our Pikafish jieqi bot misjudged its reveals': '我們的皮卡魚揭棋電腦誤判了翻子',
   'Our Pikafish jieqi bot rated some reveals far better than they were. Two bugs caused it. Both are fixed, at little or no cost in strength.':
-    '我們的皮卡魚揭棋電腦把一些翻子評得遠比實際要好。原因是兩個錯誤。兩個都已修復，棋力幾乎沒有損失。',
+    '我們的皮卡魚揭棋電腦把一些翻子評估得遠比實際要好，原因是兩個錯誤。兩個錯誤都已修復，修復後棋力只有很小的損失，或者完全沒有損失。',
   'In [jieqi](/rules/jieqi), turning over a face-down piece is a bet. You know which pieces it could be, and not which one it is. Our Pikafish bot, the engine behind Levels 1 to 8, priced some of those bets far too well. It would turn over a piece that gets mated for most of what it could be, and rate the move as winning.':
     '在[揭棋](/rules/jieqi)裡，翻開一個暗子就是一次下注。你知道它可能是哪些棋子，但不知道究竟是哪一個。我們的皮卡魚電腦，也就是第 1 到第 8 級背後的引擎，把其中一些賭注估得太好了。它會翻開一個在大多數可能下都會被將死的棋子，還把這步棋評為勝勢。',
   'We found it on October 2, while writing the [AB-JChess post](/blog/ab-jchess). The fix is live for every level and for the engine you can run on the analysis board.':
@@ -6161,7 +6165,7 @@ const ZH_HANT: Record<string, string> = {
   '1,000 games played': '已下完 1,000 盤棋',
   'Mistboard passes 1,000 games': 'Mistboard 突破 1,000 盤對局',
   'Since June 1, people have finished 1,000 games on Mistboard, most of them in September. Thank you for playing.':
-    '從 6 月 1 日起，棋友們在 Mistboard 上下完了 1,000 盤棋，大部分是在 9 月下的。感謝大家來下棋。',
+    '從 6 月 1 日起，棋友們已經在 Mistboard 上下完了 1,000 盤棋，其中大部分是在 9 月下的。感謝每一位來這裡下棋的棋友。',
   'Mistboard passed 1,000 finished games this week. A game counts once both sides have moved and it ends, against another person or a bot. Engine matches and our test accounts are left out, and counting started on June 1.':
     'Mistboard 本週下完的棋突破了 1,000 盤。一盤棋只要雙方都走過棋並且下完，就計為一盤，不論對手是人還是電腦。引擎之間的對局和我們的測試帳號不計在內，計數從 6 月 1 日開始。',
   'The Mistboard statistics page: 1,000 games played, games per week climbing from a handful in June to nearly 400 in the week of September 21, jieqi far ahead by variant, and almost every game against a bot.':
@@ -6354,7 +6358,7 @@ const ZH_HANT: Record<string, string> = {
   'League, stage one': '象甲第一階段',
   'Sep 14–18': '9月14–18日',
   "Beat the world champion 12 to 8 in a ten-game match in January, then the rest of his season through the first stage of China's top league. Six games on the board, all 75 analysed.":
-    '一月的十局番棋以 12 比 8 擊敗世界冠軍，之後一路打到中國象甲聯賽第一階段。盤面上六局，全部 75 局附引擎分析。',
+    '一月在十局番棋中以 12 比 8 擊敗世界冠軍，之後是他整個賽季的對局，直到中國象甲聯賽第一階段。棋盤上展示六局，全部 75 局都附有分析。',
   'Cao Yanlei at the board. Photo: 象棋字典 via Sohu.':
     '對局中的曹岩磊。圖片：象棋字典，經搜狐轉載。',
   'Cao Yanlei in a dark suit and white shirt, looking down at the pieces during a tournament game.':
@@ -7066,7 +7070,7 @@ const ZH_HANT: Record<string, string> = {
   'Bring your title to Mistboard': '把你的頭銜帶到 Mistboard',
   'For titled xiangqi and chess players': '致象棋與國際象棋的頭銜棋手',
   'Verified titled players get a gold badge beside their name, a coaching page students can find, and a front page that will carry their work. Verification takes about two minutes.':
-    '通過認證的頭銜棋手，名字旁會顯示金色徽章，可以開設讓學員找得到的教練主頁，作品也有機會登上首頁。認證大約只需兩分鐘。',
+    '通過認證的頭銜棋手，名字旁會顯示金色徽章，可以開設讓學員找得到的教練主頁，首頁今後也會刊登他們的作品。認證大約只需要兩分鐘。',
   'Verified titled players get a gold badge beside their name, a coaching page students can find, and a front page that will carry their work. Verification takes about two minutes: start at [mistboard.com/verify-title](/verify-title).':
     '通過認證的頭銜棋手，名字旁會顯示金色徽章，可以開設讓學員找得到的教練主頁，作品也有機會登上首頁。認證大約只需兩分鐘：請前往 [mistboard.com/verify-title](/verify-title)。',
   'Mistboard accepts WXF and CXA titles (XGM, XIM, XNM, XWGM, XWIM) and FIDE titles (GM, IM, FM, CM, WGM, WIM, WFM, WCM). Link your federation profile, give your real name, note the results behind the claim, and an admin reviews it personally.':
@@ -7093,10 +7097,11 @@ const ZH_HANT: Record<string, string> = {
   'Ask me something first': '有問題先問我',
   // -- Fortress Xiangqi --
   'Fortress Xiangqi Rules': '堡壘象棋規則',
+  'Fortress Xiangqi Rules: Drops and the Treasure': '堡壘象棋規則：打入與新棋子「寶」',
   'Shigenobu Kusumoto, working in Osaka, invented Mini Xiangqi in 1973. A Japanese designer took a Chinese game and built it a smaller board, the same move he made for his own country’s game with minishogi. Fortress Xiangqi runs that trade in the other direction. Shogi has had drops for centuries and xiangqi never has, so this is what xiangqi looks like when it borrows them.':
     '楠本茂信在大阪發明了小象棋，時間是 1973 年。一位日本設計者拿起一款中國棋，為它造了一張更小的棋盤，正如他為本國的將棋做過五五將棋。堡壘象棋把這趟交流反向跑了一遍。將棋有打入已有數百年，象棋從來沒有，這就是象棋借來打入之後的樣子。',
-  'A compact Xiangqi variant with captured pieces in reserve, piece drops, and one new piece: the Treasure.':
-    '一種緊湊的象棋變體，帶有持子、打入，以及一個新棋子「寶」。',
+  'A compact xiangqi variant on a 7 by 8 board, with the two palaces in opposite corners. Captured pieces go to your reserve and drop back as your own, and one new piece joins: the Treasure.':
+    '一種緊湊的象棋變體：棋盤為 7×8，雙方九宮位於相對的兩角。吃掉的棋子進入你的持子，可以作為己方棋子打回棋盤；另外還加入一個新棋子「寶」。',
   'Fortress Xiangqi is a compact [Xiangqi](/rules/xiangqi) variant designed by Brian H. Liou in 2026 as a Mistboard original. It keeps the familiar pieces, adds one new piece called the Treasure, and gives each player an open reserve. Capture an enemy piece and you can later drop it back as your own.':
     '堡壘象棋是 Brian H. Liou 於 2026 年為 Mistboard 原創設計的緊湊型[象棋](/rules/xiangqi)變體。它保留熟悉的棋子，加入一個名為「寶」的新棋子，並讓雙方擁有公開持子。吃掉敵子後，可以在之後將它作為己方棋子打回棋盤。',
   'Captured material stays in the game, so every exchange changes both the board and the reserves. A defensive trade now may supply the attacker you need later.':
@@ -7294,7 +7299,7 @@ const ZH_HANT: Record<string, string> = {
   "Misty is Mistboard's Fog of War chess engine: how it sees, searches possible boards, avoids hidden catastrophes, and where the current version stands.":
     'Misty 是 Mistboard 的迷霧國際象棋引擎：它如何觀察、搜尋可能盤面、避開隱藏災難，以及目前版本處在什麼水平。',
   'How Mistboard keeps hidden information on the server: canonical state, seat-scoped views, private live rooms, and public postgame review.':
-    'Mistboard 如何把隱藏資訊留在伺服器端：標準真實局面、按座位投影視野、私密即時房間，以及公開的賽後複盤。',
+    'Mistboard 如何把隱藏資訊留在伺服器端：伺服器保存標準的真實局面，按座位投影各方的視野，即時對局房間保持私密，賽後複盤則公開。',
 
   // -- Shared rules-page headings --
   'Board and setup': '棋盤與佈局',
@@ -7467,6 +7472,7 @@ const ZH_HANT: Record<string, string> = {
 
   // -- Chess primer --
   'Chess Rules': '國際象棋規則',
+  'Chess Rules: Castling, Promotion and En Passant': '國際象棋規則：王車易位、升變與吃過路兵',
   'Chess is a two-player strategy game played for centuries. It descends from the Indian game chaturanga of around the 6th century and reached Europe through Persia and the Islamic world; its modern form, with the long-range queen and bishop, took shape in Europe in the late 1400s.':
     '國際象棋是一種已有數百年歷史的雙人策略遊戲。它源自約公元 6 世紀的印度遊戲恰圖蘭加，經由波斯和伊斯蘭世界傳入歐洲；其現代形式（擁有遠程的后和象）於 15 世紀末在歐洲成形。',
   'Board setup': '棋盤佈置',
@@ -7703,17 +7709,17 @@ const ZH_HANT: Record<string, string> = {
   // point of seoTitle -- 'fog of war chess' is what players type.
   'Fog of War Chess Rules': '迷霧國際象棋規則',
   "Fog Chess is chess where you see only the squares your own pieces can reach. Nobody announces check, so a king is lost by being captured, and it can castle into an attack it can't see.":
-    '迷霧國際象棋就是只能看到己方棋子可及格子的國際象棋。沒有人提示將軍，王被吃掉即負，王也可能易位到自己看不見的攻擊之下。',
+    '迷霧國際象棋就是只能看到己方棋子所能到達的格子的國際象棋。沒有人提示將軍，所以王要被吃掉才算輸，王也可能易位到自己看不見的攻擊之下。',
   "[Fog Chess](https://en.wikipedia.org/wiki/Dark_chess) is Mistboard's public name for dark chess, also called Fog of War chess. Jens Bæk Nielsen and Torben Osted invented it in 1989. It is the implicit-fog version of the idea: no umpire, no scan action. Each side's visibility is derived from where its pieces can legally move.":
     '[迷霧國際象棋](https://en.wikipedia.org/wiki/Dark_chess)是 Mistboard 對 dark chess / Fog of War chess 的公開名稱。Jens Bæk Nielsen 與 Torben Osted 於 1989 年發明了它。它屬於隱式迷霧：沒有裁判，也沒有偵察動作。每一方的視野完全由己方棋子的合法走法範圍推導而來。',
   'Xiangqi, also known as Chinese chess, took its modern form in China during the Song dynasty (960 to 1279), when the cannon joined the board. Its ancestors run back several centuries earlier, and it shares a common root with chess, shogi, and janggi in the older Indian game chaturanga. It is now among the most widely played board games in the world.':
     '象棋的現代形態在宋代（960 至 1279 年）的中國成型，砲也在這一時期加入棋盤。它的前身可以追溯到更早幾個世紀，並與國際象棋、將棋、朝鮮象棋同源於更古老的印度遊戲恰圖蘭卡。今天它是世界上參與人數最多的棋類遊戲之一。',
   'Fog Xiangqi Rules': '迷霧象棋規則',
-  'Fog of War Xiangqi Rules': '迷霧象棋規則',
+  'Fog of War Xiangqi Rules': '迷霧象棋規則：戰爭迷霧下的象棋',
   'Brian H. Liou designed Fog Xiangqi in 2026 as a Mistboard original. Fog of War has been played on the chess board since Jens Bæk Nielsen and Torben Osted invented dark chess in 1989, and chess.com runs it as a standard variant today. Nobody had carried it across to xiangqi. The cannon is the piece that makes it strange. It captures only by jumping over another piece, so under fog you are firing at something you cannot see, across a screen you are not certain is still there.':
     '迷霧象棋由 Brian H. Liou 於 2026 年設計，是 Mistboard 的原創變體。戰爭迷霧早在 1989 年就由 Jens Bæk Nielsen 和 Torben Osted 發明的「黑棋」引入西洋棋，如今也是 chess.com 的常規變體，卻從未有人把它移植到象棋上。真正讓它變得奇特的是砲。砲只能隔子吃子，所以在迷霧中，你既看不見目標，也無法確定砲架是否還在。',
   "Fog Xiangqi is xiangqi under Fog of War. A piece you can't see can still block your horse, and a general with a clear file to the other general can capture it.":
-    '迷霧象棋是戰爭迷霧下的象棋。看不見的棋子照樣可以蹩你的馬腿；一方將帥若與對方之間的直線無子阻擋，就可以直接擒獲。',
+    '迷霧象棋就是戰爭迷霧下的象棋。你看不見的棋子照樣可以蹩你的馬腿；一方的將帥若與對方將帥之間的直線上沒有棋子阻擋，就可以直接把對方將帥吃掉。',
   'Fog Xiangqi is xiangqi under Fog of War. Pieces keep their normal movement, but unseen enemy pieces stay hidden and danger is not announced. Capture the general to win.':
     '迷霧象棋是在戰爭迷霧下對弈的象棋。棋子保留正常走法，但看不見的敵方棋子會被隱藏，危險不會被提示。擒獲將帥即獲勝。',
   'If Xiangqi is new to you, start with [Xiangqi Rules](/rules/xiangqi). If you already play xiangqi, the sections below explain only what fog changes.':
@@ -7725,7 +7731,7 @@ const ZH_HANT: Record<string, string> = {
   'Use [Xiangqi Rules](/rules/xiangqi) for the base game. This page covers what changes.':
     '基礎規則請參考[象棋規則](/rules/xiangqi)。本頁只說明變化之處。',
   'Standard chess rules, the primer behind Fog Chess: castling, promotion, en passant, the draw rules, and a famous game to play through.':
-    '普通國際象棋規則，也就是迷霧國際象棋背後的基礎：王車易位、升變、吃過路兵、和棋規則，以及一盤可逐步回放的名局。',
+    '普通國際象棋的規則，也是迷霧國際象棋背後的基礎：王車易位、升變、吃過路兵、各種和棋規則，以及一盤可以逐步回放的著名對局。',
   'Chess is the open-information base game. Add Fog of War for Fog Chess, where enemy pieces outside your vision disappear and the king falls by capture.':
     '國際象棋是資訊公開的底層遊戲。為它加上戰爭迷霧，便得到迷霧國際象棋：你視野之外的敵方棋子會消失，而王由被吃而落敗。',
   'Read Fog Chess': '閱讀迷霧國際象棋',
@@ -8537,7 +8543,7 @@ const ZH_HANT: Record<string, string> = {
   // read that is not coming. Locked the same day its English copy published, so
   // any later English edit orphans a key here and fails the coverage test.
   'Play jieqi against the engine or a friend, free and without an account, then review the game with analysis that separates your choices from your luck.':
-    '免費和揭棋AI（皮卡魚、AB-JChess）或朋友下揭棋，不用註冊，下完還能複盤，分析會把你的選擇和你的運氣分開算。',
+    '免費和揭棋AI（皮卡魚、AB-JChess）或朋友下揭棋，不用註冊帳號；下完還能複盤，分析會把你自己的選擇和運氣分開計算。',
   'Jieqi is [xiangqi](/rules/xiangqi) with every piece face-down. A piece moves as whatever normally starts on its square, then flips and keeps that identity for the rest of the game. You begin without knowing what anything is, including your own pieces. The [rules page](/rules/jieqi) has the details.':
     '揭棋就是把每個子都翻扣過去的[象棋](/rules/xiangqi)。暗子按它所在那個點原本擺的子走，走完就翻開，之後一直是翻出來的那個子。開局時你不知道任何一個子是什麼，連自己的也不知道。[規則頁](/rules/jieqi)有詳細說明。',
   'It is a young game, out of Hong Kong and Guangdong, and it has spread over the last couple of decades mostly among Chinese and Vietnamese players. For what to actually open with, see [what strong players believe about the opening](/blog/jieqi-openings).':
@@ -8629,6 +8635,7 @@ const ZH_HANT: Record<string, string> = {
   'Black wins by checkmate · 73 moves': '黑方將死獲勝 · 73 回合',
   // -- Duck Xiangqi --
   'Duck Xiangqi Rules': '鴨子象棋規則',
+  'Duck Xiangqi Rules: Duck Chess Meets Xiangqi': '鴨子象棋規則：當鴨子國際象棋遇上象棋',
   'Duck Chess on the xiangqi board. Every turn is a move and then a duck placement, the duck blocks and screens like a piece, and you win by capturing the general.':
     '把鴨子國際象棋搬到象棋盤上。每一回合都是先走一步棋，再放一次鴨子；鴨子像棋子一樣擋路，也一樣能當炮架；吃掉對方的將帥即獲勝。',
   'Duck Xiangqi is [xiangqi](/rules/xiangqi) with a duck on the board. Every turn you make a legal xiangqi move, and then you move the duck to an empty point. Both halves are one turn, and neither of them is optional.':
@@ -9385,6 +9392,7 @@ const ZH_HANT: Record<string, string> = {
   'BLACK IS IN CHECK': '黑方被將軍',
   'THE CORK: A CANNON IN FRONT OF THE CHARIOT': '塞子：車前面的炮',
   'Atomic Xiangqi Rules': '原子象棋規則',
+  'Atomic Xiangqi Rules: Every Capture Explodes': '原子象棋規則：每次吃子都會爆炸',
   'Xiangqi where a capture is an explosion. The capturer, the captured piece and the four neighbouring pieces go; soldiers survive; a cannon shot takes only its target; and a blast threat on the general is check.':
     '每次吃子都會爆炸的象棋。吃子的棋子、被吃的棋子和相鄰四個點上的棋子一起消失；兵卒能在爆炸中倖存；炮的一擊只帶走目標；對將帥的爆炸威脅算作將軍。',
   'Atomic Xiangqi is [xiangqi](/rules/xiangqi) with one change: a capture is an explosion. The piece that captures, the piece it takes, and every piece on the four points next to the capture are removed from the board. Soldiers survive an explosion. A general does not.':
@@ -9531,11 +9539,11 @@ const ZH_HANT: Record<string, string> = {
   // Overrides for every zh-Hans key that fell through to Simplified on the zh-Hant pages (2026-09-17). OpenCC s2twp, then 炮→砲 and 機器人→電腦 to match the rest of this table; prose re-read by hand.
   'The rat takes the elephant.': '鼠吃掉象。',
   'Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, makes its first move as the piece whose point it stands on, then turns face-up.':
-    '揭棋規則詳解：除將帥外的棋子都隱藏身份，首次按所在起始位置的棋子走法行棋，然後翻開並按真實身份行棋。',
+    '揭棋是一種暗子玩法的象棋變體，這裡詳解它的規則。除將帥外，所有棋子開局都背面朝上，第一步按所在位置原本棋子的走法行棋，走完即翻開，此後按真實身份行棋。',
   "Jieqi, also called Reveal Xiangqi, keeps xiangqi's board and checkmate goal, but hides every non-general piece. A dark piece first moves, attacks, and captures by the starting point it occupies. After that move, it reveals and plays by identity.":
     '揭棋保留象棋的棋盤和將死目標，但隱藏所有非將帥棋子的身份。暗子首次按它所在起始位置的棋子走法移動、攻擊和吃子，走完後翻開，之後按真實身份行棋。',
   'Banqi, also called Chinese dark chess or blind chess, is played face-down on half a xiangqi board. Pieces capture by rank, except that the soldier takes the general and the cannon jumps a screen to take anything.':
-    '暗棋又稱盲棋，在半張象棋棋盤上以背面朝上的棋子進行。棋子按等級吃子，例外是卒可以吃將，炮則隔一子跳吃任何棋子。',
+    '暗棋又稱盲棋，在半張象棋棋盤上以背面朝上的棋子進行。棋子按等級吃子，但有兩個例外：卒可以吃將，炮則隔著一個炮架跳吃任何棋子。',
   'Banqi, also called Chinese dark chess or blind chess, is a fast hidden-piece game played on half a xiangqi board. All thirty-two pieces begin shuffled and face-down. The first flip assigns colors. After that, each turn is a choice: flip a tile or move a revealed piece. Captures follow rank, except for the cannon.':
     '暗棋是在半張象棋棋盤上進行的快節奏隱藏棋子遊戲。三十二枚棋子全部洗勻並背面朝上。第一次翻子決定雙方顏色。之後每回合都在兩種行動中選擇：翻開棋子，或移動一枚已翻開的棋子。除砲外，吃子按等級進行。',
   'Although it uses [Xiangqi](/rules/xiangqi) pieces, it is a separate game: pieces move one square, the general is not royal, and face-down tiles cannot be captured. This page describes the exact rules used on Mistboard.':
@@ -9988,7 +9996,7 @@ const ZH_HANT: Record<string, string> = {
     '這盤棋是[配套研究](/study/nlZy4yNA)中的六盤之一，每盤都註明了決定勝負的打入。',
   'The six engine games': '六盤引擎對局',
   'Xiangqi where a captured piece joins your hand and the advisors and elephants start there: drop a piece on any empty point, advisors and elephants on their own half, check and mate included.':
-    '被吃的子歸入吃子一方持子、士和象開局就在持子裡的象棋：把持子打入任何一個空點，士和象限己方半盤，可以將軍，也可以將死。',
+    '被吃掉的棋子歸入吃子一方的持子、士和象開局就在持子裡的象棋：持子可以打入任何一個空點，士和象只能打入己方半盤，打入的子可以將軍，也可以將死。',
   'Everything else is xiangqi: the board, how the other pieces move, the general in its palace, the river, the rule that the two generals may not face each other on an open file, and the way a game ends.':
     '其餘一切都是象棋：棋盤、其他棋子的走法、待在九宮裡的將帥、河界、雙方將帥不能在同一條直線上無子相隔地照面的規則，以及對局結束的方式。',
   'Each side begins with its two advisors and two elephants in hand, not on the board. The back rank reads chariot, horse, two empty points, the general, two empty points, horse, chariot. The cannons and soldiers stand where they always do.':

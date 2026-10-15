@@ -20,6 +20,7 @@ export const atomicXiangqiArticle: Article = {
   // Retired 2026-10-11: the page stays up by URL, unlisted and unindexed.
   playableOnMistboard: false,
   title: 'Atomic Xiangqi Rules',
+  seoTitle: 'Atomic Xiangqi Rules: Every Capture Explodes',
   summary:
     'Xiangqi where a capture is an explosion. The capturer, the captured piece and the four neighbouring pieces go; soldiers survive; a cannon shot takes only its target; and a blast threat on the general is check.',
   showSummaryOnPage: false,

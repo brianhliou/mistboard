@@ -609,7 +609,7 @@ test('serveArticlesIndexPage injects localized metadata', async () => {
 
   assert.equal(response.status, 200);
   assert.match(response.body, /<html lang="zh-Hans">/);
-  assert.match(response.body, /<title>文章 \| Mistboard<\/title>/);
+  assert.match(response.body, /<title>象棋与变体文章 \| Mistboard<\/title>/);
   assert.match(
     response.body,
     /<meta property="og:url" content="https:\/\/mistboard.test\/zh-hans\/blog">/,
@@ -694,7 +694,7 @@ test('serveArticlesIndexPage falls back to the shell when no prerender exists', 
   });
 
   assert.equal(response.status, 200);
-  assert.match(response.body, /<title>Articles \| Mistboard<\/title>/);
+  assert.match(response.body, /<title>Xiangqi and Variant Articles \| Mistboard<\/title>/);
 });
 
 test('serveRulesIndexPage injects rules metadata', async () => {
@@ -711,7 +711,7 @@ test('serveRulesIndexPage injects rules metadata', async () => {
 
   assert.equal(response.status, 200);
   assert.match(response.body, /<html lang="zh-Hant">/);
-  assert.match(response.body, /<title>規則 \| Mistboard<\/title>/);
+  assert.match(response.body, /<title>象棋與變體規則 \| Mistboard<\/title>/);
   assert.match(
     response.body,
     /<meta property="og:url" content="https:\/\/mistboard.test\/zh-hant\/rules">/,
@@ -762,7 +762,7 @@ test('serveRulesIndexPage never hands a localized index the English file', async
   });
   assert.equal(response.status, 200);
   assert.doesNotMatch(response.body, /baked/);
-  assert.match(response.body, /<title>规则 \| Mistboard<\/title>/);
+  assert.match(response.body, /<title>象棋与变体规则 \| Mistboard<\/title>/);
 });
 
 test('the rules index shell fallback carries a self canonical and the locale group', async () => {

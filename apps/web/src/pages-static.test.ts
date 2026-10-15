@@ -338,7 +338,7 @@ describe('prerendered blog index', () => {
     ]) {
       expect(alternates).toContain(`hreflang="${lang}" href="${href}"`);
     }
-    expect(heads[1]?.title).toBe('文章 | Mistboard');
+    expect(heads[1]?.title).toBe('象棋与变体文章 | Mistboard');
   });
 });
 
@@ -399,9 +399,9 @@ describe('prerendered rules index', () => {
       expect(alternates).toContain(`hreflang="${lang}" href="${href}"`);
     }
     expect(heads.map((h) => h.title)).toEqual([
-      'Rules | Mistboard',
-      '规则 | Mistboard',
-      '規則 | Mistboard',
+      'Xiangqi and Variant Rules | Mistboard',
+      '象棋与变体规则 | Mistboard',
+      '象棋與變體規則 | Mistboard',
     ]);
   });
 });

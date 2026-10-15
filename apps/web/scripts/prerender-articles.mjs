@@ -770,7 +770,7 @@ try {
       meta: {
         title: '中国象棋在线 · 免费对弈与分析 | Mistboard',
         description:
-          '免费在线下中国象棋：与人对弈或挑战电脑，服务器判规，皮卡鱼在浏览器里分析，残局题目，以及从第一步开始的课程。不用注册。',
+          '免费在线下中国象棋：与人对弈或挑战电脑，服务器严格判规，皮卡鱼在浏览器里帮你分析，还有残局题目和从第一步开始的课程。不用注册。',
       },
     },
     {
@@ -926,10 +926,14 @@ try {
     '<div id="app"></div>',
     `<div id="app" class="landing-page">${leaderboardInner}</div>`,
   );
-  leaderboardHtml = leaderboardHtml.replace(
-    /<title>[^<]*<\/title>/,
-    '<title>Players · Mistboard</title>',
-  );
+  // Full meta, as for /learn and /puzzles: a title-only replace shipped the
+  // homepage's description here. Same copy as SPA_ROUTE_META['/player'].
+  leaderboardHtml = injectPageMeta(leaderboardHtml, {
+    title: 'Xiangqi Leaderboard | Mistboard',
+    description:
+      'The highest rated players on Mistboard, by game and time control. Rated games are played between signed-in accounts in xiangqi, jieqi, banqi, Jungle and more.',
+    url: `${host}/player`,
+  });
   leaderboardHtml = leaderboardHtml.replace(
     '</head>',
     `<link rel="canonical" href="${host}/player" />${leaderboardAssetLinks}</head>`,
@@ -999,7 +1003,7 @@ try {
     `<div id="app" class="landing-page changelog-route">${changelogInner}</div>`,
   );
   changelogHtml = injectPageMeta(changelogHtml, {
-    title: 'Changelog | Mistboard',
+    title: 'Changelog: Every Change, Month by Month | Mistboard',
     description:
       'Every change to mistboard.com, month by month, newest first: playing, learning, watching, community, the site, removals and fixes, each linking its commit.',
     url: `${host}/changelog`,
