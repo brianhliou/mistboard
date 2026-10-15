@@ -8,13 +8,9 @@ afterEach(() => {
   window.history.replaceState({}, '', '/');
 });
 
-// mountStudy dynamic-imports the whole variant review stack (board renderer,
-// annotation editor, engine glue), so the first paint waits on a lazy chunk, not
-// on a microtask. vi.waitFor's default 1s budget is enough on an idle machine and
-// not enough during a release, where this file competes with the rest of the
-// suite: it failed roughly one run in three. The assertion was never wrong, the
-// deadline was.
-const MOUNTED = { timeout: 5000 };
+// mountStudy resolves once the code-split board stack has mounted, so these
+// tests await it rather than polling. A vi.waitFor around that mount raced the
+// lazy import against a fixed deadline and failed under release load (#299).
 
 describe('study creator workspace', () => {
   it('renders navigation-first owner controls and an under-board authoring dock', async () => {
@@ -53,11 +49,8 @@ describe('study creator workspace', () => {
     const root = document.createElement('div');
     document.body.append(root);
 
-    mountStudy(root, 'uXnuObfx');
-    await vi.waitFor(
-      () => expect(root.querySelector('.review-shell--study')).not.toBeNull(),
-      MOUNTED,
-    );
+    await mountStudy(root, 'uXnuObfx');
+    expect(root.querySelector('.review-shell--study')).not.toBeNull();
 
     expect(
       root.querySelector<HTMLImageElement>('.study-page__thumbnail img')?.getAttribute('src'),
@@ -141,11 +134,8 @@ describe('study creator workspace', () => {
     const root = document.createElement('div');
     document.body.append(root);
 
-    mountStudy(root, 'study1');
-    await vi.waitFor(
-      () => expect(root.querySelector('.review-shell--study')).not.toBeNull(),
-      MOUNTED,
-    );
+    await mountStudy(root, 'study1');
+    expect(root.querySelector('.review-shell--study')).not.toBeNull();
 
     expect(root.querySelector('.study-chapters__settings')).toBeNull();
     const feature = root.querySelector<HTMLButtonElement>('.study-chapters__featured');
@@ -196,11 +186,8 @@ describe('study creator workspace', () => {
     const root = document.createElement('div');
     document.body.append(root);
 
-    mountStudy(root, 'study1');
-    await vi.waitFor(
-      () => expect(root.querySelector('.review-shell--study')).not.toBeNull(),
-      MOUNTED,
-    );
+    await mountStudy(root, 'study1');
+    expect(root.querySelector('.review-shell--study')).not.toBeNull();
 
     // The board takes moves (it is an analysis board) and nothing used to say
     // where they went, so a non-owner read their scratch line as stored on
@@ -277,10 +264,8 @@ describe('study chapter permalinks', () => {
     const root = document.createElement('div');
     document.body.append(root);
 
-    mountStudy(root, 'study1', 'chapter2');
-    await vi.waitFor(() =>
-      expect(root.querySelector('.study-chapters__row.is-active')?.textContent).toContain('Second'),
-    );
+    await mountStudy(root, 'study1', 'chapter2');
+    expect(root.querySelector('.study-chapters__row.is-active')?.textContent).toContain('Second');
     root.querySelectorAll<HTMLAnchorElement>('.study-chapters__link')[0]?.click();
     await vi.waitFor(() => expect(window.location.pathname).toBe('/study/study1/chapter1'));
     await vi.waitFor(() =>
@@ -349,11 +334,8 @@ describe('study chapter permalinks', () => {
     const root = document.createElement('div');
     document.body.append(root);
 
-    mountStudy(root, 'study1', 'chapter1');
-    await vi.waitFor(
-      () => expect(root.querySelector('.review-shell--study')).not.toBeNull(),
-      MOUNTED,
-    );
+    await mountStudy(root, 'study1', 'chapter1');
+    expect(root.querySelector('.review-shell--study')).not.toBeNull();
     expect(root.querySelector('.study-actions__status')?.textContent).toBe('Recovered local draft');
 
     root.querySelectorAll<HTMLAnchorElement>('.study-chapters__link')[1]?.click();

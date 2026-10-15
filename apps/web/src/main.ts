@@ -542,7 +542,7 @@ if (replaySample) {
   setTitleKey('nav.studies');
   void mountOrReport(() =>
     import('./study.js').then(({ mountStudy }) => {
-      mountStudy(appRoot, studyId, studyChapterId ?? undefined);
+      void mountStudy(appRoot, studyId, studyChapterId ?? undefined);
     }),
   );
 } else if (wantsXiangqiImport) {
