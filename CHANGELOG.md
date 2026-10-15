@@ -102,6 +102,8 @@ Conventions:
 
 ### Watching and review
 
+- Game search can pick games played here against people or against bots ([9ffca9cf](https://github.com/brianhliou/mistboard/commit/9ffca9cf))
+- The opening explorer starts closed and remembers if you open it ([9ffca9cf](https://github.com/brianhliou/mistboard/commit/9ffca9cf))
 - the local analysis engine now runs on iPhone, iPad and Safari ([3d14b10d](https://github.com/brianhliou/mistboard/commit/3d14b10d))
 - on phones the move arrows and a short move list now sit right under the board ([3d14b10d](https://github.com/brianhliou/mistboard/commit/3d14b10d))
 - a News entry announces the pro player photos ([048bd368](https://github.com/brianhliou/mistboard/commit/048bd368))
@@ -159,6 +161,10 @@ Conventions:
 
 ### Site
 
+- The homepage's three rows sit closer together ([9ffca9cf](https://github.com/brianhliou/mistboard/commit/9ffca9cf))
+- New games can start during a release once live games have finished, and computer games (except Fog of War and Mahjong) can start throughout it ([9ffca9cf](https://github.com/brianhliou/mistboard/commit/9ffca9cf))
+- /games cards show each player's colour beside their name ([9ffca9cf](https://github.com/brianhliou/mistboard/commit/9ffca9cf))
+- Clearer page titles and search descriptions across the hub pages and the Chinese articles ([9ffca9cf](https://github.com/brianhliou/mistboard/commit/9ffca9cf))
 - the logo mark has a clean edge and a light rim ([3d14b10d](https://github.com/brianhliou/mistboard/commit/3d14b10d))
 - the community menu now links the leaderboard, pro players and bots ([3d14b10d](https://github.com/brianhliou/mistboard/commit/3d14b10d))
 - Pages load faster on return visits; built scripts and styles are now cached for a year ([48b1258e](https://github.com/brianhliou/mistboard/commit/48b1258e))
@@ -207,6 +213,12 @@ Conventions:
 
 ### Fixed
 
+- Correspondence games no longer air on the watch page's channels with frozen clocks ([9ffca9cf](https://github.com/brianhliou/mistboard/commit/9ffca9cf))
+- The studies list reports more pages when a full page of 50 comes back ([9ffca9cf](https://github.com/brianhliou/mistboard/commit/9ffca9cf))
+- Broadcasts whose games the source posts more than a week after the event now import them automatically, checked daily for 30 days ([9ffca9cf](https://github.com/brianhliou/mistboard/commit/9ffca9cf))
+- On the puzzle page, the right column now lines up with the bottom of the board instead of running past it ([9ffca9cf](https://github.com/brianhliou/mistboard/commit/9ffca9cf))
+- Links in the Xiangqi Basic Endgames table open each position's practice chapter, including the 13 that opened only their set ([9ffca9cf](https://github.com/brianhliou/mistboard/commit/9ffca9cf))
+- Bot profiles load older games with Load more ([9ffca9cf](https://github.com/brianhliou/mistboard/commit/9ffca9cf))
 - the xiangqi engine no longer re-downloads its 51 MB network file on every visit ([dd74f380](https://github.com/brianhliou/mistboard/commit/dd74f380))
 - current games no longer lists games abandoned mid-play ([dd74f380](https://github.com/brianhliou/mistboard/commit/dd74f380))
 - the Fortress and Atomic Xiangqi on-hold article now has its Chinese pages ([dd74f380](https://github.com/brianhliou/mistboard/commit/dd74f380))
