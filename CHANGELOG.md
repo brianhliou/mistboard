@@ -26,6 +26,10 @@ Conventions:
 
 ### Playing
 
+- International pieces have smooth edges, with one even line width on the chariot, advisor and cannon ([cd5acfaa](https://github.com/brianhliou/mistboard/commit/cd5acfaa))
+- the last-move ring now hugs the outside of the moved piece, sits under it, and travels with the piece as it moves ([cd5acfaa](https://github.com/brianhliou/mistboard/commit/cd5acfaa))
+- a checkmate now draws a red slash through the mated general instead of the game-over badges ([cd5acfaa](https://github.com/brianhliou/mistboard/commit/cd5acfaa))
+- the check glow on the general is stronger and easier to see ([cd5acfaa](https://github.com/brianhliou/mistboard/commit/cd5acfaa))
 - rematch against a person is on by default in every two-player variant ([dd74f380](https://github.com/brianhliou/mistboard/commit/dd74f380))
 - finished correspondence games now stay on /correspondence for two weeks with the result and how each ended, and the bell tells you when one ends while you are away ([dd74f380](https://github.com/brianhliou/mistboard/commit/dd74f380))
 - with two or more correspondence games waiting on you, the homepage button opens your correspondence list ([3d14b10d](https://github.com/brianhliou/mistboard/commit/3d14b10d))
@@ -214,6 +218,8 @@ Conventions:
 
 ### Fixed
 
+- Jungle and Flip Jungle pieces on the board's edge now sit flush against the frame ([cd5acfaa](https://github.com/brianhliou/mistboard/commit/cd5acfaa))
+- a paused game resumes when the player on move comes back ([cd5acfaa](https://github.com/brianhliou/mistboard/commit/cd5acfaa))
 - Rules and blog pages no longer jump down as they finish loading ([a4820b25](https://github.com/brianhliou/mistboard/commit/a4820b25))
 - Article replay boards and embedded studies follow Square grid, Start markers and Coordinates ([a4820b25](https://github.com/brianhliou/mistboard/commit/a4820b25))
 - A dragged piece keeps its size in the hand on puzzles ([a4820b25](https://github.com/brianhliou/mistboard/commit/a4820b25))
