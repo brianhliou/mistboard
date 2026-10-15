@@ -464,13 +464,17 @@ export const helpmatesInXiangqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The generator is simple and the solver does the work. A position maker deals diagrams, either every placement of a few pieces or random armies from a profile that fixes how much material each side gets. The solver walks every cooperative line of two moves a side, Black first, and keeps a diagram only if exactly one line mates. The profiles that gave Black an army and Red one or two pieces produced most of what is worth looking at.',
+          text: 'The generator is the naive half of this work, and it is worth saying so plainly. A position maker deals diagrams blind, either every placement of a few pieces or random armies from a profile that fixes how much material each side gets. The solver walks every cooperative line of two moves a side, Black first, and keeps a diagram only if exactly one line mates. Nothing in the generator knows what a good problem is: it aims at no theme, prefers no quiet move over a capture, and has no sense of economy. The profiles that gave Black an army and Red one or two pieces produced most of what is worth looking at.',
         },
         {
           kind: 'code',
           language: 'text',
           text: PIPELINE,
           caption: 'The pipeline, in outline.',
+        },
+        {
+          kind: 'paragraph',
+          text: "This is the floor, and there is a lot of room above it. A composer starts from an idea and builds the position around it, and a search can work the same way. It could start from the mate it wants, say a cannon mating over a black screen, and unwind it to positions two moves earlier instead of dealing until one turns up. It could take a good problem and change it a piece at a time, keeping the changes that make the right first move harder to see or leave less red material idle. It could score what a solver feels: how many of Black's first moves look as natural as the right one, and whether the key move is a quiet one. Or it could skip dealing entirely. Chess composers now have [exhaustive helpmate tables](https://github.com/osick/helpmate-tablebase), complete through five pieces, that list every sound helpmate for a given material and leave a search only the choosing; we did not build one for xiangqi. Each of these would find problems ours cannot.",
         },
       ],
     },
@@ -526,11 +530,15 @@ export const helpmatesInXiangqiArticle: Article = {
         },
         {
           kind: 'paragraph',
+          text: "**The palace makes the lopsided problems possible.** A xiangqi general never leaves its nine-point palace and has at most four squares to step to, so a couple of black moves can wall it in. That fits what the search turned up: the profiles with a black army against one or two red pieces produced most of the good problems, because Black does nearly all the building and Red only has to arrive. A chess king has the whole board and up to eight squares, and a helpmate there spends far more of its moves taking them away.",
+        },
+        {
+          kind: 'paragraph',
           text: '**The cannon is the theme chess cannot have.** It checks by jumping exactly one piece, and in a helpmate the mated side is cooperating, so Black can supply the screen. Nineteen of the 164 mate over a black screen. The facing-generals rule adds another: the red general can take squares from its own palace, as in the seventh problem.',
         },
         {
           kind: 'paragraph',
-          text: '**A pipeline count measures patience, not problems.** 1,470 became 186 once we grouped by the final picture. Without that step the corpus would have been mostly the same mates.',
+          text: '**Finding sound problems is the easy part.** The search turned up 1,470 sound helpmates, and most were the same mate from a different setup: grouped by the final picture they came to 186. Soundness is a yes or no that a solver can check. Whether a problem is worth setting up for a friend is not, and nothing in this pipeline measures it. That is the gap the next generator has to close.',
         },
       ],
     },
