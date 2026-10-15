@@ -18,6 +18,7 @@ export const duckXiangqiArticle: Article = {
   kind: 'rules',
   playableOnMistboard: true,
   title: 'Duck Xiangqi Rules',
+  seoTitle: 'Duck Xiangqi Rules: Duck Chess Meets Xiangqi',
   summary:
     'Duck Chess on the xiangqi board. Every turn is a move and then a duck placement, the duck blocks and screens like a piece, and you win by capturing the general.',
   showSummaryOnPage: false,

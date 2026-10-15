@@ -221,7 +221,7 @@ test('Dark Xiangqi PvE route takes no engine seat while the server drains', asyn
     const response = captureResponse();
     await handleDarkXiangqiCreate(
       testContext({
-        isDraining: () => true,
+        refusesCreate: () => true,
         reserveLiveEngineSeat: async () => {
           reserveCalls += 1;
           return 'reservation';
@@ -603,7 +603,7 @@ function testContext(overrides: Partial<DarkXiangqiCreateContext> = {}): DarkXia
     createDarkXiangqiRoom: async () => ({ ok: true, room: darkXiangqiRoom('dxq_route') }),
     databaseRequired: false,
     drainDeadlineMs: () => null,
-    isDraining: () => false,
+    refusesCreate: () => false,
     reserveLiveEngineSeat: async () => null,
     releaseLiveEngineReservation: () => {},
     ...overrides,

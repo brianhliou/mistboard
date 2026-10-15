@@ -14,9 +14,25 @@ export function rematchControls(
   sendSocket: SendSocket,
 ): HTMLElement {
   const offers = liveState.rematch.offers;
-  const iOffered = Boolean(offers[mySeat]);
-  const theyOffered = Boolean(offers[theirSeat]);
+  return rematchBlock(
+    {
+      iOffered: Boolean(offers[mySeat]),
+      theyOffered: Boolean(offers[theirSeat]),
+      declined: Boolean(liveState.rematch.declined),
+    },
+    sendSocket,
+    noteRematchCancel,
+  );
+}
 
+// The block itself, from the three facts it depends on. Shared with the tenant
+// rooms (variant-tenant/tenant-rematch.ts), which keep their own state.
+export function rematchBlock(
+  state: { iOffered: boolean; theyOffered: boolean; declined: boolean },
+  sendSocket: SendSocket,
+  onCancel: () => void,
+): HTMLElement {
+  const { iOffered, theyOffered } = state;
   const block = document.createElement('div');
   block.className = 'room-rematch';
 
@@ -29,7 +45,7 @@ export function rematchControls(
       note(t('live.rematchWaiting')),
       buttonRow(
         actionButton(t('live.rematchCancel'), () => {
-          noteRematchCancel();
+          onCancel();
           sendSocket({ type: 'rematch:cancel' });
         }),
       ),
@@ -51,7 +67,7 @@ export function rematchControls(
     return block;
   }
   // Idle — possibly just after the opponent declined our offer.
-  if (liveState.rematch.declined) {
+  if (state.declined) {
     block.append(note(t('live.rematchDeclined')));
   }
   block.append(

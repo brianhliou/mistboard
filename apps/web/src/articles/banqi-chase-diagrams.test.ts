@@ -167,4 +167,32 @@ describe('banqi perpetual-chase diagrams', () => {
       expect(render()).toMatch(/^<svg/);
     }
   });
+
+  it("each step's glide is the kernel's move, keyed on the piece that makes it", () => {
+    const slotPiece = (svg: string, square: string): string | null => {
+      const host = document.createElement('div');
+      host.innerHTML = svg;
+      const slot = host.querySelector(`[data-piece-square="${square}"]`);
+      if (!slot?.hasAttribute('data-piece-cx')) return null;
+      // The piece without the position its outer element is drawn at.
+      return slot.innerHTML.replace(/^(<svg)( [xy]="[^"]*")+/, '$1');
+    };
+    const steppers = [
+      { steps: BANQI_CHASE_BACK_AND_FORTH_STEPS, moves: parse(BANQI_CHASE_DRAW_GAME.moves).slice(CHASE_DRAW_VIEW_PLY) },
+      { steps: BANQI_CHASE_CYCLE_STEPS, moves: CHASE_CYCLE_MOVES },
+    ];
+    for (const { steps, moves } of steppers) {
+      expect(steps[0]!.motion).toBeUndefined();
+      steps.slice(1).forEach((step, i) => {
+        const move = moves[i]!;
+        expect(step.motion).toEqual({ from: move.from, to: move.to });
+        expect(step.move).toBe(`${move.from}-${move.to}`);
+        // The piece on the origin before is the piece on the landing after: the
+        // slot the card glides holds the mover, not a victim or a stranger.
+        const before = slotPiece(steps[i]!.svg(), move.from);
+        expect(before).not.toBeNull();
+        expect(slotPiece(step.svg(), move.to)).toBe(before);
+      });
+    }
+  });
 });

@@ -2,7 +2,7 @@ import { type GameEvent, maybeGameSpecForId } from '@mistboard/game';
 import { shouldShowClockTenths, shouldShowFinalClockTenths } from './account-preferences.js';
 import { applyClockEmphasis, setClockFace } from './clock-emphasis.js';
 import { resultLabel, watchQueueResultLabel } from './finished-result-label.js';
-import { seatInkForVariant } from './flip-seat-ink.js';
+import { payloadFirstColor, seatInkForVariant } from './flip-seat-ink.js';
 import { createGameTable } from './game-table.js';
 import { t } from './i18n/catalog.js';
 import { renderVariantMarker } from './variant-markers.js';
@@ -150,16 +150,6 @@ type LiveFeatured = {
   }>;
   payload?: Record<string, unknown>;
 };
-
-// A live flip game's bound ink, read out of the postgame-shaped payload's view.
-// The payload is `Record<string, unknown>` by contract (the renderers own its
-// shape), so this narrows defensively: anything unexpected reads as unbound,
-// which renders a neutral disc rather than a wrong one.
-function liveFirstColor(featured: LiveFeatured): 'red' | 'black' | null {
-  const view = (featured.payload as { view?: { firstColor?: unknown } } | undefined)?.view;
-  const firstColor = view?.firstColor;
-  return firstColor === 'red' || firstColor === 'black' ? firstColor : null;
-}
 
 // Ordering guard for user-initiated channel/game switches.
 //
@@ -911,7 +901,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     const players = featured.players ?? [];
     const first = players.find((p) => p.color === 'red' || p.color === 'white') ?? players[0];
     const ordered = first ? [first, ...players.filter((p) => p !== first)] : players;
-    const firstColor = liveFirstColor(featured);
+    const firstColor = payloadFirstColor(featured.payload);
     return ordered.map((p) => ({
       color: seatInkForVariant(featured.gameSpecId, p.color, firstColor),
       name: displayLiveName(p.name, t('watch.guest')),

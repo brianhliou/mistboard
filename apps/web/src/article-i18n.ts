@@ -33,6 +33,10 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Machine-drafted 2026-10-14, not native-reviewed, a day after the English
+  // copy published (2026-10-13) with English zh pages, which is what added
+  // UNTRANSLATED_ARTICLE_SLUGS and its gate.
+  'fortress-and-atomic-xiangqi-on-hold',
   // Machine-drafted 2026-10-10, not native-reviewed, locked with its English
   // copy, which publishes in the same release (jieqi readers are mostly Chinese).
   'jieqi-puzzle-search',
@@ -89,6 +93,9 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   // Machine-drafted 2026-10-03. The fourth player page; locked with its English
   // copy, which publishes in the same release.
   'tony-fung-ga-zen',
+  // Machine-drafted 2026-10-11, not native-reviewed. The fifth player page;
+  // locked with its English copy, which publishes in the same release.
+  'zuo-wenjing',
   // Machine-drafted 2026-09-03, not native-reviewed, locked the day the English
   // copy published. The openings article's dictionary was already complete and
   // waiting: the lock requires a PUBLISHED article, so it could not be listed
@@ -168,6 +175,23 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   'misty',
   'server-enforced-fog',
 ] as const;
+
+// Published articles that deliberately have no zh pages, each with its reason.
+// Every published article is in TRANSLATED_ARTICLE_SLUGS or here, and
+// article-i18n.coverage.test.ts fails one in neither: an opt-in list alone let
+// fortress-and-atomic-xiangqi-on-hold go live on 2026-10-13 with English zh
+// pages and every test green.
+export const UNTRANSLATED_ARTICLE_SLUGS: Readonly<Record<string, string>> = {
+  mahjong:
+    'English only until a Hong Kong player checks the faan table; each correction would re-translate the page.',
+  'luat-co-up': 'A Vietnamese rules page for Vietnamese search; it has no English or zh source.',
+  // Vietnamese renders of a translated English article (derived-translation.ts);
+  // a zh reader gets the source article's zh page.
+  'choi-co-tuong-voi-may': 'Vietnamese copy of pikafish, whose zh pages exist.',
+  'co-up': 'Vietnamese copy of jieqi-platform, whose zh pages exist.',
+  'khai-cuoc-co-up': 'Vietnamese copy of jieqi-openings, whose zh pages exist.',
+  'lai-ly-huynh-co-tuong': 'Vietnamese copy of lai-ly-huynh, whose zh pages exist.',
+};
 
 const TRANSLATED_ARTICLE_SLUG_SET = new Set<string>(TRANSLATED_ARTICLE_SLUGS);
 
@@ -467,7 +491,7 @@ const ZH_HANS: Record<string, string> = {
   'The Longest Forced Mates in Xiangqi': '象棋最长的必胜杀局',
   'The Longest Forced Mates': '最长的必胜杀局',
   'A horse and a soldier beat a general with both advisors and both elephants, and the slowest win in that endgame takes 65 moves. Seven records from xiangqi endgame tablebases, with the lines, and five of them end with the loser having no legal move.':
-    '马兵能胜士象全，而这一残局里最慢的胜法要走65回合。七项出自象棋残局库的纪录，附完整着法，其中五局以负方无着可走告终。',
+    '马和兵联手就能胜士象全，而这一残局里最慢的胜法要走65回合。这里收录七项出自象棋残局库的纪录，每项都附完整着法，其中五项以负方无着可走告终。',
   'We generated xiangqi endgame tablebases for every one-and-two-attacker class against the full defence and pulled out the deepest position in each. The longest is a horse and a soldier: 65 moves of best play by both sides.':
     '我们为一子和两子进攻对士象全的每一类残局生成了象棋残局库，并找出每一类中最深的局面。最长的是马兵：双方都走最佳着法，共65回合。',
   'Five of the seven records end with the losing general having no legal move. That is 困毙, and in xiangqi it loses, so a longest-mate line can finish without a check on the board.':
@@ -538,7 +562,7 @@ const ZH_HANS: Record<string, string> = {
   'A xiangqi threefold repetition bug: the chariot and the cannon shared a key':
     '象棋三次重复局面判定的一个错误：车和炮被记成了同一个字母',
   "A one-character bug in Mistboard's xiangqi repetition key let a game end in a threefold draw after a position had occurred only twice.":
-    'Mistboard 象棋重复局面键里一个只差一个字符的错误，让一个局面只出现两次，对局就被判为三次重复和棋。',
+    'Mistboard 象棋重复局面判定所用的键里，有一个只差一个字符的错误：一个局面明明只出现了两次，对局却被判为三次重复和棋。',
   'Our xiangqi repetition key labelled each piece by the first letter of its role, so the chariot and the cannon were both `c`. Swapping a chariot and a cannon left the key unchanged, so a game could be drawn by threefold repetition after only two.':
     '我们的象棋重复局面键用棋子角色英文名的首字母来标记每个棋子，于是车（chariot）和炮（cannon）都是 `c`。车和炮互换位置后，键不变，所以一个局面只出现两次，对局就可能被判为三次重复和棋。',
   'The fix writes out the role name. Fog Chess had the same bug with the king and the knight. No finished game changes result.':
@@ -960,7 +984,7 @@ const ZH_HANS: Record<string, string> = {
   // pikafish-reveal-bug: machine-drafted 2026-10-02, not native-reviewed.
   'Our Pikafish jieqi bot misjudged its reveals': '我们的皮卡鱼揭棋电脑误判了翻子',
   'Our Pikafish jieqi bot rated some reveals far better than they were. Two bugs caused it. Both are fixed, at little or no cost in strength.':
-    '我们的皮卡鱼揭棋电脑把一些翻子评得远比实际要好。原因是两个错误。两个都已修复，棋力几乎没有损失。',
+    '我们的皮卡鱼揭棋电脑把一些翻子评估得远比实际要好，原因是两个错误。两个错误都已修复，修复后棋力只有很小的损失，或者完全没有损失。',
   'In [jieqi](/rules/jieqi), turning over a face-down piece is a bet. You know which pieces it could be, and not which one it is. Our Pikafish bot, the engine behind Levels 1 to 8, priced some of those bets far too well. It would turn over a piece that gets mated for most of what it could be, and rate the move as winning.':
     '在[揭棋](/rules/jieqi)里，翻开一个暗子就是一次下注。你知道它可能是哪些棋子，但不知道究竟是哪一个。我们的皮卡鱼电脑，也就是第 1 到第 8 级背后的引擎，把其中一些赌注估得太好了。它会翻开一个在大多数可能下都会被将死的棋子，还把这步棋评为胜势。',
   'We found it on October 2, while writing the [AB-JChess post](/blog/ab-jchess). The fix is live for every level and for the engine you can run on the analysis board.':
@@ -1067,7 +1091,7 @@ const ZH_HANS: Record<string, string> = {
   '1,000 games played': '已下完 1,000 盘棋',
   'Mistboard passes 1,000 games': 'Mistboard 突破 1,000 盘对局',
   'Since June 1, people have finished 1,000 games on Mistboard, most of them in September. Thank you for playing.':
-    '从 6 月 1 日起，棋友们在 Mistboard 上下完了 1,000 盘棋，大部分是在 9 月下的。感谢大家来下棋。',
+    '从 6 月 1 日起，棋友们已经在 Mistboard 上下完了 1,000 盘棋，其中大部分是在 9 月下的。感谢每一位来这里下棋的棋友。',
   'Mistboard passed 1,000 finished games this week. A game counts once both sides have moved and it ends, against another person or a bot. Engine matches and our test accounts are left out, and counting started on June 1.':
     'Mistboard 本周下完的棋突破了 1,000 盘。一盘棋只要双方都走过棋并且下完，就计为一盘，不论对手是人还是电脑。引擎之间的对局和我们的测试账号不计在内，计数从 6 月 1 日开始。',
   'The Mistboard statistics page: 1,000 games played, games per week climbing from a handful in June to nearly 400 in the week of September 21, jieqi far ahead by variant, and almost every game against a bot.':
@@ -1266,7 +1290,7 @@ const ZH_HANS: Record<string, string> = {
   'League, stage one': '象甲第一阶段',
   'Sep 14–18': '9月14–18日',
   "Beat the world champion 12 to 8 in a ten-game match in January, then the rest of his season through the first stage of China's top league. Six games on the board, all 75 analysed.":
-    '一月的十局番棋以 12 比 8 击败世界冠军，之后一路打到中国象甲联赛第一阶段。盘面上六局，全部 75 局附引擎分析。',
+    '一月在十局番棋中以 12 比 8 击败世界冠军，之后是他整个赛季的对局，直到中国象甲联赛第一阶段。棋盘上展示六局，全部 75 局都附有分析。',
   'Cao Yanlei at the board. Photo: 象棋字典 via Sohu.':
     '对局中的曹岩磊。图片：象棋字典，经搜狐转载。',
   'Cao Yanlei in a dark suit and white shirt, looking down at the pieces during a tournament game.':
@@ -1540,6 +1564,118 @@ const ZH_HANS: Record<string, string> = {
   'Tony Fung Ga Zen': '冯家俊',
   'Chao Yi-fan': '赵奕帆',
   'Cheng Yin Lung': '郑彦隆',
+  // zuo-wenjing (zh-Hans), machine-drafted 2026-10-11, not native-reviewed. Mainland
+  // players' names stay in one form in both scripts, so the name-only keys and the
+  // dates live here and reach zh-Hant through the spread. Her Asian Games quote is
+  // the original Chinese from the Hubei Sports Bureau.
+  'Zuo Wenjing 左文静': '左文静',
+  'Zuo Wenjing': '左文静',
+  "The 2022 women's world champion and a double gold medallist at the 2023 Asian Games. Her title run in Kuching and her 2026 season, five games on the board, 32 games analysed.":
+    '2022 年女子世界冠军，2023 年亚运会两枚金牌得主。她在古晋的夺冠之路和她的 2026 赛季，盘面上五盘对局，32 局附引擎分析。',
+  'Zuo Wenjing smiling, holding up her Asian Games gold medal.': '左文静微笑着举起她的亚运会金牌。',
+  "English-speaking xiangqi players who follow the women's game. She has no public social account, so the page is found through search and the site.":
+    '关注女子象棋的说英语的棋友。她没有公开的社交账号，所以这一页靠搜索和本站被找到。',
+  "Zuo Wenjing won the 2022 women's world championship in Kuching with six wins and a draw, and two gold medals at the 2023 Asian Games.":
+    '左文静在古晋以六胜一和夺得 2022 年女子世界冠军，又在 2023 年亚运会上拿下两枚金牌。',
+  "In 2026 she went unbeaten through China's national team championship, six wins and a draw, and reached the Shanghai Cup semi-final.":
+    '2026 年她在全国象棋团体赛上保持不败，六胜一和，还打进了上海杯半决赛。',
+  'With red she opens with the elephant: 15 of her 22 red games here start that way.':
+    '执红她用飞相开局：这里她的 22 盘执红对局，有 15 盘这样开局。',
+  'Her median accuracy at the 2022 championship was 96, against 91.7 over her 26 games since December 2025.':
+    '她在 2022 年世锦赛的准确率中位数是 96，而 2025 年 12 月以来的 26 盘对局是 91.7。',
+  'Zuo Wenjing with her gold medal at the 2023 Asian Games in Hangzhou. Photo: Han Chuanhao / Xinhua.':
+    '2023 年杭州亚运会上手持金牌的左文静。图片：韩传号 / 新华社。',
+  'Zuo Wenjing in a white China team jacket, smiling through round glasses, holding flowers in one hand and her gold medal up in the other.':
+    '左文静身穿白色中国队外套，戴着圆框眼镜微笑，一只手拿着鲜花，另一只手举起金牌。',
+  "Zuo Wenjing 左文静 is the 2022 women's world xiangqi champion. In Kuching that October she won six of her seven games and drew the other, with her Chinese teammate Chen Xinglin, and won the last round to take the title. A year later, at the Asian Games in Hangzhou, she won two gold medals: the women's individual event, beating Wang Linna in the final, and the mixed team event with China.":
+    '左文静是 2022 年女子世界象棋冠军。那年十月在古晋，她七盘赢了六盘，另一盘与中国队友陈幸琳弈和，最后一轮获胜夺得冠军。一年后在杭州亚运会上，她拿下两枚金牌：一枚是女子个人赛，决赛击败王琳娜；另一枚是随中国队拿下的混合团体赛。',
+  'She was born in 1993 in Zibo, in Shandong, and plays for Hubei, which she joined as a child as a pupil of Liu Dahua. She became a national master in 2006 and a Chinese grandmaster in 2022, the year of her world title. The WXF lists her as an International Master.':
+    '她 1993 年生于山东淄博，代表湖北出赛，少年时加入湖北队，师从柳大华。2006 年获得全国大师称号，2022 年，也就是她夺得世界冠军的那一年，成为象棋特级大师。世界象棋联合会把她列为国际大师。',
+  'This page is her 2022 world championship and her season since December 2025, with five of her games on the board. I ran the 32 games we hold through the same engine analysis Mistboard gives your own games.':
+    '这一页写的是她的 2022 年世锦赛和她 2025 年 12 月以来的赛季，盘面上有她的五盘对局。我们收录的 32 盘对局，我都用 Mistboard 给你的对局做的同一套引擎分析跑过一遍。',
+  'How she plays': '她的棋风',
+  '**She opens with the elephant.** In 15 of her 22 red games here her first move brings an elephant to the centre, and she played it in three of her four red games at the 2022 championship.':
+    '**她用飞相开局。** 这里她的 22 盘执红对局中，有 15 盘第一步就是飞相；2022 年世锦赛她四盘执红，有三盘这样走。',
+  '**She was at her most accurate in Kuching.** Her median accuracy over the six championship games we hold is 96, against 91.7 over her 26 games since December 2025. In the last round, the game that decided the title, the engine marks no inaccuracy on any of her moves.':
+    '**她在古晋下得最精准。** 我们收录的六盘世锦赛对局，她的准确率中位数是 96，而 2025 年 12 月以来的 26 盘是 91.7。决定冠军归属的最后一轮，引擎没有给她的任何一步标出失准。',
+  "**Her opponents make the first mistake.** In 16 of her 20 wins here, the engine marks her opponent's first mistake before any of hers.":
+    '**对手先出错。** 这里她赢的 20 盘中有 16 盘，引擎标出的第一个错着出自对手，早于她的任何错着。',
+  'The title': '夺冠',
+  "The 17th World Xiangqi Championship was played in Kuching, in Sarawak, and the women's event ran over seven rounds from 24 to 29 October 2022. Zuo won her first four games, drew with Chen Xinglin in round five and won the last two. By then the title was certain to go to one of the two Chinese players. Zuo won her last game, against Peng Jou-An of Chinese Taipei, and the title with it.":
+    '第十七届世界象棋锦标赛在砂拉越的古晋举行，女子组 2022 年 10 月 24 日至 29 日赛七轮。左文静前四盘全胜，第五轮与陈幸琳弈和，最后两轮都赢了。那时冠军已注定落在两位中国棋手之一。最后一盘她击败中华台北的彭柔安，冠军也随之到手。',
+  'Lee Meng Ju, Chinese Taipei': '李孟儒，中华台北',
+  'Anna Yin Meixian, United States': 'Anna Yin Meixian，美国',
+  'Ngo Lan Huang': '吴兰香',
+  'Fiona Tan Min Fang, Singapore': '陈茗芳，新加坡',
+  'Chen Xinglin, China': '陈幸琳，中国',
+  'Nguyen Hoang Yen, Vietnam': '阮黄燕，越南',
+  'Nguyen Hoang Yen': '阮黄燕',
+  'Peng Jou-An, Chinese Taipei': '彭柔安，中华台北',
+  'Peng Jou-An': '彭柔安',
+  "Her 2022 World Championship, round by round. Names and federations as the WXF's game records give them; round three's federation is left out because other sources give a different one. The record of round one does not replay, so that game is on no board.":
+    '她的 2022 年世锦赛，逐轮战绩。姓名和所属协会依照世界象棋联合会棋谱集的写法；第三轮的协会没有列出，因为其他来源给出的不一样。第一轮的棋谱无法回放，所以那盘不在盘面上。',
+  "Nguyen Hoang Yen vs Zuo Wenjing, 2022 World Xiangqi Championship, women, round 6, 27 October 2022. Zuo won with black in 37 moves. The board opens after red's move 10, with Zuo to move.":
+    '阮黄燕对左文静，2022 世界象棋锦标赛女子组第 6 轮，2022 年 10 月 27 日。左文静执黑 37 回合取胜。棋盘从红方第 10 回合之后开始，轮到左文静走。',
+  '2022 World Xiangqi Championship, women, round 6': '2022 世界象棋锦标赛，女子组第 6 轮',
+  "Zuo Wenjing vs Peng Jou-An, 2022 World Xiangqi Championship, women, round 7, 29 October 2022. Zuo won with red in 32 moves. The board opens after black's move 17, with Zuo to move.":
+    '左文静对彭柔安，2022 世界象棋锦标赛女子组第 7 轮，2022 年 10 月 29 日。左文静执红 32 回合取胜。棋盘从黑方第 17 回合之后开始，轮到左文静走。',
+  '2022 World Xiangqi Championship, women, round 7': '2022 世界象棋锦标赛，女子组第 7 轮',
+  "Tony Fung of Hong Kong, who reached the men's final at the same championship, has [his own page](/blog/tony-fung-ga-zen).":
+    '在同一届世锦赛打进男子组决赛的香港棋手冯家俊，也有[自己的专页](/blog/tony-fung-ga-zen)。',
+  'Asian Games, Hangzhou': '杭州亚运会',
+  'At the 2023 Asian Games in Hangzhou she won the women\'s individual gold, beating Wang Linna in the final. Her second gold came in the mixed team event, where she played three games for China, won two and drew the other. "I\'m very happy to win two golds," she told the Hubei Sports Bureau. "It\'s my first time at an event this big. I got to see a lot of my idols, and to play against top players."':
+    '在 2023 年杭州亚运会上，她夺得女子个人赛金牌，决赛击败王琳娜。第二枚金牌来自混合团体赛，她为中国队下了三盘，两胜一和。她对湖北省体育局说：“获得2金很开心！我第一次参加这样的大型赛会，可以看到很多自己的偶像，还可以跟高手过招。”',
+  'Her 2026 season': '她的 2026 赛季',
+  'National Team Championship, Zhangjiakou': '全国象棋团体赛，张家口',
+  "The national team championship ran from 28 March to 2 April 2026. Zuo played all seven rounds for Hubei's women's team, drew the first with black against Huang Leilei and won the other six.":
+    '全国象棋团体赛于 2026 年 3 月 28 日至 4 月 2 日举行。左文静代表湖北女队打满七轮，首轮执黑与黄蕾蕾弈和，其余六轮全胜。',
+  'Huang Leilei': '黄蕾蕾',
+  'Fu Anxin': '傅安欣',
+  'Zhang Jiawen': '张佳雯',
+  'Jiang Yu': '姜瑀',
+  'Dong Yunan': '董毓男',
+  'Zhang Tingting': '张婷婷',
+  'Li Chao': '李超',
+  'Wu Dan': '吴丹',
+  'Her national team championship, round by round.': '她的全国团体赛，逐轮战绩。',
+  "Zuo Wenjing vs Fu Anxin, 2026 National Team Championship, women, 28 March 2026. Zuo won with red in 37 moves. The board opens after black's move 9, with Zuo to move.":
+    '左文静对傅安欣，2026 全国象棋团体赛女子组，2026 年 3 月 28 日。左文静执红 37 回合取胜。棋盘从黑方第 9 回合之后开始，轮到左文静走。',
+  '2026 National Team Championship, women': '2026 全国象棋团体赛，女子组',
+  'The [whole event](/broadcast/xiangqi/2026-womens-xiangqi-team-championship) is in the broadcast archive.':
+    '[整项赛事](/broadcast/xiangqi/2026-womens-xiangqi-team-championship)都在直播档案里。',
+  "At the Shanghai Cup, from 9 to 13 September, she reached the semi-final of the women's event and lost it to Wang Zihan of Hebei. We hold her four games with red there: two wins, a draw and that loss.":
+    '9 月 9 日至 13 日的上海杯，她打进女子组半决赛，负于河北的王子涵。我们收录了她在那里的四盘执红对局：两胜一和，以及那盘败局。',
+  "Zuo Wenjing vs Dong Yunan, 2026 Shanghai Cup, women, 10 September 2026. Zuo won with red in 34 moves. The board opens after black's move 24, with Zuo to move.":
+    '左文静对董毓男，2026 上海杯女子组，2026 年 9 月 10 日。左文静执红 34 回合取胜。棋盘从黑方第 24 回合之后开始，轮到左文静走。',
+  '2026 Shanghai Cup, women': '2026 上海杯，女子组',
+  "Women's league, Suifenhe": '女子甲级联赛，绥芬河',
+  "A week later she played two events back to back in Suifenhe: the qualifier for China's women's league, from 20 to 22 September, and then the first stage of the league itself, to 27 September. She scored five wins, a draw and a loss in the qualifier, the loss to Wang Linna, whom she had beaten for the Asian Games gold. In the league she won six, drew two and lost two, and in round five she played Wang Zihan twice, two weeks after the Shanghai semi-final, winning with black and drawing with red.":
+    '一周后，她在绥芬河接连参加两项赛事：先是 9 月 20 日至 22 日的全国象棋女子甲级联赛预选赛，接着是联赛本身的第一阶段，打到 9 月 27 日。预选赛她五胜一和一负，输给了王琳娜，正是她在亚运会金牌之战中击败的对手。联赛中她六胜两和两负，第五轮两次对阵王子涵，距上海杯半决赛只有两周，执黑取胜，执红弈和。',
+  "Zuo Wenjing vs Wu Dan, 2026 Women's League qualifier, 21 September 2026. Zuo won with red in 21 moves. The board opens after black's move 5, with Zuo to move.":
+    '左文静对吴丹，2026 全国象棋女子甲级联赛预选赛，2026 年 9 月 21 日。左文静执红 21 回合取胜。棋盘从黑方第 5 回合之后开始，轮到左文静走。',
+  "2026 Women's League qualifier": '2026 全国象棋女子甲级联赛预选赛',
+  'The [qualifier](/broadcast/xiangqi/2026-womens-league-qualifier) and the [league](/broadcast/xiangqi/2026-womens-xiangqi-league) are in the broadcast archive.':
+    '[预选赛](/broadcast/xiangqi/2026-womens-league-qualifier)和[联赛](/broadcast/xiangqi/2026-womens-xiangqi-league)都在直播档案里。',
+  'Every event with her full record': '成绩齐全的每项赛事',
+  "Women's league, first stage, Suifenhe": '女子甲级联赛第一阶段，绥芬河',
+  'Sep 23–27, 2026': '2026年9月23–27日',
+  "Women's league qualifier, Suifenhe": '女子甲级联赛预选赛，绥芬河',
+  'Sep 20–22, 2026': '2026年9月20–22日',
+  'Mar 28–Apr 2, 2026': '2026年3月28日–4月2日',
+  'World Championship, Kuching': '世锦赛，古晋',
+  'Oct 24–29, 2022': '2022年10月24–29日',
+  'Every event for which we hold all her results. The Shanghai Cup, the Xintai Cup, the July squad selection and the December 2025 national individual championship are left out: we hold only some of her games there.':
+    '我们收齐她全部成绩的每一项赛事。上海杯、新泰杯、七月的国家集训队选拔赛和 2025 年 12 月的全国象棋个人赛没有列入：我们只收录了她在那里的部分对局。',
+  'Where she stands': '她现在的位置',
+  "Her 2026 games are in the broadcast archive with the site's analysis, and her player page there has her results.":
+    '她的 2026 年对局都在直播档案里，附网站的分析；她在那里的棋手页面列有她的成绩。',
+  "Sources: game records from dpxq.com, which may not hold every game of an event, and for 2022 from the WXF's book of game records; the 2022 result from Xinhua and Viet Nam News; the Asian Games from Sina and the Hubei Sports Bureau, which with Chinese Wikipedia also gives her biography; the Shanghai Cup semi-final from The Paper; her titles from the WXF title list of December 2022 and China's national registration list of 2023; analysis by Pikafish through Mistboard's review pipeline, October 2026.":
+    '资料来源：棋谱来自 dpxq.com，该数据库不一定收齐每项赛事的全部对局，2022 年的棋谱来自世界象棋联合会的棋谱集；2022 年的成绩来自新华社和 Viet Nam News；亚运会来自新浪和湖北省体育局，她的生平也来自湖北省体育局和中文维基百科；上海杯半决赛来自澎湃新闻；她的称号来自世界象棋联合会 2022 年 12 月的称号名单和 2023 年的全国等级称号注册名单；分析由 Pikafish 经 Mistboard 的复盘流程完成，2026 年 10 月。',
+  "Four years after Kuching she still wins most of her games. She went through the spring's team championship without a loss, reached the last four in Shanghai, and won 11 of her 17 games across the two September league events. The world title has gone elsewhere since: to Tang Sinan in 2023 and to Tang Dan in 2025, and Tang Dan beat her at the national individual championship in Jinan in December 2025. What has not changed since 2022 is the opening: she still starts with the elephant, and her wins still come from the other side's first mistake.":
+    '古晋夺冠四年后，她仍然赢下大部分对局。春天的团体赛她一盘未输，在上海打进四强，九月的两项联赛赛事 17 盘赢了 11 盘。此后世界冠军另有归属：2023 年是唐思楠，2025 年是唐丹，唐丹还在 2025 年 12 月济南的全国象棋个人赛上击败了她。2022 年以来没有变的是开局：她仍然以飞相起手，她的胜局仍然来自对方的第一个错着。',
+  'Her games in the archive': '她在档案里的对局',
+  "Zuo Wenjing 左文静, the 2022 women's world xiangqi champion: games and analysis":
+    '左文静，2022 年女子世界象棋冠军：对局与分析',
   // yin-sheng (zh-Hans), machine-drafted 2026-09-21, not native-reviewed. Mainland
   // players' names stay in one form in both scripts.
   'Yin Sheng 尹昇: games, results, and analysis': '尹昇：对局、战绩与分析',
@@ -1774,7 +1910,7 @@ const ZH_HANS: Record<string, string> = {
   // Drives the localized <title>; not covered by the prose test, so it is easy to miss.
   'For titled xiangqi and chess players': '致象棋与国际象棋的头衔棋手',
   'Verified titled players get a gold badge beside their name, a coaching page students can find, and a front page that will carry their work. Verification takes about two minutes.':
-    '通过认证的头衔棋手，名字旁会显示金色徽章，可以开设让学员找得到的教练主页，作品也有机会登上首页。认证大约只需两分钟。',
+    '通过认证的头衔棋手，名字旁会显示金色徽章，可以开设让学员找得到的教练主页，首页今后也会刊登他们的作品。认证大约只需要两分钟。',
   'Verified titled players get a gold badge beside their name, a coaching page students can find, and a front page that will carry their work. Verification takes about two minutes: start at [mistboard.com/verify-title](/verify-title).':
     '通过认证的头衔棋手，名字旁会显示金色徽章，可以开设让学员找得到的教练主页，作品也有机会登上首页。认证大约只需两分钟：请前往 [mistboard.com/verify-title](/verify-title)。',
   'Mistboard accepts WXF and CXA titles (XGM, XIM, XNM, XWGM, XWIM) and FIDE titles (GM, IM, FM, CM, WGM, WIM, WFM, WCM). Link your federation profile, give your real name, note the results behind the claim, and an admin reviews it personally.':
@@ -2002,7 +2138,7 @@ const ZH_HANS: Record<string, string> = {
   "Misty is Mistboard's Fog of War chess engine: how it sees, searches possible boards, avoids hidden catastrophes, and where the current version stands.":
     'Misty 是 Mistboard 的迷雾国际象棋引擎：它如何观察、搜索可能局面、避开隐藏灾难，以及当前版本处在什么水平。',
   'How Mistboard keeps hidden information on the server: canonical state, seat-scoped views, private live rooms, and public postgame review.':
-    'Mistboard 如何把隐藏信息留在服务器端：规范真实局面、按座位投影视野、私密实时房间，以及公开的赛后复盘。',
+    'Mistboard 如何把隐藏信息留在服务器端：服务器保存规范的真实局面，按座位投影各方的视野，实时对局房间保持私密，赛后复盘则公开。',
 
   // -- Shared rules-page headings --
   'Board and setup': '棋盘与布局',
@@ -2177,6 +2313,7 @@ const ZH_HANS: Record<string, string> = {
 
   // -- Chess primer --
   'Chess Rules': '国际象棋规则',
+  'Chess Rules: Castling, Promotion and En Passant': '国际象棋规则：王车易位、升变与吃过路兵',
   'Chess is a two-player strategy game played for centuries. It descends from the Indian game chaturanga of around the 6th century and reached Europe through Persia and the Islamic world; its modern form, with the long-range queen and bishop, took shape in Europe in the late 1400s.':
     '国际象棋是一种已有数百年历史的双人策略游戏。它源自约公元 6 世纪的印度游戏恰图兰加，经由波斯和伊斯兰世界传入欧洲；其现代形式（拥有远程的后和象）于 15 世纪末在欧洲成形。',
   'Board setup': '棋盘布置',
@@ -2435,17 +2572,17 @@ const ZH_HANS: Record<string, string> = {
   // point of seoTitle -- 'fog of war chess' is what players type.
   'Fog of War Chess Rules': '迷雾国际象棋规则',
   "Fog Chess is chess where you see only the squares your own pieces can reach. Nobody announces check, so a king is lost by being captured, and it can castle into an attack it can't see.":
-    '迷雾国际象棋就是只能看到己方棋子可及格子的国际象棋。没有人提示将军，王被吃掉即负，王也可能易位到自己看不见的攻击之下。',
+    '迷雾国际象棋就是只能看到己方棋子所能到达的格子的国际象棋。没有人提示将军，所以王要被吃掉才算输，王也可能易位到自己看不见的攻击之下。',
   "[Fog Chess](https://en.wikipedia.org/wiki/Dark_chess) is Mistboard's public name for dark chess, also called Fog of War chess. Jens Bæk Nielsen and Torben Osted invented it in 1989. It is the implicit-fog version of the idea: no umpire, no scan action. Each side's visibility is derived from where its pieces can legally move.":
     '[迷雾国际象棋](https://en.wikipedia.org/wiki/Dark_chess)是 Mistboard 对 dark chess / Fog of War chess 的公开名称。Jens Bæk Nielsen 与 Torben Osted 于 1989 年发明了它。它属于隐式迷雾：没有裁判，也没有侦察动作。每一方的视野完全由己方棋子的合法走法范围推导而来。',
   'Xiangqi, also known as Chinese chess, took its modern form in China during the Song dynasty (960 to 1279), when the cannon joined the board. Its ancestors run back several centuries earlier, and it shares a common root with chess, shogi, and janggi in the older Indian game chaturanga. It is now among the most widely played board games in the world.':
     '象棋的现代形态在宋代（960 至 1279 年）的中国成型，炮也在这一时期加入棋盘。它的前身可以追溯到更早几个世纪，并与国际象棋、将棋、朝鲜象棋同源于更古老的印度游戏恰图兰卡。今天它是世界上参与人数最多的棋类游戏之一。',
   'Fog Xiangqi Rules': '迷雾象棋规则',
-  'Fog of War Xiangqi Rules': '迷雾象棋规则',
+  'Fog of War Xiangqi Rules': '迷雾象棋规则：战争迷雾下的象棋',
   'Brian H. Liou designed Fog Xiangqi in 2026 as a Mistboard original. Fog of War has been played on the chess board since Jens Bæk Nielsen and Torben Osted invented dark chess in 1989, and chess.com runs it as a standard variant today. Nobody had carried it across to xiangqi. The cannon is the piece that makes it strange. It captures only by jumping over another piece, so under fog you are firing at something you cannot see, across a screen you are not certain is still there.':
     '迷雾象棋由 Brian H. Liou 于 2026 年设计，是 Mistboard 的原创变体。战争迷雾早在 1989 年就由 Jens Bæk Nielsen 和 Torben Osted 发明的「黑棋」引入国际象棋，如今也是 chess.com 的常规变体，却从未有人把它移植到象棋上。真正让它变得奇特的是炮。炮只能隔子吃子，所以在迷雾中，你既看不见目标，也无法确定炮架是否还在。',
   "Fog Xiangqi is xiangqi under Fog of War. A piece you can't see can still block your horse, and a general with a clear file to the other general can capture it.":
-    '迷雾象棋是战争迷雾下的象棋。看不见的棋子照样可以蹩你的马腿；一方将帅若与对方之间的直线无子阻挡，就可以直接擒获。',
+    '迷雾象棋就是战争迷雾下的象棋。你看不见的棋子照样可以蹩你的马腿；一方的将帅若与对方将帅之间的直线上没有棋子阻挡，就可以直接把对方将帅吃掉。',
   'Fog Xiangqi is xiangqi under Fog of War. Pieces keep their normal movement, but unseen enemy pieces stay hidden and danger is not announced. Capture the general to win.':
     '迷雾象棋是在战争迷雾下对弈的象棋。棋子保留正常走法，但看不见的敌方棋子会被隐藏，危险不会被提示。擒获将帅即获胜。',
   'If Xiangqi is new to you, start with [Xiangqi Rules](/rules/xiangqi). If you already play xiangqi, the sections below explain only what fog changes.':
@@ -2457,7 +2594,7 @@ const ZH_HANS: Record<string, string> = {
   'Use [Xiangqi Rules](/rules/xiangqi) for the base game. This page covers what changes.':
     '基础规则请参考[象棋规则](/rules/xiangqi)。本页只说明变化之处。',
   'Standard chess rules, the primer behind Fog Chess: castling, promotion, en passant, the draw rules, and a famous game to play through.':
-    '普通国际象棋规则，也就是迷雾国际象棋背后的基础：王车易位、升变、吃过路兵、和棋规则，以及一盘可逐步回放的名局。',
+    '普通国际象棋的规则，也是迷雾国际象棋背后的基础：王车易位、升变、吃过路兵、各种和棋规则，以及一盘可以逐步回放的著名对局。',
   'Chess is the open-information base game. Add Fog of War for Fog Chess, where enemy pieces outside your vision disappear and the king falls by capture.':
     '国际象棋是信息公开的底层游戏。为它加上战争迷雾，便得到迷雾国际象棋：你视野之外的敌方棋子会消失，而王由被吃而落败。',
   'Read Fog Chess': '阅读迷雾国际象棋',
@@ -2479,11 +2616,11 @@ const ZH_HANS: Record<string, string> = {
     '斗兽棋的 4×4 翻面版本，又称翻翻棋。所有动物开局均背面朝上。每回合翻开一枚或走动一枚，等级相同的双方同归于尽、一起离场。',
   'Jieqi Rules (Reveal Xiangqi)': '揭棋规则：玩法详解与免费在线对弈',
   'Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, makes its first move as the piece whose point it stands on, then turns face-up.':
-    '揭棋规则详解：除将帅外的棋子都隐藏身份，首次按所在起始位置的棋子走法行棋，然后翻开并按真实身份行棋。',
+    '揭棋是一种暗子玩法的中国象棋变体，这里详解它的规则。除将帅外，所有棋子开局都背面朝上，第一步按所在位置原本棋子的走法行棋，走完即翻开，此后按真实身份行棋。',
   "Jieqi, also called Reveal Xiangqi, keeps xiangqi's board and checkmate goal, but hides every non-general piece. A dark piece first moves, attacks, and captures by the starting point it occupies. After that move, it reveals and plays by identity.":
     '揭棋保留象棋的棋盘和将死目标，但隐藏所有非将帅棋子的身份。暗子首次按它所在起始位置的棋子走法移动、攻击和吃子，走完后翻开，之后按真实身份行棋。',
   'Banqi, also called Chinese dark chess or blind chess, is played face-down on half a xiangqi board. Pieces capture by rank, except that the soldier takes the general and the cannon jumps a screen to take anything.':
-    '暗棋又称盲棋，在半张象棋棋盘上以背面朝上的棋子进行。棋子按等级吃子，例外是卒可以吃将，炮则隔一子跳吃任何棋子。',
+    '暗棋又称盲棋，在半张象棋棋盘上以背面朝上的棋子进行。棋子按等级吃子，但有两个例外：卒可以吃将，炮则隔着一个炮架跳吃任何棋子。',
   'Banqi, also called Chinese dark chess or blind chess, is a fast hidden-piece game played on half a xiangqi board. All thirty-two pieces begin shuffled and face-down. The first flip assigns colors. After that, each turn is a choice: flip a tile or move a revealed piece. Captures follow rank, except for the cannon.':
     '暗棋是在半张象棋棋盘上进行的快节奏隐藏棋子游戏。三十二枚棋子全部洗匀并背面朝上。第一次翻子决定双方颜色。之后每回合都在两种行动中选择：翻开棋子，或移动一枚已翻开的棋子。除炮外，吃子按等级进行。',
   'Although it uses [Xiangqi](/rules/xiangqi) pieces, it is a separate game: pieces move one square, the general is not royal, and face-down tiles cannot be captured. This page describes the exact rules used on Mistboard.':
@@ -3651,7 +3788,7 @@ const ZH_HANS: Record<string, string> = {
   // read that is not coming. Locked the same day its English copy published, so
   // any later English edit orphans a key here and fails the coverage test.
   'Play jieqi against the engine or a friend, free and without an account, then review the game with analysis that separates your choices from your luck.':
-    '免费和揭棋AI（皮卡鱼、AB-JChess）或朋友下揭棋，不用注册，下完还能复盘，分析会把你的选择和你的运气分开算。',
+    '免费和揭棋AI（皮卡鱼、AB-JChess）或朋友下揭棋，不用注册账号；下完还能复盘，分析会把你自己的选择和运气分开计算。',
   'Jieqi is [xiangqi](/rules/xiangqi) with every piece face-down. A piece moves as whatever normally starts on its square, then flips and keeps that identity for the rest of the game. You begin without knowing what anything is, including your own pieces. The [rules page](/rules/jieqi) has the details.':
     '揭棋就是把每个子都翻扣过去的[象棋](/rules/xiangqi)。暗子按它所在那个点原本摆的子走，走完就翻开，之后一直是翻出来的那个子。开局时你不知道任何一个子是什么，连自己的也不知道。[规则页](/rules/jieqi)有详细说明。',
   'It is a young game, out of Hong Kong and Guangdong, and it has spread over the last couple of decades mostly among Chinese and Vietnamese players. For what to actually open with, see [what strong players believe about the opening](/blog/jieqi-openings).':
@@ -3743,6 +3880,7 @@ const ZH_HANS: Record<string, string> = {
   'Black wins by checkmate · 73 moves': '黑方将死获胜 · 73 回合',
   // -- Duck Xiangqi --
   'Duck Xiangqi Rules': '鸭子象棋规则',
+  'Duck Xiangqi Rules: Duck Chess Meets Xiangqi': '鸭子象棋规则：当鸭子国际象棋遇上象棋',
   'Duck Chess on the xiangqi board. Every turn is a move and then a duck placement, the duck blocks and screens like a piece, and you win by capturing the general.':
     '把鸭子国际象棋搬到象棋盘上。每一回合都是先走一步棋，再放一次鸭子；鸭子像棋子一样挡路，也一样能当炮架；吃掉对方的将帅即获胜。',
   'Duck Xiangqi is [xiangqi](/rules/xiangqi) with a duck on the board. Every turn you make a legal xiangqi move, and then you move the duck to an empty point. Both halves are one turn, and neither of them is optional.':
@@ -4989,6 +5127,57 @@ const ZH_HANS: Record<string, string> = {
   'Flip Jungle: an engine game, Red wins on move 28': '翻翻棋：一盘引擎对局，红方第 28 回合获胜',
   'The [companion study](/study/uKxJ60mN) has all twenty games from the run, each opening into its own deal, with a note on how it went.':
     '[配套研究](/study/uKxJ60mN)收录了这一批全部二十盘对局，每盘都从自己的发牌开始，并附有对局经过的说明。',
+  // -- fortress-and-atomic-xiangqi-on-hold, machine-drafted 2026-10-14, not native-reviewed. Terms follow the
+  // Fortress and Atomic rules pages (宝, 持子, 打入, 长将) and the site's variant names. --
+  'Back to the drawing board: Fortress and Atomic Xiangqi': '推倒重来：堡垒象棋与原子象棋',
+  'Back to the drawing board: Fortress Xiangqi and Atomic Xiangqi':
+    '推倒重来：堡垒象棋和原子象棋暂停开放',
+  'Fortress and Atomic on hold': '堡垒与原子象棋暂停',
+  'On 11 October we stopped new games of Fortress Xiangqi and Atomic Xiangqi so we can redesign them. In Fortress the drops took over a small board; Atomic only stopped looping after the cannon got its own exception. Finished games still replay.':
+    '10 月 11 日，我们停止了堡垒象棋和原子象棋的新对局，以便重新设计。在堡垒象棋里，打入主宰了一张小棋盘；原子象棋则是在炮有了自己的例外规则之后，才不再陷入循环。已结束的对局仍可回放。',
+  'Fortress Xiangqi and Atomic Xiangqi are on hold while we redesign them. You cannot start a new game, but finished games still replay and both rules pages stay up.':
+    '堡垒象棋和原子象棋已暂停，我们正在重新设计。你无法开始新对局，但已结束的对局仍可回放，两个规则页面也都保留。',
+  'In Fortress the drops took over the small board. A redesign has to make a smaller xiangqi that still feels like the full game.':
+    '在堡垒象棋里，打入主宰了小棋盘。重新设计必须做出一种更小的象棋，下起来仍像完整的象棋。',
+  'Atomic only played well after the cannon got its own exception. A redesign has to give it a cannon that follows the same rule as every other piece.':
+    '原子象棋是在炮有了自己的例外规则之后才下得好。重新设计必须给它一个和其他所有棋子遵循同一条规则的炮。',
+  'On 11 October we stopped new games of [Fortress Xiangqi](/rules/fortress-xiangqi) and [Atomic Xiangqi](/rules/atomic-xiangqi). Games already played still replay from their links, and both rules pages stay up. We designed both games, and we launched both before they were ready. What went wrong with each, and what does a version worth bringing back have to fix?':
+    '10 月 11 日，我们停止了[堡垒象棋](/rules/fortress-xiangqi)和[原子象棋](/rules/atomic-xiangqi)的新对局。已经下过的对局仍可从各自的链接回放，两个规则页面也都保留。这两款棋都是我们设计的，也都是在还没准备好时就上线了。它们各自出了什么问题？一个值得重新推出的版本又必须解决什么？',
+  'Fortress Xiangqi tried four new ideas at once': '堡垒象棋同时尝试了四个新点子',
+  'Fortress was played on a 7 by 8 board with the two palaces in opposite corners. It added the Treasure, a new piece that steps one point in any direction. A captured piece went into your hand, and you could drop it back onto the board later as your own move. For its first two months it also had veteran soldiers, which we later took out.':
+    '堡垒象棋在 7×8 的棋盘上进行，两个九宫分处对角。它加入了「宝」，一个可以向任意方向走一步的新棋子。被吃掉的棋子进入你的持子，之后你可以用自己的一步把它打回棋盘。最初的两个月里它还有老兵，后来我们把老兵去掉了。',
+  'Each idea was worth trying. Together they made a game that was hard to learn, and the drops overwhelmed the rest. With the general boxed into a corner of a small board, one piece dropped beside it was often enough. A typical engine game ended this way, with most of both armies still on the board.':
+    '每个点子都值得一试。合在一起，却成了一款难学的棋，而打入压倒了其余一切。将帅被困在小棋盘的一角，往它旁边打入一子往往就够了。一盘典型的引擎对局就是这样结束的，双方的大部分兵力都还在盘上。',
+  'Black drops a soldier from its hand on b1, beside the general. With the horse on c3 guarding b1 and Red’s own chariot on a2, the general has nowhere to go, and that is mate.':
+    '黑方从持子中把一枚卒打在 b1，紧挨着帅。c3 的马守住 b1，红方自己的车又占着 a2，帅无路可走，这就是将死。',
+  'A redesign has to make a smaller xiangqi that keeps the feel of the full game, without drops taking over.':
+    '重新设计必须做出一种更小的象棋，保留完整象棋的感觉，又不让打入主宰全局。',
+  'Until then, drops live on the site in [Crazyhouse Xiangqi](/rules/crazyhouse-xiangqi), which plays them on the normal board with the normal pieces and palaces.':
+    '在此之前，本站的打入玩法在[疯狂屋象棋](/rules/crazyhouse-xiangqi)里：它在普通棋盘上，用普通的棋子和九宫来打入。',
+  'Atomic Xiangqi needed an exception for the cannon': '原子象棋得为炮开一个例外',
+  'In Atomic Xiangqi a capture explodes. The piece that captures, the piece it takes and every piece on the four points next to the capture leave the board. Soldiers survive a blast; a general does not, and losing it loses the game.':
+    '在原子象棋里，吃子会爆炸。吃子的棋子、被吃的棋子，以及吃子点相邻四个点上的所有棋子，都离开棋盘。兵卒能在爆炸中幸存；将帅不能，失去它就输掉这盘棋。',
+  'In the first version the cannon exploded too, which made it the perfect defender: it could block a chariot’s attack and threaten back through the chariot. An attacker could often force a draw this way.':
+    '在最初的版本里，炮也会爆炸，这让它成了完美的防守者：它能挡住车的进攻，再隔着车反过来威胁。进攻方常常就这样被拖成和棋。',
+  'Under the first rules. (a) The chariot threatens the advisor on d10. (b) The cannon blocks and threatens d1 through the chariot. (c) The chariot switches files. (d) The cannon follows, and the cycle repeats.':
+    '按最初的规则。(a) 车威胁 d10 的士。(b) 炮挡住，并隔着车威胁 d1。(c) 车换到另一路。(d) 炮跟过去，循环重复。',
+  '(a) Rd2': '(a) Rd2',
+  '(b) Cd6': '(b) Cd6',
+  '(c) Rf2': '(c) Rf2',
+  '(d) Cf6': '(d) Cf6',
+  'With its palace closed in, as here, the defender has no other move, and a repetition rule can’t break the cycle because both sides threaten on every move.':
+    '像这里这样九宫被封住时，防守方没有别的着法；重复局面规则也打破不了这个循环，因为双方每一步都在威胁。',
+  'To launch it, we made a cannon’s capture remove only the cannon and its target, and made the side that keeps up a threat through a repeated cycle lose, like perpetual check in xiangqi.':
+    '为了上线，我们让炮吃子只移除炮和它的目标，并规定在重复的循环里一直保持威胁的一方判负，就像象棋里的长将。',
+  'That ended the loop, but left the cannon playing by its own rule: it alone can capture next to its own general. We launched before we had a design without that patch.':
+    '这结束了循环，却让炮按自己的规则行事：只有它能在己方将帅的相邻点上吃子。我们在找到不需要这个补丁的设计之前就上线了。',
+  'A redesign needs a cannon that follows the same rule as every other piece.':
+    '重新设计需要一个和其他所有棋子遵循同一条规则的炮。',
+  'Both come back when they are right': '两款棋都会在做对之后回来',
+  'We would rather run a short list of games we stand behind than keep two that need an apology. Neither game is dead. Each has one problem to solve. Fortress needs a small board that drops do not take over, and Atomic needs a cannon with no exception. When a version of either one solves it, that game comes back.':
+    '我们宁愿只运营一小批自己认可的棋，也不愿留着两款需要道歉的棋。两款棋都没有死。各自都有一个问题要解决：堡垒象棋需要一张不被打入主宰的小棋盘，原子象棋需要一个没有例外的炮。哪一款的新版本解决了它的问题，那款棋就会回来。',
+  'If dropping pieces was the part of Fortress you liked, Crazyhouse Xiangqi is where drops live on the site today.':
+    '如果打入是你在堡垒象棋里喜欢的部分，如今本站的打入玩法就在疯狂屋象棋里。',
   // -- Crazyhouse Xiangqi (rules page), machine-drafted 2026-10-02 for the hand-start rules, not native-reviewed --
   'Crazyhouse Xiangqi Rules': '疯狂屋象棋规则',
   'The sample game’s last move. Left, Red to move with three soldiers in hand. Right, one dropped on e9 mates the general on f9.':
@@ -5039,7 +5228,7 @@ const ZH_HANS: Record<string, string> = {
     '这盘棋是[配套研究](/study/nlZy4yNA)中的六盘之一，每盘都注明了决定胜负的打入。',
   'The six engine games': '六盘引擎对局',
   'Xiangqi where a captured piece joins your hand and the advisors and elephants start there: drop a piece on any empty point, advisors and elephants on their own half, check and mate included.':
-    '被吃的子归入吃子一方持子、士和象开局就在持子里的象棋：把持子打入任何一个空点，士和象限己方半盘，可以将军，也可以将死。',
+    '被吃掉的棋子归入吃子一方的持子、士和象开局就在持子里的象棋：持子可以打入任何一个空点，士和象只能打入己方半盘，打入的子可以将军，也可以将死。',
   'Everything else is xiangqi: the board, how the other pieces move, the general in its palace, the river, the rule that the two generals may not face each other on an open file, and the way a game ends.':
     '其余一切都是象棋：棋盘、其他棋子的走法、待在九宫里的将帅、河界、双方将帅不能在同一条直线上无子相隔地照面的规则，以及对局结束的方式。',
   'Each side begins with its two advisors and two elephants in hand, not on the board. The back rank reads chariot, horse, two empty points, the general, two empty points, horse, chariot. The cannons and soldiers stand where they always do.':
@@ -5460,7 +5649,7 @@ const ZH_HANT: Record<string, string> = {
   'The Longest Forced Mates in Xiangqi': '象棋最長的必勝殺局',
   'The Longest Forced Mates': '最長的必勝殺局',
   'A horse and a soldier beat a general with both advisors and both elephants, and the slowest win in that endgame takes 65 moves. Seven records from xiangqi endgame tablebases, with the lines, and five of them end with the loser having no legal move.':
-    '馬兵能勝士象全，而這一殘局裡最慢的勝法要走65回合。七項出自象棋殘局庫的紀錄，附完整著法，其中五局以負方無著可走告終。',
+    '馬和兵聯手就能勝士象全，而這一殘局裡最慢的勝法要走65回合。這裡收錄七項出自象棋殘局庫的紀錄，每項都附完整著法，其中五項以負方無著可走告終。',
   'We generated xiangqi endgame tablebases for every one-and-two-attacker class against the full defence and pulled out the deepest position in each. The longest is a horse and a soldier: 65 moves of best play by both sides.':
     '我們為一子和兩子進攻對士象全的每一類殘局生成了象棋殘局庫，並找出每一類中最深的局面。最長的是馬兵：雙方都走最佳著法，共65回合。',
   'Five of the seven records end with the losing general having no legal move. That is 困毙, and in xiangqi it loses, so a longest-mate line can finish without a check on the board.':
@@ -5532,7 +5721,7 @@ const ZH_HANT: Record<string, string> = {
   'A xiangqi threefold repetition bug: the chariot and the cannon shared a key':
     '象棋三次重複局面判定的一個錯誤：車和炮被記成了同一個字母',
   "A one-character bug in Mistboard's xiangqi repetition key let a game end in a threefold draw after a position had occurred only twice.":
-    'Mistboard 象棋重複局面鍵裡一個只差一個字元的錯誤，讓一個局面只出現兩次，對局就被判為三次重複和棋。',
+    'Mistboard 象棋重複局面判定所用的鍵裡，有一個只差一個字元的錯誤：一個局面明明只出現了兩次，對局卻被判為三次重複和棋。',
   'Our xiangqi repetition key labelled each piece by the first letter of its role, so the chariot and the cannon were both `c`. Swapping a chariot and a cannon left the key unchanged, so a game could be drawn by threefold repetition after only two.':
     '我們的象棋重複局面鍵用棋子角色英文名的首字母來標記每個棋子，於是車（chariot）和炮（cannon）都是 `c`。車和炮互換位置後，鍵不變，所以一個局面只出現兩次，對局就可能被判為三次重複和棋。',
   'The fix writes out the role name. Fog Chess had the same bug with the king and the knight. No finished game changes result.':
@@ -5955,7 +6144,7 @@ const ZH_HANT: Record<string, string> = {
   // pikafish-reveal-bug: machine-drafted 2026-10-02, not native-reviewed.
   'Our Pikafish jieqi bot misjudged its reveals': '我們的皮卡魚揭棋電腦誤判了翻子',
   'Our Pikafish jieqi bot rated some reveals far better than they were. Two bugs caused it. Both are fixed, at little or no cost in strength.':
-    '我們的皮卡魚揭棋電腦把一些翻子評得遠比實際要好。原因是兩個錯誤。兩個都已修復，棋力幾乎沒有損失。',
+    '我們的皮卡魚揭棋電腦把一些翻子評估得遠比實際要好，原因是兩個錯誤。兩個錯誤都已修復，修復後棋力只有很小的損失，或者完全沒有損失。',
   'In [jieqi](/rules/jieqi), turning over a face-down piece is a bet. You know which pieces it could be, and not which one it is. Our Pikafish bot, the engine behind Levels 1 to 8, priced some of those bets far too well. It would turn over a piece that gets mated for most of what it could be, and rate the move as winning.':
     '在[揭棋](/rules/jieqi)裡，翻開一個暗子就是一次下注。你知道它可能是哪些棋子，但不知道究竟是哪一個。我們的皮卡魚電腦，也就是第 1 到第 8 級背後的引擎，把其中一些賭注估得太好了。它會翻開一個在大多數可能下都會被將死的棋子，還把這步棋評為勝勢。',
   'We found it on October 2, while writing the [AB-JChess post](/blog/ab-jchess). The fix is live for every level and for the engine you can run on the analysis board.':
@@ -6069,7 +6258,7 @@ const ZH_HANT: Record<string, string> = {
   '1,000 games played': '已下完 1,000 盤棋',
   'Mistboard passes 1,000 games': 'Mistboard 突破 1,000 盤對局',
   'Since June 1, people have finished 1,000 games on Mistboard, most of them in September. Thank you for playing.':
-    '從 6 月 1 日起，棋友們在 Mistboard 上下完了 1,000 盤棋，大部分是在 9 月下的。感謝大家來下棋。',
+    '從 6 月 1 日起，棋友們已經在 Mistboard 上下完了 1,000 盤棋，其中大部分是在 9 月下的。感謝每一位來這裡下棋的棋友。',
   'Mistboard passed 1,000 finished games this week. A game counts once both sides have moved and it ends, against another person or a bot. Engine matches and our test accounts are left out, and counting started on June 1.':
     'Mistboard 本週下完的棋突破了 1,000 盤。一盤棋只要雙方都走過棋並且下完，就計為一盤，不論對手是人還是電腦。引擎之間的對局和我們的測試帳號不計在內，計數從 6 月 1 日開始。',
   'The Mistboard statistics page: 1,000 games played, games per week climbing from a handful in June to nearly 400 in the week of September 21, jieqi far ahead by variant, and almost every game against a bot.':
@@ -6262,7 +6451,7 @@ const ZH_HANT: Record<string, string> = {
   'League, stage one': '象甲第一階段',
   'Sep 14–18': '9月14–18日',
   "Beat the world champion 12 to 8 in a ten-game match in January, then the rest of his season through the first stage of China's top league. Six games on the board, all 75 analysed.":
-    '一月的十局番棋以 12 比 8 擊敗世界冠軍，之後一路打到中國象甲聯賽第一階段。盤面上六局，全部 75 局附引擎分析。',
+    '一月在十局番棋中以 12 比 8 擊敗世界冠軍，之後是他整個賽季的對局，直到中國象甲聯賽第一階段。棋盤上展示六局，全部 75 局都附有分析。',
   'Cao Yanlei at the board. Photo: 象棋字典 via Sohu.':
     '對局中的曹岩磊。圖片：象棋字典，經搜狐轉載。',
   'Cao Yanlei in a dark suit and white shirt, looking down at the pieces during a tournament game.':
@@ -6520,6 +6709,104 @@ const ZH_HANT: Record<string, string> = {
   'Tony Fung Ga Zen': '馮家俊',
   'Chao Yi-fan': '趙奕帆',
   'Cheng Yin Lung': '鄭彥隆',
+  // zuo-wenjing (zh-Hant), machine-drafted 2026-10-11, not native-reviewed. After the
+  // spread, like tony-fung-ga-zen's. Mainland players' names stay simplified and come
+  // from the spread (左文静, 陈幸琳, 王琳娜, 王子涵, 唐丹 and her 2026 opponents);
+  // Taiwan, Singapore and Vietnam players convert (李孟儒, 陳茗芳, 阮黃燕, 吳蘭香),
+  // as do the place names. Cup is 盃, as on the other pages.
+  "The 2022 women's world champion and a double gold medallist at the 2023 Asian Games. Her title run in Kuching and her 2026 season, five games on the board, 32 games analysed.":
+    '2022 年女子世界冠軍，2023 年亞運會兩枚金牌得主。她在古晉的奪冠之路和她的 2026 賽季，盤面上五盤對局，32 局附引擎分析。',
+  'Zuo Wenjing smiling, holding up her Asian Games gold medal.': '左文静微笑著舉起她的亞運會金牌。',
+  "English-speaking xiangqi players who follow the women's game. She has no public social account, so the page is found through search and the site.":
+    '關注女子象棋的說英語的棋友。她沒有公開的社群帳號，所以這一頁靠搜尋和本站被找到。',
+  "Zuo Wenjing won the 2022 women's world championship in Kuching with six wins and a draw, and two gold medals at the 2023 Asian Games.":
+    '左文静在古晉以六勝一和奪得 2022 年女子世界冠軍，又在 2023 年亞運會上拿下兩枚金牌。',
+  "In 2026 she went unbeaten through China's national team championship, six wins and a draw, and reached the Shanghai Cup semi-final.":
+    '2026 年她在全國象棋團體賽上保持不敗，六勝一和，還打進了上海盃半決賽。',
+  'With red she opens with the elephant: 15 of her 22 red games here start that way.':
+    '執紅她用飛相開局：這裡她的 22 盤執紅對局，有 15 盤這樣開局。',
+  'Her median accuracy at the 2022 championship was 96, against 91.7 over her 26 games since December 2025.':
+    '她在 2022 年世錦賽的準確率中位數是 96，而 2025 年 12 月以來的 26 盤對局是 91.7。',
+  'Zuo Wenjing with her gold medal at the 2023 Asian Games in Hangzhou. Photo: Han Chuanhao / Xinhua.':
+    '2023 年杭州亞運會上手持金牌的左文静。圖片：韩传号 / 新華社。',
+  'Zuo Wenjing in a white China team jacket, smiling through round glasses, holding flowers in one hand and her gold medal up in the other.':
+    '左文静身穿白色中國隊外套，戴著圓框眼鏡微笑，一隻手拿著鮮花，另一隻手舉起金牌。',
+  "Zuo Wenjing 左文静 is the 2022 women's world xiangqi champion. In Kuching that October she won six of her seven games and drew the other, with her Chinese teammate Chen Xinglin, and won the last round to take the title. A year later, at the Asian Games in Hangzhou, she won two gold medals: the women's individual event, beating Wang Linna in the final, and the mixed team event with China.":
+    '左文静是 2022 年女子世界象棋冠軍。那年十月在古晉，她七盤贏了六盤，另一盤與中國隊友陈幸琳弈和，最後一輪獲勝奪得冠軍。一年後在杭州亞運會上，她拿下兩枚金牌：一枚是女子個人賽，決賽擊敗王琳娜；另一枚是隨中國隊拿下的混合團體賽。',
+  'She was born in 1993 in Zibo, in Shandong, and plays for Hubei, which she joined as a child as a pupil of Liu Dahua. She became a national master in 2006 and a Chinese grandmaster in 2022, the year of her world title. The WXF lists her as an International Master.':
+    '她 1993 年生於山東淄博，代表湖北出賽，少年時加入湖北隊，師從柳大华。2006 年獲得全國大師稱號，2022 年，也就是她奪得世界冠軍的那一年，成為象棋特級大師。世界象棋聯合會把她列為國際大師。',
+  'This page is her 2022 world championship and her season since December 2025, with five of her games on the board. I ran the 32 games we hold through the same engine analysis Mistboard gives your own games.':
+    '這一頁寫的是她的 2022 年世錦賽和她 2025 年 12 月以來的賽季，盤面上有她的五盤對局。我們收錄的 32 盤對局，我都用 Mistboard 給你的對局做的同一套引擎分析跑過一遍。',
+  'How she plays': '她的棋風',
+  '**She opens with the elephant.** In 15 of her 22 red games here her first move brings an elephant to the centre, and she played it in three of her four red games at the 2022 championship.':
+    '**她用飛相開局。** 這裡她的 22 盤執紅對局中，有 15 盤第一步就是飛相；2022 年世錦賽她四盤執紅，有三盤這樣走。',
+  '**She was at her most accurate in Kuching.** Her median accuracy over the six championship games we hold is 96, against 91.7 over her 26 games since December 2025. In the last round, the game that decided the title, the engine marks no inaccuracy on any of her moves.':
+    '**她在古晉下得最精準。** 我們收錄的六盤世錦賽對局，她的準確率中位數是 96，而 2025 年 12 月以來的 26 盤是 91.7。決定冠軍歸屬的最後一輪，引擎沒有給她的任何一步標出失準。',
+  "**Her opponents make the first mistake.** In 16 of her 20 wins here, the engine marks her opponent's first mistake before any of hers.":
+    '**對手先出錯。** 這裡她贏的 20 盤中有 16 盤，引擎標出的第一個錯著出自對手，早於她的任何錯著。',
+  'The title': '奪冠',
+  "The 17th World Xiangqi Championship was played in Kuching, in Sarawak, and the women's event ran over seven rounds from 24 to 29 October 2022. Zuo won her first four games, drew with Chen Xinglin in round five and won the last two. By then the title was certain to go to one of the two Chinese players. Zuo won her last game, against Peng Jou-An of Chinese Taipei, and the title with it.":
+    '第十七屆世界象棋錦標賽在砂拉越的古晉舉行，女子組 2022 年 10 月 24 日至 29 日賽七輪。左文静前四盤全勝，第五輪與陈幸琳弈和，最後兩輪都贏了。那時冠軍已註定落在兩位中國棋手之一。最後一盤她擊敗中華台北的彭柔安，冠軍也隨之到手。',
+  'Lee Meng Ju, Chinese Taipei': '李孟儒，中華台北',
+  'Anna Yin Meixian, United States': 'Anna Yin Meixian，美國',
+  'Ngo Lan Huang': '吳蘭香',
+  'Fiona Tan Min Fang, Singapore': '陳茗芳，新加坡',
+  'Chen Xinglin, China': '陈幸琳，中國',
+  'Nguyen Hoang Yen, Vietnam': '阮黃燕，越南',
+  'Nguyen Hoang Yen': '阮黃燕',
+  'Peng Jou-An, Chinese Taipei': '彭柔安，中華台北',
+  "Her 2022 World Championship, round by round. Names and federations as the WXF's game records give them; round three's federation is left out because other sources give a different one. The record of round one does not replay, so that game is on no board.":
+    '她的 2022 年世錦賽，逐輪戰績。姓名和所屬協會依照世界象棋聯合會棋譜集的寫法；第三輪的協會沒有列出，因為其他來源給出的不一樣。第一輪的棋譜無法回放，所以那盤不在盤面上。',
+  "Nguyen Hoang Yen vs Zuo Wenjing, 2022 World Xiangqi Championship, women, round 6, 27 October 2022. Zuo won with black in 37 moves. The board opens after red's move 10, with Zuo to move.":
+    '阮黃燕對左文静，2022 世界象棋錦標賽女子組第 6 輪，2022 年 10 月 27 日。左文静執黑 37 回合取勝。棋盤從紅方第 10 回合之後開始，輪到左文静走。',
+  '2022 World Xiangqi Championship, women, round 6': '2022 世界象棋錦標賽，女子組第 6 輪',
+  "Zuo Wenjing vs Peng Jou-An, 2022 World Xiangqi Championship, women, round 7, 29 October 2022. Zuo won with red in 32 moves. The board opens after black's move 17, with Zuo to move.":
+    '左文静對彭柔安，2022 世界象棋錦標賽女子組第 7 輪，2022 年 10 月 29 日。左文静執紅 32 回合取勝。棋盤從黑方第 17 回合之後開始，輪到左文静走。',
+  '2022 World Xiangqi Championship, women, round 7': '2022 世界象棋錦標賽，女子組第 7 輪',
+  "Tony Fung of Hong Kong, who reached the men's final at the same championship, has [his own page](/blog/tony-fung-ga-zen).":
+    '在同一屆世錦賽打進男子組決賽的香港棋手馮家俊，也有[自己的專頁](/blog/tony-fung-ga-zen)。',
+  'Asian Games, Hangzhou': '杭州亞運會',
+  'At the 2023 Asian Games in Hangzhou she won the women\'s individual gold, beating Wang Linna in the final. Her second gold came in the mixed team event, where she played three games for China, won two and drew the other. "I\'m very happy to win two golds," she told the Hubei Sports Bureau. "It\'s my first time at an event this big. I got to see a lot of my idols, and to play against top players."':
+    '在 2023 年杭州亞運會上，她奪得女子個人賽金牌，決賽擊敗王琳娜。第二枚金牌來自混合團體賽，她為中國隊下了三盤，兩勝一和。她對湖北省體育局說：「獲得2金很開心！我第一次參加這樣的大型賽會，可以看到很多自己的偶像，還可以跟高手過招。」',
+  'Her 2026 season': '她的 2026 賽季',
+  'National Team Championship, Zhangjiakou': '全國象棋團體賽，張家口',
+  "The national team championship ran from 28 March to 2 April 2026. Zuo played all seven rounds for Hubei's women's team, drew the first with black against Huang Leilei and won the other six.":
+    '全國象棋團體賽於 2026 年 3 月 28 日至 4 月 2 日舉行。左文静代表湖北女隊打滿七輪，首輪執黑與黄蕾蕾弈和，其餘六輪全勝。',
+  'Her national team championship, round by round.': '她的全國團體賽，逐輪戰績。',
+  "Zuo Wenjing vs Fu Anxin, 2026 National Team Championship, women, 28 March 2026. Zuo won with red in 37 moves. The board opens after black's move 9, with Zuo to move.":
+    '左文静對傅安欣，2026 全國象棋團體賽女子組，2026 年 3 月 28 日。左文静執紅 37 回合取勝。棋盤從黑方第 9 回合之後開始，輪到左文静走。',
+  '2026 National Team Championship, women': '2026 全國象棋團體賽，女子組',
+  'The [whole event](/broadcast/xiangqi/2026-womens-xiangqi-team-championship) is in the broadcast archive.':
+    '[整項賽事](/broadcast/xiangqi/2026-womens-xiangqi-team-championship)都在直播檔案裡。',
+  "At the Shanghai Cup, from 9 to 13 September, she reached the semi-final of the women's event and lost it to Wang Zihan of Hebei. We hold her four games with red there: two wins, a draw and that loss.":
+    '9 月 9 日至 13 日的上海盃，她打進女子組半決賽，負於河北的王子涵。我們收錄了她在那裡的四盤執紅對局：兩勝一和，以及那盤敗局。',
+  "Zuo Wenjing vs Dong Yunan, 2026 Shanghai Cup, women, 10 September 2026. Zuo won with red in 34 moves. The board opens after black's move 24, with Zuo to move.":
+    '左文静對董毓男，2026 上海盃女子組，2026 年 9 月 10 日。左文静執紅 34 回合取勝。棋盤從黑方第 24 回合之後開始，輪到左文静走。',
+  '2026 Shanghai Cup, women': '2026 上海盃，女子組',
+  "Women's league, Suifenhe": '女子甲級聯賽，綏芬河',
+  "A week later she played two events back to back in Suifenhe: the qualifier for China's women's league, from 20 to 22 September, and then the first stage of the league itself, to 27 September. She scored five wins, a draw and a loss in the qualifier, the loss to Wang Linna, whom she had beaten for the Asian Games gold. In the league she won six, drew two and lost two, and in round five she played Wang Zihan twice, two weeks after the Shanghai semi-final, winning with black and drawing with red.":
+    '一週後，她在綏芬河接連參加兩項賽事：先是 9 月 20 日至 22 日的全國象棋女子甲級聯賽預選賽，接著是聯賽本身的第一階段，打到 9 月 27 日。預選賽她五勝一和一負，輸給了王琳娜，正是她在亞運會金牌之戰中擊敗的對手。聯賽中她六勝兩和兩負，第五輪兩次對陣王子涵，距上海盃半決賽只有兩週，執黑取勝，執紅弈和。',
+  "Zuo Wenjing vs Wu Dan, 2026 Women's League qualifier, 21 September 2026. Zuo won with red in 21 moves. The board opens after black's move 5, with Zuo to move.":
+    '左文静對吴丹，2026 全國象棋女子甲級聯賽預選賽，2026 年 9 月 21 日。左文静執紅 21 回合取勝。棋盤從黑方第 5 回合之後開始，輪到左文静走。',
+  "2026 Women's League qualifier": '2026 全國象棋女子甲級聯賽預選賽',
+  'The [qualifier](/broadcast/xiangqi/2026-womens-league-qualifier) and the [league](/broadcast/xiangqi/2026-womens-xiangqi-league) are in the broadcast archive.':
+    '[預選賽](/broadcast/xiangqi/2026-womens-league-qualifier)和[聯賽](/broadcast/xiangqi/2026-womens-xiangqi-league)都在直播檔案裡。',
+  'Every event with her full record': '成績齊全的每項賽事',
+  "Women's league, first stage, Suifenhe": '女子甲級聯賽第一階段，綏芬河',
+  "Women's league qualifier, Suifenhe": '女子甲級聯賽預選賽，綏芬河',
+  'World Championship, Kuching': '世錦賽，古晉',
+  'Every event for which we hold all her results. The Shanghai Cup, the Xintai Cup, the July squad selection and the December 2025 national individual championship are left out: we hold only some of her games there.':
+    '我們收齊她全部成績的每一項賽事。上海盃、新泰盃、七月的國家集訓隊選拔賽和 2025 年 12 月的全國象棋個人賽沒有列入：我們只收錄了她在那裡的部分對局。',
+  'Where she stands': '她現在的位置',
+  "Her 2026 games are in the broadcast archive with the site's analysis, and her player page there has her results.":
+    '她的 2026 年對局都在直播檔案裡，附網站的分析；她在那裡的棋手頁面列有她的成績。',
+  "Sources: game records from dpxq.com, which may not hold every game of an event, and for 2022 from the WXF's book of game records; the 2022 result from Xinhua and Viet Nam News; the Asian Games from Sina and the Hubei Sports Bureau, which with Chinese Wikipedia also gives her biography; the Shanghai Cup semi-final from The Paper; her titles from the WXF title list of December 2022 and China's national registration list of 2023; analysis by Pikafish through Mistboard's review pipeline, October 2026.":
+    '資料來源：棋譜來自 dpxq.com，該資料庫不一定收齊每項賽事的全部對局，2022 年的棋譜來自世界象棋聯合會的棋譜集；2022 年的成績來自新華社和 Viet Nam News；亞運會來自新浪和湖北省體育局，她的生平也來自湖北省體育局和中文維基百科；上海盃半決賽來自澎湃新聞；她的稱號來自世界象棋聯合會 2022 年 12 月的稱號名單和 2023 年的全國等級稱號註冊名單；分析由 Pikafish 經 Mistboard 的復盤流程完成，2026 年 10 月。',
+  "Four years after Kuching she still wins most of her games. She went through the spring's team championship without a loss, reached the last four in Shanghai, and won 11 of her 17 games across the two September league events. The world title has gone elsewhere since: to Tang Sinan in 2023 and to Tang Dan in 2025, and Tang Dan beat her at the national individual championship in Jinan in December 2025. What has not changed since 2022 is the opening: she still starts with the elephant, and her wins still come from the other side's first mistake.":
+    '古晉奪冠四年後，她仍然贏下大部分對局。春天的團體賽她一盤未輸，在上海打進四強，九月的兩項聯賽賽事 17 盤贏了 11 盤。此後世界冠軍另有歸屬：2023 年是唐思楠，2025 年是唐丹，唐丹還在 2025 年 12 月濟南的全國象棋個人賽上擊敗了她。2022 年以來沒有變的是開局：她仍然以飛相起手，她的勝局仍然來自對方的第一個錯著。',
+  'Her games in the archive': '她在檔案裡的對局',
+  "Zuo Wenjing 左文静, the 2022 women's world xiangqi champion: games and analysis":
+    '左文静，2022 年女子世界象棋冠軍：對局與分析',
   // yin-sheng (zh-Hant), machine-drafted 2026-09-21, not native-reviewed. After the
   // spread, or the Simplified entries win (they did, for one deploy).
   'Yin Sheng 尹昇: games, results, and analysis': '尹昇：對局、戰績與分析',
@@ -6971,7 +7258,7 @@ const ZH_HANT: Record<string, string> = {
   'Bring your title to Mistboard': '把你的頭銜帶到 Mistboard',
   'For titled xiangqi and chess players': '致象棋與國際象棋的頭銜棋手',
   'Verified titled players get a gold badge beside their name, a coaching page students can find, and a front page that will carry their work. Verification takes about two minutes.':
-    '通過認證的頭銜棋手，名字旁會顯示金色徽章，可以開設讓學員找得到的教練主頁，作品也有機會登上首頁。認證大約只需兩分鐘。',
+    '通過認證的頭銜棋手，名字旁會顯示金色徽章，可以開設讓學員找得到的教練主頁，首頁今後也會刊登他們的作品。認證大約只需要兩分鐘。',
   'Verified titled players get a gold badge beside their name, a coaching page students can find, and a front page that will carry their work. Verification takes about two minutes: start at [mistboard.com/verify-title](/verify-title).':
     '通過認證的頭銜棋手，名字旁會顯示金色徽章，可以開設讓學員找得到的教練主頁，作品也有機會登上首頁。認證大約只需兩分鐘：請前往 [mistboard.com/verify-title](/verify-title)。',
   'Mistboard accepts WXF and CXA titles (XGM, XIM, XNM, XWGM, XWIM) and FIDE titles (GM, IM, FM, CM, WGM, WIM, WFM, WCM). Link your federation profile, give your real name, note the results behind the claim, and an admin reviews it personally.':
@@ -7199,7 +7486,7 @@ const ZH_HANT: Record<string, string> = {
   "Misty is Mistboard's Fog of War chess engine: how it sees, searches possible boards, avoids hidden catastrophes, and where the current version stands.":
     'Misty 是 Mistboard 的迷霧國際象棋引擎：它如何觀察、搜尋可能盤面、避開隱藏災難，以及目前版本處在什麼水平。',
   'How Mistboard keeps hidden information on the server: canonical state, seat-scoped views, private live rooms, and public postgame review.':
-    'Mistboard 如何把隱藏資訊留在伺服器端：標準真實局面、按座位投影視野、私密即時房間，以及公開的賽後複盤。',
+    'Mistboard 如何把隱藏資訊留在伺服器端：伺服器保存標準的真實局面，按座位投影各方的視野，即時對局房間保持私密，賽後複盤則公開。',
 
   // -- Shared rules-page headings --
   'Board and setup': '棋盤與佈局',
@@ -7372,6 +7659,7 @@ const ZH_HANT: Record<string, string> = {
 
   // -- Chess primer --
   'Chess Rules': '國際象棋規則',
+  'Chess Rules: Castling, Promotion and En Passant': '國際象棋規則：王車易位、升變與吃過路兵',
   'Chess is a two-player strategy game played for centuries. It descends from the Indian game chaturanga of around the 6th century and reached Europe through Persia and the Islamic world; its modern form, with the long-range queen and bishop, took shape in Europe in the late 1400s.':
     '國際象棋是一種已有數百年歷史的雙人策略遊戲。它源自約公元 6 世紀的印度遊戲恰圖蘭加，經由波斯和伊斯蘭世界傳入歐洲；其現代形式（擁有遠程的后和象）於 15 世紀末在歐洲成形。',
   'Board setup': '棋盤佈置',
@@ -7608,17 +7896,17 @@ const ZH_HANT: Record<string, string> = {
   // point of seoTitle -- 'fog of war chess' is what players type.
   'Fog of War Chess Rules': '迷霧國際象棋規則',
   "Fog Chess is chess where you see only the squares your own pieces can reach. Nobody announces check, so a king is lost by being captured, and it can castle into an attack it can't see.":
-    '迷霧國際象棋就是只能看到己方棋子可及格子的國際象棋。沒有人提示將軍，王被吃掉即負，王也可能易位到自己看不見的攻擊之下。',
+    '迷霧國際象棋就是只能看到己方棋子所能到達的格子的國際象棋。沒有人提示將軍，所以王要被吃掉才算輸，王也可能易位到自己看不見的攻擊之下。',
   "[Fog Chess](https://en.wikipedia.org/wiki/Dark_chess) is Mistboard's public name for dark chess, also called Fog of War chess. Jens Bæk Nielsen and Torben Osted invented it in 1989. It is the implicit-fog version of the idea: no umpire, no scan action. Each side's visibility is derived from where its pieces can legally move.":
     '[迷霧國際象棋](https://en.wikipedia.org/wiki/Dark_chess)是 Mistboard 對 dark chess / Fog of War chess 的公開名稱。Jens Bæk Nielsen 與 Torben Osted 於 1989 年發明了它。它屬於隱式迷霧：沒有裁判，也沒有偵察動作。每一方的視野完全由己方棋子的合法走法範圍推導而來。',
   'Xiangqi, also known as Chinese chess, took its modern form in China during the Song dynasty (960 to 1279), when the cannon joined the board. Its ancestors run back several centuries earlier, and it shares a common root with chess, shogi, and janggi in the older Indian game chaturanga. It is now among the most widely played board games in the world.':
     '象棋的現代形態在宋代（960 至 1279 年）的中國成型，砲也在這一時期加入棋盤。它的前身可以追溯到更早幾個世紀，並與國際象棋、將棋、朝鮮象棋同源於更古老的印度遊戲恰圖蘭卡。今天它是世界上參與人數最多的棋類遊戲之一。',
   'Fog Xiangqi Rules': '迷霧象棋規則',
-  'Fog of War Xiangqi Rules': '迷霧象棋規則',
+  'Fog of War Xiangqi Rules': '迷霧象棋規則：戰爭迷霧下的象棋',
   'Brian H. Liou designed Fog Xiangqi in 2026 as a Mistboard original. Fog of War has been played on the chess board since Jens Bæk Nielsen and Torben Osted invented dark chess in 1989, and chess.com runs it as a standard variant today. Nobody had carried it across to xiangqi. The cannon is the piece that makes it strange. It captures only by jumping over another piece, so under fog you are firing at something you cannot see, across a screen you are not certain is still there.':
     '迷霧象棋由 Brian H. Liou 於 2026 年設計，是 Mistboard 的原創變體。戰爭迷霧早在 1989 年就由 Jens Bæk Nielsen 和 Torben Osted 發明的「黑棋」引入西洋棋，如今也是 chess.com 的常規變體，卻從未有人把它移植到象棋上。真正讓它變得奇特的是砲。砲只能隔子吃子，所以在迷霧中，你既看不見目標，也無法確定砲架是否還在。',
   "Fog Xiangqi is xiangqi under Fog of War. A piece you can't see can still block your horse, and a general with a clear file to the other general can capture it.":
-    '迷霧象棋是戰爭迷霧下的象棋。看不見的棋子照樣可以蹩你的馬腿；一方將帥若與對方之間的直線無子阻擋，就可以直接擒獲。',
+    '迷霧象棋就是戰爭迷霧下的象棋。你看不見的棋子照樣可以蹩你的馬腿；一方的將帥若與對方將帥之間的直線上沒有棋子阻擋，就可以直接把對方將帥吃掉。',
   'Fog Xiangqi is xiangqi under Fog of War. Pieces keep their normal movement, but unseen enemy pieces stay hidden and danger is not announced. Capture the general to win.':
     '迷霧象棋是在戰爭迷霧下對弈的象棋。棋子保留正常走法，但看不見的敵方棋子會被隱藏，危險不會被提示。擒獲將帥即獲勝。',
   'If Xiangqi is new to you, start with [Xiangqi Rules](/rules/xiangqi). If you already play xiangqi, the sections below explain only what fog changes.':
@@ -7630,7 +7918,7 @@ const ZH_HANT: Record<string, string> = {
   'Use [Xiangqi Rules](/rules/xiangqi) for the base game. This page covers what changes.':
     '基礎規則請參考[象棋規則](/rules/xiangqi)。本頁只說明變化之處。',
   'Standard chess rules, the primer behind Fog Chess: castling, promotion, en passant, the draw rules, and a famous game to play through.':
-    '普通國際象棋規則，也就是迷霧國際象棋背後的基礎：王車易位、升變、吃過路兵、和棋規則，以及一盤可逐步回放的名局。',
+    '普通國際象棋的規則，也是迷霧國際象棋背後的基礎：王車易位、升變、吃過路兵、各種和棋規則，以及一盤可以逐步回放的著名對局。',
   'Chess is the open-information base game. Add Fog of War for Fog Chess, where enemy pieces outside your vision disappear and the king falls by capture.':
     '國際象棋是資訊公開的底層遊戲。為它加上戰爭迷霧，便得到迷霧國際象棋：你視野之外的敵方棋子會消失，而王由被吃而落敗。',
   'Read Fog Chess': '閱讀迷霧國際象棋',
@@ -8442,7 +8730,7 @@ const ZH_HANT: Record<string, string> = {
   // read that is not coming. Locked the same day its English copy published, so
   // any later English edit orphans a key here and fails the coverage test.
   'Play jieqi against the engine or a friend, free and without an account, then review the game with analysis that separates your choices from your luck.':
-    '免費和揭棋AI（皮卡魚、AB-JChess）或朋友下揭棋，不用註冊，下完還能複盤，分析會把你的選擇和你的運氣分開算。',
+    '免費和揭棋AI（皮卡魚、AB-JChess）或朋友下揭棋，不用註冊帳號；下完還能複盤，分析會把你自己的選擇和運氣分開計算。',
   'Jieqi is [xiangqi](/rules/xiangqi) with every piece face-down. A piece moves as whatever normally starts on its square, then flips and keeps that identity for the rest of the game. You begin without knowing what anything is, including your own pieces. The [rules page](/rules/jieqi) has the details.':
     '揭棋就是把每個子都翻扣過去的[象棋](/rules/xiangqi)。暗子按它所在那個點原本擺的子走，走完就翻開，之後一直是翻出來的那個子。開局時你不知道任何一個子是什麼，連自己的也不知道。[規則頁](/rules/jieqi)有詳細說明。',
   'It is a young game, out of Hong Kong and Guangdong, and it has spread over the last couple of decades mostly among Chinese and Vietnamese players. For what to actually open with, see [what strong players believe about the opening](/blog/jieqi-openings).':
@@ -8534,6 +8822,7 @@ const ZH_HANT: Record<string, string> = {
   'Black wins by checkmate · 73 moves': '黑方將死獲勝 · 73 回合',
   // -- Duck Xiangqi --
   'Duck Xiangqi Rules': '鴨子象棋規則',
+  'Duck Xiangqi Rules: Duck Chess Meets Xiangqi': '鴨子象棋規則：當鴨子國際象棋遇上象棋',
   'Duck Chess on the xiangqi board. Every turn is a move and then a duck placement, the duck blocks and screens like a piece, and you win by capturing the general.':
     '把鴨子國際象棋搬到象棋盤上。每一回合都是先走一步棋，再放一次鴨子；鴨子像棋子一樣擋路，也一樣能當炮架；吃掉對方的將帥即獲勝。',
   'Duck Xiangqi is [xiangqi](/rules/xiangqi) with a duck on the board. Every turn you make a legal xiangqi move, and then you move the duck to an empty point. Both halves are one turn, and neither of them is optional.':
@@ -9436,11 +9725,11 @@ const ZH_HANT: Record<string, string> = {
   // Overrides for every zh-Hans key that fell through to Simplified on the zh-Hant pages (2026-09-17). OpenCC s2twp, then 炮→砲 and 機器人→電腦 to match the rest of this table; prose re-read by hand.
   'The rat takes the elephant.': '鼠吃掉象。',
   'Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, makes its first move as the piece whose point it stands on, then turns face-up.':
-    '揭棋規則詳解：除將帥外的棋子都隱藏身份，首次按所在起始位置的棋子走法行棋，然後翻開並按真實身份行棋。',
+    '揭棋是一種暗子玩法的象棋變體，這裡詳解它的規則。除將帥外，所有棋子開局都背面朝上，第一步按所在位置原本棋子的走法行棋，走完即翻開，此後按真實身份行棋。',
   "Jieqi, also called Reveal Xiangqi, keeps xiangqi's board and checkmate goal, but hides every non-general piece. A dark piece first moves, attacks, and captures by the starting point it occupies. After that move, it reveals and plays by identity.":
     '揭棋保留象棋的棋盤和將死目標，但隱藏所有非將帥棋子的身份。暗子首次按它所在起始位置的棋子走法移動、攻擊和吃子，走完後翻開，之後按真實身份行棋。',
   'Banqi, also called Chinese dark chess or blind chess, is played face-down on half a xiangqi board. Pieces capture by rank, except that the soldier takes the general and the cannon jumps a screen to take anything.':
-    '暗棋又稱盲棋，在半張象棋棋盤上以背面朝上的棋子進行。棋子按等級吃子，例外是卒可以吃將，炮則隔一子跳吃任何棋子。',
+    '暗棋又稱盲棋，在半張象棋棋盤上以背面朝上的棋子進行。棋子按等級吃子，但有兩個例外：卒可以吃將，炮則隔著一個炮架跳吃任何棋子。',
   'Banqi, also called Chinese dark chess or blind chess, is a fast hidden-piece game played on half a xiangqi board. All thirty-two pieces begin shuffled and face-down. The first flip assigns colors. After that, each turn is a choice: flip a tile or move a revealed piece. Captures follow rank, except for the cannon.':
     '暗棋是在半張象棋棋盤上進行的快節奏隱藏棋子遊戲。三十二枚棋子全部洗勻並背面朝上。第一次翻子決定雙方顏色。之後每回合都在兩種行動中選擇：翻開棋子，或移動一枚已翻開的棋子。除砲外，吃子按等級進行。',
   'Although it uses [Xiangqi](/rules/xiangqi) pieces, it is a separate game: pieces move one square, the general is not royal, and face-down tiles cannot be captured. This page describes the exact rules used on Mistboard.':
@@ -9792,6 +10081,57 @@ const ZH_HANT: Record<string, string> = {
   'Flip Jungle: an engine game, Red wins on move 28': '翻翻棋：一盤引擎對局，紅方第 28 回合獲勝',
   'The [companion study](/study/uKxJ60mN) has all twenty games from the run, each opening into its own deal, with a note on how it went.':
     '[配套研究](/study/uKxJ60mN)收錄了這一批全部二十盤對局，每盤都從自己的發牌開始，並附有對局經過的說明。',
+  // -- fortress-and-atomic-xiangqi-on-hold, machine-drafted 2026-10-14, not native-reviewed. Terms follow the
+  // Fortress and Atomic rules pages (寶, 持子, 打入, 長將) and the site's variant names. --
+  'Back to the drawing board: Fortress and Atomic Xiangqi': '推倒重來：堡壘象棋與原子象棋',
+  'Back to the drawing board: Fortress Xiangqi and Atomic Xiangqi':
+    '推倒重來：堡壘象棋和原子象棋暫停開放',
+  'Fortress and Atomic on hold': '堡壘與原子象棋暫停',
+  'On 11 October we stopped new games of Fortress Xiangqi and Atomic Xiangqi so we can redesign them. In Fortress the drops took over a small board; Atomic only stopped looping after the cannon got its own exception. Finished games still replay.':
+    '10 月 11 日，我們停止了堡壘象棋和原子象棋的新對局，以便重新設計。在堡壘象棋裡，打入主宰了一張小棋盤；原子象棋則是在炮有了自己的例外規則之後，才不再陷入循環。已結束的對局仍可回放。',
+  'Fortress Xiangqi and Atomic Xiangqi are on hold while we redesign them. You cannot start a new game, but finished games still replay and both rules pages stay up.':
+    '堡壘象棋和原子象棋已暫停，我們正在重新設計。你無法開始新對局，但已結束的對局仍可回放，兩個規則頁面也都保留。',
+  'In Fortress the drops took over the small board. A redesign has to make a smaller xiangqi that still feels like the full game.':
+    '在堡壘象棋裡，打入主宰了小棋盤。重新設計必須做出一種更小的象棋，下起來仍像完整的象棋。',
+  'Atomic only played well after the cannon got its own exception. A redesign has to give it a cannon that follows the same rule as every other piece.':
+    '原子象棋是在炮有了自己的例外規則之後才下得好。重新設計必須給它一個和其他所有棋子遵循同一條規則的炮。',
+  'On 11 October we stopped new games of [Fortress Xiangqi](/rules/fortress-xiangqi) and [Atomic Xiangqi](/rules/atomic-xiangqi). Games already played still replay from their links, and both rules pages stay up. We designed both games, and we launched both before they were ready. What went wrong with each, and what does a version worth bringing back have to fix?':
+    '10 月 11 日，我們停止了[堡壘象棋](/rules/fortress-xiangqi)和[原子象棋](/rules/atomic-xiangqi)的新對局。已經下過的對局仍可從各自的連結回放，兩個規則頁面也都保留。這兩款棋都是我們設計的，也都是在還沒準備好時就上線了。它們各自出了什麼問題？一個值得重新推出的版本又必須解決什麼？',
+  'Fortress Xiangqi tried four new ideas at once': '堡壘象棋同時嘗試了四個新點子',
+  'Fortress was played on a 7 by 8 board with the two palaces in opposite corners. It added the Treasure, a new piece that steps one point in any direction. A captured piece went into your hand, and you could drop it back onto the board later as your own move. For its first two months it also had veteran soldiers, which we later took out.':
+    '堡壘象棋在 7×8 的棋盤上進行，兩個九宮分處對角。它加入了「寶」，一個可以向任意方向走一步的新棋子。被吃掉的棋子進入你的持子，之後你可以用自己的一步把它打回棋盤。最初的兩個月裡它還有老兵，後來我們把老兵去掉了。',
+  'Each idea was worth trying. Together they made a game that was hard to learn, and the drops overwhelmed the rest. With the general boxed into a corner of a small board, one piece dropped beside it was often enough. A typical engine game ended this way, with most of both armies still on the board.':
+    '每個點子都值得一試。合在一起，卻成了一款難學的棋，而打入壓倒了其餘一切。將帥被困在小棋盤的一角，往它旁邊打入一子往往就夠了。一盤典型的引擎對局就是這樣結束的，雙方的大部分兵力都還在盤上。',
+  'Black drops a soldier from its hand on b1, beside the general. With the horse on c3 guarding b1 and Red’s own chariot on a2, the general has nowhere to go, and that is mate.':
+    '黑方從持子中把一枚卒打在 b1，緊挨著帥。c3 的馬守住 b1，紅方自己的車又占著 a2，帥無路可走，這就是將死。',
+  'A redesign has to make a smaller xiangqi that keeps the feel of the full game, without drops taking over.':
+    '重新設計必須做出一種更小的象棋，保留完整象棋的感覺，又不讓打入主宰全局。',
+  'Until then, drops live on the site in [Crazyhouse Xiangqi](/rules/crazyhouse-xiangqi), which plays them on the normal board with the normal pieces and palaces.':
+    '在此之前，本站的打入玩法在[瘋狂屋象棋](/rules/crazyhouse-xiangqi)裡：它在普通棋盤上，用普通的棋子和九宮來打入。',
+  'Atomic Xiangqi needed an exception for the cannon': '原子象棋得為炮開一個例外',
+  'In Atomic Xiangqi a capture explodes. The piece that captures, the piece it takes and every piece on the four points next to the capture leave the board. Soldiers survive a blast; a general does not, and losing it loses the game.':
+    '在原子象棋裡，吃子會爆炸。吃子的棋子、被吃的棋子，以及吃子點相鄰四個點上的所有棋子，都離開棋盤。兵卒能在爆炸中倖存；將帥不能，失去它就輸掉這盤棋。',
+  'In the first version the cannon exploded too, which made it the perfect defender: it could block a chariot’s attack and threaten back through the chariot. An attacker could often force a draw this way.':
+    '在最初的版本裡，炮也會爆炸，這讓它成了完美的防守者：它能擋住車的進攻，再隔著車反過來威脅。進攻方常常就這樣被拖成和棋。',
+  'Under the first rules. (a) The chariot threatens the advisor on d10. (b) The cannon blocks and threatens d1 through the chariot. (c) The chariot switches files. (d) The cannon follows, and the cycle repeats.':
+    '按最初的規則。(a) 車威脅 d10 的士。(b) 炮擋住，並隔著車威脅 d1。(c) 車換到另一路。(d) 炮跟過去，循環重複。',
+  '(a) Rd2': '(a) Rd2',
+  '(b) Cd6': '(b) Cd6',
+  '(c) Rf2': '(c) Rf2',
+  '(d) Cf6': '(d) Cf6',
+  'With its palace closed in, as here, the defender has no other move, and a repetition rule can’t break the cycle because both sides threaten on every move.':
+    '像這裡這樣九宮被封住時，防守方沒有別的著法；重複局面規則也打破不了這個循環，因為雙方每一步都在威脅。',
+  'To launch it, we made a cannon’s capture remove only the cannon and its target, and made the side that keeps up a threat through a repeated cycle lose, like perpetual check in xiangqi.':
+    '為了上線，我們讓炮吃子只移除炮和它的目標，並規定在重複的循環裡一直保持威脅的一方判負，就像象棋裡的長將。',
+  'That ended the loop, but left the cannon playing by its own rule: it alone can capture next to its own general. We launched before we had a design without that patch.':
+    '這結束了循環，卻讓炮按自己的規則行事：只有它能在己方將帥的相鄰點上吃子。我們在找到不需要這個補丁的設計之前就上線了。',
+  'A redesign needs a cannon that follows the same rule as every other piece.':
+    '重新設計需要一個和其他所有棋子遵循同一條規則的炮。',
+  'Both come back when they are right': '兩款棋都會在做對之後回來',
+  'We would rather run a short list of games we stand behind than keep two that need an apology. Neither game is dead. Each has one problem to solve. Fortress needs a small board that drops do not take over, and Atomic needs a cannon with no exception. When a version of either one solves it, that game comes back.':
+    '我們寧願只營運一小批自己認可的棋，也不願留著兩款需要道歉的棋。兩款棋都沒有死。各自都有一個問題要解決：堡壘象棋需要一張不被打入主宰的小棋盤，原子象棋需要一個沒有例外的炮。哪一款的新版本解決了它的問題，那款棋就會回來。',
+  'If dropping pieces was the part of Fortress you liked, Crazyhouse Xiangqi is where drops live on the site today.':
+    '如果打入是你在堡壘象棋裡喜歡的部分，如今本站的打入玩法就在瘋狂屋象棋裡。',
   // -- Crazyhouse Xiangqi (rules page), machine-drafted 2026-10-02 for the hand-start rules, not native-reviewed --
   'Crazyhouse Xiangqi Rules': '瘋狂屋象棋規則',
   'The sample game’s last move. Left, Red to move with three soldiers in hand. Right, one dropped on e9 mates the general on f9.':
@@ -9842,7 +10182,7 @@ const ZH_HANT: Record<string, string> = {
     '這盤棋是[配套研究](/study/nlZy4yNA)中的六盤之一，每盤都註明了決定勝負的打入。',
   'The six engine games': '六盤引擎對局',
   'Xiangqi where a captured piece joins your hand and the advisors and elephants start there: drop a piece on any empty point, advisors and elephants on their own half, check and mate included.':
-    '被吃的子歸入吃子一方持子、士和象開局就在持子裡的象棋：把持子打入任何一個空點，士和象限己方半盤，可以將軍，也可以將死。',
+    '被吃掉的棋子歸入吃子一方的持子、士和象開局就在持子裡的象棋：持子可以打入任何一個空點，士和象只能打入己方半盤，打入的子可以將軍，也可以將死。',
   'Everything else is xiangqi: the board, how the other pieces move, the general in its palace, the river, the rule that the two generals may not face each other on an open file, and the way a game ends.':
     '其餘一切都是象棋：棋盤、其他棋子的走法、待在九宮裡的將帥、河界、雙方將帥不能在同一條直線上無子相隔地照面的規則，以及對局結束的方式。',
   'Each side begins with its two advisors and two elephants in hand, not on the board. The back rank reads chariot, horse, two empty points, the general, two empty points, horse, chariot. The cannons and soldiers stand where they always do.':
@@ -9991,12 +10331,34 @@ const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {
   'zh-Hant': ZH_HANT,
 };
 
+// Fields that hold board geometry rather than prose. A dictionary key that
+// happens to equal a geometry token (the bare role names `advisor`, `general`
+// added for the banqi chase labels) must not rewrite a deal or a move list: on
+// 2026-10-13 that turned every zh jieqi and banqi replay deal into 士/将 roles
+// and the deal check threw. Values under these keys are copied untranslated.
+export const ARTICLE_GEOMETRY_KEYS: ReadonlySet<string> = new Set([
+  'deal',
+  'moves',
+  'role',
+  'color',
+  'square',
+  'squares',
+  'from',
+  'to',
+  'uci',
+  'fen',
+  'perspective',
+  'orientation',
+]);
+
 function deepTranslate<T>(value: T, dict: Record<string, string>): T {
-  if (typeof value === 'string') return (dict[value] ?? value) as T;
+  if (typeof value === 'string') return (hasOwnKey(dict, value) ? dict[value] : value) as T;
   if (Array.isArray(value)) return value.map((v) => deepTranslate(v, dict)) as T;
   if (value && typeof value === 'object') {
     const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(value)) out[k] = deepTranslate(v, dict);
+    for (const [k, v] of Object.entries(value)) {
+      out[k] = ARTICLE_GEOMETRY_KEYS.has(k) ? v : deepTranslate(v, dict);
+    }
     return out as T;
   }
   return value;

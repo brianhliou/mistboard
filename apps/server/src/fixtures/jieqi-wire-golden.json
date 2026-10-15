@@ -15448,7 +15448,14 @@
                 "",
                 "",
                 "+"
-              ]
+              ],
+              "rematch": {
+                "offers": {
+                  "red": false,
+                  "black": false
+                },
+                "finalizedRoomId": null
+              }
             },
             "black": {
               "type": "snapshot",
@@ -15824,7 +15831,14 @@
                 "",
                 "",
                 "+"
-              ]
+              ],
+              "rematch": {
+                "offers": {
+                  "red": false,
+                  "black": false
+                },
+                "finalizedRoomId": null
+              }
             },
             "spectator": {
               "type": "snapshot",
@@ -16200,7 +16214,14 @@
                 "",
                 "",
                 "+"
-              ]
+              ],
+              "rematch": {
+                "offers": {
+                  "red": false,
+                  "black": false
+                },
+                "finalizedRoomId": null
+              }
             }
           },
           "eventForSeat": {
@@ -22166,7 +22187,14 @@
                 "initialMs": 60000,
                 "incrementMs": 1000
               },
-              "roomMode": "pvp"
+              "roomMode": "pvp",
+              "rematch": {
+                "offers": {
+                  "red": false,
+                  "black": false
+                },
+                "finalizedRoomId": null
+              }
             },
             "black": {
               "type": "snapshot",
@@ -22458,7 +22486,14 @@
                 "initialMs": 60000,
                 "incrementMs": 1000
               },
-              "roomMode": "pvp"
+              "roomMode": "pvp",
+              "rematch": {
+                "offers": {
+                  "red": false,
+                  "black": false
+                },
+                "finalizedRoomId": null
+              }
             },
             "spectator": {
               "type": "snapshot",
@@ -22750,7 +22785,14 @@
                 "initialMs": 60000,
                 "incrementMs": 1000
               },
-              "roomMode": "pvp"
+              "roomMode": "pvp",
+              "rematch": {
+                "offers": {
+                  "red": false,
+                  "black": false
+                },
+                "finalizedRoomId": null
+              }
             }
           },
           "eventForSeat": {

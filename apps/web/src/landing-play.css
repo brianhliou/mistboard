@@ -139,9 +139,13 @@
   min-width: 0;
 }
 
+/* The title clips its overflow for the ellipsis, so its line box must hold
+   the whole glyph: the 1.1 inherited from .landing-play-action cut the g of
+   "1 game" (same cause as #543). */
 .landing-corr-title {
   overflow: hidden;
   font-weight: 620;
+  line-height: 1.5;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

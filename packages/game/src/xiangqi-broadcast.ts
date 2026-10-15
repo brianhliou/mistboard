@@ -459,8 +459,47 @@ export function broadcastSourcePageHref(sourceUrl: string | undefined): string |
   return undefined;
 }
 
+// Tours imported by hand, whose source URL names a game page (or nothing)
+// rather than the dpxq tour, mapped to that tour: the calendar lists each event
+// once by it, and the records credit links the tour's own dpxq page. Reviewed
+// in the same diff as the tour it maps, like the level grades.
+export const HAND_IMPORTED_DPXQ_TOURS: Readonly<Record<string, string>> = {
+  // 象甲"腾讯天天象棋"预选赛, Aug 17-19: 99 games pasted from movelist_12656.
+  '2026-league-qualifier': '12656',
+  // 10th North American Championship, Houston, Apr 3-5: 75 games from tour_12473.
+  '2026-north-american-championship': '12473',
+};
+
+/** dpxq's own page for a tour: the event, its rounds and its games. */
+export function dpxqTourPageUrl(tourId: string): string {
+  return `http://www.dpxq.com/hldcg/tour_${tourId}.html`;
+}
+
+/** The dpxq tour a tour of ours relays, from its discovery URL or the
+ *  hand-import map; null for a tour from anywhere else. */
+export function dpxqTourIdForTour(tour: {
+  slug: string;
+  sourceUrl?: string | null;
+}): string | null {
+  if (tour.sourceUrl?.startsWith('mistboard-discover://dpxq-tour')) {
+    try {
+      const id = new URL(tour.sourceUrl).searchParams.get('tour');
+      if (id && /^\d+$/.test(id)) return id;
+    } catch {
+      // Fall through to the hand-import map.
+    }
+  }
+  return HAND_IMPORTED_DPXQ_TOURS[tour.slug] ?? null;
+}
+
+/**
+ * The credit links the page a reader can check the records against: the
+ * tour's own dpxq page when the records came from dpxq and we know the tour,
+ * else the source's site.
+ */
 export function broadcastRecordsCredit(
   boards: readonly { sourceUrl?: string }[],
+  tour?: { slug: string; sourceUrl?: string | null } | null,
 ): { host: string; href: string } | null {
   const origins = new Map<string, string>();
   for (const board of boards) {
@@ -477,6 +516,7 @@ export function broadcastRecordsCredit(
   // Credit only what can be stated without qualification.
   if (origins.size !== 1) return null;
   const [entry] = [...origins.entries()];
-  const [host, href] = entry!;
-  return { host, href };
+  const [host, origin] = entry!;
+  const dpxqTour = host === 'dpxq.com' && tour ? dpxqTourIdForTour(tour) : null;
+  return { host, href: dpxqTour ? dpxqTourPageUrl(dpxqTour) : origin };
 }

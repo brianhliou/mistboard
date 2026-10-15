@@ -5,8 +5,9 @@ import { articleIsRetired } from './article-meta.js';
 import { type HttpApiContext, handleApiRequest } from './http-api.js';
 import { INDEXNOW_KEY, isIndexNowKeyRequest } from './indexnow.js';
 import { serveBroadcastBoardOgImage } from './og-broadcast.js';
+import { isCardAspect } from './og-card-board.js';
 import { serveAnyGameOgImage } from './og-game-tenant.js';
-import { serveArticleOgImage, serveStudyOgImage } from './og-image.js';
+import { isArticleOgLang, serveArticleOgImage, serveStudyOgImage } from './og-image.js';
 import { servePlayerOgImage } from './og-player.js';
 import { servePositionOgImage } from './og-position.js';
 import * as persistence from './persistence.js';
@@ -130,20 +131,32 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
     // WASM threads, which need SharedArrayBuffer and therefore cross-origin
     // isolation. Send COOP/COEP on exactly the review document routes (set here,
     // before the various index.html handlers below, which only writeHead a
-    // content-type and so preserve these). credentialless keeps our same-origin
-    // bundle/engine assets working without forcing CORP on every subresource,
-    // and leaves the rest of the site (patron's Stripe redirect, etc.)
-    // non-isolated. See docs-private/analysis-board-track.md.
+    // content-type and so preserve these), leaving the rest of the site
+    // (patron's Stripe redirect, etc.) non-isolated. See
+    // docs-private/analysis-board-track.md.
+    //
+    // COEP is require-corp, for every browser (#276). It was credentialless
+    // until 2026-10-14, and WebKit does not implement credentialless: it ignores
+    // the header, so every iPhone/iPad browser and desktop Safari stayed
+    // un-isolated and could never start the engine. require-corp isolates all
+    // three engines. It is one policy rather than a WebKit-only one on purpose:
+    // the SPA keeps this COEP across pushState navigations, so a cross-origin
+    // no-cors subresource anywhere on the site is blocked unless it sends CORP,
+    // and with one policy that breakage shows up in Chrome during development
+    // instead of only on the phones nobody tests on. The cross-origin loads the
+    // site makes all pass: posthog-js loads its extras with crossorigin=anonymous
+    // (us-assets answers ACAO *), and the Cloudflare beacon and YouTube
+    // thumbnails send CORP: cross-origin. server-http.test.ts pins the header.
     if (isReviewShellRoute(pathname)) {
       response.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-      response.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
+      response.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
     }
 
     // Ceval engines run as dedicated workers (Fairy-Stockfish additionally as
     // emscripten pthreads). A dedicated worker only becomes cross-origin
     // isolated (and can accept the SharedArrayBuffer memory the main thread
     // hands it) when its OWN script response carries COEP; the document's
-    // credentialless header does not extend to it, so the worker spawns
+    // header does not extend to it, so the worker spawns
     // un-isolated and dies (pthreads: an opaque "pthread sent an error";
     // Chrome on COEP documents: ERR_BLOCKED_BY_RESPONSE before the script
     // runs). Serve ALL vendored engine assets (/engine/<pkg>/<file>) with
@@ -165,6 +178,17 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
       // like .nnue only when told to. The browser half is fixed here; the edge
       // half needs a Cloudflare cache rule on /engine/*.
       response.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+
+    // Vite's build output (/assets/<name>-<hash>.<ext>) names every file by its
+    // content, so a changed file is a new URL. With no Cache-Control the edge
+    // applied its 4h default and browsers revalidated each chunk on every
+    // visit, a round trip per file through a possibly distant edge. Only a
+    // successful response is marked: a 404 for a chunk asked of an instance
+    // that does not have it yet (a deploy swap) must not be pinned for a year.
+    // HTML, feeds and the sitemap keep their own (absent) headers.
+    if (isHashedBuildAssetPath(pathname)) {
+      setHeaderOnSuccess(response, 'Cache-Control', 'public, max-age=31536000, immutable');
     }
 
     // Page navigations carry the viewer's country (Cloudflare's CF-IPCountry)
@@ -317,6 +341,31 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
     if (articleOgMatch) {
       const slug = decodeURIComponent(articleOgMatch[1]!);
       const meta = ARTICLE_META[slug];
+      // ?aspect=16x9|4x3|1x1 asks for the JSON-LD shapes; anything else is a
+      // 400, never quietly the wide card under a URL that promised a square.
+      // ?lang=zh-hans|zh-hant asks for a zh page's card (hanzi pieces, the
+      // page's zh title); English is the absent parameter, so anything else is
+      // a 400 too, never quietly mapped to the nearest language.
+      const query = new URLSearchParams(url.slice(pathname.length));
+      const aspectParam = query.get('aspect');
+      if (aspectParam !== null && !isCardAspect(aspectParam)) {
+        response.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' });
+        response.end('aspect must be 16x9, 4x3 or 1x1');
+        return;
+      }
+      const langParam = query.get('lang');
+      if (langParam !== null && !isArticleOgLang(langParam)) {
+        response.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' });
+        response.end('lang must be zh-hans or zh-hant');
+        return;
+      }
+      const aspect = aspectParam ?? undefined;
+      const lang = langParam ?? undefined;
+      if ((aspect || lang) && !meta) {
+        response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+        response.end('no such article');
+        return;
+      }
       if (meta) {
         void serveArticleOgImage({
           slug,
@@ -324,11 +373,20 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
           kind: meta.kind,
           response,
           staticDir: options.staticDir,
+          ...(aspect ? { aspect } : {}),
+          ...(lang ? { lang } : {}),
+          ...(meta.zhTitles ? { zhTitles: meta.zhTitles } : {}),
         }).catch((err: Error) => {
           console.warn('article og render failed', err.message);
           if (!response.headersSent) {
-            response.writeHead(302, { location: '/og-image.png' });
-            response.end();
+            // An aspect or zh URL must not answer with the wide site card.
+            if (aspect || lang) {
+              response.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' });
+              response.end('render failed');
+            } else {
+              response.writeHead(302, { location: '/og-image.png' });
+              response.end();
+            }
           }
         });
       } else {
@@ -809,6 +867,28 @@ export function isIsolatedEngineAssetPath(pathname: string): boolean {
   return /^\/engine\/[^/]+\//.test(pathname);
 }
 
+// A Vite build chunk: /assets/<name>-<hash>.<ext>, the hash 8 base64url
+// characters (Vite's default naming; vite.config.ts sets no override, and every
+// file the build writes under dist/assets carries one). Nothing else writes
+// into /assets (copyPublicDir is off), so the hash check is a second guard
+// rather than the only one.
+export function isHashedBuildAssetPath(pathname: string): boolean {
+  return /^\/assets\/[^/]+-[A-Za-z0-9_-]{8}\.[A-Za-z0-9]+$/.test(pathname);
+}
+
+// Set a header only if the response turns out to be a success (2xx or 304).
+// The static handler decides the status after this point, so the decision is
+// made at writeHead, which Node also calls for an implicit header flush.
+export function setHeaderOnSuccess(response: ServerResponse, name: string, value: string): void {
+  const writeHead = response.writeHead.bind(response) as (...args: unknown[]) => ServerResponse;
+  response.writeHead = ((statusCode: number, ...rest: unknown[]) => {
+    if ((statusCode >= 200 && statusCode < 300) || statusCode === 304) {
+      response.setHeader(name, value);
+    }
+    return writeHead(statusCode, ...rest);
+  }) as ServerResponse['writeHead'];
+}
+
 // A page navigation is an extensionless GET/HEAD whose Accept header asks for
 // HTML (or is absent — direct address-bar hits and crawlers). Asset requests
 // carry a file extension in the final path segment; those are excluded so they
@@ -858,7 +938,7 @@ function buildApiContext(options: ServerHttpHandlerOptions): HttpApiContext {
     releaseLiveEngineReservation: options.releaseLiveEngineReservation,
     abandonRoom: options.abandonRoom,
     inMemoryGameSummary: options.inMemoryGameSummary,
-    isDraining: options.drainController.isDraining,
+    refusesCreate: options.drainController.refusesCreate,
     drainDeadlineMs: options.drainController.drainDeadlineMs,
     restartPhase: options.drainController.restartPhase,
     activeGameCount: options.drainController.activeGameCount,

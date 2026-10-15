@@ -61,6 +61,7 @@ export const notificationSettingsUrl = `${emailPublicHost}/account/settings/noti
 const VARIANT_NAMES: Record<GameSpecId, Record<EmailLocale, string> | null> = {
   banqi: { en: 'Banqi', 'zh-Hans': '暗棋', 'zh-Hant': '暗棋' },
   mahjong: null,
+  'xiangqi-mahjong': null,
   'dark-chess': { en: 'Fog Chess', 'zh-Hans': '迷雾国际象棋', 'zh-Hant': '迷霧國際象棋' },
   'dark-xiangqi': { en: 'Fog Xiangqi', 'zh-Hans': '迷雾象棋', 'zh-Hant': '迷霧象棋' },
   'fortress-xiangqi': { en: 'Fortress Xiangqi', 'zh-Hans': '堡垒象棋', 'zh-Hant': '堡壘象棋' },

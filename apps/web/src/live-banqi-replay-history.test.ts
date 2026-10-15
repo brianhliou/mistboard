@@ -169,6 +169,16 @@ function controlButton(action: string): HTMLButtonElement {
   return button;
 }
 
+// #264: a cold join to a finished room once rendered |< < > disabled with only
+// >| live, because the history held the single served snapshot.
+function scrubberDisabled(): Record<string, boolean> {
+  const state: Record<string, boolean> = {};
+  for (const action of ['first', 'prev', 'next', 'latest']) {
+    state[action] = controlButton(action).disabled;
+  }
+  return state;
+}
+
 beforeEach(() => {
   document.body.innerHTML = '';
   vi.stubGlobal(
@@ -223,6 +233,26 @@ describe('cold join to a finished banqi room', () => {
 
     controlButton('first').click();
     expect(boardOnScreen()).toEqual(expectedMasked(STATES[0]!));
+  });
+
+  it('enables the scrubber controls (#264)', async () => {
+    const options = await mount();
+    options.applyHello(
+      frame('hello', {
+        seat: 'spectator',
+        state: truthView(resigned(STATES[PLIES]!)),
+        events: [CREATED, ...moveEvents(PLIES), FINISHED],
+      }),
+    );
+    options.render();
+    expect(scrubberDisabled()).toEqual({ first: false, prev: false, next: true, latest: true });
+
+    controlButton('first').click();
+    expect(scrubberDisabled()).toEqual({ first: true, prev: true, next: false, latest: false });
+    controlButton('next').click();
+    expect(boardOnScreen()).toEqual(expectedMasked(STATES[1]!));
+    controlButton('latest').click();
+    expect(Object.values(boardOnScreen())).not.toContain('');
   });
 
   it('a seated player reloading a finished room gets the same history', async () => {

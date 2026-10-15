@@ -152,7 +152,7 @@ function pliesPlayed(events: readonly { type: string }[]): number {
 // When the last move was played (room start when none has been). Not the last
 // event: seat joins, reconnects and clock pauses append events too, and none of
 // them moves the board.
-function lastMoveAt(events: readonly { type: string; at?: number }[]): number | null {
+export function lastMoveAt(events: readonly { type: string; at?: number }[]): number | null {
   for (let index = events.length - 1; index >= 0; index -= 1) {
     const event = events[index]!;
     if (isMoveEvent(event) && typeof event.at === 'number') return event.at;

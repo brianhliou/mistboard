@@ -3,6 +3,7 @@ import {
   censusDeployGate,
   countDeployGatingRooms,
   type DeployGateCensus,
+  type DrainCreate,
   mergeDeployGateCensus,
 } from './deploy-gate.js';
 import { recordRoomLifecycleAuditSafe } from './room-lifecycle-audit.js';
@@ -15,6 +16,8 @@ import {
   variantTenantDeployGateCensus,
 } from './variant-tenant/registry.js';
 
+export type { DrainCreate };
+
 export type DrainController = {
   activeGameCount(): number;
   deployGateCensus(): DeployGateCensus;
@@ -25,7 +28,13 @@ export type DrainController = {
     response: ServerResponse,
     pathname: string,
   ): Promise<void>;
+  // A drain window is open (the "Update pending" / "restarting now" banner is
+  // up). Not the same question as whether a create is refused: see
+  // refusesCreate.
   isDraining(): boolean;
+  // Whether a create of this kind gets 503 server_draining right now. Every
+  // create route asks this, not isDraining (#559).
+  refusesCreate(create?: DrainCreate): boolean;
   // A request the drain turned away (a 503 on a create route). Counted into the
   // drain's summary so a release that blocked players shows how many.
   noteRefusedCreate(pathname: string): void;
@@ -124,6 +133,7 @@ export function createDrainController(options: DrainControllerOptions): DrainCon
   const drainState: DrainState = { phase: null, restartAt: null, owner: null };
   const drainRateBuckets = new Map<string, number[]>();
   let session: DrainSession | null = null;
+  let shuttingDown = false;
 
   async function closeSession(outcome: DrainOutcome, endedAt: number): Promise<void> {
     const closing = session;
@@ -162,6 +172,11 @@ export function createDrainController(options: DrainControllerOptions): DrainCon
   }
 
   async function finalizeOnShutdown(): Promise<void> {
+    // From here on every create is refused, drain or not. The shutdown pauses
+    // the rooms that exist when it starts; a room created after that walk
+    // would keep a running clock into the restart. The refusal is the same
+    // 503 server_draining the client already retries through (#478).
+    shuttingDown = true;
     if (session) {
       await closeSession('shutdown', Date.now());
       return;
@@ -186,6 +201,22 @@ export function createDrainController(options: DrainControllerOptions): DrainCon
 
   function isDraining(): boolean {
     return drainState.restartAt !== null && drainState.restartAt > Date.now();
+  }
+
+  // Creates are refused only while the drain is still waiting for live games.
+  // Once the count has reached zero and the restart is committed (the
+  // "restarting now" notice), the remaining minutes are the build of the
+  // pushed commit, and refusing creates then protected nobody (#559 step 1).
+  // A game made in that window is an ordinary live room: the shutdown pauses
+  // it with every other room and the new build resumes it, and the release
+  // does not look at the count again after the commit.
+  //
+  // A resumable PvE create is let through for the whole drain (step 2).
+  function refusesCreate(create: DrainCreate = {}): boolean {
+    if (shuttingDown) return true;
+    if (!isDraining()) return false;
+    if (drainState.phase === 'restarting') return false;
+    return create.resumablePve !== true;
   }
 
   function drainDeadlineMs(): number | null {
@@ -317,12 +348,16 @@ export function createDrainController(options: DrainControllerOptions): DrainCon
         writeJson(response, 409, { error: 'drain_not_active' });
         return;
       }
+      const idempotent = drainState.phase === 'restarting';
       const activeGames = activeGameCount();
-      if (activeGames !== 0) {
+      // A repeat commit stays a 200: once committed, creates are open again,
+      // so games made since are expected and paused at shutdown like any
+      // other. Re-checking the count here would turn them into a 409 and put
+      // a committed release back into a wait for games it already let in.
+      if (!idempotent && activeGames !== 0) {
         writeJson(response, 409, { error: 'active_games_remaining', activeGames });
         return;
       }
-      const idempotent = drainState.phase === 'restarting';
       drainState.phase = 'restarting';
       if (!idempotent) broadcastRestartNow(options.rooms);
       const committedAt = Date.now();
@@ -442,6 +477,7 @@ export function createDrainController(options: DrainControllerOptions): DrainCon
     handleRequest,
     isDraining,
     noteRefusedCreate,
+    refusesCreate,
     restartPhase,
   };
 }

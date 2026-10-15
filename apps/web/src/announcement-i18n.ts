@@ -48,6 +48,11 @@ const ZH_HANS: Record<string, string> = {
   'Looking for jieqi puzzles: what 50 games turned up.': '在揭棋里找题目：50 盘对局找到了什么。',
   'We scored 2,939 positions from 50 jieqi games, looking for puzzles. Four passed the rules our xiangqi puzzles go through, and none of them turns on a face-down piece: the hidden-piece answers were bets, or moves the tile hardly touched. Where skill does show is in timing a capture a face-down piece can make whatever it turns out to be. Every example is on a board you can step through.':
     '我们给 50 盘揭棋对局中的 2,939 个局面打分，寻找题目。有四个局面通过了我们象棋题目要过的规则，没有一个取决于暗子：取决于暗子的答案，要么是赌博，要么是暗子几乎无关的着法。实力真正体现的地方，是一枚暗子无论翻出什么都能完成的吃子，何时去吃。每个例子都在可以逐着演示的棋盘上。',
+  // ── 2026-10-14 (banqi reveal odds) ── 暗子 / 暗子概率 follow the banqi room's own strings.
+  'Banqi now shows reveal odds.': '暗棋现在显示暗子概率。',
+  'The face-down tally under a banqi board now gives the chance of each piece turning up on the next flip, counted only from what both players can already see. It is on for both players and spectators, rated games included. Banqi boards also show coordinates when Board coordinates is on in your display settings, and a finished room keeps the tally of what stayed face-down.':
+    '暗棋棋盘下方的暗子统计，现在会给出下一次翻开时每种棋子出现的概率，只根据双方都已看得到的信息计算。双方棋手和观战者都能看到，等级分对局也包括在内。在显示设置中打开“棋盘坐标”后，暗棋棋盘也会显示坐标；对局结束后，房间会保留最后仍是暗子的统计。',
+  'Play banqi': '下暗棋',
   // ── 2026-10-12 (banqi perpetual chase article) ── 长捉 / 重复局面 follow the banqi-perpetual-chase article.
   'Why banqi needs a perpetual chase rule, shown with real games.':
     '暗棋为什么需要长捉规则，用真实对局说明。',
@@ -92,6 +97,9 @@ const ZH_HANS: Record<string, string> = {
   "Game chapters in Mistboard's own xiangqi studies now open with the advantage chart, the move marks and accuracy, as in a game review. Chapters set up from a position, such as compositions, have no chart. On the player pages, a board whose game is in the broadcast archive has the chart under it: click it to jump to any move, or hide it from the board menu.":
     'Mistboard 自己的象棋研习中，对局章节现在一打开就显示优势图、着法评注和准确率，和对局复盘一样。从摆好的局面开始的章节（例如排局）没有优势图。在棋手页面上，如果棋盘上的对局在直播档案里，棋盘下方会显示它的优势图：点击优势图可以跳到任意一步，也可以在棋盘菜单里隐藏它。',
   'See the Cao Yanlei page': '查看曹岩磊的页面',
+  'A player page for Zuo Wenjing.': '左文静有了自己的棋手页面。',
+  "The 2022 women's world champion, and a double gold medallist at the 2023 Asian Games. The page follows her title run in Kuching and her 2026 season, with five of her games on the board, in English and Chinese. All 32 of her games are in a study with the engine's judgments and lines.":
+    '2022 年女子世锦赛冠军，2023 年亚运会两枚金牌得主。页面讲述她在古晋的夺冠历程和 2026 赛季，棋盘上有她的五盘对局，提供英文和中文版。她的全部 32 盘对局都收在一个研习里，附引擎的判断和变化。',
   'A player page for Tony Fung.': '冯家俊有了自己的棋手页面。',
   "Hong Kong's 2022 world championship finalist, who scored nine points from ten in this year's qualifier for China's top league. The page follows his last fourteen months and his run to the 2022 final in Kuching, with five of his games on the board, in English and Chinese. All 47 of his games are in a study with the engine's judgments and lines.":
     '打进 2022 年世锦赛决赛的香港棋手，今年象甲预选赛十分拿下九分。页面讲述他最近十四个月的比赛和 2022 年在古晋打进决赛的经历，棋盘上有他的五盘对局，提供英文和中文版。他的全部 47 盘对局都收在一个研习里，附引擎的判断和变化。',
@@ -503,6 +511,11 @@ const ZH_HANT: Record<string, string> = {
   'Looking for jieqi puzzles: what 50 games turned up.': '在揭棋裡找題目：50 盤對局找到了什麼。',
   'We scored 2,939 positions from 50 jieqi games, looking for puzzles. Four passed the rules our xiangqi puzzles go through, and none of them turns on a face-down piece: the hidden-piece answers were bets, or moves the tile hardly touched. Where skill does show is in timing a capture a face-down piece can make whatever it turns out to be. Every example is on a board you can step through.':
     '我們給 50 盤揭棋對局中的 2,939 個局面評分，尋找題目。有四個局面通過了我們象棋題目要過的規則，沒有一個取決於暗子：取決於暗子的答案，要麼是賭博，要麼是暗子幾乎無關的著法。實力真正體現的地方，是一枚暗子無論翻出什麼都能完成的吃子，何時去吃。每個例子都在可以逐著演示的棋盤上。',
+  // ── 2026-10-14 (banqi reveal odds) ── 暗子 / 暗子概率 follow the banqi room's own strings.
+  'Banqi now shows reveal odds.': '暗棋現在顯示暗子機率。',
+  'The face-down tally under a banqi board now gives the chance of each piece turning up on the next flip, counted only from what both players can already see. It is on for both players and spectators, rated games included. Banqi boards also show coordinates when Board coordinates is on in your display settings, and a finished room keeps the tally of what stayed face-down.':
+    '暗棋棋盤下方的暗子統計，現在會給出下一次翻開時每種棋子出現的機率，只根據雙方都已看得到的資訊計算。雙方棋手和觀戰者都能看到，等級分對局也包括在內。在顯示設定中打開「棋盤座標」後，暗棋棋盤也會顯示座標；對局結束後，房間會保留最後仍是暗子的統計。',
+  'Play banqi': '下暗棋',
   // ── 2026-10-12 (banqi perpetual chase article) ── 長捉 / 重複局面 follow the banqi-perpetual-chase article.
   'Why banqi needs a perpetual chase rule, shown with real games.':
     '暗棋為什麼需要長捉規則，用真實對局說明。',
@@ -547,6 +560,9 @@ const ZH_HANT: Record<string, string> = {
   "Game chapters in Mistboard's own xiangqi studies now open with the advantage chart, the move marks and accuracy, as in a game review. Chapters set up from a position, such as compositions, have no chart. On the player pages, a board whose game is in the broadcast archive has the chart under it: click it to jump to any move, or hide it from the board menu.":
     'Mistboard 自己的象棋研習中，對局章節現在一打開就顯示優勢圖、著法評註和準確率，和對局復盤一樣。從擺好的局面開始的章節（例如排局）沒有優勢圖。在棋手頁面上，如果棋盤上的對局在直播檔案裡，棋盤下方會顯示它的優勢圖：點擊優勢圖可以跳到任意一步，也可以在棋盤選單裡隱藏它。',
   'See the Cao Yanlei page': '查看曹岩磊的頁面',
+  'A player page for Zuo Wenjing.': '左文静有了自己的棋手頁面。',
+  "The 2022 women's world champion, and a double gold medallist at the 2023 Asian Games. The page follows her title run in Kuching and her 2026 season, with five of her games on the board, in English and Chinese. All 32 of her games are in a study with the engine's judgments and lines.":
+    '2022 年女子世錦賽冠軍，2023 年亞運會兩枚金牌得主。頁面講述她在古晉的奪冠歷程和 2026 賽季，棋盤上有她的五盤對局，提供英文和中文版。她的全部 32 盤對局都收在一個研習裡，附引擎的判斷和變化。',
   'A player page for Tony Fung.': '馮家俊有了自己的棋手頁面。',
   "Hong Kong's 2022 world championship finalist, who scored nine points from ten in this year's qualifier for China's top league. The page follows his last fourteen months and his run to the 2022 final in Kuching, with five of his games on the board, in English and Chinese. All 47 of his games are in a study with the engine's judgments and lines.":
     '打進 2022 年世錦賽決賽的香港棋手，今年象甲預選賽十分拿下九分。頁面講述他最近十四個月的比賽和 2022 年在古晉打進決賽的經歷，棋盤上有他的五盤對局，提供英文和中文版。他的全部 47 盤對局都收在一個研習裡，附引擎的判斷和變化。',

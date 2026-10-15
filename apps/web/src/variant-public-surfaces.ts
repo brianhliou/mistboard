@@ -27,6 +27,7 @@ const VARIANT_PUBLIC_SURFACE_ENABLED = {
   // proven against an independent implementation, the SCORING is not proven at
   // all, and a listing would invite people to trust numbers nobody has read.
   mahjong: false,
+  'xiangqi-mahjong': false,
   'duck-xiangqi': true,
   // Unlisted 2026-10-06 while the rules were reworked, retired 2026-10-11: off
   // the rails, tiles, News and feed; /rules/atomic-xiangqi stays up by URL,

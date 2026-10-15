@@ -380,7 +380,7 @@ function renderGameInfo(view: PlayerView | null): void {
     status: statusLine,
   });
   refs.gameInfo.replaceChildren(card.el);
-  // Connection only surfaces when degraded — green-path "Connected · 1ms" is noise.
+  // Connection only surfaces when degraded; a green-path "Connected" row is noise.
   // The wrapper carries the .game-info styling the row expects (the region
   // itself no longer has it, so it can't mangle the meta card).
   if (liveState.connectionState !== 'connected') {
@@ -467,10 +467,6 @@ function modeDetailEntry(): [string, string] | null {
 
 function connectionDetailLabel(): string | null {
   switch (liveState.connectionState) {
-    case 'connected':
-      return liveState.latencyMs !== null
-        ? t('live.connConnectedWithLatency', { latency: liveState.latencyMs })
-        : t('live.connConnected');
     case 'connecting':
       return t('live.statusConnecting');
     case 'reconnecting':

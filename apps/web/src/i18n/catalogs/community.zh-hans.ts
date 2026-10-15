@@ -99,6 +99,7 @@ export const ZH_HANS_COMMUNITY = {
   'profile.ratingStatsVariant': '评分变体',
   'profile.ratingStatsSummary': '{count} 位 {variant} 计分玩家。平均评分为 {average}。',
   'profile.ratingStatsChartLabel': '{variant} 评分分布',
+  'profile.ratingStatsEmptyPool': '这个用时还没有计分对局。',
   'profile.bots': '机器人',
   'profile.onlinePlayers': '在线玩家',
   'profile.activePlayers': '活跃玩家',

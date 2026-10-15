@@ -122,6 +122,8 @@ export const BANQI_CHASE_BACK_AND_FORTH_STEPS = CHASE_DRAW_NARRATIVES.map((narra
         `bq-chase-draw-${k}`,
       ),
     move: move ? `${move.from}-${move.to}` : undefined,
+    // The kernel's own move: the card glides it (a flip, from === to, does not).
+    motion: move ? { from: move.from, to: move.to } : undefined,
     narrative,
   };
 });
@@ -181,6 +183,8 @@ export const BANQI_CHASE_CYCLE_STEPS = CHASE_CYCLE_NARRATIVES.map((narrative, k)
       return frame(getBanqiPlayerView(state, 'red'), move, `bq-chase-cycle-${k}`);
     },
     move: move ? `${move.from}-${move.to}` : undefined,
+    // The kernel's own move: the card glides it (a flip, from === to, does not).
+    motion: move ? { from: move.from, to: move.to } : undefined,
     narrative,
   };
 });

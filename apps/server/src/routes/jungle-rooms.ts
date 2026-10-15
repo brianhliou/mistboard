@@ -1,4 +1,5 @@
 import { JUNGLE_SPEC_ID, type RoomTimeControl } from '@mistboard/game';
+import type { DrainCreate } from '../deploy-gate.js';
 import {
   isJunglePlayableEngineClientId,
   JUNGLE_PLAYABLE_ENGINE_ID,
@@ -13,7 +14,7 @@ import {
 // move-order seat — 'red' = first mover (and the red pieces), 'black' = second.
 export type JungleCreateContext = {
   databaseRequired: boolean;
-  isDraining(): boolean;
+  refusesCreate(create?: DrainCreate): boolean;
   drainDeadlineMs(): number | null;
   createJungleRoom(
     timeControl?: RoomTimeControl,

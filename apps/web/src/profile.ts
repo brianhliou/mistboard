@@ -2,6 +2,7 @@
 
 import {
   FORTRESS_XIANGQI_SPEC_ID,
+  type GameSpecId,
   hasOwnKey,
   JUNGLE_SPEC_ID,
   type RatingVariant,
@@ -188,9 +189,11 @@ type RatingHistogramBin = { min: number; max: number; count: number };
 const LEADERBOARD_BUCKETS: {
   variant: ProfileRatingVariant;
   miniId: VariantMiniId;
+  gameSpecId: GameSpecId;
 }[] = leaderboardVariants.map((v) => ({
   variant: v.id,
   miniId: v.miniId,
+  gameSpecId: v.gameSpecId,
 }));
 
 const PROFILE_VARIANT_LABEL_KEY: Record<ProfileRatingVariant, I18nKey> = {
@@ -509,6 +512,28 @@ export async function mountLeaderboard(root: HTMLElement): Promise<void> {
   });
 }
 
+// The pace /player/rating-stats opens on for a variant: the pool with the most
+// rated players, so the page does not open on an empty blitz chart while bullet
+// has the players. Ties (all empty included) keep the leaderboard default, then
+// the canonical pace order.
+export function ratingStatsDefaultPace(
+  pools: readonly { timeClass: ProfileRatingTimeClass; players: number }[],
+): ProfileRatingTimeClass {
+  let best: { timeClass: ProfileRatingTimeClass; players: number } | null = null;
+  for (const pool of pools) {
+    if (
+      !best ||
+      pool.players > best.players ||
+      (pool.players === best.players &&
+        pool.timeClass === DEFAULT_LEADERBOARD_TIME_CLASS &&
+        best.timeClass !== DEFAULT_LEADERBOARD_TIME_CLASS)
+    ) {
+      best = pool;
+    }
+  }
+  return best?.timeClass ?? DEFAULT_LEADERBOARD_TIME_CLASS;
+}
+
 export async function mountRatingStats(root: HTMLElement): Promise<void> {
   const locale = currentLocale();
   root.replaceChildren();
@@ -535,28 +560,91 @@ export async function mountRatingStats(root: HTMLElement): Promise<void> {
   }
   title.append(select, ` ${t('profile.ratingStatsSuffix', {}, locale)}`);
 
+  // One chip per rated pace (1+1 bullet, 3+2 blitz, 5+5 rapid; correspondence
+  // once its rated pool is on): each is its own Glicko pool, like the ladders.
+  const paces = leaderboardPaces();
+  const paceGroup = document.createElement('div');
+  paceGroup.className = 'rating-stats-paces';
+  paceGroup.setAttribute('role', 'group');
+  paceGroup.setAttribute('aria-label', t('setup.timeControl', {}, locale));
+  const paceButtons = paces.map((pace) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'rating-stats-pace';
+    button.dataset.timeClass = pace;
+    const label = LEADERBOARD_TIME_CLASSES.find((entry) => entry.id === pace)?.label;
+    button.textContent = label ? t(label, {}, locale) : pace;
+    paceGroup.append(button);
+    return button;
+  });
+
   const chartShell = document.createElement('section');
   chartShell.className = 'rating-stats-chart-shell';
   chartShell.setAttribute('aria-live', 'polite');
 
-  body.append(title, chartShell);
+  body.append(title, paceGroup, chartShell);
 
   const shell = document.createElement('main');
   shell.className = 'site-section community-shell leaderboard-shell';
   shell.append(buildCommunityLayout('/player/rating-stats', body, locale));
   root.append(buildNav(locale), shell);
 
-  const renderSelected = async () => {
+  // Each variant x pace is fetched once; a failed fetch is dropped so a later
+  // click retries it.
+  const cache = new Map<string, Promise<LeaderboardResult>>();
+  const load = (variant: ProfileRatingVariant, pace: ProfileRatingTimeClass) => {
+    const key = `${variant}:${pace}`;
+    let pending = cache.get(key);
+    if (!pending) {
+      pending = fetchLeaderboard(variant, pace).then((result) => {
+        if (!result) cache.delete(key);
+        return result;
+      });
+      cache.set(key, pending);
+    }
+    return pending;
+  };
+
+  let pace: ProfileRatingTimeClass = DEFAULT_LEADERBOARD_TIME_CLASS;
+  let renderToken = 0;
+  const markPace = () => {
+    for (const button of paceButtons) {
+      const active = button.dataset.timeClass === pace;
+      button.classList.toggle('rating-stats-pace-active', active);
+      button.setAttribute('aria-pressed', String(active));
+    }
+  };
+
+  const renderSelected = async (pickDefaultPace: boolean) => {
+    const token = ++renderToken;
     const variant = select.value as ProfileRatingVariant;
     chartShell.replaceChildren(buildRatingStatsLoading(locale));
-    const result = await fetchLeaderboard(variant);
+    if (pickDefaultPace) {
+      const results = await Promise.all(paces.map((candidate) => load(variant, candidate)));
+      if (token !== renderToken) return;
+      pace = ratingStatsDefaultPace(
+        paces.map((candidate, index) => ({
+          timeClass: candidate,
+          players: results[index]?.leaderboard.length ?? 0,
+        })),
+      );
+    }
+    markPace();
+    const result = await load(variant, pace);
+    if (token !== renderToken) return;
     renderRatingStatsChart(chartShell, result, variant, locale);
   };
 
   select.addEventListener('change', () => {
-    void renderSelected();
+    void renderSelected(true);
   });
-  await renderSelected();
+  for (const button of paceButtons) {
+    button.addEventListener('click', () => {
+      pace = button.dataset.timeClass as ProfileRatingTimeClass;
+      void renderSelected(false);
+    });
+  }
+  await renderSelected(true);
 }
 
 async function fetchLeaderboardSummary(
@@ -574,9 +662,14 @@ async function fetchLeaderboardSummary(
   }
 }
 
-async function fetchLeaderboard(variant: ProfileRatingVariant): Promise<LeaderboardResult> {
+async function fetchLeaderboard(
+  variant: ProfileRatingVariant,
+  timeClass: ProfileRatingTimeClass,
+): Promise<LeaderboardResult> {
   try {
-    const resp = await fetch(`/api/leaderboard?variant=${encodeURIComponent(variant)}&limit=500`);
+    const resp = await fetch(
+      `/api/leaderboard?variant=${encodeURIComponent(variant)}&timeClass=${encodeURIComponent(timeClass)}&limit=500`,
+    );
     if (!resp.ok) throw new Error(`leaderboard failed: ${resp.status}`);
     return (await resp.json()) as NonNullable<LeaderboardResult>;
   } catch (err) {
@@ -608,9 +701,19 @@ function renderRatingStatsChart(
 
   const ratings = result.leaderboard.map((entry) => entry.eloRating).filter(Number.isFinite);
   if (ratings.length === 0) {
+    // An empty pool says so and points at the one thing that fills it.
     const msg = document.createElement('p');
     msg.className = 'rating-stats-empty';
-    msg.textContent = t('profile.noRatedGames', {}, locale);
+    msg.append(t('profile.ratingStatsEmptyPool', {}, locale), ' ');
+    const gameSpecId = LEADERBOARD_BUCKETS.find((bucket) => bucket.variant === variant)?.gameSpecId;
+    const link = document.createElement('a');
+    link.className = 'rating-stats-empty-cta';
+    link.href = localizedHref(
+      gameSpecId ? `/?play=lobby&gameSpecId=${encodeURIComponent(gameSpecId)}` : '/?play=lobby',
+      locale,
+    );
+    link.textContent = t('play.findOpponent', {}, locale);
+    msg.append(link);
     shell.replaceChildren(msg);
     return;
   }

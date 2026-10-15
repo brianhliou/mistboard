@@ -100,6 +100,9 @@ export type BanqiBoardRenderOptions = {
   pieceSet?: XiangqiPieceSet;
   // While dragging, render the origin as a dim source shadow.
   draggingFrom?: BanqiSquare | null;
+  // Coordinate labels (the site-wide Board coordinates setting, #308): callers
+  // pass boardCoordinatesEnabled(); authored diagrams leave it off.
+  coordinates?: boolean;
 };
 
 export interface BanqiBoardArrow extends SvgBoardArrowStyle {
@@ -390,6 +393,32 @@ function hitLayerWithTargets(
   }).join('');
 }
 
+// Coordinates (#308), in the move list's own names: files a-h left to right
+// along the bottom, ranks 1-4 bottom to top up the left side, so "b3-b2" or
+// "a4" in the score sheet is read straight off the board. Banqi shows one board
+// to both seats, so the labels never flip. They sit in the frame margin, which
+// a piece never reaches (it stops 3 units inside its cell), so nothing resizes
+// when the setting flips.
+export function banqiCoordinateLabels(): string {
+  const size = 15;
+  const bottomY = HEIGHT - MARGIN / 2;
+  const leftX = MARGIN / 2;
+  const parts: string[] = [];
+  for (let file = 0; file < FILES; file += 1) {
+    const { x } = cellCenter(`${'abcdefgh'[file]}1` as BanqiSquare);
+    parts.push(coordLabel(x, bottomY, 'abcdefgh'[file] ?? '', size));
+  }
+  for (let rank = 1; rank <= RANKS; rank += 1) {
+    const { y } = cellCenter(`a${rank}` as BanqiSquare);
+    parts.push(coordLabel(leftX, y, String(rank), size));
+  }
+  return `<g class="banqi-coords" aria-hidden="true">${parts.join('')}</g>`;
+}
+
+function coordLabel(x: number, y: number, text: string, size: number): string {
+  return `<text class="banqi-coord" x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" font-size="${size}">${text}</text>`;
+}
+
 // `perspective` is accepted for call-site parity with the other variants, but
 // banqi shows the SAME board to both seats (symmetric info), so it is unused.
 export function renderBanqiBoardSvg(
@@ -410,6 +439,7 @@ export function renderBanqiBoardSvg(
     <svg class="banqi-board" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Banqi board">
       <rect class="banqi-board-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}" rx="${boardCornerRadius(WIDTH)}"/>
       <g class="banqi-grid">${gridLines()}</g>
+      ${options.coordinates ? banqiCoordinateLabels() : ''}
       ${lastMoveMarkers(view)}
       ${selectionRing(options.selectedSquare ?? null)}
       ${pieceLayer(view, pieceSet, options.draggingFrom ?? null)}
@@ -444,6 +474,13 @@ export const BANQI_BOARD_CSS = `
       filter: drop-shadow(0 14px 36px rgba(37, 31, 24, 0.18));
     }
     .banqi-board-bg { fill: var(--mini-xq-board-bg, #f0d6a4); }
+    .banqi-coord {
+      fill: color-mix(in srgb, var(--mini-xq-grid, #5b4a32) 72%, transparent);
+      font-weight: 700;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
     .banqi-grid line {
       stroke: var(--mini-xq-grid, #5b4a32);
       stroke-width: 1.5;

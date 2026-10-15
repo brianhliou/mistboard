@@ -145,12 +145,35 @@ describe('reveal odds visibility', () => {
     mount.render({ view: startView(), orientation: 'black' });
     expect(top.dataset.ink).toBe('red');
     expect(bottom.dataset.ink).toBe('black');
-    // After the game the rows empty but stay mounted (reserved bands).
+    expect(top.hasAttribute('data-over')).toBe(false);
+    // After the game the rows empty but stay mounted, marked over so the phone
+    // layout can collapse the bands that would push the post-game actions down.
     mount.render({ view: { ...startView(), status: { type: 'finished' } }, orientation: 'red' });
     expect(console.querySelectorAll('.reveal-odds-chip')).toHaveLength(0);
     expect(console.querySelectorAll('[data-reveal-odds]')).toHaveLength(2);
+    expect(console.querySelectorAll('[data-reveal-odds][data-over]')).toHaveLength(2);
+    // A new game in the same mount (no remount) reserves the bands again.
+    mount.render({ view: startView(), orientation: 'red' });
+    expect(console.querySelectorAll('[data-reveal-odds][data-over]')).toHaveLength(0);
+    // Before a view arrives the bands stay reserved, so the board does not move.
+    mount.render({ view: null, orientation: 'red' });
+    expect(console.querySelectorAll('[data-reveal-odds][data-over]')).toHaveLength(0);
     // A remount (a room re-entry) replaces the rows rather than stacking them.
     mountRevealOdds(slots, () => glyph);
     expect(console.querySelectorAll('[data-reveal-odds]')).toHaveLength(2);
+  });
+
+  // Phone: the finished game's empty bands (about 150px) pushed Review game and
+  // Challenge a friend below the fold on a 390x844 screen (jieqi loop QA,
+  // 2026-10-14). The rows sit below the board there, so collapsing them never
+  // moves the board.
+  it('collapses the over rows in the phone layout', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
+    const css = readFileSync(resolve(__dirname, 'live-jieqi-reveal-odds.css'), 'utf-8');
+    const phone = css.slice(css.indexOf('@media (max-width: 799px)'));
+    expect(phone).toMatch(
+      /\.live-review__cluster \.game-console > \.reveal-odds-row\[data-over\]\s*\{\s*display:\s*none;/,
+    );
   });
 });

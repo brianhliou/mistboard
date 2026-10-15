@@ -274,11 +274,21 @@ export type RawSvgStepperStep = {
    *  names one, the card's rail is a score sheet and the narrative is the
    *  note under the move. */
   move?: string;
+  /** The squares the move into this step went from and to, from the generator's
+   *  own move data (never parsed from `move`). The card glides the piece slot
+   *  keyed by these squares (board-piece-slot.ts); from === to (a flip) and a
+   *  step without one only repaint. Needs the block's `gameSpecId`. */
+  motion?: { from: string; to: string };
 };
 
 export type RawSvgStepperBlock = {
   kind: 'raw-svg-stepper';
   steps: RawSvgStepperStep[];
+  /** The variant the board shows, whose visibility decides whether a step may
+   *  glide: only 'open' and 'hidden-identity' do. A fog board, an unknown id or
+   *  none at all stays static. An article-only open variant (Benedict, Anti
+   *  Xiangqi) names the board it is drawn on. */
+  gameSpecId?: GameSpecId;
   header?: { players: string; event: string }; // optional title above the frame (engine-game style)
   /** Seat rows above and below the board, as in the study embed. */
   seats?: {

@@ -17,3 +17,4 @@ import '../jungle-flip-registration.js';
 import '../jungle-registration.js';
 import '../mahjong-registration.js';
 import '../xiangqi-registration.js';
+import '../xiangqi-mahjong-registration.js';

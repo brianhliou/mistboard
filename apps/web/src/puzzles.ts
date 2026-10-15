@@ -397,7 +397,6 @@ function createPuzzleSession(puzzle: PuzzleDetail): PuzzleSession {
     revealed: false,
     focusNext: false,
     vote: null,
-    streak: null,
   };
 }
 
@@ -654,7 +653,7 @@ async function submitMove(
     session.qualitySessionId,
   ).catch(playLockRefusal);
   if (submitted === PLAY_LOCKED) return showPlayLocked(session, renderSession);
-  const { attempt, rating, streak } = submitted;
+  const { attempt, rating } = submitted;
   session.submitting = false;
   session.selectedSquare = null;
   session.selectedDrop = null;
@@ -666,7 +665,6 @@ async function submitMove(
     if (attempt.complete) {
       session.solved = true;
       session.focusNext = true;
-      session.streak = streak;
       trackPuzzleAttempted(session, 'solved');
       onSolved?.(session.puzzle.id);
     }
@@ -824,12 +822,25 @@ function paintedPuzzleBoard(column: HTMLElement): HTMLElement {
 // Park the resize grip on the painted board's corner rather than the column's.
 // The column track carries the height budget, so on a wide screen it is wider
 // than the board and the grip would otherwise float in the gutter beside it.
+//
+// The same measurement hands the board's DRAWN height to the right column
+// (--puzzle-board-height, #536). --puzzle-surface-size is only the height
+// budget: when the column track is narrower than that budget allows, the 9x10
+// board binds on width and draws shorter (616 vs 704 at 1440x900), and a side
+// panel sized from the budget ran 88px past the board's bottom edge. The value
+// lives on .puzzle-detail, which survives renderSession's repaint, so the next
+// render starts from the last measurement instead of flashing the budget.
 function fitPuzzleGrip(column: HTMLElement): void {
   requestAnimationFrame(() => {
     if (!column.isConnected) return;
     const painted = paintedPuzzleBoard(column);
-    const gutter = column.getBoundingClientRect().width - painted.getBoundingClientRect().width;
+    const paintedRect = painted.getBoundingClientRect();
+    const gutter = column.getBoundingClientRect().width - paintedRect.width;
     column.style.setProperty('--puzzle-board-inset', `${Math.max(0, Math.round(gutter / 2))}px`);
+    const detail = column.closest<HTMLElement>('.puzzle-detail');
+    if (detail && paintedRect.height > 0) {
+      detail.style.setProperty('--puzzle-board-height', `${Math.round(paintedRect.height)}px`);
+    }
   });
 }
 

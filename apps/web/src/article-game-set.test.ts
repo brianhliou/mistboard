@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ANTI_GAME_SET_STRINGS } from './anti-xiangqi-article-diagrams.js';
 import {
   type GameSetBoard,
@@ -138,5 +138,29 @@ describe('mounted game set', () => {
     expect(host.textContent).toContain('Red moves first.');
     controller.destroy();
     host.remove();
+  });
+
+  it('glides a one-ply step both ways through the card, and not a jump', () => {
+    // happy-dom has no WAAPI; glideSvgPiece feature-checks for it.
+    const animate = vi.fn();
+    Object.assign(Element.prototype, { animate, getAnimations: () => [] });
+    const host = document.createElement('div');
+    document.body.append(host);
+    const redFirst = { ...record, id: 'red-glide', moves: 'a1a2 a10a9', firstMover: undefined };
+    const controller = mountStepGameSet(host, { records: [redFirst], start }, { strings: {} });
+    const glided = () =>
+      animate.mock.contexts.map((ctx) => (ctx as Element).getAttribute('data-piece-square'));
+    const key = (k: string) =>
+      host.querySelector('.embed-card')!.dispatchEvent(new KeyboardEvent('keydown', { key: k }));
+    key('ArrowRight');
+    key('ArrowLeft');
+    expect(glided()).toEqual(['a2', 'a1']);
+    animate.mockClear();
+    key('End');
+    expect(glided()).toEqual([]);
+    controller.destroy();
+    host.remove();
+    delete (Element.prototype as { animate?: unknown }).animate;
+    delete (Element.prototype as { getAnimations?: unknown }).getAnimations;
   });
 });

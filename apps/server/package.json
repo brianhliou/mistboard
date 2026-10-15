@@ -59,6 +59,7 @@
     "worker:dev:execute": "tsx src/worker.ts --execute",
     "worker:dev:service": "tsx src/worker.ts --execute --loop",
     "predev": "node ../../scripts/ensure-packages-built.mjs",
+    "prereadout:mistboard": "node ../../scripts/ensure-packages-built.mjs",
     "predev:persistent": "node ../../scripts/ensure-packages-built.mjs",
     "pretypecheck": "node ../../scripts/ensure-packages-built.mjs",
     "pretest:unit": "node ../../scripts/ensure-packages-built.mjs",

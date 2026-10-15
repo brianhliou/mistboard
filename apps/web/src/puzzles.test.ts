@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from 'node:fs';
 import {
   attemptStandardXiangqiPuzzleLine,
   detectXiangqiPuzzleMotifs,
@@ -158,6 +159,52 @@ describe('puzzles route', () => {
     expect(grip?.getAttribute('aria-label')).toBe('Resize board');
   });
 
+  it("sizes the right column to the board's drawn height, not its max size", async () => {
+    const puzzle = RED_MATE;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url === '/api/puzzles') return json({ puzzles: [publicSummary(puzzle)] });
+        if (url === `/api/puzzles/${puzzle.id}`) return json({ puzzle: publicDetail(puzzle) });
+        return json({ error: 'not_found' }, 404);
+      }),
+    );
+    // A width-bound board: the column is narrower than the 704px height budget
+    // allows, so the 9x10 board draws 556x616 (1440x900, measured), not 704 tall.
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: Element,
+    ) {
+      const painted = this.classList.contains('puzzle-xiangqi-board');
+      return new DOMRect(0, 0, 556, painted ? 616 : 704);
+    });
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountPuzzles(root, puzzle.id);
+
+    const detail = root.querySelector<HTMLElement>('.puzzle-detail');
+    await vi.waitFor(() =>
+      expect(detail?.style.getPropertyValue('--puzzle-board-height')).toBe('616px'),
+    );
+  });
+
+  it("keeps the side panel's height on the measured board height", () => {
+    const css = readFileSync(
+      ['src/puzzles.css', 'apps/web/src/puzzles.css'].find((path) => existsSync(path))!,
+      'utf8',
+    );
+    const rule = (selector: string): string =>
+      css.match(new RegExp(`(?<!,)\\n${selector.replace(/[.-]/g, '\\$&')} \\{([^}]*)\\}`))?.[1] ??
+      '';
+    expect(rule('.puzzle-side-panel')).toMatch(
+      /\bheight: var\(--puzzle-board-height, var\(--puzzle-surface-size\)\)/,
+    );
+    expect(rule('.puzzle-side-panel--analysis')).toMatch(
+      /max-height: var\(--puzzle-board-height, var\(--puzzle-surface-size\)\)/,
+    );
+  });
+
   it('merges the practice note into the puzzle rating card', async () => {
     stubWindowLocalStorage(memoryStorage({ 'mistboard:puzzles:rated': 'false' }));
     const mini = RED_MATE;
@@ -231,11 +278,9 @@ describe('puzzles route', () => {
       `/api/puzzles/${drop.id}/attempt`,
       expect.objectContaining({ method: 'POST' }),
     );
-    // No streak in the response (a guest): no streak line either.
-    expect(root.querySelector('.puzzle-solved-streak')).toBeNull();
   });
 
-  it('shows the puzzle streak the server sends back with a solve', async () => {
+  it('shows no streak line under Success even when the server sends one', async () => {
     const drop = RED_MATE;
     let timeZone: unknown = null;
     vi.stubGlobal(
@@ -262,9 +307,8 @@ describe('puzzles route', () => {
     await solveLine(root, drop);
 
     await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
-    expect(root.querySelector('.puzzle-solved-streak')?.textContent).toBe(
-      'Puzzle streak: 3 days (best 7 days)',
-    );
+    expect(root.querySelector('.puzzle-solved-streak')).toBeNull();
+    expect(root.textContent).not.toContain('Puzzle streak');
     // The attempt carries the browser's calendar so the server counts days
     // the way the solver does.
     expect(timeZone).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');

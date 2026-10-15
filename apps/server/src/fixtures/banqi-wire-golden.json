@@ -13383,6 +13383,13 @@
                 "initialMs": 180000,
                 "incrementMs": 2000
               },
+              "rematch": {
+                "offers": {
+                  "red": false,
+                  "black": false
+                },
+                "finalizedRoomId": null
+              },
               "roomMode": "pvp"
             },
             "black": {
@@ -13755,6 +13762,13 @@
                 "initialMs": 180000,
                 "incrementMs": 2000
               },
+              "rematch": {
+                "offers": {
+                  "red": false,
+                  "black": false
+                },
+                "finalizedRoomId": null
+              },
               "roomMode": "pvp"
             },
             "spectator": {
@@ -14126,6 +14140,13 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
+              },
+              "rematch": {
+                "offers": {
+                  "red": false,
+                  "black": false
+                },
+                "finalizedRoomId": null
               },
               "roomMode": "pvp"
             }
@@ -19132,6 +19153,13 @@
                 "initialMs": 60000,
                 "incrementMs": 1000
               },
+              "rematch": {
+                "offers": {
+                  "red": false,
+                  "black": false
+                },
+                "finalizedRoomId": null
+              },
               "roomMode": "pvp"
             },
             "black": {
@@ -19426,6 +19454,13 @@
                 "initialMs": 60000,
                 "incrementMs": 1000
               },
+              "rematch": {
+                "offers": {
+                  "red": false,
+                  "black": false
+                },
+                "finalizedRoomId": null
+              },
               "roomMode": "pvp"
             },
             "spectator": {
@@ -19719,6 +19754,13 @@
               "timeControl": {
                 "initialMs": 60000,
                 "incrementMs": 1000
+              },
+              "rematch": {
+                "offers": {
+                  "red": false,
+                  "black": false
+                },
+                "finalizedRoomId": null
               },
               "roomMode": "pvp"
             }

@@ -32,6 +32,7 @@ export const chessArticle: Article = {
     // page stays reachable at /rules/chess for SEO + the Fog Chess primer link.
     showInIndex: false,
     title: 'Chess Rules',
+    seoTitle: 'Chess Rules: Castling, Promotion and En Passant',
     summary:
       'Standard chess rules, the primer behind Fog Chess: castling, promotion, en passant, the draw rules, and a famous game to play through.',
     showSummaryOnPage: false,

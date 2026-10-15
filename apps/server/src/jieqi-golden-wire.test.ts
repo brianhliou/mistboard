@@ -566,8 +566,25 @@ test('jieqi golden wire: snapshot marks room mode and omits chess-only wire keys
     const snapshot = pvp.snapshots[seat] as SeatRecord;
     assert.equal(snapshot.roomMode, 'pvp', 'a human-vs-human room is roomMode:pvp');
     assert.ok(!('pveEngineId' in snapshot), 'a PvP room carries no engine id');
-    for (const key of ['mode', 'rated', 'forfeitDeadline', 'rematch']) {
+    for (const key of ['mode', 'rated', 'forfeitDeadline']) {
       assert.ok(!(key in snapshot), `jieqi snapshot must not carry '${key}'`);
+    }
+    // A finished PvP room carries the rematch offer flags and nothing else: no
+    // seat token, no account, no redirect.
+    assert.ok(isFinishedStep(pvp), 'script A ends finished');
+    assert.deepStrictEqual(snapshot.rematch, {
+      offers: { red: false, black: false },
+      finalizedRoomId: null,
+    });
+  }
+  // A live room's wire is unchanged: no rematch key before the game ends.
+  for (const step of runScriptA().steps) {
+    if (isFinishedStep(step)) continue;
+    for (const seat of SEATS) {
+      assert.ok(
+        !('rematch' in (step.snapshots[seat] as SeatRecord)),
+        `${step.label}: live rematch`,
+      );
     }
   }
   const pve = runScriptB().steps.at(-1)!;
@@ -575,5 +592,6 @@ test('jieqi golden wire: snapshot marks room mode and omits chess-only wire keys
     const snapshot = pve.snapshots[seat] as SeatRecord;
     assert.equal(snapshot.roomMode, 'pve', 'an engine-seated room is roomMode:pve');
     assert.equal(snapshot.pveEngineId, JIEQI_DEFAULT_ENGINE_ID, 'and carries the engine id');
+    assert.ok(!('rematch' in snapshot), 'a PvE room offers play again, not a rematch');
   }
 });

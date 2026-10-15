@@ -680,6 +680,73 @@ definePersistenceTests('game lists', () => {
     assert.ok(!unlocked.some((game) => game.roomId === 'watch-cap-64'));
   });
 
+  test('watch leaves correspondence games out of its replays and in-play count', async () => {
+    const now = new Date('2026-10-14T12:00:00.000Z');
+    const endedAt = new Date(now.getTime() - 60_000);
+    const live = { initialMs: 600_000, incrementMs: 5_000 };
+    const correspondence = { daysPerMove: 1 };
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      const rows: [string, string, object][] = [
+        ['watch-live-done', 'completed', live],
+        ['watch-corr-done', 'completed', correspondence],
+        ['watch-live-running', 'running', live],
+        ['watch-corr-running', 'running', correspondence],
+      ];
+      for (const [roomId, status, timeControl] of rows) {
+        const done = status === 'completed';
+        await client.query(
+          `INSERT INTO games
+             (room_id, variant, result, termination, ply_count, started_at, ended_at,
+              white_client, black_client, white_name, black_name, mode, status, visibility)
+           VALUES
+             ($1, 'dark-chess', $2, $3, 40, $4, $5,
+              'white', 'black', NULL, NULL, 'pvp', $6, 'public')`,
+          [
+            roomId,
+            done ? 'white-wins' : null,
+            done ? 'resignation' : null,
+            endedAt,
+            done ? endedAt : null,
+            status,
+          ],
+        );
+        await client.query(
+          `INSERT INTO events (room_id, seq, type, payload)
+           VALUES ($1, 0, 'room-created', $2)`,
+          [
+            roomId,
+            {
+              type: 'room-created',
+              at: endedAt.getTime() - 1,
+              roomId,
+              variant: 'dark-chess',
+              timeControl,
+            },
+          ],
+        );
+        const last = done
+          ? { type: 'seat-resigned', at: endedAt.getTime(), roomId, color: 'black' }
+          : { type: 'move-played', at: endedAt.getTime(), roomId };
+        await client.query(
+          `INSERT INTO events (room_id, seq, type, payload)
+           VALUES ($1, 1, $2, $3)`,
+          [roomId, last.type, last],
+        );
+      }
+    } finally {
+      await client.end();
+    }
+
+    const unlocked = await listWatchUnlockedGames({ now, variants: ['dark-chess'] });
+    assert.deepEqual(
+      unlocked.map((game) => game.roomId),
+      ['watch-live-done'],
+    );
+    assert.equal(await countWatchSealedGames({ now, variants: ['dark-chess'] }), 1);
+  });
+
   test('listCorpusGames filters timeout games shorter than ten ply', async () => {
     const now = new Date('2026-05-09T12:00:00.000Z');
     const client = new pg.Client({ connectionString: TEST_DATABASE_URL });

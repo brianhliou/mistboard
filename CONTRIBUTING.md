@@ -2,7 +2,7 @@
 
 Mistboard is a free, open-source place to play and study Chinese chess
 (xiangqi, Jieqi, Banqi) and the original strategy games built on it, such as
-Duck Xiangqi, Fog Xiangqi, Fortress, and Crazyhouse Xiangqi. Jungle Chess, Flip
+Duck Xiangqi, Fog Xiangqi, and Crazyhouse Xiangqi. Jungle Chess, Flip
 Jungle, and Fog Chess are live too. Every game is server-enforced, and several
 hide information from one side (Fog of War, Jieqi, Banqi, Flip Jungle). Before
 opening a pull request, check whether the change helps the product rule:

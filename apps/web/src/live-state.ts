@@ -175,7 +175,6 @@ export const liveState = {
   // See ConnectionNoticeTier: staged visibility for an in-progress reconnect.
   connectionNoticeTier: 'none' as ConnectionNoticeTier,
   closeReason: '',
-  latencyMs: null as number | null,
   lastServerAt: null as number | null,
   lastSnapshotAt: null as number | null,
   roomRegion: 'global' as string,
@@ -246,6 +245,13 @@ export function resolveWebSocketBaseUrls(): string[] {
   const primary = stripQuery(configured as string);
   return primary === sameOrigin ? [primary] : [primary, sameOrigin];
 }
+
+// Once a tab's socket has moved to the fallback host it stays there for the
+// tab's life, including across a rematch redirect, so the next room does not
+// spend another two failed opens rediscovering the same dead path. The value
+// is 'fallback' while it holds (socket-client.ts writes it; the connection
+// footer's ping reads it to time the same host).
+export const SOCKET_HOST_SESSION_KEY = 'mistboard.socket.host';
 
 function stripQuery(url: string): string {
   return url.replace(/\?$/, '');

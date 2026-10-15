@@ -177,6 +177,7 @@ export const EMBED_ANALYSIS_VARIANTS: Record<GameSpecId, EmbedAnalysisVariant | 
   'duck-xiangqi': null,
   'crazyhouse-xiangqi': null,
   mahjong: null,
+  'xiangqi-mahjong': null,
   chess: null,
 };
 

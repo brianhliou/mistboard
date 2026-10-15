@@ -128,9 +128,51 @@ function stableTourSlug(value: string): string {
   return base;
 }
 
-function extractArticleTitle(html: string): string | undefined {
-  const match = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-  return cleanTagValue(match?.[1]?.replace(/ - World Xiangqi Federation[\s\S]*$/i, ''));
+/**
+ * The page's own title, without the site name WXF wraps it in.
+ *
+ * 2019 pages read "<article> - World Xiangqi Federation". From 2024 the site
+ * name comes first as well, and on round pages the title is nothing else:
+ * "World Xiangqi Federation 世界象棋联合会 (WXF) - World Xiangqi Federation
+ * 世界象棋联合会 (WXF)". Stripping only the tail left the site name as the
+ * tour name and slug (`world-xiangqi-federation-wxf-9jj3vn`). Those pages
+ * carry the article's own title in og:title, so that is read first; a title
+ * that is only the site name counts as no title, and the frames' event tag
+ * names the tour instead.
+ */
+export function extractArticleTitle(html: string): string | undefined {
+  const og = html.match(/<meta\s[^>]*property=["']og:title["'][^>]*content=["']([^"']*)["']/i)?.[1];
+  const raw = og ?? html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1];
+  if (raw === undefined) return undefined;
+  const title = (cleanTagValue(raw) ?? '')
+    .replace(/\s+-\s+World Xiangqi Federation[\s\S]*$/i, '')
+    .replace(/^World Xiangqi Federation[^-]*\(WXF\)\s*-\s*/i, '');
+  if (title === '' || /^World Xiangqi Federation\b[^-]*$/i.test(title)) return undefined;
+  return cleanTagValue(title);
+}
+
+/**
+ * Round and table of one game on a page that carries a whole round, when the
+ * frame states them: the `round`/`table` tags when both are numbers, else a
+ * "<round>-<table>" token in the frame title ("世锦赛男个 1-7 中国 ..." is
+ * round 1, table 7; WXF 2025 leaves both tags empty).
+ */
+export function frameRoundTable(
+  tags: Map<string, string>,
+  title: string | undefined,
+): { round: number; table: number } | undefined {
+  const tagRound = Number(tags.get('round')?.match(/\d+/)?.[0]);
+  const tagTable = Number(tags.get('table')?.match(/\d+/)?.[0]);
+  if (Number.isInteger(tagRound) && tagRound > 0 && Number.isInteger(tagTable) && tagTable > 0) {
+    return { round: tagRound, table: tagTable };
+  }
+  const token = title?.match(/(?:^|\s)(\d{1,2})-(\d{1,3})(?=\s|$)/);
+  const round = Number(token?.[1]);
+  const table = Number(token?.[2]);
+  if (Number.isInteger(round) && round > 0 && Number.isInteger(table) && table > 0) {
+    return { round, table };
+  }
+  return undefined;
 }
 
 function extractFrameBodies(html: string): string[] {
@@ -318,9 +360,6 @@ export function convertWxfDhtmlXqPageToSnapshot(
   html: string,
   options: WxfDhtmlXqConversionOptions = {},
 ): WxfDhtmlXqConversionResult {
-  const articleTitle = extractArticleTitle(html);
-  const tourSlug = options.tourSlug ?? stableTourSlug(articleTitle ?? 'wxf-xiangqi-broadcast');
-
   const frames = extractFrameBodies(html);
   if (frames.length === 0) {
     return {
@@ -328,6 +367,11 @@ export function convertWxfDhtmlXqPageToSnapshot(
       issues: [{ kind: 'no_dhtmlxq_frames', message: 'no DhtmlXQ iframe payloads found' }],
     };
   }
+
+  const articleTitle = extractArticleTitle(html);
+  // A page with no title of its own still names its event in every frame.
+  const eventTitle = articleTitle ?? cleanTagValue(parseFrameTags(frames[0]!).get('event'));
+  const tourSlug = options.tourSlug ?? stableTourSlug(eventTitle ?? 'wxf-xiangqi-broadcast');
 
   // A dpxq archive page is one game carrying its own round (第NN轮); derive a
   // distinct round id/name from it so games from different rounds don't merge
@@ -341,7 +385,7 @@ export function convertWxfDhtmlXqPageToSnapshot(
   const tour: XiangqiBroadcastTour = {
     schema: XIANGQI_BROADCAST_SCHEMA,
     slug: tourSlug,
-    name: options.tourName ?? articleTitle ?? 'WXF Xiangqi Broadcast',
+    name: options.tourName ?? eventTitle ?? 'WXF Xiangqi Broadcast',
     ...(options.sourceUrl ? { sourceUrl: options.sourceUrl } : {}),
   };
   const round: XiangqiBroadcastRound = {
@@ -369,6 +413,17 @@ export function convertWxfDhtmlXqPageToSnapshot(
       (sourceGameId(options.sourceUrl)
         ? `board-${index + 1}`
         : sourceBoardIdFromTitle(title, index));
+    // A page carrying a whole round (WXF from 2024: "世锦赛男个 1-7 ..." per
+    // frame, round and table tags empty) has no Latin board token, and the
+    // pairing hash below would make its board ids unreadable and unrelated to
+    // the table. The round and table the frame states are the board's name.
+    // Only multi-frame pages: a single-game page keeps the id it always had.
+    if (!pinned && frames.length > 1 && /^board-\d+$/.test(sourceBoardId)) {
+      const roundTable = frameRoundTable(tags, title);
+      if (roundTable) {
+        sourceBoardId = `r${String(roundTable.round).padStart(2, '0')}t${String(roundTable.table).padStart(2, '0')}`;
+      }
+    }
     const binit = requireTag(tags, 'binit', sourceBoardId);
     if (!binit.ok) {
       issues.push(binit.issue);

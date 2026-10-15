@@ -81,7 +81,12 @@ export type {
   BotRatingSnapshot,
   BotRatingSource,
 } from './persistence-bots.js';
-export { getPublicBotForPlay, getPublicBotProfile, listPublicBots } from './persistence-bots.js';
+export {
+  getBotGamesPage,
+  getPublicBotForPlay,
+  getPublicBotProfile,
+  listPublicBots,
+} from './persistence-bots.js';
 export type { ChatLineRecord, ChatModerationStatus, ChatReportRecord } from './persistence-chat.js';
 export {
   activeChatTimeout,
@@ -395,6 +400,7 @@ export {
   FORUM_UNREAD_WINDOW_DAYS,
   isNotificationWatermarkKind,
   markNotificationsSeen,
+  notificationsSeenAt,
   unreadWatchedForumTopics,
   unseenNewFollowers,
 } from './persistence-notifications.js';
@@ -435,6 +441,7 @@ export {
   getUserProfileByHandle,
   getUserRatingHistory,
   isProfileGameResultFilter,
+  listRecentFinishedCorrespondenceGames,
   updateUserAccountPreference,
   updateUserDmPolicy,
   updateUserLocale,

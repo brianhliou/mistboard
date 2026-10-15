@@ -37,6 +37,7 @@ import { ensureLocaleCatalog, type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, initializeLocaleFromCurrentUrl, resolveLocale } from './i18n/locale.js';
 import {
   challengesNotificationSource,
+  correspondenceFinishedNotificationSource,
   correspondenceNotificationSource,
   followersNotificationSource,
   forumNotificationSource,
@@ -86,6 +87,8 @@ registerNotificationSource(forumNotificationSource);
 if (correspondenceEnabled()) registerNotificationSource(challengesNotificationSource);
 // A public board seek that lapsed with no taker: told once, then seen.
 if (correspondenceEnabled()) registerNotificationSource(seekExpiryNotificationSource);
+// A correspondence game that ended while you were away: told once, then seen.
+if (correspondenceEnabled()) registerNotificationSource(correspondenceFinishedNotificationSource);
 // An embed runs inside SOMEONE ELSE'S page, so the site bootstrap below is not
 // just wasted work there, it is work we have no business doing in their document:
 // the account nav fetches /api/auth/me with credentials, and analytics reports a
@@ -422,6 +425,10 @@ const wantsStudyIndex = path === '/study';
 const wantsPractice =
   path === '/practice' || path === '/zh-hans/practice' || path === '/zh-hant/practice';
 const wantsPracticePosition = path === '/practice/position';
+// One shelf exercise by set slug and position (article links, #521): a bounce
+// page that resolves the chapter in this database. The module validates the
+// pair; isClientRoute already 404s anything that is not one.
+const wantsPracticeChapter = /^\/practice\/([a-z-]+)\/([a-z0-9-]+)$/.exec(path) !== null;
 // Hidden DEV-only lab for Jungle river-movement cues (rat / tiger / lion). No nav entry.
 const wantsJungleCuesLab = import.meta.env.DEV && path === '/jungle-cues';
 // Hidden DEV-only audition lab for sound sets. No nav entry.
@@ -522,6 +529,13 @@ if (replaySample) {
       mountPracticePosition(appRoot);
     }),
   );
+} else if (wantsPracticeChapter) {
+  setTitleKey('nav.practice');
+  void mountOrReport(() =>
+    import('./practice-chapter-redirect.js').then(({ mountPracticeChapterRedirect }) =>
+      mountPracticeChapterRedirect(path),
+    ),
+  );
 } else if (wantsPractice) {
   setTitleKey('nav.practice');
   void mountOrReport(() =>
@@ -540,7 +554,7 @@ if (replaySample) {
   setTitleKey('nav.studies');
   void mountOrReport(() =>
     import('./study.js').then(({ mountStudy }) => {
-      mountStudy(appRoot, studyId, studyChapterId ?? undefined);
+      void mountStudy(appRoot, studyId, studyChapterId ?? undefined);
     }),
   );
 } else if (wantsXiangqiImport) {

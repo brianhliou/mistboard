@@ -152,7 +152,7 @@ const ACCOUNT = { id: 'user-friend', handle: 'friend', displayName: 'Friend' } a
 
 const createCtx: TenantCreateHttpContext = {
   databaseRequired: false,
-  isDraining: () => false,
+  refusesCreate: () => false,
   drainDeadlineMs: () => null,
   reserveLiveEngineSeat: () => Promise.resolve(null),
   releaseLiveEngineReservation: () => undefined,

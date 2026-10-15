@@ -28,6 +28,7 @@ import {
   defaultClockInitialMs,
   type RoomTimeControl,
 } from '@mistboard/game';
+import { type DrainCreate, RESUMABLE_PVE_GAME_SPECS } from '../deploy-gate.js';
 import { ratedEnabled } from '../feature-flags.js';
 import { gateGameSpecRequest } from '../game-spec-request-gate.js';
 import type { UserAccount } from '../persistence.js';
@@ -40,7 +41,7 @@ import { lobbyOffersRated } from './registry.js';
 // `create<Variant>Room`) structurally satisfies this.
 export type TenantRoomCreateBaseContext = {
   databaseRequired: boolean;
-  isDraining(): boolean;
+  refusesCreate(create?: DrainCreate): boolean;
   drainDeadlineMs(): number | null;
 };
 
@@ -294,7 +295,13 @@ export function createTenantRoomsRoute<
       writeJson(response, 503, { error: 'persistence_disabled' });
       return;
     }
-    if (ctx.isDraining()) {
+    // PvE on a resumable spec is let through a pending drain (#559 step 2):
+    // the restart pauses it and the new build resumes it, bot and all.
+    const resumablePve =
+      mode === 'pve' &&
+      config.engine.kind === 'seated' &&
+      RESUMABLE_PVE_GAME_SPECS.has(config.gameSpecId);
+    if (ctx.refusesCreate({ resumablePve })) {
       writeJson(response, 503, { error: 'server_draining', restartAt: ctx.drainDeadlineMs() });
       return;
     }

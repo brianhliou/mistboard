@@ -24,6 +24,7 @@ import {
   serveSitemapIndex,
   serveSpaShellWithRoutePreloads,
   serveStudyPage,
+  setRobotsMeta,
   sitemapSectionFromPath,
 } from './server-static-pages.js';
 
@@ -60,6 +61,10 @@ function indexHtml(): string {
     '<html lang="en">',
     '<head>',
     '<title>Mistboard</title>',
+    // The shell's one robots tag, as in apps/web/index.html: noindex pages
+    // replace it (setRobotsMeta), so every noindex test below also proves the
+    // page ends with exactly one tag.
+    '<meta name="robots" content="max-image-preview:large" />',
     '<meta name="description" content="old">',
     '<meta property="og:title" content="old">',
     '<meta property="og:description" content="old">',
@@ -217,6 +222,45 @@ test('serveArticlePage leaves the Crazyhouse Xiangqi rules page indexable', asyn
   });
   assert.equal(response.status, 200);
   assert.doesNotMatch(response.body, /noindex/);
+  assert.deepEqual(robotsTags(response.body), ['max-image-preview:large']);
+});
+
+function robotsTags(html: string): string[] {
+  return [...html.matchAll(/<meta\s+name="robots"\s+content="([^"]*)"/g)].map((m) => m[1]!);
+}
+
+test('setRobotsMeta replaces the shell robots tag instead of adding a second', () => {
+  const html = setRobotsMeta(indexHtml(), 'noindex, follow');
+  assert.deepEqual(robotsTags(html), ['noindex, follow']);
+  // A page with no tag at all still gets one, in the head.
+  const bare = '<html><head><title>x</title></head><body></body></html>';
+  assert.equal(
+    setRobotsMeta(bare, 'noindex, nofollow'),
+    '<html><head><title>x</title><meta name="robots" content="noindex, nofollow"></head><body></body></html>',
+  );
+});
+
+test('a noindex page carries one robots tag and no image-preview directive', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const notFound = captureResponse();
+  await serveNotFoundShell({ response: notFound, staticDir });
+  assert.deepEqual(robotsTags(notFound.body), ['noindex, follow']);
+  const heldRules = captureResponse();
+  await serveArticlePage({
+    slug: 'shogi4',
+    base: 'rules',
+    response: heldRules,
+    publicHost: 'https://mistboard.test',
+    staticDir,
+  });
+  assert.deepEqual(robotsTags(heldRules.body), ['noindex, follow']);
+});
+
+test('the real shell lets search show a large image preview, in one robots tag', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const shell = await readFile(new URL('../../web/index.html', import.meta.url).pathname, 'utf-8');
+  assert.deepEqual(robotsTags(shell), ['max-image-preview:large']);
 });
 
 // Every localized surface must be reachable AND advertised. Before this the
@@ -565,7 +609,7 @@ test('serveArticlesIndexPage injects localized metadata', async () => {
 
   assert.equal(response.status, 200);
   assert.match(response.body, /<html lang="zh-Hans">/);
-  assert.match(response.body, /<title>文章 \| Mistboard<\/title>/);
+  assert.match(response.body, /<title>象棋与变体文章 \| Mistboard<\/title>/);
   assert.match(
     response.body,
     /<meta property="og:url" content="https:\/\/mistboard.test\/zh-hans\/blog">/,
@@ -650,7 +694,7 @@ test('serveArticlesIndexPage falls back to the shell when no prerender exists', 
   });
 
   assert.equal(response.status, 200);
-  assert.match(response.body, /<title>Articles \| Mistboard<\/title>/);
+  assert.match(response.body, /<title>Xiangqi and Variant Articles \| Mistboard<\/title>/);
 });
 
 test('serveRulesIndexPage injects rules metadata', async () => {
@@ -667,7 +711,7 @@ test('serveRulesIndexPage injects rules metadata', async () => {
 
   assert.equal(response.status, 200);
   assert.match(response.body, /<html lang="zh-Hant">/);
-  assert.match(response.body, /<title>規則 \| Mistboard<\/title>/);
+  assert.match(response.body, /<title>象棋與變體規則 \| Mistboard<\/title>/);
   assert.match(
     response.body,
     /<meta property="og:url" content="https:\/\/mistboard.test\/zh-hant\/rules">/,
@@ -718,7 +762,7 @@ test('serveRulesIndexPage never hands a localized index the English file', async
   });
   assert.equal(response.status, 200);
   assert.doesNotMatch(response.body, /baked/);
-  assert.match(response.body, /<title>规则 \| Mistboard<\/title>/);
+  assert.match(response.body, /<title>象棋与变体规则 \| Mistboard<\/title>/);
 });
 
 test('the rules index shell fallback carries a self canonical and the locale group', async () => {

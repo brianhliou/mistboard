@@ -14,7 +14,7 @@ can render as icons you can identify before you can read 車 or 砲, and a
 beginner course starts from the first move.
 
 Beside the traditional games sit the ones Mistboard invents: Duck Xiangqi, Fog
-Xiangqi, Fortress, and Crazyhouse Xiangqi, with more in design. Each starts
+Xiangqi, and Crazyhouse Xiangqi, with more in design. Each starts
 from a board people already know and changes one thing, and each gets a rules
 page and server-enforced play. Jungle Chess, Flip Jungle, and Fog Chess are
 live too.

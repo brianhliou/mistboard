@@ -615,13 +615,14 @@
   box-sizing: border-box;
 }
 
+/* Clips its overflow, so the line box must hold the glyph's descenders (#543). */
 .watch-queue-preview .showcase-seat-name {
   min-width: 0;
   overflow: hidden;
   color: var(--site-text);
   font-size: var(--showcase-seat-name-size);
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -972,10 +973,11 @@
   color: var(--site-accent);
 }
 
+/* Clips its overflow, so the line box must hold the glyph's descenders (#543). */
 .watch-channel-name {
   max-width: 100%;
   font-size: 13px;
-  line-height: 1.2;
+  line-height: 1.35;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -983,12 +985,13 @@
 
 /* The top-rated seat under the channel name (name + rating), muted and lighter
    like lichess's TV rail. */
+/* Clips its overflow, so the line box must hold the glyph's descenders (#543). */
 .watch-channel-player {
   max-width: 100%;
   color: var(--site-muted);
   font-size: 12px;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.35;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

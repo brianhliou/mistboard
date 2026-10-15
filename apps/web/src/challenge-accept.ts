@@ -295,8 +295,19 @@ export function buildChallengeCard(view: ChallengeView): HTMLElement {
     copy.className = 'challenge-btn';
     copy.textContent = t('challenge.copyLink');
     copy.addEventListener('click', () => {
-      void navigator.clipboard?.writeText(share.value);
-      copy.textContent = t('challenge.copied');
+      // A browser may refuse the write (NotAllowedError on Android Chrome):
+      // select the link instead so a long-press copy is one step away.
+      const selectForManualCopy = (): void => {
+        share.focus();
+        share.select();
+      };
+      if (!navigator.clipboard?.writeText) {
+        selectForManualCopy();
+        return;
+      }
+      navigator.clipboard.writeText(share.value).then(() => {
+        copy.textContent = t('challenge.copied');
+      }, selectForManualCopy);
     });
     actions.append(copy);
   }

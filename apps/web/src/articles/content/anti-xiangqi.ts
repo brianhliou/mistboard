@@ -95,6 +95,7 @@ export const antiXiangqiArticle: Article = {
         },
         {
           kind: 'raw-svg-stepper',
+          gameSpecId: 'xiangqi',
           steps: antiSteps('anti-proof', ANTI_PROOF_LINE),
           caption:
             'The main line of the proof that 1...Rxb10 loses, 34 plies, with notes on the plies that matter. The whole tree is in the evidence repository.',
@@ -128,6 +129,7 @@ export const antiXiangqiArticle: Article = {
         },
         {
           kind: 'raw-svg-stepper',
+          gameSpecId: 'xiangqi',
           steps: antiSteps('anti-2m', ANTI_GAME_2M),
           caption:
             'The engine against itself at two million nodes a move, 44 plies. It opened on the other wing; the game is shown mirrored so its files match the boards above.',
@@ -138,6 +140,7 @@ export const antiXiangqiArticle: Article = {
         },
         {
           kind: 'raw-svg-stepper',
+          gameSpecId: 'xiangqi',
           steps: antiSteps('anti-5m', ANTI_GAME_5M),
           caption:
             'The engine against itself at five million nodes a move, 131 plies, mirrored the same way. The notes follow the trades.',

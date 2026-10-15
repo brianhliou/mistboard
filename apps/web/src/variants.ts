@@ -98,6 +98,7 @@ const VARIANT_MINI_BY_GAME_SPEC: Record<GameSpecId, VariantMiniId | null> = {
   [JUNGLE_FLIP_SPEC_ID]: 'jungle-flip',
   // Behind a server flag and a per-account grant; no variant surface shows it.
   mahjong: null,
+  'xiangqi-mahjong': null,
   // Study-only (game-specs.ts): never playable, so never a variant marker.
   chess: null,
 };

@@ -186,7 +186,7 @@ export async function tryHandle(
       response.end(JSON.stringify({ error: 'persistence_disabled' }));
       return true;
     }
-    if (ctx.isDraining()) {
+    if (ctx.refusesCreate()) {
       response.writeHead(503, { 'content-type': 'application/json' });
       response.end(JSON.stringify({ error: 'server_draining', restartAt: ctx.drainDeadlineMs() }));
       return true;

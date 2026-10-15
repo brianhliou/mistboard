@@ -140,8 +140,7 @@ complete information about the game.
 - `game_over`: terminal indicator if the game ended at this ply.
 
 Piece letters in `visible_pieces` are variant-scoped. Dark chess uses
-`P N B R Q K`; Dark Mini Xiangqi uses `G H C R S`
-(general/horse/cannon/chariot/soldier); full Dark Xiangqi uses
+`P N B R Q K`; Dark Xiangqi uses
 `K A B N R C P` (general/advisor/elephant/horse/chariot/cannon/soldier).
 Shared letters are disambiguated by the request's `gameSpecId`, which is
 omitted for dark chess (engines default to it, keeping the chess wire

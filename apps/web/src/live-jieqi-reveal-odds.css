@@ -123,4 +123,11 @@
   .live-review__cluster .game-console > .reveal-odds-row--bottom {
     order: 33;
   }
+
+  /* A finished game: the empty bands would push Review game and Challenge a
+     friend below the fold. They sit under the board here, so dropping them
+     never moves it. */
+  .live-review__cluster .game-console > .reveal-odds-row[data-over] {
+    display: none;
+  }
 }

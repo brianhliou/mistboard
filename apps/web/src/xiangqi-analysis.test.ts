@@ -19,9 +19,29 @@ function freshRoot(): HTMLElement {
   return root;
 }
 
+// This happy-dom build ships no window.localStorage; back it with memory so the
+// opening-book preference (#534) can be remembered across mounts.
+const storageValues = new Map<string, string>();
+Object.defineProperty(window, 'localStorage', {
+  configurable: true,
+  value: {
+    get length() {
+      return storageValues.size;
+    },
+    clear: () => storageValues.clear(),
+    getItem: (key: string) => storageValues.get(key) ?? null,
+    key: (index: number) => [...storageValues.keys()][index] ?? null,
+    removeItem: (key: string) => void storageValues.delete(key),
+    setItem: (key: string, value: string) => void storageValues.set(key, value),
+  } satisfies Storage,
+});
+
 // These tests locate cells by from-to text; pin coordinate labels so the
 // reader's notation default (algebraic) does not become the subject.
-beforeEach(() => pinXiangqiNotation('coordinate'));
+beforeEach(() => {
+  storageValues.clear();
+  pinXiangqiNotation('coordinate');
+});
 afterEach(() => pinXiangqiNotation(null));
 
 describe('mountXiangqiAnalysis', () => {
@@ -195,10 +215,11 @@ describe('mountXiangqiAnalysisPage', () => {
     root.remove();
   });
 
-  it('carries no dead toolbar buttons, and the book starts open', () => {
+  it('carries no dead toolbar buttons, and the book starts closed', () => {
     // The rule: a control bar never shows a button with nothing behind it. The
     // bar is the five move-nav columns; the opening book is a menu row (#523),
-    // open by default, and toggling it closes and reopens the pane.
+    // closed by default for a first-time reader (#534), and toggling it opens
+    // and closes the pane.
     const root = freshRoot();
     mountXiangqiAnalysis(root, [...OPENING]);
     const bar = root.querySelector('.review-controls.move-nav-bar');
@@ -214,16 +235,49 @@ describe('mountXiangqiAnalysisPage', () => {
     expect(bar?.hasAttribute('data-live-glow')).toBe(false);
     const book = root.querySelector<HTMLButtonElement>('[data-review-explorer]');
     const pane = root.querySelector<HTMLElement>('.opening-explorer');
-    expect(pane?.hidden).toBe(false);
-    root.querySelector<HTMLButtonElement>('.move-nav-bar__menu-button')?.click();
-    expect(book?.getAttribute('aria-pressed')).toBe('true');
-    book?.click();
     expect(pane?.hidden).toBe(true);
     root.querySelector<HTMLButtonElement>('.move-nav-bar__menu-button')?.click();
     expect(book?.getAttribute('aria-pressed')).toBe('false');
     book?.click();
     expect(pane?.hidden).toBe(false);
+    root.querySelector<HTMLButtonElement>('.move-nav-bar__menu-button')?.click();
+    expect(book?.getAttribute('aria-pressed')).toBe('true');
+    book?.click();
+    expect(pane?.hidden).toBe(true);
     root.remove();
+  });
+
+  it('remembers the book choice across boards (#534)', () => {
+    // Every review surface shares the one bar, so the reader's last choice is
+    // the next board's starting state: opened stays open, closed stays closed.
+    const mount = () => {
+      const root = freshRoot();
+      mountXiangqiAnalysis(root, [...OPENING]);
+      const pane = root.querySelector<HTMLElement>('.opening-explorer');
+      const book = root.querySelector<HTMLButtonElement>('[data-review-explorer]');
+      const openMenu = () =>
+        root.querySelector<HTMLButtonElement>('.move-nav-bar__menu-button')?.click();
+      return { root, pane, book, openMenu };
+    };
+
+    const first = mount();
+    expect(first.pane?.hidden).toBe(true);
+    first.openMenu();
+    first.book?.click();
+    expect(first.pane?.hidden).toBe(false);
+    first.root.remove();
+
+    const second = mount();
+    expect(second.pane?.hidden).toBe(false);
+    second.openMenu();
+    expect(second.book?.getAttribute('aria-pressed')).toBe('true');
+    second.book?.click();
+    expect(second.pane?.hidden).toBe(true);
+    second.root.remove();
+
+    const third = mount();
+    expect(third.pane?.hidden).toBe(true);
+    third.root.remove();
   });
 
   it('Clear moves wipes the tree back to the start position', () => {

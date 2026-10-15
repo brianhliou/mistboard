@@ -74,6 +74,14 @@ export function mahjongEnabled(): boolean {
   return process.env.MISTBOARD_MAHJONG_ENABLED === 'true';
 }
 
+// Xiangqi mahjong (象棋麻將, 32 tiles, two players) live rooms. Server-side
+// opt-in, default off, and like Hong Kong mahjong only half the gate: the spec
+// is on the per-account allowlist (139) too, so an environment with this on
+// seats admins and grant holders and nobody else. It exists for a playtest.
+export function xiangqiMahjongEnabled(): boolean {
+  return process.env.MISTBOARD_XIANGQI_MAHJONG_ENABLED === 'true';
+}
+
 // Crazyhouse Xiangqi (xiangqi where captured pieces change sides) live rooms.
 // Server-side opt-in, default off: the runtime kill-switch for room creation.
 // Launched as a public casual variant; there is no pool to rate.

@@ -104,6 +104,55 @@ describe('renderBanqiMaterial', () => {
     expect(s.hiddenPool.childElementCount).toBe(0);
   });
 
+  it('gives each face-down disc its reveal odds while the game is on (#542)', () => {
+    const s = slots();
+    renderBanqiMaterial(s, midgame, 'red');
+    // The pool is start minus revealed minus captured, 32 - 2 - 3 = 27 (the
+    // fixture's board is a fragment), one pool shared by both inks.
+    expect(s.hiddenPool.querySelector('.hidden-pool__caption')?.textContent).toBe(
+      '27 face-down could be:',
+    );
+    const chip = (ink: string, role: string) =>
+      s.hiddenPool.querySelector(
+        `.hidden-pool__row[data-ink="${ink}"] .reveal-odds-chip[data-role="${role}"] .reveal-odds-chip__pct`,
+      )?.textContent;
+    expect(chip('black', 'soldier')).toBe('11%'); // 3 of 27
+    expect(chip('red', 'soldier')).toBe('19%'); // 5 of 27
+    expect(chip('red', 'general')).toBe('4%'); // 1 of 27
+  });
+
+  it('keeps the tally once the game is over, rebuilt from the moves (#544)', () => {
+    // A finished room serves the truth view: every tile face up. Without the
+    // move log the tally would be empty and the panel under the board vanishes.
+    const finished: BanqiWireView = {
+      ...midgame,
+      board: {
+        a1: { color: 'red', role: 'chariot', faceDown: false },
+        b1: { color: 'black', role: 'horse', faceDown: false },
+        c1: { color: 'red', role: 'soldier', faceDown: false },
+        d1: { color: 'black', role: 'general', faceDown: false },
+      },
+      status: { type: 'finished', winner: 'red', reason: 'stalemate' },
+      ply: 2,
+    };
+    const moves = [
+      { from: 'a1', to: 'a1' },
+      { from: 'b1', to: 'b1' },
+    ] as const;
+    const s = slots();
+    renderBanqiMaterial(s, finished, 'red', moves);
+    expect(s.hiddenPool.querySelector('.hidden-pool__caption')?.textContent).toBe(
+      'Face-down at the end',
+    );
+    expect(s.hiddenPool.querySelectorAll('.hidden-pool__row').length).toBe(2);
+    // A record, not odds: no percentages once play has stopped.
+    expect(s.hiddenPool.querySelector('.reveal-odds-chip__pct')).toBeNull();
+    // A log that does not cover the game shows nothing rather than a wrong tally.
+    const short = slots();
+    renderBanqiMaterial(short, finished, 'red', moves.slice(1));
+    expect(short.hiddenPool.childElementCount).toBe(0);
+  });
+
   it('clears every slot when there is no view', () => {
     const s = slots();
     renderBanqiMaterial(s, midgame, 'red');

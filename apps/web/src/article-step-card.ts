@@ -19,17 +19,27 @@
 // (a figure stepped through frames, not a game) the rail is the step's text
 // and a step count.
 //
-// The card moves only on interaction: nothing animates on its own.
+// The card moves only on interaction: nothing animates on its own. A one-step
+// move glides the piece that moved (board-anim.ts): the caller names the move
+// into each position, the painted board keys its pieces in slots that carry
+// their centres (board-piece-slot.ts), and the card reads both, so it needs no
+// board geometry of its own. A caller on a fog surface names no moves.
 
 import './review/move-list.css';
 import './embed/embed.css';
 import type { ArticleLang } from './article-i18n.js';
+import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import { findPieceSlot, pieceSlotCentre } from './board-piece-slot.js';
 import type { EmbedSeat } from './embed/embed-card.js';
 import { replayStepperCopy } from './replay-stepper-copy.js';
 import { createMoveList, type MoveList, type MoveListEntry } from './review/move-list.js';
 import { seatDiscEl } from './seat-disc.js';
 
 export type StepCardMove = { label: string; note?: string };
+
+/** The squares a move into a position went from and to, as the painted board
+ *  keys its piece slots. A flip in place has from === to. */
+export type StepCardMotion = { from: string; to: string };
 
 export type StepCardGame = {
   /** Positions 0..count-1; with moves, position i is the one after i moves. */
@@ -48,6 +58,10 @@ export type StepCardGame = {
   seats?: { first: EmbedSeat; second: EmbedSeat };
   /** The result foot ("Red wins"); without one the foot counts the steps. */
   result?: string;
+  /** The move into position `index` (index >= 1), for the glide; null for a
+   *  step with no single moving piece (a drop, a figure). Without it the card
+   *  repaints and nothing glides. */
+  motion?: (index: number) => StepCardMotion | null;
   /** Open on this position; default 0. */
   start?: number;
   /** The second seat moved first: the sheet opens in its column. */
@@ -217,7 +231,16 @@ export function createStepCard(options: StepCardOptions, initial: StepCardGame):
   });
 
   function paint(from: number | null): void {
+    const glide = glideFor(from);
+    // The origin is read from the board still showing `from`: the piece stands
+    // there now, and may not after the repaint.
+    const origin = glide ? pieceSlotCentre(findPieceSlot(board, glide.origin)) : null;
     game.paint(board, index, from);
+    if (glide && origin) {
+      const slot = findPieceSlot(board, glide.settle);
+      const rest = pieceSlotCentre(slot);
+      if (slot && rest) glideSvgPiece(slot, origin.x - rest.x, origin.y - rest.y, glide.duration);
+    }
     // A landscape board (banqi) takes the room a narrower sheet column frees.
     const view = board.querySelector('svg')?.getAttribute('viewBox')?.split(/\s+/).map(Number);
     el.classList.toggle('article-step-card--landscape', !!view && view[2]! / view[3]! > 1.2);
@@ -232,6 +255,22 @@ export function createStepCard(options: StepCardOptions, initial: StepCardGame):
       foot.textContent = `${index + 1} / ${game.count}`;
       foot.hidden = false;
     }
+  }
+
+  // One step either way glides the mover; a step back runs the move in reverse.
+  // A longer jump, a flip in place, or a step with no motion only repaints.
+  function glideFor(
+    from: number | null,
+  ): { origin: string; settle: string; duration: number } | null {
+    if (from === null || !game.motion || Math.abs(index - from) !== 1) return null;
+    const forward = index > from;
+    const move = game.motion(forward ? index : from);
+    if (!move || move.from === move.to) return null;
+    const duration = pieceAnimationDurationMs();
+    if (duration <= 0) return null;
+    return forward
+      ? { origin: move.from, settle: move.to, duration }
+      : { origin: move.to, settle: move.from, duration };
   }
 
   function jump(target: number): void {

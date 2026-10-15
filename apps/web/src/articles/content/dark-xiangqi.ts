@@ -142,6 +142,8 @@ export const darkXiangqiArticle: Article = {
           },
           {
             kind: 'raw-svg-stepper',
+            // Fog: the variant's visibility keeps these steps static.
+            gameSpecId: 'dark-xiangqi',
             steps: XQ_FACING_GENERAL_STEPS,
           } as ArticleBlock,
         ],
@@ -156,6 +158,7 @@ export const darkXiangqiArticle: Article = {
           },
           {
             kind: 'raw-svg-stepper',
+            gameSpecId: 'dark-xiangqi',
             header: {
               players: 'rebirthfox333 (Red) vs Misty DXQ 1.1 (Black)',
               event: 'Production game · July 17, 2026',
