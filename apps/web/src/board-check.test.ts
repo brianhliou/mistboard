@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   type FortressXiangqiPlayerView,
   type JieqiPlayerView,
@@ -88,13 +90,24 @@ describe('board check glow', () => {
     expect(renderFortressXiangqiBoardSvg(view('red'), 'red')).not.toContain(GLOW);
   });
 
-  it('keeps the halo tight: at most 20% past the disc, never reaching a neighbour', () => {
+  it("keeps the halo close: 36% past the disc, its tail under a neighbour's disc", () => {
     // Xiangqi's piece is 54 units on a 60-unit cell.
     const svg = boardCheckGlowSvg({ x: 100, y: 100 }, 54);
     const r = Number(/class="board-check__glow"[^>]*\br="([\d.]+)"/.exec(svg)?.[1]);
-    expect(r).toBeGreaterThan(27);
-    expect(r).toBeLessThanOrEqual(27 * 1.2);
-    expect(r + 27).toBeLessThan(60);
+    expect(r).toBeCloseTo(27 * 1.36, 1);
+    // The halo draws under the pieces, so a tail that stops inside the outer
+    // half of a neighbour's disc is hidden by it.
+    expect(r).toBeLessThan(60 - 27 / 2);
+  });
+
+  it('paints the core at 0.85 and fades to nothing at the edge', () => {
+    // Resolved from the working directory: import.meta.url is not a file: URL here.
+    const cssPath = ['src/board-check.css', 'apps/web/src/board-check.css']
+      .map((candidate) => resolve(process.cwd(), candidate))
+      .find((candidate) => existsSync(candidate));
+    const css = readFileSync(cssPath as string, 'utf8');
+    expect(css).toMatch(/\.board-check__core\s*\{[^}]*stop-opacity:\s*0\.85;/);
+    expect(css).toMatch(/\.board-check__edge\s*\{[^}]*stop-opacity:\s*0;/);
   });
 
   it('Fog Xiangqi never glows, even with an attacker on the general file', () => {
