@@ -13,10 +13,13 @@ import {
   xmjViewFor,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
+import { ensureLocaleCatalog } from './i18n/catalog.js';
 import {
+  signed,
   type XmjTableOptions,
   xiangqiMahjongTableHtml,
   xmjFeltFromSearch,
+  xmjResultLine,
   xmjViewOffersAction,
 } from './xiangqi-mahjong-table.js';
 
@@ -188,5 +191,68 @@ describe('xiangqi mahjong table', () => {
     const host = doc(xiangqiMahjongTableHtml(xmjViewFor(current, 'east'), opts(true)));
     expect(host.querySelectorAll('.xmj-ledger tbody tr').length).toBeGreaterThan(1);
     expect(host.textContent).toMatch(/Match to (You|Bot)|Match drawn/);
+    expect(host.querySelector('.xmj-table > .xmj-hand-line')?.textContent).toBe('Hand 4 of 4');
+    const final = xmjViewFor(current, 'east');
+    const points = [...host.querySelectorAll('.xmj-points')].map((node) => node.textContent);
+    expect(points).toEqual(
+      (['west', 'east'] as const).map((seat) => `Score ${signed(final.scores[seat])}`),
+    );
+  });
+
+  it('shows the hand number at the top of the table while a hand is played', () => {
+    const host = doc(xiangqiMahjongTableHtml(xmjViewFor(state, mover), opts(true)));
+    expect(host.querySelector('.xmj-table')?.firstElementChild?.textContent).toBe('Hand 1 of 4');
+    expect(host.querySelector('.xmj-plate__facts')?.textContent).not.toContain('Hand');
+  });
+
+  it('signs scores with a real minus sign', () => {
+    expect([signed(3), signed(-3), signed(0)]).toEqual(['+3', '\u22123', '0']);
+  });
+});
+
+// East/west only alternate the deal; the table names players. The finished line
+// in the room chrome printed "points • West is victorious" beside a table that
+// said "You" and "Bot". Every reason, every locale: a player, never a seat.
+describe('xiangqi mahjong result line', () => {
+  const nameOf = (seat: XmjSeat) => (seat === 'east' ? 'brianhliou' : 'Xiangqi mahjong bot');
+  const reasons = ['points', 'timeout', 'resignation', 'abandonment', 'rules'];
+  const lines = () => [
+    ...reasons.flatMap((reason) =>
+      (['east', 'west'] as const).flatMap((winner) =>
+        (['east', 'west', 'spectator'] as const).map((viewer) =>
+          xmjResultLine(winner, reason, viewer, nameOf),
+        ),
+      ),
+    ),
+    xmjResultLine(null, 'tie', 'east', nameOf),
+    xmjResultLine(null, 'abandonment', 'spectator', nameOf),
+  ];
+
+  it('names the winner by player in English', () => {
+    expect(xmjResultLine('west', 'points', 'east', nameOf)).toBe(
+      'Xiangqi mahjong bot wins on points',
+    );
+    expect(xmjResultLine('east', 'points', 'east', nameOf)).toBe('You win on points');
+    expect(xmjResultLine('east', 'timeout', 'spectator', nameOf)).toBe('brianhliou wins on time');
+    expect(xmjResultLine(null, 'tie', 'east', nameOf)).toBe('Match drawn on points');
+    for (const line of lines()) expect(line).not.toMatch(/East|West/);
+  });
+
+  it('never names a wind in zh-Hans or zh-Hant', async () => {
+    for (const [path, locale] of [
+      ['/zh-hans/play', 'zh-Hans'],
+      ['/zh-hant/play', 'zh-Hant'],
+    ] as const) {
+      await ensureLocaleCatalog(locale);
+      window.history.pushState(null, '', path);
+      try {
+        expect(xmjResultLine('east', 'points', 'east', nameOf)).toMatch(
+          /^你以积分获胜$|^你以積分獲勝$/,
+        );
+        for (const line of lines()) expect(line).not.toMatch(/[东東西]|East|West/);
+      } finally {
+        window.history.pushState(null, '', '/');
+      }
+    }
   });
 });

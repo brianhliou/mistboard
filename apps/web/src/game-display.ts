@@ -2,7 +2,7 @@ import { type GameSpecId, maybeGameSpecForId } from '@mistboard/game';
 import { isFlipSeatVariant, seatInkForVariant } from './flip-seat-ink.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import type { Locale } from './i18n/locale.js';
-import { seatColorWord } from './variant-seat-label.js';
+import { seatColorWord, seatsNamePlayers } from './variant-seat-label.js';
 
 export const MISTBOARD_ENGINE_SNAPSHOT_ID = 'engine-v2-2026-05-24';
 export const MISTBOARD_ENGINE_SNAPSHOT_NAME = 'Mistboard Engine v2.0';
@@ -18,7 +18,8 @@ export const MISTBOARD_ENGINE_MISTY_ID = 'python-v2-v1.6';
 export const MISTBOARD_ENGINE_MISTY_NAME = 'Misty 1.6';
 
 export type GameParticipant = {
-  color: 'white' | 'black' | 'red';
+  // east/west: xiangqi mahjong, whose seats are winds, not colours (variant-seat-label.ts SEAT_NAMING).
+  color: 'white' | 'black' | 'red' | 'east' | 'west';
   displayName: string;
   subjectType: 'guest' | 'user' | 'bot' | 'engine-version' | 'manual' | 'imported';
   subjectId: string | null;
@@ -140,11 +141,13 @@ export type MatchupSeatPair = readonly [GameParticipant['color'], GameParticipan
 export function matchupSeats(game: FeaturedGame): MatchupSeatPair {
   const colors = new Set((game.participants ?? []).map((participant) => participant.color));
   if (colors.size >= 2) {
+    if (colors.has('east') && colors.has('west')) return ['east', 'west'];
     if (!colors.has('red')) return ['white', 'black'];
     return colors.has('white') ? ['white', 'red'] : ['red', 'black'];
   }
   const family = maybeGameSpecForId(game.variant)?.family;
   if (family === 'xiangqi' || family === 'jungle') return ['red', 'black'];
+  if (family === 'mahjong') return ['east', 'west'];
   return ['white', 'black'];
 }
 
@@ -171,6 +174,9 @@ function fallbackSeatName(
   color: GameParticipant['color'],
   firstColor?: 'red' | 'black' | null,
 ): string {
+  // A variant whose seat id is bookkeeping (xiangqi mahjong's east/west) has no
+  // seat word to fall back on: a nameless seat is a guest, never "West".
+  if (seatsNamePlayers(variant)) return t('watch.guest');
   // Flip variants (banqi, jungle-flip) seat by MOVE ORDER, so the seat id is not a
   // colour claim: naming a nameless seat "Red" is wrong for half of all games. Use
   // the bound ink when the row carries firstColor, and the move-order word when it
@@ -307,6 +313,12 @@ export function gameOutcome(result: string, variant?: string | null): GameOutcom
   if (result === 'black-wins') return { winner: seatColorWord(variant, 'black') };
   if (result === 'white-wins') return { winner: seatColorWord(variant, 'white') };
   if (result === 'draw') return { draw: true };
+  if (result === 'east-wins' || result === 'west-wins') {
+    // No participants reach this function, so a player-named variant gets the
+    // seat-neutral word rather than "West wins" (variant-seat-label.ts SEAT_NAMING).
+    if (seatsNamePlayers(variant)) return { label: t('watch.decisive') };
+    return { winner: seatColorWord(variant, result === 'east-wins' ? 'east' : 'west') };
+  }
   return { label: humanizeToken(result) };
 }
 

@@ -401,6 +401,49 @@ describe('tenant room chrome player names', () => {
     expect(empty.refs.playerTop.textContent).not.toContain('Guest');
   });
 
+  // Xiangqi mahjong's seat ids only alternate the deal; its table names players.
+  // The meta card read "points • West is victorious" and the move-list result
+  // "Points • West is victorious" beside a table that said "You" and "Bot".
+  it('names seats and the finished line through the tenant player hooks', () => {
+    const playerTenant: WebVariantTenant<Color> = {
+      ...tenant,
+      reasonPhrase: () => 'result.onPoints',
+      seatPlayerName: (seat) => (seat === 'white' ? 'You' : 'Bot'),
+      finishedLine: (winner) => (winner === 'red' ? 'Bot wins on points' : 'You win on points'),
+    };
+    const finished: TenantWebView<Color> = {
+      id: 'test_room',
+      status: { type: 'finished', winner: 'red', reason: 'points' },
+      moveNumber: 30,
+    };
+    const { chrome, refs } = chromeHarness({ view: finished }, playerTenant);
+    chrome.renderMeta();
+    expect(refs.gameInfo.textContent).toContain('Bot wins on points');
+    expect(refs.gameInfo.textContent).toContain('You');
+    expect(refs.gameInfo.textContent).not.toMatch(/Red|White|victorious|\(/);
+    const console = document.createElement('section');
+    console.className = 'game-console';
+    const result = document.createElement('div');
+    result.dataset.gameResult = '';
+    result.hidden = true;
+    console.append(refs.actionSection, result);
+    chrome.renderActionStatus();
+    expect(result.textContent).toContain('Bot wins on points');
+    expect(result.textContent).not.toMatch(/Red|victorious/);
+  });
+
+  it('capitalizes the finished line on the meta card like the move-list result', () => {
+    const { chrome, refs } = chromeHarness({
+      view: {
+        id: 'test_room',
+        status: { type: 'finished', winner: 'red', reason: 'points' },
+        moveNumber: 30,
+      },
+    });
+    chrome.renderMeta();
+    expect(refs.gameInfo.textContent).toContain('The game rules • Red is victorious');
+  });
+
   it('names an anonymous opponent Guest on the meta card too', () => {
     const { chrome, refs } = chromeHarness({});
     chrome.renderMeta();

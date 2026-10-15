@@ -17,6 +17,7 @@ import { currentLocale, LOCALE_META, type Locale } from './i18n/locale.js';
 import { appendWithNameNode, participantProfileTarget, playerNameEl } from './profile-link.js';
 import { attachBotCard } from './profile-summary-card.js';
 import { renderVariantMarker } from './variant-markers.js';
+import { seatsNamePlayers } from './variant-seat-label.js';
 import { webVariantTenantForRoomId, webVariantTenantForSpecId } from './variant-tenant/registry.js';
 import { variantMiniIdForRawVariant } from './variants.js';
 
@@ -273,7 +274,9 @@ export function buildProfileGameRow(
     tag.title = unavailable.title;
     details.append(tag);
   }
-  if (!neutral)
+  // A player-named variant (xiangqi mahjong) has no side to show: its seat id is
+  // bookkeeping, and the old fallback printed "White" for an east seat.
+  if (!neutral && !seatsNamePlayers(game.variant))
     details.append(buildGameDetail(profileSideLabel(game, locale), 'profile-game-side'));
   // Only rated games get a badge; casual (the default, and every game while
   // rated is gated off) stays untagged so the feed isn't littered with "Casual".
@@ -356,6 +359,9 @@ export function profileResultTone(game: FeaturedGame): 'win' | 'loss' | 'draw' {
   if (game.result === 'draw') return 'draw';
   if (game.playerColor === 'red') return game.result === 'red-wins' ? 'win' : 'loss';
   if (game.playerColor === 'black') return game.result === 'black-wins' ? 'win' : 'loss';
+  if (game.playerColor === 'east' || game.playerColor === 'west') {
+    return game.result === `${game.playerColor}-wins` ? 'win' : 'loss';
+  }
   return game.result === 'white-wins' ? 'win' : 'loss';
 }
 
@@ -399,7 +405,7 @@ function localizedSeatName(name: string, locale: Locale): string {
 function opponentColor(
   game: FeaturedGame,
   color: FeaturedGame['playerColor'],
-): 'white' | 'black' | 'red' {
+): GameParticipant['color'] {
   const [first, second] = matchupSeats(game);
   return color === first ? second : first;
 }

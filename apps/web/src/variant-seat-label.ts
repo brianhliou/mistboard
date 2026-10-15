@@ -1,4 +1,4 @@
-import { maybeGameSpecForId } from '@mistboard/game';
+import { type GameSpecId, maybeGameSpecForId } from '@mistboard/game';
 import { t } from './i18n/catalog.js';
 
 // Display word for a seat color. The Jungle family (Jungle Chess + Flip Jungle)
@@ -36,4 +36,39 @@ export function brandsBlackAsBlue(variant: string | null | undefined): boolean {
  */
 export function seatInkFamily(variant: string | null | undefined): string | null {
   return brandsBlackAsBlue(variant) ? 'jungle' : null;
+}
+
+/**
+ * How a variant names its seats on list and result surfaces. 'seat-word': the
+ * seat id IS a side the player plays as (Red, Black, White, the mahjong winds),
+ * so "West wins" is a sentence. 'player': the seat id is bookkeeping nobody plays
+ * as. Xiangqi mahjong's east/west only alternate the deal, its table names the
+ * seats "You", the handle or the bot, and "West is victorious" beside that table
+ * read as a third party. A 'player' variant names the winner by player, or uses a
+ * seat-neutral phrase where no name is at hand, and never prints the seat id.
+ *
+ * Exhaustive over GameSpecId so a new variant must choose (fail closed); an
+ * unknown or legacy variant string reads as 'seat-word', the old behaviour.
+ */
+export type SeatNaming = 'seat-word' | 'player';
+const SEAT_NAMING: Readonly<Record<GameSpecId, SeatNaming>> = {
+  banqi: 'seat-word',
+  mahjong: 'seat-word',
+  'xiangqi-mahjong': 'player',
+  'dark-chess': 'seat-word',
+  'dark-xiangqi': 'seat-word',
+  'fortress-xiangqi': 'seat-word',
+  jieqi: 'seat-word',
+  jungle: 'seat-word',
+  'jungle-flip': 'seat-word',
+  xiangqi: 'seat-word',
+  'crazyhouse-xiangqi': 'seat-word',
+  'duck-xiangqi': 'seat-word',
+  'atomic-xiangqi': 'seat-word',
+  chess: 'seat-word',
+};
+
+export function seatsNamePlayers(variant: string | null | undefined): boolean {
+  const spec = variant ? maybeGameSpecForId(variant) : undefined;
+  return spec ? SEAT_NAMING[spec.id] === 'player' : false;
 }

@@ -29,6 +29,7 @@ import {
   xmjSortTiles,
 } from '@mistboard/game';
 import { type I18nKey, t } from './i18n/catalog.js';
+import type { TenantReasonKey } from './variant-tenant/room-chrome.js';
 import { escapeHtml } from './web-utils.js';
 
 export interface XmjTableOptions {
@@ -76,8 +77,58 @@ export function xmjTileName(tile: XmjTile): string {
   });
 }
 
-function signed(points: number): string {
-  return points > 0 ? `+${points}` : `${points}`;
+export function xmjReasonPhrase(reason: string): TenantReasonKey {
+  switch (reason) {
+    case 'points':
+      return 'result.onPoints';
+    case 'tie':
+      return 'result.drawPhrase';
+    case 'timeout':
+      return 'result.timeout';
+    case 'resignation':
+      return 'result.resignation';
+    case 'abandonment':
+      return 'result.abandonment';
+    default:
+      return 'result.gameRules';
+  }
+}
+
+// One whole sentence per reason, so the zh catalogs order it their own way.
+type XmjWinLine = readonly [I18nKey, I18nKey];
+const XMJ_WIN_LINES: ReadonlyMap<string, XmjWinLine> = new Map<string, XmjWinLine>([
+  ['points', ['live.xmj.youWinOnPoints', 'live.xmj.nameWinsOnPoints']],
+  ['timeout', ['live.xmj.youWinOnTime', 'live.xmj.nameWinsOnTime']],
+  ['resignation', ['live.xmj.youWinByResignation', 'live.xmj.nameWinsByResignation']],
+  ['abandonment', ['live.xmj.youWinByAbandonment', 'live.xmj.nameWinsByAbandonment']],
+]);
+const XMJ_WIN_FALLBACK: XmjWinLine = ['live.xmj.youWin', 'live.xmj.nameWins'];
+
+/**
+ * The finished-match line for the room chrome (meta card, the result under the
+ * move list, the notice): the winner by player, "You" for the viewer's own seat,
+ * never the seat id. East/west only alternate the deal; the table names players.
+ */
+export function xmjResultLine(
+  winner: XmjSeat | null,
+  reason: string,
+  viewer: unknown,
+  nameOf: (seat: XmjSeat) => string,
+): string {
+  if (winner === null) {
+    if (reason === 'tie') return t('live.xmj.drawnOnPoints');
+    return t('result.drawByReason', { reason: t(xmjReasonPhrase(reason)) });
+  }
+  const [youKey, nameKey] = XMJ_WIN_LINES.get(reason) ?? XMJ_WIN_FALLBACK;
+  return winner === viewer ? t(youKey) : t(nameKey, { name: nameOf(winner) });
+}
+
+// A real minus sign (U+2212), not the hyphen: it is as wide as the plus, so a
+// column of scores lines up, and the seat rows and the ledger read the same.
+export function signed(points: number): string {
+  if (points > 0) return `+${points}`;
+  if (points < 0) return `\u2212${-points}`;
+  return '0';
 }
 
 function tileClass(tile: XmjTile, extra = ''): string {
@@ -186,7 +237,7 @@ function seatRowHtml(
     view.turn === seat
       ? `<span class="xmj-badge xmj-badge--turn">${t('live.xmj.toDiscard')}</span>`
       : '';
-  return `<div class="xmj-seat-row"><span class="xmj-name">${escapeHtml(names[seat])}</span>${dealer}<span class="xmj-points">${signed(view.scores[seat])}</span>${turn}</div>`;
+  return `<div class="xmj-seat-row"><span class="xmj-name">${escapeHtml(names[seat])}</span>${dealer}<span class="xmj-points">${t('live.xmj.score', { points: signed(view.scores[seat]) })}</span>${turn}</div>`;
 }
 
 function opponentHtml(
@@ -329,11 +380,7 @@ function plateHtml(
   } else {
     message = t('live.xmj.theirTurn', { name: escapeHtml(names[view.turn]) });
   }
-  const hand = t('live.xmj.handOf', {
-    hand: Math.min(view.handNumber, view.handsInMatch),
-    hands: view.handsInMatch,
-  });
-  return `<div class="xmj-plate"><div class="xmj-plate__facts"><span>${hand}</span><span>${t('live.xmj.wall', { count: view.wallCount })}</span></div><p class="xmj-message">${message}</p></div>`;
+  return `<div class="xmj-plate"><div class="xmj-plate__facts"><span>${t('live.xmj.wall', { count: view.wallCount })}</span></div><p class="xmj-message">${message}</p></div>`;
 }
 
 function groupHtml(tiles: readonly XmjTile[], caption: string, winning: XmjTile | null): string {
@@ -465,5 +512,11 @@ export function xiangqiMahjongTableHtml(view: XmjPlayerView, options: XmjTableOp
   const centre = handOver ? resultHtml(view, options) : plateHtml(view, self, names);
   const claimBubble = you ? bubbleHtml(view, names) : '';
   const actions = handOver || !you ? '' : actionsHtml(view, options);
-  return `<div class="xmj-table">${opponentHtml(view, opponent, names)}${pondHtml(view, opponent, false, names, claimBubble)}${centre}${pondHtml(view, self, you, names, '')}${actions}${selfHtml(view, self, you, options.canAct && you, names)}</div>`;
+  // Where the match stands, above everything: handsInMatch is the server's
+  // min(XMJ_MATCH_HANDS, walls dealt), so a short test match reads true too.
+  const handLine = `<p class="xmj-hand-line">${t('live.xmj.handOf', {
+    hand: Math.min(view.handNumber, view.handsInMatch),
+    hands: view.handsInMatch,
+  })}</p>`;
+  return `<div class="xmj-table">${handLine}${opponentHtml(view, opponent, names)}${pondHtml(view, opponent, false, names, claimBubble)}${centre}${pondHtml(view, self, you, names, '')}${actions}${selfHtml(view, self, you, options.canAct && you, names)}</div>`;
 }

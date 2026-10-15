@@ -12,6 +12,7 @@ import {
   type FeaturedGame,
   firstMoverColorName,
   type GameParticipant,
+  gameOutcome,
   matchupLabel,
   matchupSeats,
   secondMoverColorName,
@@ -183,6 +184,20 @@ describe('displayParticipantName', () => {
     } finally {
       window.history.pushState(null, '', '/');
     }
+  });
+});
+
+// Xiangqi mahjong's seat ids are bookkeeping; with no names at hand the outcome
+// is seat-neutral, never "West wins". The Hong Kong table keeps its winds.
+describe('gameOutcome for wind seats', () => {
+  it('is seat-neutral for xiangqi mahjong and keeps the wind for mahjong', () => {
+    expect(gameOutcome('west-wins', 'xiangqi-mahjong')).toEqual({ label: 'Decisive' });
+    expect(gameOutcome('east-wins', 'xiangqi-mahjong')).toEqual({ label: 'Decisive' });
+    expect(gameOutcome('east-wins', 'mahjong')).toEqual({ winner: 'East' });
+  });
+
+  it('pairs xiangqi mahjong seats east vs west', () => {
+    expect(matchupSeats(game('xiangqi-mahjong'))).toEqual(['east', 'west']);
   });
 });
 

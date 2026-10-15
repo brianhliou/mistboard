@@ -93,6 +93,14 @@
   min-width: 0;
 }
 
+.xmj-hand-line {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.8;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
 .xmj-seat {
   display: flex;
   flex-direction: column;

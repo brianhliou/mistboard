@@ -28,12 +28,14 @@ import {
   type TenantLiveEvent,
   type TenantMovePlayed,
 } from './variant-tenant/live-client.js';
-import type { TenantReasonKey, WebVariantTenant } from './variant-tenant/room-chrome.js';
+import type { WebVariantTenant } from './variant-tenant/room-chrome.js';
 import './xiangqi-mahjong.css';
 import {
   xiangqiMahjongTableHtml,
   xmjCountdown,
   xmjFeltFromSearch,
+  xmjReasonPhrase,
+  xmjResultLine,
   xmjViewOffersAction,
 } from './xiangqi-mahjong-table.js';
 
@@ -118,21 +120,17 @@ function startTicker(board: HTMLElement): void {
   }, 250);
 }
 
-function xmjReasonPhrase(reason: string): TenantReasonKey {
-  switch (reason) {
-    case 'points':
-      return 'result.onPoints';
-    case 'tie':
-      return 'result.drawPhrase';
-    case 'timeout':
-      return 'result.timeout';
-    case 'resignation':
-      return 'result.resignation';
-    case 'abandonment':
-      return 'result.abandonment';
-    default:
-      return 'result.gameRules';
-  }
+// A seat by its player, for the room chrome around the table (player rows, the
+// finished line): "You" for the viewer's own seat, else the server's name for the
+// seat (handle, the bot's name), else the table's own word. Never "East"/"West":
+// the seat id only alternates the deal.
+function xmjPlayerName(seat: XmjSeat): string {
+  if (seat === core?.state.seat) return t('live.xmj.you');
+  return core?.state.seatDisplayNames?.[seat] ?? seatNames()[seat];
+}
+
+function xmjFinishedLine(winner: XmjSeat | null, reason: string): string {
+  return xmjResultLine(winner, reason, core?.state.seat ?? null, xmjPlayerName);
 }
 
 const xmjWebTenant: WebVariantTenant<XmjSeat> = {
@@ -145,6 +143,8 @@ const xmjWebTenant: WebVariantTenant<XmjSeat> = {
   // No review page exists, so no link: the postgame panel drops an empty href.
   reviewUrl: () => '',
   reasonPhrase: xmjReasonPhrase,
+  seatPlayerName: xmjPlayerName,
+  finishedLine: xmjFinishedLine,
   rejectedBody: 'live.xiangqiMahjongRoomNotActive',
   liveGameRejectedBody: 'live.roomLiveHandSeatedOnly',
   spectatorBody: 'live.spectatorXiangqiMahjong',
