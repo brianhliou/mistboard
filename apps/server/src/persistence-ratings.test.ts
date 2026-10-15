@@ -683,6 +683,75 @@ definePersistenceTests('ratings', () => {
     assert.ok(alpha.rank < beta.rank, 'more games ranks higher');
   });
 
+  test('getMostActivePlayers leaves out stats-excluded accounts', async () => {
+    const now = new Date();
+    for (const [id, handle] of [
+      ['actx_op', 'actx-operator'],
+      ['actx_real', 'actx-real'],
+    ] as const) {
+      await createUser({
+        id,
+        email: `${id}@actx.com`,
+        emailVerifiedAt: now,
+        handle,
+        displayName: handle,
+        profileVisibility: 'public',
+        now,
+      });
+    }
+    for (let i = 0; i < 3; i += 1) {
+      await recordGameEnd(`actx-game-${i}`, {
+        variant: 'jungle',
+        mode: 'pvp',
+        result: 'white-wins',
+        termination: 'resignation',
+        plyCount: 10,
+        startedAt: now,
+        endedAt: now,
+        whiteClient: 'browser',
+        blackClient: 'browser',
+        whiteName: null,
+        blackName: null,
+        corpusId: null,
+        participants: [
+          {
+            color: 'white',
+            displayName: 'Op',
+            subjectType: 'user',
+            subjectId: 'actx_op',
+            visibility: 'public',
+          },
+          {
+            color: 'black',
+            displayName: 'Real',
+            subjectType: 'user',
+            subjectId: 'actx_real',
+            visibility: 'public',
+          },
+        ],
+        visibility: 'public',
+      });
+    }
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      await client.query(`UPDATE users SET stats_excluded_at = now() WHERE id = 'actx_op'`);
+    } finally {
+      await client.end();
+    }
+
+    const active = await getMostActivePlayers(50);
+    const handles = active.map((entry) => entry.handle);
+    assert.ok(!handles.includes('actx-operator'), 'stats-excluded account left off');
+    const real = active.find((entry) => entry.handle === 'actx-real');
+    assert.ok(real, 'its opponent stays on the board');
+    assert.equal(
+      real.gamesPlayed,
+      3,
+      'games against an excluded account still count for the opponent',
+    );
+  });
+
   test('getUserProfileByHandle lists completed account-attributed games', async () => {
     const now = new Date('2026-05-08T10:00:00.000Z');
     await createUser({

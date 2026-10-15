@@ -821,32 +821,35 @@ describe('profile ratings rail', () => {
 
   it('renders rating stats from leaderboard data', async () => {
     vi.stubEnv('DEV', false);
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(
+    const entries = [
+      {
+        rank: 1,
+        handle: 'misty',
+        displayName: 'Misty',
+        eloRating: 1540,
+        gamesPlayed: 12,
+        provisional: false,
+      },
+      {
+        rank: 2,
+        handle: 'foggy',
+        displayName: 'Foggy',
+        eloRating: 1460,
+        gamesPlayed: 9,
+        provisional: false,
+      },
+    ];
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = new URL(String(input), 'https://mistboard.test');
+      const timeClass = url.searchParams.get('timeClass');
+      return new Response(
         JSON.stringify({
-          bucket: { variant: 'fog', timeClass: 'blitz' },
-          leaderboard: [
-            {
-              rank: 1,
-              handle: 'misty',
-              displayName: 'Misty',
-              eloRating: 1540,
-              gamesPlayed: 12,
-              provisional: false,
-            },
-            {
-              rank: 2,
-              handle: 'foggy',
-              displayName: 'Foggy',
-              eloRating: 1460,
-              gamesPlayed: 9,
-              provisional: false,
-            },
-          ],
+          bucket: { variant: url.searchParams.get('variant'), timeClass },
+          leaderboard: timeClass === 'blitz' ? entries : [],
         }),
         { headers: { 'content-type': 'application/json' }, status: 200 },
-      ),
-    );
+      );
+    });
     const root = document.createElement('div');
     const { mountRatingStats } = await import('./profile.js');
 
@@ -863,8 +866,98 @@ describe('profile ratings rail', () => {
       '2 rated Fog Chess players. Average rating is 1500.',
     );
     expect(root.querySelectorAll('.rating-stats-bar').length).toBeGreaterThan(0);
-    expect(fetchSpy).toHaveBeenCalledWith('/api/leaderboard?variant=fog&limit=500');
+    expect(fetchSpy).toHaveBeenCalledWith('/api/leaderboard?variant=fog&timeClass=blitz&limit=500');
   });
+
+  it('offers one chip per rated pace and opens on the pool with the most players', async () => {
+    vi.stubEnv('DEV', false);
+    const player = (handle: string, eloRating: number) => ({
+      rank: 1,
+      handle,
+      displayName: handle,
+      eloRating,
+      gamesPlayed: 5,
+      provisional: true,
+    });
+    const pools: Record<string, ReturnType<typeof player>[]> = {
+      bullet: [player('a', 1500), player('b', 1600), player('c', 1700)],
+      blitz: [player('d', 1500)],
+      rapid: [],
+    };
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = new URL(String(input), 'https://mistboard.test');
+      const timeClass = url.searchParams.get('timeClass') ?? 'blitz';
+      return new Response(
+        JSON.stringify({ bucket: { variant: 'fog', timeClass }, leaderboard: pools[timeClass] }),
+        { headers: { 'content-type': 'application/json' }, status: 200 },
+      );
+    });
+    const root = document.createElement('div');
+    const { mountRatingStats } = await import('./profile.js');
+
+    await mountRatingStats(root);
+
+    const chips = [...root.querySelectorAll<HTMLButtonElement>('.rating-stats-pace')];
+    expect(chips.map((chip) => chip.textContent)).toEqual(['Bullet', 'Blitz', 'Rapid']);
+    const pressed = () =>
+      root.querySelector<HTMLButtonElement>('.rating-stats-pace[aria-pressed="true"]')?.dataset
+        .timeClass;
+    expect(pressed()).toBe('bullet');
+    expect(root.querySelector('.rating-stats-summary')?.textContent).toBe(
+      '3 rated Fog Chess players. Average rating is 1600.',
+    );
+
+    // An empty pool says so and links to Find opponent for this variant.
+    chips[2]!.click();
+    await vi.waitFor(() =>
+      expect(root.querySelector('.rating-stats-empty')?.textContent).toContain(
+        'No rated games at this time control yet.',
+      ),
+    );
+    expect(pressed()).toBe('rapid');
+    expect(root.querySelector('.rating-stats-bar')).toBeNull();
+    const cta = root.querySelector<HTMLAnchorElement>('.rating-stats-empty-cta');
+    expect(cta?.textContent).toBe('Find opponent');
+    expect(cta?.getAttribute('href')).toBe('/?play=lobby&gameSpecId=dark-chess');
+  });
+
+  it('picks blitz when every pool ties', async () => {
+    const { ratingStatsDefaultPace } = await import('./profile.js');
+    expect(
+      ratingStatsDefaultPace([
+        { timeClass: 'bullet', players: 0 },
+        { timeClass: 'blitz', players: 0 },
+        { timeClass: 'rapid', players: 0 },
+      ]),
+    ).toBe('blitz');
+    expect(
+      ratingStatsDefaultPace([
+        { timeClass: 'bullet', players: 2 },
+        { timeClass: 'blitz', players: 1 },
+        { timeClass: 'rapid', players: 2 },
+      ]),
+    ).toBe('bullet');
+  });
+
+  it('localizes the empty pool state', async () => {
+    vi.stubEnv('DEV', false);
+    window.history.replaceState(null, '', '/zh-hant/player/rating-stats');
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async () =>
+        new Response(JSON.stringify({ bucket: {}, leaderboard: [] }), {
+          headers: { 'content-type': 'application/json' },
+          status: 200,
+        }),
+    );
+    const root = document.createElement('div');
+    const { mountRatingStats } = await import('./profile.js');
+    await mountRatingStats(root);
+    expect(root.querySelector('.rating-stats-empty')?.textContent).toContain(
+      '這個用時還沒有計分對局。',
+    );
+    expect(root.querySelector('.rating-stats-empty-cta')?.textContent).toBe('尋找對手');
+  });
+
   it('scopes the games list to the variant picked in the rating rail, and can clear it', async () => {
     // Before this, picking a variant moved the rating spotlight while the games
     // list kept showing every variant -- the list is paginated, so the filter

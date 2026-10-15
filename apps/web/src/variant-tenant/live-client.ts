@@ -760,10 +760,10 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       gameId: view.id,
       variant: config.gameSpecId,
       ...(lifecycleSpecProps ?? {}),
-      // The tenant stack carries no per-room rated flag, so this is unknown
-      // here rather than false. Do not substitute a guess: the legacy stack
-      // reports a real value and a fabricated one would silently pool with it.
-      rated: null,
+      // The room's rated fact (snapshot `rated`, read in applyFrame), so
+      // PostHog can count rated starts beside the chess stack's. Null until
+      // 2026-10-14, from before the tenant client kept the flag.
+      rated: state.rated,
       ...roomModeAnalyticsProps(config.chrome?.roomMode?.() ?? 'pvp', opponentSeatName()),
       initialMs: timeControl?.initialMs ?? null,
       incrementMs: timeControl?.incrementMs ?? null,
