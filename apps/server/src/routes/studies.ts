@@ -26,6 +26,7 @@ import {
 } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
 import * as persistence from './../persistence.js';
+import { STUDY_PAGE_MAX } from './../persistence-studies.js';
 import {
   readJsonBody,
   requireAdminSession,
@@ -111,7 +112,9 @@ function publicStudyView(study: persistence.PublicStudySummary) {
 
 function parseLimit(params: URLSearchParams, fallback: number): number {
   const value = Number(params.get('limit'));
-  return Number.isFinite(value) && value > 0 ? value : fallback;
+  return Number.isFinite(value) && value > 0
+    ? Math.min(Math.trunc(value), STUDY_PAGE_MAX)
+    : fallback;
 }
 
 function parseOffset(params: URLSearchParams): number {
