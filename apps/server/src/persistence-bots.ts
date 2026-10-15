@@ -546,7 +546,24 @@ async function queryLatestPublishedRatings(
   return ratingsByBotId;
 }
 
-async function queryBotGames(botId: string, limit: number): Promise<ProfileGameRecord[]> {
+// One page of a bot's games in one variant, newest first: the bot page's
+// "Load more" past the per-variant list the profile payload carries (#550).
+// Same rows as that list (public games, public seat); the bot's own
+// visibility is the route's check (routes/bots.ts).
+export async function getBotGamesPage(
+  botId: string,
+  variant: string,
+  offset: number,
+  limit: number,
+): Promise<ProfileGameRecord[]> {
+  return queryBotGames(botId, limit, { variant, offset });
+}
+
+async function queryBotGames(
+  botId: string,
+  limit: number,
+  page: { variant?: string; offset?: number } = {},
+): Promise<ProfileGameRecord[]> {
   const { rows } = await getPool().query<BotGameRow>(
     `SELECT games.room_id,
             game_participants.color AS player_color,
@@ -571,9 +588,15 @@ async function queryBotGames(botId: string, limit: number): Promise<ProfileGameR
         AND games.status = 'completed'
         AND games.visibility = 'public'
         AND game_participants.visibility = 'public'
+        AND ($3::text IS NULL OR games.variant = $3)
       ORDER BY games.ended_at DESC, games.room_id DESC
-      LIMIT $2`,
-    [botId, Math.max(1, Math.min(limit, 50))],
+      LIMIT $2 OFFSET $4`,
+    [
+      botId,
+      Math.max(1, Math.min(limit, 50)),
+      page.variant ?? null,
+      Math.max(0, Math.trunc(page.offset ?? 0)),
+    ],
   );
   return attachGameParticipants(rows.map(botGameFromRow));
 }

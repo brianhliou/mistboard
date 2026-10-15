@@ -81,7 +81,12 @@ export type {
   BotRatingSnapshot,
   BotRatingSource,
 } from './persistence-bots.js';
-export { getPublicBotForPlay, getPublicBotProfile, listPublicBots } from './persistence-bots.js';
+export {
+  getBotGamesPage,
+  getPublicBotForPlay,
+  getPublicBotProfile,
+  listPublicBots,
+} from './persistence-bots.js';
 export type { ChatLineRecord, ChatModerationStatus, ChatReportRecord } from './persistence-chat.js';
 export {
   activeChatTimeout,

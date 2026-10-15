@@ -475,6 +475,61 @@ describe('bot pages', () => {
     expect(gameLinks()).toEqual(['/xiangqi/game/room_x1']);
   });
 
+  it('pages older games of the selected variant past the profile cap (#550)', async () => {
+    const game = (index: number) => ({
+      roomId: `room_x${index}`,
+      variant: 'xiangqi',
+      mode: 'pve',
+      rated: false,
+      result: 'white-wins',
+      termination: 'checkmate',
+      plyCount: 30,
+      whiteName: 'Pikafish',
+      blackName: 'challenger',
+      corpusId: null,
+      endedAt: '2026-07-01T00:00:00.000Z',
+      playerColor: 'white',
+    });
+    const firstPage = Array.from({ length: 10 }, (_, index) => game(12 - index));
+    const profile = pikafish({
+      recordsByGameSpecId: {
+        xiangqi: { games: 12, wins: 12, losses: 0, draws: 0 },
+        jieqi: { games: 0, wins: 0, losses: 0, draws: 0 },
+      },
+      gamesByGameSpecId: { xiangqi: firstPage, jieqi: [] },
+    });
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse({ bot: profile }))
+      .mockResolvedValueOnce(jsonResponse({ games: [game(2), game(1)] }));
+    const root = document.createElement('div');
+    const { mountBotProfile } = await import('./bots.js');
+
+    await mountBotProfile(root, 'pikafish');
+
+    const rows = () => root.querySelectorAll('.bot-profile-games .profile-game-row-open').length;
+    expect(rows()).toBe(10);
+    const more = root.querySelector<HTMLButtonElement>(
+      '.bot-profile-games .profile-games-more-btn',
+    );
+    expect(more).not.toBeNull();
+
+    more?.click();
+    await flushPromises();
+    await flushPromises();
+
+    expect(String(fetchMock.mock.calls[1]?.[0])).toBe(
+      '/api/bots/pikafish/games?variant=xiangqi&offset=10&limit=15',
+    );
+    expect(rows()).toBe(12);
+    // Every game of the variant is on the page, so the control goes away.
+    expect(root.querySelector('.bot-profile-games .profile-games-more')).toBeNull();
+
+    // A variant with nothing past the first page never offers the control.
+    root.querySelector<HTMLElement>('.bot-rating-row[data-game-spec-id="jieqi"]')?.click();
+    expect(root.querySelector('.bot-profile-games .profile-games-more-btn')).toBeNull();
+  });
+
   it('names the variant when the selected one has no games, and never shows lifetime numbers under it', async () => {
     const profile = pikafish({
       gamesTotal: 64,
