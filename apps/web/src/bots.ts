@@ -80,6 +80,9 @@ type BotProfile = {
 
 class BotNotFound extends Error {}
 
+// Games per "Load more" click on a bot profile (server routes/bots.ts).
+const BOT_GAMES_PAGE = 15;
+
 const LADDER_BOT_ID_PREFIX = 'fairy-stockfish-level-';
 // The jieqi ladder's level bots (2026-09-29); its top rung is Pikafish.
 const JIEQI_LADDER_BOT_ID_PREFIX = 'pikafish-level-';
@@ -751,7 +754,77 @@ function buildRecentGames(bot: BotProfile, gameSpecId: string): HTMLElement {
   list.className = 'profile-game-list profile-activity';
   for (const game of games) list.append(buildProfileGameRow(game));
   section.append(list);
+  // The payload carries only the newest games per variant; the record counts
+  // the same rows, so a gap between the two means older games to page in.
+  const total = botRecordFor(bot, gameSpecId).games;
+  if (games.length < total) {
+    section.append(
+      buildBotGamesMore(bot.id, gameSpecId, games.length, total, (page) => {
+        for (const game of page) list.append(buildProfileGameRow(game));
+      }),
+    );
+  }
   return section;
+}
+
+// "Load more" for one variant's games, the player profile's control and stop
+// rule (profile.ts profileGamesMore). Switching variant rebuilds the panel, so
+// the page count never carries across variants.
+function buildBotGamesMore(
+  botId: string,
+  gameSpecId: string,
+  startRendered: number,
+  total: number,
+  appendGames: (games: FeaturedGame[]) => void,
+): HTMLElement {
+  let rendered = startRendered;
+  const moreWrap = document.createElement('div');
+  moreWrap.className = 'profile-games-more';
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'profile-games-more-btn';
+  button.textContent = t('profile.loadMore');
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    button.textContent = t('profile.loadingMore');
+    const page = await fetchBotGamesPage(botId, gameSpecId, rendered).catch((err) => {
+      console.warn(err);
+      return null;
+    });
+    if (!page) {
+      button.disabled = false;
+      button.textContent = t('profile.loadMore');
+      return;
+    }
+    appendGames(page);
+    rendered += page.length;
+    if (rendered >= total || page.length === 0) {
+      moreWrap.remove();
+    } else {
+      button.disabled = false;
+      button.textContent = t('profile.loadMore');
+    }
+  });
+  moreWrap.append(button);
+  return moreWrap;
+}
+
+async function fetchBotGamesPage(
+  botId: string,
+  gameSpecId: string,
+  offset: number,
+): Promise<FeaturedGame[]> {
+  const params = new URLSearchParams({
+    variant: gameSpecId,
+    offset: String(offset),
+    limit: String(BOT_GAMES_PAGE),
+  });
+  const resp = await fetch(`/api/bots/${encodeURIComponent(botId)}/games?${params}`, {
+    headers: { accept: 'application/json' },
+  });
+  if (!resp.ok) throw new Error(`bot_games_failed_${resp.status}`);
+  const data = (await resp.json()) as { games: FeaturedGame[] };
+  return data.games;
 }
 
 // The bot's record in ONE variant. Falls back to the lifetime record only when
