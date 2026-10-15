@@ -31,6 +31,35 @@ function devWebSocketUrlForApiUrl(apiUrl: string): string | null {
   }
 }
 
+// Cross-origin isolate the dev server so the review board's local engines
+// (Fairy-Stockfish, Pikafish, PikaJieQi WASM threads) can allocate a
+// SharedArrayBuffer. require-corp, the same COEP prod sends: WebKit ignores
+// credentialless, so a credentialless dev server can never show the engine on
+// iPhone/iPad or Safari (#276). In prod the server scopes these headers to the
+// review routes (server-http.ts); here they cover every response, which is
+// stricter.
+//
+// A middleware, not `server.headers`: Vite's static handler answers a
+// revalidation with a bare 304 that drops `server.headers`, and WebKit judges a
+// worker's COEP from that 304. Fairy-Stockfish spawns its pthread workers one
+// after another from the same URL, so the second spawn revalidated, came back
+// without COEP, and was refused ("Worker load was blocked by
+// Cross-Origin-Embedder-Policy"): the engine never started in WebKit on dev,
+// while prod, whose 304s carry the headers, was fine. Headers set here survive
+// every later writeHead, 304 included.
+function crossOriginIsolationPlugin(): Plugin {
+  return {
+    name: 'mistboard-cross-origin-isolation',
+    configureServer(server) {
+      server.middlewares.use((_req, res, next) => {
+        res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+        res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+        next();
+      });
+    },
+  };
+}
+
 function annotationsApiPlugin(): Plugin {
   return {
     name: 'mistboard-annotations-api',
@@ -176,17 +205,12 @@ export default defineConfig(({ command }) => {
       : null;
 
   return {
-    plugins: [annotationsApiPlugin(), devApiProxyPlugin(), copyFilteredPublicDirPlugin()],
-    // Cross-origin isolate the dev server so the review board's local engine
-    // (Fairy-Stockfish WASM) can allocate a SharedArrayBuffer. `credentialless`
-    // keeps cross-origin subresources loading without needing CORP. In prod the
-    // server scopes the same headers to the analysis routes (see server-http.ts).
-    server: {
-      headers: {
-        'Cross-Origin-Opener-Policy': 'same-origin',
-        'Cross-Origin-Embedder-Policy': 'credentialless',
-      },
-    },
+    plugins: [
+      crossOriginIsolationPlugin(),
+      annotationsApiPlugin(),
+      devApiProxyPlugin(),
+      copyFilteredPublicDirPlugin(),
+    ],
     build: {
       copyPublicDir: false,
       // Emitted to dist/.vite/manifest.json; the prerender step reads it to bake

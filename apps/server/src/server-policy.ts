@@ -550,8 +550,8 @@ export function isNoindexRoute(pathname: string): boolean {
 // is fixed at document-load time and client-side pushState navigation between
 // puzzles does not re-request the document, so whichever puzzle URL the user
 // first loads must already carry the headers for the post-completion engine to
-// run. COEP is `credentialless` (see server-http), so isolating the puzzle page
-// does not force CORP on its cross-origin subresources.
+// run. COEP is `require-corp` (see server-http), so a cross-origin subresource
+// on any of these pages must be CORS-loaded or send CORP.
 //
 // Keep the single optional variant segment in sync with the /<variant>/game/
 // tenants in isClientRoute above; apps/web/src/variant-registry-sync.test.ts

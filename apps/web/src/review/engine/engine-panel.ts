@@ -21,6 +21,7 @@ import {
 } from './ceval.js';
 import '../../seat-disc-ink.css';
 import './engine-panel.css';
+import { engineUnsupportedCopy } from './engine-unsupported-copy.js';
 import type { EvalBar } from './eval-bar.js';
 import { formatEval, formatMistyEval } from './eval-format.js';
 import { isMistyCevalVariant } from './misty-ceval.js';
@@ -39,7 +40,7 @@ export interface EnginePanel {
    *  search to grade a try). Fires onToggle like a click would; a no-op when
    *  the engine is unsupported in this browser or already in that state. */
   setOn(next: boolean): void;
-  /** Whether this browser can run the local engine at all (Safari cannot). */
+  /** Whether this browser can run the local engine at all (WebKit cannot: #276). */
   supported: boolean;
   dispose(): void;
 }
@@ -365,13 +366,17 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
   if (!supported) {
     toggle.disabled = true;
     // Do NOT promise a reload. The threaded engine needs cross-origin isolation,
-    // which these routes request with COEP: credentialless; Safari/WebKit does
-    // not implement credentialless, so it never isolates and no number of
-    // reloads changes that. Measured 2026-08-01, along with why switching to
-    // require-corp is not the fix (memory: engine_safari_coep_wall). Cases where
-    // a reload genuinely helps (a stale header-less cached document) are rare
-    // next to the browsers that simply cannot, so name the limitation.
-    sub.textContent = 'Local engine is unavailable in this browser. Safari cannot run it yet.';
+    // which these routes request with COEP: require-corp (#276). Until
+    // 2026-10-14 it was credentialless, which WebKit ignores, so no iPhone,
+    // iPad or Safari page could isolate however often it reloaded; under
+    // require-corp the browsers left here are ones too old to isolate at all
+    // (iOS/Safari before 15.2), so name the requirement. Every iPhone/iPad
+    // browser is WebKit, so the copy names the OS there, not Safari
+    // (engine-unsupported-copy.ts).
+    sub.textContent = engineUnsupportedCopy({
+      userAgent: navigator.userAgent,
+      maxTouchPoints: navigator.maxTouchPoints ?? 0,
+    });
   } else {
     toggle.addEventListener('click', () => (on ? turnOff() : turnOn()));
   }
