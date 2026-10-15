@@ -216,7 +216,7 @@
   "fortress-xiangqi": {
     "title": "Fortress Xiangqi Rules",
     "kind": "rules",
-    "description": "A compact xiangqi variant on a 7 by 8 board, with the two palaces in opposite corners. Captured pieces go to your reserve and drop back as your own, and one new piece joins: the Treasure.",
+    "description": "A compact Xiangqi variant with captured pieces in reserve, piece drops, and one new piece: the Treasure.",
     "status": "published",
     "zhTitles": {
       "zh-hans": "堡垒象棋规则",

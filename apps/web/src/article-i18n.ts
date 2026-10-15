@@ -1937,11 +1937,10 @@ const ZH_HANS: Record<string, string> = {
   'Ask me something first': '有问题先问我',
   // -- Fortress Xiangqi --
   'Fortress Xiangqi Rules': '堡垒象棋规则',
-  'Fortress Xiangqi Rules: Drops and the Treasure': '堡垒象棋规则：打入与新棋子「宝」',
   'Shigenobu Kusumoto, working in Osaka, invented Mini Xiangqi in 1973. A Japanese designer took a Chinese game and built it a smaller board, the same move he made for his own country’s game with minishogi. Fortress Xiangqi runs that trade in the other direction. Shogi has had drops for centuries and xiangqi never has, so this is what xiangqi looks like when it borrows them.':
     '楠本茂信在大阪发明了小象棋，时间是 1973 年。一位日本设计者拿起一款中国棋，为它造了一张更小的棋盘，正如他为本国的将棋做过五五将棋。堡垒象棋把这趟交流反向跑了一遍。将棋有打入已有数百年，象棋从来没有，这就是象棋借来打入之后的样子。',
-  'A compact xiangqi variant on a 7 by 8 board, with the two palaces in opposite corners. Captured pieces go to your reserve and drop back as your own, and one new piece joins: the Treasure.':
-    '一种紧凑的象棋变体：棋盘为 7×8，双方九宫位于相对的两角。吃掉的棋子进入你的持子，可以作为己方棋子打回棋盘；另外还加入一个新棋子「宝」。',
+  'A compact Xiangqi variant with captured pieces in reserve, piece drops, and one new piece: the Treasure.':
+    '一种紧凑的象棋变体，带有持子、打入，以及一个新棋子「宝」。',
   'Fortress Xiangqi is a compact [Xiangqi](/rules/xiangqi) variant designed by Brian H. Liou in 2026 as a Mistboard original. It keeps the familiar pieces, adds one new piece called the Treasure, and gives each player an open reserve. Capture an enemy piece and you can later drop it back as your own.':
     '堡垒象棋是 Brian H. Liou 于 2026 年为 Mistboard 原创设计的紧凑型[象棋](/rules/xiangqi)变体。它保留熟悉的棋子，加入一个名为「宝」的新棋子，并让双方拥有公开持子。吃掉敌子后，可以在之后将它作为己方棋子打回棋盘。',
   'Captured material stays in the game, so every exchange changes both the board and the reserves. A defensive trade now may supply the attacker you need later.':
@@ -4596,7 +4595,6 @@ const ZH_HANS: Record<string, string> = {
   'BLACK IS IN CHECK': '黑方被将军',
   'THE CORK: A CANNON IN FRONT OF THE CHARIOT': '塞子：车前面的炮',
   'Atomic Xiangqi Rules': '原子象棋规则',
-  'Atomic Xiangqi Rules: Every Capture Explodes': '原子象棋规则：每次吃子都会爆炸',
   'Xiangqi where a capture is an explosion. The capturer, the captured piece and the four neighbouring pieces go; soldiers survive; a cannon shot takes only its target; and a blast threat on the general is check.':
     '每次吃子都会爆炸的象棋。吃子的棋子、被吃的棋子和相邻四个点上的棋子一起消失；兵卒能在爆炸中幸存；炮的一击只带走目标；对将帅的爆炸威胁算作将军。',
   'Atomic Xiangqi is [xiangqi](/rules/xiangqi) with one change: a capture is an explosion. The piece that captures, the piece it takes, and every piece on the four points next to the capture are removed from the board. Soldiers survive an explosion. A general does not.':
@@ -7097,11 +7095,10 @@ const ZH_HANT: Record<string, string> = {
   'Ask me something first': '有問題先問我',
   // -- Fortress Xiangqi --
   'Fortress Xiangqi Rules': '堡壘象棋規則',
-  'Fortress Xiangqi Rules: Drops and the Treasure': '堡壘象棋規則：打入與新棋子「寶」',
   'Shigenobu Kusumoto, working in Osaka, invented Mini Xiangqi in 1973. A Japanese designer took a Chinese game and built it a smaller board, the same move he made for his own country’s game with minishogi. Fortress Xiangqi runs that trade in the other direction. Shogi has had drops for centuries and xiangqi never has, so this is what xiangqi looks like when it borrows them.':
     '楠本茂信在大阪發明了小象棋，時間是 1973 年。一位日本設計者拿起一款中國棋，為它造了一張更小的棋盤，正如他為本國的將棋做過五五將棋。堡壘象棋把這趟交流反向跑了一遍。將棋有打入已有數百年，象棋從來沒有，這就是象棋借來打入之後的樣子。',
-  'A compact xiangqi variant on a 7 by 8 board, with the two palaces in opposite corners. Captured pieces go to your reserve and drop back as your own, and one new piece joins: the Treasure.':
-    '一種緊湊的象棋變體：棋盤為 7×8，雙方九宮位於相對的兩角。吃掉的棋子進入你的持子，可以作為己方棋子打回棋盤；另外還加入一個新棋子「寶」。',
+  'A compact Xiangqi variant with captured pieces in reserve, piece drops, and one new piece: the Treasure.':
+    '一種緊湊的象棋變體，帶有持子、打入，以及一個新棋子「寶」。',
   'Fortress Xiangqi is a compact [Xiangqi](/rules/xiangqi) variant designed by Brian H. Liou in 2026 as a Mistboard original. It keeps the familiar pieces, adds one new piece called the Treasure, and gives each player an open reserve. Capture an enemy piece and you can later drop it back as your own.':
     '堡壘象棋是 Brian H. Liou 於 2026 年為 Mistboard 原創設計的緊湊型[象棋](/rules/xiangqi)變體。它保留熟悉的棋子，加入一個名為「寶」的新棋子，並讓雙方擁有公開持子。吃掉敵子後，可以在之後將它作為己方棋子打回棋盤。',
   'Captured material stays in the game, so every exchange changes both the board and the reserves. A defensive trade now may supply the attacker you need later.':
@@ -9392,7 +9389,6 @@ const ZH_HANT: Record<string, string> = {
   'BLACK IS IN CHECK': '黑方被將軍',
   'THE CORK: A CANNON IN FRONT OF THE CHARIOT': '塞子：車前面的炮',
   'Atomic Xiangqi Rules': '原子象棋規則',
-  'Atomic Xiangqi Rules: Every Capture Explodes': '原子象棋規則：每次吃子都會爆炸',
   'Xiangqi where a capture is an explosion. The capturer, the captured piece and the four neighbouring pieces go; soldiers survive; a cannon shot takes only its target; and a blast threat on the general is check.':
     '每次吃子都會爆炸的象棋。吃子的棋子、被吃的棋子和相鄰四個點上的棋子一起消失；兵卒能在爆炸中倖存；炮的一擊只帶走目標；對將帥的爆炸威脅算作將軍。',
   'Atomic Xiangqi is [xiangqi](/rules/xiangqi) with one change: a capture is an explosion. The piece that captures, the piece it takes, and every piece on the four points next to the capture are removed from the board. Soldiers survive an explosion. A general does not.':

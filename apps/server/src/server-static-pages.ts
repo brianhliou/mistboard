@@ -390,19 +390,19 @@ export const RULES_INDEX_META: Record<
   en: {
     title: 'Xiangqi and Variant Rules | Mistboard',
     description:
-      'Full rules for every game on Mistboard: xiangqi (Chinese chess), jieqi, banqi, Jungle and chess, plus Fog of War, atomic, duck and other xiangqi variants.',
+      'Full rules for every game on Mistboard: xiangqi (Chinese chess), jieqi, banqi, Jungle and chess, plus Fog of War, Duck Xiangqi and other xiangqi variants.',
     htmlLang: 'en',
   },
   'zh-hans': {
     title: '象棋与变体规则 | Mistboard',
     description:
-      'Mistboard 上每一种棋的完整规则：象棋（中国象棋）、揭棋、暗棋、斗兽棋和国际象棋，以及迷雾、原子、鸭子等各种象棋变体。',
+      'Mistboard 上每一种棋的完整规则：象棋（中国象棋）、揭棋、暗棋、斗兽棋和国际象棋，以及迷雾、鸭子等各种象棋变体。',
     htmlLang: 'zh-Hans',
   },
   'zh-hant': {
     title: '象棋與變體規則 | Mistboard',
     description:
-      'Mistboard 上每一種棋的完整規則：象棋（中國象棋）、揭棋、暗棋、鬥獸棋和國際象棋，以及迷霧、原子、鴨子等各種象棋變體。',
+      'Mistboard 上每一種棋的完整規則：象棋（中國象棋）、揭棋、暗棋、鬥獸棋和國際象棋，以及迷霧、鴨子等各種象棋變體。',
     htmlLang: 'zh-Hant',
   },
 };

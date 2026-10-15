@@ -20,9 +20,8 @@ export const fortressXiangqiArticle: Article = {
   // Retired 2026-10-11: the page stays up by URL, unlisted and unindexed.
   playableOnMistboard: false,
   title: 'Fortress Xiangqi Rules',
-  seoTitle: 'Fortress Xiangqi Rules: Drops and the Treasure',
   summary:
-    'A compact xiangqi variant on a 7 by 8 board, with the two palaces in opposite corners. Captured pieces go to your reserve and drop back as your own, and one new piece joins: the Treasure.',
+    'A compact Xiangqi variant with captured pieces in reserve, piece drops, and one new piece: the Treasure.',
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-07-01',

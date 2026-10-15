@@ -11,6 +11,7 @@ import {
   seoMetaLengthProblems,
   seoTextLength,
 } from './seo-meta-length.js';
+import { articleIsNoindex } from './variant-public-surfaces.js';
 
 const appsDir = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -41,7 +42,8 @@ describe('seoTextLength', () => {
 describe('prerendered page meta is long enough to describe the page', () => {
   const pages: Array<{ page: string; title: string; description: string }> = [];
   for (const article of articles) {
-    if (article.status !== 'published') continue;
+    // A noindex page (a retired variant's rules) is out of search results.
+    if (article.status !== 'published' || articleIsNoindex(article)) continue;
     const base = article.kind === 'rules' ? 'rules' : 'blog';
     const langs =
       !article.sourceLang && isArticleTranslationPublished(article.slug)
