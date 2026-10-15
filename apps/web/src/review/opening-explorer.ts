@@ -96,8 +96,8 @@ export type OpeningExplorerOptions = {
   /** Exact endgame table shown in place of the book for covered positions. */
   tablebase?: XiangqiTablebasePanel;
   /** Wait this long after the position last changed before asking the server
-   *  (book or tablebase). The book is open by default on review pages (#523),
-   *  so holding an arrow key would otherwise send one request per ply; a
+   *  (book or tablebase). A reader who keeps the book open (#534) would
+   *  otherwise send one request per ply while holding an arrow key; a
    *  position already in the cache still renders at once. 0 asks immediately. */
   settleMs?: number;
 };
