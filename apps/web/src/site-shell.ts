@@ -90,7 +90,7 @@ export function buildNav(locale: Locale = currentLocale()): HTMLElement {
   links.append(navMenu('nav.learn', learnNavItems(), locale, '/rules'));
   // Watch title links to Mistboard TV (/watch); the dropdown adds Broadcasts.
   links.append(navMenu('nav.watch', watchNavItems(), locale, watch?.href ?? '/watch'));
-  // Community title itself links to the player page (lichess parity): hovering
+  // Community title itself links to the leaderboard (lichess parity): hovering
   // opens the dropdown, clicking the word navigates to /player.
   links.append(navMenu('nav.community', communityNavItems(), locale, '/player'));
   // Tools title links to the analysis board (the anchor tool); the dropdown
@@ -458,7 +458,10 @@ function pathMatchesNavItem(path: string, href: string): boolean {
   return (
     normalizedPath === href ||
     (href === '/puzzles' && normalizedPath.startsWith('/puzzles/')) ||
-    (href === '/player' && normalizedPath.startsWith('/player/')) ||
+    (href === '/player' &&
+      (normalizedPath === '/leaderboard' || normalizedPath.startsWith('/player/'))) ||
+    // Pro player pages, team pages and the teams index all sit under /players/.
+    (href === '/players' && normalizedPath.startsWith('/players/')) ||
     (href === '/account' && normalizedPath.startsWith('/account/')) ||
     (href === '/bots' && normalizedPath.startsWith('/bot/')) ||
     (href === '/forum' && normalizedPath.startsWith('/forum/')) ||
