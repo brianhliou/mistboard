@@ -269,7 +269,8 @@ function furniture(
 }
 
 // Each piece: the shared framed dobutsu token (cream rounded square + cutout + ring),
-// its outer edge at 98% of the cell (2026-10-14). The last move is a cell tint, so
+// its outer edge on the cell edge (JUNGLE_TOKEN_REACH, 2026-10-15), so a tile in an
+// edge cell meets the board edge. The last move is a cell tint, so
 // nothing has to fit inside it. The river badge keeps its size from the 0.9-of-a-cell
 // token it was tuned on, so it lands inside the tile's corner.
 function pieces(

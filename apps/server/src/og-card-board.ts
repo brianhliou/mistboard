@@ -16,8 +16,8 @@
 //                   international discs at 92% of the cell, jade face-down
 //                   #2f8f6b / #184a38 at the same size).
 //   jungle          apps/web/src/jungle-skins.ts + jungle-art.ts, the default
-//                   'bare' board and 'animals' tokens: rounded squares at 98% of
-//                   the cell, one #28323c ring on both sides.
+//                   'bare' board and 'animals' tokens: rounded squares spanning
+//                   the whole cell, one #28323c ring on both sides.
 //   fog chess       packages/board-render BROWN_PALETTE + inline cburnett pieces,
 //                   via renderBoardComposition.
 // Piece art is the same PNG the browser loads, embedded as a data URI from the
@@ -255,7 +255,7 @@ const INTERSECTION_MARGIN = 0.6;
 //   xiangqi family  XIANGQI_PIECE_REACH 0.98, XIANGQI_PIECE_OUTLINE_SHARE 0.948
 //                   (apps/web/src/board-metrics.ts xiangqiPieceDrawSize)
 //   banqi           BANQI_PIECE_REACH 0.92 (apps/web/src/live-banqi-render.ts)
-//   jungle          JUNGLE_TOKEN_REACH 0.98 (apps/web/src/jungle-art.ts)
+//   jungle          JUNGLE_TOKEN_REACH 1 (apps/web/src/jungle-art.ts)
 const PIECE_OUTLINE_SHARE = 0.948;
 const PIECE_RATIO = 0.98 / PIECE_OUTLINE_SHARE;
 const BANQI_REACH = 0.92;
@@ -264,7 +264,7 @@ const BANQI_PIECE_RATIO = BANQI_REACH / PIECE_OUTLINE_SHARE;
 const BANQI_BACK_STROKE = 2 / 64;
 // JUNGLE_ART in apps/web/src/jungle-art.ts: the token is a rounded square, the
 // cream face out to the ring and the ring on the edge, ratios to its nominal size.
-const JUNGLE_REACH = 0.98;
+const JUNGLE_REACH = 1;
 const JUNGLE_HALF = 0.45;
 const JUNGLE_RING = 0.0274;
 const JUNGLE_CORNER_PER_HALF = 14 / 46;

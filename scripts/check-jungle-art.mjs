@@ -3,9 +3,9 @@
 // (apps/web/src/jungle-art.ts recipe + public/.../dobutsu pieces). The blog is downstream.
 //
 // The piece look of 2026-10-14: a cream rounded square under the animal art and one
-// dark ring (a rounded square too) on both sides, the outer edge at 98% of the cell
-// (117.6 at a cell of 120), no shadow; Flip Jungle's face-down tile is a jade rounded
-// square of the same reach. This asserts:
+// dark ring (a rounded square too) on both sides, the outer edge on the cell edge
+// (120 at a cell of 120; 98% until 2026-10-15), no shadow; Flip Jungle's face-down
+// tile is a jade rounded square of the same reach. This asserts:
 //   (1) both blog widgets (brianhliou.com assets/js/jungle-replay.js and
 //       flip-jungle-replay.js) name the same reach, face and ring ratios, corner
 //       ratio, ring colour and face fill as jungle-art.ts, draw the token as a
@@ -101,13 +101,13 @@ if (!/rx="\$\{r\(half \* JUNGLE_ART\.cornerPerHalf\)\}"/.test(art))
 
 // The outline at a 120 cell: the token box times (2 × ring half + ring stroke).
 // Both sides round the box to quarter units, so the edge lands within a quarter
-// unit of 117.6.
+// unit of 120.
 const outlineAt120 = (r) =>
   r.reach == null || r.ring == null || r.ringStroke == null
     ? null
     : (Math.round(((120 * r.reach) / (2 * r.ring + r.ringStroke)) * 4) / 4) *
       (2 * r.ring + r.ringStroke);
-close(outlineAt120(canon), 117.6, 'jungle-art outline at a 120 cell vs 117.6', 0.25);
+close(outlineAt120(canon), 120, 'jungle-art outline at a 120 cell vs 120', 0.25);
 
 // --- Blog widgets ---
 for (const w of WIDGETS) {
@@ -138,7 +138,7 @@ for (const w of WIDGETS) {
   close(blog.corner, canon.corner, at('corner per half'));
   eq(blog.ringInk, canon.ringInk, at('ring colour'));
   eq(blog.faceFill, canon.faceFill, at('face fill'));
-  close(outlineAt120(blog), 117.6, at('outline at a 120 cell vs 117.6'), 0.25);
+  close(outlineAt120(blog), 120, at('outline at a 120 cell vs 120'), 0.25);
 
   // Shape and the single ring: a rounded square on the corner ratio, never a
   // circle, no per-side ring colour, no shadow on the piece.

@@ -22,12 +22,12 @@ function rects(svg: string): Rect[] {
 }
 
 // The 2026-10-14 look (docs-private/tools/x-drafts/card-lab/PIECES-2026-10.md):
-// Jungle and Flip Jungle tokens are rounded squares whose outer edge spans 98% of
+// Jungle and Flip Jungle tokens are rounded squares whose outer edge spans all of
 // the cell, the ring on that edge, and the face-down tile the same size.
 describe('jungle tokens', () => {
   const CELL = 64;
 
-  it('are rounded squares whose ring reaches 98% of the cell', () => {
+  it('are rounded squares whose ring reaches the cell edge', () => {
     const svg = framedTokenSvg({
       cx: 32,
       cy: 32,
