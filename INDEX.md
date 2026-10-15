@@ -1110,6 +1110,7 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/web/src/news-disc.ts` | _needs a one-line description_ |
 | `apps/web/src/postgame-invite.ts` | _needs a one-line description_ |
 | `apps/web/src/practice-index.ts` | _needs a one-line description_ |
+| `apps/web/src/practice-chapter-redirect.ts` | `/practice/<set slug>/<position>`: resolves one endgame shelf exercise to this database's study chapter and replaces the URL (#521) |
 | `apps/web/src/profile-link.ts` | _needs a one-line description_ |
 | `apps/web/src/pve-memory.ts` | _needs a one-line description_ |
 | `apps/web/src/readouts-admin.ts` | _needs a one-line description_ |

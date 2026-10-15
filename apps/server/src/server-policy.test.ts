@@ -407,6 +407,7 @@ const PARAMETRIC_ROUTE_SAMPLES: Record<string, readonly string[]> = {
   '^\\/coach(?:\\/([^/]+))?$': ['/coach', '/coach/somehandle'],
   '^\\/players\\/([^/]+)$': ['/players/yin-sheng'],
   '^\\/changelog\\/\\d{4}-\\d{2}$': ['/changelog/2026-09'],
+  '^\\/practice\\/([a-z-]+)\\/([a-z0-9-]+)$': ['/practice/endgames-soldier/soldier-vs-advisor'],
   '^\\/players\\/teams\\/([^/]+)$': ['/players/teams/hebei-team'],
   '^(?:\\/(?:zh-hans|zh-hant))?\\/study\\/([A-Za-z0-9]+)$': [
     '/study/Ab12cd',
@@ -673,6 +674,12 @@ test('isReviewShellRoute matches postgame review documents (COOP/COEP scope)', (
   assert.equal(isClientRoute('/practice/position/'), true);
   assert.equal(isClientRoute('/practice/position/extra'), false);
   assert.equal(isClientRoute('/practice/positions'), false);
+  // One shelf exercise by slug (#521): a real set/position pair is a plain
+  // client page (it only redirects to the study), anything else 404s.
+  assert.equal(isClientRoute('/practice/endgames-horse/horse-vs-advisor'), true);
+  assert.equal(isReviewShellRoute('/practice/endgames-horse/horse-vs-advisor'), false);
+  assert.equal(isClientRoute('/practice/endgames-soldier/horse-vs-advisor'), false);
+  assert.equal(isClientRoute('/practice/endgames-horse/no-such-position'), false);
   // The puzzle trainer mounts the same ceval engine after a puzzle is completed.
   // Both the list and a specific puzzle must be isolated, because the isolation
   // is fixed at document load and pushState nav between puzzles never reloads.

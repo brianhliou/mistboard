@@ -6,6 +6,7 @@ import {
   maybeGameSpecForId,
   replayGameEvents,
   type VisibilityRulesId,
+  xiangqiEndgamePracticeRouteFromPath,
 } from '@mistboard/game';
 
 // Visibility rule: a finished game is public via replay endpoints; a LIVE game
@@ -475,6 +476,11 @@ export function isClientRoute(pathname: string): boolean {
     // board editor link here. It mounts the ceval engine, so it is also a
     // review-shell route below. The query is read fail-closed by the client.
     normalized === '/practice/position' ||
+    // One shelf exercise by set slug and position (/practice/endgames-horse/
+    // horse-vs-advisor): the client looks the chapter up in this database and
+    // replaces the URL with /study/:id/:chapter, so article links survive a
+    // reseed and work off prod (#521). Only real set/position pairs are routes.
+    xiangqiEndgamePracticeRouteFromPath(normalized) !== null ||
     normalized === '/study' ||
     /^\/study\/[A-Za-z0-9]+(?:\/[A-Za-z0-9]+)?$/.test(normalized) ||
     // Locale-prefixed study permalinks (/zh-hans/study/:id) serve the same SPA

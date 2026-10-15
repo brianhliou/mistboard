@@ -25,6 +25,7 @@ import {
   endgameRowText,
   XIANGQI_ENDGAME_HUB,
   XIANGQI_ENDGAME_PRACTICE_SET_IDS,
+  xiangqiEndgamePracticePath,
 } from '@mistboard/game';
 
 export type { EndgameText };
@@ -602,138 +603,6 @@ export function endgameTableIdea(row: EndgameTableRow): EndgameText {
 
 // ── Links ──
 
-/** The prod study id of each practice set (GET /api/studies, read 2026-10-07). */
-export const ENDGAME_SET_STUDY_IDS: Record<EndgamePracticeSetSlug, string> = {
-  'endgames-soldier': 'DstCTARw',
-  'endgames-chariot': 'hc6LmrOG',
-  'endgames-horse': 'PNqQaTM6',
-  'endgames-cannon': 'rj3D8rMs',
-  'endgames-insufficient': 'feCqSlEw',
-};
-
-/**
- * Positions that are already a chapter on prod, with that chapter's root FEN as
- * read 2026-10-07. The seeder matches chapters by name and keeps their ids, so
- * these deep links survive the reseed; the test holds each FEN to the corpus
- * position. Table rows not listed are chapters the next seed adds, and link to
- * their set.
- */
-export const ENDGAME_PROD_CHAPTERS: Record<
-  string,
-  { study: string; chapter: string; rootFen: string }
-> = {
-  'three-soldiers-vs-full-defence': {
-    study: 'DstCTARw',
-    chapter: 'aRL5w6iC',
-    rootFen: '2b1ka3/4a4/4b4/2P1P1P2/9/9/9/9/9/4K4 r - - 0 1',
-  },
-  'two-soldiers-vs-two-advisors': {
-    study: 'DstCTARw',
-    chapter: 'hjxe7Knl',
-    rootFen: '3aka3/9/9/9/3P1P3/9/9/9/9/3K5 r - - 0 1',
-  },
-  'two-soldiers-vs-two-elephants': {
-    study: 'DstCTARw',
-    chapter: 'NraxgqiY',
-    rootFen: '2b1k1b2/9/9/9/3P1P3/9/9/9/9/3K5 r - - 0 1',
-  },
-  'two-soldiers-vs-advisor-and-elephant': {
-    study: 'DstCTARw',
-    chapter: 'CHi4AJpE',
-    rootFen: '2b1k4/4a4/9/9/3P1P3/9/9/9/9/4K4 r - - 0 1',
-  },
-  'three-soldiers-vs-horse-and-two-advisors': {
-    study: 'DstCTARw',
-    chapter: 'fjcDdHLP',
-    rootFen: '3aka3/9/4n4/2P1P1P2/9/9/9/9/9/4K4 r - - 0 1',
-  },
-  'three-soldiers-vs-cannon-and-two-elephants': {
-    study: 'DstCTARw',
-    chapter: 'bEx7oNV5',
-    rootFen: '2b1k1b2/9/9/2P1P1P2/9/4c4/9/9/9/4K4 r - - 0 1',
-  },
-  'horse-vs-advisor': {
-    study: 'PNqQaTM6',
-    chapter: 'uJQcVSvn',
-    rootFen: '3ak4/9/9/9/9/4N4/9/9/9/4K4 r - - 0 1',
-  },
-  'horse-vs-elephant': {
-    study: 'PNqQaTM6',
-    chapter: 'M5LYB24C',
-    rootFen: '2b1k4/9/9/9/9/4N4/9/9/9/4K4 r - - 0 1',
-  },
-  'horse-vs-elephant-zugzwang': {
-    study: 'PNqQaTM6',
-    chapter: 'jeCJgZEG',
-    rootFen: '3k5/9/5N3/9/2b6/9/9/9/4K4/9 r - - 0 1',
-  },
-  'horse-and-soldier-vs-three-defence': {
-    study: 'PNqQaTM6',
-    chapter: 'mmiG3IsB',
-    rootFen: '4ka3/4a4/4b4/9/4P4/4N4/9/9/9/4K4 r - - 0 1',
-  },
-  'horse-and-soldier-vs-full-defence': {
-    study: 'PNqQaTM6',
-    chapter: 'HUojqblI',
-    rootFen: '2b1ka3/4a4/4b4/9/4P4/4N4/9/9/9/4K4 r - - 0 1',
-  },
-  'two-horses-vs-full-defence': {
-    study: 'PNqQaTM6',
-    chapter: 'E8vYqhoQ',
-    rootFen: '2b1ka3/4a4/4b4/9/9/3N1N3/9/9/9/4K4 r - - 0 1',
-  },
-  'cannon-and-advisor-vs-two-advisors': {
-    study: 'rj3D8rMs',
-    chapter: '8AI7kOXl',
-    rootFen: '3k5/4a4/3a5/9/9/9/9/3A1K3/9/3C5 r - - 0 1',
-  },
-  'cannon-and-full-defence-vs-full-defence': {
-    study: 'rj3D8rMs',
-    chapter: 'hDZE0K9k',
-    rootFen: '2b1ka3/4a4/4b4/9/9/4C4/9/4B4/4A4/2BAK4 r - - 0 1',
-  },
-  'cannon-vs-bare-general': {
-    study: 'feCqSlEw',
-    chapter: '3VUGq3dJ',
-    rootFen: '4k4/9/9/9/9/4C4/9/9/9/4K4 r - - 0 1',
-  },
-  'chariot-vs-full-defence': {
-    study: 'hc6LmrOG',
-    chapter: 'MyIZ3XSd',
-    rootFen: '2b1ka3/4a4/4b4/9/9/4R4/9/9/9/4K4 r - - 0 1',
-  },
-  'chariot-vs-three-defence': {
-    study: 'hc6LmrOG',
-    chapter: 'aAF1ooTw',
-    rootFen: '4ka3/4a4/4b4/9/9/4R4/9/9/9/4K4 r - - 0 1',
-  },
-  'chariot-vs-horse-two-elephants-fortress': {
-    study: 'hc6LmrOG',
-    chapter: 'zsSsZLbq',
-    rootFen: '4k4/9/4n3b/4R4/6b2/9/9/9/4K4/9 r - - 0 1',
-  },
-  'chariot-vs-horse-two-elephants-broken': {
-    study: 'hc6LmrOG',
-    chapter: 'N0sRR1n9',
-    rootFen: '4k1b2/9/4n3b/4R4/9/9/9/9/4K4/9 r - - 0 1',
-  },
-  'two-chariots-vs-chariot-full-defence': {
-    study: 'hc6LmrOG',
-    chapter: 'HJWlVc5G',
-    rootFen: '2b1ka3/4a4/r3b4/9/9/3R1R3/9/9/9/4K4 r - - 0 1',
-  },
-  'chariot-vs-two-minor-pieces': {
-    study: 'hc6LmrOG',
-    chapter: 'hIZwpqop',
-    rootFen: '5c3/5k3/9/3n5/9/R8/9/9/9/4K4 r - - 0 1',
-  },
-  'chariot-cannon-vs-chariot': {
-    study: 'hc6LmrOG',
-    chapter: 'GoeeVBgU',
-    rootFen: '5k3/9/9/9/9/R1C1r4/9/9/9/3K5 r - - 0 1',
-  },
-};
-
 /** The practice set a corpus position sits in. */
 export function endgamePracticeSetOf(id: string): EndgamePracticeSetSlug {
   for (const [slug, ids] of Object.entries(XIANGQI_ENDGAME_PRACTICE_SET_IDS)) {
@@ -742,11 +611,14 @@ export function endgamePracticeSetOf(id: string): EndgamePracticeSetSlug {
   throw new Error(`xiangqi endgames: ${id} is in no practice set`);
 }
 
-/** Where a position links: its prod chapter, else its practice set. */
+/**
+ * Where a position links: /practice/<set slug>/<id>, which opens its chapter in
+ * whatever database serves the page. Study and chapter ids differ between prod
+ * and a local pair, so the page carries neither (#521); the test holds the
+ * lookup to the chapters prod links opened.
+ */
 export function endgameStudyHref(id: string): string {
-  const chapter = ENDGAME_PROD_CHAPTERS[id];
-  if (chapter) return `/study/${chapter.study}/${chapter.chapter}`;
-  return `/study/${ENDGAME_SET_STUDY_IDS[endgamePracticeSetOf(id)]}`;
+  return xiangqiEndgamePracticePath(id);
 }
 
 function materialCell(row: EndgameTableRow, lang: keyof EndgameText): string {
