@@ -168,7 +168,7 @@
     }
   },
   "en-passant-under-fog": {
-    "title": "Under Fog, En Passant Is Part of What You Can See",
+    "title": "An En Passant Bug Under Fog",
     "kind": "article",
     "description": "My fog of war chess engine recorded the en passant square under standard chess legality, in a variant with no such rule. En passant availability decides what a pawn can see, so the true board fell out of the engine's belief and it finished the game against 41 worlds that did not exist.",
     "status": "draft"

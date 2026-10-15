@@ -3,8 +3,9 @@ import { parseStandardChessFen } from '@mistboard/game';
 import type { Article, ArticleBlock } from '../types.js';
 
 // Moved from the brianhliou.com post of 2026-09-21 (/posts/most-played-move/),
-// text word for word as published there. The ten boards were already this
-// site's study embeds (same study, same chapters, same titles). Links to
+// text word for word as published there, except the method (now a table) and
+// the resources folded into one closing paragraph (2026-10-15). The ten boards
+// were already this site's study embeds (same study, same chapters, same titles). Links to
 // "What Lichess Analysis Misses", which stays on brianhliou.com, point there.
 
 const STUDY_ID = 'ibFQtGAL';
@@ -189,18 +190,44 @@ export const mostPlayedMoveArticle: Article = {
     {
       heading: 'How this was measured',
       blocks: [
+        {
+          kind: 'table',
+          keyColumn: true,
+          wrap: true,
+          headers: ['', ''],
+          rows: [
+            [
+              '**Positions**',
+              'The [Lichess opening explorer](https://lichess.org/analysis#explorer), database "Lichess", ratings 1600, 1800, 2000 and 2200, blitz, rapid and classical',
+            ],
+            [
+              '**Walk**',
+              'From the start position to 14 plies, keeping every position with at least 500,000 games; stopped at 4,000 expanded nodes, with 55 left in the queue',
+            ],
+            [
+              '**Engine**',
+              'Stockfish 18 at 20,000,000 nodes, MultiPV 3, one search per position, on Modal',
+            ],
+            [
+              '**Judged against**',
+              'The best move from that search. The most played move is scored by its own line when the search ranked it among the three, else by a 20M search of the position after it',
+            ],
+            [
+              '**Miss**',
+              "A gap of 0.1 or more by lila's winning-chance formula, `2 / (1 + e^(−0.00368·cp)) − 1`",
+            ],
+            [
+              '**Second search**',
+              'Every flagged position again at 20M, MultiPV 3, on a different machine and thread count, same rule; 144 of 168 survive',
+            ],
+            [
+              '**Masters eras**',
+              'The masters database with `until=2009`, `since=2010&until=2017` and `since=2018`; a cell under twenty games counts as no data',
+            ],
+          ],
+        },
         p(
-          `Positions: the Lichess opening explorer, database "Lichess", ratings 1600, 1800, 2000, 2200, speeds blitz, rapid and classical, walked from the start position to a depth of 14 plies, keeping every position with at least 500,000 games and stopping at 4,000 expanded nodes (55 were left in the queue). Evaluation: Stockfish 18 at 20,000,000 nodes, MultiPV 3, one search per position, on Modal. The most played move is judged against the best move from that search, by its own line when the search ranked it among the three, else by a 20M search of the position after it; lila's winning-chance formula (\`2 / (1 + e^(−0.00368·cp)) − 1\`) gives the gap. Flag at 0.1. Verification: a second 20M MultiPV-3 search of every flagged position on a different machine and thread count, same rule; 144 of 168 survive. Eras: the masters database with \`until=2009\`, \`since=2010&until=2017\`, \`since=2018\`; cells under twenty games are treated as no data. The harness is the one from the [Lichess analysis post](${LICHESS_ANALYSIS_POST}).`,
-        ),
-        p('**Resources:**'),
-        p(
-          `[The study](${STUDY_HREF}): all 144 positions with the club share, the masters' history and the engine's line`,
-        ),
-        p(
-          '[Lichess opening explorer](https://lichess.org/analysis#explorer): the source of every popularity number here',
-        ),
-        p(
-          `[What Lichess Analysis Misses](${LICHESS_ANALYSIS_POST}): the previous post, on how the labels are made`,
+          `The harness is the one from [What Lichess Analysis Misses](${LICHESS_ANALYSIS_POST}), the previous post, on how the labels are made.`,
         ),
         {
           kind: 'cta',

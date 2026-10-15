@@ -3,9 +3,11 @@ import { parseDarkChessFen } from '@mistboard/game';
 import { fogFor } from '../diagrams.js';
 import type { Article } from '../types.js';
 
-// Moved from the brianhliou.com post of 2026-09-12 (/posts/en-passant-under-fog/),
-// text word for word as published there. The three board figures are the
-// post's own SVGs, drawn by Misty's visibility code, served as static images
+// Moved from the brianhliou.com post of 2026-09-12 (/posts/en-passant-under-fog/)
+// and recut as a bug story (2026-10-15): the edge case, the bug, the game it
+// hit, the fix. Facts follow mistboard-engine 129c2b4 (the fix), issue #21 and
+// 8f85306 (Misty 0.1.3). The three board figures are the post's own SVGs, drawn
+// by Misty's visibility code, served as static images
 // (public/article-thumbs/en-passant-under-fog/) so the closing note about how
 // they were drawn stays true. Only the card thumbnail is a live board.
 
@@ -20,7 +22,7 @@ export const enPassantUnderFogArticle: Article = {
   slug: 'en-passant-under-fog',
   kind: 'article',
   publisher: 'mistboard',
-  title: 'Under Fog, En Passant Is Part of What You Can See',
+  title: 'An En Passant Bug Under Fog',
   // Homepage card only (the full title wraps at the 186px card budget).
   cardTitle: 'En Passant Under Fog',
   summary:
@@ -46,38 +48,29 @@ export const enPassantUnderFogArticle: Article = {
   intro: [
     {
       kind: 'paragraph',
-      text: '[Misty](/blog/misty) plays [fog of war chess](/rules/fog-chess) by holding `P`, the set of every board consistent with what it has observed. `P` is stored as FEN strings, and one field of a FEN is written by a rule rather than by the position.',
+      text: 'In [fog of war chess](/rules/fog-chess) you may leave your king attacked, so a pawn can take en passant in positions where standard chess forbids it. And since you see every square your pieces can move to, whether that capture exists changes what you see: a pawn that can take en passant sees the landing square and the pawn it would take.',
     },
     {
-      kind: 'table',
-      keyColumn: true,
-      wrap: true,
-      headers: ['', ''],
-      rows: [
-        [
-          '**Symptom**',
-          '`P` fell from 625 boards to 41 in one ply, and the true board was not among the 41',
-        ],
-        ['**Impact**', 'Misty finished that game drawing search roots from 41 worlds, none of them real'],
-        [
-          '**Cause**',
-          'The en passant square recorded under standard-chess legality, in a variant with no king-safety rule',
-        ],
-        [
-          '**Fix**',
-          'Record it on the pseudo-legal rule (`EnPassantMode.XFEN`), through one shared function',
-        ],
-        ['**Frequency**', '1 ply in 12,866, across 273 finished games'],
-        [
-          '**Detection**',
-          'None. Found four months later while measuring belief sizes for something else',
-        ],
-      ],
+      kind: 'paragraph',
+      text: '[Misty](/blog/misty) plays fog of war chess by holding `P`, the set of every board consistent with what it has observed, stored as FEN strings. It wrote the en passant field of those strings by the standard chess rule, and in one game that dropped the real board out of `P`.',
     },
   ],
   sections: [
     {
-      heading: 'The bug',
+      heading: 'Misty recorded the en passant square by standard chess rules',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: "`python-chess` writes the en passant field with `EnPassantMode.LEGAL` by default: it records the square only when the capture is legal in standard chess, and that includes not leaving the capturing side's king in check. Misty's Rust hot path copied the same filter on purpose, so its strings would match python-chess byte for byte.",
+        },
+        {
+          kind: 'paragraph',
+          text: "So the square went missing in one kind of position: a pawn has just moved two squares to stand beside an enemy pawn, and taking it en passant would leave the capturer's king attacked, as it does when that king is already in check. With the square gone, the rebuilt position no longer sees the landing square or the pawn it could take, so the real board stops matching what Misty observed and drops out of `P`. The trigger came up 1 ply in 12,866, in 1 of 273 finished games.",
+        },
+      ],
+    },
+    {
+      heading: 'One game lost the real board at move 29',
       blocks: [
         {
           kind: 'paragraph',
@@ -93,11 +86,7 @@ export const enPassantUnderFogArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: "Black's f4 pawn can take on g3 en passant. Standard chess forbids it: Black is in check, and the capture does not address the check. Fog of war chess has no such rule. You cannot see the attack on your king, so you may leave it there, and the game ends on a captured king rather than at mate. f4xg3 is an ordinary move here.",
-        },
-        {
-          kind: 'paragraph',
-          text: 'Vision under fog is the set of squares your own pieces can move to. A pawn that can capture en passant sees the landing square, and sees the pawn it would take. The en passant square is therefore a fact about perception, not only about legality.',
+          text: 'Black is in check, so standard chess forbids f4xg3 en passant. Under fog it is an ordinary move, and it decides what Black sees.',
         },
         {
           kind: 'image-figure',
@@ -116,7 +105,7 @@ export const enPassantUnderFogArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: '`python-chess` writes that field with `EnPassantMode.LEGAL` by default, recording the square only when the capture is legal by standard rules. So it wrote `-`:',
+          text: 'Under the standard rule the square was dropped:',
         },
         {
           kind: 'code',
@@ -125,12 +114,16 @@ export const enPassantUnderFogArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'The belief update rebuilds positions from those strings. Rebuilt from the stored one, the true position showed Black twelve squares instead of fourteen, no longer matched the observation it had itself produced, and dropped out of `P`.',
+          text: 'Misty built the position after 29.g4 without the square, counted 12 visible squares for Black, compared them with the 14 in the real observation, and threw out the true move. `P` fell from 625 boards to 41 in that ply, and the real board was not among the 41. Misty played its last four decisions of the game drawing search roots from those 41.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'Move the black king one square over, where nothing attacks it, and change nothing else: the square is recorded as g3 and the real board stays in `P`.',
         },
       ],
     },
     {
-      heading: 'The fix',
+      heading: 'The fix records the square whenever a pawn can take',
       blocks: [
         {
           kind: 'paragraph',
@@ -138,7 +131,7 @@ export const enPassantUnderFogArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Both writers now go through one named function instead of each calling a serializer with its own defaults. The membership check takes a board and canonicalizes it, since passing a raw `board.fen()` was the shape of the original mistake.',
+          text: 'The Rust path now checks only that an enemy pawn stands beside the pushed one. On the Python side every board written into `P` goes through one function, `belief_fen`, and the membership check takes a board and spells it the same way, since passing a raw `board.fen()` was how the mistake got in.',
         },
         {
           kind: 'paragraph',
@@ -151,32 +144,7 @@ export const enPassantUnderFogArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: '**The tripwire fires on the wrong extreme.** The enumerator raises when `P` goes empty, which needs a belief so small that no candidate survives. Losing the truth from a set of 41 is silent, and has to be: in play the engine never knows the truth, so it has nothing to check against.',
-        },
-        {
-          kind: 'paragraph',
-          text: "**The differential test passed because both sides were wrong.** Misty's hot path is a Rust extension carrying a function written to reproduce python-chess byte for byte. It succeeded. The test comparing them across 178,145 move applications stayed green, comparing two encoders that had made the same mistake.",
-        },
-        {
-          kind: 'paragraph',
-          text: '**Replay could have seen it and was not looking.** The analysis pass records whether the truth is in `P`, but that column was only read on games past the sampling cap, where losing the truth is expected. On uncapped games it has no innocent explanation. Nobody had run that query.',
-        },
-      ],
-    },
-    {
-      heading: 'What generalizes',
-      blocks: [
-        {
-          kind: 'paragraph',
-          text: "**A serializer from a standard-rules library is not a neutral encoder.** It writes that library's judgments into the bytes, and those judgments are rules. Use its output as a key and you have imported a rulebook you never read.",
-        },
-        {
-          kind: 'paragraph',
-          text: '**Two implementations agreeing tells you they agree.** Mine agreed for months, and the agreement hid the bug: whenever I wondered whether the Rust port had drifted, a green test said no. True, and not the question.',
-        },
-        {
-          kind: 'paragraph',
-          text: '**A belief that loses the truth gets sharper, not vaguer.** 41 worlds is a more confident belief than the 617 that survive once the square is recorded correctly. The failure does not look like uncertainty from the inside.',
+          text: 'The enumerator raises only when `P` goes empty, and losing the truth from a set of 41 is silent, as it has to be: in play the engine never knows the truth. The test comparing the Rust port with python-chess stayed green across 178,145 move applications, because both made the same mistake. Replay records whether the truth is in `P`, but that column was only read on games past the sampling cap, where losing the truth is expected.',
         },
         {
           kind: 'paragraph',

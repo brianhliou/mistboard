@@ -5389,7 +5389,6 @@ const ZH_HANS: Record<string, string> = {
   'CHINESE XIANGQI ASSOCIATION RULINGS': '中国象棋协会处罚决定',
   'VERIFIED TITLES': '已核实的头衔',
   // en-passant-under-fog: carried over from the brianhliou.com zh-hans and zh-hant posts (2026-10-15), word for word; links repointed like the English. Strings whose two zh versions were translated separately (ASCII differs) are left out, so the parity check below holds.
-  'Under Fog, En Passant Is Part of What You Can See': '迷雾之中，吃过路兵也是你能看见的一部分',
   "My fog of war chess engine recorded the en passant square under standard chess legality, in a variant with no such rule. En passant availability decides what a pawn can see, so the true board fell out of the engine's belief and it finished the game against 41 worlds that did not exist.":
     '我的战争迷雾国际象棋引擎按标准象棋的合法性规则记录吃过路兵格，而这个变体根本没有这条规则。吃过路兵的可用性决定了兵能看见什么，于是真实棋盘从引擎的信念集合中掉了出去，它对着41个并不存在的世界下完了整局。',
   'Misty tracks every board consistent with what it has seen, stored as FEN strings. In one game it finished against 41 boards, none of them the real one.':
@@ -5400,57 +5399,13 @@ const ZH_HANS: Record<string, string> = {
     '修正后，只要有兵能吃就记录该格。重放全部271局，抽样局面之外丢失真相的情形由四例降为零。',
   'Nothing caught it: the Rust port copied python-chess byte for byte, so the test comparing the two passed, and a belief that loses the truth gets more confident, not less.':
     '没有任何机制发现它：Rust 移植版逐字节照搬 python-chess，所以对比两者的测试通过了；而一个丢失真相的信念只会变得更自信，不会变得更不确定。',
-  '[Misty](/blog/misty) plays [fog of war chess](/rules/fog-chess) by holding `P`, the set of every board consistent with what it has observed. `P` is stored as FEN strings, and one field of a FEN is written by a rule rather than by the position.':
-    '[Misty](/blog/misty) 下[战争迷雾国际象棋](/rules/fog-chess)的方式是维护 `P`，即所有与它观察到的信息相符的棋盘集合。`P` 以 FEN 字符串存储，而 FEN 中有一个字段是由规则写出的，而不是由局面写出的。',
-  '**Symptom**': '**症状**',
-  '`P` fell from 625 boards to 41 in one ply, and the true board was not among the 41':
-    '`P` 在一着之内从625个棋盘降到41个，而真实棋盘不在这41个之中',
-  '**Impact**': '**影响**',
-  'Misty finished that game drawing search roots from 41 worlds, none of them real':
-    'Misty 下完了那局棋，搜索根节点都是从41个世界中抽取的，没有一个是真实的',
-  '**Cause**': '**原因**',
-  'The en passant square recorded under standard-chess legality, in a variant with no king-safety rule':
-    '在一个没有王安全规则的变体中，按标准象棋的合法性记录吃过路兵格',
-  '**Fix**': '**修正**',
-  'Record it on the pseudo-legal rule (`EnPassantMode.XFEN`), through one shared function':
-    '按伪合法规则（`EnPassantMode.XFEN`）记录，且统一经过一个共享函数',
-  '**Frequency**': '**频率**',
-  '1 ply in 12,866, across 273 finished games': '273局已完成对局中，12,866着里出现1着',
-  '**Detection**': '**发现方式**',
-  'None. Found four months later while measuring belief sizes for something else':
-    '无。四个月后在为别的事情测量信念集合大小时才发现',
-  'The bug': '这个缺陷',
   "Game `e751c6c4`, Misty as Black, move 29. White pushes the g-pawn two squares, beside Black's pawn on f4. White's queen on d6 attacks the black king.":
     '对局 `e751c6c4`，Misty 执黑，第29回合。白方把 g 兵推进两格，落在黑方 f4 兵的旁边。白方位于 d6 的后正攻击着黑王。',
-  "Black's f4 pawn can take on g3 en passant. Standard chess forbids it: Black is in check, and the capture does not address the check. Fog of war chess has no such rule. You cannot see the attack on your king, so you may leave it there, and the game ends on a captured king rather than at mate. f4xg3 is an ordinary move here.":
-    '黑方 f4 的兵可以在 g3 吃过路兵。标准象棋禁止这样走：黑方正被将军，而这步吃子并不解将。战争迷雾国际象棋没有这条规则。你看不见对你王的攻击，所以你可以放着不管，而且对局是以王被吃掉而不是以将死结束的。在这里 f4xg3 是一步普通的着法。',
-  'Vision under fog is the set of squares your own pieces can move to. A pawn that can capture en passant sees the landing square, and sees the pawn it would take. The en passant square is therefore a fact about perception, not only about legality.':
-    '迷雾规则下的视野，就是自己棋子能走到的格子集合。能吃过路兵的兵看得见落点格，也看得见它将要吃掉的那个兵。因此吃过路兵格是关于感知的事实，而不只是关于合法性的事实。',
-  '`python-chess` writes that field with `EnPassantMode.LEGAL` by default, recording the square only when the capture is legal by standard rules. So it wrote `-`:':
-    '`python-chess` 默认以 `EnPassantMode.LEGAL` 写出该字段，只在这步吃子按标准规则合法时才记录该格。于是它写成了 `-`：',
-  'The belief update rebuilds positions from those strings. Rebuilt from the stored one, the true position showed Black twelve squares instead of fourteen, no longer matched the observation it had itself produced, and dropped out of `P`.':
-    '信念更新会从这些字符串重建局面。从存储的字符串重建后，真实局面显示黑方只看见十二个格子而不是十四个，于是不再与它自己产生的那次观察相符，从 `P` 中掉了出去。',
-  'The fix': '修正',
   'Record the square when a pawn can take, regardless of whether taking is wise. That is `EnPassantMode.XFEN`, and it is the fog rule. It still omits the square when no enemy pawn is adjacent, so the belief does not split over a square nobody can use.':
     '只要有兵能吃就记录该格，不管吃下去是否明智。这就是 `EnPassantMode.XFEN`，也正是迷雾规则。当旁边没有敌方兵时它仍然会省略该格，这样信念就不会因为一个谁都用不上的格子而分裂。',
-  'Both writers now go through one named function instead of each calling a serializer with its own defaults. The membership check takes a board and canonicalizes it, since passing a raw `board.fen()` was the shape of the original mistake.':
-    '现在两处写出都经过同一个具名函数，而不是各自调用序列化器并使用各自的默认参数。成员检查接收一个棋盘并做规范化，因为直接传入原始的 `board.fen()` 正是最初那个错误的形态。',
   'At the failing ply `P` now goes 625 to 617, truth kept. Replaying all 271 games reports no lost-truth decisions outside the sampled games, against four before.':
     '在出错的那一着，`P` 现在是从625变到617，真相得以保留。重放全部271局，抽样局面之外不再报告任何丢失真相的决策，此前是四例。',
   'Why nothing caught it': '为什么没有任何机制发现它',
-  '**The tripwire fires on the wrong extreme.** The enumerator raises when `P` goes empty, which needs a belief so small that no candidate survives. Losing the truth from a set of 41 is silent, and has to be: in play the engine never knows the truth, so it has nothing to check against.':
-    '**警报线设在了错误的极端。** 枚举器只在 `P` 变空时抛出异常，而那需要信念小到没有任何候选存活。从41个的集合里丢掉真相是无声的，而且必然如此：对局中引擎从不知道真相，所以它没有任何可供核对的东西。',
-  "**The differential test passed because both sides were wrong.** Misty's hot path is a Rust extension carrying a function written to reproduce python-chess byte for byte. It succeeded. The test comparing them across 178,145 move applications stayed green, comparing two encoders that had made the same mistake.":
-    '**差分测试通过了，因为两边都是错的。** Misty 的热点路径是一个 Rust 扩展，其中有一个函数是照着 python-chess 逐字节复现写出来的。它成功了。跨178,145次着法应用比较两者的测试一直是绿色的，比较的是两个犯了同一个错误的编码器。',
-  '**Replay could have seen it and was not looking.** The analysis pass records whether the truth is in `P`, but that column was only read on games past the sampling cap, where losing the truth is expected. On uncapped games it has no innocent explanation. Nobody had run that query.':
-    '**重放本可以发现它，只是没人去看。** 分析流程会记录真相是否在 `P` 中，但那一列只在超过抽样上限的对局上被读取过，而在那种情况下丢失真相是预期行为。在未触及上限的对局里，它没有任何无害的解释。没人跑过那条查询。',
-  'What generalizes': '可以推广的结论',
-  "**A serializer from a standard-rules library is not a neutral encoder.** It writes that library's judgments into the bytes, and those judgments are rules. Use its output as a key and you have imported a rulebook you never read.":
-    '**来自标准规则库的序列化器不是中立的编码器。** 它会把那个库的判断写进字节里，而那些判断就是规则。把它的输出当作键来用，你就引入了一本自己从未读过的规则书。',
-  '**Two implementations agreeing tells you they agree.** Mine agreed for months, and the agreement hid the bug: whenever I wondered whether the Rust port had drifted, a green test said no. True, and not the question.':
-    '**两个实现一致，只说明它们一致。** 我的两个实现一致了好几个月，而这种一致恰恰掩盖了缺陷：每当我怀疑 Rust 移植版是否已经偏离，一个绿色的测试就说没有。这是真的，但答的不是我问的问题。',
-  '**A belief that loses the truth gets sharper, not vaguer.** 41 worlds is a more confident belief than the 617 that survive once the square is recorded correctly. The failure does not look like uncertainty from the inside.':
-    '**丢失真相的信念会变得更锐利，而不是更模糊。** 41个世界比正确记录该格后存活下来的617个更自信。从内部看，这种失败并不像是不确定性。',
   "Fixed in the engine on 2026-09-10 and released in [Misty 0.1.3](https://github.com/brianhliou/misty/releases/tag/v0.1.3). Every board above is drawn by the engine's own visibility code from that position; the script that draws them refuses to run if the two views stop differing by exactly g3 and g4.":
     '已于2026-09-10在引擎中修正，并随 [Misty 0.1.3](https://github.com/brianhliou/misty/releases/tag/v0.1.3) 发布。上面每一张棋盘都是引擎自己的可见性代码从该局面绘制的；绘图脚本一旦发现两个视图的差异不再恰好是 g3 和 g4，就会拒绝运行。',
   // most-played-move: carried over from the brianhliou.com zh-hans and zh-hant posts (2026-10-15), word for word; links repointed like the English. Strings whose two zh versions were translated separately (ASCII differs) are left out, so the parity check below holds.
@@ -5524,13 +5479,6 @@ const ZH_HANS: Record<string, string> = {
   "The most played move in your rating band is the move most people at your rating play, which is not a recommendation, and the explorer never said it was. The filters that fix most of this list are already in the gear menu. Switch to the masters database and set the years to 2018 on, not the all-time table: the masters' book moves, and the all-time table is an average of eras. And when the most played move takes a pawn or declines one, check the engine before trusting the crowd; four of the ten above are a capture or a declined capture.":
     '你所在分段最常走的一手，是和你同分段的多数人会走的一手，这并不是推荐，局面浏览器也从没说过它是。能解决这份名单上大部分问题的筛选项，就在齿轮菜单里。切换到大师数据库，把年份设为2018年起，别用全时段的表：大师的开局库是会变的，而全时段表是各年代的平均。还有，当最常走的一手是吃兵或拒收弃兵时，先问问引擎，别轻信大众；上面十个局面里有四个涉及吃子或拒收吃子。',
   'How this was measured': '测量方法',
-  '**Resources:**': '**资源：**',
-  "[The study](/study/ibFQtGAL): all 144 positions with the club share, the masters' history and the engine's line":
-    '[这份研究](/study/ibFQtGAL)：全部144个局面，含俱乐部占比、大师的历史选择和引擎变例',
-  '[Lichess opening explorer](https://lichess.org/analysis#explorer): the source of every popularity number here':
-    '[Lichess开局局面浏览器](https://lichess.org/analysis#explorer)：本文所有流行度数据的来源',
-  '[What Lichess Analysis Misses](https://brianhliou.com/posts/lichess-analysis-accuracy/): the previous post, on how the labels are made':
-    '[Lichess分析遗漏了什么](https://brianhliou.com/posts/lichess-analysis-accuracy/)：上一篇文章，讲这些标签是怎么来的',
   'Open the 144 positions':
     '<a class="cta cta-primary" href="{{ site.embed_origin }}/study/{{ page.study }}">打开这144个局面</a>',
   'The deep puzzles':
@@ -10853,7 +10801,6 @@ const ZH_HANT: Record<string, string> = {
   'CHINESE XIANGQI ASSOCIATION RULINGS': '中國象棋協會處罰決定',
   'VERIFIED TITLES': '已核實的頭銜',
   // en-passant-under-fog: carried over from the brianhliou.com zh-hans and zh-hant posts (2026-10-15), word for word; links repointed like the English. Strings whose two zh versions were translated separately (ASCII differs) are left out, so the parity check below holds.
-  'Under Fog, En Passant Is Part of What You Can See': '迷霧之下，吃過路兵也是你能看見的一部分',
   "My fog of war chess engine recorded the en passant square under standard chess legality, in a variant with no such rule. En passant availability decides what a pawn can see, so the true board fell out of the engine's belief and it finished the game against 41 worlds that did not exist.":
     '我的迷霧戰爭西洋棋引擎依標準西洋棋的合法性記錄吃過路兵的目標格，可是這個變體根本沒有這條規則。能否吃過路兵決定了兵能看見什麼，於是真實棋盤從引擎的信念中掉了出去，它在最後對著 41 個不存在的世界下完了那盤棋。',
   'Misty tracks every board consistent with what it has seen, stored as FEN strings. In one game it finished against 41 boards, none of them the real one.':
@@ -10864,57 +10811,13 @@ const ZH_HANT: Record<string, string> = {
     '修正方式是只要有兵能吃就記下該格。重播全部 271 盤棋後，抽樣棋局以外的真值遺失案例由四例降為零。',
   'Nothing caught it: the Rust port copied python-chess byte for byte, so the test comparing the two passed, and a belief that loses the truth gets more confident, not less.':
     '沒有任何機制抓到它：Rust 移植版逐位元組複製了 python-chess 的行為，所以比對兩者的測試通過了；而一個遺失真值的信念只會變得更有把握，不會更不確定。',
-  '[Misty](/blog/misty) plays [fog of war chess](/rules/fog-chess) by holding `P`, the set of every board consistent with what it has observed. `P` is stored as FEN strings, and one field of a FEN is written by a rule rather than by the position.':
-    '[Misty](/blog/misty) 下[迷霧戰爭西洋棋](/rules/fog-chess)的方式是持有 `P`，也就是所有與它已觀察到的資訊一致的棋盤集合。`P` 以 FEN 字串儲存，而 FEN 的其中一個欄位是由規則寫出的，而非由局面決定。',
-  '**Symptom**': '**症狀**',
-  '`P` fell from 625 boards to 41 in one ply, and the true board was not among the 41':
-    '`P` 在一著之內由 625 個棋盤掉到 41 個，而真實棋盤不在這 41 個之中',
-  '**Impact**': '**影響**',
-  'Misty finished that game drawing search roots from 41 worlds, none of them real':
-    'Misty 在那盤棋的餘下部分都是從 41 個世界中抽取搜尋根節點，沒有一個是真的',
-  '**Cause**': '**原因**',
-  'The en passant square recorded under standard-chess legality, in a variant with no king-safety rule':
-    '在一個沒有王安全規則的變體中，卻依標準西洋棋的合法性記錄吃過路兵的目標格',
-  '**Fix**': '**修正**',
-  'Record it on the pseudo-legal rule (`EnPassantMode.XFEN`), through one shared function':
-    '依偽合法規則（`EnPassantMode.XFEN`）記錄，並透過單一共用函式處理',
-  '**Frequency**': '**頻率**',
-  '1 ply in 12,866, across 273 finished games': '273 盤已完成棋局中，12,866 著裡的 1 著',
-  '**Detection**': '**發現方式**',
-  'None. Found four months later while measuring belief sizes for something else':
-    '無。四個月後為了別的事量測信念大小時才發現',
-  'The bug': '這個錯誤',
   "Game `e751c6c4`, Misty as Black, move 29. White pushes the g-pawn two squares, beside Black's pawn on f4. White's queen on d6 attacks the black king.":
     '棋局 `e751c6c4`，Misty 執黑，第 29 著。白方將 g 兵推進兩格，落在黑方 f4 兵的旁邊。白方在 d6 的后攻擊黑王。',
-  "Black's f4 pawn can take on g3 en passant. Standard chess forbids it: Black is in check, and the capture does not address the check. Fog of war chess has no such rule. You cannot see the attack on your king, so you may leave it there, and the game ends on a captured king rather than at mate. f4xg3 is an ordinary move here.":
-    '黑方 f4 的兵可以在 g3 吃過路兵。標準西洋棋禁止這麼做：黑方正被將軍，而這個吃子並未解除將軍。迷霧戰爭西洋棋沒有這條規則。你看不見對王的攻擊，所以可以放著不管，棋局是以王被吃掉而結束，而不是以將死結束。在這裡 f4xg3 就是一個普通的著法。',
-  'Vision under fog is the set of squares your own pieces can move to. A pawn that can capture en passant sees the landing square, and sees the pawn it would take. The en passant square is therefore a fact about perception, not only about legality.':
-    '迷霧下的視野，是你自己的棋子能走到的格子集合。能吃過路兵的兵看得見落子的格子，也看得見它將要吃掉的那個兵。因此吃過路兵的目標格是關於感知的事實，不只是關於合法性。',
-  '`python-chess` writes that field with `EnPassantMode.LEGAL` by default, recording the square only when the capture is legal by standard rules. So it wrote `-`:':
-    '`python-chess` 預設以 `EnPassantMode.LEGAL` 寫出該欄位，只有在該吃子依標準規則合法時才記下那個格子。所以它寫成了 `-`：',
-  'The belief update rebuilds positions from those strings. Rebuilt from the stored one, the true position showed Black twelve squares instead of fourteen, no longer matched the observation it had itself produced, and dropped out of `P`.':
-    '信念更新會從那些字串重建局面。從儲存的字串重建後，真實局面顯示黑方看見十二個格子而非十四個，不再與它自己產生的觀察相符，於是從 `P` 中掉了出去。',
-  'The fix': '修正',
   'Record the square when a pawn can take, regardless of whether taking is wise. That is `EnPassantMode.XFEN`, and it is the fog rule. It still omits the square when no enemy pawn is adjacent, so the belief does not split over a square nobody can use.':
     '只要有兵能吃，就記下那個格子，不管吃下去是否明智。這就是 `EnPassantMode.XFEN`，也是迷霧規則。當旁邊沒有敵方兵時它仍會省略該格，所以信念不會因為一個沒人能用的格子而分裂。',
-  'Both writers now go through one named function instead of each calling a serializer with its own defaults. The membership check takes a board and canonicalizes it, since passing a raw `board.fen()` was the shape of the original mistake.':
-    '現在兩處寫出的程式碼都走同一個具名函式，而不是各自帶著自己的預設值去呼叫序列化器。成員檢查改為接受一個棋盤並將其正規化，因為直接傳入原始的 `board.fen()` 正是當初出錯的形式。',
   'At the failing ply `P` now goes 625 to 617, truth kept. Replaying all 271 games reports no lost-truth decisions outside the sampled games, against four before.':
     '在出錯的那一著，`P` 現在是由 625 變為 617，真值保留。重播全部 271 盤棋後，抽樣棋局以外沒有任何真值遺失的決策，先前則有四例。',
   'Why nothing caught it': '為什麼沒有任何機制抓到它',
-  '**The tripwire fires on the wrong extreme.** The enumerator raises when `P` goes empty, which needs a belief so small that no candidate survives. Losing the truth from a set of 41 is silent, and has to be: in play the engine never knows the truth, so it has nothing to check against.':
-    '**警報線是在錯誤的極端才觸發。** 列舉器只在 `P` 變成空集合時拋出錯誤，那需要信念小到沒有任何候選存活。從 41 個的集合中遺失真值是無聲的，也必然如此：實戰中引擎從來不知道真值，所以它沒有東西可以拿來核對。',
-  "**The differential test passed because both sides were wrong.** Misty's hot path is a Rust extension carrying a function written to reproduce python-chess byte for byte. It succeeded. The test comparing them across 178,145 move applications stayed green, comparing two encoders that had made the same mistake.":
-    '**差異測試通過了，因為兩邊都錯。** Misty 的熱路徑是一個 Rust 擴充，其中帶著一個寫成要逐位元組重現 python-chess 行為的函式。它成功了。橫跨 178,145 次著法套用的比對測試一直是綠的，比對的是兩個犯了同樣錯誤的編碼器。',
-  '**Replay could have seen it and was not looking.** The analysis pass records whether the truth is in `P`, but that column was only read on games past the sampling cap, where losing the truth is expected. On uncapped games it has no innocent explanation. Nobody had run that query.':
-    '**重播本來看得見，只是沒人去看。** 分析流程會記錄真值是否在 `P` 中，但那一欄只在超過抽樣上限的棋局上被讀過，在那些棋局中遺失真值是預期的。在沒有上限的棋局上，它沒有任何無害的解釋。只是從來沒有人跑過那個查詢。',
-  'What generalizes': '可以推廣的部分',
-  "**A serializer from a standard-rules library is not a neutral encoder.** It writes that library's judgments into the bytes, and those judgments are rules. Use its output as a key and you have imported a rulebook you never read.":
-    '**來自標準規則函式庫的序列化器不是中立的編碼器。** 它把那個函式庫的判斷寫進了位元組裡，而那些判斷就是規則。拿它的輸出當鍵值，你就引入了一本自己從未讀過的規則書。',
-  '**Two implementations agreeing tells you they agree.** Mine agreed for months, and the agreement hid the bug: whenever I wondered whether the Rust port had drifted, a green test said no. True, and not the question.':
-    '**兩個實作一致，只告訴你它們一致。** 我的兩個實作一致了好幾個月，而這份一致正好藏住了錯誤：每當我懷疑 Rust 移植是否偏移，綠色的測試就說沒有。這是真的，但不是我該問的問題。',
-  '**A belief that loses the truth gets sharper, not vaguer.** 41 worlds is a more confident belief than the 617 that survive once the square is recorded correctly. The failure does not look like uncertainty from the inside.':
-    '**遺失真值的信念會變得更銳利，而不是更模糊。** 41 個世界比正確記錄該格後存活的 617 個更有把握。這種失敗從內部看起來完全不像不確定。',
   "Fixed in the engine on 2026-09-10 and released in [Misty 0.1.3](https://github.com/brianhliou/misty/releases/tag/v0.1.3). Every board above is drawn by the engine's own visibility code from that position; the script that draws them refuses to run if the two views stop differing by exactly g3 and g4.":
     '已於 2026-09-10 在引擎中修正，並隨 [Misty 0.1.3](https://github.com/brianhliou/misty/releases/tag/v0.1.3) 發佈。上方每一張棋盤都是由引擎自己的可見性程式碼從該局面繪製的；繪圖的腳本若發現兩個視野的差異不再剛好是 g3 與 g4，就會拒絕執行。',
   // most-played-move: carried over from the brianhliou.com zh-hans and zh-hant posts (2026-10-15), word for word; links repointed like the English. Strings whose two zh versions were translated separately (ASCII differs) are left out, so the parity check below holds.
@@ -10989,13 +10892,6 @@ const ZH_HANT: Record<string, string> = {
   "The most played move in your rating band is the move most people at your rating play, which is not a recommendation, and the explorer never said it was. The filters that fix most of this list are already in the gear menu. Switch to the masters database and set the years to 2018 on, not the all-time table: the masters' book moves, and the all-time table is an average of eras. And when the most played move takes a pawn or declines one, check the engine before trusting the crowd; four of the ten above are a capture or a declined capture.":
     '你所在分數段中最多人下的著法，就是與你同分的人多數會走的著法，這並不是推薦，局面瀏覽器也從未說它是推薦。能修正這份清單上大部分問題的篩選條件，已經在齒輪選單裡了。切換到大師資料庫，並把年份設為 2018 年起，不要用全時期的表格：大師的開局書會移動，而全時期的表格是各年代的平均。此外，當最多人下的著法是吃兵或拒吃時，先查引擎，別輕信群眾；上面十個局面裡有四個是吃子或拒吃。',
   'How this was measured': '測量方式',
-  '**Resources:**': '**相關資源：**',
-  "[The study](/study/ibFQtGAL): all 144 positions with the club share, the masters' history and the engine's line":
-    '[這份研究](/study/ibFQtGAL)：全部 144 個局面，附俱樂部棋手比例、大師的歷史選擇與引擎的變例',
-  '[Lichess opening explorer](https://lichess.org/analysis#explorer): the source of every popularity number here':
-    '[Lichess 開局瀏覽器](https://lichess.org/analysis#explorer)：本文所有流行度數字的來源',
-  '[What Lichess Analysis Misses](https://brianhliou.com/posts/lichess-analysis-accuracy/): the previous post, on how the labels are made':
-    '[Lichess 分析遺漏了什麼](https://brianhliou.com/posts/lichess-analysis-accuracy/)：上一篇文章，談這些標籤是怎麼產生的',
   'Open the 144 positions':
     '<a class="cta cta-primary" href="{{ site.embed_origin }}/study/{{ page.study }}">打開這 144 個局面</a>',
   'The deep puzzles':
