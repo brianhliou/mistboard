@@ -14,7 +14,9 @@ import {
   type XmjMove,
   type XmjRoomState,
   type XmjSeat,
+  xmjAnswerAt,
   xmjBotAction,
+  xmjClaimAnswerEarliestAt,
   xmjIsLegalMove,
   xmjSeatMayAct,
   xmjViewFor,
@@ -33,6 +35,20 @@ export function isXmjBotClientId(clientId: string | undefined): boolean {
 
 /** Well inside the claim window, so the bot never lets one time out. */
 const BOT_THINK_MS = 700;
+/** The runtime fires a pending action this long after its deadline (lifecycle.ts). */
+const RUNTIME_SETTLE_LAG_MS = 25;
+
+/**
+ * How long the bot waits before acting. As the claimant it answers when the
+ * claim pause ends, at the moment the runtime would pass for a seat with
+ * nothing to claim, so a bot's claim, its pass and its empty hand all settle
+ * the window at the same time.
+ */
+export function xmjBotDelayMs(state: XmjRoomState, now: number): number {
+  const earliest = xmjClaimAnswerEarliestAt(state);
+  if (earliest === null) return BOT_THINK_MS;
+  return Math.max(0, earliest - now) + RUNTIME_SETTLE_LAG_MS;
+}
 
 type XmjRuntimeRoomForBots = TenantRuntimeRoom<
   'xiangqi-mahjong',
@@ -47,12 +63,18 @@ function botSeats(room: XmjRuntimeRoomForBots): XmjSeat[] {
 }
 
 /** The move this bot seat wants to make, or null if it has nothing to do. */
-export function xmjBotMove(state: XmjRoomState, seat: XmjSeat): XmjMove | null {
+export function xmjBotMove(
+  state: XmjRoomState,
+  seat: XmjSeat,
+  now: number = Date.now(),
+): XmjMove | null {
   if (state.status.type !== 'playing') return null;
   if (!xmjSeatMayAct(state, seat)) return null;
   const action = xmjBotAction(xmjViewFor(state, seat), seat);
   if (action === null) return null;
-  const move = { ...action, by: seat, at: Date.now() } as XmjMove;
+  // An answer to a discard is dated to the end of the pause, as the runtime's
+  // pass is, so the move log carries no timing the empty-handed pass lacks.
+  const move = { ...action, by: seat, at: xmjAnswerAt(state, now) } as XmjMove;
   return xmjIsLegalMove(state, move) ? move : null;
 }
 
@@ -71,31 +93,34 @@ export function scheduleXmjBotMove(
   const ready = botSeats(room).find((seat) => xmjBotMove(room.projection.state, seat) !== null);
   if (!ready) return;
 
-  room.engineTimer = setTimeout(() => {
-    const move = xmjBotMove(room.projection.state, ready);
-    if (move === null) return;
-    void ctx
-      .appendEvent(room, {
-        type: 'move-played',
-        at: Date.now(),
-        roomId: room.id,
-        color: ready,
-        move,
-      })
-      .then((seq) => {
-        const event = room.events[seq];
-        if (event) ctx.broadcastEventAppended(room, event, seq);
-      })
-      .catch((err) => {
-        logger.error({
-          kind: 'xiangqi_mahjong_bot_move_failure',
-          room_id: room.id,
-          seat: ready,
-          error: (err as Error).message,
+  room.engineTimer = setTimeout(
+    () => {
+      const move = xmjBotMove(room.projection.state, ready);
+      if (move === null) return;
+      void ctx
+        .appendEvent(room, {
+          type: 'move-played',
           at: Date.now(),
+          roomId: room.id,
+          color: ready,
+          move,
+        })
+        .then((seq) => {
+          const event = room.events[seq];
+          if (event) ctx.broadcastEventAppended(room, event, seq);
+        })
+        .catch((err) => {
+          logger.error({
+            kind: 'xiangqi_mahjong_bot_move_failure',
+            room_id: room.id,
+            seat: ready,
+            error: (err as Error).message,
+            at: Date.now(),
+          });
         });
-      });
-  }, BOT_THINK_MS);
+    },
+    xmjBotDelayMs(room.projection.state, Date.now()),
+  );
   room.engineTimer.unref();
 }
 

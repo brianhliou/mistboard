@@ -1,10 +1,16 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  applyXmjMove,
+  createXmjRoomState,
   createXmjSetup,
   XIANGQI_MAHJONG_SPEC_ID,
+  XMJ_CLAIM_PAUSE_MS,
   type XmjRoomState,
   type XmjSeat,
+  type XmjTile,
+  xmjOrderedTiles,
+  xmjPendingAction,
 } from '@mistboard/game';
 import { gateGameSpecRequest } from './game-spec-request-gate.js';
 import { isAllowlistedGameSpec } from './persistence-variant-access.js';
@@ -12,6 +18,8 @@ import {
   isXmjBotClientId,
   playXmjBotMove,
   XMJ_BOT_CLIENT_ID,
+  xmjBotDelayMs,
+  xmjBotMove,
 } from './server-xiangqi-mahjong-bots.js';
 import {
   getXmjClientView,
@@ -133,4 +141,39 @@ test('the bot seat is an engine seat, so it never reads as a disconnected player
   assert.equal(tenant.engine?.isEngineClientId(XMJ_BOT_CLIENT_ID), true);
   assert.equal(tenant.engine?.isEngineClientId('some-human'), false);
   assert.equal(tenant.oppositeColor('east'), 'west');
+});
+
+/** East deals 帥仕俥傌炮 (black 將 here) and discards 俥; west's hand is the variable. */
+function botClaimantAfterDiscard(west: XmjTile[]): XmjRoomState {
+  const rest = xmjOrderedTiles();
+  const east: XmjTile[] = ['bK', 'rA', 'rR', 'bH', 'bC'];
+  for (const tile of [...east, ...west, 'rP' as XmjTile]) rest.splice(rest.indexOf(tile), 1);
+  const wall = [...east, ...west, 'rP' as XmjTile, ...rest];
+  const state = createXmjRoomState({ walls: [wall], firstDealer: 'east' }, 'xmj_bot');
+  return applyXmjMove(state, { by: 'east', at: 10_000, action: 'discard', tile: 'rR' });
+}
+
+test('a bot claimant settles the window at the same moment, claim or not', () => {
+  const canChow = botClaimantAfterDiscard(['rH', 'rC', 'bA', 'rE']);
+  const nothing = botClaimantAfterDiscard(['bP', 'bP', 'bA', 'rE']);
+  const pauseEnd = 10_000 + XMJ_CLAIM_PAUSE_MS;
+  const armedAt = 10_050;
+  // The bot waits for the pause like everyone; its timer and the runtime's
+  // pass for an empty hand fire together (both run 25 ms past the deadline).
+  assert.equal(xmjBotDelayMs(canChow, armedAt), xmjBotDelayMs(nothing, armedAt));
+  assert.equal(armedAt + xmjBotDelayMs(nothing, armedAt), pauseEnd + 25);
+  // With a claim the bot answers; with none it has nothing to do and the
+  // runtime passes. Both moves are the claimant's, dated to the pause end.
+  const claim = xmjBotMove(canChow, 'west', pauseEnd + 25);
+  assert.equal(claim?.action, 'claim');
+  assert.equal(claim?.by, 'west');
+  assert.equal(claim?.at, pauseEnd);
+  assert.equal(xmjBotMove(nothing, 'west', pauseEnd + 25), null);
+  const pass = xmjPendingAction(nothing);
+  assert.equal(pass?.at, pauseEnd);
+  assert.equal(pass?.move.by, 'west');
+  assert.equal(pass?.move.at, pauseEnd);
+  // Outside a window the bot keeps its ordinary think time.
+  const fresh = createXmjRoomState({ walls: [xmjOrderedTiles()], firstDealer: 'east' });
+  assert.equal(xmjBotDelayMs(fresh, 0), 700);
 });

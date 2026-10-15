@@ -2,13 +2,23 @@ import {
   applyXmjMove,
   createXmjRoomState,
   createXmjSetup,
+  XMJ_GLYPHS,
+  type XmjPlayerView,
   type XmjRoomState,
   type XmjSeat,
+  type XmjTile,
   xmjBotAction,
+  xmjOrderedTiles,
+  xmjPendingAction,
   xmjViewFor,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
-import { xiangqiMahjongTableHtml, xmjViewOffersAction } from './xiangqi-mahjong-table.js';
+import {
+  type XmjTableOptions,
+  xiangqiMahjongTableHtml,
+  xmjFeltFromSearch,
+  xmjViewOffersAction,
+} from './xiangqi-mahjong-table.js';
 
 function seeded(seed: number): () => number {
   let x = seed;
@@ -18,11 +28,14 @@ function seeded(seed: number): () => number {
   };
 }
 
+/** A bot move for whoever has one, else the runtime's deadline move. */
 function botStep(state: XmjRoomState): XmjRoomState {
   for (const seat of ['east', 'west'] as const) {
     const action = xmjBotAction(xmjViewFor(state, seat), seat);
     if (action) return applyXmjMove(state, { ...action, by: seat, at: 0 });
   }
+  const pending = xmjPendingAction(state);
+  if (pending) return applyXmjMove(state, pending.move);
   throw new Error('nobody can act');
 }
 
@@ -32,60 +45,148 @@ function doc(html: string): HTMLElement {
   return host;
 }
 
+const NAMES = { east: 'You', west: 'Bot' } as const;
+function opts(canAct: boolean, extra: Partial<XmjTableOptions> = {}): XmjTableOptions {
+  return { canAct, names: NAMES, now: 0, ...extra };
+}
+
+/** East deals 將仕俥傌炮 and discards 俥; west holds `west`. */
+function afterDiscard(west: XmjTile[]): XmjRoomState {
+  const east: XmjTile[] = ['bK', 'rA', 'rR', 'bH', 'bC'];
+  const rest = xmjOrderedTiles();
+  for (const tile of [...east, ...west, 'rP' as XmjTile]) rest.splice(rest.indexOf(tile), 1);
+  const wall = [...east, ...west, 'rP' as XmjTile, ...rest];
+  const state = createXmjRoomState({ walls: [wall], firstDealer: 'east' }, 'xmj_test');
+  return applyXmjMove(state, { by: 'east', at: 10_000, action: 'discard', tile: 'rR' });
+}
+
 describe('xiangqi mahjong table', () => {
   const state = createXmjRoomState(createXmjSetup(seeded(7)), 'xmj_test');
   const mover = state.status.type === 'playing' ? state.status.turn : ('east' as XmjSeat);
   const idle: XmjSeat = mover === 'east' ? 'west' : 'east';
 
-  it('shows the viewer their tiles and only backs for the opponent', () => {
+  it('shows the viewer their tiles and full-size backs for the opponent', () => {
     const view = xmjViewFor(state, mover);
-    const host = doc(xiangqiMahjongTableHtml(view, true));
+    const host = doc(xiangqiMahjongTableHtml(view, opts(true)));
     const own = view.hands[mover] ?? [];
     expect(host.querySelectorAll('.xmj-seat--self .xmj-rack .xmj-tile').length).toBe(own.length);
-    expect(host.querySelectorAll('.xmj-tile--back').length).toBe(view.handCounts[idle]);
+    const backs = host.querySelectorAll('.xmj-seat--opponent .xmj-tile--back');
+    expect(backs.length).toBe(view.handCounts[idle]);
+    // Same tiles turned over: no small modifier on the opponent's hand.
+    expect(host.querySelectorAll('.xmj-seat--opponent .xmj-tile--back.xmj-tile--sm').length).toBe(
+      0,
+    );
     // The dealer's opening hand has a discard to make: every tile is a button.
     expect(host.querySelectorAll('[data-xmj-tile]').length).toBe(own.length);
   });
 
+  it('names seats by who sits there and marks the dealer, with no winds', () => {
+    const host = doc(xiangqiMahjongTableHtml(xmjViewFor(state, 'east'), opts(true)));
+    const names = [...host.querySelectorAll('.xmj-name')].map((node) => node.textContent);
+    expect(names.sort()).toEqual(['Bot', 'You']);
+    expect(host.querySelectorAll('.xmj-badge--dealer').length).toBe(1);
+    expect(host.textContent).not.toMatch(/East|West|東|西/);
+  });
+
   it('offers no discard buttons when the room says this seat may not act', () => {
-    const host = doc(xiangqiMahjongTableHtml(xmjViewFor(state, mover), false));
+    const host = doc(xiangqiMahjongTableHtml(xmjViewFor(state, mover), opts(false)));
     expect(host.querySelectorAll('[data-xmj-tile]').length).toBe(0);
   });
 
   it('a spectator sees two concealed hands and no actions', () => {
     const view = xmjViewFor(state, 'spectator');
-    const host = doc(xiangqiMahjongTableHtml(view, true));
+    const host = doc(xiangqiMahjongTableHtml(view, opts(true)));
     expect(host.querySelectorAll('.xmj-tile--back').length).toBe(
       view.handCounts.east + view.handCounts.west,
     );
     expect(host.querySelectorAll('button').length).toBe(0);
   });
 
-  it('seatMayAct follows the server legal actions, not the turn', () => {
-    expect(xmjViewOffersAction(xmjViewFor(state, mover), mover)).toBe(true);
-    expect(xmjViewOffersAction(xmjViewFor(state, idle), idle)).toBe(false);
-    // After a discard, the idle seat answers the claim window.
-    const action = xmjBotAction(xmjViewFor(state, mover), mover);
-    if (action?.action !== 'discard') throw new Error('expected a discard');
-    const after = applyXmjMove(state, { ...action, by: mover, at: 0 });
-    expect(xmjViewOffersAction(xmjViewFor(after, idle), idle)).toBe(true);
-    const host = doc(xiangqiMahjongTableHtml(xmjViewFor(after, idle), true));
-    expect(host.querySelector('[data-xmj-pass]')).not.toBeNull();
+  it('keeps one pond per player, labelled, and notches the latest discard', () => {
+    const after = afterDiscard(['bP', 'bP', 'bA', 'rE']);
+    const host = doc(xiangqiMahjongTableHtml(xmjViewFor(after, 'west'), opts(false)));
+    const east = host.querySelector('[data-xmj-pond="east"]');
+    const west = host.querySelector('[data-xmj-pond="west"]');
+    expect(east?.querySelector('.xmj-pond-label')?.textContent).toBe("You's discards");
+    expect(west?.querySelector('.xmj-pond-label')?.textContent).toBe('Your discards');
+    expect(east?.querySelectorAll('.xmj-tile').length).toBe(1);
+    expect(east?.querySelector('.xmj-tile--last')?.textContent).toBe(XMJ_GLYPHS.rR);
+    expect(west?.querySelectorAll('.xmj-tile').length).toBe(0);
   });
 
-  it('renders every state of a bot match, ending in the results table', () => {
+  it('a claimant with a claim gets Take with the set, Pass, a countdown and a bubble', () => {
+    const after = afterDiscard(['rH', 'rC', 'bA', 'rE']);
+    const view = xmjViewFor(after, 'west');
+    expect(xmjViewOffersAction(view, 'west')).toBe(true);
+    const html = xiangqiMahjongTableHtml(view, opts(true, { now: 12_000 }));
+    const host = doc(html);
+    const take = host.querySelector('[data-xmj-claim="chow"]');
+    expect(take?.textContent).toBe(`Take${XMJ_GLYPHS.rR}${XMJ_GLYPHS.rH}${XMJ_GLYPHS.rC}`);
+    expect(host.querySelector('[data-xmj-pass]')?.textContent).toBe('Pass');
+    const timer = host.querySelector<HTMLElement>('.xmj-timer-line');
+    expect(Number(timer?.dataset.xmjDeadline)).toBe(view.windowClosesAt);
+    expect(timer?.querySelector('[data-xmj-secs]')?.textContent).toBe('8s');
+    expect(host.querySelector('.xmj-bubble')?.textContent).toContain(XMJ_GLYPHS.rR);
+    // A queued pass spends every button until it goes.
+    const queued = doc(xiangqiMahjongTableHtml(view, opts(true, { passQueued: true })));
+    for (const button of queued.querySelectorAll<HTMLButtonElement>('.xmj-actions button')) {
+      expect(button.disabled).toBe(true);
+    }
+  });
+
+  it('the discarder sees the same table whether or not the claimant can claim', () => {
+    const render = (west: XmjTile[]) =>
+      xiangqiMahjongTableHtml(xmjViewFor(afterDiscard(west), 'east'), opts(false));
+    expect(render(['rH', 'rC', 'bA', 'rE'])).toBe(render(['bP', 'bP', 'bA', 'rE']));
+  });
+
+  it('a claimant with nothing to claim gets no buttons and no countdown', () => {
+    const view = xmjViewFor(afterDiscard(['bP', 'bP', 'bA', 'rE']), 'west');
+    expect(xmjViewOffersAction(view, 'west')).toBe(false);
+    const host = doc(xiangqiMahjongTableHtml(view, opts(false)));
+    expect(host.querySelector('.xmj-actions')).toBeNull();
+    expect(host.querySelector('.xmj-bubble')).toBeNull();
+  });
+
+  it('reads the felt from the query string, green by default', () => {
+    expect(xmjFeltFromSearch('')).toBe('green');
+    expect(xmjFeltFromSearch('?felt=wood')).toBe('wood');
+    expect(xmjFeltFromSearch('?x=1&felt=slate')).toBe('slate');
+    expect(xmjFeltFromSearch('?felt=site')).toBe('site');
+    expect(xmjFeltFromSearch('?felt=<b>')).toBe('green');
+  });
+
+  it('renders every state of a bot match, groups each win as scored, and ends in the ledger', () => {
     let current = state;
     let steps = 0;
+    let wins = 0;
     while (current.status.type === 'playing' && steps < 5000) {
       for (const seat of ['east', 'west', 'spectator'] as const) {
-        expect(() => xiangqiMahjongTableHtml(xmjViewFor(current, seat), true)).not.toThrow();
+        const view: XmjPlayerView = xmjViewFor(current, seat);
+        const html = xiangqiMahjongTableHtml(view, opts(true));
+        // No set or pair hints while a hand is in play.
+        if (!view.between) expect(html).not.toContain('xmj-group');
+        if (view.between && view.phase.type === 'won' && seat === 'east') {
+          wins += 1;
+          const host = doc(html);
+          const { meld, pair } = view.phase.score.shape;
+          const groups = [...host.querySelectorAll('.xmj-group')];
+          const shown = groups.flatMap((group) =>
+            [...group.querySelectorAll('.xmj-tile')].map((tile) => tile.textContent),
+          );
+          expect(shown).toEqual([...meld, ...pair].map((tile) => XMJ_GLYPHS[tile]));
+          expect(host.querySelectorAll('.xmj-tile--win').length).toBe(1);
+          const caps = groups.map((group) => group.querySelector('.xmj-group__cap')?.textContent);
+          expect(caps).toEqual(caps.length === 1 ? ['five soldiers'] : ['set', 'pair']);
+        }
       }
       current = botStep(current);
       steps += 1;
     }
     expect(current.status.type).toBe('finished');
-    const host = doc(xiangqiMahjongTableHtml(xmjViewFor(current, 'east'), true));
-    expect(host.querySelectorAll('.xmj-results tbody tr').length).toBeGreaterThan(0);
-    expect(host.textContent).toMatch(/wins the match|Match drawn/);
+    expect(wins).toBeGreaterThan(0);
+    const host = doc(xiangqiMahjongTableHtml(xmjViewFor(current, 'east'), opts(true)));
+    expect(host.querySelectorAll('.xmj-ledger tbody tr').length).toBeGreaterThan(1);
+    expect(host.textContent).toMatch(/Match to (You|Bot)|Match drawn/);
   });
 });

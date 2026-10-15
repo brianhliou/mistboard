@@ -191,12 +191,16 @@ test('(g) 天胡: the dealer wins on the opening five, flat 6', () => {
   assert.equal(won.phase.score.total, 6);
 });
 
-test('draw/discard cycle: no claim available means the opponent draws at once', () => {
+test('draw/discard cycle: a discard always opens the window, even with no claim in it', () => {
   const hand = xmjDeal(
     wallWith(['bK', 'rA', 'rR', 'bH', 'rC'], ['bP', 'bA', 'rE', 'bC'], ['rH']),
     0,
   );
-  const after = xmjDiscard(hand, 'rR');
+  const window = xmjDiscard(hand, 'rR');
+  // Opening only when a claim existed told the discarder the opponent's hand.
+  assert.equal(window.phase.type, 'claim');
+  assert.deepEqual(xmjClaimsOpen(window), []);
+  const after = xmjPass(window);
   assert.equal(after.turn, 1);
   assert.equal(after.phase.type, 'discard');
   assert.equal(after.hands[1].length, 5);
@@ -268,6 +272,8 @@ test('win on the opponent discard (胡) scores and books the hand', () => {
   assert.equal(won.phase.selfDrawn, false);
   // win 1 only: mixed colours, non-dealer.
   assert.equal(won.phase.score.total, 1);
+  // The score carries the split it was counted from, for the table to group.
+  assert.deepEqual(won.phase.score.shape, { meld: ['bK', 'bA', 'bE'], pair: ['rP', 'rP'] });
 });
 
 test('地胡: the non-dealer wins on the first draw, flat 6', () => {
@@ -275,7 +281,7 @@ test('地胡: the non-dealer wins on the first draw, flat 6', () => {
     wallWith(['rA', 'rA', 'rR', 'bH', 'rC'], ['bK', 'bA', 'rP', 'rP'], ['bE']),
     0,
   );
-  const drawn = xmjDiscard(hand, 'rR');
+  const drawn = xmjPass(xmjDiscard(hand, 'rR'));
   assert.equal(drawn.turn, 1);
   assert.ok(xmjCanSelfDraw(drawn));
   const won = xmjSelfDraw(drawn);

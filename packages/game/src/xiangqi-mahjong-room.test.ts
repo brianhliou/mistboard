@@ -9,6 +9,7 @@ import {
   isXmjMove,
   isXmjRoomSetup,
   XMJ_BETWEEN_HANDS_MS,
+  XMJ_CLAIM_PAUSE_MS,
   XMJ_CLAIM_WINDOW_MS,
   XMJ_SEATS,
   type XmjAction,
@@ -16,6 +17,8 @@ import {
   type XmjRoomSetup,
   type XmjRoomState,
   type XmjSeat,
+  xmjAnswerAt,
+  xmjClaimAnswerEarliestAt,
   xmjClaimant,
   xmjClockOwner,
   xmjIsLegalMove,
@@ -55,13 +58,17 @@ function play(state: XmjRoomState, by: XmjSeat, action: XmjAction, at = 1_000): 
   return next;
 }
 
-/** Whichever seat has something to do, by bot. Null when nobody does. */
+/**
+ * Whichever seat has something to do, by bot; else the runtime's deadline move
+ * (a window with nothing to claim settles that way). Null when nobody does.
+ */
 function botStep(state: XmjRoomState, at: number): XmjRoomState | null {
   for (const seat of XMJ_SEATS) {
     const action = xmjBotAction(xmjViewFor(state, seat), seat);
     if (action) return play(state, seat, action, at);
   }
-  return null;
+  const pending = xmjPendingAction(state);
+  return pending ? applyXmjMove(state, pending.move) : null;
 }
 
 test('a fresh setup is one full wall per match hand and passes its own validator', () => {
@@ -100,7 +107,7 @@ test('a seat sees its own tiles, never the other hand or the other seat’s draw
   if (own.phase.type === 'discard') assert.notEqual(own.phase.drawn, null);
 });
 
-test('a claim window belongs to the claimant; the discarder only times it out', () => {
+test('a claim window belongs to the claimant and settles as its pass', () => {
   const wall = wallWith(['bE', 'rA', 'rR', 'bH', 'rC'], ['bK', 'bA', 'rP', 'rH'], ['rH']);
   let state = createXmjRoomState({ walls: [wall], firstDealer: 'east' });
   state = play(state, 'east', { action: 'discard', tile: 'bE' }, 5_000);
@@ -118,9 +125,11 @@ test('a claim window belongs to the claimant; the discarder only times it out', 
       fromHand: ['bK', 'bA'],
     }),
   );
-  // The runtime's timeout is the discarder's, and acts as a pass.
+  // With a claim to weigh the claimant keeps the full window; the runtime then
+  // passes for it, the same move a seat with nothing to claim makes.
   const pending = xmjPendingAction(state);
-  assert.equal(pending?.color, 'east');
+  assert.equal(pending?.color, 'west');
+  assert.equal(pending?.move.action, 'pass');
   assert.equal(pending?.at, 5_000 + XMJ_CLAIM_WINDOW_MS);
   const timedOut = applyXmjMove(state, pending?.move as XmjMove);
   assert.equal(timedOut.match.hand.turn, 1);
@@ -128,6 +137,59 @@ test('a claim window belongs to the claimant; the discarder only times it out', 
   assert.equal(timedOut.windowClosesAt, null);
   // A client cannot send a timeout.
   assert.equal(xmjMoveFromMessage({ action: 'timeout' }), null);
+});
+
+// Same dealer hand, same discard (車); only the claimant's hidden hand differs.
+const DEALER: XmjTile[] = ['bK', 'rA', 'rR', 'bH', 'bC'];
+const CAN_CHOW: XmjTile[] = ['rH', 'rC', 'bA', 'rE']; // 傌炮 take the 俥
+const NOTHING: XmjTile[] = ['bP', 'bP', 'bA', 'rE'];
+
+function afterDiscard(claimant: XmjTile[]): XmjRoomState {
+  const wall = wallWith(DEALER, claimant, ['rP']);
+  const state = createXmjRoomState({ walls: [wall], firstDealer: 'east' });
+  return play(state, 'east', { action: 'discard', tile: 'rR' }, 5_000);
+}
+
+test('the discarder sees the same window whether or not the claimant can claim', () => {
+  const withClaim = afterDiscard(CAN_CHOW);
+  const without = afterDiscard(NOTHING);
+  assert.deepEqual(
+    xmjViewFor(withClaim, 'west').legal.claims.map((c) => c.kind),
+    ['chow'],
+  );
+  assert.deepEqual(xmjViewFor(without, 'west').legal.claims, []);
+  // A window that opened only for a claim told the discarder the opponent's
+  // hand fit the tile. Every field the discarder (and a spectator) can read is
+  // identical: phase, deadlines, counts, what it may do.
+  assert.deepEqual(xmjViewFor(withClaim, 'east'), xmjViewFor(without, 'east'));
+  assert.deepEqual(xmjViewFor(withClaim, 'spectator'), xmjViewFor(without, 'spectator'));
+  const view = xmjViewFor(without, 'east');
+  assert.equal(view.phase.type, 'claim');
+  assert.equal(view.windowClosesAt, 5_000 + XMJ_CLAIM_WINDOW_MS);
+  assert.equal(view.claimPauseEndsAt, 5_000 + XMJ_CLAIM_PAUSE_MS);
+});
+
+test('a window with nothing to claim passes for the claimant when the pause ends', () => {
+  const without = afterDiscard(NOTHING);
+  // No buttons for a seat with nothing to press.
+  assert.equal(xmjViewFor(without, 'west').legal.pass, false);
+  const pending = xmjPendingAction(without);
+  assert.deepEqual(pending, {
+    at: 5_000 + XMJ_CLAIM_PAUSE_MS,
+    color: 'west',
+    move: { by: 'west', at: 5_000 + XMJ_CLAIM_PAUSE_MS, action: 'pass' },
+  });
+  const drawn = applyXmjMove(without, pending?.move as XmjMove);
+  assert.equal(drawn.match.hand.turn, 1);
+  assert.equal(drawn.match.hand.hands[1].length, 5);
+  assert.equal(drawn.windowClosesAt, null);
+  assert.equal(drawn.claimPauseEndsAt, null);
+
+  // A claimant WITH a claim answers no sooner than that same moment, so the
+  // window settles at the pause end either way unless a human sits on it.
+  const withClaim = afterDiscard(CAN_CHOW);
+  assert.equal(xmjClaimAnswerEarliestAt(withClaim), pending?.at);
+  assert.equal(xmjClaimAnswerEarliestAt(drawn), null);
 });
 
 test('claiming a chow through the room exposes the set and skips the draw', () => {
@@ -270,4 +332,17 @@ test('two bots play 200 seeded matches to the end with zero-sum scores', () => {
   // Sanity on the bot, not a rule: most hands should be won, and some claimed.
   assert.ok(wins > exhausted, `wins ${wins}, exhausted ${exhausted}`);
   assert.ok(claims > 0);
+});
+
+test('an answer made at once is dated to the pause end, a late one to its own time', () => {
+  const state = afterDiscard(CAN_CHOW);
+  const pauseEnd = 5_000 + XMJ_CLAIM_PAUSE_MS;
+  assert.equal(xmjAnswerAt(state, pauseEnd + 80), pauseEnd);
+  assert.equal(xmjAnswerAt(state, pauseEnd + 4_000), pauseEnd + 4_000);
+  // Outside a window the clock is the clock.
+  const fresh = createXmjRoomState({
+    walls: [wallWith(DEALER, CAN_CHOW, ['rP'])],
+    firstDealer: 'east',
+  });
+  assert.equal(xmjAnswerAt(fresh, 123), 123);
 });

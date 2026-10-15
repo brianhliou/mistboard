@@ -264,6 +264,12 @@ export interface XmjTaiLine {
 export interface XmjScore {
   readonly lines: readonly XmjTaiLine[];
   readonly total: number;
+  /**
+   * The set and pair this score was counted from. Where a hand splits more
+   * than one way, this is the split the lines above were read off, so a table
+   * that groups the winning hand shows the hand that was scored.
+   */
+  readonly shape: XmjWinShape;
 }
 
 export const XMJ_TAI_LABELS: Readonly<Record<XmjTaiKey, string>> = {
@@ -305,10 +311,10 @@ function line(key: XmjTaiKey, tai: number): XmjTaiLine {
  * dealer's extra tile and first discard let one early win snowball.
  */
 export function xmjScore(ctx: XmjWinContext): XmjScore {
-  if (ctx.heavenly) return { lines: [line('heavenly', 6)], total: 6 };
-  if (ctx.earthly) return { lines: [line('earthly', 6)], total: 6 };
   const shape = xmjWinShape(ctx.concealed, ctx.melds);
   if (!shape) throw new Error('xmjScore: not a winning hand');
+  if (ctx.heavenly) return { lines: [line('heavenly', 6)], total: 6, shape };
+  if (ctx.earthly) return { lines: [line('earthly', 6)], total: 6, shape };
   const all = [...ctx.concealed, ...ctx.melds.flatMap((m) => m.tiles)];
   const lines: XmjTaiLine[] = [line('win', 1)];
   if (ctx.selfDrawn) lines.push(line('self-draw', 2));
@@ -322,7 +328,7 @@ export function xmjScore(ctx: XmjWinContext): XmjScore {
   }
   if (ctx.lastTile) lines.push(line('last-tile', 1));
   const total = lines.reduce((sum, l) => sum + l.tai, 0);
-  return { lines, total };
+  return { lines, total, shape };
 }
 
 // ---------------------------------------------------------------- one hand
@@ -409,8 +415,10 @@ export function xmjCanDiscard(state: XmjHandState, tile: XmjTile): boolean {
 }
 
 /**
- * Discard a tile. Opens the claim window when the opponent has a claim;
- * otherwise the opponent draws at once (the pass it could only ever be).
+ * Discard a tile. Always opens the claim window, whether or not the opponent
+ * holds a claim: a window that opened only when a claim existed would tell the
+ * discarder the opponent's hand fits the tile. The room settles a window with
+ * no claim in it as a pass (see `xmjPendingAction`).
  */
 export function xmjDiscard(state: XmjHandState, tile: XmjTile): XmjHandState {
   if (!xmjCanDiscard(state, tile)) return state;
@@ -422,7 +430,7 @@ export function xmjDiscard(state: XmjHandState, tile: XmjTile): XmjHandState {
     discards: setSeat(state.discards, seat, [...state.discards[seat], tile]),
     phase: { type: 'claim', discard: tile, discarder: seat },
   };
-  return xmjClaimsOpen(next).length > 0 ? next : xmjPass(next);
+  return next;
 }
 
 /** Claims open to the non-discarder in the current window (empty outside one). */

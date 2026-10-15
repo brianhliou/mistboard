@@ -13,11 +13,13 @@ import {
   XIANGQI_MAHJONG_SPEC_ID,
   XMJ_GLYPHS,
   XMJ_SEATS,
+  type XmjClaimKind,
   type XmjMove,
   type XmjPlayerView,
   type XmjSeat,
 } from '@mistboard/game';
 import { xiangqiMahjongEnabled } from './feature-flags.js';
+import { t } from './i18n/catalog.js';
 import { playSound, playTerminalPlan } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
 import {
@@ -28,11 +30,93 @@ import {
 } from './variant-tenant/live-client.js';
 import type { TenantReasonKey, WebVariantTenant } from './variant-tenant/room-chrome.js';
 import './xiangqi-mahjong.css';
-import { xiangqiMahjongTableHtml, xmjViewOffersAction } from './xiangqi-mahjong-table.js';
+import {
+  xiangqiMahjongTableHtml,
+  xmjCountdown,
+  xmjFeltFromSearch,
+  xmjViewOffersAction,
+} from './xiangqi-mahjong-table.js';
 
 let core: TenantLiveClientContext<XmjSeat, XmjPlayerView> | null = null;
 let roomMode: 'pvp' | 'pve' = 'pve';
 let forfeitDeadline: number | null = null;
+
+/**
+ * The server's clock, estimated from the times on move events. An event is
+ * stamped no later than it is sent, so the largest recent (stamp - arrival)
+ * is the closest guess; an answer dated back to a pause end only lowers one
+ * sample.
+ */
+const offsetSamples: number[] = [];
+function noteServerTime(at: unknown): void {
+  if (typeof at !== 'number' || !Number.isFinite(at)) return;
+  offsetSamples.push(at - Date.now());
+  if (offsetSamples.length > 8) offsetSamples.shift();
+}
+function serverNow(): number {
+  return Date.now() + (offsetSamples.length > 0 ? Math.max(...offsetSamples) : 0);
+}
+
+/**
+ * A Pass pressed during the pause after a discard waits for the pause to end:
+ * an answer sooner than an empty hand's automatic pass would tell the
+ * discarder there was something to decide. Keyed by the window it answers.
+ */
+let queuedPass: { window: number; timer: ReturnType<typeof setTimeout> } | null = null;
+const PASS_MARGIN_MS = 120;
+
+function clearQueuedPass(): void {
+  if (queuedPass) clearTimeout(queuedPass.timer);
+  queuedPass = null;
+}
+
+function seatNames(): Record<XmjSeat, string> {
+  const own = core?.state.seat;
+  const shown = core?.state.seatDisplayNames ?? {};
+  const name = (seat: XmjSeat): string => {
+    if (seat === own) return t('live.xmj.you');
+    if (roomMode === 'pve' && own !== 'spectator' && own !== null && own !== undefined) {
+      return t('live.xmj.bot');
+    }
+    return shown[seat] ?? t('live.xmj.guest');
+  };
+  return { east: name('east'), west: name('west') };
+}
+
+/** The countdowns tick in place; nothing else on the table moves. */
+let ticker: ReturnType<typeof setInterval> | null = null;
+function tickCountdowns(board: HTMLElement): boolean {
+  const now = serverNow();
+  const nodes = board.querySelectorAll<HTMLElement>('[data-xmj-deadline]');
+  for (const node of nodes) {
+    const deadline = Number(node.dataset.xmjDeadline);
+    const span = Number(node.dataset.xmjSpan ?? 0);
+    const { secs, width } = xmjCountdown(deadline, span > 0 ? span : 1, now);
+    if (node.dataset.xmjText === 'nextHandIn') {
+      node.textContent = t('live.xmj.nextHandIn', { count: secs });
+      continue;
+    }
+    const bar = node.querySelector<HTMLElement>('.xmj-timer i');
+    if (bar) bar.style.width = `${width.toFixed(1)}%`;
+    const label = node.querySelector<HTMLElement>('[data-xmj-secs]');
+    if (label) label.textContent = t('live.xmj.seconds', { count: secs });
+  }
+  return nodes.length > 0;
+}
+function startTicker(board: HTMLElement): void {
+  if (!tickCountdowns(board)) {
+    if (ticker !== null) clearInterval(ticker);
+    ticker = null;
+    return;
+  }
+  if (ticker !== null) return;
+  ticker = setInterval(() => {
+    if (!tickCountdowns(board) && ticker !== null) {
+      clearInterval(ticker);
+      ticker = null;
+    }
+  }, 250);
+}
 
 function xmjReasonPhrase(reason: string): TenantReasonKey {
   switch (reason) {
@@ -67,20 +151,28 @@ const xmjWebTenant: WebVariantTenant<XmjSeat> = {
   selectInstruction: 'live.selectXiangqiMahjong',
 };
 
+const CLAIM_LABEL: Readonly<
+  Record<XmjClaimKind, 'live.xmj.win' | 'live.xmj.takePung' | 'live.xmj.takeChow'>
+> = {
+  win: 'live.xmj.win',
+  pung: 'live.xmj.takePung',
+  chow: 'live.xmj.takeChow',
+};
+
 function notate(move: XmjMove): string {
   switch (move.action) {
     case 'discard':
       return XMJ_GLYPHS[move.tile];
     case 'claim':
-      return move.kind;
+      return t(CLAIM_LABEL[move.kind]);
     case 'self-draw':
-      return 'self-draw';
+      return t('live.xmj.selfDraw');
+    // A pass and a window that ran out read the same: neither says why.
     case 'pass':
-      return 'pass';
-    case 'next-hand':
-      return 'ready';
     case 'timeout':
-      return 'no claim';
+      return t('live.xmj.pass');
+    case 'next-hand':
+      return t('live.xmj.ready');
     default:
       return '';
   }
@@ -125,12 +217,21 @@ function maybePlayTerminalSound(): void {
 }
 
 function renderTable(refs: LiveRefs, view: XmjPlayerView | null): void {
-  refs.board.className = 'board xiangqi-mahjong-live-board';
+  const felt = xmjFeltFromSearch(window.location.search);
+  refs.board.className = `board xiangqi-mahjong-live-board${felt === 'green' ? '' : ` xmj-felt--${felt}`}`;
   if (!view) {
     refs.board.innerHTML = '';
+    startTicker(refs.board);
     return;
   }
-  refs.board.innerHTML = xiangqiMahjongTableHtml(view, core?.canActNow() === true);
+  if (queuedPass && view.windowClosesAt !== queuedPass.window) clearQueuedPass();
+  refs.board.innerHTML = xiangqiMahjongTableHtml(view, {
+    canAct: core?.canActNow() === true,
+    names: seatNames(),
+    now: serverNow(),
+    passQueued: queuedPass !== null,
+  });
+  startTicker(refs.board);
 }
 
 const client = createTenantLiveClient<XmjSeat, XmjPlayerView, XmjMove>({
@@ -151,6 +252,7 @@ const client = createTenantLiveClient<XmjSeat, XmjPlayerView, XmjMove>({
   onFrame: (frame) => {
     if (frame.roomMode === 'pve' || frame.roomMode === 'pvp') roomMode = frame.roomMode;
     forfeitDeadline = typeof frame.forfeitDeadline === 'number' ? frame.forfeitDeadline : null;
+    noteServerTime((frame.event as { at?: unknown } | undefined)?.at);
     soundForEvent(frame.event, frame.seat);
     maybePlayTerminalSound();
   },
@@ -158,6 +260,8 @@ const client = createTenantLiveClient<XmjSeat, XmjPlayerView, XmjMove>({
     lastStatusType = null;
     roomMode = 'pve';
     forfeitDeadline = null;
+    offsetSamples.length = 0;
+    clearQueuedPass();
   },
   renderBoard: renderTable,
   setup: (ctx) => {
@@ -192,7 +296,7 @@ function installTableInteraction(ctx: TenantLiveClientContext<XmjSeat, XmjPlayer
     if (!target || !ctx.canActNow()) return;
     const data = target.dataset;
     if (data.xmjSelfdraw !== undefined) ctx.send({ type: 'move', action: 'self-draw' });
-    else if (data.xmjPass !== undefined) ctx.send({ type: 'move', action: 'pass' });
+    else if (data.xmjPass !== undefined) sendPass(ctx);
     else if (data.xmjNext !== undefined) ctx.send({ type: 'move', action: 'next-hand' });
     else if (data.xmjClaim) {
       const tiles = (data.xmjFrom ?? '').split(',').filter(Boolean);
@@ -202,6 +306,28 @@ function installTableInteraction(ctx: TenantLiveClientContext<XmjSeat, XmjPlayer
       ctx.send({ type: 'move', action: 'discard', tiles: [data.xmjTile] });
     }
   });
+}
+
+function sendPass(ctx: TenantLiveClientContext<XmjSeat, XmjPlayerView>): void {
+  const view = ctx.state.view;
+  const pauseEnd = view?.claimPauseEndsAt ?? null;
+  const closesAt = view?.windowClosesAt ?? null;
+  const wait = pauseEnd === null ? 0 : pauseEnd + PASS_MARGIN_MS - serverNow();
+  if (wait <= 0 || closesAt === null) {
+    ctx.send({ type: 'move', action: 'pass' });
+    return;
+  }
+  if (queuedPass) return;
+  queuedPass = {
+    window: closesAt,
+    timer: setTimeout(() => {
+      const still = queuedPass?.window === closesAt && ctx.state.view?.windowClosesAt === closesAt;
+      queuedPass = null;
+      if (still && ctx.canActNow()) ctx.send({ type: 'move', action: 'pass' });
+      ctx.renderAll();
+    }, wait),
+  };
+  ctx.renderAll();
 }
 
 export function bootstrapXiangqiMahjongLiveRoom(): void {

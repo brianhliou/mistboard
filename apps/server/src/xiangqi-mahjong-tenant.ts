@@ -12,8 +12,11 @@
  *     whole match replays from the event log. It is persisted in room-created
  *     and stripped from the wire by `clientEventFor`.
  *   - Two deadlines are moves rather than timers: the claim window settles
- *     itself (played by the discarder, as a pass), and the pause between hands
+ *     itself (played by the claimant, as a pass), and the pause between hands
  *     deals the next one (played by the next dealer). `pendingAction` names both.
+ *     The window opens after EVERY discard: a claimant with nothing to claim
+ *     passes when the short pause ends, one with a claim keeps the full window,
+ *     and the discarder sees the same phase and deadlines either way.
  *
  * GATED TWICE, like HK mahjong: the flag is off by default, and the spec is on
  * the per-account allowlist (139). It exists for a playtest.
@@ -30,6 +33,7 @@ import {
   isXmjSeat,
   XIANGQI_MAHJONG_SPEC_ID,
   XMJ_BETWEEN_HANDS_MS,
+  XMJ_CLAIM_PAUSE_MS,
   XMJ_CLAIM_WINDOW_MS,
   XMJ_SEATS,
   type XmjAbortReason,
@@ -37,6 +41,7 @@ import {
   type XmjPlayerView,
   type XmjRoomState,
   type XmjSeat,
+  xmjAnswerAt,
   xmjClockOwner,
   xmjIsLegalMove,
   xmjMoveFromMessage,
@@ -159,7 +164,10 @@ export const xiangqiMahjongTenant: XmjTenantType = {
     // server clock. 'timeout' is refused here: it is the runtime's move.
     moveFromMessage: xmjMoveFromMessage,
     canonicalMove: (state, move, seat) => {
-      const stamped = { ...move, by: seat, at: Date.now() } as XmjMove;
+      // A claim-window answer made at once is dated to the pause end, like the
+      // runtime's pass for an empty hand (xmjAnswerAt), so `at` on the wire
+      // says nothing about whether there was a choice.
+      const stamped = { ...move, by: seat, at: xmjAnswerAt(state, Date.now()) } as XmjMove;
       if (!xmjSeatMayAct(state, seat)) return null;
       if (!xmjIsLegalMove(state, stamped)) return null;
       return stamped;
@@ -187,6 +195,7 @@ export const xiangqiMahjongTenant: XmjTenantType = {
         rated: room.rated,
         forfeitDeadline: tenantForfeitDeadlineForClient(xiangqiMahjongTenant, room, client),
         claimWindowMs: XMJ_CLAIM_WINDOW_MS,
+        claimPauseMs: XMJ_CLAIM_PAUSE_MS,
         betweenHandsMs: XMJ_BETWEEN_HANDS_MS,
       };
     },
