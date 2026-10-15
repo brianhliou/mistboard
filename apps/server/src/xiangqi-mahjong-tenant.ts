@@ -130,6 +130,8 @@ export const xiangqiMahjongTenant: XmjTenantType = {
   gameSpecId: XIANGQI_MAHJONG_SPEC_ID,
   roomIdPrefix: XIANGQI_MAHJONG_ROOM_ID_PREFIX,
   colors: XMJ_SEATS,
+  // Rematch rides the lobby factory, and this room is PvE with no lobby.
+  rematch: { optOut: 'PvE only, no lobby' },
   // A move here is an action, not a turn; the clock runs from the first one.
   armsClockOnFirstMove: true,
   // The seat that must discard is on the clock. Nobody is during a claim

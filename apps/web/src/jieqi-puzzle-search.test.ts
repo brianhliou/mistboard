@@ -183,7 +183,9 @@ describe('jieqi-puzzle-search lines', () => {
         expect(blackMatesInTwo(play(withC1(letter), ['c1a3']))).toBe(false);
       }
       expect(legal(play(start, ['c1a3', 'd5d1']))).toContain('a1d1');
-    });
+      // Six mate-in-two searches: ~3s alone, past the 15s default when the
+      // whole suite runs in parallel.
+    }, 60_000);
 
     it('the tile was an advisor and Black took the a5 cannon; only a chariot guards a5', () => {
       const game = replay(line);

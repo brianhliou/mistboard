@@ -31,6 +31,7 @@ import { mahjongTenant } from './mahjong-tenant.js';
 import './variant-tenant/register-tenants.js';
 import { registeredVariantTenants } from './variant-tenant/registry.js';
 import { tenantRoomOffersRematch, tenantSnapshotPayload } from './variant-tenant/runtime.js';
+import { xiangqiMahjongTenant } from './xiangqi-mahjong-tenant.js';
 import { xiangqiTenant } from './xiangqi-tenant.js';
 
 for (const flag of [
@@ -45,6 +46,7 @@ for (const flag of [
   'JUNGLE_FLIP',
   'MAHJONG',
   'XIANGQI',
+  'XIANGQI_MAHJONG',
 ]) {
   process.env[`MISTBOARD_${flag}_ENABLED`] = 'true';
 }
@@ -74,6 +76,7 @@ const TENANTS: Record<string, AnyTenant> = Object.fromEntries(
     jungleFlipTenant,
     jungleTenant,
     mahjongTenant,
+    xiangqiMahjongTenant,
     xiangqiTenant,
   ].map((tenant) => [tenant.kind, tenant as unknown as AnyTenant]),
 );
