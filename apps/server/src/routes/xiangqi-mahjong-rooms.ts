@@ -7,11 +7,12 @@
  */
 
 import { type RoomTimeControl, XIANGQI_MAHJONG_SPEC_ID, type XmjSeat } from '@mistboard/game';
+import type { DrainCreate } from '../deploy-gate.js';
 import { createTenantRoomsRoute } from './../variant-tenant/rooms-route.js';
 
 export type XiangqiMahjongCreateContext = {
   databaseRequired: boolean;
-  isDraining(): boolean;
+  refusesCreate(create?: DrainCreate): boolean;
   drainDeadlineMs(): number | null;
   createXiangqiMahjongRoom(
     timeControl?: RoomTimeControl,
