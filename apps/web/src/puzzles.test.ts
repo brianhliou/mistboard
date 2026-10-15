@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from 'node:fs';
 import {
   attemptStandardXiangqiPuzzleLine,
   detectXiangqiPuzzleMotifs,
@@ -156,6 +157,52 @@ describe('puzzles route', () => {
     const grip = root.querySelector('.puzzle-board > .board-resize-grip');
     expect(grip).not.toBeNull();
     expect(grip?.getAttribute('aria-label')).toBe('Resize board');
+  });
+
+  it("sizes the right column to the board's drawn height, not its max size", async () => {
+    const puzzle = RED_MATE;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url === '/api/puzzles') return json({ puzzles: [publicSummary(puzzle)] });
+        if (url === `/api/puzzles/${puzzle.id}`) return json({ puzzle: publicDetail(puzzle) });
+        return json({ error: 'not_found' }, 404);
+      }),
+    );
+    // A width-bound board: the column is narrower than the 704px height budget
+    // allows, so the 9x10 board draws 556x616 (1440x900, measured), not 704 tall.
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: Element,
+    ) {
+      const painted = this.classList.contains('puzzle-xiangqi-board');
+      return new DOMRect(0, 0, 556, painted ? 616 : 704);
+    });
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountPuzzles(root, puzzle.id);
+
+    const detail = root.querySelector<HTMLElement>('.puzzle-detail');
+    await vi.waitFor(() =>
+      expect(detail?.style.getPropertyValue('--puzzle-board-height')).toBe('616px'),
+    );
+  });
+
+  it("keeps the side panel's height on the measured board height", () => {
+    const css = readFileSync(
+      ['src/puzzles.css', 'apps/web/src/puzzles.css'].find((path) => existsSync(path))!,
+      'utf8',
+    );
+    const rule = (selector: string): string =>
+      css.match(new RegExp(`(?<!,)\\n${selector.replace(/[.-]/g, '\\$&')} \\{([^}]*)\\}`))?.[1] ??
+      '';
+    expect(rule('.puzzle-side-panel')).toMatch(
+      /\bheight: var\(--puzzle-board-height, var\(--puzzle-surface-size\)\)/,
+    );
+    expect(rule('.puzzle-side-panel--analysis')).toMatch(
+      /max-height: var\(--puzzle-board-height, var\(--puzzle-surface-size\)\)/,
+    );
   });
 
   it('merges the practice note into the puzzle rating card', async () => {
