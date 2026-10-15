@@ -2,7 +2,9 @@
 //
 // Runs AFTER `vite build`, against the hashed `dist/index.html` shell. For each
 // published article it renders the real client renderer (buildArticlePage) under
-// happy-dom, bakes the resulting <main> into #app, injects per-route meta from
+// happy-dom, bakes the nav and the resulting <main> into #app with the route
+// classes mountArticle sets (the frame the client mounts, so nothing jumps on
+// takeover, #557), injects per-route meta from
 // articles-data (single source of truth), and writes dist/blog/<slug>.html.
 //
 // The server serves these files for /blog/<slug>; the client SPA still boots
@@ -344,7 +346,8 @@ const server = await createServer({
 });
 
 try {
-  const { buildArticlePage } = await server.ssrLoadModule('/src/articles.ts');
+  const { ARTICLE_ROUTE_CLASS, renderArticlePageShellForPrerender } =
+    await server.ssrLoadModule('/src/pages-static.ts');
   const { articles } = await server.ssrLoadModule('/src/articles-data.ts');
   const { isArticleTranslationPublished, translateArticle } =
     await server.ssrLoadModule('/src/article-i18n.ts');
@@ -610,13 +613,16 @@ try {
     const articleVariants = translationPublished ? localeVariants : localeVariants.slice(0, 1);
     for (const v of articleVariants) {
       const localized = v.lang ? translateArticle(article, v.lang) : article;
-      const main = buildArticlePage(article.slug, v.lang ?? undefined);
+      const appInner = await renderArticlePageShellForPrerender(article.slug, v.lang);
       const url = `${host}${v.urlPrefix}/${base}/${slug}`;
       const imageUrl = articleOgImageUrl(host, article.slug, v.lang);
       const structuredImage = articleStructuredDataImage(host, article.slug, v.lang);
       let html = shell
         .replace('<html lang="en">', `<html lang="${v.htmlLang}">`)
-        .replace('<div id="app"></div>', `<div id="app">${main.outerHTML}</div>`);
+        .replace(
+          '<div id="app"></div>',
+          `<div id="app" class="${ARTICLE_ROUTE_CLASS}">${appInner}</div>`,
+        );
       html = injectPageMeta(html, {
         // seoTitle drives the document title and, through injectPageMeta, the
         // og/twitter titles — all the places a stranger meets the page cold. The

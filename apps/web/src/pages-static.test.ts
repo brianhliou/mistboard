@@ -3,8 +3,10 @@ import { isArticleTranslationPublished, translateArticle } from './article-i18n.
 import { articles } from './articles-data.js';
 import { t } from './i18n/catalog.js';
 import {
+  ARTICLE_ROUTE_CLASS,
   articlesIndexPrerenderHead,
   mountAbout,
+  mountArticle,
   mountContact,
   mountFaq,
   mountNews,
@@ -13,6 +15,7 @@ import {
   mountSource,
   mountTerms,
   PIECE_SET_SOURCE_URLS,
+  renderArticlePageShellForPrerender,
   renderArticlesIndexShellForPrerender,
   renderRulesIndexShellForPrerender,
   rulesIndexPrerenderHead,
@@ -340,6 +343,54 @@ describe('prerendered blog index', () => {
     }
     expect(heads[1]?.title).toBe('象棋与变体文章 | Mistboard');
   });
+});
+
+// Issue #557: a baked article (/rules/<slug>, /blog/<slug>) painted a bare
+// <main> in a classless root, then mountArticle put the nav above it and the
+// route classes on the root, shifting the whole page down (rules p75 layout
+// shift 0.40). The baked frame must be the frame the client mounts.
+describe('prerendered article page', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+    window.history.replaceState(null, '', '/');
+  });
+
+  const frameOf = (root: HTMLElement) => ({
+    rootClass: [...root.classList].sort(),
+    children: [...root.children].map((el) => `${el.tagName.toLowerCase()}.${el.className}`),
+  });
+
+  const published = articles.filter((a) => a.status === 'published');
+  const cases = [
+    published.find((a) => a.kind === 'rules'),
+    published.find((a) => a.kind === 'article'),
+  ];
+
+  it.each(cases.map((a) => [a?.kind, a?.slug ?? '']))(
+    'bakes the frame mountArticle builds (%s %s)',
+    async (_kind, slug) => {
+      expect(slug).not.toBe('');
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => ({ ok: false, json: async () => ({}) })),
+      );
+      const base = cases.find((a) => a?.slug === slug)?.kind === 'rules' ? 'rules' : 'blog';
+      window.history.replaceState(null, '', `/${base}/${slug}`);
+      const root = document.createElement('div');
+      root.id = 'app';
+      document.body.append(root);
+      root.className = ARTICLE_ROUTE_CLASS;
+      root.innerHTML = await renderArticlePageShellForPrerender(slug);
+      const baked = frameOf(root);
+
+      await mountArticle(root, slug);
+      const mounted = frameOf(root);
+
+      expect(mounted.children[0]).toMatch(/^nav\./);
+      expect(baked).toEqual(mounted);
+    },
+  );
 });
 
 // /rules, /zh-hans/rules and /zh-hant/rules sat in the sitemap answering with

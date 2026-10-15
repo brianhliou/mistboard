@@ -244,6 +244,22 @@ export async function mountRulesIndex(
   mountArticleThumbnails(index);
 }
 
+/* /blog/<slug>, /rules/<slug> and their zh copies, baked at build time into a
+ * root carrying ARTICLE_ROUTE_CLASS: the same frame mountArticle builds, nav
+ * first. Until #557 the bake was the bare <main> in a classless root, so the
+ * client mount put the nav above it and restyled the root, and the whole page
+ * jumped (rules p75 layout shift 0.40, blog 0.26). */
+export const ARTICLE_ROUTE_CLASS = 'landing-page articles-route';
+
+export async function renderArticlePageShellForPrerender(
+  slug: string,
+  lang?: import('./article-i18n.js').ArticleLang | null,
+): Promise<string> {
+  const { buildArticlePage } = await import('./articles.js');
+  const locale: Locale = lang ?? 'en';
+  return `${buildNav(locale).outerHTML}${buildArticlePage(slug, lang ?? undefined).outerHTML}`;
+}
+
 export async function mountArticle(
   root: HTMLElement,
   slug: string,
@@ -262,7 +278,7 @@ export async function mountArticle(
   const { translateArticle } = await import('./article-i18n.js');
   const { setBoardFamily, xiangqiAppearanceEnabled } = await import('./theme.js');
   root.replaceChildren();
-  root.classList.add('landing-page', 'articles-route');
+  root.classList.add(...ARTICLE_ROUTE_CLASS.split(' '));
   const base = findArticle(slug);
   // Show the family's board/piece pickers while the article is open so the
   // diagrams react to the right controls (each family only when its flag is on).
