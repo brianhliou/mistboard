@@ -182,7 +182,7 @@ export const mostPlayedMoveArticle: Article = {
       heading: 'Reading the explorer',
       blocks: [
         p(
-          "The most played move in your rating band is the move most people at your rating play, which is not a recommendation, and the explorer never said it was. The filters that fix most of this list are already in the gear menu. Switch to the masters database and set the years to 2018 on, not the all-time table: the masters' book moves, and the all-time table is an average of eras. And when the most played move takes a pawn or declines one, check the engine before trusting the crowd; six of the ten above are a capture or a declined capture.",
+          "The most played move in your rating band is the move most people at your rating play, which is not a recommendation, and the explorer never said it was. The filters that fix most of this list are already in the gear menu. Switch to the masters database and set the years to 2018 on, not the all-time table: the masters' book moves, and the all-time table is an average of eras. And when the most played move takes a pawn or declines one, check the engine before trusting the crowd; four of the ten above are a capture or a declined capture.",
         ),
       ],
     },

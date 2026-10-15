@@ -5521,8 +5521,8 @@ const ZH_HANS: Record<string, string> = {
   'All 144 are in [the study](/study/ibFQtGAL), these ten first, the rest ranked by how many games they touch times how much the move gives up.':
     '全部144个局面都在[这份研究](/study/ibFQtGAL)里，这十个排在最前，其余按涉及对局数乘以该着法损失的幅度排序。',
   'Reading the explorer': '怎么读局面浏览器',
-  "The most played move in your rating band is the move most people at your rating play, which is not a recommendation, and the explorer never said it was. The filters that fix most of this list are already in the gear menu. Switch to the masters database and set the years to 2018 on, not the all-time table: the masters' book moves, and the all-time table is an average of eras. And when the most played move takes a pawn or declines one, check the engine before trusting the crowd; six of the ten above are a capture or a declined capture.":
-    '你所在分段最常走的一手，是和你同分段的多数人会走的一手，这并不是推荐，局面浏览器也从没说过它是。能解决这份名单上大部分问题的筛选项，就在齿轮菜单里。切换到大师数据库，把年份设为2018年起，别用全时段的表：大师的开局库是会变的，而全时段表是各年代的平均。还有，当最常走的一手是吃兵或拒收弃兵时，先问问引擎，别轻信大众；上面十个局面里有六个涉及吃子或拒收吃子。',
+  "The most played move in your rating band is the move most people at your rating play, which is not a recommendation, and the explorer never said it was. The filters that fix most of this list are already in the gear menu. Switch to the masters database and set the years to 2018 on, not the all-time table: the masters' book moves, and the all-time table is an average of eras. And when the most played move takes a pawn or declines one, check the engine before trusting the crowd; four of the ten above are a capture or a declined capture.":
+    '你所在分段最常走的一手，是和你同分段的多数人会走的一手，这并不是推荐，局面浏览器也从没说过它是。能解决这份名单上大部分问题的筛选项，就在齿轮菜单里。切换到大师数据库，把年份设为2018年起，别用全时段的表：大师的开局库是会变的，而全时段表是各年代的平均。还有，当最常走的一手是吃兵或拒收弃兵时，先问问引擎，别轻信大众；上面十个局面里有四个涉及吃子或拒收吃子。',
   'How this was measured': '测量方法',
   '**Resources:**': '**资源：**',
   "[The study](/study/ibFQtGAL): all 144 positions with the club share, the masters' history and the engine's line":
@@ -5582,7 +5582,7 @@ const ZH_HANS: Record<string, string> = {
   Compute: '算力',
   'Modal, 96 batches × 10 positions': 'Modal，96 批 × 10 个局面',
   Runtime: '运行时间',
-  '33 minutes wall, about $2': '实际耗时 33 分钟，约 2 美元',
+  '33 minutes wall, under $3': '实际耗时 33 分钟，不到 3 美元',
   'Every starting position used the same depth target, so the rankings do not mix shallow and deep engine outputs. The pipeline is the same cloud Stockfish setup described in the [previous post on scaling Stockfish compute](https://brianhliou.com/posts/scaling-stockfish-compute-workloads/).':
     '每个开局局面都用同一个深度目标，因此排名不会把浅层和深层的引擎输出混在一起。这套流水线与[上一篇关于扩展 Stockfish 算力的文章](https://brianhliou.com/posts/scaling-stockfish-compute-workloads/)中描述的云端 Stockfish 配置相同。',
   'Quality checks:': '质量检查：',
@@ -5606,8 +5606,8 @@ const ZH_HANS: Record<string, string> = {
   '0.25 to 0.49': '0.25 至 0.49',
   '0.50 to 0.99': '0.50 至 0.99',
   'Evaluation distribution histogram': '评估值分布直方图',
-  'At shallower public-cache depth, SP-663 can appear slightly black-favored (-0.10 in the Lichess cache). At depth 36 it evaluates at +0.18. The "black-favored start" result disappears under the uniform deeper search.':
-    '在公共缓存较浅的深度下，SP-663 会显得略偏黑方（Lichess 缓存中为 -0.10）。在深度 36 下它的评估值是 +0.18。在统一的更深搜索下，「偏向黑方的开局局面」这一结果就消失了。',
+  'At shallower public-cache depth, SP-663 can appear slightly black-favored (-0.10 in the Lichess cache). At depth 36 it evaluates at +0.14. The "black-favored start" result disappears under the uniform deeper search.':
+    '在公共缓存较浅的深度下，SP-663 会显得略偏黑方（Lichess 缓存中为 -0.10）。在深度 36 下它的评估值是 +0.14。在统一的更深搜索下，「偏向黑方的开局局面」这一结果就消失了。',
   'Where Standard Chess Ranks': '标准国际象棋排在哪里',
   'The default start, **SP-518 (RNBQKBNR)**, evaluates to **+0.31**. It ranks 463/960 by ascending imbalance: almost exactly the median. 462 Chess960 starts are more balanced; 497 are more imbalanced.':
     '默认的开局局面 **SP-518（RNBQKBNR）**评估值为 **+0.31**。按失衡程度升序排列，它排第 463/960：几乎正好是中位数。462 个国际象棋960开局局面更均衡；497 个更失衡。',
@@ -5879,8 +5879,8 @@ const ZH_HANS: Record<string, string> = {
   'Further Reading': '延伸阅读',
   "[Scaling Parallel Stockfish Analysis](https://brianhliou.com/posts/scaling-stockfish-compute-workloads/): methodology for running Stockfish at scale on cloud CPU workers, written for the case where the cache doesn't have the answer.":
     '[扩展并行 Stockfish 分析](https://brianhliou.com/posts/scaling-stockfish-compute-workloads/)：在云端 CPU 工作节点上大规模运行 Stockfish 的方法，面向缓存*没有*现成答案的情形。',
-  '[Mistboard](/): free online Chinese chess in English, which also hosts open-source Fog of War chess. Chess960 is a pregame option in the Fog of War surface (the "Draft960" pregame): both players are offered three legal Chess960 starts and each picks one, then they play Fog of War from the chosen start.':
-    '[Mistboard](/)：英文界面的免费在线象棋网站，同时提供开源的迷雾国际象棋。国际象棋960是迷雾国际象棋界面中的赛前选项（即「Draft960」赛前流程）：双方各获得三个合法的国际象棋960开局局面并各选一个，然后从选定的开局局面开始下迷雾国际象棋。',
+  '[Mistboard](/): free online Chinese chess in English, which also hosts open-source Fog of War chess. Its Chess960 pregame (Draft960) was retired in September 2026.':
+    '[Mistboard](/)：英文界面的免费在线象棋网站，同时提供开源的迷雾国际象棋。其国际象棋960赛前选项（Draft960）已于 2026 年 9 月下线。',
   Dataset: '数据集',
   '[Download the full CSV](/article-data/chess960-starting-position-evals.csv) (960 rows). Columns: `scharnagl_id`, `back_rank`, `fen`, `position_key`, `cp`, `mate`, `best_move`, `pv`, `depth`, `nodes`, `source`, `fetched_at_iso`.':
     '[下载完整 CSV](/article-data/chess960-starting-position-evals.csv)（960 行）。列：`scharnagl_id`、`back_rank`、`fen`、`position_key`、`cp`、`mate`、`best_move`、`pv`、`depth`、`nodes`、`source`、`fetched_at_iso`。',
@@ -10986,8 +10986,8 @@ const ZH_HANT: Record<string, string> = {
   'All 144 are in [the study](/study/ibFQtGAL), these ten first, the rest ranked by how many games they touch times how much the move gives up.':
     '全部 144 個都收在[這份研究](/study/ibFQtGAL)裡，這十個排在最前面，其餘按「涉及對局數乘以該著法所損失的幅度」排序。',
   'Reading the explorer': '如何閱讀局面瀏覽器',
-  "The most played move in your rating band is the move most people at your rating play, which is not a recommendation, and the explorer never said it was. The filters that fix most of this list are already in the gear menu. Switch to the masters database and set the years to 2018 on, not the all-time table: the masters' book moves, and the all-time table is an average of eras. And when the most played move takes a pawn or declines one, check the engine before trusting the crowd; six of the ten above are a capture or a declined capture.":
-    '你所在分數段中最多人下的著法，就是與你同分的人多數會走的著法，這並不是推薦，局面瀏覽器也從未說它是推薦。能修正這份清單上大部分問題的篩選條件，已經在齒輪選單裡了。切換到大師資料庫，並把年份設為 2018 年起，不要用全時期的表格：大師的開局書會移動，而全時期的表格是各年代的平均。此外，當最多人下的著法是吃兵或拒吃時，先查引擎，別輕信群眾；上面十個局面裡有六個是吃子或拒吃。',
+  "The most played move in your rating band is the move most people at your rating play, which is not a recommendation, and the explorer never said it was. The filters that fix most of this list are already in the gear menu. Switch to the masters database and set the years to 2018 on, not the all-time table: the masters' book moves, and the all-time table is an average of eras. And when the most played move takes a pawn or declines one, check the engine before trusting the crowd; four of the ten above are a capture or a declined capture.":
+    '你所在分數段中最多人下的著法，就是與你同分的人多數會走的著法，這並不是推薦，局面瀏覽器也從未說它是推薦。能修正這份清單上大部分問題的篩選條件，已經在齒輪選單裡了。切換到大師資料庫，並把年份設為 2018 年起，不要用全時期的表格：大師的開局書會移動，而全時期的表格是各年代的平均。此外，當最多人下的著法是吃兵或拒吃時，先查引擎，別輕信群眾；上面十個局面裡有四個是吃子或拒吃。',
   'How this was measured': '測量方式',
   '**Resources:**': '**相關資源：**',
   "[The study](/study/ibFQtGAL): all 144 positions with the club share, the masters' history and the engine's line":
@@ -11047,7 +11047,7 @@ const ZH_HANT: Record<string, string> = {
   Compute: '運算',
   'Modal, 96 batches × 10 positions': 'Modal，96 批 × 10 個局面',
   Runtime: '執行時間',
-  '33 minutes wall, about $2': '實際耗時 33 分鐘，約 2 美元',
+  '33 minutes wall, under $3': '實際耗時 33 分鐘，不到 3 美元',
   'Every starting position used the same depth target, so the rankings do not mix shallow and deep engine outputs. The pipeline is the same cloud Stockfish setup described in the [previous post on scaling Stockfish compute](https://brianhliou.com/posts/scaling-stockfish-compute-workloads/).':
     '每個開局局面都用相同的深度目標，因此排名不會混雜淺層與深層的引擎輸出。這套流程與[先前談擴展 Stockfish 運算的文章](https://brianhliou.com/posts/scaling-stockfish-compute-workloads/)中所述的雲端 Stockfish 設定相同。',
   'Quality checks:': '品質檢查：',
@@ -11071,8 +11071,8 @@ const ZH_HANT: Record<string, string> = {
   '0.25 to 0.49': '0.25 到 0.49',
   '0.50 to 0.99': '0.50 到 0.99',
   'Evaluation distribution histogram': '評估值分佈直方圖',
-  'At shallower public-cache depth, SP-663 can appear slightly black-favored (-0.10 in the Lichess cache). At depth 36 it evaluates at +0.18. The "black-favored start" result disappears under the uniform deeper search.':
-    '在較淺的公開快取深度下，SP-663 可能看起來略微對黑方有利（Lichess 快取中為 -0.10）。在深度 36 時它的評估值是 +0.18。在統一的較深搜尋下，「對黑方有利的開局」這個結果就消失了。',
+  'At shallower public-cache depth, SP-663 can appear slightly black-favored (-0.10 in the Lichess cache). At depth 36 it evaluates at +0.14. The "black-favored start" result disappears under the uniform deeper search.':
+    '在較淺的公開快取深度下，SP-663 可能看起來略微對黑方有利（Lichess 快取中為 -0.10）。在深度 36 時它的評估值是 +0.14。在統一的較深搜尋下，「對黑方有利的開局」這個結果就消失了。',
   'Where Standard Chess Ranks': '標準西洋棋排在哪裡',
   'The default start, **SP-518 (RNBQKBNR)**, evaluates to **+0.31**. It ranks 463/960 by ascending imbalance: almost exactly the median. 462 Chess960 starts are more balanced; 497 are more imbalanced.':
     '預設開局 **SP-518（RNBQKBNR）**的評估值是 **+0.31**。依失衡程度遞增排序，它排在 463/960：幾乎正好是中位數。有 462 個西洋棋960開局更均衡；497 個更失衡。',
@@ -11344,8 +11344,8 @@ const ZH_HANT: Record<string, string> = {
   'Further Reading': '延伸閱讀',
   "[Scaling Parallel Stockfish Analysis](https://brianhliou.com/posts/scaling-stockfish-compute-workloads/): methodology for running Stockfish at scale on cloud CPU workers, written for the case where the cache doesn't have the answer.":
     '[擴展平行 Stockfish 分析](https://brianhliou.com/posts/scaling-stockfish-compute-workloads/)：在雲端 CPU 工作節點上大規模執行 Stockfish 的方法論，針對快取*沒有*答案的情況而寫。',
-  '[Mistboard](/): free online Chinese chess in English, which also hosts open-source Fog of War chess. Chess960 is a pregame option in the Fog of War surface (the "Draft960" pregame): both players are offered three legal Chess960 starts and each picks one, then they play Fog of War from the chosen start.':
-    '[Mistboard](/)：免費的英文介面線上象棋，同時也提供開源的迷霧西洋棋。西洋棋960是迷霧西洋棋介面中的賽前選項（「Draft960」賽前流程）：雙方各獲得三個合法的西洋棋960開局並各選一個，然後從選定的開局開始下迷霧西洋棋。',
+  '[Mistboard](/): free online Chinese chess in English, which also hosts open-source Fog of War chess. Its Chess960 pregame (Draft960) was retired in September 2026.':
+    '[Mistboard](/)：免費的英文介面線上象棋，同時也提供開源的迷霧西洋棋。其西洋棋960賽前選項（Draft960）已於 2026 年 9 月下線。',
   Dataset: '資料集',
   '[Download the full CSV](/article-data/chess960-starting-position-evals.csv) (960 rows). Columns: `scharnagl_id`, `back_rank`, `fen`, `position_key`, `cp`, `mate`, `best_move`, `pv`, `depth`, `nodes`, `source`, `fetched_at_iso`.':
     '[下載完整 CSV](/article-data/chess960-starting-position-evals.csv)（960 列）。欄位：`scharnagl_id`、`back_rank`、`fen`、`position_key`、`cp`、`mate`、`best_move`、`pv`、`depth`、`nodes`、`source`、`fetched_at_iso`。',

@@ -145,7 +145,7 @@ export const chess960StartingPositionsArticle: Article = {
             ['MultiPV', '1'],
             ['Chess960 mode', '`UCI_Chess960=true`'],
             ['Compute', 'Modal, 96 batches × 10 positions'],
-            ['Runtime', '33 minutes wall, about $2'],
+            ['Runtime', '33 minutes wall, under $3'],
           ],
         },
         p(
@@ -184,8 +184,8 @@ export const chess960StartingPositionsArticle: Article = {
           headers: ['evaluation', 'count'],
           rows: [
             ['< 0.00 (black-favored)', '0'],
-            ['0.00 to 0.09', '4'],
-            ['0.10 to 0.24', '231'],
+            ['0.00 to 0.09', '3'],
+            ['0.10 to 0.24', '232'],
             ['0.25 to 0.49', '655'],
             ['0.50 to 0.99', '69'],
             ['>= 1.00', '1'],
@@ -197,7 +197,7 @@ export const chess960StartingPositionsArticle: Article = {
           alt: 'Evaluation distribution histogram',
         },
         p(
-          'At shallower public-cache depth, SP-663 can appear slightly black-favored (-0.10 in the Lichess cache). At depth 36 it evaluates at +0.18. The "black-favored start" result disappears under the uniform deeper search.',
+          'At shallower public-cache depth, SP-663 can appear slightly black-favored (-0.10 in the Lichess cache). At depth 36 it evaluates at +0.14. The "black-favored start" result disappears under the uniform deeper search.',
         ),
       ],
     },
@@ -480,7 +480,7 @@ export const chess960StartingPositionsArticle: Article = {
           `[Scaling Parallel Stockfish Analysis](${SCALING_POST}): methodology for running Stockfish at scale on cloud CPU workers, written for the case where the cache doesn't have the answer.`,
         ),
         p(
-          '[Mistboard](/): free online Chinese chess in English, which also hosts open-source Fog of War chess. Chess960 is a pregame option in the Fog of War surface (the "Draft960" pregame): both players are offered three legal Chess960 starts and each picks one, then they play Fog of War from the chosen start.',
+          '[Mistboard](/): free online Chinese chess in English, which also hosts open-source Fog of War chess. Its Chess960 pregame (Draft960) was retired in September 2026.',
         ),
       ],
     },
