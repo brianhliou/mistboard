@@ -71,7 +71,7 @@ describe('xiangqi piece sprites', () => {
       { color: 'red', role: 'general' },
       { pieceSet: 'international' },
     );
-    expect(svg).toContain('/piece-sets/xiangqi/international/red-general.png?v=16');
+    expect(svg).toContain('/piece-sets/xiangqi/international/red-general.png?v=17');
     // One dark ring on both sides (2026-10-14).
     expect(svg).toContain('stroke="#202427"');
     expect(svg).not.toContain(XIANGQI_GLYPH_PATHS.帥);

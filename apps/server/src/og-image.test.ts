@@ -144,29 +144,29 @@ test('the article card route serves each aspect at its size, board and site card
   // re-framed.
   for (const slug of ['jungle', 'banqi', 'pikafish', 'jieqi-platform']) {
     for (const [aspect, [width, height]] of Object.entries(expected)) {
-      const res = await getRoute(`/og/article/${slug}.png?v=6&aspect=${aspect}`);
+      const res = await getRoute(`/og/article/${slug}.png?v=7&aspect=${aspect}`);
       assert.equal(res.status, 200, `${slug} ${aspect}`);
       assert.equal(res.headers['content-type'], 'image/png');
       assert.deepEqual(pngSize(res.body), { width, height }, `${slug} ${aspect}`);
     }
   }
   // The wide card is untouched: still 2400x1260 with no aspect.
-  const wide = await getRoute('/og/article/jungle.png?v=6');
+  const wide = await getRoute('/og/article/jungle.png?v=7');
   assert.deepEqual(pngSize(wide.body), { width: 2400, height: 1260 });
 });
 
 test('an unknown aspect is a 400, never the wide card under a square URL', async () => {
   for (const bad of ['2x1', '1X1', '', 'square']) {
-    const res = await getRoute(`/og/article/jungle.png?v=6&aspect=${bad}`);
+    const res = await getRoute(`/og/article/jungle.png?v=7&aspect=${bad}`);
     assert.equal(res.status, 400, JSON.stringify(bad));
     assert.notEqual(res.headers['content-type'], 'image/png');
   }
 });
 
 test('a hand-drawn card has no aspect versions and says so with a 404', async () => {
-  const res = await getRoute('/og/article/yin-sheng.png?v=6&aspect=1x1');
+  const res = await getRoute('/og/article/yin-sheng.png?v=7&aspect=1x1');
   assert.equal(res.status, 404);
-  const unknown = await getRoute('/og/article/no-such-article.png?v=6&aspect=1x1');
+  const unknown = await getRoute('/og/article/no-such-article.png?v=7&aspect=1x1');
   assert.equal(unknown.status, 404);
 });
 
@@ -182,9 +182,9 @@ test('a xiangqi-family card has a zh version per script at every shape', async (
   assert.ok(!ARTICLE_OG_ZH_SLUGS.includes('jungle'), 'animal pieces have no hanzi set');
   for (const slug of ['banqi', 'pikafish']) {
     for (const shape of ['', '&aspect=16x9', '&aspect=4x3', '&aspect=1x1']) {
-      const plain = await getRoute(`/og/article/${slug}.png?v=6${shape}`);
-      const hans = await getRoute(`/og/article/${slug}.png?v=6&lang=zh-hans${shape}`);
-      const hant = await getRoute(`/og/article/${slug}.png?v=6&lang=zh-hant${shape}`);
+      const plain = await getRoute(`/og/article/${slug}.png?v=7${shape}`);
+      const hans = await getRoute(`/og/article/${slug}.png?v=7&lang=zh-hans${shape}`);
+      const hant = await getRoute(`/og/article/${slug}.png?v=7&lang=zh-hant${shape}`);
       for (const [name, res] of [
         ['zh-hans', hans],
         ['zh-hant', hant],
@@ -229,19 +229,19 @@ test('every zh card captions in its own script, at full size, from the published
 
 test('an unknown lang is a 400 and a card with no zh version is a 404', async () => {
   for (const bad of ['zh', 'zh-Hant', 'zh-tw', 'en', 'traditional', '']) {
-    const res = await getRoute(`/og/article/banqi.png?v=6&lang=${bad}`);
+    const res = await getRoute(`/og/article/banqi.png?v=7&lang=${bad}`);
     assert.equal(res.status, 400, JSON.stringify(bad));
     assert.notEqual(res.headers['content-type'], 'image/png');
   }
   // The retired pre-release parameter is not quietly honoured either.
-  const old = await getRoute('/og/article/banqi.png?v=6&pieces=traditional');
-  const plain = await getRoute('/og/article/banqi.png?v=6');
+  const old = await getRoute('/og/article/banqi.png?v=7&pieces=traditional');
+  const plain = await getRoute('/og/article/banqi.png?v=7');
   assert.ok(old.body.equals(plain.body), 'pieces= is ignored, not mapped to a zh card');
   for (const path of [
-    '/og/article/jungle.png?v=6&lang=zh-hant',
-    '/og/article/yin-sheng.png?v=6&lang=zh-hant',
-    '/og/article/jieqi-platform.png?v=6&lang=zh-hans&aspect=1x1',
-    '/og/article/no-such-article.png?v=6&lang=zh-hans',
+    '/og/article/jungle.png?v=7&lang=zh-hant',
+    '/og/article/yin-sheng.png?v=7&lang=zh-hant',
+    '/og/article/jieqi-platform.png?v=7&lang=zh-hans&aspect=1x1',
+    '/og/article/no-such-article.png?v=7&lang=zh-hans',
   ]) {
     const res = await getRoute(path);
     assert.equal(res.status, 404, path);
@@ -482,18 +482,18 @@ test('every mid-game rules card is a legal line, replayed by its kernel', async 
 test("a zh page names its script's card; the English page and other boards do not", async () => {
   const { articleOgImageUrl } = await import('./og-image.js');
   const host = 'https://mistboard.com';
-  assert.equal(articleOgImageUrl(host, 'banqi'), `${host}/og/article/banqi.png?v=6`);
+  assert.equal(articleOgImageUrl(host, 'banqi'), `${host}/og/article/banqi.png?v=7`);
   for (const prefix of ['zh-hans', 'zh-hant']) {
     for (const slug of ['banqi', 'pikafish']) {
       assert.equal(
         articleOgImageUrl(host, slug, prefix),
-        `${host}/og/article/${slug}.png?v=6&lang=${prefix}`,
+        `${host}/og/article/${slug}.png?v=7&lang=${prefix}`,
       );
     }
-    assert.equal(articleOgImageUrl(host, 'jungle', prefix), `${host}/og/article/jungle.png?v=6`);
+    assert.equal(articleOgImageUrl(host, 'jungle', prefix), `${host}/og/article/jungle.png?v=7`);
   }
   for (const other of ['vi', 'zh', 'en']) {
-    assert.equal(articleOgImageUrl(host, 'banqi', other), `${host}/og/article/banqi.png?v=6`);
+    assert.equal(articleOgImageUrl(host, 'banqi', other), `${host}/og/article/banqi.png?v=7`);
   }
 });
 

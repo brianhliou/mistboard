@@ -41,12 +41,12 @@
       "sha": "1fdfa63a8b120ea3"
     },
     "xiangqi/international": {
-      "version": 16,
-      "sha": "3b1ad904482f7bbe"
+      "version": 17,
+      "sha": "f0c2b89c512a659b"
     },
     "xiangqi/international-grid": {
-      "version": 16,
-      "sha": "75d0575396138ad6"
+      "version": 17,
+      "sha": "cc414aa9c16a549d"
     },
     "xiangqi/lacquer": {
       "version": 1,
@@ -59,15 +59,15 @@
   },
   "og": {
     "folders": ["jungle/dobutsu", "xiangqi/animal-dobutsu", "xiangqi/international"],
-    "sha": "955f75d77aa41280",
+    "sha": "922dec2fce02e066",
     "versions": {
-      "game": 6,
-      "article": 6,
-      "articleClient": 6,
-      "study": 6,
-      "position": 4,
-      "broadcast": 3,
-      "player": 3
+      "game": 7,
+      "article": 7,
+      "articleClient": 7,
+      "study": 7,
+      "position": 5,
+      "broadcast": 4,
+      "player": 4
     }
   }
 }

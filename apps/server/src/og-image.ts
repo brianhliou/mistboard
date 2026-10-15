@@ -56,7 +56,8 @@ export {
 // v5 (2026-09-12): the shared board card (one board, seats beside it) in place
 // of the two-fog-view frame.
 // v6 (2026-10-15): the piece look of 2026-10-14: one dark ring on both sides, pieces at 98% of the point gap (banqi 92%), no shadow, full-size face-down backs, Jungle rounded squares.
-export const GAME_OG_IMAGE_VERSION = 6;
+// v7 (2026-10-15): the international pieces with smooth edges, one line width on the straight figures.
+export const GAME_OG_IMAGE_VERSION = 7;
 
 // Bounded LRU of rendered per-game PNGs. Each card is rendered once on first
 // scraper fetch, then served from here (and from the scraper/CDN cache, via the
@@ -369,7 +370,8 @@ const ARTICLE_POSITION_KEY: Record<string, string> = {
 //  pikafish gets a board card instead of the site card. The ?lang= and
 //  ?aspect= URLs are new with v5, so no older URL ever named them.
 //  v6 (2026-10-15): the piece look of 2026-10-14: one dark ring on both sides, pieces at 98% of the point gap (banqi 92%), no shadow, full-size face-down backs, Jungle rounded squares.
-export const ARTICLE_OG_IMAGE_VERSION = 6;
+//  v7 (2026-10-15): the international pieces with smooth edges, one line width on the straight figures.
+export const ARTICLE_OG_IMAGE_VERSION = 7;
 
 /** The page's wide card URL (og:image), as the server-rendered article shell
  *  writes it. A zh page (`langPrefix` zh-hans / zh-hant) of a slug with a zh
@@ -578,7 +580,8 @@ async function serveArticleAspectImage(params: {
 //  full height with the title beside it (og-card-board.ts). */
 //  v4 (2026-09-25): Chinese study and chapter titles render instead of boxes.
 //  v6 (2026-10-15): the piece look of 2026-10-14: one dark ring on both sides, pieces at 98% of the point gap (banqi 92%), no shadow, full-size face-down backs, Jungle rounded squares.
-export const STUDY_OG_IMAGE_VERSION = 6;
+//  v7 (2026-10-15): the international pieces with smooth edges, one line width on the straight figures.
+export const STUDY_OG_IMAGE_VERSION = 7;
 
 // Per-composition share card: the chapter's own starting diagram plus its name.
 // A 排局 IS its diagram, so a link to one composition should preview that

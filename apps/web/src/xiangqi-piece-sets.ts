@@ -593,7 +593,9 @@ export function assetTreasureMarks(set: AssetXiangqiPieceSet, color: XiangqiColo
 const ANIMAL_ART_VERSION = 4;
 // 16 (2026-10-14): the figures rebuilt from the Chess-style art, grown to radius
 // 43, ivory tusks and advisor neck band, cannon turned 15 degrees.
-const INTERNATIONAL_ART_VERSION = 16;
+// 17 (2026-10-15): smooth edges. Chariot, advisor and cannon redrawn from geometry
+// at one line width; the curved figures re-traced with the wobble smoothed out.
+const INTERNATIONAL_ART_VERSION = 17;
 
 // On the square grid the cannon has a figure of its own (international-grid/):
 // turned 17 degrees and 6% bigger, so it clears the square's inner edge. Every
