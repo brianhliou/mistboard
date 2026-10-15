@@ -170,6 +170,27 @@ describe('mountXiangqiAnalysisPage', () => {
     root.remove();
   });
 
+  // A problem link (the /x/ short links) carries ply=0 so the reader lands on
+  // the problem, not on the solution's final move; without it the line's end
+  // is where the board opens.
+  it('opens at the root of a ?fen= + ?moves= line on ?ply=0', () => {
+    const fen = encodeURIComponent('3k5/4P4/9/9/9/9/9/4C4/9/4K4 r - - 0 1');
+    window.history.pushState({}, '', `/analysis/xiangqi?fen=${fen}&moves=e9e10`);
+    const atEnd = freshRoot();
+    mountXiangqiAnalysisPage(atEnd);
+    expect(atEnd.querySelector('.review-move-list__move--current')?.textContent).toContain(
+      'e9-e10',
+    );
+    atEnd.remove();
+
+    window.history.pushState({}, '', `/analysis/xiangqi?fen=${fen}&moves=e9e10&ply=0`);
+    const atStart = freshRoot();
+    mountXiangqiAnalysisPage(atStart);
+    expect(atStart.querySelector('.move-tree')?.textContent).toContain('e9-e10');
+    expect(atStart.querySelector('.review-move-list__move--current')).toBeNull();
+    atStart.remove();
+  });
+
   it('degrades an invalid ?fen= to the standard start', () => {
     window.history.pushState({}, '', '/analysis/xiangqi?fen=not-a-fen');
     const root = freshRoot();

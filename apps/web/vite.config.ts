@@ -146,8 +146,13 @@ function devApiProxyPlugin(): Plugin {
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         // /og/ too: the per-game images the Share & export tab downloads are
-        // drawn by the server, which owns that path in production.
-        if (!req.url?.startsWith('/api/') && !req.url?.startsWith('/og/')) {
+        // drawn by the server, which owns that path in production. /x/ is the
+        // server's short-link redirect (x-short-links.ts), same reason.
+        if (
+          !req.url?.startsWith('/api/') &&
+          !req.url?.startsWith('/og/') &&
+          !req.url?.startsWith('/x/')
+        ) {
           next();
           return;
         }

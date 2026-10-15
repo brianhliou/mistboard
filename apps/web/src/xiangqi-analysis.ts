@@ -74,6 +74,10 @@ export interface XiangqiAnalysisOptions {
   /** Render the site nav above the board (default). The embed passes false:
    *  it runs inside someone else's page and shows the board alone. */
   nav?: boolean;
+  /** Where the board opens on a seeded line: its last move (default) or its
+   *  root. A problem link opens on the root so the solution is not the first
+   *  thing the reader sees. */
+  initialPosition?: 'start' | 'end';
 }
 
 /** Mount the interactive analysis board for a standard-xiangqi move list. An empty
@@ -121,6 +125,7 @@ export function mountXiangqiAnalysis(
     // current line as a study, and wipe the moves back to the root position.
     studyExport: { variant: DEFAULT_STUDY_VARIANT, name: opts.title ?? 'Xiangqi analysis' },
     allowClearMoves: true,
+    initialPosition: opts.initialPosition,
     // Hand the current position to the board editor (/editor/xiangqi?fen=).
     boardEditorHref: (truth) => editorHref('xiangqi', standardXiangqiFen(truth)),
     // A hand-set start roots the tree + engine at the composition's position.
