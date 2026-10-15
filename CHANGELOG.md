@@ -161,6 +161,7 @@ Conventions:
 
 ### Site
 
+- New look for the International pieces: one dark ring on both sides, larger pieces, rounded squares on the Square grid, and a clearer last-move mark on the grid ([a4820b25](https://github.com/brianhliou/mistboard/commit/a4820b25))
 - The homepage's three rows sit closer together ([9ffca9cf](https://github.com/brianhliou/mistboard/commit/9ffca9cf))
 - New games can start during a release once live games have finished, and computer games (except Fog of War and Mahjong) can start throughout it ([9ffca9cf](https://github.com/brianhliou/mistboard/commit/9ffca9cf))
 - /games cards show each player's colour beside their name ([9ffca9cf](https://github.com/brianhliou/mistboard/commit/9ffca9cf))
@@ -213,6 +214,9 @@ Conventions:
 
 ### Fixed
 
+- Rules and blog pages no longer jump down as they finish loading ([a4820b25](https://github.com/brianhliou/mistboard/commit/a4820b25))
+- Article replay boards and embedded studies follow Square grid, Start markers and Coordinates ([a4820b25](https://github.com/brianhliou/mistboard/commit/a4820b25))
+- A dragged piece keeps its size in the hand on puzzles ([a4820b25](https://github.com/brianhliou/mistboard/commit/a4820b25))
 - Correspondence games no longer air on the watch page's channels with frozen clocks ([9ffca9cf](https://github.com/brianhliou/mistboard/commit/9ffca9cf))
 - The studies list reports more pages when a full page of 50 comes back ([9ffca9cf](https://github.com/brianhliou/mistboard/commit/9ffca9cf))
 - Broadcasts whose games the source posts more than a week after the event now import them automatically, checked daily for 30 days ([9ffca9cf](https://github.com/brianhliou/mistboard/commit/9ffca9cf))
