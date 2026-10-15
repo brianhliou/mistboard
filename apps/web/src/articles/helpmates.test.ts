@@ -270,15 +270,20 @@ function shogiPlay(pos: Position, usi: string): Position {
   return next;
 }
 
-const isMate = (pos: Position): boolean => pos.outcome()?.result === 'checkmate';
+// isCheck first: it is cheap, and most leaves of the search are not in check.
+const isMate = (pos: Position): boolean =>
+  pos.isCheck() && pos.outcome()?.result === 'checkmate';
 
 // Every line of `plies` moves, both sides cooperating, that ends in mate.
 function cooperativeMates(pos: Position, plies: number): string[] {
   if (plies === 0) return isMate(pos) ? [''] : [];
   if (pos.isEnd()) return [];
-  return shogiMoves(pos).flatMap((usi) =>
-    cooperativeMates(shogiPlay(pos, usi), plies - 1).map((rest) => `${usi} ${rest}`.trim()),
-  );
+  return shogiMoves(pos).flatMap((usi) => {
+    // shogiMoves already checked each move is legal; skip shogiPlay's second check.
+    const next = pos.clone();
+    next.play(parseUsi(usi)!);
+    return cooperativeMates(next, plies - 1).map((rest) => `${usi} ${rest}`.trim());
+  });
 }
 
 function diagramBoardSfen(diagram: ShogiDiagram): string {
@@ -321,7 +326,9 @@ describe('helpmates article: the shogi cooperative mate', () => {
   it('is the only cooperative mate in three, with none in one', () => {
     expect(cooperativeMates(start, 1)).toEqual([]);
     expect(cooperativeMates(start, 3)).toEqual([SHOGI_LINE.join(' ')]);
-  });
+    // A brute-force search over every defender drop: about 2s here, 4x that on a
+    // CI runner, which overran the 15s default on 2026-10-15.
+  }, 60_000);
 
   it('a lance dropped farther from the king fails: the defender interposes', () => {
     const afterTwo = SHOGI_LINE.slice(0, 2).reduce(shogiPlay, start);
