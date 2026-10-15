@@ -10,11 +10,12 @@ import {
   fortressXiangqiCoordOf,
   fortressXiangqiSquareOf,
 } from '@mistboard/game';
-import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
 import { boardCheckGlowSvg } from './board-check.js';
 import {
-  BOARD_LASTMOVE_MARKER_SELECTOR,
+  animateBoardLastMoveArrival,
   boardLastMoveMarkersSvg,
+  boardLastMovePiece,
   boardLastMoveStyleAttr,
 } from './board-lastmove.js';
 import { tokenPieceSize, xiangqiPieceDrawSize } from './board-metrics.js';
@@ -193,7 +194,7 @@ export function renderFortressXiangqiBoardSvg(
       ${cell ? xiangqiSurfaceRiver(surface, perspective, layout) : `<g class="xq-live-river" aria-hidden="true" pointer-events="none">${xiangqiSurfaceRiver(surface, perspective, layout)}</g>`}
       ${cell ? `<g class="xq-live-palace-bands">${xiangqiSurfacePalaceBands(surface, perspective, layout)}</g>` : ''}
       ${coords ? `<g class="fxq-coords xq-live-coords" aria-hidden="true" pointer-events="none">${coords}</g>` : ''}
-      ${lastMoveMarkers(view, perspective)}
+      ${lastMoveMarkers(view, perspective, pieceSet)}
       ${options.check === false ? '' : checkGlow(view, perspective)}
       ${selectionRing(options.selectedSquare ?? null, perspective)}
       ${options.interactive ? '' : moveHints(view, targets, perspective)}
@@ -370,11 +371,9 @@ export function animateFortressXiangqiBoardMove(
   const from = intersection(origin.file, origin.rank, perspective);
   const to = intersection(settle.file, settle.rank, perspective);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
-  // Draw the destination halo on as the piece lands (forward moves only): a
-  // reverse step renders the prior move's marker at a different square.
-  if (!opts.reverse) {
-    drawMarkerOnArrival(host.querySelector(BOARD_LASTMOVE_MARKER_SELECTOR), duration);
-  }
+  // The gold band rides on the piece for the whole glide (forward moves only):
+  // a reverse step renders the prior move's marks at a different square.
+  if (!opts.reverse) animateBoardLastMoveArrival(host, from, to, duration);
 }
 
 // Render a single piece centered on (x, y). The six shared xiangqi roles go
@@ -499,11 +498,16 @@ function blockedMarks(
     .join('');
 }
 
-// Shared with every other token board (board-lastmove.ts). A drop has no origin
-// square, so it marks only the destination.
+// Shared with every other token board (board-lastmove.ts), drawn under the
+// pieces in one layer. A drop has no origin square, so it marks only the
+// destination. The band hugs a disc, so the square grid (rounded-square pieces,
+// which a circle cannot hug) draws no band: the r-28 halo it drew there until
+// 2026-10-15 sat under the piece and showed nothing either. The square grid
+// still lacks the family's square-grid destination ring.
 function lastMoveMarkers(
   view: FortressXiangqiPlayerView,
   perspective: FortressXiangqiColor,
+  pieceSet: XiangqiPieceSet,
 ): string {
   const last = view.lastMove;
   if (!last) return '';
@@ -512,8 +516,13 @@ function lastMoveMarkers(
     return intersection(file, rank, perspective);
   };
   return boardLastMoveMarkersSvg(
-    { from: 'from' in last ? center(last.from) : null, to: center(last.to) },
+    {
+      from: 'from' in last ? center(last.from) : null,
+      to: activeLayout === 'cell' ? null : center(last.to),
+    },
     MARK_PIECE_SIZE,
+    'both',
+    boardLastMovePiece(PIECE_SIZE, pieceSet),
   );
 }
 

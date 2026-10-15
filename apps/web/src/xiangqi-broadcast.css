@@ -270,8 +270,7 @@
    thumbnail the blur is about a pixel, and the piece disc and stroke carry the
    silhouette without it. Two classes to out-specify .xq-piece in live-xiangqi.css,
    for the same chunk-order reason as the rules below. */
-.xqb-card-board .xq-piece,
-.xqb-card-board .xq-live-lastmove-ring {
+.xqb-card-board .xq-piece {
   filter: none;
 }
 

@@ -14,6 +14,7 @@ import { describe, expect, it } from 'vitest';
 import {
   boardLastMoveCellMarksSvg,
   boardLastMoveMarkersSvg,
+  boardLastMovePiece,
   CELL_LASTMOVE_AMBER,
   CELL_LASTMOVE_ORIGIN_OPACITY,
   CELL_LASTMOVE_RING_WIDTH,
@@ -23,42 +24,41 @@ import { renderJungleBoardSvg } from './jungle-render.js';
 import { renderJieqiBoardSvg } from './live-jieqi-render.js';
 import { renderXiangqiBoardSvg } from './xiangqi-board.js';
 
-// Pieces drawn at 98% of the point gap (2026-10-14) cover the destination halo,
-// which was tuned to show only in the ring of board between a 90% piece and the
-// half-cell line. So the halo draws ABOVE the piece layer, in a group no pointer
-// can land on, while the origin wash stays under the pieces (it marks an empty
-// point and must sit under whatever lands there next). The square grid has its
-// own marks (Brian, 2026-10-15): a solid amber origin cell under the pieces and
-// an amber ring on the moved piece's outline over them.
+// The destination band (2026-10-15) hugs the OUTSIDE of the drawn piece and
+// draws UNDER the piece layer with the origin wash: the piece covers none of it,
+// and a neighbour one point away, whose disc reaches into the band, paints its
+// own outline over it. From 2026-10-14 to 10-15 an r-28 halo drew over the
+// pieces and crossed their dark edge; nothing of the intersection marks may
+// sit above the pieces now. The square grid has its own marks (Brian,
+// 2026-10-15): a solid amber origin cell under the pieces and an amber ring on
+// the moved piece's outline over them.
 const OVER_GROUP = '<g class="xq-live-lastmove-over" aria-hidden="true" pointer-events="none">';
 
-function assertHaloOverPieces(svg: string, pieceMarker: string) {
+function assertBandUnderPieces(svg: string, pieceMarker: string) {
   const ring = svg.indexOf('class="xq-live-lastmove-ring"');
   const origin = svg.indexOf('xq-live-lastmove-from');
-  const over = svg.indexOf(OVER_GROUP);
   expect(ring).toBeGreaterThan(-1);
   expect(origin).toBeGreaterThan(-1);
-  expect(over).toBeGreaterThan(-1);
-  // The halo is the first thing inside the over group, after every piece...
-  expect(ring).toBeGreaterThan(over);
-  expect(ring).toBeGreaterThan(svg.lastIndexOf(pieceMarker));
-  expect(svg.slice(over, ring)).not.toContain('</g>');
-  // ...the origin wash before the first one, and each drawn exactly once.
-  expect(origin).toBeLessThan(svg.indexOf(pieceMarker));
+  // Both before the first piece, the band after the wash, each drawn once...
+  expect(ring).toBeLessThan(svg.indexOf(pieceMarker));
+  expect(origin).toBeLessThan(ring);
   expect(svg.match(/xq-live-lastmove-ring/g)).toHaveLength(1);
   expect(svg.match(/xq-live-lastmove-from/g)).toHaveLength(1);
+  // ...and the over group, kept for the square grid, is empty here.
+  const over = svg.indexOf(OVER_GROUP);
+  if (over > -1) expect(svg.slice(over + OVER_GROUP.length).startsWith('</g>')).toBe(true);
 }
 
-describe('the destination halo draws over the pieces', () => {
-  it('splits the shared marks into an under and an over layer', () => {
-    const ends = { from: { x: 0, y: 0 }, to: { x: 60, y: 0 } };
-    const both = boardLastMoveMarkersSvg(ends, 54);
-    expect(boardLastMoveMarkersSvg(ends, 54, 'under')).toBe(
-      both.slice(0, both.indexOf('<circle class="xq-live-lastmove-ring"')),
-    );
-    expect(boardLastMoveMarkersSvg(ends, 54, 'over')).toBe(
-      both.slice(both.indexOf('<circle class="xq-live-lastmove-ring"')),
-    );
+describe('the destination band draws under the pieces', () => {
+  const ends = { from: { x: 0, y: 0 }, to: { x: 60, y: 0 } };
+  const piece = boardLastMovePiece(62, 'international');
+
+  it('emits both intersection marks in the under layer and nothing over', () => {
+    const under = boardLastMoveMarkersSvg(ends, 54, 'under', piece);
+    expect(under).toContain('xq-live-lastmove-from');
+    expect(under).toContain('xq-live-lastmove-ring');
+    expect(boardLastMoveMarkersSvg(ends, 54, 'over', piece)).toBe('');
+    expect(boardLastMoveMarkersSvg(ends, 54, 'both', piece)).toBe(under);
   });
 
   it('on the xiangqi board', () => {
@@ -67,7 +67,7 @@ describe('the destination halo draws over the pieces', () => {
       to: 'e3',
     });
     const svg = renderXiangqiBoardSvg(getStandardXiangqiPlayerView(state, 'red'));
-    assertHaloOverPieces(svg, 'class="xq-piece-slot"');
+    assertBandUnderPieces(svg, 'class="xq-piece-slot"');
   });
 
   it('on the duck xiangqi board', () => {
@@ -83,20 +83,25 @@ describe('the destination halo draws over the pieces', () => {
       targets: [],
       layout: 'intersection',
     });
-    assertHaloOverPieces(svg, 'class="xq-piece-slot"');
+    assertBandUnderPieces(svg, 'class="xq-piece-slot"');
   });
 
-  it('on the jieqi board', () => {
+  it('on the jieqi board, sized to its larger piece', () => {
     const start = createInitialJieqiState('halo-over');
     const state = applyJieqiMove(start, getJieqiLegalMoves(start)[0]);
     const svg = renderJieqiBoardSvg(getJieqiPlayerView(state, 'red'), 'red', {
       layout: 'intersection',
       interactive: false,
+      pieceSet: 'international',
     });
-    assertHaloOverPieces(svg, 'class="jieqi-piece-slot"');
+    assertBandUnderPieces(svg, 'class="jieqi-piece-slot"');
+    // Cell 72 draws its piece in a 74.5 box: band 35.31 to 38.32, centre 36.82.
+    expect(svg).toMatch(
+      /<circle class="xq-live-lastmove-ring" cx="[\d.]+" cy="[\d.]+" r="36.82" stroke-width="3"\/>/,
+    );
   });
 
-  it('keeps the intersection layout on the wash and halo', () => {
+  it('keeps the intersection layout on the wash and band', () => {
     const state = applyXiangqiMove(createInitialXiangqiState('halo-int'), {
       from: 'b3',
       to: 'e3',

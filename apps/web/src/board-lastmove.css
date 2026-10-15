@@ -1,5 +1,5 @@
 /* One last-move language for every token board (xiangqi, fog xiangqi, jieqi,
-   mini/drop mini, fortress). Unified 2026-08-27: each renderer used to inject
+   duck xiangqi, fortress). Unified 2026-08-27: each renderer used to inject
    its own marker style, so the homepage viewer and the daily-puzzle widget
    sitting one band apart drew the same event two different ways (two soft rings
    vs. an origin disc plus a gold destination halo). The xiangqi treatment won:
@@ -17,7 +17,7 @@
 
 /* Origin marker: a pale wash with a thin amber outline, sized to the piece that
    left (outline included -- see CANONICAL_ORIGIN_OUTER_EDGE, which is what keeps
-   it clear of the destination halo one point away). This is the treatment the
+   it clear of the destination band one point away). This is the treatment the
    jieqi board carried before the boards were unified; picked for all of them on
    2026-08-27 over the darker piece-sized disc, which read as heavy and small
    next to the destination ring. The outline is what makes it legible on the tan
@@ -30,18 +30,20 @@
   stroke-width: var(--board-lastmove-origin-stroke, 2);
 }
 
-/* Destination: a gold halo around the last-moved piece, its centre line just
-   outside the 90% piece radius it was tuned on. Drawn in its own group ABOVE the
-   piece layer since pieces grew to 98% of the gap (2026-10-15): under them, the
-   piece covered all but a sliver. Gold rides the shared board-highlight token (contrast/colorblind
-   board themes override it); the tight drop-shadow keeps the ring legible on the
-   pale tan board skins where flat gold would wash out. Boards whose cell is not
-   the canonical 60 units set --board-lastmove-stroke to keep the RENDERED ring
-   weight equal across variants (see boardLastMoveStrokeWidth). */
+/* Destination: a thin gold band hugging the OUTSIDE of the last-moved piece
+   (Brian, 2026-10-15, from the video prototype): its inner edge sits exactly on
+   the drawn disc's outer edge, so it frames the piece without crossing the
+   piece's dark outline the way the r-28 halo drawn over the pieces did
+   (2026-10-14 to 10-15). It draws UNDER the pieces, so a neighbour one point
+   away still paints its own outline over the band. Radius and stroke-width are
+   attributes from boardLastMoveBand, derived from the piece actually drawn, so
+   no width lives here (a CSS stroke-width would override the attribute). Gold
+   rides the shared board-highlight token (contrast/colorblind board themes
+   override it). On an animated move the band glides with the piece
+   (animateBoardLastMoveArrival). */
 .xq-live-lastmove-ring {
   fill: none;
   stroke: var(--board-highlight, #d6af4e);
-  stroke-width: var(--board-lastmove-stroke, 4);
-  filter: drop-shadow(0 0 1px rgba(70, 45, 8, 0.5));
+  stroke-opacity: 0.8;
   pointer-events: none;
 }

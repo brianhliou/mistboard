@@ -66,6 +66,7 @@ import {
   type BoardLastMoveLayer,
   boardLastMoveCellMarksSvg,
   boardLastMoveMarkersSvg,
+  boardLastMovePiece,
 } from './board-lastmove.js';
 import { tokenPieceSize } from './board-metrics.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
@@ -371,9 +372,10 @@ function lastMoveLayer(
       },
     );
   }
-  // The SHARED marker markup, not an invented class: origin shadow disc plus a
-  // gold destination ring, tuned on the standard xiangqi board and used by every
-  // token board here. Rolling my own gave two unstyled circles.
+  // The SHARED marker markup, not an invented class: origin wash plus a gold
+  // destination band hugging the drawn piece, tuned on the standard xiangqi
+  // board and used by every token board here. Rolling my own gave two unstyled
+  // circles.
   return boardLastMoveMarkersSvg(
     {
       from: point(view.lastMove.from, perspective, layout),
@@ -381,6 +383,7 @@ function lastMoveLayer(
     },
     tokenPieceSize(LIVE_BOARD_GEO.cell),
     layer,
+    boardLastMovePiece(XIANGQI_LIVE_PIECE_SIZE, pieceSet ?? readStoredXiangqiPieceSet()),
   );
 }
 

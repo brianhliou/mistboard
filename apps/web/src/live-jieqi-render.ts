@@ -5,10 +5,10 @@ import {
   type JieqiSquare,
   jieqiCheckedGeneral,
 } from '@mistboard/game';
-import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
 import { boardCheckGlowSvg } from './board-check.js';
 import {
-  BOARD_LASTMOVE_MARKER_SELECTOR,
+  animateBoardLastMoveArrival,
   BOARD_LASTMOVE_OVER_GROUP_ATTRS,
   type BoardLastMoveLayer,
   boardLastMoveCellMarksSvg,
@@ -52,6 +52,7 @@ import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
 import {
   renderXiangqiPieceGlyphed,
   type XiangqiPieceSet,
+  xiangqiPieceOuterRadius,
   xiangqiPieceSetShape,
   xiangqiPieceShapeForLayout,
 } from './xiangqi-piece-sets.js';
@@ -406,13 +407,10 @@ export function animateJieqiBoardMove(
   const from = intersection(origin.file, origin.rank, perspective);
   const to = intersection(settle.file, settle.rank, perspective);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
-  // A reverse step renders the PRIOR move's marker at a different square, so
-  // fading it in would not track the reverse glide.
-  if (!opts.reverse) {
-    for (const marker of host.querySelectorAll(BOARD_LASTMOVE_MARKER_SELECTOR)) {
-      drawMarkerOnArrival(marker, duration);
-    }
-  }
+  // The gold band rides on the piece for the whole glide (the square grid's
+  // marks fade in as it lands). A reverse step renders the PRIOR move's marks
+  // at a different square, so neither would track the reverse glide.
+  if (!opts.reverse) animateBoardLastMoveArrival(host, from, to, duration);
 }
 
 function selectionRing(selection: JieqiSquare | null, perspective: JieqiColor): string {
@@ -439,8 +437,8 @@ function moveHints(
     .join('');
 }
 
-// Shared with every other token board (board-lastmove.ts): a darkened origin
-// disc and a gold halo on the destination, rather than the symmetric pair of
+// Shared with every other token board (board-lastmove.ts): a pale origin wash
+// and a thin gold band hugging the moved piece, rather than the symmetric pair of
 // soft rings this board drew until 2026-08-27. On the square grid it draws the
 // square-grid family's marks (amber origin cell, amber ring on the moved piece;
 // Brian, 2026-10-15); until that day it drew the intersection marks there.
@@ -462,7 +460,15 @@ function lastMoveMarkers(
       shape: xiangqiPieceSetShape(pieceSet, 'square'),
     });
   }
-  return boardLastMoveMarkersSvg(ends, MARK_PIECE_SIZE, layer);
+  // The band hugs the piece actually standing on the destination: a move
+  // reveals the piece, so it is face up, but a face-down back has a wider rim
+  // (xiangqiPieceOuterRadius) and the band must clear that too.
+  const landed = view.board[view.lastMove.to];
+  const outer = xiangqiPieceOuterRadius(
+    pieceSet,
+    landed?.faceDown ? { shrouded: true, shroudedStyle: 'back' } : {},
+  );
+  return boardLastMoveMarkersSvg(ends, MARK_PIECE_SIZE, layer, { box: PIECE_SIZE, outer });
 }
 
 function hitLayer(

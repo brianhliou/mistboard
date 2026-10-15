@@ -172,20 +172,18 @@ describe('Dark Xiangqi last-move marks', () => {
     lastMove: { from, to },
   });
 
-  it('draws the same origin wash and destination halo as the open board', () => {
+  it('draws the same origin wash and destination band as the open board', () => {
     const svg = renderDarkXiangqiBoardSvg(withLastMove('b3', 'b4'));
 
     expect(svg).toContain('xq-live-lastmove-cell xq-live-lastmove-from');
     expect(svg).toContain('xq-live-lastmove-ring');
     // The old treatment: two bare -cell circles, no -from, no ring.
     expect(svg).not.toMatch(/class="xq-live-lastmove-cell"/);
-    // Wash under the pieces, halo over them (98% pieces cover it otherwise).
+    // Wash and band both under the pieces: the band hugs the disc from outside.
     const pieces = svg.indexOf('<g class="xq-live-pieces">');
     expect(svg.indexOf('xq-live-lastmove-from')).toBeLessThan(pieces);
-    expect(svg.indexOf('xq-live-lastmove-ring')).toBeGreaterThan(
-      svg.indexOf('<g class="xq-live-lastmove-over" aria-hidden="true" pointer-events="none">'),
-    );
-    expect(svg.indexOf('xq-live-lastmove-over')).toBeGreaterThan(pieces);
+    expect(svg.indexOf('xq-live-lastmove-ring')).toBeLessThan(pieces);
+    expect(svg.match(/xq-live-lastmove-ring/g)).toHaveLength(1);
   });
 
   it('draws the square-grid marks on the square grid, only where the viewer can see', () => {

@@ -25,12 +25,13 @@ import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './
 import './board-glyph-marker.css';
 import './embed/embed-credit.css';
 import {
-  BOARD_LASTMOVE_MARKER_SELECTOR,
+  animateBoardLastMoveArrival,
   BOARD_LASTMOVE_OVER_GROUP_ATTRS,
   type BoardLastMoveLayer,
   boardLastMoveCellMarksSvg,
   boardLastMoveMarkersSvg,
   boardLastMoveOuterRadius,
+  boardLastMovePiece,
 } from './board-lastmove.js';
 import { tokenPieceSize, xiangqiPieceDrawSize } from './board-metrics.js';
 import { readDisplayPreferences } from './display-preferences.js';
@@ -60,7 +61,11 @@ import {
 import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
 import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle, xiangqiNotationChangedEvent } from './xiangqi-notation.js';
-import { renderXiangqiPieceGlyphed, xiangqiPieceSetShape } from './xiangqi-piece-sets.js';
+import {
+  renderXiangqiPieceGlyphed,
+  XIANGQI_PIECE_SETS,
+  xiangqiPieceSetShape,
+} from './xiangqi-piece-sets.js';
 import type { ReplayChartSource } from './xiangqi-replay-chart.js';
 import { xiangqiDiagramRiverText } from './xiangqi-river-text.js';
 
@@ -82,7 +87,7 @@ const GLYPH_OFFSET = (21 / 60) * CELL;
  * intersection, not just the piece. Three things reach past its centre:
  *
  *   the piece itself         PIECE_DRAWN / 2           16.0 at CELL 31
- *   the last-move ring       outer radius              15.6
+ *   the last-move band       outer edge                16.5 (widest rim)
  *   the judgment badge       offset + its own radius   17.6
  *
  * A previous version set this to 15 by reasoning only about the piece, which
@@ -91,7 +96,15 @@ const GLYPH_OFFSET = (21 / 60) * CELL;
  * fourth decoration that reaches further cannot silently crop it.
  */
 const MARGIN = Math.ceil(
-  Math.max(PIECE_DRAWN / 2, boardLastMoveOuterRadius(PIECE), GLYPH_OFFSET + GLYPH_RADIUS),
+  Math.max(
+    PIECE_DRAWN / 2,
+    // The band hugs the drawn piece, so it reaches furthest on the set with the
+    // widest rim; the reader can switch sets without a re-layout.
+    ...XIANGQI_PIECE_SETS.map(({ id }) =>
+      boardLastMoveOuterRadius(PIECE, boardLastMovePiece(PIECE_DRAWN, id)),
+    ),
+    GLYPH_OFFSET + GLYPH_RADIUS,
+  ),
 );
 const GLYPH_CLASS: Record<string, string> = {
   '??': 'xq-marker--blunder',
@@ -412,10 +425,10 @@ function glideReplayMove(
   const to = pointXY(s.file, s.rank, board);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
   // Forward only: a back step draws the PRIOR move's markers somewhere else, so
-  // fading them in would not track this glide. The judgment badge rides the
-  // arriving piece, so it lands with it too.
+  // neither would track this glide. The gold band rides on the piece; the
+  // judgment badge fades in as the piece lands.
   if (!reverse) {
-    drawMarkerOnArrival(frame.querySelector(BOARD_LASTMOVE_MARKER_SELECTOR), duration);
+    animateBoardLastMoveArrival(frame, from, to, duration);
     drawMarkerOnArrival(frame.querySelector('.xq-marker--glyph'), duration);
   }
 }
@@ -434,7 +447,12 @@ function lastMoveSvg(move: XiangqiMove, board: ReplayBoard, layer: BoardLastMove
       shape: xiangqiPieceSetShape(readStoredXiangqiPieceSet(), 'square'),
     });
   }
-  return boardLastMoveMarkersSvg(ends, PIECE, layer);
+  return boardLastMoveMarkersSvg(
+    ends,
+    PIECE,
+    layer,
+    boardLastMovePiece(PIECE_DRAWN, readStoredXiangqiPieceSet()),
+  );
 }
 
 /** The judgment badge, pinned to the destination of the move just played. */
