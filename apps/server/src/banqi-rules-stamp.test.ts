@@ -30,6 +30,7 @@ const FRESH_GAME_CALL_SITES: Record<string, string> = {
     'a composed position that teaches the current 長捉 rule, not a recorded game',
   'packages/game/src/hidden-piece-record.ts': 'the start FEN: no moves',
   'packages/game/src/start-fen.ts': 'a fresh dealt start position',
+  'scripts/board-sweep.mts': 'a seeded playout for the review sheet: never a stored game',
 };
 
 const SCAN_ROOTS = ['apps/server/src', 'apps/web/src', 'packages/game/src', 'scripts'];

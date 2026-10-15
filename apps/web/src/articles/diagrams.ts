@@ -33,7 +33,12 @@ import articleSnapshotFog from '../article-snapshot-fog.json' with { type: 'json
 import articleSnapshotFogBlack from '../article-snapshot-fog-black.json' with { type: 'json' };
 import { BANQI_CONVERSION_GAME } from '../banqi-engine-game.js';
 import { BANQI_SAMPLE_GAME } from '../banqi-sample-game.js';
-import { tokenPieceSize } from '../board-metrics.js';
+import {
+  tokenPieceSize,
+  XIANGQI_PIECE_OUTLINE_SHARE,
+  xiangqiPieceDrawSize,
+} from '../board-metrics.js';
+import { BANQI_PIECE_REACH, banqiPieceDrawSize } from '../live-banqi-render.js';
 import { pieceSlot } from '../board-piece-slot.js';
 import type { XiangqiBoardLayout } from '../xiangqi-appearance-storage.js';
 import {
@@ -47,7 +52,9 @@ import {
   DEFAULT_XIANGQI_PIECE_SET,
   renderXiangqiPieceGlyphed,
   type XiangqiPieceSet,
+  type XiangqiPieceShape,
   type XiangqiShroudedStyle,
+  xiangqiPieceShapeForLayout,
 } from '../xiangqi-piece-sets.js';
 import { xiangqiDiagramRiverText } from '../xiangqi-river-text.js';
 import type { ArticleSection, CtaBlock, CtaButton } from './types.js';
@@ -1167,7 +1174,10 @@ export const XQ_CELL = 31;
 export const XQ_MARGIN = 18;
 export const XQ_BOARD_W = XQ_MARGIN * 2 + 8 * XQ_CELL;
 export const XQ_BOARD_H = XQ_MARGIN * 2 + 9 * XQ_CELL;
+/** The layout piece size the diagram marks (rings, blast circles) are tuned on. */
 export const XQ_PIECE_SIZE = tokenPieceSize(XQ_CELL);
+/** The box a piece is drawn in: its outline spans 98% of the gap (2026-10-14). */
+export const XQ_PIECE_DRAW_SIZE = xiangqiPieceDrawSize(XQ_CELL);
 export const XQ_FOG_OVERLAP = 0.5;
 export const XQ_VIEWBOX_PAD = 4;
 export const XQ_BOARD_RADIUS = 8;
@@ -1200,6 +1210,7 @@ const XQ_CELL_GEO: XiangqiBoardGeometry = {
 const XQ_CELL_PAD_X = (XQ_BOARD_W - XQ_CELL_GEO.fileCount * XQ_CELL_SIZE) / 2;
 const XQ_CELL_PAD_Y = (XQ_BOARD_H - (XQ_CELL_GEO.rankCount * XQ_CELL_SIZE + XQ_CELL_RIVER_GAP)) / 2;
 const XQ_CELL_PIECE_SIZE = tokenPieceSize(XQ_CELL_SIZE);
+const XQ_CELL_PIECE_DRAW_SIZE = xiangqiPieceDrawSize(XQ_CELL_SIZE);
 
 // The layout a diagram render is currently producing. Diagram SVGs come from
 // synchronous render thunks; the geometry helpers read this the same way the
@@ -1225,6 +1236,17 @@ export function withXiangqiBoardLayout(layout: XiangqiBoardLayout, render: () =>
 // number or it drifts from the discs beside it whenever the layout changes.
 export function xqPieceSize(): number {
   return activeXiangqiBoardLayout === 'cell' ? XQ_CELL_PIECE_SIZE : XQ_PIECE_SIZE;
+}
+
+/** The box a board piece is drawn in for the active layout: its outer edge spans 98% of
+ *  the gap or cell. xqPieceSize stays the size the marks around a piece are tuned on. */
+export function xqPieceDrawSize(): number {
+  return activeXiangqiBoardLayout === 'cell' ? XQ_CELL_PIECE_DRAW_SIZE : XQ_PIECE_DRAW_SIZE;
+}
+
+/** The piece shape for the active layout: a rounded square on the grid, a disc on lines. */
+export function xqPieceShape(): XiangqiPieceShape {
+  return xiangqiPieceShapeForLayout(activeXiangqiBoardLayout);
 }
 function xqHalfCell(): number {
   return (activeXiangqiBoardLayout === 'cell' ? XQ_CELL_SIZE : XQ_CELL) / 2;
@@ -1466,11 +1488,12 @@ export function xqPiecesLayer(
       if (!piece) return '';
       const { file, rank } = xqCoord(sq as XiangqiSquare);
       const { x, y } = xqPoint(file, rank, perspective, x0, y0);
-      const size = xqPieceSize();
+      const size = xqPieceDrawSize();
       const pieceSvg = renderXiangqiPieceGlyphed(piece as XiangqiPiece, activeXiangqiPieceSet, {
         x: x - size / 2,
         y: y - size / 2,
         size,
+        shape: xqPieceShape(),
         shrouded,
         shroudedStyle,
         // Horde Xiangqi's veteran soldier has the crossed soldier's move from
@@ -1653,7 +1676,8 @@ export function xqHalfBoardTagClashes(
   boardY = 28,
 ): XiangqiSquare[] {
   const scale = box.w / XQ_THUMB_TAG_REF_WIDTH;
-  const r = xqPieceSize() / 2;
+  // The piece's visible outer edge, not its drawing box (which has a margin).
+  const r = (xqPieceDrawSize() * XIANGQI_PIECE_OUTLINE_SHARE) / 2;
   return squares.filter((square) => {
     const { file, rank } = xqCoord(square);
     const p = xqPoint(file, rank, perspective, 0, boardY);
@@ -1757,7 +1781,7 @@ export function xqHandStrip(strip: XqHandStrip, x: number, y: number): string {
     const piece = renderXiangqiPieceGlyphed(
       { color: strip.color, role: entry.role },
       activeXiangqiPieceSet,
-      { x: cx - size / 2, y: top, size },
+      { x: cx - size / 2, y: top, size, shape: xqPieceShape() },
     );
     const badge = entry.count > 1 ? xqHandBadge(entry.count, cx + size / 2, top + size, size) : '';
     parts.push(
@@ -2767,7 +2791,11 @@ export const BANQI_CELL = 50;
 export const BANQI_MARGIN = 16;
 export const BANQI_BOARD_W = BANQI_MARGIN * 2 + BANQI_COLS * BANQI_CELL;
 export const BANQI_BOARD_H = BANQI_MARGIN * 2 + BANQI_ROWS * BANQI_CELL;
-export const BANQI_PIECE_SIZE = 42;
+// A disc whose outer edge spans 92% of the cell, the live banqi board's look
+// (live-banqi-render.ts BANQI_PIECE_REACH, Brian 2026-10-14).
+export const BANQI_PIECE_SIZE = banqiPieceDrawSize(BANQI_CELL);
+/** A ring just outside a banqi piece: 2 units past its outer edge. */
+const BANQI_MARK_R = (BANQI_CELL * BANQI_PIECE_REACH) / 2 + 2;
 // Banqi diagrams fill the article column: the board canvas is exactly the board
 // width (no pair-width letterboxing), so every banqi figure renders edge-to-edge
 // instead of centered inside a wider xq-pair frame. Kept as named constants so
@@ -2844,6 +2872,7 @@ export function banqiPiece(
     x: x - BANQI_PIECE_SIZE / 2,
     y: y - BANQI_PIECE_SIZE / 2,
     size: BANQI_PIECE_SIZE,
+    shape: 'disc',
     shrouded: spec.shrouded,
     shroudedStyle: spec.shrouded ? 'back' : undefined,
     ariaLabel: spec.shrouded ? 'face-down Banqi piece' : undefined,
@@ -3053,13 +3082,13 @@ export const BANQI_CANNON_CAPTURE = () =>
         BANQI_CENTER_X,
         28,
         'banqi-cannon-screen-capture',
-        BANQI_PIECE_SIZE / 2 + 4,
+        BANQI_MARK_R,
       ),
       banqiPiece({ color: 'red', role: 'cannon' }, 1, 2, BANQI_CENTER_X, 28),
       banqiPiece({ shrouded: true }, 3, 2, BANQI_CENTER_X, 28),
       banqiPiece({ color: 'black', role: 'general' }, 6, 2, BANQI_CENTER_X, 28),
       // Red ring marks the capture target (the revealed enemy beyond the screen).
-      `<circle cx="${banqiCellCenter(6, 2, BANQI_CENTER_X, 28).x}" cy="${banqiCellCenter(6, 2, BANQI_CENTER_X, 28).y}" r="${BANQI_PIECE_SIZE / 2 + 4}" fill="none" stroke="#b91c1c" stroke-width="2.5"/>`,
+      `<circle cx="${banqiCellCenter(6, 2, BANQI_CENTER_X, 28).x}" cy="${banqiCellCenter(6, 2, BANQI_CENTER_X, 28).y}" r="${BANQI_MARK_R}" fill="none" stroke="#b91c1c" stroke-width="2.5"/>`,
     ].join(''),
   );
 

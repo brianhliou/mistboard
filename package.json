@@ -23,6 +23,7 @@
     "articles:cards": "ARTICLE_CARDS_PREVIEW=1 npm run test:unit --workspace @mistboard/web -- src/article-card-preview.test.ts && node -p \"require('node:os').tmpdir() + '/mistboard-article-cards.html'\"",
     "articles:meta": "UPDATE_ARTICLE_META=1 npm run test:unit --workspace @mistboard/web -- src/articles-meta-sync.test.ts",
     "variant:catalog": "tsx scripts/variant-catalog.ts",
+    "board:sweep": "tsx scripts/board-sweep.mts",
     "lab": "tsx scripts/variant-lab/lab/cli.ts",
     "study:edit": "tsx apps/server/src/study-edit-cli.ts",
     "email:preview": "tsx apps/server/src/scripts/email-previews.ts",

@@ -8,7 +8,6 @@ import {
   assetTreasureMarks,
   DEFAULT_XIANGQI_PIECE_SET,
   duckPieceMarks,
-  internationalFlatTreasureMarks,
   internationalTreasureMarks,
   isAssetPieceSet,
   RETIRED_XIANGQI_PIECE_SETS,
@@ -17,7 +16,9 @@ import {
   xiangqiGlyph,
   xiangqiNeutralBackMarks,
   xiangqiPieceDiscShadow,
+  xiangqiPieceSetShape,
   xiangqiPieceShadowMarks,
+  xiangqiPieceShapeForLayout,
   xiangqiPieceTilePreview,
   xiangqiPreviewGlyph,
 } from './xiangqi-piece-sets.js';
@@ -74,74 +75,17 @@ describe('renderXiangqiPieceGlyphed', () => {
     const cannon = renderXiangqiPieceGlyphed({ color: 'black', role: 'cannon' }, 'international', {
       className: 'xq-piece',
     });
-    expect(general).toContain('/piece-sets/xiangqi/international/red-general.png?v=15');
-    expect(cannon).toContain('/piece-sets/xiangqi/international/black-cannon.png?v=15');
+    expect(general).toContain('/piece-sets/xiangqi/international/red-general.png?v=16');
+    expect(cannon).toContain('/piece-sets/xiangqi/international/black-cannon.png?v=16');
     expect(general).toContain('x="-7" y="-7" width="114" height="114"');
     expect(cannon).toContain('x="-11" y="-11" width="122" height="122"');
     expect(cannon).toContain('class="xq-piece"');
     expect(general).toContain('fill="#fef0d7"');
-    expect(general).toContain('stroke="#c30d0d"');
+    // One dark ring on both sides (Brian, 2026-10-14): the figure's fill carries the side.
+    expect(general).toContain('stroke="#202427"');
+    expect(general).not.toContain('stroke="#c30d0d"');
     expect(cannon).toContain('stroke="#202427"');
     expect(general).not.toContain('<text');
-  });
-
-  it('renders the Chess-style prototype from the international art without a disc', () => {
-    const general = renderXiangqiPieceGlyphed(redGeneral, 'international-flat', {});
-    expect(general).toContain('/piece-sets/xiangqi/international-flat/red-general.png?v=2');
-    expect(general).toContain('x="-26.38" y="-26.38" width="152.76" height="152.76"');
-    expect(general).toContain('style="filter:none"');
-    expect(general).not.toContain('<circle');
-    expect(general).not.toContain('fill="#fef0d7"');
-  });
-
-  it('renders Animal (no disc) from the Dobutsu art, 15% larger, with no disc', () => {
-    const general = renderXiangqiPieceGlyphed(redGeneral, 'animal-flat', {
-      className: 'xq-piece',
-    });
-    expect(general).toContain('/piece-sets/xiangqi/animal-dobutsu/red-general.png?v=4');
-    expect(general).toContain('x="-7.5" y="-7.5" width="115" height="115"');
-    expect(general).toContain('class="xq-piece xq-piece--bare-animal"');
-    // Keeps the board's soft piece shadow: the heads need grounding the flat
-    // chess figures do not.
-    expect(general).not.toContain('filter:none');
-    expect(general).not.toContain('<circle');
-  });
-
-  it('keeps the Dobutsu disc on a hidden Animal (no disc) token', () => {
-    const hidden = renderXiangqiPieceGlyphed(redGeneral, 'animal-flat', { shrouded: true });
-    expect(hidden).toContain('fill="#fff2cf"');
-    expect(hidden).not.toContain('xq-piece--bare-animal');
-  });
-
-  it('fits the Chess-style elephant and cannon to their silhouettes', () => {
-    const elephant = renderXiangqiPieceGlyphed(
-      { color: 'red', role: 'elephant' },
-      'international-flat',
-      {},
-    );
-    const cannon = renderXiangqiPieceGlyphed(
-      { color: 'red', role: 'cannon' },
-      'international-flat',
-      {},
-    );
-
-    expect(elephant).toContain('x="-23.7" y="-26.7" width="147.4" height="147.4"');
-    expect(cannon).toContain('x="-35.4" y="-35.4" width="170.8" height="170.8"');
-  });
-
-  it('aligns the Chess-style advisor/soldier/chariot bases and enlarges the chariot', () => {
-    const flat = (role: 'advisor' | 'soldier' | 'chariot') =>
-      renderXiangqiPieceGlyphed({ color: 'red', role }, 'international-flat', {});
-
-    // advisor: default 1.34 scale, nudged up 1.2 units so its base meets the
-    // general's (~y=90). Same box as the general, shifted in y only.
-    expect(flat('advisor')).toContain('x="-26.38" y="-27.58" width="152.76" height="152.76"');
-    // soldier: native-framed art pulled down 3.6 units onto the shared baseline.
-    expect(flat('soldier')).toContain('x="-17" y="-13.4" width="134" height="134"');
-    // chariot: the smallest figure, scaled up to 1.46 so it carries similar
-    // visual weight to its neighbours, with a yOffset that keeps its base on the
-    // shared baseline despite the larger box.
-    expect(flat('chariot')).toContain('x="-31.03" y="-29.82" width="162.06" height="166.44"');
   });
 
   it('keeps the international soldier at native size while larger art fills more of the disc', () => {
@@ -159,37 +103,26 @@ describe('renderXiangqiPieceGlyphed', () => {
     expect(advisor).toContain('x="-7" y="-7" width="114" height="114"');
   });
 
-  it('uses the promoted-soldier art after crossing the river in both international sets', () => {
+  it('uses the promoted-soldier art after crossing the river', () => {
     const piece = { color: 'red', role: 'soldier' } as const;
     const international = renderXiangqiPieceGlyphed(piece, 'international', { crossed: true });
-    const chessStyle = renderXiangqiPieceGlyphed(piece, 'international-flat', { crossed: true });
 
     expect(international).toContain(
-      '/piece-sets/xiangqi/international/red-crossed-soldier.png?v=15',
-    );
-    expect(chessStyle).toContain(
-      '/piece-sets/xiangqi/international-flat/red-crossed-soldier.png?v=2',
+      '/piece-sets/xiangqi/international/red-crossed-soldier.png?v=16',
     );
   });
 
   it('renders the international Fortress treasure from the generated cutout art', () => {
     const red = internationalTreasureMarks('red');
     const black = internationalTreasureMarks('black');
-    expect(red).toContain('/piece-sets/xiangqi/international/red-treasure.png?v=15');
-    expect(black).toContain('/piece-sets/xiangqi/international/black-treasure.png?v=15');
+    expect(red).toContain('/piece-sets/xiangqi/international/red-treasure.png?v=16');
+    expect(black).toContain('/piece-sets/xiangqi/international/black-treasure.png?v=16');
     // Two units below the other 114-unit figures: the diamond is top-heavy.
     expect(red).toContain('x="-7" y="-5" width="114" height="114"');
     expect(red).toContain('fill="#fef0d7"');
-    expect(red).toContain('stroke="#c30d0d"');
+    expect(red).toContain('stroke="#202427"');
     expect(black).toContain('stroke="#202427"');
     expect(red).not.toContain('M38 38 L62 38');
-  });
-
-  it('renders the Chess-style Fortress treasure without a disc', () => {
-    const treasure = internationalFlatTreasureMarks('red');
-    expect(treasure).toContain('/piece-sets/xiangqi/international-flat/red-treasure.png?v=2');
-    expect(treasure).toContain('width="152.76" height="152.76"');
-    expect(treasure).not.toContain('<circle');
   });
 
   it('renders the Dobutsu animal set from the full seven-role fitted image assets', () => {
@@ -270,7 +203,6 @@ describe('xiangqiPreviewGlyph', () => {
     expect(xiangqiPreviewGlyph('traditional')).toBe('帥');
     expect(xiangqiPreviewGlyph('simplified')).toBe('帅');
     expect(xiangqiPreviewGlyph('international')).toBe('G');
-    expect(xiangqiPreviewGlyph('international-flat')).toBe('G');
     expect(xiangqiPreviewGlyph('animal-dobutsu')).toBe('G');
   });
 });
@@ -293,17 +225,11 @@ describe('xiangqiPieceTilePreview', () => {
       expect(international.markup).toContain('/piece-sets/xiangqi/international/red-general.png');
       expect(international.markup).not.toContain('stroke="#c2261e"');
     }
-    const chessStyle = xiangqiPieceTilePreview('international-flat');
-    expect(chessStyle.kind).toBe('svg');
-    if (chessStyle.kind === 'svg') {
-      expect(chessStyle.markup).toContain('/piece-sets/xiangqi/international-flat/red-general.png');
-      expect(chessStyle.markup).not.toContain('<circle');
-    }
     const dobutsu = xiangqiPieceTilePreview('animal-dobutsu');
     expect(dobutsu.kind).toBe('svg');
     if (dobutsu.kind === 'svg') {
       expect(dobutsu.markup).toContain('/piece-sets/xiangqi/animal-dobutsu/red-general.png');
-      expect(dobutsu.markup).toContain('stroke="#c2261e"');
+      expect(dobutsu.markup).toContain('stroke="#283a47"');
     }
   });
 });
@@ -347,11 +273,11 @@ describe('asset piece sets', () => {
     return existsSync(`${publicDir}${href.split('?')[0]}`);
   }
 
-  it('offers exactly the five asset sets beside the six built-in ones, and none retired', () => {
+  it('offers exactly the five asset sets beside the four built-in ones, and none retired', () => {
     expect(
       XIANGQI_PIECE_SETS.filter((set) => isAssetPieceSet(set.id)).map((set) => set.id),
     ).toEqual(ASSET_SETS);
-    expect(XIANGQI_PIECE_SETS).toHaveLength(11);
+    expect(XIANGQI_PIECE_SETS).toHaveLength(9);
     for (const set of XIANGQI_PIECE_SETS) {
       expect(RETIRED_XIANGQI_PIECE_SETS.has(set.id)).toBe(false);
       expect(set.labelKey).toBe(`prefs.xqPieceSet.${set.id}`);
@@ -435,9 +361,16 @@ describe('piece shadow', () => {
     delete document.documentElement.dataset.xiangqiPieceShadow;
   });
 
-  it('draws one shadow under every disc set, first, with the box opened for it', () => {
+  it('draws none by default: the shadow is off since 2026-10-14', () => {
     for (const { id } of XIANGQI_PIECE_SETS) {
-      if (id === 'international-flat' || id === 'animal-flat') continue;
+      const svg = renderXiangqiPieceGlyphed(general, id, { x: 0, y: 0, size: 56 });
+      expect(count(svg), id).toBe(0);
+    }
+  });
+
+  it('draws one shadow under every disc set when switched on, first, with the box opened for it', () => {
+    document.documentElement.dataset.xiangqiPieceShadow = 'on';
+    for (const { id } of XIANGQI_PIECE_SETS) {
       const svg = renderXiangqiPieceGlyphed(general, id, { x: 0, y: 0, size: 56 });
       expect(count(svg), id).toBe(1);
       expect(svg, id).toContain('overflow="visible"');
@@ -448,16 +381,8 @@ describe('piece shadow', () => {
     }
   });
 
-  it('draws none for the disc-less sets, except on their fog token disc', () => {
-    for (const id of ['international-flat', 'animal-flat'] as const) {
-      const face = renderXiangqiPieceGlyphed(general, id);
-      expect(count(face), id).toBe(0);
-      expect(face, id).not.toContain('overflow="visible"');
-      expect(count(renderXiangqiPieceGlyphed(general, id, { shrouded: true })), id).toBe(1);
-    }
-  });
-
   it('draws it under the face-down backs too', () => {
+    document.documentElement.dataset.xiangqiPieceShadow = 'on';
     for (const id of ['traditional', 'international', 'lacquer', 'wood'] as const) {
       const back = renderXiangqiPieceGlyphed(general, id, {
         shrouded: true,
@@ -468,7 +393,7 @@ describe('piece shadow', () => {
   });
 
   it('follows the switch on the root, and an explicit option wins', () => {
-    expect(count(renderXiangqiPieceGlyphed(general, 'traditional'))).toBe(1);
+    expect(count(renderXiangqiPieceGlyphed(general, 'traditional'))).toBe(0);
     document.documentElement.dataset.xiangqiPieceShadow = 'off';
     expect(count(renderXiangqiPieceGlyphed(general, 'traditional'))).toBe(0);
     expect(count(renderXiangqiPieceGlyphed(general, 'lacquer'))).toBe(0);
@@ -506,5 +431,99 @@ describe('piece shadow', () => {
         }
       }
     }
+  });
+});
+
+// The 2026-10-14 piece look (docs-private/tools/x-drafts/card-lab/PIECES-2026-10.md).
+describe('the 2026-10-14 piece look', () => {
+  const SQUARE = '<rect x="4" y="4" width="92" height="92" rx="14"';
+  const general: XiangqiPiece = { color: 'red', role: 'general' };
+
+  it('draws a rounded square on the square grid for the international and Dobutsu sets only', () => {
+    expect(xiangqiPieceShapeForLayout('cell')).toBe('square');
+    expect(xiangqiPieceShapeForLayout('intersection')).toBe('disc');
+    for (const set of ['international', 'animal-dobutsu'] as const) {
+      const onGrid = renderXiangqiPieceGlyphed(general, set, { shape: 'square' });
+      expect(onGrid, set).toContain(SQUARE);
+      expect(onGrid, set).not.toContain('<circle cx="50" cy="50" r="46"');
+      const onLines = renderXiangqiPieceGlyphed(general, set, { shape: 'disc' });
+      expect(onLines, set).toContain('<circle cx="50" cy="50" r="46"');
+      expect(onLines, set).not.toContain('<rect');
+    }
+    // The asset sets are whole disc files and keep their disc on every board.
+    expect(renderXiangqiPieceGlyphed(general, 'lacquer', { shape: 'square' })).not.toContain(
+      SQUARE,
+    );
+  });
+
+  // 2026-10-15, Brian: "use rounded squares at 98% like the picture sets, to unify".
+  it('draws the character sets as rounded squares on the grid, double ring kept, ring colour by side', () => {
+    for (const set of ['traditional', 'simplified'] as const) {
+      expect(xiangqiPieceSetShape(set, xiangqiPieceShapeForLayout('cell')), set).toBe('square');
+      expect(xiangqiPieceSetShape(set, xiangqiPieceShapeForLayout('intersection')), set).toBe(
+        'disc',
+      );
+      for (const [color, ink] of [
+        ['red', '#b91c1c'],
+        ['black', '#1f2937'],
+      ] as const) {
+        const onGrid = renderXiangqiPieceGlyphed({ color, role: 'chariot' }, set, {
+          shape: 'square',
+        });
+        expect(onGrid, `${set} ${color}`).toContain(
+          `${SQUARE} fill="#f3e6c4" stroke="${ink}" stroke-width="2.5"/>`,
+        );
+        expect(onGrid, `${set} ${color}`).toContain(
+          `<rect x="12" y="12" width="76" height="76" rx="9" fill="none" stroke="${ink}"`,
+        );
+        expect(onGrid, `${set} ${color}`).not.toContain('<circle');
+        const onLines = renderXiangqiPieceGlyphed({ color, role: 'chariot' }, set, {
+          shape: 'disc',
+        });
+        expect(onLines, `${set} ${color}`).toContain(
+          `<circle cx="50" cy="50" r="46" fill="#f3e6c4" stroke="${ink}" stroke-width="2.5"/>`,
+        );
+        expect(onLines, `${set} ${color}`).not.toContain('<rect');
+      }
+    }
+  });
+
+  it('draws face-down backs at the face-up edge, r 46, square on the grid', () => {
+    const back = (shape: 'disc' | 'square') =>
+      renderXiangqiPieceGlyphed(general, 'international', {
+        shrouded: true,
+        shroudedStyle: 'back',
+        shape,
+      });
+    expect(back('disc')).toContain('<circle cx="50" cy="50" r="46" class="xq-piece-back-mark"');
+    expect(back('disc')).not.toContain('r="43"');
+    expect(back('square')).toContain(`${SQUARE} class="xq-piece-back-mark"`);
+  });
+
+  it('puts the Dobutsu ring on the edge (r 46, 2.8 wide), dark on both sides', () => {
+    for (const color of ['red', 'black'] as const) {
+      const svg = renderXiangqiPieceGlyphed({ color, role: 'horse' }, 'animal-dobutsu');
+      expect(svg, color).toContain('r="46"');
+      expect(svg, color).toContain('stroke="#283a47" stroke-width="2.8"');
+      expect(svg, color).not.toContain('r="48.5"');
+      expect(svg, color).not.toContain('r="45"');
+      expect(svg, color).not.toContain('#c2261e');
+    }
+  });
+
+  it('rings red international pieces in the same dark ink as black', () => {
+    for (const color of ['red', 'black'] as const) {
+      const svg = renderXiangqiPieceGlyphed({ color, role: 'chariot' }, 'international');
+      expect(svg, color).toContain('stroke="#202427" stroke-width="2.8"');
+      expect(svg, color).not.toContain('#c30d0d');
+    }
+  });
+
+  it('retires Chess-style and Animal (no disc)', () => {
+    expect(RETIRED_XIANGQI_PIECE_SETS.has('international-flat')).toBe(true);
+    expect(RETIRED_XIANGQI_PIECE_SETS.has('animal-flat')).toBe(true);
+    const offered = XIANGQI_PIECE_SETS.map((entry) => entry.id as string);
+    expect(offered).not.toContain('international-flat');
+    expect(offered).not.toContain('animal-flat');
   });
 });

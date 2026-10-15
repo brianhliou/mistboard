@@ -20,7 +20,8 @@ import { resolvePositionOg } from './og-position.js';
 import { createPngCache, redirectToDefault, svgToPng, writePng } from './og-raster.js';
 import * as persistence from './persistence.js';
 
-export const BROADCAST_OG_IMAGE_VERSION = 2;
+// v3 (2026-10-15): the piece look of 2026-10-14: one dark ring on both sides, pieces at 98% of the point gap (banqi 92%), no shadow, full-size face-down backs, Jungle rounded squares.
+export const BROADCAST_OG_IMAGE_VERSION = 3;
 
 const cache = createPngCache(64);
 

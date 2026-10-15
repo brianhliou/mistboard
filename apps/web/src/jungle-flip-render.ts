@@ -24,7 +24,7 @@ import {
   jungleFlipCoordOf,
 } from '@mistboard/game';
 import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
-import { boardCornerRadius, TOKEN_PIECE_RATIO } from './board-metrics.js';
+import { boardCornerRadius } from './board-metrics.js';
 import { boardCoordinatesEnabled } from './display-preferences.js';
 import { currentJungleBoardSkin, currentJunglePieceSkin } from './jungle-appearance-storage.js';
 import {
@@ -35,6 +35,7 @@ import {
   jungleFaceDownDiscSvg,
   jungleLastMoveCellSvg,
   jungleShadowFilterDef,
+  jungleTokenSize,
 } from './jungle-art.js';
 import { characterTokenSvg, type JungleBoardSkin, type JunglePieceSkin } from './jungle-skins.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
@@ -53,9 +54,6 @@ const CELL = 64;
 // border below so the two can never disagree about the curve. Derived from the shared
 // ratio rather than hand-computed, which is what let it sit at 5 against a 4.86 target.
 const BOARD_RADIUS = boardCornerRadius(FILES * CELL);
-// Flip tokens back off the canonical ratio so they sit INSIDE the last-move
-// ring (its inner clear is ~0.83·cell).
-const FLIP_TOKEN_RATIO = TOKEN_PIECE_RATIO - 0.03;
 
 const PALETTE = {
   // Solid (non-alternating) board: one warm tan for every cell.
@@ -115,7 +113,7 @@ export type JungleFlipRenderOptions = {
   draggingFrom?: JungleFlipSquare | null;
   interactive?: boolean;
   idSuffix?: string;
-  // Drop the per-token shadow filter (markers; avoids duplicate filter ids).
+  // Opt in to the per-token drop shadow (off by default since 2026-10-14).
   shadow?: boolean;
   // Pin the look instead of resolving it — for surfaces that must render
   // deterministically (variant markers, rules diagrams, OG cards).
@@ -213,7 +211,8 @@ function pieces(
   pieceSkin: JunglePieceSkin,
 ): string {
   const parts: string[] = [];
-  const s = geom.cell * FLIP_TOKEN_RATIO;
+  // Outer edge at 98% of the cell, the same as the face-down tile (2026-10-14).
+  const s = jungleTokenSize(geom.cell);
   const filterId = shadow ? `${gid}-tok` : undefined;
   // The face-down disc is already flat, so it is shared by both skins.
   const tokenSvg = pieceSkin === 'characters' ? characterTokenSvg : framedTokenSvg;
@@ -227,8 +226,8 @@ function pieces(
     // The keyed outer slot lets a post-render glide find the token
     // (animateJungleFlipBoardMove); the drag-source dimmer stays an inner wrapper.
     const body = entry.faceDown
-      ? // Face-down back: a banqi-style neutral jade disc (no ink/identity — the deal is
-        // hidden from both sides), small enough to sit inside the last-move mark.
+      ? // Face-down back: a neutral jade rounded square (no ink or identity, the deal is
+        // hidden from both sides), the same outer size and shape as a face-up token.
         jungleFaceDownDiscSvg(x, y, geom.cell, filterId)
       : // Revealed: the framed token for the active skin (matches the vanilla board).
         tokenSvg({ cx: x, cy: y, size: s, ink: entry.color, role: entry.role, filterId });
@@ -288,7 +287,7 @@ export function jungleFlipPieceGhostSvg(entry: {
   const inner = tokenSvg({
     cx: CELL / 2,
     cy: CELL / 2,
-    size: CELL * FLIP_TOKEN_RATIO,
+    size: jungleTokenSize(CELL),
     ink: entry.color,
     role: entry.role,
   });
@@ -300,7 +299,8 @@ export function renderJungleFlipBoardSvg(
   options: JungleFlipRenderOptions = {},
 ): string {
   const gid = `jungleflip${options.idSuffix ?? ''}`;
-  const shadow = options.shadow ?? true;
+  // Off by default since 2026-10-14 (no shadow on the new tokens); still opt-in.
+  const shadow = options.shadow ?? false;
   // Resolved once per render; a caller may pin either axis (markers, diagrams).
   const boardSkin = options.boardSkin ?? currentJungleBoardSkin();
   const pieceSkin = options.pieceSkin ?? currentJunglePieceSkin();

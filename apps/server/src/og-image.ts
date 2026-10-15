@@ -55,7 +55,8 @@ export {
 };
 // v5 (2026-09-12): the shared board card (one board, seats beside it) in place
 // of the two-fog-view frame.
-export const GAME_OG_IMAGE_VERSION = 5;
+// v6 (2026-10-15): the piece look of 2026-10-14: one dark ring on both sides, pieces at 98% of the point gap (banqi 92%), no shadow, full-size face-down backs, Jungle rounded squares.
+export const GAME_OG_IMAGE_VERSION = 6;
 
 // Bounded LRU of rendered per-game PNGs. Each card is rendered once on first
 // scraper fetch, then served from here (and from the scraper/CDN cache, via the
@@ -367,7 +368,8 @@ const ARTICLE_POSITION_KEY: Record<string, string> = {
 //  mid-title (banqi, jieqi, jungle, flip jungle) no longer gets a second one;
 //  pikafish gets a board card instead of the site card. The ?lang= and
 //  ?aspect= URLs are new with v5, so no older URL ever named them.
-export const ARTICLE_OG_IMAGE_VERSION = 5;
+//  v6 (2026-10-15): the piece look of 2026-10-14: one dark ring on both sides, pieces at 98% of the point gap (banqi 92%), no shadow, full-size face-down backs, Jungle rounded squares.
+export const ARTICLE_OG_IMAGE_VERSION = 6;
 
 /** The page's wide card URL (og:image), as the server-rendered article shell
  *  writes it. A zh page (`langPrefix` zh-hans / zh-hant) of a slug with a zh
@@ -575,7 +577,8 @@ async function serveArticleAspectImage(params: {
 //  v3 (2026-09-12): the live board and the site's default piece set, board at
 //  full height with the title beside it (og-card-board.ts). */
 //  v4 (2026-09-25): Chinese study and chapter titles render instead of boxes.
-export const STUDY_OG_IMAGE_VERSION = 5;
+//  v6 (2026-10-15): the piece look of 2026-10-14: one dark ring on both sides, pieces at 98% of the point gap (banqi 92%), no shadow, full-size face-down backs, Jungle rounded squares.
+export const STUDY_OG_IMAGE_VERSION = 6;
 
 // Per-composition share card: the chapter's own starting diagram plus its name.
 // A 排局 IS its diagram, so a link to one composition should preview that

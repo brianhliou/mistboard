@@ -6,7 +6,7 @@
 // drift fails loudly instead of misplacing overlays.
 
 import type { XiangqiColor, XiangqiSquare } from '@mistboard/game';
-import { tokenPieceSize } from '../board-metrics.js';
+import { xiangqiPieceDrawSize } from '../board-metrics.js';
 import {
   type XiangqiBoardGeometry,
   xiangqiBoardPoint,
@@ -22,7 +22,8 @@ export const BOARD_WIDTH = MARGIN * 2 + (FILE_COUNT - 1) * CELL;
 export const BOARD_HEIGHT = MARGIN * 2 + (RANK_COUNT - 1) * CELL;
 export const RIVER_TOP = MARGIN + 4 * CELL;
 export const RIVER_BOTTOM = MARGIN + 5 * CELL;
-export const PIECE_SIZE = tokenPieceSize(CELL);
+// The product board's drawn piece (outline at 98% of the point gap).
+export const PIECE_SIZE = xiangqiPieceDrawSize(CELL);
 
 export type Point = { x: number; y: number };
 

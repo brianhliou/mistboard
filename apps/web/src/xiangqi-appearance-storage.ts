@@ -367,10 +367,11 @@ export function writeStoredXiangqiStartMarkers(on: boolean): void {
 }
 
 // Piece shadow (2026-10-08): the soft shadow drawn under every disc piece
-// (xiangqiPieceShadowMarks). On by default; like the start markers, only an
-// explicit pick is stored, so nothing is written until the reader flips it.
+// (xiangqiPieceShadowMarks). Off by default since 2026-10-14 (the new piece look
+// has none); the switch stays. Like the start markers, only an explicit pick is
+// stored, so nothing is written until the reader flips it.
 const xiangqiPieceShadowStorageKey = 'mistboard.xiangqiPieceShadow';
-const defaultXiangqiPieceShadow = true;
+const defaultXiangqiPieceShadow = false;
 
 export function readStoredXiangqiPieceShadow(): boolean {
   try {

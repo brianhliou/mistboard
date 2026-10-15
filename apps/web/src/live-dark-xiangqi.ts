@@ -26,8 +26,14 @@ import type {
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import { type SvgBoardMarkerStyle, svgBoardCircleMarker } from './svg-board-marker.js';
 import './live-xiangqi.css';
-import { type BoardPoint, boardLastMoveMarkersSvg } from './board-lastmove.js';
-import { tokenPieceSize } from './board-metrics.js';
+import {
+  BOARD_LASTMOVE_OVER_GROUP_ATTRS,
+  type BoardLastMoveLayer,
+  type BoardPoint,
+  boardLastMoveCellMarksSvg,
+  boardLastMoveMarkersSvg,
+} from './board-lastmove.js';
+import { tokenPieceSize, xiangqiPieceDrawSize } from './board-metrics.js';
 import { readDisplayPreferences } from './display-preferences.js';
 import { darkXiangqiEnabled } from './feature-flags.js';
 import {
@@ -60,7 +66,10 @@ import {
 import type { TenantReasonKey, WebVariantTenant } from './variant-tenant/room-chrome.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
 import type { XiangqiBoardLayout } from './xiangqi-appearance-storage.js';
-import { readStoredXiangqiBoardLayout } from './xiangqi-appearance-storage.js';
+import {
+  readStoredXiangqiBoardLayout,
+  readStoredXiangqiPieceSet,
+} from './xiangqi-appearance-storage.js';
 import {
   type XiangqiBoardGeometry,
   xiangqiBoardPoint,
@@ -82,6 +91,7 @@ import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
 import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { xiangqiFogRegion } from './xiangqi-fog.js';
 import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
+import { xiangqiPieceSetShape, xiangqiPieceShapeForLayout } from './xiangqi-piece-sets.js';
 import { renderXiangqiPiece } from './xiangqi-pieces.js';
 
 type DarkXiangqiWireBoardEntry =
@@ -109,7 +119,10 @@ const FILE_COUNT = 9;
 const RANK_COUNT = 10;
 const CELL = 60;
 const MARGIN = 36;
-const PIECE_SIZE = tokenPieceSize(CELL);
+// The drawn piece: its outline spans 98% of the point gap (2026-10-14). Marks stay
+// on the layout piece size they were tuned on.
+const PIECE_SIZE = xiangqiPieceDrawSize(CELL);
+const MARK_PIECE_SIZE = tokenPieceSize(CELL);
 const HIT_HALF = 26;
 const NON_SELECTABLE_RIVER_ATTRS =
   'aria-hidden="true" pointer-events="none" style="-webkit-user-select: none; user-select: none;"';
@@ -430,10 +443,11 @@ function boardSvg(
           ? `<g class="xq-live-river" ${NON_SELECTABLE_RIVER_ATTRS}>${xiangqiSurfaceRiver(surface, perspective, layout)}</g>`
           : ''
       }
-      <g class="xq-live-lastmove">${lastMoveLayer(view, perspective)}</g>
+      <g class="xq-live-lastmove">${lastMoveLayer(view, perspective, 'under')}</g>
       <g class="xq-live-selection">${selectionLayer(sel, perspective)}</g>
       <g class="xq-live-hints">${options.interactive ? '' : hintLayer(view, perspective, sel)}</g>
       <g class="xq-live-pieces">${pieceLayer(view, perspective, drag)}</g>
+      <g ${BOARD_LASTMOVE_OVER_GROUP_ATTRS}>${lastMoveLayer(view, perspective, 'over')}</g>
       <g class="xq-live-markers" aria-hidden="true" pointer-events="none">${(options.markers ?? []).map((marker) => darkXiangqiMarkerSvg(marker, perspective)).join('')}</g>
       <g class="xq-live-arrows" aria-hidden="true" pointer-events="none">${(options.arrows ?? []).map((arrow) => darkXiangqiArrowSvg(arrow, perspective)).join('')}</g>
       <g class="xq-live-clicks">${options.interactive ? clickLayer(view, perspective, sel) : ''}</g>
@@ -513,15 +527,25 @@ export function fogLayer(
 // arises where the reveal widens -- postgame, /watch replay. Draw nothing for a
 // square this view cannot see anyway: a render path that can only ever be fed
 // safe input is one refactor away from being fed unsafe input.
-function lastMoveLayer(view: DarkXiangqiWireView, perspective: XiangqiColor): string {
+function lastMoveLayer(
+  view: DarkXiangqiWireView,
+  perspective: XiangqiColor,
+  layer: BoardLastMoveLayer,
+): string {
   if (!view.lastMove) return '';
-  return boardLastMoveMarkersSvg(
-    {
-      from: visibleLastMoveCenter(view, view.lastMove.from, perspective),
-      to: visibleLastMoveCenter(view, view.lastMove.to, perspective),
-    },
-    PIECE_SIZE,
-  );
+  const ends = {
+    from: visibleLastMoveCenter(view, view.lastMove.from, perspective),
+    to: visibleLastMoveCenter(view, view.lastMove.to, perspective),
+  };
+  // The square grid draws the family's square-grid marks (amber origin cell,
+  // amber ring on the moved piece), from the same visible-only endpoints.
+  if (activeLayout === 'cell') {
+    return boardLastMoveCellMarksSvg(ends, CELL, layer, {
+      size: PIECE_SIZE,
+      shape: xiangqiPieceSetShape(readStoredXiangqiPieceSet(), 'square'),
+    });
+  }
+  return boardLastMoveMarkersSvg(ends, MARK_PIECE_SIZE, layer);
 }
 
 function visibleLastMoveCenter(
@@ -579,6 +603,7 @@ function pieceLayer(
         x: center.x - PIECE_SIZE / 2,
         y: center.y - PIECE_SIZE / 2,
         size: PIECE_SIZE,
+        shape: xiangqiPieceShapeForLayout(activeLayout),
         shrouded: entry.shrouded,
         // A shrouded entry is a soldier-shaped placeholder for an unknown role,
         // so promoting its art would assert a piece the viewer has not seen.
@@ -653,6 +678,7 @@ function darkXiangqiPieceGhostSvg(piece: XiangqiPiece, crossed = false): string 
     ariaLabel: `${piece.color} ${piece.role}`,
     className: 'xq-piece',
     size: PIECE_SIZE,
+    shape: xiangqiPieceShapeForLayout(activeLayout),
     crossed,
   });
 }

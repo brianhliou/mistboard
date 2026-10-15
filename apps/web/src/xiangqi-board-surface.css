@@ -70,20 +70,6 @@
   -webkit-user-select: none;
 }
 
-/* 'Animal (no disc)' on the lined board: the grid lines would run straight into
-   a bare head, so it gets a thin cream outline (four zero-blur shadows) before
-   the usual soft shadow. The square grid needs none: each head has a cell. */
-.xq-surface--intersection .xq-piece--bare-animal {
-  filter: drop-shadow(1.5px 0 0 #fffaf0) drop-shadow(-1.5px 0 0 #fffaf0)
-    drop-shadow(0 1.5px 0 #fffaf0) drop-shadow(0 -1.5px 0 #fffaf0)
-    drop-shadow(0 3px 4px rgba(35, 27, 18, 0.25));
-}
-
-:root[data-xiangqi-piece-shadow="off"] .xq-surface--intersection .xq-piece--bare-animal {
-  filter: drop-shadow(1.5px 0 0 #fffaf0) drop-shadow(-1.5px 0 0 #fffaf0)
-    drop-shadow(0 1.5px 0 #fffaf0) drop-shadow(0 -1.5px 0 #fffaf0);
-}
-
 /* Start markers: the printed brackets at the cannons' and soldiers' starting
    points (xiangqiSurfaceStartMarkers). The same ink as the grid, so a custom
    board colour carries them along with the lines. */

@@ -77,6 +77,7 @@ import { jungleFlipPieceGhostSvg, renderJungleFlipBoardSvg } from '../jungle-fli
 import { junglePieceGhostSvg, renderJungleBoardSvg } from '../jungle-render.js';
 import {
   BANQI_PIECE_PX,
+  banqiFaceDownRadius,
   banqiPieceGhostSvg,
   installBanqiBoardStyles,
   renderBanqiBoardSvg,
@@ -732,7 +733,7 @@ const BANQI_DEALT: DealtRules = {
 const BANQI_GEOMETRY = cellGeometry(8, 4, 64, 28, false, 62);
 
 function faceDownDiscSvg(className: string, size: number): string {
-  const r = size * 0.46;
+  const r = banqiFaceDownRadius(size);
   return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g class="${className}"><circle cx="${size / 2}" cy="${size / 2}" r="${r}"/></g></svg>`;
 }
 

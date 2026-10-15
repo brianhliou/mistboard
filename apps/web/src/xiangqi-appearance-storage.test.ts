@@ -178,7 +178,8 @@ describe('xiangqi appearance storage normalization', () => {
   });
 
   it('clears a retired set so the browser follows the inference again', () => {
-    for (const retired of ['western', 'symbols']) {
+    // Chess-style and Animal (no disc) retired 2026-10-14 with the new international look.
+    for (const retired of ['western', 'symbols', 'international-flat', 'animal-flat']) {
       const storage = installLocalStorage();
       storage.setItem('mistboard.xiangqiPieceSet', retired);
       storage.setItem('mistboard.xiangqiPieceSetVersion', '4');
@@ -205,18 +206,16 @@ describe('xiangqi appearance storage normalization', () => {
     expect(readStoredXiangqiPieceSet()).toBe('traditional');
   });
 
-  it('accepts and persists the Chess-style prototype', () => {
-    installLocalStorage();
-    expect(normalizeXiangqiPieceSet('international-flat')).toBe('international-flat');
-    writeStoredXiangqiPieceSet('international-flat');
-    expect(readStoredXiangqiPieceSet()).toBe('international-flat');
+  it('no longer accepts the retired Chess-style or Animal (no disc) sets', () => {
+    expect(normalizeXiangqiPieceSet('international-flat')).toBe('international');
+    expect(normalizeXiangqiPieceSet('animal-flat')).toBe('international');
   });
 
   it('previews a URL-pinned piece set without replacing the saved preference', () => {
     const storage = installLocalStorage();
     writeStoredXiangqiPieceSet('traditional');
-    window.history.replaceState({}, '', '/?xqPieces=international-flat');
-    expect(readStoredXiangqiPieceSet()).toBe('international-flat');
+    window.history.replaceState({}, '', '/?xqPieces=animal-dobutsu');
+    expect(readStoredXiangqiPieceSet()).toBe('animal-dobutsu');
     expect(storage.getItem('mistboard.xiangqiPieceSet')).toBe('traditional');
     window.history.replaceState({}, '', '/');
   });
@@ -322,9 +321,10 @@ describe('xiangqi board colour, river text and start marker storage', () => {
     expect(readStoredXiangqiStartMarkers()).toBe(true);
   });
 
-  it('draws the piece shadow by default without storing it, and remembers turning it off', () => {
+  it('draws no piece shadow by default without storing it, and remembers the switch', () => {
     const storage = installLocalStorage();
-    expect(readStoredXiangqiPieceShadow()).toBe(true);
+    // Off by default since 2026-10-14 (the new piece look has none).
+    expect(readStoredXiangqiPieceShadow()).toBe(false);
     // Reading the default writes nothing: a later change of default reaches
     // every browser that never chose.
     expect(storage.getItem('mistboard.xiangqiPieceShadow')).toBeNull();
@@ -335,7 +335,7 @@ describe('xiangqi board colour, river text and start marker storage', () => {
     expect(storage.getItem('mistboard.xiangqiPieceShadow')).toBe('on');
     expect(readStoredXiangqiPieceShadow()).toBe(true);
     storage.setItem('mistboard.xiangqiPieceShadow', 'sometimes');
-    expect(readStoredXiangqiPieceShadow()).toBe(true);
+    expect(readStoredXiangqiPieceShadow()).toBe(false);
   });
 
   it('previews the piece shadow from ?xqShadow= without saving it', () => {

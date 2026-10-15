@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { BANQI_BOARD_CSS, renderBanqiBoardSvg } from './live-banqi-render.js';
+import { XIANGQI_PIECE_OUTLINE_SHARE } from './board-metrics.js';
+import {
+  BANQI_BOARD_CSS,
+  BANQI_PIECE_PX,
+  BANQI_PIECE_REACH,
+  BANQI_PIECE_SHAPE,
+  banqiFaceDownRadius,
+  banqiPieceDrawSize,
+  renderBanqiBoardSvg,
+} from './live-banqi-render.js';
 
 describe('renderBanqiBoardSvg', () => {
   const view = {
@@ -248,5 +257,40 @@ describe('banqi board coordinates (#308)', () => {
     const red = renderBanqiBoardSvg(view as never, 'red', { coordinates: true });
     const black = renderBanqiBoardSvg(view as never, 'black', { coordinates: true });
     expect(labels(black)).toEqual(labels(red));
+  });
+});
+
+// Banqi keeps round pieces on its square grid (Brian, 2026-10-14: players expect
+// round xiangqi pieces) and leaves a gap between them, as on a physical set.
+describe('banqi piece look', () => {
+  it('draws discs whose edge spans 92% of the cell', () => {
+    expect(BANQI_PIECE_SHAPE).toBe('disc');
+    for (const cell of [50, 64, 72]) {
+      const edge = (banqiPieceDrawSize(cell) * XIANGQI_PIECE_OUTLINE_SHARE) / cell;
+      expect(edge, String(cell)).toBeCloseTo(BANQI_PIECE_REACH, 2);
+    }
+  });
+
+  it('draws face-down backs as discs of the face-up outer size', () => {
+    const r = banqiFaceDownRadius(BANQI_PIECE_PX);
+    // The back's 2-unit stroke puts its outer edge at r + 1.
+    expect(r + 1).toBeCloseTo((BANQI_PIECE_PX * XIANGQI_PIECE_OUTLINE_SHARE) / 2, 1);
+    const view = {
+      id: 'banqi-look',
+      perspective: 'red',
+      board: {
+        a1: { color: 'red', role: 'chariot', faceDown: false },
+        b1: { faceDown: true },
+      },
+      legalMoves: [],
+      captured: [],
+      status: { type: 'playing', turn: 'red' },
+      ply: 0,
+      firstColor: 'red',
+      moveNumber: 1,
+    };
+    const svg = renderBanqiBoardSvg(view as never, 'red', { pieceSet: 'international' });
+    expect(svg).toContain(`r="${r}"`);
+    expect(svg).not.toContain('<rect x="4" y="4" width="92" height="92" rx="14"');
   });
 });

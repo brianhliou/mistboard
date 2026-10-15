@@ -58,7 +58,8 @@ describe('standard Xiangqi board SVG', () => {
     // at 318. Red a1 shifts with its half and remains centered in its square.
     expect(svg).toContain('x="6" y="246" width="60" height="60"');
     expect(svg).toContain('x="6" y="318" width="60" height="60"');
-    expect(svg).toContain('x="9" y="561" width="54" height="54"');
+    // A piece's outer edge spans 98% of its cell (2026-10-14): a 62 box at cell 60.
+    expect(svg).toContain('x="5" y="557" width="62" height="62"');
   });
 
   it('retains the traditional palace diagonals on intersection boards', () => {
@@ -127,7 +128,7 @@ describe('standard Xiangqi board SVG', () => {
     );
   });
 
-  it('marks the last move with complete source and destination cells on a square grid', () => {
+  it('marks the last move with a solid origin cell and a ringed destination on a square grid', () => {
     const state = applyXiangqiMove(createInitialXiangqiState('xq-board-cell-lastmove'), {
       from: 'b3',
       to: 'e3',
@@ -138,17 +139,21 @@ describe('standard Xiangqi board SVG', () => {
     // b3 center=(96,468), e3 center=(276,468), then inset half a 60-unit cell.
     const svg = renderSharedXiangqiBoardSvg(view, 'red', { layout: 'cell' });
     expect(svg).toContain(
-      '<rect class="xq-live-lastmove-square xq-live-lastmove-from" x="66" y="438" width="60" height="60"/>',
+      '<rect class="xq-live-lastmove-origin xq-live-lastmove-from" fill="#f59e0b" fill-opacity="0.65" pointer-events="none" x="66" y="438" width="60" height="60"/>',
     );
     expect(svg).toContain(
       '<rect class="xq-live-lastmove-square xq-live-lastmove-to" x="246" y="438" width="60" height="60"/>',
+    );
+    // The ring traces the moved piece's outline (62-unit box: rect 4..96).
+    expect(svg).toContain(
+      '<rect x="247.48" y="439.48" width="57.04" height="57.04" rx="8.68" class="xq-live-lastmove-piece-ring" fill="none" stroke="#f59e0b" stroke-width="2.6"/>',
     );
     expect(svg).not.toContain('xq-live-lastmove-cell');
     expect(svg).not.toContain('xq-live-lastmove-ring');
 
     const flipped = renderSharedXiangqiBoardSvg(view, 'black', { layout: 'cell' });
     expect(flipped).toContain(
-      '<rect class="xq-live-lastmove-square xq-live-lastmove-from" x="426" y="126" width="60" height="60"/>',
+      '<rect class="xq-live-lastmove-origin xq-live-lastmove-from" fill="#f59e0b" fill-opacity="0.65" pointer-events="none" x="426" y="126" width="60" height="60"/>',
     );
     expect(flipped).toContain(
       '<rect class="xq-live-lastmove-square xq-live-lastmove-to" x="246" y="126" width="60" height="60"/>',
@@ -161,6 +166,9 @@ describe('standard Xiangqi board SVG', () => {
     expect(renderSharedXiangqiBoardSvg(view)).not.toContain('xq-live-lastmove-cell');
     expect(renderSharedXiangqiBoardSvg(view)).not.toContain('xq-live-lastmove-ring');
     expect(renderSharedXiangqiBoardSvg(view)).not.toContain('xq-live-lastmove-square');
+    const cell = renderSharedXiangqiBoardSvg(view, 'red', { layout: 'cell' });
+    expect(cell).not.toContain('xq-live-lastmove-origin');
+    expect(cell).not.toContain('xq-live-lastmove-piece-ring');
   });
 });
 

@@ -686,7 +686,7 @@ describe('standard xiangqi puzzles', () => {
     stubWindowLocalStorage(
       memoryStorage({
         'mistboard.xiangqiPieceSetVersion': '3',
-        'mistboard.xiangqiPieceSet': 'international-flat',
+        'mistboard.xiangqiPieceSet': 'animal-dobutsu',
       }),
     );
     const puzzle = minedByPlyCount(3);
@@ -699,7 +699,7 @@ describe('standard xiangqi puzzles', () => {
       image.getAttribute('href'),
     );
     expect(hrefs.length).toBeGreaterThan(0);
-    expect(hrefs.every((href) => href?.includes('/international-flat/'))).toBe(true);
+    expect(hrefs.every((href) => href?.includes('/animal-dobutsu/'))).toBe(true);
   });
 
   it('repaints a mounted standard puzzle when the board layout changes', async () => {

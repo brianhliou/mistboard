@@ -11,7 +11,12 @@ import {
 } from '@mistboard/game';
 import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
 import { BOARD_LASTMOVE_MARKER_SELECTOR } from './board-lastmove.js';
-import { boardCornerRadius, tokenPieceSize } from './board-metrics.js';
+import {
+  boardCornerRadius,
+  roundPieceBox,
+  tokenPieceSize,
+  XIANGQI_PIECE_OUTLINE_SHARE,
+} from './board-metrics.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
   GLYPH_OFFSET_RATIO,
@@ -24,6 +29,7 @@ import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import {
   renderXiangqiPieceGlyphed,
   type XiangqiPieceSet,
+  type XiangqiPieceShape,
   xiangqiNeutralBackMarks,
   xiangqiPieceShadowEnabled,
   xiangqiPieceShadowMarks,
@@ -47,14 +53,29 @@ const FILES = 8; // cells across (9 vertical lines / files a..i)
 const RANKS = 4; // cells down (5 horizontal lines / ranks 1..5, river at the top)
 const CELL = 64;
 const MARGIN = 28;
-const PIECE_SIZE = tokenPieceSize(CELL);
+// Banqi's piece look (Brian, 2026-10-14): a disc on every banqi board, never the
+// grid boards' rounded square, its outer edge at 92% of the cell (not the 98% of
+// the xiangqi family: banqi pieces sit in cells side by side, so they keep a gap).
+// The box a piece is drawn in is cell x 0.92 / 0.948, since the outline ends at
+// 94.8 of its 100-unit box. Face-down backs match the faces' outer size and shape.
+export const BANQI_PIECE_SHAPE: XiangqiPieceShape = 'disc';
+export const BANQI_PIECE_REACH = 0.92;
+/** The box a banqi piece is drawn in on a board of this cell. */
+export function banqiPieceDrawSize(cell: number): number {
+  return roundPieceBox((cell * BANQI_PIECE_REACH) / XIANGQI_PIECE_OUTLINE_SHARE);
+}
+const PIECE_SIZE = banqiPieceDrawSize(CELL);
+/** Half the piece's outer edge, the radius a mark ON the piece's edge uses. */
+const PIECE_EDGE_R = (CELL * BANQI_PIECE_REACH) / 2;
+/** The layout piece size the engine marker was tuned on. */
+const MARK_PIECE_SIZE = tokenPieceSize(CELL);
 const WIDTH = MARGIN * 2 + FILES * CELL;
 const HEIGHT = MARGIN * 2 + RANKS * CELL;
 const HIT_HALF = CELL / 2 - 1;
 // Engine candidate marker. Was sharing the last-move ring's radius, which tied an
 // unrelated mark to that ring's geometry; the other boards size it from the piece
 // like their selection ring, so do the same here.
-const ENGINE_MARKER_RADIUS = PIECE_SIZE / 2 + 6;
+const ENGINE_MARKER_RADIUS = MARK_PIECE_SIZE / 2 + 6;
 // Last move: banqi TINTS THE CELL instead of ringing the piece, and this is the
 // one board on which that is the right call.
 //
@@ -131,6 +152,7 @@ export function banqiPieceGhostSvg(
     x: 0,
     y: 0,
     size: PIECE_SIZE,
+    shape: BANQI_PIECE_SHAPE,
   });
   return `<svg width="${PIECE_SIZE}" height="${PIECE_SIZE}" viewBox="0 0 ${PIECE_SIZE} ${PIECE_SIZE}" overflow="visible" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`;
 }
@@ -194,6 +216,13 @@ function gridLines(): string {
   return parts.join('');
 }
 
+/** The jade back's radius in a piece box of `size`: its outer edge (r plus half its
+ *  2-unit stroke, .banqi-back > circle) lands where a face's outline ends, 47.4 of
+ *  the 100-unit box. */
+export function banqiFaceDownRadius(size: number): number {
+  return Math.round((size * 0.474 - 1) * 100) / 100;
+}
+
 // A uniform face-down disc: one colour, a single ring, no glyph (the deal is
 // hidden from both). A flat disc with no inner ring keeps the back clean. A
 // piece set whose own back is the same for both sides (wood, brush, clerical)
@@ -216,7 +245,7 @@ function faceDownDisc(
     const overflowAttr = shadow ? ' overflow="visible"' : '';
     return `<g class="${className}"><svg x="${x}" y="${y}" width="${PIECE_SIZE}" height="${PIECE_SIZE}"${overflowAttr} viewBox="0 0 100 100">${shadow}${marks}</svg></g>`;
   }
-  const r = PIECE_SIZE * 0.46;
+  const r = banqiFaceDownRadius(PIECE_SIZE);
   // The disc's outer edge includes its 2-unit stroke (.banqi-back > circle).
   const shadow = shadowOn ? xiangqiPieceShadowMarks(r + 1, cx, cy, PIECE_SIZE) : '';
   return [
@@ -246,6 +275,7 @@ function pieceLayer(
           x: x - PIECE_SIZE / 2,
           y: y - PIECE_SIZE / 2,
           size: PIECE_SIZE,
+          shape: BANQI_PIECE_SHAPE,
         });
     return `<g class="banqi-piece-slot" data-piece-square="${square}">${pieceSvg}</g>`;
   }).join('');
@@ -294,10 +324,10 @@ function selectionRing(selection: BanqiSquare | null): string {
 }
 
 // A capturable piece is outlined in the hint green: the ring sits ON the
-// piece's own edge (PIECE_SIZE/2), wide enough to replace its outline. A ring
+// piece's own edge (PIECE_EDGE_R), wide enough to replace its outline. A ring
 // outside the piece would cross into the neighbouring cell, since a piece
-// fills 90% of its cell. Same radius in the static and interactive layers.
-const CAPTURE_RING_R = PIECE_SIZE / 2;
+// fills 92% of its cell. Same radius in the static and interactive layers.
+const CAPTURE_RING_R = PIECE_EDGE_R;
 const HINT_DOT_R = 10;
 // Half the arm span of the 長捉 cross: a little wider than the dot it replaces, so
 // it reads as a mark rather than a smudge, still well inside the empty cell.

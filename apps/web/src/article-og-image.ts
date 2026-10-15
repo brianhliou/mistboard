@@ -8,7 +8,7 @@
 /** Mirrors ARTICLE_OG_IMAGE_VERSION in apps/server/src/og-image.ts. Scrapers
  *  hold a card under its URL with a year-long immutable max-age, so the LOOK of
  *  a card can only change behind a new ?v=. */
-export const ARTICLE_OG_IMAGE_VERSION = 5;
+export const ARTICLE_OG_IMAGE_VERSION = 6;
 
 /** The shapes Google asks for in an Article's `image` (it crops a single wide
  *  card to a square in some surfaces, which cut the caption), widest first. */

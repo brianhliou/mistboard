@@ -6,14 +6,18 @@
 //   xiangqi family  apps/web/src/xiangqi-board-surface.ts + app-base.css
 //                   (--xq-board-bg #f5dca8, --xq-board-ink #5a3a14, 1.2px grid,
 //                   margin 0.6 cell, no river label, no star points) and
-//                   xiangqi-piece-sets.ts (`international`: #fef0d7 disc, 2.8
-//                   ring in #c30d0d / #202427, PNG art per INTERNATIONAL_IMAGE_FRAMES;
-//                   jieqi face-down = pieceBackMark; duck = gold ring + duck.png;
-//                   treasure = the international treasure art).
+//                   xiangqi-piece-sets.ts (`international`: #fef0d7 disc, one 2.8
+//                   ring in #202427 on both sides, PNG art per INTERNATIONAL_IMAGE_FRAMES;
+//                   jieqi face-down = pieceBackMark at the face's size; duck = gold
+//                   ring + duck.png; treasure = the international treasure art).
+//                   The piece's outer edge spans 98% of the point gap (board-metrics.ts
+//                   xiangqiPieceDrawSize); no shadow (the piece look of 2026-10-14).
 //   banqi           apps/web/src/live-banqi-render.ts (same bg/ink, 1.5px grid,
-//                   international discs, jade face-down #2f8f6b / #184a38).
+//                   international discs at 92% of the cell, jade face-down
+//                   #2f8f6b / #184a38 at the same size).
 //   jungle          apps/web/src/jungle-skins.ts + jungle-art.ts, the default
-//                   'bare' board and 'animals' tokens.
+//                   'bare' board and 'animals' tokens: rounded squares at 98% of
+//                   the cell, one #28323c ring on both sides.
 //   fog chess       packages/board-render BROWN_PALETTE + inline cburnett pieces,
 //                   via renderBoardComposition.
 // Piece art is the same PNG the browser loads, embedded as a data URI from the
@@ -182,7 +186,9 @@ export function resetCardArt(): void {
 const BOARD_BG = '#f5dca8';
 const BOARD_INK = '#5a3a14';
 const DISC_FACE = '#fef0d7';
-const DISC_RING: Record<Ink, string> = { red: '#c30d0d', black: '#202427' };
+/** INTERNATIONAL_RING_STROKE in apps/web/src/xiangqi-piece-sets.ts: one dark ring
+ *  on both sides since 2026-10-14 (the figure's fill carries the side). */
+const DISC_RING = '#202427';
 const BACK: Record<Ink, { fill: string; stroke: string }> = {
   red: { fill: '#a95f4a', stroke: '#6f342c' },
   black: { fill: '#2f7d62', stroke: '#174536' },
@@ -197,7 +203,10 @@ const JUNGLE = {
   mark: '#8a6534',
   grid: 'rgba(91,74,50,0.55)',
   disc: '#fff2cf',
-  ring: { red: '#b5322b', black: '#28323c' } as Record<Ink, string>,
+  /** Ink by side: only the text fallback when the art is missing. */
+  ink: { red: '#b5322b', black: '#28323c' } as Record<Ink, string>,
+  /** JUNGLE_ART.animalRing in apps/web/src/jungle-art.ts: one ring on both sides. */
+  ring: '#28323c',
 };
 // Mirrors TRADITIONAL in apps/web/src/xiangqi-piece-sets.ts, the glyph fallback.
 const TRADITIONAL: Record<Ink, Record<string, string>> = {
@@ -239,7 +248,32 @@ const FRAMES: Record<string, { x: number; y: number; w: number; h: number }> = {
 
 /** Live intersection boards: margin 0.6 cell (xiangqi-board.ts CELL 60 / MARGIN 36). */
 const INTERSECTION_MARGIN = 0.6;
-const PIECE_RATIO = 0.9;
+// The piece look of 2026-10-14, ported from the web (the server cannot import
+// apps/web): every xiangqi piece is drawn in a 100-unit box whose outline ends
+// at 94.8 (r 46 plus half a 2.8 ring), so a piece whose outer edge spans REACH
+// of the cell is drawn in a box of cell x REACH / 0.948.
+//   xiangqi family  XIANGQI_PIECE_REACH 0.98, XIANGQI_PIECE_OUTLINE_SHARE 0.948
+//                   (apps/web/src/board-metrics.ts xiangqiPieceDrawSize)
+//   banqi           BANQI_PIECE_REACH 0.92 (apps/web/src/live-banqi-render.ts)
+//   jungle          JUNGLE_TOKEN_REACH 0.98 (apps/web/src/jungle-art.ts)
+const PIECE_OUTLINE_SHARE = 0.948;
+const PIECE_RATIO = 0.98 / PIECE_OUTLINE_SHARE;
+const BANQI_REACH = 0.92;
+const BANQI_PIECE_RATIO = BANQI_REACH / PIECE_OUTLINE_SHARE;
+/** The banqi jade back's stroke (.banqi-back > circle, 2 px on the 64 px cell). */
+const BANQI_BACK_STROKE = 2 / 64;
+// JUNGLE_ART in apps/web/src/jungle-art.ts: the token is a rounded square, the
+// cream face out to the ring and the ring on the edge, ratios to its nominal size.
+const JUNGLE_REACH = 0.98;
+const JUNGLE_HALF = 0.45;
+const JUNGLE_RING = 0.0274;
+const JUNGLE_CORNER_PER_HALF = 14 / 46;
+/** jungleTokenSize: the nominal token size whose outer edge spans JUNGLE_REACH of the cell. */
+function jungleTokenSize(cell: number): number {
+  return (cell * JUNGLE_REACH) / (2 * JUNGLE_HALF + JUNGLE_RING);
+}
+/** JUNGLE_ART.faceDown: the jade tile, a rounded square at the face-up size. */
+const JUNGLE_BACK_STROKE = 0.039;
 
 export function intersectionLayout(files: number, ranks: number, height: number) {
   const cell = height / (ranks - 1 + 2 * INTERSECTION_MARGIN);
@@ -294,8 +328,14 @@ function piece(cx: number, cy: number, size: number, inner: string): string {
   return `<g transform="translate(${cx - size / 2} ${cy - size / 2}) scale(${size / 100})">${inner}</g>`;
 }
 
-function internationalDisc(ink: Ink): string {
-  return `<circle cx="50" cy="50" r="46" fill="${DISC_FACE}" stroke="${DISC_RING[ink]}" stroke-width="2.8"/>`;
+function internationalDisc(): string {
+  return `<circle cx="50" cy="50" r="46" fill="${DISC_FACE}" stroke="${DISC_RING}" stroke-width="2.8"/>`;
+}
+
+/** A rounded square centred on (cx, cy), `half` from centre to edge, with the
+ *  site's 14-per-46 corner (jungle-art.ts jungleTokenSquare). */
+function roundedSquare(cx: number, cy: number, half: number, attrs: string): string {
+  return `<rect x="${cx - half}" y="${cy - half}" width="${2 * half}" height="${2 * half}" rx="${half * JUNGLE_CORNER_PER_HALF}" ${attrs}/>`;
 }
 
 /** `size` is the piece's box in card units (`piece()` scales the 100-unit box to it). */
@@ -337,14 +377,15 @@ function xiangqiPiece(
     artRole,
     size,
   );
-  if (image) return `${internationalDisc(ink)}${image}`;
+  if (image) return `${internationalDisc()}${image}`;
   return traditionalInner(ink, role);
 }
 
-/** pieceBackMark: a jieqi face-down piece (ink public, role hidden). */
+/** pieceBackMark: a jieqi face-down piece (ink public, role hidden), the same
+ *  outer size as the face-up piece beside it (r 46; it was r 43 before 2026-10-14). */
 function backInner(ink: Ink): string {
   const b = BACK[ink];
-  return `<circle cx="50" cy="50" r="43" fill="${b.fill}" stroke="${b.stroke}" stroke-width="3"/>`;
+  return `<circle cx="50" cy="50" r="46" fill="${b.fill}" stroke="${b.stroke}" stroke-width="3"/>`;
 }
 
 /** The duck as the live board draws it in each set (xiangqi-piece-sets.ts
@@ -363,12 +404,6 @@ function duckInner(art: CardArt, size: number, pieceSet: CardPieceSet): string {
   return `<circle cx="50" cy="50" r="46" fill="${DISC_FACE}" stroke="${DUCK_RING}" stroke-width="2.8"/>${image}`;
 }
 
-/** Live drop shadow under the pieces (live-xiangqi.css .xq-piece). A filter,
- *  not CSS, so resvg draws it. */
-function shadowDefs(id: string): string {
-  return `<defs><filter id="${id}" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="3" stdDeviation="2" flood-color="#231b12" flood-opacity="0.25"/></filter></defs>`;
-}
-
 // ── Boards ────────────────────────────────────────────────────────────────────
 
 function hasCrossedRiver(ink: Ink, rank: number, ranks: number): boolean {
@@ -382,14 +417,12 @@ function renderIntersection(
   board: Extract<PositionOgBoard, { kind: 'intersection' }>,
   art: CardArt,
   height: number,
-  id: string,
   pieceSet: CardPieceSet,
 ): string {
   const g = intersectionLayout(board.files, board.ranks, height);
   const { cell, width } = g;
   const parts: string[] = [
     `<rect x="0" y="0" width="${width}" height="${height}" rx="${boardCornerRadius(width)}" fill="${BOARD_BG}"/>`,
-    shadowDefs(id),
   ];
   const lw = Math.max(1, cell / 50);
   const line = (x1: number, y1: number, x2: number, y2: number) =>
@@ -421,7 +454,6 @@ function renderIntersection(
       `<rect x="${g.px(at.file) - cell / 2}" y="${g.py(at.rank) - cell / 2}" width="${cell}" height="${cell}" fill="rgba(58,40,16,0.42)"/>`,
     );
   }
-  parts.push(`<g filter="url(#${id})">`);
   for (const pc of board.pieces) {
     const artRole =
       pc.role === 'soldier' && hasCrossedRiver(pc.color, pc.rank, board.ranks)
@@ -452,7 +484,6 @@ function renderIntersection(
         ),
       );
   }
-  parts.push('</g>');
   return parts.join('');
 }
 
@@ -465,7 +496,6 @@ function renderGrid(
   art: CardArt,
   width: number,
   height: number,
-  id: string,
   pieceSet: CardPieceSet,
 ): string {
   const cell = width / board.files;
@@ -480,7 +510,6 @@ function renderGrid(
   const fillInset = jungle ? 0 : lw / 2;
   const parts: string[] = [
     `<rect x="${fillInset}" y="${fillInset}" width="${width - 2 * fillInset}" height="${height - 2 * fillInset}" rx="${Math.max(0, radius - fillInset)}" fill="${bg}"/>`,
-    shadowDefs(id),
   ];
   for (let f = 1; f < board.files; f += 1) {
     parts.push(
@@ -503,25 +532,39 @@ function renderGrid(
   }
   const cx = (file: number) => (file + 0.5) * cell;
   const cy = (rank: number) => (board.ranks - rank + 0.5) * cell;
-  parts.push(`<g filter="url(#${id})">`);
   for (const tile of board.tiles) {
     const x = cx(tile.file);
     const y = cy(tile.rank);
     if (tile.hidden) {
-      const r = jungle ? 0.374 * cell : 0.46 * PIECE_RATIO * cell;
-      const sw = jungle ? 0.031 * cell : 2;
-      parts.push(
-        `<circle cx="${x}" cy="${y}" r="${r}" fill="${JADE.fill}" stroke="${JADE.stroke}" stroke-width="${sw}"/>`,
-      );
+      // Face-down tiles match the face-up pieces' outer size and shape: the
+      // jungle-art.ts jade rounded square, or live-banqi-render.ts's jade disc
+      // whose outer edge (stroke included) lands at 92% of the cell.
+      if (jungle) {
+        const sw = JUNGLE_BACK_STROKE * cell;
+        parts.push(
+          roundedSquare(
+            x,
+            y,
+            (JUNGLE_REACH * cell - sw) / 2,
+            `fill="${JADE.fill}" stroke="${JADE.stroke}" stroke-width="${sw}"`,
+          ),
+        );
+      } else {
+        const sw = BANQI_BACK_STROKE * cell;
+        parts.push(
+          `<circle cx="${x}" cy="${y}" r="${(BANQI_REACH * cell - sw) / 2}" fill="${JADE.fill}" stroke="${JADE.stroke}" stroke-width="${sw}"/>`,
+        );
+      }
     } else if (tile.mark.kind === 'glyph') {
       const role = roleOfGlyph(tile.mark.glyph) ?? 'soldier';
-      const size = PIECE_RATIO * cell;
+      const size = BANQI_PIECE_RATIO * cell;
       parts.push(piece(x, y, size, xiangqiPiece(art, tile.ink, role, role, size, pieceSet)));
     } else {
-      parts.push(jungleToken(art, x, y, 0.87 * cell, tile.ink, roleOfJungleName(tile.mark.text)));
+      parts.push(
+        jungleToken(art, x, y, jungleTokenSize(cell), tile.ink, roleOfJungleName(tile.mark.text)),
+      );
     }
   }
-  parts.push('</g>');
   return parts.join('');
 }
 
@@ -548,11 +591,17 @@ function jungleToken(
   const uri = artHref(art, `piece-sets/jungle/dobutsu/${ink}-${role}.png`, size);
   const inner = uri
     ? `<image href="${uri}" x="${cx - size / 2}" y="${cy - size / 2}" width="${size}" height="${size}" preserveAspectRatio="xMidYMid meet"/>`
-    : `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-family="${OG_FONT}" font-size="${size * 0.3}" font-weight="700" fill="${JUNGLE.ring[ink]}">${escapeXml(role[0]!.toUpperCase() + role.slice(1))}</text>`;
+    : `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-family="${OG_FONT}" font-size="${size * 0.3}" font-weight="700" fill="${JUNGLE.ink[ink]}">${escapeXml(role[0]!.toUpperCase() + role.slice(1))}</text>`;
+  const half = JUNGLE_HALF * size;
   return [
-    `<circle cx="${cx}" cy="${cy}" r="${0.485 * size}" fill="${JUNGLE.disc}"/>`,
+    roundedSquare(cx, cy, half, `fill="${JUNGLE.disc}"`),
     inner,
-    `<circle cx="${cx}" cy="${cy}" r="${0.45 * size}" fill="none" stroke="${JUNGLE.ring[ink]}" stroke-width="${0.032 * size}"/>`,
+    roundedSquare(
+      cx,
+      cy,
+      half,
+      `fill="none" stroke="${JUNGLE.ring}" stroke-width="${JUNGLE_RING * size}"`,
+    ),
   ].join('');
 }
 
@@ -570,13 +619,11 @@ function renderJungle(
   board: Extract<PositionOgBoard, { kind: 'jungle' }>,
   art: CardArt,
   height: number,
-  id: string,
 ): string {
   const cell = height / JUNGLE_HEIGHT;
   const width = JUNGLE_WIDTH * cell;
   const parts: string[] = [
     `<rect x="0" y="0" width="${width}" height="${height}" rx="${boardCornerRadius(width)}" fill="${JUNGLE.land}"/>`,
-    shadowDefs(id),
   ];
   const left = (file: number) => file * cell;
   const top = (rank: number) => (JUNGLE_HEIGHT - rank) * cell;
@@ -612,20 +659,18 @@ function renderJungle(
       `<line x1="0" y1="${r * cell}" x2="${width}" y2="${r * cell}" stroke="${JUNGLE.grid}" stroke-width="1"/>`,
     );
   }
-  parts.push(`<g filter="url(#${id})">`);
   for (const pc of board.pieces) {
     parts.push(
       jungleToken(
         art,
         left(pc.file) + cell / 2,
         top(pc.rank) + cell / 2,
-        0.86 * cell,
+        jungleTokenSize(cell),
         pc.ink,
         pc.role,
       ),
     );
   }
-  parts.push('</g>');
   return parts.join('');
 }
 
@@ -820,16 +865,15 @@ function renderBoardInner(
   art: CardArt,
   width: number,
   height: number,
-  id: string,
   pieceSet: CardPieceSet,
 ): string {
   switch (board.kind) {
     case 'intersection':
-      return renderIntersection(board, art, height, id, pieceSet);
+      return renderIntersection(board, art, height, pieceSet);
     case 'grid':
-      return renderGrid(board, art, width, height, id, pieceSet);
+      return renderGrid(board, art, width, height, pieceSet);
     case 'jungle':
-      return renderJungle(board, art, height, id);
+      return renderJungle(board, art, height);
     case 'chess':
       // The composition centres its board on the canvas width it is given, so a
       // canvas of exactly the board's width puts it at the origin.
@@ -870,7 +914,7 @@ export function renderBoardCard(
   const { width, height } = boardSize(board);
   const boardX = CARD_BOARD_X;
   const boardY = CARD_PAD + (CARD_BOARD_HEIGHT - height) / 2;
-  const inner = renderBoardInner(board, art, width, height, 'card-shadow', pieceSet);
+  const inner = renderBoardInner(board, art, width, height, pieceSet);
   const columnX = boardX + width + CAPTION_GAP;
   const columnW = CAPTION_RIGHT - columnX;
   const parts: string[] = [
@@ -963,7 +1007,7 @@ export function renderBoardAspectCard(
   );
   const boardX = (frame.width - width) / 2;
   const boardY = (frame.height - height) / 2;
-  const inner = renderBoardInner(board, art, width, height, 'card-shadow', pieceSet);
+  const inner = renderBoardInner(board, art, width, height, pieceSet);
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${frame.width}" height="${frame.height}" viewBox="0 0 ${frame.width} ${frame.height}">`,
     `<rect width="${frame.width}" height="${frame.height}" fill="${CARD_BG}"/>`,

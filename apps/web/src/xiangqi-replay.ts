@@ -26,10 +26,12 @@ import './board-glyph-marker.css';
 import './embed/embed-credit.css';
 import {
   BOARD_LASTMOVE_MARKER_SELECTOR,
+  BOARD_LASTMOVE_OVER_GROUP_ATTRS,
+  type BoardLastMoveLayer,
   boardLastMoveMarkersSvg,
   boardLastMoveOuterRadius,
 } from './board-lastmove.js';
-import { tokenPieceSize } from './board-metrics.js';
+import { tokenPieceSize, xiangqiPieceDrawSize } from './board-metrics.js';
 import { type ReplayStepperCopy, replayStepperCopy } from './replay-stepper-copy.js';
 import { seatDiscEl } from './seat-disc.js';
 import { GLYPH_SUFFIX_CLASS } from './study-chapter-annotations.js';
@@ -44,7 +46,10 @@ import { xiangqiDiagramRiverText } from './xiangqi-river-text.js';
 // Geometry/colours mirror the static xiangqi diagrams in articles-data.ts so
 // the replay board is visually identical to the rules diagrams.
 const CELL = 31;
+// The layout piece size the marks are tuned on; the piece itself is drawn larger,
+// its outline spanning 98% of the point gap (2026-10-14).
 const PIECE = tokenPieceSize(CELL);
+const PIECE_DRAWN = xiangqiPieceDrawSize(CELL);
 // The live board draws its judgment badge at r=13 / offset 21 on a 60px cell.
 // Same proportions here so the badge sits in the same place relative to the
 // piece; the markup and palette are the shared ones (board-glyph-marker.css).
@@ -55,7 +60,7 @@ const GLYPH_OFFSET = (21 / 60) * CELL;
  * The margin has to clear everything drawn around a piece on an EDGE
  * intersection, not just the piece. Three things reach past its centre:
  *
- *   the piece itself         PIECE / 2                 14.0 at CELL 31
+ *   the piece itself         PIECE_DRAWN / 2           16.0 at CELL 31
  *   the last-move ring       outer radius              15.6
  *   the judgment badge       offset + its own radius   17.6
  *
@@ -65,7 +70,7 @@ const GLYPH_OFFSET = (21 / 60) * CELL;
  * fourth decoration that reaches further cannot silently crop it.
  */
 const MARGIN = Math.ceil(
-  Math.max(PIECE / 2, boardLastMoveOuterRadius(PIECE), GLYPH_OFFSET + GLYPH_RADIUS),
+  Math.max(PIECE_DRAWN / 2, boardLastMoveOuterRadius(PIECE), GLYPH_OFFSET + GLYPH_RADIUS),
 );
 const GLYPH_CLASS: Record<string, string> = {
   '??': 'xq-marker--blunder',
@@ -311,9 +316,9 @@ function piecesSvg(board: XiangqiBoard, perspective: XiangqiColor): string {
         piece as XiangqiPiece,
         readStoredXiangqiPieceSet(),
         {
-          x: x - PIECE / 2,
-          y: y - PIECE / 2,
-          size: PIECE,
+          x: x - PIECE_DRAWN / 2,
+          y: y - PIECE_DRAWN / 2,
+          size: PIECE_DRAWN,
           crossed: drawsCrossedSoldier(piece as XiangqiPiece, rank),
         },
       );
@@ -336,12 +341,15 @@ function boardSvg(
   // The site marks a last move with an origin wash and a destination ring
   // (board-lastmove.ts, shared by every live board). This widget used to draw
   // its own green arrow, which made an article embed look like a different
-  // product from the game page. The markers sit under the pieces, so only the
-  // halo outside the piece radius shows.
+  // product from the game page. The origin wash sits under the pieces, the
+  // destination ring over them (the pieces cover it otherwise).
   const body = [
     gridSvg(perspective),
-    lastMove ? lastMoveSvg(lastMove, perspective) : '',
+    lastMove ? lastMoveSvg(lastMove, perspective, 'under') : '',
     piecesSvg(board, perspective),
+    lastMove
+      ? `<g ${BOARD_LASTMOVE_OVER_GROUP_ATTRS}>${lastMoveSvg(lastMove, perspective, 'over')}</g>`
+      : '',
     // Over the pieces: the badge annotates the piece that just arrived, so it
     // has to sit on top of it rather than under.
     lastMove && glyph ? glyphMarkerSvg(lastMove, glyph, perspective) : '',
@@ -383,7 +391,11 @@ function glideReplayMove(
   }
 }
 
-function lastMoveSvg(move: XiangqiMove, perspective: XiangqiColor): string {
+function lastMoveSvg(
+  move: XiangqiMove,
+  perspective: XiangqiColor,
+  layer: BoardLastMoveLayer,
+): string {
   const from = coord(move.from);
   const to = coord(move.to);
   return boardLastMoveMarkersSvg(
@@ -392,6 +404,7 @@ function lastMoveSvg(move: XiangqiMove, perspective: XiangqiColor): string {
       to: pointXY(to.file, to.rank, perspective),
     },
     PIECE,
+    layer,
   );
 }
 

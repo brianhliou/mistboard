@@ -77,7 +77,11 @@ test('with the site art loaded, the international set draws; without it, the gly
   assert.equal(art.size, cardArtPaths().length, 'every art file the cards need is in web/public');
   const withArt = renderBoardCard(board('xiangqi'), art, { title: ['Xiangqi'] });
   assert.ok(withArt.includes('data:image/png;base64,'), 'PNG art embedded');
-  assert.ok(withArt.includes('fill="#fef0d7" stroke="#c30d0d"'), 'international red disc');
+  assert.ok(
+    withArt.includes('fill="#fef0d7" stroke="#202427"'),
+    'international disc: one dark ring on both sides',
+  );
+  assert.ok(!withArt.includes('stroke="#c30d0d"'), 'no red ring on the international set');
   const glyphs = renderBoardCard(board('xiangqi'), new Map(), { title: ['Xiangqi'] });
   assert.ok(!glyphs.includes('data:image/png'), 'no art, no image');
   assert.ok(glyphs.includes('<path d='), 'baked glyph paths instead');
@@ -230,8 +234,13 @@ test('an inset board outline rounds concentric with the fill under it', () => {
   ];
   let outlines = 0;
   for (const [variant, fen] of cases) {
-    const svg = renderBoardCard(board(variant, fen), new Map(), { title: ['Card'] });
-    const rects = [...svg.matchAll(/<rect ([^>]*)\/>/g)].map((m) => m[1]!);
+    const b = board(variant, fen);
+    const svg = renderBoardCard(b, new Map(), { title: ['Card'] });
+    // Board-sized rects only: jungle tokens are rounded squares with a ring too.
+    const half = boardSize(b).width / 2;
+    const rects = [...svg.matchAll(/<rect ([^>]*)\/>/g)]
+      .map((m) => m[1]!)
+      .filter((r) => (num(r, 'width') ?? 0) > half);
     const fill = rects.find((r) => !r.includes('fill="none"') && num(r, 'rx') !== undefined);
     assert.ok(fill, `${variant}: rounded board fill`);
     const fillRx = num(fill, 'rx')!;

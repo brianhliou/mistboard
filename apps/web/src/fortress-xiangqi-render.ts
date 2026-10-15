@@ -17,7 +17,7 @@ import {
   boardLastMoveMarkersSvg,
   boardLastMoveStyleAttr,
 } from './board-lastmove.js';
-import { tokenPieceSize } from './board-metrics.js';
+import { tokenPieceSize, xiangqiPieceDrawSize } from './board-metrics.js';
 import { readDisplayPreferences } from './display-preferences.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
@@ -49,16 +49,17 @@ import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
 import { drawsFortressCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
 import {
-  animalFlatTreasureMarks,
   animalTreasureMarks,
   assetTreasureMarks,
   cjkGlyphMark,
-  internationalFlatTreasureMarks,
   internationalTreasureMarks,
   isAssetPieceSet,
   renderXiangqiPieceGlyphed,
   type XiangqiPieceSet,
+  type XiangqiPieceShape,
+  xiangqiGlyphFrameMarks,
   xiangqiPieceDiscShadow,
+  xiangqiPieceShapeForLayout,
 } from './xiangqi-piece-sets.js';
 
 // Bespoke SVG renderer for the 7x8 Fortress Xiangqi board. Perfect information
@@ -69,11 +70,14 @@ import {
 
 const CELL = 72;
 const MARGIN = 42;
-const PIECE_SIZE = tokenPieceSize(CELL);
-// Move/selection markers wrap the disc: radii track the piece radius.
-const RING_SELECTION = PIECE_SIZE / 2 + 6;
-const RING_LAST = PIECE_SIZE / 2 + 4;
-const RING_CAPTURE = PIECE_SIZE / 2 + 1;
+// The drawn piece: its outline spans 98% of the point gap (2026-10-14).
+const PIECE_SIZE = xiangqiPieceDrawSize(CELL);
+// The layout piece size the marks are tuned on; it did not grow with the drawing.
+const MARK_PIECE_SIZE = tokenPieceSize(CELL);
+// Move/selection markers wrap the disc: radii track the layout piece radius.
+const RING_SELECTION = MARK_PIECE_SIZE / 2 + 6;
+const RING_LAST = MARK_PIECE_SIZE / 2 + 4;
+const RING_CAPTURE = MARK_PIECE_SIZE / 2 + 1;
 const FILES = 7;
 const RANKS = 8;
 const HIT_HALF = 31;
@@ -177,7 +181,7 @@ export function renderFortressXiangqiBoardSvg(
     : '';
   const cell = layout === 'cell';
   return `
-    <svg class="fxq-board fxq-board--${layout} xq-surface xq-surface--${layout}" data-xiangqi-layout="${layout}"${boardLastMoveStyleAttr(PIECE_SIZE)} viewBox="${vb.minX} ${vb.minY} ${vb.width} ${vb.height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Storm the Fortress board">
+    <svg class="fxq-board fxq-board--${layout} xq-surface xq-surface--${layout}" data-xiangqi-layout="${layout}"${boardLastMoveStyleAttr(MARK_PIECE_SIZE)} viewBox="${vb.minX} ${vb.minY} ${vb.width} ${vb.height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Storm the Fortress board">
       ${cell ? '' : `<rect class="fxq-board-bg" x="${vb.minX}" y="${vb.minY}" width="${vb.width}" height="${vb.height}"/>`}
       ${cell ? '' : riverBand(perspective)}
       ${cell ? '' : palaceBands(perspective)}
@@ -206,7 +210,7 @@ function checkGlow(view: FortressXiangqiPlayerView, perspective: FortressXiangqi
   const square = fortressXiangqiCheckedGeneral(view.board, view.status);
   if (!square) return '';
   const coord = fortressXiangqiCoordOf(square);
-  return boardCheckGlowSvg(intersection(coord.file, coord.rank, perspective), PIECE_SIZE);
+  return boardCheckGlowSvg(intersection(coord.file, coord.rank, perspective), MARK_PIECE_SIZE);
 }
 
 export function fortressXiangqiMarkerSvg(
@@ -389,8 +393,9 @@ function renderFortressXiangqiPiece(
   const className = dragSource ? 'fxq-piece fxq-piece--drag-source' : 'fxq-piece';
   const left = x - PIECE_SIZE / 2;
   const top = y - PIECE_SIZE / 2;
+  const shape = xiangqiPieceShapeForLayout(activeLayout);
   if (piece.role === 'treasure') {
-    return treasureDisc(piece.color, set, left, top, className);
+    return treasureDisc(piece.color, set, left, top, className, shape);
   }
   return renderXiangqiPieceGlyphed(piece as unknown as XiangqiPiece, set, {
     ariaLabel: `${piece.color} ${piece.role}`,
@@ -399,6 +404,7 @@ function renderFortressXiangqiPiece(
     x: left,
     y: top,
     size: PIECE_SIZE,
+    shape,
     // River-gated again since 2026-09-02, so the promoted art means what it means
     // everywhere else: this soldier has crossed. Fortress-specific predicate —
     // the 9x10 one disagrees on rank 5 for both colours.
@@ -409,18 +415,16 @@ function renderFortressXiangqiPiece(
 // Treasure disc inner marks (centered in a 100x100 box). On the Dobutsu set it
 // mirrors the animal-disc look (cream fill + image + colored ring) with the
 // peacock art from the v2 minimal set. Asset sets put 寶 on their own back; glyph sets use the character disc.
-function treasureInnerMarks(color: FortressXiangqiColor, set: XiangqiPieceSet): string {
+function treasureInnerMarks(
+  color: FortressXiangqiColor,
+  set: XiangqiPieceSet,
+  shape: XiangqiPieceShape = 'disc',
+): string {
   if (set === 'animal-dobutsu') {
-    return animalTreasureMarks(color);
-  }
-  if (set === 'animal-flat') {
-    return animalFlatTreasureMarks(color);
+    return animalTreasureMarks(color, shape);
   }
   if (set === 'international') {
-    return internationalTreasureMarks(color);
-  }
-  if (set === 'international-flat') {
-    return internationalFlatTreasureMarks(color);
+    return internationalTreasureMarks(color, shape);
   }
   if (isAssetPieceSet(set)) {
     return assetTreasureMarks(set, color);
@@ -430,11 +434,7 @@ function treasureInnerMarks(color: FortressXiangqiColor, set: XiangqiPieceSet): 
   // xiangqi piece uses (never the viewer's system serif), so the Treasure's
   // stroke weight matches its neighbors.
   const mark = cjkGlyphMark(set === 'simplified' ? '宝' : '寶', colorHex);
-  return [
-    `<circle cx="50" cy="50" r="46" fill="#f3e6c4" stroke="${colorHex}" stroke-width="2.5"/>`,
-    `<circle cx="50" cy="50" r="38" fill="none" stroke="${colorHex}" stroke-width="1.5"/>`,
-    mark,
-  ].join('');
+  return [xiangqiGlyphFrameMarks(colorHex, shape), mark].join('');
 }
 
 function treasureDisc(
@@ -443,12 +443,12 @@ function treasureDisc(
   x: number,
   y: number,
   className: string,
+  shape: XiangqiPieceShape,
 ): string {
-  const styleAttr = set === 'international-flat' ? ' style="filter:none"' : '';
   // The same disc shadow as the six shared pieces beside it.
-  const shadow = xiangqiPieceDiscShadow(set);
+  const shadow = xiangqiPieceDiscShadow(set, { shape });
   const overflowAttr = shadow ? ' overflow="visible"' : '';
-  return `<svg class="${className}"${styleAttr} x="${x}" y="${y}" width="${PIECE_SIZE}" height="${PIECE_SIZE}"${overflowAttr} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${color} treasure">${shadow}${treasureInnerMarks(color, set)}</svg>`;
+  return `<svg class="${className}" x="${x}" y="${y}" width="${PIECE_SIZE}" height="${PIECE_SIZE}"${overflowAttr} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${color} treasure">${shadow}${treasureInnerMarks(color, set, shape)}</svg>`;
 }
 
 function selectionRing(
@@ -513,7 +513,7 @@ function lastMoveMarkers(
   };
   return boardLastMoveMarkersSvg(
     { from: 'from' in last ? center(last.from) : null, to: center(last.to) },
-    PIECE_SIZE,
+    MARK_PIECE_SIZE,
   );
 }
 
