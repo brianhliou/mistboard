@@ -1,5 +1,6 @@
 import { type Color, TIME_CONTROLS, type TimeClass, type XiangqiColor } from '@mistboard/game';
 import type { MahjongSeat } from '@mistboard/mahjong';
+import { emitAchievementTrigger } from './achievement-triggers.js';
 import { engineVersionDisplayName } from './engine-registry.js';
 import { botEngineAttributions, firstPartyBotForEngine } from './first-party-bots.js';
 import { getPool, withTransaction } from './persistence-db.js';
@@ -1500,7 +1501,7 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
   // abandonment the kernel used to end the room.
   const result = summary.abortedAs ? null : summary.result;
   const termination = summary.abortedAs?.termination ?? summary.termination;
-  await withTransaction(async (client) => {
+  const participants = await withTransaction(async (client) => {
     const rated = summary.rated ?? false;
     await client.query(
       `INSERT INTO games
@@ -1612,7 +1613,16 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
         );
       }
     }
+    return participants;
   });
+  // After commit, off the caller's path: the evaluator re-derives from the rows
+  // just written (playedHumanGame decides what counts).
+  if ((mode === 'pvp' || mode === 'pve') && !summary.abortedAs) {
+    emitAchievementTrigger({
+      trigger: 'game_end',
+      userIds: participants.map((p) => (p.subjectType === 'user' ? p.subjectId : null)),
+    });
+  }
 }
 
 function ratedParticipantColors(participants: readonly { color: GameParticipantColor }[]): {

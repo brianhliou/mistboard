@@ -3,6 +3,7 @@
 import {
   FORTRESS_XIANGQI_SPEC_ID,
   type GameSpecId,
+  getAchievementDefinition,
   hasOwnKey,
   JUNGLE_SPEC_ID,
   type RatingVariant,
@@ -41,6 +42,7 @@ import {
 } from './profile-ui.js';
 import { isCorrespondenceRatedModeEnabled, onRatedModeChange } from './rated-flag.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
+import { buildUiIcon } from './ui-icon.js';
 import { attachUserCard } from './user-card.js';
 import { renderVariantMarker } from './variant-markers.js';
 import type { VariantMiniId } from './variant-mini-boards.js';
@@ -121,9 +123,13 @@ type UserProfile = {
   // Consecutive days with a puzzle solved, on the viewer's calendar; absent
   // from older payloads.
   puzzleStreak?: { current: number; best: number };
+  // Earned achievements, oldest first; absent from older payloads.
+  achievements?: ProfileAchievement[];
   games: FeaturedGame[];
   gamesTotal: number;
 };
+
+type ProfileAchievement = { id: string; awardedAt: string };
 
 // First page is delivered with the profile; "Load more" pulls subsequent pages.
 const PROFILE_GAMES_PAGE = 15;
@@ -1089,7 +1095,54 @@ export function buildProfileIdentity(
   // figures, not the descriptive text (which sits in the side column).
   identity.append(buildProfileCounts(profile, locale));
 
+  const achievements = buildProfileAchievements(profile.achievements, locale);
+  if (achievements) identity.append(achievements);
+
   return identity;
+}
+
+// The Achievements row under the identity block (competitive-layer design,
+// section d): one pill per earned achievement, its description and date on
+// hover. Nothing renders until there is at least one; ids the client does not
+// know (a newer server) are skipped rather than shown raw. No toast or
+// notification announces an award yet; this row is the only surface.
+export function buildProfileAchievements(
+  earned: ProfileAchievement[] | undefined,
+  locale: Locale = currentLocale(),
+): HTMLElement | null {
+  if (!Array.isArray(earned) || earned.length === 0) return null;
+  const items: HTMLElement[] = [];
+  for (const award of earned) {
+    const definition = getAchievementDefinition(award?.id ?? '');
+    if (!definition) continue;
+    const item = document.createElement('li');
+    item.className = `profile-achievement profile-achievement-${definition.category}`;
+    item.dataset.achievementId = definition.id;
+    const title = t(definition.titleKey as I18nKey, {}, locale);
+    const hover = [t(definition.descriptionKey as I18nKey, {}, locale)];
+    const date = formatAchievementDate(award.awardedAt, locale);
+    if (date) hover.push(t('profile.achievementEarned', { date }, locale));
+    item.title = hover.join(' ');
+    item.append(
+      buildUiIcon(`achievement-${definition.icon}`, 'profile-achievement-icon'),
+      document.createTextNode(title),
+    );
+    items.push(item);
+  }
+  if (items.length === 0) return null;
+  const list = document.createElement('ul');
+  list.className = 'profile-achievements';
+  list.setAttribute('aria-label', t('profile.achievements', {}, locale));
+  list.append(...items);
+  return list;
+}
+
+function formatAchievementDate(value: string, locale: Locale): string | null {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return null;
+  return new Intl.DateTimeFormat(LOCALE_META[locale].dateLocale, { dateStyle: 'medium' }).format(
+    date,
+  );
 }
 
 // The top-strip action row: Follow/Challenge/Message for someone else's profile,

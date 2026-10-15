@@ -27,6 +27,22 @@ export {
   userIdForHandle,
 } from './persistence-accounts.js';
 export type {
+  AchievementCatalog,
+  AchievementCatalogEntry,
+  AchievementEvaluation,
+  EvaluateAchievementsInput,
+  NewAchievementAward,
+  UserAchievement,
+} from './persistence-achievements.js';
+export {
+  awardAchievements,
+  deriveAchievementFacts,
+  evaluateAchievements,
+  getAchievementCatalog,
+  getUserAchievements,
+  getUserAchievementsByHandle,
+} from './persistence-achievements.js';
+export type {
   AdminAccountRow,
   AdminAccountSort,
   AdminAccountsPage,

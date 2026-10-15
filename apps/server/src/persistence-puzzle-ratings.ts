@@ -7,6 +7,7 @@
 // ratings — retries are no-ops.
 
 import type pg from 'pg';
+import { emitAchievementTrigger } from './achievement-triggers.js';
 import { type Glicko2, isProvisional } from './glicko.js';
 import { getPool, isInitialized, withTransaction } from './persistence-db.js';
 import { ratePuzzleAttempt } from './puzzle-rating.js';
@@ -145,7 +146,7 @@ export async function recordPuzzleAttempt(
   if (!isInitialized()) return null;
   const { userId, puzzleId, variant, solved, rated, seedRating } = input;
 
-  return withTransaction(async (client) => {
+  const result = await withTransaction(async (client) => {
     const user = await lockUserRating(client, userId, variant);
     const puzzle = await lockPuzzleRating(client, puzzleId, variant, seedRating);
 
@@ -183,6 +184,11 @@ export async function recordPuzzleAttempt(
       provisional: isProvisional(change.user.rd),
     };
   });
+  // A first solve is the only attempt that can earn (after commit, off path).
+  if (result.firstAttempt && solved) {
+    emitAchievementTrigger({ trigger: 'puzzle_attempt', userIds: [userId] });
+  }
+  return result;
 }
 
 // Seed the row if absent (so FOR UPDATE has something to lock and concurrent

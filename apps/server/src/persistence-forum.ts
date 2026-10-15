@@ -1,3 +1,4 @@
+import { emitAchievementTrigger } from './achievement-triggers.js';
 import { forumExcerpt } from './forum-excerpt.js';
 import type { AccountRole } from './persistence-accounts.js';
 import { getPool, withTransaction } from './persistence-db.js';
@@ -532,6 +533,7 @@ export async function createForumTopic(input: {
     return { ok: true };
   });
   if (!result.ok) return result;
+  emitAchievementTrigger({ trigger: 'forum_post', userIds: [input.authorAccountId] });
   const topic = await getForumTopic(input.id);
   if (!topic) throw new Error(`forum topic ${input.id} missing after insert`);
   return { ok: true, topic };
@@ -548,7 +550,7 @@ export async function addForumPost(input: {
   // dropped silently, since the quoted text stands on its own either way.
   quotedPostIds?: readonly string[];
 }): Promise<AddForumPostResult> {
-  return withTransaction(async (client) => {
+  const result = await withTransaction<AddForumPostResult>(async (client) => {
     const { rows: topics } = await client.query<{
       id: string;
       locked_at: Date | null;
@@ -608,6 +610,10 @@ export async function addForumPost(input: {
     const post = postFromRow(rows[0]!);
     return { ok: true, post };
   });
+  if (result.ok) {
+    emitAchievementTrigger({ trigger: 'forum_post', userIds: [input.authorAccountId] });
+  }
+  return result;
 }
 
 export async function updateForumPost(input: {

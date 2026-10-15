@@ -191,3 +191,16 @@ export function countedAuthor(authorColumn: string): string {
     WHERE xa.id = ${authorColumn} AND xa.stats_excluded_at IS NOT NULL
   )`;
 }
+
+// A game that counts toward one account's own record (achievements,
+// persistence-achievements.ts): a completed pvp/pve game where both sides moved,
+// in a variant that is still live. Not an aggregate, so it carries neither the
+// launch date nor the excluded-seat clause: a stats-excluded account still
+// earns its own achievements, and its games still count for the person across
+// the board. Public holder counts drop excluded accounts with COUNTED_USER.
+export function playedHumanGame(gamesAlias = 'g'): string {
+  return `${gamesAlias}.status = 'completed' AND ${gamesAlias}.mode IN ('pvp', 'pve')
+    AND ${gamesAlias}.ended_at IS NOT NULL
+    AND ${bothSidesMoved(gamesAlias)}
+    AND ${notRetiredVariant(gamesAlias)}`;
+}

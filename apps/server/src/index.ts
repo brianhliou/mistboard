@@ -5,12 +5,14 @@ import pg from 'pg';
 import { WebSocketServer } from 'ws';
 // Populates the VariantTenant registry (one registration module per variant).
 import './variant-tenant/register-tenants.js';
+import { drainAchievementTriggers, installAchievementEvaluator } from './achievement-triggers.js';
 import { type BotVsBotScheduler, startBotVsBotScheduler } from './bot-vs-bot-scheduler.js';
 import { darkXiangqiRooms } from './dark-xiangqi-registration.js';
 import { MISTY_DARK_CHESS_ACTIVE_ENGINE_ID } from './first-party-bots.js';
 import { prewarmJieqiEngine } from './jieqi-engine.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import { runMigrations } from './migrate.js';
+import { logger } from './obs.js';
 import { type PatronExpirySweeper, startPatronExpirySweeper } from './patron-expiry-sweeper.js';
 import * as persistence from './persistence.js';
 import type { RematchOrchestrator } from './rematch.js';
@@ -422,6 +424,8 @@ export async function stopServer(): Promise<void> {
   }
   await closeWebSocketServer(wss);
   await closeHttpServer(server);
+  await drainAchievementTriggers();
+  installAchievementEvaluator(null);
   await persistence.close();
   rooms.clear();
   for (const registration of registeredVariantTenants()) {
@@ -458,6 +462,22 @@ async function initPersistence(): Promise<void> {
     await client.end();
   }
   persistence.init(databaseUrl);
+  // Achievements follow game ends, puzzle attempts and forum posts; the
+  // writers emit after commit and the evaluation runs off their path.
+  installAchievementEvaluator(
+    ({ trigger, userIds }) => persistence.evaluateAchievements({ trigger, userIds }),
+    {
+      onError: (error, event) =>
+        logger.error(
+          {
+            kind: 'achievement_evaluation_failure',
+            trigger: event.trigger,
+            error: (error as Error)?.message ?? String(error),
+          },
+          'achievement evaluation failure',
+        ),
+    },
+  );
   console.log('persistence: enabled');
 }
 

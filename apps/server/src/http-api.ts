@@ -10,6 +10,7 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import * as accountRoute from './routes/account.js';
+import * as achievementsRoute from './routes/achievements.js';
 import * as adminAccountsRoute from './routes/admin-accounts.js';
 import * as adminGameArtifactsRoute from './routes/admin-game-artifacts.js';
 import * as annotationsRoute from './routes/annotations.js';
@@ -89,6 +90,7 @@ export const routes: RouteModule[] = [
   annotationsRoute,
   authRoute,
   accountRoute,
+  achievementsRoute,
   botsRoute,
   chatRoute,
   enginesRoute,

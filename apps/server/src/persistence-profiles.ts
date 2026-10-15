@@ -19,6 +19,7 @@ import {
   type UserRow,
   userFromRow,
 } from './persistence-accounts.js';
+import { getUserAchievements, type UserAchievement } from './persistence-achievements.js';
 import { getPool, withTransaction } from './persistence-db.js';
 import type { GameMode, GameTermination, GameVisibility } from './persistence-game-lifecycle.js';
 import type { GameParticipantColor, GameResult, ProfileGameRecord } from './persistence-games.js';
@@ -120,6 +121,8 @@ export type UserProfile = {
   // caller passed (the viewer's browser; exact for your own profile, a close
   // read for anyone else's).
   puzzleStreak: { current: number; best: number };
+  // Earned achievements, oldest first (persistence-achievements.ts).
+  achievements: UserAchievement[];
   // First page of games (newest first). Older pages load via getUserGamesPage.
   games: ProfileGameRecord[];
   // Total completed games visible to the viewer, so the client can show an
@@ -703,7 +706,10 @@ export async function getUserProfileByHandle(
     attempts: row.attempts,
   }));
 
-  const puzzleStreak = await getPuzzleStreak(user.id, { timeZone: options.timeZone });
+  const [puzzleStreak, achievements] = await Promise.all([
+    getPuzzleStreak(user.id, { timeZone: options.timeZone }),
+    getUserAchievements(user.id),
+  ]);
 
   return {
     user: {
@@ -722,6 +728,7 @@ export async function getUserProfileByHandle(
     ratings,
     puzzleRatings,
     puzzleStreak: { current: puzzleStreak.current, best: puzzleStreak.best },
+    achievements,
     games,
     gamesTotal,
   };

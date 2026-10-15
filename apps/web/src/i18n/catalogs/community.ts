@@ -134,6 +134,18 @@ export const EN_COMMUNITY = {
   'profile.admin': 'Admin',
   'profile.patron': 'Patron',
   'profile.patronTitle': 'A Mistboard Patron. Thank you for supporting the site.',
+  'profile.achievements': 'Achievements',
+  'profile.achievementEarned': 'Earned {date}',
+  'profile.achievementFirstGame': 'First game',
+  'profile.achievementFirstGameDesc': 'Finished a game.',
+  'profile.achievementFirstPvp': 'First opponent',
+  'profile.achievementFirstPvpDesc': 'Finished a game against another player.',
+  'profile.achievementFirstRated': 'First rated game',
+  'profile.achievementFirstRatedDesc': 'Finished a rated game.',
+  'profile.achievementFirstPuzzle': 'First puzzle',
+  'profile.achievementFirstPuzzleDesc': 'Solved a puzzle on the first try.',
+  'profile.achievementFirstForumPost': 'First forum post',
+  'profile.achievementFirstForumPostDesc': 'Wrote a post in the forum.',
   // Verified player titles (flair): full names for tooltips; the badge shows
   // the uppercase abbreviation. Vocabulary mirror: player-titles.ts.
   'title.xgm': 'Xiangqi Grandmaster',
