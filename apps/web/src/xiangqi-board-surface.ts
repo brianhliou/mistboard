@@ -18,6 +18,7 @@
 
 import './xiangqi-board-surface.css';
 import type { XiangqiColor } from '@mistboard/game';
+import { jungleBoardAssetHref } from './jungle-art.js';
 import type { XiangqiBoardLayout } from './xiangqi-appearance-storage.js';
 import {
   type XiangqiBoardGeometry,
@@ -235,7 +236,7 @@ function jungleRiver(x: number, y: number, width: number, height: number): strin
   const tiles: string[] = [];
   for (let tx = 0; tx < width; tx += tile) {
     tiles.push(
-      `<image href="/piece-sets/jungle/dobutsu/board/water.png?v=2" x="${tx}" y="${(height - tile) / 2}" width="${tile}" height="${tile}"/>`,
+      `<image href="${jungleBoardAssetHref('water')}" x="${tx}" y="${(height - tile) / 2}" width="${tile}" height="${tile}"/>`,
     );
   }
   return [

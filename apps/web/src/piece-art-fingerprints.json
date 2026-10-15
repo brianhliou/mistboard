@@ -1,0 +1,73 @@
+{
+  "folders": {
+    "chess": {
+      "version": "unserved",
+      "sha": "adb39ba0f9b2dae6"
+    },
+    "colored": {
+      "version": "unserved",
+      "sha": "7c28758945f188cc"
+    },
+    "international": {
+      "version": "unserved",
+      "sha": "731d2214a04c879d"
+    },
+    "jungle/dobutsu": {
+      "version": 2,
+      "sha": "1e9e767337dab8ca"
+    },
+    "jungle/dobutsu/board": {
+      "version": 2,
+      "sha": "67763492edddd01b"
+    },
+    "jungle/origami": {
+      "version": "unserved",
+      "sha": "af6455e7cc5e3a47"
+    },
+    "xiangqi/animal-dobutsu": {
+      "version": 4,
+      "sha": "9714f77f5f5a9315"
+    },
+    "xiangqi/book": {
+      "version": 1,
+      "sha": "187c6387436e9611"
+    },
+    "xiangqi/brush": {
+      "version": 2,
+      "sha": "2dc19e4590e60864"
+    },
+    "xiangqi/clerical": {
+      "version": 2,
+      "sha": "1fdfa63a8b120ea3"
+    },
+    "xiangqi/international": {
+      "version": 16,
+      "sha": "3b1ad904482f7bbe"
+    },
+    "xiangqi/international-grid": {
+      "version": 16,
+      "sha": "75d0575396138ad6"
+    },
+    "xiangqi/lacquer": {
+      "version": 1,
+      "sha": "8e2158277e728b6a"
+    },
+    "xiangqi/wood": {
+      "version": 1,
+      "sha": "c6cda2c5d4516b89"
+    }
+  },
+  "og": {
+    "folders": ["jungle/dobutsu", "xiangqi/animal-dobutsu", "xiangqi/international"],
+    "sha": "955f75d77aa41280",
+    "versions": {
+      "game": 6,
+      "article": 6,
+      "articleClient": 6,
+      "study": 6,
+      "position": 4,
+      "broadcast": 3,
+      "player": 3
+    }
+  }
+}

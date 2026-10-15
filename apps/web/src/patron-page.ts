@@ -10,6 +10,7 @@ import type { AuthUser } from './account-nav.js';
 import { loadCachedCurrentUser } from './account-nav.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
+import { jungleDobutsuPieceHref } from './jungle-art.js';
 import { buildNav } from './site-shell.js';
 
 type PatronTierMode = 'subscription' | 'payment';
@@ -378,7 +379,7 @@ function mascotDisc(color: 'red' | 'black'): HTMLElement {
   disc.className = `patron-mascot patron-mascot-${color}`;
   disc.setAttribute('aria-hidden', 'true');
   const img = document.createElement('img');
-  img.src = `/piece-sets/jungle/dobutsu/${color}-${MASCOT_ROLE}.png`;
+  img.src = jungleDobutsuPieceHref(color, MASCOT_ROLE);
   img.alt = '';
   disc.append(img);
   return disc;

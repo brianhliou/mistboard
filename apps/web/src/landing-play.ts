@@ -37,6 +37,7 @@ import { variantNameKeyForSpecId } from './game-display.js';
 import { type GameStartSource, rememberGameStartSource } from './game-start-source.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
+import { jungleDobutsuPieceHref } from './jungle-art.js';
 import {
   LANDING_BOT_GAME_SPEC_IDS,
   landingBotLineup,
@@ -3030,7 +3031,7 @@ function jungleElephantGlyphNodes(value: LandingColorPreference): Node[] {
   const elephant = (color: 'red' | 'black') => {
     const image = document.createElement('img');
     image.className = `landing-color-piece jungle ${color}`;
-    image.src = `/piece-sets/jungle/dobutsu/${color}-elephant.png`;
+    image.src = jungleDobutsuPieceHref(color, 'elephant');
     image.alt = '';
     return image;
   };

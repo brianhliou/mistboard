@@ -185,20 +185,20 @@ describe('landing play panel', () => {
       [...options[0]!.querySelectorAll<HTMLImageElement>('.landing-color-piece.jungle')].map(
         (image) => image.getAttribute('src'),
       ),
-    ).toEqual(['/piece-sets/jungle/dobutsu/red-elephant.png']);
+    ).toEqual(['/piece-sets/jungle/dobutsu/red-elephant.png?v=2']);
     expect(
       [...options[1]!.querySelectorAll<HTMLImageElement>('.landing-color-piece.jungle')].map(
         (image) => image.getAttribute('src'),
       ),
     ).toEqual([
-      '/piece-sets/jungle/dobutsu/red-elephant.png',
-      '/piece-sets/jungle/dobutsu/black-elephant.png',
+      '/piece-sets/jungle/dobutsu/red-elephant.png?v=2',
+      '/piece-sets/jungle/dobutsu/black-elephant.png?v=2',
     ]);
     expect(
       [...options[2]!.querySelectorAll<HTMLImageElement>('.landing-color-piece.jungle')].map(
         (image) => image.getAttribute('src'),
       ),
-    ).toEqual(['/piece-sets/jungle/dobutsu/black-elephant.png']);
+    ).toEqual(['/piece-sets/jungle/dobutsu/black-elephant.png?v=2']);
   });
 
   it('localizes the open lobby requests window', async () => {
