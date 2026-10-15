@@ -3,7 +3,7 @@
 Mistboard is a free, open-source place to play and study Chinese chess and the
 original strategy games built on it. Chinese chess here means xiangqi and its
 traditional relatives, Jieqi and Banqi. Beside them sit Mistboard's own games
-(Duck Xiangqi, Fog Xiangqi, Fortress, Crazyhouse Xiangqi), plus Jungle Chess,
+(Duck Xiangqi, Fog Xiangqi, Crazyhouse Xiangqi), plus Jungle Chess,
 Flip Jungle, and Fog Chess.
 
 Mistboard is the umbrella brand; each game is named on its own. The anchor is
