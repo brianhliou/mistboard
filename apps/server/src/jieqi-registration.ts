@@ -118,7 +118,7 @@ registerVariantTenant({
   errorPrefix: 'jieqi',
   enabled: jieqiTenant.enabled,
   rooms: jieqiRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,
-  activeGameCount: () => countActiveTenantGames(jieqiRooms.values()),
+  activeGameCount: () => countActiveTenantGames(jieqiRooms.values(), jieqiTenant),
   getOrLoadRoom: (roomId) => getOrLoadJieqiRoom(roomId) as Promise<TenantManagedRoom | null>,
   attachWebSocket: (ctx, socket, request, room) =>
     handleJieqiWebSocketConnection(

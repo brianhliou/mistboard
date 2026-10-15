@@ -1,4 +1,5 @@
 import { JUNGLE_FLIP_SPEC_ID, type RoomTimeControl } from '@mistboard/game';
+import type { DrainCreate } from '../deploy-gate.js';
 import {
   isJungleFlipEngineClientId,
   JUNGLE_FLIP_DEFAULT_ENGINE_ID,
@@ -13,7 +14,7 @@ import {
 // choice).
 export type JungleFlipCreateContext = {
   databaseRequired: boolean;
-  isDraining(): boolean;
+  refusesCreate(create?: DrainCreate): boolean;
   drainDeadlineMs(): number | null;
   createJungleFlipRoom(
     timeControl?: RoomTimeControl,

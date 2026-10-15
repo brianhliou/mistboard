@@ -26,8 +26,10 @@ import {
   censusDeployGate,
   type DeployGateCensus,
   type DeployGateRoom,
+  type DrainCreate,
   emptyDeployGateCensus,
   mergeDeployGateCensus,
+  resumablePveRoomPredicate,
 } from '../deploy-gate.js';
 import type { UserAccount } from '../persistence.js';
 
@@ -88,7 +90,7 @@ export type TenantWsAttachContext = {
 // HttpApiContext satisfies it.
 export type TenantCreateHttpContext = {
   databaseRequired: boolean;
-  isDraining(): boolean;
+  refusesCreate(create?: DrainCreate): boolean;
   drainDeadlineMs(): number | null;
   reserveLiveEngineSeat(engineId: string, color: 'white' | 'black'): Promise<string | null>;
   releaseLiveEngineReservation(reservationId: string, reason: string): void;
@@ -442,7 +444,13 @@ export function variantTenantDeployGateCensus(nowMs: number = Date.now()): Deplo
     for (const room of registration.rooms.values()) {
       if (room.projection) rooms.push({ events: room.events, projection: room.projection });
     }
-    census = mergeDeployGateCensus(census, censusDeployGate(rooms, nowMs));
+    const isResumablePve = resumablePveRoomPredicate({
+      gameSpecId: registration.gameSpecId,
+      engine: registration.isEngineClientId
+        ? { isEngineClientId: registration.isEngineClientId }
+        : null,
+    });
+    census = mergeDeployGateCensus(census, censusDeployGate(rooms, nowMs, isResumablePve));
   }
   return census;
 }

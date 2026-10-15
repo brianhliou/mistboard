@@ -419,7 +419,7 @@ async function createSeek(
 }
 
 async function createSeekResult(
-  ctx: Pick<HttpApiContext, 'isDraining' | 'drainDeadlineMs'>,
+  ctx: Pick<HttpApiContext, 'refusesCreate' | 'drainDeadlineMs'>,
   user: UserAccount,
   body: Record<string, unknown>,
   source: SeekAlertNotice['source'],
@@ -493,7 +493,7 @@ async function createSeekResult(
     }
   }
 
-  if (ctx.isDraining()) {
+  if (ctx.refusesCreate()) {
     return { status: 503, body: { error: 'server_draining', restartAt: ctx.drainDeadlineMs() } };
   }
   // The same board offer posted twice returns the live one instead of stacking a
@@ -622,14 +622,14 @@ async function acceptSeek(
 }
 
 async function acceptSeekResult(
-  ctx: Pick<HttpApiContext, 'isDraining' | 'drainDeadlineMs'>,
+  ctx: Pick<HttpApiContext, 'refusesCreate' | 'drainDeadlineMs'>,
   user: UserAccount,
   seekId: string,
 ): Promise<SeekRouteResult> {
   if (persistence.isPlayDisabled(user)) {
     return { status: 403, body: { error: 'play_disabled' } };
   }
-  if (ctx.isDraining()) {
+  if (ctx.refusesCreate()) {
     return { status: 503, body: { error: 'server_draining', restartAt: ctx.drainDeadlineMs() } };
   }
   const seek = await persistence.getCorrespondenceSeek(seekId);

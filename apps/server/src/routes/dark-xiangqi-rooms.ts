@@ -6,6 +6,7 @@ import {
   isAllowedEngineTimeControl,
   type RoomTimeControl,
 } from '@mistboard/game';
+import type { DrainCreate } from '../deploy-gate.js';
 import {
   DARK_XIANGQI_DEFAULT_ENGINE_ID,
   isDarkXiangqiEngineClientId,
@@ -21,7 +22,7 @@ import { parseRoomTimeControl, writeJson } from './lib.js';
 // tenant's room factory in (dark-xiangqi-registration.ts).
 export type DarkXiangqiCreateContext = {
   databaseRequired: boolean;
-  isDraining(): boolean;
+  refusesCreate(create?: DrainCreate): boolean;
   drainDeadlineMs(): number | null;
   reserveLiveEngineSeat(engineId: string, color: 'white' | 'black'): Promise<string | null>;
   releaseLiveEngineReservation(reservationId: string, reason: string): void;
@@ -115,7 +116,7 @@ export async function handleDarkXiangqiCreate(
     writeJson(response, 503, { error: 'persistence_disabled' });
     return;
   }
-  if (ctx.isDraining()) {
+  if (ctx.refusesCreate()) {
     writeJson(response, 503, { error: 'server_draining', restartAt: ctx.drainDeadlineMs() });
     return;
   }

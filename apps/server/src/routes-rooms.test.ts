@@ -284,7 +284,7 @@ function createContext(
     databaseRequired: true,
     drainDeadlineMs: () => null,
     inMemoryGameSummary: () => null,
-    isDraining: () => false,
+    refusesCreate: () => false,
     liveClockIncrementMs: 2_000,
     liveClockInitialMs: 180_000,
     lobbyQueue: [],

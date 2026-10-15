@@ -242,7 +242,7 @@ async function makeSessionCookie(userId: string): Promise<string> {
 }
 
 const notDraining = {
-  isDraining: () => false,
+  refusesCreate: () => false,
   drainDeadlineMs: () => null,
 } as unknown as HttpApiContext;
 

@@ -116,7 +116,7 @@ registerVariantTenant({
   errorPrefix: 'xiangqi',
   enabled: xiangqiTenant.enabled,
   rooms: xiangqiRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,
-  activeGameCount: () => countActiveTenantGames(xiangqiRooms.values()),
+  activeGameCount: () => countActiveTenantGames(xiangqiRooms.values(), xiangqiTenant),
   getOrLoadRoom: (roomId) => getOrLoadXiangqiRoom(roomId) as Promise<TenantManagedRoom | null>,
   attachWebSocket: (ctx, socket, request, room) =>
     handleXiangqiWebSocketConnection(
