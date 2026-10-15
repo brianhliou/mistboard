@@ -12,12 +12,15 @@
 import type { BoardPoint } from './board-lastmove.js';
 import './board-check.css';
 
-/** How far the halo reaches, as a multiple of the piece radius: 18% past the
- *  disc edge. A neighbour one point away sits a full cell off, so halo radius
- *  plus its piece radius stays under the cell and the halo never touches it
- *  (canonical: 31.86 + 27 = 58.86 < 60). Was 0.85 of a cell (51 units), which
- *  spread across the neighbouring advisors and the palace lines. */
-export const CHECK_HALO_REACH_PIECE_RADII = 1.18;
+/** How far the halo reaches, as a multiple of the piece radius: 36% past the
+ *  disc edge. Was 1.18 until 2026-10-15, when the X clip drew it 1.15x larger
+ *  and Brian asked for the site to match the clip. A neighbour one point away
+ *  sits a full cell off, so the faded tail can pass under its disc edge
+ *  (canonical: 36.72 + 27 = 63.72 against a 60 cell); the halo draws under the
+ *  pieces, so that disc covers it. Was 0.85 of a cell (51 units) before
+ *  2026-10-06, which spread across the neighbouring advisors and the palace
+ *  lines. */
+export const CHECK_HALO_REACH_PIECE_RADII = 1.36;
 
 let gradientSeq = 0;
 
