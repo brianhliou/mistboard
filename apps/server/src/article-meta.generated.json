@@ -109,6 +109,12 @@
       "zh-hant": "國際象棋規則"
     }
   },
+  "chess960-starting-positions": {
+    "title": "Chess960 Starting Positions Ranked By Stockfish",
+    "kind": "article",
+    "description": "Stockfish 18 rankings for all 960 Chess960/Fischer Random starting positions. Most balanced: SP-418 and SP-563; standard chess is near median.",
+    "status": "draft"
+  },
   "choi-co-tuong-voi-may": {
     "title": "Chơi cờ tướng với máy: Pikafish trên Mistboard",
     "kind": "article",
@@ -160,6 +166,12 @@
       "zh-hans": "鸭子象棋攻略：你的第一盘",
       "zh-hant": "鴨子象棋攻略：你的第一盤"
     }
+  },
+  "en-passant-under-fog": {
+    "title": "Under Fog, En Passant Is Part of What You Can See",
+    "kind": "article",
+    "description": "My fog of war chess engine recorded the en passant square under standard chess legality, in a variant with no such rule. En passant availability decides what a pawn can see, so the true board fell out of the engine's belief and it finished the game against 41 worlds that did not exist.",
+    "status": "draft"
   },
   "flip-jungle-skill-ceiling": {
     "title": "Flip Jungle: 512 times the search still loses 23% of games",
@@ -396,6 +408,12 @@
       "zh-hans": "MistyBanqi 是怎么下棋的",
       "zh-hant": "MistyBanqi 是怎麼下棋的"
     }
+  },
+  "most-played-move": {
+    "title": "When the Most Played Move Is an Inaccuracy",
+    "kind": "article",
+    "description": "In 144 of 4,121 common opening positions, the move club players choose most often loses winning chances against the engine at twenty million nodes. Ten of them, with what the masters played in each era, and a study holding all 144.",
+    "status": "draft"
   },
   "one-thousand-games": {
     "title": "1,000 games played",

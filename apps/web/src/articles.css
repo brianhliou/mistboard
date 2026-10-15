@@ -1016,6 +1016,12 @@
   max-width: 100%;
 }
 
+/* A single static chess board (an SVG drawn at about 300px): at the default
+   560px cap it fills the column and reads as a poster, not a diagram. */
+.article-figure-board img {
+  max-width: min(100%, 320px);
+}
+
 /* A figure with a dark-theme twin shows the one matching the site theme.
    Scoped under the zoom button so these outrank `.article-figure-zoom img`. */
 .article-figure-zoom img.article-figure-dark,
