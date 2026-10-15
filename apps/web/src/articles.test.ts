@@ -63,6 +63,8 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      // Helpmates in xiangqi (composed helpmates in two), 2026-10-20.
+      '/blog/helpmates-in-xiangqi',
       // The fifth player page, the 2022 women's world champion Zuo Wenjing,
       // scheduled for 2026-10-16 (DEV shows it early for review).
       '/blog/zuo-wenjing',
@@ -305,6 +307,7 @@ describe('article public listing gates', () => {
     // (blog/concept) article without a homeRow appears, newest first, with no
     // curated list. Deep dives have their own row (next test).
     expect(hrefs).toEqual([
+      '/blog/helpmates-in-xiangqi',
       '/blog/fortress-and-atomic-xiangqi-on-hold',
       '/blog/banqi-perpetual-chase',
       '/blog/jieqi-puzzle-search',

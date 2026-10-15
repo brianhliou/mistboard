@@ -567,6 +567,56 @@ body.embed-body {
   text-align: center;
 }
 
+/* A problem shown without its answer (hideSolution): the sheet stays laid out
+   underneath, invisible and inert, and the cover holds the rail's place with a
+   prompt and one button. Stepping forward lifts it too (embed-card.ts). */
+.embed-card-rail--solution-hidden .embed-card-rail-inner {
+  visibility: hidden;
+}
+
+.embed-card-solution-cover {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  text-align: center;
+}
+
+.embed-card-solution-prompt {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.embed-card-solution-show {
+  padding: 7px 14px;
+  border: 1px solid var(--site-accent);
+  border-radius: 6px;
+  background: var(--site-accent-soft, transparent);
+  color: var(--site-accent-strong, var(--site-heading));
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.embed-card-solution-show:hover {
+  background: var(--site-accent);
+  color: var(--site-on-accent, #fff);
+}
+
+.embed-card-solution-show:focus-visible {
+  outline: 2px solid var(--site-accent);
+  outline-offset: 2px;
+}
+
 @media (max-width: 479px) {
   /* Stacked, the card takes the whole frame again: the sheet is under the
      board, so whatever height the board does not need is the sheet's. */
