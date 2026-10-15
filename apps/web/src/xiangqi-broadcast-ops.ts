@@ -37,7 +37,15 @@ export type PollMode = 'auto' | 'on' | 'off';
 export type PollState = {
   mode: PollMode;
   polling: boolean;
-  reason: 'on' | 'off' | 'no-source' | 'auto-undated' | 'auto-before' | 'auto-open' | 'auto-closed';
+  reason:
+    | 'on'
+    | 'off'
+    | 'no-source'
+    | 'auto-undated'
+    | 'auto-before'
+    | 'auto-open'
+    | 'auto-late'
+    | 'auto-closed';
   opensAt: string | null;
   closesAt: string | null;
   afterEvent: boolean;
@@ -420,6 +428,8 @@ export function pollStatusText(schedule: OpsSchedule): string {
       return `Polling now, ${cadence} (on: always)`;
     case 'auto-open':
       return `Polling now, ${cadence} (auto: window closes ${windowTime(state.closesAt)})`;
+    case 'auto-late':
+      return `Polling daily for late records (auto: no games yet; stops ${windowTime(state.closesAt)})`;
     case 'off':
       return 'Not polling (off)';
     case 'no-source':

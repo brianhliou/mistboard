@@ -59,6 +59,9 @@ export type XiangqiBroadcastTourSchedule = {
   endsAt: string | null;
   /** When the tour was seeded: a backfill's poll tail runs from here. */
   createdAt?: string;
+  /** Whether the tour holds any board; set by the scheduler's listing, where
+   *  `false` earns the daily late tail past the window. */
+  hasBoards?: boolean;
 };
 
 export type XiangqiBroadcastBoardSearchFilters = {
@@ -1327,12 +1330,16 @@ export async function listXiangqiBroadcastScheduledTours(): Promise<
 > {
   // Every tour that could poll; the scheduler applies each one's window
   // (xiangqiBroadcastPollState), so the rule lives in one place.
-  const { rows } = await getPool().query<TourRow>(
-    `SELECT * FROM xiangqi_broadcast_tours
-      WHERE poll_mode <> 'off' AND source_url IS NOT NULL
-      ORDER BY slug`,
+  const { rows } = await getPool().query<TourRow & { has_boards: boolean }>(
+    `SELECT tour.*,
+            EXISTS (
+              SELECT 1 FROM xiangqi_broadcast_boards AS board WHERE board.tour_slug = tour.slug
+            ) AS has_boards
+       FROM xiangqi_broadcast_tours AS tour
+      WHERE tour.poll_mode <> 'off' AND tour.source_url IS NOT NULL
+      ORDER BY tour.slug`,
   );
-  return rows.map(scheduleFromRow);
+  return rows.map((row) => ({ ...scheduleFromRow(row), hasBoards: row.has_boards }));
 }
 
 export type XiangqiBroadcastTranslationBackfillChange = {
