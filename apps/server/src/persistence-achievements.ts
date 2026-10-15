@@ -17,6 +17,7 @@ import {
   type AchievementFacts,
   type AchievementIcon,
   type AchievementSourceKind,
+  type AchievementTier,
   type AchievementTrigger,
   achievementFactsFor,
   achievementsForTrigger,
@@ -243,8 +244,10 @@ export type AchievementCatalogEntry = {
   id: string;
   category: AchievementCategory;
   icon: AchievementIcon;
+  tier: AchievementTier;
   titleKey: string;
   descriptionKey: string;
+  hintKey: string;
   // Accounts holding it, stats-excluded accounts left out.
   holders: number;
 };
@@ -276,8 +279,10 @@ export async function getAchievementCatalog(): Promise<AchievementCatalog> {
       id: definition.id,
       category: definition.category,
       icon: definition.icon,
+      tier: definition.tier,
       titleKey: definition.titleKey,
       descriptionKey: definition.descriptionKey,
+      hintKey: definition.hintKey,
       holders: holders.get(definition.id) ?? 0,
     })),
     accounts: Number(accountResult.rows[0]?.accounts ?? 0),

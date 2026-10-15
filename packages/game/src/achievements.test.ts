@@ -19,6 +19,8 @@ test('ids are unique ledger slugs and keys sit in the profile i18n namespace', (
     assert.match(definition.id, ACHIEVEMENT_ID_PATTERN);
     assert.match(definition.titleKey, /^profile\.achievement[A-Z]\w+$/);
     assert.equal(definition.descriptionKey, `${definition.titleKey}Desc`);
+    assert.equal(definition.hintKey, `${definition.titleKey}Hint`);
+    assert.ok(['standard', 'badge'].includes(definition.tier), `${definition.id} tier`);
     assert.ok(definition.triggers.length > 0, `${definition.id} has no trigger`);
     assert.ok(definition.facts.length > 0, `${definition.id} reads no fact`);
   }
@@ -28,6 +30,13 @@ test('the first set holds no bot-ladder badge (skipped 2026-09-15)', () => {
   for (const definition of ACHIEVEMENTS) {
     assert.doesNotMatch(definition.id, /bot|ladder|level/);
   }
+});
+
+test('the starter set is all standard tier: badges are reserved for rarer feats', () => {
+  assert.deepEqual(
+    ACHIEVEMENTS.filter((definition) => definition.tier !== 'standard').map((d) => d.id),
+    [],
+  );
 });
 
 test('no facts, no awards', () => {

@@ -19,6 +19,11 @@ export type AchievementTrigger = 'game_end' | 'puzzle_attempt' | 'forum_post';
 
 export type AchievementCategory = 'play' | 'puzzles' | 'community';
 
+// 'standard' achievements live on the achievements page only. 'badge' is kept
+// for the rarer, more important ones, which the profile also shows (at most
+// three). Nothing is a badge yet; the tier exists so one can be.
+export type AchievementTier = 'standard' | 'badge';
+
 // What the ledger row points back to. 'study' and 'tournament' are reserved for
 // the study and arena-trophy kinds the design names; nothing awards them yet.
 export type AchievementSourceKind = 'game' | 'puzzle' | 'forum_post' | 'study' | 'tournament';
@@ -52,9 +57,12 @@ export type AchievementDefinition = {
   id: string;
   category: AchievementCategory;
   icon: AchievementIcon;
-  // Web i18n keys (community domain, `profile.` prefix).
+  tier: AchievementTier;
+  // Web i18n keys (community domain, `profile.` prefix): the title, what the
+  // holder did (an earned card), and how to earn it (a locked card).
   titleKey: string;
   descriptionKey: string;
+  hintKey: string;
   // The events after which the live path re-evaluates this definition.
   triggers: readonly AchievementTrigger[];
   // The facts the predicate reads; the server derives only these.
@@ -76,8 +84,10 @@ export const ACHIEVEMENTS = [
     id: 'first-game',
     category: 'play',
     icon: 'first-game',
+    tier: 'standard',
     titleKey: 'profile.achievementFirstGame',
     descriptionKey: 'profile.achievementFirstGameDesc',
+    hintKey: 'profile.achievementFirstGameHint',
     triggers: ['game_end'],
     facts: ['firstGame'],
     qualify: firstOf('firstGame'),
@@ -86,8 +96,10 @@ export const ACHIEVEMENTS = [
     id: 'first-pvp',
     category: 'play',
     icon: 'versus',
+    tier: 'standard',
     titleKey: 'profile.achievementFirstPvp',
     descriptionKey: 'profile.achievementFirstPvpDesc',
+    hintKey: 'profile.achievementFirstPvpHint',
     triggers: ['game_end'],
     facts: ['firstPvpGame'],
     qualify: firstOf('firstPvpGame'),
@@ -96,8 +108,10 @@ export const ACHIEVEMENTS = [
     id: 'first-rated',
     category: 'play',
     icon: 'rated',
+    tier: 'standard',
     titleKey: 'profile.achievementFirstRated',
     descriptionKey: 'profile.achievementFirstRatedDesc',
+    hintKey: 'profile.achievementFirstRatedHint',
     triggers: ['game_end'],
     facts: ['firstRatedGame'],
     qualify: firstOf('firstRatedGame'),
@@ -106,8 +120,10 @@ export const ACHIEVEMENTS = [
     id: 'first-puzzle',
     category: 'puzzles',
     icon: 'puzzle',
+    tier: 'standard',
     titleKey: 'profile.achievementFirstPuzzle',
     descriptionKey: 'profile.achievementFirstPuzzleDesc',
+    hintKey: 'profile.achievementFirstPuzzleHint',
     triggers: ['puzzle_attempt'],
     facts: ['firstSolvedPuzzle'],
     qualify: firstOf('firstSolvedPuzzle'),
@@ -116,8 +132,10 @@ export const ACHIEVEMENTS = [
     id: 'first-forum-post',
     category: 'community',
     icon: 'forum',
+    tier: 'standard',
     titleKey: 'profile.achievementFirstForumPost',
     descriptionKey: 'profile.achievementFirstForumPostDesc',
+    hintKey: 'profile.achievementFirstForumPostHint',
     triggers: ['forum_post'],
     facts: ['firstForumPost'],
     qualify: firstOf('firstForumPost'),

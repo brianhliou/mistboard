@@ -1,0 +1,182 @@
+/* Achievements: the profile's quiet line (badges + "N achievements") and the
+   /@/<handle>/achievements page of cards (profile-achievements.ts). */
+
+.profile-achievements {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.profile-achievements-link {
+  color: var(--site-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.profile-achievements-link:hover,
+.profile-achievements-link:focus-visible {
+  color: var(--site-heading);
+  text-decoration: underline;
+}
+
+.profile-achievement-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.profile-achievement-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  box-sizing: border-box;
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid var(--site-border);
+  border-radius: 12px;
+  color: var(--site-heading);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: default;
+}
+
+.profile-achievement-icon {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+}
+
+/* The page. */
+.achievements-page-header {
+  margin-bottom: 20px;
+}
+
+.achievements-page-handle {
+  color: var(--site-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.achievements-page-handle:hover {
+  color: var(--site-heading);
+}
+
+.achievements-page-header h1 {
+  margin: 4px 0 2px;
+  color: var(--site-heading);
+  font-size: 26px;
+}
+
+.achievements-page-summary {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 14px;
+}
+
+.achievements-group + .achievements-group {
+  margin-top: 24px;
+}
+
+.achievements-group-heading {
+  margin: 0 0 10px;
+  color: var(--site-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.achievements-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: 12px;
+}
+
+.achievement-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--site-border);
+  border-radius: 8px;
+  background: var(--site-panel);
+}
+
+.achievement-card-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--site-accent) 14%, var(--site-panel));
+  color: var(--site-accent);
+}
+
+.achievement-card-icon .ui-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.achievement-card-body {
+  min-width: 0;
+}
+
+.achievement-card-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--site-heading);
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.achievement-card-tag {
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--site-accent) 16%, var(--site-panel));
+  color: var(--site-accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.achievement-card-text {
+  margin: 4px 0 0;
+  color: var(--site-text);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.achievement-card-status {
+  margin: 6px 0 0;
+  color: var(--site-muted);
+  font-size: 12px;
+}
+
+/* Locked: present, so a player can see what there is to earn, but muted. */
+.achievement-card-locked {
+  border-style: dashed;
+  background: transparent;
+}
+
+.achievement-card-locked .achievement-card-icon {
+  background: color-mix(in srgb, var(--site-muted) 12%, transparent);
+  color: var(--site-muted);
+}
+
+.achievement-card-locked .achievement-card-title {
+  color: var(--site-muted);
+}

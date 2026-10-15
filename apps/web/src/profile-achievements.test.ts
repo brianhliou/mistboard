@@ -1,11 +1,29 @@
-import { ACHIEVEMENTS } from '@mistboard/game';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { ACHIEVEMENTS, type AchievementDefinition } from '@mistboard/game';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { hasAppTranslation, type I18nKey, loadAppI18nDomains, t } from './i18n/catalog.js';
 import { SUPPORTED_LOCALES } from './i18n/locale.js';
-import { buildProfileAchievements, buildProfileIdentity } from './profile.js';
+import { buildProfileIdentity } from './profile.js';
+import {
+  buildProfileAchievementsPage,
+  buildProfileAchievementsSummary,
+  mountProfileAchievements,
+} from './profile-achievements.js';
 
-// The Achievements row under the profile identity block: one pill per earned
-// achievement, nothing at all until there is one, unknown ids skipped.
+// No definition is badge tier yet, so the tests add stand-ins: ids starting
+// `test-badge-` resolve to a badge-tier copy of first-game.
+vi.mock('@mistboard/game', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@mistboard/game')>();
+  return {
+    ...actual,
+    getAchievementDefinition: (id: string): AchievementDefinition | null => {
+      if (id.startsWith('test-badge-')) {
+        const base = actual.getAchievementDefinition('first-game')!;
+        return { ...base, id, tier: 'badge' };
+      }
+      return actual.getAchievementDefinition(id);
+    },
+  };
+});
 
 type Profile = Parameters<typeof buildProfileIdentity>[0];
 
@@ -27,68 +45,157 @@ function profile(overrides: Partial<Profile> = {}): Profile {
   };
 }
 
-describe('profile achievements row', () => {
-  // Registers the lazy zh chunks, so t() below sees the full catalogs.
-  beforeAll(async () => {
-    await loadAppI18nDomains();
+const AUG = (day: number) => `2026-08-${String(day).padStart(2, '0')}T10:00:00.000Z`;
+
+beforeAll(async () => {
+  await loadAppI18nDomains();
+});
+
+describe('achievements on the profile', () => {
+  it('shows nothing when the account holds none, or the payload predates the field', () => {
+    for (const achievements of [undefined, [], [{ id: 'arena:future:1', awardedAt: AUG(1) }]]) {
+      const identity = buildProfileIdentity(profile({ achievements }), 'en');
+      expect(identity.querySelector('.profile-achievements')).toBe(null);
+    }
   });
 
-  it('renders nothing for a profile with no achievements, or an older payload', () => {
-    expect(buildProfileIdentity(profile(), 'en').querySelector('.profile-achievements')).toBe(null);
-    expect(
-      buildProfileIdentity(profile({ achievements: [] }), 'en').querySelector(
-        '.profile-achievements',
-      ),
-    ).toBe(null);
-  });
-
-  it('shows each earned achievement in order, with its description and date on hover', () => {
+  it('standard achievements are a count link to the page, not pills', () => {
     const identity = buildProfileIdentity(
       profile({
         achievements: [
-          { id: 'first-game', awardedAt: '2026-08-01T10:00:00.000Z' },
-          { id: 'first-rated', awardedAt: '2026-08-03T10:00:00.000Z' },
+          { id: 'first-game', awardedAt: AUG(1) },
+          { id: 'first-pvp', awardedAt: AUG(2) },
+          { id: 'first-rated', awardedAt: AUG(3) },
         ],
       }),
       'en',
     );
-    const row = identity.querySelector('.profile-achievements');
-    expect(row?.getAttribute('aria-label')).toBe('Achievements');
-    const pills = [...identity.querySelectorAll<HTMLElement>('.profile-achievement')];
-    expect(pills.map((pill) => pill.dataset.achievementId)).toEqual(['first-game', 'first-rated']);
-    expect(pills.map((pill) => pill.textContent)).toEqual(['First game', 'First rated game']);
-    expect(pills[1]?.title).toBe('Finished a rated game. Earned Aug 3, 2026');
-    expect(pills[0]?.querySelector('svg.ui-icon-achievement-first-game')).not.toBe(null);
+    const link = identity.querySelector<HTMLAnchorElement>('.profile-achievements-link');
+    expect(link?.textContent).toBe('3 achievements');
+    expect(link?.getAttribute('href')).toBe('/@/river_horse/achievements');
+    expect(identity.querySelector('.profile-achievement-badges')).toBe(null);
   });
 
-  it('skips ids this client does not define instead of showing them raw', () => {
-    const row = buildProfileAchievements(
+  it('counts one in the singular and localizes', () => {
+    const one = [{ id: 'first-game', awardedAt: AUG(1) }];
+    expect(buildProfileAchievementsSummary('h', one, 'en')?.textContent).toBe('1 achievement');
+    expect(buildProfileAchievementsSummary('h', one, 'zh-Hant')?.textContent).toBe('1 項成就');
+  });
+
+  it('shows badge-tier achievements, newest three only, beside the link', () => {
+    const line = buildProfileAchievementsSummary(
+      'h',
       [
-        { id: 'arena:future:1', awardedAt: '2026-08-01T10:00:00.000Z' },
-        { id: 'first-puzzle', awardedAt: 'not a date' },
+        { id: 'first-game', awardedAt: AUG(1) },
+        { id: 'test-badge-a', awardedAt: AUG(2) },
+        { id: 'test-badge-b', awardedAt: AUG(5) },
+        { id: 'test-badge-c', awardedAt: AUG(3) },
+        { id: 'test-badge-d', awardedAt: AUG(4) },
       ],
       'en',
     );
-    const pills = [...(row?.querySelectorAll<HTMLElement>('.profile-achievement') ?? [])];
-    expect(pills.map((pill) => pill.dataset.achievementId)).toEqual(['first-puzzle']);
-    expect(pills[0]?.title).toBe('Solved a puzzle on the first try.');
-    expect(buildProfileAchievements([{ id: 'nope', awardedAt: '' }], 'en')).toBe(null);
+    const badges = [...(line?.querySelectorAll<HTMLElement>('.profile-achievement-badge') ?? [])];
+    expect(badges.map((badge) => badge.dataset.achievementId)).toEqual([
+      'test-badge-b',
+      'test-badge-d',
+      'test-badge-c',
+    ]);
+    expect(line?.querySelector('.profile-achievements-link')?.textContent).toBe('5 achievements');
+  });
+});
+
+describe('the achievements page', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.replaceChildren();
   });
 
-  it('localizes the row', () => {
-    const row = buildProfileAchievements(
-      [{ id: 'first-forum-post', awardedAt: '2026-08-01T10:00:00.000Z' }],
-      'zh-Hant',
+  it('shows earned cards with their date and locked cards with how to earn them', () => {
+    const page = buildProfileAchievementsPage(
+      'river_horse',
+      [
+        { id: 'first-rated', awardedAt: AUG(3) },
+        { id: 'arena:future:1', awardedAt: AUG(4) },
+      ],
+      'en',
     );
-    expect(row?.textContent).toBe('第一篇貼文');
+    expect(page.querySelector('.achievements-page-summary')?.textContent).toBe(
+      `1 of ${ACHIEVEMENTS.length} earned`,
+    );
+    expect(page.querySelectorAll('.achievement-card')).toHaveLength(ACHIEVEMENTS.length);
+
+    const rated = page.querySelector<HTMLElement>('[data-achievement-id="first-rated"]');
+    expect(rated?.dataset.state).toBe('earned');
+    expect(rated?.querySelector('.achievement-card-text')?.textContent).toBe(
+      t('profile.achievementFirstRatedDesc' as I18nKey, {}, 'en'),
+    );
+    expect(rated?.querySelector('.achievement-card-status')?.textContent).toBe(
+      'Earned Aug 3, 2026',
+    );
+
+    const puzzle = page.querySelector<HTMLElement>('[data-achievement-id="first-puzzle"]');
+    expect(puzzle?.dataset.state).toBe('locked');
+    expect(puzzle?.classList.contains('achievement-card-locked')).toBe(true);
+    expect(puzzle?.querySelector('.achievement-card-text')?.textContent).toBe(
+      'Solve a puzzle on your first try.',
+    );
+    expect(puzzle?.querySelector('.achievement-card-status')?.textContent).toBe('Not earned yet');
   });
 
-  it('every definition has its title and description in all three locales, no em dashes', () => {
+  it('groups by category, earned first within a group', () => {
+    const page = buildProfileAchievementsPage(
+      'h',
+      [{ id: 'first-rated', awardedAt: AUG(3) }],
+      'en',
+    );
+    const groups = [...page.querySelectorAll<HTMLElement>('.achievements-group')];
+    expect(groups.map((group) => group.dataset.category)).toEqual(['play', 'puzzles', 'community']);
+    expect(groups.map((group) => group.querySelector('h2')?.textContent)).toEqual([
+      'Play',
+      'Puzzles',
+      'Community',
+    ]);
+    const play = [...groups[0]!.querySelectorAll<HTMLElement>('.achievement-card')];
+    expect(play.map((card) => card.dataset.achievementId)).toEqual([
+      'first-rated',
+      'first-game',
+      'first-pvp',
+    ]);
+  });
+
+  it('a private profile (404 from the API) shows the not-found notice and no cards', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('{"error":"not found"}', { status: 404 })),
+    );
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountProfileAchievements(root, 'hidden_player');
+    expect(root.querySelector('.achievement-card')).toBe(null);
+    expect(root.textContent).toContain(t('profile.notFoundTitle', {}, 'en'));
+  });
+
+  it('mounts the cards from the API for a visible profile', async () => {
+    const fetchMock = vi.fn(async (url: string) =>
+      String(url).endsWith('/api/users/river_horse/achievements')
+        ? new Response(JSON.stringify({ achievements: [{ id: 'first-game', awardedAt: AUG(1) }] }))
+        : new Response('{}', { status: 404 }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountProfileAchievements(root, 'river_horse');
+    expect(root.querySelectorAll('.achievement-card-earned')).toHaveLength(1);
+    expect(root.querySelectorAll('.achievement-card-locked')).toHaveLength(ACHIEVEMENTS.length - 1);
+  });
+
+  it('every definition has its title, description and hint in all three locales, no em dashes', () => {
     for (const definition of ACHIEVEMENTS) {
       for (const locale of SUPPORTED_LOCALES) {
-        for (const key of [definition.titleKey, definition.descriptionKey] as I18nKey[]) {
+        const keys = [definition.titleKey, definition.descriptionKey, definition.hintKey];
+        for (const key of keys as I18nKey[]) {
           expect(hasAppTranslation(locale, key), `${locale} ${key}`).toBe(true);
-          expect(t(key, {}, locale), `${locale} ${key}`).not.toContain('\u2014');
+          expect(t(key, {}, locale), `${locale} ${key}`).not.toContain('—');
         }
       }
     }
