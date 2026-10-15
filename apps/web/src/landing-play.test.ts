@@ -1421,6 +1421,29 @@ describe('roomCreationRequestBody — jungle PvE bots', () => {
   });
 });
 
+describe('roomCreationRequestBody — variant fails closed', () => {
+  const setup = (gameSpecId: string): LandingRoomSetup => ({
+    gameSpecId: gameSpecId as LandingRoomSetup['gameSpecId'],
+    rated: false,
+    timeControl: { initialMs: 600_000, incrementMs: 5_000 },
+    preferredColor: 'random',
+  });
+
+  // Regression: an unlisted variant fell through to dark chess, so the bot
+  // game asked for a fog chess room with the xiangqi mahjong bot (400).
+  it('sends xiangqi-mahjong for a Xiangqi Mahjong bot game', () => {
+    const body = roomCreationRequestBody('pve', setup('xiangqi-mahjong'), 'xiangqi-mahjong-bot');
+    expect(body.gameSpecId).toBe('xiangqi-mahjong');
+    expect(body.engineId).toBe('xiangqi-mahjong-bot');
+  });
+
+  it('throws for a variant it has no mapping for instead of sending dark chess', () => {
+    expect(() => roomCreationRequestBody('pve', setup('no-such-variant'), 'misty')).toThrow(
+      /no game spec mapping/,
+    );
+  });
+});
+
 function memoryStorage(): Storage {
   const values = new Map<string, string>();
   return {
