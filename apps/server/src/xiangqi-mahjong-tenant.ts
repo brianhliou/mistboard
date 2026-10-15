@@ -6,9 +6,9 @@
  * (xiangqi-mahjong*.ts). Three things to know:
  *
  *   - Two seats, east and west, so the ordinary two-player result values and
- *     forfeit rule apply. A match is eight hands; the room finishes when the
- *     match does, on points.
- *   - The setup is server-secret: eight pre-shuffled walls, one per hand, so the
+ *     forfeit rule apply. A match is `XMJ_MATCH_HANDS` hands (four, the deal
+ *     alternating); the room finishes when the match does, on points.
+ *   - The setup is server-secret: pre-shuffled walls, one per hand, so the
  *     whole match replays from the event log. It is persisted in room-created
  *     and stripped from the wire by `clientEventFor`.
  *   - Two deadlines are moves rather than timers: the claim window settles
@@ -111,9 +111,9 @@ const XMJ_RESULTS: Record<XmjSeat, persistence.GameResult> = {
 };
 
 const XMJ_TERMINATION: Record<string, persistence.GameTermination> = {
-  // The match ran its eight hands and one seat had more points.
+  // The match ran its hands and one seat had more points.
   points: 'checkmate',
-  // The match ran its eight hands level.
+  // The match ran its hands level.
   tie: 'draw',
   timeout: 'timeout',
   resignation: 'resignation',

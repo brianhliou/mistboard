@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { type XmjTile, xmjOrderedTiles, xmjShuffle } from './xiangqi-mahjong.js';
+import { XMJ_MATCH_HANDS, type XmjTile, xmjOrderedTiles, xmjShuffle } from './xiangqi-mahjong.js';
 import { xmjBotAction, xmjBotDiscard, xmjDistance, xmjUnseen } from './xiangqi-mahjong-bot.js';
 import {
   applyXmjMove,
@@ -64,9 +64,9 @@ function botStep(state: XmjRoomState, at: number): XmjRoomState | null {
   return null;
 }
 
-test('a fresh setup is eight full walls and passes its own validator', () => {
+test('a fresh setup is one full wall per match hand and passes its own validator', () => {
   const setup = createXmjSetup(seeded(1));
-  assert.equal(setup.walls.length, 8);
+  assert.equal(setup.walls.length, XMJ_MATCH_HANDS);
   assert.ok(isXmjRoomSetup(setup));
   assert.ok(!isXmjRoomSetup({ ...setup, walls: [setup.walls[0]?.slice(1)] }));
   assert.ok(!isXmjRoomSetup({ ...setup, firstDealer: 'north' }));
@@ -172,8 +172,10 @@ test('a won hand pauses the match until both seats are ready or the deadline pas
   const both = play(one, 'east', { action: 'next-hand' });
   assert.equal(both.match.between, false);
   assert.equal(both.match.handIndex, 1);
-  // The dealer won, so the dealer keeps the deal.
-  assert.equal(both.match.hand.dealer, 0);
+  // The dealer won, and the deal passes anyway: it alternates every hand.
+  assert.equal(both.match.hand.dealer, 1);
+  assert.equal(xmjViewFor(both, 'east').handNumber, 2);
+  assert.equal(xmjViewFor(both, 'east').handsInMatch, 2);
   assert.equal(both.nextHandAt, null);
 
   const pending = xmjPendingAction(one);
@@ -253,7 +255,12 @@ test('two bots play 200 seeded matches to the end with zero-sum scores', () => {
     }
     assert.equal(state.status.type, 'finished', `seed ${seed} did not finish`);
     const { match } = state;
-    assert.equal(match.results.length, 8);
+    assert.equal(match.results.length, XMJ_MATCH_HANDS);
+    // Each seat deals the same number of times.
+    assert.deepEqual(
+      match.results.map((r) => r.dealer === match.results[0]?.dealer),
+      match.results.map((_, i) => i % 2 === 0),
+    );
     assert.equal(match.scores[0] + match.scores[1], 0);
     for (const result of match.results) {
       if (result.winner === null) exhausted += 1;

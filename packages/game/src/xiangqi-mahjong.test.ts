@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   isXmjPair,
   meldKindOf,
+  XMJ_MATCH_HANDS,
   type XmjHandState,
   type XmjTile,
   xmjAdvance,
@@ -287,7 +288,7 @@ test('地胡: the non-dealer wins on the first draw, flat 6', () => {
   }
 });
 
-test('dealer self-draw: 自摸 + 莊家, doubled for 連莊', () => {
+test('dealer self-draw: 自摸 + 莊家, a flat +1 with no 連莊 doubling', () => {
   const score = xmjScore({
     concealed: ['bR', 'bH', 'bC', 'rA', 'rA'],
     melds: [],
@@ -297,10 +298,22 @@ test('dealer self-draw: 自摸 + 莊家, doubled for 連莊', () => {
     earthly: false,
     lastTile: true,
   });
-  // 1 + 2 + 1 (dealer) + 1 (last tile) = 5, x2 = 10.
-  assert.equal(score.total, 10);
-  assert.ok(score.lines.some((l) => l.key === 'last-tile'));
-  assert.ok(score.lines.some((l) => l.key === 'dealer-repeat' && l.tai === 5));
+  // 1 + 2 + 1 (dealer) + 1 (last tile) = 5, not doubled.
+  assert.equal(score.total, 5);
+  assert.deepEqual(
+    score.lines.map((l) => [l.key, l.tai]),
+    [
+      ['win', 1],
+      ['self-draw', 2],
+      ['dealer', 1],
+      ['last-tile', 1],
+    ],
+  );
+  assert.equal(
+    score.total,
+    score.lines.reduce((sum, l) => sum + l.tai, 0),
+    'the total is the sum of the lines, nothing multiplied',
+  );
 });
 
 /** Play a hand out with both seats discarding their first tile and never claiming. */
@@ -344,19 +357,30 @@ test('(f) 流局 when the wall runs out with no winner', () => {
   assert.equal(total, 32);
 });
 
-test('match: eight hands, scores zero-sum, dealer rotation', () => {
-  assert.equal(xmjNextDealer({ dealer: 0, winner: 0, selfDrawn: true, score: null }), 0);
+test('the deal alternates after a dealer win, a non-dealer win and a 流局', () => {
+  // Dealer win: the deal still passes.
+  assert.equal(xmjNextDealer({ dealer: 0, winner: 0, selfDrawn: true, score: null }), 1);
+  assert.equal(xmjNextDealer({ dealer: 1, winner: 1, selfDrawn: false, score: null }), 0);
+  // Non-dealer win.
   assert.equal(xmjNextDealer({ dealer: 0, winner: 1, selfDrawn: true, score: null }), 1);
-  assert.equal(xmjNextDealer({ dealer: 1, winner: null, selfDrawn: false, score: null }), 1);
+  assert.equal(xmjNextDealer({ dealer: 1, winner: 0, selfDrawn: false, score: null }), 0);
+  // 流局.
+  assert.equal(xmjNextDealer({ dealer: 0, winner: null, selfDrawn: false, score: null }), 1);
+  assert.equal(xmjNextDealer({ dealer: 1, winner: null, selfDrawn: false, score: null }), 0);
+});
+
+test('match: four hands, each seat deals twice, scores zero-sum', () => {
+  assert.equal(XMJ_MATCH_HANDS, 4);
 
   let s = 7;
   const random = () => {
     s = (s * 1103515245 + 12345) % 2 ** 31;
     return s / 2 ** 31;
   };
+  // More walls than hands: the hand count, not the wall count, ends the match.
   const walls = Array.from({ length: 8 }, () => xmjShuffle(random));
   let match = xmjNewMatch(walls, 0);
-  for (let hand = 0; hand < 8; hand += 1) {
+  for (let hand = 0; hand < 4; hand += 1) {
     // Take any win the moment it is offered, else play out.
     let state = match.hand;
     for (let guard = 0; guard < 200 && !match.between && !match.over; guard += 1) {
@@ -376,7 +400,12 @@ test('match: eight hands, scores zero-sum, dealer rotation', () => {
   }
   assert.ok(match.over);
   assert.equal(match.between, false);
-  assert.equal(xmjNextHand(match), match, 'no ninth hand');
+  assert.equal(match.results.length, 4);
+  assert.equal(xmjNextHand(match), match, 'no fifth hand');
+  assert.deepEqual(
+    match.results.map((r) => r.dealer),
+    [0, 1, 0, 1],
+  );
   const winner = xmjMatchWinner(match);
   if (match.scores[0] === match.scores[1]) assert.equal(winner, null);
   else assert.equal(winner, match.scores[0] > match.scores[1] ? 0 : 1);

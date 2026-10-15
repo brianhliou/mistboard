@@ -253,8 +253,7 @@ export type XmjTaiKey =
   | 'five-soldiers'
   | 'last-tile'
   | 'heavenly'
-  | 'earthly'
-  | 'dealer-repeat';
+  | 'earthly';
 
 export interface XmjTaiLine {
   readonly key: XmjTaiKey;
@@ -277,7 +276,6 @@ export const XMJ_TAI_LABELS: Readonly<Record<XmjTaiKey, string>> = {
   'last-tile': '海底撈月 Last tile',
   heavenly: '天胡 Heavenly hand',
   earthly: '地胡 Earthly hand',
-  'dealer-repeat': '連莊 Dealer keeps the deal (x2)',
 };
 
 export interface XmjWinContext {
@@ -301,7 +299,10 @@ function line(key: XmjTaiKey, tai: number): XmjTaiLine {
  * The 台 count for a winning hand (spec 11).
  *
  * 天胡 and 地胡 are flat 6 and replace everything else. Otherwise the lines
- * sum, and a dealer win doubles the sum (連莊: the dealer keeps the deal).
+ * sum. Deliberate 2-player change from spec 11: no 連莊 doubling. The deal
+ * alternates every hand (see `xmjNextDealer`), so the dealer never keeps it,
+ * and a dealer win is the flat +1 莊家 line only. With the doubling, the
+ * dealer's extra tile and first discard let one early win snowball.
  */
 export function xmjScore(ctx: XmjWinContext): XmjScore {
   if (ctx.heavenly) return { lines: [line('heavenly', 6)], total: 6 };
@@ -320,11 +321,7 @@ export function xmjScore(ctx: XmjWinContext): XmjScore {
     lines.push(line('five-soldiers', 5));
   }
   if (ctx.lastTile) lines.push(line('last-tile', 1));
-  let total = lines.reduce((sum, l) => sum + l.tai, 0);
-  if (ctx.winnerIsDealer) {
-    lines.push(line('dealer-repeat', total));
-    total *= 2;
-  }
+  const total = lines.reduce((sum, l) => sum + l.tai, 0);
   return { lines, total };
 }
 
@@ -530,8 +527,12 @@ export function xmjHandOver(state: XmjHandState): boolean {
 
 // ---------------------------------------------------------------- the match
 
-/** Hands in a match (spec 3 [CHOICE]): eight, 流局 included. */
-export const XMJ_MATCH_HANDS = 8;
+/**
+ * Hands in a match, 流局 included. Deliberate 2-player change from spec 3,
+ * which suggested eight: four, so each seat deals twice. The one constant
+ * every match-length check reads, so eight can return as an option.
+ */
+export const XMJ_MATCH_HANDS = 4;
 
 export interface XmjHandResult {
   readonly dealer: XmjSeatIndex;
@@ -598,9 +599,13 @@ export function xmjAdvance(match: XmjMatchState, hand: XmjHandState): XmjMatchSt
   return { ...match, hand, scores, results, between: !over, over };
 }
 
-/** Dealer for the next hand: stays on a dealer win or 流局, passes otherwise. */
+/**
+ * Dealer for the next hand: the deal alternates every hand, whoever won and
+ * after a 流局, so each seat deals the same number of times. Deliberate
+ * 2-player change from spec 3 and 10, where the dealer kept the deal on a win
+ * or a 流局: the dealer's fifth tile and first discard made a kept deal snowball.
+ */
 export function xmjNextDealer(result: XmjHandResult): XmjSeatIndex {
-  if (result.winner === null || result.winner === result.dealer) return result.dealer;
   return xmjOtherSeat(result.dealer);
 }
 
