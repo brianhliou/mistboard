@@ -62,7 +62,6 @@ import {
 } from './variant-tenant/live-client.js';
 import type { TenantReasonKey, WebVariantTenant } from './variant-tenant/room-chrome.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
-import { createTenantRematch } from './variant-tenant/tenant-rematch.js';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
 
@@ -118,12 +117,6 @@ const jieqiWebTenant: WebVariantTenant<JieqiColor> = {
   selectInstruction: 'live.selectPieceThenDestination',
 };
 
-// PvP rematch offers (server: variant-tenant/rematch.ts via jieqi-registration).
-const rematch = createTenantRematch<JieqiColor>(['red', 'black'], () => {
-  const seat = core?.state.seat;
-  return isJieqiColor(seat) ? seat : null;
-});
-
 const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
   tenant: jieqiWebTenant,
   gameSpecId: 'jieqi',
@@ -132,9 +125,7 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
   boardClass: 'jieqi-live-board',
   chrome: {
     roomMode: () => roomMode,
-    rematchControls: (sendSocket) => rematch.controls(sendSocket),
   },
-  onRematchState: (message) => rematch.applyState(message),
   playAgainRequestBody: (state) => ({
     mode: roomMode,
     gameSpecId: 'jieqi',
@@ -146,7 +137,6 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
     if (frame.roomMode === 'pve' || frame.roomMode === 'pvp') roomMode = frame.roomMode;
     if (typeof frame.pveEngineId === 'string') pveEngineId = frame.pveEngineId;
     checkMarks = jieqiFrameCheckMarks(frame.checkMarks);
-    rematch.applyFrame(frame.rematch);
   },
   onSnapshotApplied: () => {
     if (core) maybePlayJieqiSnapshotSound(core.state.view, core.state.seat);
@@ -161,7 +151,6 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
     roomMode = 'pvp';
     pveEngineId = null;
     checkMarks = [];
-    rematch.reset();
   },
   renderBoard,
   // Piece glides (pieceAnimation pref). Live: only REMOTE moves animate -- an own

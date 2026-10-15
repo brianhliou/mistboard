@@ -901,6 +901,17 @@ export function tenantSnapshotPayload<
     // banqi, jungle, flip jungle and Fog Xiangqi rated games, lobby-paired ones
     // included, showed "Casual". Only on rated rooms, so casual wire is unchanged.
     ...(room.rated ? { rated: true } : {}),
+    // PvP rematch offers (rematch.ts), for every tenant that rematches, only
+    // once the game is over: a reload shows a pending offer, and a live room's
+    // wire is unchanged. The flags say which seat offered, nothing else.
+    ...(room.projection.state.status.type === 'finished' && tenantRoomOffersRematch(tenant, room)
+      ? {
+          rematch: {
+            offers: tenantRematchOfferFlags(tenant, room),
+            finalizedRoomId: room.rematch.finalizedRoomId ?? null,
+          },
+        }
+      : {}),
     ...(tenant.wire?.snapshotExtras?.(room, client) ?? {}),
   };
 }
@@ -1005,6 +1016,33 @@ export function tenantPerPlyViews<
 export function tenantRoomIsLobbyMatch(room: { events: readonly { type: string }[] }): boolean {
   const first = room.events[0] as { type: string; lobbyMatch?: unknown } | undefined;
   return first?.type === 'room-created' && first.lobbyMatch === true;
+}
+
+/**
+ * Does this room offer the mutual-confirm rematch (rematch.ts)? Every tenant
+ * does by default. The exceptions are structural, so a new tenant inherits them:
+ * a tenant that opts out (mahjong's table of four, correspondence-only dark
+ * chess), a table of more than two (the rematch swaps two seats), a bot game
+ * (the engine never offers: the web Rematch button opens a new bot room
+ * instead), a correspondence room (#531), and a retired variant, which opens no
+ * new rooms (createTenantRuntimeRoom), so its Rematch could only fail.
+ */
+export function tenantRoomOffersRematch<
+  Kind extends string,
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  View,
+  Spec extends string,
+>(
+  tenant: VariantTenant<Kind, C, M, State, View, Spec>,
+  room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
+): boolean {
+  if (tenant.rematch) return false;
+  if (tenant.colors.length !== 2) return false;
+  if (isRetiredGameSpec(tenant.gameSpecId)) return false;
+  if (room.projection.timeControl?.daysPerMove !== undefined) return false;
+  return tenantPveEngineId(tenant, room) === null;
 }
 
 export function tenantRematchOfferFlags<C extends string>(

@@ -1,6 +1,6 @@
 /**
  * Jieqi registry entry. Owns the tenant's live-room map, the room-factory
- * binding, hydration, and the PvP rematch context. Matchmaking is random-seat,
+ * binding and hydration. Matchmaking is random-seat,
  * rated or casual (lobby.supportsRated); PvP, live-clock only (PvE and
  * correspondence come later). Imported
  * for side effects by variant-tenant/register-tenants.ts.
@@ -13,14 +13,13 @@ import {
   jieqiUnknownSquares,
   type RoomTimeControl,
 } from '@mistboard/game';
-import { ratedEnabled } from './feature-flags.js';
 import { tenantCardBinding } from './game-card-tenant.js';
 import { tenantExportBinding } from './game-export-tenant.js';
 import type { JieqiCreatorPreference, JieqiRuntimeRoom } from './jieqi-runtime.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import * as persistence from './persistence.js';
 import { handleJieqiCreate, requestsJieqi } from './routes/jieqi-rooms.js';
-import { isAllowedFullTimeControl, isAllowedRatedTimeControl } from './routes/lib.js';
+import { isAllowedFullTimeControl } from './routes/lib.js';
 import {
   createJieqiLiveRoom,
   type JieqiLiveRoomCreation,
@@ -30,14 +29,10 @@ import {
   clearJieqiRuntimeTimers,
   handleJieqiWebSocketConnection,
   type JieqiLiveRoom,
-  type JieqiRematchContext,
   jieqiWs,
 } from './server-ws-jieqi.js';
 import { tenantCorrespondenceBinding } from './variant-tenant/correspondence.js';
-import {
-  persistenceRecordForTenantSeatToken,
-  recordTenantPersistenceError,
-} from './variant-tenant/events.js';
+import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
 import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
 import {
@@ -46,7 +41,6 @@ import {
   variantTenantRoomIdTaken,
 } from './variant-tenant/registry.js';
 import { countActiveTenantGames, tenantReplayCheck } from './variant-tenant/runtime.js';
-import { mintTenantSeatToken } from './variant-tenant/seat-session.js';
 import { xiangqiExportUci } from './xiangqi-game-export.js';
 
 export const jieqiRooms = new Map<string, JieqiLiveRoom>();
@@ -82,40 +76,6 @@ export async function getOrLoadJieqiRoom(roomId: string): Promise<JieqiLiveRoom 
   );
   return room as JieqiLiveRoom | null;
 }
-
-// Mutual-confirm PvP rematch (variant-tenant/rematch.ts): when both players
-// offer, a new room with the same clock, colours swapped and a fresh deal (the
-// factory deals every room), with both seats pre-issued to the old players so
-// nobody else, spectators included, can sit down. Rated carries over only while
-// it would be granted to a new rated room: the generic finalize already
-// requires both seats to be accounts; this adds the rated switch and a rated
-// pace. A PvE room never reaches here (the engine never offers).
-export const jieqiRematchContext: JieqiRematchContext = {
-  send: (client, payload) => jieqiWs.sendPayload(client, payload),
-  createRoom: async (timeControl, rated) => {
-    const stillRated =
-      rated &&
-      ratedEnabled() &&
-      timeControl !== undefined &&
-      isAllowedRatedTimeControl(timeControl);
-    const created = await createJieqiRoom(timeControl, 'random', undefined, stillRated);
-    if (!created.ok) return created;
-    return { ok: true, room: created.room as unknown as JieqiRuntimeRoom };
-  },
-  buildRoomUrl: (roomId) => `/room/${encodeURIComponent(roomId)}`,
-  accountMayPlay: async (userId) =>
-    !persistence.isInitialized() || !(await persistence.isUserIdPlayDisabled(userId)),
-  issueSeatToken: async (room, seat, identity) => {
-    const minted = mintTenantSeatToken(room, seat, identity);
-    if (persistence.isInitialized()) {
-      await persistence.upsertRoomSeatToken(
-        room.id,
-        persistenceRecordForTenantSeatToken(minted.state),
-      );
-    }
-    return minted;
-  },
-};
 
 // Correspondence (days-per-move): seek accept seats both accounts, the sweeper
 // enforces the durable deadline through the ws runtime (variant-tenant/correspondence.ts).
@@ -166,7 +126,6 @@ registerVariantTenant({
         defaultRoomRegion: ctx.defaultRoomRegion,
         wsMessageLimit: ctx.wsMessageLimit,
         wsMessageWindowMs: ctx.wsMessageWindowMs,
-        rematch: jieqiRematchContext,
       },
       socket,
       request,

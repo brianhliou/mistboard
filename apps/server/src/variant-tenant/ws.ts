@@ -49,12 +49,14 @@ import {
   offerTenantRematch,
   type TenantRematchContext,
 } from './rematch.js';
+import { registeredTenantRematchContext } from './rematch-context.js';
 import {
   expireTenantClock,
   type TenantSnapshotPayload,
   tenantClockRemainingMs,
   tenantLiveHistoryExtras,
   tenantPlyAtEventIndex,
+  tenantRoomOffersRematch,
   tenantSnapshotPayload,
 } from './runtime.js';
 import {
@@ -100,20 +102,11 @@ export type TenantLiveRoom<
   clients: Set<TenantLiveClient<C>>;
 };
 
-export type TenantWebSocketContext<
-  Kind extends string,
-  C extends string,
-  M,
-  State extends TenantGameStateLike<C>,
-  Spec extends string = string,
-> = {
+export type TenantWebSocketContext = {
   wsMessageLimit: number;
   wsMessageWindowMs: number;
   // Latency-sample observability region tag; 'global' when omitted.
   defaultRoomRegion?: string;
-  // Rematch is a capability: tenants without a rematch flow (Dark Xiangqi)
-  // omit it and rematch:* messages are ignored.
-  rematch?: TenantRematchContext<Kind, C, M, State, Spec, TenantLiveClient<C>>;
 };
 
 export type TenantWsRuntime<
@@ -125,7 +118,7 @@ export type TenantWsRuntime<
   Spec extends string = string,
 > = {
   handleConnection(
-    ctx: TenantWebSocketContext<Kind, C, M, State, Spec>,
+    ctx: TenantWebSocketContext,
     socket: WebSocket,
     request: IncomingMessage,
     room: TenantLiveRoom<Kind, C, M, State, Spec>,
@@ -167,6 +160,19 @@ export function createTenantWsRuntime<
   type LiveRoom = TenantLiveRoom<Kind, C, M, State, Spec>;
   type LiveClient = TenantLiveClient<C>;
 
+  // Rematch is on by default for every tenant (tenantRoomOffersRematch says
+  // which rooms; tenant.rematch opts a tenant out), built from the registry so
+  // no registration has to forward a context (rematch-context.ts).
+  function rematchContextFor(
+    room: LiveRoom,
+  ): TenantRematchContext<Kind, C, M, State, Spec, LiveClient> | null {
+    if (!tenantRoomOffersRematch(tenant, room)) return null;
+    return registeredTenantRematchContext<Kind, C, M, State, Spec, LiveClient>(
+      room.id,
+      sendPayload,
+    );
+  }
+
   const eventWriterCtx: TenantEventWriterContext<Kind, C, M, State, Spec> = {
     scheduleLifecycleTimers: (room) => scheduleLifecycleTimers(room as LiveRoom),
     scheduleEngineMove: (room) => scheduleEngineMove(room as LiveRoom),
@@ -190,7 +196,7 @@ export function createTenantWsRuntime<
   }
 
   async function handleConnection(
-    ctx: TenantWebSocketContext<Kind, C, M, State, Spec>,
+    ctx: TenantWebSocketContext,
     socket: WebSocket,
     request: IncomingMessage,
     room: LiveRoom,
@@ -309,7 +315,8 @@ export function createTenantWsRuntime<
     scheduleEngineMove(room);
     // A player reconnecting after a rematch was finalized (while they were
     // offline) still gets routed to the new swapped-color room.
-    if (ctx.rematch) maybeReplayTenantRematchRedirect(ctx.rematch, room, client);
+    const rematch = rematchContextFor(room);
+    if (rematch) maybeReplayTenantRematchRedirect(rematch, room, client);
 
     socket.on('message', (raw) => {
       if (
@@ -342,7 +349,7 @@ export function createTenantWsRuntime<
   // other or a player), no engine scheduling, no rematch redirect replay. The
   // hello carries no seatToken. handleMessage enforces the read-only contract.
   function joinAsSpectator(
-    ctx: TenantWebSocketContext<Kind, C, M, State, Spec>,
+    ctx: TenantWebSocketContext,
     socket: WebSocket,
     room: LiveRoom,
     clientId: string,
@@ -396,7 +403,7 @@ export function createTenantWsRuntime<
   }
 
   async function handleMessage(
-    ctx: TenantWebSocketContext<Kind, C, M, State, Spec>,
+    ctx: TenantWebSocketContext,
     room: LiveRoom,
     client: LiveClient,
     raw: string,
@@ -457,17 +464,20 @@ export function createTenantWsRuntime<
       return;
     }
     if (message.type === 'rematch:offer') {
-      if (!ctx.rematch) return;
-      offerTenantRematch(tenant, ctx.rematch, room, client);
-      await finalizeTenantRematchIfReady(tenant, ctx.rematch, room);
+      const rematch = rematchContextFor(room);
+      if (!rematch) return;
+      offerTenantRematch(tenant, rematch, room, client);
+      await finalizeTenantRematchIfReady(tenant, rematch, room);
       return;
     }
     if (message.type === 'rematch:cancel') {
-      if (ctx.rematch) cancelTenantRematch(tenant, ctx.rematch, room, client);
+      const rematch = rematchContextFor(room);
+      if (rematch) cancelTenantRematch(tenant, rematch, room, client);
       return;
     }
     if (message.type === 'rematch:decline') {
-      if (ctx.rematch) declineTenantRematch(tenant, ctx.rematch, room, client);
+      const rematch = rematchContextFor(room);
+      if (rematch) declineTenantRematch(tenant, rematch, room, client);
       return;
     }
     if (message.type !== 'move') return;

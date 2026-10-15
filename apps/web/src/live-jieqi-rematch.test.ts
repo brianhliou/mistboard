@@ -1,5 +1,5 @@
 // A finished jieqi PvP room offers both seats a mutual rematch (server:
-// variant-tenant/rematch.ts through jieqi-registration). Before this, a seated
+// variant-tenant/rematch.ts, on by default for every tenant). Before this, a seated
 // player got only New opponent and Review (docs-private/jieqi-loop-qa-2026-10.md,
 // issue 1). Drives the real room module (live-jieqi.ts) through a stubbed socket.
 

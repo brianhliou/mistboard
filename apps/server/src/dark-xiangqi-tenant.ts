@@ -8,7 +8,9 @@
  * so hidden piece identity never reaches the wire), the spectator empty view,
  * lastMove stripping, seat-vacated acceptance in event logs, and the legacy
  * GameSummary shape (no time-control fields; guests named by color). The
- * snapshot has NO extras — it is exactly the tenant core payload.
+ * snapshot's only extra is the room mode (roomMode, and pveEngineId for a bot
+ * game), as banqi and jieqi send: without it the client took every room for
+ * PvP and a finished bot game showed no Rematch.
  */
 
 import {
@@ -33,7 +35,11 @@ import { engineVersionDisplayName, isDarkXiangqiEngineClientId } from './engines
 import { darkXiangqiEnabled } from './feature-flags.js';
 import type * as persistence from './persistence.js';
 import { tenantParticipant } from './variant-tenant/events.js';
-import { applyTenantEvent, replayTenantEvents } from './variant-tenant/runtime.js';
+import {
+  applyTenantEvent,
+  replayTenantEvents,
+  tenantPveEngineId,
+} from './variant-tenant/runtime.js';
 import type {
   TenantClientEvent,
   TenantRoomEvent,
@@ -443,6 +449,11 @@ export const darkXiangqiTenant: DarkXiangqiTenant = {
   },
   wire: {
     acceptsSeatVacated: true,
+    // The engine id names a bot, never a position: no hidden information.
+    snapshotExtras: (room) => {
+      const pveEngineId = tenantPveEngineId(darkXiangqiTenant, room);
+      return pveEngineId === null ? { roomMode: 'pvp' } : { roomMode: 'pve', pveEngineId };
+    },
   },
   persistence: {
     resultForWinner: darkXiangqiResult,

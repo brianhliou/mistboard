@@ -152,6 +152,11 @@ let selectedSquare: XiangqiSquare | null = null;
 // The square a piece is being dragged from. The renderer keeps a dim source
 // shadow while the shared drag layer shows the floating ghost.
 let draggingFrom: XiangqiSquare | null = null;
+// Snapshot extras that ride the frame (read by the chrome + play-again body).
+// The room mode tells a bot game from a PvP one: without it every room read as
+// PvP and a finished bot game had no Rematch.
+let roomMode: 'pve' | 'pvp' = 'pvp';
+let pveEngineId: string | null = null;
 
 // ── Shared tenant room chrome config ─────────────────────────────────────────
 
@@ -196,15 +201,21 @@ const client = createTenantLiveClient<XiangqiColor, DarkXiangqiWireView, Xiangqi
   defaultRoomId: 'dxq_dev',
   flippable: true,
   boardClass: 'xiangqi-live-board',
-  // Not on the Dark Xiangqi wire (golden-pinned, no snapshot extras): the forfeit
-  // banner and rematch block never arm. Chrome defaults (pvp, no forfeit, no
-  // rematch) match the original, so no chrome overrides are needed.
+  chrome: {
+    roomMode: () => roomMode,
+  },
+  // A bot game's Rematch opens a new bot room; the chrome swaps the colours.
   playAgainRequestBody: (state) => ({
-    mode: 'pvp',
+    mode: roomMode,
     gameSpecId: 'dark-xiangqi',
     preferredColor: 'random',
+    ...(roomMode === 'pve' && pveEngineId ? { engineId: pveEngineId } : {}),
     ...(state.timeControl ? { timeControl: state.timeControl } : {}),
   }),
+  onFrame: (frame) => {
+    if (frame.roomMode === 'pve' || frame.roomMode === 'pvp') roomMode = frame.roomMode;
+    if (typeof frame.pveEngineId === 'string') pveEngineId = frame.pveEngineId;
+  },
   onSnapshotApplied: () => {
     if (core) maybePlayDarkXiangqiSnapshotSound(core.state.view, core.state.seat);
   },
@@ -215,6 +226,8 @@ const client = createTenantLiveClient<XiangqiColor, DarkXiangqiWireView, Xiangqi
   resetState: () => {
     selectedSquare = null;
     draggingFrom = null;
+    roomMode = 'pvp';
+    pveEngineId = null;
   },
   renderBoard,
   renderExtras: renderLiveCaptureStrips,

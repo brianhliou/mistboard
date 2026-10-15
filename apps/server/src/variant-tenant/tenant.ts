@@ -384,6 +384,15 @@ export type VariantTenant<
   // index, so a tenant with more than two seats cannot be silently mis-read.
   colors: readonly C[];
   /**
+   * Mutual-confirm PvP rematch (rematch.ts) is ON by default for every tenant:
+   * a finished two-seat PvP live room carries the offer flags in its snapshot
+   * (tenantRoomOffersRematch) and the ws runtime opens the new room through the
+   * registration's lobby factory (rematch-context.ts). A tenant that cannot
+   * rematch says why here; variant-tenant-rematch.test.ts holds every
+   * registered tenant to one or the other.
+   */
+  rematch?: { optOut: string };
+  /**
    * Start the clock on the very first move rather than after the first
    * go-around.
    *

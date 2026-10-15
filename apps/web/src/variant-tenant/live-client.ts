@@ -60,6 +60,7 @@ import {
   type TenantSocketClient,
   type TenantSocketClientOptions,
 } from './socket-client.js';
+import { createTenantRematch } from './tenant-rematch.js';
 
 export type TenantLiveClock<C extends string> = {
   activeColor: C | null;
@@ -419,6 +420,17 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     return view.status.turn === state.seat;
   }
 
+  // Mutual-confirm PvP rematch, on for every two-seat tenant (2026-10-14): the
+  // server sends the offer flags on a finished PvP room's snapshot and in
+  // rematch:state frames, and socket-client follows the redirect. A bot room
+  // shows Play again instead (room-chrome), and a table of four has no swap.
+  const rematch =
+    tenant.colors.length === 2
+      ? createTenantRematch(tenant.colors as unknown as readonly [C, C], () =>
+          tenant.isColor(state.seat) ? state.seat : null,
+        )
+      : null;
+
   const chrome = createTenantRoomChrome(tenant, {
     gameSpecId: config.gameSpecId,
     view: () => state.view,
@@ -439,7 +451,8 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     isReplayLive: () => replay.isLive(),
     orientation,
     playAgainRequestBody: () => config.playAgainRequestBody(state),
-    rematchControls: config.chrome?.rematchControls ?? (() => null),
+    rematchControls:
+      config.chrome?.rematchControls ?? ((sendSocket) => rematch?.controls(sendSocket) ?? null),
     lobbyMatch: () => state.lobbyMatch,
     rated: () => state.rated,
     ...(config.chrome?.variantDetail ? { variantDetail: config.chrome.variantDetail } : {}),
@@ -476,6 +489,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     if (frame.lobbyMatch === true) state.lobbyMatch = true;
     if (typeof frame.rated === 'boolean') state.rated = frame.rated;
     if (frame.events) state.events = frame.events;
+    rematch?.applyFrame(frame.rematch);
     config.onFrame?.(frame);
   }
 
@@ -559,6 +573,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     previousFinishView = null;
     replay.reset();
     chrome.resetState();
+    rematch?.reset();
     initLiveSound();
     resetLiveSoundState();
     config.resetSounds?.();
@@ -613,7 +628,10 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       },
       applyEvent: (frame) => applyEventFrame(frame as TenantLiveFrame<C, V>),
       ...(config.onServerMessage ? { onServerMessage: config.onServerMessage } : {}),
-      ...(config.onRematchState ? { onRematchState: config.onRematchState } : {}),
+      onRematchState: (message) => {
+        rematch?.applyState(message);
+        config.onRematchState?.(message);
+      },
       render: renderAll,
     });
     socket.connect();

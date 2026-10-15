@@ -6,8 +6,9 @@
  * fixture-independent hidden-info invariants.
  *
  * Dark Xiangqi wire quirks this suite intentionally pins (they differ from
- * DMX): the snapshot has NO mode/pveEngineId/rated/forfeitDeadline/rematch
- * keys; spectators and the other seat DO receive non-move events (only
+ * DMX): the snapshot has NO mode/rated/forfeitDeadline keys, carries roomMode
+ * (pveEngineId only in a bot room; 2026-10-14, so a bot game gets Rematch),
+ * and a finished PvP room carries the shared rematch offer flags; spectators and the other seat DO receive non-move events (only
  * move-played is redacted); the board re-encodes shrouded entries as
  * {color, shrouded: true}; the event log accepts seat-vacated.
  *
@@ -405,14 +406,33 @@ test('dxq golden wire: lastMove is stripped unless the seat moved last', () => {
   assert.equal(snapshots.black!.state.lastMove, undefined);
 });
 
-test('dxq golden wire: snapshot omits engine/rated/rematch keys (dxq wire shape)', () => {
-  const script = runScriptA();
-  const last = script.steps.at(-1);
-  assert.ok(last);
-  for (const seat of SEATS) {
-    const snapshot: SeatRecord = last.snapshots[seat]!;
-    for (const key of ['mode', 'pveEngineId', 'rated', 'forfeitDeadline', 'rematch']) {
-      assert.ok(!(key in snapshot), `dxq snapshot must not carry '${key}'`);
+test('dxq golden wire: snapshot marks room mode, omits rated keys, and offers rematch only once finished', () => {
+  for (const script of runAllScripts()) {
+    for (const step of script.steps) {
+      for (const seat of SEATS) {
+        const snapshot = step.snapshots[seat] as SeatRecord & Record<string, unknown>;
+        if (!snapshot) continue;
+        // 2026-10-14: roomMode so the client knows a bot game (Rematch); a
+        // scripted room has no engine seat, so no engine id rides along.
+        assert.equal(snapshot.roomMode, 'pvp', `${script.id}/${step.label}: roomMode pvp`);
+        for (const key of ['mode', 'pveEngineId', 'rated', 'forfeitDeadline']) {
+          assert.ok(!(key in snapshot), `dxq snapshot must not carry '${key}'`);
+        }
+        const status = (snapshot.state as { status: { type: string } }).status.type;
+        if (status !== 'finished') {
+          assert.ok(!('rematch' in snapshot), `${script.id}/${step.label}: no rematch live`);
+          continue;
+        }
+        // The rematch block is two booleans and a room id: no position, no fog.
+        assert.deepEqual(Object.keys(snapshot.rematch as object).sort(), [
+          'finalizedRoomId',
+          'offers',
+        ]);
+        assert.deepEqual(Object.keys((snapshot.rematch as { offers: object }).offers).sort(), [
+          'black',
+          'red',
+        ]);
+      }
     }
   }
 });

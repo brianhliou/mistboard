@@ -51,7 +51,6 @@ import {
   applyTenantEvent,
   replayTenantEvents,
   tenantPveEngineId,
-  tenantRematchOfferFlags,
 } from './variant-tenant/runtime.js';
 import type {
   TenantClientEvent,
@@ -307,7 +306,8 @@ export const jieqiTenant: JieqiTenant = {
   },
   // Emit the room mode + engine id so the client knows a finished PvE game was
   // PvE and "Play again" re-creates a PvE game vs the same engine (not a PvP
-  // invite), check marks, and a finished PvP room's rematch offers.
+  // invite), and check marks. A finished PvP room's rematch offers ride the
+  // shared snapshot (tenantSnapshotPayload), as for every tenant.
   wire: {
     snapshotExtras: (room) => {
       const pveEngineId = tenantPveEngineId(jieqiTenant, room);
@@ -316,17 +316,6 @@ export const jieqiTenant: JieqiTenant = {
         ...(pveEngineId === null ? { roomMode: 'pvp' } : { roomMode: 'pve', pveEngineId }),
         // Only when a move gave check, so a check-free room's wire is unchanged.
         ...(marks.some((mark) => mark !== '') ? { checkMarks: marks } : {}),
-        // PvP rematch state (variant-tenant/rematch.ts), only once the game is
-        // over, so a reload shows a pending offer and a live room's wire is
-        // unchanged. The flags say which colour offered, nothing else.
-        ...(pveEngineId === null && room.projection.state.status.type === 'finished'
-          ? {
-              rematch: {
-                offers: tenantRematchOfferFlags(jieqiTenant, room),
-                finalizedRoomId: room.rematch.finalizedRoomId ?? null,
-              },
-            }
-          : {}),
       };
     },
   },

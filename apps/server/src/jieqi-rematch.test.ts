@@ -18,7 +18,7 @@ import {
   STANDARD_JIEQI_DEAL,
 } from '@mistboard/game';
 import type { WebSocket } from 'ws';
-import { createJieqiRoom, jieqiRematchContext, jieqiRooms } from './jieqi-registration.js';
+import { createJieqiRoom, jieqiRooms } from './jieqi-registration.js';
 import type { JieqiEvent, JieqiRuntimeRoom } from './jieqi-runtime.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import { handleJieqiWebSocketConnection, type JieqiLiveRoom } from './server-ws-jieqi.js';
@@ -26,6 +26,7 @@ import {
   finalizeTenantRematchIfReady,
   type TenantRematchContext,
 } from './variant-tenant/rematch.js';
+import { registeredTenantRematchContext } from './variant-tenant/rematch-context.js';
 import { createTenantRuntimeRoomFromEvents } from './variant-tenant/runtime.js';
 import { mintTenantSeatToken } from './variant-tenant/seat-session.js';
 
@@ -36,7 +37,6 @@ const WS_CTX = {
   defaultRoomRegion: 'test',
   wsMessageLimit: 1_000,
   wsMessageWindowMs: 1_000,
-  rematch: jieqiRematchContext,
 };
 
 class FakeSocket {
@@ -292,6 +292,16 @@ test('jieqi rematch: a rated game rematches rated only between two accounts', as
 
 test('jieqi rematch context: rated carries over only while the rated switch and pace allow it', async () => {
   const prior = process.env.MISTBOARD_RATED_ENABLED;
+  // The default context every tenant gets (rematch-context.ts), found by room id.
+  const jieqiRematchContext = registeredTenantRematchContext<
+    'jieqi',
+    JieqiColor,
+    JieqiMove,
+    JieqiGameState,
+    string,
+    JieqiLiveRoom['clients'] extends Set<infer Client> ? Client : never
+  >(`${jieqiTenant.roomIdPrefix}probe`, () => {});
+  assert.ok(jieqiRematchContext, 'jieqi resolves the registry rematch context');
   try {
     process.env.MISTBOARD_RATED_ENABLED = 'true';
     const rated = await jieqiRematchContext.createRoom(
