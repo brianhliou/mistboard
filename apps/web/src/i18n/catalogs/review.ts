@@ -199,6 +199,8 @@ export const EN_REVIEW = {
   'historical.allVariants': 'All variants',
   'historical.anySource': 'Any source',
   'historical.sourcePlayedHere': 'Played on Mistboard',
+  'historical.sourcePlayedVsPeople': 'Played on Mistboard: vs people',
+  'historical.sourcePlayedVsBots': 'Played on Mistboard: vs bots',
   'historical.sourceEngineMatches': 'Engine matches',
   'historical.sourceEngineMatch': 'Engine match',
   'historical.sourceEngineGames': 'Engine games',

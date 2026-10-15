@@ -402,6 +402,8 @@ export const ZH_HANS_REVIEW = {
   'historical.allVariants': '全部棋种',
   'historical.anySource': '任意来源',
   'historical.sourcePlayedHere': '在 Mistboard 对弈',
+  'historical.sourcePlayedVsPeople': '在 Mistboard 对弈：真人对局',
+  'historical.sourcePlayedVsBots': '在 Mistboard 对弈：人机对局',
   'historical.sourceEngineMatches': '引擎对局',
   'historical.sourceEngineMatch': '引擎对局',
   'historical.sourceEngineGames': '机器人对局',
