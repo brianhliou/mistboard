@@ -26,6 +26,8 @@ Conventions:
 
 ### Playing
 
+- rematch against a person is on by default in every two-player variant ([dd74f380](https://github.com/brianhliou/mistboard/commit/dd74f380))
+- finished correspondence games now stay on /correspondence for two weeks with the result and how each ended, and the bell tells you when one ends while you are away ([dd74f380](https://github.com/brianhliou/mistboard/commit/dd74f380))
 - with two or more correspondence games waiting on you, the homepage button opens your correspondence list ([3d14b10d](https://github.com/brianhliou/mistboard/commit/3d14b10d))
 - jieqi friend and lobby games now offer a rematch with colours swapped and a fresh deal ([3d14b10d](https://github.com/brianhliou/mistboard/commit/3d14b10d))
 - banqi shows reveal odds on face-down pieces for both players and spectators, rated included ([493549c0](https://github.com/brianhliou/mistboard/commit/493549c0))
@@ -205,6 +207,9 @@ Conventions:
 
 ### Fixed
 
+- the xiangqi engine no longer re-downloads its 51 MB network file on every visit ([dd74f380](https://github.com/brianhliou/mistboard/commit/dd74f380))
+- current games no longer lists games abandoned mid-play ([dd74f380](https://github.com/brianhliou/mistboard/commit/dd74f380))
+- the Fortress and Atomic Xiangqi on-hold article now has its Chinese pages ([dd74f380](https://github.com/brianhliou/mistboard/commit/dd74f380))
 - pieces in hand can now be dropped on the crazyhouse xiangqi analysis board, by tap or drag ([3d14b10d](https://github.com/brianhliou/mistboard/commit/3d14b10d))
 - the active players panel no longer lists the site's own test accounts ([3d14b10d](https://github.com/brianhliou/mistboard/commit/3d14b10d))
 - on phones the jieqi post-game buttons no longer start below the fold ([3d14b10d](https://github.com/brianhliou/mistboard/commit/3d14b10d))
