@@ -383,6 +383,12 @@
       "zh-hant": "MistyBanqi 是怎麼下棋的"
     }
   },
+  "one-opponent-four-variants": {
+    "title": "One opponent, four variants",
+    "kind": "article",
+    "description": "Four correspondence games against the same player, one in each of four xiangqi variants. Each turned at one moment, and each moment came from what that variant changes.",
+    "status": "draft"
+  },
   "one-thousand-games": {
     "title": "1,000 games played",
     "kind": "article",

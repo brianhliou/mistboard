@@ -28,6 +28,7 @@ import { duckXiangqiGameTreeArticle } from './articles/content/duck-xiangqi-game
 import { solverAuditArticle } from './articles/content/solver-audit.js';
 import { jieqiBotWinsArticle } from './articles/content/jieqi-bot-wins.js';
 import { jieqiPuzzleSearchArticle } from './articles/content/jieqi-puzzle-search.js';
+import { oneOpponentFourVariantsArticle } from './articles/content/one-opponent-four-variants.js';
 import { oneThousandGamesArticle } from './articles/content/one-thousand-games.js';
 import { darkChessArticle } from './articles/content/dark-chess.js';
 import { darkChessConceptsArticle } from './articles/content/fog-chess-concepts.js';
@@ -71,6 +72,7 @@ import { zuoWenjingArticle } from './articles/content/zuo-wenjing.js';
 import articleSnapshotFog from './article-snapshot-fog.json' with { type: 'json' };
 
 export const articles: Article[] = [
+  oneOpponentFourVariantsArticle,
   fortressAndAtomicXiangqiOnHoldArticle,
   jieqiPuzzleSearchArticle,
   longestForcedMatesXiangqiArticle,
