@@ -5,7 +5,8 @@
 //
 // Two things are specific to this backend. The net is 51 MB and is fetched by
 // the worker on the first preload (byte progress reaches the caller through
-// `preload(onProgress)`), and Pikafish speaks a0-i9 coordinates while every
+// `preload(onProgress)`; later visits read it from Cache Storage with no
+// progress, see worker.js), and Pikafish speaks a0-i9 coordinates while every
 // caller on this side speaks Fairy-Stockfish's a1-i10, so moves are shifted
 // down one rank on the way in and PV moves shifted back up on the way out.
 import type {
@@ -40,7 +41,7 @@ const EMPTY_UPDATE: CevalUpdate = {
 type EngineMessage =
   | { type: 'ready' }
   | { type: 'net-progress'; loaded: number; total: number }
-  | { type: 'net-written'; bytes: number }
+  | { type: 'net-written'; bytes: number; source?: 'cache' | 'network' }
   | { type: 'line'; line: string }
   | { type: 'stderr'; line: string }
   | { type: 'error'; error?: string };
