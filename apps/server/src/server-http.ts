@@ -39,6 +39,7 @@ import {
 import type { LobbyTicket, Room } from './server-types.js';
 import { UnreplayableTenantGameError } from './variant-tenant/replay-guard.js';
 import { viewerCountryCookie, viewerCountryFromRequest } from './viewer-country.js';
+import { xShortLinkRedirect } from './x-short-links.js';
 import { broadcastViewers } from './xiangqi-broadcast-viewers.js';
 
 export type PersistenceHealthEntry = {
@@ -560,6 +561,15 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
         request.url = '/';
         void serveHandler(request, response, { public: options.staticDir });
       });
+      return;
+    }
+
+    // Short links for X posts (x-short-links.ts): a 302 so a slug can be
+    // repointed, and no-store so neither the edge nor a browser pins the hop.
+    const xShortLinkTarget = xShortLinkRedirect(pathname);
+    if (xShortLinkTarget) {
+      response.writeHead(302, { location: xShortLinkTarget, 'cache-control': 'no-store' });
+      response.end();
       return;
     }
 
