@@ -32,6 +32,7 @@ import {
   type BoardPoint,
   boardLastMoveCellMarksSvg,
   boardLastMoveMarkersSvg,
+  boardLastMovePiece,
 } from './board-lastmove.js';
 import { tokenPieceSize, xiangqiPieceDrawSize } from './board-metrics.js';
 import { readDisplayPreferences } from './display-preferences.js';
@@ -545,7 +546,12 @@ function lastMoveLayer(
       shape: xiangqiPieceSetShape(readStoredXiangqiPieceSet(), 'square'),
     });
   }
-  return boardLastMoveMarkersSvg(ends, MARK_PIECE_SIZE, layer);
+  return boardLastMoveMarkersSvg(
+    ends,
+    MARK_PIECE_SIZE,
+    layer,
+    boardLastMovePiece(PIECE_SIZE, readStoredXiangqiPieceSet()),
+  );
 }
 
 function visibleLastMoveCenter(

@@ -646,8 +646,7 @@
 .current-game-board .jieqi-piece,
 .current-game-board .banqi-piece,
 .current-game-board .banqi-back,
-.current-game-board .fxq-piece,
-.current-game-board .xq-live-lastmove-ring {
+.current-game-board .fxq-piece {
   filter: none;
 }
 

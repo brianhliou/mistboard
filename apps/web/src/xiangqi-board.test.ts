@@ -105,7 +105,7 @@ describe('standard Xiangqi board SVG', () => {
 
     // Red perspective geometry: x = 36 + file*60, y = 36 + (10 - rank)*60.
     // b3 -> (96, 456); e3 -> (276, 456). Origin = the darker -from shadow disc;
-    // destination = the gold ring around the moved piece (r=29 > piece r=27).
+    // destination = the gold band hugging the moved piece from outside.
     // Positions are asserted here; the radii belong to board-lastmove.test.ts,
     // which derives them. Restating them meant this failed on a deliberate
     // geometry change rather than on a bug.
@@ -113,7 +113,9 @@ describe('standard Xiangqi board SVG', () => {
     expect(svg).toMatch(
       /<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="96" cy="456" r="[\d.]+"\/>/,
     );
-    expect(svg).toMatch(/<circle class="xq-live-lastmove-ring" cx="276" cy="456" r="[\d.]+"\/>/);
+    expect(svg).toMatch(
+      /<circle class="xq-live-lastmove-ring" cx="276" cy="456" r="[\d.]+" stroke-width="[\d.]+"\/>/,
+    );
     expect(svg.match(/xq-live-lastmove-from/g)).toHaveLength(1);
     expect(svg.match(/xq-live-lastmove-ring/g)).toHaveLength(1);
 
@@ -124,7 +126,7 @@ describe('standard Xiangqi board SVG', () => {
       /<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="456" cy="156" r="[\d.]+"\/>/,
     );
     expect(flipped).toMatch(
-      /<circle class="xq-live-lastmove-ring" cx="276" cy="156" r="[\d.]+"\/>/,
+      /<circle class="xq-live-lastmove-ring" cx="276" cy="156" r="[\d.]+" stroke-width="[\d.]+"\/>/,
     );
   });
 
@@ -205,6 +207,35 @@ describe('keyed piece slots + animateXiangqiBoardMove', () => {
       { transform: 'none' },
     ]);
     expect(animate.mock.calls[0]![1]).toMatchObject({ duration: 250 });
+  });
+
+  it('carries the destination band with the piece, on the same glide', () => {
+    const host = mountMovedBoard();
+    const slot = host.querySelector('[data-piece-square="e3"]');
+    const ring = host.querySelector('.xq-live-lastmove-ring');
+    expect(ring).not.toBeNull();
+    const slotAnimate = vi.fn();
+    const ringAnimate = vi.fn();
+    Object.assign(slot as object, { animate: slotAnimate });
+    Object.assign(ring as object, { animate: ringAnimate, getAnimations: () => [] });
+    animateXiangqiBoardMove(host, { from: 'b3', to: 'e3' }, 'red');
+    // Same keyframes and timing as the piece: the band is visible the whole way
+    // (no opacity keyframes) and stays when the piece lands.
+    expect(ringAnimate).toHaveBeenCalledTimes(1);
+    expect(ringAnimate.mock.calls[0]![0]).toEqual(slotAnimate.mock.calls[0]![0]);
+    expect(ringAnimate.mock.calls[0]![1]).toEqual(slotAnimate.mock.calls[0]![1]);
+    for (const frame of ringAnimate.mock.calls[0]![0] as Keyframe[]) {
+      expect(frame).not.toHaveProperty('opacity');
+    }
+  });
+
+  it('leaves the band alone on a back-step', () => {
+    const host = mountMovedBoard();
+    const ring = host.querySelector('.xq-live-lastmove-ring');
+    const ringAnimate = vi.fn();
+    Object.assign(ring as object, { animate: ringAnimate, getAnimations: () => [] });
+    animateXiangqiBoardMove(host, { from: 'b3', to: 'e3' }, 'red', { reverse: true });
+    expect(ringAnimate).not.toHaveBeenCalled();
   });
 
   it('includes the mounted river gutter in a cross-river glide', () => {

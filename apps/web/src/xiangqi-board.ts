@@ -20,14 +20,16 @@ import type {
   XiangqiPiece,
   XiangqiSquare,
 } from '@mistboard/game';
-import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
 import { boardCheckGlowSvg } from './board-check.js';
 import {
-  BOARD_LASTMOVE_MARKER_SELECTOR,
+  animateBoardLastMoveArrival,
   BOARD_LASTMOVE_OVER_GROUP_ATTRS,
   type BoardLastMoveLayer,
+  type BoardLastMovePiece,
   boardLastMoveCellMarksSvg,
   boardLastMoveMarkersSvg,
+  boardLastMovePiece,
 } from './board-lastmove.js';
 import { tokenPieceSize, xiangqiPieceDrawSize } from './board-metrics.js';
 import { readDisplayPreferences } from './display-preferences.js';
@@ -233,16 +235,18 @@ export function xiangqiBoardSvg(
         ),
       )
     : '';
-  // The square grid's ring traces the piece actually drawn: the asset sets keep
-  // their disc there.
-  const cellPiece: CellPiece = {
-    size: PIECE_SIZE,
-    shape: xiangqiPieceSetShape(state.pieceSet ?? readStoredXiangqiPieceSet(), 'square'),
+  // Both destination marks trace the piece actually drawn: the square grid's
+  // ring its outline (the asset sets keep their disc there), the intersection
+  // band the outside of its disc.
+  const markSet = state.pieceSet ?? readStoredXiangqiPieceSet();
+  const markPiece: MarkPiece = {
+    cell: { size: PIECE_SIZE, shape: xiangqiPieceSetShape(markSet, 'square') },
+    band: boardLastMovePiece(PIECE_SIZE, markSet),
   };
   const lastMoveMarks = (layer: BoardLastMoveLayer) =>
     state.lastDropSquare
-      ? lastDropLayer(state.lastDropSquare, perspective, layout, layer, cellPiece)
-      : lastMoveLayer(view, perspective, layout, layer, cellPiece);
+      ? lastDropLayer(state.lastDropSquare, perspective, layout, layer, markPiece)
+      : lastMoveLayer(view, perspective, layout, layer, markPiece);
   return `
     <svg class="xq-live-svg xq-live-svg--${layout} xq-surface xq-surface--${layout}" data-xiangqi-layout="${layout}" viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg">
       <rect class="xq-live-bg" x="${vb.minX}" y="${vb.minY}" width="${vb.width}" height="${vb.height}"/>
@@ -265,14 +269,17 @@ export function xiangqiBoardSvg(
   `;
 }
 
-type CellPiece = Parameters<typeof boardLastMoveCellMarksSvg>[3];
+type MarkPiece = {
+  cell: Parameters<typeof boardLastMoveCellMarksSvg>[3];
+  band: BoardLastMovePiece;
+};
 
 function lastMoveLayer(
   view: StandardXiangqiPlayerView,
   perspective: XiangqiColor,
   layout: XiangqiBoardLayout,
   layer: BoardLastMoveLayer,
-  cellPiece: CellPiece,
+  markPiece: MarkPiece,
 ): string {
   if (!view.lastMove) return '';
   const from = coordOf(view.lastMove.from);
@@ -282,15 +289,24 @@ function lastMoveLayer(
   if (layout === 'cell') {
     // Amber origin cell under the pieces, amber ring on the moved piece over
     // them (board-lastmove.ts, Brian's 2026-10-15 pick).
-    return boardLastMoveCellMarksSvg({ from: fromCenter, to: toCenter }, CELL, layer, cellPiece);
+    return boardLastMoveCellMarksSvg(
+      { from: fromCenter, to: toCenter },
+      CELL,
+      layer,
+      markPiece.cell,
+    );
   }
   // Origin: a pale "the piece came from here" wash, under the pieces.
-  // Destination: a gold ring around the moved piece, drawn over the pieces
-  // since they grew to 98% of the gap and hid it. Markup + styling are shared with
-  // every other token board (board-lastmove.ts), the fog board included since
-  // 2026-08-30; this board is the one the proportions were tuned on, so it
-  // passes its layout piece size and gets the canonical radii straight back.
-  return boardLastMoveMarkersSvg({ from: fromCenter, to: toCenter }, MARK_PIECE_SIZE, layer);
+  // Destination: a thin gold band hugging the outside of the moved piece, also
+  // under the pieces (2026-10-15). Markup + styling are shared with every other
+  // token board (board-lastmove.ts), the fog board included since 2026-08-30;
+  // this board is the one the proportions were tuned on.
+  return boardLastMoveMarkersSvg(
+    { from: fromCenter, to: toCenter },
+    MARK_PIECE_SIZE,
+    layer,
+    markPiece.band,
+  );
 }
 
 function checkLayer(
@@ -307,12 +323,14 @@ function lastDropLayer(
   perspective: XiangqiColor,
   layout: XiangqiBoardLayout,
   layer: BoardLastMoveLayer,
-  cellPiece: CellPiece,
+  markPiece: MarkPiece,
 ): string {
   const to = coordOf(square);
   const toCenter = intersection(to.file, to.rank, perspective, layout);
-  if (layout === 'cell') return boardLastMoveCellMarksSvg({ to: toCenter }, CELL, layer, cellPiece);
-  return boardLastMoveMarkersSvg({ to: toCenter }, MARK_PIECE_SIZE, layer);
+  if (layout === 'cell') {
+    return boardLastMoveCellMarksSvg({ to: toCenter }, CELL, layer, markPiece.cell);
+  }
+  return boardLastMoveMarkersSvg({ to: toCenter }, MARK_PIECE_SIZE, layer, markPiece.band);
 }
 
 // ── Arrows (engine PV hints) ─────────────────────────────────────────────────
@@ -505,15 +523,13 @@ export function animateXiangqiBoardMove(
   const from = intersection(origin.file, origin.rank, perspective, layout);
   const to = intersection(settle.file, settle.rank, perspective, layout);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
-  // Draw the destination marker on as the piece lands (forward moves only). On
-  // intersection boards this is the gold ring; on square grids it is the
-  // destination-cell wash plus the amber ring on the piece. A reverse step
-  // renders the prior move's marker at a
-  // different square, so fading it would not track the reverse glide.
+  // Forward moves only: on intersection boards the gold band rides on the
+  // piece for the whole glide; on square grids the destination-cell wash and
+  // the amber ring on the piece fade in as it lands. A reverse step renders the
+  // prior move's marks at a different square, so neither would track the
+  // reverse glide.
   if (!opts.reverse) {
-    for (const marker of host.querySelectorAll(BOARD_LASTMOVE_MARKER_SELECTOR)) {
-      drawMarkerOnArrival(marker, duration);
-    }
+    animateBoardLastMoveArrival(host, from, to, duration);
   }
 }
 
