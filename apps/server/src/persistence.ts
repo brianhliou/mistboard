@@ -30,15 +30,19 @@ export type {
   AchievementCatalog,
   AchievementCatalogEntry,
   AchievementEvaluation,
+  AchievementFamilyCatalogEntry,
   EvaluateAchievementsInput,
   NewAchievementAward,
   UserAchievement,
+  UserAchievementsPage,
 } from './persistence-achievements.js';
 export {
   awardAchievements,
+  deriveAchievementCounts,
   deriveAchievementFacts,
   evaluateAchievements,
   getAchievementCatalog,
+  getUserAchievementProgress,
   getUserAchievements,
   getUserAchievementsByHandle,
 } from './persistence-achievements.js';

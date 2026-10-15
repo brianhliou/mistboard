@@ -1,12 +1,23 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  ACHIEVEMENT_AWARD_IDS,
+  ACHIEVEMENT_FAMILIES,
   ACHIEVEMENT_ID_PATTERN,
   ACHIEVEMENTS,
+  type AchievementCounts,
+  type AchievementFact,
   type AchievementFacts,
+  achievementCountersFor,
   achievementFactsFor,
+  achievementFamiliesForTrigger,
+  achievementFamilyProgress,
+  achievementLevelId,
   achievementsForTrigger,
   getAchievementDefinition,
+  getAchievementFamily,
+  getAchievementLevel,
+  qualifyAchievementLevels,
   qualifyAchievements,
 } from './index.js';
 
@@ -97,4 +108,98 @@ test('a trigger re-evaluates only its own definitions and derives only their fac
 test('lookup is fail-closed for unknown ids', () => {
   assert.equal(getAchievementDefinition('first-game')?.category, 'play');
   assert.equal(getAchievementDefinition('top-bot-xiangqi'), null);
+});
+
+test('families: ids, keys and levels are well formed, thresholds strictly ascending', () => {
+  const singleIds = new Set<string>(ACHIEVEMENTS.map((definition) => definition.id));
+  const metals = ['bronze', 'silver', 'gold', 'platinum'];
+  for (const family of ACHIEVEMENT_FAMILIES) {
+    assert.ok(!singleIds.has(family.id), `${family.id} collides with a single`);
+    assert.match(family.titleKey, /^profile\.achievement[A-Z]\w+$/);
+    assert.equal(family.descriptionKey, `${family.titleKey}Desc`);
+    assert.equal(family.hintKey, `${family.titleKey}Hint`);
+    assert.ok(family.triggers.length > 0, `${family.id} has no trigger`);
+    assert.ok(family.levels.length > 0 && family.levels.length <= metals.length);
+    family.levels.forEach((level, index) => {
+      assert.ok(Number.isInteger(level.threshold) && level.threshold > 0);
+      if (index > 0) assert.ok(level.threshold > family.levels[index - 1]!.threshold);
+      assert.equal(level.metal, metals[index], `${family.id} level ${index + 1} metal`);
+      assert.match(achievementLevelId(family.id, level.threshold), ACHIEVEMENT_ID_PATTERN);
+    });
+  }
+  assert.equal(new Set(ACHIEVEMENT_AWARD_IDS).size, ACHIEVEMENT_AWARD_IDS.length);
+});
+
+test('wins levels up at 10 / 50 / 100 / 500, bronze to platinum', () => {
+  const wins = getAchievementFamily('wins');
+  assert.deepEqual(
+    wins?.levels.map((level) => [level.threshold, level.metal]),
+    [
+      [10, 'bronze'],
+      [50, 'silver'],
+      [100, 'gold'],
+      [500, 'platinum'],
+    ],
+  );
+  assert.deepEqual(
+    achievementFamiliesForTrigger('game_end').map((family) => family.id),
+    ['wins'],
+  );
+  assert.deepEqual(achievementFamiliesForTrigger('forum_post'), []);
+  assert.deepEqual(
+    [...achievementCountersFor(ACHIEVEMENT_FAMILIES)],
+    [['wins', [10, 50, 100, 500]]],
+  );
+});
+
+test('level ids resolve to their family and level, and nothing else does', () => {
+  const level = getAchievementLevel('wins:100');
+  assert.equal(level?.family.id, 'wins');
+  assert.equal(level?.index, 2);
+  assert.equal(level?.level.metal, 'gold');
+  for (const id of ['wins', 'wins:11', 'first-game', 'losses:10', ':10', 'arena:x:1']) {
+    assert.equal(getAchievementLevel(id), null, id);
+  }
+});
+
+const fact = (sourceId: string): AchievementFact => ({ at: AT, sourceKind: 'game', sourceId });
+
+test('a count below the first threshold awards nothing; each crossing awards its own level', () => {
+  assert.deepEqual(qualifyAchievementLevels({} satisfies AchievementCounts), []);
+  assert.deepEqual(qualifyAchievementLevels({ wins: { count: 9, reached: {} } }), []);
+  const at10 = qualifyAchievementLevels({ wins: { count: 10, reached: { 10: fact('g10') } } });
+  assert.deepEqual(
+    at10.map((award) => [award.achievementId, award.sourceId]),
+    [['wins:10', 'g10']],
+  );
+  // A jump (a backfill) crosses several levels at once, each dated at its own game.
+  const jump = qualifyAchievementLevels({
+    wins: { count: 143, reached: { 10: fact('g10'), 50: fact('g050'), 100: fact('g0100') } },
+  });
+  assert.deepEqual(
+    jump.map((award) => [award.achievementId, award.sourceId]),
+    [
+      ['wins:10', 'g10'],
+      ['wins:50', 'g050'],
+      ['wins:100', 'g0100'],
+    ],
+  );
+});
+
+test('progress: level held, count, and the next threshold (null at the top)', () => {
+  const wins = getAchievementFamily('wins')!;
+  assert.deepEqual(achievementFamilyProgress(wins, new Set(), 3), {
+    id: 'wins',
+    level: 0,
+    count: 3,
+    nextThreshold: 10,
+  });
+  assert.deepEqual(
+    achievementFamilyProgress(wins, new Set(['wins:10', 'wins:50', 'wins:100']), 143),
+    { id: 'wins', level: 3, count: 143, nextThreshold: 500 },
+  );
+  assert.equal(
+    achievementFamilyProgress(wins, new Set(ACHIEVEMENT_AWARD_IDS), 612).nextThreshold,
+    null,
+  );
 });

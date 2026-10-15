@@ -42,6 +42,7 @@ export type UiIconName =
   | 'achievement-puzzle'
   | 'achievement-rated'
   | 'achievement-versus'
+  | 'achievement-wins'
   | 'announcement-release'
   | 'announcement-article'
   | 'announcement-status'
@@ -74,6 +75,7 @@ const UI_ICON_NODES: Record<UiIconName, IconNode> = {
   'achievement-puzzle': Puzzle,
   'achievement-rated': TrendingUp,
   'achievement-versus': Handshake,
+  'achievement-wins': Trophy,
   'announcement-release': Megaphone,
   'announcement-article': Newspaper,
   'announcement-status': Info,

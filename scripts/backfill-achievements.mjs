@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // Award every achievement an account already qualifies for from its existing
 // games, puzzle attempts and forum posts (persistence-achievements.ts; the
-// definitions live in packages/game/src/achievements.ts).
+// definitions live in packages/game/src/achievements.ts). Leveling families
+// (wins at 10 / 50 / 100 / 500) award every level the count has reached, each
+// dated at the game that reached it, and print one line per level.
 //
 // Run it once when the ledger ships and again whenever a definition is added.
 // It goes through the same facts and predicates as the live hooks, so it can
@@ -20,7 +22,7 @@
 //     'DATABASE_URL="$DATABASE_PUBLIC_URL" node scripts/backfill-achievements.mjs'
 
 import { parseArgs } from 'node:util';
-import { ACHIEVEMENTS } from '@mistboard/game';
+import { ACHIEVEMENT_AWARD_IDS } from '@mistboard/game';
 import { evaluateAchievements } from '../apps/server/dist/persistence-achievements.js';
 import { close, init } from '../apps/server/dist/persistence-db.js';
 
@@ -50,11 +52,11 @@ try {
   console.log(
     `${values.write ? 'wrote' : 'dry run (pass --write to apply)'}: ${result.checkedUsers} accounts with a qualifying fact`,
   );
-  for (const definition of ACHIEVEMENTS) {
-    const qualified = result.qualified[definition.id] ?? 0;
-    const fresh = added.get(definition.id) ?? 0;
+  for (const id of ACHIEVEMENT_AWARD_IDS) {
+    const qualified = result.qualified[id] ?? 0;
+    const fresh = added.get(id) ?? 0;
     console.log(
-      `  ${definition.id.padEnd(20)} qualified ${String(qualified).padStart(6)}  ${values.write ? 'awarded' : 'would award'} ${String(fresh).padStart(6)}  held ${String(qualified - fresh).padStart(6)}`,
+      `  ${id.padEnd(20)} qualified ${String(qualified).padStart(6)}  ${values.write ? 'awarded' : 'would award'} ${String(fresh).padStart(6)}  held ${String(qualified - fresh).padStart(6)}`,
     );
   }
   console.log(`  total new: ${result.newAwards.length}`);

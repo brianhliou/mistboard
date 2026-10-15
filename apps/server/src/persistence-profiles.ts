@@ -20,6 +20,7 @@ import {
   userFromRow,
 } from './persistence-accounts.js';
 import { getUserAchievements, type UserAchievement } from './persistence-achievements.js';
+import { seatWonGame } from './persistence-counted-games.js';
 import { getPool, withTransaction } from './persistence-db.js';
 import type { GameMode, GameTermination, GameVisibility } from './persistence-game-lifecycle.js';
 import type { GameParticipantColor, GameResult, ProfileGameRecord } from './persistence-games.js';
@@ -395,11 +396,7 @@ export type ProfileGameFilters = {
 // red-wins, a black seat on black-wins, any other seat on white-wins, and every
 // non-draw that is not a win is a loss. If the two disagreed, "Wins" would list
 // a row painted as a loss.
-const OWNER_WON_SQL = `(
-  (game_participants.color = 'red' AND games.result = 'red-wins')
-  OR (game_participants.color = 'black' AND games.result = 'black-wins')
-  OR (game_participants.color NOT IN ('red', 'black') AND games.result = 'white-wins')
-)`;
+const OWNER_WON_SQL = seatWonGame('game_participants', 'games');
 
 function resultFilterSql(result: ProfileGameResultFilter): string {
   if (result === 'draw') return `AND games.result = 'draw'`;

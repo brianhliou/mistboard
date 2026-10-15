@@ -8,14 +8,27 @@
 // and locked, grouped by category.
 //
 // Definitions come from @mistboard/game (achievements.ts); the server sends
-// only which ids an account holds and when. Ids this client does not define
-// (a newer server) are skipped rather than shown raw.
+// only which ids an account holds and when, plus each leveling family's
+// progress. Ids this client does not define (a newer server) are skipped
+// rather than shown raw.
+//
+// Leveling families (wins at 10 / 50 / 100 / 500) are one card each: the title
+// names the highest tier held, pips count the tiers, a thin bar shows the
+// count toward the next one, and the band takes the tier's metal. On the
+// profile and in "N of M" a family counts once, earned from its first tier.
 
 import {
+  ACHIEVEMENT_FAMILIES,
   ACHIEVEMENTS,
   type AchievementCategory,
   type AchievementDefinition,
+  type AchievementFamilyDefinition,
+  type AchievementFamilyProgress,
+  achievementFamilyProgress,
+  achievementLevelId,
   getAchievementDefinition,
+  getAchievementFamily,
+  getAchievementLevel,
 } from '@mistboard/game';
 import './account-profile.css';
 import './profile-achievements.css';
@@ -55,6 +68,27 @@ function knownEarned(earned: readonly ProfileAchievement[] | undefined): Earned[
   return out;
 }
 
+// Family levels held, as award id -> date; unknown or malformed ids skipped.
+function knownLevels(earned: readonly ProfileAchievement[] | undefined): Map<string, string> {
+  const out = new Map<string, string>();
+  if (!Array.isArray(earned)) return out;
+  for (const award of earned) {
+    const id = award?.id ?? '';
+    if (getAchievementLevel(id) && !out.has(id)) out.set(id, award.awardedAt);
+  }
+  return out;
+}
+
+// Families with at least their first tier held.
+function earnedFamilyCount(levels: ReadonlyMap<string, string>): number {
+  return ACHIEVEMENT_FAMILIES.filter((family) =>
+    levels.has(achievementLevelId(family.id, family.levels[0]?.threshold ?? 0)),
+  ).length;
+}
+
+// Every card on the page: the singles and one per family.
+export const ACHIEVEMENT_CARD_TOTAL = ACHIEVEMENTS.length + ACHIEVEMENT_FAMILIES.length;
+
 function formatAchievementDate(value: string, locale: Locale): string | null {
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return null;
@@ -75,7 +109,8 @@ export function buildProfileAchievementsSummary(
   locale: Locale = currentLocale(),
 ): HTMLElement | null {
   const held = knownEarned(earned);
-  if (held.length === 0) return null;
+  const count = held.length + earnedFamilyCount(knownLevels(earned));
+  if (count === 0) return null;
   const line = document.createElement('div');
   line.className = 'profile-achievements';
 
@@ -110,30 +145,14 @@ export function buildProfileAchievementsSummary(
   link.className = 'profile-achievements-link';
   link.href = profileAchievementsHref(handle);
   link.textContent = t(
-    held.length === 1 ? 'profile.achievementsCountOne' : 'profile.achievementsCountMany',
-    { count: held.length },
+    count === 1 ? 'profile.achievementsCountOne' : 'profile.achievementsCountMany',
+    { count },
     locale,
   );
   line.append(link);
   return line;
 }
 
-// Three looks for the page while Brian picks one (`?look=a|b|c`, default a):
-// a medallions, b a trophy list with a progress bar, c collectible cards with a
-// band per category. Same markup, so the choice is CSS plus a few look-only
-// pieces; the losers go once one is picked.
-export type AchievementsLook = 'a' | 'b' | 'c';
-const LOOKS: readonly AchievementsLook[] = ['a', 'b', 'c'];
-
-export function achievementsLookFromSearch(search: string): AchievementsLook {
-  const look = new URLSearchParams(search).get('look');
-  return LOOKS.includes(look as AchievementsLook) ? (look as AchievementsLook) : 'a';
-}
-
-// One card's worth of definition. Real definitions come from @mistboard/game;
-// previews are page-only, locked-only stand-ins (`?preview=1`) so a look can be
-// judged on a fuller grid. They never reach the shared definitions, the API or
-// any count.
 type CardDefinition = {
   id: string;
   category: AchievementCategory;
@@ -142,7 +161,6 @@ type CardDefinition = {
   titleKey: string;
   descriptionKey: string;
   hintKey: string;
-  preview?: true;
 };
 
 function cardDefinition(definition: AchievementDefinition): CardDefinition {
@@ -157,83 +175,34 @@ function cardDefinition(definition: AchievementDefinition): CardDefinition {
   };
 }
 
-function preview(
+function buildCardShell(
   id: string,
   category: AchievementCategory,
   icon: UiIconName,
-  key: string,
-): CardDefinition {
-  const titleKey = `profile.achievementPreview${key}`;
-  return {
-    id: `preview-${id}`,
-    category,
-    icon,
-    tier: 'standard',
-    titleKey,
-    descriptionKey: `${titleKey}Hint`,
-    hintKey: `${titleKey}Hint`,
-    preview: true,
-  };
-}
-
-export const PREVIEW_ACHIEVEMENTS: readonly CardDefinition[] = [
-  preview('wins', 'play', 'event-tournament', 'Wins'),
-  preview('variants', 'play', 'play-game', 'Variants'),
-  preview('puzzle-run', 'puzzles', 'achievement-puzzle', 'PuzzleRun'),
-  preview('challenger', 'community', 'challenge-friend', 'Challenger'),
-];
-
-function buildAchievementCard(
-  definition: CardDefinition,
-  awardedAt: string | null,
-  look: AchievementsLook,
-  locale: Locale,
-): HTMLElement {
+  earned: boolean,
+): { card: HTMLElement; body: HTMLElement } {
   const card = document.createElement('article');
-  const earned = awardedAt !== null;
   card.className = `achievement-card ${earned ? 'achievement-card-earned' : 'achievement-card-locked'}`;
-  if (definition.tier === 'badge') card.classList.add('achievement-card-badge');
-  card.dataset.achievementId = definition.id;
+  card.dataset.achievementId = id;
   card.dataset.state = earned ? 'earned' : 'locked';
-  card.dataset.category = definition.category;
-  if (definition.preview) card.dataset.preview = 'true';
-
-  const titleText = label(definition.titleKey, locale);
-  const text = label(earned ? definition.descriptionKey : definition.hintKey, locale);
-  // Medallions keep the card to title and date; the description rides the
-  // tooltip, and a locked medallion's hint shows on hover or focus.
-  if (look === 'a') {
-    card.title = text;
-    if (!earned) card.tabIndex = 0;
-  }
+  card.dataset.category = category;
 
   const band = document.createElement('div');
   band.className = 'achievement-card-band';
   band.setAttribute('aria-hidden', 'true');
-
-  const icon = document.createElement('span');
-  icon.className = 'achievement-card-icon';
-  icon.append(buildUiIcon(definition.icon));
-
+  const iconWrap = document.createElement('span');
+  iconWrap.className = 'achievement-card-icon';
+  iconWrap.append(buildUiIcon(icon));
   const body = document.createElement('div');
   body.className = 'achievement-card-body';
-  const title = document.createElement('h3');
-  title.className = 'achievement-card-title';
-  title.textContent = titleText;
-  if (definition.tier === 'badge') {
-    const tag = document.createElement('span');
-    tag.className = 'achievement-card-tag';
-    tag.textContent = t('profile.achievementBadge', {}, locale);
-    title.append(tag);
-  }
-  const description = document.createElement('p');
-  description.className = 'achievement-card-text';
-  description.textContent = text;
-  body.append(title, description);
+  card.append(band, iconWrap, body);
+  return { card, body };
+}
 
+function buildStatus(awardedAt: string | null, locale: Locale): HTMLElement | null {
   const status = document.createElement('p');
   status.className = 'achievement-card-status';
-  if (earned) {
+  if (awardedAt !== null) {
     const date = formatAchievementDate(awardedAt, locale);
     if (date) status.textContent = t('profile.achievementEarned', { date }, locale);
   } else {
@@ -242,17 +211,177 @@ function buildAchievementCard(
       document.createTextNode(t('profile.achievementLocked', {}, locale)),
     );
   }
+  return status.childNodes.length > 0 ? status : null;
+}
 
-  card.append(band, icon, body);
-  if (status.childNodes.length > 0) card.append(status);
+function buildAchievementCard(
+  definition: CardDefinition,
+  awardedAt: string | null,
+  locale: Locale,
+): HTMLElement {
+  const earned = awardedAt !== null;
+  const { card, body } = buildCardShell(
+    definition.id,
+    definition.category,
+    definition.icon,
+    earned,
+  );
+  if (definition.tier === 'badge') card.classList.add('achievement-card-badge');
+
+  const title = document.createElement('h3');
+  title.className = 'achievement-card-title';
+  title.textContent = label(definition.titleKey, locale);
+  if (definition.tier === 'badge') {
+    const tag = document.createElement('span');
+    tag.className = 'achievement-card-tag';
+    tag.textContent = t('profile.achievementBadge', {}, locale);
+    title.append(tag);
+  }
+  const description = document.createElement('p');
+  description.className = 'achievement-card-text';
+  description.textContent = label(earned ? definition.descriptionKey : definition.hintKey, locale);
+  body.append(title, description);
+
+  const status = buildStatus(awardedAt, locale);
+  if (status) card.append(status);
   return card;
+}
+
+type FamilyCardOptions = {
+  // The date the highest held tier was earned; null hides the status line
+  // (the preview examples).
+  awardedAt: string | null;
+  preview?: boolean;
+};
+
+// One card per family. `progress.level` is the tiers held (0 = locked); the
+// title names the highest tier held, or the first tier while locked.
+export function buildAchievementFamilyCard(
+  family: AchievementFamilyDefinition,
+  progress: AchievementFamilyProgress,
+  locale: Locale,
+  options: FamilyCardOptions = { awardedAt: null },
+): HTMLElement {
+  const levels = family.levels;
+  const level = Math.max(0, Math.min(progress.level, levels.length));
+  const earned = level > 0;
+  const reached = earned ? levels[level - 1] : undefined;
+  const { card, body } = buildCardShell(
+    family.id,
+    family.category,
+    `achievement-${family.icon}` as UiIconName,
+    earned,
+  );
+  card.classList.add('achievement-card-family');
+  card.dataset.level = String(level);
+  card.dataset.metal = reached?.metal ?? 'none';
+  if (options.preview) card.dataset.preview = 'true';
+
+  const titleCount = reached?.threshold ?? levels[0]?.threshold ?? 0;
+  const title = document.createElement('h3');
+  title.className = 'achievement-card-title';
+  title.textContent = t(family.titleKey as I18nKey, { count: titleCount }, locale);
+
+  const pips = document.createElement('div');
+  pips.className = 'achievement-card-pips';
+  pips.setAttribute('role', 'img');
+  pips.setAttribute(
+    'aria-label',
+    t('profile.achievementTierOf', { level, total: levels.length }, locale),
+  );
+  levels.forEach((entry, index) => {
+    const pip = document.createElement('span');
+    pip.className = 'achievement-card-pip';
+    pip.dataset.metal = entry.metal;
+    pip.dataset.filled = index < level ? 'true' : 'false';
+    pips.append(pip);
+  });
+
+  const next = progress.nextThreshold;
+  const description = document.createElement('p');
+  description.className = 'achievement-card-text';
+  description.textContent = earned
+    ? t(family.descriptionKey as I18nKey, { count: titleCount }, locale)
+    : t(family.hintKey as I18nKey, { count: next ?? titleCount }, locale);
+  body.append(title, pips, description);
+
+  const progressRow = document.createElement('div');
+  progressRow.className = 'achievement-card-progress';
+  if (next === null) {
+    const max = document.createElement('span');
+    max.className = 'achievement-card-max';
+    max.textContent = t('profile.achievementMaxTier', {}, locale);
+    progressRow.append(max);
+  } else {
+    const count = Math.max(0, progress.count);
+    const text = `${count} / ${next}`;
+    const bar = document.createElement('div');
+    bar.className = 'achievement-card-bar';
+    bar.setAttribute('role', 'progressbar');
+    bar.setAttribute('aria-valuemin', '0');
+    bar.setAttribute('aria-valuemax', String(next));
+    bar.setAttribute('aria-valuenow', String(Math.min(count, next)));
+    bar.setAttribute('aria-valuetext', text);
+    const fill = document.createElement('span');
+    fill.className = 'achievement-card-bar-fill';
+    fill.style.width = `${Math.min(100, Math.round((count / next) * 100))}%`;
+    bar.append(fill);
+    const value = document.createElement('span');
+    value.className = 'achievement-card-count';
+    value.textContent = text;
+    progressRow.append(bar, value);
+  }
+  card.append(progressRow);
+
+  if (!options.preview) {
+    const status = buildStatus(earned ? options.awardedAt : null, locale);
+    if (status) card.append(status);
+  }
+  return card;
+}
+
+// Example family cards for `?preview=1`: every state a wins card can be in,
+// page-only. They never reach the API or any count.
+export const PREVIEW_FAMILY_STATES: ReadonlyArray<{ level: number; count: number }> = [
+  { level: 0, count: 3 },
+  { level: 1, count: 23 },
+  { level: 2, count: 78 },
+  { level: 3, count: 143 },
+  { level: 4, count: 612 },
+];
+
+function previewProgress(
+  family: AchievementFamilyDefinition,
+  level: number,
+  count: number,
+): AchievementFamilyProgress {
+  const held = new Set(
+    family.levels.slice(0, level).map((entry) => achievementLevelId(family.id, entry.threshold)),
+  );
+  return achievementFamilyProgress(family, held, count);
+}
+
+// Without the API's progress (an older server), a family still shows the
+// tiers its ledger rows prove, with the count floored at the highest of them.
+function fallbackProgress(
+  family: AchievementFamilyDefinition,
+  levels: ReadonlyMap<string, string>,
+): AchievementFamilyProgress {
+  const held = new Set(
+    family.levels
+      .map((entry) => achievementLevelId(family.id, entry.threshold))
+      .filter((id) => levels.has(id)),
+  );
+  const top = [...family.levels]
+    .reverse()
+    .find((entry) => held.has(achievementLevelId(family.id, entry.threshold)));
+  return achievementFamilyProgress(family, held, top?.threshold ?? 0);
 }
 
 function buildPageHeader(
   handle: string,
   earnedCount: number,
   total: number,
-  look: AchievementsLook,
   locale: Locale,
 ): HTMLElement {
   const header = document.createElement('header');
@@ -283,32 +412,39 @@ function buildPageHeader(
   summary.textContent = t('profile.achievementsEarnedOf', { earned: earnedCount, total }, locale);
   titles.append(back, heading, summary);
   header.append(owner, titles);
-
-  if (look === 'b') {
-    const percent = total > 0 ? Math.round((earnedCount / total) * 100) : 0;
-    const progress = document.createElement('div');
-    progress.className = 'achievements-progress';
-    const bar = document.createElement('div');
-    bar.className = 'achievements-progress-bar';
-    bar.setAttribute('role', 'progressbar');
-    bar.setAttribute('aria-valuemin', '0');
-    bar.setAttribute('aria-valuemax', String(total));
-    bar.setAttribute('aria-valuenow', String(earnedCount));
-    bar.setAttribute('aria-label', summary.textContent);
-    const fill = document.createElement('span');
-    fill.className = 'achievements-progress-fill';
-    fill.style.width = `${percent}%`;
-    bar.append(fill);
-    const value = document.createElement('span');
-    value.className = 'achievements-progress-percent';
-    value.textContent = `${percent}%`;
-    progress.append(bar, value);
-    header.append(progress);
-  }
   return header;
 }
 
-export type AchievementsPageOptions = { look?: AchievementsLook; preview?: boolean };
+export type AchievementsPageOptions = {
+  // Per family, from the API; missing (an older server) falls back to the
+  // tiers the ledger rows prove.
+  families?: readonly AchievementFamilyProgress[];
+  // `?preview=1`: an Examples group of family cards in every state.
+  preview?: boolean;
+};
+
+type PageCard = { category: AchievementCategory; earned: boolean; build: () => HTMLElement };
+
+function buildGroup(
+  key: string,
+  heading: string | null,
+  cards: readonly HTMLElement[],
+): HTMLElement {
+  const group = document.createElement('section');
+  group.className = 'achievements-group';
+  group.dataset.category = key;
+  if (heading) {
+    const groupHeading = document.createElement('h2');
+    groupHeading.className = 'achievements-group-heading';
+    groupHeading.textContent = heading;
+    group.append(groupHeading);
+  }
+  const grid = document.createElement('div');
+  grid.className = 'achievements-grid';
+  grid.append(...cards);
+  group.append(grid);
+  return group;
+}
 
 // The page body: whose it is, "N of M earned", then the cards, grouped by
 // category when the catalog spans more than one.
@@ -318,43 +454,81 @@ export function buildProfileAchievementsPage(
   locale: Locale = currentLocale(),
   options: AchievementsPageOptions = {},
 ): HTMLElement {
-  const look = options.look ?? 'a';
   const held = new Map(knownEarned(earned).map((award) => [award.definition.id, award.awardedAt]));
+  const levels = knownLevels(earned);
+  const progressById = new Map(
+    (Array.isArray(options.families) ? options.families : [])
+      .filter((entry) => entry && getAchievementFamily(entry.id))
+      .map((entry) => [entry.id, entry]),
+  );
+
+  const cards: PageCard[] = [];
+  for (const definition of ACHIEVEMENTS) {
+    const awardedAt = held.get(definition.id) ?? null;
+    cards.push({
+      category: definition.category,
+      earned: awardedAt !== null,
+      build: () => buildAchievementCard(cardDefinition(definition), awardedAt, locale),
+    });
+  }
+  for (const family of ACHIEVEMENT_FAMILIES) {
+    const progress = progressById.get(family.id) ?? fallbackProgress(family, levels);
+    const top = family.levels[progress.level - 1];
+    const awardedAt = top
+      ? (levels.get(achievementLevelId(family.id, top.threshold)) ?? null)
+      : null;
+    cards.push({
+      category: family.category,
+      earned: progress.level > 0,
+      build: () => buildAchievementFamilyCard(family, progress, locale, { awardedAt }),
+    });
+  }
+
+  const earnedCount = cards.filter((card) => card.earned).length;
   const page = document.createElement('section');
   page.className = 'achievements-page';
-  page.dataset.look = look;
-  page.append(buildPageHeader(handle, held.size, ACHIEVEMENTS.length, look, locale));
+  page.append(buildPageHeader(handle, earnedCount, cards.length, locale));
 
-  const definitions: CardDefinition[] = [
-    ...ACHIEVEMENTS.map(cardDefinition),
-    ...(options.preview ? PREVIEW_ACHIEVEMENTS : []),
-  ];
   const categories: AchievementCategory[] = [];
-  for (const definition of definitions) {
-    if (!categories.includes(definition.category)) categories.push(definition.category);
+  for (const card of cards) {
+    if (!categories.includes(card.category)) categories.push(card.category);
   }
   for (const category of categories) {
-    const group = document.createElement('section');
-    group.className = 'achievements-group';
-    group.dataset.category = category;
-    if (categories.length > 1) {
-      const groupHeading = document.createElement('h2');
-      groupHeading.className = 'achievements-group-heading';
-      groupHeading.textContent = t(CATEGORY_LABEL[category], {}, locale);
-      group.append(groupHeading);
-    }
-    const grid = document.createElement('div');
-    grid.className = 'achievements-grid';
     // Earned first within a group, catalog order otherwise.
-    const inGroup = definitions.filter((definition) => definition.category === category);
+    const inGroup = cards.filter((card) => card.category === category);
     const ordered = [
-      ...inGroup.filter((definition) => held.has(definition.id)),
-      ...inGroup.filter((definition) => !held.has(definition.id)),
+      ...inGroup.filter((card) => card.earned),
+      ...inGroup.filter((card) => !card.earned),
     ];
-    for (const definition of ordered) {
-      grid.append(buildAchievementCard(definition, held.get(definition.id) ?? null, look, locale));
+    page.append(
+      buildGroup(
+        category,
+        categories.length > 1 ? t(CATEGORY_LABEL[category], {}, locale) : null,
+        ordered.map((card) => card.build()),
+      ),
+    );
+  }
+
+  if (options.preview) {
+    const examples: HTMLElement[] = [];
+    for (const family of ACHIEVEMENT_FAMILIES) {
+      for (const state of PREVIEW_FAMILY_STATES) {
+        if (state.level > family.levels.length) continue;
+        examples.push(
+          buildAchievementFamilyCard(
+            family,
+            previewProgress(family, state.level, state.count),
+            locale,
+            {
+              awardedAt: null,
+              preview: true,
+            },
+          ),
+        );
+      }
     }
-    group.append(grid);
+    const group = buildGroup('examples', t('profile.achievementExamples', {}, locale), examples);
+    group.dataset.preview = 'true';
     page.append(group);
   }
   return page;
@@ -362,12 +536,23 @@ export function buildProfileAchievementsPage(
 
 class AchievementsNotFound extends Error {}
 
-async function fetchUserAchievements(handle: string): Promise<ProfileAchievement[]> {
+type UserAchievementsResponse = {
+  achievements: ProfileAchievement[];
+  families: AchievementFamilyProgress[] | undefined;
+};
+
+async function fetchUserAchievements(handle: string): Promise<UserAchievementsResponse> {
   const resp = await fetch(`/api/users/${encodeURIComponent(handle)}/achievements`);
   if (resp.status === 404) throw new AchievementsNotFound();
   if (!resp.ok) throw new Error(`failed to load achievements: ${resp.status}`);
-  const data = (await resp.json()) as { achievements?: ProfileAchievement[] };
-  return Array.isArray(data.achievements) ? data.achievements : [];
+  const data = (await resp.json()) as {
+    achievements?: ProfileAchievement[];
+    families?: AchievementFamilyProgress[];
+  };
+  return {
+    achievements: Array.isArray(data.achievements) ? data.achievements : [],
+    families: Array.isArray(data.families) ? data.families : undefined,
+  };
 }
 
 // A private profile answers 404 to anyone but its owner, the same gate as the
@@ -380,9 +565,9 @@ export async function mountProfileAchievements(root: HTMLElement, handle: string
   shell.className = 'profile-shell achievements-shell';
   root.replaceChildren(buildNav(locale), shell);
 
-  let earned: ProfileAchievement[];
+  let loaded: UserAchievementsResponse;
   try {
-    earned = await fetchUserAchievements(handle);
+    loaded = await fetchUserAchievements(handle);
   } catch (err) {
     console.warn(err);
     const notFound = err instanceof AchievementsNotFound;
@@ -395,8 +580,8 @@ export async function mountProfileAchievements(root: HTMLElement, handle: string
   document.title = `${t('profile.achievements', {}, locale)} · @${handle} · Mistboard`;
   const search = typeof location === 'undefined' ? '' : location.search;
   shell.append(
-    buildProfileAchievementsPage(handle, earned, locale, {
-      look: achievementsLookFromSearch(search),
+    buildProfileAchievementsPage(handle, loaded.achievements, locale, {
+      families: loaded.families,
       preview: new URLSearchParams(search).get('preview') === '1',
     }),
   );

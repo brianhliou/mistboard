@@ -52,13 +52,41 @@
   flex: 0 0 auto;
 }
 
-/* The page. Three looks while one is picked (`?look=a|b|c`): shared pieces
-   first, then each look scoped by `.achievements-page[data-look]`. Category
-   tints come from existing palette tokens and follow the theme: Play is the
-   site jade, Puzzles the piece red, Community the ink blue. Nothing moves
-   unless the reader does something. */
+/* The page: collectible cards (Brian picked look c on 2026-10-14). A single
+   achievement's band takes its category tint from existing palette tokens and
+   follows the theme: Play is the site jade, Puzzles the piece red, Community
+   the ink blue. A leveling family's card (wins) takes the metal of the highest
+   tier held instead: bronze, silver, gold, platinum. `--ach-<metal>` is the
+   band, `--ach-<metal>-ink` the same metal dark enough (light theme) or light
+   enough (dark theme) for an icon, pips and the progress fill on the panel.
+   Nothing moves unless the reader does something. */
 .achievements-page {
   --ach-gold: hsl(42, 70%, 52%);
+  --ach-bronze-band: hsl(26, 52%, 52%);
+  --ach-bronze-ink: hsl(24, 55%, 36%);
+  --ach-silver-band: hsl(210, 8%, 70%);
+  --ach-silver-ink: hsl(210, 8%, 38%);
+  --ach-gold-band: hsl(42, 70%, 52%);
+  --ach-gold-ink: hsl(38, 75%, 32%);
+  --ach-platinum-band: hsl(195, 22%, 78%);
+  --ach-platinum-ink: hsl(200, 25%, 34%);
+}
+
+:root[data-effective-theme="dark"] .achievements-page {
+  --ach-gold: hsl(42, 62%, 48%);
+  --ach-bronze-band: hsl(26, 45%, 46%);
+  --ach-bronze-ink: hsl(26, 60%, 66%);
+  --ach-silver-band: hsl(210, 6%, 58%);
+  --ach-silver-ink: hsl(210, 10%, 76%);
+  --ach-gold-band: hsl(42, 62%, 48%);
+  --ach-gold-ink: hsl(43, 72%, 66%);
+  --ach-platinum-band: hsl(195, 18%, 66%);
+  --ach-platinum-ink: hsl(195, 30%, 80%);
+}
+
+.achievements-page .achievement-card {
+  --ach-ink: var(--ach-cat);
+  --ach-sheen: var(--ach-gold);
 }
 
 .achievements-page .achievement-card[data-category="play"] {
@@ -71,6 +99,30 @@
 
 .achievements-page .achievement-card[data-category="community"] {
   --ach-cat: var(--ink-blue);
+}
+
+.achievements-page .achievement-card[data-metal="bronze"] {
+  --ach-cat: var(--ach-bronze-band);
+  --ach-ink: var(--ach-bronze-ink);
+  --ach-sheen: var(--ach-bronze-band);
+}
+
+.achievements-page .achievement-card[data-metal="silver"] {
+  --ach-cat: var(--ach-silver-band);
+  --ach-ink: var(--ach-silver-ink);
+  --ach-sheen: var(--ach-silver-band);
+}
+
+.achievements-page .achievement-card[data-metal="gold"] {
+  --ach-cat: var(--ach-gold-band);
+  --ach-ink: var(--ach-gold-ink);
+  --ach-sheen: var(--ach-gold-band);
+}
+
+.achievements-page .achievement-card[data-metal="platinum"] {
+  --ach-cat: var(--ach-platinum-band);
+  --ach-ink: var(--ach-platinum-ink);
+  --ach-sheen: var(--ach-platinum-band);
 }
 
 .achievements-page-header {
@@ -161,10 +213,6 @@
   background: var(--site-panel);
 }
 
-.achievement-card-band {
-  display: none;
-}
-
 .achievement-card-icon {
   display: inline-flex;
   flex: 0 0 auto;
@@ -221,249 +269,18 @@
   flex: 0 0 auto;
 }
 
-/* a. Medallions. */
-.achievements-page[data-look="a"] .achievements-grid {
+.achievements-grid {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr));
 }
 
 @media (max-width: 480px) {
-  .achievements-page[data-look="a"] .achievements-grid {
+  .achievements-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
   }
 }
 
-.achievements-page[data-look="a"] .achievement-card {
-  display: grid;
-  grid-template-rows: auto auto 1fr;
-  grid-template-areas:
-    "icon"
-    "title"
-    "slot";
-  justify-items: center;
-  row-gap: 10px;
-  padding: 22px 12px 16px;
-  text-align: center;
-}
-
-.achievements-page[data-look="a"] .achievement-card-icon {
-  grid-area: icon;
-  width: 72px;
-  height: 72px;
-  margin: 5px;
-  border: 3px solid var(--ach-cat);
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at 35% 30%,
-    var(--site-panel),
-    color-mix(in srgb, var(--ach-cat) 22%, var(--site-panel)) 70%
-  );
-  box-shadow:
-    0 0 0 3px var(--site-panel),
-    0 0 0 5px color-mix(in srgb, var(--ach-gold) 70%, var(--ach-cat)),
-    0 4px 10px var(--site-shadow);
-  color: var(--ach-cat);
-}
-
-.achievements-page[data-look="a"] .achievement-card-icon .ui-icon {
-  width: 32px;
-  height: 32px;
-}
-
-/* Title in its own row; the description (earned) or hint (locked) shares one
-   grid cell with the status line, so swapping them on hover shifts nothing. */
-.achievements-page[data-look="a"] .achievement-card-body {
-  display: contents;
-}
-
-.achievements-page[data-look="a"] .achievement-card-title {
-  grid-area: title;
-}
-
-.achievements-page[data-look="a"] .achievement-card-text,
-.achievements-page[data-look="a"] .achievement-card-status {
-  grid-area: slot;
-  align-self: start;
-  justify-content: center;
-  margin: 0;
-}
-
-.achievements-page[data-look="a"] .achievement-card-earned .achievement-card-text {
-  display: none;
-}
-
-.achievements-page[data-look="a"] .achievement-card-locked .achievement-card-text {
-  color: var(--site-text);
-  font-size: 12px;
-  visibility: hidden;
-}
-
-.achievements-page[data-look="a"] .achievement-card-locked:hover .achievement-card-text,
-.achievements-page[data-look="a"] .achievement-card-locked:focus-visible .achievement-card-text {
-  visibility: visible;
-}
-
-.achievements-page[data-look="a"] .achievement-card-locked:hover .achievement-card-status,
-.achievements-page[data-look="a"] .achievement-card-locked:focus-visible .achievement-card-status {
-  visibility: hidden;
-}
-
-@media (hover: none) {
-  .achievements-page[data-look="a"] .achievement-card-locked .achievement-card-text {
-    visibility: visible;
-  }
-
-  .achievements-page[data-look="a"] .achievement-card-locked .achievement-card-status {
-    visibility: hidden;
-  }
-}
-
-.achievements-page[data-look="a"] .achievement-card-locked:focus-visible {
-  outline: 2px solid var(--site-focus);
-  outline-offset: 2px;
-}
-
-.achievements-page[data-look="a"] .achievement-card-locked {
-  background: var(--site-panel-soft);
-}
-
-.achievements-page[data-look="a"] .achievement-card-locked .achievement-card-icon {
-  filter: grayscale(1);
-  opacity: 0.35;
-  box-shadow: none;
-}
-
-.achievements-page[data-look="a"] .achievement-card-locked .achievement-card-title {
-  color: var(--site-muted);
-}
-
-/* b. Trophy list. */
-.achievements-progress {
-  display: flex;
-  flex: 1 1 100%;
-  align-items: center;
-  gap: 12px;
-}
-
-.achievements-progress-bar {
-  position: relative;
-  flex: 1 1 auto;
-  height: 10px;
-  overflow: hidden;
-  border-radius: 5px;
-  background: var(--site-bg-soft);
-}
-
-.achievements-progress-fill {
-  position: absolute;
-  inset: 0 auto 0 0;
-  border-radius: 5px;
-  background: linear-gradient(90deg, var(--site-accent), var(--site-accent-strong));
-}
-
-.achievements-progress-percent {
-  flex: 0 0 auto;
-  min-width: 3.5ch;
-  color: var(--site-heading);
-  font-size: 18px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-
-.achievements-page[data-look="b"] .achievements-grid {
-  gap: 8px;
-}
-
-.achievements-page[data-look="b"] .achievement-card {
-  display: grid;
-  grid-template-columns: 64px minmax(0, 1fr) auto;
-  grid-template-areas: "icon body status";
-  align-items: center;
-  gap: 4px 14px;
-  padding: 10px 16px 10px 10px;
-}
-
-.achievements-page[data-look="b"] .achievement-card-icon {
-  grid-area: icon;
-  width: 64px;
-  height: 64px;
-  border-radius: 8px;
-  background: linear-gradient(
-    145deg,
-    color-mix(in srgb, var(--ach-cat) 80%, var(--site-panel)),
-    var(--ach-cat)
-  );
-  color: var(--site-on-accent);
-}
-
-.achievements-page[data-look="b"] .achievement-card-icon .ui-icon {
-  width: 30px;
-  height: 30px;
-}
-
-.achievements-page[data-look="b"] .achievement-card-body {
-  grid-area: body;
-}
-
-.achievements-page[data-look="b"] .achievement-card-status {
-  grid-area: status;
-  justify-content: flex-end;
-  text-align: right;
-  white-space: nowrap;
-}
-
-.achievements-page[data-look="b"] .achievement-card-earned .achievement-card-status {
-  color: var(--site-text);
-}
-
-@media (max-width: 520px) {
-  .achievements-page[data-look="b"] .achievement-card {
-    grid-template-columns: 52px minmax(0, 1fr);
-    grid-template-areas:
-      "icon body"
-      "icon status";
-  }
-
-  .achievements-page[data-look="b"] .achievement-card-icon {
-    width: 52px;
-    height: 52px;
-  }
-
-  .achievements-page[data-look="b"] .achievement-card-status {
-    justify-content: flex-start;
-    white-space: normal;
-  }
-}
-
-.achievements-page[data-look="b"] .achievement-card-locked {
-  background: var(--site-panel-soft);
-}
-
-.achievements-page[data-look="b"] .achievement-card-locked .achievement-card-icon {
-  background: var(--site-bg-soft);
-  color: var(--site-muted);
-  opacity: 0.6;
-}
-
-.achievements-page[data-look="b"] .achievement-card-locked .achievement-card-title,
-.achievements-page[data-look="b"] .achievement-card-locked .achievement-card-text {
-  color: var(--site-muted);
-}
-
-/* c. Collectible cards. */
-.achievements-page[data-look="c"] .achievements-grid {
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr));
-}
-
-@media (max-width: 480px) {
-  .achievements-page[data-look="c"] .achievements-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-}
-
-.achievements-page[data-look="c"] .achievement-card {
+.achievement-card {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -473,7 +290,7 @@
   min-height: 230px;
 }
 
-.achievements-page[data-look="c"] .achievement-card-band {
+.achievement-card-band {
   display: block;
   align-self: stretch;
   height: 64px;
@@ -483,49 +300,112 @@
     var(--ach-cat);
 }
 
-.achievements-page[data-look="c"] .achievement-card-icon {
+.achievement-card-icon {
   width: 68px;
   height: 68px;
   margin-top: -34px;
   border: 4px solid var(--site-panel);
   border-radius: 50%;
   background: color-mix(in srgb, var(--ach-cat) 14%, var(--site-panel));
-  color: var(--ach-cat);
+  color: var(--ach-ink);
 }
 
-.achievements-page[data-look="c"] .achievement-card-icon .ui-icon {
+.achievement-card-icon .ui-icon {
   width: 30px;
   height: 30px;
 }
 
-.achievements-page[data-look="c"] .achievement-card-body {
+.achievement-card-body {
   flex: 1 1 auto;
   margin-top: 10px;
 }
 
-.achievements-page[data-look="c"] .achievement-card-status {
+.achievement-card-status {
   justify-content: center;
   margin-top: 12px;
 }
 
-/* Earned: a static sheen on the border, category colour through gold. */
-.achievements-page[data-look="c"] .achievement-card-earned {
+/* Tier pips under the title: filled up to the tier held. */
+.achievement-card-pips {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  margin: 6px 0 0;
+}
+
+.achievement-card-pip {
+  box-sizing: border-box;
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid var(--site-border);
+  border-radius: 50%;
+}
+
+.achievement-card-pip[data-filled="true"] {
+  border-color: var(--ach-ink);
+  background: var(--ach-ink);
+}
+
+/* Progress toward the next tier: a thin bar and "143 / 500", or "Max tier". */
+.achievement-card-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  align-self: stretch;
+  margin-top: 12px;
+}
+
+.achievement-card-bar {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--site-bg-soft);
+}
+
+.achievement-card-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--ach-ink);
+}
+
+.achievement-card-count {
+  color: var(--site-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.achievement-card-max {
+  color: var(--ach-ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Earned: a static sheen on the border, the band colour through gold (a
+   family: through its own metal). */
+.achievement-card-earned {
   border: 2px solid transparent;
   background:
     linear-gradient(var(--site-panel), var(--site-panel)) padding-box,
     linear-gradient(
       135deg,
       var(--ach-cat),
-      var(--ach-gold) 45%,
-      color-mix(in srgb, var(--ach-gold) 40%, var(--site-panel)) 55%,
+      var(--ach-sheen) 45%,
+      color-mix(in srgb, var(--ach-sheen) 40%, var(--site-panel)) 55%,
       var(--ach-cat)
     )
     border-box;
   box-shadow: 0 6px 16px var(--site-shadow);
 }
 
-.achievements-page[data-look="c"] .achievement-card-locked {
+.achievement-card-locked {
   border: 2px solid var(--site-border-soft);
   filter: grayscale(1);
   opacity: 0.6;
+}
+
+/* A locked family card still reports its count, so it fades less. */
+.achievement-card-family.achievement-card-locked {
+  opacity: 0.75;
 }

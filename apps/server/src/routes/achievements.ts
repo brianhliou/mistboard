@@ -3,7 +3,10 @@
 //   GET /api/achievements                  the catalog, each with its holder
 //                                          count (stats-excluded accounts left
 //                                          out) and the account total.
-//   GET /api/users/:handle/achievements    one account's awards, id and date.
+//   GET /api/users/:handle/achievements    one account's awards (id and date;
+//                                          a family level is its own row, e.g.
+//                                          `wins:50`) and, per leveling family,
+//                                          { id, level, count, nextThreshold }.
 //                                          Same gate as the profile: a private
 //                                          profile is a 404 to everyone else.
 //
@@ -41,12 +44,12 @@ export async function tryHandle(
       return true;
     }
     const viewer = await currentAccountUser(request);
-    const achievements = await persistence.getUserAchievementsByHandle(handle, viewer?.id ?? null);
-    if (!achievements) {
+    const page = await persistence.getUserAchievementsByHandle(handle, viewer?.id ?? null);
+    if (!page) {
       writeJson(response, 404, { error: 'not_found' });
       return true;
     }
-    writeJson(response, 200, { achievements });
+    writeJson(response, 200, page);
     return true;
   }
 

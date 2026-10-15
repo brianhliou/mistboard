@@ -1,14 +1,20 @@
-import { ACHIEVEMENTS, type AchievementDefinition } from '@mistboard/game';
+import {
+  ACHIEVEMENT_FAMILIES,
+  ACHIEVEMENTS,
+  type AchievementDefinition,
+  getAchievementFamily,
+} from '@mistboard/game';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { hasAppTranslation, type I18nKey, loadAppI18nDomains, t } from './i18n/catalog.js';
 import { SUPPORTED_LOCALES } from './i18n/locale.js';
 import { buildProfileIdentity } from './profile.js';
 import {
-  achievementsLookFromSearch,
+  ACHIEVEMENT_CARD_TOTAL,
+  buildAchievementFamilyCard,
   buildProfileAchievementsPage,
   buildProfileAchievementsSummary,
   mountProfileAchievements,
-  PREVIEW_ACHIEVEMENTS,
+  PREVIEW_FAMILY_STATES,
 } from './profile-achievements.js';
 
 // No definition is badge tier yet, so the tests add stand-ins: ids starting
@@ -104,6 +110,85 @@ describe('achievements on the profile', () => {
     ]);
     expect(line?.querySelector('.profile-achievements-link')?.textContent).toBe('5 achievements');
   });
+
+  it('a family counts once, from its first tier, however many tiers are held', () => {
+    const line = buildProfileAchievementsSummary(
+      'h',
+      [
+        { id: 'first-game', awardedAt: AUG(1) },
+        { id: 'wins:10', awardedAt: AUG(2) },
+        { id: 'wins:50', awardedAt: AUG(9) },
+      ],
+      'en',
+    );
+    expect(line?.querySelector('.profile-achievements-link')?.textContent).toBe('2 achievements');
+  });
+});
+
+const WINS = getAchievementFamily('wins')!;
+
+describe('the wins card', () => {
+  const card = (level: number, count: number, nextThreshold: number | null, awardedAt?: string) =>
+    buildAchievementFamilyCard(WINS, { id: 'wins', level, count, nextThreshold }, 'en', {
+      awardedAt: awardedAt ?? null,
+    });
+  const pips = (el: HTMLElement) =>
+    [...el.querySelectorAll<HTMLElement>('.achievement-card-pip')]
+      .map((pip) => (pip.dataset.filled === 'true' ? '●' : '○'))
+      .join('');
+
+  it('locked: the first tier as its title, no metal, and the count toward it', () => {
+    const el = card(0, 3, 10);
+    expect(el.dataset.state).toBe('locked');
+    expect(el.dataset.metal).toBe('none');
+    expect(el.querySelector('.achievement-card-title')?.textContent).toBe('10 wins');
+    expect(pips(el)).toBe('○○○○');
+    expect(el.querySelector('.achievement-card-pips')?.getAttribute('aria-label')).toBe(
+      'Tier 0 of 4',
+    );
+    expect(el.querySelector('.achievement-card-text')?.textContent).toBe(
+      'Win 10 games against people or bots.',
+    );
+    expect(el.querySelector('.achievement-card-count')?.textContent).toBe('3 / 10');
+    expect(el.querySelector<HTMLElement>('.achievement-card-bar-fill')?.style.width).toBe('30%');
+    expect(el.querySelector('.achievement-card-status')?.textContent).toBe('Not earned yet');
+  });
+
+  it('tiered: the highest tier held names the card and lends its metal', () => {
+    const el = card(3, 143, 500, AUG(20));
+    expect(el.dataset.state).toBe('earned');
+    expect(el.dataset.level).toBe('3');
+    expect(el.dataset.metal).toBe('gold');
+    expect(el.querySelector('.achievement-card-title')?.textContent).toBe('100 wins');
+    expect(pips(el)).toBe('●●●○');
+    expect(el.querySelector('.achievement-card-text')?.textContent).toBe('Won 100 games.');
+    expect(el.querySelector('.achievement-card-count')?.textContent).toBe('143 / 500');
+    expect(el.querySelector('.achievement-card-bar')?.getAttribute('aria-valuenow')).toBe('143');
+    expect(el.querySelector('.achievement-card-max')).toBe(null);
+    expect(el.querySelector('.achievement-card-status')?.textContent).toBe('Earned Aug 20, 2026');
+    expect(card(1, 23, 50).dataset.metal).toBe('bronze');
+    expect(card(2, 78, 100).dataset.metal).toBe('silver');
+  });
+
+  it('max tier: platinum, every pip filled, "Max tier" and no bar', () => {
+    const el = card(4, 612, null, AUG(30));
+    expect(el.dataset.metal).toBe('platinum');
+    expect(el.querySelector('.achievement-card-title')?.textContent).toBe('500 wins');
+    expect(pips(el)).toBe('●●●●');
+    expect(el.querySelector('.achievement-card-bar')).toBe(null);
+    expect(el.querySelector('.achievement-card-count')).toBe(null);
+    expect(el.querySelector('.achievement-card-max')?.textContent).toBe('Max tier');
+  });
+
+  it('localizes the title, tier label and max line', () => {
+    const el = buildAchievementFamilyCard(
+      WINS,
+      { id: 'wins', level: 4, count: 612, nextThreshold: null },
+      'zh-Hans',
+    );
+    expect(el.querySelector('.achievement-card-title')?.textContent).toBe('500 胜');
+    expect(el.querySelector('.achievement-card-max')?.textContent).toBe('已达最高级');
+  });
 });
 
 describe('the achievements page', () => {
@@ -122,9 +207,10 @@ describe('the achievements page', () => {
       'en',
     );
     expect(page.querySelector('.achievements-page-summary')?.textContent).toBe(
-      `1 of ${ACHIEVEMENTS.length} earned`,
+      `1 of ${ACHIEVEMENT_CARD_TOTAL} earned`,
     );
-    expect(page.querySelectorAll('.achievement-card')).toHaveLength(ACHIEVEMENTS.length);
+    expect(page.querySelectorAll('.achievement-card')).toHaveLength(ACHIEVEMENT_CARD_TOTAL);
+    expect(ACHIEVEMENT_CARD_TOTAL).toBe(ACHIEVEMENTS.length + ACHIEVEMENT_FAMILIES.length);
 
     const rated = page.querySelector<HTMLElement>('[data-achievement-id="first-rated"]');
     expect(rated?.dataset.state).toBe('earned');
@@ -162,7 +248,39 @@ describe('the achievements page', () => {
       'first-rated',
       'first-game',
       'first-pvp',
+      'wins',
     ]);
+  });
+
+  it('a family is one card at its highest tier, with the API progress and that tier date', () => {
+    const page = buildProfileAchievementsPage(
+      'h',
+      [
+        { id: 'wins:10', awardedAt: AUG(2) },
+        { id: 'wins:50', awardedAt: AUG(9) },
+      ],
+      'en',
+      { families: [{ id: 'wins', level: 2, count: 55, nextThreshold: 100 }] },
+    );
+    const wins = page.querySelectorAll<HTMLElement>('[data-achievement-id="wins"]');
+    expect(wins).toHaveLength(1);
+    expect(wins[0]?.dataset.metal).toBe('silver');
+    expect(wins[0]?.querySelector('.achievement-card-count')?.textContent).toBe('55 / 100');
+    expect(wins[0]?.querySelector('.achievement-card-status')?.textContent).toBe(
+      'Earned Aug 9, 2026',
+    );
+    expect(page.querySelector('.achievements-page-summary')?.textContent).toBe(
+      `1 of ${ACHIEVEMENT_CARD_TOTAL} earned`,
+    );
+    // An older server without `families`: the tiers the rows prove.
+    const fallback = buildProfileAchievementsPage(
+      'h',
+      [{ id: 'wins:10', awardedAt: AUG(2) }],
+      'en',
+    );
+    const card = fallback.querySelector<HTMLElement>('[data-achievement-id="wins"]');
+    expect(card?.dataset.metal).toBe('bronze');
+    expect(card?.querySelector('.achievement-card-count')?.textContent).toBe('10 / 50');
   });
 
   it('says whose page it is, linking back to the profile', () => {
@@ -173,37 +291,29 @@ describe('the achievements page', () => {
     expect(page.querySelector('.achievements-page-handle')?.textContent).toBe('@river_horse');
   });
 
-  it('picks the look from ?look=, default a; only the trophy list has a progress bar', () => {
-    expect(achievementsLookFromSearch('')).toBe('a');
-    expect(achievementsLookFromSearch('?look=b')).toBe('b');
-    expect(achievementsLookFromSearch('?look=c&preview=1')).toBe('c');
-    expect(achievementsLookFromSearch('?look=zz')).toBe('a');
-    const earned = [{ id: 'first-game', awardedAt: AUG(1) }];
-    const a = buildProfileAchievementsPage('h', earned, 'en');
-    expect(a.dataset.look).toBe('a');
-    expect(a.querySelector('.achievements-progress')).toBe(null);
-    const b = buildProfileAchievementsPage('h', earned, 'en', { look: 'b' });
-    expect(b.querySelector('.achievements-progress-percent')?.textContent).toBe(
-      `${Math.round(100 / ACHIEVEMENTS.length)}%`,
-    );
-  });
-
-  it('preview definitions appear only on request, locked, and leave the count alone', () => {
+  it('?preview=1 adds an Examples group of wins cards in every state, outside the count', () => {
     const plain = buildProfileAchievementsPage('h', [], 'en');
     expect(plain.querySelector('[data-preview]')).toBe(null);
-    const page = buildProfileAchievementsPage(
-      'h',
-      [{ id: 'preview-wins', awardedAt: AUG(1) }],
-      'en',
-      {
-        preview: true,
-      },
+    const page = buildProfileAchievementsPage('h', [], 'en', { preview: true });
+    const examples = page.querySelector<HTMLElement>('.achievements-group[data-preview="true"]');
+    expect(examples?.querySelector('h2')?.textContent).toBe('Examples');
+    const cards = [...(examples?.querySelectorAll<HTMLElement>('.achievement-card') ?? [])];
+    expect(cards).toHaveLength(PREVIEW_FAMILY_STATES.length);
+    expect(cards.map((card) => card.dataset.metal)).toEqual([
+      'none',
+      'bronze',
+      'silver',
+      'gold',
+      'platinum',
+    ]);
+    expect(
+      cards.map((card) => card.querySelector('.achievement-card-count')?.textContent ?? null),
+    ).toEqual(['3 / 10', '23 / 50', '78 / 100', '143 / 500', null]);
+    expect(cards.every((card) => card.querySelector('.achievement-card-status') === null)).toBe(
+      true,
     );
-    const previews = [...page.querySelectorAll<HTMLElement>('[data-preview="true"]')];
-    expect(previews.length).toBeGreaterThan(0);
-    expect(previews.every((card) => card.dataset.state === 'locked')).toBe(true);
     expect(page.querySelector('.achievements-page-summary')?.textContent).toBe(
-      `0 of ${ACHIEVEMENTS.length} earned`,
+      `0 of ${ACHIEVEMENT_CARD_TOTAL} earned`,
     );
   });
 
@@ -222,7 +332,12 @@ describe('the achievements page', () => {
   it('mounts the cards from the API for a visible profile', async () => {
     const fetchMock = vi.fn(async (url: string) =>
       String(url).endsWith('/api/users/river_horse/achievements')
-        ? new Response(JSON.stringify({ achievements: [{ id: 'first-game', awardedAt: AUG(1) }] }))
+        ? new Response(
+            JSON.stringify({
+              achievements: [{ id: 'first-game', awardedAt: AUG(1) }],
+              families: [{ id: 'wins', level: 0, count: 4, nextThreshold: 10 }],
+            }),
+          )
         : new Response('{}', { status: 404 }),
     );
     vi.stubGlobal('fetch', fetchMock);
@@ -230,17 +345,32 @@ describe('the achievements page', () => {
     document.body.append(root);
     await mountProfileAchievements(root, 'river_horse');
     expect(root.querySelectorAll('.achievement-card-earned')).toHaveLength(1);
-    expect(root.querySelectorAll('.achievement-card-locked')).toHaveLength(ACHIEVEMENTS.length - 1);
+    expect(root.querySelectorAll('.achievement-card-locked')).toHaveLength(
+      ACHIEVEMENT_CARD_TOTAL - 1,
+    );
+    expect(
+      root.querySelector('[data-achievement-id="wins"] .achievement-card-count')?.textContent,
+    ).toBe('4 / 10');
   });
 
   it('every definition has its title, description and hint in all three locales, no em dashes', () => {
-    for (const definition of [...ACHIEVEMENTS, ...PREVIEW_ACHIEVEMENTS]) {
+    for (const definition of [...ACHIEVEMENTS, ...ACHIEVEMENT_FAMILIES]) {
       for (const locale of SUPPORTED_LOCALES) {
         const keys = [definition.titleKey, definition.descriptionKey, definition.hintKey];
         for (const key of keys as I18nKey[]) {
           expect(hasAppTranslation(locale, key), `${locale} ${key}`).toBe(true);
           expect(t(key, {}, locale), `${locale} ${key}`).not.toContain('—');
         }
+      }
+    }
+    for (const key of [
+      'profile.achievementTierOf',
+      'profile.achievementMaxTier',
+      'profile.achievementExamples',
+    ] as I18nKey[]) {
+      for (const locale of SUPPORTED_LOCALES) {
+        expect(hasAppTranslation(locale, key), `${locale} ${key}`).toBe(true);
+        expect(t(key, {}, locale)).not.toContain('—');
       }
     }
   });
