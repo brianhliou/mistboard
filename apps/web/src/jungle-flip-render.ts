@@ -211,7 +211,7 @@ function pieces(
   pieceSkin: JunglePieceSkin,
 ): string {
   const parts: string[] = [];
-  // Outer edge at 98% of the cell, the same as the face-down tile (2026-10-14).
+  // Outer edge on the cell edge, the same as the face-down tile (JUNGLE_TOKEN_REACH).
   const s = jungleTokenSize(geom.cell);
   const filterId = shadow ? `${gid}-tok` : undefined;
   // The face-down disc is already flat, so it is shared by both skins.

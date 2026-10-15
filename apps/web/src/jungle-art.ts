@@ -24,8 +24,8 @@ import { roundPieceBox } from './board-metrics.js';
 // 2026-10-14 (the grid-board piece look, Brian): a token is a rounded square, not a
 // disc. The cream face stops at the ring and the ring sits on the edge, 2.8 wide per
 // 46 of half-width with corners of 14 per 46, the same square the xiangqi family
-// draws on its grid boards. On a board the outer edge spans 98% of the cell
-// (jungleTokenSize). The blog widget still draws the old disc recipe, so
+// draws on its grid boards. On a board the outer edge spans the whole cell
+// (jungleTokenSize; 98% until 2026-10-15, see JUNGLE_TOKEN_REACH). The blog widget still draws the old disc recipe, so
 // `check:jungle-art` reports the drift until it is ported.
 export const JUNGLE_ART = {
   /** Cream face under every revealed animal, out to the ring. */
@@ -51,13 +51,19 @@ export const JUNGLE_ART = {
    *  (2026-10-14: no shadow on the new tokens). */
   shadow: { dx: 0, dy: 1.5, std: 1, color: '#3a2c20', opacity: 0.34 },
   /** Flip Jungle face-down tile: a flat jade rounded square (neutral, the deal is
-   *  hidden from both sides), the same outer size and shape as a face-up token.
+   *  hidden from both sides), the same outer size and shape as a face-up token, so
+   *  its reach is JUNGLE_TOKEN_REACH's.
    *  Ratios ÷ cell: the stroke is today's 0.031 grown with the tile. */
-  faceDown: { fill: '#2f8f6b', stroke: '#184a38', reach: 0.98, strokeRatio: 0.039 },
+  faceDown: { fill: '#2f8f6b', stroke: '#184a38', reach: 1, strokeRatio: 0.039 },
 } as const;
 
-/** A token's outer edge (ring included) as a share of the cell on a board. */
-export const JUNGLE_TOKEN_REACH = 0.98;
+/** A token's outer edge (ring included) as a share of the cell on a board: the
+ *  whole cell (2026-10-15; was 0.98). The boards draw grid lines on interior cell
+ *  boundaries only, never a perimeter, so at 0.98 a tile in an edge cell stopped
+ *  half a unit short of the board edge and showed a strip of grass against the
+ *  frame, while between cells the grid line hid the same gap. At 1 an edge tile
+ *  meets the board edge and two neighbours' rings meet on the grid line. */
+export const JUNGLE_TOKEN_REACH = 1;
 
 /** The nominal token size whose outer edge spans JUNGLE_TOKEN_REACH of the cell:
  *  the ring's outer half-width is size × (ringRadiusRatio + ringStrokeRatio / 2). */
