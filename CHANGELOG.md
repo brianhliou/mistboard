@@ -26,6 +26,8 @@ Conventions:
 
 ### Playing
 
+- with two or more correspondence games waiting on you, the homepage button opens your correspondence list ([3d14b10d](https://github.com/brianhliou/mistboard/commit/3d14b10d))
+- jieqi friend and lobby games now offer a rematch with colours swapped and a fresh deal ([3d14b10d](https://github.com/brianhliou/mistboard/commit/3d14b10d))
 - banqi shows reveal odds on face-down pieces for both players and spectators, rated included ([493549c0](https://github.com/brianhliou/mistboard/commit/493549c0))
 - banqi boards show coordinates when Board coordinates is on ([493549c0](https://github.com/brianhliou/mistboard/commit/493549c0))
 - bigger captured pieces in the banqi room's right column ([493549c0](https://github.com/brianhliou/mistboard/commit/493549c0))
@@ -98,6 +100,8 @@ Conventions:
 
 ### Watching and review
 
+- the local analysis engine now runs on iPhone, iPad and Safari ([3d14b10d](https://github.com/brianhliou/mistboard/commit/3d14b10d))
+- on phones the move arrows and a short move list now sit right under the board ([3d14b10d](https://github.com/brianhliou/mistboard/commit/3d14b10d))
 - a News entry announces the pro player photos ([048bd368](https://github.com/brianhliou/mistboard/commit/048bd368))
 - 75 pro player pages now show a portrait from the xiangqiqipu.com archive, credited and linked ([f04df5fc](https://github.com/brianhliou/mistboard/commit/f04df5fc))
 - the 2026 women's league broadcast reads every earlier round again, and round 1 shows each team match's games instead of six from the wrong matches ([182cfd50](https://github.com/brianhliou/mistboard/commit/182cfd50))
@@ -143,6 +147,7 @@ Conventions:
 
 ### Community
 
+- rating stats has bullet, blitz and rapid choices, and says so when a pool has no rated games ([3d14b10d](https://github.com/brianhliou/mistboard/commit/3d14b10d))
 - The homepage chat announces only wins over a top bot, one line per player a day ([105d81c7](https://github.com/brianhliou/mistboard/commit/105d81c7))
 - You can now see who follows you: the bell names each new follower, and a private Followers tab sits beside Following on your Friends page ([c746143c](https://github.com/brianhliou/mistboard/commit/c746143c))
 - The contribute page asks players who read Chinese to review one rules page or lesson of the machine translation, and every Chinese rules page links to it ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
@@ -152,6 +157,8 @@ Conventions:
 
 ### Site
 
+- the logo mark has a clean edge and a light rim ([3d14b10d](https://github.com/brianhliou/mistboard/commit/3d14b10d))
+- the community menu now links the leaderboard, pro players and bots ([3d14b10d](https://github.com/brianhliou/mistboard/commit/3d14b10d))
 - Pages load faster on return visits; built scripts and styles are now cached for a year ([48b1258e](https://github.com/brianhliou/mistboard/commit/48b1258e))
 - Links shared from a rules page now preview a game in progress, in square, 4:3 and 16:9 sizes, with Chinese cards in Chinese ([48b1258e](https://github.com/brianhliou/mistboard/commit/48b1258e))
 - Pages load faster on return visits; built scripts and styles are now cached for a year ([ba7d8d8a](https://github.com/brianhliou/mistboard/commit/ba7d8d8a))
@@ -198,6 +205,10 @@ Conventions:
 
 ### Fixed
 
+- pieces in hand can now be dropped on the crazyhouse xiangqi analysis board, by tap or drag ([3d14b10d](https://github.com/brianhliou/mistboard/commit/3d14b10d))
+- the active players panel no longer lists the site's own test accounts ([3d14b10d](https://github.com/brianhliou/mistboard/commit/3d14b10d))
+- on phones the jieqi post-game buttons no longer start below the fold ([3d14b10d](https://github.com/brianhliou/mistboard/commit/3d14b10d))
+- names and titles in the homepage, play panel, event banners, broadcast, watch and inbox no longer cut off the bottoms of letters like g and y ([3d14b10d](https://github.com/brianhliou/mistboard/commit/3d14b10d))
 - jieqi and banqi replays in Chinese articles load again ([4d86c768](https://github.com/brianhliou/mistboard/commit/4d86c768))
 - copying a challenge link no longer says Copied when the browser blocks the clipboard ([4d86c768](https://github.com/brianhliou/mistboard/commit/4d86c768))
 - the broadcast calendar shows no Source link for events we don't relay ([493549c0](https://github.com/brianhliou/mistboard/commit/493549c0))
