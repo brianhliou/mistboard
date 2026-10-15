@@ -10,7 +10,9 @@ import {
 } from '@mistboard/game';
 import {
   hasTrackedCorrespondenceStart,
+  hasTrackedLiveGameStart,
   markCorrespondenceStartTracked,
+  markLiveGameStartTracked,
   takeCorrespondenceStartSource,
   takeGameStartSource,
 } from './game-start-source.js';
@@ -348,19 +350,23 @@ export function createGameLifecycleTracker(): GameLifecycleTracker {
   };
 }
 
-// A live game is opened once, so the first `playing` render on a page is its
-// start. A correspondence game is reopened every day for weeks, and each visit
-// is a fresh page whose first render is `playing` again: counted naively, one
-// game would start thirty times. So a correspondence start fires once per game
-// per browser (remembered by game id), and its entry source can come from the
-// long-lived correspondence slot: the player who posted the seek arrives days
-// later from an email, long after the ten-minute live source has expired.
+// Every page load of a seated room renders `playing` first, so the first
+// `playing` render is not a start: a live player who refreshes, or reconnects
+// after an app switch, gets a fresh page and a fresh tracker (#437), and a
+// correspondence game is reopened every day for weeks. Counted naively, one game
+// would start many times. So a start fires once per game per browser
+// (remembered by the server's game id). A correspondence start's entry source
+// can also come from the long-lived correspondence slot: the player who posted
+// the seek arrives days later from an email, long after the ten-minute live
+// source has expired.
 function trackGameStarted(baseProps: Record<string, unknown>): void {
+  const gameId = typeof baseProps.gameId === 'string' ? baseProps.gameId : null;
   if (baseProps.time_class !== 'correspondence') {
+    if (gameId && hasTrackedLiveGameStart(gameId)) return;
+    if (gameId) markLiveGameStartTracked(gameId);
     track('game_started', { ...baseProps, entry_source: takeGameStartSource() });
     return;
   }
-  const gameId = typeof baseProps.gameId === 'string' ? baseProps.gameId : null;
   if (gameId && hasTrackedCorrespondenceStart(gameId)) return;
   const liveSource = takeGameStartSource();
   const gameSpec = typeof baseProps.game_spec === 'string' ? baseProps.game_spec : null;

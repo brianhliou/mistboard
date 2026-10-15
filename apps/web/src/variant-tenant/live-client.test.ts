@@ -9,6 +9,7 @@
 import { BANQI_SPEC_ID } from '@mistboard/game';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { setPostHogInstance } from '../analytics.js';
+import { resetTrackedGameStartsForTests } from '../game-start-source.js';
 import type { LiveRefs } from '../live-state.js';
 import {
   createTenantLiveClient,
@@ -854,6 +855,10 @@ describe('tenant game lifecycle analytics', () => {
 
   beforeEach(() => {
     capture.mockReset();
+    // game_started fires once per game id per browser (#437); the harness
+    // reuses one id, so each case starts from a browser that has seen none.
+    globalThis.localStorage?.clear();
+    resetTrackedGameStartsForTests();
     setPostHogInstance({ capture, identify: vi.fn(), reset: vi.fn() });
   });
 
