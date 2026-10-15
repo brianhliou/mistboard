@@ -43,6 +43,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-10-15',
+    kind: 'update',
+    headline: 'A new look for the International pieces.',
+    body: 'The International set is redrawn: one dark ring on both sides, larger pieces, and rounded squares on the Square grid board. On the Square grid, the last move now lights the square the piece left and rings the piece that moved. Change the set or the board in your display settings.',
+    href: '/?play=computer&gameSpecId=xiangqi',
+    cta: 'Play xiangqi',
+  },
+  {
     date: '2026-10-16',
     kind: 'article',
     headline: 'A player page for Zuo Wenjing.',

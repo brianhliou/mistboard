@@ -48,6 +48,11 @@ const ZH_HANS: Record<string, string> = {
   'Looking for jieqi puzzles: what 50 games turned up.': '在揭棋里找题目：50 盘对局找到了什么。',
   'We scored 2,939 positions from 50 jieqi games, looking for puzzles. Four passed the rules our xiangqi puzzles go through, and none of them turns on a face-down piece: the hidden-piece answers were bets, or moves the tile hardly touched. Where skill does show is in timing a capture a face-down piece can make whatever it turns out to be. Every example is on a board you can step through.':
     '我们给 50 盘揭棋对局中的 2,939 个局面打分，寻找题目。有四个局面通过了我们象棋题目要过的规则，没有一个取决于暗子：取决于暗子的答案，要么是赌博，要么是暗子几乎无关的着法。实力真正体现的地方，是一枚暗子无论翻出什么都能完成的吃子，何时去吃。每个例子都在可以逐着演示的棋盘上。',
+  // ── 2026-10-15 (piece look) ── 国际 / 國際 follow prefs.xqPieceSet.international.
+  'A new look for the International pieces.': '国际棋子换了新样子。',
+  'The International set is redrawn: one dark ring on both sides, larger pieces, and rounded squares on the Square grid board. On the Square grid, the last move now lights the square the piece left and rings the piece that moved. Change the set or the board in your display settings.':
+    '国际棋子重新绘制：双方都用同一道深色外圈，棋子更大，在方格棋盘上是圆角方块。在方格棋盘上，上一步现在会点亮棋子离开的格子，并给走动的棋子加一道外圈。可以在显示设置中更换棋子或棋盘。',
+  'Play xiangqi': '下象棋',
   // ── 2026-10-14 (banqi reveal odds) ── 暗子 / 暗子概率 follow the banqi room's own strings.
   'Banqi now shows reveal odds.': '暗棋现在显示暗子概率。',
   'The face-down tally under a banqi board now gives the chance of each piece turning up on the next flip, counted only from what both players can already see. It is on for both players and spectators, rated games included. Banqi boards also show coordinates when Board coordinates is on in your display settings, and a finished room keeps the tally of what stayed face-down.':
@@ -511,6 +516,11 @@ const ZH_HANT: Record<string, string> = {
   'Looking for jieqi puzzles: what 50 games turned up.': '在揭棋裡找題目：50 盤對局找到了什麼。',
   'We scored 2,939 positions from 50 jieqi games, looking for puzzles. Four passed the rules our xiangqi puzzles go through, and none of them turns on a face-down piece: the hidden-piece answers were bets, or moves the tile hardly touched. Where skill does show is in timing a capture a face-down piece can make whatever it turns out to be. Every example is on a board you can step through.':
     '我們給 50 盤揭棋對局中的 2,939 個局面評分，尋找題目。有四個局面通過了我們象棋題目要過的規則，沒有一個取決於暗子：取決於暗子的答案，要麼是賭博，要麼是暗子幾乎無關的著法。實力真正體現的地方，是一枚暗子無論翻出什麼都能完成的吃子，何時去吃。每個例子都在可以逐著演示的棋盤上。',
+  // ── 2026-10-15 (piece look) ── 國際 / 国际 follow prefs.xqPieceSet.international.
+  'A new look for the International pieces.': '國際棋子換了新樣子。',
+  'The International set is redrawn: one dark ring on both sides, larger pieces, and rounded squares on the Square grid board. On the Square grid, the last move now lights the square the piece left and rings the piece that moved. Change the set or the board in your display settings.':
+    '國際棋子重新繪製：雙方都用同一道深色外圈，棋子更大，在方格棋盤上是圓角方塊。在方格棋盤上，上一步現在會點亮棋子離開的格子，並給走動的棋子加一道外圈。可以在顯示設定中更換棋子或棋盤。',
+  'Play xiangqi': '下象棋',
   // ── 2026-10-14 (banqi reveal odds) ── 暗子 / 暗子概率 follow the banqi room's own strings.
   'Banqi now shows reveal odds.': '暗棋現在顯示暗子機率。',
   'The face-down tally under a banqi board now gives the chance of each piece turning up on the next flip, counted only from what both players can already see. It is on for both players and spectators, rated games included. Banqi boards also show coordinates when Board coordinates is on in your display settings, and a finished room keeps the tally of what stayed face-down.':
