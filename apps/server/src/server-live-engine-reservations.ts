@@ -97,6 +97,50 @@ export function releaseLiveEngineReservation(reservationId: string, reason: stri
 }
 
 /**
+ * A stopping server hands back every engine-service seat its rooms hold (#567).
+ * Seats live only in the worker's memory and this process's rooms; nothing
+ * persists them, so a restart used to leave each PvE game's seat held on the
+ * worker until its 30-minute TTL. The new server's re-reservation on hydration
+ * then met a full worker: a Fog Xiangqi room refused to load, and a Fog chess
+ * bot's turn hit 429 and forfeited. Each id is cleared before the release so
+ * nothing presents it again; the next server reserves its own seat on
+ * hydration. Awaited, and bounded by the control-request timeout; a failed
+ * release is logged and the TTL frees that seat as before.
+ */
+export async function releaseLiveEngineSeatsOnShutdown(
+  holders: Iterable<{ id: string; engineReservationId?: string | null }>,
+): Promise<{ released: number; failed: number }> {
+  const releases: Array<Promise<void>> = [];
+  for (const holder of holders) {
+    const reservationId = holder.engineReservationId;
+    if (!reservationId) continue;
+    holder.engineReservationId = null;
+    releases.push(
+      releaseInternalEngineReservation(reservationId, 'server-shutdown').catch((err) => {
+        engineCounters.recordReservationReleaseFailure();
+        logger.warn(
+          {
+            kind: 'live_engine_reservation_release_failed',
+            reservation_id: reservationId,
+            room_id: holder.id,
+            reason: 'server-shutdown',
+            error: err instanceof Error ? err.message : String(err),
+            ...(err instanceof InternalEngineClientError
+              ? { engine_error_reason: err.reason }
+              : {}),
+          },
+          'live engine reservation release failed',
+        );
+        throw err;
+      }),
+    );
+  }
+  const results = await Promise.allSettled(releases);
+  const failed = results.filter((result) => result.status === 'rejected').length;
+  return { released: results.length - failed, failed };
+}
+
+/**
  * Anything that holds a live engine-service seat for one game: a dark-chess
  * `Room` or a tenant room (Dark Xiangqi). The renewal path writes a fresh id
  * back here, so the next turn presents a seat the worker knows.

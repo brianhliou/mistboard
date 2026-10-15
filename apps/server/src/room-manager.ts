@@ -1378,6 +1378,11 @@ export async function playRandomEngineMoveIfReady(
   const decisionAt = Date.now();
   if (room.projection.state.status.type !== 'playing') return;
   if (room.projection.state.status.turn !== engineSeat) return;
+  // The room can pause while the engine thinks: a shutdown lands mid-turn. A
+  // reply appended after the pause would play a move on a frozen clock and
+  // restart the human's clock running through the outage (the reducer does not
+  // refuse moves while paused). Drop it; the resume re-schedules the turn.
+  if (room.projection.paused) return;
   if (
     room.projection.state.clock &&
     clockRemainingMs(room.projection.state.clock, engineSeat, decisionAt) <= 0
