@@ -22,7 +22,8 @@ import './profile-achievements.css';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale } from './i18n/locale.js';
 import { buildNav, buildNotice } from './site-shell.js';
-import { buildUiIcon } from './ui-icon.js';
+import './seat-disc-ink.css';
+import { buildUiIcon, type UiIconName } from './ui-icon.js';
 
 export type ProfileAchievement = { id: string; awardedAt: string };
 
@@ -117,9 +118,75 @@ export function buildProfileAchievementsSummary(
   return line;
 }
 
+// Three looks for the page while Brian picks one (`?look=a|b|c`, default a):
+// a medallions, b a trophy list with a progress bar, c collectible cards with a
+// band per category. Same markup, so the choice is CSS plus a few look-only
+// pieces; the losers go once one is picked.
+export type AchievementsLook = 'a' | 'b' | 'c';
+const LOOKS: readonly AchievementsLook[] = ['a', 'b', 'c'];
+
+export function achievementsLookFromSearch(search: string): AchievementsLook {
+  const look = new URLSearchParams(search).get('look');
+  return LOOKS.includes(look as AchievementsLook) ? (look as AchievementsLook) : 'a';
+}
+
+// One card's worth of definition. Real definitions come from @mistboard/game;
+// previews are page-only, locked-only stand-ins (`?preview=1`) so a look can be
+// judged on a fuller grid. They never reach the shared definitions, the API or
+// any count.
+type CardDefinition = {
+  id: string;
+  category: AchievementCategory;
+  icon: UiIconName;
+  tier: AchievementDefinition['tier'];
+  titleKey: string;
+  descriptionKey: string;
+  hintKey: string;
+  preview?: true;
+};
+
+function cardDefinition(definition: AchievementDefinition): CardDefinition {
+  return {
+    id: definition.id,
+    category: definition.category,
+    icon: `achievement-${definition.icon}` as UiIconName,
+    tier: definition.tier,
+    titleKey: definition.titleKey,
+    descriptionKey: definition.descriptionKey,
+    hintKey: definition.hintKey,
+  };
+}
+
+function preview(
+  id: string,
+  category: AchievementCategory,
+  icon: UiIconName,
+  key: string,
+): CardDefinition {
+  const titleKey = `profile.achievementPreview${key}`;
+  return {
+    id: `preview-${id}`,
+    category,
+    icon,
+    tier: 'standard',
+    titleKey,
+    descriptionKey: `${titleKey}Hint`,
+    hintKey: `${titleKey}Hint`,
+    preview: true,
+  };
+}
+
+export const PREVIEW_ACHIEVEMENTS: readonly CardDefinition[] = [
+  preview('wins', 'play', 'event-tournament', 'Wins'),
+  preview('variants', 'play', 'play-game', 'Variants'),
+  preview('puzzle-run', 'puzzles', 'achievement-puzzle', 'PuzzleRun'),
+  preview('challenger', 'community', 'challenge-friend', 'Challenger'),
+];
+
 function buildAchievementCard(
-  definition: AchievementDefinition,
+  definition: CardDefinition,
   awardedAt: string | null,
+  look: AchievementsLook,
   locale: Locale,
 ): HTMLElement {
   const card = document.createElement('article');
@@ -128,16 +195,31 @@ function buildAchievementCard(
   if (definition.tier === 'badge') card.classList.add('achievement-card-badge');
   card.dataset.achievementId = definition.id;
   card.dataset.state = earned ? 'earned' : 'locked';
+  card.dataset.category = definition.category;
+  if (definition.preview) card.dataset.preview = 'true';
+
+  const titleText = label(definition.titleKey, locale);
+  const text = label(earned ? definition.descriptionKey : definition.hintKey, locale);
+  // Medallions keep the card to title and date; the description rides the
+  // tooltip, and a locked medallion's hint shows on hover or focus.
+  if (look === 'a') {
+    card.title = text;
+    if (!earned) card.tabIndex = 0;
+  }
+
+  const band = document.createElement('div');
+  band.className = 'achievement-card-band';
+  band.setAttribute('aria-hidden', 'true');
 
   const icon = document.createElement('span');
   icon.className = 'achievement-card-icon';
-  icon.append(buildUiIcon(`achievement-${definition.icon}`));
+  icon.append(buildUiIcon(definition.icon));
 
   const body = document.createElement('div');
   body.className = 'achievement-card-body';
   const title = document.createElement('h3');
   title.className = 'achievement-card-title';
-  title.textContent = label(definition.titleKey, locale);
+  title.textContent = titleText;
   if (definition.tier === 'badge') {
     const tag = document.createElement('span');
     tag.className = 'achievement-card-tag';
@@ -146,53 +228,109 @@ function buildAchievementCard(
   }
   const description = document.createElement('p');
   description.className = 'achievement-card-text';
-  description.textContent = label(earned ? definition.descriptionKey : definition.hintKey, locale);
+  description.textContent = text;
+  body.append(title, description);
+
   const status = document.createElement('p');
   status.className = 'achievement-card-status';
-  const date = earned ? formatAchievementDate(awardedAt, locale) : null;
-  status.textContent = earned
-    ? date
-      ? t('profile.achievementEarned', { date }, locale)
-      : ''
-    : t('profile.achievementLocked', {}, locale);
-  body.append(title, description);
-  if (status.textContent) body.append(status);
+  if (earned) {
+    const date = formatAchievementDate(awardedAt, locale);
+    if (date) status.textContent = t('profile.achievementEarned', { date }, locale);
+  } else {
+    status.append(
+      buildUiIcon('achievement-lock', 'achievement-card-lock'),
+      document.createTextNode(t('profile.achievementLocked', {}, locale)),
+    );
+  }
 
-  card.append(icon, body);
+  card.append(band, icon, body);
+  if (status.childNodes.length > 0) card.append(status);
   return card;
 }
 
-// The page body: heading, "N of M earned", then the cards, grouped by category
-// when the catalog spans more than one.
-export function buildProfileAchievementsPage(
+function buildPageHeader(
   handle: string,
-  earned: readonly ProfileAchievement[],
-  locale: Locale = currentLocale(),
+  earnedCount: number,
+  total: number,
+  look: AchievementsLook,
+  locale: Locale,
 ): HTMLElement {
-  const held = new Map(knownEarned(earned).map((award) => [award.definition.id, award.awardedAt]));
-  const page = document.createElement('section');
-  page.className = 'achievements-page';
-
   const header = document.createElement('header');
   header.className = 'achievements-page-header';
+  const profileHref = `/@/${encodeURIComponent(handle)}`;
+
+  // Whose page this is: a monogram and the handle, both back to the profile.
+  const owner = document.createElement('a');
+  owner.className = 'achievements-owner';
+  owner.href = profileHref;
+  owner.title = t('profile.achievementsBackToProfile', {}, locale);
+  const monogram = document.createElement('span');
+  monogram.className = 'achievements-owner-monogram';
+  monogram.setAttribute('aria-hidden', 'true');
+  monogram.textContent = (Array.from(handle)[0] ?? '?').toUpperCase();
+  owner.append(monogram);
+
+  const titles = document.createElement('div');
+  titles.className = 'achievements-page-titles';
   const back = document.createElement('a');
   back.className = 'achievements-page-handle';
-  back.href = `/@/${encodeURIComponent(handle)}`;
+  back.href = profileHref;
   back.textContent = `@${handle}`;
   const heading = document.createElement('h1');
   heading.textContent = t('profile.achievements', {}, locale);
   const summary = document.createElement('p');
   summary.className = 'achievements-page-summary';
-  summary.textContent = t(
-    'profile.achievementsEarnedOf',
-    { earned: held.size, total: ACHIEVEMENTS.length },
-    locale,
-  );
-  header.append(back, heading, summary);
-  page.append(header);
+  summary.textContent = t('profile.achievementsEarnedOf', { earned: earnedCount, total }, locale);
+  titles.append(back, heading, summary);
+  header.append(owner, titles);
 
+  if (look === 'b') {
+    const percent = total > 0 ? Math.round((earnedCount / total) * 100) : 0;
+    const progress = document.createElement('div');
+    progress.className = 'achievements-progress';
+    const bar = document.createElement('div');
+    bar.className = 'achievements-progress-bar';
+    bar.setAttribute('role', 'progressbar');
+    bar.setAttribute('aria-valuemin', '0');
+    bar.setAttribute('aria-valuemax', String(total));
+    bar.setAttribute('aria-valuenow', String(earnedCount));
+    bar.setAttribute('aria-label', summary.textContent);
+    const fill = document.createElement('span');
+    fill.className = 'achievements-progress-fill';
+    fill.style.width = `${percent}%`;
+    bar.append(fill);
+    const value = document.createElement('span');
+    value.className = 'achievements-progress-percent';
+    value.textContent = `${percent}%`;
+    progress.append(bar, value);
+    header.append(progress);
+  }
+  return header;
+}
+
+export type AchievementsPageOptions = { look?: AchievementsLook; preview?: boolean };
+
+// The page body: whose it is, "N of M earned", then the cards, grouped by
+// category when the catalog spans more than one.
+export function buildProfileAchievementsPage(
+  handle: string,
+  earned: readonly ProfileAchievement[],
+  locale: Locale = currentLocale(),
+  options: AchievementsPageOptions = {},
+): HTMLElement {
+  const look = options.look ?? 'a';
+  const held = new Map(knownEarned(earned).map((award) => [award.definition.id, award.awardedAt]));
+  const page = document.createElement('section');
+  page.className = 'achievements-page';
+  page.dataset.look = look;
+  page.append(buildPageHeader(handle, held.size, ACHIEVEMENTS.length, look, locale));
+
+  const definitions: CardDefinition[] = [
+    ...ACHIEVEMENTS.map(cardDefinition),
+    ...(options.preview ? PREVIEW_ACHIEVEMENTS : []),
+  ];
   const categories: AchievementCategory[] = [];
-  for (const definition of ACHIEVEMENTS) {
+  for (const definition of definitions) {
     if (!categories.includes(definition.category)) categories.push(definition.category);
   }
   for (const category of categories) {
@@ -208,13 +346,13 @@ export function buildProfileAchievementsPage(
     const grid = document.createElement('div');
     grid.className = 'achievements-grid';
     // Earned first within a group, catalog order otherwise.
-    const definitions = ACHIEVEMENTS.filter((definition) => definition.category === category);
+    const inGroup = definitions.filter((definition) => definition.category === category);
     const ordered = [
-      ...definitions.filter((definition) => held.has(definition.id)),
-      ...definitions.filter((definition) => !held.has(definition.id)),
+      ...inGroup.filter((definition) => held.has(definition.id)),
+      ...inGroup.filter((definition) => !held.has(definition.id)),
     ];
     for (const definition of ordered) {
-      grid.append(buildAchievementCard(definition, held.get(definition.id) ?? null, locale));
+      grid.append(buildAchievementCard(definition, held.get(definition.id) ?? null, look, locale));
     }
     group.append(grid);
     page.append(group);
@@ -255,5 +393,11 @@ export async function mountProfileAchievements(root: HTMLElement, handle: string
     return;
   }
   document.title = `${t('profile.achievements', {}, locale)} · @${handle} · Mistboard`;
-  shell.append(buildProfileAchievementsPage(handle, earned, locale));
+  const search = typeof location === 'undefined' ? '' : location.search;
+  shell.append(
+    buildProfileAchievementsPage(handle, earned, locale, {
+      look: achievementsLookFromSearch(search),
+      preview: new URLSearchParams(search).get('preview') === '1',
+    }),
+  );
 }

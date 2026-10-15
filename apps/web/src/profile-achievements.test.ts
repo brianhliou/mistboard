@@ -4,9 +4,11 @@ import { hasAppTranslation, type I18nKey, loadAppI18nDomains, t } from './i18n/c
 import { SUPPORTED_LOCALES } from './i18n/locale.js';
 import { buildProfileIdentity } from './profile.js';
 import {
+  achievementsLookFromSearch,
   buildProfileAchievementsPage,
   buildProfileAchievementsSummary,
   mountProfileAchievements,
+  PREVIEW_ACHIEVEMENTS,
 } from './profile-achievements.js';
 
 // No definition is badge tier yet, so the tests add stand-ins: ids starting
@@ -163,6 +165,48 @@ describe('the achievements page', () => {
     ]);
   });
 
+  it('says whose page it is, linking back to the profile', () => {
+    const page = buildProfileAchievementsPage('river_horse', [], 'en');
+    const owner = page.querySelector<HTMLAnchorElement>('.achievements-owner');
+    expect(owner?.getAttribute('href')).toBe('/@/river_horse');
+    expect(owner?.textContent).toBe('R');
+    expect(page.querySelector('.achievements-page-handle')?.textContent).toBe('@river_horse');
+  });
+
+  it('picks the look from ?look=, default a; only the trophy list has a progress bar', () => {
+    expect(achievementsLookFromSearch('')).toBe('a');
+    expect(achievementsLookFromSearch('?look=b')).toBe('b');
+    expect(achievementsLookFromSearch('?look=c&preview=1')).toBe('c');
+    expect(achievementsLookFromSearch('?look=zz')).toBe('a');
+    const earned = [{ id: 'first-game', awardedAt: AUG(1) }];
+    const a = buildProfileAchievementsPage('h', earned, 'en');
+    expect(a.dataset.look).toBe('a');
+    expect(a.querySelector('.achievements-progress')).toBe(null);
+    const b = buildProfileAchievementsPage('h', earned, 'en', { look: 'b' });
+    expect(b.querySelector('.achievements-progress-percent')?.textContent).toBe(
+      `${Math.round(100 / ACHIEVEMENTS.length)}%`,
+    );
+  });
+
+  it('preview definitions appear only on request, locked, and leave the count alone', () => {
+    const plain = buildProfileAchievementsPage('h', [], 'en');
+    expect(plain.querySelector('[data-preview]')).toBe(null);
+    const page = buildProfileAchievementsPage(
+      'h',
+      [{ id: 'preview-wins', awardedAt: AUG(1) }],
+      'en',
+      {
+        preview: true,
+      },
+    );
+    const previews = [...page.querySelectorAll<HTMLElement>('[data-preview="true"]')];
+    expect(previews.length).toBeGreaterThan(0);
+    expect(previews.every((card) => card.dataset.state === 'locked')).toBe(true);
+    expect(page.querySelector('.achievements-page-summary')?.textContent).toBe(
+      `0 of ${ACHIEVEMENTS.length} earned`,
+    );
+  });
+
   it('a private profile (404 from the API) shows the not-found notice and no cards', async () => {
     vi.stubGlobal(
       'fetch',
@@ -190,7 +234,7 @@ describe('the achievements page', () => {
   });
 
   it('every definition has its title, description and hint in all three locales, no em dashes', () => {
-    for (const definition of ACHIEVEMENTS) {
+    for (const definition of [...ACHIEVEMENTS, ...PREVIEW_ACHIEVEMENTS]) {
       for (const locale of SUPPORTED_LOCALES) {
         const keys = [definition.titleKey, definition.descriptionKey, definition.hintKey];
         for (const key of keys as I18nKey[]) {

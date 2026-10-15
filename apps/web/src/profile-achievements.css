@@ -52,26 +52,80 @@
   flex: 0 0 auto;
 }
 
-/* The page. */
-.achievements-page-header {
-  margin-bottom: 20px;
+/* The page. Three looks while one is picked (`?look=a|b|c`): shared pieces
+   first, then each look scoped by `.achievements-page[data-look]`. Category
+   tints come from existing palette tokens and follow the theme: Play is the
+   site jade, Puzzles the piece red, Community the ink blue. Nothing moves
+   unless the reader does something. */
+.achievements-page {
+  --ach-gold: hsl(42, 70%, 52%);
 }
 
-.achievements-page-handle {
-  color: var(--site-muted);
-  font-size: 13px;
-  font-weight: 600;
+.achievements-page .achievement-card[data-category="play"] {
+  --ach-cat: var(--site-accent);
+}
+
+.achievements-page .achievement-card[data-category="puzzles"] {
+  --ach-cat: var(--ink-red);
+}
+
+.achievements-page .achievement-card[data-category="community"] {
+  --ach-cat: var(--ink-blue);
+}
+
+.achievements-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 16px;
+  margin-bottom: 24px;
+}
+
+.achievements-owner {
+  flex: 0 0 auto;
   text-decoration: none;
 }
 
+.achievements-owner-monogram {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--site-accent);
+  color: var(--site-on-accent);
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.achievements-owner:hover .achievements-owner-monogram,
+.achievements-owner:focus-visible .achievements-owner-monogram {
+  background: var(--site-accent-strong);
+}
+
+.achievements-page-titles {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.achievements-page-handle {
+  color: var(--site-link);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
 .achievements-page-handle:hover {
-  color: var(--site-heading);
+  text-decoration: underline;
 }
 
 .achievements-page-header h1 {
-  margin: 4px 0 2px;
+  margin: 2px 0;
   color: var(--site-heading);
-  font-size: 26px;
+  font-size: 28px;
+  line-height: 1.15;
 }
 
 .achievements-page-summary {
@@ -81,11 +135,11 @@
 }
 
 .achievements-group + .achievements-group {
-  margin-top: 24px;
+  margin-top: 28px;
 }
 
 .achievements-group-heading {
-  margin: 0 0 10px;
+  margin: 0 0 12px;
   color: var(--site-muted);
   font-size: 12px;
   font-weight: 700;
@@ -95,19 +149,20 @@
 
 .achievements-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
-  gap: 12px;
+  gap: 14px;
 }
 
 .achievement-card {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
+  position: relative;
+  box-sizing: border-box;
   min-width: 0;
-  padding: 14px;
   border: 1px solid var(--site-border);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--site-panel);
+}
+
+.achievement-card-band {
+  display: none;
 }
 
 .achievement-card-icon {
@@ -115,16 +170,7 @@
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--site-accent) 14%, var(--site-panel));
-  color: var(--site-accent);
-}
-
-.achievement-card-icon .ui-icon {
-  width: 18px;
-  height: 18px;
+  box-sizing: border-box;
 }
 
 .achievement-card-body {
@@ -132,25 +178,25 @@
 }
 
 .achievement-card-title {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
   margin: 0;
   color: var(--site-heading);
   font-size: 15px;
+  line-height: 1.3;
   overflow-wrap: anywhere;
 }
 
 .achievement-card-tag {
+  display: inline-block;
+  margin-left: 6px;
   padding: 1px 6px;
   border-radius: 3px;
-  background: color-mix(in srgb, var(--site-accent) 16%, var(--site-panel));
+  background: var(--site-accent-soft);
   color: var(--site-accent);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  vertical-align: middle;
 }
 
 .achievement-card-text {
@@ -161,22 +207,325 @@
 }
 
 .achievement-card-status {
-  margin: 6px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
   color: var(--site-muted);
   font-size: 12px;
 }
 
-/* Locked: present, so a player can see what there is to earn, but muted. */
-.achievement-card-locked {
-  border-style: dashed;
-  background: transparent;
+.achievement-card-lock {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
 }
 
-.achievement-card-locked .achievement-card-icon {
-  background: color-mix(in srgb, var(--site-muted) 12%, transparent);
+/* a. Medallions. */
+.achievements-page[data-look="a"] .achievements-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr));
+}
+
+@media (max-width: 480px) {
+  .achievements-page[data-look="a"] .achievements-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
+
+.achievements-page[data-look="a"] .achievement-card {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  grid-template-areas:
+    "icon"
+    "title"
+    "slot";
+  justify-items: center;
+  row-gap: 10px;
+  padding: 22px 12px 16px;
+  text-align: center;
+}
+
+.achievements-page[data-look="a"] .achievement-card-icon {
+  grid-area: icon;
+  width: 72px;
+  height: 72px;
+  margin: 5px;
+  border: 3px solid var(--ach-cat);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 35% 30%,
+    var(--site-panel),
+    color-mix(in srgb, var(--ach-cat) 22%, var(--site-panel)) 70%
+  );
+  box-shadow:
+    0 0 0 3px var(--site-panel),
+    0 0 0 5px color-mix(in srgb, var(--ach-gold) 70%, var(--ach-cat)),
+    0 4px 10px var(--site-shadow);
+  color: var(--ach-cat);
+}
+
+.achievements-page[data-look="a"] .achievement-card-icon .ui-icon {
+  width: 32px;
+  height: 32px;
+}
+
+/* Title in its own row; the description (earned) or hint (locked) shares one
+   grid cell with the status line, so swapping them on hover shifts nothing. */
+.achievements-page[data-look="a"] .achievement-card-body {
+  display: contents;
+}
+
+.achievements-page[data-look="a"] .achievement-card-title {
+  grid-area: title;
+}
+
+.achievements-page[data-look="a"] .achievement-card-text,
+.achievements-page[data-look="a"] .achievement-card-status {
+  grid-area: slot;
+  align-self: start;
+  justify-content: center;
+  margin: 0;
+}
+
+.achievements-page[data-look="a"] .achievement-card-earned .achievement-card-text {
+  display: none;
+}
+
+.achievements-page[data-look="a"] .achievement-card-locked .achievement-card-text {
+  color: var(--site-text);
+  font-size: 12px;
+  visibility: hidden;
+}
+
+.achievements-page[data-look="a"] .achievement-card-locked:hover .achievement-card-text,
+.achievements-page[data-look="a"] .achievement-card-locked:focus-visible .achievement-card-text {
+  visibility: visible;
+}
+
+.achievements-page[data-look="a"] .achievement-card-locked:hover .achievement-card-status,
+.achievements-page[data-look="a"] .achievement-card-locked:focus-visible .achievement-card-status {
+  visibility: hidden;
+}
+
+@media (hover: none) {
+  .achievements-page[data-look="a"] .achievement-card-locked .achievement-card-text {
+    visibility: visible;
+  }
+
+  .achievements-page[data-look="a"] .achievement-card-locked .achievement-card-status {
+    visibility: hidden;
+  }
+}
+
+.achievements-page[data-look="a"] .achievement-card-locked:focus-visible {
+  outline: 2px solid var(--site-focus);
+  outline-offset: 2px;
+}
+
+.achievements-page[data-look="a"] .achievement-card-locked {
+  background: var(--site-panel-soft);
+}
+
+.achievements-page[data-look="a"] .achievement-card-locked .achievement-card-icon {
+  filter: grayscale(1);
+  opacity: 0.35;
+  box-shadow: none;
+}
+
+.achievements-page[data-look="a"] .achievement-card-locked .achievement-card-title {
   color: var(--site-muted);
 }
 
-.achievement-card-locked .achievement-card-title {
+/* b. Trophy list. */
+.achievements-progress {
+  display: flex;
+  flex: 1 1 100%;
+  align-items: center;
+  gap: 12px;
+}
+
+.achievements-progress-bar {
+  position: relative;
+  flex: 1 1 auto;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: var(--site-bg-soft);
+}
+
+.achievements-progress-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 5px;
+  background: linear-gradient(90deg, var(--site-accent), var(--site-accent-strong));
+}
+
+.achievements-progress-percent {
+  flex: 0 0 auto;
+  min-width: 3.5ch;
+  color: var(--site-heading);
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.achievements-page[data-look="b"] .achievements-grid {
+  gap: 8px;
+}
+
+.achievements-page[data-look="b"] .achievement-card {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  grid-template-areas: "icon body status";
+  align-items: center;
+  gap: 4px 14px;
+  padding: 10px 16px 10px 10px;
+}
+
+.achievements-page[data-look="b"] .achievement-card-icon {
+  grid-area: icon;
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--ach-cat) 80%, var(--site-panel)),
+    var(--ach-cat)
+  );
+  color: var(--site-on-accent);
+}
+
+.achievements-page[data-look="b"] .achievement-card-icon .ui-icon {
+  width: 30px;
+  height: 30px;
+}
+
+.achievements-page[data-look="b"] .achievement-card-body {
+  grid-area: body;
+}
+
+.achievements-page[data-look="b"] .achievement-card-status {
+  grid-area: status;
+  justify-content: flex-end;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.achievements-page[data-look="b"] .achievement-card-earned .achievement-card-status {
+  color: var(--site-text);
+}
+
+@media (max-width: 520px) {
+  .achievements-page[data-look="b"] .achievement-card {
+    grid-template-columns: 52px minmax(0, 1fr);
+    grid-template-areas:
+      "icon body"
+      "icon status";
+  }
+
+  .achievements-page[data-look="b"] .achievement-card-icon {
+    width: 52px;
+    height: 52px;
+  }
+
+  .achievements-page[data-look="b"] .achievement-card-status {
+    justify-content: flex-start;
+    white-space: normal;
+  }
+}
+
+.achievements-page[data-look="b"] .achievement-card-locked {
+  background: var(--site-panel-soft);
+}
+
+.achievements-page[data-look="b"] .achievement-card-locked .achievement-card-icon {
+  background: var(--site-bg-soft);
   color: var(--site-muted);
+  opacity: 0.6;
+}
+
+.achievements-page[data-look="b"] .achievement-card-locked .achievement-card-title,
+.achievements-page[data-look="b"] .achievement-card-locked .achievement-card-text {
+  color: var(--site-muted);
+}
+
+/* c. Collectible cards. */
+.achievements-page[data-look="c"] .achievements-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr));
+}
+
+@media (max-width: 480px) {
+  .achievements-page[data-look="c"] .achievements-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
+
+.achievements-page[data-look="c"] .achievement-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  padding: 0 14px 16px;
+  text-align: center;
+  min-height: 230px;
+}
+
+.achievements-page[data-look="c"] .achievement-card-band {
+  display: block;
+  align-self: stretch;
+  height: 64px;
+  margin: 0 -14px;
+  background:
+    linear-gradient(160deg, color-mix(in srgb, #fff 18%, transparent), transparent 60%),
+    var(--ach-cat);
+}
+
+.achievements-page[data-look="c"] .achievement-card-icon {
+  width: 68px;
+  height: 68px;
+  margin-top: -34px;
+  border: 4px solid var(--site-panel);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ach-cat) 14%, var(--site-panel));
+  color: var(--ach-cat);
+}
+
+.achievements-page[data-look="c"] .achievement-card-icon .ui-icon {
+  width: 30px;
+  height: 30px;
+}
+
+.achievements-page[data-look="c"] .achievement-card-body {
+  flex: 1 1 auto;
+  margin-top: 10px;
+}
+
+.achievements-page[data-look="c"] .achievement-card-status {
+  justify-content: center;
+  margin-top: 12px;
+}
+
+/* Earned: a static sheen on the border, category colour through gold. */
+.achievements-page[data-look="c"] .achievement-card-earned {
+  border: 2px solid transparent;
+  background:
+    linear-gradient(var(--site-panel), var(--site-panel)) padding-box,
+    linear-gradient(
+      135deg,
+      var(--ach-cat),
+      var(--ach-gold) 45%,
+      color-mix(in srgb, var(--ach-gold) 40%, var(--site-panel)) 55%,
+      var(--ach-cat)
+    )
+    border-box;
+  box-shadow: 0 6px 16px var(--site-shadow);
+}
+
+.achievements-page[data-look="c"] .achievement-card-locked {
+  border: 2px solid var(--site-border-soft);
+  filter: grayscale(1);
+  opacity: 0.6;
 }

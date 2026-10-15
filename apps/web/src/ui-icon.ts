@@ -15,6 +15,7 @@ import {
   Heart,
   type IconNode,
   Info,
+  Lock,
   Mail,
   Megaphone,
   MessageSquare,
@@ -37,6 +38,7 @@ import type { AnnouncementKind } from './announcements.js';
 export type UiIconName =
   | 'achievement-first-game'
   | 'achievement-forum'
+  | 'achievement-lock'
   | 'achievement-puzzle'
   | 'achievement-rated'
   | 'achievement-versus'
@@ -68,6 +70,7 @@ const UI_ICON_NODES: Record<UiIconName, IconNode> = {
   // achievements.ts) as `achievement-<icon>`.
   'achievement-first-game': ChessKnight,
   'achievement-forum': MessageSquare,
+  'achievement-lock': Lock,
   'achievement-puzzle': Puzzle,
   'achievement-rated': TrendingUp,
   'achievement-versus': Handshake,

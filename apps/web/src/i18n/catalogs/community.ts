@@ -159,6 +159,15 @@ export const EN_COMMUNITY = {
   'profile.achievementCategoryCommunity': 'Community',
   'profile.achievementLocked': 'Not earned yet',
   'profile.achievementBadge': 'Badge',
+  'profile.achievementsBackToProfile': 'Back to profile',
+  'profile.achievementPreviewWins': 'Ten wins',
+  'profile.achievementPreviewWinsHint': 'Win ten games.',
+  'profile.achievementPreviewVariants': 'Five variants',
+  'profile.achievementPreviewVariantsHint': 'Finish a game in five different variants.',
+  'profile.achievementPreviewPuzzleRun': 'Puzzle run',
+  'profile.achievementPreviewPuzzleRunHint': 'Solve 25 puzzles.',
+  'profile.achievementPreviewChallenger': 'Challenger',
+  'profile.achievementPreviewChallengerHint': 'Finish a game against a friend you challenged.',
   // Verified player titles (flair): full names for tooltips; the badge shows
   // the uppercase abbreviation. Vocabulary mirror: player-titles.ts.
   'title.xgm': 'Xiangqi Grandmaster',
