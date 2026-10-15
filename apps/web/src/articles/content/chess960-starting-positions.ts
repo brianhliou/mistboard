@@ -90,7 +90,7 @@ export const chess960StartingPositionsArticle: Article = {
   summary:
     'Stockfish 18 rankings for all 960 Chess960/Fischer Random starting positions. Most balanced: SP-418 and SP-563; standard chess is near median.',
   showSummaryOnPage: false,
-  status: 'draft',
+  status: 'published',
   publishedAt: '2026-05-07',
   updatedAt: '2026-10-15',
   thumbnail: {

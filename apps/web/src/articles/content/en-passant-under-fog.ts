@@ -28,7 +28,7 @@ export const enPassantUnderFogArticle: Article = {
   summary:
     "My fog of war chess engine recorded the en passant square under standard chess legality, in a variant with no such rule. En passant availability decides what a pawn can see, so the true board fell out of the engine's belief and it finished the game against 41 worlds that did not exist.",
   showSummaryOnPage: false,
-  status: 'draft',
+  status: 'published',
   publishedAt: '2026-09-12',
   updatedAt: '2026-10-15',
   thumbnail: {

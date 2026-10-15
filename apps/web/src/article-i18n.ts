@@ -195,6 +195,11 @@ export const UNTRANSLATED_ARTICLE_SLUGS: Readonly<Record<string, string>> = {
   'co-up': 'Vietnamese copy of jieqi-platform, whose zh pages exist.',
   'khai-cuoc-co-up': 'Vietnamese copy of jieqi-openings, whose zh pages exist.',
   'lai-ly-huynh-co-tuong': 'Vietnamese copy of lai-ly-huynh, whose zh pages exist.',
+  // Chess posts moved from brianhliou.com on 2026-10-15 with their original dates;
+  // their old zh pairs were dropped, so zh waits for a translation of the moved text.
+  'en-passant-under-fog': 'Moved from brianhliou.com in English; not yet translated.',
+  'most-played-move': 'Moved from brianhliou.com in English; not yet translated.',
+  'chess960-starting-positions': 'Moved from brianhliou.com in English; not yet translated.',
 };
 
 const TRANSLATED_ARTICLE_SLUG_SET = new Set<string>(TRANSLATED_ARTICLE_SLUGS);

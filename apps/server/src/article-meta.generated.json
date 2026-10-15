@@ -113,7 +113,7 @@
     "title": "Chess960 Starting Positions Ranked By Stockfish",
     "kind": "article",
     "description": "Stockfish 18 rankings for all 960 Chess960/Fischer Random starting positions. Most balanced: SP-418 and SP-563; standard chess is near median.",
-    "status": "draft"
+    "status": "published"
   },
   "choi-co-tuong-voi-may": {
     "title": "Chơi cờ tướng với máy: Pikafish trên Mistboard",
@@ -171,7 +171,7 @@
     "title": "An En Passant Bug Under Fog",
     "kind": "article",
     "description": "My fog of war chess engine recorded the en passant square under standard chess legality, in a variant with no such rule. En passant availability decides what a pawn can see, so the true board fell out of the engine's belief and it finished the game against 41 worlds that did not exist.",
-    "status": "draft"
+    "status": "published"
   },
   "flip-jungle-skill-ceiling": {
     "title": "Flip Jungle: 512 times the search still loses 23% of games",
@@ -413,7 +413,7 @@
     "title": "When the Most Played Move Is an Inaccuracy",
     "kind": "article",
     "description": "In 144 of 4,121 common opening positions, the move club players choose most often loses winning chances against the engine at twenty million nodes. Ten of them, with what the masters played in each era, and a study holding all 144.",
-    "status": "draft"
+    "status": "published"
   },
   "one-thousand-games": {
     "title": "1,000 games played",

@@ -47,7 +47,7 @@ export const mostPlayedMoveArticle: Article = {
   summary:
     'In 144 of 4,121 common opening positions, the move club players choose most often loses winning chances against the engine at twenty million nodes. Ten of them, with what the masters played in each era, and a study holding all 144.',
   showSummaryOnPage: false,
-  status: 'draft',
+  status: 'published',
   publishedAt: '2026-09-21',
   updatedAt: '2026-10-15',
   thumbnail: {
