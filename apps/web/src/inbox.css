@@ -118,10 +118,11 @@
   align-items: baseline;
 }
 
+/* Clips its overflow, so the line box must hold the glyph's descenders (#543). */
 .inbox-thread-handle {
   font-weight: 600;
   font-size: 15px;
-  line-height: 1.2;
+  line-height: 1.5;
   color: var(--site-text);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -145,9 +146,10 @@
   color: color-mix(in srgb, var(--site-muted) 86%, transparent);
 }
 
+/* Clips its overflow, so the line box must hold the glyph's descenders (#543). */
 .inbox-thread-preview {
   font-size: 14px;
-  line-height: 1.25;
+  line-height: 1.5;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -223,10 +225,11 @@
   outline: none;
 }
 
+/* Clips its overflow, so the line box must hold the glyph's descenders (#543). */
 .inbox-convo-handle {
   font-weight: 600;
   font-size: 18px;
-  line-height: 1.2;
+  line-height: 1.5;
   color: var(--site-text);
   text-decoration: none;
   overflow: hidden;
