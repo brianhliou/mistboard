@@ -206,3 +206,60 @@ export function isNewFinishedGame(game: FinishedGameFacts, seenAt: Date | null):
   if (WINNING_MOVE_TERMINATIONS.has(game.termination) && won) return false;
   return true;
 }
+
+// ---------------------------------------------------------------------------
+// The bell's "your correspondence game ended" rows (routes/notifications.ts)
+// ---------------------------------------------------------------------------
+//
+// The same games the page tags "New": ended after the correspondence-finished
+// watermark, inside the page's window, not ended by the player's own act. One
+// watermark serves both, so opening the bell clears the page's tags and opening
+// the page clears the bell (Brian, 2026-10-14). Nothing is written when a game
+// ends: the notice is read off the games row, so a re-run of the end handler
+// (recordGameEnd upserts one row per room, ended_at from the event log) cannot
+// tell anyone twice. A row carries the result, how it ended, the variant and the
+// opponent's name, never a board: fog games say nothing their replay hides.
+// Scanned past the bell's own row cap so the count stays true for a few more.
+export const FINISHED_BELL_SCAN = 20;
+
+export type CorrespondenceEndedNotificationJson = {
+  roomId: string;
+  gameSpecId: string;
+  outcome: 'won' | 'lost' | 'draw';
+  termination: string;
+  // The other seat: handle only when their profile may be linked.
+  opponent: { handle: string | null; displayName: string } | null;
+  endedAt: string;
+};
+
+export async function unseenFinishedCorrespondenceGames(
+  userId: string,
+  options: { limit: number },
+  deps: Pick<FinishedCorrespondenceDeps, 'list' | 'seenAt'> = defaultFinishedDeps,
+  now: Date = new Date(),
+): Promise<{ total: number; games: CorrespondenceEndedNotificationJson[] }> {
+  const seenAt = await deps.seenAt(userId);
+  if (!seenAt) return { total: 0, games: [] };
+  const windowStart = new Date(now.getTime() - FINISHED_WINDOW_DAYS * DAY_MS);
+  const since = seenAt.getTime() > windowStart.getTime() ? seenAt : windowStart;
+  const games = await deps.list(userId, { since, limit: FINISHED_BELL_SCAN });
+  const unseen = games.filter((game) => isNewFinishedGame(game, seenAt));
+  return {
+    total: unseen.length,
+    games: unseen.slice(0, options.limit).map(endedNotificationJson),
+  };
+}
+
+function endedNotificationJson(game: ProfileGameRecord): CorrespondenceEndedNotificationJson {
+  const opponent = game.participants.find((seat) => seat.color !== game.playerColor);
+  return {
+    roomId: game.roomId,
+    gameSpecId: game.variant,
+    outcome: game.result === 'draw' ? 'draw' : playerWonFinishedGame(game) ? 'won' : 'lost',
+    termination: game.termination,
+    opponent: opponent
+      ? { handle: opponent.handle ?? null, displayName: opponent.displayName }
+      : null,
+    endedAt: game.endedAt.toISOString(),
+  };
+}

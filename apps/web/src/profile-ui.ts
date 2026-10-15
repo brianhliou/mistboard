@@ -18,7 +18,7 @@ import { currentLocale, LOCALE_META, type Locale } from './i18n/locale.js';
 import { appendWithNameNode, participantProfileTarget, playerNameEl } from './profile-link.js';
 import { attachBotCard } from './profile-summary-card.js';
 import { renderVariantMarker } from './variant-markers.js';
-import { webVariantTenantForRoomId, webVariantTenantForSpecId } from './variant-tenant/registry.js';
+import { finishedGameHref } from './variant-tenant/registry.js';
 import { variantMiniIdForRawVariant } from './variants.js';
 
 export function buildProfileDashboard(
@@ -455,9 +455,5 @@ export function profileGameUnavailableTag(
 }
 
 export function profileGameHref(game: FeaturedGame): string {
-  const tenant = webVariantTenantForRoomId(game.roomId) ?? webVariantTenantForSpecId(game.variant);
-  if (tenant?.gameRouteBase) {
-    return `${tenant.gameRouteBase}/${encodeURIComponent(game.roomId)}`;
-  }
-  return `/game/${encodeURIComponent(game.roomId)}`;
+  return finishedGameHref(game.roomId, game.variant);
 }

@@ -1132,7 +1132,10 @@ export async function renderFinishedGames(
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ kind: 'correspondence-finished' }),
-    }).catch(() => undefined);
+    })
+      // The bell's "game ended" rows read the same watermark: drop them now.
+      .then(() => refreshNotifications())
+      .catch(() => undefined);
   }
 }
 

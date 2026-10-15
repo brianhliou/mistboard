@@ -19,9 +19,9 @@ import { linkableHandleSql, seekExpirySql } from './persistence-correspondence-s
 import { getPool } from './persistence-db.js';
 import { visibleFollowerSql } from './persistence-relations.js';
 
-// 'correspondence-finished' (167) is read by the /correspondence page's
-// "Recently finished" list, not the bell: it marks games that ended since the
-// player last opened the page.
+// 'correspondence-finished' (167) marks games that ended since the player last
+// looked: the /correspondence page's "New" tag and the bell's "your game ended"
+// rows read it, and opening either advances it.
 export type NotificationWatermarkKind = 'followers' | 'forum-replies' | 'correspondence-finished';
 
 const WATERMARK_COLUMNS: Record<NotificationWatermarkKind, string> = {

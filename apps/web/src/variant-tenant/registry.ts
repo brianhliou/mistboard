@@ -1004,6 +1004,15 @@ export function webVariantTenantForSpecId(value: string | null): WebVariantTenan
   );
 }
 
+// A finished game's page: the tenant's postgame route (room-id prefix first,
+// spec id as a fallback for legacy aliases), else the dark-chess /game/:id
+// surface. Shared by the profile game rows and the bell's "game ended" rows.
+export function finishedGameHref(roomId: string, gameSpecId: string | null): string {
+  const tenant = webVariantTenantForRoomId(roomId) ?? webVariantTenantForSpecId(gameSpecId);
+  if (tenant?.gameRouteBase) return `${tenant.gameRouteBase}/${encodeURIComponent(roomId)}`;
+  return `/game/${encodeURIComponent(roomId)}`;
+}
+
 /**
  * The pace a variant's picker preselects. A thin re-export of the shared policy
  * in @mistboard/game, which the SERVER also applies when a bot-id create omits
