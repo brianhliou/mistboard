@@ -33,6 +33,10 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Machine-drafted 2026-10-14, not native-reviewed, a day after the English
+  // copy published (2026-10-13) with English zh pages, which is what added
+  // UNTRANSLATED_ARTICLE_SLUGS and its gate.
+  'fortress-and-atomic-xiangqi-on-hold',
   // Machine-drafted 2026-10-10, not native-reviewed, locked with its English
   // copy, which publishes in the same release (jieqi readers are mostly Chinese).
   'jieqi-puzzle-search',
@@ -171,6 +175,23 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   'misty',
   'server-enforced-fog',
 ] as const;
+
+// Published articles that deliberately have no zh pages, each with its reason.
+// Every published article is in TRANSLATED_ARTICLE_SLUGS or here, and
+// article-i18n.coverage.test.ts fails one in neither: an opt-in list alone let
+// fortress-and-atomic-xiangqi-on-hold go live on 2026-10-13 with English zh
+// pages and every test green.
+export const UNTRANSLATED_ARTICLE_SLUGS: Readonly<Record<string, string>> = {
+  mahjong:
+    'English only until a Hong Kong player checks the faan table; each correction would re-translate the page.',
+  'luat-co-up': 'A Vietnamese rules page for Vietnamese search; it has no English or zh source.',
+  // Vietnamese renders of a translated English article (derived-translation.ts);
+  // a zh reader gets the source article's zh page.
+  'choi-co-tuong-voi-may': 'Vietnamese copy of pikafish, whose zh pages exist.',
+  'co-up': 'Vietnamese copy of jieqi-platform, whose zh pages exist.',
+  'khai-cuoc-co-up': 'Vietnamese copy of jieqi-openings, whose zh pages exist.',
+  'lai-ly-huynh-co-tuong': 'Vietnamese copy of lai-ly-huynh, whose zh pages exist.',
+};
 
 const TRANSLATED_ARTICLE_SLUG_SET = new Set<string>(TRANSLATED_ARTICLE_SLUGS);
 
@@ -5009,6 +5030,57 @@ const ZH_HANS: Record<string, string> = {
   'Flip Jungle: an engine game, Red wins on move 28': '翻翻棋：一盘引擎对局，红方第 28 回合获胜',
   'The [companion study](/study/uKxJ60mN) has all twenty games from the run, each opening into its own deal, with a note on how it went.':
     '[配套研究](/study/uKxJ60mN)收录了这一批全部二十盘对局，每盘都从自己的发牌开始，并附有对局经过的说明。',
+  // -- fortress-and-atomic-xiangqi-on-hold, machine-drafted 2026-10-14, not native-reviewed. Terms follow the
+  // Fortress and Atomic rules pages (宝, 持子, 打入, 长将) and the site's variant names. --
+  'Back to the drawing board: Fortress and Atomic Xiangqi': '推倒重来：堡垒象棋与原子象棋',
+  'Back to the drawing board: Fortress Xiangqi and Atomic Xiangqi':
+    '推倒重来：堡垒象棋和原子象棋暂停开放',
+  'Fortress and Atomic on hold': '堡垒与原子象棋暂停',
+  'On 11 October we stopped new games of Fortress Xiangqi and Atomic Xiangqi so we can redesign them. In Fortress the drops took over a small board; Atomic only stopped looping after the cannon got its own exception. Finished games still replay.':
+    '10 月 11 日，我们停止了堡垒象棋和原子象棋的新对局，以便重新设计。在堡垒象棋里，打入主宰了一张小棋盘；原子象棋则是在炮有了自己的例外规则之后，才不再陷入循环。已结束的对局仍可回放。',
+  'Fortress Xiangqi and Atomic Xiangqi are on hold while we redesign them. You cannot start a new game, but finished games still replay and both rules pages stay up.':
+    '堡垒象棋和原子象棋已暂停，我们正在重新设计。你无法开始新对局，但已结束的对局仍可回放，两个规则页面也都保留。',
+  'In Fortress the drops took over the small board. A redesign has to make a smaller xiangqi that still feels like the full game.':
+    '在堡垒象棋里，打入主宰了小棋盘。重新设计必须做出一种更小的象棋，下起来仍像完整的象棋。',
+  'Atomic only played well after the cannon got its own exception. A redesign has to give it a cannon that follows the same rule as every other piece.':
+    '原子象棋是在炮有了自己的例外规则之后才下得好。重新设计必须给它一个和其他所有棋子遵循同一条规则的炮。',
+  'On 11 October we stopped new games of [Fortress Xiangqi](/rules/fortress-xiangqi) and [Atomic Xiangqi](/rules/atomic-xiangqi). Games already played still replay from their links, and both rules pages stay up. We designed both games, and we launched both before they were ready. What went wrong with each, and what does a version worth bringing back have to fix?':
+    '10 月 11 日，我们停止了[堡垒象棋](/rules/fortress-xiangqi)和[原子象棋](/rules/atomic-xiangqi)的新对局。已经下过的对局仍可从各自的链接回放，两个规则页面也都保留。这两款棋都是我们设计的，也都是在还没准备好时就上线了。它们各自出了什么问题？一个值得重新推出的版本又必须解决什么？',
+  'Fortress Xiangqi tried four new ideas at once': '堡垒象棋同时尝试了四个新点子',
+  'Fortress was played on a 7 by 8 board with the two palaces in opposite corners. It added the Treasure, a new piece that steps one point in any direction. A captured piece went into your hand, and you could drop it back onto the board later as your own move. For its first two months it also had veteran soldiers, which we later took out.':
+    '堡垒象棋在 7×8 的棋盘上进行，两个九宫分处对角。它加入了「宝」，一个可以向任意方向走一步的新棋子。被吃掉的棋子进入你的持子，之后你可以用自己的一步把它打回棋盘。最初的两个月里它还有老兵，后来我们把老兵去掉了。',
+  'Each idea was worth trying. Together they made a game that was hard to learn, and the drops overwhelmed the rest. With the general boxed into a corner of a small board, one piece dropped beside it was often enough. A typical engine game ended this way, with most of both armies still on the board.':
+    '每个点子都值得一试。合在一起，却成了一款难学的棋，而打入压倒了其余一切。将帅被困在小棋盘的一角，往它旁边打入一子往往就够了。一盘典型的引擎对局就是这样结束的，双方的大部分兵力都还在盘上。',
+  'Black drops a soldier from its hand on b1, beside the general. With the horse on c3 guarding b1 and Red’s own chariot on a2, the general has nowhere to go, and that is mate.':
+    '黑方从持子中把一枚卒打在 b1，紧挨着帅。c3 的马守住 b1，红方自己的车又占着 a2，帅无路可走，这就是将死。',
+  'A redesign has to make a smaller xiangqi that keeps the feel of the full game, without drops taking over.':
+    '重新设计必须做出一种更小的象棋，保留完整象棋的感觉，又不让打入主宰全局。',
+  'Until then, drops live on the site in [Crazyhouse Xiangqi](/rules/crazyhouse-xiangqi), which plays them on the normal board with the normal pieces and palaces.':
+    '在此之前，本站的打入玩法在[疯狂屋象棋](/rules/crazyhouse-xiangqi)里：它在普通棋盘上，用普通的棋子和九宫来打入。',
+  'Atomic Xiangqi needed an exception for the cannon': '原子象棋得为炮开一个例外',
+  'In Atomic Xiangqi a capture explodes. The piece that captures, the piece it takes and every piece on the four points next to the capture leave the board. Soldiers survive a blast; a general does not, and losing it loses the game.':
+    '在原子象棋里，吃子会爆炸。吃子的棋子、被吃的棋子，以及吃子点相邻四个点上的所有棋子，都离开棋盘。兵卒能在爆炸中幸存；将帅不能，失去它就输掉这盘棋。',
+  'In the first version the cannon exploded too, which made it the perfect defender: it could block a chariot’s attack and threaten back through the chariot. An attacker could often force a draw this way.':
+    '在最初的版本里，炮也会爆炸，这让它成了完美的防守者：它能挡住车的进攻，再隔着车反过来威胁。进攻方常常就这样被拖成和棋。',
+  'Under the first rules. (a) The chariot threatens the advisor on d10. (b) The cannon blocks and threatens d1 through the chariot. (c) The chariot switches files. (d) The cannon follows, and the cycle repeats.':
+    '按最初的规则。(a) 车威胁 d10 的士。(b) 炮挡住，并隔着车威胁 d1。(c) 车换到另一路。(d) 炮跟过去，循环重复。',
+  '(a) Rd2': '(a) Rd2',
+  '(b) Cd6': '(b) Cd6',
+  '(c) Rf2': '(c) Rf2',
+  '(d) Cf6': '(d) Cf6',
+  'With its palace closed in, as here, the defender has no other move, and a repetition rule can’t break the cycle because both sides threaten on every move.':
+    '像这里这样九宫被封住时，防守方没有别的着法；重复局面规则也打破不了这个循环，因为双方每一步都在威胁。',
+  'To launch it, we made a cannon’s capture remove only the cannon and its target, and made the side that keeps up a threat through a repeated cycle lose, like perpetual check in xiangqi.':
+    '为了上线，我们让炮吃子只移除炮和它的目标，并规定在重复的循环里一直保持威胁的一方判负，就像象棋里的长将。',
+  'That ended the loop, but left the cannon playing by its own rule: it alone can capture next to its own general. We launched before we had a design without that patch.':
+    '这结束了循环，却让炮按自己的规则行事：只有它能在己方将帅的相邻点上吃子。我们在找到不需要这个补丁的设计之前就上线了。',
+  'A redesign needs a cannon that follows the same rule as every other piece.':
+    '重新设计需要一个和其他所有棋子遵循同一条规则的炮。',
+  'Both come back when they are right': '两款棋都会在做对之后回来',
+  'We would rather run a short list of games we stand behind than keep two that need an apology. Neither game is dead. Each has one problem to solve. Fortress needs a small board that drops do not take over, and Atomic needs a cannon with no exception. When a version of either one solves it, that game comes back.':
+    '我们宁愿只运营一小批自己认可的棋，也不愿留着两款需要道歉的棋。两款棋都没有死。各自都有一个问题要解决：堡垒象棋需要一张不被打入主宰的小棋盘，原子象棋需要一个没有例外的炮。哪一款的新版本解决了它的问题，那款棋就会回来。',
+  'If dropping pieces was the part of Fortress you liked, Crazyhouse Xiangqi is where drops live on the site today.':
+    '如果打入是你在堡垒象棋里喜欢的部分，如今本站的打入玩法就在疯狂屋象棋里。',
   // -- Crazyhouse Xiangqi (rules page), machine-drafted 2026-10-02 for the hand-start rules, not native-reviewed --
   'Crazyhouse Xiangqi Rules': '疯狂屋象棋规则',
   'The sample game’s last move. Left, Red to move with three soldiers in hand. Right, one dropped on e9 mates the general on f9.':
@@ -9815,6 +9887,57 @@ const ZH_HANT: Record<string, string> = {
   'Flip Jungle: an engine game, Red wins on move 28': '翻翻棋：一盤引擎對局，紅方第 28 回合獲勝',
   'The [companion study](/study/uKxJ60mN) has all twenty games from the run, each opening into its own deal, with a note on how it went.':
     '[配套研究](/study/uKxJ60mN)收錄了這一批全部二十盤對局，每盤都從自己的發牌開始，並附有對局經過的說明。',
+  // -- fortress-and-atomic-xiangqi-on-hold, machine-drafted 2026-10-14, not native-reviewed. Terms follow the
+  // Fortress and Atomic rules pages (寶, 持子, 打入, 長將) and the site's variant names. --
+  'Back to the drawing board: Fortress and Atomic Xiangqi': '推倒重來：堡壘象棋與原子象棋',
+  'Back to the drawing board: Fortress Xiangqi and Atomic Xiangqi':
+    '推倒重來：堡壘象棋和原子象棋暫停開放',
+  'Fortress and Atomic on hold': '堡壘與原子象棋暫停',
+  'On 11 October we stopped new games of Fortress Xiangqi and Atomic Xiangqi so we can redesign them. In Fortress the drops took over a small board; Atomic only stopped looping after the cannon got its own exception. Finished games still replay.':
+    '10 月 11 日，我們停止了堡壘象棋和原子象棋的新對局，以便重新設計。在堡壘象棋裡，打入主宰了一張小棋盤；原子象棋則是在炮有了自己的例外規則之後，才不再陷入循環。已結束的對局仍可回放。',
+  'Fortress Xiangqi and Atomic Xiangqi are on hold while we redesign them. You cannot start a new game, but finished games still replay and both rules pages stay up.':
+    '堡壘象棋和原子象棋已暫停，我們正在重新設計。你無法開始新對局，但已結束的對局仍可回放，兩個規則頁面也都保留。',
+  'In Fortress the drops took over the small board. A redesign has to make a smaller xiangqi that still feels like the full game.':
+    '在堡壘象棋裡，打入主宰了小棋盤。重新設計必須做出一種更小的象棋，下起來仍像完整的象棋。',
+  'Atomic only played well after the cannon got its own exception. A redesign has to give it a cannon that follows the same rule as every other piece.':
+    '原子象棋是在炮有了自己的例外規則之後才下得好。重新設計必須給它一個和其他所有棋子遵循同一條規則的炮。',
+  'On 11 October we stopped new games of [Fortress Xiangqi](/rules/fortress-xiangqi) and [Atomic Xiangqi](/rules/atomic-xiangqi). Games already played still replay from their links, and both rules pages stay up. We designed both games, and we launched both before they were ready. What went wrong with each, and what does a version worth bringing back have to fix?':
+    '10 月 11 日，我們停止了[堡壘象棋](/rules/fortress-xiangqi)和[原子象棋](/rules/atomic-xiangqi)的新對局。已經下過的對局仍可從各自的連結回放，兩個規則頁面也都保留。這兩款棋都是我們設計的，也都是在還沒準備好時就上線了。它們各自出了什麼問題？一個值得重新推出的版本又必須解決什麼？',
+  'Fortress Xiangqi tried four new ideas at once': '堡壘象棋同時嘗試了四個新點子',
+  'Fortress was played on a 7 by 8 board with the two palaces in opposite corners. It added the Treasure, a new piece that steps one point in any direction. A captured piece went into your hand, and you could drop it back onto the board later as your own move. For its first two months it also had veteran soldiers, which we later took out.':
+    '堡壘象棋在 7×8 的棋盤上進行，兩個九宮分處對角。它加入了「寶」，一個可以向任意方向走一步的新棋子。被吃掉的棋子進入你的持子，之後你可以用自己的一步把它打回棋盤。最初的兩個月裡它還有老兵，後來我們把老兵去掉了。',
+  'Each idea was worth trying. Together they made a game that was hard to learn, and the drops overwhelmed the rest. With the general boxed into a corner of a small board, one piece dropped beside it was often enough. A typical engine game ended this way, with most of both armies still on the board.':
+    '每個點子都值得一試。合在一起，卻成了一款難學的棋，而打入壓倒了其餘一切。將帥被困在小棋盤的一角，往它旁邊打入一子往往就夠了。一盤典型的引擎對局就是這樣結束的，雙方的大部分兵力都還在盤上。',
+  'Black drops a soldier from its hand on b1, beside the general. With the horse on c3 guarding b1 and Red’s own chariot on a2, the general has nowhere to go, and that is mate.':
+    '黑方從持子中把一枚卒打在 b1，緊挨著帥。c3 的馬守住 b1，紅方自己的車又占著 a2，帥無路可走，這就是將死。',
+  'A redesign has to make a smaller xiangqi that keeps the feel of the full game, without drops taking over.':
+    '重新設計必須做出一種更小的象棋，保留完整象棋的感覺，又不讓打入主宰全局。',
+  'Until then, drops live on the site in [Crazyhouse Xiangqi](/rules/crazyhouse-xiangqi), which plays them on the normal board with the normal pieces and palaces.':
+    '在此之前，本站的打入玩法在[瘋狂屋象棋](/rules/crazyhouse-xiangqi)裡：它在普通棋盤上，用普通的棋子和九宮來打入。',
+  'Atomic Xiangqi needed an exception for the cannon': '原子象棋得為炮開一個例外',
+  'In Atomic Xiangqi a capture explodes. The piece that captures, the piece it takes and every piece on the four points next to the capture leave the board. Soldiers survive a blast; a general does not, and losing it loses the game.':
+    '在原子象棋裡，吃子會爆炸。吃子的棋子、被吃的棋子，以及吃子點相鄰四個點上的所有棋子，都離開棋盤。兵卒能在爆炸中倖存；將帥不能，失去它就輸掉這盤棋。',
+  'In the first version the cannon exploded too, which made it the perfect defender: it could block a chariot’s attack and threaten back through the chariot. An attacker could often force a draw this way.':
+    '在最初的版本裡，炮也會爆炸，這讓它成了完美的防守者：它能擋住車的進攻，再隔著車反過來威脅。進攻方常常就這樣被拖成和棋。',
+  'Under the first rules. (a) The chariot threatens the advisor on d10. (b) The cannon blocks and threatens d1 through the chariot. (c) The chariot switches files. (d) The cannon follows, and the cycle repeats.':
+    '按最初的規則。(a) 車威脅 d10 的士。(b) 炮擋住，並隔著車威脅 d1。(c) 車換到另一路。(d) 炮跟過去，循環重複。',
+  '(a) Rd2': '(a) Rd2',
+  '(b) Cd6': '(b) Cd6',
+  '(c) Rf2': '(c) Rf2',
+  '(d) Cf6': '(d) Cf6',
+  'With its palace closed in, as here, the defender has no other move, and a repetition rule can’t break the cycle because both sides threaten on every move.':
+    '像這裡這樣九宮被封住時，防守方沒有別的著法；重複局面規則也打破不了這個循環，因為雙方每一步都在威脅。',
+  'To launch it, we made a cannon’s capture remove only the cannon and its target, and made the side that keeps up a threat through a repeated cycle lose, like perpetual check in xiangqi.':
+    '為了上線，我們讓炮吃子只移除炮和它的目標，並規定在重複的循環裡一直保持威脅的一方判負，就像象棋裡的長將。',
+  'That ended the loop, but left the cannon playing by its own rule: it alone can capture next to its own general. We launched before we had a design without that patch.':
+    '這結束了循環，卻讓炮按自己的規則行事：只有它能在己方將帥的相鄰點上吃子。我們在找到不需要這個補丁的設計之前就上線了。',
+  'A redesign needs a cannon that follows the same rule as every other piece.':
+    '重新設計需要一個和其他所有棋子遵循同一條規則的炮。',
+  'Both come back when they are right': '兩款棋都會在做對之後回來',
+  'We would rather run a short list of games we stand behind than keep two that need an apology. Neither game is dead. Each has one problem to solve. Fortress needs a small board that drops do not take over, and Atomic needs a cannon with no exception. When a version of either one solves it, that game comes back.':
+    '我們寧願只營運一小批自己認可的棋，也不願留著兩款需要道歉的棋。兩款棋都沒有死。各自都有一個問題要解決：堡壘象棋需要一張不被打入主宰的小棋盤，原子象棋需要一個沒有例外的炮。哪一款的新版本解決了它的問題，那款棋就會回來。',
+  'If dropping pieces was the part of Fortress you liked, Crazyhouse Xiangqi is where drops live on the site today.':
+    '如果打入是你在堡壘象棋裡喜歡的部分，如今本站的打入玩法就在瘋狂屋象棋裡。',
   // -- Crazyhouse Xiangqi (rules page), machine-drafted 2026-10-02 for the hand-start rules, not native-reviewed --
   'Crazyhouse Xiangqi Rules': '瘋狂屋象棋規則',
   'The sample game’s last move. Left, Red to move with three soldiers in hand. Right, one dropped on e9 mates the general on f9.':

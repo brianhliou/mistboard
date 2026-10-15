@@ -207,7 +207,11 @@
     "title": "Back to the drawing board: Fortress and Atomic Xiangqi",
     "kind": "article",
     "description": "On 11 October we stopped new games of Fortress Xiangqi and Atomic Xiangqi so we can redesign them. In Fortress the drops took over a small board; Atomic only stopped looping after the cannon got its own exception. Finished games still replay.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "推倒重来：堡垒象棋与原子象棋",
+      "zh-hant": "推倒重來：堡壘象棋與原子象棋"
+    }
   },
   "fortress-xiangqi": {
     "title": "Fortress Xiangqi Rules",
