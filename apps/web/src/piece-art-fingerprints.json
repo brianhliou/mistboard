@@ -41,11 +41,11 @@
       "sha": "1fdfa63a8b120ea3"
     },
     "xiangqi/international": {
-      "version": 17,
-      "sha": "f0c2b89c512a659b"
+      "version": 18,
+      "sha": "f6896225b0083b55"
     },
     "xiangqi/international-grid": {
-      "version": 17,
+      "version": 18,
       "sha": "cc414aa9c16a549d"
     },
     "xiangqi/lacquer": {
@@ -59,7 +59,7 @@
   },
   "og": {
     "folders": ["jungle/dobutsu", "xiangqi/animal-dobutsu", "xiangqi/international"],
-    "sha": "922dec2fce02e066",
+    "sha": "c8317e1b6e5777e2",
     "versions": {
       "game": 7,
       "article": 7,

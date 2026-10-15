@@ -75,8 +75,8 @@ describe('renderXiangqiPieceGlyphed', () => {
     const cannon = renderXiangqiPieceGlyphed({ color: 'black', role: 'cannon' }, 'international', {
       className: 'xq-piece',
     });
-    expect(general).toContain('/piece-sets/xiangqi/international/red-general.png?v=17');
-    expect(cannon).toContain('/piece-sets/xiangqi/international/black-cannon.png?v=17');
+    expect(general).toContain('/piece-sets/xiangqi/international/red-general.png?v=18');
+    expect(cannon).toContain('/piece-sets/xiangqi/international/black-cannon.png?v=18');
     expect(general).toContain('x="-7" y="-7" width="114" height="114"');
     expect(cannon).toContain('x="-11" y="-11" width="122" height="122"');
     expect(cannon).toContain('class="xq-piece"');
@@ -108,15 +108,15 @@ describe('renderXiangqiPieceGlyphed', () => {
     const international = renderXiangqiPieceGlyphed(piece, 'international', { crossed: true });
 
     expect(international).toContain(
-      '/piece-sets/xiangqi/international/red-crossed-soldier.png?v=17',
+      '/piece-sets/xiangqi/international/red-crossed-soldier.png?v=18',
     );
   });
 
   it('renders the international Fortress treasure from the generated cutout art', () => {
     const red = internationalTreasureMarks('red');
     const black = internationalTreasureMarks('black');
-    expect(red).toContain('/piece-sets/xiangqi/international/red-treasure.png?v=17');
-    expect(black).toContain('/piece-sets/xiangqi/international/black-treasure.png?v=17');
+    expect(red).toContain('/piece-sets/xiangqi/international/red-treasure.png?v=18');
+    expect(black).toContain('/piece-sets/xiangqi/international/black-treasure.png?v=18');
     // Two units below the other 114-unit figures: the diamond is top-heavy.
     expect(red).toContain('x="-7" y="-5" width="114" height="114"');
     expect(red).toContain('fill="#fef0d7"');

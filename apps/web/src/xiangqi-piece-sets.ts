@@ -595,7 +595,10 @@ const ANIMAL_ART_VERSION = 4;
 // 43, ivory tusks and advisor neck band, cannon turned 15 degrees.
 // 17 (2026-10-15): smooth edges. Chariot, advisor and cannon redrawn from geometry
 // at one line width; the curved figures re-traced with the wobble smoothed out.
-const INTERNATIONAL_ART_VERSION = 17;
+// 18 (2026-10-15): the disc cannon drawn 3.6% smaller inside its 122 frame (the
+// muzzle reached 44.2 of the disc's 46, now 42.6 like the general and horse), its
+// line 23 px at 1024 so it lands on the disc at 2.74, with the chariot and advisor.
+const INTERNATIONAL_ART_VERSION = 18;
 
 // On the square grid the cannon has a figure of its own (international-grid/):
 // turned 17 degrees and 6% bigger, so it clears the square's inner edge. Every
