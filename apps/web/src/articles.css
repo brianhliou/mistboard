@@ -1147,6 +1147,13 @@
 .xq-article-svg .xq-diagram-ink {
   fill: var(--xq-diagram-ink, #4b3c2a);
 }
+/* The replay board draws the shared surface (xiangqi-replay.ts, #558); its
+   lines keep the diagrams' ink and hairline so it matches the boards beside it. */
+.xq-article-svg.xq-surface .xq-live-line,
+.xq-article-svg.xq-surface .xq-live-start-mark {
+  stroke: var(--xq-diagram-ink, #4b3c2a);
+  stroke-width: 1;
+}
 .xq-article-svg .xq-diagram-river-label {
   display: var(--xq-river-label-display, none);
 }

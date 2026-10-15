@@ -28,18 +28,39 @@ import {
   BOARD_LASTMOVE_MARKER_SELECTOR,
   BOARD_LASTMOVE_OVER_GROUP_ATTRS,
   type BoardLastMoveLayer,
+  boardLastMoveCellMarksSvg,
   boardLastMoveMarkersSvg,
   boardLastMoveOuterRadius,
 } from './board-lastmove.js';
 import { tokenPieceSize, xiangqiPieceDrawSize } from './board-metrics.js';
+import { readDisplayPreferences } from './display-preferences.js';
 import { type ReplayStepperCopy, replayStepperCopy } from './replay-stepper-copy.js';
 import { seatDiscEl } from './seat-disc.js';
 import { GLYPH_SUFFIX_CLASS } from './study-chapter-annotations.js';
 import { readStoredXiangqiPieceSet, xiangqiAppearanceChangedEvent } from './theme.js';
-import { type XiangqiBoardGeometry, xiangqiBoardPoint } from './xiangqi-board-geometry.js';
+import {
+  readStoredXiangqiBoardLayout,
+  type XiangqiBoardLayout,
+} from './xiangqi-appearance-storage.js';
+import { LIVE_BOARD_SURFACE } from './xiangqi-board.js';
+import {
+  type XiangqiBoardGeometry,
+  xiangqiBoardPoint,
+  xiangqiBoardViewBox,
+} from './xiangqi-board-geometry.js';
+import {
+  type XiangqiSurfaceConfig,
+  xiangqiSurfaceCoords,
+  xiangqiSurfaceGrid,
+  xiangqiSurfacePalace,
+  xiangqiSurfacePalaceBands,
+  xiangqiSurfaceRiver,
+  xiangqiSurfaceStartMarkers,
+} from './xiangqi-board-surface.js';
+import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
 import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle, xiangqiNotationChangedEvent } from './xiangqi-notation.js';
-import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
+import { renderXiangqiPieceGlyphed, xiangqiPieceSetShape } from './xiangqi-piece-sets.js';
 import type { ReplayChartSource } from './xiangqi-replay-chart.js';
 import { xiangqiDiagramRiverText } from './xiangqi-river-text.js';
 
@@ -81,9 +102,6 @@ const GLYPH_CLASS: Record<string, string> = {
   // the badge renders as an empty disc.
   '!': 'xq-marker--good',
 };
-const PAD = 0;
-const BOARD_W = MARGIN * 2 + 8 * CELL;
-const BOARD_H = MARGIN * 2 + 9 * CELL;
 const RADIUS = 8;
 
 /**
@@ -231,13 +249,45 @@ export function writeEvalGraphHidden(hidden: boolean): void {
   window.dispatchEvent(new CustomEvent(evalGraphChangedEvent, { detail: { hidden } }));
 }
 
-const GEOMETRY: XiangqiBoardGeometry = {
-  fileCount: 9,
-  rankCount: 10,
-  cell: CELL,
-  margin: MARGIN,
-  riverGap: 0,
+// The square grid opens the river as a band, a fifth of a cell like the live
+// board's (12 on its 60-unit cell). Coordinates get the same fifth as a gutter.
+const RIVER_GAP = Math.round(CELL / 5);
+const COORD_GUTTER = Math.round(CELL / 5);
+// The square grid's outer cells end half a cell from the edge points, which
+// leaves MARGIN - CELL / 2 of board beyond them. It is kept, so the badge and
+// ring on an edge piece clear the edge on this layout too.
+const CELL_PAD = MARGIN - CELL / 2;
+
+/**
+ * How this board is drawn right now: the perspective plus the reader's Square
+ * grid and Coordinates settings (#558), resolved once per render so the
+ * surface, pieces, markers and glide all place on the same geometry. The board
+ * used to be intersection-only with its own grid, so those settings, and Start
+ * markers, never reached an article replay or an embedded study board.
+ */
+type ReplayBoard = {
+  perspective: XiangqiColor;
+  layout: XiangqiBoardLayout;
+  coords: boolean;
+  surface: XiangqiSurfaceConfig;
 };
+
+function replayBoard(perspective: XiangqiColor): ReplayBoard {
+  const layout = readStoredXiangqiBoardLayout();
+  const coords = readDisplayPreferences().boardCoordinates;
+  const gutter = coords ? COORD_GUTTER : 0;
+  const geo: XiangqiBoardGeometry = {
+    fileCount: 9,
+    rankCount: 10,
+    cell: CELL,
+    margin: MARGIN,
+    riverGap: layout === 'cell' ? RIVER_GAP : 0,
+    coordGutter: layout === 'cell' ? CELL_PAD + gutter : gutter,
+  };
+  // The intersection board keeps the diagrams' own river caption (gridSvg), so
+  // it reads the same as the static boards beside it in an article.
+  return { perspective, layout, coords, surface: { ...LIVE_BOARD_SURFACE, geo, riverText: false } };
+}
 
 /**
  * Every point on this board goes through the shared geometry, so flipping is the
@@ -246,72 +296,50 @@ const GEOMETRY: XiangqiBoardGeometry = {
  * got the file fix on 2026-08-27 and this copy did not, so a flipped article
  * board left a1 on the reader's left, against the Chinese notation beside it.
  */
-function pointXY(file: number, rank: number, perspective: XiangqiColor): { x: number; y: number } {
-  return xiangqiBoardPoint(file, rank, perspective, 'intersection', GEOMETRY);
+function pointXY(file: number, rank: number, board: ReplayBoard): { x: number; y: number } {
+  return xiangqiBoardPoint(file, rank, board.perspective, board.layout, board.surface.geo);
 }
 
 function coord(square: XiangqiSquare): { file: number; rank: number } {
   return { file: 'abcdefghi'.indexOf(square[0]!), rank: Number(square.slice(1)) };
 }
 
-function gridSvg(perspective: XiangqiColor): string {
+/** The shared board surface (xiangqi-board-surface.ts) in the diagrams' colours. */
+function gridSvg(board: ReplayBoard): string {
+  const { perspective, layout, surface } = board;
+  const { cell, margin } = surface.geo;
+  const vb = xiangqiBoardViewBox(layout, surface.geo);
   const parts: string[] = [
-    `<rect x="0" y="0" width="${BOARD_W}" height="${BOARD_H}" rx="${RADIUS}" class="xq-diagram-bg"/>`,
+    `<rect x="${vb.minX}" y="${vb.minY}" width="${vb.width}" height="${vb.height}" rx="${RADIUS}" class="xq-diagram-bg"/>`,
+    xiangqiSurfaceGrid(surface, layout),
+    xiangqiSurfaceStartMarkers(surface, perspective, layout),
   ];
-  const left = MARGIN;
-  const right = left + 8 * CELL;
-  const top = MARGIN;
-  const bottom = top + 9 * CELL;
-  const riverTop = top + 4 * CELL;
-  const riverBottom = top + 5 * CELL;
-  for (let r = 0; r < 10; r += 1) {
-    const y = top + r * CELL;
+  if (layout === 'cell') {
     parts.push(
-      `<line x1="${left}" y1="${y}" x2="${right}" y2="${y}" class="xq-diagram-line" stroke-width="1"/>`,
+      xiangqiSurfacePalaceBands(surface, perspective, layout),
+      xiangqiSurfaceRiver(surface, perspective, layout),
+    );
+  } else {
+    parts.push(
+      `<g class="xq-diagram-line" stroke-width="1">${xiangqiSurfacePalace(surface, perspective, layout)}</g>`,
+      xiangqiDiagramRiverText(margin + 4 * cell, margin + 4.5 * cell + 1),
     );
   }
-  for (let f = 0; f < 9; f += 1) {
-    const x = left + f * CELL;
-    if (f === 0 || f === 8) {
-      parts.push(
-        `<line x1="${x}" y1="${top}" x2="${x}" y2="${bottom}" class="xq-diagram-line" stroke-width="1"/>`,
-      );
-    } else {
-      parts.push(
-        `<line x1="${x}" y1="${top}" x2="${x}" y2="${riverTop}" class="xq-diagram-line" stroke-width="1"/>`,
-      );
-      parts.push(
-        `<line x1="${x}" y1="${riverBottom}" x2="${x}" y2="${bottom}" class="xq-diagram-line" stroke-width="1"/>`,
-      );
-    }
-  }
-  for (const palace of [
-    { fileMin: 3, fileMax: 5, rankBack: 1 },
-    { fileMin: 3, fileMax: 5, rankBack: 8 },
-  ]) {
-    const topRank = palace.rankBack === 1 ? 3 : 10;
-    const bottomRank = palace.rankBack;
-    const a = pointXY(palace.fileMin, topRank, perspective);
-    const b = pointXY(palace.fileMax, bottomRank, perspective);
-    const c = pointXY(palace.fileMax, topRank, perspective);
-    const d = pointXY(palace.fileMin, bottomRank, perspective);
+  if (board.coords) {
+    const labels = xiangqiCoordLabels(currentXiangqiNotationStyle(), 9, 10);
     parts.push(
-      `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" class="xq-diagram-line" stroke-width="1"/>`,
-    );
-    parts.push(
-      `<line x1="${c.x}" y1="${c.y}" x2="${d.x}" y2="${d.y}" class="xq-diagram-line" stroke-width="1"/>`,
+      `<g aria-hidden="true" pointer-events="none">${xiangqiSurfaceCoords(surface, perspective, layout, labels)}</g>`,
     );
   }
-  parts.push(xiangqiDiagramRiverText(left + 4 * CELL, (riverTop + riverBottom) / 2 + 1));
   return parts.join('');
 }
 
-function piecesSvg(board: XiangqiBoard, perspective: XiangqiColor): string {
-  return Object.entries(board)
+function piecesSvg(pieces: XiangqiBoard, board: ReplayBoard): string {
+  return Object.entries(pieces)
     .map(([sq, piece]) => {
       if (!piece) return '';
       const { file, rank } = coord(sq as XiangqiSquare);
-      const { x, y } = pointXY(file, rank, perspective);
+      const { x, y } = pointXY(file, rank, board);
       const pieceSvg = renderXiangqiPieceGlyphed(
         piece as XiangqiPiece,
         readStoredXiangqiPieceSet(),
@@ -319,6 +347,7 @@ function piecesSvg(board: XiangqiBoard, perspective: XiangqiColor): string {
           x: x - PIECE_DRAWN / 2,
           y: y - PIECE_DRAWN / 2,
           size: PIECE_DRAWN,
+          shape: board.layout === 'cell' ? 'square' : 'disc',
           crossed: drawsCrossedSoldier(piece as XiangqiPiece, rank),
         },
       );
@@ -330,31 +359,31 @@ function piecesSvg(board: XiangqiBoard, perspective: XiangqiColor): string {
 }
 
 function boardSvg(
-  board: XiangqiBoard,
+  pieces: XiangqiBoard,
   lastMove: XiangqiMove | undefined,
-  perspective: XiangqiColor,
+  board: ReplayBoard,
   _key: number,
   glyph?: string,
 ): string {
-  const pw = BOARD_W + PAD * 2;
-  const ph = BOARD_H + PAD * 2;
+  const vb = xiangqiBoardViewBox(board.layout, board.surface.geo);
   // The site marks a last move with an origin wash and a destination ring
   // (board-lastmove.ts, shared by every live board). This widget used to draw
   // its own green arrow, which made an article embed look like a different
   // product from the game page. The origin wash sits under the pieces, the
   // destination ring over them (the pieces cover it otherwise).
   const body = [
-    gridSvg(perspective),
-    lastMove ? lastMoveSvg(lastMove, perspective, 'under') : '',
-    piecesSvg(board, perspective),
+    gridSvg(board),
+    lastMove ? lastMoveSvg(lastMove, board, 'under') : '',
+    piecesSvg(pieces, board),
     lastMove
-      ? `<g ${BOARD_LASTMOVE_OVER_GROUP_ATTRS}>${lastMoveSvg(lastMove, perspective, 'over')}</g>`
+      ? `<g ${BOARD_LASTMOVE_OVER_GROUP_ATTRS}>${lastMoveSvg(lastMove, board, 'over')}</g>`
       : '',
     // Over the pieces: the badge annotates the piece that just arrived, so it
     // has to sit on top of it rather than under.
-    lastMove && glyph ? glyphMarkerSvg(lastMove, glyph, perspective) : '',
+    lastMove && glyph ? glyphMarkerSvg(lastMove, glyph, board) : '',
   ].join('');
-  return `<svg class="xq-article-svg" data-xq-layout="single" style="--xq-svg-width: ${pw}px" viewBox="0 0 ${pw} ${ph}" role="img" xmlns="http://www.w3.org/2000/svg"><g transform="translate(${PAD} ${PAD})">${body}</g></svg>`;
+  // xq-surface scopes the shared surface's styles (xiangqi-board-surface.css).
+  return `<svg class="xq-article-svg xq-surface xq-surface--${board.layout}" data-xq-layout="single" data-xiangqi-layout="${board.layout}" style="--xq-svg-width: ${vb.width}px" viewBox="${vb.minX} ${vb.minY} ${vb.width} ${vb.height}" role="img" xmlns="http://www.w3.org/2000/svg">${body}</svg>`;
 }
 
 /**
@@ -368,7 +397,7 @@ function boardSvg(
 function glideReplayMove(
   frame: HTMLElement,
   move: XiangqiMove,
-  perspective: XiangqiColor,
+  board: ReplayBoard,
   reverse: boolean,
 ): void {
   const duration = pieceAnimationDurationMs();
@@ -379,8 +408,8 @@ function glideReplayMove(
   if (!slot) return;
   const o = coord(origin);
   const s = coord(settle);
-  const from = pointXY(o.file, o.rank, perspective);
-  const to = pointXY(s.file, s.rank, perspective);
+  const from = pointXY(o.file, o.rank, board);
+  const to = pointXY(s.file, s.rank, board);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
   // Forward only: a back step draws the PRIOR move's markers somewhere else, so
   // fading them in would not track this glide. The judgment badge rides the
@@ -391,29 +420,29 @@ function glideReplayMove(
   }
 }
 
-function lastMoveSvg(
-  move: XiangqiMove,
-  perspective: XiangqiColor,
-  layer: BoardLastMoveLayer,
-): string {
+function lastMoveSvg(move: XiangqiMove, board: ReplayBoard, layer: BoardLastMoveLayer): string {
   const from = coord(move.from);
   const to = coord(move.to);
-  return boardLastMoveMarkersSvg(
-    {
-      from: pointXY(from.file, from.rank, perspective),
-      to: pointXY(to.file, to.rank, perspective),
-    },
-    PIECE,
-    layer,
-  );
+  const ends = {
+    from: pointXY(from.file, from.rank, board),
+    to: pointXY(to.file, to.rank, board),
+  };
+  // The square grid gets its own marks (board-lastmove.ts), traced on the piece drawn.
+  if (board.layout === 'cell') {
+    return boardLastMoveCellMarksSvg(ends, board.surface.geo.cell, layer, {
+      size: PIECE_DRAWN,
+      shape: xiangqiPieceSetShape(readStoredXiangqiPieceSet(), 'square'),
+    });
+  }
+  return boardLastMoveMarkersSvg(ends, PIECE, layer);
 }
 
 /** The judgment badge, pinned to the destination of the move just played. */
-function glyphMarkerSvg(move: XiangqiMove, glyph: string, perspective: XiangqiColor): string {
+function glyphMarkerSvg(move: XiangqiMove, glyph: string, board: ReplayBoard): string {
   const kind = GLYPH_CLASS[glyph];
   if (!kind) return '';
   const to = coord(move.to);
-  const at = pointXY(to.file, to.rank, perspective);
+  const at = pointXY(to.file, to.rank, board);
   // Screen-space offset, so the badge keeps the same corner when the board flips.
   const cx = at.x + GLYPH_OFFSET;
   const cy = at.y - GLYPH_OFFSET;
@@ -1093,8 +1122,9 @@ export function mountXiangqiReplay(
     // Only the mainline carries a verdict; a position inside an engine line is
     // not a move anyone played.
     const playedGlyph = !variation && index > 0 ? annotationAt(index)?.glyph : undefined;
-    frame.innerHTML = boardSvg(view.board, view.lastMove, perspective, view.key, playedGlyph);
-    if (glide) glideReplayMove(frame, glide.move, perspective, glide.reverse);
+    const board = replayBoard(perspective);
+    frame.innerHTML = boardSvg(view.board, view.lastMove, board, view.key, playedGlyph);
+    if (glide) glideReplayMove(frame, glide.move, board, glide.reverse);
     if (counter.isConnected) counter.textContent = index === 0 ? copy.start : `${index} / ${total}`;
     // While a sideline is open the controls walk the LINE, so their enabled
     // state has to come from the line's cursor. Reading the mainline index here
@@ -1529,6 +1559,7 @@ export function mountXiangqiReplayBoard(
   let inLine: { atPly: number; cursor: number } | null = null;
 
   const render = (glide?: { move: XiangqiMove; reverse: boolean }): void => {
+    const board = replayBoard(perspective);
     if (inLine) {
       // Replay the sideline from the position the judged move was played in;
       // an illegal token truncates the line rather than throwing.
@@ -1542,19 +1573,19 @@ export function mountXiangqiReplayBoard(
         state = next;
         last = mv;
       }
-      frame.innerHTML = boardSvg(state.board, last, perspective, 1000 + inLine.cursor);
-      if (glide) glideReplayMove(frame, glide.move, perspective, glide.reverse);
+      frame.innerHTML = boardSvg(state.board, last, board, 1000 + inLine.cursor);
+      if (glide) glideReplayMove(frame, glide.move, board, glide.reverse);
       return;
     }
     const glyph = index > 0 ? annotated?.byPly[index]?.glyph : undefined;
     frame.innerHTML = boardSvg(
       states[index]!.board,
       index > 0 ? moves[index - 1] : undefined,
-      perspective,
+      board,
       index,
       glyph,
     );
-    if (glide) glideReplayMove(frame, glide.move, perspective, glide.reverse);
+    if (glide) glideReplayMove(frame, glide.move, board, glide.reverse);
     hooks.onPlyChange?.(index, total);
   };
   const onAppearance = (): void => render();
