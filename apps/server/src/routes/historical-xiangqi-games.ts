@@ -26,8 +26,13 @@ const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 // bot-vs-bot-scheduler.ts).
 export const ENGINE_MATCH_SOURCE = 'engine-match';
 export const ENGINE_GAME_SOURCE = 'engine-game';
+// The games played here, narrowed by opponent (#533): people against people
+// ('pvp') or a person against a bot ('pve'). 'mistboard' is both.
+export const PLAYED_PVP_SOURCE = 'mistboard-pvp';
+export const PLAYED_PVE_SOURCE = 'mistboard-pve';
+const PLAYED_SOURCES = new Set(['mistboard', PLAYED_PVP_SOURCE, PLAYED_PVE_SOURCE]);
 const RESERVED_SOURCES = new Set([
-  'mistboard',
+  ...PLAYED_SOURCES,
   'broadcast',
   'archive',
   ENGINE_MATCH_SOURCE,
@@ -256,7 +261,7 @@ export function searchLanes(filters: GameSearchFilters): SearchLane[] {
   const source = filters.sourceSlug;
   const xiangqiOnly = !filters.variant || filters.variant === XIANGQI_SPEC_ID;
   const lanes: SearchLane[] = [];
-  if (!source || source === 'mistboard') lanes.push('played');
+  if (!source || PLAYED_SOURCES.has(source)) lanes.push('played');
   if (source === ENGINE_MATCH_SOURCE || (!source && (filters.event || filters.player))) {
     lanes.push('engine-match');
   }
@@ -376,10 +381,21 @@ type StoredGameLane = 'played' | 'engine-match' | 'engine-game';
 // (older imported corpora have none and are never listed); EvE rows must be the
 // scheduler's (public since #488; lab bake-off imports are public 'eve' rows
 // too, and stay out).
-function laneModeFilters(lane: StoredGameLane): Partial<persistence.GameQueryFilters> {
-  if (lane === 'played') return { modes: PUBLIC_GAME_MODES };
+function laneModeFilters(
+  lane: StoredGameLane,
+  source: string | undefined,
+): Partial<persistence.GameQueryFilters> {
+  if (lane === 'played') return { modes: playedLaneModes(source) };
   if (lane === 'engine-match') return { modes: ['imported'], importedOrigin: true };
   return { modes: ['eve'], scheduledEngine: true };
+}
+
+/** The modes the played-here lane reads for a source: one side of it when the
+ *  search picked an opponent (#533), else both. */
+export function playedLaneModes(source: string | undefined): persistence.GameMode[] {
+  if (source === PLAYED_PVP_SOURCE) return ['pvp'];
+  if (source === PLAYED_PVE_SOURCE) return ['pve'];
+  return PUBLIC_GAME_MODES;
 }
 
 const LANE_SOURCE: Record<
@@ -410,7 +426,7 @@ async function queryPlayedGames(
   const page = await persistence.queryGames({
     variants: storedVariants,
     ...(filters.sort ? { sort: filters.sort } : {}),
-    ...laneModeFilters(lane),
+    ...laneModeFilters(lane, filters.sourceSlug),
     visibility: 'public',
     ...(results.length > 0 ? { results } : {}),
     ...(filters.player ? { player: filters.player } : {}),
