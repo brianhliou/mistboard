@@ -112,6 +112,9 @@ describe('article public listing gates', () => {
       // The Pikafish page is scheduled for 2026-09-22 (DEV shows it early for
       // review).
       '/blog/pikafish',
+      // Moved from brianhliou.com (2026-09-21), a draft until Brian's go; it
+      // shares the date with yin-sheng and sorts ahead of it.
+      '/blog/most-played-move',
       // The first player page, dated 2026-09-21.
       '/blog/yin-sheng',
       // The horde-xiangqi and anti-xiangqi write-ups are dated 2026-09-15 and
@@ -119,6 +122,8 @@ describe('article public listing gates', () => {
       // launch note (2026-09-16) is served by URL only since the variant retired.
       '/blog/horde-xiangqi',
       '/blog/anti-xiangqi',
+      // Moved from brianhliou.com (2026-09-12), a draft until Brian's go.
+      '/blog/en-passant-under-fog',
       // Published with the variant on 2026-09-11, the same date as the
       // puzzles post; ties break on HOME_ARTICLE_LEAD_ON_TIE, and this
       // index is ordered by date alone, so the newest pair leads.
@@ -152,6 +157,8 @@ describe('article public listing gates', () => {
       '/blog/misty',
       '/blog/mistybanqi',
       '/blog/server-enforced-fog',
+      // Moved from brianhliou.com (2026-05-07), a draft until Brian's go.
+      '/blog/chess960-starting-positions',
       '/blog/fog-chess-concepts',
     ]);
   });
@@ -324,8 +331,10 @@ describe('article public listing gates', () => {
       '/blog/one-thousand-games',
       '/blog/banqi-statistics',
       '/blog/pikafish',
+      '/blog/most-played-move',
       '/blog/horde-xiangqi',
       '/blog/anti-xiangqi',
+      '/blog/en-passant-under-fog',
       '/blog/duck-xiangqi-strategy',
       '/blog/puzzles-with-more-than-one-solution',
       '/blog/jieqi-openings',
@@ -340,6 +349,8 @@ describe('article public listing gates', () => {
       '/blog/misty',
       '/blog/mistybanqi',
       '/blog/server-enforced-fog',
+      // Moved from brianhliou.com (2026-05-07), a draft until Brian's go.
+      '/blog/chess960-starting-positions',
       '/blog/fog-chess-concepts',
     ]);
   });

@@ -32,6 +32,9 @@ import { oneThousandGamesArticle } from './articles/content/one-thousand-games.j
 import { darkChessArticle } from './articles/content/dark-chess.js';
 import { darkChessConceptsArticle } from './articles/content/fog-chess-concepts.js';
 import { fogOpeningsArticle } from './articles/content/fog-openings.js';
+import { enPassantUnderFogArticle } from './articles/content/en-passant-under-fog.js';
+import { mostPlayedMoveArticle } from './articles/content/most-played-move.js';
+import { chess960StartingPositionsArticle } from './articles/content/chess960-starting-positions.js';
 import { jieqiOpeningsArticle } from './articles/content/jieqi-openings.js';
 import { khaiCuocCoUpArticle } from './articles/content/khai-cuoc-co-up.js';
 import { darkXiangqiArticle } from './articles/content/dark-xiangqi.js';
@@ -95,6 +98,9 @@ export const articles: Article[] = [
   darkChessArticle,
   darkChessConceptsArticle,
   fogOpeningsArticle,
+  enPassantUnderFogArticle,
+  mostPlayedMoveArticle,
+  chess960StartingPositionsArticle,
   jieqiOpeningsArticle,
   khaiCuocCoUpArticle,
   xiangqiArticle,
