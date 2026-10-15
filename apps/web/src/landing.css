@@ -66,7 +66,9 @@
      this much and start level with the panel's card (2026-10-11). */
   --landing-lobby-tabs-height: 40px;
   --landing-col-gap: clamp(10px, 0.9vw, 15px);
-  --landing-row-gap: clamp(14px, 1.8vw, 24px);
+  /* Rows sit as close as columns: the three bands read as one page, not
+     three stacked sections (Brian, 2026-10-14; was 14-24px). */
+  --landing-row-gap: var(--landing-col-gap);
   column-gap: var(--landing-col-gap);
   row-gap: var(--landing-row-gap);
   align-items: start;
