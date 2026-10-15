@@ -938,7 +938,7 @@ function buildApiContext(options: ServerHttpHandlerOptions): HttpApiContext {
     releaseLiveEngineReservation: options.releaseLiveEngineReservation,
     abandonRoom: options.abandonRoom,
     inMemoryGameSummary: options.inMemoryGameSummary,
-    isDraining: options.drainController.isDraining,
+    refusesCreate: options.drainController.refusesCreate,
     drainDeadlineMs: options.drainController.drainDeadlineMs,
     restartPhase: options.drainController.restartPhase,
     activeGameCount: options.drainController.activeGameCount,

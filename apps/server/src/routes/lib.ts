@@ -14,7 +14,7 @@ import {
   type VariantId,
 } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
-import type { DeployGateCensus } from './../deploy-gate.js';
+import type { DeployGateCensus, DrainCreate } from './../deploy-gate.js';
 import * as persistence from './../persistence.js';
 import { isAdminDebugToken, isProductionLikeRuntime } from './../server-policy.js';
 import type { LobbyTicket, Room } from './../server-types.js';
@@ -82,7 +82,7 @@ export interface HttpApiContext {
     { ok: true } | { ok: false; error: 'not_found' | 'unauthorized' | 'already_terminal' }
   >;
   inMemoryGameSummary(roomId: string): persistence.RecentEveGameRecord | null;
-  isDraining(): boolean;
+  refusesCreate(create?: DrainCreate): boolean;
   drainDeadlineMs(): number | null;
   restartPhase?(): 'pending' | 'restarting' | null;
   activeGameCount(): number;

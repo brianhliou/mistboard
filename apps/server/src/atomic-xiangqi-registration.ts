@@ -150,7 +150,7 @@ registerVariantTenant({
     legacyVariants: ['atomic-xiangqi'],
   },
   rooms: atomicXiangqiRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,
-  activeGameCount: () => countActiveTenantGames(atomicXiangqiRooms.values()),
+  activeGameCount: () => countActiveTenantGames(atomicXiangqiRooms.values(), atomicXiangqiTenant),
   getOrLoadRoom: (roomId) =>
     getOrLoadAtomicXiangqiRoom(roomId) as Promise<TenantManagedRoom | null>,
   attachWebSocket: (ctx, socket, request, room) =>

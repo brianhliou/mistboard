@@ -76,6 +76,10 @@ function bothSeatsFilled(room: BanqiEngineRoom): boolean {
 
 function engineToMove(room: BanqiEngineRoom, seat: BanqiSeat): boolean {
   const status = room.projection.state.status;
+  // A paused room is not the engine's turn: a search that lands (or fails)
+  // after the shutdown pause must neither move nor resign. The resume
+  // reschedules the engine, which searches again on the restored room.
+  if (room.projection.paused) return false;
   return status.type === 'playing' && status.turn === seat && bothSeatsFilled(room);
 }
 

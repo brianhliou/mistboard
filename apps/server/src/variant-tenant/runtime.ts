@@ -20,7 +20,7 @@ import {
   isRetiredGameSpec,
   maybeGameSpecForId,
 } from '@mistboard/game';
-import { countDeployGatingRooms } from '../deploy-gate.js';
+import { countDeployGatingRooms, resumablePveRoomPredicate } from '../deploy-gate.js';
 import {
   firstPartyBotForEngine,
   firstPartyBotForId,
@@ -1388,13 +1388,26 @@ export function isTenantClockState<C extends string>(
 // chess map agree on what "live" means. They used to disagree: this side
 // dropped correspondence and the chess side didn't, so a single chess
 // correspondence room could block every deploy forever.
+//
+// Pass the tenant to stop counting its resumable PvE games (#559): a spec in
+// RESUMABLE_PVE_GAME_SPECS whose room has an engine in a seat. Same predicate
+// as the registry's census, so the gate and its explanation agree.
 export function countActiveTenantGames(
   rooms: Iterable<{
     events?: readonly { at?: number }[];
-    projection: { state: { status: { type: string } }; timeControl?: RoomTimeControl };
+    projection: {
+      state: { status: { type: string } };
+      timeControl?: RoomTimeControl;
+      seats?: object;
+    };
   }>,
+  tenant?: Parameters<typeof resumablePveRoomPredicate>[0],
 ): number {
-  return countDeployGatingRooms(rooms);
+  return countDeployGatingRooms(
+    rooms,
+    Date.now(),
+    tenant ? resumablePveRoomPredicate(tenant) : undefined,
+  );
 }
 
 export function computeTenantConnectedSeats<C extends string>(

@@ -1024,7 +1024,7 @@ function emptyCtx() {
     releaseLiveEngineReservation: () => {},
     abandonRoom: async () => ({ ok: false, error: 'not_found' as const }),
     inMemoryGameSummary: () => null,
-    isDraining: () => false,
+    refusesCreate: () => false,
     drainDeadlineMs: () => null,
     activeGameCount: () => 0,
   };

@@ -1,4 +1,5 @@
 import { JIEQI_SPEC_ID, type RoomTimeControl } from '@mistboard/game';
+import type { DrainCreate } from '../deploy-gate.js';
 import {
   abJchessAvailable,
   isJieqiEngineClientId,
@@ -14,7 +15,7 @@ import {
 // tenant's room factory in (jieqi-registration.ts).
 export type JieqiCreateContext = {
   databaseRequired: boolean;
-  isDraining(): boolean;
+  refusesCreate(create?: DrainCreate): boolean;
   drainDeadlineMs(): number | null;
   createJieqiRoom(
     timeControl?: RoomTimeControl,

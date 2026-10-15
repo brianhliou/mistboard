@@ -117,7 +117,7 @@ registerVariantTenant({
   errorPrefix: 'banqi',
   enabled: banqiTenant.enabled,
   rooms: banqiRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,
-  activeGameCount: () => countActiveTenantGames(banqiRooms.values()),
+  activeGameCount: () => countActiveTenantGames(banqiRooms.values(), banqiTenant),
   getOrLoadRoom: (roomId) => getOrLoadBanqiRoom(roomId) as Promise<TenantManagedRoom | null>,
   attachWebSocket: (ctx, socket, request, room) =>
     handleBanqiWebSocketConnection(

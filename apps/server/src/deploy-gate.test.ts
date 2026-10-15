@@ -87,6 +87,7 @@ test('census keeps the discarded rooms so a blocked deploy can say why', () => {
     correspondence: 1,
     paused: 1,
     'not-playing': 1,
+    pve: 0,
   });
 });
 
@@ -101,5 +102,6 @@ test('censuses from the chess map and the tenants add up', () => {
     correspondence: 0,
     paused: 1,
     'not-playing': 0,
+    pve: 0,
   });
 });

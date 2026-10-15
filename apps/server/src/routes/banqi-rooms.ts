@@ -1,5 +1,6 @@
 import { BANQI_SPEC_ID, type RoomTimeControl } from '@mistboard/game';
 import { BANQI_DEFAULT_ENGINE_ID, isBanqiEngineClientId } from './../banqi-engine.js';
+import type { DrainCreate } from '../deploy-gate.js';
 import {
   createTenantRoomsRoute,
   resolveFirstMoverHumanSeat,
@@ -12,7 +13,7 @@ import {
 // 'red' | 'black' | 'random'.
 export type BanqiCreateContext = {
   databaseRequired: boolean;
-  isDraining(): boolean;
+  refusesCreate(create?: DrainCreate): boolean;
   drainDeadlineMs(): number | null;
   createBanqiRoom(
     timeControl?: RoomTimeControl,
