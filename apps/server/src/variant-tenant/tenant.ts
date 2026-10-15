@@ -219,7 +219,8 @@ export type TenantRoomEvent<C extends string, M, Spec extends string = string> =
 // 'shutdown': the server was told to stop. 'orphaned': it died without saying
 // so, found on hydration by the gap since the last event.
 export type TenantPauseReason = 'shutdown' | 'orphaned';
-// 'players-returned': every human seat is connected again. 'grace-elapsed':
+// 'players-returned': every human seat, or the human on move, is connected
+// again. 'grace-elapsed':
 // the wait ran out with a seat still empty, and that seat's clock runs.
 export type TenantResumeReason = 'players-returned' | 'grace-elapsed';
 

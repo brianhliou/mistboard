@@ -91,14 +91,14 @@ test('a paused game does not flag a player after an outage longer than their clo
   assert.ok(pause);
   events.push(pause as DarkChessTenantEvent);
 
-  // It comes back 200s later and white reconnects first.
+  // It comes back 200s later and black, not on move, reconnects first.
   const room = hydrate(events);
-  room.clients = new Set([{ seat: 'white', displaced: false }]);
+  room.clients = new Set([{ seat: 'black', displaced: false }]);
   const { ctx, appended } = writerContext(() => 225_000);
   scheduleTenantLifecycleTimers(darkChessTenant, room, ctx);
   await settle();
 
-  assert.deepEqual(appended, [], 'no clock-expired, no resume while black is away');
+  assert.deepEqual(appended, [], 'no clock-expired, no resume while the side on move is away');
   assert.equal(room.clockTimer, null);
   assert.equal(room.resumeDeadline, 225_000 + TENANT_PAUSE_GRACE_MS);
   assert.equal(room.projection.clock?.remainingMs.white, 177_000);
@@ -131,6 +131,35 @@ test('the clock resumes for the side on move once both players are back', async 
   assert.equal(clock.runningSince, 225_000);
   assert.equal(tenantClockRemainingMs(clock, 'white', 235_000), 167_000);
   assert.notEqual(room.clockTimer, null, 'the flag timer is armed again');
+  clearTenantRuntimeTimers(room);
+});
+
+// #567: only the side to move has a running clock after a resume, so its
+// player being back is enough. Before, a returning mover sat on a frozen board,
+// unable to move, until the opponent came back or the 90s grace ran out.
+test('the clock resumes as soon as the player on move is back, opponent still away', async () => {
+  const roomId = 'dchx_mover_back';
+  const events = liveGame(roomId);
+  events.push(
+    tenantPauseEventFor(
+      replayTenantEvents(darkChessTenant, events),
+      25_000,
+      'shutdown',
+    ) as DarkChessTenantEvent,
+  );
+  const room = hydrate(events);
+  room.clients = new Set([{ seat: 'white', displaced: false }]);
+  const { ctx, appended } = writerContext(() => 225_000);
+  scheduleTenantLifecycleTimers(darkChessTenant, room, ctx);
+  await settle();
+
+  assert.equal(appended[0]?.type, 'clock-resumed');
+  assert.equal(room.projection.paused, undefined);
+  const clock = room.projection.clock!;
+  assert.equal(clock.activeColor, 'white');
+  assert.equal(clock.runningSince, 225_000, 'the outage is charged to nobody');
+  assert.equal(clock.remainingMs.white, 177_000);
+  assert.equal(clock.remainingMs.black, 182_000, 'the absent opponent loses nothing');
   clearTenantRuntimeTimers(room);
 });
 
