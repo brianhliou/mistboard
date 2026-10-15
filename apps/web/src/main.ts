@@ -36,6 +36,7 @@ import { ensureLocaleCatalog, type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, initializeLocaleFromCurrentUrl, resolveLocale } from './i18n/locale.js';
 import {
   challengesNotificationSource,
+  correspondenceFinishedNotificationSource,
   correspondenceNotificationSource,
   followersNotificationSource,
   forumNotificationSource,
@@ -85,6 +86,8 @@ registerNotificationSource(forumNotificationSource);
 if (correspondenceEnabled()) registerNotificationSource(challengesNotificationSource);
 // A public board seek that lapsed with no taker: told once, then seen.
 if (correspondenceEnabled()) registerNotificationSource(seekExpiryNotificationSource);
+// A correspondence game that ended while you were away: told once, then seen.
+if (correspondenceEnabled()) registerNotificationSource(correspondenceFinishedNotificationSource);
 // An embed runs inside SOMEONE ELSE'S page, so the site bootstrap below is not
 // just wasted work there, it is work we have no business doing in their document:
 // the account nav fetches /api/auth/me with credentials, and analytics reports a

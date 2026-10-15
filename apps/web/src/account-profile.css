@@ -2212,6 +2212,29 @@
   min-width: 60px;
 }
 
+/* How the game ended (the /correspondence "Recently finished" rows): an
+   outlined pill, so it reads as the outcome's detail rather than metadata. */
+.profile-game-detail.profile-game-ending {
+  border-color: var(--site-border-soft);
+  background: transparent;
+  color: var(--site-heading);
+}
+
+/* "New" beside the opponent: a game that ended since the player last looked.
+   Small and accent-tinted; never animated. Two classes deep to beat the
+   row's .profile-game-row span size. */
+.profile-game-topline .profile-game-new {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--site-accent) 15%, var(--site-panel));
+  color: color-mix(in srgb, var(--site-accent) 80%, var(--site-heading));
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 /* Time control joins the fixed-width leading pills so the source + ply pills
    stay aligned across rows. Tabular figures keep "1 + 1" and "3 + 2" the same
    visual width; the soft accent border reads it as the game's speed. */

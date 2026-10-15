@@ -395,6 +395,7 @@ export {
   FORUM_UNREAD_WINDOW_DAYS,
   isNotificationWatermarkKind,
   markNotificationsSeen,
+  notificationsSeenAt,
   unreadWatchedForumTopics,
   unseenNewFollowers,
 } from './persistence-notifications.js';
@@ -435,6 +436,7 @@ export {
   getUserProfileByHandle,
   getUserRatingHistory,
   isProfileGameResultFilter,
+  listRecentFinishedCorrespondenceGames,
   updateUserAccountPreference,
   updateUserDmPolicy,
   updateUserLocale,
