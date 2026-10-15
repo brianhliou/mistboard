@@ -1175,26 +1175,24 @@ export async function loadLogoMarkHref(staticDir: string): Promise<string> {
   return `data:image/png;base64,${png.toString('base64')}`;
 }
 
-// Two fixes to the raster on a card (Brian, 2026-10-11: "a fuzzy whitish
-// outline ... a bit too grey and not enough pop"). The PNG was cut out of a
-// white background, so its edge carries a pale ring: erode the alpha by ~2.5
-// source px to drop it. Its greys (frame 53, tiles 65-69) sit too close to the
-// card's blue-black, so a gamma curve darkens them while the whites stay white,
+// The raster's greys (frame 53, tiles 65-69 before the 2026-10-14 re-cut) sat
+// too close to the card's blue-black (Brian, 2026-10-11: "a bit too grey and
+// not enough pop"), so a gamma curve darkens them while the whites stay white,
 // and a soft glow behind the mark keeps the darker frame from sinking into the
-// background. Picked from a sheet over a light card, which pops hardest but is
-// a white flash in every dark-mode feed.
-const LOGO_MARK_GAMMA = 1.6;
+// background. The 10-11 fix also eroded the alpha to drop a pale ring left by
+// cutting the PNG out of white; the 10-14 re-cut of logo-mark.png cleaned that
+// edge, darkened the greys by gamma 1.25 and drew a deliberate light rim, so
+// the card no longer erodes (it would eat the rim) and applies only the rest
+// of its 1.6 curve: 1.25 x 1.28 = 1.6.
+const LOGO_MARK_GAMMA = 1.28;
 
 function logoMarkImage(href: string, x: number, y: number, size: number): string {
-  const erode = (2.5 * size) / 512;
   const tone = ['R', 'G', 'B']
     .map((c) => `<feFunc${c} type="gamma" exponent="${LOGO_MARK_GAMMA}"/>`)
     .join('');
   return [
     `<filter id="logo-mark" color-interpolation-filters="sRGB">`,
-    `<feMorphology in="SourceAlpha" operator="erode" radius="${erode}" result="inside"/>`,
-    `<feComposite in="SourceGraphic" in2="inside" operator="in" result="trimmed"/>`,
-    `<feComponentTransfer in="trimmed">${tone}</feComponentTransfer>`,
+    `<feComponentTransfer>${tone}</feComponentTransfer>`,
     `</filter>`,
     `<image href="${href}" x="${x}" y="${y}" width="${size}" height="${size}" filter="url(#logo-mark)"/>`,
   ].join('');
