@@ -49,6 +49,7 @@ type HarnessTour = {
   pollMode?: XiangqiBroadcastPollMode;
   startsAt?: string | null;
   endsAt?: string | null;
+  hasBoards?: boolean;
 };
 
 type Harness = {
@@ -377,6 +378,48 @@ test('scheduler stops an auto tour 7 days after the event, logs once, and resume
   h.advance(30_000);
   await scheduler.tick();
   assert.deepEqual(h.pollSlugs.slice(-1), ['long-over']);
+});
+
+test('scheduler polls an empty tour past its window once a day until its first board (#493)', async () => {
+  const h = harness();
+  const scheduler = createXiangqiBroadcastScheduler(h.deps);
+  const day = 24 * 60 * 60_000;
+  const empty = {
+    slug: 'empty',
+    sourceUrl: 'https://fixture.invalid/empty.json',
+    pollIntervalMs: 30_000,
+    pollMode: 'auto' as const,
+    startsAt: new Date(h.now() - 12 * day).toISOString(),
+    // Ended ten days ago: the 7-day tail closed three days ago.
+    endsAt: new Date(h.now() - 10 * day).toISOString(),
+    hasBoards: false,
+  };
+  h.setTours([empty, { ...empty, slug: 'imported', hasBoards: true }]);
+
+  await scheduler.tick();
+  assert.deepEqual(h.pollSlugs, ['empty'], 'a tour with boards stays closed');
+
+  h.advance(day - 60_000);
+  await scheduler.tick();
+  assert.equal(h.pollSlugs.length, 1, 'one poll a day, not the 30-minute tail cadence');
+
+  h.advance(60_001);
+  await scheduler.tick();
+  assert.deepEqual(h.pollSlugs, ['empty', 'empty']);
+
+  // The source posted the records: the next poll imported boards, which ends
+  // the late tail.
+  h.setTours([{ ...empty, hasBoards: true }]);
+  h.advance(day + 1);
+  await scheduler.tick();
+  assert.equal(h.pollSlugs.length, 2);
+  assert.equal((h.logs.at(-1) as { kind: string }).kind, 'poll_stopped_after_event');
+
+  // Thirty days past the window an empty tour stops too.
+  h.setTours([{ ...empty, endsAt: new Date(h.now() - 38 * day).toISOString() }]);
+  h.advance(day + 1);
+  await scheduler.tick();
+  assert.equal(h.pollSlugs.length, 2);
 });
 
 test('scheduler sweeps the dpxq index before polling, then every six hours', async () => {
