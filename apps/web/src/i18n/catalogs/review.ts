@@ -919,6 +919,11 @@ export const EN_REVIEW = {
   'replay.showSolution': 'Show the solution',
   // A hidden-solution embed's header until the reveal: the study, then the chapter's number.
   'replay.solutionHiddenHeader': '{study} · chapter {n}',
+  'review.gradeCard.inaccuracy': 'Inaccuracy',
+  'review.gradeCard.mistake': 'Mistake',
+  'review.gradeCard.blunder': 'Blunder',
+  'review.gradeCard.loss': 'Lost {points} points of win chance',
+  'review.gradeCard.best': 'Better was {move}',
 } as const;
 
 export type ReviewI18nKey = keyof typeof EN_REVIEW;

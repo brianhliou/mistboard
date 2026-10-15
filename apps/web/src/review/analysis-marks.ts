@@ -104,6 +104,14 @@ export type MarkBetter =
   | { kind: 'move'; uci: string }
   | { kind: 'candidates'; moves: MarkArrowMove[] };
 
+export type MarkGrade = {
+  judgment: Exclude<MoveJudgment, null>;
+  /** Win-chance points lost, rounded; absent when the analysis cannot say. */
+  loss?: number;
+  /** The better move, board notation; absent when none may be quoted. */
+  best?: string;
+};
+
 export type AnalysisMark = {
   ply: number;
   /** Glyph after the move ('??', '?', '?!', or a praise '!!' / '!'); absent = none. */
@@ -117,6 +125,11 @@ export type AnalysisMark = {
   luck?: number;
   /** The decision layer's full ranked table for a chance ply, unfiltered. */
   candidates?: DecisionCandidate[];
+  /** What the grade card says about a judged move (grade-mark-card.ts): the grade, the
+   *  win-chance points it cost, and the better move in board notation. The same numbers the
+   *  glyph and the advice come from: the eval track's on a quiet move, the decision layer's
+   *  (what the mover could see) on a chance move. Absent on an unjudged move. */
+  grade?: MarkGrade;
   /** What to point at on the board while on this move; null when the move is not judged,
    *  the variant may not quote the eval's best move, or nothing drawable was stored. */
   better: MarkBetter | null;
@@ -147,8 +160,9 @@ export function analysisMarks(input: AnalysisMarksInput): Map<number, AnalysisMa
   for (const move of analysis.moves) {
     const glyph = judgmentGlyph(move.judgment) ?? praiseGlyph(move.praise);
     const best = move.judgment && quoteEvalBestMove ? evalByPly.get(move.ply - 1)?.best : null;
+    const bestText = best ? formatBestMove(best) : undefined;
     const comment = move.judgment
-      ? `${ADVICE_LABEL[move.judgment]}.${best ? ` ${formatBestMove(best)} was best.` : ''}`
+      ? `${ADVICE_LABEL[move.judgment]}.${bestText ? ` ${bestText} was best.` : ''}`
       : move.praise
         ? PRAISE_COMMENT[move.praise]
         : undefined;
@@ -156,6 +170,15 @@ export function analysisMarks(input: AnalysisMarksInput): Map<number, AnalysisMa
       ply: move.ply,
       ...(glyph ? { suffix: glyph.suffix, suffixClass: glyph.suffixClass } : {}),
       ...(comment ? { comment } : {}),
+      ...(move.judgment
+        ? {
+            grade: {
+              judgment: move.judgment,
+              ...(move.winLoss === undefined ? {} : { loss: Math.round(move.winLoss) }),
+              ...(bestText ? { best: bestText } : {}),
+            },
+          }
+        : {}),
       ...((move.judgment ?? move.praise) ? { commentClass: move.judgment ?? move.praise } : {}),
       better: best ? { kind: 'move', uci: best } : null,
     });
@@ -181,11 +204,31 @@ export function analysisMarks(input: AnalysisMarksInput): Map<number, AnalysisMa
       ...(info.candidates?.length ? { candidates: info.candidates } : {}),
       better: info.judgment ? candidateBetter(info.candidates) : null,
     };
+    const grade = info.judgment ? decisionGrade(info.judgment, info) : null;
+    if (grade) next.grade = grade;
+    else delete next.grade;
     if (!next.suffix) delete next.suffix;
     if (!next.suffixClass) delete next.suffixClass;
     marks.set(ply, next);
   }
   return marks;
+}
+
+/** A judged chance ply's grade, from the decision layer's luck-free table only: the cost is
+ *  the best choice's win% minus the played one's, both averaged over what the mover could not
+ *  see, so the card never reads off the hidden identity. No cost when the table lacks either
+ *  row; no better move when the played move led the table. */
+function decisionGrade(judgment: Exclude<MoveJudgment, null>, info: DecisionMoveInfo): MarkGrade {
+  const candidates = info.candidates ?? [];
+  const top = candidates[0];
+  const played = candidates.find((candidate) => candidate.played);
+  const topIsBest = top !== undefined && (top.rank === undefined || top.rank === 1);
+  const quote = decisionBestQuote(info);
+  return {
+    judgment,
+    ...(topIsBest && played ? { loss: Math.max(0, Math.round(top.win - played.win)) } : {}),
+    ...(quote && top ? { best: top.label } : {}),
+  };
 }
 
 /** The top alternatives of a judged chance ply, best first, without the move played (the

@@ -2,16 +2,15 @@
 // turned out to be (the mover's own on a reveal, the opponent's on a face-down capture), the
 // odds of that, the swing, and the bag it came out of.
 //
-// The board's hit layer sits above the marker layer and owns every click (piece selection,
-// drags), so the card does not listen on the mark itself. It watches pointer positions on
-// the board host and tests them against the mark: the piece's hit disc and the die on its
-// corner. That keeps the board's own input untouched: a tap on the revealed piece still
-// selects it, and also opens the card. The move list's luck badge opens the same card for
-// its own move (attachLuckBadgeCard).
+// The card and its triggers are mark-card.ts's, shared with the move-grade card; this file
+// says what the luck card shows and where its mark is: the piece's hit disc and the die on
+// its corner. The move list's luck badge opens the same card for its own move
+// (attachLuckBadgeCard).
 
 import type { JieqiPieceRole } from '@mistboard/game';
 import { luckDieIconSvg } from '../board-luck-mark.js';
 import { t } from '../i18n/catalog.js';
+import { overGradeBadge } from './grade-mark-card.js';
 import {
   type JieqiChanceKind,
   luckPoints,
@@ -19,6 +18,7 @@ import {
   luckSizeTone,
   type RevealOdds,
 } from './jieqi-luck-mark.js';
+import { attachBoardMarkCard, attachListBadgeCard, type MarkCardContent } from './mark-card.js';
 
 export type LuckCardDetail = {
   /** The square the mark is drawn on; the card only opens over a mark on this square. */
@@ -144,47 +144,14 @@ export function luckCardHtml(detail: LuckCardDetail, pieceSvg: PieceSvg): string
   );
 }
 
-/** The card element and its placement, shared by the board mark and the move-list badge. */
-function createLuckCard(pieceSvg: PieceSvg) {
-  const card = document.createElement('div');
-  card.className = 'luck-card';
-  card.setAttribute('role', 'tooltip');
-  card.hidden = true;
-  document.body.append(card);
-  let shownFor: string | null = null;
-
-  /** Open the card for `detail`, centred over `rect` (the piece, or the badge); below it
-   *  when the top is tight. */
-  function show(rect: DOMRect, detail: LuckCardDetail): void {
-    const key = `${detail.square}:${detail.kind ?? 'reveal'}:${detail.luck}`;
-    if (shownFor !== key) {
-      card.innerHTML = luckCardHtml(detail, pieceSvg);
-      card.dataset.tone = luckCardTone(detail);
-      shownFor = key;
-    }
-    card.hidden = false;
-    // Measure after unhiding, then place above the anchor; below when the top is tight.
-    const cw = card.offsetWidth;
-    const ch = card.offsetHeight;
-    const gap = 10;
-    const margin = 8;
-    let left = rect.left + rect.width / 2 - cw / 2;
-    left = Math.max(margin, Math.min(left, window.innerWidth - cw - margin));
-    const above = rect.top - ch - gap;
-    const below = rect.bottom + gap;
-    const top = above >= margin ? above : below;
-    card.dataset.side = above >= margin ? 'above' : 'below';
-    card.style.left = `${Math.round(left)}px`;
-    card.style.top = `${Math.round(top)}px`;
-    card.classList.add('luck-card--open');
-  }
-
-  function hide(): void {
-    card.classList.remove('luck-card--open');
-    card.hidden = true;
-  }
-
-  return { el: card, show, hide };
+/** The card's content for `detail`, keyed so an unchanged card is not redrawn. One builder
+ *  for the board mark and the move-list badge. */
+function luckCardContent(detail: LuckCardDetail, pieceSvg: PieceSvg): MarkCardContent {
+  return {
+    key: `${detail.square}:${detail.kind ?? 'reveal'}:${detail.luck}`,
+    html: luckCardHtml(detail, pieceSvg),
+    tone: luckCardTone(detail),
+  };
 }
 
 /** Slack around the die's square, in px: its white edge (stroke) is drawn outside the
@@ -222,10 +189,7 @@ export function attachLuckMarkCard(
   getDetail: () => LuckCardDetail | null,
   pieceSvg: PieceSvg,
 ): () => void {
-  const card = createLuckCard(pieceSvg);
-  let pinned = false;
-
-  function markHit(): { rect: DOMRect; die: DOMRect | null; detail: LuckCardDetail } | null {
+  return attachBoardMarkCard(boardHost, () => {
     const detail = getDetail();
     if (!detail) return null;
     const mark = boardHost.querySelector(
@@ -233,73 +197,15 @@ export function attachLuckMarkCard(
     );
     const hit = mark?.querySelector('.luck-mark__hit');
     if (!mark || !hit) return null;
-    const die = mark.querySelector('.luck-mark__cube');
+    const rect = hit.getBoundingClientRect();
+    const cube = mark.querySelector('.luck-mark__cube');
+    const die = cube ? cube.getBoundingClientRect() : null;
     return {
-      rect: hit.getBoundingClientRect(),
-      die: die ? die.getBoundingClientRect() : null,
-      detail,
+      rect,
+      contains: (x, y) => luckMarkContains(rect, die, x, y) && !overGradeBadge(boardHost, x, y),
+      content: luckCardContent(detail, pieceSvg),
     };
-  }
-
-  function over(x: number, y: number): { rect: DOMRect; detail: LuckCardDetail } | null {
-    const hit = markHit();
-    return hit && luckMarkContains(hit.rect, hit.die, x, y) ? hit : null;
-  }
-
-  function hide(): void {
-    pinned = false;
-    card.hide();
-  }
-
-  const onMove = (event: PointerEvent): void => {
-    if (event.pointerType !== 'mouse' || pinned) return;
-    const hit = over(event.clientX, event.clientY);
-    if (hit) card.show(hit.rect, hit.detail);
-    else if (!card.el.hidden) hide();
-  };
-  const onLeave = (event: PointerEvent): void => {
-    if (event.pointerType === 'mouse' && !pinned) hide();
-  };
-  // Touch and pen: a tap on the revealed piece or its die pins the card open; any other
-  // tap closes it.
-  const onDown = (event: PointerEvent): void => {
-    if (event.pointerType === 'mouse') return;
-    const hit = over(event.clientX, event.clientY);
-    if (hit) {
-      if (pinned) hide();
-      else {
-        card.show(hit.rect, hit.detail);
-        pinned = true;
-      }
-    } else hide();
-  };
-  const onDocDown = (event: PointerEvent): void => {
-    if (!boardHost.contains(event.target as Node)) hide();
-  };
-  // Navigation re-renders the board: re-place the card over the new mark, or close it.
-  const observer = new MutationObserver(() => {
-    if (card.el.hidden) return;
-    const hit = markHit();
-    if (hit) card.show(hit.rect, hit.detail);
-    else hide();
   });
-  boardHost.addEventListener('pointermove', onMove);
-  boardHost.addEventListener('pointerleave', onLeave);
-  boardHost.addEventListener('pointerdown', onDown);
-  document.addEventListener('pointerdown', onDocDown, true);
-  window.addEventListener('scroll', hide, true);
-  window.addEventListener('resize', hide);
-  observer.observe(boardHost, { childList: true, subtree: true });
-  return () => {
-    observer.disconnect();
-    boardHost.removeEventListener('pointermove', onMove);
-    boardHost.removeEventListener('pointerleave', onLeave);
-    boardHost.removeEventListener('pointerdown', onDown);
-    document.removeEventListener('pointerdown', onDocDown, true);
-    window.removeEventListener('scroll', hide, true);
-    window.removeEventListener('resize', hide);
-    card.el.remove();
-  };
 }
 
 /** The attribute move-tree.ts puts on a luck badge: the path key of the move it labels. */
@@ -318,75 +224,12 @@ export function attachLuckBadgeCard(
   getDetail: (badge: HTMLElement) => LuckCardDetail | null,
   pieceSvg: PieceSvg,
 ): () => void {
-  const card = createLuckCard(pieceSvg);
-  let anchor: HTMLElement | null = null;
-  let pinned = false;
-
-  const badgeAt = (target: EventTarget | null): HTMLElement | null =>
-    target instanceof Element ? (target.closest(LUCK_BADGE_SELECTOR) as HTMLElement | null) : null;
-
-  function open(badge: HTMLElement): boolean {
-    const detail = getDetail(badge);
-    if (!detail) return false;
-    anchor = badge;
-    card.show(badge.getBoundingClientRect(), detail);
-    return true;
-  }
-
-  function hide(): void {
-    pinned = false;
-    anchor = null;
-    card.hide();
-  }
-
-  const onOver = (event: PointerEvent): void => {
-    if (event.pointerType !== 'mouse' || pinned) return;
-    const badge = badgeAt(event.target);
-    if (badge && badge !== anchor) open(badge);
-  };
-  const onOut = (event: PointerEvent): void => {
-    if (event.pointerType !== 'mouse' || pinned || !anchor) return;
-    if (!(event.relatedTarget instanceof Node && anchor.contains(event.relatedTarget))) hide();
-  };
-  const onDown = (event: PointerEvent): void => {
-    if (event.pointerType === 'mouse') return;
-    const badge = badgeAt(event.target);
-    if (!badge) return;
-    if (pinned && anchor === badge) hide();
-    else if (open(badge)) pinned = true;
-  };
-  const onDocDown = (event: PointerEvent): void => {
-    if (!anchor) return;
-    const badge = badgeAt(event.target);
-    if (!badge || !list.contains(badge)) hide();
-  };
-  // A rebuild (analysis landing, a relabel) replaces the badges: follow the open card to the
-  // badge for the same move, or close it.
-  const observer = new MutationObserver(() => {
-    if (!anchor || anchor.isConnected) return;
-    const path = anchor.dataset.luckPath ?? '';
-    const next = list.querySelector<HTMLElement>(
-      `${LUCK_BADGE_SELECTOR}[data-luck-path="${CSS.escape(path)}"]`,
-    );
-    const keepPinned = pinned;
-    if (next && open(next)) pinned = keepPinned;
-    else hide();
+  return attachListBadgeCard(list, {
+    selector: LUCK_BADGE_SELECTOR,
+    pathAttr: 'luckPath',
+    content: (badge) => {
+      const detail = getDetail(badge);
+      return detail ? luckCardContent(detail, pieceSvg) : null;
+    },
   });
-  list.addEventListener('pointerover', onOver);
-  list.addEventListener('pointerout', onOut);
-  list.addEventListener('pointerdown', onDown);
-  document.addEventListener('pointerdown', onDocDown, true);
-  window.addEventListener('scroll', hide, true);
-  window.addEventListener('resize', hide);
-  observer.observe(list, { childList: true, subtree: true });
-  return () => {
-    observer.disconnect();
-    list.removeEventListener('pointerover', onOver);
-    list.removeEventListener('pointerout', onOut);
-    list.removeEventListener('pointerdown', onDown);
-    document.removeEventListener('pointerdown', onDocDown, true);
-    window.removeEventListener('scroll', hide, true);
-    window.removeEventListener('resize', hide);
-    card.el.remove();
-  };
 }

@@ -188,8 +188,10 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
     assessEl.className = 'review-move-list__assessment';
     button.append(san, suffixEl, luckEl, assessEl, evalEl);
     const ann = annotations.get(key);
+    // data-grade-path lets the grade card (grade-mark-card.ts) find the move a glyph labels.
     if (ann?.suffix) {
       suffixEl.textContent = ann.suffix;
+      suffixEl.dataset.gradePath = key;
       if (ann.suffixClass) suffixEl.classList.add(`review-move--${ann.suffixClass}`);
     }
     // Inline luck badge for a reveal (chance) move — the reveal's variance, shown but never graded.
