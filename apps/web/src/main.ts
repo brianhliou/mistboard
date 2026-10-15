@@ -424,6 +424,10 @@ const wantsStudyIndex = path === '/study';
 const wantsPractice =
   path === '/practice' || path === '/zh-hans/practice' || path === '/zh-hant/practice';
 const wantsPracticePosition = path === '/practice/position';
+// One shelf exercise by set slug and position (article links, #521): a bounce
+// page that resolves the chapter in this database. The module validates the
+// pair; isClientRoute already 404s anything that is not one.
+const wantsPracticeChapter = /^\/practice\/([a-z-]+)\/([a-z0-9-]+)$/.exec(path) !== null;
 // Hidden DEV-only lab for Jungle river-movement cues (rat / tiger / lion). No nav entry.
 const wantsJungleCuesLab = import.meta.env.DEV && path === '/jungle-cues';
 // Hidden DEV-only audition lab for sound sets. No nav entry.
@@ -523,6 +527,13 @@ if (replaySample) {
     import('./practice-position.js').then(({ mountPracticePosition }) => {
       mountPracticePosition(appRoot);
     }),
+  );
+} else if (wantsPracticeChapter) {
+  setTitleKey('nav.practice');
+  void mountOrReport(() =>
+    import('./practice-chapter-redirect.js').then(({ mountPracticeChapterRedirect }) =>
+      mountPracticeChapterRedirect(path),
+    ),
   );
 } else if (wantsPractice) {
   setTitleKey('nav.practice');
