@@ -1032,10 +1032,10 @@
      stretched group, which would render a ~600px empty panel beside a 308px
      board. Size the CHAT, never the group: chat-resize.ts derives the drag
      handle's ceiling from the panel's PARENT, so a group that is content-sized
-     around the panel makes that ceiling track the panel itself. The handle then
-     ratchets shut, one-way: every shrink lowers the ceiling to the new height
-     and the panel can never grow back. Whatever sizes this chat, the group it
-     sits in has to keep a height of its own. */
+     around the panel makes that ceiling track the panel itself. Left alone that
+     ratchets the handle shut (every shrink lowers the ceiling to the new
+     height); chat-resize now probes for it and climbs to the rail (#298), but
+     the group keeping a height of its own is still the cheap, exact case. */
   .banqi-review .review-shell__left {
     height: auto;
   }
