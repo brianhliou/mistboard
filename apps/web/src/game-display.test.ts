@@ -191,8 +191,8 @@ describe('displayParticipantName', () => {
 // is seat-neutral, never "West wins". The Hong Kong table keeps its winds.
 describe('gameOutcome for wind seats', () => {
   it('is seat-neutral for xiangqi mahjong and keeps the wind for mahjong', () => {
-    expect(gameOutcome('west-wins', 'xiangqi-mahjong')).toEqual({ label: 'Decisive' });
-    expect(gameOutcome('east-wins', 'xiangqi-mahjong')).toEqual({ label: 'Decisive' });
+    expect(gameOutcome('west-wins', 'xiangqi-mahjong')).toEqual({ label: 'Won' });
+    expect(gameOutcome('east-wins', 'xiangqi-mahjong')).toEqual({ label: 'Won' });
     expect(gameOutcome('east-wins', 'mahjong')).toEqual({ winner: 'East' });
   });
 

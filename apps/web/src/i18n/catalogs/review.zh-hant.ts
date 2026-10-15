@@ -273,7 +273,7 @@ export const ZH_HANT_REVIEW = {
   'watch.whiteWins': '白方獲勝',
   'watch.draw': '和棋',
   'watch.colorWins': '{color}獲勝',
-  'watch.decisive': '分出勝負',
+  'watch.won': '分出勝負',
   'watch.resultByReason': '{result}（{reason}）',
   'watch.matchup': '{first} 對 {second}',
   'watch.reviewMatchup': '復盤 {matchup}',

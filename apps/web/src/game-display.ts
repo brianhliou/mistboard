@@ -316,7 +316,7 @@ export function gameOutcome(result: string, variant?: string | null): GameOutcom
   if (result === 'east-wins' || result === 'west-wins') {
     // No participants reach this function, so a player-named variant gets the
     // seat-neutral word rather than "West wins" (variant-seat-label.ts SEAT_NAMING).
-    if (seatsNamePlayers(variant)) return { label: t('watch.decisive') };
+    if (seatsNamePlayers(variant)) return { label: t('watch.won') };
     return { winner: seatColorWord(variant, result === 'east-wins' ? 'east' : 'west') };
   }
   return { label: humanizeToken(result) };
