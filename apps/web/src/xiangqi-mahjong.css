@@ -1220,15 +1220,33 @@ ol.xmj-log {
   }
 }
 
-/* Points by hand, in the room's meta card under the player rows. */
-.xmj-hands-card {
-  padding-top: 8px;
+/* Points by hand, under the table in the centre column: a column per hand
+   grows with the match, and the left card is too narrow to hold it. */
+.live-route--xiangqi-mahjong .live-review__cluster .review-shell__center {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+}
+
+.xmj-hands-under {
+  box-sizing: border-box;
+  width: var(--uni-board-width, 100%);
+  max-width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--site-border);
+  border-radius: 10px;
+  background: var(--site-panel, var(--site-surface));
+}
+
+.xmj-hands-under[hidden] {
+  display: none;
 }
 
 .xmj-hands {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 14px;
   font-variant-numeric: tabular-nums;
   table-layout: fixed;
 }
@@ -1245,7 +1263,7 @@ ol.xmj-log {
 }
 
 .xmj-hands tbody th {
-  width: 40%;
+  width: 22%;
   overflow: hidden;
   text-align: left;
   text-overflow: ellipsis;

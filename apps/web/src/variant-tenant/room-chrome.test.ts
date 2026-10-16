@@ -435,36 +435,6 @@ describe('tenant room chrome player names', () => {
     expect(result.textContent).not.toMatch(/Red|victorious|Brianhliou/);
   });
 
-  it('puts a tenant block under the meta card player rows, above the status', () => {
-    const extraTenant: WebVariantTenant<Color> = {
-      ...tenant,
-      metaExtra: (view) => {
-        const block = document.createElement('div');
-        block.className = 'test-extra';
-        block.textContent = view ? `moves ${view.moveNumber}` : 'none';
-        return block;
-      },
-    };
-    const finished: TenantWebView<Color> = {
-      id: 'test_room',
-      status: { type: 'finished', winner: 'red', reason: 'points' },
-      moveNumber: 30,
-    };
-    const { chrome, refs } = chromeHarness({ view: finished }, extraTenant);
-    chrome.renderMeta();
-    const extra = refs.gameInfo.querySelector('.test-extra');
-    expect(extra?.textContent).toBe('moves 30');
-    expect(extra?.previousElementSibling?.classList.contains('game-meta-card__players')).toBe(true);
-    expect(extra?.nextElementSibling?.classList.contains('game-meta-card__status')).toBe(true);
-    // Rebuilt with the card, never stacked.
-    chrome.renderMeta();
-    expect(refs.gameInfo.querySelectorAll('.test-extra').length).toBe(1);
-    // A tenant without the hook gets the card as before.
-    const plain = chromeHarness({ view: finished });
-    plain.chrome.renderMeta();
-    expect(plain.refs.gameInfo.querySelector('.test-extra')).toBeNull();
-  });
-
   it('capitalizes the finished line on the meta card like the move-list result', () => {
     const { chrome, refs } = chromeHarness({
       view: {

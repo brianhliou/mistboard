@@ -153,13 +153,6 @@ const xmjWebTenant: WebVariantTenant<XmjSeat> = {
   reasonPhrase: xmjReasonPhrase,
   seatPlayerName: xmjPlayerName,
   finishedLine: xmjFinishedLine,
-  metaExtra: (view) => {
-    if (!view) return null;
-    const block = document.createElement('div');
-    block.className = 'xmj-hands-card';
-    block.innerHTML = xmjHandsTableHtml(view as XmjPlayerView, seatNames());
-    return block;
-  },
   rejectedBody: 'live.xiangqiMahjongRoomNotActive',
   liveGameRejectedBody: 'live.roomLiveHandSeatedOnly',
   spectatorBody: 'live.spectatorXiangqiMahjong',
@@ -356,7 +349,27 @@ function animateMoves(board: HTMLElement, view: XmjPlayerView, sources: TileSour
   }
 }
 
+/**
+ * The match's points by hand, under the board in the centre column: the left
+ * card is too narrow to grow a column per hand. Its own node, so the table's
+ * redraw and flight animations never touch it.
+ */
+function renderHandsUnderBoard(board: HTMLElement, view: XmjPlayerView | null): void {
+  const center = board.closest<HTMLElement>('.review-shell__center');
+  if (!center) return;
+  let host = center.querySelector<HTMLElement>(':scope > .xmj-hands-under');
+  if (!host) {
+    host = document.createElement('section');
+    host.className = 'xmj-hands-under';
+    center.append(host);
+  }
+  const html = view ? xmjHandsTableHtml(view, seatNames()) : '';
+  host.hidden = html === '';
+  if (host.innerHTML !== html) host.innerHTML = html;
+}
+
 function renderTable(refs: LiveRefs, view: XmjPlayerView | null): void {
+  renderHandsUnderBoard(refs.board, view);
   const felt = xmjFeltFromSearch(window.location.search);
   const look = xmjTileLookFromSearch(window.location.search);
   // A spike (`?size=big`): larger discards and wall, judged live before it is kept.
