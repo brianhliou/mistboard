@@ -46,13 +46,16 @@ const gameSpecIds = new Set<string>(GAME_SPECS.map((spec) => spec.id));
 // NON_INDEXED_ARTICLE_SLUGS carries the same slugs (articles-meta-sync.test.ts
 // holds the two together). /rules/crazyhouse-xiangqi was held here for polish
 // on 2026-10-02 and went public the same day (Brian).
-// The two Xiangqi Mahjong rules pages are held here while Brian reviews them
-// (2026-10-15); they carry no gameSpecId, so they stay unlisted when the
-// variant goes public, until their slugs leave this set.
+// The Xiangqi Mahjong rules page is held here while Brian reviews it
+// (2026-10-15); it stays unlisted, even once the variant goes public, until
+// its slug leaves this set.
 const HIDDEN_RULES_SLUGS = new Set(['shogi4', 'xiangqi-mahjong-32']);
+// Rules pages whose slug is not the spec id. variant-conformance.test.ts holds
+// every variant's rules link to a rules page that exists.
 const RULES_GAME_SPEC_BY_SLUG: Record<string, GameSpecId> = {
   'fog-chess': 'dark-chess',
   'fog-xiangqi': 'dark-xiangqi',
+  'xiangqi-mahjong-32': 'xiangqi-mahjong',
 };
 // /rules/chess is the chess primer (hidden from the rail since 2026-07-03,
 // indexed, linked from the Fog Chess page). It documents the game, not the
@@ -73,8 +76,14 @@ export function variantPublicSurfaceEnabled(id: GameSpecId): boolean {
  *  unknown). The forward direction of RULES_GAME_SPEC_BY_SLUG. */
 export function rulesHrefForGameSpec(id: string): string | null {
   if (!isGameSpecId(id) || !variantPublicSurfaceEnabled(id) || isRetiredGameSpec(id)) return null;
+  return `/rules/${rulesSlugForGameSpec(id)}`;
+}
+
+/** The `/rules/<slug>` slug that documents a game spec, whether or not it is
+ *  listed. Ungated so a test can hold every variant to a page that exists. */
+export function rulesSlugForGameSpec(id: GameSpecId): string {
   const aliased = Object.entries(RULES_GAME_SPEC_BY_SLUG).find(([, specId]) => specId === id);
-  return `/rules/${aliased?.[0] ?? id}`;
+  return aliased?.[0] ?? id;
 }
 
 /** rulesHrefForGameSpec in the page locale, for a meta card's variant link. */

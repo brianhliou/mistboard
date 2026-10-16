@@ -4,6 +4,7 @@ import {
   applyXmjMove,
   createXmjRoomState,
   createXmjSetup,
+  exportFormatsForVariant,
   XIANGQI_MAHJONG_SPEC_ID,
   XMJ_CLAIM_PAUSE_MS,
   type XmjRoomState,
@@ -12,6 +13,7 @@ import {
   xmjOrderedTiles,
   xmjPendingAction,
 } from '@mistboard/game';
+import { botVsBotConfigFromEnv } from './bot-vs-bot-scheduler.js';
 import { gateGameSpecRequest } from './game-spec-request-gate.js';
 import { isAllowlistedGameSpec } from './persistence-variant-access.js';
 import {
@@ -125,14 +127,18 @@ test('two bots play a whole match to a recordable finish', () => {
     if (state.status.type !== 'finished') continue;
     const result = tenant.persistence.resultForWinner(state.status.winner);
     assert.ok(['east-wins', 'west-wins', 'draw'].includes(result));
-    assert.ok(['checkmate', 'draw'].includes(tenant.persistence.termination(state.status.reason)));
+    assert.ok(['points', 'draw'].includes(tenant.persistence.termination(state.status.reason)));
   }
 });
 
 test('every runtime ending maps to a termination, and an unknown one throws', () => {
-  for (const reason of ['points', 'tie', 'timeout', 'resignation', 'abandonment']) {
-    assert.ok(tenant.persistence.termination(reason));
-  }
+  // A match is won on points, never by 'checkmate' (migration 169 added 'points').
+  assert.deepEqual(
+    ['points', 'tie', 'timeout', 'resignation', 'abandonment'].map((reason) =>
+      tenant.persistence.termination(reason),
+    ),
+    ['points', 'draw', 'timeout', 'resignation', 'abandonment'],
+  );
   assert.throws(() => tenant.persistence.termination('exhausted'), /unmapped/);
 });
 
@@ -176,4 +182,27 @@ test('a bot claimant settles the window at the same moment, claim or not', () =>
   // Outside a window the bot keeps its ordinary think time.
   const fresh = createXmjRoomState({ walls: [xmjOrderedTiles()], firstDealer: 'east' });
   assert.equal(xmjBotDelayMs(fresh, 0), 700);
+});
+
+// Launch-playbook rule 3: the surfaces Xiangqi Mahjong is left off on purpose.
+// No PGN/JSON export (no notation for a tile match), no share card (no board
+// position to draw), no TV channel (concealed hands). A finished game opens at
+// its own room instead (finishedGameOpensRoom). Bot-vs-bot never schedules it.
+test('xiangqi mahjong is off export, share card and TV on purpose', async () => {
+  await import('./variant-tenant/register-tenants.js');
+  const { registeredVariantTenants } = await import('./variant-tenant/registry.js');
+  const entry = registeredVariantTenants().find(
+    (candidate) => candidate.gameSpecId === XIANGQI_MAHJONG_SPEC_ID,
+  );
+  assert.ok(entry, 'xiangqi mahjong is registered');
+  assert.deepEqual(exportFormatsForVariant(XIANGQI_MAHJONG_SPEC_ID), []);
+  assert.equal(entry.export ?? null, null);
+  assert.equal(entry.card ?? null, null);
+  assert.equal(entry.watch ?? null, null);
+  assert.equal(entry.finishedGameOpensRoom, true);
+  const eve = botVsBotConfigFromEnv({
+    MISTBOARD_BOT_VS_BOT_VARIANTS: XIANGQI_MAHJONG_SPEC_ID,
+  } as NodeJS.ProcessEnv);
+  assert.deepEqual(eve.plans, []);
+  assert.equal(eve.skipped[0]?.variant, XIANGQI_MAHJONG_SPEC_ID);
 });

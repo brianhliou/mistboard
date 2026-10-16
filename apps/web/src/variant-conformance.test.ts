@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import {
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
   DAYS_PER_MOVE_OPTIONS,
+  GAME_SPECS,
   type GameSpecId,
   isRetiredGameSpec,
   MAHJONG_SPEC_ID,
@@ -11,6 +12,10 @@ import {
   XIANGQI_MAHJONG_SPEC_ID,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
+import { ANALYSIS_VARIANTS } from './analysis-catalog.js';
+import { articles } from './articles-data.js';
+import { EDITOR_VARIANT_IDS } from './editor/editor-catalog.js';
+import { LANDING_BOT_GAME_SPEC_IDS } from './landing-bot-policy.js';
 import {
   type LandingRoomSetup,
   roomCreationGameSpecId,
@@ -18,9 +23,17 @@ import {
 } from './landing-play.js';
 import { panelPersonPaces } from './landing-play-panel.js';
 import { buildReviewMeta } from './review/game-review-meta.js';
-import { webVariantTenants } from './variant-tenant/registry.js';
+import { STUDY_VARIANTS } from './study-catalog.js';
+import { gameSpecIdFromRulesSlug, rulesSlugForGameSpec } from './variant-public-surfaces.js';
+import { finishedGameHref, webVariantTenants } from './variant-tenant/registry.js';
 import { roomMarkerId } from './variant-tenant/room-chrome.js';
-import { variantMiniIdForGameSpec } from './variants.js';
+import {
+  leaderboardVariants,
+  profileRatingVariants,
+  VARIANTS,
+  variantMiniIdForGameSpec,
+} from './variants.js';
+import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
 
 // Variant-wiring conformance. Adding a variant touches ~12 scattered sites; the
 // create-request builders are the ones that fail SILENTLY when missed —
@@ -124,11 +137,15 @@ describe('variant correspondence conformance', () => {
 // marker id) while every other surface derived it from the spec. Both cards now
 // take only the spec and look the marker up in variants.ts; these pin that.
 describe('variant marker conformance', () => {
-  // Both mahjongs are behind a flag and never shown as a variant: no marker, no icon.
+  // HK mahjong is behind a flag and never shown as a variant: no marker, no icon.
   const markedTenants = webVariantTenants().filter(
-    (tenant) =>
-      tenant.gameSpecId !== MAHJONG_SPEC_ID && tenant.gameSpecId !== XIANGQI_MAHJONG_SPEC_ID,
+    (tenant) => tenant.gameSpecId !== MAHJONG_SPEC_ID,
   );
+
+  it('marks Xiangqi Mahjong with its own tile marker', () => {
+    expect(markedTenants.map((tenant) => tenant.gameSpecId)).toContain(XIANGQI_MAHJONG_SPEC_ID);
+    expect(variantMiniIdForGameSpec(XIANGQI_MAHJONG_SPEC_ID)).toBe('xiangqi-mahjong');
+  });
 
   it('every tenant room resolves its OWN spec marker', () => {
     expect(markedTenants.length).toBeGreaterThan(0);
@@ -184,5 +201,87 @@ describe('variant marker conformance', () => {
     };
     walk(srcDir);
     expect(offenders).toEqual([]);
+  });
+});
+
+// Finished-game links (2026-10-15, Xiangqi Mahjong launch prep). Profile rows,
+// the bell, the database and featured cards all link a finished game. The
+// legacy /game/:id page reads only the chess-shell event log, so a tenant with
+// its own room client linked there is a dead page: Xiangqi Mahjong has no
+// postgame route and fell through to it. A tenant links its postgame route,
+// else its room when it says its finished room is the page (the server suite
+// pins what that shows a visitor), else /game/:id. Hong Kong mahjong still has
+// no finished-game page, and the server marks its rows unavailable.
+describe('finished-game link conformance', () => {
+  it('every tenant links a finished game to a page that mounts it', () => {
+    for (const tenant of webVariantTenants()) {
+      const roomId = `${tenant.roomIdPrefix}finished1`;
+      const routeBase = tenant.gameRouteBase ?? tenant.reviewRouteBase;
+      const expected = routeBase
+        ? `${routeBase}/${roomId}`
+        : tenant.finishedGameOpensRoom
+          ? `/room/${roomId}`
+          : `/game/${roomId}`;
+      expect(finishedGameHref(roomId, tenant.gameSpecId), tenant.gameSpecId).toBe(expected);
+      if (tenant.finishedGameOpensRoom) {
+        expect(tenant.loadLiveRoomClient, `${tenant.gameSpecId}: no room client`).toBeDefined();
+      }
+    }
+    expect(finishedGameHref('xmj_finished1', XIANGQI_MAHJONG_SPEC_ID)).toBe('/room/xmj_finished1');
+  });
+});
+
+describe('rules link conformance', () => {
+  // A meta card, a review page and a rules page's play button all link a variant
+  // to rulesHrefForGameSpec. A variant whose rules page has a different slug
+  // must say so (RULES_GAME_SPEC_BY_SLUG), or the link 404s the day it goes
+  // public. `chess` is study-only: /rules/chess is the primer, not its page.
+  it('every live variant links to a rules page that exists and points back', () => {
+    const rulesSlugs = new Set(articles.filter((a) => a.kind === 'rules').map((a) => a.slug));
+    for (const spec of GAME_SPECS) {
+      if (isRetiredGameSpec(spec.id) || spec.id === 'chess') continue;
+      const slug = rulesSlugForGameSpec(spec.id);
+      expect(rulesSlugs.has(slug), `${spec.id}: no /rules/${slug}`).toBe(true);
+      expect(gameSpecIdFromRulesSlug(slug), slug).toBe(spec.id);
+    }
+    expect(rulesSlugForGameSpec(XIANGQI_MAHJONG_SPEC_ID)).toBe('xiangqi-mahjong-32');
+  });
+});
+
+// Launch-playbook rule 3: a surface a variant is left off is left off on
+// purpose and pinned, so it fails closed. Xiangqi Mahjong has no position an
+// analysis board, editor or study can hold (hands are concealed tiles, not a
+// board) and no TV channel (concealed hands, nothing a spectator can follow
+// live). Adding it to any of these is a product decision: change the pin with
+// it. Its homepage bot (Misty) and its web rating-grid row are in, each behind
+// the same gate as the variant itself; pinned below.
+describe('Xiangqi Mahjong deliberate exclusions', () => {
+  const XMJ = 'xiangqi-mahjong';
+
+  it('is not an analysis, editor or study variant', () => {
+    expect(ANALYSIS_VARIANTS.map((variant) => variant.id)).not.toContain(XMJ);
+    expect(EDITOR_VARIANT_IDS as readonly string[]).not.toContain(XMJ);
+    expect(STUDY_VARIANTS.map((variant) => variant.id)).not.toContain(XMJ);
+  });
+
+  it('has no watch channel', () => {
+    expect(Object.keys(WATCH_CHANNEL_MINI_IDS)).not.toContain(XMJ);
+  });
+
+  // The shelf lists it, but the Lobby rows, Quick Pairing chip and play panel
+  // only draw a variant the play menu offers (landingSeedVariantOffered), which
+  // is the allowlist until launch; the server refuses the room the same way.
+  it('is on the homepage bot shelf, played by Misty', () => {
+    expect(LANDING_BOT_GAME_SPEC_IDS as readonly string[]).toContain(XMJ);
+  });
+
+  // The rating-grid row follows the spec's public surface, not the web flag: the
+  // flag is on for the allowlisted playtest, while the server keeps the pool off
+  // every grid until launch. The launch commit flips this pin.
+  it('has a VARIANTS row, kept off the rating grids until launch', () => {
+    const row = VARIANTS.find((variant) => variant.gameSpecId === XMJ);
+    expect(row?.miniId).toBe('xiangqi-mahjong');
+    expect(leaderboardVariants.map((variant) => variant.gameSpecId)).not.toContain(XMJ);
+    expect(profileRatingVariants.map((variant) => variant.gameSpecId)).not.toContain(XMJ);
   });
 });

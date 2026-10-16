@@ -17,6 +17,7 @@ import {
   matchupSeats,
   secondMoverColorName,
   terminationLabel,
+  variantNameKeyForSpecId,
 } from './game-display.js';
 import { ensureLocaleCatalog } from './i18n/catalog.js';
 
@@ -209,6 +210,8 @@ describe('terminationLabel', () => {
     expect(terminationLabel('king-captured')).toBe('King captured');
     expect(terminationLabel('progress-clock')).toBe('Progress clock');
     expect(terminationLabel('race')).toBe('Den entered');
+    // Xiangqi Mahjong's match win (migration 169), once printed as Checkmate.
+    expect(terminationLabel('points')).toBe('On points');
     expect(terminationLabel('')).toBe('');
   });
 
@@ -273,6 +276,11 @@ describe('correspondence side names', () => {
     // A retired variant left the create list, but a game in progress still
     // names its sides.
     expect(firstMoverColorName('fortress-xiangqi')).toBe('Red');
+    // Xiangqi Mahjong seats east and west; east deals first.
+    expect(firstMoverColorName('xiangqi-mahjong')).toBe('East');
+    expect(secondMoverColorName('xiangqi-mahjong')).toBe('West');
+    // and goes by its catalog name, so zh readers see 象棋麻将, not the English.
+    expect(variantNameKeyForSpecId('xiangqi-mahjong')).toBe('variant.xiangqiMahjong.name');
     expect(firstMoverColorName('no-such-spec')).toBe('White');
   });
 });

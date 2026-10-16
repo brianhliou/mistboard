@@ -27,14 +27,16 @@ describe('landing bot policy', () => {
     expect(after).toBe(before + 1);
   });
 
-  it('shows six distinct variants and covers the full shelf in any two buckets', () => {
-    for (let bucket = 0; bucket < 3; bucket++) {
+  it('shows six distinct variants, jieqi every time, and the full shelf in any three buckets', () => {
+    for (let bucket = -2; bucket < 9; bucket++) {
       const current = landingBotLineup(bucket);
-      const next = landingBotLineup(bucket + 1);
 
       expect(current).toHaveLength(6);
       expect(new Set(current).size).toBe(6);
-      expect(new Set([...current, ...next])).toEqual(new Set(LANDING_BOT_GAME_SPEC_IDS));
+      expect(current).toContain('jieqi');
+      expect(
+        new Set([...current, ...landingBotLineup(bucket + 1), ...landingBotLineup(bucket + 2)]),
+      ).toEqual(new Set(LANDING_BOT_GAME_SPEC_IDS));
     }
   });
 
@@ -217,7 +219,15 @@ describe('landing bot policy', () => {
     // Every Misty variant, fog included, advertises the 10+5 bot default. For
     // the fog engines it also clears the 5s increment floor (#283) the picker
     // and the create routes enforce (isAllowedEngineTimeControl).
-    for (const gameSpecId of ['banqi', 'jungle', 'jungle-flip', 'dark-chess', 'dark-xiangqi']) {
+    // Xiangqi Mahjong's room accepts every preset, 10+5 included.
+    for (const gameSpecId of [
+      'banqi',
+      'jungle',
+      'jungle-flip',
+      'dark-chess',
+      'dark-xiangqi',
+      'xiangqi-mahjong',
+    ]) {
       expect(landingBotOffer(gameSpecId)).toMatchObject({
         botId: 'misty',
         timeControlId: '10m5',
@@ -330,7 +340,14 @@ describe('landing bot ladder (homepage play panel)', () => {
   });
 
   it('gives the house-built variants a single Misty', () => {
-    for (const spec of ['dark-chess', 'dark-xiangqi', 'banqi', 'jungle', 'jungle-flip']) {
+    for (const spec of [
+      'dark-chess',
+      'dark-xiangqi',
+      'banqi',
+      'jungle',
+      'jungle-flip',
+      'xiangqi-mahjong',
+    ]) {
       expect(ids(spec)).toEqual(['misty']);
     }
     expect(ids('not-a-variant')).toEqual([]);

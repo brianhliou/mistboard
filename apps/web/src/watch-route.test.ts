@@ -209,14 +209,14 @@ describe('watch route copy helpers', () => {
         },
         {
           color: 'west',
-          displayName: 'Xiangqi mahjong bot',
+          displayName: 'Misty',
           subjectType: 'bot',
           subjectId: null,
           visibility: 'public',
         },
       ],
     };
-    expect(watchQueueResultLabel(base)).toBe('Xiangqi mahjong bot wins');
+    expect(watchQueueResultLabel(base)).toBe('Misty wins');
     expect(watchQueueResultLabel({ ...base, result: 'east-wins' })).toBe('brianhliou wins');
     expect(watchQueueResultLabel({ ...base, result: 'draw' })).toBe('Draw');
     expect(watchQueueResultLabel({ ...base, participants: [] })).toBe('Guest wins');

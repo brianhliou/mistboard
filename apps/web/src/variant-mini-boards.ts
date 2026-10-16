@@ -19,9 +19,10 @@ export type VariantMiniId =
   | 'jieqi'
   | 'banqi'
   | 'jungle'
-  | 'jungle-flip';
+  | 'jungle-flip'
+  | 'xiangqi-mahjong';
 
-export type VariantMiniFamily = 'chess' | 'xiangqi' | 'jungle';
+export type VariantMiniFamily = 'chess' | 'xiangqi' | 'jungle' | 'mahjong';
 
 export interface VariantMiniDef {
   id: VariantMiniId;
@@ -122,6 +123,15 @@ export const VARIANT_MINIS: readonly VariantMiniDef[] = [
     accent: '#1f7a5e',
     blurb: 'Animals shuffled face-down on a 4x4 grid; flip to reveal, equal ranks trade.',
     family: 'jungle',
+  },
+  {
+    id: 'xiangqi-mahjong',
+    label: 'Xiangqi Mahjong',
+    shortLabel: 'XMJ',
+    accent: '#a8642a',
+    blurb:
+      'The 32 xiangqi pieces as tiles: draw, discard and claim to a hand of one set and a pair.',
+    family: 'mahjong',
   },
 ];
 

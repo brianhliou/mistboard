@@ -1,6 +1,7 @@
 // The profile Games list's result and opponent filters: the owner's seat
 // decides the result, and a private account is never matchable.
 
+import { readFileSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createUser, getUserGamesPage } from './persistence.js';
 import {
@@ -188,6 +189,31 @@ definePersistenceTests('profile games filters', () => {
     assert.deepEqual(ids(await getUserGamesPage('alice', null, 0, 50, { result: 'loss' })), [
       'pg_xmj_west_loss',
     ]);
+  });
+
+  // Migration 169: a points win was stored as 'checkmate' and every profile row
+  // said so. The CHECK now takes 'points', and the migration relabels old rows.
+  test('a Xiangqi Mahjong points win is stored and listed as points, old rows relabelled', async () => {
+    await seedUsers();
+    await seedRow('pg_xmj_points', 'xiangqi-mahjong', 'east-wins', '2026-08-06T10:00:00Z', [
+      alice('east'),
+      user('u_bob', 'west'),
+    ]);
+    await seedRow('pg_xq_mate', 'xiangqi', 'red-wins', '2026-08-07T10:00:00Z', [
+      alice('red'),
+      user('u_bob', 'black'),
+    ]);
+    await sql(`UPDATE games SET termination = 'checkmate'`);
+    const migration = readFileSync(
+      new URL('../migrations/169_add_points_termination.sql', import.meta.url),
+      'utf8',
+    );
+    await sql(migration.slice(migration.indexOf('UPDATE games')));
+    const page = await getUserGamesPage('alice', null, 0, 50, {});
+    const termination = (roomId: string) =>
+      page?.games.find((game) => game.roomId === roomId)?.termination;
+    assert.equal(termination('pg_xmj_points'), 'points');
+    assert.equal(termination('pg_xq_mate'), 'checkmate');
   });
 
   test('the opponent filter matches a public handle in any case, never a private account', async () => {

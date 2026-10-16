@@ -252,13 +252,24 @@ describe('web tenant registry <-> server tenant registry parity', () => {
       const web = webTenants.find((tenant) => roomId.startsWith(tenant.roomIdPrefix));
       const webHasPage =
         Boolean(web?.gameRouteBase && web.mountPostgame) ||
+        Boolean(web?.finishedGameOpensRoom) ||
         Boolean(maybeGameSpecForId(registration.gameSpecId)?.legacyLiveRoom);
+      if (serverHasPage && web?.finishedGameOpensRoom) {
+        const server = crosstableReviewUrl(roomId, registration.gameSpecId);
+        const href = reviewUrlForGame({ roomId, variant: registration.gameSpecId } as FeaturedGame);
+        if (server !== href)
+          drift.push(`${registration.gameSpecId}: server ${server} != web ${href}`);
+      }
       if (serverHasPage !== webHasPage)
         drift.push(`${registration.gameSpecId}: server ${serverHasPage} != web ${webHasPage}`);
     }
     expect(drift, drift.join('\n')).toEqual([]);
     // Mahjong is the live case: playable, with no page for a finished table.
     expect(crosstableReviewUrl(`mj_${SAMPLE_ROOM_SUFFIX}`, 'mahjong')).toBeNull();
+    // Xiangqi Mahjong's finished room is its page.
+    expect(crosstableReviewUrl(`xmj_${SAMPLE_ROOM_SUFFIX}`, 'xiangqi-mahjong')).toBe(
+      `/room/xmj_${SAMPLE_ROOM_SUFFIX}`,
+    );
   });
 
   it('web tenant roomIdPrefixes are unique', () => {

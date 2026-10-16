@@ -11,6 +11,7 @@ import {
   JUNGLE_SPEC_ID,
   TIME_CONTROLS,
   type TimeControlId,
+  XIANGQI_MAHJONG_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
 
@@ -26,7 +27,8 @@ export type LandingBotGameSpecId =
   | typeof DARK_XIANGQI_SPEC_ID
   | typeof DARK_CHESS_SPEC_ID
   | typeof JUNGLE_SPEC_ID
-  | typeof JUNGLE_FLIP_SPEC_ID;
+  | typeof JUNGLE_FLIP_SPEC_ID
+  | typeof XIANGQI_MAHJONG_SPEC_ID;
 
 export type LandingBotOffer = {
   botId: string;
@@ -47,24 +49,35 @@ export const LANDING_BOT_GAME_SPEC_IDS: readonly LandingBotGameSpecId[] = [
   DARK_CHESS_SPEC_ID,
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
+  // Misty plays it (the in-process tile bot). Offered only where the play menu
+  // offers the variant (landingSeedVariantOffered), so it stays off the shelf
+  // for anyone the allowlist does not cover.
+  XIANGQI_MAHJONG_SPEC_ID,
 ];
 
-// Each bucket shows these plus the two fixed heads (xiangqi, fog chess), and
-// any two CONSECUTIVE buckets must cover the whole shelf, which is what stops a
-// variant from disappearing for a whole day.
+// Each bucket shows jieqi and three of these plus the two fixed heads (xiangqi,
+// fog chess), and any three CONSECUTIVE buckets must cover the whole shelf,
+// which is what stops a variant from disappearing for a whole day.
 //
-// Four wide (six variants with the two heads). Fortress and Atomic Xiangqi
-// retired on 2026-10-11 and left seven rotating variants, which split into two
-// four-lineups that share one variant and together cover everything, so the
-// cycle is two long: every pair of consecutive buckets is the whole shelf, and
-// each variant is on the panel at least every other bucket. The shared one is
-// jieqi, the most-played rotating variant (2026-09-17 read: 59% of counted
-// human games). Four wide keeps the panel the height it had once Atomic was
-// unlisted (2026-10-06).
-const ROTATING_LINEUPS: readonly (readonly LandingBotGameSpecId[])[] = [
-  [JIEQI_SPEC_ID, BANQI_SPEC_ID, DUCK_XIANGQI_SPEC_ID, CRAZYHOUSE_XIANGQI_SPEC_ID],
-  [JIEQI_SPEC_ID, DARK_XIANGQI_SPEC_ID, JUNGLE_SPEC_ID, JUNGLE_FLIP_SPEC_ID],
+// Four wide (six variants with the two heads), which keeps the panel the
+// height it had once Atomic was unlisted (2026-10-06). Jieqi is the
+// most-played rotating variant (2026-09-17 read: 59% of counted human games),
+// so it holds a slot in every bucket. Xiangqi Mahjong made the others seven
+// for three slots: the window steps three along the ring each bucket, so the
+// cycle is seven long, each variant shows in three buckets of seven, and three
+// consecutive buckets (nine slots) see all seven. Where the play menu does not
+// offer Xiangqi Mahjong, the panel fills its slot from the rest of the shelf.
+const ROTATING_ANCHOR: LandingBotGameSpecId = JIEQI_SPEC_ID;
+const ROTATING_RING: readonly LandingBotGameSpecId[] = [
+  BANQI_SPEC_ID,
+  DUCK_XIANGQI_SPEC_ID,
+  CRAZYHOUSE_XIANGQI_SPEC_ID,
+  XIANGQI_MAHJONG_SPEC_ID,
+  DARK_XIANGQI_SPEC_ID,
+  JUNGLE_SPEC_ID,
+  JUNGLE_FLIP_SPEC_ID,
 ];
+const ROTATING_WINDOW = 3;
 
 // Xiangqi's Lobby block is a fixed difficulty ladder, not a rotation: the rungs
 // never change, so a returning player can climb them ("beat Level 5, try Level
@@ -107,7 +120,7 @@ const XIANGQI_ENGINE_ID_PREFIX = 'fairy-stockfish-xiangqi-level-';
 // Level 4 at random+400 (fortress, duck, atomic 2026-09-15), so a bucket that
 // showed Level 7 would be a worse first game than a stable Level 4; the band
 // is variety for a returning player, not a re-tuning. The cycle is three so it
-// never locks to the two-cycle variant lineup.
+// never locks to the seven-cycle variant lineup.
 const LOBBY_LEVEL_OFFSETS = [0, -1, 1] as const;
 
 // The per-variant PvE memory holds a bot id after a one-click start (bot-play.ts)
@@ -182,11 +195,16 @@ export function landingBotRotationBucket(now: Date = new Date()): number {
   return Math.floor(now.getTime() / ROTATION_BUCKET_MS);
 }
 
-// Xiangqi and Fog Chess anchor every lineup. Four other slots rotate in paired
-// families; any two consecutive buckets cover all seven rotating variants.
+// Xiangqi, Fog Chess and jieqi are in every lineup. Three other slots slide
+// along the ring; any three consecutive buckets cover all eight rotating
+// variants.
 export function landingBotLineup(bucket: number): readonly LandingBotGameSpecId[] {
-  const rotating = ROTATING_LINEUPS[positiveModulo(bucket, ROTATING_LINEUPS.length)]!;
-  return [XIANGQI_SPEC_ID, DARK_CHESS_SPEC_ID, ...rotating];
+  const start = positiveModulo(bucket, ROTATING_RING.length) * ROTATING_WINDOW;
+  const rotating = Array.from(
+    { length: ROTATING_WINDOW },
+    (_, i) => ROTATING_RING[(start + i) % ROTATING_RING.length]!,
+  );
+  return [XIANGQI_SPEC_ID, DARK_CHESS_SPEC_ID, ROTATING_ANCHOR, ...rotating];
 }
 
 // The canonical offer for a variant: which opponent the Quick Pairing chip

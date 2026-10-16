@@ -71,11 +71,12 @@ const xiangqiMahjongWs = createTenantWsRuntime(xiangqiMahjongTenant, {
 });
 
 /**
- * The paces the table offers (web registry timePresetIds: 5+5 and 10+5). A
- * match is about 21 decisions a player over four hands; 3+2 and 1+1 would
- * flag players who stop to read a claim. Only 5+5 is a rated pace.
+ * The paces the table offers (web registry timePresetIds): every site preset.
+ * A match is about 21 discards a player over four hands, and no clock runs
+ * while a claim is open (xmjClockOwner), so even 1+1 leaves a few seconds a
+ * discard. 1+1, 3+2 and 5+5 are rated, as everywhere.
  */
-const XMJ_LOBBY_TIME_CONTROL_IDS: ReadonlySet<string> = new Set(['5m5', '10m5']);
+const XMJ_LOBBY_TIME_CONTROL_IDS: ReadonlySet<string> = new Set(['1m1', '3m2', '5m5', '10m5']);
 
 export function xmjLobbyAllowsTimeControl(timeControl: RoomTimeControl): boolean {
   const spec = findTimeControl(timeControl.initialMs, timeControl.incrementMs);
@@ -105,8 +106,13 @@ export async function createXiangqiMahjongRoom(
           timeControl,
           creatorPreference: xiangqiMahjongTenant.oppositeColor(engine.seat),
           // Seated at creation, so the bot is in the initial event log and
-          // survives hydration. A bot game never rates.
-          engine: { engineId: XMJ_BOT_CLIENT_ID, seat: engine.seat, botId: XMJ_BOT_ID },
+          // survives hydration. A bot game never rates. A homepage start names
+          // the persona that fronts the bot (Misty); a direct create names none.
+          engine: {
+            engineId: XMJ_BOT_CLIENT_ID,
+            seat: engine.seat,
+            botId: engine.botId ?? XMJ_BOT_ID,
+          },
         }
       : // PvP: both seats are human and handed out on connect.
         { timeControl, creatorPreference, rated },
@@ -147,12 +153,13 @@ registerVariantTenant({
   gameSpecId: xiangqiMahjongTenant.gameSpecId,
   roomIdPrefix: xiangqiMahjongTenant.roomIdPrefix,
   isEngineClientId: isXmjBotClientId,
-  engineDisplayName: (clientId) => (isXmjBotClientId(clientId) ? 'Xiangqi mahjong bot' : null),
+  engineDisplayName: (clientId) => (isXmjBotClientId(clientId) ? 'Misty' : null),
   ownsSpecRouting: true,
   replays: tenantReplayCheck(xiangqiMahjongTenant),
   errorPrefix: 'xiangqi_mahjong',
   enabled: xiangqiMahjongTenant.enabled,
-  // No TV channel: a playtest variant is never the homepage board.
+  // No TV channel: the hands are concealed, so there is nothing a spectator
+  // can follow live (xiangqi-mahjong-tenant.test.ts pins it).
   watch: null,
   rooms: xiangqiMahjongRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,
   activeGameCount: () => countActiveTenantGames(xiangqiMahjongRooms.values()),
@@ -197,5 +204,8 @@ registerVariantTenant({
   },
   // No export binding: there is no record format for this game here.
   export: null,
+  // No postgame page either: a finished game opens at its room, which shows
+  // every hand and never the walls (xiangqi-mahjong-pvp.test.ts).
+  finishedGameOpensRoom: true,
   ...xiangqiMahjongCorrespondence,
 });

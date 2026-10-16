@@ -121,8 +121,8 @@ const XMJ_RESULTS: Record<XmjSeat, persistence.GameResult> = {
 };
 
 const XMJ_TERMINATION: Record<string, persistence.GameTermination> = {
-  // The match ran its hands and one seat had more points.
-  points: 'checkmate',
+  // The match ran its hands and one seat had more points (migration 169).
+  points: 'points',
   // The match ran its hands level.
   tie: 'draw',
   timeout: 'timeout',
@@ -194,7 +194,7 @@ export const xiangqiMahjongTenant: XmjTenantType = {
   engine: {
     terminalContext: 'full-history',
     isEngineClientId: isXmjBotClientId,
-    displayName: () => 'Xiangqi mahjong bot',
+    displayName: () => 'Misty',
     reservationReleaseTag: 'xiangqi-mahjong',
   },
   visibility: {

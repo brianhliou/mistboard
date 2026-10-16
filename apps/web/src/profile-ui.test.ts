@@ -235,7 +235,7 @@ describe('profile game rows', () => {
             },
             {
               color: 'west',
-              displayName: 'Xiangqi mahjong bot',
+              displayName: 'Misty',
               subjectType: 'bot',
               subjectId: null,
               visibility: 'public',
@@ -245,7 +245,7 @@ describe('profile game rows', () => {
       );
     const won = seats('east-wins', 'east');
     expect(won.querySelector('.profile-game-outcome')?.textContent).toBe('Win');
-    expect(won.textContent).toContain('vs Xiangqi mahjong bot');
+    expect(won.textContent).toContain('vs Misty');
     expect(won.querySelector('.profile-game-side')).toBeNull();
     expect(won.textContent).not.toMatch(/White|Black|East|West/);
     expect(seats('west-wins', 'east').querySelector('.profile-game-outcome')?.textContent).toBe(

@@ -339,6 +339,7 @@ export const ZH_HANS_REVIEW = {
   'replay.endDenEntered': '入兽穴',
   'replay.endPiecesCaptured': '吃光全部棋子',
   'replay.endDeadPosition': '死局',
+  'replay.endPoints': '计分胜负',
   'replay.share': '分享',
   'replay.copied': '已复制',
   'replay.copyLinkToPosition': '复制当前局面的链接',

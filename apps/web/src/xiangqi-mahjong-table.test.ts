@@ -447,7 +447,7 @@ describe('xiangqi mahjong table', () => {
 // in the room chrome printed "points • West is victorious" beside a table that
 // said "You" and "Bot". Every reason, every locale: a player, never a seat.
 describe('xiangqi mahjong result line', () => {
-  const nameOf = (seat: XmjSeat) => (seat === 'east' ? 'brianhliou' : 'Xiangqi mahjong bot');
+  const nameOf = (seat: XmjSeat) => (seat === 'east' ? 'brianhliou' : 'Misty');
   const reasons = ['points', 'timeout', 'resignation', 'abandonment', 'rules'];
   const lines = () => [
     ...reasons.flatMap((reason) =>
@@ -462,9 +462,7 @@ describe('xiangqi mahjong result line', () => {
   ];
 
   it('names the winner by player in English', () => {
-    expect(xmjResultLine('west', 'points', 'east', nameOf)).toBe(
-      'Xiangqi mahjong bot wins on points',
-    );
+    expect(xmjResultLine('west', 'points', 'east', nameOf)).toBe('Misty wins on points');
     expect(xmjResultLine('east', 'points', 'east', nameOf)).toBe('You win on points');
     expect(xmjResultLine('east', 'timeout', 'spectator', nameOf)).toBe('brianhliou wins on time');
     expect(xmjResultLine(null, 'tie', 'east', nameOf)).toBe('Match drawn on points');

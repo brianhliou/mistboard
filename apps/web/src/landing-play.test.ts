@@ -1432,9 +1432,9 @@ describe('roomCreationRequestBody — variant fails closed', () => {
   // Regression: an unlisted variant fell through to dark chess, so the bot
   // game asked for a fog chess room with the xiangqi mahjong bot (400).
   it('sends xiangqi-mahjong for a Xiangqi Mahjong bot game', () => {
-    const body = roomCreationRequestBody('pve', setup('xiangqi-mahjong'), 'xiangqi-mahjong-bot');
+    const body = roomCreationRequestBody('pve', setup('xiangqi-mahjong'), 'misty-xiangqi-mahjong');
     expect(body.gameSpecId).toBe('xiangqi-mahjong');
-    expect(body.engineId).toBe('xiangqi-mahjong-bot');
+    expect(body.engineId).toBe('misty-xiangqi-mahjong');
   });
 
   it('throws for a variant it has no mapping for instead of sending dark chess', () => {

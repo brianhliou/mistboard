@@ -129,6 +129,7 @@ export const EN_REVIEW = {
   'replay.endDenEntered': 'Den entered',
   'replay.endPiecesCaptured': 'All pieces captured',
   'replay.endDeadPosition': 'Dead position',
+  'replay.endPoints': 'On points',
   // Replay meta card + share button (replay-meta.ts).
   'replay.share': 'Share',
   'replay.copied': 'Copied',

@@ -25,6 +25,11 @@ const EXEMPT: Readonly<Record<string, string>> = {
   // smoke. Their config rows and prod:smoke:<name> scripts are dead until deleted.
   'fortress-xiangqi': 'retired',
   'atomic-xiangqi': 'retired',
+  // The bot is a pure function run in the web process (packages/game
+  // xiangqi-mahjong-bot.ts): no engine service that can stop answering, and the
+  // server suite plays two bots through a whole match
+  // (xiangqi-mahjong-tenant.test.ts).
+  'xiangqi-mahjong': 'in-process bot, covered by the server suite',
 };
 
 function pveGameSpecIds(): string[] {

@@ -6,7 +6,7 @@
 // Consolidated roster (2026-07-21):
 //   - Misty            — the house player: every hidden-info / house-built
 //                        variant (fog chess, fog xiangqi, banqi, jungle, flip
-//                        jungle) under one identity.
+//                        jungle, xiangqi mahjong) under one identity.
 //   - Pikafish         — the boss: full-strength Pikafish for xiangqi + jieqi.
 //   - Fairy-Stockfish Level 1..8 — the ladder, one bot per level, each playing
 //                        xiangqi, fortress xiangqi, duck xiangqi and atomic xiangqi.
@@ -101,6 +101,8 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       banqi: 'misty-banqi',
       jungle: 'misty-jungle-level-2',
       'jungle-flip': 'misty-jungle-flip',
+      // The in-process tile bot (packages/game xiangqi-mahjong-bot.ts).
+      'xiangqi-mahjong': 'misty-xiangqi-mahjong',
     },
     defaultGameSpecId: 'dark-chess',
     attributionEngineIds: [

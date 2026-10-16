@@ -233,11 +233,13 @@ export function displayLiveName(name: string | null | undefined, fallback: strin
 // and Flip Jungle seat 'red'/'black' but a player's colour is decided by the first flip,
 // so their sides are First/Second, as the play menu labels them. Fail-safe: an unknown spec
 // falls back to White/Black rather than throwing (worst case a wrong color WORD on the
-// label; the seat itself is always assigned by the tenant's own colors).
+// label; the seat itself is always assigned by the tenant's own colors). The mahjong
+// family seats east and west, and east deals first.
 const WHITE_FIRST_SPECS: ReadonlySet<string> = new Set(['dark-chess', 'chess']);
 
 export function firstMoverColorName(gameSpecId: string): string {
   if (isFlipSeatVariant(gameSpecId)) return t('setup.first');
+  if (maybeGameSpecForId(gameSpecId)?.family === 'mahjong') return t('live.seatEast');
   if (WHITE_FIRST_SPECS.has(gameSpecId) || !maybeGameSpecForId(gameSpecId)) {
     return t('setup.white');
   }
@@ -245,6 +247,7 @@ export function firstMoverColorName(gameSpecId: string): string {
 }
 
 export function secondMoverColorName(gameSpecId: string): string {
+  if (maybeGameSpecForId(gameSpecId)?.family === 'mahjong') return t('live.seatWest');
   return isFlipSeatVariant(gameSpecId) ? t('setup.second') : t('setup.black');
 }
 
@@ -257,7 +260,7 @@ export const VARIANT_NAME_KEYS: Record<GameSpecId, I18nKey | null> = {
   banqi: 'variant.banqi.name',
   // runtimeStatus 'future': falls back to the spec's English publicName.
   mahjong: null,
-  'xiangqi-mahjong': null,
+  'xiangqi-mahjong': 'variant.xiangqiMahjong.name',
   'dark-chess': 'variant.darkChess.name',
   'dark-xiangqi': 'variant.darkXiangqi.name',
   'fortress-xiangqi': 'variant.fortressXiangqi.name',
@@ -360,6 +363,7 @@ const TERMINATION_KEYS: Record<string, I18nKey> = {
   race: 'replay.endRace',
   chasing: 'replay.endChasing',
   'dead-position': 'replay.endDeadPosition',
+  points: 'replay.endPoints',
   'den-entered': 'replay.endDenEntered',
   'pieces-captured': 'replay.endPiecesCaptured',
 };

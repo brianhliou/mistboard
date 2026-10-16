@@ -24,6 +24,7 @@ import {
   maybeGameSpecForId,
   type RatingVariant,
   ratingPoolForSpec,
+  XIANGQI_MAHJONG_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
 import {
@@ -77,6 +78,11 @@ const jieqiSpec = gameSpecForId(JIEQI_SPEC_ID);
 const banqiSpec = gameSpecForId(BANQI_SPEC_ID);
 const jungleSpec = gameSpecForId(JUNGLE_SPEC_ID);
 const jungleFlipSpec = gameSpecForId(JUNGLE_FLIP_SPEC_ID);
+const xiangqiMahjongSpec = gameSpecForId(XIANGQI_MAHJONG_SPEC_ID);
+// Xiangqi Mahjong joins the rating grids when its spec goes public, read from
+// the spec rather than the web flag: before launch the flag is on for the
+// allowlisted playtest, and the server keeps the pool off every grid.
+const xiangqiMahjongPublic = xiangqiMahjongSpec.publicSurface !== 'hidden';
 
 // Marker coverage is broader than the rated/current variant registry: the play
 // picker can surface casual tenants, and rules/articles can reference variants
@@ -96,9 +102,9 @@ const VARIANT_MINI_BY_GAME_SPEC: Record<GameSpecId, VariantMiniId | null> = {
   [BANQI_SPEC_ID]: 'banqi',
   [JUNGLE_SPEC_ID]: 'jungle',
   [JUNGLE_FLIP_SPEC_ID]: 'jungle-flip',
+  [XIANGQI_MAHJONG_SPEC_ID]: 'xiangqi-mahjong',
   // Behind a server flag and a per-account grant; no variant surface shows it.
   mahjong: null,
-  'xiangqi-mahjong': null,
   // Study-only (game-specs.ts): never playable, so never a variant marker.
   chess: null,
 };
@@ -215,6 +221,19 @@ export const VARIANTS: VariantDef[] = [
     enabled: false,
     onLeaderboard: jungleFlipOn,
     onProfile: jungleFlipOn,
+  },
+  // Xiangqi Mahjong: the 32 pieces as tiles, rated by the four-hand match.
+  // Last on the canonical order (a new family), and on the grids only once
+  // its spec is public.
+  {
+    id: currentRatingVariantForSpec(XIANGQI_MAHJONG_SPEC_ID),
+    gameSpecId: xiangqiMahjongSpec.id,
+    apiParam: XIANGQI_MAHJONG_SPEC_ID,
+    label: xiangqiMahjongSpec.publicName,
+    miniId: 'xiangqi-mahjong',
+    enabled: false,
+    onLeaderboard: xiangqiMahjongPublic,
+    onProfile: xiangqiMahjongPublic,
   },
   // Retired 2026-10-11, so off the canonical order and at the tail: the
   // entries stay so labels and finished games resolve, and no rating surface

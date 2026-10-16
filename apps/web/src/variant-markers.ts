@@ -47,6 +47,11 @@ export const FINAL_VARIANT_MARKERS = {
   'dark-chess': {
     path: '/variant-markers/final/fog-chess.png',
   },
+  // Two mahjong tiles standing on one baseline, the front one carrying the
+  // xiangqi elephant: xiangqi pieces played as tiles.
+  'xiangqi-mahjong': {
+    path: '/variant-markers/final/xiangqi-mahjong.png',
+  },
 } as const satisfies Record<VariantMiniId, { path: string }>;
 
 /** Narrows an untyped variant string (a stored study variant, a wire field) to a marker id. */
