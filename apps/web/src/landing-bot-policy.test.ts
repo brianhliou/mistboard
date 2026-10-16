@@ -182,14 +182,18 @@ describe('landing bot policy', () => {
       );
     });
 
-    it('never rotates the clock below the bot default', () => {
-      // The bot default is the slowest pace, so there is nothing slower to
-      // rotate to, and no row drops back to the 3+2 that flagged a third of
-      // guest games. Holds for the fog engines too: 10+5 clears their floor.
+    it('never rotates the clock off the bot default', () => {
+      // Rows rotate only to paces at or slower than the variant's bot default.
+      // 10+5 is the slowest, so nearly every row shows it and none drops back to
+      // the 3+2 that flagged a third of guest games (the fog floor holds);
+      // xiangqi mahjong's 5+5 default may rotate up to 10+5.
       for (const gameSpecId of LANDING_BOT_GAME_SPEC_IDS) {
-        expect(new Set(rowsFor(gameSpecId).map((offer) => offer.timeControlId))).toEqual(
-          new Set(['10m5']),
-        );
+        const paces = gameSpecId === 'xiangqi-mahjong' ? ['5m5', '10m5'] : ['10m5'];
+        for (const offer of rowsFor(gameSpecId)) {
+          expect(paces, `${gameSpecId} row at ${offer.timeControlId}`).toContain(
+            offer.timeControlId,
+          );
+        }
       }
     });
 
@@ -219,20 +223,17 @@ describe('landing bot policy', () => {
     // Every Misty variant, fog included, advertises the 10+5 bot default. For
     // the fog engines it also clears the 5s increment floor (#283) the picker
     // and the create routes enforce (isAllowedEngineTimeControl).
-    // Xiangqi Mahjong's room accepts every preset, 10+5 included.
-    for (const gameSpecId of [
-      'banqi',
-      'jungle',
-      'jungle-flip',
-      'dark-chess',
-      'dark-xiangqi',
-      'xiangqi-mahjong',
-    ]) {
+    for (const gameSpecId of ['banqi', 'jungle', 'jungle-flip', 'dark-chess', 'dark-xiangqi']) {
       expect(landingBotOffer(gameSpecId)).toMatchObject({
         botId: 'misty',
         timeControlId: '10m5',
       });
     }
+    // Xiangqi Mahjong advertises its own bot pace, 5+5: a turn is one discard.
+    expect(landingBotOffer('xiangqi-mahjong')).toMatchObject({
+      botId: 'misty',
+      timeControlId: '5m5',
+    });
   });
 
   it('maps a remembered jieqi bot to the engine the setup menu lists', () => {

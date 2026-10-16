@@ -229,7 +229,7 @@ test('variantDefaultTimeControl: deliberate variants opt out of the house pace',
   assert.equal(variantDefaultTimeControl('not-a-real-spec').id, '3m2');
 });
 
-test('defaultEngineTimeControl: every bot game starts at 10+5', () => {
+test('defaultEngineTimeControl: bot games start at 10+5 unless the variant names its own', () => {
   // The pace the web chip (landing-bot-policy offerPace), the picker and the
   // server create routes ALL have to apply, or one advertises a pace the other
   // does not start. Human games keep their variant default.
@@ -244,6 +244,13 @@ test('defaultEngineTimeControl: every bot game starts at 10+5', () => {
     assert.equal(defaultEngineTimeControl(gameSpecId).id, '10m5', gameSpecId);
   }
   assert.equal(variantDefaultTimeControl('banqi').id, '3m2');
+});
+
+test('defaultEngineTimeControl: xiangqi mahjong bot games start at its human pace, 5+5', () => {
+  // A turn is one discard and the clock runs only for the seat to discard, so
+  // 10+5 left most of the clock unspent.
+  assert.equal(defaultEngineTimeControl('xiangqi-mahjong').id, '5m5');
+  assert.equal(variantDefaultTimeControl('xiangqi-mahjong').id, '5m5');
 });
 
 test('the bot default clears every engine floor', () => {

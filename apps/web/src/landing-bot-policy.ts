@@ -236,9 +236,9 @@ export function landingBotOffer(
 
 // The Lobby row and the Quick Pairing chip must advertise the clock the click
 // will actually start, so this mirrors the picker's preselection exactly: the
-// shared bot default, 10+5 in every variant (defaultEngineTimeControl). It
-// clears the fog engines' increment floor (#283), and guests could not finish
-// a full-board game at 3+2.
+// shared bot default (defaultEngineTimeControl): 10+5 unless a variant names its
+// own. It clears the fog engines' increment floor (#283), and guests could not
+// finish a full-board game at 3+2.
 function offerPace(gameSpecId: LandingBotGameSpecId): TimeControlId {
   return defaultEngineTimeControl(gameSpecId).id;
 }

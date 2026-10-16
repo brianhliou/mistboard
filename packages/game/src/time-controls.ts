@@ -156,6 +156,15 @@ export const ENGINE_FLOORED_GAME_SPEC_IDS: readonly GameSpecId[] = Object.keys(
 // both.
 export const BOT_DEFAULT_TIME_CONTROL_ID: TimeControlId = '10m5';
 
+// Variants whose bot games start somewhere other than BOT_DEFAULT_TIME_CONTROL_ID.
+// Xiangqi mahjong: a turn is one discard, and the clock runs only for the seat
+// to discard, so 10+5 left a four-hand match mostly unspent clock (Brian,
+// 2026-10-15: "way too much time"). 5+5, its human default, so a bot game and a
+// human game start at one pace.
+const BOT_TIME_CONTROL_OVERRIDES: Readonly<Partial<Record<GameSpecId, TimeControlId>>> = {
+  [XIANGQI_MAHJONG_SPEC_ID]: '5m5',
+};
+
 // The pace a variant PRESELECTS for human games, for variants that want
 // something other than the house 3+2. Bot games ignore this and start at
 // BOT_DEFAULT_TIME_CONTROL_ID. A preference, not a constraint: every pace the variant offers
@@ -222,10 +231,10 @@ export function variantDefaultTimeControl(gameSpecId: GameSpecId | string): Time
  * drift into advertising one clock and starting another. Takes the spec so a
  * future per-variant bot pace has one place to go.
  */
-export function defaultEngineTimeControl(_gameSpecId: GameSpecId | string): TimeControlSpec {
-  const spec = TIME_CONTROLS.find((tc) => tc.id === BOT_DEFAULT_TIME_CONTROL_ID);
-  if (!spec)
-    throw new Error(`bot default ${BOT_DEFAULT_TIME_CONTROL_ID} is not a known time control`);
+export function defaultEngineTimeControl(gameSpecId: GameSpecId | string): TimeControlSpec {
+  const id = BOT_TIME_CONTROL_OVERRIDES[gameSpecId as GameSpecId] ?? BOT_DEFAULT_TIME_CONTROL_ID;
+  const spec = TIME_CONTROLS.find((tc) => tc.id === id);
+  if (!spec) throw new Error(`bot default ${id} is not a known time control`);
   return spec;
 }
 

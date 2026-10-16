@@ -338,7 +338,7 @@ export async function resolveBotRoomRequest(
   // profile is not the authority on what pace to start, and migrating the rows
   // would only re-create this drift the next time a default moves.
   //
-  // defaultEngineTimeControl is the one bot pace, 10+5 in every variant, which
+  // defaultEngineTimeControl is the one bot pace (10+5 unless a variant names its own), which
   // also clears the fog engines' increment floor (#283). An EXPLICIT request
   // below that floor still falls through to the create gate and is refused
   // there.
