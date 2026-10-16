@@ -282,8 +282,23 @@ test('xmj pvp: a finished room, rebuilt from its log, shows a spectator every ha
   assert.ok(view.hands.east, 'the finished table shows east');
   assert.ok(view.hands.west, 'the finished table shows west');
   assert.deepEqual([view.legal.discard.length, view.legal.claims.length], [0, 0]);
-  const history = tenantLiveHistoryExtras(tenant, reopened, client('spectator'));
-  assertNoWalls(history, 'finished liveHistory/spectator');
+  // The walls are never revealed, so the client cannot replay the match: the
+  // finished room keeps sending each viewer its own per-ply views, every ply
+  // from the deal to the end, each as that viewer saw it live.
+  const moves = reopened.events.filter((event) => event.type === 'move-played').length;
+  for (const viewer of VIEWERS) {
+    const history = tenantLiveHistoryExtras(tenant, reopened, client(viewer)).liveHistory;
+    assertNoWalls(history, `finished liveHistory/${viewer}`);
+    assert.ok(history, `a finished room sends ${viewer} its history`);
+    assert.deepEqual(
+      history.map((entry) => entry.ply),
+      Array.from({ length: moves + 1 }, (_, ply) => ply),
+    );
+    for (const entry of history) {
+      assertViewHidesOthers(entry.view, viewer, `finished liveHistory ply ${entry.ply}/${viewer}`);
+    }
+    assert.equal(history.at(-1)?.view.status.type, 'finished');
+  }
 });
 
 test('xmj pvp: a friend room seats no bot and carries the rated flag', async () => {

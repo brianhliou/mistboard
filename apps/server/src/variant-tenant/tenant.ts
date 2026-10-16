@@ -556,6 +556,12 @@ export type VariantTenant<
       events: readonly TenantRoomEvent<C, M, Spec>[],
       viewer: TenantSeat<C>,
     ): Array<{ ply: number; view: View }>;
+    // Send liveHistory for a FINISHED room too. For a tenant whose finished
+    // view still cannot rebuild the game (xiangqi mahjong: the walls are never
+    // revealed, only each hand's result), so a reload of a finished match can
+    // step back through it. Each ply is still the view this viewer was served
+    // live, never truth.
+    liveHistoryWhenFinished?: true;
   };
   engine?: {
     // Required declaration of how the live engine preserves history-dependent terminal

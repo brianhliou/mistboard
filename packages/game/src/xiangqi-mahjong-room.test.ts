@@ -300,7 +300,7 @@ test('a won hand pauses the match until both seats are ready or the deadline pas
   state = play(state, 'east', { action: 'self-draw' }, 2_000);
   const view = xmjViewFor(state, 'west');
   assert.equal(view.between, true);
-  assert.deepEqual(view.scores, { east: 6, west: -6 });
+  assert.deepEqual(view.scores, { east: 6, west: 0 });
   assert.deepEqual(view.hands.east, ['rK', 'rA', 'rE', 'rP', 'rP']);
   assert.equal(state.nextHandAt, 2_000 + XMJ_BETWEEN_HANDS_MS);
   assert.equal(xmjClockOwner(state), null);
@@ -377,7 +377,7 @@ test('the bot claims a set only when it gets strictly closer', () => {
   });
 });
 
-test('two bots play 200 seeded matches to the end with zero-sum scores', () => {
+test('two bots play 200 seeded matches to the end, each score the hands its seat won', () => {
   let wins = 0;
   let exhausted = 0;
   let claims = 0;
@@ -400,7 +400,12 @@ test('two bots play 200 seeded matches to the end with zero-sum scores', () => {
       match.results.map((r) => r.dealer === match.results[0]?.dealer),
       match.results.map((_, i) => i % 2 === 0),
     );
-    assert.equal(match.scores[0] + match.scores[1], 0);
+    for (const seat of [0, 1] as const) {
+      const banked = match.results
+        .filter((r) => r.winner === seat)
+        .reduce((sum, r) => sum + (r.score?.total ?? 0), 0);
+      assert.equal(match.scores[seat], banked);
+    }
     for (const result of match.results) {
       if (result.winner === null) exhausted += 1;
       else wins += 1;

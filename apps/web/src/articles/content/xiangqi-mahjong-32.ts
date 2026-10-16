@@ -247,7 +247,7 @@ export const xiangqiMahjong32Article: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'A match is four hands, and the deal alternates every hand, so each player deals twice. The winner of a hand gains its points and the other player loses the same amount. After four hands the higher score wins the match, and equal scores are a draw.',
+          text: 'A match is four hands, and the deal alternates every hand, so each player deals twice. The winner of a hand adds its points to their score, and the other score stays where it was. After four hands the higher score wins the match, and equal scores are a draw.',
         },
       ],
     },

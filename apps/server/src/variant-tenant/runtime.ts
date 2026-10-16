@@ -933,7 +933,8 @@ export function tenantSnapshotPayload<
  *     whatever the hook would return,
  *   - the room is still playing: a finished room reveals truth through the
  *     snapshot (and the client rebuilds from it), an aborted one has nothing
- *     to replay.
+ *     to replay. A tenant that sets liveHistoryWhenFinished (its finished view
+ *     cannot rebuild the game either) gets it for a finished room too.
  * Hello only, not every snapshot: broadcastEventAppended builds a snapshot per
  * client per move, and the history is O(plies) views.
  */
@@ -951,12 +952,14 @@ export function tenantLiveHistoryExtras<
 ): { liveHistory?: Array<{ ply: number; view: View }> } {
   const liveHistory = tenant.visibility.liveHistory;
   if (!liveHistory) return {};
-  if (room.projection.state.status.type !== 'playing') return {};
+  const status = room.projection.state.status.type;
+  const finishedToo = tenant.visibility.liveHistoryWhenFinished === true && status === 'finished';
+  if (status !== 'playing' && !finishedToo) return {};
   const viewer = client.seat;
   if (viewer === 'spectator') {
     const spec = maybeGameSpecForId(tenant.gameSpecId);
     if (!spec) return {};
-    if (roomViewPolicy(spec.visibility, false, 'spectator') === 'nothing') return {};
+    if (roomViewPolicy(spec.visibility, finishedToo, 'spectator') === 'nothing') return {};
   } else if (!tenant.colors.includes(viewer)) {
     return {};
   }

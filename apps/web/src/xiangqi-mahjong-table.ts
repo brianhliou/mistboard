@@ -25,6 +25,8 @@ import {
   XMJ_CLAIM_WINDOW_MS,
   XMJ_DEALER_TILES,
   XMJ_OTHER_TILES,
+  XMJ_TAI_ORDER,
+  XMJ_TAI_POINTS,
   type XmjClaim,
   type XmjMeld,
   type XmjPlayerView,
@@ -72,7 +74,7 @@ const XMJ_WALL_AT_DEAL = 32 - XMJ_DEALER_TILES - XMJ_OTHER_TILES;
 /** Discards per pond row. Two rows hold any seat's discards in a hand. */
 export const XMJ_POND_COLUMNS = 8;
 /** The rules section that explains each scoring line. */
-export const XMJ_SCORING_HREF = '/rules/xiangqi-mahjong-32#winning-hands-and-their-score';
+export const XMJ_SCORING_HREF = '/rules/xiangqi-mahjong-32#adding-it-up';
 
 // The piece set for the render in progress. The table is one synchronous
 // string render, so xiangqiMahjongTableHtml sets it and restores it after.
@@ -215,14 +217,6 @@ export function xmjResultLine(
   return winner === viewer ? t(youKey) : t(nameKey, { name: nameOf(winner) });
 }
 
-// A real minus sign (U+2212), not the hyphen: it is as wide as the plus, so a
-// column of scores lines up, and the seat rows and the ledger read the same.
-export function signed(points: number): string {
-  if (points > 0) return `+${points}`;
-  if (points < 0) return `−${-points}`;
-  return '0';
-}
-
 // ── Tiles ────────────────────────────────────────────────────────────────────
 
 function tileClass(tile: XmjTile, extra = ''): string {
@@ -290,7 +284,7 @@ function seatRowHtml(
     view.turn === seat
       ? `<span class="xmj-badge xmj-badge--turn">${t('live.xmj.toDiscard')}</span>`
       : '';
-  return `<div class="xmj-seat-row"><span class="xmj-name">${escapeHtml(names[seat])}</span>${dealer}<span class="xmj-points">${t('live.xmj.score', { points: signed(view.scores[seat]) })}</span>${turn}</div>`;
+  return `<div class="xmj-seat-row"><span class="xmj-name">${escapeHtml(names[seat])}</span>${dealer}<span class="xmj-points">${t('live.xmj.score', { points: view.scores[seat] })}</span>${turn}</div>`;
 }
 
 function opponentHtml(
@@ -596,20 +590,25 @@ function winningHandHtml(score: XmjScore, winning: XmjTile): string {
 }
 
 /**
- * The hand's scoring lines as one sum, Win 1 + Dealer 1 + ..., with the way to
- * the scoring rules at its end. The total is the big number in the head, and
- * who paid it is the scoreboard's column, so neither is said again here.
+ * The rules page's scoring table, all of it, with the lines this hand scored
+ * lit and the rest left dim: the reader learns the table by seeing which rows
+ * a real hand hits. Same order and wording as "Adding it up", which the "?"
+ * opens. The total is the big number in the head, so it is not said again.
  */
-function breakdownHtml(score: XmjScore): string {
-  const lines = score.lines
-    .map(
-      (line) =>
-        `<li><span>${t(`live.xmj.tai.${line.key}` as I18nKey)}</span><b>${line.tai}</b></li>`,
-    )
-    .join('');
+function scoringHtml(score: XmjScore): string {
+  const scored = new Set(score.lines.map((line) => line.key));
+  const rows = XMJ_TAI_ORDER.map((key) => {
+    const points = XMJ_TAI_POINTS[key];
+    // A line that is the whole score (the win, the two special hands) is a
+    // flat number; the rest add to it.
+    const flat = key === 'win' || key === 'heavenly' || key === 'earthly';
+    const on = scored.has(key);
+    const mark = on ? `<span class="xmj-sr">${t('live.xmj.taiScored')}</span>` : '';
+    return `<li${on ? ' class="xmj-line--on"' : ''}><span>${t(`live.xmj.tai.${key}` as I18nKey)}${mark}</span><b>${flat ? points : `+${points}`}</b></li>`;
+  }).join('');
   const how = t('live.xmj.howScoring');
   const link = `<a class="xmj-result__how" href="${localizedHref(XMJ_SCORING_HREF)}" title="${how}" aria-label="${how}">?</a>`;
-  return `<div class="xmj-breakdown"><ul>${lines}</ul>${link}</div>`;
+  return `<div class="xmj-scoring"><ol class="xmj-lines" aria-label="${t('live.xmj.taiTable')}">${rows}</ol>${link}</div>`;
 }
 
 function outcomeText(result: XmjViewResult, names: Readonly<Record<XmjSeat, string>>): string {
@@ -620,49 +619,21 @@ function outcomeText(result: XmjViewResult, names: Readonly<Record<XmjSeat, stri
 }
 
 /**
- * The match as a scoreboard: a column per hand of the match, a row per player
- * (the viewer first), the winner's cell lit, and the running total at the
- * end. Hands not yet played hold a dot, so the board shows how far in the
- * match is. A won hand is zero-sum: the winner's gain is the other's loss.
+ * The match in one line under the hand, while it runs: how far in, and each
+ * player's points (the viewer first). The panel is this hand's result; each
+ * earlier hand is a line in the move list.
  */
-function scoreboardHtml(view: XmjPlayerView, names: Readonly<Record<XmjSeat, string>>): string {
+function matchLineHtml(view: XmjPlayerView, names: Readonly<Record<XmjSeat, string>>): string {
   if (view.results.length === 0) return '';
   const self: XmjSeat = view.perspective === 'spectator' ? 'east' : view.perspective;
-  const seats: readonly XmjSeat[] = [self, other(self)];
-  const hands = Math.max(view.handsInMatch, view.results.length);
-  const now = view.results.length - 1;
-  const total: Record<XmjSeat, number> = { east: 0, west: 0 };
-  const heads = Array.from({ length: hands }, (_, index) => {
-    const result = view.results[index];
-    const cls = index === now ? ' class="xmj-board__now"' : '';
-    const title = result ? ` title="${outcomeText(result, names)}"` : '';
-    return `<th scope="col"${cls}${title}>${index + 1}</th>`;
-  }).join('');
-  const rows = seats
-    .map((seat) => {
-      const cells = Array.from({ length: hands }, (_, index) => {
-        const result = view.results[index];
-        const classes: string[] = [];
-        if (index === now) classes.push('xmj-board__now');
-        let text = '·';
-        if (!result) {
-          classes.push('xmj-board__ahead');
-        } else if (result.winner === null) {
-          text = '0';
-        } else {
-          const points = result.score?.total ?? 0;
-          const delta = seat === result.winner ? points : -points;
-          total[seat] += delta;
-          text = signed(delta);
-          if (seat === result.winner) classes.push('xmj-board__win');
-        }
-        const cls = classes.length > 0 ? ` class="${classes.join(' ')}"` : '';
-        return `<td${cls}>${text}</td>`;
-      }).join('');
-      return `<tr><th scope="row">${escapeHtml(names[seat])}</th>${cells}<td class="xmj-board__total">${signed(total[seat])}</td></tr>`;
-    })
+  const players = [self, other(self)]
+    .map((seat) => `<span>${escapeHtml(names[seat])} <b>${view.scores[seat]}</b></span>`)
     .join('');
-  return `<table class="xmj-board"><thead><tr><th scope="col"><span class="xmj-sr">${t('live.xmj.ledgerHand')}</span></th>${heads}<th scope="col" class="xmj-board__total">${t('live.xmj.ledgerTotal')}</th></tr></thead><tbody>${rows}</tbody></table>`;
+  const after = t('live.xmj.matchAfter', {
+    hand: view.results.length,
+    hands: Math.max(view.handsInMatch, view.results.length),
+  });
+  return `<p class="xmj-result__match"><span>${after}</span>${players}</p>`;
 }
 
 /** The one sentence the result leads with, for a screen reader and the log. */
@@ -733,8 +704,10 @@ function resultHtml(view: XmjPlayerView, options: XmjTableOptions): string {
   const title = xmjResultTitle(view, names);
   const body =
     phase.type === 'won'
-      ? `<div class="xmj-won">${winningHandHtml(phase.score, phase.winningTile)}</div>${breakdownHtml(phase.score)}`
+      ? `<div class="xmj-won">${winningHandHtml(phase.score, phase.winningTile)}</div>${scoringHtml(phase.score)}`
       : '';
+  // A finished match says its result in the foot; one still running gets a line.
+  const match = view.status.type === 'playing' ? matchLineHtml(view, names) : '';
   let foot: string;
   if (view.status.type === 'finished' && !ON_POINTS.has(view.status.reason)) {
     // Ended by the clock, a resignation or abandonment: the score says nothing
@@ -747,14 +720,11 @@ function resultHtml(view: XmjPlayerView, options: XmjTableOptions): string {
     const winner = view.status.type === 'finished' ? view.status.winner : null;
     const line =
       winner === null
-        ? t('live.xmj.matchDrawn', {
-            east: signed(view.scores.east),
-            west: signed(view.scores.west),
-          })
+        ? t('live.xmj.matchDrawn', { points: view.scores.east })
         : t('live.xmj.matchWon', {
             name: escapeHtml(names[winner]),
-            winner: signed(view.scores[winner]),
-            loser: signed(view.scores[other(winner)]),
+            winner: view.scores[winner],
+            loser: view.scores[other(winner)],
           });
     foot = `<div class="xmj-result__foot"><p class="xmj-note xmj-note--strong">${line}</p></div>`;
   } else {
@@ -776,7 +746,7 @@ function resultHtml(view: XmjPlayerView, options: XmjTableOptions): string {
     }
     foot = `<div class="xmj-result__foot">${parts.join('')}</div>`;
   }
-  return `<div class="xmj-result" role="region" aria-label="${title}">${resultHeadHtml(view, names, title)}${body}${scoreboardHtml(view, names)}${foot}</div>`;
+  return `<div class="xmj-result" role="region" aria-label="${title}">${resultHeadHtml(view, names, title)}${body}${match}${foot}</div>`;
 }
 
 // ── The table ────────────────────────────────────────────────────────────────
@@ -823,33 +793,38 @@ export interface XmjLogOptions {
   readonly tileLook?: XmjTileLook;
 }
 
+/** A row's words; the tile, when the row has one, is set apart by logRowHtml. */
 function logRowText(row: XmjLogRow, options: XmjLogOptions): string {
   const you = 'seat' in row && row.seat === options.viewer;
   const name = 'seat' in row ? escapeHtml(options.names[row.seat]) : '';
-  const tile = (value: XmjTile) => tileSpan(value, 'xmj-tile--xs');
   switch (row.kind) {
     case 'discard':
       if (row.drew) {
         return you
-          ? t('live.xmj.log.youDrawDiscard', { tile: tile(row.tile) })
-          : t('live.xmj.log.nameDrawsDiscards', { name, tile: tile(row.tile) });
+          ? t('live.xmj.log.youDrawDiscard')
+          : t('live.xmj.log.nameDrawsDiscards', { name });
       }
-      return you
-        ? t('live.xmj.log.youDiscard', { tile: tile(row.tile) })
-        : t('live.xmj.log.nameDiscards', { name, tile: tile(row.tile) });
+      return you ? t('live.xmj.log.youDiscard') : t('live.xmj.log.nameDiscards', { name });
     case 'claim':
-      return you
-        ? t('live.xmj.log.youClaim', { tile: tile(row.tile) })
-        : t('live.xmj.log.nameClaims', { name, tile: tile(row.tile) });
+      return you ? t('live.xmj.log.youClaim') : t('live.xmj.log.nameClaims', { name });
     case 'win':
-      return you
-        ? t('live.xmj.log.youWinOn', { tile: tile(row.tile) })
-        : t('live.xmj.log.nameWinsOn', { name, tile: tile(row.tile) });
+      return you ? t('live.xmj.log.youWinOn') : t('live.xmj.log.nameWinsOn', { name });
     case 'self-draw':
       return you ? t('live.xmj.log.youWinSelfDraw') : t('live.xmj.log.nameWinsSelfDraw', { name });
     case 'exhausted':
       return t('live.xmj.log.wallEmpty');
   }
+}
+
+/**
+ * The words on the left, the tile in a fixed column on the right, every row
+ * alike (the win included), so the tiles read down the hand as one column.
+ */
+function logRowHtml(row: XmjLogRow, options: XmjLogOptions): string {
+  const words = `<span class="xmj-log__text">${logRowText(row, options)}</span>`;
+  const tile =
+    row.kind === 'self-draw' || row.kind === 'exhausted' ? '' : tileSpan(row.tile, 'xmj-tile--xs');
+  return `${words}<span class="xmj-log__tile">${tile}</span>`;
 }
 
 function logRowsHtml(hand: XmjLogHand, options: XmjLogOptions, activeRow: number | null): string {
@@ -861,7 +836,7 @@ function logRowsHtml(hand: XmjLogHand, options: XmjLogOptions, activeRow: number
       // a step back, so the two hands alternate at a glance without colours.
       const theirs = options.viewer !== null && 'seat' in row && row.seat !== options.viewer;
       const cls = `xmj-log__row${active ? ' active' : ''}${ends ? ' xmj-log__row--end' : ''}${theirs ? ' xmj-log__row--theirs' : ''}`;
-      const text = logRowText(row, options);
+      const text = logRowHtml(row, options);
       // A row is a jump only when this client holds that position.
       return options.hasPly(row.ply)
         ? `<li><button type="button" class="${cls} move-jump" data-xmj-ply="${row.ply}">${text}</button></li>`

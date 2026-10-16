@@ -297,8 +297,34 @@ export interface XmjWinContext {
   readonly lastTile: boolean;
 }
 
-function line(key: XmjTaiKey, tai: number): XmjTaiLine {
-  return { key, label: XMJ_TAI_LABELS[key], tai };
+/** What each line is worth: the one table the scorer and the result panel read. */
+export const XMJ_TAI_POINTS: Readonly<Record<XmjTaiKey, number>> = {
+  win: 1,
+  'one-colour': 1,
+  'generals-pair': 2,
+  'five-soldiers': 5,
+  'self-draw': 2,
+  dealer: 1,
+  'last-tile': 1,
+  heavenly: 6,
+  earthly: 6,
+};
+
+/** The lines in the rules page's order ("Adding it up"), for a table of all of them. */
+export const XMJ_TAI_ORDER: readonly XmjTaiKey[] = [
+  'win',
+  'one-colour',
+  'generals-pair',
+  'five-soldiers',
+  'self-draw',
+  'dealer',
+  'last-tile',
+  'heavenly',
+  'earthly',
+];
+
+function line(key: XmjTaiKey): XmjTaiLine {
+  return { key, label: XMJ_TAI_LABELS[key], tai: XMJ_TAI_POINTS[key] };
 }
 
 /**
@@ -313,20 +339,20 @@ function line(key: XmjTaiKey, tai: number): XmjTaiLine {
 export function xmjScore(ctx: XmjWinContext): XmjScore {
   const shape = xmjWinShape(ctx.concealed, ctx.melds);
   if (!shape) throw new Error('xmjScore: not a winning hand');
-  if (ctx.heavenly) return { lines: [line('heavenly', 6)], total: 6, shape };
-  if (ctx.earthly) return { lines: [line('earthly', 6)], total: 6, shape };
+  if (ctx.heavenly) return { lines: [line('heavenly')], total: XMJ_TAI_POINTS.heavenly, shape };
+  if (ctx.earthly) return { lines: [line('earthly')], total: XMJ_TAI_POINTS.earthly, shape };
   const all = [...ctx.concealed, ...ctx.melds.flatMap((m) => m.tiles)];
-  const lines: XmjTaiLine[] = [line('win', 1)];
-  if (ctx.selfDrawn) lines.push(line('self-draw', 2));
-  if (ctx.winnerIsDealer) lines.push(line('dealer', 1));
+  const lines: XmjTaiLine[] = [line('win')];
+  if (ctx.selfDrawn) lines.push(line('self-draw'));
+  if (ctx.winnerIsDealer) lines.push(line('dealer'));
   const colors = new Set(all.map(tileColor));
-  if (colors.size === 1) lines.push(line('one-colour', 1));
+  if (colors.size === 1) lines.push(line('one-colour'));
   const [p, q] = shape.pair;
-  if (p !== q) lines.push(line('generals-pair', 2));
+  if (p !== q) lines.push(line('generals-pair'));
   if (all.every((tile) => tile === all[0]) && tilePiece(all[0] as XmjTile) === 'P') {
-    lines.push(line('five-soldiers', 5));
+    lines.push(line('five-soldiers'));
   }
-  if (ctx.lastTile) lines.push(line('last-tile', 1));
+  if (ctx.lastTile) lines.push(line('last-tile'));
   const total = lines.reduce((sum, l) => sum + l.tai, 0);
   return { lines, total, shape };
 }
@@ -604,7 +630,10 @@ export function xmjNewMatch(
 
 /**
  * Apply a hand-level transition and, if it ended the hand, book the result:
- * the winner takes the 台 total from the opponent (base 0, 1 point per 台).
+ * the winner banks the hand's 台 total (1 point per 台); the other player
+ * loses nothing. Two players make this the same race as the zero-sum count
+ * (the gap is identical, so is the winner), and a total that only grows reads
+ * at a glance: "Misty 8, You 5" rather than "+3 to −3".
  */
 export function xmjAdvance(match: XmjMatchState, hand: XmjHandState): XmjMatchState {
   if (hand === match.hand) return match;
@@ -615,11 +644,6 @@ export function xmjAdvance(match: XmjMatchState, hand: XmjHandState): XmjMatchSt
   if (phase.type === 'won') {
     const points = phase.score.total;
     scores = setSeat(scores, phase.winner, scores[phase.winner] + points);
-    scores = setSeat(
-      scores,
-      xmjOtherSeat(phase.winner),
-      scores[xmjOtherSeat(phase.winner)] - points,
-    );
     result = {
       dealer: hand.dealer,
       winner: phase.winner,

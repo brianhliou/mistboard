@@ -375,7 +375,7 @@ test('the deal alternates after a dealer win, a non-dealer win and a 流局', ()
   assert.equal(xmjNextDealer({ dealer: 1, winner: null, selfDrawn: false, score: null }), 0);
 });
 
-test('match: four hands, each seat deals twice, scores zero-sum', () => {
+test('match: four hands, each seat deals twice, the winner banks the points', () => {
   assert.equal(XMJ_MATCH_HANDS, 4);
 
   let s = 7;
@@ -401,7 +401,13 @@ test('match: four hands, each seat deals twice, scores zero-sum', () => {
       match = xmjAdvance(match, state);
     }
     assert.equal(match.results.length, hand + 1);
-    assert.equal(match.scores[0] + match.scores[1], 0);
+    // Positive: a win adds to the winner and takes nothing from the other.
+    for (const seat of [0, 1] as const) {
+      const banked = match.results
+        .filter((r) => r.winner === seat)
+        .reduce((sum, r) => sum + (r.score?.total ?? 0), 0);
+      assert.equal(match.scores[seat], banked);
+    }
     if (!match.over) match = xmjNextHand(match);
   }
   assert.ok(match.over);

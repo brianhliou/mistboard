@@ -867,46 +867,52 @@
   }
 }
 
-/* The lines as one sum: Win 1 + Dealer 1 + One colour 1, then the way to
-   the scoring rules. */
-.xmj-breakdown {
+/* The rules page's scoring table, every line, read down two columns in the
+   page's order; the lines this hand scored are lit, the rest stay dim. The "?"
+   in its corner opens the page at that table. */
+.xmj-scoring {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  width: 100%;
+  max-width: 440px;
 }
 
-.xmj-breakdown ul {
+.xmj-lines {
+  flex: 1;
+  min-width: 0;
   list-style: none;
   margin: 0;
   padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(5, auto);
+  grid-auto-flow: column;
+  gap: 2px 14px;
+  font-size: 12px;
+  text-align: left;
+}
+
+.xmj-lines li {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
   align-items: baseline;
-  gap: 4px 8px;
-}
-
-.xmj-breakdown li {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 5px;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 8px;
+  border-radius: 5px;
   white-space: nowrap;
-}
-
-.xmj-breakdown li + li::before {
-  content: "+";
   opacity: 0.45;
 }
 
-.xmj-breakdown li span {
-  opacity: 0.8;
+.xmj-lines b {
+  font-variant-numeric: tabular-nums;
 }
 
-.xmj-breakdown b {
+.xmj-lines li.xmj-line--on {
+  opacity: 1;
+  font-weight: 600;
   color: var(--xmj-accent);
-  font-variant-numeric: tabular-nums;
+  background: color-mix(in srgb, var(--xmj-accent) 16%, transparent);
 }
 
 .xmj-result__how {
@@ -933,75 +939,23 @@
   border-color: var(--xmj-accent);
 }
 
-/* The match: a column per hand, a row per player, the winner's cell lit, the
-   hand just played ringed, hands to come as dots. */
-.xmj-board {
-  border-collapse: separate;
-  border-spacing: 3px;
-  font-size: 13px;
+/* The match, one line under the hand: how far in, then each player's points. */
+.xmj-result__match {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px 14px;
+  font-size: 12px;
+}
+
+.xmj-result__match > :first-child {
+  opacity: 0.7;
+}
+
+.xmj-result__match b {
+  font-size: 14px;
   font-variant-numeric: tabular-nums;
-}
-
-.xmj-board th,
-.xmj-board td {
-  min-width: 34px;
-  padding: 3px 6px;
-  border-radius: 6px;
-  text-align: center;
-}
-
-.xmj-board thead th {
-  padding-block: 0;
-  font-size: 11px;
-  font-weight: 600;
-  opacity: 0.6;
-}
-
-.xmj-board thead th.xmj-board__now {
-  opacity: 1;
-  color: var(--xmj-accent);
-}
-
-.xmj-board tbody th {
-  max-width: 9em;
-  padding-left: 0;
-  padding-right: 10px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: left;
-  font-weight: 600;
-}
-
-.xmj-board td {
-  background: rgb(255 255 255 / 0.06);
-}
-
-.xmj-board td.xmj-board__ahead {
-  background: transparent;
-  opacity: 0.35;
-}
-
-.xmj-board td.xmj-board__win {
-  background: color-mix(in srgb, var(--xmj-accent) 22%, transparent);
-  color: var(--xmj-accent);
-  font-weight: 700;
-}
-
-.xmj-board td.xmj-board__now {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--xmj-accent) 65%, transparent);
-}
-
-.xmj-board .xmj-board__total {
-  padding-left: 12px;
-  background: transparent;
-  border-left: 1px solid var(--xmj-line);
-  border-radius: 0;
-}
-
-.xmj-board tbody .xmj-board__total {
-  font-size: 15px;
-  font-weight: 800;
 }
 
 .xmj-result__foot {
@@ -1015,11 +969,15 @@
 
 /* ── The move list, one hand at a time ─────────────────────────────────────── */
 
+/* No ply-number gutter here (game-shell.css paints one behind every move
+   list): the rows have no numbers, so the stripe was a bare shaded band. */
+.round-table__box ol.xmj-log,
 ol.xmj-log {
   display: block;
   list-style: none;
   margin: 0;
   padding: 4px 6px;
+  background: none;
 }
 
 .xmj-log__hand {
@@ -1104,11 +1062,19 @@ ol.xmj-log {
   border-radius: 6px;
 }
 
-/* The tile ends the sentence in every catalog: pushed right, the tiles form
-   one column that reads down the hand. */
-/* The row that ends a hand keeps its tile beside the words ("wins on"). */
-.xmj-log__row:not(.xmj-log__row--end) > .xmj-tile:last-child {
-  margin-left: auto;
+/* Words left, tile right in a cell of fixed width, on every row, so the tiles
+   form one column that reads down the hand (an empty cell keeps the column
+   for a self-draw or an empty wall). */
+.xmj-log__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.xmj-log__tile {
+  flex: none;
+  display: inline-flex;
+  justify-content: center;
+  min-width: 26px;
 }
 
 .xmj-log .xmj-log__row--theirs {
@@ -1212,13 +1178,11 @@ ol.xmj-log {
     gap: 10px;
   }
 
-  .xmj-board th,
-  .xmj-board td {
-    min-width: 26px;
-    padding: 2px 4px;
+  .xmj-lines {
+    gap: 2px 8px;
   }
 
-  .xmj-board .xmj-board__total {
-    padding-left: 8px;
+  .xmj-lines li {
+    padding: 1px 6px;
   }
 }

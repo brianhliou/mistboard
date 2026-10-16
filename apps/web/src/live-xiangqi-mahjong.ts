@@ -33,6 +33,7 @@ import {
   type TenantLiveEvent,
   type TenantMovePlayed,
 } from './variant-tenant/live-client.js';
+import { adoptLiveHistory } from './variant-tenant/live-history.js';
 import type { WebVariantTenant } from './variant-tenant/room-chrome.js';
 import './xiangqi-mahjong.css';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
@@ -88,8 +89,9 @@ function seatNames(): Record<XmjSeat, string> {
   const shown = core?.state.seatDisplayNames ?? {};
   const name = (seat: XmjSeat): string => {
     if (seat === own) return t('live.xmj.you');
+    // The bot by its own name (Misty), as the player strip shows it.
     if (roomMode === 'pve' && own !== 'spectator' && own !== null && own !== undefined) {
-      return t('live.xmj.bot');
+      return shown[seat] ?? t('live.xmj.bot');
     }
     return shown[seat] ?? t('live.xmj.guest');
   };
@@ -496,13 +498,21 @@ const client = createTenantLiveClient<XmjSeat, XmjPlayerView, XmjMove>({
   },
   replayCapture: {
     positionKey: replayPositionKey,
-    plyForView: (view, ctx) => {
-      const ply = ctx.positionChanged ? ctx.latestPly + 1 : ctx.latestPly;
-      // Earlier plies cannot be rebuilt client-side (the walls stay a server
-      // secret), so a finished match is filed at its move count.
-      if (view.status.type !== 'finished') return ply;
-      return Math.max(ply, ctx.events.filter(isXmjMoveEvent).length);
-    },
+    // A view is filed at the move count it follows, the same ply the move
+    // list's rows jump to: every move is a ply here, passes and deadlines
+    // included, whether or not the table looks different after it.
+    plyForView: (_view, ctx) => Math.max(ctx.latestPly, ctx.events.filter(isXmjMoveEvent).length),
+  },
+  // The walls stay a server secret, so the log cannot be replayed here. The
+  // hello carries this viewer's own per-ply views instead, live or finished
+  // (the server's liveHistoryWhenFinished), installed as sent: a reload or a
+  // finished-game link can still step back through every hand.
+  replayHistory: {
+    rebuild: ({ events, view, frame }) =>
+      adoptLiveHistory(frame.liveHistory, view, events.filter(isXmjMoveEvent).length, {
+        finished: true,
+        boardless: true,
+      }),
   },
 });
 

@@ -16,7 +16,6 @@ import { describe, expect, it } from 'vitest';
 import { ensureLocaleCatalog } from './i18n/catalog.js';
 import { type XmjLogMove, xmjHandLog } from './xiangqi-mahjong-log.js';
 import {
-  signed,
   XMJ_SCORING_HREF,
   type XmjTableOptions,
   xiangqiMahjongTableHtml,
@@ -276,17 +275,17 @@ describe('xiangqi mahjong table', () => {
     expect(current.status.type).toBe('finished');
     expect(wins).toBeGreaterThan(0);
     const host = doc(xiangqiMahjongTableHtml(xmjViewFor(current, 'east'), opts(true)));
-    // The scoreboard: a row per player, a column per hand of the match.
-    expect(host.querySelectorAll('.xmj-board tbody tr').length).toBe(2);
-    expect(
-      host.querySelectorAll('.xmj-board tbody tr:first-child td:not(.xmj-board__total)').length,
-    ).toBe(4);
-    expect(host.textContent).toMatch(/Match to (You|Bot)|Match drawn/);
+    // A finished match says its result in the foot, in plain points, and has
+    // no running match line.
+    expect(host.querySelector('.xmj-result__foot')?.textContent).toMatch(
+      /^Match to (You|Bot), \d+ to \d+\.$|^Match drawn, \d+ points each\.$/,
+    );
+    expect(host.querySelector('.xmj-result__match')).toBeNull();
     expect(host.querySelector('.xmj-centre .xmj-hand-line')?.textContent).toBe('Hand 4 of 4');
     const final = xmjViewFor(current, 'east');
     const points = [...host.querySelectorAll('.xmj-points')].map((node) => node.textContent);
     expect(points).toEqual(
-      (['west', 'east'] as const).map((seat) => `Score ${signed(final.scores[seat])}`),
+      (['west', 'east'] as const).map((seat) => `Score ${final.scores[seat]}`),
     );
   });
 
@@ -413,32 +412,29 @@ describe('xiangqi mahjong table', () => {
         expect(host.querySelector('.xmj-result__total')?.textContent).toBe(
           `${total}${total === 1 ? 'point' : 'points'}`,
         );
-        // Every line, and they add up to the total.
-        const lines = [...host.querySelectorAll('.xmj-breakdown li b')].map((b) =>
-          Number(b.textContent),
+        // The whole scoring table, in the rules page's order, with this hand's
+        // lines lit; the lit lines add up to the total.
+        const rows = [...host.querySelectorAll('.xmj-lines li')];
+        expect(rows.length).toBe(9);
+        const lit = rows.filter((row) => row.classList.contains('xmj-line--on'));
+        expect(lit.length).toBe(won.score.lines.length);
+        expect(lit.map((row) => row.querySelector('.xmj-sr')?.textContent)).toEqual(
+          lit.map(() => ' (scored)'),
         );
-        expect(lines.length).toBe(won.score.lines.length);
-        expect(lines.reduce((sum, n) => sum + n, 0)).toBe(total);
+        expect(lit.reduce((sum, row) => sum + Number(row.querySelector('b')?.textContent), 0)).toBe(
+          total,
+        );
         expect(host.querySelector('.xmj-result__how')?.getAttribute('href')).toBe(XMJ_SCORING_HREF);
-        // The viewer's row first. This hand's column: the winner's gain is the
-        // other player's loss, lit on the winner; the totals are the score now.
-        const rows = [...host.querySelectorAll('.xmj-board tbody tr')];
-        const now = rows.map((row) => row.querySelector('td.xmj-board__now'));
-        const delta = (seat: XmjSeat) => (seat === won.winner ? total : -total);
-        expect(now.map((cell) => cell?.textContent)).toEqual([
-          signed(delta('east')),
-          signed(delta('west')),
-        ]);
-        expect(now.map((cell) => cell?.classList.contains('xmj-board__win'))).toEqual([
-          won.winner === 'east',
-          won.winner === 'west',
-        ]);
-        const totals = rows.map((row) => row.querySelector('.xmj-board__total')?.textContent);
-        expect(totals).toEqual([signed(view.scores.east), signed(view.scores.west)]);
-        // Hands still to come hold a dot.
-        expect(
-          host.querySelectorAll('.xmj-board tbody tr:first-child td.xmj-board__ahead').length,
-        ).toBe(view.handsInMatch - view.results.length);
+        // While the match runs, one line: how far in, then the points, the
+        // viewer first. Points only grow: nobody's score goes below zero.
+        const match = host.querySelector('.xmj-result__match');
+        if (view.status.type === 'playing') {
+          expect(match?.textContent).toBe(
+            `Match after hand ${view.results.length} of ${view.handsInMatch}You ${view.scores.east}Bot ${view.scores.west}`,
+          );
+        }
+        expect(view.scores.east).toBeGreaterThanOrEqual(0);
+        expect(view.scores.west).toBeGreaterThanOrEqual(0);
       }
       current = botStep(current);
     }
@@ -467,8 +463,8 @@ describe('xiangqi mahjong table', () => {
     expect(host.querySelector('.xmj-result__title')?.textContent).toBe('Hand 1 was not finished.');
     expect(host.querySelector('.xmj-result__foot')?.textContent).toBe('Bot wins on time.');
     expect(host.textContent).not.toMatch(/Match to|\+0 to/);
-    // No hand finished: no empty scoreboard.
-    expect(host.querySelector('.xmj-board')).toBeNull();
+    // A finished match has no running match line.
+    expect(host.querySelector('.xmj-result__match')).toBeNull();
   });
 
   it('writes the move log one hand at a time: the latest open, earlier hands one line each', () => {
@@ -510,6 +506,15 @@ describe('xiangqi mahjong table', () => {
       expect(row.classList.contains('xmj-log__row--theirs')).toBe(false);
     }
     expect(render({ viewer: null }).querySelector('.xmj-log__row--theirs')).toBeNull();
+    // Words then one tile cell on every row, the win row too: the tiles
+    // stood right on discards and left on the win, a ragged column.
+    for (const row of rows) {
+      expect([...row.children].map((child) => child.className)).toEqual([
+        'xmj-log__text',
+        'xmj-log__tile',
+      ]);
+      expect(row.querySelector('.xmj-log__text .xmj-tile')).toBeNull();
+    }
     // Passes and the steps between hands never show.
     expect(host.textContent).not.toMatch(/Pass|Ready/);
     // A scrub into hand 1 opens it and marks the row.
@@ -531,10 +536,6 @@ describe('xiangqi mahjong table', () => {
     ).toBe(String(before));
     // A ply this client holds no snapshot for is not a jump.
     expect(render({ hasPly: () => false }).querySelectorAll('[data-xmj-ply]').length).toBe(0);
-  });
-
-  it('signs scores with a real minus sign', () => {
-    expect([signed(3), signed(-3), signed(0)]).toEqual(['+3', '\u22123', '0']);
   });
 });
 

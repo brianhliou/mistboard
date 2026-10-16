@@ -10,6 +10,17 @@ import type { TenantReplaySnapshot } from './replay-controller.js';
 
 type ViewLike = { status: { type: string }; board?: unknown; perspective?: unknown };
 
+export interface AdoptLiveHistoryOptions {
+  /**
+   * Accept it for a finished room too: the server sends one there only for a
+   * tenant whose finished view cannot rebuild the game (xiangqi mahjong, whose
+   * walls are never revealed).
+   */
+  readonly finished?: boolean;
+  /** The tenant's view has no `board` (xiangqi mahjong's table). */
+  readonly boardless?: boolean;
+}
+
 /**
  * The history from a hello frame, or null to keep the captured one. Accepted
  * only when it is exactly what this viewer should hold: the room is playing,
@@ -22,8 +33,10 @@ export function adoptLiveHistory<V extends ViewLike>(
   liveHistory: unknown,
   view: V,
   livePly: number,
+  options: AdoptLiveHistoryOptions = {},
 ): TenantReplaySnapshot<V>[] | null {
-  if (view.status.type !== 'playing') return null;
+  const finishedToo = options.finished === true && view.status.type === 'finished';
+  if (view.status.type !== 'playing' && !finishedToo) return null;
   if (!Array.isArray(liveHistory) || liveHistory.length === 0) return null;
   const snapshots: TenantReplaySnapshot<V>[] = [];
   for (const [index, entry] of liveHistory.entries()) {
@@ -33,7 +46,9 @@ export function adoptLiveHistory<V extends ViewLike>(
     if (!plyView || typeof plyView !== 'object') return null;
     const candidate = plyView as V;
     if (candidate.perspective !== view.perspective) return null;
-    if (!candidate.board || typeof candidate.board !== 'object') return null;
+    if (options.boardless !== true && (!candidate.board || typeof candidate.board !== 'object')) {
+      return null;
+    }
     snapshots.push({ ply: index, view: candidate });
   }
   if (snapshots.length - 1 !== livePly) return null;

@@ -57,7 +57,11 @@ import {
 import { xiangqiMahjongEnabled } from './feature-flags.js';
 import type * as persistence from './persistence.js';
 import { isXmjBotClientId } from './server-xiangqi-mahjong-bots.js';
-import { tenantForfeitDeadlineForClient, tenantPveEngineId } from './variant-tenant/runtime.js';
+import {
+  tenantForfeitDeadlineForClient,
+  tenantPerPlyViews,
+  tenantPveEngineId,
+} from './variant-tenant/runtime.js';
 import type {
   TenantClientEvent,
   TenantRoomEvent,
@@ -200,6 +204,12 @@ export const xiangqiMahjongTenant: XmjTenantType = {
   visibility: {
     clientEventFor: xmjClientEventFor,
     viewForClient: (state, client) => getXmjClientView(state, client),
+    // The walls are a server secret, live or finished, so the client cannot
+    // replay its log: the hello carries this viewer's own per-ply views (a
+    // seat's own hand only, a spectator's public table), and a finished match
+    // keeps them, so the move list can step back through every hand.
+    liveHistory: (events, viewer) => tenantPerPlyViews(xiangqiMahjongTenant, events, viewer),
+    liveHistoryWhenFinished: true,
   },
   wire: {
     snapshotExtras: (room, client) => {
