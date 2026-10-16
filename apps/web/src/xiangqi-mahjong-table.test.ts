@@ -139,7 +139,7 @@ describe('xiangqi mahjong table', () => {
     expect(character?.querySelector('circle')).toBeNull();
   });
 
-  it('lays a third-party set on its own disc surface, and prints the disc in the disc look', () => {
+  it('lays a third-party set on its own disc surface, in every look', () => {
     const view = xmjViewFor(afterDiscard(['bP', 'bP', 'bA', 'rE']), 'west');
     const tile = (options: Partial<XmjTableOptions>) =>
       doc(xiangqiMahjongTableHtml(view, opts(false, options))).querySelector<HTMLElement>(
@@ -153,15 +153,10 @@ describe('xiangqi mahjong table', () => {
     );
     // A set Mistboard draws keeps the ivory.
     expect(tile({ pieceSet: 'traditional' })?.hasAttribute('style')).toBe(false);
-    // The disc look prints the whole piece on ivory, in any set.
-    const disc = tile({ pieceSet: 'wood', tileLook: 'disc' });
-    expect(disc?.hasAttribute('style')).toBe(false);
-    expect(disc?.querySelector('image')?.getAttribute('href')).toContain(
-      '/piece-sets/xiangqi/wood/red-chariot.svg',
-    );
-    const drawn = tile({ pieceSet: 'traditional', tileLook: 'disc' });
-    expect(drawn?.querySelector('.xmj-tile-art--disc circle')).not.toBeNull();
-    expect(drawn?.querySelector('.xmj-tile-art')?.getAttribute('aria-hidden')).toBe('true');
+    // Every look lays the set's surface edge to edge, the card included.
+    const card = tile({ pieceSet: 'wood', tileLook: 'card' });
+    expect(card?.getAttribute('style')).toContain('/piece-sets/xiangqi/wood/tile/red-face.svg');
+    expect(card?.querySelector('.xmj-tile-art')?.getAttribute('aria-hidden')).toBe('true');
   });
 
   it('keeps one pond per player, labelled, and notches the latest discard', () => {
@@ -227,7 +222,8 @@ describe('xiangqi mahjong table', () => {
     expect(xmjTileLookFromSearch('')).toBe('jade');
     expect(xmjTileLookFromSearch('?tiles=bamboo')).toBe('bamboo');
     expect(xmjTileLookFromSearch('?tiles=card')).toBe('card');
-    expect(xmjTileLookFromSearch('?tiles=disc')).toBe('disc');
+    // The disc look was dropped (Brian, 10-15); an old link falls back to jade.
+    expect(xmjTileLookFromSearch('?tiles=disc')).toBe('jade');
     expect(xmjTileLookFromSearch('?tiles=<b>')).toBe('jade');
   });
 

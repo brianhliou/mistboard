@@ -40,7 +40,6 @@ import type { TenantReasonKey } from './variant-tenant/room-chrome.js';
 import { escapeHtml } from './web-utils.js';
 import type { XmjLogHand, XmjLogRow } from './xiangqi-mahjong-log.js';
 import {
-  renderXiangqiPieceGlyphed,
   renderXiangqiPieceMark,
   type XiangqiPieceSet,
   xiangqiTileFaceHref,
@@ -57,7 +56,7 @@ export interface XmjTableOptions {
   readonly passQueued?: boolean;
   /** The viewer's xiangqi piece set; each tile draws its piece in it. */
   readonly pieceSet?: XiangqiPieceSet;
-  /** The tile look (`?tiles=`); `disc` prints the whole piece, disc and all. */
+  /** The tile look (`?tiles=`). */
   readonly tileLook?: XmjTileLook;
 }
 
@@ -90,24 +89,15 @@ function tilePieceOf(tile: XmjTile) {
   };
 }
 
-// The piece's figure or character with no disc: the tile is the frame. The
-// disc look prints the whole piece instead.
+// The piece's figure or character with no disc: the tile is the frame.
 function tileArt(tile: XmjTile): string {
   const piece = tilePieceOf(tile);
-  if (activeTileLook === 'disc') {
-    return renderXiangqiPieceGlyphed(piece, activePieceSet, {
-      className: 'xmj-tile-art xmj-tile-art--disc',
-      ariaLabel: '',
-      shadow: false,
-    }).replace(' aria-label=""', ' aria-hidden="true"');
-  }
   return `<svg class="xmj-tile-art" viewBox="0 0 100 100" aria-hidden="true">${renderXiangqiPieceMark(piece, activePieceSet)}</svg>`;
 }
 
 // A third-party set's disc surface laid over the whole face (lacquer, grain,
-// paper), in every look but disc, which prints the disc itself.
+// paper), edge to edge in every look.
 function tileFaceStyle(tile: XmjTile): string {
-  if (activeTileLook === 'disc') return '';
   const href = xiangqiTileFaceHref(activePieceSet, tilePieceOf(tile).color);
   return href ? ` style="background-image:url('${href}')"` : '';
 }
@@ -123,10 +113,9 @@ export function xmjFeltFromSearch(search: string): XmjFelt {
 
 /**
  * The tile looks (`?tiles=`): ivory on jade by default; a thin printed card;
- * an ivory tile with the whole piece, disc and all, printed on it; ivory on
- * bamboo.
+ * ivory on bamboo.
  */
-export const XMJ_TILE_LOOKS = ['jade', 'card', 'disc', 'bamboo'] as const;
+export const XMJ_TILE_LOOKS = ['jade', 'card', 'bamboo'] as const;
 export type XmjTileLook = (typeof XMJ_TILE_LOOKS)[number];
 
 export function xmjTileLookFromSearch(search: string): XmjTileLook {

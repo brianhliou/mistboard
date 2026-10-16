@@ -302,10 +302,13 @@
   box-shadow: 0 1px 1px rgb(0 0 0 / 0.25);
 }
 
-/* ?tiles=disc: the whole piece, disc and all, printed on the ivory. */
-.xmj-tile-art--disc {
-  width: 94%;
-  filter: drop-shadow(0 1px 1px rgb(60 40 10 / 0.3));
+/* A set's own surface on a card runs to the edge: no ivory margin or ink
+   rule inside it, only a hairline to part it from the felt. */
+.xmj-tiles--card .xmj-tile--faced {
+  background-size: cover;
+  background-position: center;
+  border-color: rgb(0 0 0 / 0.3);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.28);
 }
 
 /* A tile turned over: jade on top, the ivory face showing along the edge. */
