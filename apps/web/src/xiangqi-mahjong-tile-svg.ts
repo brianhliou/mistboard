@@ -228,7 +228,7 @@ function badgeSvg(badge: XmjRowBadge, cx: number, cy: number): string {
   const mark = win
     ? `M${cx - 5} ${cy + 0.5}l3.6 3.6 6.6-7.4`
     : `M${cx - 4.2} ${cy - 4.2}l8.4 8.4M${cx + 4.2} ${cy - 4.2}l-8.4 8.4`;
-  return `<g class="xmj-badge xmj-badge--${badge}" role="img" aria-label="${label}"><title>${label}</title><circle cx="${cx}" cy="${cy}" r="${BADGE_R}" style="fill:${fill}"/><path d="${mark}" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--article-mark-ink,#fff)"/></g>`;
+  return `<g class="xmj-verdict xmj-verdict--${badge}" role="img" aria-label="${label}"><title>${label}</title><circle cx="${cx}" cy="${cy}" r="${BADGE_R}" style="fill:${fill}"/><path d="${mark}" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--article-mark-ink,#fff)"/></g>`;
 }
 
 /**

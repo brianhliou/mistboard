@@ -151,15 +151,15 @@ describe('xiangqi mahjong 32 rules diagrams', () => {
       expect(svg.startsWith('<svg')).toBe(true);
       expect(svg).toContain(`<title>Winning hand: ${example.title}</title>`);
       expect(svg).toContain(
-        'class="xmj-badge xmj-badge--win" role="img" aria-label="Winning hand"',
+        'class="xmj-verdict xmj-verdict--win" role="img" aria-label="Winning hand"',
       );
-      expect(svg).not.toContain('xmj-badge--not-win');
+      expect(svg).not.toContain('xmj-verdict--not-win');
     }
     for (const example of XMJ32_NOT_WINS) {
       const svg = xmj32NotWinSvg(example.id)();
       expect(svg).toContain('<title>Not a winning hand: ');
       expect(svg).toContain(
-        'class="xmj-badge xmj-badge--not-win" role="img" aria-label="Not a winning hand"',
+        'class="xmj-verdict xmj-verdict--not-win" role="img" aria-label="Not a winning hand"',
       );
     }
   });
