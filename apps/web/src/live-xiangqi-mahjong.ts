@@ -389,8 +389,11 @@ function renderTable(refs: LiveRefs, view: XmjPlayerView | null): void {
   // A scrubbed position is not a move being made: no flight.
   const live = view === core?.state.view;
   const sources = live ? tileSources(refs.board) : null;
+  // A result already on screen is redrawn settled: its entrance played once.
+  const resultShown = refs.board.querySelector('.xmj-result') !== null;
   refs.board.innerHTML = html;
   lastTableHtml = html;
+  if (resultShown) refs.board.querySelector('.xmj-result')?.classList.add('xmj-result--settled');
   if (sources) animateMoves(refs.board, view, sources);
   else drawnCounts = null;
   startTicker(refs.board);

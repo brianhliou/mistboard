@@ -276,7 +276,11 @@ describe('xiangqi mahjong table', () => {
     expect(current.status.type).toBe('finished');
     expect(wins).toBeGreaterThan(0);
     const host = doc(xiangqiMahjongTableHtml(xmjViewFor(current, 'east'), opts(true)));
-    expect(host.querySelectorAll('.xmj-ledger tbody tr').length).toBeGreaterThan(1);
+    // The scoreboard: a row per player, a column per hand of the match.
+    expect(host.querySelectorAll('.xmj-board tbody tr').length).toBe(2);
+    expect(
+      host.querySelectorAll('.xmj-board tbody tr:first-child td:not(.xmj-board__total)').length,
+    ).toBe(4);
     expect(host.textContent).toMatch(/Match to (You|Bot)|Match drawn/);
     expect(host.querySelector('.xmj-centre .xmj-hand-line')?.textContent).toBe('Hand 4 of 4');
     const final = xmjViewFor(current, 'east');
@@ -381,7 +385,7 @@ describe('xiangqi mahjong table', () => {
     expect(backs.filter((back) => back.classList.contains('xmj-tile--drawn')).length).toBe(1);
   });
 
-  it('leads the result with one sentence in points, never tai, and lays it over the middle band', () => {
+  it('leads the result with the winner and the points, never tai, and lays it over the middle band', () => {
     let current = state;
     let results = 0;
     for (let steps = 0; current.status.type === 'playing' && steps < 5000; steps += 1) {
@@ -393,31 +397,48 @@ describe('xiangqi mahjong table', () => {
         const host = doc(html);
         // Over the band, so nothing below it moves when a hand ends.
         expect(host.querySelector('.xmj-middle > .xmj-result')).not.toBeNull();
-        const title = host.querySelector('.xmj-result__title')?.textContent ?? '';
-        expect(title).toMatch(
-          /^(You win|Bot wins) hand [1-4] (by self-draw|on a discard): \d+ points?$/,
-        );
-        expect(title).toContain(`${view.phase.score.total} point`);
-        const lines = [...host.querySelectorAll('.xmj-breakdown li:not(.xmj-breakdown__sum)')];
-        expect(lines.length).toBe(view.phase.score.lines.length);
         const won = view.phase;
         const total = won.score.total;
-        expect(host.querySelector('.xmj-breakdown__sum b')?.textContent).toBe(String(total));
-        // Who pays: the winner's gain is the other player's loss.
-        const loser = won.winner === 'east' ? 'west' : 'east';
-        expect(host.querySelector('.xmj-breakdown__paid')?.textContent).toBe(
-          `The other player pays it: ${NAMES[won.winner]} ${signed(total)}, ${NAMES[loser]} ${signed(-total)}.`,
+        // The whole sentence is the region's name; the head splits it.
+        const region = host.querySelector('.xmj-result')?.getAttribute('aria-label') ?? '';
+        expect(region).toMatch(
+          /^(You win|Bot wins) hand [1-4] (by self-draw|on a discard): \d+ points?$/,
         );
+        expect(host.querySelector('.xmj-result__title')?.textContent).toBe(
+          won.winner === 'east' ? 'You win' : 'Bot wins',
+        );
+        expect(host.querySelector('.xmj-result__sub')?.textContent).toBe(
+          `Hand ${view.handNumber} · ${won.selfDrawn ? 'self-drawn' : 'on a discard'}`,
+        );
+        expect(host.querySelector('.xmj-result__total')?.textContent).toBe(
+          `${total}${total === 1 ? 'point' : 'points'}`,
+        );
+        // Every line, and they add up to the total.
+        const lines = [...host.querySelectorAll('.xmj-breakdown li b')].map((b) =>
+          Number(b.textContent),
+        );
+        expect(lines.length).toBe(won.score.lines.length);
+        expect(lines.reduce((sum, n) => sum + n, 0)).toBe(total);
         expect(host.querySelector('.xmj-result__how')?.getAttribute('href')).toBe(XMJ_SCORING_HREF);
-        // Each row is that hand's change; the foot is the score now.
-        const last = [...host.querySelectorAll('.xmj-ledger tbody tr')].at(-1);
-        const cells = [...(last?.querySelectorAll('td') ?? [])].map((cell) => cell.textContent);
+        // The viewer's row first. This hand's column: the winner's gain is the
+        // other player's loss, lit on the winner; the totals are the score now.
+        const rows = [...host.querySelectorAll('.xmj-board tbody tr')];
+        const now = rows.map((row) => row.querySelector('td.xmj-board__now'));
         const delta = (seat: XmjSeat) => (seat === won.winner ? total : -total);
-        expect(cells.slice(-2)).toEqual([signed(delta('east')), signed(delta('west'))]);
-        const foot = [...host.querySelectorAll('.xmj-ledger tfoot td')].map(
-          (cell) => cell.textContent,
-        );
-        expect(foot.slice(-2)).toEqual([signed(view.scores.east), signed(view.scores.west)]);
+        expect(now.map((cell) => cell?.textContent)).toEqual([
+          signed(delta('east')),
+          signed(delta('west')),
+        ]);
+        expect(now.map((cell) => cell?.classList.contains('xmj-board__win'))).toEqual([
+          won.winner === 'east',
+          won.winner === 'west',
+        ]);
+        const totals = rows.map((row) => row.querySelector('.xmj-board__total')?.textContent);
+        expect(totals).toEqual([signed(view.scores.east), signed(view.scores.west)]);
+        // Hands still to come hold a dot.
+        expect(
+          host.querySelectorAll('.xmj-board tbody tr:first-child td.xmj-board__ahead').length,
+        ).toBe(view.handsInMatch - view.results.length);
       }
       current = botStep(current);
     }
@@ -446,8 +467,8 @@ describe('xiangqi mahjong table', () => {
     expect(host.querySelector('.xmj-result__title')?.textContent).toBe('Hand 1 was not finished.');
     expect(host.querySelector('.xmj-result__foot')?.textContent).toBe('Bot wins on time.');
     expect(host.textContent).not.toMatch(/Match to|\+0 to/);
-    // No hand finished: no empty ledger.
-    expect(host.querySelector('.xmj-ledger')).toBeNull();
+    // No hand finished: no empty scoreboard.
+    expect(host.querySelector('.xmj-board')).toBeNull();
   });
 
   it('writes the move log one hand at a time: the latest open, earlier hands one line each', () => {

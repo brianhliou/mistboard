@@ -254,12 +254,7 @@ function meldsHtml(melds: readonly XmjMeld[]): string {
     .map(
       (meld) =>
         `<span class="xmj-meld">${meld.tiles
-          .map((tile) =>
-            tileSpan(
-              tile,
-              tile === meld.claimed ? 'xmj-tile--sm xmj-tile--claimed' : 'xmj-tile--sm',
-            ),
-          )
+          .map((tile) => tileSpan(tile, tile === meld.claimed ? 'xmj-tile--claimed' : ''))
           .join('')}</span>`,
     )
     .join('');
@@ -573,13 +568,14 @@ function centreHtml(
 
 // ── The result, between hands ────────────────────────────────────────────────
 
+/** One group of the winning hand, at the hand's own size; the won tile stands raised. */
 function groupHtml(tiles: readonly XmjTile[], caption: string, winning: XmjTile | null): string {
   let marked = false;
   const html = tiles
     .map((tile) => {
       const win = winning !== null && !marked && tile === winning;
       if (win) marked = true;
-      return tileSpan(tile, win ? 'xmj-tile--sm xmj-tile--win' : 'xmj-tile--sm');
+      return tileSpan(tile, win ? 'xmj-tile--win' : '');
     })
     .join('');
   return `<div class="xmj-group"><div class="xmj-group__tiles">${html}</div><div class="xmj-group__cap">${caption}</div></div>`;
@@ -600,29 +596,20 @@ function winningHandHtml(score: XmjScore, winning: XmjTile): string {
 }
 
 /**
- * Each scoring line, their sum, and who pays it: the line a player reads to
- * see why their own score moved.
+ * The hand's scoring lines as one sum, Win 1 + Dealer 1 + ..., with the way to
+ * the scoring rules at its end. The total is the big number in the head, and
+ * who paid it is the scoreboard's column, so neither is said again here.
  */
-function breakdownHtml(
-  score: XmjScore,
-  winner: XmjSeat,
-  names: Readonly<Record<XmjSeat, string>>,
-): string {
+function breakdownHtml(score: XmjScore): string {
   const lines = score.lines
     .map(
       (line) =>
         `<li><span>${t(`live.xmj.tai.${line.key}` as I18nKey)}</span><b>${line.tai}</b></li>`,
     )
     .join('');
-  const sum = `<li class="xmj-breakdown__sum"><span>${t('live.xmj.ledgerTotal')}</span><b>${score.total}</b></li>`;
-  const paid = t('live.xmj.paidBy', {
-    winner: escapeHtml(names[winner]),
-    gain: signed(score.total),
-    loser: escapeHtml(names[other(winner)]),
-    loss: signed(-score.total),
-  });
-  const how = `<a class="xmj-result__how" href="${localizedHref(XMJ_SCORING_HREF)}">${t('live.xmj.howScoring')}</a>`;
-  return `<div class="xmj-breakdown"><ul>${lines}${sum}</ul><p class="xmj-breakdown__paid">${paid}</p>${how}</div>`;
+  const how = t('live.xmj.howScoring');
+  const link = `<a class="xmj-result__how" href="${localizedHref(XMJ_SCORING_HREF)}" title="${how}" aria-label="${how}">?</a>`;
+  return `<div class="xmj-breakdown"><ul>${lines}</ul>${link}</div>`;
 }
 
 function outcomeText(result: XmjViewResult, names: Readonly<Record<XmjSeat, string>>): string {
@@ -633,38 +620,52 @@ function outcomeText(result: XmjViewResult, names: Readonly<Record<XmjSeat, stri
 }
 
 /**
- * Hand by hand, what each player gained or lost in it, and the match total
- * underneath. A won hand is zero-sum: the winner's gain is the other's loss.
+ * The match as a scoreboard: a column per hand of the match, a row per player
+ * (the viewer first), the winner's cell lit, and the running total at the
+ * end. Hands not yet played hold a dot, so the board shows how far in the
+ * match is. A won hand is zero-sum: the winner's gain is the other's loss.
  */
-function ledgerHtml(view: XmjPlayerView, names: Readonly<Record<XmjSeat, string>>): string {
+function scoreboardHtml(view: XmjPlayerView, names: Readonly<Record<XmjSeat, string>>): string {
   if (view.results.length === 0) return '';
-  const seats: readonly XmjSeat[] = ['east', 'west'];
+  const self: XmjSeat = view.perspective === 'spectator' ? 'east' : view.perspective;
+  const seats: readonly XmjSeat[] = [self, other(self)];
+  const hands = Math.max(view.handsInMatch, view.results.length);
+  const now = view.results.length - 1;
   const total: Record<XmjSeat, number> = { east: 0, west: 0 };
-  const rows = view.results
-    .map((result, index) => {
-      const winner = result.winner;
-      const points = winner === null ? 0 : (result.score?.total ?? 0);
-      const cells = seats
-        .map((seat) => {
-          const delta = winner === null ? 0 : seat === winner ? points : -points;
+  const heads = Array.from({ length: hands }, (_, index) => {
+    const result = view.results[index];
+    const cls = index === now ? ' class="xmj-board__now"' : '';
+    const title = result ? ` title="${outcomeText(result, names)}"` : '';
+    return `<th scope="col"${cls}${title}>${index + 1}</th>`;
+  }).join('');
+  const rows = seats
+    .map((seat) => {
+      const cells = Array.from({ length: hands }, (_, index) => {
+        const result = view.results[index];
+        const classes: string[] = [];
+        if (index === now) classes.push('xmj-board__now');
+        let text = '·';
+        if (!result) {
+          classes.push('xmj-board__ahead');
+        } else if (result.winner === null) {
+          text = '0';
+        } else {
+          const points = result.score?.total ?? 0;
+          const delta = seat === result.winner ? points : -points;
           total[seat] += delta;
-          return `<td class="xmj-ledger__n">${winner === null ? '0' : signed(delta)}</td>`;
-        })
-        .join('');
-      const now = index === view.results.length - 1 ? ' class="xmj-ledger__now"' : '';
-      return `<tr${now}><td>${index + 1}</td><td>${outcomeText(result, names)}</td>${cells}</tr>`;
+          text = signed(delta);
+          if (seat === result.winner) classes.push('xmj-board__win');
+        }
+        const cls = classes.length > 0 ? ` class="${classes.join(' ')}"` : '';
+        return `<td${cls}>${text}</td>`;
+      }).join('');
+      return `<tr><th scope="row">${escapeHtml(names[seat])}</th>${cells}<td class="xmj-board__total">${signed(total[seat])}</td></tr>`;
     })
     .join('');
-  const heads = seats
-    .map((seat) => `<th class="xmj-ledger__n">${escapeHtml(names[seat])}</th>`)
-    .join('');
-  const totals = seats
-    .map((seat) => `<td class="xmj-ledger__n">${signed(total[seat])}</td>`)
-    .join('');
-  return `<table class="xmj-ledger"><thead><tr><th>${t('live.xmj.ledgerHand')}</th><th>${t('live.xmj.ledgerResult')}</th>${heads}</tr></thead><tbody>${rows}</tbody><tfoot><tr><td></td><td>${t('live.xmj.ledgerTotal')}</td>${totals}</tr></tfoot></table>`;
+  return `<table class="xmj-board"><thead><tr><th scope="col"><span class="xmj-sr">${t('live.xmj.ledgerHand')}</span></th>${heads}<th scope="col" class="xmj-board__total">${t('live.xmj.ledgerTotal')}</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
-/** The one sentence the result leads with. */
+/** The one sentence the result leads with, for a screen reader and the log. */
 export function xmjResultTitle(
   view: XmjPlayerView,
   names: Readonly<Record<XmjSeat, string>>,
@@ -693,6 +694,36 @@ export function xmjResultTitle(
   return t('live.xmj.handUnfinished', { hand });
 }
 
+/**
+ * The result's head: who won and how on the left, the hand's points large on
+ * the right. A hand nobody won is its one sentence.
+ */
+function resultHeadHtml(
+  view: XmjPlayerView,
+  names: Readonly<Record<XmjSeat, string>>,
+  title: string,
+): string {
+  const phase = view.phase;
+  if (phase.type !== 'won') {
+    return `<div class="xmj-result__head"><h3 class="xmj-result__title">${title}</h3></div>`;
+  }
+  const you = view.perspective === phase.winner;
+  const who = you
+    ? t('live.xmj.youWin')
+    : t('live.xmj.nameWins', { name: escapeHtml(names[phase.winner]) });
+  const how = t(phase.selfDrawn ? 'live.xmj.handSelfDraw' : 'live.xmj.handDiscard', {
+    hand: view.handNumber,
+  });
+  const total = phase.score.total;
+  const unit = t(total === 1 ? 'live.xmj.pointUnit' : 'live.xmj.pointsUnit');
+  const tone = you
+    ? ' xmj-result--yours'
+    : view.perspective === 'spectator'
+      ? ''
+      : ' xmj-result--theirs';
+  return `<div class="xmj-result__head${tone}"><div><h3 class="xmj-result__title">${who}</h3><p class="xmj-result__sub">${how}</p></div><p class="xmj-result__total"><b>${total}</b><span>${unit}</span></p></div>`;
+}
+
 /** Finished reasons the match score decides; any other names how it ended. */
 const ON_POINTS: ReadonlySet<string> = new Set(['points', 'tie']);
 
@@ -702,7 +733,7 @@ function resultHtml(view: XmjPlayerView, options: XmjTableOptions): string {
   const title = xmjResultTitle(view, names);
   const body =
     phase.type === 'won'
-      ? `<div class="xmj-result__win"><div class="xmj-won">${winningHandHtml(phase.score, phase.winningTile)}</div>${breakdownHtml(phase.score, phase.winner, names)}</div>`
+      ? `<div class="xmj-won">${winningHandHtml(phase.score, phase.winningTile)}</div>${breakdownHtml(phase.score)}`
       : '';
   let foot: string;
   if (view.status.type === 'finished' && !ON_POINTS.has(view.status.reason)) {
@@ -745,7 +776,7 @@ function resultHtml(view: XmjPlayerView, options: XmjTableOptions): string {
     }
     foot = `<div class="xmj-result__foot">${parts.join('')}</div>`;
   }
-  return `<div class="xmj-result" role="region" aria-label="${title}"><h3 class="xmj-result__title">${title}</h3>${body}${ledgerHtml(view, names)}${foot}</div>`;
+  return `<div class="xmj-result" role="region" aria-label="${title}">${resultHeadHtml(view, names, title)}${body}${scoreboardHtml(view, names)}${foot}</div>`;
 }
 
 // ── The table ────────────────────────────────────────────────────────────────
