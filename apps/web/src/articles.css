@@ -259,6 +259,17 @@
   overflow: hidden;
 }
 
+/* The index card is 16:10 (30bcd841), and chessground sizes its board to the
+   wrap, so a full-width wrap squashed every square to 40x25. Keep the board
+   square, centred on the panel, inset like the SVG board thumbnails so the date
+   badge does not sit on a corner piece. */
+.articles-index-card-media .articles-thumb-board.cg-wrap {
+  width: auto;
+  height: calc(100% - 20px);
+  aspect-ratio: 1;
+  margin: 10px auto;
+}
+
 /* Chessground floors cg-container to a multiple of 8 physical px for crisp
    squares and anchors it top:0;left:0, so the leftover always lands as an
    asymmetric bottom/right gap inside the square frame. Thumbnails are

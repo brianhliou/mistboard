@@ -340,7 +340,6 @@ describe('article public listing gates', () => {
       '/blog/jieqi-openings',
       '/blog/jieqi-platform',
       '/blog/how-puzzle-mining-works',
-      '/blog/xiangqi-champions',
       '/blog/titled-players',
       '/blog/riverbank-cannon',
       '/blog/skill-vs-luck',
@@ -371,6 +370,7 @@ describe('article public listing gates', () => {
       '/blog/yin-sheng',
       '/blog/xiangqi-match-fixing',
       '/blog/xiangqi-world-championship',
+      '/blog/xiangqi-champions',
     ]);
   });
 

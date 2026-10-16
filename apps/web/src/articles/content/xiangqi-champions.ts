@@ -1055,6 +1055,7 @@ export const xiangqiChampionsArticle: Article = {
   ],
   status: 'published',
   publishedAt: '2026-08-29',
+  homeRow: 'deep-dives',
   audience:
     'English-speaking chess players who know the world chess champions by heart and cannot name a single xiangqi player.',
   thumbnail: { kind: 'svg', svg: CHAMPIONS_THUMBNAIL },
