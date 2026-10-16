@@ -22,7 +22,6 @@
 import {
   tileColor,
   tilePiece,
-  XMJ_CLAIM_WINDOW_MS,
   XMJ_DEALER_TILES,
   XMJ_OTHER_TILES,
   XMJ_TAI_ORDER,
@@ -460,11 +459,6 @@ export function xmjCountdown(
   };
 }
 
-function countdownHtml(label: string, deadline: number, spanMs: number, now: number): string {
-  const { secs, width } = xmjCountdown(deadline, spanMs, now);
-  return `<div class="xmj-timer-line" data-xmj-deadline="${deadline}" data-xmj-span="${spanMs}"><span class="xmj-timer-label">${label}</span><div class="xmj-timer"><i style="width:${width.toFixed(1)}%"></i></div><span class="xmj-timer-secs" data-xmj-secs>${t('live.xmj.seconds', { count: secs })}</span></div>`;
-}
-
 function actionsHtml(view: XmjPlayerView, options: XmjTableOptions): string {
   if (!options.canAct) return '';
   const legal = view.legal;
@@ -491,14 +485,8 @@ function actionsHtml(view: XmjPlayerView, options: XmjTableOptions): string {
         );
       }
     }
-    if (view.windowClosesAt !== null) {
-      timer = countdownHtml(
-        t('live.xmj.claimPrompt', { tile: xmjTileName(phase.discard) }),
-        view.windowClosesAt,
-        XMJ_CLAIM_WINDOW_MS,
-        options.now,
-      );
-    }
+    // No countdown: the decision runs on the claimant's own clock.
+    timer = `<p class="xmj-actions__hint">${t('live.xmj.claimPrompt', { tile: xmjTileName(phase.discard) })}</p>`;
   }
   if (legal.selfDraw) {
     buttons.push(

@@ -191,7 +191,7 @@ describe('xiangqi mahjong table', () => {
     expect(west?.querySelectorAll('.xmj-tile').length).toBe(0);
   });
 
-  it('a claimant with a claim gets Take with the set, Pass, a countdown and a bubble', () => {
+  it('a claimant with a claim gets Take with the set, Pass, a prompt with no countdown and a bubble', () => {
     const after = afterDiscard(['rH', 'rC', 'bA', 'rE']);
     const view = xmjViewFor(after, 'west');
     expect(xmjViewOffersAction(view, 'west')).toBe(true);
@@ -203,9 +203,11 @@ describe('xiangqi mahjong table', () => {
       (['rR', 'rH', 'rC'] as const).map(xmjTileName),
     );
     expect(host.querySelector('[data-xmj-pass]')?.textContent).toBe('Pass');
-    const timer = host.querySelector<HTMLElement>('.xmj-timer-line');
-    expect(Number(timer?.dataset.xmjDeadline)).toBe(view.windowClosesAt);
-    expect(timer?.querySelector('[data-xmj-secs]')?.textContent).toBe('8s');
+    // The decision runs on the claimant's clock, so nothing counts down here.
+    expect(host.querySelector('.xmj-actions__hint')?.textContent).toBe(
+      `Claim ${xmjTileName('rR')}?`,
+    );
+    expect(host.querySelector('[data-xmj-deadline]')).toBeNull();
     expect(host.querySelector('.xmj-bubble')?.textContent).toContain(xmjTileName('rR'));
     // A queued pass spends every button until it goes.
     const queued = doc(xiangqiMahjongTableHtml(view, opts(true, { passQueued: true })));

@@ -473,7 +473,6 @@ export const ZH_HANT_PLAY = {
   'live.xmj.waitingOn': '你打出 {tile}。等待{name}。',
   'live.xmj.claimBubble': '{name}打出 {tile}。你可以要這張牌。',
   'live.xmj.claimPrompt': '要 {tile} 嗎？',
-  'live.xmj.seconds': '{count} 秒',
   'live.xmj.win': '胡',
   'live.xmj.selfDraw': '自摸',
   'live.xmj.takePung': '碰',

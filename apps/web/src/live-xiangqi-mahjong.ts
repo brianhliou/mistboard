@@ -74,7 +74,8 @@ function serverNow(): number {
 /**
  * A Pass pressed during the pause after a discard waits for the pause to end:
  * an answer sooner than an empty hand's automatic pass would tell the
- * discarder there was something to decide. Keyed by the window it answers.
+ * discarder there was something to decide. Keyed by the pause it waits out,
+ * which is new for every discard.
  */
 let queuedPass: { window: number; timer: ReturnType<typeof setTimeout> } | null = null;
 const PASS_MARGIN_MS = 120;
@@ -98,27 +99,16 @@ function seatNames(): Record<XmjSeat, string> {
   return { east: name('east'), west: name('west') };
 }
 
-/** The countdowns tick in place; nothing else on the table moves. */
+/** The next-deal countdown ticks in place; nothing else on the table moves. */
 let ticker: ReturnType<typeof setInterval> | null = null;
 function tickCountdowns(board: HTMLElement): boolean {
   const now = serverNow();
   const nodes = board.querySelectorAll<HTMLElement>('[data-xmj-deadline]');
   for (const node of nodes) {
-    const deadline = Number(node.dataset.xmjDeadline);
-    const span = Number(node.dataset.xmjSpan ?? 0);
-    const { secs, width } = xmjCountdown(deadline, span > 0 ? span : 1, now);
+    const { secs } = xmjCountdown(Number(node.dataset.xmjDeadline), 1, now);
     // Write only what changed: an unchanged write still dirties the text.
-    if (node.dataset.xmjText === 'nextHandIn') {
-      const text = t('live.xmj.nextHandIn', { count: secs });
-      if (node.textContent !== text) node.textContent = text;
-      continue;
-    }
-    const bar = node.querySelector<HTMLElement>('.xmj-timer i');
-    const barWidth = `${width.toFixed(1)}%`;
-    if (bar && bar.style.width !== barWidth) bar.style.width = barWidth;
-    const label = node.querySelector<HTMLElement>('[data-xmj-secs]');
-    const text = t('live.xmj.seconds', { count: secs });
-    if (label && label.textContent !== text) label.textContent = text;
+    const text = t('live.xmj.nextHandIn', { count: secs });
+    if (node.textContent !== text) node.textContent = text;
   }
   return nodes.length > 0;
 }
@@ -372,7 +362,7 @@ function renderTable(refs: LiveRefs, view: XmjPlayerView | null): void {
     startTicker(refs.board);
     return;
   }
-  if (queuedPass && view.windowClosesAt !== queuedPass.window) clearQueuedPass();
+  if (queuedPass && view.claimPauseEndsAt !== queuedPass.window) clearQueuedPass();
   if (armedDiscard && (!view.legal.selfDraw || armedDiscard.hand !== view.handNumber)) {
     armedDiscard = null;
   }
@@ -564,17 +554,17 @@ function installTableInteraction(ctx: TenantLiveClientContext<XmjSeat, XmjPlayer
 function sendPass(ctx: TenantLiveClientContext<XmjSeat, XmjPlayerView>): void {
   const view = ctx.state.view;
   const pauseEnd = view?.claimPauseEndsAt ?? null;
-  const closesAt = view?.windowClosesAt ?? null;
   const wait = pauseEnd === null ? 0 : pauseEnd + PASS_MARGIN_MS - serverNow();
-  if (wait <= 0 || closesAt === null) {
+  if (wait <= 0 || pauseEnd === null) {
     ctx.send({ type: 'move', action: 'pass' });
     return;
   }
   if (queuedPass) return;
   queuedPass = {
-    window: closesAt,
+    window: pauseEnd,
     timer: setTimeout(() => {
-      const still = queuedPass?.window === closesAt && ctx.state.view?.windowClosesAt === closesAt;
+      const still =
+        queuedPass?.window === pauseEnd && ctx.state.view?.claimPauseEndsAt === pauseEnd;
       queuedPass = null;
       if (still && ctx.canActNow()) ctx.send({ type: 'move', action: 'pass' });
       ctx.renderAll();

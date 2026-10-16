@@ -10,7 +10,6 @@ import {
   isXmjRoomSetup,
   XMJ_BETWEEN_HANDS_MS,
   XMJ_CLAIM_PAUSE_MS,
-  XMJ_CLAIM_WINDOW_MS,
   XMJ_SEATS,
   type XmjAction,
   type XmjMove,
@@ -184,13 +183,13 @@ test('a hand-copy claim with no twin in the hand is ignored', () => {
   assert.deepEqual(state.match.hand.drawnDiscards[1], [true]);
 });
 
-test('a claim window belongs to the claimant and settles as its pass', () => {
+test('a claim decision belongs to the claimant, on its own clock, with no other deadline', () => {
   const wall = wallWith(['bE', 'rA', 'rR', 'bH', 'rC'], ['bK', 'bA', 'rP', 'rH'], ['rH']);
   let state = createXmjRoomState({ walls: [wall], firstDealer: 'east' });
   state = play(state, 'east', { action: 'discard', tile: 'bE' }, 5_000);
   assert.equal(xmjClaimant(state), 'west');
-  assert.equal(state.windowClosesAt, 5_000 + XMJ_CLAIM_WINDOW_MS);
-  assert.equal(xmjClockOwner(state), null);
+  // The discard hands the clock over: the claimant's runs while it decides.
+  assert.equal(xmjClockOwner(state), 'west');
   // The discarder cannot pass or claim for the claimant.
   assert.ok(!xmjIsLegalMove(state, { by: 'east', at: 1, action: 'pass' }));
   assert.ok(
@@ -202,16 +201,13 @@ test('a claim window belongs to the claimant and settles as its pass', () => {
       fromHand: ['bK', 'bA'],
     }),
   );
-  // With a claim to weigh the claimant keeps the full window; the runtime then
-  // passes for it, the same move a seat with nothing to claim makes.
-  const pending = xmjPendingAction(state);
-  assert.equal(pending?.color, 'west');
-  assert.equal(pending?.move.action, 'pass');
-  assert.equal(pending?.at, 5_000 + XMJ_CLAIM_WINDOW_MS);
-  const timedOut = applyXmjMove(state, pending?.move as XmjMove);
-  assert.equal(timedOut.match.hand.turn, 1);
-  assert.equal(timedOut.match.hand.hands[1].length, 5);
-  assert.equal(timedOut.windowClosesAt, null);
+  // With a claim to weigh there is no claim timer: the runtime never passes
+  // for it, and only its clock running out ends the wait.
+  assert.equal(xmjPendingAction(state), null);
+  const passed = play(state, 'west', { action: 'pass' }, 60_000);
+  assert.equal(passed.match.hand.turn, 1);
+  assert.equal(passed.match.hand.hands[1].length, 5);
+  assert.equal(xmjClockOwner(passed), 'west', 'pass, draw and discard are one turn');
   // A client cannot send a timeout.
   assert.equal(xmjMoveFromMessage({ action: 'timeout' }), null);
 });
@@ -242,7 +238,6 @@ test('the discarder sees the same window whether or not the claimant can claim',
   assert.deepEqual(xmjViewFor(withClaim, 'spectator'), xmjViewFor(without, 'spectator'));
   const view = xmjViewFor(without, 'east');
   assert.equal(view.phase.type, 'claim');
-  assert.equal(view.windowClosesAt, 5_000 + XMJ_CLAIM_WINDOW_MS);
   assert.equal(view.claimPauseEndsAt, 5_000 + XMJ_CLAIM_PAUSE_MS);
 });
 
@@ -259,7 +254,6 @@ test('a window with nothing to claim passes for the claimant when the pause ends
   const drawn = applyXmjMove(without, pending?.move as XmjMove);
   assert.equal(drawn.match.hand.turn, 1);
   assert.equal(drawn.match.hand.hands[1].length, 5);
-  assert.equal(drawn.windowClosesAt, null);
   assert.equal(drawn.claimPauseEndsAt, null);
 
   // A claimant WITH a claim answers no sooner than that same moment, so the
@@ -453,7 +447,6 @@ test('correspondence: a discard opens the claimant’s turn with no window, and 
   for (const claimant of [NOTHING, CAN_CHOW]) {
     const state = afterCorrespondenceDiscard(claimant);
     assert.equal(xmjClaimant(state), 'west');
-    assert.equal(state.windowClosesAt, null);
     assert.equal(state.claimPauseEndsAt, null);
     // No deadline but the move deadline: nothing for the runtime to settle.
     assert.equal(xmjPendingAction(state), null);
@@ -469,7 +462,6 @@ test('correspondence: a discard opens the claimant’s turn with no window, and 
   const strip = (view: ReturnType<typeof xmjViewFor>) => ({
     phase: view.phase,
     legal: view.legal,
-    windowClosesAt: view.windowClosesAt,
     claimPauseEndsAt: view.claimPauseEndsAt,
     turn: view.turn,
   });

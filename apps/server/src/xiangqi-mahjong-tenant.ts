@@ -39,7 +39,6 @@ import {
   XIANGQI_MAHJONG_SPEC_ID,
   XMJ_BETWEEN_HANDS_MS,
   XMJ_CLAIM_PAUSE_MS,
-  XMJ_CLAIM_WINDOW_MS,
   XMJ_SEATS,
   type XmjAbortReason,
   type XmjMove,
@@ -146,8 +145,8 @@ export const xiangqiMahjongTenant: XmjTenantType = {
   rematch: { optOut: 'allowlisted playtest: the rematch conformance test seats guests' },
   // A move here is an action, not a turn; the clock runs from the first one.
   armsClockOnFirstMove: true,
-  // The seat that must discard is on the clock. Nobody is during a claim
-  // window (it has its own deadline) or between hands.
+  // The seat that must discard is on the clock, and after a discard the
+  // claimant, whose claim decision has no timer of its own. Nobody between hands.
   clockOwner: xmjClockOwner,
   enabled: xiangqiMahjongEnabled,
   oppositeColor: (seat) => (seat === 'east' ? 'west' : 'east'),
@@ -219,7 +218,6 @@ export const xiangqiMahjongTenant: XmjTenantType = {
         ...(pveEngineId === null ? {} : { pveEngineId }),
         rated: room.rated,
         forfeitDeadline: tenantForfeitDeadlineForClient(xiangqiMahjongTenant, room, client),
-        claimWindowMs: XMJ_CLAIM_WINDOW_MS,
         claimPauseMs: XMJ_CLAIM_PAUSE_MS,
         betweenHandsMs: XMJ_BETWEEN_HANDS_MS,
       };

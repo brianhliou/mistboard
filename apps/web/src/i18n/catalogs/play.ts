@@ -497,7 +497,6 @@ export const EN_PLAY = {
   'live.xmj.waitingOn': 'You discarded {tile}. Waiting on {name}.',
   'live.xmj.claimBubble': '{name} discarded {tile}. You can claim it.',
   'live.xmj.claimPrompt': 'Claim {tile}?',
-  'live.xmj.seconds': '{count}s',
   'live.xmj.win': 'Win',
   'live.xmj.selfDraw': 'Win',
   'live.xmj.takePung': 'Take',

@@ -136,7 +136,6 @@ test('a discard hands the deadline to the other seat, which passes, draws and di
     play(room, { by: 'east', at: t0, action: 'discard', tile: firstDiscard(room, 'east') });
     // West owes the claim decision; no window, no pause.
     assert.equal(deadlineSeat(room), 'west');
-    assert.equal(state(room).windowClosesAt, null);
     assert.equal(state(room).claimPauseEndsAt, null);
     assert.equal(view(room, 'west').legal.pass, true);
     const decisionDue = tenantDurableDeadlineFor(tenant, room)?.dueAt;

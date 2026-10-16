@@ -140,7 +140,7 @@ export const xiangqiMahjong32Article: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'You have 10 seconds to claim. After that the discard is passed and you draw as usual. Every discard pauses for a moment even when you have nothing to claim, so the wait never tells the other player what you hold.',
+          text: 'Deciding whether to claim takes time from your own clock, and there is no separate claim timer. If you pass, you draw as usual. Every discard pauses for a moment even when you have nothing to claim, so the wait never tells the other player what you hold.',
         },
         {
           kind: 'raw-svg',

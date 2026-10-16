@@ -3,7 +3,7 @@
  *
  * The engine (xiangqi-mahjong.ts) knows the rules and nothing else. A room also
  * needs seat names on the wire, a move count, who acted and when (a claim comes
- * from the seat whose turn it is not), a claim-window deadline, and a pause
+ * from the seat whose turn it is not), a pause after each discard, and a pause
  * between hands so both players can read the score before the next deal. This
  * module adds exactly that and no rules of its own.
  *
@@ -57,18 +57,14 @@ export function isXmjSeat(value: unknown): value is XmjSeat {
 }
 
 /**
- * How long the claimant has to claim or pass a discard. Provisional: longer than
- * Hong Kong's six seconds because the tiles are unfamiliar glyphs, and one of
- * the numbers to ask a player about after a real session.
- */
-export const XMJ_CLAIM_WINDOW_MS = 10_000;
-/**
  * The pause after EVERY discard, claim or not. The window is opened
  * unconditionally because one that opened only when the claimant held a claim
  * told the discarder so. A claimant with nothing to claim passes when the pause
- * ends; one with a claim keeps the full window, and its client and the bot hold
- * any earlier answer until the pause ends, so the window settles at the same
- * moment whether a claim was there or not.
+ * ends. One with a claim decides on its own clock, which has run since the
+ * discard either way (xmjClockOwner), the way a correspondence claimant decides
+ * inside its move: there is no separate claim timer. Its client and the bot
+ * hold any earlier answer until the pause ends, so an answer made at once
+ * lands at the same moment whether a claim was there or not.
  */
 export const XMJ_CLAIM_PAUSE_MS = 1_500;
 /** How long the score sits on screen before the next hand deals itself. */
@@ -89,7 +85,7 @@ export type XmjAction =
   | { readonly action: 'pass' }
   /** This seat has read the score and is ready for the next deal. */
   | { readonly action: 'next-hand' }
-  /** A deadline passed (claim window or between hands). The runtime's move only. */
+  /** A deadline passed (between hands; claim timeouts in older logs). The runtime's move only. */
   | { readonly action: 'timeout' };
 
 /** A move as applied and persisted: `by` and `at` are stamped by the server. */
@@ -122,8 +118,6 @@ export interface XmjRoomState {
   readonly moveNumber: number;
   readonly lastMove?: XmjMove;
   readonly match: XmjMatchState;
-  /** When the open claim window settles itself. Null outside a window. */
-  readonly windowClosesAt: number | null;
   /**
    * The end of the pause every discard gets (`XMJ_CLAIM_PAUSE_MS`). A window with
    * no claim in it settles here. Null outside a window. Optional so a state
@@ -180,7 +174,6 @@ export function createXmjRoomState(setup: XmjRoomSetup, id = ''): XmjRoomState {
     status: { type: 'playing', turn: xmjSeatName(match.hand.turn) },
     moveNumber: 0,
     match,
-    windowClosesAt: null,
     claimPauseEndsAt: null,
     nextHandAt: null,
     ready: [],
@@ -198,8 +191,8 @@ export function xmjClaimant(state: XmjRoomState): XmjSeat | null {
 /**
  * May this seat act now?
  *
- * In a hand: the seat to move, or in a claim window the claimant (and the
- * discarder, for the runtime's timeout). Between hands: either seat.
+ * In a hand: the seat to move, or after a discard the claimant (and the
+ * discarder, so older logs with its timeout replay). Between hands: either seat.
  */
 export function xmjSeatMayAct(state: XmjRoomState, seat: XmjSeat): boolean {
   if (state.status.type !== 'playing') return false;
@@ -240,8 +233,9 @@ export function xmjIsLegalMove(state: XmjRoomState, move: XmjMove): boolean {
         )
       );
     case 'timeout':
-      // The claim window now settles as the claimant's pass (xmjPendingAction);
-      // the discarder's timeout stays legal so older logs replay.
+      // A claim with nothing to take settles as the claimant's pass when the
+      // pause ends (xmjPendingAction); the discarder's timeout stays legal so
+      // older logs, from when a claim had its own deadline, replay.
       return phase.type === 'claim' && phase.discarder === seat;
     default:
       return false;
@@ -298,7 +292,6 @@ function withHand(state: XmjRoomState, at: number): XmjRoomState {
         winner: winner === null ? null : xmjSeatName(winner),
         reason: winner === null ? 'tie' : 'points',
       },
-      windowClosesAt: null,
       claimPauseEndsAt: null,
       nextHandAt: null,
       ready: [],
@@ -309,21 +302,19 @@ function withHand(state: XmjRoomState, at: number): XmjRoomState {
     return {
       ...state,
       status: { type: 'playing', turn },
-      windowClosesAt: null,
       claimPauseEndsAt: null,
       // Correspondence deals the next hand at once: nobody waits days on a
       // score screen, and nobody has to come back to press Next hand.
       nextHandAt: state.nextHandAt ?? (state.correspondence ? at : at + XMJ_BETWEEN_HANDS_MS),
     };
   }
-  // Correspondence has no claim window: the claim decision is the claimant's
-  // turn, under the move deadline like any other.
-  const inWindow = match.hand.phase.type === 'claim' && !state.correspondence;
+  // Correspondence has no pause: the claim decision is the claimant's turn,
+  // under the move deadline like any other.
+  const paused = match.hand.phase.type === 'claim' && !state.correspondence;
   return {
     ...state,
     status: { type: 'playing', turn },
-    windowClosesAt: inWindow ? (state.windowClosesAt ?? at + XMJ_CLAIM_WINDOW_MS) : null,
-    claimPauseEndsAt: inWindow ? (state.claimPauseEndsAt ?? at + XMJ_CLAIM_PAUSE_MS) : null,
+    claimPauseEndsAt: paused ? (state.claimPauseEndsAt ?? at + XMJ_CLAIM_PAUSE_MS) : null,
   };
 }
 
@@ -341,16 +332,14 @@ export function xmjPendingAction(
     };
   }
   const phase = state.match.hand.phase;
-  if (phase.type === 'claim' && state.windowClosesAt !== null) {
-    // Settled as the claimant's pass either way, so the move log reads the same
-    // whether the claimant had a claim (and let the window run out) or not.
+  const pauseEnd = state.claimPauseEndsAt ?? null;
+  if (phase.type === 'claim' && pauseEnd !== null) {
+    // A claimant with a claim to weigh has no deadline but its own clock.
+    if (xmjClaimsOpen(state.match.hand).length > 0) return null;
+    // One with nothing to claim passes when the pause ends: the same move, at
+    // the same moment, as a claimant who declined at once.
     const by = xmjSeatName(xmjOtherSeat(phase.discarder));
-    const nothingToClaim = xmjClaimsOpen(state.match.hand).length === 0;
-    const at =
-      nothingToClaim && state.claimPauseEndsAt != null
-        ? state.claimPauseEndsAt
-        : state.windowClosesAt;
-    return { at, color: by, move: { by, at, action: 'pass' } };
+    return { at: pauseEnd, color: by, move: { by, at: pauseEnd, action: 'pass' } };
   }
   return null;
 }
@@ -387,17 +376,16 @@ function lastResult(match: XmjMatchState): XmjHandResult {
 }
 
 /**
- * The seat whose clock runs: the seat to discard. Nobody during a window or
- * between hands. In correspondence the claimant owns the claim decision too, so
- * its claim or pass, draw and discard spend one move deadline, and the clock
- * passes to the other seat on every discard whether a claim was there or not.
+ * The seat whose clock runs: the seat to discard, or after a discard the
+ * claimant, who owns the claim decision. Nobody between hands. So the clock
+ * passes to the other seat on every discard whether a claim was there or not,
+ * and the claimant's claim or pass, draw and discard are one turn on one clock,
+ * live and correspondence alike (in correspondence, one move deadline).
  */
 export function xmjClockOwner(state: XmjRoomState): XmjSeat | null {
   if (state.status.type !== 'playing' || state.match.between) return null;
   const phase = state.match.hand.phase;
-  if (phase.type === 'claim' && state.correspondence) {
-    return xmjSeatName(xmjOtherSeat(phase.discarder));
-  }
+  if (phase.type === 'claim') return xmjSeatName(xmjOtherSeat(phase.discarder));
   return phase.type === 'discard' ? xmjSeatName(state.match.hand.turn) : null;
 }
 
@@ -518,7 +506,6 @@ export interface XmjPlayerView {
   readonly phase: XmjViewPhase;
   readonly between: boolean;
   readonly ready: readonly XmjSeat[];
-  readonly windowClosesAt: number | null;
   /** End of the pause every discard gets; the claimant's answer waits for it. */
   readonly claimPauseEndsAt: number | null;
   readonly nextHandAt: number | null;
@@ -609,7 +596,6 @@ export function xmjViewFor(state: XmjRoomState, perspective: XmjSeat | 'spectato
     phase: viewPhase(state, perspective),
     between: match.between,
     ready: state.ready,
-    windowClosesAt: state.windowClosesAt,
     claimPauseEndsAt: state.claimPauseEndsAt ?? null,
     nextHandAt: state.nextHandAt,
     results: match.results.map((result) => ({
