@@ -127,7 +127,7 @@ export function xmjTileSvg(
     piece,
     opts.name === false
       ? ''
-      : `<text x="${cx}" y="${y + H + DEPTH + 15}" text-anchor="middle" font-size="10.5" fill="currentColor">${escapeText(name)}</text>`,
+      : `<text x="${cx}" y="${y + H + DEPTH + 15}" text-anchor="middle" font-size="10.5" fill="currentColor" data-i18n-key="${color} ${name}">${escapeText(name)}</text>`,
   ].join('');
 }
 
@@ -280,7 +280,7 @@ export function xmjTileKindGridSvg(
       }
       const end = x - TILE_GAP;
       parts.push(
-        `<text x="${(start + end) / 2}" y="${y + TILE_H + DEPTH + 16}" text-anchor="middle" font-size="11" fill="currentColor" class="xmj-kind-label">${escapeText(XMJ_PIECE_NAMES[tilePiece(kind)])}</text>`,
+        `<text x="${(start + end) / 2}" y="${y + TILE_H + DEPTH + 16}" text-anchor="middle" font-size="11" fill="currentColor" data-i18n-key="${tileColor(kind) === 'r' ? 'red' : 'black'} ${XMJ_PIECE_NAMES[tilePiece(kind)]}" class="xmj-kind-label">${escapeText(XMJ_PIECE_NAMES[tilePiece(kind)])}</text>`,
       );
       width = Math.max(width, end);
       x = end + KIND_GAP;

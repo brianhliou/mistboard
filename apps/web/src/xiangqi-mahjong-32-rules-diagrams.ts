@@ -4,6 +4,7 @@
 // claim a win, a non-win or a score the game itself would not give.
 
 import {
+  tileColor,
   tilePiece,
   XMJ_PIECE_NAMES,
   type XmjHandState,
@@ -703,7 +704,7 @@ export const XMJ32_CLAIM_ANIMATION_SVG = (): string => {
     claimLabel(CLAIM_X0, S.rows.yours - 7, 'Your discards'),
     claimLabel(CLAIM_X0, hand - 7, 'Your hand'),
     `<g class="xmj-claim-mark-fade">`,
-    `<text x="${set2 + CLAIM_SIDEWAYS.w / 2}" y="${nameY}" text-anchor="middle" font-size="10.5" fill="currentColor">${escapeText(XMJ_PIECE_NAMES[tilePiece(XMJ32_CLAIM_DISCARD)])}</text>`,
+    `<text x="${set2 + CLAIM_SIDEWAYS.w / 2}" y="${nameY}" text-anchor="middle" font-size="10.5" fill="currentColor" data-i18n-key="${tileColor(XMJ32_CLAIM_DISCARD) === 'r' ? 'red' : 'black'} ${XMJ_PIECE_NAMES[tilePiece(XMJ32_CLAIM_DISCARD)]}">${escapeText(XMJ_PIECE_NAMES[tilePiece(XMJ32_CLAIM_DISCARD)])}</text>`,
     `<path d="M${set0 + 2} ${by - 4}V${by}H${S.setEnd - 2}V${by - 4}" fill="none" stroke="currentColor" stroke-opacity="0.45" stroke-width="1"/>`,
     `<text x="${(set0 + S.setEnd) / 2}" y="${by + 14}" text-anchor="middle" font-size="11" font-style="italic" fill="currentColor" fill-opacity="0.75">claimed, face up</text></g>`,
     ...tracks,

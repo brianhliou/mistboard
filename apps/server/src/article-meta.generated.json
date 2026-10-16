@@ -559,7 +559,11 @@
     "title": "Xiangqi Mahjong Rules (32 tiles)",
     "kind": "rules",
     "description": "The 32-tile game of Xiangqi Mahjong for two players: one xiangqi set used as tiles, five-tile hands, the winning hands drawn out, and the points each one scores.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "象棋麻将规则（32 张）",
+      "zh-hant": "象棋麻將規則（32 張）"
+    }
   },
   "xiangqi-match-fixing": {
     "title": "The Xiangqi Match-Fixing Case",

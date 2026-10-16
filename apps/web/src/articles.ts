@@ -1880,8 +1880,24 @@ function localizeInlineSvgText(root: ParentNode, lang?: ArticleLang): void {
     .forEach((node) => {
       const text = node.textContent;
       if (!text || node.getAttribute('translate') === 'no') return;
-      node.textContent = translateArticleText(lang, text.trim());
+      // data-i18n-key names the dictionary key when the visible English word
+      // is shared by labels that translate differently (a red and a black
+      // General are both "General", but 帥 and 將). Untranslated, it keeps the
+      // English text rather than showing the key.
+      const keyed = node.getAttribute('data-i18n-key');
+      const out = translateArticleText(lang, keyed ?? text.trim());
+      if (keyed && out === keyed) return;
+      node.textContent = out;
     });
+  // A figure's aria-label usually repeats its <title>; a screen reader reads
+  // the label, so it follows the title into the page language when the
+  // dictionary has it.
+  root.querySelectorAll<SVGSVGElement>('svg[aria-label]').forEach((svg) => {
+    const label = svg.getAttribute('aria-label')?.trim();
+    if (!label || svg.getAttribute('translate') === 'no') return;
+    const out = translateArticleText(lang, label);
+    if (out !== label) svg.setAttribute('aria-label', out);
+  });
 }
 
 function renderImageFigureBlock(block: ImageFigureBlock): HTMLElement {

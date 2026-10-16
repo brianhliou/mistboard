@@ -19,8 +19,9 @@ import type { Article, ArticleBlock } from '../types.js';
 // NON_INDEXED_ARTICLE_SLUGS (server) keep it out of the rail, the /rules
 // index, the sitemap and search; it answers by URL. No gameSpecId on purpose:
 // listing then follows this slug, so the page stays unlisted when the variant
-// itself goes public. English only (UNTRANSLATED_ARTICLE_SLUGS) until the
-// English is signed off.
+// itself goes public. zh-Hans and zh-Hant are machine-drafted from the
+// English signed off 2026-10-16 (article-i18n.ts); an English edit orphans
+// their keys and fails the coverage test until the dictionary follows.
 //
 // Every tile row below is data in xiangqi-mahjong-32-rules-diagrams.ts, and
 // its test runs each hand through xmjWinShape / xmjScore: a picture here

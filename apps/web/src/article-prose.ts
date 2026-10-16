@@ -3,6 +3,8 @@
 // are treated as translatable. Labels baked into generated SVG are not prose
 // fields; articles/svg-labels.ts extracts those and the coverage test gates them
 // separately. Code-block payloads stay excluded.
+
+import { SVG_FIELDS } from './articles/svg-labels.js';
 import type { Article, ArticleBlock, ArticleSection } from './articles-data.js';
 
 export type Prose = { path: string; text: string };
@@ -25,14 +27,16 @@ export function articleTranslationSourceStrings(sourceArticles: readonly Article
   const collect = (value: unknown, key?: string): void => {
     if (typeof value === 'string') {
       strings.add(value);
-      for (const match of value.matchAll(/<(text|title|desc)\b[^>]*>([\s\S]*?)<\/\1>/gi)) {
-        const visible = decodeSvgText(match[2].replace(/<[^>]+>/g, '')).trim();
+      for (const match of value.matchAll(/<(text|title|desc)\b([^>]*)>([\s\S]*?)<\/\1>/gi)) {
+        const visible = decodeSvgText(match[3].replace(/<[^>]+>/g, '')).trim();
         if (visible) strings.add(visible);
+        const keyed = match[2].match(/\bdata-i18n-key="([^"]*)"/);
+        if (keyed) strings.add(decodeSvgText(keyed[1]));
       }
       return;
     }
     if (typeof value === 'function') {
-      if (key === 'svg') collect((value as () => string)(), key);
+      if (key !== undefined && SVG_FIELDS.has(key)) collect((value as () => string)(), key);
       return;
     }
     if (Array.isArray(value)) {
@@ -40,6 +44,9 @@ export function articleTranslationSourceStrings(sourceArticles: readonly Article
       return;
     }
     if (value && typeof value === 'object') {
+      // The animated figure's Replay button is renderer chrome, translated
+      // through the same dictionary (renderAnimatedSvgBlock).
+      if ((value as { kind?: unknown }).kind === 'animated-svg') strings.add('Replay');
       for (const [childKey, item] of Object.entries(value)) collect(item, childKey);
     }
   };
@@ -150,7 +157,9 @@ const BLOCK_PROSE: {
       // reached the coverage gate as a string with no translation, which no
       // dictionary can satisfy, and would have blocked the first locked article
       // whose table has one.
-      ...(b.headers ?? []).filter((header) => header.trim().length > 0),
+      // A header with no Latin script (a hand number on a scoreboard) is data,
+      // like a numeric cell.
+      ...(b.headers ?? []).filter((header) => /\p{Script=Latin}/u.test(header)),
       ...(b.rows ?? []).flat().filter((cell) => /\p{Script=Latin}/u.test(cell)),
       ...caption(block),
     ];
