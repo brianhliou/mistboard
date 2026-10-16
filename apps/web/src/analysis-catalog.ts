@@ -65,9 +65,14 @@ export function analysisVariantLabel(id: AnalysisVariantId): string {
 }
 
 /** Parse an /analysis path: bare /analysis opens the flagship (xiangqi); a known
- *  slug opens that variant; anything else is null (the caller 404s). */
+ *  slug opens that variant; anything else is null (the caller 404s). The
+ *  xiangqi board alone also answers under /zh-hans and /zh-hant (象棋AI分析);
+ *  the prefix sets the locale, as on /zh-hans/bots. */
 export function analysisVariantFromPath(path: string): AnalysisVariantId | null {
   if (path === '/analysis') return 'xiangqi';
+  if (path === '/zh-hans/analysis/xiangqi' || path === '/zh-hant/analysis/xiangqi') {
+    return 'xiangqi';
+  }
   const match = /^\/analysis\/([a-z0-9-]+)$/.exec(path);
   if (!match) return null;
   const slug = match[1];

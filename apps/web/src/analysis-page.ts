@@ -9,6 +9,7 @@ import { ANALYSIS_VARIANTS, type AnalysisVariantId } from './analysis-catalog.js
 import { EDITOR_VARIANTS, type EditorVariantId } from './editor/editor-catalog.js';
 import { variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
+import { localizedHref } from './i18n/locale.js';
 import { renderVariantMarker } from './variant-markers.js';
 import { variantPublicSurfaceEnabled } from './variant-public-surfaces.js';
 import { variantMiniIdForGameSpec } from './variants.js';
@@ -97,7 +98,9 @@ export function buildVariantPicker(
   // is unreliable (jsdom resolves it to the wrong option entirely).
   select.value = current;
   select.addEventListener('change', () => {
-    window.location.assign(`${basePath}/${select.value}`);
+    // A Chinese reader picking xiangqi lands on its zh URL; other variants
+    // have English URLs only.
+    window.location.assign(localizedHref(`${basePath}/${select.value}`));
   });
   wrap.append(icon, select);
   return wrap;

@@ -152,6 +152,22 @@ describe('locale helpers', () => {
     expect(localizedHref('/account?tab=login', 'zh-Hant')).toBe('/account?tab=login');
   });
 
+  it('localizes the xiangqi board, editor, videos and study links, keeping the query', () => {
+    expect(localizedHref('/analysis/xiangqi?fen=abc&moves=h2e2', 'zh-Hans')).toBe(
+      '/zh-hans/analysis/xiangqi?fen=abc&moves=h2e2',
+    );
+    expect(localizedHref('/editor/xiangqi?fen=abc', 'zh-Hant')).toBe(
+      '/zh-hant/editor/xiangqi?fen=abc',
+    );
+    expect(localizedHref('/videos', 'zh-Hans')).toBe('/zh-hans/videos');
+    expect(localizedHref('/study/Ab12cd', 'zh-Hant')).toBe('/zh-hant/study/Ab12cd');
+    // Only xiangqi has zh board URLs; other variants and the alias stay English.
+    expect(localizedHref('/analysis/banqi?fen=abc', 'zh-Hans')).toBe('/analysis/banqi?fen=abc');
+    expect(localizedHref('/editor/jieqi', 'zh-Hans')).toBe('/editor/jieqi');
+    expect(localizedHref('/analysis', 'zh-Hans')).toBe('/analysis');
+    expect(localizedHref('/zh-hans/analysis/xiangqi', 'en')).toBe('/analysis/xiangqi');
+  });
+
   it('strips existing locale prefixes before rebuilding hrefs', () => {
     expect(stripLocalePrefix('/zh-hant/rules/banqi#top')).toBe('/rules/banqi#top');
     expect(localizedHref('/zh-hans/rules/banqi', 'zh-Hant')).toBe('/zh-hant/rules/banqi');

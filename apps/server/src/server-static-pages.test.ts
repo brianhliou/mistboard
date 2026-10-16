@@ -797,6 +797,7 @@ test('the rules index shell fallback carries a self canonical and the locale gro
         `${path} is missing the ${lang} alternate`,
       );
     }
+    assert.equal(response.body.match(/hreflang="x-default"/g)?.length, 1, `${path} x-default`);
   }
 });
 
@@ -1003,10 +1004,13 @@ test('the videos library serves all three locales, each distinct and cross-linke
     seen.set(route, { title, body: response.body });
     // hreflang, so the three read as one page in three languages rather than
     // three near-duplicates competing with each other.
+    // x-default (missing until 2026-10-15) names the page for a reader whose
+    // language is none of the three.
     for (const [lang, href] of [
       ['en', 'https://mistboard.com/videos'],
       ['zh-Hans', 'https://mistboard.com/zh-hans/videos'],
       ['zh-Hant', 'https://mistboard.com/zh-hant/videos'],
+      ['x-default', 'https://mistboard.com/videos'],
     ]) {
       assert.ok(
         response.body.includes(`<link rel="alternate" hreflang="${lang}" href="${href}">`),
@@ -1150,7 +1154,15 @@ test('the practice shelf serves all three locales, each distinct and cross-linke
 // member names itself, exactly once.
 test('every locale-group SPA route names itself as canonical', async () => {
   const staticDir = await staticDirWithPreloadManifest();
-  const groups = ['/videos', '/bots', '/learn/xiangqi', '/champions', '/practice'];
+  const groups = [
+    '/videos',
+    '/bots',
+    '/learn/xiangqi',
+    '/champions',
+    '/practice',
+    '/analysis/xiangqi',
+    '/editor/xiangqi',
+  ];
   for (const group of groups) {
     for (const route of [group, `/zh-hans${group}`, `/zh-hant${group}`]) {
       const response = captureResponse();
@@ -1173,6 +1185,111 @@ test('every locale-group SPA route names itself as canonical', async () => {
 });
 
 // --- position routes (/analysis, /editor) --------------------------------------
+
+// Until 2026-10-15 the xiangqi board and editor had one English URL each, so a
+// Chinese search (象棋AI分析, 摆残局) had nothing in its language to land on.
+test('the xiangqi analysis board and editor serve all three locales, cross-linked', async () => {
+  const staticDir = await staticDirWithPreloadManifest();
+  for (const surface of ['analysis', 'editor'] as const) {
+    const group = `/${surface}/xiangqi`;
+    const titles = new Set<string>();
+    for (const [route, lang] of [
+      [group, 'en'],
+      [`/zh-hans${group}`, 'zh-Hans'],
+      [`/zh-hant${group}`, 'zh-Hant'],
+    ] as const) {
+      assert.ok(isClientRoute(route), `${route} would 404 on a direct hit in production`);
+      assert.ok(SITEMAP_STATIC_ROUTES.includes(route), `${route} is not advertised in the sitemap`);
+      const response = captureResponse();
+      const served = await serveSpaShellWithRoutePreloads({
+        response,
+        staticDir,
+        pathname: route,
+        publicHost: 'https://mistboard.com',
+      });
+      assert.equal(served, true, `${route} fell through to the plain shell`);
+      const title = response.body.match(/<title>([^<]*)<\/title>/)?.[1] ?? '';
+      titles.add(title);
+      assert.match(response.body, new RegExp(`<html lang="${lang}">`));
+      assert.ok(
+        response.body.includes(`<link rel="canonical" href="https://mistboard.com${route}">`),
+        `${route} has no self canonical`,
+      );
+      for (const [alt, href] of [
+        ['en', `https://mistboard.com${group}`],
+        ['zh-Hans', `https://mistboard.com/zh-hans${group}`],
+        ['zh-Hant', `https://mistboard.com/zh-hant${group}`],
+        ['x-default', `https://mistboard.com${group}`],
+      ]) {
+        assert.ok(
+          response.body.includes(`<link rel="alternate" hreflang="${alt}" href="${href}">`),
+          `${route} is missing the ${alt} alternate`,
+        );
+      }
+      if (lang !== 'en') {
+        assert.match(title, surface === 'analysis' ? /象棋AI分析/ : /象棋(摆|擺)残|象棋(摆|擺)殘/);
+        assert.doesNotMatch(response.body, /Xiangqi (Analysis Board|Board Editor) \|/);
+      }
+      assert.doesNotMatch(title, /\u2014/, `${route} title has an em dash`);
+    }
+    assert.equal(titles.size, 3, `${surface} titles must differ`);
+  }
+});
+
+test('a zh xiangqi board keeps its FEN card, and only xiangqi has zh board URLs', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const fen = 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1';
+  for (const pathname of ['/zh-hans/analysis/xiangqi', '/zh-hant/editor/xiangqi']) {
+    const response = captureResponse();
+    await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname,
+      search: `?fen=${encodeURIComponent(fen)}`,
+      publicHost: 'https://mistboard.com',
+    });
+    assert.match(response.body, /<html lang="zh-Han[st]">/, pathname);
+    assert.match(
+      response.body,
+      /<meta property="og:image" content="https:\/\/mistboard\.com\/og\/position\/xiangqi\.png\?fen=/,
+      pathname,
+    );
+    // The canonical drops the query: one URL per locale, not one per position.
+    assert.ok(
+      response.body.includes(`<link rel="canonical" href="https://mistboard.com${pathname}">`),
+      pathname,
+    );
+  }
+  for (const route of [
+    '/zh-hans/analysis/banqi',
+    '/zh-hant/editor/jieqi',
+    '/zh-hans/analysis',
+    '/zh-hans/editor',
+  ]) {
+    assert.equal(isClientRoute(route), false, `${route} should 404`);
+  }
+});
+
+test('bare /analysis and /editor name their /xiangqi page as canonical', async () => {
+  const staticDir = await staticDirWithPreloadManifest();
+  for (const [route, target] of [
+    ['/analysis', '/analysis/xiangqi'],
+    ['/editor', '/editor/xiangqi'],
+  ] as const) {
+    assert.equal(SITEMAP_STATIC_ROUTES.includes(route), false, `${route} is an alias, not a page`);
+    const response = captureResponse();
+    await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname: route,
+      publicHost: 'https://mistboard.com',
+    });
+    const canonicals = response.body.match(/<link rel="canonical"[^>]*>/g) ?? [];
+    assert.deepEqual(canonicals, [`<link rel="canonical" href="https://mistboard.com${target}">`]);
+    assert.doesNotMatch(response.body, /hreflang/);
+  }
+});
 
 // A mid-game banqi deal: five public fields plus the sixth field naming the
 // identities under the face-down tiles. The og:image URL must carry only the
@@ -1496,20 +1613,41 @@ test('a chapter page canonicalises to its study root in the same locale, and is 
     );
   }
 
-  // The study root: hreflang across the three locales, no canonical added.
-  const root = captureResponse();
-  await serveStudyPage({
-    studyId: 'S1',
-    response: root,
-    staticDir,
-    publicHost: 'https://mistboard.com',
-    getStudy,
-  });
-  assert.doesNotMatch(root.body, /rel="canonical"/);
-  assert.match(
-    root.body,
-    /<link rel="alternate" hreflang="zh-Hans" href="https:\/\/mistboard\.com\/zh-hans\/study\/S1">/,
-  );
+  // The study root: a self canonical (none until 2026-10-15), hreflang across
+  // the three locales with x-default, and the prefix's <html lang> (the zh
+  // roots said lang="en" until then).
+  for (const [localeSlug, prefix, lang] of [
+    ['en', '', 'en'],
+    ['zh-hans', '/zh-hans', 'zh-Hans'],
+    ['zh-hant', '/zh-hant', 'zh-Hant'],
+  ] as const) {
+    const root = captureResponse();
+    await serveStudyPage({
+      studyId: 'S1',
+      localeSlug,
+      response: root,
+      staticDir,
+      publicHost: 'https://mistboard.com',
+      getStudy,
+    });
+    assert.deepEqual(
+      root.body.match(/<link rel="canonical"[^>]*>/g),
+      [`<link rel="canonical" href="https://mistboard.com${prefix}/study/S1">`],
+      localeSlug,
+    );
+    assert.match(root.body, new RegExp(`<html lang="${lang}">`), localeSlug);
+    for (const [alt, href] of [
+      ['en', 'https://mistboard.com/study/S1'],
+      ['zh-Hans', 'https://mistboard.com/zh-hans/study/S1'],
+      ['zh-Hant', 'https://mistboard.com/zh-hant/study/S1'],
+      ['x-default', 'https://mistboard.com/study/S1'],
+    ]) {
+      assert.ok(
+        root.body.includes(`<link rel="alternate" hreflang="${alt}" href="${href}">`),
+        `${localeSlug} root is missing the ${alt} alternate`,
+      );
+    }
+  }
 });
 
 // /game/:id is the Fog Chess replay route only (tenant games live under

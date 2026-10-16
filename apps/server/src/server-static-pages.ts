@@ -56,6 +56,22 @@ type SpaRouteMeta = {
    *  reads as one page in three languages rather than three near-duplicates
    *  competing with each other. */
   localeGroup?: string;
+  /** An alias route's canonical target (bare /analysis names
+   *  /analysis/xiangqi). Only on routes outside a locale group, which name
+   *  themselves. */
+  canonicalPath?: string;
+};
+
+const XIANGQI_ANALYSIS_EN = {
+  title: 'Xiangqi Analysis Board | Mistboard',
+  description:
+    'Analyse xiangqi (Chinese chess) positions with a free engine. Import moves or a FEN, branch variations, review any game. Mistboard variants supported too.',
+};
+
+const XIANGQI_EDITOR_EN = {
+  title: 'Xiangqi Board Editor | Mistboard',
+  description:
+    'Set up any xiangqi (Chinese chess) position by hand, get its FEN, and send it to the free analysis board. Mistboard variants supported too.',
 };
 
 export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
@@ -221,15 +237,41 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     htmlLang: 'zh-Hant',
     localeGroup: '/learn/xiangqi',
   },
-  '/analysis': {
-    title: 'Xiangqi Analysis Board | Mistboard',
+  // The xiangqi analysis board and editor, in three languages (象棋AI and
+  // 摆残局 are Chinese search terms; until 2026-10-15 both pages had one English
+  // URL). /analysis/xiangqi is the page the nav links; bare /analysis opens
+  // the same board and names it as canonical rather than competing with it.
+  '/analysis': { ...XIANGQI_ANALYSIS_EN, canonicalPath: '/analysis/xiangqi' },
+  '/analysis/xiangqi': { ...XIANGQI_ANALYSIS_EN, localeGroup: '/analysis/xiangqi' },
+  '/zh-hans/analysis/xiangqi': {
+    title: '象棋AI分析 · 皮卡鱼引擎免费分析棋盘 | Mistboard',
     description:
-      'Analyse xiangqi (Chinese chess) positions with a free engine. Import moves or a FEN, branch variations, review any game. Mistboard variants supported too.',
+      '免费的象棋AI分析棋盘：在浏览器里用皮卡鱼引擎分析任意局面。可以粘贴棋谱或 FEN 导入，摆出变着分支，复盘任何一盘对局。无需下载，也无需注册账号。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/analysis/xiangqi',
   },
-  '/editor': {
-    title: 'Xiangqi Board Editor | Mistboard',
+  '/zh-hant/analysis/xiangqi': {
+    title: '象棋AI分析 · 皮卡魚引擎免費分析棋盤 | Mistboard',
     description:
-      'Set up any xiangqi (Chinese chess) position by hand, get its FEN, and send it to the free analysis board. Mistboard variants supported too.',
+      '免費的象棋AI分析棋盤：在瀏覽器裡用皮卡魚引擎分析任意局面。可以貼上棋譜或 FEN 匯入，擺出變著分支，復盤任何一盤對局。無需下載，也無需註冊帳號。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/analysis/xiangqi',
+  },
+  '/editor': { ...XIANGQI_EDITOR_EN, canonicalPath: '/editor/xiangqi' },
+  '/editor/xiangqi': { ...XIANGQI_EDITOR_EN, localeGroup: '/editor/xiangqi' },
+  '/zh-hans/editor/xiangqi': {
+    title: '象棋摆残局 · 免费棋盘编辑器 | Mistboard',
+    description:
+      '在棋盘编辑器里摆出任意象棋局面或残局：逐个放置棋子，设定走棋方，实时得到局面的 FEN，再一键送到分析棋盘让引擎分析，或者从这个局面开始和电脑对练。免费，无需注册。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/editor/xiangqi',
+  },
+  '/zh-hant/editor/xiangqi': {
+    title: '象棋擺殘局 · 免費棋盤編輯器 | Mistboard',
+    description:
+      '在棋盤編輯器裡擺出任意象棋局面或殘局：逐個放置棋子，設定走棋方，即時得到局面的 FEN，再一鍵送到分析棋盤讓引擎分析，或者從這個局面開始和電腦對練。免費，無需註冊。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/editor/xiangqi',
   },
   '/puzzles': {
     title: 'Xiangqi Puzzles | Mistboard',
@@ -311,7 +353,9 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
 // og:image URL carries the PUBLIC five-field spelling only, so the image URL
 // itself never names a hidden identity; og:url keeps the link as shared, since
 // that is the page the preview is for.
-const POSITION_ROUTE = /^\/(analysis|editor)(?:\/([a-z0-9-]+))?$/;
+// The xiangqi boards also answer under /zh-hans and /zh-hant (and only they:
+// the other variants have one English URL each).
+const POSITION_ROUTE = /^(?:\/(zh-hans|zh-hant))?\/(analysis|editor)(?:\/([a-z0-9-]+))?$/;
 
 type PositionRouteMeta = {
   title: string;
@@ -325,9 +369,10 @@ type PositionRouteMeta = {
 function positionPageCopy(
   surface: 'analysis' | 'editor',
   variant: PositionOgVariant,
+  localePrefix: '' | '/zh-hans' | '/zh-hant',
 ): { title: string; description: string } {
-  // The flagship keeps the wording of its long-standing route entries.
-  if (variant === 'xiangqi') return SPA_ROUTE_META[`/${surface}`]!;
+  // The flagship's copy is its route entry, in the locale of the URL.
+  if (variant === 'xiangqi') return SPA_ROUTE_META[`${localePrefix}/${surface}/xiangqi`]!;
   const label = positionOgVariantLabel(variant);
   return surface === 'analysis'
     ? {
@@ -343,12 +388,16 @@ function positionPageCopy(
 export function positionRouteMeta(pathname: string, search: string): PositionRouteMeta | null {
   const match = POSITION_ROUTE.exec(pathname);
   if (!match) return null;
-  const surface = match[1] as 'analysis' | 'editor';
-  const slug = match[2] ?? 'xiangqi';
+  const localePrefix: '' | '/zh-hans' | '/zh-hant' =
+    match[1] === 'zh-hans' ? '/zh-hans' : match[1] === 'zh-hant' ? '/zh-hant' : '';
+  const surface = match[2] as 'analysis' | 'editor';
+  const slug = match[3] ?? 'xiangqi';
   // Unknown slugs get the plain shell (the client 404s them); never another
   // variant's meta.
   if (!isPositionOgVariant(slug)) return null;
-  const copy = positionPageCopy(surface, slug);
+  // A locale prefix is a route only on the spelled-out xiangqi board.
+  if (localePrefix && match[3] !== 'xiangqi') return null;
+  const copy = positionPageCopy(surface, slug, localePrefix);
   const fen = new URLSearchParams(search).get('fen')?.trim();
   const publicFen = fen ? publicPositionFen(slug, fen) : null;
   if (!fen || !publicFen) return { ...copy, urlPath: pathname };
@@ -532,15 +581,17 @@ function queryFreeCanonicalPath(pathname: string): string | null {
   return QUERY_FREE_CANONICAL_ROUTES.has(normalized) ? normalized : null;
 }
 
-/** hreflang links for a route that exists at '', '/zh-hans' and '/zh-hant'. */
+/** hreflang links for a route that exists at '', '/zh-hans' and '/zh-hant',
+ *  with the English URL as x-default (the page for a reader whose language is
+ *  none of the three), as the prerendered blog and rules pages do. */
 function localeAlternateLinks(publicHost: string, basePath: string): string {
-  return (['en', 'zh-hans', 'zh-hant'] as const)
-    .map((slug) => {
-      const href = `${publicHost}${slug === 'en' ? '' : `/${slug}`}${basePath}`;
-      const hreflang = slug === 'en' ? 'en' : slug === 'zh-hans' ? 'zh-Hans' : 'zh-Hant';
-      return `<link rel="alternate" hreflang="${hreflang}" href="${href}">`;
-    })
-    .join('');
+  const links = (['en', 'zh-hans', 'zh-hant'] as const).map((slug) => {
+    const href = `${publicHost}${slug === 'en' ? '' : `/${slug}`}${basePath}`;
+    const hreflang = slug === 'en' ? 'en' : slug === 'zh-hans' ? 'zh-Hans' : 'zh-Hant';
+    return `<link rel="alternate" hreflang="${hreflang}" href="${href}">`;
+  });
+  links.push(`<link rel="alternate" hreflang="x-default" href="${publicHost}${basePath}">`);
+  return links.join('');
 }
 
 // Serves the SPA shell with the matched route's preload hints baked into <head>.
@@ -625,6 +676,11 @@ export async function serveSpaShellWithRoutePreloads(params: {
       '</head>',
       `<link rel="canonical" href="${params.publicHost}${params.pathname}">` +
         `${localeAlternateLinks(params.publicHost, spaMeta.localeGroup)}</head>`,
+    );
+  } else if (spaMeta?.canonicalPath && params.publicHost) {
+    html = html.replace(
+      '</head>',
+      `<link rel="canonical" href="${params.publicHost}${spaMeta.canonicalPath}"></head>`,
     );
   }
   if (player?.meta && params.publicHost) {
@@ -741,6 +797,9 @@ export async function serveStudyPage(params: {
   const slug = params.localeSlug ?? 'en';
   const localePath = slug === 'en' ? '' : `/${slug}`;
   const locale = STUDY_LOCALE_BY_SLUG[slug];
+  // The served language follows the prefix, published or not: /zh-hans/study/:id
+  // said lang="en" until 2026-10-15, to crawlers and screen readers alike.
+  if (locale !== 'en') html = html.replace('<html lang="en">', `<html lang="${locale}">`);
   const study = await (params.getStudy ?? persistence.getStudyById)(params.studyId).catch(
     () => null,
   );
@@ -785,11 +844,14 @@ export async function serveStudyPage(params: {
         `<link rel="canonical" href="${params.publicHost}${localePath}${studyPath}"></head>`,
       );
     } else {
-      // hreflang alternates so the locale variants read as one page in three
-      // languages rather than three competing near-duplicates.
+      // A self canonical plus hreflang alternates, so the locale variants read
+      // as one page in three languages rather than three competing
+      // near-duplicates. The root had alternates and no canonical until
+      // 2026-10-15, which left a crawler to pick between query-string copies.
       html = html.replace(
         '</head>',
-        `${localeAlternateLinks(params.publicHost, studyPath)}</head>`,
+        `<link rel="canonical" href="${params.publicHost}${localePath}${studyPath}">` +
+          `${localeAlternateLinks(params.publicHost, studyPath)}</head>`,
       );
     }
     // oEmbed discovery. A consumer that speaks oEmbed (WordPress, Ghost,
@@ -950,8 +1012,12 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/practice',
   '/zh-hans/practice',
   '/zh-hant/practice',
-  '/analysis',
-  '/editor',
+  '/analysis/xiangqi',
+  '/zh-hans/analysis/xiangqi',
+  '/zh-hant/analysis/xiangqi',
+  '/editor/xiangqi',
+  '/zh-hans/editor/xiangqi',
+  '/zh-hant/editor/xiangqi',
   '/study',
   '/games',
   '/games/search',
@@ -1325,8 +1391,7 @@ export async function serveRulesIndexPage(params: {
   // a crawler that lands on it sees one page in three languages either way.
   html = html.replace(
     '</head>',
-    `<link rel="canonical" href="${url}">${localeAlternateLinks(params.publicHost, '/rules')}` +
-      `<link rel="alternate" hreflang="x-default" href="${params.publicHost}/rules"></head>`,
+    `<link rel="canonical" href="${url}">${localeAlternateLinks(params.publicHost, '/rules')}</head>`,
   );
   params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
   params.response.end(html);

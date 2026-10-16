@@ -74,6 +74,8 @@ export const EDITOR_VARIANTS: readonly EditorVariant[] = ANALYSIS_VARIANTS.filte
  *  404s), including an analysis variant with no editor. */
 export function editorVariantFromPath(path: string): EditorVariantId | null {
   if (path === '/editor') return 'xiangqi';
+  // The xiangqi editor alone has Chinese URLs (摆残局), like the analysis board.
+  if (path === '/zh-hans/editor/xiangqi' || path === '/zh-hant/editor/xiangqi') return 'xiangqi';
   const match = /^\/editor\/([a-z0-9-]+)$/.exec(path);
   if (!match) return null;
   const slug = match[1];

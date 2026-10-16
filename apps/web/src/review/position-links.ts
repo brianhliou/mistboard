@@ -14,14 +14,17 @@
 
 import type { AnalysisVariantId } from '../analysis-catalog.js';
 import type { EditorVariantId } from '../editor/editor-catalog.js';
+import { localizedHref } from '../i18n/locale.js';
 
+// localizedHref keeps a Chinese reader on /zh-hans/analysis/xiangqi; every
+// other variant has one English URL and passes through unchanged.
 export function analysisHref(variant: AnalysisVariantId, fen: string): string {
-  return `/analysis/${variant}?fen=${encodeURIComponent(fen)}`;
+  return localizedHref(`/analysis/${variant}?fen=${encodeURIComponent(fen)}`);
 }
 
 /** EditorVariantId, not AnalysisVariantId: the editor covers a subset of the
  *  catalog, so a review board for a variant with no editor cannot build a
  *  "Board editor" link that would 404 (it omits `boardEditorHref` instead). */
 export function editorHref(variant: EditorVariantId, fen: string): string {
-  return `/editor/${variant}?fen=${encodeURIComponent(fen)}`;
+  return localizedHref(`/editor/${variant}?fen=${encodeURIComponent(fen)}`);
 }

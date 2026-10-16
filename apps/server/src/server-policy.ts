@@ -495,6 +495,9 @@ export function isClientRoute(pathname: string): boolean {
     // catalog as /analysis. Plain client page: no engine, so not a review-shell
     // route.
     /^\/editor(?:\/[a-z0-9-]+)?$/.test(normalized) ||
+    // The xiangqi board and editor in Chinese (象棋AI, 摆残局): xiangqi only, so
+    // a prefixed variant slug still 404s.
+    /^\/(?:zh-hans|zh-hant)\/(?:analysis|editor)\/xiangqi$/.test(normalized) ||
     // /engine/:id is the admin engine-profile SPA page (single segment). Deeper
     // paths like /engine/fairy-stockfish/stockfish.js are vendored ceval assets
     // and MUST fall through to the static handler, not the index.html rewrite.
@@ -568,6 +571,8 @@ export function isReviewShellRoute(pathname: string): boolean {
     /^(?:\/[a-z0-9-]+)?\/game\/[^/]+$/.test(normalized) ||
     /^\/historical-xiangqi\/game\/[^/]+$/.test(normalized) ||
     /^\/analysis(?:\/[a-z0-9-]+)?$/.test(normalized) ||
+    // The Chinese xiangqi board runs the same engine as the English one.
+    /^\/(?:zh-hans|zh-hant)\/analysis\/xiangqi$/.test(normalized) ||
     // Both the bare and locale-prefixed study permalinks mount the ceval engine,
     // so both need the COOP/COEP headers or SharedArrayBuffer silently goes away
     // on the localized URL only.

@@ -31,6 +31,10 @@ describe('analysis catalog', () => {
   it('parses /analysis paths fail-closed', () => {
     expect(analysisVariantFromPath('/analysis')).toBe('xiangqi');
     expect(analysisVariantFromPath('/analysis/xiangqi')).toBe('xiangqi');
+    expect(analysisVariantFromPath('/zh-hans/analysis/xiangqi')).toBe('xiangqi');
+    expect(analysisVariantFromPath('/zh-hant/analysis/xiangqi')).toBe('xiangqi');
+    expect(analysisVariantFromPath('/zh-hans/analysis/banqi')).toBeNull();
+    expect(analysisVariantFromPath('/zh-hans/analysis')).toBeNull();
     expect(analysisVariantFromPath('/analysis/banqi')).toBe('banqi');
     expect(analysisVariantFromPath('/analysis/jungle-flip')).toBe('jungle-flip');
     // Unknown or malformed slugs must return null (404), never another variant.
