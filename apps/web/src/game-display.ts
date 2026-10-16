@@ -360,6 +360,7 @@ const TERMINATION_KEYS: Record<string, I18nKey> = {
   race: 'replay.endRace',
   chasing: 'replay.endChasing',
   'dead-position': 'replay.endDeadPosition',
+  points: 'replay.endPoints',
   'den-entered': 'replay.endDenEntered',
   'pieces-captured': 'replay.endPiecesCaptured',
 };

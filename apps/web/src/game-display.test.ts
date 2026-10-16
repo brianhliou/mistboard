@@ -209,6 +209,8 @@ describe('terminationLabel', () => {
     expect(terminationLabel('king-captured')).toBe('King captured');
     expect(terminationLabel('progress-clock')).toBe('Progress clock');
     expect(terminationLabel('race')).toBe('Den entered');
+    // Xiangqi Mahjong's match win (migration 169), once printed as Checkmate.
+    expect(terminationLabel('points')).toBe('On points');
     expect(terminationLabel('')).toBe('');
   });
 

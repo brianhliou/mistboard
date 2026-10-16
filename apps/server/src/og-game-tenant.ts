@@ -134,6 +134,7 @@ const TERMINATION_PHRASE: Record<string, string> = {
   repetition: 'by repetition',
   'progress-clock': 'by the no-progress rule',
   'den-entered': 'by entering the den',
+  points: 'on points',
 };
 
 /** A seat's score for the card: "1" / "0" for a decided game, "½" for a draw,

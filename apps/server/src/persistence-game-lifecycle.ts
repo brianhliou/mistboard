@@ -27,7 +27,9 @@ export type GameTermination =
   | 'truncated'
   | 'race'
   | 'chasing'
-  | 'dead-position';
+  | 'dead-position'
+  // Xiangqi Mahjong: the match ran its hands and one seat had more points.
+  | 'points';
 export type GameReviewStatus = 'unreviewed' | 'flagged' | 'reviewed' | 'training' | 'rejected';
 export type GameVisibility = 'private' | 'link' | 'unlisted' | 'public';
 

@@ -101,6 +101,7 @@ export function pgnStandardTermination(termination: string): string {
     case 'race':
     case 'chasing':
     case 'dead-position':
+    case 'points':
       return 'normal';
     case 'timeout':
       return 'time forfeit';

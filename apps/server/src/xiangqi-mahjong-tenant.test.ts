@@ -125,14 +125,18 @@ test('two bots play a whole match to a recordable finish', () => {
     if (state.status.type !== 'finished') continue;
     const result = tenant.persistence.resultForWinner(state.status.winner);
     assert.ok(['east-wins', 'west-wins', 'draw'].includes(result));
-    assert.ok(['checkmate', 'draw'].includes(tenant.persistence.termination(state.status.reason)));
+    assert.ok(['points', 'draw'].includes(tenant.persistence.termination(state.status.reason)));
   }
 });
 
 test('every runtime ending maps to a termination, and an unknown one throws', () => {
-  for (const reason of ['points', 'tie', 'timeout', 'resignation', 'abandonment']) {
-    assert.ok(tenant.persistence.termination(reason));
-  }
+  // A match is won on points, never by 'checkmate' (migration 169 added 'points').
+  assert.deepEqual(
+    ['points', 'tie', 'timeout', 'resignation', 'abandonment'].map((reason) =>
+      tenant.persistence.termination(reason),
+    ),
+    ['points', 'draw', 'timeout', 'resignation', 'abandonment'],
+  );
   assert.throws(() => tenant.persistence.termination('exhausted'), /unmapped/);
 });
 
