@@ -1,3 +1,4 @@
+import { setImmediate as yieldToEventLoop } from 'node:timers/promises';
 import {
   ARBITER_ADJUDICATED_DRAWS,
   applyStandardXiangqiMove,
@@ -130,4 +131,29 @@ export function xiangqiBroadcastBoardServes(board: StoredXiangqiBroadcastBoard):
   } catch {
     return false;
   }
+}
+
+// The readout's whole-corpus sweep. It runs in the serving process, so it
+// replays in slices and hands the event loop back between them: on 2026-10-16
+// one synchronous filter over ~2,000 boards (~155k plies) held prod's loop for
+// 16.4s, freezing every room, clock and request on the box. A slice of 20ms
+// keeps the loop-lag p99 well under the 400ms alert while the sweep runs.
+const UNSERVABLE_SWEEP_SLICE_MS = 20;
+
+export async function findUnservableXiangqiBroadcastBoards(
+  boards: readonly StoredXiangqiBroadcastBoard[],
+  options: { serves?: (board: StoredXiangqiBroadcastBoard) => boolean; sliceMs?: number } = {},
+): Promise<StoredXiangqiBroadcastBoard[]> {
+  const serves = options.serves ?? xiangqiBroadcastBoardServes;
+  const sliceMs = options.sliceMs ?? UNSERVABLE_SWEEP_SLICE_MS;
+  const unservable: StoredXiangqiBroadcastBoard[] = [];
+  let sliceStart = performance.now();
+  for (const board of boards) {
+    if (performance.now() - sliceStart >= sliceMs) {
+      await yieldToEventLoop();
+      sliceStart = performance.now();
+    }
+    if (!serves(board)) unservable.push(board);
+  }
+  return unservable;
 }
