@@ -5,7 +5,11 @@
 
 import type { XmjMeld, XmjTile, XmjWinContext } from '@mistboard/game';
 import { activeXiangqiPieceSet } from './articles/diagrams.js';
-import { xmjTileRowSvg as tileRow, type XmjTileGroup } from './xiangqi-mahjong-tile-svg.js';
+import {
+  xmjTileLinesSvg as tileLines,
+  xmjTileRowSvg as tileRow,
+  type XmjTileGroup,
+} from './xiangqi-mahjong-tile-svg.js';
 
 // Every row draws in the article's active piece set, so the page repaints when
 // the reader changes pieces (the raw-svg blocks pass these as thunks).
@@ -60,13 +64,37 @@ export function xmjExampleHand(example: XmjHandExample): {
 
 // --- The tiles ----------------------------------------------------------------
 
-export const XMJ32_RED_TILES: readonly XmjTile[] = ['rK', 'rA', 'rE', 'rR', 'rH', 'rC', 'rP'];
-export const XMJ32_BLACK_TILES: readonly XmjTile[] = ['bK', 'bA', 'bE', 'bR', 'bH', 'bC', 'bP'];
+/**
+ * One side of a xiangqi set as tiles, in rows the reader can take in at phone
+ * width: the General's group, the Chariot's group, the Soldiers. Each piece
+ * appears as often as the set holds it (XMJ_COPIES; the test checks).
+ */
+const sideLines = (c: 'r' | 'b'): XmjTile[][] =>
+  [
+    [`${c}K`, `${c}A`, `${c}A`, `${c}E`, `${c}E`],
+    [`${c}R`, `${c}R`, `${c}H`, `${c}H`, `${c}C`, `${c}C`],
+    [`${c}P`, `${c}P`, `${c}P`, `${c}P`, `${c}P`],
+  ] as XmjTile[][];
 
-export const XMJ32_RED_KINDS = (): string =>
-  xmjTileRowSvg([{ tiles: XMJ32_RED_TILES }], 'The seven red tiles');
-export const XMJ32_BLACK_KINDS = (): string =>
-  xmjTileRowSvg([{ tiles: XMJ32_BLACK_TILES }], 'The seven black tiles');
+export const XMJ32_RED_SIDE: readonly (readonly XmjTile[])[] = sideLines('r');
+export const XMJ32_BLACK_SIDE: readonly (readonly XmjTile[])[] = sideLines('b');
+
+/** A row split into one group per piece kind, so the kinds read apart. */
+const byKind = (tiles: readonly XmjTile[]): XmjTileGroup[] => {
+  const groups: XmjTile[][] = [];
+  for (const tile of tiles) {
+    const last = groups.at(-1);
+    if (last && last[0] === tile) last.push(tile);
+    else groups.push([tile]);
+  }
+  return groups.map((g) => ({ tiles: g }));
+};
+
+const sideSvg = (side: readonly (readonly XmjTile[])[], title: string) => (): string =>
+  tileLines(side.map(byKind), title, activeXiangqiPieceSet);
+
+export const XMJ32_RED_SIDE_SVG = sideSvg(XMJ32_RED_SIDE, 'The sixteen red tiles');
+export const XMJ32_BLACK_SIDE_SVG = sideSvg(XMJ32_BLACK_SIDE, 'The sixteen black tiles');
 
 // --- The four sets ----------------------------------------------------------
 
@@ -179,7 +207,7 @@ export const XMJ32_CLAIM_BEFORE_SVG = (): string =>
   xmjTileRowSvg(
     [
       { tiles: XMJ32_CLAIM_HAND, label: 'your hand' },
-      { tiles: [XMJ32_CLAIM_DISCARD], label: 'discard' },
+      { tiles: [XMJ32_CLAIM_DISCARD], label: 'their discard' },
     ],
     'Your four tiles, and the red Cannon the other player discards',
   );
@@ -189,7 +217,7 @@ export const XMJ32_CLAIM_AFTER_SVG = (): string =>
     [
       { tiles: ['rR', 'rH', XMJ32_CLAIM_DISCARD], label: 'face up', claimed: XMJ32_CLAIM_DISCARD },
       { tiles: ['bE'], label: 'kept' },
-      { tiles: [XMJ32_CLAIM_THROWN], label: 'thrown' },
+      { tiles: [XMJ32_CLAIM_THROWN], label: 'discarded' },
     ],
     'The claimed set face up, the Elephant kept, the Soldier discarded',
   );
@@ -243,3 +271,98 @@ export const XMJ32_WORKED: XmjWinExample = {
 
 export const XMJ32_WORKED_SVG = (): string =>
   xmjTileRowSvg(XMJ32_WORKED.groups, XMJ32_WORKED.title);
+
+// --- A six-hand match --------------------------------------------------------
+
+export type XmjMatchPlayer = 'Ana' | 'Ben';
+
+export interface XmjMatchHand {
+  readonly dealer: XmjMatchPlayer;
+  /** Null: the wall ran out and the hand is void. */
+  readonly winner: XmjMatchPlayer | null;
+  /** How it was won, as the table says it. */
+  readonly how: string;
+  /** The winning hand; the test scores it through xmjScore. Null when void. */
+  readonly win: XmjWinExample | null;
+}
+
+const ON_DISCARD_AS_DEALER = { ...ON_DISCARD, winnerIsDealer: true } as const;
+
+/**
+ * A whole match for the page's table: the deal alternates, two hands are void,
+ * and each win is a real hand whose points the kernel gives.
+ */
+export const XMJ32_MATCH: readonly XmjMatchHand[] = [
+  {
+    dealer: 'Ana',
+    winner: 'Ana',
+    how: 'Ben’s discard, as dealer',
+    win: {
+      id: 'match-1',
+      title: 'General, Advisor, Elephant with two black Horses',
+      groups: [set('rK', 'rA', 'rE'), pair('bH', 'bH')],
+      context: ON_DISCARD_AS_DEALER,
+      expectedLines: ['win', 'dealer'],
+      expectedTotal: 2,
+    },
+  },
+  { dealer: 'Ben', winner: null, how: 'Void: the wall ran out', win: null },
+  {
+    dealer: 'Ana',
+    winner: 'Ben',
+    how: 'Self-draw',
+    win: {
+      id: 'match-3',
+      title: 'Black Chariot, Horse, Cannon with two red Soldiers',
+      groups: [set('bR', 'bH', 'bC'), pair('rP', 'rP')],
+      context: SELF_DRAWN,
+      expectedLines: ['win', 'self-draw'],
+      expectedTotal: 3,
+    },
+  },
+  {
+    dealer: 'Ben',
+    winner: 'Ben',
+    how: 'Ana’s discard, as dealer, one colour',
+    win: {
+      id: 'match-4',
+      title: 'Red Chariot, Horse, Cannon with two red Soldiers',
+      groups: [set('rR', 'rH', 'rC'), pair('rP', 'rP')],
+      context: ON_DISCARD_AS_DEALER,
+      expectedLines: ['win', 'dealer', 'one-colour'],
+      expectedTotal: 3,
+    },
+  },
+  {
+    dealer: 'Ana',
+    winner: 'Ana',
+    how: 'Self-draw on the last tile, as dealer',
+    win: {
+      id: 'match-5',
+      title: 'Three black Soldiers with two red Advisors',
+      groups: [set('bP', 'bP', 'bP'), pair('rA', 'rA')],
+      context: { ...SELF_DRAWN, winnerIsDealer: true, lastTile: true },
+      expectedLines: ['win', 'self-draw', 'dealer', 'last-tile'],
+      expectedTotal: 5,
+    },
+  },
+  { dealer: 'Ben', winner: null, how: 'Void: the wall ran out', win: null },
+];
+
+/** The match as table rows: hand, dealer, winner, how, points, Ana, Ben. */
+export function xmj32MatchRows(): string[][] {
+  const score: Record<XmjMatchPlayer, number> = { Ana: 0, Ben: 0 };
+  return XMJ32_MATCH.map((hand, i) => {
+    const points = hand.win?.expectedTotal ?? 0;
+    if (hand.winner) score[hand.winner] += points;
+    return [
+      String(i + 1),
+      hand.dealer,
+      hand.winner ?? 'Nobody',
+      hand.how,
+      String(points),
+      String(score.Ana),
+      String(score.Ben),
+    ];
+  });
+}

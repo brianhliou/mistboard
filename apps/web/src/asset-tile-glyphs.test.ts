@@ -15,7 +15,7 @@ import {
   piecesDir,
   tileLayerFiles,
 } from '../scripts/asset-tile-glyphs.mjs';
-import { XMJ32_RED_TILES } from './xiangqi-mahjong-32-rules-diagrams.js';
+import { XMJ32_RED_SIDE } from './xiangqi-mahjong-32-rules-diagrams.js';
 import { xmjTileRowSvg } from './xiangqi-mahjong-tile-svg.js';
 import { renderXiangqiPieceMark, xiangqiTileFaceHref } from './xiangqi-piece-sets.js';
 
@@ -123,7 +123,7 @@ describe('asset tile layers', () => {
       );
     }
     // The rules page's tiles follow: the set's surface, clipped to the tile.
-    const row = xmjTileRowSvg([{ tiles: XMJ32_RED_TILES.slice(0, 2) }], 'row', 'wood');
+    const row = xmjTileRowSvg([{ tiles: XMJ32_RED_SIDE.flat().slice(0, 2) }], 'row', 'wood');
     expect(row).toContain('/piece-sets/xiangqi/wood/tile/red-face.svg');
     expect(row).toContain('clip-path="url(#xmj-face-');
     // Each face is drawn square and clipped. Stretched to the tile with
@@ -136,7 +136,7 @@ describe('asset tile layers', () => {
       expect(image.match(/ height="([\d.]+)"/)?.[1]).toBe(w);
     }
     expect(
-      xmjTileRowSvg([{ tiles: XMJ32_RED_TILES.slice(0, 2) }], 'row', 'traditional'),
+      xmjTileRowSvg([{ tiles: XMJ32_RED_SIDE.flat().slice(0, 2) }], 'row', 'traditional'),
     ).not.toContain('face.svg');
     expect(xiangqiTileFaceHref('traditional', 'red')).toBeNull();
     expect(xiangqiTileFaceHref('international', 'black')).toBeNull();

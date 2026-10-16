@@ -104,6 +104,45 @@ function tileSvg(
   ].join('');
 }
 
+/** One line of groups at `y`, starting at `x0`: its parts and right edge. */
+function groupsLine(
+  groups: readonly XmjTileGroup[],
+  x0: number,
+  y: number,
+  pieceSet: XiangqiPieceSet,
+): { parts: string[]; end: number } {
+  let x = x0;
+  const parts: string[] = [];
+  groups.forEach((group, gi) => {
+    if (gi > 0) x += GROUP_GAP - TILE_GAP;
+    const start = x;
+    let claimedDrawn = false;
+    for (const tile of group.tiles) {
+      const isClaimed = !claimedDrawn && group.claimed === tile;
+      if (isClaimed) claimedDrawn = true;
+      parts.push(tileSvg(tile, x, y, isClaimed, pieceSet));
+      x += TILE_W + TILE_GAP;
+    }
+    const end = x - TILE_GAP;
+    if (group.label) {
+      const by = y + TILE_H + DEPTH + 23;
+      parts.push(
+        `<path d="M${start + 2} ${by - 4}V${by}H${end - 2}V${by - 4}" fill="none" stroke="currentColor" stroke-opacity="0.45" stroke-width="1"/>`,
+        `<text x="${(start + end) / 2}" y="${by + 14}" text-anchor="middle" font-size="11" font-style="italic" fill="currentColor" fill-opacity="0.75">${escapeText(group.label)}</text>`,
+      );
+    }
+  });
+  return { parts, end: x - TILE_GAP };
+}
+
+function lineHeight(groups: readonly XmjTileGroup[]): number {
+  return TILE_H + DEPTH + 21 + (groups.some((g) => g.label) ? 26 : 0);
+}
+
+function wrapSvg(width: number, height: number, title: string, body: string): string {
+  return `<svg xmlns="http://www.w3.org/2000/svg" class="xmj-article-tiles" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="${escapeText(title)}" style="max-width:min(100%,${Math.round(width * 1.15)}px);margin:0 auto"><title>${escapeText(title)}</title>${body}</svg>`;
+}
+
 /**
  * A row of tile groups. `title` is the accessible name. The figure keeps its
  * drawn size on wide screens and shrinks to fit a phone.
@@ -113,31 +152,32 @@ export function xmjTileRowSvg(
   title: string,
   pieceSet: XiangqiPieceSet = 'international',
 ): string {
-  const anyLabel = groups.some((g) => g.label);
-  const height = PAD + TILE_H + DEPTH + 21 + (anyLabel ? 26 : 0);
-  let x = PAD;
+  const { parts, end } = groupsLine(groups, PAD, PAD, pieceSet);
+  return wrapSvg(end + PAD, PAD + lineHeight(groups), title, parts.join(''));
+}
+
+/**
+ * Several rows of tile groups stacked in one figure, each row centred on the
+ * widest. For a set too wide for one row at phone width: the figure is as wide
+ * as its longest row, so it shrinks far less on a phone than one long row.
+ */
+export function xmjTileLinesSvg(
+  lines: readonly (readonly XmjTileGroup[])[],
+  title: string,
+  pieceSet: XiangqiPieceSet = 'international',
+): string {
+  const widthOf = (groups: readonly XmjTileGroup[]) =>
+    groups.reduce((w, g) => w + g.tiles.length * (TILE_W + TILE_GAP), 0) -
+    TILE_GAP +
+    (groups.length - 1) * (GROUP_GAP - TILE_GAP);
+  const inner = Math.max(...lines.map(widthOf));
   const parts: string[] = [];
-  groups.forEach((group, gi) => {
-    if (gi > 0) x += GROUP_GAP - TILE_GAP;
-    const start = x;
-    let claimedDrawn = false;
-    for (const tile of group.tiles) {
-      const isClaimed = !claimedDrawn && group.claimed === tile;
-      if (isClaimed) claimedDrawn = true;
-      parts.push(tileSvg(tile, x, PAD, isClaimed, pieceSet));
-      x += TILE_W + TILE_GAP;
-    }
-    const end = x - TILE_GAP;
-    if (group.label) {
-      const by = PAD + TILE_H + DEPTH + 23;
-      parts.push(
-        `<path d="M${start + 2} ${by - 4}V${by}H${end - 2}V${by - 4}" fill="none" stroke="currentColor" stroke-opacity="0.45" stroke-width="1"/>`,
-        `<text x="${(start + end) / 2}" y="${by + 14}" text-anchor="middle" font-size="11" font-style="italic" fill="currentColor" fill-opacity="0.75">${escapeText(group.label)}</text>`,
-      );
-    }
-  });
-  const width = x - TILE_GAP + PAD;
-  return `<svg xmlns="http://www.w3.org/2000/svg" class="xmj-article-tiles" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="${escapeText(title)}" style="max-width:min(100%,${Math.round(width * 1.15)}px);margin:0 auto"><title>${escapeText(title)}</title>${parts.join('')}</svg>`;
+  let y = PAD;
+  for (const groups of lines) {
+    parts.push(...groupsLine(groups, PAD + (inner - widthOf(groups)) / 2, y, pieceSet).parts);
+    y += lineHeight(groups);
+  }
+  return wrapSvg(inner + 2 * PAD, y, title, parts.join(''));
 }
 
 /** Every tile in a list of groups, in the order drawn. */

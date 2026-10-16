@@ -1,13 +1,14 @@
 import {
-  XMJ32_BLACK_KINDS,
+  XMJ32_BLACK_SIDE_SVG,
   XMJ32_CLAIM_AFTER_SVG,
   XMJ32_CLAIM_BEFORE_SVG,
   XMJ32_PAIRS_SVG,
-  XMJ32_RED_KINDS,
+  XMJ32_RED_SIDE_SVG,
   XMJ32_SEQUENCES_SVG,
   XMJ32_SEQUENCES_SVG_2,
   XMJ32_TRIPLETS_SVG,
   XMJ32_WORKED_SVG,
+  xmj32MatchRows,
   xmj32NotWinSvg,
   xmj32WinSvg,
 } from '../../xiangqi-mahjong-32-rules-diagrams.js';
@@ -54,7 +55,7 @@ export const xiangqiMahjong32Article: Article = {
     },
     {
       kind: 'paragraph',
-      text: 'Folk sources play it with two to four people. This page describes the two-player game as Mistboard’s table plays it, with the rules the sources agree on.',
+      text: 'This page describes the two-player game as Mistboard’s table plays it, with the rules the sources agree on.',
     },
   ],
   sections: [
@@ -63,17 +64,15 @@ export const xiangqiMahjong32Article: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The tiles are the 32 pieces of one xiangqi set: sixteen red and sixteen black. Each side has one General, two Advisors, two Elephants, two Chariots, two Horses, two Cannons and five Soldiers. Colour works like a suit in mahjong. A set has to be all red or all black.',
+          text: 'The tiles are exactly one standard xiangqi set, the same 32 pieces you set up on a xiangqi board: sixteen red and sixteen black. Each side has one General, two Advisors, two Elephants, two Chariots, two Horses, two Cannons and five Soldiers. Colour works like a suit in mahjong. A set has to be all red or all black.',
         },
         {
-          kind: 'raw-svg',
-          svg: XMJ32_RED_KINDS,
-          caption: 'The red tiles. One General, five Soldiers, two of every other piece.',
-        },
-        {
-          kind: 'raw-svg',
-          svg: XMJ32_BLACK_KINDS,
-          caption: 'The black tiles, in the same counts.',
+          kind: 'svg-row',
+          items: [
+            { svg: XMJ32_RED_SIDE_SVG, caption: 'The sixteen red tiles.' },
+            { svg: XMJ32_BLACK_SIDE_SVG, caption: 'The sixteen black tiles.' },
+          ],
+          caption: 'All 32 tiles. One General, five Soldiers and two of every other piece on each side.',
         },
         {
           kind: 'paragraph',
@@ -129,6 +128,10 @@ export const xiangqiMahjong32Article: Article = {
           kind: 'paragraph',
           text: 'The dealer starts by discarding one tile, without drawing. From then on, a turn is: draw one tile from the wall, then either declare a win or discard one tile face up. Between turns you always hold four tiles, one short of a hand, and the fifth tile is the one you are waiting for.',
         },
+        {
+          kind: 'paragraph',
+          text: 'If you discard the tile you just drew, it shows shaded in your discard row, so the other player knows you did not keep the new tile. If you discard from your hand instead, they know you kept it, but not which of your tiles you threw: the table always shows the tile leaving from the middle of your hand, never from the place it really sat.',
+        },
       ],
     },
     {
@@ -140,21 +143,29 @@ export const xiangqiMahjong32Article: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Deciding whether to claim takes time from your own clock, and there is no separate claim timer. If you pass, you draw as usual. Every discard pauses for a moment even when you have nothing to claim, so the wait never tells the other player what you hold.',
+          text: 'Deciding whether to claim takes time from your own clock, and there is no separate claim timer. If you pass, you draw as usual.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'After every discard, the table waits about a second and a half before the next draw, whether or not anyone can claim. If it waited only when you could claim, the wait itself would tell the other player that their discard fits your hand.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'Here is a claim in three steps. You hold the red Chariot and Horse, a black Elephant and a black Soldier.',
         },
         {
           kind: 'raw-svg',
           svg: XMJ32_CLAIM_BEFORE_SVG,
-          caption: 'You hold the red Chariot and Horse, a black Elephant and a black Soldier. The other player discards the red Cannon, the tile your sequence is missing.',
+          caption: '1. Their turn: they discard the red Cannon, the tile your sequence is missing.',
         },
         {
           kind: 'raw-svg',
           svg: XMJ32_CLAIM_AFTER_SVG,
-          caption: 'You claim it. Chariot, Horse and Cannon go face up, and you discard the Soldier. One tile is left in your hand: you now need the other black Elephant for the pair.',
+          caption: '2. You claim it instead of drawing. Chariot, Horse and Cannon go face up, the Cannon (blue edge) taken from their discard row, and you discard the Soldier. You keep the black Elephant and need the other one for the pair.',
         },
         win(
           'claimed',
-          'You draw the other black Elephant. A set and a pair: you win, and it scores 3 points for a self-drawn win.',
+          '3. Your next turn: you draw the other black Elephant and win. A set and a pair, self-drawn: 3 points.',
         ),
         {
           kind: 'paragraph',
@@ -171,7 +182,7 @@ export const xiangqiMahjong32Article: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Two wins happen before the hand has really started. If the dealer’s opening five tiles already make a winning hand, that is a heavenly hand. If the other player wins with their first draw, before anyone has claimed a tile, that is an earthly hand.',
+          text: 'Two wins happen before the hand has really started. If the dealer’s opening five tiles already make a winning hand, that is a **heavenly hand**. If the other player wins with their first draw, before anyone has claimed a tile, that is an **earthly hand**.',
         },
       ],
     },
@@ -212,7 +223,7 @@ export const xiangqiMahjong32Article: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Add every line that applies: the hand’s own lines from the pictures above, then how it was won. The heavenly and earthly hands are the exception: each scores 6 and nothing is added.',
+          text: 'Every winning hand scores 1. Add every line marked + that applies: the hand’s own lines from the pictures above, then how it was won.',
         },
         {
           kind: 'table',
@@ -227,6 +238,18 @@ export const xiangqiMahjong32Article: Article = {
             ['Self-draw', '+2', 'You drew the winning tile'],
             ['Dealer', '+1', 'The dealer won'],
             ['Last tile', '+1', 'Self-draw on the last wall tile'],
+          ],
+        },
+        {
+          kind: 'paragraph',
+          text: 'The two special hands are the exception. Each scores a flat 6, and nothing is added to it.',
+        },
+        {
+          kind: 'table',
+          keyColumn: true,
+          compact: true,
+          headers: ['Special hand', 'Points', 'When'],
+          rows: [
             ['Heavenly hand', '6', 'The dealer’s first five tiles win'],
             ['Earthly hand', '6', 'A win on the first draw'],
           ],
@@ -249,14 +272,46 @@ export const xiangqiMahjong32Article: Article = {
           kind: 'paragraph',
           text: 'A match is six hands, and the deal alternates every hand, so each player deals three times. The winner of a hand adds its points to their score, and the other score stays where it was. After six hands the higher score wins the match, and equal scores are a draw.',
         },
+        {
+          kind: 'paragraph',
+          text: 'Here is a whole match between Ana and Ben, with Ana dealing first. Two hands are void, and each win is scored from the table above.',
+        },
+        {
+          kind: 'table',
+          wrap: true,
+          compact: true,
+          headers: ['Hand', 'Dealer', 'Winner', 'How', 'Points', 'Ana', 'Ben'],
+          rows: xmj32MatchRows(),
+          highlightRows: [4],
+        },
+        {
+          kind: 'paragraph',
+          text: 'Ana wins the match 7 to 6. The hand that decided it was the fifth: a self-draw on the last tile while she was dealer, worth 1 for the win, 2 for the self-draw, 1 as dealer and 1 for the last tile.',
+        },
       ],
     },
     {
-      heading: 'Sources',
+      heading: 'Common questions',
       blocks: [
         {
-          kind: 'paragraph',
-          text: 'The game has no rulebook. These rules and the point values follow the Chinese Wikipedia article and the Eastking rule page, which agree, checked against other Taiwanese rule pages and FunTown’s online parlour. Where they are silent we chose: no kongs and no ready declaration, the deal alternating every hand, and the six-hand match, since the sources play for money and give no match format.',
+          kind: 'faq',
+          items: [
+            {
+              question: 'Where do these rules come from?',
+              answer:
+                'The game has no rulebook. The rules and point values here follow the Chinese Wikipedia article and the Eastking rule page, which agree, checked against other Taiwanese rule pages and FunTown’s online parlour. Where they are silent, Mistboard chose: the deal alternates every hand, and a match is six hands, since the sources play for money and give no match format.',
+            },
+            {
+              question: 'Can more than two people play?',
+              answer:
+                'Folk sources play with two to four. With four, 17 tiles are dealt and only 15 stay in the wall, so each player gets about four draws, and claims on the other three players’ discards do much of the work. Mistboard plays the two-player game.',
+            },
+            {
+              question: 'Why is there no kong or ready declaration?',
+              answer:
+                'The sources are silent on both, so Mistboard leaves them out. A kong would hardly come up anyway: it is four identical tiles, and only the Soldiers come in more than two.',
+            },
+          ],
         },
       ],
     },

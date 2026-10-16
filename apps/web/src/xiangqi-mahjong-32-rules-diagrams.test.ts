@@ -1,9 +1,11 @@
 import {
   isXmjPair,
   meldKindOf,
+  tileColor,
   tilePiece,
   XMJ_COPIES,
   XMJ_HAND_SIZE,
+  XMJ_TILE_KINDS,
   type XmjTile,
   xmjLegalClaims,
   xmjScore,
@@ -11,17 +13,21 @@ import {
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import {
-  XMJ32_BLACK_TILES,
+  XMJ32_BLACK_SIDE,
+  XMJ32_BLACK_SIDE_SVG,
   XMJ32_CLAIM_DISCARD,
   XMJ32_CLAIM_HAND,
   XMJ32_CLAIM_THROWN,
+  XMJ32_MATCH,
   XMJ32_NOT_WINS,
   XMJ32_PAIRS,
-  XMJ32_RED_TILES,
+  XMJ32_RED_SIDE,
+  XMJ32_RED_SIDE_SVG,
   XMJ32_SEQUENCES,
   XMJ32_TRIPLETS,
   XMJ32_WINS,
   XMJ32_WORKED,
+  xmj32MatchRows,
   xmj32NotWinSvg,
   xmj32WinSvg,
   xmjExampleHand,
@@ -34,9 +40,17 @@ import {
 const sorted = (tiles: readonly XmjTile[]) => [...tiles].sort();
 
 describe('xiangqi mahjong 32 rules diagrams', () => {
-  it('shows each of the fourteen tile kinds once', () => {
-    expect(new Set([...XMJ32_RED_TILES, ...XMJ32_BLACK_TILES]).size).toBe(14);
-    expect(Object.values(XMJ_COPIES).reduce((a, b) => a + b, 0) * 2).toBe(32);
+  it('draws all 32 tiles: every kind as often as one xiangqi set holds it', () => {
+    const all = [...XMJ32_RED_SIDE.flat(), ...XMJ32_BLACK_SIDE.flat()];
+    expect(all).toHaveLength(32);
+    expect(XMJ32_RED_SIDE.flat().every((t) => tileColor(t) === 'r')).toBe(true);
+    expect(XMJ32_BLACK_SIDE.flat().every((t) => tileColor(t) === 'b')).toBe(true);
+    for (const kind of XMJ_TILE_KINDS) {
+      expect(all.filter((t) => t === kind).length, kind).toBe(XMJ_COPIES[tilePiece(kind)]);
+    }
+    for (const side of [XMJ32_RED_SIDE_SVG, XMJ32_BLACK_SIDE_SVG]) {
+      expect(side().match(/<text [^>]*text-anchor="middle" font-size="10.5"/g)).toHaveLength(16);
+    }
   });
 
   it('draws only real sets and pairs in the sets section', () => {
@@ -48,7 +62,9 @@ describe('xiangqi mahjong 32 rules diagrams', () => {
     }
   });
 
-  for (const example of [...XMJ32_WINS, XMJ32_WORKED]) {
+  const matchWins = XMJ32_MATCH.flatMap((h) => (h.win ? [h.win] : []));
+
+  for (const example of [...XMJ32_WINS, XMJ32_WORKED, ...matchWins]) {
     it(`${example.id}: wins with the drawn set and pair, and scores as captioned`, () => {
       const { concealed, melds } = xmjExampleHand(example);
       expect(concealed.length + melds.length * 3).toBe(XMJ_HAND_SIZE);
@@ -86,7 +102,7 @@ describe('xiangqi mahjong 32 rules diagrams', () => {
   }
 
   it('every hand uses no tile more often than the set holds it', () => {
-    for (const example of [...XMJ32_WINS, ...XMJ32_NOT_WINS, XMJ32_WORKED]) {
+    for (const example of [...XMJ32_WINS, ...XMJ32_NOT_WINS, XMJ32_WORKED, ...matchWins]) {
       const counts = new Map<XmjTile, number>();
       for (const g of example.groups)
         for (const t of g.tiles) counts.set(t, (counts.get(t) ?? 0) + 1);
@@ -116,5 +132,40 @@ describe('xiangqi mahjong 32 rules diagrams', () => {
     const { concealed, melds } = xmjExampleHand(claimed);
     expect(melds[0]?.tiles).toEqual(['rR', 'rH', XMJ32_CLAIM_DISCARD]);
     expect(sorted(concealed)).toEqual(sorted([...kept, 'bE']));
+  });
+
+  it('plays the match as the rules say: six hands, the deal alternating', () => {
+    expect(XMJ32_MATCH).toHaveLength(6);
+    XMJ32_MATCH.forEach((hand, i) => {
+      expect(hand.dealer).toBe(i % 2 === 0 ? 'Ana' : 'Ben');
+      expect(hand.winner === null).toBe(hand.win === null);
+      if (!hand.win) {
+        expect(hand.how).toMatch(/^Void/);
+        return;
+      }
+      const ctx = hand.win.context;
+      expect(ctx.winnerIsDealer, `hand ${i + 1}`).toBe(hand.winner === hand.dealer);
+      expect(ctx.selfDrawn, `hand ${i + 1}`).toBe(hand.how.startsWith('Self-draw'));
+      expect(ctx.lastTile).toBe(hand.how.includes('last tile'));
+      expect(hand.how.includes('as dealer')).toBe(ctx.winnerIsDealer);
+      expect(hand.how.includes('one colour')).toBe(hand.win.expectedLines.includes('one-colour'));
+      if (!ctx.selfDrawn) {
+        expect(hand.how.startsWith(`${hand.winner === 'Ana' ? 'Ben' : 'Ana'}’s discard`)).toBe(
+          true,
+        );
+      }
+    });
+  });
+
+  it('adds the match up to the result the page states', () => {
+    const rows = xmj32MatchRows();
+    const totals = { Ana: 0, Ben: 0 };
+    for (const hand of XMJ32_MATCH) {
+      if (!hand.win || !hand.winner) continue;
+      const { concealed, melds } = xmjExampleHand(hand.win);
+      totals[hand.winner] += xmjScore({ concealed, melds, ...hand.win.context }).total;
+    }
+    expect(rows.at(-1)?.slice(5)).toEqual([String(totals.Ana), String(totals.Ben)]);
+    expect(totals).toEqual({ Ana: 7, Ben: 6 });
   });
 });
