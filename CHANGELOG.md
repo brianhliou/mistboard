@@ -76,6 +76,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- The jieqi rules page and articles now point to AB-JChess, the strongest jieqi bot on the site ([4f480534](https://github.com/brianhliou/mistboard/commit/4f480534))
 - New article, [Lichess Analysis: What a Million Nodes a Move Buys](/blog/lichess-analysis-accuracy): 300 games re-run at twenty times Lichess's analysis budget, and what the deeper search changes ([a254d56e](https://github.com/brianhliou/mistboard/commit/a254d56e))
 - Step-through boards in articles now slide the piece that moved (banqi chase, Benedict and Anti Xiangqi); fog of war boards stay still ([48b1258e](https://github.com/brianhliou/mistboard/commit/48b1258e))
 - Step-through boards in articles now slide the piece that moved (banqi chase, Benedict and Anti Xiangqi); fog of war boards stay still ([ba7d8d8a](https://github.com/brianhliou/mistboard/commit/ba7d8d8a))
@@ -227,6 +228,9 @@ Conventions:
 
 ### Fixed
 
+- a finished Jieqi game no longer shows anyone a piece captured face-down or never revealed, on the game page, in downloads or on share cards ([4f480534](https://github.com/brianhliou/mistboard/commit/4f480534))
+- Jieqi game analysis is computed only from what both players saw ([4f480534](https://github.com/brianhliou/mistboard/commit/4f480534))
+- the puzzles page no longer jumps while the first puzzle loads ([4f480534](https://github.com/brianhliou/mistboard/commit/4f480534))
 - Crazyhouse Xiangqi now marks the general in check, and move lists show the elephant as E instead of B ([0de59972](https://github.com/brianhliou/mistboard/commit/0de59972))
 - The banqi bot now picks its best allowed move when the perpetual chase rule forbids its first choice ([0de59972](https://github.com/brianhliou/mistboard/commit/0de59972))
 - Hand-typed /game and /embed/game links to a Xiangqi Mahjong or mahjong game no longer show a broken page ([629657e2](https://github.com/brianhliou/mistboard/commit/629657e2))
