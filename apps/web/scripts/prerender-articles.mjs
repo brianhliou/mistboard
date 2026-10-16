@@ -15,6 +15,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Window } from 'happy-dom';
 import { createServer } from 'vite';
+import { prerenderedCssMisses } from './prerender-css-coverage.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const distDir = resolve(__dirname, '..', 'dist');
@@ -161,6 +162,49 @@ function routeAssetLinks(manifest, entryId, shellHtml) {
   for (const file of js) {
     if (shellHtml.includes(file)) continue; // the entry script itself
     links.push(`<link rel="modulepreload" crossorigin href="/${file}">`);
+  }
+  return links.join('');
+}
+
+// The article layout (rail, sheet, TOC grid: articles.css and the board styles
+// its diagrams use) lives in the chunk pages-static.ts reaches through
+// `import('./articles.js')`, a dynamic import the static walk above stops at.
+// Unlinked, every baked /rules and /blog page painted unstyled and then snapped
+// into its grid once that chunk injected its CSS. The CSS order is Vite's own
+// preload order (a chunk's imports before its own CSS), so the cascade matches
+// a client-side visit.
+function dynamicChunkAssetLinks(manifest, ownerId, chunkName, alreadyLinked) {
+  const key = (manifest[ownerId]?.dynamicImports ?? []).find(
+    (id) => manifest[id]?.name === chunkName,
+  );
+  if (!key) {
+    throw new Error(
+      `prerender: no "${chunkName}" chunk among ${ownerId}'s dynamic imports in the build manifest`,
+    );
+  }
+  const css = [];
+  const js = [];
+  const seen = new Set();
+  const walk = (id) => {
+    if (seen.has(id)) return;
+    seen.add(id);
+    const node = manifest[id];
+    if (!node) return;
+    if (node.file) js.push(node.file);
+    for (const dep of node.imports ?? []) walk(dep);
+    for (const file of node.css ?? []) if (!css.includes(file)) css.push(file);
+  };
+  walk(key);
+  const links = [];
+  for (const file of css) {
+    if (!alreadyLinked.includes(file)) {
+      links.push(`<link rel="stylesheet" crossorigin href="/${file}">`);
+    }
+  }
+  for (const file of js) {
+    if (!alreadyLinked.includes(file)) {
+      links.push(`<link rel="modulepreload" crossorigin href="/${file}">`);
+    }
   }
   return links.join('');
 }
@@ -387,7 +431,10 @@ try {
   const manifest = JSON.parse(
     await fs.readFile(resolve(distDir, '.vite', 'manifest.json'), 'utf-8'),
   );
-  const articleAssetLinks = routeAssetLinks(manifest, 'src/pages-static.ts', shell);
+  const pagesStaticLinks = routeAssetLinks(manifest, 'src/pages-static.ts', shell);
+  const articleAssetLinks =
+    pagesStaticLinks +
+    dynamicChunkAssetLinks(manifest, 'src/pages-static.ts', 'articles', shell + pagesStaticLinks);
   const landingAssetLinks = routeAssetLinks(manifest, 'src/landing.ts', shell);
 
   await writeRoutePreloadManifest(manifest, shell);
@@ -1154,6 +1201,18 @@ try {
   );
   await fs.writeFile(resolve(distDir, 'patron.html'), patronHtml, 'utf-8');
   console.log('prerendered /patron (patron.html)');
+
+  // Every baked page must link the stylesheets that style its markup, or it
+  // paints unstyled until a lazy chunk brings them (the /rules flash, 10-16).
+  // Fix a miss by linking the chunk that renders the page (dynamicChunkAssetLinks
+  // above) or by importing the CSS from the module that emits the class.
+  const cssCheck = await prerenderedCssMisses(distDir);
+  if (cssCheck.lines.length) {
+    throw new Error(
+      `prerendered pages missing stylesheets that style their markup:\n  ${cssCheck.lines.join('\n  ')}`,
+    );
+  }
+  console.log(`css check: ${cssCheck.pages} baked pages link every stylesheet that styles them`);
 } catch (err) {
   console.error('prerender failed:', err);
   process.exitCode = 1;
