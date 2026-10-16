@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import {
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
   DAYS_PER_MOVE_OPTIONS,
+  GAME_SPECS,
   type GameSpecId,
   isRetiredGameSpec,
   MAHJONG_SPEC_ID,
@@ -11,6 +12,7 @@ import {
   XIANGQI_MAHJONG_SPEC_ID,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
+import { articles } from './articles-data.js';
 import {
   type LandingRoomSetup,
   roomCreationGameSpecId,
@@ -18,6 +20,7 @@ import {
 } from './landing-play.js';
 import { panelPersonPaces } from './landing-play-panel.js';
 import { buildReviewMeta } from './review/game-review-meta.js';
+import { gameSpecIdFromRulesSlug, rulesSlugForGameSpec } from './variant-public-surfaces.js';
 import { finishedGameHref, webVariantTenants } from './variant-tenant/registry.js';
 import { roomMarkerId } from './variant-tenant/room-chrome.js';
 import { variantMiniIdForGameSpec } from './variants.js';
@@ -211,5 +214,22 @@ describe('finished-game link conformance', () => {
       }
     }
     expect(finishedGameHref('xmj_finished1', XIANGQI_MAHJONG_SPEC_ID)).toBe('/room/xmj_finished1');
+  });
+});
+
+describe('rules link conformance', () => {
+  // A meta card, a review page and a rules page's play button all link a variant
+  // to rulesHrefForGameSpec. A variant whose rules page has a different slug
+  // must say so (RULES_GAME_SPEC_BY_SLUG), or the link 404s the day it goes
+  // public. `chess` is study-only: /rules/chess is the primer, not its page.
+  it('every live variant links to a rules page that exists and points back', () => {
+    const rulesSlugs = new Set(articles.filter((a) => a.kind === 'rules').map((a) => a.slug));
+    for (const spec of GAME_SPECS) {
+      if (isRetiredGameSpec(spec.id) || spec.id === 'chess') continue;
+      const slug = rulesSlugForGameSpec(spec.id);
+      expect(rulesSlugs.has(slug), `${spec.id}: no /rules/${slug}`).toBe(true);
+      expect(gameSpecIdFromRulesSlug(slug), slug).toBe(spec.id);
+    }
+    expect(rulesSlugForGameSpec(XIANGQI_MAHJONG_SPEC_ID)).toBe('xiangqi-mahjong-32');
   });
 });
