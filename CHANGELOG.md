@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- Xiangqi and jieqi bots now take a moment to think before replying, longer in complex positions and quick when the move is obvious ([3a0dd19d](https://github.com/brianhliou/mistboard/commit/3a0dd19d))
 - International pieces have smooth edges, with one even line width on the chariot, advisor and cannon ([cd5acfaa](https://github.com/brianhliou/mistboard/commit/cd5acfaa))
 - the last-move ring now hugs the outside of the moved piece, sits under it, and travels with the piece as it moves ([cd5acfaa](https://github.com/brianhliou/mistboard/commit/cd5acfaa))
 - a checkmate now draws a red slash through the mated general instead of the game-over badges ([cd5acfaa](https://github.com/brianhliou/mistboard/commit/cd5acfaa))
@@ -165,6 +166,7 @@ Conventions:
 
 ### Site
 
+- the blog filters by topic (/blog?topic=deep-dives), and the homepage's deep dives row links there once it has more posts than it shows ([3a0dd19d](https://github.com/brianhliou/mistboard/commit/3a0dd19d))
 - New look for the International pieces: one dark ring on both sides, larger pieces, rounded squares on the Square grid, and a clearer last-move mark on the grid ([a4820b25](https://github.com/brianhliou/mistboard/commit/a4820b25))
 - The homepage's three rows sit closer together ([9ffca9cf](https://github.com/brianhliou/mistboard/commit/9ffca9cf))
 - New games can start during a release once live games have finished, and computer games (except Fog of War and Mahjong) can start throughout it ([9ffca9cf](https://github.com/brianhliou/mistboard/commit/9ffca9cf))

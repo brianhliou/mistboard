@@ -186,7 +186,11 @@ describe('landing shell', () => {
     expect(
       latest?.querySelector('.landing-row-header a.landing-row-more')?.getAttribute('href'),
     ).toBe('/blog');
-    expect(deepDives?.querySelector('.landing-row-more')).toBeNull();
+    // The deep-dives row links on only while it holds posts back, which depends on
+    // the live corpus (blog-topic-filter.test.ts pins when it shows); when it
+    // does, it opens the filtered blog, not the whole index.
+    const divesMore = deepDives?.querySelector('.landing-row-more');
+    if (divesMore) expect(divesMore.getAttribute('href')).toBe('/blog?topic=deep-dives');
     expect(demo?.querySelector('.landing-learn-row')).toBeNull();
     expect(demo?.querySelector('.landing-left-column .landing-board-column')).not.toBeNull();
     // The support/store pair left the homepage (patronage stays in the nav).

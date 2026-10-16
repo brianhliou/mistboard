@@ -35,6 +35,7 @@ import {
   reportEngineMoveOk,
   resolveValidatedEngineMove,
 } from './engine-move-guard.js';
+import { replyPace, replyPacePayload, sleepMs } from './engine-reply-pacing.js';
 import { budgetForMove } from './engine-time-budget.js';
 import { logger } from './obs.js';
 import type { UciEval } from './uci-engine-harness.js';
@@ -91,6 +92,12 @@ export function xiangqiEngineSeatFor(room: XiangqiEngineRoom): XiangqiColor | nu
     if (isXiangqiEngineClientId(room.projection.seats[seat])) return seat;
   }
   return null;
+}
+
+function xiangqiEngineSeatCount(room: XiangqiEngineRoom): number {
+  return (['red', 'black'] as const).filter((seat) =>
+    isXiangqiEngineClientId(room.projection.seats[seat]),
+  ).length;
 }
 
 export function scheduleXiangqiEngineMove(
@@ -256,6 +263,27 @@ export async function playXiangqiEngineMoveIfReady(
     chosen = guarded;
   }
 
+  // Hold the move so the player sees their own land first (#389). The wait is on
+  // the bot's clock; anything that ends or pauses the turn meanwhile drops the move.
+  const stateAtTurn = room.projection.state;
+  // Assigned inside requestMove, which control-flow narrowing does not follow.
+  const search = lastSearch as UciEval | null;
+  const pace = replyPace({
+    roomId: room.id,
+    ply: history.length,
+    legalCount: legalMoves.length,
+    cp: search?.cp ?? null,
+    mate: search?.mate ?? null,
+    remainingMs,
+    incrementMs,
+    computeMs: thinkTimeMs,
+    engineVsEngine: xiangqiEngineSeatCount(room) === 2,
+  });
+  if (pace.waitMs > 0) {
+    await sleepMs(pace.waitMs);
+    if (room.projection.state !== stateAtTurn || !engineToMove(room, seat)) return;
+  }
+
   const event: TenantRoomEvent<XiangqiColor, XiangqiMove, XiangqiSpecId> = {
     type: 'move-played',
     at: Date.now(),
@@ -266,14 +294,14 @@ export async function playXiangqiEngineMoveIfReady(
   // Queue BEFORE the append: if this move mates, the tenant event writer records
   // the game end and flushes the queue inside the same append, and a decision
   // queued afterwards would never be written.
-  queueEngineDecision(
-    room,
-    buildXiangqiEngineDecisionPayload({
+  queueEngineDecision(room, {
+    ...buildXiangqiEngineDecisionPayload({
       ...decisionBase,
       move: xiangqiMoveToPikafishUci(chosen),
       guardReplaced: guarded !== validated,
     }),
-  );
+    ...replyPacePayload(pace),
+  });
   const seq = await ctx.appendEvent(room, event);
   ctx.broadcastEventAppended(room, event, seq);
 }

@@ -28,6 +28,7 @@ import {
   reportEngineMoveOk,
   resolveValidatedEngineMove,
 } from './engine-move-guard.js';
+import { replyPace, replyPacePayload, sleepMs } from './engine-reply-pacing.js';
 import { budgetForMove } from './engine-time-budget.js';
 import { guardJieqiRuleEnding, type JieqiDrawGuardResult } from './jieqi-draw-guard.js';
 import {
@@ -74,6 +75,12 @@ type JieqiEngineContext = TenantLifecycleContext<
   JieqiSpecId,
   JieqiEngineRoom
 >;
+
+function jieqiEngineSeatCount(room: JieqiEngineRoom): number {
+  return (['red', 'black'] as const).filter((seat) =>
+    isJieqiEngineClientId(room.projection.seats[seat]),
+  ).length;
+}
 
 export function jieqiEngineSeatFor(room: JieqiEngineRoom): JieqiColor | null {
   for (const seat of ['red', 'black'] as const) {
@@ -393,6 +400,29 @@ export async function playJieqiEngineMoveIfReady(
     },
     'Jieqi engine move accepted',
   );
+
+  // Hold the move so the player sees their own land first (#389). The wait is on
+  // the bot's clock; anything that ends or pauses the turn meanwhile drops the move.
+  // Assigned inside requestMove, which control-flow narrowing does not follow.
+  const playedSearch = lastSearch as UciEval | null;
+  const legalCount = getJieqiLegalMoves(room.projection.state).length;
+  const computeMs = Date.now() - startedAt;
+  const pace = replyPace({
+    roomId: room.id,
+    ply: gameMoves.length,
+    legalCount,
+    cp: playedSearch?.cp ?? null,
+    mate: playedSearch?.mate ?? null,
+    remainingMs,
+    incrementMs,
+    computeMs,
+    engineVsEngine: jieqiEngineSeatCount(room) === 2,
+  });
+  if (pace.waitMs > 0) {
+    await sleepMs(pace.waitMs);
+    if (room.projection.state !== stateAtTurn || !engineToMove(room, seat)) return;
+  }
+
   const event: TenantRoomEvent<JieqiColor, JieqiMove, JieqiSpecId> = {
     type: 'move-played',
     at: Date.now(),
@@ -406,9 +436,8 @@ export async function playJieqiEngineMoveIfReady(
   // live-only and dies with the container; this is the durable copy, and it adds
   // the depth the search reached — the one number that says whether a depth-capped
   // rung is actually searching to its cap.
-  queueEngineDecision(
-    room,
-    buildLiveEngineDecisionPayload({
+  queueEngineDecision(room, {
+    ...buildLiveEngineDecisionPayload({
       variant: 'jieqi',
       roomId: room.id,
       engineId,
@@ -425,16 +454,17 @@ export async function playJieqiEngineMoveIfReady(
       // The engine's own search: with guard_replaced, `engine_move` is the move the
       // guard turned down and `guard_detail` carries the re-search that replaced it.
       search: lastSearch,
-      thinkTimeMs: Date.now() - startedAt,
+      thinkTimeMs: computeMs,
       attempts,
       move: jieqiMoveToPikafishUci(validated),
       fen,
-      legalCount: getJieqiLegalMoves(room.projection.state).length,
+      legalCount,
       guardReplaced: drawGuard?.replaced ?? false,
       guardReason: drawGuard?.reason ?? null,
       guardDetail: drawGuard?.detail ?? null,
     }),
-  );
+    ...replyPacePayload(pace),
+  });
   const seq = await ctx.appendEvent(room, event);
   ctx.broadcastEventAppended(room, event, seq);
 }

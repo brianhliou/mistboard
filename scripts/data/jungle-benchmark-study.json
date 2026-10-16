@@ -1,9 +1,29 @@
 {
   "name": "MistyJungle benchmark games, June 2026",
+  "i18n": {
+    "zh-Hans": {
+      "name": "MistyJungle 基准对局，2026 年 6 月",
+      "description": "brianhliou.com 上《斗兽棋：传统搜索击败学习型评估》一文所用的对局：MistyJungle 对上它能匹配到的最强传统引擎，以及它以每着 800 万节点自我对弈。对局采用 Mistboard 在 2026 年 9 月之前使用的虎只能纵向跳河的规则；按现行规则，每一步依然合法。"
+    },
+    "zh-Hant": {
+      "name": "MistyJungle 基準對局，2026 年 6 月",
+      "description": "brianhliou.com 上《鬥獸棋：傳統搜尋擊敗學習型評估》一文所用的對局：MistyJungle 對上牠能匹配到的最強傳統引擎，以及牠以每著 800 萬節點自我對弈。對局採用 Mistboard 在 2026 年 9 月之前使用的虎只能縱向跳河的規則；按現行規則，每一步依然合法。"
+    }
+  },
   "description": "The games behind \"Dou Shou Qi: Classical Search Beat the Learned Eval\" on brianhliou.com: MistyJungle against the strongest classical engine it could be matched with, and against itself at 8M nodes. Played under the lengthwise-only tiger rule Mistboard used until September 2026; every move stays legal under the current rule.",
   "games": [
     {
       "name": "MistyJungle wins, up 82 and a lion in red's den",
+      "i18n": {
+        "name": {
+          "zh-Hans": "MistyJungle 领先 82 分，狮入红方兽穴获胜",
+          "zh-Hant": "MistyJungle 領先 82 分，獅入紅方獸穴獲勝"
+        },
+        "comment": {
+          "zh-Hans": "MistyJungle（执黑）对我能运行的最强开源引擎。MistyJungle 领先 82 分，狮入红方兽穴获胜。共 104 步。对局在 2026 年 6 月进行，当时 Mistboard 上的虎只能纵向跳河。",
+          "zh-Hant": "MistyJungle（執黑）對我能執行的最強開源引擎。MistyJungle 領先 82 分，獅入紅方獸穴獲勝。共 104 步。對局在 2026 年 6 月進行，當時 Mistboard 上的虎只能縱向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g3g4",
@@ -122,6 +142,16 @@
     },
     {
       "name": "MistyJungle reaches red's den after an 80-ply squeeze",
+      "i18n": {
+        "name": {
+          "zh-Hans": "MistyJungle 经过 80 步的挤压后进入红方兽穴",
+          "zh-Hant": "MistyJungle 經過 80 步的擠壓後進入紅方獸穴"
+        },
+        "comment": {
+          "zh-Hans": "保存的基准对局：MistyJungle 执黑。MistyJungle 经过 80 步的挤压后进入红方兽穴。共 80 步。对局在 2026 年 6 月进行，当时 Mistboard 上的虎只能纵向跳河。",
+          "zh-Hant": "保存的基準對局：MistyJungle 執黑。MistyJungle 經過 80 步的擠壓後進入紅方獸穴。共 80 步。對局在 2026 年 6 月進行，當時 Mistboard 上的虎只能縱向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "e3f3",
@@ -216,6 +246,16 @@
     },
     {
       "name": "MistyJungle wins the den race despite losing material",
+      "i18n": {
+        "name": {
+          "zh-Hans": "MistyJungle 子力落后，仍赢下入穴竞赛",
+          "zh-Hant": "MistyJungle 子力落後，仍贏下入穴競賽"
+        },
+        "comment": {
+          "zh-Hans": "保存的基准对局：MistyJungle 执红。MistyJungle 子力落后，仍赢下入穴竞赛。共 57 步。对局在 2026 年 6 月进行，当时 Mistboard 上的虎只能纵向跳河。",
+          "zh-Hant": "保存的基準對局：MistyJungle 執紅。MistyJungle 子力落後，仍贏下入穴競賽。共 57 步。對局在 2026 年 6 月進行，當時 Mistboard 上的虎只能縱向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "f2f3",
@@ -287,6 +327,16 @@
     },
     {
       "name": "MistyJungle grinds out a long red win and reaches the den",
+      "i18n": {
+        "name": {
+          "zh-Hans": "MistyJungle 执红磨出一盘长局，最终入穴",
+          "zh-Hant": "MistyJungle 執紅磨出一盤長局，最終入穴"
+        },
+        "comment": {
+          "zh-Hans": "保存的基准对局：漫长的兑现。MistyJungle 执红磨出一盘长局，最终入穴。共 283 步。对局在 2026 年 6 月进行，当时 Mistboard 上的虎只能纵向跳河。",
+          "zh-Hant": "保存的基準對局：漫長的兌現。MistyJungle 執紅磨出一盤長局，最終入穴。共 283 步。對局在 2026 年 6 月進行，當時 Mistboard 上的虎只能縱向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g3g2",
@@ -584,6 +634,16 @@
     },
     {
       "name": "Red converts a one-piece edge, lion into the den",
+      "i18n": {
+        "name": {
+          "zh-Hans": "红方兑现一子优势，狮入兽穴",
+          "zh-Hant": "紅方兌現一子優勢，獅入獸穴"
+        },
+        "comment": {
+          "zh-Hans": "MistyJungle 以每着 800 万节点自我对弈。红方兑现一子优势，狮入兽穴。共 109 步。对局在 2026 年 6 月进行，当时 Mistboard 上的虎只能纵向跳河。",
+          "zh-Hant": "MistyJungle 以每著 800 萬節點自我對弈。紅方兌現一子優勢，獅入獸穴。共 109 步。對局在 2026 年 6 月進行，當時 Mistboard 上的虎只能縱向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a3b3",
@@ -707,6 +767,16 @@
     },
     {
       "name": "Down 16 in material, red's rat reaches the den first",
+      "i18n": {
+        "name": {
+          "zh-Hans": "红方子力落后 16 分，鼠先一步入穴",
+          "zh-Hant": "紅方子力落後 16 分，鼠先一步入穴"
+        },
+        "comment": {
+          "zh-Hans": "MistyJungle 以每着 800 万节点自我对弈。红方子力落后 16 分，鼠先一步入穴。共 93 步。对局在 2026 年 6 月进行，当时 Mistboard 上的虎只能纵向跳河。",
+          "zh-Hant": "MistyJungle 以每著 800 萬節點自我對弈。紅方子力落後 16 分，鼠先一步入穴。共 93 步。對局在 2026 年 6 月進行，當時 Mistboard 上的虎只能縱向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "c3c2",
