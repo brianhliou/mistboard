@@ -7,11 +7,12 @@ import {
   DARK_CHESS_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
+  XIANGQI_MAHJONG_SPEC_ID,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import { buildFinishedTile, buildSeatRow, paintSeatDiscs } from './current-games.js';
 import type { CurrentGamePlayer } from './current-games-model.js';
-import { payloadFirstColor } from './flip-seat-ink.js';
+import { payloadFirstColor, variantSeatsHaveInk } from './flip-seat-ink.js';
 import type { FeaturedGame, GameParticipant } from './game-display.js';
 
 function participant(color: GameParticipant['color'], displayName: string): GameParticipant {
@@ -137,6 +138,38 @@ describe('live and correspondence seat rows', () => {
     expect(discInk(card.querySelector('[data-color="red"]'))).toBe('black');
     expect(discInk(card.querySelector('[data-color="black"]'))).toBe('red');
     expect(card.dataset.seatInkFamily).toBe('jungle');
+  });
+});
+
+// Xiangqi Mahjong seats players by wind and has no colours, so an ink disc is
+// an empty grey circle that claims a colour the game does not have.
+describe('a variant with colourless seats', () => {
+  it('reads Xiangqi Mahjong (and only the mahjong family) as having no seat ink', () => {
+    expect(variantSeatsHaveInk(XIANGQI_MAHJONG_SPEC_ID)).toBe(false);
+    expect(variantSeatsHaveInk('xiangqi')).toBe(true);
+    expect(variantSeatsHaveInk(JUNGLE_FLIP_SPEC_ID)).toBe(true);
+  });
+
+  it('draws no disc on a just-finished Xiangqi Mahjong tile, names kept', () => {
+    const tile = buildFinishedTile(
+      finishedGame({
+        variant: XIANGQI_MAHJONG_SPEC_ID,
+        result: 'east-wins',
+        termination: 'points',
+        participants: [participant('east', 'Ann'), participant('west', 'Bo')],
+      }),
+    );
+    expect(tile.querySelector('.seat-disc')).toBeNull();
+    const names = [...tile.querySelectorAll('.current-game-finished-seat-name')].map(
+      (el) => el.textContent,
+    );
+    expect(names.sort()).toEqual(['Ann', 'Bo']);
+  });
+
+  it('draws no disc on a live seat row whose variant has no ink', () => {
+    const row = buildSeatRow(player('east', 'Ann'), {}, false);
+    expect(row.querySelector('.seat-disc')).toBeNull();
+    expect(row.querySelector('.current-game-seat-name')?.textContent).toContain('Ann');
   });
 });
 

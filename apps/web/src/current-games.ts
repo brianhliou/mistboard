@@ -55,7 +55,12 @@ import {
   splitSections,
 } from './current-games-model.js';
 import { watchQueueResultLabel } from './finished-result-label.js';
-import { type FlipSeat, payloadFirstColor, seatInkForVariant } from './flip-seat-ink.js';
+import {
+  type FlipSeat,
+  payloadFirstColor,
+  seatInkForVariant,
+  variantSeatsHaveInk,
+} from './flip-seat-ink.js';
 import {
   displayLiveName,
   displayParticipantName,
@@ -345,8 +350,9 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
     const [top, bottom] = seatOrder(game);
     const clockEls: Record<string, HTMLElement> = {};
     const firstColor = payloadFirstColor(game.payload);
-    const ink = (seat: CurrentGamePlayer | null): string | null =>
-      seat ? seatInkForVariant(game.gameSpecId, seat.color, firstColor) : null;
+    const hasInk = variantSeatsHaveInk(game.gameSpecId);
+    const ink = (seat: CurrentGamePlayer | null): string | null | false =>
+      !hasInk ? false : seat ? seatInkForVariant(game.gameSpecId, seat.color, firstColor) : null;
     const topRow = buildSeatRow(top, clockEls, ink(top));
     const boardRoot = document.createElement('div');
     boardRoot.className = 'current-game-board';
@@ -693,18 +699,19 @@ function seatOrder(game: CurrentGame): [CurrentGamePlayer | null, CurrentGamePla
 }
 
 // `ink` is the colour the seat plays (seatInkForVariant), drawn as the shared
-// seat disc /watch uses; null is a flip game before its flip, a dashed ring.
+// seat disc /watch uses; null is a flip game before its flip, a dashed ring;
+// false is a variant whose seats have no colour (Xiangqi Mahjong), so no disc.
 export function buildSeatRow(
   player: CurrentGamePlayer | null,
   clockEls: Record<string, HTMLElement>,
-  ink: string | null,
+  ink: string | null | false,
 ): HTMLElement {
   const row = document.createElement('div');
   row.className = 'current-game-seat';
   if (player) row.dataset.color = player.color;
   const who = document.createElement('span');
   who.className = 'current-game-seat-who';
-  if (player) who.append(seatDiscEl(ink, 'current-game-seat-disc'));
+  if (player && ink !== false) who.append(seatDiscEl(ink, 'current-game-seat-disc'));
   who.append(
     playerNameEl(
       displayLiveName(player?.name, t('games.guest')),
@@ -1012,13 +1019,15 @@ function finishedSeatRow(
   const label = document.createElement('span');
   label.className = 'current-game-finished-seat-name';
   label.textContent = name;
-  row.append(
-    seatDiscEl(
-      seatInkForVariant(game.variant, color, game.firstColor ?? null),
-      'current-game-seat-disc',
-    ),
-    label,
-  );
+  if (variantSeatsHaveInk(game.variant)) {
+    row.append(
+      seatDiscEl(
+        seatInkForVariant(game.variant, color, game.firstColor ?? null),
+        'current-game-seat-disc',
+      ),
+    );
+  }
+  row.append(label);
   return row;
 }
 

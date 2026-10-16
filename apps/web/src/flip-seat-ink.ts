@@ -39,6 +39,16 @@ export function flipSeatInk(seat: FlipSeat, firstColor: FlipSeat | null): FlipSe
 }
 
 /**
+ * False when the variant's seats have no colour at all: the mahjong family seats
+ * players by wind (east, west), and a seat disc there is an empty grey circle
+ * that claims a colour the game does not have. Callers draw no disc instead.
+ */
+export function variantSeatsHaveInk(variant: string | null | undefined): boolean {
+  if (!variant) return true;
+  return maybeGameSpecForId(variant)?.family !== 'mahjong';
+}
+
+/**
  * The ink a seat renders as for ANY variant: flip variants translate through
  * `firstColor` (null until the flip binds), and every other variant has seat == ink
  * so the seat passes straight through. Use this wherever a seat id is about to be
