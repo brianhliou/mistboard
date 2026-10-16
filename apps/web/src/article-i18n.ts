@@ -188,6 +188,8 @@ export const TRANSLATED_ARTICLE_SLUGS = [
 export const UNTRANSLATED_ARTICLE_SLUGS: Readonly<Record<string, string>> = {
   mahjong:
     'English only until a Hong Kong player checks the faan table; each correction would re-translate the page.',
+  'xiangqi-mahjong-32':
+    'Unlisted English draft under review; zh is translated from the signed-off English.',
   'luat-co-up': 'A Vietnamese rules page for Vietnamese search; it has no English or zh source.',
   // Vietnamese renders of a translated English article (derived-translation.ts);
   // a zh reader gets the source article's zh page.

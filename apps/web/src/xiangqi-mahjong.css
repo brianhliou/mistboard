@@ -186,6 +186,15 @@
   padding: 0;
 }
 
+/* The piece's 100-unit box is drawn a little wider than the tile; the figure
+   or character inside it sits well within the tile face. */
+.xmj-tile-art {
+  flex: none;
+  width: 118%;
+  aspect-ratio: 1;
+  pointer-events: none;
+}
+
 .xmj-tile--red {
   color: var(--xmj-red);
 }

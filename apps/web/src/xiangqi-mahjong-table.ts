@@ -19,7 +19,6 @@ import {
   tileColor,
   tilePiece,
   XMJ_CLAIM_WINDOW_MS,
-  XMJ_GLYPHS,
   type XmjClaim,
   type XmjMeld,
   type XmjPlayerView,
@@ -31,6 +30,7 @@ import {
 import { type I18nKey, t } from './i18n/catalog.js';
 import type { TenantReasonKey } from './variant-tenant/room-chrome.js';
 import { escapeHtml } from './web-utils.js';
+import { renderXiangqiPieceMark, type XiangqiPieceSet } from './xiangqi-piece-sets.js';
 
 export interface XmjTableOptions {
   /** The room's "may act now": live, seated, and something on offer. */
@@ -41,6 +41,31 @@ export interface XmjTableOptions {
   readonly now: number;
   /** A pass is waiting for the pause to end; the buttons are spent. */
   readonly passQueued?: boolean;
+  /** The viewer's xiangqi piece set; each tile draws its piece in it. */
+  readonly pieceSet?: XiangqiPieceSet;
+}
+
+// The piece set for the render in progress. The table is one synchronous
+// string render, so xiangqiMahjongTableHtml sets it and restores it after.
+let activePieceSet: XiangqiPieceSet = 'international';
+
+const XMJ_ROLES = {
+  K: 'general',
+  A: 'advisor',
+  E: 'elephant',
+  R: 'chariot',
+  H: 'horse',
+  C: 'cannon',
+  P: 'soldier',
+} as const;
+
+// The piece's figure or character with no disc: the tile is the frame.
+function tileArt(tile: XmjTile): string {
+  const piece = {
+    color: tileColor(tile) === 'r' ? ('red' as const) : ('black' as const),
+    role: XMJ_ROLES[tilePiece(tile)],
+  };
+  return `<svg class="xmj-tile-art" viewBox="0 0 100 100" aria-hidden="true">${renderXiangqiPieceMark(piece, activePieceSet)}</svg>`;
 }
 
 /** The felts the table can be laid on (`?felt=`); green is the default. */
@@ -137,13 +162,13 @@ function tileClass(tile: XmjTile, extra = ''): string {
 }
 
 function tileSpan(tile: XmjTile, extra = ''): string {
-  return `<span class="${tileClass(tile, extra)}" role="img" aria-label="${xmjTileName(tile)}">${XMJ_GLYPHS[tile]}</span>`;
+  return `<span class="${tileClass(tile, extra)}" role="img" aria-label="${xmjTileName(tile)}">${tileArt(tile)}</span>`;
 }
 
 function tileButton(tile: XmjTile, extra = ''): string {
   const cls = tileClass(tile, `xmj-tile--button${extra ? ` ${extra}` : ''}`);
   const label = t('live.xmj.discardTile', { tile: xmjTileName(tile) });
-  return `<button type="button" class="${cls}" data-xmj-tile="${tile}" aria-label="${label}">${XMJ_GLYPHS[tile]}</button>`;
+  return `<button type="button" class="${cls}" data-xmj-tile="${tile}" aria-label="${label}">${tileArt(tile)}</button>`;
 }
 
 function backs(count: number): string {
@@ -193,7 +218,7 @@ function bubbleHtml(view: XmjPlayerView, names: Readonly<Record<XmjSeat, string>
   const column = (view.discards[phase.discarder].length - 1) % 6;
   const text = t('live.xmj.claimBubble', {
     name: escapeHtml(names[phase.discarder]),
-    tile: XMJ_GLYPHS[phase.discard],
+    tile: xmjTileName(phase.discard),
   });
   return `<div class="xmj-bubble" role="status" style="--xmj-col:${column}">${text}</div>`;
 }
@@ -340,7 +365,7 @@ function actionsHtml(view: XmjPlayerView, options: XmjTableOptions): string {
     }
     if (view.windowClosesAt !== null) {
       timer = countdownHtml(
-        t('live.xmj.claimPrompt', { tile: XMJ_GLYPHS[phase.discard] }),
+        t('live.xmj.claimPrompt', { tile: xmjTileName(phase.discard) }),
         view.windowClosesAt,
         XMJ_CLAIM_WINDOW_MS,
         options.now,
@@ -507,6 +532,16 @@ function resultHtml(view: XmjPlayerView, options: XmjTableOptions): string {
 
 /** The whole table for one view. */
 export function xiangqiMahjongTableHtml(view: XmjPlayerView, options: XmjTableOptions): string {
+  const previous = activePieceSet;
+  activePieceSet = options.pieceSet ?? 'international';
+  try {
+    return tableHtml(view, options);
+  } finally {
+    activePieceSet = previous;
+  }
+}
+
+function tableHtml(view: XmjPlayerView, options: XmjTableOptions): string {
   const you = view.perspective !== 'spectator';
   const self: XmjSeat = view.perspective === 'spectator' ? 'east' : view.perspective;
   const opponent = other(self);

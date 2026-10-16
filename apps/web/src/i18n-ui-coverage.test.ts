@@ -46,6 +46,7 @@ const ALLOWED: Record<string, Reason> = {
   'players/ecco-english.ts': 'content', // the English opening-name table itself
   'study-thumbnails.ts': 'content', // archive cover credits
   'videos-data.ts': 'content', // third-party video titles
+  'xiangqi-mahjong-32-rules-diagrams.ts': 'content', // rules-page tile alt text; article-i18n.coverage.test.ts
   // visitor-facing debt
   'replay-board.ts': '#464',
   'review/move-tree.ts': '#464',
