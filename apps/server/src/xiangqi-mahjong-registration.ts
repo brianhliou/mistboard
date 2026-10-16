@@ -197,5 +197,8 @@ registerVariantTenant({
   },
   // No export binding: there is no record format for this game here.
   export: null,
+  // No postgame page either: a finished game opens at its room, which shows
+  // every hand and never the walls (xiangqi-mahjong-pvp.test.ts).
+  finishedGameOpensRoom: true,
   ...xiangqiMahjongCorrespondence,
 });

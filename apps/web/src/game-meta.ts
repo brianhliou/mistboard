@@ -9,7 +9,7 @@ import {
 } from './game-display.js';
 import type { GameMeta } from './replay.js';
 import { correspondenceLabelFromMs, timeControlLabelFromMeta } from './replay-meta.js';
-import { webVariantTenantForRoomId, webVariantTenantForSpecId } from './variant-tenant/registry.js';
+import { finishedGameHref } from './variant-tenant/registry.js';
 
 export function gameMetaForGame(game: FeaturedGame): GameMeta {
   // GameMeta's whiteName/blackName are first/second-seat keys, not literal
@@ -58,15 +58,10 @@ export function reviewUrlForGame(game: FeaturedGame): string | null {
   if (game.corpusId === 'replay-samples') return null;
   // Variant-tenant games replay ONLY under their own postgame route: the legacy
   // /game/:id chess shell can't parse a tenant event log and 403s
-  // (game_not_public). Resolve the tenant by room-id prefix (robust against
-  // legacy variant aliases in persisted rows, e.g. dxq_ rows whose spec-id lookup
-  // could miss) and prefer gameRouteBase, the postgame mount. Mirrors
-  // databaseReviewHref; reviewRouteBase is the older equivalent some tenants set.
-  const tenant = webVariantTenantForRoomId(game.roomId) ?? webVariantTenantForSpecId(game.variant);
-  const routeBase = tenant?.gameRouteBase ?? tenant?.reviewRouteBase ?? null;
-  return routeBase
-    ? `${routeBase}/${encodeURIComponent(game.roomId)}`
-    : `/game/${encodeURIComponent(game.roomId)}`;
+  // (game_not_public). finishedGameHref resolves the tenant by room-id prefix
+  // (robust against legacy aliases such as dxq_ rows) and links its postgame
+  // mount, a tile table's own room, or the legacy shell for chess games.
+  return finishedGameHref(game.roomId, game.variant);
 }
 
 // Append the post-game rating change to a player's name on the game page, e.g.

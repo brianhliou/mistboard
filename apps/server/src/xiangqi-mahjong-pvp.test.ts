@@ -267,6 +267,25 @@ test('xmj pvp: a live room refuses spectators and a finished one admits them', (
   assert.equal(spectator.hands.west, null);
 });
 
+// Finished-game links (profile rows, the bell, the database, featured cards)
+// open the room itself: the table has no postgame page. A finished room is
+// rebuilt from its log for the visitor, who sees both final hands, and still
+// never the walls the match was dealt from.
+test('xmj pvp: a finished room, rebuilt from its log, shows a spectator every hand and no wall', () => {
+  const played = pvpRoom(42);
+  playMatch(played);
+  assert.equal(played.projection.state.status.type, 'finished');
+  const reopened = hydrate(played.events as XmjEvent[]);
+  const { payload, view } = snapshotView(reopened, 'spectator');
+  assertNoWalls(payload, 'finished snapshot/spectator');
+  assert.equal(view.status.type, 'finished');
+  assert.ok(view.hands.east, 'the finished table shows east');
+  assert.ok(view.hands.west, 'the finished table shows west');
+  assert.deepEqual([view.legal.discard.length, view.legal.claims.length], [0, 0]);
+  const history = tenantLiveHistoryExtras(tenant, reopened, client('spectator'));
+  assertNoWalls(history, 'finished liveHistory/spectator');
+});
+
 test('xmj pvp: a friend room seats no bot and carries the rated flag', async () => {
   const pvp = await createXiangqiMahjongRoom(FIVE_FIVE, 'random', undefined, true);
   const pve = await createXiangqiMahjongRoom(FIVE_FIVE, 'east', {

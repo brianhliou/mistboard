@@ -204,6 +204,12 @@ export type VariantTenantRegistration = {
   // PGN/JSON export of finished games, or null/absent when the tenant exports
   // nothing (see VariantTenantExport).
   export?: VariantTenantExport | null;
+  // A finished game opens at its own room (/room/:id) when the tenant has no
+  // postgame route but its room client draws a finished match for a visitor
+  // (canObserveRoom admits every finished room). crosstableReviewUrl links it
+  // there instead of marking the game unsupported; the web tenant carries the
+  // same flag (apps/web/src/variant-registry-sync.test.ts holds the two).
+  finishedGameOpensRoom?: true;
   // Share card for finished games, or null/absent (see VariantTenantCard).
   card?: VariantTenantCard | null;
   // Does a stored log still replay under the current rules? Bound with

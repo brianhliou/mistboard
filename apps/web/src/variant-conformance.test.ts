@@ -18,7 +18,7 @@ import {
 } from './landing-play.js';
 import { panelPersonPaces } from './landing-play-panel.js';
 import { buildReviewMeta } from './review/game-review-meta.js';
-import { webVariantTenants } from './variant-tenant/registry.js';
+import { finishedGameHref, webVariantTenants } from './variant-tenant/registry.js';
 import { roomMarkerId } from './variant-tenant/room-chrome.js';
 import { variantMiniIdForGameSpec } from './variants.js';
 
@@ -184,5 +184,32 @@ describe('variant marker conformance', () => {
     };
     walk(srcDir);
     expect(offenders).toEqual([]);
+  });
+});
+
+// Finished-game links (2026-10-15, Xiangqi Mahjong launch prep). Profile rows,
+// the bell, the database and featured cards all link a finished game. The
+// legacy /game/:id page reads only the chess-shell event log, so a tenant with
+// its own room client linked there is a dead page: Xiangqi Mahjong has no
+// postgame route and fell through to it. A tenant links its postgame route,
+// else its room when it says its finished room is the page (the server suite
+// pins what that shows a visitor), else /game/:id. Hong Kong mahjong still has
+// no finished-game page, and the server marks its rows unavailable.
+describe('finished-game link conformance', () => {
+  it('every tenant links a finished game to a page that mounts it', () => {
+    for (const tenant of webVariantTenants()) {
+      const roomId = `${tenant.roomIdPrefix}finished1`;
+      const routeBase = tenant.gameRouteBase ?? tenant.reviewRouteBase;
+      const expected = routeBase
+        ? `${routeBase}/${roomId}`
+        : tenant.finishedGameOpensRoom
+          ? `/room/${roomId}`
+          : `/game/${roomId}`;
+      expect(finishedGameHref(roomId, tenant.gameSpecId), tenant.gameSpecId).toBe(expected);
+      if (tenant.finishedGameOpensRoom) {
+        expect(tenant.loadLiveRoomClient, `${tenant.gameSpecId}: no room client`).toBeDefined();
+      }
+    }
+    expect(finishedGameHref('xmj_finished1', XIANGQI_MAHJONG_SPEC_ID)).toBe('/room/xmj_finished1');
   });
 });

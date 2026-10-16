@@ -10,8 +10,12 @@ import {
 } from './variant-tenant/registry.js';
 
 export type CrosstableTenantLookup = {
-  forRoomId: (roomId: string) => Pick<VariantTenantRegistration, 'export'> | null;
-  forSpecId: (gameSpecId: string) => Pick<VariantTenantRegistration, 'export'> | null;
+  forRoomId: (
+    roomId: string,
+  ) => Pick<VariantTenantRegistration, 'export' | 'finishedGameOpensRoom'> | null;
+  forSpecId: (
+    gameSpecId: string,
+  ) => Pick<VariantTenantRegistration, 'export' | 'finishedGameOpensRoom'> | null;
 };
 
 export const REGISTRY_LOOKUP: CrosstableTenantLookup = {
@@ -31,6 +35,8 @@ export function crosstableReviewUrl(
     lookup.forSpecId(variant)?.export?.gameRouteBase ??
     null;
   if (routeBase) return `${routeBase}/${encodeURIComponent(roomId)}`;
+  const tenant = lookup.forRoomId(roomId) ?? lookup.forSpecId(variant);
+  if (tenant?.finishedGameOpensRoom) return `/room/${encodeURIComponent(roomId)}`;
   if (CHESS_STACK_VARIANTS.has(variant)) return `/game/${encodeURIComponent(roomId)}`;
   return null;
 }

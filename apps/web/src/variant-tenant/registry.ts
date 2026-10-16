@@ -114,6 +114,11 @@ export type WebVariantTenant = {
   // games are linked from shared surfaces set it; others keep the legacy
   // /game/:id link those surfaces always produced.
   reviewRouteBase?: string;
+  // A finished game opens at its own room (/room/:id), which hydrates the
+  // finished match: for a table with no postgame page whose room client draws
+  // the final position for a visitor. The server registration carries the same
+  // flag (crosstableReviewUrl); variant-registry-sync.test.ts holds the two.
+  finishedGameOpensRoom?: true;
   // Self-contained live-room client. Resolves to the bootstrap
   // function so callers can preload the chunk before swapping the URL/DOM.
   // Tenants without one ride the chess live shell (live.ts) and register
@@ -993,6 +998,9 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     roomIdPrefix: 'xmj_',
     enabled: xiangqiMahjongEnabled,
     pageTitleKey: 'variant.xiangqiMahjong.name',
+    // No postgame page: the room itself shows a finished match, every hand
+    // face up and never the walls (server xiangqi-mahjong-pvp.test.ts).
+    finishedGameOpensRoom: true,
     loadLiveRoomClient: () =>
       import('../live-xiangqi-mahjong.js').then(
         ({ bootstrapXiangqiMahjongLiveRoom }) =>
@@ -1067,12 +1075,18 @@ export function webVariantOfferedInMenu(gameSpecId: string): boolean {
 }
 
 // A finished game's page: the tenant's postgame route (room-id prefix first,
-// spec id as a fallback for legacy aliases), else the dark-chess /game/:id
-// surface. Shared by the profile game rows and the bell's "game ended" rows.
+// spec id as a fallback for legacy aliases); for a table whose finished room is
+// its page (Xiangqi Mahjong), the room, which hydrates the finished match and
+// shows every hand; else the dark-chess /game/:id surface. Shared by the
+// profile game rows, the bell's "game ended" rows, the database and the
+// featured-game cards.
 export function finishedGameHref(roomId: string, gameSpecId: string | null): string {
   const tenant = webVariantTenantForRoomId(roomId) ?? webVariantTenantForSpecId(gameSpecId);
-  if (tenant?.gameRouteBase) return `${tenant.gameRouteBase}/${encodeURIComponent(roomId)}`;
-  return `/game/${encodeURIComponent(roomId)}`;
+  const id = encodeURIComponent(roomId);
+  const routeBase = tenant?.gameRouteBase ?? tenant?.reviewRouteBase ?? null;
+  if (routeBase) return `${routeBase}/${id}`;
+  if (tenant?.finishedGameOpensRoom) return `/room/${id}`;
+  return `/game/${id}`;
 }
 
 /**
