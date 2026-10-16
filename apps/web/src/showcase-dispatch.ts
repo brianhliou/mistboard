@@ -8,6 +8,7 @@
 // resolver without pulling chessground into its module-init path. The mount
 // itself (which needs mountReplay) lives in ./showcase-board.ts.
 
+import { legacyLiveRoomForGameSpec } from '@mistboard/game';
 import { isGameSpecId } from './variant-public-surfaces.js';
 import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
 
@@ -18,6 +19,20 @@ export type ShowcaseRendererKind = string;
 export function showcaseRendererKindForSpec(specId: string | null): ShowcaseRendererKind {
   const tenant = webVariantTenantForSpecId(specId);
   return tenant?.watch && specId ? specId : 'chess';
+}
+
+// The renderer a framed game (/embed/game/:id) mounts, keyed on the persisted
+// games.variant, or null when nothing can draw it. Fail-closed, unlike the
+// showcase resolver above: the chessground fallback is only for the chess
+// stack (legacy 'fog' rows and specs with a legacy live room), so a tenant
+// with no watch renderer (Xiangqi Mahjong, Hong Kong mahjong) or an unknown
+// variant reads as not embeddable instead of mounting the chess board and
+// failing on its 403'd event log.
+export function embedRendererKindForVariant(variant: string): ShowcaseRendererKind | null {
+  if (variant === 'fog') return 'chess';
+  if (!isGameSpecId(variant)) return null;
+  if (webVariantTenantForSpecId(variant)?.watch) return variant;
+  return legacyLiveRoomForGameSpec(variant) ? 'chess' : null;
 }
 
 // Normalize a persisted games.variant value to a game spec id for dispatch.

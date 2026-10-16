@@ -11,7 +11,7 @@ import {
   RETIRED_GAME_SPEC_IDS,
   XIANGQI_MAHJONG_SPEC_ID,
 } from '@mistboard/game';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ANALYSIS_VARIANTS } from './analysis-catalog.js';
 import { articles } from './articles-data.js';
 import { EDITOR_VARIANT_IDS } from './editor/editor-catalog.js';
@@ -25,7 +25,11 @@ import { panelPersonPaces } from './landing-play-panel.js';
 import { buildReviewMeta } from './review/game-review-meta.js';
 import { STUDY_VARIANTS } from './study-catalog.js';
 import { gameSpecIdFromRulesSlug, rulesSlugForGameSpec } from './variant-public-surfaces.js';
-import { finishedGameHref, webVariantTenants } from './variant-tenant/registry.js';
+import {
+  finishedGameHref,
+  legacyGameRouteForRoomId,
+  webVariantTenants,
+} from './variant-tenant/registry.js';
 import { roomMarkerId } from './variant-tenant/room-chrome.js';
 import {
   leaderboardVariants,
@@ -228,6 +232,47 @@ describe('finished-game link conformance', () => {
       }
     }
     expect(finishedGameHref('xmj_finished1', XIANGQI_MAHJONG_SPEC_ID)).toBe('/room/xmj_finished1');
+  });
+});
+
+// The legacy /game/:id route (2026-10-16). It is the chess shell, which 403s
+// on a tenant's event log ("Page failed to load"). A hand-typed /game/xmj_...
+// mounted it because the redirect only knew postgame routes. Every tenant id
+// now goes to its finished-game page or reads as not found; only the chess
+// stack mounts the shell.
+describe('legacy /game/:id route conformance', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('never mounts the chess shell for a tenant game', () => {
+    vi.stubEnv('VITE_XIANGQI_MAHJONG_ENABLED', 'true');
+    vi.stubEnv('VITE_MAHJONG_ENABLED', 'true');
+    for (const tenant of webVariantTenants()) {
+      const roomId = `${tenant.roomIdPrefix}finished1`;
+      const route = legacyGameRouteForRoomId(roomId);
+      if (tenant.gameSpecId === 'dark-chess') {
+        expect(route, tenant.gameSpecId).toEqual({ kind: 'chess' });
+        continue;
+      }
+      expect(route.kind, tenant.gameSpecId).not.toBe('chess');
+      if (route.kind === 'redirect' && tenant.enabled()) {
+        expect(route.href, tenant.gameSpecId).toBe(finishedGameHref(roomId, tenant.gameSpecId));
+      }
+    }
+    expect(legacyGameRouteForRoomId('xmj_finished1')).toEqual({
+      kind: 'redirect',
+      href: '/room/xmj_finished1',
+    });
+    // Hong Kong mahjong has no finished-game page at all.
+    expect(legacyGameRouteForRoomId('mj_finished1')).toEqual({ kind: 'not-found' });
+    // A bare Fog Chess room id is what the route is for.
+    expect(legacyGameRouteForRoomId('abc123')).toEqual({ kind: 'chess' });
+  });
+
+  it('reads a flagged-off tenant as not found rather than the chess shell', () => {
+    vi.stubEnv('VITE_XIANGQI_MAHJONG_ENABLED', 'false');
+    expect(legacyGameRouteForRoomId('xmj_finished1')).toEqual({ kind: 'not-found' });
   });
 });
 
