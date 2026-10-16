@@ -27,14 +27,16 @@ describe('landing bot policy', () => {
     expect(after).toBe(before + 1);
   });
 
-  it('shows six distinct variants and covers the full shelf in any two buckets', () => {
-    for (let bucket = 0; bucket < 3; bucket++) {
+  it('shows six distinct variants, jieqi every time, and the full shelf in any three buckets', () => {
+    for (let bucket = -2; bucket < 9; bucket++) {
       const current = landingBotLineup(bucket);
-      const next = landingBotLineup(bucket + 1);
 
       expect(current).toHaveLength(6);
       expect(new Set(current).size).toBe(6);
-      expect(new Set([...current, ...next])).toEqual(new Set(LANDING_BOT_GAME_SPEC_IDS));
+      expect(current).toContain('jieqi');
+      expect(
+        new Set([...current, ...landingBotLineup(bucket + 1), ...landingBotLineup(bucket + 2)]),
+      ).toEqual(new Set(LANDING_BOT_GAME_SPEC_IDS));
     }
   });
 

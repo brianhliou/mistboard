@@ -8,13 +8,13 @@ import { buildLobbyPanel } from './landing-play.js';
 // invariants worth pinning are honesty (labeled engine), separation from the
 // human seek table, and the bucket-stable rotation.
 
-// Six-hour bucket 82622: lineup A (even bucket). The bucket picks WHICH variants
+// Six-hour bucket 82621: the ring's first window (bucket mod 7 = 0). The bucket picks WHICH variants
 // show and, per row, which rung of a Fairy-Stockfish ladder (one step either
 // side of the tier) and which of the variant's slower-or-equal clocks; the
 // Xiangqi ladder block itself is fixed (Levels 2/5/8 at 10+5) so it can be
 // climbed. The exact rungs and clocks below are landingLobbyBotOffer's output
 // for this bucket; landing-bot-policy.test.ts pins the rules they follow.
-const FIXED_DATE = new Date('2026-07-21T12:00:00Z');
+const FIXED_DATE = new Date('2026-07-21T06:00:00Z');
 
 describe('landing lobby bot seeks', () => {
   // Every test gets its own device memory. On CI window.localStorage is a
@@ -51,8 +51,8 @@ describe('landing lobby bot seeks', () => {
       'fairy-stockfish-level-8|xiangqi',
       'pikafish-level-2|jieqi',
       'misty|banqi',
-      'fairy-stockfish-level-4|duck-xiangqi',
-      'fairy-stockfish-level-3|crazyhouse-xiangqi',
+      'fairy-stockfish-level-5|duck-xiangqi',
+      'fairy-stockfish-level-4|crazyhouse-xiangqi',
       'misty|dark-chess',
     ]);
     // Fortress and Atomic Xiangqi left the rotation when they retired (2026-10-11).
@@ -208,11 +208,11 @@ describe('landing lobby bot seeks', () => {
     expect(xiangqi?.textContent).toBe('—');
     expect(xiangqi?.getAttribute('data-pool-rating')).toBe('2450?');
     // Unmatched bots keep the placeholder rather than guessing a number.
-    const duck = panel.querySelector(
-      '.landing-lobby-seed[data-bot-id="fairy-stockfish-level-4"][data-game-spec="duck-xiangqi"] .landing-lobby-seed-rating',
+    const crazyhouse = panel.querySelector(
+      '.landing-lobby-seed[data-bot-id="fairy-stockfish-level-4"][data-game-spec="crazyhouse-xiangqi"] .landing-lobby-seed-rating',
     );
-    expect(duck?.textContent).toBe('—');
-    expect(duck?.getAttribute('title')).toBeNull();
+    expect(crazyhouse?.textContent).toBe('—');
+    expect(crazyhouse?.getAttribute('title')).toBeNull();
   });
 
   it('lists human seeks above the bots in one table with the same column grammar', async () => {
