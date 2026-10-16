@@ -167,6 +167,29 @@ definePersistenceTests('profile games filters', () => {
     assert.equal(own?.total, 3, 'total is the filtered count');
   });
 
+  test('an east or west seat (Xiangqi Mahjong) wins on its own result, not white-wins', async () => {
+    await seedUsers();
+    await seedRow('pg_xmj_east_win', 'xiangqi-mahjong', 'east-wins', '2026-08-06T10:00:00Z', [
+      alice('east'),
+      user('u_bob', 'west'),
+    ]);
+    await seedRow('pg_xmj_west_loss', 'xiangqi-mahjong', 'east-wins', '2026-08-07T10:00:00Z', [
+      user('u_bob', 'east'),
+      alice('west'),
+    ]);
+    await seedRow('pg_xmj_west_win', 'xiangqi-mahjong', 'west-wins', '2026-08-08T10:00:00Z', [
+      user('u_bob', 'east'),
+      alice('west'),
+    ]);
+    assert.deepEqual(ids(await getUserGamesPage('alice', null, 0, 50, { result: 'win' })), [
+      'pg_xmj_east_win',
+      'pg_xmj_west_win',
+    ]);
+    assert.deepEqual(ids(await getUserGamesPage('alice', null, 0, 50, { result: 'loss' })), [
+      'pg_xmj_west_loss',
+    ]);
+  });
+
   test('the opponent filter matches a public handle in any case, never a private account', async () => {
     await seedList();
     assert.deepEqual(ids(await getUserGamesPage('alice', null, 0, 50, { opponent: 'BOB' })), [

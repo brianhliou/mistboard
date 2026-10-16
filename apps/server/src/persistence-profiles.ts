@@ -390,13 +390,16 @@ export type ProfileGameFilters = {
 
 // Win/loss from the owner's seat, IN SQL, mirroring the row's own tone
 // (profileResultTone in apps/web/src/profile-ui.ts): a red seat wins on
-// red-wins, a black seat on black-wins, any other seat on white-wins, and every
+// red-wins, a black seat on black-wins, an east or west seat (Xiangqi Mahjong)
+// on its own east-wins or west-wins, any other seat on white-wins, and every
 // non-draw that is not a win is a loss. If the two disagreed, "Wins" would list
 // a row painted as a loss.
 const OWNER_WON_SQL = `(
   (game_participants.color = 'red' AND games.result = 'red-wins')
   OR (game_participants.color = 'black' AND games.result = 'black-wins')
-  OR (game_participants.color NOT IN ('red', 'black') AND games.result = 'white-wins')
+  OR (game_participants.color = 'east' AND games.result = 'east-wins')
+  OR (game_participants.color = 'west' AND games.result = 'west-wins')
+  OR (game_participants.color NOT IN ('red', 'black', 'east', 'west') AND games.result = 'white-wins')
 )`;
 
 function resultFilterSql(result: ProfileGameResultFilter): string {
