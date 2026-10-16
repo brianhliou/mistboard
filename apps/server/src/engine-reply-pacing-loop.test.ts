@@ -65,6 +65,14 @@ const decisive =
     depth: 1,
   });
 
+// The reply wait's timer is unref'd so it never holds a stopping server open.
+// Here it is the only pending work, and Node 22 cancels a test whose event
+// loop empties while it awaits, so hold the loop open for the test.
+function holdEventLoop(): () => void {
+  const timer = setInterval(() => {}, 1_000);
+  return () => clearInterval(timer);
+}
+
 function writer(appended: string[]) {
   return {
     appendEvent: async (target: unknown, event: { type: string }) => {
@@ -78,8 +86,13 @@ function writer(appended: string[]) {
 test('an instant engine move is held for the beat and the wait is logged', async () => {
   const room = botOnMove('xq_pace_beat');
   const appended: string[] = [];
+  const release = holdEventLoop();
   const startedAt = Date.now();
-  await playXiangqiEngineMoveIfReady(writer(appended) as never, room as never, decisive(room));
+  try {
+    await playXiangqiEngineMoveIfReady(writer(appended) as never, room as never, decisive(room));
+  } finally {
+    release();
+  }
   const elapsed = Date.now() - startedAt;
 
   assert.deepEqual(appended, ['move-played']);
@@ -103,7 +116,12 @@ test('a game that ends during the wait gets no bot move', async () => {
       color: 'red',
     });
   }, 100);
-  await playXiangqiEngineMoveIfReady(writer(appended) as never, room as never, decisive(room));
+  const release = holdEventLoop();
+  try {
+    await playXiangqiEngineMoveIfReady(writer(appended) as never, room as never, decisive(room));
+  } finally {
+    release();
+  }
 
   assert.deepEqual(appended, [], 'the held move never reached the writer');
   assert.equal(room.projection.state.status.type, 'finished');
