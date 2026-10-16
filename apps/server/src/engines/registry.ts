@@ -1033,8 +1033,8 @@ const BANQI_ENGINES: Record<string, EngineDefinition> = {
     // the hash names what DECIDES play — the build and the strength dial. The movetime
     // cap is a latency backstop that must not bind (see banqi-engine.ts), so it stays
     // out of the identity while remaining recorded in `config`.
-    configHash: 'misty-banqi-0.2.5-nodes-3500000',
-    playSignature: 'misty-banqi-0.2.5-nodes-3500000',
+    configHash: 'misty-banqi-0.2.6-nodes-3500000',
+    playSignature: 'misty-banqi-0.2.6-nodes-3500000',
     config: { kind: 'banqi-uci', nodes: 3_500_000, movetime_ms: 8_000 },
     notes:
       'MistyBanqi 0.2.4 — v0.2.1 gen_danger general-safety eval term (proximity+escape-aware, ' +
