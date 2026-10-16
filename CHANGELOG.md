@@ -107,6 +107,7 @@ Conventions:
 
 ### Watching and review
 
+- hover or tap a ?!, ? or ?? mark to see what the move cost and the better move ([12461d24](https://github.com/brianhliou/mistboard/commit/12461d24))
 - Game search can pick games played here against people or against bots ([9ffca9cf](https://github.com/brianhliou/mistboard/commit/9ffca9cf))
 - The opening explorer starts closed and remembers if you open it ([9ffca9cf](https://github.com/brianhliou/mistboard/commit/9ffca9cf))
 - the local analysis engine now runs on iPhone, iPad and Safari ([3d14b10d](https://github.com/brianhliou/mistboard/commit/3d14b10d))
@@ -156,6 +157,7 @@ Conventions:
 
 ### Community
 
+- achievements get their own page per player, with win tiers at 10, 50, 100 and 500 ([12461d24](https://github.com/brianhliou/mistboard/commit/12461d24))
 - rating stats has bullet, blitz and rapid choices, and says so when a pool has no rated games ([3d14b10d](https://github.com/brianhliou/mistboard/commit/3d14b10d))
 - The homepage chat announces only wins over a top bot, one line per player a day ([105d81c7](https://github.com/brianhliou/mistboard/commit/105d81c7))
 - You can now see who follows you: the bell names each new follower, and a private Followers tab sits beside Following on your Friends page ([c746143c](https://github.com/brianhliou/mistboard/commit/c746143c))
@@ -221,6 +223,7 @@ Conventions:
 
 ### Fixed
 
+- the Fog Xiangqi bot no longer learns which piece a shrouded screen or blocker is ([12461d24](https://github.com/brianhliou/mistboard/commit/12461d24))
 - Fog of War chess boards fit inside their card on /games ([f23e9dfc](https://github.com/brianhliou/mistboard/commit/f23e9dfc))
 - Chess board thumbnails on the blog are square again instead of stretched to the card ([d250631c](https://github.com/brianhliou/mistboard/commit/d250631c))
 - The mahjong game-over sound no longer plays again when you reopen a finished game ([d250631c](https://github.com/brianhliou/mistboard/commit/d250631c))
