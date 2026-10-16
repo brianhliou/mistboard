@@ -50,7 +50,7 @@ import {
   xmjTileLookFromSearch,
   xmjViewOffersAction,
 } from './xiangqi-mahjong-table.js';
-import { xmjTerminalSound } from './xiangqi-mahjong-terminal-sound.js';
+import { xmjMoveSound, xmjTerminalSound } from './xiangqi-mahjong-terminal-sound.js';
 
 let core: TenantLiveClientContext<XmjSeat, XmjPlayerView> | null = null;
 let roomMode: 'pvp' | 'pve' = 'pve';
@@ -209,11 +209,9 @@ function replayPositionKey(view: XmjPlayerView): string {
 }
 
 function soundForEvent(event: unknown, seat: unknown): void {
-  const played = event as { type?: string; color?: string; move?: { action?: string } } | undefined;
-  if (played?.type !== 'move-played') return;
-  const action = played.move?.action;
-  if (action === 'discard') playSound(played.color === seat ? 'move' : 'captured');
-  else if (action === 'claim' || action === 'self-draw') playSound('capture');
+  const matchOver = core?.state.view?.status.type === 'finished';
+  const kind = xmjMoveSound(event, seat, matchOver);
+  if (kind) playSound(kind);
 }
 
 let lastStatusType: XmjRoomStatus['type'] | null = null;
