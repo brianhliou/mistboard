@@ -223,6 +223,9 @@ Conventions:
 
 ### Fixed
 
+- Hand-typed /game and /embed/game links to a Xiangqi Mahjong or mahjong game no longer show a broken page ([629657e2](https://github.com/brianhliou/mistboard/commit/629657e2))
+- the site no longer freezes for several seconds once a day while the daily report runs ([629657e2](https://github.com/brianhliou/mistboard/commit/629657e2))
+- Rules and blog pages, including diagram marker colours, now load styled, and the rules sidebar switches pages without reloading ([629657e2](https://github.com/brianhliou/mistboard/commit/629657e2))
 - the Fog Xiangqi bot no longer learns which piece a shrouded screen or blocker is ([12461d24](https://github.com/brianhliou/mistboard/commit/12461d24))
 - Fog of War chess boards fit inside their card on /games ([f23e9dfc](https://github.com/brianhliou/mistboard/commit/f23e9dfc))
 - Chess board thumbnails on the blog are square again instead of stretched to the card ([d250631c](https://github.com/brianhliou/mistboard/commit/d250631c))
