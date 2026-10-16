@@ -436,6 +436,20 @@ describe('xiangqi mahjong table', () => {
     expect(text).not.toContain('The wall ran out');
   });
 
+  it('a match lost on the clock says so, not a +0 to +0 score', () => {
+    const live = afterDiscard(['rH', 'rC', 'rP', 'bP', 'bP']);
+    const timedOut: XmjRoomState = {
+      ...live,
+      status: { type: 'finished', winner: 'west', reason: 'timeout' },
+    };
+    const host = doc(xiangqiMahjongTableHtml(xmjViewFor(timedOut, 'east'), opts(false)));
+    expect(host.querySelector('.xmj-result__title')?.textContent).toBe('Hand 1 was not finished.');
+    expect(host.querySelector('.xmj-result__foot')?.textContent).toBe('Bot wins on time.');
+    expect(host.textContent).not.toMatch(/Match to|\+0 to/);
+    // No hand finished: no empty ledger.
+    expect(host.querySelector('.xmj-ledger')).toBeNull();
+  });
+
   it('writes the move log one hand at a time: the latest open, earlier hands one line each', () => {
     let current = state;
     const moves: XmjLogMove[] = [];

@@ -670,7 +670,9 @@ export function xmjResultTitle(
   names: Readonly<Record<XmjSeat, string>>,
 ): string {
   const phase = view.phase;
-  const hand = Math.max(1, view.results.length);
+  // The hand in play, not the count of finished ones: a match lost on time in
+  // hand 3 has two results and names hand 3.
+  const hand = view.handNumber;
   if (phase.type === 'won') {
     const you = view.perspective === phase.winner;
     const key = phase.selfDrawn
@@ -691,6 +693,9 @@ export function xmjResultTitle(
   return t('live.xmj.handUnfinished', { hand });
 }
 
+/** Finished reasons the match score decides; any other names how it ended. */
+const ON_POINTS: ReadonlySet<string> = new Set(['points', 'tie']);
+
 function resultHtml(view: XmjPlayerView, options: XmjTableOptions): string {
   const names = options.names;
   const phase = view.phase;
@@ -700,7 +705,14 @@ function resultHtml(view: XmjPlayerView, options: XmjTableOptions): string {
       ? `<div class="xmj-result__win"><div class="xmj-won">${winningHandHtml(phase.score, phase.winningTile)}</div>${breakdownHtml(phase.score, phase.winner, names)}</div>`
       : '';
   let foot: string;
-  if (view.status.type !== 'playing') {
+  if (view.status.type === 'finished' && !ON_POINTS.has(view.status.reason)) {
+    // Ended by the clock, a resignation or abandonment: the score says nothing
+    // about why (often +0 to +0), so the line names how instead.
+    const line = xmjResultLine(view.status.winner, view.status.reason, view.perspective, (seat) =>
+      escapeHtml(names[seat]),
+    );
+    foot = `<div class="xmj-result__foot"><p class="xmj-note xmj-note--strong">${line}.</p></div>`;
+  } else if (view.status.type !== 'playing') {
     const winner = view.status.type === 'finished' ? view.status.winner : null;
     const line =
       winner === null
