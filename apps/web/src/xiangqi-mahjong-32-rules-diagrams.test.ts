@@ -4,26 +4,36 @@ import {
   tileColor,
   tilePiece,
   XMJ_COPIES,
+  XMJ_DEALER_TILES,
   XMJ_HAND_SIZE,
+  XMJ_OTHER_TILES,
   XMJ_TILE_KINDS,
   type XmjTile,
   xmjLegalClaims,
+  xmjOrderedTiles,
   xmjScore,
   xmjWinShape,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import {
   XMJ32_BLACK_SIDE,
-  XMJ32_BLACK_SIDE_SVG,
+  XMJ32_CLAIM_ANIMATION_SVG,
   XMJ32_CLAIM_DISCARD,
+  XMJ32_CLAIM_EARLIER_DISCARD,
   XMJ32_CLAIM_HAND,
+  XMJ32_CLAIM_KEPT,
+  XMJ32_CLAIM_SET,
+  XMJ32_CLAIM_STATIC_SVG,
   XMJ32_CLAIM_THROWN,
+  XMJ32_DEAL,
+  XMJ32_DEAL_SVG,
   XMJ32_MATCH,
+  XMJ32_MATCH_HEADERS,
   XMJ32_NOT_WINS,
   XMJ32_PAIRS,
   XMJ32_RED_SIDE,
-  XMJ32_RED_SIDE_SVG,
   XMJ32_SEQUENCES,
+  XMJ32_TILES_SVG,
   XMJ32_TRIPLETS,
   XMJ32_WINS,
   XMJ32_WORKED,
@@ -48,9 +58,32 @@ describe('xiangqi mahjong 32 rules diagrams', () => {
     for (const kind of XMJ_TILE_KINDS) {
       expect(all.filter((t) => t === kind).length, kind).toBe(XMJ_COPIES[tilePiece(kind)]);
     }
-    for (const side of [XMJ32_RED_SIDE_SVG, XMJ32_BLACK_SIDE_SVG]) {
-      expect(side().match(/<text [^>]*text-anchor="middle" font-size="10.5"/g)).toHaveLength(16);
+    // One figure, each kind named once per colour (7 kinds a side), and no
+    // per-tile names.
+    const svg = XMJ32_TILES_SVG();
+    expect(svg.match(/class="xmj-article-tiles"/g)).toHaveLength(1);
+    expect(svg).not.toContain('font-size="10.5"');
+    const labels = [...svg.matchAll(/class="xmj-kind-label">([^<]+)</g)].map((m) => m[1]);
+    expect(labels).toEqual([
+      ...['General', 'Advisor', 'Elephant', 'Chariot', 'Horse', 'Cannon', 'Soldier'],
+      ...['General', 'Advisor', 'Elephant', 'Chariot', 'Horse', 'Cannon', 'Soldier'],
+    ]);
+  });
+
+  it('draws a real kernel deal: 5 for the dealer, 4 for you, 23 in the wall', () => {
+    const dealer = XMJ32_DEAL.hands[XMJ32_DEAL.dealer];
+    const yours = XMJ32_DEAL.hands[XMJ32_DEAL.dealer === 0 ? 1 : 0];
+    expect(dealer).toHaveLength(XMJ_DEALER_TILES);
+    expect(yours).toHaveLength(XMJ_OTHER_TILES);
+    expect(XMJ32_DEAL.wall).toHaveLength(23);
+    expect(dealer.length + yours.length + XMJ32_DEAL.wall.length).toBe(32);
+    expect(sorted([...dealer, ...yours, ...XMJ32_DEAL.wall])).toEqual(sorted(xmjOrderedTiles()));
+    const svg = XMJ32_DEAL_SVG();
+    for (const text of ['Dealer, 5 tiles', 'Wall', '23 left', 'You, 4 tiles']) {
+      expect(svg).toContain(`>${text}</text>`);
     }
+    // 5 dealer backs + 23 wall backs, each with its gradient; your four face up.
+    expect(svg.match(/<linearGradient /g)).toHaveLength(5 + 23);
   });
 
   it('draws only real sets and pairs in the sets section', () => {
@@ -79,13 +112,6 @@ describe('xiangqi mahjong 32 rules diagrams', () => {
       expect(score.total).toBe(example.expectedTotal);
     });
   }
-
-  it('the claimed example lays its set face up with the claimed tile in it', () => {
-    const claimed = XMJ32_WINS.find((w) => w.id === 'claimed');
-    const { melds } = xmjExampleHand(claimed as (typeof XMJ32_WINS)[number]);
-    expect(melds).toHaveLength(1);
-    expect(melds[0]?.tiles).toContain(melds[0]?.claimed);
-  });
 
   it('the worked example totals 6 points', () => {
     const { concealed, melds } = xmjExampleHand(XMJ32_WORKED);
@@ -116,22 +142,54 @@ describe('xiangqi mahjong 32 rules diagrams', () => {
     for (const example of XMJ32_WINS) {
       const svg = xmj32WinSvg(example.id)();
       expect(svg.startsWith('<svg')).toBe(true);
-      expect(svg).toContain(`<title>${example.title}</title>`);
+      expect(svg).toContain(`<title>Winning hand: ${example.title}</title>`);
+      expect(svg).toContain(
+        'class="xmj-badge xmj-badge--win" role="img" aria-label="Winning hand"',
+      );
+      expect(svg).not.toContain('xmj-badge--not-win');
     }
     for (const example of XMJ32_NOT_WINS) {
-      expect(xmj32NotWinSvg(example.id)()).toContain('<title>Not a win');
+      const svg = xmj32NotWinSvg(example.id)();
+      expect(svg).toContain('<title>Not a winning hand: ');
+      expect(svg).toContain(
+        'class="xmj-badge xmj-badge--not-win" role="img" aria-label="Not a winning hand"',
+      );
     }
   });
 
-  it('walks through a claim the kernel allows and that ends in the claimed win', () => {
+  it('animates a claim the kernel allows, into a legal sequence', () => {
     const claims = xmjLegalClaims(XMJ32_CLAIM_HAND, [], XMJ32_CLAIM_DISCARD);
-    expect(claims).toContainEqual({ kind: 'chow', fromHand: expect.arrayContaining(['rR', 'rH']) });
+    const fromHand = XMJ32_CLAIM_SET.filter((t) => t !== XMJ32_CLAIM_DISCARD);
+    expect(claims).toContainEqual({ kind: 'chow', fromHand: expect.arrayContaining(fromHand) });
     expect(claims.some((c) => c.kind === 'win')).toBe(false);
-    const kept = XMJ32_CLAIM_HAND.filter((t) => !['rR', 'rH', XMJ32_CLAIM_THROWN].includes(t));
-    const claimed = XMJ32_WINS.find((w) => w.id === 'claimed')!;
-    const { concealed, melds } = xmjExampleHand(claimed);
-    expect(melds[0]?.tiles).toEqual(['rR', 'rH', XMJ32_CLAIM_DISCARD]);
-    expect(sorted(concealed)).toEqual(sorted([...kept, 'bE']));
+    expect(meldKindOf(XMJ32_CLAIM_SET)).toBe('sequence');
+    expect(XMJ32_CLAIM_SET).toContain(XMJ32_CLAIM_DISCARD);
+    // The hand ends as the claimed set plus the kept tile: four tiles, the
+    // Soldier gone to the discards.
+    expect(sorted([...fromHand, XMJ32_CLAIM_KEPT, XMJ32_CLAIM_THROWN])).toEqual(
+      sorted(XMJ32_CLAIM_HAND),
+    );
+    expect(XMJ32_CLAIM_EARLIER_DISCARD).not.toBe(XMJ32_CLAIM_DISCARD);
+  });
+
+  it('draws the claim animation playing once, with a static before and after', () => {
+    const svg = XMJ32_CLAIM_ANIMATION_SVG();
+    expect(svg.match(/class="xmj-article-tiles"/g)).toHaveLength(1);
+    // Every keyframe holds its end state and none loops.
+    expect(svg.match(/s ease-in-out both/g)).toHaveLength(4);
+    expect(svg).not.toContain('infinite');
+    for (const cls of [
+      'xmj-claim-cannon',
+      'xmj-claim-kept',
+      'xmj-claim-mark',
+      'xmj-claim-thrown',
+    ]) {
+      expect(svg).toContain(`class="${cls}"`);
+    }
+    const still = XMJ32_CLAIM_STATIC_SVG();
+    expect(still.match(/class="xmj-article-tiles"/g)).toHaveLength(2);
+    expect(still).toContain('<title>Before: ');
+    expect(still).toContain('<title>After: ');
   });
 
   it('plays the match as the rules say: six hands, the deal alternating', () => {
@@ -165,7 +223,19 @@ describe('xiangqi mahjong 32 rules diagrams', () => {
       const { concealed, melds } = xmjExampleHand(hand.win);
       totals[hand.winner] += xmjScore({ concealed, melds, ...hand.win.context }).total;
     }
-    expect(rows.at(-1)?.slice(5)).toEqual([String(totals.Ana), String(totals.Ben)]);
+    expect(XMJ32_MATCH_HEADERS).toEqual(['Hand', '1', '2', '3', '4', '5', '6', 'Total']);
+    expect(rows.map((r) => r[0])).toEqual(['Ana', 'Ben']);
+    for (const row of rows) expect(row).toHaveLength(XMJ32_MATCH_HEADERS.length);
+    expect(rows.map((r) => r.at(-1))).toEqual([String(totals.Ana), String(totals.Ben)]);
     expect(totals).toEqual({ Ana: 7, Ben: 6 });
+    XMJ32_MATCH.forEach((hand, i) => {
+      const [ana, ben] = [rows[0]?.[i + 1], rows[1]?.[i + 1]];
+      if (!hand.winner) {
+        expect([ana, ben]).toEqual(['void', 'void']);
+        return;
+      }
+      const points = String(hand.win?.expectedTotal);
+      expect([ana, ben]).toEqual(hand.winner === 'Ana' ? [points, ''] : ['', points]);
+    });
   });
 });

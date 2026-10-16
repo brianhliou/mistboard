@@ -3,18 +3,37 @@
 // (xmjWinShape / xmjScore in packages/game), so a picture on the page cannot
 // claim a win, a non-win or a score the game itself would not give.
 
-import type { XmjMeld, XmjTile, XmjWinContext } from '@mistboard/game';
+import {
+  type XmjHandState,
+  type XmjMeld,
+  type XmjTile,
+  type XmjWinContext,
+  xmjDeal,
+  xmjShuffle,
+} from '@mistboard/game';
 import { activeXiangqiPieceSet } from './articles/diagrams.js';
 import {
-  xmjTileLinesSvg as tileLines,
+  escapeText,
   xmjTileRowSvg as tileRow,
+  XMJ_CLAIM_EDGE,
+  XMJ_TILE_GAP,
+  XMJ_TILE_H,
+  XMJ_TILE_W,
+  type XmjRowBadge,
   type XmjTileGroup,
+  xmjTileBackSvg,
+  xmjTileFigureSvg,
+  xmjTileKindGridSvg,
+  xmjTileSvg,
 } from './xiangqi-mahjong-tile-svg.js';
 
 // Every row draws in the article's active piece set, so the page repaints when
 // the reader changes pieces (the raw-svg blocks pass these as thunks).
-const xmjTileRowSvg = (groups: readonly XmjTileGroup[], title: string): string =>
-  tileRow(groups, title, activeXiangqiPieceSet);
+const xmjTileRowSvg = (
+  groups: readonly XmjTileGroup[],
+  title: string,
+  badge?: XmjRowBadge,
+): string => tileRow(groups, title, activeXiangqiPieceSet, badge);
 
 export interface XmjHandExample {
   readonly id: string;
@@ -79,22 +98,84 @@ const sideLines = (c: 'r' | 'b'): XmjTile[][] =>
 export const XMJ32_RED_SIDE: readonly (readonly XmjTile[])[] = sideLines('r');
 export const XMJ32_BLACK_SIDE: readonly (readonly XmjTile[])[] = sideLines('b');
 
-/** A row split into one group per piece kind, so the kinds read apart. */
-const byKind = (tiles: readonly XmjTile[]): XmjTileGroup[] => {
-  const groups: XmjTile[][] = [];
-  for (const tile of tiles) {
-    const last = groups.at(-1);
-    if (last && last[0] === tile) last.push(tile);
-    else groups.push([tile]);
-  }
-  return groups.map((g) => ({ tiles: g }));
+/**
+ * All 32 tiles in one figure: red's three rows above black's, each row split
+ * by kind with the kind's name once under it.
+ */
+export const XMJ32_TILES_SVG = (): string =>
+  xmjTileKindGridSvg(
+    [...XMJ32_RED_SIDE, ...XMJ32_BLACK_SIDE],
+    'All 32 tiles: the sixteen red tiles above the sixteen black tiles',
+    activeXiangqiPieceSet,
+    [XMJ32_RED_SIDE.length - 1],
+  );
+
+// --- The deal -----------------------------------------------------------------
+
+/** A small seeded generator (mulberry32), so the page's deal never changes. */
+function seededRandom(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * The deal the page draws: a real kernel shuffle and deal (xmjShuffle,
+ * xmjDeal), seeded so it is the same on every visit. Seat 0 deals; the reader
+ * is seat 1, with four tiles.
+ */
+export const XMJ32_DEAL_SEED = 12;
+export const XMJ32_DEAL: XmjHandState = xmjDeal(xmjShuffle(seededRandom(XMJ32_DEAL_SEED)), 0);
+
+/** The table from the reader's seat: the dealer's backs, the wall, your four. */
+export const XMJ32_DEAL_SVG = (): string => {
+  const W = 278;
+  const centre = (n: number, w: number, gap: number) => (W - (n * w + (n - 1) * gap)) / 2;
+  const label = (y: number, text: string, extra = '') =>
+    `<text x="${W / 2}" y="${y}" text-anchor="middle" font-size="12" fill="currentColor"${extra}>${escapeText(text)}</text>`;
+  const parts: string[] = [];
+  const dealer = XMJ32_DEAL.hands[XMJ32_DEAL.dealer];
+  const yours = XMJ32_DEAL.hands[XMJ32_DEAL.dealer === 0 ? 1 : 0];
+
+  parts.push(label(14, `Dealer, ${dealer.length} tiles`, ' font-weight="600"'));
+  const dx = centre(dealer.length, XMJ_TILE_W, XMJ_TILE_GAP);
+  dealer.forEach((_, i) => {
+    parts.push(xmjTileBackSvg(dx + i * (XMJ_TILE_W + XMJ_TILE_GAP), 22));
+  });
+
+  // The wall as two rows of small backs, every tile in it drawn once.
+  const WALL_W = 20;
+  const WALL_H = 26;
+  const perRow = Math.ceil(XMJ32_DEAL.wall.length / 2);
+  parts.push(label(110, 'Wall', ' font-weight="600"'));
+  const wx = centre(perRow, WALL_W, 2);
+  XMJ32_DEAL.wall.forEach((_, i) => {
+    const row = i < perRow ? 0 : 1;
+    const col = row === 0 ? i : i - perRow;
+    parts.push(xmjTileBackSvg(wx + col * (WALL_W + 2), 118 + row * (WALL_H + 5), WALL_W, WALL_H));
+  });
+  parts.push(
+    label(196, `${XMJ32_DEAL.wall.length} left`, ' font-style="italic" fill-opacity="0.75"'),
+  );
+
+  parts.push(label(222, `You, ${yours.length} tiles`, ' font-weight="600"'));
+  const yx = centre(yours.length, XMJ_TILE_W, XMJ_TILE_GAP);
+  yours.forEach((tile, i) => {
+    parts.push(xmjTileSvg(tile, yx + i * (XMJ_TILE_W + XMJ_TILE_GAP), 230, activeXiangqiPieceSet));
+  });
+
+  return xmjTileFigureSvg(
+    W,
+    316,
+    'The deal: the dealer with five tiles face down, the 23-tile wall, and your four tiles face up',
+    parts.join(''),
+  );
 };
-
-const sideSvg = (side: readonly (readonly XmjTile[])[], title: string) => (): string =>
-  tileLines(side.map(byKind), title, activeXiangqiPieceSet);
-
-export const XMJ32_RED_SIDE_SVG = sideSvg(XMJ32_RED_SIDE, 'The sixteen red tiles');
-export const XMJ32_BLACK_SIDE_SVG = sideSvg(XMJ32_BLACK_SIDE, 'The sixteen black tiles');
 
 // --- The four sets ----------------------------------------------------------
 
@@ -175,51 +256,108 @@ export const XMJ32_WINS: readonly XmjWinExample[] = [
     expectedLines: ['win', 'one-colour', 'five-soldiers'],
     expectedTotal: 7,
   },
-  {
-    id: 'claimed',
-    title: 'A claimed set: the Cannon taken from a discard, then a pair drawn',
-    groups: [{ tiles: ['rR', 'rH', 'rC'], label: 'claimed set', claimed: 'rC' }, pair('bE', 'bE')],
-    context: SELF_DRAWN,
-    expectedLines: ['win', 'self-draw'],
-    expectedTotal: 3,
-  },
 ];
 
+/** A winning row, marked with the green check. */
 export function xmj32WinSvg(id: string): () => string {
   const example = XMJ32_WINS.find((w) => w.id === id);
   if (!example) throw new Error(`xmj32WinSvg: no example ${id}`);
-  return () => xmjTileRowSvg(example.groups, example.title);
+  return () => xmjTileRowSvg(example.groups, `Winning hand: ${example.title}`, 'win');
 }
 
-// --- A claim, step by step ----------------------------------------------------
+// --- A claim, animated -------------------------------------------------------
 
 /**
- * The claim walk-through: you hold four tiles, the other player discards the
- * red Cannon, you claim it into Chariot, Horse, Cannon and throw the Soldier,
- * then draw the second black Elephant for the pair. The last step is the
- * 'claimed' win above; the test checks the claim is legal from this hand.
+ * The claim the page animates: you hold four tiles, the other player discards
+ * the red Cannon, you claim it into Chariot, Horse, Cannon (face up, the
+ * claimed tile edged in blue) and discard the Soldier without drawing. The
+ * test checks the kernel allows this claim and that the set is a sequence.
  */
 export const XMJ32_CLAIM_HAND: readonly XmjTile[] = ['rR', 'rH', 'bE', 'bP'];
 export const XMJ32_CLAIM_DISCARD: XmjTile = 'rC';
+export const XMJ32_CLAIM_SET: readonly XmjTile[] = ['rR', 'rH', XMJ32_CLAIM_DISCARD];
+export const XMJ32_CLAIM_KEPT: XmjTile = 'bE';
 export const XMJ32_CLAIM_THROWN: XmjTile = 'bP';
+/** What the other player had already discarded before the Cannon. */
+export const XMJ32_CLAIM_EARLIER_DISCARD: XmjTile = 'bA';
 
-export const XMJ32_CLAIM_BEFORE_SVG = (): string =>
-  xmjTileRowSvg(
-    [
-      { tiles: XMJ32_CLAIM_HAND, label: 'your hand' },
-      { tiles: [XMJ32_CLAIM_DISCARD], label: 'their discard' },
-    ],
-    'Your four tiles, and the red Cannon the other player discards',
+const CLAIM_BEFORE_GROUPS: readonly XmjTileGroup[] = [
+  { tiles: XMJ32_CLAIM_HAND, label: 'your hand' },
+  { tiles: [XMJ32_CLAIM_DISCARD], label: 'their discard' },
+];
+const CLAIM_AFTER_GROUPS: readonly XmjTileGroup[] = [
+  { tiles: XMJ32_CLAIM_SET, label: 'claimed, face up', claimed: XMJ32_CLAIM_DISCARD },
+  { tiles: [XMJ32_CLAIM_KEPT], label: 'kept' },
+  { tiles: [XMJ32_CLAIM_THROWN], label: 'discarded' },
+];
+
+const CLAIM_SECONDS = 5;
+
+/**
+ * The claim as one animated figure (an animated-svg block). Every tile is
+ * drawn where it ends; keyframes (fill-mode both) start each one where it
+ * begins, so the SVG's still state is the end frame. Timeline of the 5 s:
+ * the Cannon lands in their discards (0 to 0.5 s), moves into your hand
+ * beside the Horse as the Elephant steps right (1.3 to 2.2 s), the set is
+ * marked face up with the blue edge on the Cannon (2.4 to 2.9 s), then the
+ * Soldier goes to your discards (3.3 to 4.2 s) and the frame holds.
+ */
+export const XMJ32_CLAIM_ANIMATION_SVG = (): string => {
+  const P = activeXiangqiPieceSet;
+  const pitch = XMJ_TILE_W + XMJ_TILE_GAP;
+  const x0 = 4;
+  const theirY = 20;
+  const discardY = 123;
+  const handY = 226;
+  const keptX = x0 + 3 * pitch + 22 - XMJ_TILE_GAP;
+  const label = (y: number, text: string) =>
+    `<text x="${x0}" y="${y}" font-size="11.5" font-weight="600" fill="currentColor" fill-opacity="0.7">${escapeText(text)}</text>`;
+  const cannonX = x0 + 2 * pitch;
+  const cannonFrom = { x: x0 + pitch - cannonX, y: theirY - handY };
+  const elephantFrom = x0 + 2 * pitch - keptX;
+  const soldierFrom = { x: x0 + 3 * pitch - x0, y: handY - discardY };
+  const setEnd = x0 + 3 * pitch - XMJ_TILE_GAP;
+  const by = handY + XMJ_TILE_H + 5 + 23;
+  const t = (n: number) => `${(n / CLAIM_SECONDS) * 100}%`;
+  const style = [
+    `@keyframes xmj-claim-cannon{0%{transform:translate(${cannonFrom.x}px,${cannonFrom.y}px);opacity:0}${t(0.5)},${t(1.3)}{transform:translate(${cannonFrom.x}px,${cannonFrom.y}px);opacity:1}${t(2.2)},100%{transform:none;opacity:1}}`,
+    `@keyframes xmj-claim-shift{0%,${t(1.3)}{transform:translateX(${elephantFrom}px)}${t(2.2)},100%{transform:none}}`,
+    `@keyframes xmj-claim-show{0%,${t(2.4)}{opacity:0}${t(2.9)},100%{opacity:1}}`,
+    `@keyframes xmj-claim-throw{0%,${t(3.3)}{transform:translate(${soldierFrom.x}px,${soldierFrom.y}px)}${t(4.2)},100%{transform:none}}`,
+    `.xmj-claim-cannon{animation:xmj-claim-cannon ${CLAIM_SECONDS}s ease-in-out both}`,
+    `.xmj-claim-kept{animation:xmj-claim-shift ${CLAIM_SECONDS}s ease-in-out both}`,
+    `.xmj-claim-mark{animation:xmj-claim-show ${CLAIM_SECONDS}s ease-in-out both}`,
+    `.xmj-claim-thrown{animation:xmj-claim-throw ${CLAIM_SECONDS}s ease-in-out both}`,
+  ].join('');
+  const parts = [
+    `<style>${style}</style>`,
+    label(13, 'Their discards'),
+    xmjTileSvg(XMJ32_CLAIM_EARLIER_DISCARD, x0, theirY, P),
+    label(116, 'Your discards'),
+    label(219, 'Your hand'),
+    xmjTileSvg('rR', x0, handY, P),
+    xmjTileSvg('rH', x0 + pitch, handY, P),
+    `<g class="xmj-claim-kept">${xmjTileSvg(XMJ32_CLAIM_KEPT, keptX, handY, P)}</g>`,
+    `<g class="xmj-claim-mark">`,
+    `<path d="M${x0 + 2} ${by - 4}V${by}H${setEnd - 2}V${by - 4}" fill="none" stroke="currentColor" stroke-opacity="0.45" stroke-width="1"/>`,
+    `<text x="${(x0 + setEnd) / 2}" y="${by + 14}" text-anchor="middle" font-size="11" font-style="italic" fill="currentColor" fill-opacity="0.75">claimed, face up</text></g>`,
+    `<g class="xmj-claim-cannon">${xmjTileSvg(XMJ32_CLAIM_DISCARD, cannonX, handY, P)}<rect class="xmj-claim-mark" x="${cannonX}" y="${handY}" width="${XMJ_TILE_W}" height="${XMJ_TILE_H}" rx="6" fill="none" stroke="${XMJ_CLAIM_EDGE}" stroke-width="2.5"/></g>`,
+    `<g class="xmj-claim-thrown">${xmjTileSvg(XMJ32_CLAIM_THROWN, x0, discardY, P)}</g>`,
+  ];
+  return xmjTileFigureSvg(
+    keptX + XMJ_TILE_W + 4,
+    by + 22,
+    'A claim: the other player discards the red Cannon, you take it into Chariot, Horse, Cannon, lay the set face up and discard the black Soldier',
+    parts.join(''),
   );
+};
 
-export const XMJ32_CLAIM_AFTER_SVG = (): string =>
+/** The claim for readers who asked for less motion: before, then after. */
+export const XMJ32_CLAIM_STATIC_SVG = (): string =>
+  xmjTileRowSvg(CLAIM_BEFORE_GROUPS, 'Before: your four tiles, and the red Cannon they discard') +
   xmjTileRowSvg(
-    [
-      { tiles: ['rR', 'rH', XMJ32_CLAIM_DISCARD], label: 'face up', claimed: XMJ32_CLAIM_DISCARD },
-      { tiles: ['bE'], label: 'kept' },
-      { tiles: [XMJ32_CLAIM_THROWN], label: 'discarded' },
-    ],
-    'The claimed set face up, the Elephant kept, the Soldier discarded',
+    CLAIM_AFTER_GROUPS,
+    'After: the claimed set face up, the Elephant kept, the Soldier discarded',
   );
 
 // --- Not a win ---------------------------------------------------------------
@@ -227,30 +365,31 @@ export const XMJ32_CLAIM_AFTER_SVG = (): string =>
 export const XMJ32_NOT_WINS: readonly XmjHandExample[] = [
   {
     id: 'mixed-colour',
-    title: 'Not a win: the General, Advisor and Elephant are not all one colour',
+    title: 'Not a winning hand: the General, Advisor and Elephant are not all one colour',
     groups: [{ tiles: ['rK', 'bA', 'rE'] }, { tiles: ['rP', 'rP'] }],
   },
   {
     id: 'mixed-group',
-    title: 'Not a win: General, Advisor and Horse come from different sets',
+    title: 'Not a winning hand: General, Advisor and Horse come from different sets',
     groups: [{ tiles: ['bK', 'bA', 'bH'] }, { tiles: ['rC', 'rC'] }],
   },
   {
     id: 'mixed-soldiers',
-    title: 'Not a win: two red Soldiers and a black one are not three of a kind',
+    title: 'Not a winning hand: two red Soldiers and a black one are not three of a kind',
     groups: [{ tiles: ['rP', 'rP', 'bP'] }, { tiles: ['bE', 'bE'] }],
   },
   {
     id: 'mixed-pair',
-    title: 'Not a win: a red and a black Advisor are not a pair',
+    title: 'Not a winning hand: a red and a black Advisor are not a pair',
     groups: [{ tiles: ['rR', 'rH', 'rC'] }, { tiles: ['rA', 'bA'] }],
   },
 ];
 
+/** A non-winning row, marked with the red cross. */
 export function xmj32NotWinSvg(id: string): () => string {
   const example = XMJ32_NOT_WINS.find((w) => w.id === id);
   if (!example) throw new Error(`xmj32NotWinSvg: no example ${id}`);
-  return () => xmjTileRowSvg(example.groups, example.title);
+  return () => xmjTileRowSvg(example.groups, example.title, 'not-win');
 }
 
 // --- The worked example ------------------------------------------------------
@@ -349,20 +488,28 @@ export const XMJ32_MATCH: readonly XmjMatchHand[] = [
   { dealer: 'Ben', winner: null, how: 'Void: the wall ran out', win: null },
 ];
 
-/** The match as table rows: hand, dealer, winner, how, points, Ana, Ben. */
+/** The scoreboard's header: the hands across, then the total. */
+export const XMJ32_MATCH_HEADERS: readonly string[] = [
+  'Hand',
+  ...XMJ32_MATCH.map((_, i) => String(i + 1)),
+  'Total',
+];
+
+/**
+ * The match as a mahjong scoreboard, one row per player: the points each won
+ * on each hand (empty when the other player won it), "void" in both rows for a
+ * hand nobody won, then the total.
+ */
 export function xmj32MatchRows(): string[][] {
-  const score: Record<XmjMatchPlayer, number> = { Ana: 0, Ben: 0 };
-  return XMJ32_MATCH.map((hand, i) => {
-    const points = hand.win?.expectedTotal ?? 0;
-    if (hand.winner) score[hand.winner] += points;
-    return [
-      String(i + 1),
-      hand.dealer,
-      hand.winner ?? 'Nobody',
-      hand.how,
-      String(points),
-      String(score.Ana),
-      String(score.Ben),
-    ];
+  return (['Ana', 'Ben'] as const).map((player) => {
+    let total = 0;
+    const cells = XMJ32_MATCH.map((hand) => {
+      if (!hand.winner) return 'void';
+      if (hand.winner !== player) return '';
+      const points = hand.win?.expectedTotal ?? 0;
+      total += points;
+      return String(points);
+    });
+    return [player, ...cells, String(total)];
   });
 }

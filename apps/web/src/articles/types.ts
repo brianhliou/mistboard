@@ -254,6 +254,21 @@ export type RawSvgBlock = {
   zoomable?: boolean;
 };
 
+// One SVG whose CSS keyframes play a short sequence (a tile claimed, then a
+// discard). It plays once, when the figure first scrolls into view, then holds
+// its last frame; a Replay button runs it again. The SVG's keyframes must use
+// fill-mode `both` and its un-animated state must be the end frame, so a
+// paused or finished animation reads correctly. Under prefers-reduced-motion
+// the figure shows `reducedSvg` instead (static before and after frames) and
+// no button.
+export type AnimatedSvgBlock = {
+  kind: 'animated-svg';
+  // A thunk is re-run on a piece-set change, like a raw-svg block's.
+  svg: string | (() => string);
+  reducedSvg: string | (() => string);
+  caption?: string;
+};
+
 // Two or three raw-SVG figures on one row (stacking on narrow screens). Rules
 // pages teach by contrast — leap across vs leap along, tiger vs lion from the
 // same square — and a contrast only lands when both cases are on screen at
@@ -390,6 +405,9 @@ export type TableBlock = {
    *  accessible name. On a phone the table becomes one card per row: the board
    *  on the left, the cells stacked beside it. */
   rowDiagrams?: TableRowDiagram[];
+  /** Emphasise a column (the hand that decided a match). Zero-indexed into
+   *  `headers` and each row's cells. */
+  highlightColumns?: number[];
 };
 
 export type TableRowDiagram = { svg: () => string; label: string };
@@ -422,6 +440,7 @@ export type ArticleBlock =
   | LiveBoardsBlock
   | CtaBlock
   | RawSvgBlock
+  | AnimatedSvgBlock
   | SvgRowBlock
   | RawSvgStepperBlock
   | StepGameSetBlock

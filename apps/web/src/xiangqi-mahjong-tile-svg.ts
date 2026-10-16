@@ -21,9 +21,12 @@ import {
   xiangqiTileFaceHref,
 } from './xiangqi-piece-sets.js';
 
-const TILE_W = 44;
-const TILE_H = 58;
-const TILE_GAP = 6;
+export const XMJ_TILE_W = 44;
+export const XMJ_TILE_H = 58;
+export const XMJ_TILE_GAP = 6;
+const TILE_W = XMJ_TILE_W;
+const TILE_H = XMJ_TILE_H;
+const TILE_GAP = XMJ_TILE_GAP;
 const GROUP_GAP = 22;
 const PAD = 4;
 
@@ -34,8 +37,11 @@ const FACE_LOW = '#efe7d2';
 const EDGE = '#ded3b8';
 const JADE = '#2f8a70';
 const JADE_LOW = '#22684f';
-const DEPTH = 5;
-const CLAIM = '#2f6fb3';
+export const XMJ_TILE_DEPTH = 5;
+const DEPTH = XMJ_TILE_DEPTH;
+export const XMJ_CLAIM_EDGE = '#2f6fb3';
+const CLAIM = XMJ_CLAIM_EDGE;
+const JADE_HIGH = '#45a587';
 // The piece's box is a little wider than the tile; the figure or character
 // inside it sits well within the tile.
 const PIECE_SIZE = 52;
@@ -58,17 +64,22 @@ export interface XmjTileGroup {
   readonly claimed?: XmjTile;
 }
 
-function escapeText(text: string): string {
+export function escapeText(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function tileSvg(
+/**
+ * One tile with its top-left at (x, y). `name` writes the English piece name
+ * under it (the default); a figure that labels each kind once turns it off.
+ */
+export function xmjTileSvg(
   tile: XmjTile,
   x: number,
   y: number,
-  claimed: boolean,
   pieceSet: XiangqiPieceSet,
+  opts: { claimed?: boolean; name?: boolean } = {},
 ): string {
+  const claimed = opts.claimed ?? false;
   const color = tileColor(tile) === 'r' ? 'red' : 'black';
   const piece = renderXiangqiPieceMark({ color, role: XMJ_ROLES[tilePiece(tile)] }, pieceSet, {
     x: x + (TILE_W - PIECE_SIZE) / 2,
@@ -100,9 +111,39 @@ function tileSvg(
     `<rect x="${x}" y="${y}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="${FACE}" stroke="${edge}" stroke-width="${claimed ? 2.5 : 1}"/>`,
     face,
     piece,
-    `<text x="${x + TILE_W / 2}" y="${y + TILE_H + DEPTH + 15}" text-anchor="middle" font-size="10.5" fill="currentColor">${escapeText(name)}</text>`,
+    opts.name === false
+      ? ''
+      : `<text x="${x + TILE_W / 2}" y="${y + TILE_H + DEPTH + 15}" text-anchor="middle" font-size="10.5" fill="currentColor">${escapeText(name)}</text>`,
   ].join('');
 }
+
+/**
+ * A tile turned over, the live table's back: jade on top, the ivory face
+ * showing along the bottom edge as depth. `w`/`h` default to a full tile; the
+ * wall draws them small.
+ */
+export function xmjTileBackSvg(x: number, y: number, w = TILE_W, h = TILE_H): string {
+  const r = Math.max(2, Math.round(w * 0.14));
+  const depth = Math.max(2, Math.round(h * 0.085));
+  const id = `xmj-back-${w}-${h}`;
+  return [
+    `<linearGradient id="${id}" x1="0" y1="0" x2="0.45" y2="1"><stop offset="0" stop-color="${JADE_HIGH}"/><stop offset="0.45" stop-color="${JADE}"/><stop offset="1" stop-color="${JADE_LOW}"/></linearGradient>`,
+    `<rect x="${x}" y="${y + depth}" width="${w}" height="${h}" rx="${r}" fill="${EDGE}"/>`,
+    `<rect x="${x}" y="${y + depth - 1}" width="${w}" height="${h}" rx="${r}" fill="${FACE_LOW}"/>`,
+    `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="url(#${id})" stroke="${JADE_LOW}" stroke-width="1"/>`,
+    w >= 20
+      ? `<path d="M${x + r} ${y + 1.5}H${x + w - r}" stroke="#fff" stroke-opacity="0.3"/>`
+      : '',
+  ].join('');
+}
+
+const tileSvg = (
+  tile: XmjTile,
+  x: number,
+  y: number,
+  claimed: boolean,
+  pieceSet: XiangqiPieceSet,
+): string => xmjTileSvg(tile, x, y, pieceSet, { claimed });
 
 /** One line of groups at `y`, starting at `x0`: its parts and right edge. */
 function groupsLine(
@@ -139,21 +180,93 @@ function lineHeight(groups: readonly XmjTileGroup[]): number {
   return TILE_H + DEPTH + 21 + (groups.some((g) => g.label) ? 26 : 0);
 }
 
+export function xmjTileFigureSvg(
+  width: number,
+  height: number,
+  title: string,
+  body: string,
+): string {
+  return wrapSvg(width, height, title, body);
+}
+
 function wrapSvg(width: number, height: number, title: string, body: string): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" class="xmj-article-tiles" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="${escapeText(title)}" style="max-width:min(100%,${Math.round(width * 1.15)}px);margin:0 auto"><title>${escapeText(title)}</title>${body}</svg>`;
 }
 
+/** A verdict mark at the left of a row: a check for a win, a cross for not. */
+export type XmjRowBadge = 'win' | 'not-win';
+
+const BADGE_R = 11;
+const BADGE_W = BADGE_R * 2 + 12;
+
+// The colours are site tokens (articles.css), so the badge follows the light
+// and dark theme; the fallbacks are for a copy outside the article.
+function badgeSvg(badge: XmjRowBadge, cx: number, cy: number): string {
+  const win = badge === 'win';
+  const label = win ? 'Winning hand' : 'Not a winning hand';
+  const fill = win ? 'var(--article-mark-win,#2c7a4b)' : 'var(--article-mark-lose,#b3362b)';
+  const mark = win
+    ? `M${cx - 5} ${cy + 0.5}l3.6 3.6 6.6-7.4`
+    : `M${cx - 4.2} ${cy - 4.2}l8.4 8.4M${cx + 4.2} ${cy - 4.2}l-8.4 8.4`;
+  return `<g class="xmj-badge xmj-badge--${badge}" role="img" aria-label="${label}"><title>${label}</title><circle cx="${cx}" cy="${cy}" r="${BADGE_R}" style="fill:${fill}"/><path d="${mark}" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--article-mark-ink,#fff)"/></g>`;
+}
+
 /**
  * A row of tile groups. `title` is the accessible name. The figure keeps its
- * drawn size on wide screens and shrinks to fit a phone.
+ * drawn size on wide screens and shrinks to fit a phone. `badge` puts a win
+ * or not-win mark at the left of the row.
  */
 export function xmjTileRowSvg(
   groups: readonly XmjTileGroup[],
   title: string,
   pieceSet: XiangqiPieceSet = 'international',
+  badge?: XmjRowBadge,
 ): string {
-  const { parts, end } = groupsLine(groups, PAD, PAD, pieceSet);
-  return wrapSvg(end + PAD, PAD + lineHeight(groups), title, parts.join(''));
+  const x0 = PAD + (badge ? BADGE_W : 0);
+  const { parts, end } = groupsLine(groups, x0, PAD, pieceSet);
+  const mark = badge ? badgeSvg(badge, PAD + BADGE_R, PAD + TILE_H / 2) : '';
+  return wrapSvg(end + PAD, PAD + lineHeight(groups), title, mark + parts.join(''));
+}
+
+/**
+ * Rows of tiles, left-aligned, each row split by piece kind: a tile gap inside
+ * a kind, a wider gap between kinds, and the kind's name once, centred under
+ * it ("Advisor" under the two Advisors), instead of a name under every tile.
+ */
+export function xmjTileKindGridSvg(
+  lines: readonly (readonly XmjTile[])[],
+  title: string,
+  pieceSet: XiangqiPieceSet = 'international',
+  /** Rows after which a wider gap opens (red's block above black's). */
+  breakAfter: readonly number[] = [],
+): string {
+  const KIND_GAP = 16;
+  const ROW_H = TILE_H + DEPTH + 26;
+  const BREAK = 18;
+  const parts: string[] = [];
+  let width = 0;
+  let y = PAD;
+  lines.forEach((line, row) => {
+    if (row > 0) y += ROW_H + (breakAfter.includes(row - 1) ? BREAK : 0);
+    let x = PAD;
+    let i = 0;
+    while (i < line.length) {
+      const kind = line[i] as XmjTile;
+      const start = x;
+      while (line[i] === kind) {
+        parts.push(xmjTileSvg(kind, x, y, pieceSet, { name: false }));
+        x += TILE_W + TILE_GAP;
+        i += 1;
+      }
+      const end = x - TILE_GAP;
+      parts.push(
+        `<text x="${(start + end) / 2}" y="${y + TILE_H + DEPTH + 16}" text-anchor="middle" font-size="11" fill="currentColor" class="xmj-kind-label">${escapeText(XMJ_PIECE_NAMES[tilePiece(kind)])}</text>`,
+      );
+      width = Math.max(width, end);
+      x = end + KIND_GAP;
+    }
+  });
+  return wrapSvg(width + PAD, y + ROW_H - 4, title, parts.join(''));
 }
 
 /**

@@ -1,11 +1,12 @@
 import {
-  XMJ32_BLACK_SIDE_SVG,
-  XMJ32_CLAIM_AFTER_SVG,
-  XMJ32_CLAIM_BEFORE_SVG,
+  XMJ32_CLAIM_ANIMATION_SVG,
+  XMJ32_CLAIM_STATIC_SVG,
+  XMJ32_DEAL_SVG,
+  XMJ32_MATCH_HEADERS,
   XMJ32_PAIRS_SVG,
-  XMJ32_RED_SIDE_SVG,
   XMJ32_SEQUENCES_SVG,
   XMJ32_SEQUENCES_SVG_2,
+  XMJ32_TILES_SVG,
   XMJ32_TRIPLETS_SVG,
   XMJ32_WORKED_SVG,
   xmj32MatchRows,
@@ -67,16 +68,13 @@ export const xiangqiMahjong32Article: Article = {
           text: 'The tiles are exactly one standard xiangqi set, the same 32 pieces you set up on a xiangqi board: sixteen red and sixteen black. Each side has one General, two Advisors, two Elephants, two Chariots, two Horses, two Cannons and five Soldiers. Colour works like a suit in mahjong. A set has to be all red or all black.',
         },
         {
-          kind: 'svg-row',
-          items: [
-            { svg: XMJ32_RED_SIDE_SVG, caption: 'The sixteen red tiles.' },
-            { svg: XMJ32_BLACK_SIDE_SVG, caption: 'The sixteen black tiles.' },
-          ],
+          kind: 'raw-svg',
+          svg: XMJ32_TILES_SVG,
           caption: 'All 32 tiles. One General, five Soldiers and two of every other piece on each side.',
         },
         {
           kind: 'paragraph',
-          text: 'Each tile shows its piece in the piece set you play xiangqi with on Mistboard, so you can play with figures or with the Chinese characters of a traditional set. The pictures on this page follow your piece set too, with each tile’s English name underneath.',
+          text: 'Each tile shows its piece in the piece set you play xiangqi with on Mistboard, so you can play with figures or with the Chinese characters of a traditional set. The pictures on this page follow your piece set too, with each piece’s English name underneath.',
         },
       ],
     },
@@ -85,7 +83,7 @@ export const xiangqiMahjong32Article: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'A set is three tiles of one colour, and there are only two kinds. A sequence is one of four fixed groups: General, Advisor and Elephant, or Chariot, Horse and Cannon, in red or in black. The order in your hand does not matter.',
+          text: 'A **set** is three tiles of one colour, and there are only two kinds. A **sequence** is one of four fixed groups: General, Advisor and Elephant, or Chariot, Horse and Cannon, in red or in black. The order in your hand does not matter.',
         },
         {
           kind: 'raw-svg',
@@ -99,7 +97,7 @@ export const xiangqiMahjong32Article: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'A triplet is three identical tiles. Only the Soldiers have more than two of a kind, so the only triplets are three red Soldiers and three black Soldiers.',
+          text: 'A **triplet** is three identical tiles. Only the Soldiers have more than two of a kind, so the only triplets are three red Soldiers and three black Soldiers.',
         },
         {
           kind: 'raw-svg',
@@ -108,7 +106,7 @@ export const xiangqiMahjong32Article: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'A pair is two identical tiles. There is one exception: the red General and the black General also make a pair, even though they differ in colour. Each General is a single tile, so this is the only way a General can be in the pair at all, and it scores extra.',
+          text: 'A **pair** is two identical tiles. There is one exception: the red General and the black General also make a pair, even though they differ in colour. Each General is a single tile, so this is the only way a General can be in the pair at all, and it scores extra.',
         },
         {
           kind: 'raw-svg',
@@ -123,6 +121,11 @@ export const xiangqiMahjong32Article: Article = {
         {
           kind: 'paragraph',
           text: 'Shuffle the 32 tiles face down. The dealer takes five and the other player four; the other 23 are the wall, and both players draw from it. The table shows how many tiles are left in the wall.',
+        },
+        {
+          kind: 'raw-svg',
+          svg: XMJ32_DEAL_SVG,
+          caption: 'A deal from your seat: the dealer has five tiles, you have four, and 23 are left in the wall.',
         },
         {
           kind: 'paragraph',
@@ -151,22 +154,14 @@ export const xiangqiMahjong32Article: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Here is a claim in three steps. You hold the red Chariot and Horse, a black Elephant and a black Soldier.',
+          text: 'Here is a claim. You hold the red Chariot and Horse, a black Elephant and a black Soldier, and the other player discards the red Cannon, the tile your sequence is missing.',
         },
         {
-          kind: 'raw-svg',
-          svg: XMJ32_CLAIM_BEFORE_SVG,
-          caption: '1. Their turn: they discard the red Cannon, the tile your sequence is missing.',
+          kind: 'animated-svg',
+          svg: XMJ32_CLAIM_ANIMATION_SVG,
+          reducedSvg: XMJ32_CLAIM_STATIC_SVG,
+          caption: 'You claim the Cannon instead of drawing. Chariot, Horse and Cannon go face up, the claimed Cannon edged in blue, and you discard the Soldier without drawing. You keep the black Elephant and wait for the other one to make the pair.',
         },
-        {
-          kind: 'raw-svg',
-          svg: XMJ32_CLAIM_AFTER_SVG,
-          caption: '2. You claim it instead of drawing. Chariot, Horse and Cannon go face up, the Cannon (blue edge) taken from their discard row, and you discard the Soldier. You keep the black Elephant and need the other one for the pair.',
-        },
-        win(
-          'claimed',
-          '3. Your next turn: you draw the other black Elephant and win. A set and a pair, self-drawn, and you did not deal: 3 points.',
-        ),
         {
           kind: 'paragraph',
           text: 'You can lay down only one set this way, since a hand has room for one. There is no kong (four of a kind) in this game, and no declaring that you are one tile from winning.',
@@ -274,15 +269,15 @@ export const xiangqiMahjong32Article: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Here is a whole match between Ana and Ben, with Ana dealing first. Two hands are void, and each win is scored from the table above.',
+          text: 'Here is a whole match between Ana and Ben, kept the way a mahjong scoreboard is. Ana deals hands 1, 3 and 5, and Ben deals 2, 4 and 6. Each column is one hand, with the points its winner scored from the table above; hands 2 and 6 are void, because the wall ran out.',
         },
         {
           kind: 'table',
-          wrap: true,
+          keyColumn: true,
           compact: true,
-          headers: ['Hand', 'Dealer', 'Winner', 'How', 'Points', 'Ana', 'Ben'],
+          headers: [...XMJ32_MATCH_HEADERS],
           rows: xmj32MatchRows(),
-          highlightRows: [4],
+          highlightColumns: [5],
         },
         {
           kind: 'paragraph',
