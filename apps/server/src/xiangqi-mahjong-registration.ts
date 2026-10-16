@@ -105,8 +105,13 @@ export async function createXiangqiMahjongRoom(
           timeControl,
           creatorPreference: xiangqiMahjongTenant.oppositeColor(engine.seat),
           // Seated at creation, so the bot is in the initial event log and
-          // survives hydration. A bot game never rates.
-          engine: { engineId: XMJ_BOT_CLIENT_ID, seat: engine.seat, botId: XMJ_BOT_ID },
+          // survives hydration. A bot game never rates. A homepage start names
+          // the persona that fronts the bot (Misty); a direct create names none.
+          engine: {
+            engineId: XMJ_BOT_CLIENT_ID,
+            seat: engine.seat,
+            botId: engine.botId ?? XMJ_BOT_ID,
+          },
         }
       : // PvP: both seats are human and handed out on connect.
         { timeControl, creatorPreference, rated },

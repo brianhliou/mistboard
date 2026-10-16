@@ -23,6 +23,7 @@ test('the merged Misty identity fronts every house variant', () => {
   assert.equal(firstPartyBotEngineFor('misty', 'banqi'), 'misty-banqi');
   assert.equal(firstPartyBotEngineFor('misty', 'jungle'), 'misty-jungle-level-2');
   assert.equal(firstPartyBotEngineFor('misty', 'jungle-flip'), 'misty-jungle-flip');
+  assert.equal(firstPartyBotEngineFor('misty', 'xiangqi-mahjong'), 'xiangqi-mahjong-bot');
   // A variant Misty does not play resolves to null, never a guess.
   assert.equal(firstPartyBotEngineFor('misty', 'xiangqi'), null);
 

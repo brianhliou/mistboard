@@ -2551,6 +2551,7 @@ const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
   banqi: 'banqi',
   jungle: 'jungle',
   'jungle-flip': 'jungle-flip',
+  'xiangqi-mahjong-32': 'xiangqi-mahjong',
 };
 
 // A rail/landing thumbnail rendered as the variant's marker, or null if the

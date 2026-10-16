@@ -217,7 +217,15 @@ describe('landing bot policy', () => {
     // Every Misty variant, fog included, advertises the 10+5 bot default. For
     // the fog engines it also clears the 5s increment floor (#283) the picker
     // and the create routes enforce (isAllowedEngineTimeControl).
-    for (const gameSpecId of ['banqi', 'jungle', 'jungle-flip', 'dark-chess', 'dark-xiangqi']) {
+    // Xiangqi Mahjong's room accepts 5+5 and 10+5, so the default is one it starts.
+    for (const gameSpecId of [
+      'banqi',
+      'jungle',
+      'jungle-flip',
+      'dark-chess',
+      'dark-xiangqi',
+      'xiangqi-mahjong',
+    ]) {
       expect(landingBotOffer(gameSpecId)).toMatchObject({
         botId: 'misty',
         timeControlId: '10m5',
@@ -330,7 +338,14 @@ describe('landing bot ladder (homepage play panel)', () => {
   });
 
   it('gives the house-built variants a single Misty', () => {
-    for (const spec of ['dark-chess', 'dark-xiangqi', 'banqi', 'jungle', 'jungle-flip']) {
+    for (const spec of [
+      'dark-chess',
+      'dark-xiangqi',
+      'banqi',
+      'jungle',
+      'jungle-flip',
+      'xiangqi-mahjong',
+    ]) {
       expect(ids(spec)).toEqual(['misty']);
     }
     expect(ids('not-a-variant')).toEqual([]);

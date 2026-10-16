@@ -24,6 +24,10 @@ const NOT_EVE_RATED_VARIANTS: ReadonlyMap<string, string> = new Map([
   ['dark-chess', 'python-worker engine; rated by the dark-chess EvE runner, not a tenant adapter'],
   ['dark-xiangqi', 'Misty DXQ, engine-service; no UCI ladder to round-robin'],
   ['jungle-flip', 'one node-budgeted bot, nothing to rank it against'],
+  [
+    'xiangqi-mahjong',
+    'one in-process heuristic tile bot over a four-hand match; no ladder, nothing to rank it against',
+  ],
 ]);
 
 // Variants with an adapter that plays scheduled data games (#488) but that is

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Readable } from 'node:stream';
 import type { RoomTimeControl, VariantId } from '@mistboard/game';
@@ -257,6 +258,34 @@ definePersistenceTests('room bot play requests', () => {
     assert.deepEqual(resolved.timeControl, { initialMs: 60_000, incrementMs: 1_000 });
   });
 
+  // Misty fronts the in-process tile bot. The roster names the engine, but the
+  // pair is allowed only once migration 170 adds the spec to her row, so this
+  // runs the migration's own SQL over the row migration 111 wrote.
+  test('migration 170 lets Misty start a Xiangqi Mahjong game on the tile bot', async () => {
+    await insertMistyProfile();
+    await runSql(
+      readFileSync(
+        new URL('../migrations/170_xiangqi_mahjong_misty_support.sql', import.meta.url),
+        'utf8',
+      ),
+    );
+    const before = process.env.MISTBOARD_XIANGQI_MAHJONG_ENABLED;
+    process.env.MISTBOARD_XIANGQI_MAHJONG_ENABLED = 'true';
+    try {
+      const resolved = await resolveBotRoomRequest(captureResponse(), {
+        botId: 'misty',
+        gameSpecId: 'xiangqi-mahjong',
+        mode: 'pve',
+      });
+      assert.ok(resolved);
+      assert.equal(resolved.botId, 'misty');
+      assert.equal(resolved.engineId, 'xiangqi-mahjong-bot');
+    } finally {
+      if (before === undefined) delete process.env.MISTBOARD_XIANGQI_MAHJONG_ENABLED;
+      else process.env.MISTBOARD_XIANGQI_MAHJONG_ENABLED = before;
+    }
+  });
+
   test('a spec outside the bot roster rejects with bot_game_spec_conflict', async () => {
     await insertMistyProfile();
     const response = captureResponse();
@@ -344,6 +373,16 @@ async function insertMistyProfile(): Promise<void> {
 // jieqi PvE is behind a launch flag that isBotSpecPlayable resolves through the
 // tenant registry, so a bot create for it rejects as unplayable with the flag
 // off, whatever the pace logic does.
+async function runSql(sql: string): Promise<void> {
+  const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+  await client.connect();
+  try {
+    await client.query(sql);
+  } finally {
+    await client.end();
+  }
+}
+
 async function withJieqiEnabled<T>(run: () => Promise<T>): Promise<T> {
   const before = process.env.MISTBOARD_JIEQI_ENABLED;
   process.env.MISTBOARD_JIEQI_ENABLED = 'true';
