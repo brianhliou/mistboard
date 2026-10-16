@@ -174,8 +174,113 @@ export type ArticleIndexView = 'community' | 'mistboard';
 export function buildArticlesIndex(
   lang?: ArticleLang,
   view: ArticleIndexView = 'mistboard',
+  topic?: string | null,
 ): HTMLElement {
-  return buildContentIndex('article', lang, view);
+  return buildContentIndex('article', lang, view, topic);
+}
+
+/**
+ * Topic filters on the blog index: `/blog?topic=<id>` narrows the one list in
+ * place, so a topic is data (an id, its chip label, which posts it holds), never
+ * a page of its own, and the canonical /blog stays the only URL search sees.
+ * Add a topic by adding an entry here. The first one reuses the homepage row
+ * tag, so a post tagged for the deep-dives row is in the deep-dives topic with
+ * no second edit.
+ */
+export type ArticleTopic = {
+  id: string;
+  labelKey: I18nKey;
+  matches: (article: Article) => boolean;
+};
+
+export const ARTICLE_TOPICS: readonly ArticleTopic[] = [
+  {
+    id: 'deep-dives',
+    labelKey: 'articles.deepDives',
+    matches: (article) => article.homeRow === 'deep-dives',
+  },
+];
+
+export function articleTopicHref(topicId: string, locale: Locale = currentLocale()): string {
+  return localizedHref(`/blog?topic=${encodeURIComponent(topicId)}`, locale);
+}
+
+/** The `?topic=` value of a search string, or null when it has none. */
+export function articleTopicFromSearch(search: string): string | null {
+  return new URLSearchParams(search).get('topic');
+}
+
+// The topics that hold at least one of these posts. A topic with nothing in it
+// gets no chip, and a link to it falls back to All: a filter must never open on
+// an empty list while the posts exist one click away.
+function articleTopicsWithPosts(entries: readonly Article[]): ArticleTopic[] {
+  return ARTICLE_TOPICS.filter((topic) => entries.some((article) => topic.matches(article)));
+}
+
+function buildArticleTopicChips(
+  topics: readonly ArticleTopic[],
+  list: HTMLElement,
+  locale: Locale,
+  activeTopicId: string | null,
+): HTMLElement {
+  const nav = document.createElement('nav');
+  nav.className = 'articles-topic-chips';
+  nav.setAttribute('aria-label', t('articles.topicsLabel', {}, locale));
+
+  const chips: Array<{ topicId: string | null; link: HTMLAnchorElement }> = [
+    {
+      topicId: null,
+      label: t('articles.topicAll', {}, locale),
+      href: localizedHref('/blog', locale),
+    },
+    ...topics.map((topic) => ({
+      topicId: topic.id,
+      label: t(topic.labelKey, {}, locale),
+      href: articleTopicHref(topic.id, locale),
+    })),
+  ].map(({ topicId, label, href }) => {
+    const link = document.createElement('a');
+    link.className = 'articles-topic-chip';
+    link.href = href;
+    link.textContent = label;
+    link.dataset.topic = topicId ?? '';
+    return { topicId, link };
+  });
+
+  const select = (topicId: string | null): void => {
+    applyArticleTopicFilter(list, topicId);
+    for (const chip of chips) {
+      if (chip.topicId === topicId) chip.link.setAttribute('aria-current', 'true');
+      else chip.link.removeAttribute('aria-current');
+    }
+  };
+
+  for (const chip of chips) {
+    // The chip is a real link, so a new tab or a shared URL lands on the same
+    // filtered list; a plain click narrows the list in place without a reload.
+    chip.link.addEventListener('click', (event) => {
+      if (event.defaultPrevented || event.button !== 0) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      select(chip.topicId);
+      try {
+        window.history.replaceState(window.history.state, '', chip.link.getAttribute('href'));
+      } catch {
+        // A sandboxed frame may refuse; the list is filtered either way.
+      }
+      track('blog_topic_selected', { topic: chip.topicId ?? 'all' });
+    });
+    nav.append(chip.link);
+  }
+  select(activeTopicId);
+  return nav;
+}
+
+function applyArticleTopicFilter(list: HTMLElement, topicId: string | null): void {
+  for (const item of list.querySelectorAll<HTMLLIElement>(':scope > li')) {
+    const topics = (item.dataset.topics ?? '').split(' ').filter(Boolean);
+    item.hidden = topicId !== null && !topics.includes(topicId);
+  }
 }
 
 export function buildRulesIndex(lang?: ArticleLang): HTMLElement {
@@ -186,6 +291,7 @@ function buildContentIndex(
   kind: Article['kind'],
   lang?: ArticleLang,
   articleView: ArticleIndexView = 'community',
+  topic?: string | null,
 ): HTMLElement {
   const locale = articleLocale(lang);
   const main = document.createElement('main');
@@ -222,7 +328,20 @@ function buildContentIndex(
     })
     .sort(compareArticlesNewestFirst);
   for (const article of entries) {
-    list.append(articleCard(article, lang));
+    const card = articleCard(article, lang);
+    const topicIds = ARTICLE_TOPICS.filter((entry) => entry.matches(article)).map(
+      (entry) => entry.id,
+    );
+    if (topicIds.length > 0) card.dataset.topics = topicIds.join(' ');
+    list.append(card);
+  }
+
+  // Chips only when they choose between something: All plus at least one topic
+  // with posts in this view. An unknown or empty topic falls back to All.
+  const topics = kind === 'article' ? articleTopicsWithPosts(entries) : [];
+  if (topics.length > 0) {
+    const activeTopicId = topics.some((entry) => entry.id === topic) ? (topic ?? null) : null;
+    headingBlock.append(buildArticleTopicChips(topics, list, locale, activeTopicId));
   }
 
   sheet.append(headingBlock);
@@ -484,13 +603,21 @@ export function buildHomeArticleCards(
     locale,
   );
   header.append(label);
-  if (row === 'latest') {
+  // The deep-dives row links on only when it is holding posts back: with every
+  // tagged post already on screen, "More" would open a list of the same cards.
+  const moreHref =
+    row === 'latest'
+      ? localizedHref('/blog', locale)
+      : articleItems.length > cards.length
+        ? articleTopicHref(row, locale)
+        : null;
+  if (moreHref) {
     const more = document.createElement('a');
     more.className = 'landing-row-more';
-    more.href = localizedHref('/blog', locale);
+    more.href = moreHref;
     more.textContent = t('site.more', {}, locale);
     // Autocapture is off, so a homepage link with no track() call is invisible
-    // in PostHog: this is the only way off the homepage into the blog index.
+    // in PostHog: these are the only ways off the homepage into the blog index.
     more.addEventListener('click', () => {
       track('landing_row_more_clicked', { row, href: more.getAttribute('href') });
     });
