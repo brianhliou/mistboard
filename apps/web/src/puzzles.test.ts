@@ -999,12 +999,56 @@ describe('puzzles prerender shell', () => {
     expect(hrefs).toContain('/analysis');
   });
 
-  it('does not reuse the screen-reader-only header class', () => {
-    // puzzles.css clips .puzzles-header to 1px because the live trainer leads
-    // with the board. Reusing it here would hide the baked heading from the
-    // no-JS visitor this page exists for.
-    const wrap = render();
-    expect(wrap.querySelector('.puzzles-intro-header')).not.toBeNull();
-    expect(wrap.querySelector('.puzzles-header')).toBeNull();
+  // Tag and class of every element in the frame, stopping at the slots whose
+  // content legitimately differs (the sidebar: explainer vs queue; the trainer
+  // panel: empty vs loading line).
+  const frameSkeleton = (root: ParentNode): string[] => {
+    const out: string[] = [];
+    const walk = (el: Element, depth: number): void => {
+      out.push(`${'  '.repeat(depth)}${el.tagName.toLowerCase()}.${el.className}`);
+      if (el.matches('.puzzles-sidebar, .puzzle-side-panel')) return;
+      for (const child of el.children) walk(child, depth + 1);
+    };
+    const shell = root.querySelector('.puzzles-shell');
+    if (shell) walk(shell, 0);
+    return out;
+  };
+
+  it('bakes the frame the client mounts into', async () => {
+    // The bake used to be an article (visible heading, explainer column) that
+    // the mount replaced with the three-column trainer: CLS 0.69 on prod. The
+    // two now share buildPuzzlesFrame, so the mount lands in the same slots.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise<Response>(() => {})),
+    );
+    const root = document.createElement('div');
+    document.body.append(root);
+    void mountPuzzles(root);
+    const baked = frameSkeleton(render());
+    expect(baked.length).toBeGreaterThan(4);
+    expect(frameSkeleton(root)).toEqual(baked);
+    expect(render().querySelector('.puzzles-sidebar .puzzles-intro')).not.toBeNull();
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+  });
+
+  it('keeps the board slot while the API answers', async () => {
+    // .puzzle-detail is display: contents, so a bare loading line in it became
+    // a layout grid item ahead of the sidebar, and the sidebar jumped columns
+    // (or down the page, stacked) when the board painted.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise<Response>(() => {})),
+    );
+    const root = document.createElement('div');
+    document.body.append(root);
+    void mountPuzzles(root);
+    const detail = root.querySelector('.puzzle-detail');
+    expect(detail?.querySelector(':scope > .puzzles-status')).toBeNull();
+    expect(detail?.querySelector('.puzzle-board > .puzzle-xiangqi-board')).not.toBeNull();
+    expect(detail?.querySelector('.puzzle-side-panel .puzzles-status')).not.toBeNull();
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
   });
 });

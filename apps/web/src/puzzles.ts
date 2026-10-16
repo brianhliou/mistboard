@@ -102,23 +102,7 @@ export async function mountPuzzles(
   restoreBoardScale();
   installPuzzleGripFit();
 
-  const shell = document.createElement('main');
-  shell.className = 'site-section puzzles-shell';
-  const header = document.createElement('div');
-  header.className = 'puzzles-header';
-  const title = document.createElement('h1');
-  title.className = 'site-section-heading';
-  title.textContent = t('puzzle.heading');
-  header.append(title);
-
-  const layout = document.createElement('div');
-  layout.className = 'puzzles-layout';
-  const detail = document.createElement('section');
-  detail.className = 'puzzle-detail';
-  const controls = document.createElement('aside');
-  controls.className = 'puzzles-sidebar';
-  layout.append(detail, controls);
-  shell.append(header, layout);
+  const { shell, detail, controls } = buildPuzzlesFrame();
   root.replaceChildren(buildNav(), shell);
 
   let summaries: PuzzleSummary[] = [];
@@ -249,7 +233,7 @@ export async function mountPuzzles(
     }
     selectedId = id;
     renderControls();
-    renderStatus(detail, t('puzzle.loading'));
+    renderPendingBoard(detail, t('puzzle.loading'));
     const token = ++loadToken;
     const puzzle = await fetchPuzzleDetail(id);
     if (token !== loadToken) return;
@@ -312,7 +296,7 @@ export async function mountPuzzles(
   window.addEventListener('keydown', onPuzzleKeyDown);
 
   renderStatus(controls, t('puzzle.loading'));
-  renderStatus(detail, t('puzzle.loading'));
+  renderPendingBoard(detail, t('puzzle.loading'));
   const puzzleList = await fetchPuzzleListWithAttempts();
   summaries = puzzleList.puzzles;
   // Merge the server's record of finished puzzles into the local seen-set
@@ -955,28 +939,77 @@ function resolveToFullPuzzleId(idOrCode: string, summaries: readonly PuzzleSumma
   );
 }
 
-// Build-time prerender of the puzzles landing frame: nav, heading, and the
-// static explainer. /puzzles is in the sitemap but served the bare shell, so a
-// crawler saw a <title> and 27 characters of body. The trainer itself needs the
-// API, so what bakes here is the explanation a first-time visitor reads; the
-// client mount replaces all of it on takeover (mountPuzzles calls
-// root.replaceChildren), so there is no hydration contract to keep.
-//
-// Default locale only, matching /player and /learn/xiangqi: prefixed paths stay
-// on the client-rendered shell, so this copy is deliberately not in the catalog.
-export function renderPuzzlesShellForPrerender(): string {
+// The page frame: shell, the screen-reader heading, and the three-column
+// layout (sidebar, board, trainer panel). The build-time bake and the client
+// mount both build it here, so the baked page already has the trainer's
+// geometry and the mount swaps content into the same slots instead of
+// replacing an article with a different layout (CLS 0.69 on /puzzles).
+function buildPuzzlesFrame(): {
+  shell: HTMLElement;
+  detail: HTMLElement;
+  controls: HTMLElement;
+} {
   const shell = document.createElement('main');
   shell.className = 'site-section puzzles-shell';
-
-  // Not .puzzles-header: that one is clipped to 1px for screen readers because
-  // the live trainer shows the board instead. The baked page is what a no-JS
-  // visitor actually reads, so its heading is visible.
   const header = document.createElement('div');
-  header.className = 'puzzles-intro-header';
+  header.className = 'puzzles-header';
   const title = document.createElement('h1');
   title.className = 'site-section-heading';
   title.textContent = t('puzzle.heading');
   header.append(title);
+
+  const layout = document.createElement('div');
+  layout.className = 'puzzles-layout';
+  const detail = document.createElement('section');
+  detail.className = 'puzzle-detail';
+  const controls = document.createElement('aside');
+  controls.className = 'puzzles-sidebar';
+  layout.append(detail, controls);
+  shell.append(header, layout);
+  renderPendingBoard(detail, null);
+  return { shell, detail, controls };
+}
+
+// The board and trainer-panel slots, empty, at the size the painted board will
+// take. .puzzle-detail is display: contents, so a bare status line would land in
+// the layout grid as its own item: on a wide screen it took the sidebar's
+// column and pushed the sidebar one column right, on a narrow one the sidebar
+// sat right under it, and both jumped when the board arrived. The stand-in
+// carries the xiangqi board's classes so its box is the board's box; it is the
+// only surfaced trainer, and a deep link to another variant settles once.
+function renderPendingBoard(host: HTMLElement, message: string | null): void {
+  const panel = document.createElement('div');
+  panel.className = 'puzzle-board-panel puzzle-board-panel--pending';
+  const board = document.createElement('div');
+  board.className = 'puzzle-board';
+  const surface = document.createElement('div');
+  surface.className = 'xiangqi-live-board puzzle-xiangqi-board puzzle-board-placeholder';
+  surface.setAttribute('aria-hidden', 'true');
+  board.append(surface);
+  const side = document.createElement('aside');
+  side.className = 'puzzle-side-panel';
+  if (message) {
+    const status = document.createElement('p');
+    status.className = 'puzzles-status';
+    status.textContent = message;
+    side.append(status);
+  }
+  panel.append(board, side);
+  host.replaceChildren(panel);
+}
+
+// Build-time prerender of /puzzles. /puzzles is in the sitemap but served the
+// bare shell, so a crawler saw a <title> and 27 characters of body. The trainer
+// itself needs the API, so the bake is the trainer's empty frame (the same
+// buildPuzzlesFrame the client mounts) with the explanation a first-time
+// visitor reads in the sidebar slot, where the queue panel lands once the API
+// answers. The client mount still replaces all of it (root.replaceChildren),
+// so there is no hydration contract to keep, only the shared geometry.
+//
+// Default locale only, matching /player and /learn/xiangqi: prefixed paths stay
+// on the client-rendered shell, so this copy is deliberately not in the catalog.
+export function renderPuzzlesShellForPrerender(): string {
+  const { shell, controls } = buildPuzzlesFrame();
 
   const intro = document.createElement('section');
   intro.className = 'puzzles-intro';
@@ -1035,7 +1068,7 @@ export function renderPuzzlesShellForPrerender(): string {
   );
   intro.append(footer);
 
-  shell.append(header, intro);
+  controls.append(intro);
   return `${buildNav().outerHTML}${shell.outerHTML}`;
 }
 
