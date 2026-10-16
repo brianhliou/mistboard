@@ -200,7 +200,7 @@ export const jieqiBotWinsArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'A stronger engine now sits above Level 8: AB-JChess, an open-source jieqi engine by Huorongrong and Laoxu (Kouza), which beat full-strength Pikafish in 248 of 400 games. Its story, and how it handles positions like these, follows next week.',
+          text: 'A stronger engine now sits above Level 8: AB-JChess, an open-source jieqi engine by Huorongrong and Laoxu (Kouza), which beat full-strength Pikafish in 248 of 400 games. Its story, and how it handles positions like these, is in [the AB-JChess post](/blog/ab-jchess).',
         },
         {
           kind: 'cta',

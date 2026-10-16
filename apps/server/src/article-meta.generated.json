@@ -2,7 +2,7 @@
   "ab-jchess": {
     "title": "AB-JChess, a stronger jieqi bot",
     "kind": "article",
-    "description": "An open-source jieqi engine with its own neural network now sits above Pikafish Level 8. It beat full-strength Pikafish 248 to 136 in 400 games.",
+    "description": "AB-JChess, an open-source jieqi engine with its own neural network, now sits above Pikafish Level 8 on Mistboard. It beat full-strength Pikafish 248 to 136 in 400 games.",
     "status": "published",
     "zhTitles": {
       "zh-hans": "AB-JChess：更强的揭棋电脑",
