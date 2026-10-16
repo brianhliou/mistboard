@@ -182,14 +182,18 @@ function soundForEvent(event: unknown, seat: unknown): void {
   if (action === 'claim') playSound('capture');
 }
 
+// The win/lose/draw sting plays once, on the live playing -> finished
+// transition, never on a load or reconnect into an already-finished room,
+// and only for a seated player (a spectator has no result to hear).
 let lastStatusType: string | null = null;
 function maybePlayTerminalSound(): void {
   const status = core?.state.view?.status;
   if (!status) return;
-  if (status.type === lastStatusType) return;
+  const previous = lastStatusType;
   lastStatusType = status.type;
-  if (status.type !== 'finished') return;
+  if (status.type !== 'finished' || previous !== 'playing') return;
   const seat = core?.state.seat;
+  if (!isMahjongSeat(seat)) return;
   const result = status.winner === null ? 'draw' : status.winner === seat ? 'win' : 'lose';
   playTerminalPlan(result, status.reason ?? null);
 }
