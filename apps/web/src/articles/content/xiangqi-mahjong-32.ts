@@ -51,7 +51,7 @@ export const xiangqiMahjong32Article: Article = {
   intro: [
     {
       kind: 'paragraph',
-      text: 'Xiangqi Mahjong is a folk game from Taiwan that plays a xiangqi set as mahjong tiles. The pieces go face down, you draw and discard, and the first player to hold a complete hand wins. The hand is tiny: five tiles, which is one set of three and a pair. That makes the game fast, and it means you can learn the winning hands from the pictures on this page.',
+      text: 'Xiangqi Mahjong is a mahjong game played with the 32 pieces of a xiangqi set, a pastime from Taiwan. The pieces go face down as tiles, you draw and discard, and the first player to hold a complete hand wins. The hand is tiny: five tiles, which is one set of three and a pair. That makes the game fast, and it means you can learn the winning hands from the pictures on this page.',
     },
     {
       kind: 'paragraph',
