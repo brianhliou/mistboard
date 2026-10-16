@@ -532,9 +532,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  font-size: 12px;
-  opacity: 0.8;
+  gap: 5px;
+  font-size: 11px;
+  /* A footnote, not a status line (Brian, 2026-10-15: "too loud"); it comes
+     up to read on hover, and each shaded tile carries its own title. */
+  opacity: 0.45;
+  transition: opacity 120ms ease;
+}
+
+.xmj-shaded-key:hover {
+  opacity: 0.9;
 }
 
 .xmj-shaded-key--hidden {
