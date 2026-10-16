@@ -151,8 +151,10 @@ const xmjWebTenant: WebVariantTenant<XmjSeat> = {
   oppositeColor: (seat) => (seat === 'east' ? 'west' : 'east'),
   seatMayAct: (view, seat) => xmjViewOffersAction(view as XmjPlayerView, seat),
   enabled: xiangqiMahjongEnabled,
-  // No review page exists, so no link: the postgame panel drops an empty href.
-  reviewUrl: () => '',
+  // The review page (xiangqi-mahjong-postgame.ts): the whole match, move by
+  // move, every tile face up. Linked only once the match is finished; its API
+  // refuses a live match.
+  reviewUrl: (roomId) => `/xiangqi-mahjong/game/${encodeURIComponent(roomId)}`,
   reasonPhrase: xmjReasonPhrase,
   seatPlayerName: xmjPlayerName,
   finishedLine: xmjFinishedLine,

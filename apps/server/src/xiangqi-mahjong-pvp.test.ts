@@ -7,8 +7,8 @@
  * suite plays whole matches through the runtime (the same projection the ws
  * runtime serves) and checks every payload a client could receive: the
  * snapshot, each broadcast event, the event log rebuilt on join and reconnect,
- * and the live history. A live spectator is refused outright ('sealed'), and
- * would see neither hand if it were not.
+ * and the live history. A live spectator is admitted ('open') and sees
+ * neither hand while one is in play (xiangqi-mahjong-spectate.test.ts).
  */
 
 import assert from 'node:assert/strict';
@@ -264,8 +264,8 @@ test('xmj pvp: the log rebuilt on join and reconnect hides the same things', () 
   assert.ok(checked > 2, 'rehydration was exercised mid-match');
 });
 
-test('xmj pvp: a live room refuses spectators and a finished one admits them', () => {
-  assert.equal(canObserveRoom(false, XIANGQI_MAHJONG_SPEC_ID), false);
+test('xmj pvp: live and finished rooms admit spectators, who see neither live hand', () => {
+  assert.equal(canObserveRoom(false, XIANGQI_MAHJONG_SPEC_ID), true);
   assert.equal(canObserveRoom(true, XIANGQI_MAHJONG_SPEC_ID), true);
   const room = pvpRoom(41);
   const spectator = snapshotView(room, 'spectator').view;

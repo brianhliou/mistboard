@@ -1361,8 +1361,25 @@ ol.xmj-log {
   color: var(--site-muted);
 }
 
+/* A fixed table takes its column widths from the first row, so the name
+   column's width sits on the header's empty corner cell: wide enough for a
+   whole handle beside six hands, ellipsized only on a phone. */
+.xmj-hands .xmj-hands__corner {
+  width: 28%;
+}
+
+@media (max-width: 480px) {
+  .xmj-hands .xmj-hands__corner {
+    width: 22%;
+  }
+
+  .xmj-hands th,
+  .xmj-hands td {
+    padding-inline: 2px;
+  }
+}
+
 .xmj-hands tbody th {
-  width: 22%;
   overflow: hidden;
   text-align: left;
   text-overflow: ellipsis;
@@ -1396,4 +1413,53 @@ ol.xmj-log {
   border-left: 1px solid var(--site-border);
   color: var(--site-text);
   font-weight: 700;
+}
+
+/* ── The review page (xiangqi-mahjong-postgame.ts) ───────────────────────────
+   The room's table and move list in the review shell. The list scrolls inside
+   its rail, beside a table of the same height. */
+
+/* .review-shell carries wider rails than the room for board games; take the
+   room's (the route's) instead, so both pages lay the table out alike. */
+.live-route--xiangqi-mahjong .review-shell {
+  --uni-side-min: inherit;
+  --uni-side-max: inherit;
+  --uni-table-min: inherit;
+  --uni-table-max: inherit;
+}
+
+/* The shell locks the left rail to width / aspect, a fixed-ratio board's
+   height; the table is not one, so the rail takes its measured height, as the
+   room's meta panel does (top of this file). */
+@media (min-width: 1260px) {
+  .live-route--xiangqi-mahjong .review-shell .review-shell__left {
+    height: calc(var(--uni-board-width) * 0.625 + 323px);
+  }
+}
+
+/* The grip's host (attachBoardResizeGrip); the board inside is redrawn each
+   step. The room's .board-shell carries the same light ink for the felt. */
+.xmj-review__stage {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  --board-resize-ink: #f1f5f2;
+}
+
+/* The clocks size their type to the console's width (cqw), as in the room,
+   where live-review.css makes the console the container. */
+.live-route--xiangqi-mahjong.xmj-review .game-console {
+  container-type: inline-size;
+}
+
+.xmj-review__moves {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* The room's game table, with no action rows under the list: the list takes
+   that height back, so the column ends level with the table. */
+.live-route--xiangqi-mahjong.xmj-review .round-table__box .game-table-moves {
+  max-height: max(200px, calc(var(--uni-board-width, 560px) * 0.625 + 323px - 344px));
 }

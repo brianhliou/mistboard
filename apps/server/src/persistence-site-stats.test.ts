@@ -1,3 +1,4 @@
+import { isPublicGameSpec, XIANGQI_MAHJONG_SPEC_ID } from '@mistboard/game';
 import {
   createUser,
   getPublicSiteStats,
@@ -235,6 +236,55 @@ definePersistenceTests('site stats', () => {
     const admin = await getSiteStats();
     assert.equal(admin.gamesByVariant['fortress-xiangqi'], 2);
     assert.equal(admin.gamesByVariant['atomic-xiangqi'], 1);
+  });
+
+  test('public stats count a playtest variant exactly when its launch switch is on', async () => {
+    // Xiangqi Mahjong is a hidden playtest until its publicSurface flips
+    // (packages/game game-specs.ts). While hidden its games stay out of every
+    // public number, as a retired variant's do; once launched they count,
+    // history included. The admin totals see them either way.
+    const launched = isPublicGameSpec(XIANGQI_MAHJONG_SPEC_ID);
+    const now = new Date('2026-10-16T12:00:00.000Z');
+    const ended = new Date('2026-10-15T12:00:00.000Z');
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      await client.query(
+        `INSERT INTO games
+           (room_id, variant, result, termination, ply_count, started_at, ended_at,
+            white_client, black_client, white_name, black_name, mode, status, visibility)
+         VALUES
+           ('playtest-xmj-pvp', 'xiangqi-mahjong', 'red-wins', 'resignation', 30, $1, $1,
+            'red', 'black', NULL, NULL, 'pvp', 'completed', 'public'),
+           ('playtest-xiangqi-pvp', 'xiangqi', 'red-wins', 'resignation', 30, $1, $1,
+            'red', 'black', NULL, NULL, 'pvp', 'completed', 'public')`,
+        [ended],
+      );
+    } finally {
+      await client.end();
+    }
+
+    const expected = launched ? 2 : 1;
+    const stats = await getPublicSiteStats({ now });
+    assert.equal(stats.totalCompletedGames, expected);
+    assert.equal(stats.publicGames, expected);
+    assert.equal(
+      stats.variantTotals.some((row) => row.variant === XIANGQI_MAHJONG_SPEC_ID),
+      launched,
+    );
+    assert.equal(
+      stats.weeklyByVariant.some((row) => row.variant === XIANGQI_MAHJONG_SPEC_ID),
+      launched,
+    );
+    assert.equal((await getSiteGameTotals({ now })).totalCompletedGames, expected);
+    assert.equal(
+      (await getRecentCountedGamesByVariant(28, { now })).some(
+        (row) => row.variant === XIANGQI_MAHJONG_SPEC_ID,
+      ),
+      launched,
+    );
+    const admin = await getSiteStats();
+    assert.equal(admin.gamesByVariant[XIANGQI_MAHJONG_SPEC_ID], 1);
   });
 
   test('getRecentCountedGamesByVariant counts counted games ended inside the window', async () => {

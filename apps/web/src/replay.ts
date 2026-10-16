@@ -95,7 +95,7 @@ import {
   type WallClockReplayLoop,
   type WallClockReplayPosition,
 } from './replay-wall-clock.js';
-import type { MoveListEntry } from './review/move-list.js';
+import type { MoveList, MoveListEntry } from './review/move-list.js';
 import { seatDiscEl } from './seat-disc.js';
 import type { SvgBoardSquareArrow, SvgBoardSquareGlyph } from './svg-board-arrow.js';
 import { svgBoardGlyphMarker } from './svg-board-marker.js';
@@ -260,6 +260,10 @@ export type ReplayHandle = {
   /** A variant-agnostic move list for the loaded game (one entry per played move,
    *  `ply` 1-based). OPTIONAL; empty when a path can't derive labels cleanly. */
   moveEntries?: () => MoveListEntry[];
+  /** The variant's own move list for the rail, in place of the paired list built
+   *  from moveEntries. OPTIONAL; a game whose turns do not alternate (Xiangqi
+   *  Mahjong's hand-by-hand log) passes it, every other path omits it. */
+  moveLog?: () => MoveList | null;
   /** Switch which perspective the board shows at the CURRENT ply, without
    *  restarting playback: a side's own (now-public) fogged view or the truth
    *  board. OPTIONAL — the /watch fog-perspective toggle drives it; showcase +

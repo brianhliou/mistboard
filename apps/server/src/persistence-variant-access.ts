@@ -9,7 +9,7 @@
 // forgetting to grant somebody shows up as "I can't get in", never as a
 // stranger quietly playing a variant whose scoring nobody has checked.
 
-import type { GameSpecId } from '@mistboard/game';
+import { ALLOWLISTED_PLAYTEST_SPEC_IDS, type GameSpecId } from '@mistboard/game';
 import type pg from 'pg';
 import type { AccountRole } from './persistence-accounts.js';
 import { getPool } from './persistence-db.js';
@@ -21,13 +21,12 @@ type VariantAccessDatabase = pg.Pool | pg.PoolClient;
  *
  * Membership is a statement about TRUST, not about readiness: a spec belongs
  * here while the code runs but its rules have not been checked by somebody who
- * plays the game. Take a spec out of this list when that check has happened,
- * not when the build goes green.
+ * plays the game. Derived from the launch switch (packages/game game-specs.ts:
+ * a PLAYTEST_GAME_SPEC_IDS spec whose publicSurface is 'hidden'), so a spec
+ * leaves this list in the same edit that lists it publicly. Flip the switch
+ * when that check has happened, not when the build goes green.
  */
-export const ALLOWLISTED_GAME_SPEC_IDS = [
-  'mahjong',
-  'xiangqi-mahjong',
-] as const satisfies readonly GameSpecId[];
+export const ALLOWLISTED_GAME_SPEC_IDS: readonly GameSpecId[] = ALLOWLISTED_PLAYTEST_SPEC_IDS;
 
 const ALLOWLISTED: ReadonlySet<GameSpecId> = new Set(ALLOWLISTED_GAME_SPEC_IDS);
 

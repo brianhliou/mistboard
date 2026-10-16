@@ -315,7 +315,15 @@ function opponentHtml(
       Array.from({ length: drew ? count - 1 : count }, () => back()).join('') +
       (drew ? back('xmj-tile--drawn') : '');
   } else {
-    concealed = hand.map((tile) => tileSpan(tile)).join('');
+    // A revealed hand (a finished match's review) sets its drawn tile apart too.
+    const drawn =
+      seatJustDrew(view, seat) && view.phase.type === 'discard' ? view.phase.drawn : null;
+    const rest = [...hand];
+    const drawnAt = drawn === null ? -1 : rest.lastIndexOf(drawn);
+    if (drawnAt >= 0) rest.splice(drawnAt, 1);
+    concealed =
+      rest.map((tile) => tileSpan(tile)).join('') +
+      (drawn !== null && drawnAt >= 0 ? tileSpan(drawn, 'xmj-tile--drawn') : '');
   }
   return `<section class="xmj-seat xmj-seat--opponent" data-xmj-seat="${seat}">${seatRowHtml(view, seat, names)}<div class="xmj-rack"><span class="xmj-concealed">${concealed}</span>${meldsHtml(view.melds[seat])}</div></section>`;
 }
@@ -654,7 +662,7 @@ export function xmjHandsTableHtml(
     }).join('');
     return `<tr><th scope="row">${escapeHtml(names[seat])}</th>${cells}<td class="xmj-hands__total">${view.scores[seat]}</td></tr>`;
   }).join('');
-  return `<table class="xmj-hands" aria-label="${t('live.xmj.handsTable')}"><thead><tr><td></td>${heads}<th scope="col" class="xmj-hands__total">${t('live.xmj.handsTotal')}</th></tr></thead><tbody>${rows}</tbody></table>`;
+  return `<table class="xmj-hands" aria-label="${t('live.xmj.handsTable')}"><thead><tr><td class="xmj-hands__corner"></td>${heads}<th scope="col" class="xmj-hands__total">${t('live.xmj.handsTotal')}</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 /** The one sentence the result leads with, for a screen reader and the log. */

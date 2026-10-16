@@ -747,6 +747,13 @@
   font-weight: 600;
 }
 
+/* A linked name is the clock-name element itself, so the global
+   a.player-name-link `color: inherit` would take the row's text colour and set
+   a human's name apart from "You" or a bot's. Keep the heading colour. */
+a.clock-name.player-name-link {
+  color: var(--site-heading);
+}
+
 .clock-to-move {
   display: inline-flex;
   align-items: center;

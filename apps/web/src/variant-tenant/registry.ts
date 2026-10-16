@@ -22,6 +22,7 @@ import {
   DUCK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   type GameSpecId,
+  isPublicGameSpec,
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
@@ -116,9 +117,11 @@ export type WebVariantTenant = {
   // /game/:id link those surfaces always produced.
   reviewRouteBase?: string;
   // A finished game opens at its own room (/room/:id), which hydrates the
-  // finished match: for a table with no postgame page whose room client draws
-  // the final position for a visitor. The server registration carries the same
-  // flag (crosstableReviewUrl); variant-registry-sync.test.ts holds the two.
+  // finished match: for a table whose room client draws the final position for
+  // a visitor. It outranks gameRouteBase as the finished game's link; a review
+  // page, when the tenant has one, is reached from the room. The server
+  // registration carries the same flag (crosstableReviewUrl);
+  // variant-registry-sync.test.ts holds the two.
   finishedGameOpensRoom?: true;
   // Self-contained live-room client. Resolves to the bootstrap
   // function so callers can preload the chunk before swapping the URL/DOM.
@@ -177,14 +180,17 @@ const XIANGQI_CAPABILITIES_BASE = {
 const alwaysEnabled = () => true;
 
 // Offered only to an account the server would actually seat: the build flag
-// plus a grant named on /api/auth/me (admins hold every one). Turning the flag
-// on alone would put a door in every visitor's play menu that their account
-// cannot open, and they would land as a spectator at an empty table with
-// nothing explaining why.
-const mahjongOffered = (): boolean => mahjongEnabled() && hasLikelyVariantGrant(MAHJONG_SPEC_ID);
+// plus, while the spec is a hidden playtest, a grant named on /api/auth/me
+// (admins hold every one). Turning the flag on alone would put a door in every
+// visitor's play menu that their account cannot open, and they would land as a
+// spectator at an empty table with nothing explaining why. Once the spec's
+// launch switch (publicSurface) is on, the server drops it from the allowlist
+// and the flag alone decides.
+const playtestOffered = (enabled: () => boolean, gameSpecId: GameSpecId) => (): boolean =>
+  enabled() && (isPublicGameSpec(gameSpecId) || hasLikelyVariantGrant(gameSpecId));
+const mahjongOffered = playtestOffered(mahjongEnabled, MAHJONG_SPEC_ID);
 // Xiangqi mahjong is gated the same way, on its own flag and its own grant.
-const xiangqiMahjongOffered = (): boolean =>
-  xiangqiMahjongEnabled() && hasLikelyVariantGrant(XIANGQI_MAHJONG_SPEC_ID);
+const xiangqiMahjongOffered = playtestOffered(xiangqiMahjongEnabled, XIANGQI_MAHJONG_SPEC_ID);
 // Retired/hidden from the play-menu picker (2026-07-03 xiangqi pivot,
 // project_xiangqi_pivot_track). Discoverability only: acceptsDeepLink stays live
 // so existing games + physical/kids deep links keep working, and the live client
@@ -994,20 +1000,41 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     // Gated like Hong Kong mahjong: the build flag plus the server's
     // per-account allowlist. Against the bot, a friend room, or Find opponent
     // (rated at 5+5; the rated unit is the whole four-hand match). The lobby
-    // lists its seeks only to granted accounts, and there is no watch surface.
+    // lists its seeks only to granted accounts. On TV (and the live listings)
+    // only once the spec is public: the server gates the channel on
+    // publicSurface (watch-channels.ts listedOnSurface).
     gameSpecId: XIANGQI_MAHJONG_SPEC_ID,
     roomIdPrefix: 'xmj_',
     enabled: xiangqiMahjongEnabled,
     pageTitleKey: 'variant.xiangqiMahjong.name',
-    // No postgame page: the room itself shows a finished match, every hand
-    // face up and never the walls (server xiangqi-mahjong-pvp.test.ts).
+    // A finished match opens at its own room, which shows the final hand with
+    // every tile face up and never the walls (server xiangqi-mahjong-pvp.test.ts);
+    // profile rows, the bell and the database link there (finishedGameOpensRoom
+    // wins over gameRouteBase in finishedGameHref). The room's Review button
+    // opens the review page below: every hand of the match, move by move, both
+    // hands and each draw face up. Its API answers only for a finished match
+    // (server routes/xiangqi-mahjong-games.ts); no engine, no discard advice.
     finishedGameOpensRoom: true,
+    gameRouteBase: '/xiangqi-mahjong/game',
+    mountPostgame: (root, roomId) =>
+      import('../xiangqi-mahjong-postgame.js').then(({ mountXiangqiMahjongPostgame }) =>
+        mountXiangqiMahjongPostgame(root, roomId),
+      ),
     loadLiveRoomClient: () =>
       import('../live-xiangqi-mahjong.js').then(
         ({ bootstrapXiangqiMahjongLiveRoom }) =>
           () =>
             bootstrapXiangqiMahjongLiveRoom(),
       ),
+    // Mistboard TV: the room's table at each recorded view, spectator views
+    // while live, with the hand-by-hand log and the points in the rail.
+    watch: {
+      family: 'mahjong',
+      mountReplay: (root, roomId, options) =>
+        import('../watch-xiangqi-mahjong-replay.js').then(({ mountXiangqiMahjongWatchReplay }) =>
+          mountXiangqiMahjongWatchReplay(root, roomId, options),
+        ),
+    },
     landing: {
       capabilities: {
         firstColor: 'red',
@@ -1084,9 +1111,11 @@ export function webVariantOfferedInMenu(gameSpecId: string): boolean {
 export function finishedGameHref(roomId: string, gameSpecId: string | null): string {
   const tenant = webVariantTenantForRoomId(roomId) ?? webVariantTenantForSpecId(gameSpecId);
   const id = encodeURIComponent(roomId);
+  // A table whose room is its finished page links the room even when it also
+  // has a review page (Xiangqi Mahjong: the room's Review button opens it).
+  if (tenant?.finishedGameOpensRoom) return `/room/${id}`;
   const routeBase = tenant?.gameRouteBase ?? tenant?.reviewRouteBase ?? null;
   if (routeBase) return `${routeBase}/${id}`;
-  if (tenant?.finishedGameOpensRoom) return `/room/${id}`;
   return `/game/${id}`;
 }
 
@@ -1109,10 +1138,10 @@ export function legacyGameRouteForRoomId(roomId: string): LegacyGameRoute {
   if (!tenant || legacyLiveRoomForGameSpec(tenant.gameSpecId)) return { kind: 'chess' };
   if (!tenant.enabled()) return { kind: 'not-found' };
   const id = encodeURIComponent(roomId);
+  if (tenant.finishedGameOpensRoom) return { kind: 'redirect', href: `/room/${id}` };
   if (tenant.gameRouteBase && tenant.mountPostgame) {
     return { kind: 'redirect', href: `${tenant.gameRouteBase}/${id}` };
   }
-  if (tenant.finishedGameOpensRoom) return { kind: 'redirect', href: `/room/${id}` };
   return { kind: 'not-found' };
 }
 

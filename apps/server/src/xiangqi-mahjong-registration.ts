@@ -1,5 +1,6 @@
 /**
- * Xiangqi mahjong registry entry. Narrow on purpose: no TV channel, no export.
+ * Xiangqi mahjong registry entry. Narrow on purpose: no export. Its TV channel
+ * follows the spectator view and lists only when the spec is public.
  * A room is PvE (the in-process bot takes the other seat), PvP (a friend room,
  * or a Find opponent pairing through the lobby), or correspondence (a seek or
  * challenge between two granted accounts, casual only). The rated unit is the
@@ -42,7 +43,9 @@ import {
   createTenantWsRuntime,
   type TenantLiveRoom,
 } from './variant-tenant/ws.js';
+import { registerLiveWatchPayloadBuilder } from './watch-live.js';
 import { type XmjEvent, xiangqiMahjongTenant } from './xiangqi-mahjong-tenant.js';
+import { xmjLiveWatchPayloadFor } from './xiangqi-mahjong-watch.js';
 
 export type XmjRuntimeRoom = TenantRuntimeRoom<
   'xiangqi-mahjong',
@@ -158,9 +161,15 @@ registerVariantTenant({
   replays: tenantReplayCheck(xiangqiMahjongTenant),
   errorPrefix: 'xiangqi_mahjong',
   enabled: xiangqiMahjongTenant.enabled,
-  // No TV channel: the hands are concealed, so there is nothing a spectator
-  // can follow live (xiangqi-mahjong-tenant.test.ts pins it).
-  watch: null,
+  // TV follows a match the way a room spectator does: melds, discards, counts
+  // and the points table, never a concealed tile (xiangqi-mahjong-watch.ts).
+  // Listed only once the spec's publicSurface is not 'hidden' (watch-channels.ts).
+  watch: {
+    channelId: 'xiangqi-mahjong',
+    family: 'mahjong',
+    label: 'Xiangqi Mahjong',
+    legacyVariants: ['xiangqi-mahjong'],
+  },
   rooms: xiangqiMahjongRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,
   activeGameCount: () => countActiveTenantGames(xiangqiMahjongRooms.values()),
   getOrLoadRoom: (roomId) =>
@@ -208,4 +217,12 @@ registerVariantTenant({
   // every hand and never the walls (xiangqi-mahjong-pvp.test.ts).
   finishedGameOpensRoom: true,
   ...xiangqiMahjongCorrespondence,
+});
+
+registerLiveWatchPayloadBuilder('xiangqi-mahjong', async (roomId) => {
+  if (!xiangqiMahjongTenant.enabled()) return null;
+  const room = xiangqiMahjongRooms.get(roomId) ?? null;
+  if (!room) return null;
+  await room.pendingWrites.catch(() => undefined);
+  return xmjLiveWatchPayloadFor(roomId, room);
 });

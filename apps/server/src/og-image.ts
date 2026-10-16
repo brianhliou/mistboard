@@ -20,6 +20,10 @@ import {
   getPlayerView as getXiangqiPlayerView,
   initialGameProjection,
   parseStandardXiangqiFen,
+  tileColor,
+  tilePiece,
+  type XmjPiece,
+  type XmjTile,
 } from '@mistboard/game';
 import type { ArticleZhTitles } from './article-meta.js';
 import { SKILL_VS_LUCK_OG_SERIES } from './banqi-luck-og-data.js';
@@ -30,6 +34,7 @@ import {
   loadCardArt,
   renderBoardAspectCard,
   renderBoardCard,
+  xiangqiFigureSvg,
 } from './og-card-board.js';
 import { type PositionOgBoard, type PositionOgVariant, resolvePositionOg } from './og-position.js';
 import { escapeXml, OG_FONT, OG_HEIGHT, OG_WIDTH } from './og-primitives.js';
@@ -183,6 +188,7 @@ const CUSTOM_ARTICLE_OG_SVGS: Record<
   'server-enforced-fog': renderServerFogOgSvg,
   'skill-vs-luck': renderSkillVsLuckOgSvg,
   shogi4: renderShogi4OgSvg,
+  'xiangqi-mahjong-32': renderXiangqiMahjongOgSvg,
   misty: renderMistyOgSvg,
   'yin-sheng': playerFaceOgSvg('article-thumbs/yin-sheng-2022-face.jpg'),
   'cao-yanlei': playerFaceOgSvg('article-thumbs/cao-yanlei-2024-face.jpg'),
@@ -807,6 +813,88 @@ async function renderShogi4OgSvg(title: string, ctx: ArticleOgContext): Promise<
     `<rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="#0f1115"/>`,
     `<svg x="${boardX}" y="${boardY}" width="${boardSize}" height="${boardSize}" viewBox="0 0 262 262">${inner.join('')}</svg>`,
     ogFooterLine(title, boardY + boardSize + 48),
+    `</svg>`,
+  ].join('');
+}
+
+// Xiangqi Mahjong's card is a winning hand on the table's tiles (ivory face,
+// jade backing; apps/web/src/xiangqi-mahjong-tile-svg.ts at 4x), drawn as
+// vectors at output size with the piece art picked for that size. The hand is
+// the rules page's worked example (XMJ32_WORKED): red Chariot, Horse, Cannon
+// with the two Generals as the pair; og-image.test.ts runs it through
+// xmjWinShape so the card cannot show a hand the game would not call a win.
+export const XMJ_OG_HAND: readonly (readonly XmjTile[])[] = [
+  ['rR', 'rH', 'rC'],
+  ['rK', 'bK'],
+];
+const XMJ_OG_GROUP_LABELS = ['set', 'pair'] as const;
+const XMJ_OG_ROLES: Readonly<Record<XmjPiece, string>> = {
+  K: 'general',
+  A: 'advisor',
+  E: 'elephant',
+  R: 'chariot',
+  H: 'horse',
+  C: 'cannon',
+  P: 'soldier',
+};
+
+function xmjOgTile(
+  art: Awaited<ReturnType<typeof loadCardArt>>,
+  tile: XmjTile,
+  x: number,
+  y: number,
+  scale: number,
+): string {
+  const w = 44 * scale;
+  const h = 58 * scale;
+  const rx = 6 * scale;
+  const depth = 5 * scale;
+  const pieceSize = 52 * scale;
+  const ink = tileColor(tile) === 'r' ? 'red' : 'black';
+  const role = XMJ_OG_ROLES[tilePiece(tile)];
+  return [
+    `<rect x="${x}" y="${y + depth}" width="${w}" height="${h}" rx="${rx}" fill="#22684f"/>`,
+    `<rect x="${x}" y="${y + depth - scale}" width="${w}" height="${h}" rx="${rx}" fill="#2f8a70"/>`,
+    `<rect x="${x}" y="${y + scale}" width="${w}" height="${h}" rx="${rx}" fill="#ded3b8"/>`,
+    `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="#fbf7ec" stroke="#ded3b8" stroke-width="${scale}"/>`,
+    `<path d="M${x + scale} ${y + h * 0.6}H${x + w - scale}V${y + h - rx}a${rx - scale} ${rx - scale} 0 0 1-${rx - scale} ${rx - scale}H${x + rx}a${rx - scale} ${rx - scale} 0 0 1-${rx - scale}-${rx - scale}Z" fill="#efe7d2" fill-opacity="0.7"/>`,
+    `<path d="M${x + rx} ${y + 1.5 * scale}H${x + w - rx}" stroke="#fff" stroke-opacity="0.9" stroke-width="${scale}"/>`,
+    xiangqiFigureSvg(art, ink, role, x + (w - pieceSize) / 2, y + (h - pieceSize) / 2, pieceSize),
+  ].join('');
+}
+
+async function renderXiangqiMahjongOgSvg(title: string, ctx: ArticleOgContext): Promise<string> {
+  const art = await loadCardArt(ctx.staticDir);
+  const scale = 4;
+  const tileW = 44 * scale;
+  const tileGap = 6 * scale;
+  const groupGap = 22 * scale;
+  const tileY = 132;
+  const tileBottom = tileY + (58 + 5) * scale;
+  const tiles = XMJ_OG_HAND.flat().length;
+  const width =
+    tiles * tileW + (tiles - XMJ_OG_HAND.length) * tileGap + (XMJ_OG_HAND.length - 1) * groupGap;
+  let x = (OG_WIDTH - width) / 2;
+  const parts: string[] = [];
+  XMJ_OG_HAND.forEach((group, index) => {
+    const groupX = x;
+    for (const tile of group) {
+      parts.push(xmjOgTile(art, tile, x, tileY, scale));
+      x += tileW + tileGap;
+    }
+    x += groupGap - tileGap;
+    const groupEnd = x - groupGap;
+    const bracketY = tileBottom + 22;
+    parts.push(
+      `<path d="M${groupX + 4} ${bracketY - 10}V${bracketY}H${groupEnd - 4}V${bracketY - 10}" fill="none" stroke="#5b6470" stroke-width="3"/>`,
+      `<text x="${(groupX + groupEnd) / 2}" y="${bracketY + 38}" text-anchor="middle" font-family="${FONT}" font-size="28" fill="#9ca3af">${XMJ_OG_GROUP_LABELS[index]}</text>`,
+    );
+  });
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">`,
+    `<rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="#0f1115"/>`,
+    ...parts,
+    ogFooterLine(title, 36 + 500 + 48),
     `</svg>`,
   ].join('');
 }

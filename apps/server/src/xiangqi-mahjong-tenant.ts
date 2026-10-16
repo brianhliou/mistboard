@@ -149,9 +149,9 @@ export const xiangqiMahjongTenant: XmjTenantType = {
   // Rematch rides the lobby factory, which this table now has, but the
   // conformance test (variant-tenant-rematch.test.ts) seats two guests and the
   // per-account grant refuses guests. Opted out until that test can seat
-  // granted accounts; a PvP seat gets New opponent meanwhile. There is no
-  // Review: the table has no review page (the web reviewUrl is empty), and a
-  // finished match reopens at its own room.
+  // granted accounts; a PvP seat gets New opponent meanwhile. A finished match
+  // reopens at its own room, whose Review button opens the review page
+  // (routes/xiangqi-mahjong-games.ts, finished matches only).
   rematch: { optOut: 'allowlisted playtest: the rematch conformance test seats guests' },
   // A move here is an action, not a turn; the clock runs from the first one.
   armsClockOnFirstMove: true,

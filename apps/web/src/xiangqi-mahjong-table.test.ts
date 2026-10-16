@@ -10,6 +10,7 @@ import {
   xmjBotAction,
   xmjOrderedTiles,
   xmjPendingAction,
+  xmjReviewViewFor,
   xmjViewFor,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
@@ -443,6 +444,21 @@ describe('xiangqi mahjong table', () => {
     expect(backs.filter((back) => back.classList.contains('xmj-tile--drawn')).length).toBe(1);
   });
 
+  it('a review shows the tile just drawn face up, apart from the rest of the hand', () => {
+    const after = afterDiscard(['bP', 'bP', 'bA', 'rE']);
+    const drew = applyXmjMove(after, { by: 'west', at: 20_000, action: 'pass' });
+    const view = xmjReviewViewFor(drew);
+    const drawn = view.phase.type === 'discard' ? view.phase.drawn : null;
+    expect(drawn).not.toBeNull();
+    const host = doc(xiangqiMahjongTableHtml(view, opts(false)));
+    const tiles = [...host.querySelectorAll('.xmj-seat--opponent .xmj-concealed > .xmj-tile')];
+    expect(tiles).toHaveLength(view.hands.west?.length ?? -1);
+    expect(host.querySelectorAll('.xmj-tile--back')).toHaveLength(0);
+    expect(tiles.at(-1)?.classList.contains('xmj-tile--drawn')).toBe(true);
+    expect(tiles.at(-1)?.getAttribute('aria-label')).toBe(xmjTileName(drawn as XmjTile));
+    expect(host.querySelectorAll('.xmj-tile--drawn')).toHaveLength(1);
+  });
+
   it('lists the points of every hand for under the table, totals matching the match score', () => {
     let current = state;
     let checked = 0;
@@ -614,6 +630,26 @@ describe('xiangqi mahjong table', () => {
     }
     // Passes and the steps between hands never show.
     expect(host.textContent).not.toMatch(/Pass|Ready/);
+    // Every row says a whole thing, for a player and for a spectator: a win on
+    // a discard used to read "Bot wins on", as if cut off before the tile.
+    const kinds = new Set(hands.flatMap((hand) => hand.rows.map((row) => row.kind)));
+    expect(kinds.has('discard')).toBe(true);
+    for (const viewer of ['east', null] as const) {
+      const all = render({ viewer, expanded: new Set(hands.map((hand) => hand.hand)) });
+      const texts = [...all.querySelectorAll('.xmj-log__row')].map(words);
+      expect(texts.length).toBe(hands.reduce((sum, hand) => sum + hand.rows.length, 0));
+      for (const text of texts) {
+        expect(text).toMatch(
+          /^(You|Bot|Misty) (discards?|draws?, discards?|takes?|wins? on a discard|wins? by self-draw)$|^The wall ran out$/,
+        );
+      }
+    }
+    const winRow = hands.flatMap((hand) => hand.rows).find((row) => row.kind === 'win');
+    if (winRow) {
+      const all = render({ viewer: null, expanded: new Set(hands.map((hand) => hand.hand)) });
+      const row = all.querySelector(`.xmj-log__row[data-xmj-ply="${winRow.ply}"]`);
+      expect(row ? words(row) : '').toMatch(/ wins on a discard$/);
+    }
     // A scrub into hand 1 opens it and marks the row.
     const first = hands[0]?.rows[0];
     const scrubbed = render({ activePly: first?.ply ?? 1 });

@@ -813,10 +813,16 @@
   }
 }
 @media (min-width: 1260px) {
+  /* Clip, with room for the chat's drop shadow (0 8px 18px, spectator-chat.css):
+     the chat fills to the rail's edges, and a hard clip there cut its shadow
+     flat while the wedges outside its rounded corners kept theirs, so the
+     corners read as square. A browser without overflow-clip-margin clips at
+     the edge as before. */
   .review-shell__left {
     align-self: stretch;
     min-height: 0;
-    overflow: hidden;
+    overflow: clip;
+    overflow-clip-margin: 26px;
   }
 }
 

@@ -4,6 +4,7 @@ import {
   type GameFamilyId,
   type GameSpecId,
   isRetiredGameSpec,
+  maybeGameSpecForId,
 } from '@mistboard/game';
 import type { GameMode } from './persistence-game-lifecycle.js';
 import { registeredVariantTenants } from './variant-tenant/registry.js';
@@ -149,7 +150,30 @@ function channelEnabled(channel: WatchChannel): boolean {
   // A retired variant keeps its tenant (live games finish, finished games
   // replay) but has no TV channel: nothing new is starting there.
   if (registration && isRetiredGameSpec(registration.gameSpecId)) return false;
+  // A variant gated on its public surface (publicSurface 'hidden': built,
+  // flagged on for playtests, not launched) has no TV channel either. Its
+  // rooms stay spectatable by URL; nothing lists them.
+  if (registration && !listedOnSurface(registration.gameSpecId)) return false;
   return registration?.enabled() ?? false;
+}
+
+// Whether a spec is on a public surface (publicSurface not 'hidden'). Unknown
+// ids are not public (fail-closed).
+export function gameSpecIsPublic(gameSpecId: string): boolean {
+  const spec = maybeGameSpecForId(gameSpecId);
+  return spec !== null && spec.publicSurface !== 'hidden';
+}
+
+// Variants whose listings (TV channel, the live election, /games) wait for the
+// public-surface gate rather than the feature flag alone. Xiangqi Mahjong is
+// flagged on for playtests before launch, so its flag cannot be the listing
+// gate. The other hidden specs (atomic xiangqi, HK mahjong, chess) keep their
+// flag-only listing until someone decides to move them here.
+const LISTED_ONLY_WHEN_PUBLIC: ReadonlySet<string> = new Set(['xiangqi-mahjong']);
+
+/** False only for a variant that waits on its public surface and is not on one. */
+export function listedOnSurface(gameSpecId: string): boolean {
+  return !LISTED_ONLY_WHEN_PUBLIC.has(gameSpecId) || gameSpecIsPublic(gameSpecId);
 }
 
 export function listWatchChannels(): readonly WatchChannel[] {

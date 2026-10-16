@@ -959,7 +959,7 @@ export function tenantLiveHistoryExtras<
   if (viewer === 'spectator') {
     const spec = maybeGameSpecForId(tenant.gameSpecId);
     if (!spec) return {};
-    if (roomViewPolicy(spec.visibility, finishedToo, 'spectator') === 'nothing') return {};
+    if (roomViewPolicy(spec.visibility, finishedToo, 'spectator', spec.id) === 'nothing') return {};
   } else if (!tenant.colors.includes(viewer)) {
     return {};
   }
@@ -1179,6 +1179,7 @@ function tenantRoomRevealsTruth<
       spec.visibility,
       room.projection.state.status.type === 'finished',
       client.seat === 'spectator' ? 'spectator' : 'player',
+      spec.id,
     ) === 'truth'
   );
 }

@@ -303,7 +303,17 @@ describe('profile game rows', () => {
   // /game/:id (whose chess-family replay reducer 403s on a non-chess event
   // log). This is the lock that a hand-maintained switch lacked, so a newly
   // launched variant can't silently regress to "vs White" / a 403 postgame.
-  const tenantsWithPostgame = webVariantTenants().filter((tenant) => tenant.gameRouteBase);
+  // A tenant whose finished room is its page (Xiangqi Mahjong) links the room
+  // even with a review page, which its room opens.
+  const tenantsWithPostgame = webVariantTenants().filter(
+    (tenant) => tenant.gameRouteBase && !tenant.finishedGameOpensRoom,
+  );
+  it('links a xiangqi mahjong row to its room, not its review page', () => {
+    const row = buildProfileGameRow(game({ roomId: 'xmj_done', variant: 'xiangqi-mahjong' }));
+    expect(row.querySelector('.profile-game-row-open')?.getAttribute('href')).toBe(
+      '/room/xmj_done',
+    );
+  });
   it.each(tenantsWithPostgame.map((tenant) => [tenant.gameSpecId, tenant] as const))(
     'routes %s profile rows to its own postgame surface',
     (_specId, tenant) => {

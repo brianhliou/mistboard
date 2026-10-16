@@ -21,6 +21,9 @@
  * - Correspondence rooms are hydrated from the durable room_deadlines index
  *   first, so a days-per-move game with nobody connected (and therefore no
  *   in-memory room) is still on the page.
+ * - A variant that waits on its public surface (Xiangqi Mahjong) is not
+ *   listed while its spec is 'hidden', the same gate its TV channel uses
+ *   (listedOnSurface).
  * - "In play" is the deploy gate's own classification (isGameInPlay): paused
  *   rooms and rooms idle past the abandonment window are not listed. One
  *   definition of "is this game real" (see deploy-gate.ts).
@@ -48,7 +51,7 @@ import {
   type VariantTenantRegistration,
   variantTenantForRoomId,
 } from './variant-tenant/registry.js';
-import { listWatchChannels } from './watch-channels.js';
+import { listedOnSurface, listWatchChannels } from './watch-channels.js';
 import {
   hasLiveWatchPayloadBuilder,
   lastMoveAt,
@@ -163,6 +166,7 @@ export async function hydrateCorrespondenceRooms(ctx: HttpApiContext): Promise<D
       if (liveIds.has(row.roomId)) return;
       const registration = variantTenantForRoomId(row.roomId);
       if (!registration?.enabled()) return;
+      if (!listedOnSurface(registration.gameSpecId)) return;
       try {
         await registration.getOrLoadRoom(row.roomId);
       } catch (err) {
@@ -196,6 +200,9 @@ export function collectCurrentGames(
   }
   for (const registration of registeredVariantTenants()) {
     if (!registration.enabled()) continue;
+    // A variant gated on its public surface is listed only once it is public;
+    // until then its room is spectatable by URL, never advertised here.
+    if (!listedOnSurface(registration.gameSpecId)) continue;
     const channelId = registration.watch?.channelId ?? channelForSpec(registration.gameSpecId);
     const isEngine = registration.isEngineClientId ?? isServerEngineClient;
     for (const room of registration.rooms.values()) {

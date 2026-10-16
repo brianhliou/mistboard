@@ -21,6 +21,7 @@
 // room) is plain envelope data and lives here so it can't drift between variants.
 
 import type { GameSpecId } from '@mistboard/game';
+import { variantSeatsHaveInk } from '../flip-seat-ink.js';
 import {
   brandedEngineName,
   type GameOutcome,
@@ -122,7 +123,11 @@ export function buildReviewMeta(config: ReviewMetaConfig): ReviewMeta {
     variantName: config.variantName,
     variantHref: localizedRulesHrefForRoom(game.roomId),
     subline: timeAgoLabel(game.endedAt),
-    players: reviewMetaPlayers(game.players, config.seatColors, game.result),
+    // A wind-seated variant (the mahjong family) has no seat colour, so its
+    // rows draw no disc, as in its room (room-chrome.ts).
+    players: reviewMetaPlayers(game.players, config.seatColors, game.result).map((player) =>
+      variantSeatsHaveInk(config.gameSpecId) ? player : { ...player, noDisc: true },
+    ),
     status: config.status,
   });
   if (game.origin) card.el.append(reviewOriginBlock(game.origin));

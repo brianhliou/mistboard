@@ -381,6 +381,25 @@ function xiangqiPiece(
   return traditionalInner(ink, role);
 }
 
+/** A xiangqi piece's figure with no disc, `size` units square at (x, y): the
+ *  international art, or the traditional character when the art is not loaded.
+ *  For a frame that is the piece's own body, as a Xiangqi Mahjong tile is
+ *  (apps/web/src/xiangqi-mahjong-tile-svg.ts draws the same mark). */
+export function xiangqiFigureSvg(
+  art: CardArt,
+  ink: Ink,
+  role: string,
+  x: number,
+  y: number,
+  size: number,
+): string {
+  const image = artImage(art, `piece-sets/xiangqi/international/${ink}-${role}.png`, role, size);
+  const path = XIANGQI_GLYPH_PATHS[TRADITIONAL[ink][role] ?? ''];
+  const inner =
+    image ?? (path ? `<path d="${path}" fill="${ink === 'red' ? '#b91c1c' : '#1f2937'}"/>` : '');
+  return `<svg x="${x}" y="${y}" width="${size}" height="${size}" viewBox="0 0 100 100">${inner}</svg>`;
+}
+
 /** pieceBackMark: a jieqi face-down piece (ink public, role hidden), the same
  *  outer size as the face-up piece beside it (r 46; it was r 43 before 2026-10-14). */
 function backInner(ink: Ink): string {

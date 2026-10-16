@@ -9,6 +9,7 @@
 // lives under /rules/<slug>, everything else under /blog/<slug>.
 //
 // The hand-kept sets below are site policy about slugs, not article data.
+import { type GameSpecId, isPublicGameSpec, PLAYTEST_GAME_SPEC_IDS } from '@mistboard/game';
 import generated from './article-meta.generated.json' with { type: 'json' };
 
 export type ArticleKind = 'rules' | 'article';
@@ -27,10 +28,28 @@ type GeneratedArticleMeta = {
 
 const GENERATED = generated as Record<string, GeneratedArticleMeta>;
 
+// The rules page of each playtest variant (PLAYTEST_GAME_SPEC_IDS). The web's
+// RULES_GAME_SPEC_BY_SLUG holds the same aliases; articles-meta-sync.test.ts
+// fails when the two sides disagree about any rules page.
+const PLAYTEST_RULES_SLUG: Readonly<Record<string, string>> = {
+  mahjong: 'mahjong',
+  'xiangqi-mahjong': 'xiangqi-mahjong-32',
+};
+
+/** The playtest rules slugs kept out of the index under a public predicate:
+ *  every hidden playtest spec's page. Pure, so a test can flip the switch. */
+export function playtestRulesSlugs(isPublic: (id: GameSpecId) => boolean): string[] {
+  return PLAYTEST_GAME_SPEC_IDS.filter((id) => !isPublic(id)).map((id) => {
+    const slug = PLAYTEST_RULES_SLUG[id];
+    if (!slug) throw new Error(`playtest spec ${id} has no rules slug in article-meta.ts`);
+    return slug;
+  });
+}
+
 // Reachable by URL, deliberately unlisted and unindexed: /rules/shogi4 is
 // linked from outside the site and stays up, but is not a Mistboard variant.
 // /rules/mahjong is the page for a table that is admin-only and allowlisted
-// (apps/web/src/variant-public-surfaces.ts has `mahjong: false`); it leaves
+// (a hidden playtest spec: playtestRulesSlugs above); it leaves
 // this set the day the variant goes public, and articles-meta-sync.test.ts
 // fails if the two disagree. A public variant's rules page held back for
 // polish goes here and in HIDDEN_RULES_SLUGS on the web side, and leaves both
@@ -42,15 +61,15 @@ const GENERATED = generated as Record<string, GeneratedArticleMeta>;
 // deleted.
 const NON_INDEXED_ARTICLE_SLUGS = new Set([
   'shogi4',
-  'mahjong',
   'atomic-xiangqi',
   'fortress-xiangqi',
   // The Atomic Xiangqi launch post, served by URL only since the variant
   // retired (web side: `noindex: true` on the article).
   'atomic-xiangqi-build',
-  // Xiangqi Mahjong rules, by URL only while under review (web side:
-  // HIDDEN_RULES_SLUGS in variant-public-surfaces.ts).
-  'xiangqi-mahjong-32',
+  // The playtest variants' rules pages, while the variant is hidden: they
+  // follow the launch switch (the spec's publicSurface), as the web side's
+  // rulesSlugPublicSurfaceEnabled does.
+  ...playtestRulesSlugs(isPublicGameSpec),
 ]);
 
 // Rules pages for DELETED variants (docs-private/variant-retirement-plan.md,

@@ -608,3 +608,28 @@ export function xmjViewFor(state: XmjRoomState, perspective: XmjSeat | 'spectato
     correspondence: state.correspondence === true,
   };
 }
+
+/**
+ * The review view: every tile face up at any point of the match, including both
+ * concealed hands and the tile just drawn, with no actions and no deadlines.
+ * It holds what xmjViewFor withholds while a hand is live, so the server builds
+ * it only for a FINISHED match (the postgame route, apps/server
+ * routes/xiangqi-mahjong-games.ts), never for a live or between-hands room.
+ * The wall stays a count: its order is not shown even here.
+ */
+export function xmjReviewViewFor(state: XmjRoomState): XmjPlayerView {
+  const view = xmjViewFor(state, 'spectator');
+  const hand = state.match.hand;
+  const phase = hand.phase;
+  return {
+    ...view,
+    hands: bySeat((i) => [...hand.hands[i]]),
+    phase:
+      phase.type === 'discard'
+        ? { type: 'discard', mayWin: phase.mayWin, drawn: phase.drawn }
+        : view.phase,
+    ready: [],
+    claimPauseEndsAt: null,
+    nextHandAt: null,
+  };
+}

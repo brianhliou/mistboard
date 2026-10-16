@@ -23,6 +23,7 @@ import {
   xmjIsLegalMove,
   xmjMoveFromMessage,
   xmjPendingAction,
+  xmjReviewViewFor,
   xmjSeatMayAct,
   xmjViewFor,
 } from './xiangqi-mahjong-room.js';
@@ -104,6 +105,32 @@ test('a seat sees its own tiles, never the other hand or the other seat’s draw
   if (after.phase.type === 'discard') assert.equal(after.phase.drawn, null);
   const own = xmjViewFor(next, 'west');
   if (own.phase.type === 'discard') assert.notEqual(own.phase.drawn, null);
+});
+
+test('the review view shows both hands and the draw mid-hand, with no actions or deadlines', () => {
+  const setup: XmjRoomSetup = { walls: [xmjShuffle(seeded(2))], firstDealer: 'east' };
+  const state = createXmjRoomState(setup, 'xmj_test');
+  const east = xmjViewFor(state, 'east');
+  let next = play(state, 'east', { action: 'discard', tile: east.legal.discard[0] as XmjTile });
+  if (next.match.hand.phase.type === 'claim') next = play(next, 'west', { action: 'pass' });
+  const review = xmjReviewViewFor(next);
+  assert.equal(review.perspective, 'spectator');
+  assert.deepEqual(review.hands.east, [...next.match.hand.hands[0]]);
+  assert.deepEqual(review.hands.west, [...next.match.hand.hands[1]]);
+  assert.equal(review.phase.type, 'discard');
+  const phase = next.match.hand.phase;
+  if (review.phase.type === 'discard' && phase.type === 'discard') {
+    assert.equal(review.phase.drawn, phase.drawn);
+    assert.notEqual(review.phase.drawn, null);
+  }
+  assert.equal(review.legal.discard.length, 0);
+  assert.equal(review.legal.nextHand, false);
+  assert.equal(review.claimPauseEndsAt, null);
+  assert.equal(review.nextHandAt, null);
+  assert.deepEqual(review.ready, []);
+  // The wall is a count, never its order.
+  assert.equal(JSON.stringify(review).includes('walls'), false);
+  assert.equal(review.wallCount, next.match.hand.wall.length);
 });
 
 test('each discard says whether it was the tile just drawn; the opponent learns only that', () => {

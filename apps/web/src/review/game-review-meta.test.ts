@@ -334,6 +334,29 @@ describe('buildReviewMeta', () => {
     ]);
   });
 
+  it('draws no seat disc for a wind-seated variant, and one per row elsewhere', () => {
+    const card = (gameSpecId: 'xiangqi-mahjong' | 'xiangqi', colors: [string, string]) =>
+      buildReviewMeta({
+        gameSpecId,
+        variantName: 'Test',
+        status: 'Done',
+        game: {
+          roomId: 'room_test',
+          result: `${colors[0]}-wins`,
+          players: [
+            { color: colors[0], name: 'brianhliou', kind: 'account' },
+            { color: colors[1], name: 'Misty', kind: 'account' },
+          ],
+        },
+      }).metaCard;
+    const mahjong = card('xiangqi-mahjong', ['east', 'west']);
+    expect(mahjong.querySelectorAll('.game-meta-card__player')).toHaveLength(2);
+    expect(mahjong.querySelectorAll('.game-meta-card__disc')).toHaveLength(0);
+    expect(
+      card('xiangqi', ['red', 'black']).querySelectorAll('.game-meta-card__disc'),
+    ).toHaveLength(2);
+  });
+
   it('scores a draw on both rows and marks neither as the winner', () => {
     const { metaCard } = buildReviewMeta({
       gameSpecId: 'xiangqi',

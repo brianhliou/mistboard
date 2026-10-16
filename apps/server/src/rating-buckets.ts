@@ -100,12 +100,17 @@ export function bucketForGame(input: BucketInput): RatingBucket | null {
 // shown on NO public rating surface (leaderboard, profile, best-rating badges,
 // rating history) while the spec needs a grant. A variant nobody may see must
 // not surface through somebody's rating either.
-export const PRIVATE_RATING_POOLS: readonly RatingVariant[] = ALLOWLISTED_GAME_SPEC_IDS.flatMap(
-  (specId) => {
+export function privateRatingPoolsFor(
+  allowlisted: readonly GameSpecId[],
+): readonly RatingVariant[] {
+  return allowlisted.flatMap((specId) => {
     const pool = ratingPoolForSpec(specId);
     return pool ? [pool] : [];
-  },
-);
+  });
+}
+
+export const PRIVATE_RATING_POOLS: readonly RatingVariant[] =
+  privateRatingPoolsFor(ALLOWLISTED_GAME_SPEC_IDS);
 
 export function isPublicRatingPool(pool: string): boolean {
   return !(PRIVATE_RATING_POOLS as readonly string[]).includes(pool);

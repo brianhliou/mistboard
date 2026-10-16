@@ -31,7 +31,7 @@
 // the count uses the same line: 25 of 324 counted games sat under it on
 // 2026-09-12. Set 2026-09-12.
 
-import { RETIRED_GAME_SPEC_IDS } from '@mistboard/game';
+import { ALLOWLISTED_PLAYTEST_SPEC_IDS, RETIRED_GAME_SPEC_IDS } from '@mistboard/game';
 
 export const STATS_COUNTED_FROM = '2026-06-01';
 export const MIN_COUNTED_PLIES = 2;
@@ -93,11 +93,34 @@ export function notRetiredVariant(
   return `${gamesAlias}.variant NOT IN (${retiredIds.map((id) => `'${id}'`).join(', ')})`;
 }
 
-// A counted game in a variant that is still live: the filter behind every
-// public aggregate.
+// Variants left out of every public figure: the retired ones, and the
+// playtest variants still hidden behind the per-account allowlist
+// (ALLOWLISTED_PLAYTEST_SPEC_IDS, which the launch switch on each spec's
+// publicSurface derives). A hidden variant's games would otherwise show in
+// the /stats totals and its per-variant JSON before anyone may see the game;
+// the day the switch flips, its games count, history included. Set 2026-10-16.
+export function offPublicGameSpecIds(allowlisted: readonly string[]): readonly string[] {
+  return [...RETIRED_GAME_SPEC_IDS, ...allowlisted];
+}
+
+export const OFF_PUBLIC_GAME_SPEC_IDS: readonly string[] = offPublicGameSpecIds(
+  ALLOWLISTED_PLAYTEST_SPEC_IDS,
+);
+
+// A game in a variant a visitor can play and see: not retired, not a hidden
+// playtest.
+export function publicVariant(
+  gamesAlias = 'g',
+  offPublicIds: readonly string[] = OFF_PUBLIC_GAME_SPEC_IDS,
+): string {
+  return notRetiredVariant(gamesAlias, offPublicIds);
+}
+
+// A counted game in a variant that is still live and public: the filter
+// behind every public aggregate.
 export function countedPublicGame(gamesAlias = 'g'): string {
   return `${countedHumanGame(gamesAlias)}
-    AND ${notRetiredVariant(gamesAlias)}`;
+    AND ${publicVariant(gamesAlias)}`;
 }
 
 // A person sat in the game: at least one guest or user seat. The prod smoke
