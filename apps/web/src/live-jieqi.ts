@@ -24,6 +24,7 @@ import type {
 } from '@mistboard/game';
 import './live-xiangqi.css';
 import { jieqiEnabled } from './feature-flags.js';
+import { renderJieqiMaterial } from './jieqi-material.js';
 import { finishBadgesForResult, generalSquareOn } from './live-finish-badges.js';
 import { jieqiClickResult } from './live-jieqi-interaction.js';
 import {
@@ -45,7 +46,6 @@ import {
 } from './live-jieqi-sound.js';
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
-import { fillCapturedPoolWith } from './review/captured-pool.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import {
   annotationOwner,
@@ -405,20 +405,8 @@ function dropJieqiPiece(liveRefs: LiveRefs, from: JieqiSquare, to: JieqiSquare |
 
 // ── Material: captured pools ─────────────────────────────────────────────────
 
-// Lichess convention: a player's captured material sits next to that player.
-// The bottom strip is the viewer's side, so it shows the pieces the viewer has
-// captured (the opponent's lost pieces); the top strip is the opponent's side,
-// so it shows the pieces the opponent has captured (the viewer's lost pieces).
-// A null role (a dark piece the viewer did not capture, so cannot identify)
-// renders as the board's own face-down disc (the brown / green back), not a
-// "?" token: the pool then reads in the board's vocabulary, and the cream "?"
-// disc was the one tile on the rail that matched nothing on the board. Jieqi does NOT render the "still face-down"
-// pool the other flip variants do (hidden-pool-panel.ts): under capturer-only
-// reveal the viewer's own pool cannot be computed (the dark pieces the opponent
-// took are unknown to them), and a row that lists pieces which may already be
-// gone was read as a bug (2026-09-20). The strips carry the same facts; the
-// player does the subtraction. The hiddenPool slot is cleared so a variant
-// switch never leaves a stale panel behind.
+// The captured pools (jieqi-material.ts, shared with Mistboard TV's rail), from the
+// DISPLAYED view: the seat's own PlayerView, or the spectator's public view.
 function renderCapturedPools(liveRefs: LiveRefs, view: JieqiWireView | null): void {
   renderJieqiMaterial(liveRefs, view, orientationFor(view));
 }
@@ -428,37 +416,6 @@ function renderCapturedPools(liveRefs: LiveRefs, view: JieqiWireView | null): vo
 // they stood then and nothing reads past what this viewer was sent.
 function renderRevealOdds(view: JieqiWireView | null): void {
   revealOdds?.render({ view, orientation: orientationFor(view) });
-}
-
-// Exported for unit testing the material data path (revealed identity vs an
-// unidentifiable "?" dark piece) without a live socket — same
-// extraction rationale as live-jieqi-render / live-jieqi-interaction.
-export function renderJieqiMaterial(
-  slots: Pick<LiveRefs, 'capturesTop' | 'capturesBottom' | 'hiddenPool'>,
-  view: JieqiWireView | null,
-  viewer: JieqiColor,
-): void {
-  slots.capturesTop.replaceChildren();
-  slots.capturesBottom.replaceChildren();
-  slots.hiddenPool.replaceChildren();
-  // No view yet (or an empty board) must not read as "everything still
-  // face-down". A spectator's view is the public one since 2026-09-20: the same
-  // masked board, and captures with a role only where the piece was face-up
-  // when taken, so the pools below render for a spectator exactly as they do
-  // for the victim of each capture.
-  if (!view || Object.keys(view.board).length === 0) return;
-  const pieceSet = readStoredXiangqiPieceSet();
-  const glyph = (entry: { color: JieqiColor; role: JieqiPieceRole }): string =>
-    renderXiangqiPieceGlyphed(entry, pieceSet, { ariaLabel: `${entry.color} ${entry.role}` });
-  const hidden = (color: JieqiColor): string =>
-    renderXiangqiPieceGlyphed({ color, role: 'soldier' }, pieceSet, {
-      ariaLabel: `${color} hidden piece`,
-      shrouded: true,
-      shroudedStyle: 'back',
-    });
-  const opponent: JieqiColor = viewer === 'red' ? 'black' : 'red';
-  fillCapturedPoolWith(slots.capturesTop, view.captured, viewer, glyph, hidden);
-  fillCapturedPoolWith(slots.capturesBottom, view.captured, opponent, glyph, hidden);
 }
 
 // ── Replay capture (no fog to redact; capture every distinct position) ────────

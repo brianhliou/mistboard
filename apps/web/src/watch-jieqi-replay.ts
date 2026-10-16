@@ -1,8 +1,8 @@
 // Mistboard TV renderer for Jieqi — a thin adapter over the shared tenant watch
-// renderer (watch-tenant-replay.ts). TV shows one finished-game board with no
-// captures or player-knowledge POVs. The dedicated /watch payload therefore avoids
-// the richer review endpoint's Red + Black histories and historical legal-move
-// generation.
+// renderer (watch-tenant-replay.ts). TV shows one board with no player-knowledge
+// POVs. The dedicated /watch payload therefore avoids the richer review endpoint's
+// Red + Black histories and historical legal-move generation. The rail's capture
+// strips come from the same per-ply view the board draws (jieqi-material.ts).
 //
 // That board is the AS-PLAYED one ('masked'): a piece nobody ever moved is still
 // face-down, which is how the game actually looked and how the review page has
@@ -11,6 +11,7 @@
 // jieqi's 'truth' has to keep meaning fully-revealed for the review's deal
 // recovery.
 import { type JieqiMove, type JieqiPlayerView, jieqiMoveLabel } from '@mistboard/game';
+import { renderJieqiMaterial } from './jieqi-material.js';
 import {
   type JieqiPostgameResponse,
   type JieqiPostgameViewKey,
@@ -112,10 +113,20 @@ export function mountJieqiWatchReplay(
         if (!move) return;
         animateJieqiBoardMove(boardEl, move, orientation, { reverse: direction === 'back' });
       },
-      // Captures are intentionally absent from the compact TV product.
       // Spectator cue: the mover's own-move sound (watch-move-sound.ts).
       moveSound: watchJieqiMoveSound,
       fillCaptures: () => {},
+      // The rail draws the captured pools from the ply's view, which is the server's
+      // public capture list on both tracks: a piece taken face-down carries no role,
+      // live or finished (only its capturer ever learns it), so it draws as a piece
+      // back, grouped with a count. Red, the first mover, sits at the bottom, so its
+      // strip holds the black pieces Red took.
+      railMaterial: (slots, view) =>
+        renderJieqiMaterial(
+          { capturesTop: slots.top, capturesBottom: slots.bottom, hiddenPool: slots.pool },
+          view,
+          'red',
+        ),
       moveLabels: jieqiWatchMoveLabels,
     },
   );

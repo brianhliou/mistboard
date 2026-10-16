@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { type JieqiWireView, renderJieqiMaterial } from './live-jieqi.js';
+import { renderJieqiMaterial } from './jieqi-material.js';
+import type { JieqiWireView } from './live-jieqi.js';
 
 // Locks the material picture the jieqi room builds. Jieqi positions are public
 // but identities are hidden, so a captured piece is either revealed (the captor
