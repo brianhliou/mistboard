@@ -156,6 +156,8 @@ export type TenantMoveListRenderContext<C extends string, M> = {
   isLive: boolean;
   /** Scrub to a ply (the latest ply returns to live) and re-render the room. */
   jumpToPly(ply: number): void;
+  /** Whether this client holds a snapshot for the ply, so a jump lands on it. */
+  hasPly(ply: number): boolean;
 };
 
 export type TenantMoveListConfig<C extends string, M> = {
@@ -844,6 +846,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
           replay.jumpToPly(ply);
           renderAll();
         },
+        hasPly: (ply) => replay.hasPly(ply),
       });
       return;
     }

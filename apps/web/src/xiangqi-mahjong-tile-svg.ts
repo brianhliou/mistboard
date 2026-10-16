@@ -1,5 +1,6 @@
 // Tile pictures for the Xiangqi Mahjong rules page (/rules/xiangqi-mahjong-32):
-// a row of bone tiles, each carrying a xiangqi piece's figure or character in
+// a row of ivory tiles on a jade backing (the live table's look,
+// xiangqi-mahjong.css), each carrying a xiangqi piece's figure or character in
 // the reader's piece set (no disc: the tile is the frame), the
 // English piece name under each tile, and a bracket naming each group (set,
 // pair).
@@ -20,8 +21,14 @@ const TILE_GAP = 6;
 const GROUP_GAP = 22;
 const PAD = 4;
 
-const FACE = '#f7f4ea';
-const EDGE = '#d9d3c2';
+// The live table's tile: an ivory face, a jade backing showing as a band
+// along the bottom edge, a light line where the face bevels in at the top.
+const FACE = '#fbf7ec';
+const FACE_LOW = '#efe7d2';
+const EDGE = '#ded3b8';
+const JADE = '#2f8a70';
+const JADE_LOW = '#22684f';
+const DEPTH = 5;
 const CLAIM = '#2f6fb3';
 // The piece's box is a little wider than the tile; the figure or character
 // inside it sits well within the tile.
@@ -64,10 +71,14 @@ function tileSvg(
   const edge = claimed ? CLAIM : EDGE;
   const name = XMJ_PIECE_NAMES[tilePiece(tile)];
   return [
-    `<rect x="${x}" y="${y + 2}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="${EDGE}"/>`,
+    `<rect x="${x}" y="${y + DEPTH}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="${JADE_LOW}"/>`,
+    `<rect x="${x}" y="${y + DEPTH - 1}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="${JADE}"/>`,
+    `<rect x="${x}" y="${y + 1}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="${EDGE}"/>`,
     `<rect x="${x}" y="${y}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="${FACE}" stroke="${edge}" stroke-width="${claimed ? 2.5 : 1}"/>`,
+    `<path d="M${x + 1} ${y + TILE_H * 0.6}H${x + TILE_W - 1}V${y + TILE_H - 6}a5 5 0 0 1-5 5H${x + 6}a5 5 0 0 1-5-5Z" fill="${FACE_LOW}" fill-opacity="0.7"/>`,
+    `<path d="M${x + 6} ${y + 1.5}H${x + TILE_W - 6}" stroke="#fff" stroke-opacity="0.9"/>`,
     piece,
-    `<text x="${x + TILE_W / 2}" y="${y + TILE_H + 16}" text-anchor="middle" font-size="10.5" fill="currentColor">${escapeText(name)}</text>`,
+    `<text x="${x + TILE_W / 2}" y="${y + TILE_H + DEPTH + 15}" text-anchor="middle" font-size="10.5" fill="currentColor">${escapeText(name)}</text>`,
   ].join('');
 }
 
@@ -81,7 +92,7 @@ export function xmjTileRowSvg(
   pieceSet: XiangqiPieceSet = 'international',
 ): string {
   const anyLabel = groups.some((g) => g.label);
-  const height = PAD + TILE_H + 22 + (anyLabel ? 26 : 0);
+  const height = PAD + TILE_H + DEPTH + 21 + (anyLabel ? 26 : 0);
   let x = PAD;
   const parts: string[] = [];
   groups.forEach((group, gi) => {
@@ -96,7 +107,7 @@ export function xmjTileRowSvg(
     }
     const end = x - TILE_GAP;
     if (group.label) {
-      const by = PAD + TILE_H + 24;
+      const by = PAD + TILE_H + DEPTH + 23;
       parts.push(
         `<path d="M${start + 2} ${by - 4}V${by}H${end - 2}V${by - 4}" fill="none" stroke="currentColor" stroke-opacity="0.45" stroke-width="1"/>`,
         `<text x="${(start + end) / 2}" y="${by + 14}" text-anchor="middle" font-size="11" font-style="italic" fill="currentColor" fill-opacity="0.75">${escapeText(group.label)}</text>`,

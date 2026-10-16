@@ -1,10 +1,14 @@
 /**
- * The xiangqi mahjong table, as markup (layout "A, the table", 2026-10-14).
+ * The xiangqi mahjong table, as markup (layout "A, the table", recomposed
+ * 2026-10-15).
  *
- * Top to bottom: the opponent's seat and tiles, the opponent's discards, a
- * centre plate (or the result card between hands), the viewer's discards, the
- * claim row, the viewer's hand, the viewer's seat. Each player's discards are
- * their own pond of six columns, in order, with the latest discard notched.
+ * One centred column of fixed width: the opponent's seat and rack at the top,
+ * then a middle band (the opponent's discards, the centre with the wall and
+ * whatever the viewer may do now, the viewer's discards), then the viewer's
+ * rack and seat. The middle band keeps its height for the whole match: the
+ * ponds reserve two rows, the centre reserves room for the claim buttons, and
+ * the result between hands is an overlay on the band, so nothing below moves
+ * when a hand ends. The revealed hands turn face up in their own racks.
  *
  * Every button comes from view.legal, so the client never decides what is
  * allowed; it only draws what the server says this seat may do. The winning
@@ -19,17 +23,22 @@ import {
   tileColor,
   tilePiece,
   XMJ_CLAIM_WINDOW_MS,
+  XMJ_DEALER_TILES,
+  XMJ_OTHER_TILES,
   type XmjClaim,
   type XmjMeld,
   type XmjPlayerView,
   type XmjScore,
   type XmjSeat,
   type XmjTile,
+  type XmjViewResult,
   xmjSortTiles,
 } from '@mistboard/game';
 import { type I18nKey, t } from './i18n/catalog.js';
+import { localizedHref } from './i18n/locale.js';
 import type { TenantReasonKey } from './variant-tenant/room-chrome.js';
 import { escapeHtml } from './web-utils.js';
+import type { XmjLogHand, XmjLogRow } from './xiangqi-mahjong-log.js';
 import { renderXiangqiPieceMark, type XiangqiPieceSet } from './xiangqi-piece-sets.js';
 
 export interface XmjTableOptions {
@@ -44,6 +53,13 @@ export interface XmjTableOptions {
   /** The viewer's xiangqi piece set; each tile draws its piece in it. */
   readonly pieceSet?: XiangqiPieceSet;
 }
+
+/** The wall at the deal: 32 tiles less both hands. */
+const XMJ_WALL_AT_DEAL = 32 - XMJ_DEALER_TILES - XMJ_OTHER_TILES;
+/** Discards per pond row. Two rows hold any seat's discards in a hand. */
+export const XMJ_POND_COLUMNS = 8;
+/** The rules section that explains each scoring line. */
+export const XMJ_SCORING_HREF = '/rules/xiangqi-mahjong-32#winning-hands-and-their-score';
 
 // The piece set for the render in progress. The table is one synchronous
 // string render, so xiangqiMahjongTableHtml sets it and restores it after.
@@ -77,6 +93,15 @@ export function xmjFeltFromSearch(search: string): XmjFelt {
   return (XMJ_FELTS as readonly string[]).includes(felt) ? (felt as XmjFelt) : 'green';
 }
 
+/** The tile looks (`?tiles=`): ivory on jade by default, or on bamboo. */
+export const XMJ_TILE_LOOKS = ['jade', 'bamboo'] as const;
+export type XmjTileLook = (typeof XMJ_TILE_LOOKS)[number];
+
+export function xmjTileLookFromSearch(search: string): XmjTileLook {
+  const look = new URLSearchParams(search).get('tiles') ?? '';
+  return (XMJ_TILE_LOOKS as readonly string[]).includes(look) ? (look as XmjTileLook) : 'jade';
+}
+
 function other(seat: XmjSeat): XmjSeat {
   return seat === 'east' ? 'west' : 'east';
 }
@@ -100,6 +125,11 @@ export function xmjTileName(tile: XmjTile): string {
     ink: t(tileColor(tile) === 'r' ? 'live.xmj.inkRed' : 'live.xmj.inkBlack'),
     piece: t(`live.xmj.piece.${tilePiece(tile)}` as I18nKey),
   });
+}
+
+/** "1 point", "5 points"; the zh catalogs count in 台. */
+export function xmjPoints(count: number): string {
+  return count === 1 ? t('live.xmj.onePoint') : t('live.xmj.points', { count });
 }
 
 export function xmjReasonPhrase(reason: string): TenantReasonKey {
@@ -152,17 +182,19 @@ export function xmjResultLine(
 // column of scores lines up, and the seat rows and the ledger read the same.
 export function signed(points: number): string {
   if (points > 0) return `+${points}`;
-  if (points < 0) return `\u2212${-points}`;
+  if (points < 0) return `−${-points}`;
   return '0';
 }
+
+// ── Tiles ────────────────────────────────────────────────────────────────────
 
 function tileClass(tile: XmjTile, extra = ''): string {
   const ink = tileColor(tile) === 'r' ? 'xmj-tile--red' : 'xmj-tile--black';
   return `xmj-tile ${ink}${extra ? ` ${extra}` : ''}`;
 }
 
-function tileSpan(tile: XmjTile, extra = ''): string {
-  return `<span class="${tileClass(tile, extra)}" role="img" aria-label="${xmjTileName(tile)}">${tileArt(tile)}</span>`;
+function tileSpan(tile: XmjTile, extra = '', label = xmjTileName(tile)): string {
+  return `<span class="${tileClass(tile, extra)}" role="img" aria-label="${label}">${tileArt(tile)}</span>`;
 }
 
 function tileButton(tile: XmjTile, extra = ''): string {
@@ -171,11 +203,8 @@ function tileButton(tile: XmjTile, extra = ''): string {
   return `<button type="button" class="${cls}" data-xmj-tile="${tile}" aria-label="${label}">${tileArt(tile)}</button>`;
 }
 
-function backs(count: number): string {
-  return Array.from(
-    { length: count },
-    () => '<span class="xmj-tile xmj-tile--back" aria-hidden="true"></span>',
-  ).join('');
+function back(extra = ''): string {
+  return `<span class="xmj-tile xmj-tile--back${extra ? ` ${extra}` : ''}" aria-hidden="true"></span>`;
 }
 
 function meldsHtml(melds: readonly XmjMeld[]): string {
@@ -197,54 +226,17 @@ function meldsHtml(melds: readonly XmjMeld[]): string {
 }
 
 /**
- * Which pond holds the latest discard, if it is still in a pond. In a claim
- * window it is the discarder's. After a draw it is the other seat's last
- * tile; after a claim it went into a meld, so nothing is marked.
+ * Whether a seat holds a tile it just drew. Public: everyone saw the draw,
+ * only the drawer knows which tile. The dealer's opening turn has no draw.
  */
-function lastDiscardSeat(view: XmjPlayerView): XmjSeat | null {
+function seatJustDrew(view: XmjPlayerView, seat: XmjSeat): boolean {
   const phase = view.phase;
-  if (view.between) return null;
-  if (phase.type === 'claim') return phase.discarder;
-  if (phase.type === 'discard' && phase.mayWin) {
-    const seat = other(view.turn);
-    return view.discards[seat].length > 0 ? seat : null;
-  }
-  return null;
+  if (view.between || phase.type !== 'discard' || view.turn !== seat) return false;
+  if (phase.drawn !== null) return true;
+  return phase.mayWin && view.wallCount < XMJ_WALL_AT_DEAL;
 }
 
-function bubbleHtml(view: XmjPlayerView, names: Readonly<Record<XmjSeat, string>>): string {
-  const phase = view.phase;
-  if (phase.type !== 'claim' || view.legal.claims.length === 0) return '';
-  const column = (view.discards[phase.discarder].length - 1) % 6;
-  const text = t('live.xmj.claimBubble', {
-    name: escapeHtml(names[phase.discarder]),
-    tile: xmjTileName(phase.discard),
-  });
-  return `<div class="xmj-bubble" role="status" style="--xmj-col:${column}">${text}</div>`;
-}
-
-function pondHtml(
-  view: XmjPlayerView,
-  seat: XmjSeat,
-  self: boolean,
-  names: Readonly<Record<XmjSeat, string>>,
-  bubble: string,
-): string {
-  const tiles = view.discards[seat];
-  const marked = lastDiscardSeat(view) === seat;
-  const label = self
-    ? t('live.xmj.yourDiscards')
-    : t('live.xmj.theirDiscards', { name: escapeHtml(names[seat]) });
-  const html = tiles
-    .map((tile, index) =>
-      tileSpan(
-        tile,
-        marked && index === tiles.length - 1 ? 'xmj-tile--sm xmj-tile--last' : 'xmj-tile--sm',
-      ),
-    )
-    .join('');
-  return `<div class="xmj-pond-wrap" data-xmj-pond="${seat}"><div class="xmj-pond-label">${label}</div><div class="xmj-pond">${html}</div>${bubble}</div>`;
-}
+// ── Seats ────────────────────────────────────────────────────────────────────
 
 function seatRowHtml(
   view: XmjPlayerView,
@@ -271,10 +263,19 @@ function opponentHtml(
   names: Readonly<Record<XmjSeat, string>>,
 ): string {
   const hand = view.hands[seat];
-  // Face-down tiles are the size of the viewer's own: the same tiles, turned over.
-  const rack =
-    hand === null ? backs(view.handCounts[seat]) : hand.map((tile) => tileSpan(tile)).join('');
-  return `<section class="xmj-seat xmj-seat--opponent" data-xmj-seat="${seat}">${seatRowHtml(view, seat, names)}<div class="xmj-rack">${rack}${meldsHtml(view.melds[seat])}</div></section>`;
+  let concealed: string;
+  if (hand === null) {
+    // Face-down tiles are the size of the viewer's own: the same tiles, turned
+    // over. A tile just drawn stands apart, as the viewer's own does.
+    const count = view.handCounts[seat];
+    const drew = seatJustDrew(view, seat) && count > 0;
+    concealed =
+      Array.from({ length: drew ? count - 1 : count }, () => back()).join('') +
+      (drew ? back('xmj-tile--drawn') : '');
+  } else {
+    concealed = hand.map((tile) => tileSpan(tile)).join('');
+  }
+  return `<section class="xmj-seat xmj-seat--opponent" data-xmj-seat="${seat}">${seatRowHtml(view, seat, names)}<div class="xmj-rack"><span class="xmj-concealed">${concealed}</span>${meldsHtml(view.melds[seat])}</div></section>`;
 }
 
 function selfHtml(
@@ -286,9 +287,9 @@ function selfHtml(
 ): string {
   const hand = view.hands[seat];
   const drawn = view.phase.type === 'discard' && view.turn === seat ? view.phase.drawn : null;
-  let rack: string;
+  let concealed: string;
   if (hand === null) {
-    rack = backs(view.handCounts[seat]);
+    concealed = Array.from({ length: view.handCounts[seat] }, () => back()).join('');
   } else {
     const legal = new Set(view.legal.discard);
     // The drawn tile sits apart at the right, as it would on a table.
@@ -297,10 +298,93 @@ function selfHtml(
     if (drawnAt >= 0) rest.splice(drawnAt, 1);
     const draw = (tile: XmjTile, extra = '') =>
       canAct && legal.has(tile) ? tileButton(tile, extra) : tileSpan(tile, extra);
-    rack = rest.map((tile) => draw(tile)).join('');
-    if (drawn !== null && drawnAt >= 0) rack += draw(drawn, 'xmj-tile--drawn');
+    concealed = rest.map((tile) => draw(tile)).join('');
+    if (drawn !== null && drawnAt >= 0) concealed += draw(drawn, 'xmj-tile--drawn');
   }
-  return `<section class="xmj-seat${you ? ' xmj-seat--self' : ''}" data-xmj-seat="${seat}"><div class="xmj-rack">${rack}${meldsHtml(view.melds[seat])}</div>${seatRowHtml(view, seat, names)}</section>`;
+  return `<section class="xmj-seat xmj-seat--self${you ? ' xmj-seat--you' : ''}" data-xmj-seat="${seat}"><div class="xmj-rack"><span class="xmj-concealed">${concealed}</span>${meldsHtml(view.melds[seat])}</div>${seatRowHtml(view, seat, names)}</section>`;
+}
+
+// ── Ponds ────────────────────────────────────────────────────────────────────
+
+/**
+ * Which pond holds the latest discard, if it is still in a pond. In a claim
+ * window it is the discarder's. After a draw it is the other seat's last
+ * tile; after a claim it went into a meld, so nothing is marked.
+ */
+function lastDiscardSeat(view: XmjPlayerView): XmjSeat | null {
+  const phase = view.phase;
+  if (view.between) return null;
+  if (phase.type === 'claim') return phase.discarder;
+  if (phase.type === 'discard' && phase.mayWin) {
+    const seat = other(view.turn);
+    return view.discards[seat].length > 0 ? seat : null;
+  }
+  return null;
+}
+
+function bubbleHtml(view: XmjPlayerView, names: Readonly<Record<XmjSeat, string>>): string {
+  const phase = view.phase;
+  if (phase.type !== 'claim' || view.legal.claims.length === 0) return '';
+  const column = (view.discards[phase.discarder].length - 1) % XMJ_POND_COLUMNS;
+  const text = t('live.xmj.claimBubble', {
+    name: escapeHtml(names[phase.discarder]),
+    tile: xmjTileName(phase.discard),
+  });
+  return `<div class="xmj-bubble" role="status" style="--xmj-col:${column}">${text}</div>`;
+}
+
+function pondHtml(
+  view: XmjPlayerView,
+  seat: XmjSeat,
+  self: boolean,
+  names: Readonly<Record<XmjSeat, string>>,
+  bubble: string,
+): string {
+  const tiles = view.discards[seat];
+  const fromDraw = view.drawnDiscards[seat];
+  const marked = lastDiscardSeat(view) === seat;
+  const label = self
+    ? t('live.xmj.yourDiscards')
+    : t('live.xmj.theirDiscards', { name: escapeHtml(names[seat]) });
+  const html = tiles
+    .map((tile, index) => {
+      const classes = ['xmj-tile--sm'];
+      if (marked && index === tiles.length - 1) classes.push('xmj-tile--last');
+      // Discarded straight after drawing it: a quiet dot, and said in words.
+      const drew = fromDraw[index] === true;
+      if (drew) classes.push('xmj-tile--fromdraw');
+      const name = xmjTileName(tile);
+      return tileSpan(
+        tile,
+        classes.join(' '),
+        drew ? t('live.xmj.drawnDiscard', { tile: name }) : name,
+      );
+    })
+    .join('');
+  return `<div class="xmj-pond-wrap" data-xmj-pond="${seat}"><div class="xmj-pond" role="group" aria-label="${label}">${html}</div>${bubble}</div>`;
+}
+
+// ── The centre: wall, status and actions ─────────────────────────────────────
+
+/**
+ * The wall as tile backs, stacked two high, drawn from the left end. Each
+ * stack keeps its place as the wall shrinks, so the wall shortens from one
+ * end and nothing beside it moves.
+ */
+function wallHtml(count: number): string {
+  const stacks = Math.ceil(XMJ_WALL_AT_DEAL / 2);
+  const left = Math.max(0, Math.min(XMJ_WALL_AT_DEAL, count));
+  const html: string[] = [];
+  // The last stack of an odd wall is a single tile; draws take from the left.
+  for (let index = 0; index < stacks; index += 1) {
+    const fromRight = stacks - 1 - index;
+    const height = Math.max(0, Math.min(2, left - fromRight * 2));
+    html.push(
+      `<span class="xmj-stack" data-h="${height}">${height > 0 ? '<i></i>'.repeat(height) : ''}</span>`,
+    );
+  }
+  const label = t('live.xmj.wall', { count: left });
+  return `<div class="xmj-wall" role="img" aria-label="${label}"><span class="xmj-wall__stacks" aria-hidden="true">${html.join('')}</span><span class="xmj-wall__count" aria-hidden="true">${label}</span></div>`;
 }
 
 function claimTiles(claim: XmjClaim, discard: XmjTile): XmjTile[] {
@@ -386,7 +470,7 @@ function actionsHtml(view: XmjPlayerView, options: XmjTableOptions): string {
   return `<div class="xmj-actions">${timer}<div class="xmj-buttons">${buttons.join('')}</div></div>`;
 }
 
-function plateHtml(
+function messageHtml(
   view: XmjPlayerView,
   self: XmjSeat,
   names: Readonly<Record<XmjSeat, string>>,
@@ -405,8 +489,28 @@ function plateHtml(
   } else {
     message = t('live.xmj.theirTurn', { name: escapeHtml(names[view.turn]) });
   }
-  return `<div class="xmj-plate"><div class="xmj-plate__facts"><span>${t('live.xmj.wall', { count: view.wallCount })}</span></div><p class="xmj-message">${message}</p></div>`;
+  return `<p class="xmj-message">${message}</p>`;
 }
+
+function centreHtml(
+  view: XmjPlayerView,
+  self: XmjSeat,
+  options: XmjTableOptions,
+  handOver: boolean,
+): string {
+  // Where the match stands: handsInMatch is the server's
+  // min(XMJ_MATCH_HANDS, walls dealt), so a short test match reads true too.
+  const handLine = `<span class="xmj-hand-line">${t('live.xmj.handOf', {
+    hand: Math.min(view.handNumber, view.handsInMatch),
+    hands: view.handsInMatch,
+  })}</span>`;
+  const you = view.perspective !== 'spectator';
+  const actions = handOver || !you ? '' : actionsHtml(view, options);
+  const status = handOver ? '' : actions || messageHtml(view, self, options.names);
+  return `<div class="xmj-centre"><div class="xmj-centre__facts">${handLine}${wallHtml(view.wallCount)}</div><div class="xmj-centre__status">${status}</div></div>`;
+}
+
+// ── The result, between hands ────────────────────────────────────────────────
 
 function groupHtml(tiles: readonly XmjTile[], caption: string, winning: XmjTile | null): string {
   let marked = false;
@@ -414,7 +518,7 @@ function groupHtml(tiles: readonly XmjTile[], caption: string, winning: XmjTile 
     .map((tile) => {
       const win = winning !== null && !marked && tile === winning;
       if (win) marked = true;
-      return tileSpan(tile, win ? 'xmj-tile--win' : '');
+      return tileSpan(tile, win ? 'xmj-tile--sm xmj-tile--win' : 'xmj-tile--sm');
     })
     .join('');
   return `<div class="xmj-group"><div class="xmj-group__tiles">${html}</div><div class="xmj-group__cap">${caption}</div></div>`;
@@ -434,65 +538,85 @@ function winningHandHtml(score: XmjScore, winning: XmjTile): string {
   );
 }
 
-function taiHtml(score: XmjScore): string {
+/** Each scoring line in one compact row, and where the rules explain them. */
+function breakdownHtml(score: XmjScore): string {
   const lines = score.lines
     .map(
       (line) =>
-        `<li><span>${t(`live.xmj.tai.${line.key}` as I18nKey)}</span><span>${t('live.xmj.taiCount', { count: line.tai })}</span></li>`,
+        `<li><span>${t(`live.xmj.tai.${line.key}` as I18nKey)}</span><b>${line.tai}</b></li>`,
     )
     .join('');
-  return `<ul class="xmj-tai">${lines}<li class="xmj-tai__total"><span>${t('live.xmj.handTotal')}</span><span>${t('live.xmj.taiCount', { count: score.total })}</span></li></ul>`;
+  const how = `<a class="xmj-result__how" href="${localizedHref(XMJ_SCORING_HREF)}">${t('live.xmj.howScoring')}</a>`;
+  return `<div class="xmj-breakdown"><ul>${lines}</ul>${how}</div>`;
 }
 
+function outcomeText(result: XmjViewResult, names: Readonly<Record<XmjSeat, string>>): string {
+  if (result.winner === null) return t('live.xmj.resultNone');
+  return t(result.selfDrawn ? 'live.xmj.resultSelfDraw' : 'live.xmj.resultDiscard', {
+    name: escapeHtml(names[result.winner]),
+  });
+}
+
+/** Hand by hand, with each player's running total after it. */
 function ledgerHtml(view: XmjPlayerView, names: Readonly<Record<XmjSeat, string>>): string {
   const seats: readonly XmjSeat[] = ['east', 'west'];
+  const running: Record<XmjSeat, number> = { east: 0, west: 0 };
   const rows = view.results
     .map((result, index) => {
       const winner = result.winner;
-      const outcome =
-        winner === null
-          ? t('live.xmj.resultNone')
-          : t(result.selfDrawn ? 'live.xmj.resultSelfDraw' : 'live.xmj.resultDiscard', {
-              name: escapeHtml(names[winner]),
-            });
-      const points = result.score?.total ?? 0;
+      const points = winner === null ? 0 : (result.score?.total ?? 0);
+      if (winner !== null) {
+        running[winner] += points;
+        running[other(winner)] -= points;
+      }
       const cells = seats
-        .map((seat) => {
-          const delta = winner === null ? 0 : winner === seat ? points : -points;
-          return `<td class="xmj-ledger__n">${signed(delta)}</td>`;
-        })
+        .map((seat) => `<td class="xmj-ledger__n">${signed(running[seat])}</td>`)
         .join('');
       const now = index === view.results.length - 1 ? ' class="xmj-ledger__now"' : '';
-      return `<tr${now}><td>${index + 1}</td><td>${escapeHtml(names[result.dealer])}</td><td>${outcome}</td>${cells}</tr>`;
+      return `<tr${now}><td>${index + 1}</td><td>${outcomeText(result, names)}</td><td class="xmj-ledger__n">${points > 0 ? points : ''}</td>${cells}</tr>`;
     })
     .join('');
   const heads = seats
     .map((seat) => `<th class="xmj-ledger__n">${escapeHtml(names[seat])}</th>`)
     .join('');
-  const totals = seats
-    .map((seat) => `<td class="xmj-ledger__n">${signed(view.scores[seat])}</td>`)
-    .join('');
-  return `<table class="xmj-ledger"><thead><tr><th>${t('live.xmj.ledgerHand')}</th><th>${t('live.xmj.ledgerDealer')}</th><th>${t('live.xmj.ledgerResult')}</th>${heads}</tr></thead><tbody>${rows}<tr class="xmj-ledger__total"><td colspan="3">${t('live.xmj.ledgerMatch')}</td>${totals}</tr></tbody></table>`;
+  return `<table class="xmj-ledger"><thead><tr><th>${t('live.xmj.ledgerHand')}</th><th>${t('live.xmj.ledgerResult')}</th><th class="xmj-ledger__n">${t('live.xmj.ledgerPoints')}</th>${heads}</tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+/** The one sentence the result leads with. */
+export function xmjResultTitle(
+  view: XmjPlayerView,
+  names: Readonly<Record<XmjSeat, string>>,
+): string {
+  const phase = view.phase;
+  const hand = Math.max(1, view.results.length);
+  if (phase.type === 'won') {
+    const you = view.perspective === phase.winner;
+    const key = phase.selfDrawn
+      ? you
+        ? 'live.xmj.youWonSelfDraw'
+        : 'live.xmj.nameWonSelfDraw'
+      : you
+        ? 'live.xmj.youWonDiscard'
+        : 'live.xmj.nameWonDiscard';
+    return t(key, {
+      hand,
+      name: escapeHtml(names[phase.winner]),
+      points: xmjPoints(phase.score.total),
+    });
+  }
+  if (phase.type === 'exhausted') return t('live.xmj.exhausted', { hand });
+  // The match ended mid-hand (resignation, timeout): the foot names how.
+  return t('live.xmj.handUnfinished', { hand });
 }
 
 function resultHtml(view: XmjPlayerView, options: XmjTableOptions): string {
   const names = options.names;
   const phase = view.phase;
-  const hand = Math.max(1, view.results.length);
-  let title: string;
-  let body = '';
-  if (phase.type === 'won') {
-    title = t(phase.selfDrawn ? 'live.xmj.wonSelfDraw' : 'live.xmj.wonDiscard', {
-      hand,
-      name: escapeHtml(names[phase.winner]),
-    });
-    body = `<div class="xmj-won">${winningHandHtml(phase.score, phase.winningTile)}</div>${taiHtml(phase.score)}`;
-  } else if (phase.type === 'exhausted') {
-    title = t('live.xmj.exhausted', { hand });
-  } else {
-    // The match ended mid-hand (resignation, timeout): the foot names how.
-    title = t('live.xmj.handUnfinished', { hand });
-  }
+  const title = xmjResultTitle(view, names);
+  const body =
+    phase.type === 'won'
+      ? `<div class="xmj-result__win"><div class="xmj-won">${winningHandHtml(phase.score, phase.winningTile)}</div>${breakdownHtml(phase.score)}</div>`
+      : '';
   let foot: string;
   if (view.status.type !== 'playing') {
     const winner = view.status.type === 'finished' ? view.status.winner : null;
@@ -507,7 +631,7 @@ function resultHtml(view: XmjPlayerView, options: XmjTableOptions): string {
             winner: signed(view.scores[winner]),
             loser: signed(view.scores[other(winner)]),
           });
-    foot = `<p class="xmj-note xmj-note--strong">${line}</p>`;
+    foot = `<div class="xmj-result__foot"><p class="xmj-note xmj-note--strong">${line}</p></div>`;
   } else {
     const parts: string[] = [];
     if (view.legal.nextHand && options.canAct) {
@@ -527,8 +651,10 @@ function resultHtml(view: XmjPlayerView, options: XmjTableOptions): string {
     }
     foot = `<div class="xmj-result__foot">${parts.join('')}</div>`;
   }
-  return `<div class="xmj-result"><h3 class="xmj-result__title">${title}</h3>${body}${ledgerHtml(view, names)}${foot}</div>`;
+  return `<div class="xmj-result" role="region" aria-label="${title}"><h3 class="xmj-result__title">${title}</h3>${body}${ledgerHtml(view, names)}${foot}</div>`;
 }
+
+// ── The table ────────────────────────────────────────────────────────────────
 
 /** The whole table for one view. */
 export function xiangqiMahjongTableHtml(view: XmjPlayerView, options: XmjTableOptions): string {
@@ -547,14 +673,125 @@ function tableHtml(view: XmjPlayerView, options: XmjTableOptions): string {
   const opponent = other(self);
   const names = options.names;
   const handOver = view.between || view.status.type === 'finished';
-  const centre = handOver ? resultHtml(view, options) : plateHtml(view, self, names);
-  const claimBubble = you ? bubbleHtml(view, names) : '';
-  const actions = handOver || !you ? '' : actionsHtml(view, options);
-  // Where the match stands, above everything: handsInMatch is the server's
-  // min(XMJ_MATCH_HANDS, walls dealt), so a short test match reads true too.
-  const handLine = `<p class="xmj-hand-line">${t('live.xmj.handOf', {
-    hand: Math.min(view.handNumber, view.handsInMatch),
-    hands: view.handsInMatch,
-  })}</p>`;
-  return `<div class="xmj-table">${handLine}${opponentHtml(view, opponent, names)}${pondHtml(view, opponent, false, names, claimBubble)}${centre}${pondHtml(view, self, you, names, '')}${actions}${selfHtml(view, self, you, options.canAct && you, names)}</div>`;
+  const claimBubble = you && !handOver ? bubbleHtml(view, names) : '';
+  const result = handOver ? resultHtml(view, options) : '';
+  const middle = `<div class="xmj-middle${handOver ? ' xmj-middle--result' : ''}">${pondHtml(view, opponent, false, names, claimBubble)}${centreHtml(view, self, options, handOver)}${pondHtml(view, self, you, names, '')}${result}</div>`;
+  return `<div class="xmj-table">${opponentHtml(view, opponent, names)}${middle}${selfHtml(view, self, you, options.canAct && you, names)}</div>`;
+}
+
+// ── The move log, one hand at a time ─────────────────────────────────────────
+
+export interface XmjLogOptions {
+  readonly names: Readonly<Record<XmjSeat, string>>;
+  /** The viewer's seat, worded "You"; a spectator has none. */
+  readonly viewer: XmjSeat | null;
+  /** Each finished hand's result, from the live view. */
+  readonly results: readonly XmjViewResult[];
+  /** The ply on show while scrubbing, or null when live. */
+  readonly activePly: number | null;
+  /** Earlier hands the reader opened. */
+  readonly expanded: ReadonlySet<number>;
+  /** Whether a row's ply can be shown (the client holds that snapshot). */
+  readonly hasPly: (ply: number) => boolean;
+  readonly pieceSet?: XiangqiPieceSet;
+}
+
+function logRowText(row: XmjLogRow, options: XmjLogOptions): string {
+  const you = 'seat' in row && row.seat === options.viewer;
+  const name = 'seat' in row ? escapeHtml(options.names[row.seat]) : '';
+  const tile = (value: XmjTile) => tileSpan(value, 'xmj-tile--xs');
+  switch (row.kind) {
+    case 'discard':
+      if (row.drew) {
+        return you
+          ? t('live.xmj.log.youDrawDiscard', { tile: tile(row.tile) })
+          : t('live.xmj.log.nameDrawsDiscards', { name, tile: tile(row.tile) });
+      }
+      return you
+        ? t('live.xmj.log.youDiscard', { tile: tile(row.tile) })
+        : t('live.xmj.log.nameDiscards', { name, tile: tile(row.tile) });
+    case 'claim':
+      return you
+        ? t('live.xmj.log.youClaim', { tile: tile(row.tile) })
+        : t('live.xmj.log.nameClaims', { name, tile: tile(row.tile) });
+    case 'win':
+      return you
+        ? t('live.xmj.log.youWinOn', { tile: tile(row.tile) })
+        : t('live.xmj.log.nameWinsOn', { name, tile: tile(row.tile) });
+    case 'self-draw':
+      return you ? t('live.xmj.log.youWinSelfDraw') : t('live.xmj.log.nameWinsSelfDraw', { name });
+    case 'exhausted':
+      return t('live.xmj.log.wallEmpty');
+  }
+}
+
+function logRowsHtml(hand: XmjLogHand, options: XmjLogOptions, activeRow: number | null): string {
+  return hand.rows
+    .map((row) => {
+      const active = activeRow === row.ply;
+      const ends = row.kind === 'win' || row.kind === 'self-draw' || row.kind === 'exhausted';
+      const cls = `xmj-log__row${active ? ' active' : ''}${ends ? ' xmj-log__row--end' : ''}`;
+      const text = logRowText(row, options);
+      // A row is a jump only when this client holds that position.
+      return options.hasPly(row.ply)
+        ? `<li><button type="button" class="${cls} move-jump" data-xmj-ply="${row.ply}">${text}</button></li>`
+        : `<li><span class="${cls}">${text}</span></li>`;
+    })
+    .join('');
+}
+
+function logSummary(hand: XmjLogHand, options: XmjLogOptions): string {
+  const result = options.results[hand.hand - 1];
+  const parts = [t('live.xmj.log.hand', { hand: hand.hand })];
+  if (result) {
+    parts.push(outcomeText(result, options.names));
+    if (result.winner !== null && result.score) parts.push(xmjPoints(result.score.total));
+  }
+  return parts.map((part) => `<span>${part}</span>`).join('');
+}
+
+/**
+ * The row a scrubbed position belongs to: the last shown row at or before it.
+ * Passes and the steps between hands have no row, so stepping onto one keeps
+ * the move before it lit instead of lighting nothing.
+ */
+function activeRowPly(hands: readonly XmjLogHand[], activePly: number | null): number | null {
+  if (activePly === null) return null;
+  let found: number | null = null;
+  for (const hand of hands) {
+    for (const row of hand.rows) {
+      if (row.ply > activePly) return found;
+      found = row.ply;
+    }
+  }
+  return found;
+}
+
+/**
+ * The log: the latest hand in full, each earlier hand one line that opens.
+ * A hand holding the scrubbed ply opens by itself, so the highlight shows.
+ */
+export function xmjLogHtml(hands: readonly XmjLogHand[], options: XmjLogOptions): string {
+  const activeRow = activeRowPly(hands, options.activePly);
+  const previous = activePieceSet;
+  activePieceSet = options.pieceSet ?? 'international';
+  try {
+    return hands
+      .map((hand, index) => {
+        const latest = index === hands.length - 1;
+        const holdsActive = hand.rows.some((row) => row.ply === activeRow);
+        const open = latest || holdsActive || options.expanded.has(hand.hand);
+        const summary = logSummary(hand, options);
+        const head = latest
+          ? `<div class="xmj-log__head">${summary}</div>`
+          : `<button type="button" class="xmj-log__head xmj-log__toggle" data-xmj-hand="${hand.hand}" aria-expanded="${open}">${summary}</button>`;
+        const rows = open
+          ? `<ol class="xmj-log__rows">${logRowsHtml(hand, options, activeRow)}</ol>`
+          : '';
+        return `<li class="xmj-log__hand${open ? ' xmj-log__hand--open' : ''}">${head}${rows}</li>`;
+      })
+      .join('');
+  } finally {
+    activePieceSet = previous;
+  }
 }

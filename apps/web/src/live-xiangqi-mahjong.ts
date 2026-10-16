@@ -23,6 +23,8 @@ import { t } from './i18n/catalog.js';
 import { playSound, playTerminalPlan } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
+import { syncMoveListScroll } from './variant-tenant/chrome-dom.js';
+import type { TenantMoveListRenderContext } from './variant-tenant/live-client.js';
 import {
   createTenantLiveClient,
   type TenantLiveClientContext,
@@ -32,12 +34,15 @@ import {
 import type { WebVariantTenant } from './variant-tenant/room-chrome.js';
 import './xiangqi-mahjong.css';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
+import { xmjHandLog } from './xiangqi-mahjong-log.js';
 import {
   xiangqiMahjongTableHtml,
   xmjCountdown,
   xmjFeltFromSearch,
+  xmjLogHtml,
   xmjReasonPhrase,
   xmjResultLine,
+  xmjTileLookFromSearch,
   xmjViewOffersAction,
 } from './xiangqi-mahjong-table.js';
 
@@ -96,14 +101,18 @@ function tickCountdowns(board: HTMLElement): boolean {
     const deadline = Number(node.dataset.xmjDeadline);
     const span = Number(node.dataset.xmjSpan ?? 0);
     const { secs, width } = xmjCountdown(deadline, span > 0 ? span : 1, now);
+    // Write only what changed: an unchanged write still dirties the text.
     if (node.dataset.xmjText === 'nextHandIn') {
-      node.textContent = t('live.xmj.nextHandIn', { count: secs });
+      const text = t('live.xmj.nextHandIn', { count: secs });
+      if (node.textContent !== text) node.textContent = text;
       continue;
     }
     const bar = node.querySelector<HTMLElement>('.xmj-timer i');
-    if (bar) bar.style.width = `${width.toFixed(1)}%`;
+    const barWidth = `${width.toFixed(1)}%`;
+    if (bar && bar.style.width !== barWidth) bar.style.width = barWidth;
     const label = node.querySelector<HTMLElement>('[data-xmj-secs]');
-    if (label) label.textContent = t('live.xmj.seconds', { count: secs });
+    const text = t('live.xmj.seconds', { count: secs });
+    if (label && label.textContent !== text) label.textContent = text;
   }
   return nodes.length > 0;
 }
@@ -191,6 +200,7 @@ function replayPositionKey(view: XmjPlayerView): string {
     counts: view.handCounts,
     melds: view.melds,
     discards: view.discards,
+    drawnDiscards: view.drawnDiscards,
     wall: view.wallCount,
     turn: view.turn,
     phase: view.phase,
@@ -218,23 +228,149 @@ function maybePlayTerminalSound(): void {
   playTerminalPlan(result, status.reason ?? null);
 }
 
+// ── The discard, shown leaving the hand it came from ─────────────────────────
+
+/** Where the viewer's last tap on one of their own tiles was, briefly. */
+let tappedTile: { rect: DOMRect; at: number } | null = null;
+const TAP_FRESH_MS = 3000;
+/** The ponds as last drawn, to tell a new discard from a redraw. */
+let drawnPonds: { hand: number; east: number; west: number } | null = null;
+let lastTableHtml = '';
+
+type DiscardSources = Record<XmjSeat, { drawn: DOMRect | null; middle: DOMRect | null }>;
+
+/** Read, before the redraw, the spots a discard can come from in each rack. */
+function discardSources(board: HTMLElement): DiscardSources {
+  const read = (seat: XmjSeat) => {
+    const rack = board.querySelector<HTMLElement>(`[data-xmj-seat="${seat}"] .xmj-concealed`);
+    const tiles = rack ? [...rack.children] : [];
+    const drawn = rack?.querySelector('.xmj-tile--drawn') ?? null;
+    // The middle of the tiles that were not just drawn: for the opponent this
+    // is where any hand tile seems to leave from, never its true slot.
+    const kept = tiles.filter((tile) => tile !== drawn);
+    const middle = kept[Math.floor((kept.length - 1) / 2)] ?? null;
+    return {
+      drawn: drawn?.getBoundingClientRect() ?? null,
+      middle: middle?.getBoundingClientRect() ?? null,
+    };
+  };
+  return { east: read('east'), west: read('west') };
+}
+
+function animateDiscards(board: HTMLElement, view: XmjPlayerView, sources: DiscardSources): void {
+  const before = drawnPonds;
+  drawnPonds = {
+    hand: view.handNumber,
+    east: view.discards.east.length,
+    west: view.discards.west.length,
+  };
+  const tap = tappedTile && Date.now() - tappedTile.at < TAP_FRESH_MS ? tappedTile.rect : null;
+  tappedTile = null;
+  if (!before || before.hand !== view.handNumber) return;
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+  for (const seat of XMJ_SEATS) {
+    if (view.discards[seat].length !== before[seat] + 1) continue;
+    const target = board.querySelector<HTMLElement>(
+      `[data-xmj-pond="${seat}"] .xmj-pond > :last-child`,
+    );
+    if (!target || typeof target.animate !== 'function') continue;
+    const fromDraw = view.drawnDiscards[seat].at(-1) === true;
+    const own = seat === core?.state.seat;
+    const from =
+      (own ? tap : null) ??
+      (fromDraw ? sources[seat].drawn : null) ??
+      sources[seat].middle ??
+      sources[seat].drawn;
+    if (!from) continue;
+    const to = target.getBoundingClientRect();
+    if (to.width === 0) continue;
+    const dx = from.left + from.width / 2 - (to.left + to.width / 2);
+    const dy = from.top + from.height / 2 - (to.top + to.height / 2);
+    const scale = from.width / to.width;
+    target.animate(
+      [
+        { transform: `translate(${dx}px, ${dy}px) scale(${scale})` },
+        { transform: 'translate(0, 0) scale(1)' },
+      ],
+      { duration: 320, easing: 'cubic-bezier(.2,.7,.3,1)' },
+    );
+  }
+}
+
 function renderTable(refs: LiveRefs, view: XmjPlayerView | null): void {
   const felt = xmjFeltFromSearch(window.location.search);
-  refs.board.className = `board xiangqi-mahjong-live-board${felt === 'green' ? '' : ` xmj-felt--${felt}`}`;
+  const look = xmjTileLookFromSearch(window.location.search);
+  const className = `board xiangqi-mahjong-live-board${felt === 'green' ? '' : ` xmj-felt--${felt}`}${look === 'jade' ? '' : ` xmj-tiles--${look}`}`;
+  if (refs.board.className !== className) refs.board.className = className;
   if (!view) {
     refs.board.innerHTML = '';
+    lastTableHtml = '';
+    drawnPonds = null;
     startTicker(refs.board);
     return;
   }
   if (queuedPass && view.windowClosesAt !== queuedPass.window) clearQueuedPass();
-  refs.board.innerHTML = xiangqiMahjongTableHtml(view, {
+  const html = xiangqiMahjongTableHtml(view, {
     canAct: core?.canActNow() === true,
     names: seatNames(),
     now: serverNow(),
     passQueued: queuedPass !== null,
     pieceSet: readStoredXiangqiPieceSet(),
   });
+  // The room redraws on every frame and clock tick; most change nothing here.
+  if (html === lastTableHtml && refs.board.firstElementChild) {
+    startTicker(refs.board);
+    return;
+  }
+  // A scrubbed position is not a discard being made: no flight.
+  const live = view === core?.state.view;
+  const sources = live ? discardSources(refs.board) : null;
+  refs.board.innerHTML = html;
+  lastTableHtml = html;
+  if (sources) animateDiscards(refs.board, view, sources);
+  else drawnPonds = null;
   startTicker(refs.board);
+}
+
+// ── The move list, one hand at a time ────────────────────────────────────────
+
+/** Earlier hands the reader opened in the move list. */
+const openHands = new Set<number>();
+let lastListCtx: TenantMoveListRenderContext<XmjSeat, XmjMove> | null = null;
+
+function renderMoveLog(ctx: TenantMoveListRenderContext<XmjSeat, XmjMove>): void {
+  lastListCtx = ctx;
+  // Plies count the move events in order, as the replay files them.
+  const hands = xmjHandLog(ctx.moves.map((event, index) => ({ move: event.move, ply: index + 1 })));
+  const seat = core?.state.seat;
+  ctx.refs.moveList.innerHTML = xmjLogHtml(hands, {
+    names: seatNames(),
+    viewer: seat === 'east' || seat === 'west' ? seat : null,
+    results: core?.state.view?.results ?? [],
+    activePly: ctx.activePly,
+    expanded: openHands,
+    hasPly: ctx.hasPly,
+    pieceSet: readStoredXiangqiPieceSet(),
+  });
+  syncMoveListScroll(ctx.refs.moveList, { live: ctx.isLive, plyCount: ctx.latestPly });
+}
+
+function installMoveLogInteraction(list: HTMLElement): void {
+  list.addEventListener('click', (event) => {
+    const target = (event.target as HTMLElement | null)?.closest<HTMLElement>(
+      '[data-xmj-ply], [data-xmj-hand]',
+    );
+    if (!target || !lastListCtx) return;
+    const hand = Number(target.dataset.xmjHand);
+    if (Number.isInteger(hand) && hand > 0) {
+      if (openHands.has(hand)) openHands.delete(hand);
+      else openHands.add(hand);
+      renderMoveLog(lastListCtx);
+      return;
+    }
+    const ply = Number(target.dataset.xmjPly);
+    if (Number.isInteger(ply) && ply > 0) lastListCtx.jumpToPly(ply);
+  });
 }
 
 const client = createTenantLiveClient<XmjSeat, XmjPlayerView, XmjMove>({
@@ -261,6 +397,9 @@ const client = createTenantLiveClient<XmjSeat, XmjPlayerView, XmjMove>({
   },
   resetState: () => {
     lastStatusType = null;
+    lastTableHtml = '';
+    drawnPonds = null;
+    openHands.clear();
     roomMode = 'pve';
     forfeitDeadline = null;
     offsetSamples.length = 0;
@@ -270,15 +409,18 @@ const client = createTenantLiveClient<XmjSeat, XmjPlayerView, XmjMove>({
   setup: (ctx) => {
     core = ctx;
     installTableInteraction(ctx);
+    installMoveLogInteraction(ctx.refs.moveList);
     // A piece-set change in the appearance picker redraws the tiles.
     window.addEventListener(xiangqiAppearanceChangedEvent, ctx.renderAll);
   },
   moveList: {
     rowClass: 'move-row xiangqi-mahjong-move-row',
     cellPrefix: 'xiangqi-mahjong-move-row',
+    listClass: 'xmj-log',
     masked: false,
     notate,
     isMoveEvent: isXmjMoveEvent,
+    render: renderMoveLog,
   },
   replayCapture: {
     positionKey: replayPositionKey,
@@ -307,8 +449,19 @@ function installTableInteraction(ctx: TenantLiveClientContext<XmjSeat, XmjPlayer
       const tiles = (data.xmjFrom ?? '').split(',').filter(Boolean);
       ctx.send({ type: 'move', action: data.xmjClaim, tiles });
     } else if (data.xmjTile) {
-      // Tiles of one kind are interchangeable, so the kind is the whole move.
-      ctx.send({ type: 'move', action: 'discard', tiles: [data.xmjTile] });
+      // Tiles of one kind are interchangeable, so the kind is the whole move;
+      // what is public is whether it was the tile just drawn. A copy of the
+      // drawn tile played from the hand says so, and the opponent sees it
+      // leave the hand rather than the drawn slot.
+      tappedTile = { rect: target.getBoundingClientRect(), at: Date.now() };
+      const phase = ctx.state.view?.phase;
+      const drawn = phase?.type === 'discard' ? phase.drawn : null;
+      const fromHand = drawn === data.xmjTile && !target.classList.contains('xmj-tile--drawn');
+      ctx.send({
+        type: 'move',
+        action: fromHand ? 'discard-hand' : 'discard',
+        tiles: [data.xmjTile],
+      });
     }
   });
 }

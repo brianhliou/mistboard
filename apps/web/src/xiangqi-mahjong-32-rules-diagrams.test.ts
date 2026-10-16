@@ -71,7 +71,7 @@ describe('xiangqi mahjong 32 rules diagrams', () => {
     expect(melds[0]?.tiles).toContain(melds[0]?.claimed);
   });
 
-  it('the worked example totals 6 台', () => {
+  it('the worked example totals 6 points', () => {
     const { concealed, melds } = xmjExampleHand(XMJ32_WORKED);
     expect(xmjScore({ concealed, melds, ...XMJ32_WORKED.context }).total).toBe(6);
   });

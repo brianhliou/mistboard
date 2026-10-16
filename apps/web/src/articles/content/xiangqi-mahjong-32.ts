@@ -41,7 +41,7 @@ export const xiangqiMahjong32Article: Article = {
   kind: 'rules',
   title: 'Xiangqi Mahjong Rules (32 tiles)',
   summary:
-    'The 32-tile game of Xiangqi Mahjong for two players: one xiangqi set used as tiles, five-tile hands, the winning hands drawn out, and the 台 table we score with.',
+    'The 32-tile game of Xiangqi Mahjong for two players: one xiangqi set used as tiles, five-tile hands, the winning hands drawn out, and the points each one scores.',
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-10-15',
@@ -154,7 +154,7 @@ export const xiangqiMahjong32Article: Article = {
         },
         win(
           'claimed',
-          'You draw the other black Elephant. A set and a pair: you win, and it scores 3 台 for a self-drawn win.',
+          'You draw the other black Elephant. A set and a pair: you win, and it scores 3 points for a self-drawn win.',
         ),
         {
           kind: 'paragraph',
@@ -180,16 +180,16 @@ export const xiangqiMahjong32Article: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'A winning hand is five tiles: one set and one pair, counting a set you laid down after a claim. There are only three kinds of set, a General sequence, a Chariot sequence or three Soldiers, so the first three hands below cover them all. A hand scores in 台 (tái), the counting unit of Taiwanese mahjong; each caption gives what the hand scores when won on the other player’s discard.',
+          text: 'A winning hand is five tiles: one set and one pair, counting a set you laid down after a claim. There are only three kinds of set, a General sequence, a Chariot sequence or three Soldiers, so the first three hands below cover them all. A hand scores points; each caption gives what the hand scores when won on the other player’s discard.',
         },
-        win('palace', 'General, Advisor and Elephant, with any pair: 1 台.'),
-        win('chariot', 'Chariot, Horse and Cannon, with any pair. The pair need not match the set’s colour: 1 台.'),
-        win('soldiers', 'Three Soldiers of one colour, with any pair: 1 台.'),
-        win('one-colour', 'One colour: every tile red, or every tile black. 1 more, for 2 台.'),
-        win('generals', 'Generals pair: the red and the black General as the pair. 2 more, for 3 台.'),
+        win('palace', 'General, Advisor and Elephant, with any pair: 1 point.'),
+        win('chariot', 'Chariot, Horse and Cannon, with any pair. The pair need not match the set’s colour: 1 point.'),
+        win('soldiers', 'Three Soldiers of one colour, with any pair: 1 point.'),
+        win('one-colour', 'One colour: every tile red, or every tile black. 1 more, for 2 points.'),
+        win('generals', 'Generals pair: the red and the black General as the pair. 2 more, for 3 points.'),
         win(
           'five-soldiers',
-          'Five Soldiers: all five Soldiers of one colour. 5 more, and it is one colour too: 7 台.',
+          'Five Soldiers: all five Soldiers of one colour. 5 more, and it is one colour too: 7 points.',
         ),
         {
           kind: 'sub-heading',
@@ -218,7 +218,7 @@ export const xiangqiMahjong32Article: Article = {
           kind: 'table',
           keyColumn: true,
           compact: true,
-          headers: ['Line', '台', 'When'],
+          headers: ['Line', 'Points', 'When'],
           rows: [
             ['Win', '1', 'Every winning hand'],
             ['One colour', '+1', 'All five tiles one colour'],
@@ -238,7 +238,7 @@ export const xiangqiMahjong32Article: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'A worked example. The dealer holds the red Chariot, Horse and Cannon and the red General, and draws the black General from the wall. That is a set and the Generals pair: 1 for the win, 2 for the Generals pair, 2 for the self-draw and 1 because the dealer won, 6 台 in all. It is not one colour, since the pair is half black.',
+          text: 'A worked example. The dealer holds the red Chariot, Horse and Cannon and the red General, and draws the black General from the wall. That is a set and the Generals pair: 1 for the win, 2 for the Generals pair, 2 for the self-draw and 1 because the dealer won, 6 points in all. It is not one colour, since the pair is half black.',
         },
       ],
     },
@@ -247,7 +247,7 @@ export const xiangqiMahjong32Article: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'A match is four hands, and the deal alternates every hand, so each player deals twice. Each 台 is one point: the winner of a hand gains its total and the other player loses the same amount. After four hands the higher score wins the match, and equal scores are a draw.',
+          text: 'A match is four hands, and the deal alternates every hand, so each player deals twice. The winner of a hand gains its points and the other player loses the same amount. After four hands the higher score wins the match, and equal scores are a draw.',
         },
       ],
     },
@@ -256,7 +256,7 @@ export const xiangqiMahjong32Article: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The game has no rulebook. These rules and the 台 values follow the Chinese Wikipedia article and the Eastking rule page, which agree, checked against other Taiwanese rule pages and FunTown’s online parlour. Where they are silent we chose: no kongs and no ready declaration, the deal alternating every hand, and the four-hand match, since the sources play for money and give no match format.',
+          text: 'The game has no rulebook. These rules and the point values follow the Chinese Wikipedia article and the Eastking rule page, which agree, checked against other Taiwanese rule pages and FunTown’s online parlour. Where they are silent we chose: no kongs and no ready declaration, the deal alternating every hand, and the four-hand match, since the sources play for money and give no match format.',
         },
       ],
     },

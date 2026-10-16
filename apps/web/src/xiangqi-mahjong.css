@@ -1,12 +1,19 @@
 /*
- * The xiangqi mahjong table (layout A, 2026-10-14): two seats facing each
- * other, each with its own pond of discards, and a centre plate between them.
- * Tiles are bone in any light, like the Hong Kong table, so the red and black
- * inks mean the same thing on a light page and a dark one. Copied, not shared,
- * so either table can be removed alone.
+ * The xiangqi mahjong table (recomposed 2026-10-15): one centred column, the
+ * opponent at the top, the discards and the wall in the middle band, the
+ * viewer's hand at the bottom. Tiles are ivory on a jade backing in any light,
+ * so the red and black inks mean the same thing on a light page and a dark
+ * one. Copied, not shared, with the Hong Kong table, so either can go alone.
  *
- * Nothing on the table moves on its own except the claim countdown.
- * `?felt=wood|slate|site` swaps the cloth for a look study; green is the default.
+ * Nothing moves on its own: the claim countdown ticks, and a discard flies
+ * once from the hand it left (live-xiangqi-mahjong.ts, skipped under reduced
+ * motion). The middle band keeps one height for the whole match and the
+ * result between hands lies over it, so the table never reflows.
+ *
+ * Every shadow here is an offset with no blur: a tile's depth is drawn as
+ * solid layers, which paint once and cost nothing to scroll.
+ *
+ * `?felt=wood|slate|site` swaps the cloth; `?tiles=bamboo` swaps the backing.
  */
 
 .live-route--xiangqi-mahjong {
@@ -18,18 +25,35 @@
   aspect-ratio: auto;
 }
 
+/* The table sizes itself; a drag handle for a square board means nothing here. */
+.live-route--xiangqi-mahjong .board-resize-grip {
+  display: none;
+}
+
+/* The tiles, wherever they are drawn: on the table and in the move list. */
+.live-route--xiangqi-mahjong,
+.xiangqi-mahjong-live-board,
+.xmj-log {
+  --xmj-face: #fbf7ec;
+  --xmj-face-low: #efe7d2;
+  --xmj-face-edge: #ded3b8;
+  --xmj-red: #a8231b;
+  --xmj-black: #1d1d1b;
+  --xmj-jade: #2f8a70;
+  --xmj-jade-low: #22684f;
+  --xmj-jade-high: #45a587;
+  --xmj-accent: #f2c14e;
+  --xmj-accent-ink: #1f1f1f;
+}
+
 .xiangqi-mahjong-live-board {
-  --xmj-tile-w: 46px;
-  --xmj-tile-h: 58px;
-  --xmj-pond-w: 30px;
-  --xmj-pond-h: 38px;
-  --xmj-pond-gap: 3px;
-  --xmj-face: #f7f4ea;
-  --xmj-edge: #d9d3c2;
-  --xmj-red: #b3261e;
-  --xmj-black: #1f1f1f;
-  --xmj-back: #2e7d6b;
-  --xmj-back-edge: #23614f;
+  --xmj-tile-w: 52px;
+  --xmj-tile-h: 68px;
+  --xmj-tile-r: 7px;
+  --xmj-depth: 5px;
+  --xmj-pond-w: 36px;
+  --xmj-pond-h: 47px;
+  --xmj-pond-gap: 4px;
   --xmj-felt: #1f5c45;
   --xmj-felt-edge: #164634;
   --xmj-felt-deep: #184b38;
@@ -37,10 +61,17 @@
   --xmj-line: rgb(255 255 255 / 0.16);
   --xmj-chip: rgb(255 255 255 / 0.14);
   --xmj-button-edge: rgb(255 255 255 / 0.45);
-  --xmj-accent: #f2c14e;
-  --xmj-accent-ink: #1f1f1f;
   width: 100%;
   min-width: 0;
+  display: flex;
+  justify-content: center;
+}
+
+/* A bamboo backing, the older tiles' look. */
+.xiangqi-mahjong-live-board.xmj-tiles--bamboo {
+  --xmj-jade: #c39a3e;
+  --xmj-jade-low: #92702a;
+  --xmj-jade-high: #d9b65e;
 }
 
 /* A xiangqi board's wood, and its ink. */
@@ -54,8 +85,6 @@
   --xmj-button-edge: rgb(75 60 42 / 0.5);
   --xmj-accent: #9a3412;
   --xmj-accent-ink: #fff8ee;
-  --xmj-back: #7c5a32;
-  --xmj-back-edge: #5f4425;
 }
 
 /* A dark neutral. */
@@ -64,8 +93,6 @@
   --xmj-felt-edge: #1f2328;
   --xmj-felt-deep: #24292e;
   --xmj-on-felt: #eef1f4;
-  --xmj-back: #4a5560;
-  --xmj-back-edge: #39424b;
 }
 
 /* The site's own surfaces, following its light and dark themes. */
@@ -82,6 +109,10 @@
 }
 
 .xmj-table {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
   background: var(--xmj-felt);
   border: 1px solid var(--xmj-felt-edge);
   border-radius: 18px;
@@ -91,19 +122,15 @@
   flex-direction: column;
   gap: 12px;
   min-width: 0;
+  contain: layout paint;
 }
 
-.xmj-hand-line {
-  margin: 0;
-  font-size: 13px;
-  opacity: 0.8;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
+/* ── Seats ─────────────────────────────────────────────────────────────────── */
 
 .xmj-seat {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 8px;
   min-width: 0;
 }
@@ -111,10 +138,12 @@
 .xmj-seat-row {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   flex-wrap: wrap;
   font-size: 14px;
   min-width: 0;
+  min-height: 24px;
 }
 
 .xmj-name {
@@ -146,18 +175,27 @@
   font-weight: 600;
 }
 
+/* A rack holds its height with no tiles in it, so a seat never jumps. */
 .xmj-rack {
   display: flex;
   align-items: flex-end;
-  gap: 4px;
+  justify-content: center;
+  gap: 10px;
   flex-wrap: wrap;
-  min-height: var(--xmj-tile-h);
+  min-height: calc(var(--xmj-tile-h) + var(--xmj-depth));
+  padding-bottom: var(--xmj-depth);
+  box-sizing: border-box;
+}
+
+.xmj-concealed {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 4px;
 }
 
 .xmj-melds {
   display: inline-flex;
-  gap: 10px;
-  margin-left: 12px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
@@ -166,6 +204,10 @@
   gap: 2px;
 }
 
+/* ── Tiles ─────────────────────────────────────────────────────────────────── */
+
+/* An ivory face on a jade backing: the face bevels in at the top, the jade
+   shows as a band along the bottom edge, and the piece is cut into the face. */
 .xmj-tile {
   box-sizing: border-box;
   position: relative;
@@ -175,24 +217,37 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--xmj-face);
-  border: 1px solid var(--xmj-edge);
-  border-radius: 6px;
-  box-shadow: 0 2px 0 var(--xmj-edge);
+  background: linear-gradient(
+    180deg,
+    var(--xmj-face) 0%,
+    var(--xmj-face) 55%,
+    var(--xmj-face-low) 100%
+  );
+  border: 1px solid var(--xmj-face-edge);
+  border-radius: var(--xmj-tile-r, 7px);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.9),
+    inset 0 -2px 0 rgb(120 100 60 / 0.08),
+    0 1px 0 var(--xmj-face-edge),
+    0 calc(var(--xmj-depth, 5px) - 1px) 0 var(--xmj-jade),
+    0 var(--xmj-depth, 5px) 0 var(--xmj-jade-low);
   font-family: "PingFang TC", "Hiragino Sans CNS", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
   font-size: calc(var(--xmj-tile-h) * 0.46);
   font-weight: 700;
   line-height: 1;
   padding: 0;
+  color: var(--xmj-black);
 }
 
 /* The piece's 100-unit box is drawn a little wider than the tile; the figure
-   or character inside it sits well within the tile face. */
+   or character inside it sits well within the face. A one-pixel light edge
+   under the ink reads as a cut in the ivory. */
 .xmj-tile-art {
   flex: none;
-  width: 118%;
+  width: 112%;
   aspect-ratio: 1;
   pointer-events: none;
+  filter: drop-shadow(0 1px 0 rgb(255 255 255 / 0.85));
 }
 
 .xmj-tile--red {
@@ -203,84 +258,130 @@
   color: var(--xmj-black);
 }
 
-/* The opponent's tiles are the viewer's size: the same tiles, turned over. */
+/* A tile turned over: jade on top, the ivory face showing along the edge. */
 .xmj-tile--back {
-  background: var(--xmj-back);
-  border-color: var(--xmj-back-edge);
-  box-shadow: 0 2px 0 var(--xmj-back-edge);
+  background: linear-gradient(
+    160deg,
+    var(--xmj-jade-high) 0%,
+    var(--xmj-jade) 45%,
+    var(--xmj-jade-low) 100%
+  );
+  border-color: var(--xmj-jade-low);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.25),
+    0 calc(var(--xmj-depth, 5px) - 1px) 0 var(--xmj-face-low),
+    0 var(--xmj-depth, 5px) 0 var(--xmj-face-edge);
 }
 
 .xmj-tile--sm {
-  width: var(--xmj-pond-w);
-  height: var(--xmj-pond-h);
-  font-size: calc(var(--xmj-pond-h) * 0.46);
-  border-radius: 4px;
+  --xmj-tile-r: 5px;
+  --xmj-depth: 4px;
+  width: var(--xmj-pond-w, 36px);
+  height: var(--xmj-pond-h, 47px);
+  font-size: calc(var(--xmj-pond-h, 47px) * 0.46);
 }
 
 .xmj-tile--xs {
-  width: 22px;
-  height: 28px;
-  font-size: 13px;
-  border-radius: 3px;
-  box-shadow: 0 1px 0 var(--xmj-edge);
+  --xmj-tile-r: 3px;
+  --xmj-depth: 2px;
+  width: 20px;
+  height: 26px;
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+.xmj-tile--xs .xmj-tile-art {
+  filter: none;
 }
 
 .xmj-tile--button {
   cursor: pointer;
+  transition: transform 120ms ease-out;
 }
 
 .xmj-tile--button:hover,
 .xmj-tile--button:focus-visible {
   transform: translateY(-6px);
+}
+
+.xmj-tile--button:focus-visible {
   outline: 2px solid var(--xmj-accent);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 
+/* The tile just drawn stands apart at the right of the rack. */
 .xmj-tile--drawn {
-  margin-left: 14px;
+  margin-left: 12px;
 }
 
+/* The claimed tile in a laid-down set sits a step lower, turned to the table. */
 .xmj-tile--claimed {
-  box-shadow: 0 2px 0 var(--xmj-accent);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.9),
+    0 calc(var(--xmj-depth, 5px) - 1px) 0 var(--xmj-accent),
+    0 var(--xmj-depth, 5px) 0 var(--xmj-jade-low);
 }
 
-.xmj-tile--win {
-  outline: 3px solid var(--xmj-accent);
-  outline-offset: 1px;
+/* The winning tile: an outline around the whole tile, depth included. */
+.xmj-tile--win::after {
+  content: "";
+  position: absolute;
+  inset: -4px -4px calc(-4px - var(--xmj-depth, 5px)) -4px;
+  border: 2.5px solid var(--xmj-accent);
+  border-radius: calc(var(--xmj-tile-r, 7px) + 4px);
+  pointer-events: none;
 }
 
 /* The latest discard: a notch above the tile. Static. */
 .xmj-tile--last::before {
   content: "";
   position: absolute;
-  top: -10px;
+  top: -11px;
   left: 50%;
   transform: translateX(-50%);
-  border: 6px solid transparent;
+  border: 5px solid transparent;
   border-top-color: var(--xmj-accent);
+}
+
+/* Discarded straight after drawing it: a small jade dot in the corner. */
+.xmj-tile--fromdraw::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--xmj-jade);
+}
+
+/* ── The middle band ───────────────────────────────────────────────────────── */
+
+/* Two pond rows, the centre, two pond rows: one height all match long. */
+.xmj-middle {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
 }
 
 .xmj-pond-wrap {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.xmj-pond-label {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  opacity: 0.8;
+  width: calc(var(--xmj-pond-w) * 8 + var(--xmj-pond-gap) * 7);
+  max-width: 100%;
 }
 
 .xmj-pond {
   display: grid;
-  grid-template-columns: repeat(6, var(--xmj-pond-w));
-  grid-auto-rows: var(--xmj-pond-h);
+  grid-template-columns: repeat(8, var(--xmj-pond-w));
+  grid-auto-rows: calc(var(--xmj-pond-h) + 4px);
   gap: 6px var(--xmj-pond-gap);
-  min-height: var(--xmj-pond-h);
-  padding-top: 4px;
+  align-content: start;
+  box-sizing: border-box;
+  /* Two rows of eight hold a hand's discards: the 23-tile wall splits between two players. */
+  min-height: calc((var(--xmj-pond-h) + 4px) * 2 + 6px + 6px);
+  padding-top: 6px;
 }
 
 /* A board notice (live-banqi-chase-bubble.css): anchored under the latest
@@ -288,17 +389,17 @@
 .xmj-bubble {
   position: absolute;
   z-index: 3;
-  top: calc(100% + 8px);
+  top: calc(100% + 6px);
   left: 0;
-  width: 220px;
+  width: 230px;
   max-width: calc(100% - 4px);
   box-sizing: border-box;
   padding: 6px 11px;
   border-radius: 9px;
   border-left: 3px solid rgb(232 110 98);
   color: #fbf6ec;
-  background: rgb(28 24 20 / 90%);
-  box-shadow: 0 4px 14px rgb(0 0 0 / 28%);
+  background: rgb(28 24 20 / 92%);
+  box-shadow: 0 2px 0 rgb(0 0 0 / 18%);
   font-size: 13px;
   font-weight: 500;
   line-height: 1.35;
@@ -312,34 +413,95 @@
   left: calc(var(--xmj-col, 0) * (var(--xmj-pond-w) + var(--xmj-pond-gap)) + var(--xmj-pond-w) / 2);
   transform: translateX(-50%);
   border: 6px solid transparent;
-  border-bottom-color: rgb(28 24 20 / 90%);
+  border-bottom-color: rgb(28 24 20 / 92%);
 }
 
-.xmj-plate,
-.xmj-result {
+.xmj-centre {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 118px;
   background: var(--xmj-felt-deep);
   border-radius: 12px;
-  padding: 10px 12px;
+  padding: 8px 12px 10px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   font-size: 13px;
 }
 
-.xmj-plate__facts {
+.xmj-centre__facts {
   display: flex;
-  gap: 16px;
-  opacity: 0.8;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   font-variant-numeric: tabular-nums;
+}
+
+.xmj-hand-line {
+  font-size: 13px;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+.xmj-centre__status {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* The wall: two-high stacks of backs, taken from the left end. */
+.xmj-wall {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.xmj-wall__stacks {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.xmj-stack {
+  position: relative;
+  width: 12px;
+  height: 21px;
+}
+
+.xmj-stack i {
+  position: absolute;
+  left: 0;
+  bottom: 2px;
+  box-sizing: border-box;
+  width: 12px;
+  height: 15px;
+  border-radius: 2px;
+  background: linear-gradient(160deg, var(--xmj-jade-high), var(--xmj-jade-low));
+  border: 1px solid var(--xmj-jade-low);
+  box-shadow: 0 2px 0 var(--xmj-face-low);
+}
+
+.xmj-stack i + i {
+  bottom: 6px;
+}
+
+.xmj-wall__count {
+  font-size: 13px;
+  opacity: 0.85;
+  white-space: nowrap;
+  min-width: 6ch;
+  text-align: right;
 }
 
 .xmj-message {
   margin: 0;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   flex-wrap: wrap;
   font-size: 15px;
+  text-align: center;
 }
 
 .xmj-note {
@@ -368,6 +530,12 @@
   font-size: 13px;
 }
 
+.xmj-timer-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .xmj-timer {
   height: 4px;
   border-radius: 2px;
@@ -391,13 +559,14 @@
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  justify-content: center;
 }
 
 .xmj-action {
   font: inherit;
   font-size: 14px;
   min-height: 44px;
-  padding: 8px 14px;
+  padding: 6px 14px;
   border-radius: 9px;
   border: 1px solid var(--xmj-button-edge);
   background: transparent;
@@ -429,21 +598,43 @@
   display: inline-flex;
   gap: 2px;
   align-items: center;
+  padding-bottom: 2px;
 }
 
+/* ── The result, over the middle band ──────────────────────────────────────── */
+
 .xmj-result {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  overflow: auto;
+  box-sizing: border-box;
+  background: var(--xmj-felt-deep);
   border: 2px solid var(--xmj-accent);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
+  font-size: 13px;
 }
 
 .xmj-result__title {
   margin: 0;
   font-size: 16px;
+  line-height: 1.3;
+}
+
+.xmj-result__win {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px 22px;
+  flex-wrap: wrap;
 }
 
 .xmj-won {
   display: flex;
-  gap: 14px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
@@ -456,6 +647,7 @@
 .xmj-group__tiles {
   display: flex;
   gap: 3px;
+  padding: 4px 4px 0;
 }
 
 .xmj-group__cap {
@@ -466,35 +658,47 @@
   opacity: 0.85;
 }
 
-.xmj-tai {
+.xmj-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 150px;
+}
+
+.xmj-breakdown ul {
   list-style: none;
   margin: 0;
   padding: 0;
-  max-width: 320px;
-  font-size: 14px;
-}
-
-.xmj-tai li {
   display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 3px 0;
-  border-bottom: 1px solid var(--xmj-line);
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
-.xmj-tai__total {
-  font-weight: 700;
+.xmj-breakdown li {
+  display: inline-flex;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--xmj-chip);
+  white-space: nowrap;
 }
 
-.xmj-tai li.xmj-tai__total {
-  border-bottom: 0;
+.xmj-breakdown b {
+  font-variant-numeric: tabular-nums;
+}
+
+.xmj-result__how {
+  color: inherit;
+  font-size: 12px;
+  opacity: 0.9;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .xmj-ledger {
   border-collapse: collapse;
   font-size: 13px;
   width: 100%;
-  max-width: 460px;
 }
 
 .xmj-ledger th,
@@ -502,6 +706,11 @@
   text-align: left;
   padding: 3px 8px 3px 0;
   border-bottom: 1px solid var(--xmj-line);
+}
+
+.xmj-ledger th {
+  font-weight: 600;
+  opacity: 0.85;
 }
 
 .xmj-ledger .xmj-ledger__n {
@@ -514,50 +723,186 @@
   font-weight: 600;
 }
 
-.xmj-ledger__total td {
-  font-weight: 700;
-  border-bottom: 0;
-}
-
 .xmj-result__foot {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
   font-size: 13px;
+  margin-top: auto;
 }
+
+/* ── The move list, one hand at a time ─────────────────────────────────────── */
+
+ol.xmj-log {
+  display: block;
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+}
+
+.xmj-log__hand {
+  display: block;
+  border-bottom: 1px solid var(--site-border);
+  padding: 2px 0 4px;
+}
+
+.xmj-log__hand:last-child {
+  border-bottom: 0;
+}
+
+.xmj-log__head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0 6px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+}
+
+.xmj-log__head span + span::before {
+  content: "\00b7";
+  margin-right: 6px;
+  opacity: 0.6;
+}
+
+.xmj-log__toggle {
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.xmj-log__toggle:hover {
+  background: var(--site-hover);
+}
+
+.xmj-log__toggle::before {
+  content: "";
+  width: 0;
+  height: 0;
+  margin-right: 2px;
+  border: 4px solid transparent;
+  border-left: 5px solid currentcolor;
+  border-right: 0;
+  opacity: 0.7;
+}
+
+.xmj-log__toggle[aria-expanded="true"]::before {
+  transform: rotate(90deg);
+}
+
+.xmj-log__rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.xmj-log__row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 2px 8px 2px 18px;
+  min-height: 30px;
+  font: inherit;
+  font-size: 13px;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+}
+
+button.xmj-log__row {
+  cursor: pointer;
+}
+
+button.xmj-log__row:hover {
+  background: var(--site-hover);
+}
+
+.xmj-log__row.active {
+  background: var(--site-hover);
+  box-shadow: inset 3px 0 0 var(--site-accent);
+  font-weight: 600;
+}
+
+.xmj-log__row--end {
+  font-weight: 600;
+}
+
+/* ── Phones ────────────────────────────────────────────────────────────────── */
 
 @media (max-width: 520px) {
   .xiangqi-mahjong-live-board {
-    --xmj-tile-w: 38px;
-    --xmj-tile-h: 48px;
-    --xmj-pond-w: 28px;
-    --xmj-pond-h: 35px;
+    --xmj-tile-w: 44px;
+    --xmj-tile-h: 58px;
+    --xmj-tile-r: 6px;
+    --xmj-depth: 4px;
+    --xmj-pond-w: 32px;
+    --xmj-pond-h: 42px;
+    --xmj-pond-gap: 3px;
   }
 
   .xmj-table {
-    padding: 12px;
+    padding: 10px;
+    gap: 10px;
+    border-radius: 14px;
   }
 
-  .xmj-melds {
+  .xmj-rack {
+    gap: 8px;
+  }
+
+  .xmj-concealed {
+    gap: 3px;
+  }
+
+  .xmj-tile--drawn {
     margin-left: 8px;
   }
 
+  .xmj-stack,
+  .xmj-stack i {
+    width: 9px;
+  }
+
+  .xmj-wall__stacks {
+    gap: 1px;
+  }
+
   .xmj-buttons {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    flex-wrap: nowrap;
+  }
+
+  .xmj-action {
+    padding: 6px 10px;
   }
 
   .xmj-action--wide {
-    grid-column: 1 / -1;
+    min-width: 0;
   }
 
-  .xmj-timer-line {
-    grid-template-columns: 1fr auto;
+  .xmj-result {
+    padding: 10px;
+    gap: 8px;
   }
 
-  .xmj-timer-label {
-    grid-column: 1 / -1;
+  .xmj-result__title {
+    font-size: 15px;
+  }
+
+  .xmj-result__win {
+    gap: 8px 14px;
   }
 
   .xmj-ledger {
