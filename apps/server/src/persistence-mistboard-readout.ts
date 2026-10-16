@@ -38,7 +38,7 @@ import {
 } from './persistence-xiangqi-puzzle-mining.js';
 import { fetchDpxqTourIndex, planDpxqIndexSync } from './xiangqi-broadcast-dpxq-index.js';
 import type { XiangqiBroadcastSourceFetch } from './xiangqi-broadcast-fetch.js';
-import { xiangqiBroadcastBoardServes } from './xiangqi-broadcast-serving.js';
+import { findUnservableXiangqiBroadcastBoards } from './xiangqi-broadcast-serving.js';
 import { xiangqiEditorialCandidateSignals } from './xiangqi-puzzle-editorial-ranking.js';
 
 type Queryable = Pick<pg.Pool, 'query'>;
@@ -504,7 +504,7 @@ async function collectBroadcasts(
   untrackedEvents: MistboardReadoutBroadcasts['untrackedEvents'],
 ): Promise<MistboardReadoutBroadcasts> {
   const boards = await listAllXiangqiBroadcastBoardsOn(db);
-  const unservable = boards.filter((board) => !xiangqiBroadcastBoardServes(board));
+  const unservable = await findUnservableXiangqiBroadcastBoards(boards);
   return {
     boards: boards.length,
     unservableBoards: unservable.length,

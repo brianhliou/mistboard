@@ -6,6 +6,7 @@ import { replayXiangqiBroadcastBoard, type XiangqiBroadcastBoard } from '@mistbo
 import type { StoredXiangqiBroadcastBoard } from './persistence.js';
 import {
   buildXiangqiBroadcastBoardReplay,
+  findUnservableXiangqiBroadcastBoards,
   xiangqiBroadcastBoardServes,
 } from './xiangqi-broadcast-serving.js';
 
@@ -50,4 +51,48 @@ test('serving check fails a record with a move after checkmate, as the API does'
   const past = { ...mated, moves: [...mated.moves, mated.moves[0]!] };
   assert.equal(xiangqiBroadcastBoardServes(past), false);
   assert.throws(() => buildXiangqiBroadcastBoardReplay(past), /moves after terminal state/);
+});
+
+test('readout sweep finds the same unservable boards as the per-board check', async () => {
+  const clean = stored('2025-wxc-sample/games/men-r1-b01.json');
+  const mated = stored('checkmate.json');
+  const past = { ...mated, id: `${mated.id}-past`, moves: [...mated.moves, mated.moves[0]!] };
+  const unservable = await findUnservableXiangqiBroadcastBoards([clean, past, mated], {
+    sliceMs: 0,
+  });
+  assert.deepEqual(
+    unservable.map((board) => board.id),
+    [past.id],
+  );
+});
+
+// 2026-10-16: the daily readout replayed every stored board (~2,000 boards,
+// ~155k plies) in one synchronous filter and held prod's event loop for 16.4s,
+// stalling every room and request on the box. The sweep must hand the loop
+// back between slices however large the corpus grows.
+test('readout sweep yields the event loop while it replays a large corpus', async () => {
+  const board = stored('2025-wxc-sample/games/men-r1-b01.json');
+  const boards = Array.from({ length: 40 }, (_, index) => ({ ...board, id: `b${index}` }));
+  let ticks = 0;
+  const ticker = setInterval(() => {
+    ticks += 1;
+  }, 1);
+  let ticksBeforeLastBoard = -1;
+  try {
+    await findUnservableXiangqiBroadcastBoards(boards, {
+      sliceMs: 5,
+      serves: (next) => {
+        const until = performance.now() + 2;
+        while (performance.now() < until) {
+          // stand in for a 2ms replay
+        }
+        if (next.id === 'b39') ticksBeforeLastBoard = ticks;
+        return true;
+      },
+    });
+  } finally {
+    clearInterval(ticker);
+  }
+  // 80ms of work in 5ms slices: timers must have run during the sweep, not after.
+  assert.ok(ticksBeforeLastBoard >= 5, `timers ran ${ticksBeforeLastBoard} times during the sweep`);
 });
