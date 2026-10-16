@@ -166,6 +166,7 @@ Conventions:
 
 ### Site
 
+- The xiangqi analysis board and position editor have their own Chinese pages ([f23e9dfc](https://github.com/brianhliou/mistboard/commit/f23e9dfc))
 - the blog filters by topic (/blog?topic=deep-dives), and the homepage's deep dives row links there once it has more posts than it shows ([3a0dd19d](https://github.com/brianhliou/mistboard/commit/3a0dd19d))
 - New look for the International pieces: one dark ring on both sides, larger pieces, rounded squares on the Square grid, and a clearer last-move mark on the grid ([a4820b25](https://github.com/brianhliou/mistboard/commit/a4820b25))
 - The homepage's three rows sit closer together ([9ffca9cf](https://github.com/brianhliou/mistboard/commit/9ffca9cf))
@@ -220,6 +221,7 @@ Conventions:
 
 ### Fixed
 
+- Fog of War chess boards fit inside their card on /games ([f23e9dfc](https://github.com/brianhliou/mistboard/commit/f23e9dfc))
 - Chess board thumbnails on the blog are square again instead of stretched to the card ([d250631c](https://github.com/brianhliou/mistboard/commit/d250631c))
 - The mahjong game-over sound no longer plays again when you reopen a finished game ([d250631c](https://github.com/brianhliou/mistboard/commit/d250631c))
 - Jungle and Flip Jungle pieces on the board's edge now sit flush against the frame ([cd5acfaa](https://github.com/brianhliou/mistboard/commit/cd5acfaa))
