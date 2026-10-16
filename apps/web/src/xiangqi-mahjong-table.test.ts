@@ -310,14 +310,24 @@ describe('xiangqi mahjong table', () => {
     );
   });
 
-  it('marks each discard made straight from the draw, and only those', () => {
+  it('marks each discard made straight from the draw, and only those, with a key once one shows', () => {
     let current = state;
     let marked = 0;
+    let keyed = 0;
     for (let steps = 0; current.status.type === 'playing' && steps < 5000; steps += 1) {
       for (const seat of ['east', 'west', 'spectator'] as const) {
         const view = xmjViewFor(current, seat);
         if (view.between) continue;
         const host = doc(xiangqiMahjongTableHtml(view, opts(false)));
+        // The key's line is always laid out; it shows once any shaded tile does.
+        const key = host.querySelector('.xmj-shaded-key');
+        const any =
+          view.drawnDiscards.east.includes(true) || view.drawnDiscards.west.includes(true);
+        expect(key?.classList.contains('xmj-shaded-key--hidden')).toBe(!any);
+        if (any) {
+          keyed += 1;
+          expect(key?.textContent).toBe('Shaded tiles were discarded as soon as they were drawn');
+        }
         for (const pondSeat of ['east', 'west'] as const) {
           const tiles = [...host.querySelectorAll(`[data-xmj-pond="${pondSeat}"] .xmj-tile`)];
           const flags = tiles.map((tile) => tile.classList.contains('xmj-tile--fromdraw'));
@@ -336,6 +346,7 @@ describe('xiangqi mahjong table', () => {
       current = botStep(current);
     }
     expect(marked).toBeGreaterThan(0);
+    expect(keyed).toBeGreaterThan(0);
   });
 
   it('with a win on offer, raises one tapped discard and asks for a second tap', () => {

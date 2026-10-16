@@ -505,6 +505,29 @@
   white-space: nowrap;
 }
 
+.xmj-shaded-key {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.xmj-shaded-key--hidden {
+  visibility: hidden;
+}
+
+/* A blank tile face, dimmed the way a shaded discard is. */
+.xmj-shaded-key__swatch {
+  width: 9px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--xmj-face);
+  filter: brightness(0.7) saturate(0.6);
+}
+
 .xmj-centre__status {
   flex: 1;
   display: flex;

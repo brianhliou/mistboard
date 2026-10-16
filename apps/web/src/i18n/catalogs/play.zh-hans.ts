@@ -529,6 +529,7 @@ export const ZH_HANS_PLAY = {
   'live.xmj.onePoint': '1 台',
   'live.xmj.points': '{count} 台',
   'live.xmj.drawnDiscard': '{tile}，摸到即打',
+  'live.xmj.shadedKey': '暗色的牌：摸到即打',
   'live.xmj.howScoring': '计分方法',
   'live.xmj.taiScored': '（已计分）',
   'live.xmj.taiTable': '计分表',

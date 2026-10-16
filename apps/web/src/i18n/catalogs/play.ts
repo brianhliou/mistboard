@@ -553,6 +553,7 @@ export const EN_PLAY = {
   'live.xmj.onePoint': '1 point',
   'live.xmj.points': '{count} points',
   'live.xmj.drawnDiscard': '{tile}, discarded as drawn',
+  'live.xmj.shadedKey': 'Shaded tiles were discarded as soon as they were drawn',
   'live.xmj.howScoring': 'How scoring works',
   'live.xmj.taiScored': ' (scored)',
   'live.xmj.taiTable': 'Scoring table',
