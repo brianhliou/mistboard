@@ -361,7 +361,9 @@ function animateMoves(board: HTMLElement, view: XmjPlayerView, sources: TileSour
 function renderTable(refs: LiveRefs, view: XmjPlayerView | null): void {
   const felt = xmjFeltFromSearch(window.location.search);
   const look = xmjTileLookFromSearch(window.location.search);
-  const className = `board xiangqi-mahjong-live-board${felt === 'green' ? '' : ` xmj-felt--${felt}`}${look === 'jade' ? '' : ` xmj-tiles--${look}`}`;
+  // A spike (`?size=big`): larger discards and wall, judged live before it is kept.
+  const big = new URLSearchParams(window.location.search).get('size') === 'big';
+  const className = `board xiangqi-mahjong-live-board${felt === 'green' ? '' : ` xmj-felt--${felt}`}${look === 'jade' ? '' : ` xmj-tiles--${look}`}${big ? ' xmj-size--big' : ''}`;
   if (refs.board.className !== className) refs.board.className = className;
   if (!view) {
     refs.board.innerHTML = '';

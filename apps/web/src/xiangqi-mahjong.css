@@ -1175,3 +1175,47 @@ ol.xmj-log {
     padding: 1px 6px;
   }
 }
+
+/* ── Spike: bigger discards and wall (`?size=big`) ─────────────────────────── */
+
+.xiangqi-mahjong-live-board.xmj-size--big {
+  --xmj-pond-w: 46px;
+  --xmj-pond-h: 60px;
+  --xmj-pond-gap: 5px;
+}
+
+.xmj-size--big .xmj-wall__stacks {
+  gap: 3px;
+}
+
+.xmj-size--big .xmj-stack {
+  width: 18px;
+  height: 31px;
+}
+
+.xmj-size--big .xmj-stack i {
+  width: 18px;
+  height: 23px;
+  border-radius: 3px;
+}
+
+.xmj-size--big .xmj-stack i + i {
+  bottom: 9px;
+}
+
+@media (max-width: 520px) {
+  .xiangqi-mahjong-live-board.xmj-size--big {
+    --xmj-pond-w: 39px;
+    --xmj-pond-h: 51px;
+    --xmj-pond-gap: 3px;
+  }
+
+  .xmj-size--big .xmj-wall__stacks {
+    gap: 1px;
+  }
+
+  .xmj-size--big .xmj-stack,
+  .xmj-size--big .xmj-stack i {
+    width: 12px;
+  }
+}
