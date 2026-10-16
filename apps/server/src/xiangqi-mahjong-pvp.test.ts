@@ -352,9 +352,10 @@ test('xmj pvp: only granted accounts sit down, and a guest never does', async ()
   }
 });
 
-test('xmj pvp: Find opponent offers 5+5 and 10+5 only', () => {
+test('xmj pvp: Find opponent offers every site pace, and nothing off the list', () => {
+  assert.equal(xmjLobbyAllowsTimeControl({ initialMs: 60_000, incrementMs: 1_000 }), true);
+  assert.equal(xmjLobbyAllowsTimeControl({ initialMs: 180_000, incrementMs: 2_000 }), true);
   assert.equal(xmjLobbyAllowsTimeControl({ initialMs: 300_000, incrementMs: 5_000 }), true);
   assert.equal(xmjLobbyAllowsTimeControl({ initialMs: 600_000, incrementMs: 5_000 }), true);
-  assert.equal(xmjLobbyAllowsTimeControl({ initialMs: 180_000, incrementMs: 2_000 }), false);
-  assert.equal(xmjLobbyAllowsTimeControl({ initialMs: 60_000, incrementMs: 1_000 }), false);
+  assert.equal(xmjLobbyAllowsTimeControl({ initialMs: 420_000, incrementMs: 3_000 }), false);
 });

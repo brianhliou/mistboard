@@ -219,7 +219,7 @@ describe('landing bot policy', () => {
     // Every Misty variant, fog included, advertises the 10+5 bot default. For
     // the fog engines it also clears the 5s increment floor (#283) the picker
     // and the create routes enforce (isAllowedEngineTimeControl).
-    // Xiangqi Mahjong's room accepts 5+5 and 10+5, so the default is one it starts.
+    // Xiangqi Mahjong's room accepts every preset, 10+5 included.
     for (const gameSpecId of [
       'banqi',
       'jungle',

@@ -1019,7 +1019,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsRated: true,
         supportsTimeControl: true,
       },
-      timePresetIds: ['5m5', '10m5'],
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       // One predicate for both, as for Hong Kong mahjong.
       offerInMenu: xiangqiMahjongOffered,
       acceptsDeepLink: xiangqiMahjongOffered,

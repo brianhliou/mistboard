@@ -71,11 +71,12 @@ const xiangqiMahjongWs = createTenantWsRuntime(xiangqiMahjongTenant, {
 });
 
 /**
- * The paces the table offers (web registry timePresetIds: 5+5 and 10+5). A
- * match is about 21 decisions a player over four hands; 3+2 and 1+1 would
- * flag players who stop to read a claim. Only 5+5 is a rated pace.
+ * The paces the table offers (web registry timePresetIds): every site preset.
+ * A match is about 21 discards a player over four hands, and no clock runs
+ * while a claim is open (xmjClockOwner), so even 1+1 leaves a few seconds a
+ * discard. 1+1, 3+2 and 5+5 are rated, as everywhere.
  */
-const XMJ_LOBBY_TIME_CONTROL_IDS: ReadonlySet<string> = new Set(['5m5', '10m5']);
+const XMJ_LOBBY_TIME_CONTROL_IDS: ReadonlySet<string> = new Set(['1m1', '3m2', '5m5', '10m5']);
 
 export function xmjLobbyAllowsTimeControl(timeControl: RoomTimeControl): boolean {
   const spec = findTimeControl(timeControl.initialMs, timeControl.incrementMs);

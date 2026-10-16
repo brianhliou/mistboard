@@ -193,8 +193,8 @@ const VARIANT_DEFAULT_TIME_CONTROLS: Readonly<Partial<Record<GameSpecId, TimeCon
   [ATOMIC_XIANGQI_SPEC_ID]: '10m5',
   // Xiangqi's pace, and every capture hands the opponent a piece to place.
   [CRAZYHOUSE_XIANGQI_SPEC_ID]: '10m5',
-  // The table offers 5+5 and 10+5 only (a claim is read, not calculated, but
-  // 3+2 would still flag a player reading one). 5+5 is the rated pace.
+  // A PREFERENCE: the table offers every preset (no clock runs while a claim
+  // is open), but a first-time player starts where a claim can be read.
   [XIANGQI_MAHJONG_SPEC_ID]: '5m5',
 };
 
