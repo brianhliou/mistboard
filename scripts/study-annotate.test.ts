@@ -9,6 +9,7 @@ import {
   judgedMoves,
   moveGlyphFor,
   type StudyNode,
+  squaresOf,
 } from './study-annotate.ts';
 
 describe('study-annotate', () => {
@@ -136,5 +137,29 @@ describe('study-annotate', () => {
     const beforeThird = first[0]!.children[0]!;
     assert.equal(beforeThird.children.length, 2, 'the line beside the ?? move stays');
     assert.equal(beforeThird.children[1]!.uci, 'e1e2');
+  });
+
+  it('splits a move on the file letter, so a rank-10 square keeps both digits', () => {
+    assert.deepEqual(squaresOf('f10e10'), { orig: 'f10', dest: 'e10' });
+    assert.deepEqual(squaresOf('d9d10'), { orig: 'd9', dest: 'd10' });
+    assert.deepEqual(squaresOf('a1a2'), { orig: 'a1', dest: 'a2' });
+    assert.throws(() => squaresOf('P*e5'), /not a from-to move/);
+  });
+
+  it("draws a sideline's arrow from a rank-10 square", () => {
+    const tree = annotateFromEngine({
+      rootFen: 'root',
+      moves: ['a1a2', 'b10b9', 'c1c2', 'd10d9'],
+      // Black's ply-2 move drops black from 60% to 10%, so the line beside it hangs.
+      redScore: [0.5, 0.4, 0.9, 0.9],
+      best: ['a1a2', 'f10e10', 'c1c2', null],
+      sidelines: [{ ply: 1, moves: ['f10e10', 'e1e2'], redScoreEnd: 0.4 }],
+      judge: 'both',
+    });
+    const first = tree.root.children[0]!;
+    assert.equal(first.children[1]!.uci, 'f10e10');
+    assert.deepEqual(first.annotations?.shapes, [
+      { kind: 'arrow', brush: 'green', orig: 'f10', dest: 'e10' },
+    ]);
   });
 });
