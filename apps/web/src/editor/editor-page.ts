@@ -29,6 +29,7 @@ import {
   parsePracticePositionParams,
   practicePositionHref,
 } from '../practice-position-params.js';
+import { analysisHref } from '../review/position-links.js';
 import { buildNav } from '../site-shell.js';
 import { installBoardDrag } from '../variant-tenant/board-drag.js';
 // The intersection boards (xiangqi, dark-xiangqi, jungle, jungle-flip) take
@@ -703,7 +704,7 @@ export function mountEditorPage(
     const canonical = result.ok && !problem ? result.fen : null;
     // The href always carries the editor's FEN so the link is inspectable; the
     // control itself is inert until the variant parser accepts the position.
-    analysisLink.href = `/analysis/${variant}?fen=${encodeURIComponent(canonical ?? fen)}`;
+    analysisLink.href = analysisHref(variant, canonical ?? fen);
     analysisLink.setAttribute('aria-disabled', error ? 'true' : 'false');
     analysisLink.classList.toggle('is-disabled', error !== null);
     if (error) analysisLink.setAttribute('tabindex', '-1');

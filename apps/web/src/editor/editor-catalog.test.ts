@@ -12,6 +12,13 @@ describe('editorVariantFromPath', () => {
     expect(editorVariantFromPath('/editor')).toBe('xiangqi');
   });
 
+  it('opens the xiangqi editor, and only it, under a zh prefix', () => {
+    expect(editorVariantFromPath('/zh-hans/editor/xiangqi')).toBe('xiangqi');
+    expect(editorVariantFromPath('/zh-hant/editor/xiangqi')).toBe('xiangqi');
+    expect(editorVariantFromPath('/zh-hans/editor/jieqi')).toBeNull();
+    expect(editorVariantFromPath('/zh-hant/editor')).toBeNull();
+  });
+
   it('opens every editor variant by slug', () => {
     for (const id of EDITOR_VARIANT_IDS) {
       expect(editorVariantFromPath(`/editor/${id}`)).toBe(id);

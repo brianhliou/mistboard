@@ -661,6 +661,10 @@ test('isReviewShellRoute matches postgame review documents (COOP/COEP scope)', (
   assert.equal(isReviewShellRoute('/analysis/xiangqi'), true);
   assert.equal(isReviewShellRoute('/analysis/banqi'), true);
   assert.equal(isReviewShellRoute('/analysis'), true);
+  // The Chinese xiangqi board (象棋AI分析) runs the same engine.
+  assert.equal(isReviewShellRoute('/zh-hans/analysis/xiangqi'), true);
+  assert.equal(isReviewShellRoute('/zh-hant/analysis/xiangqi'), true);
+  assert.equal(isReviewShellRoute('/zh-hans/editor/xiangqi'), false);
   // The board editor has no engine: a plain client page, never cross-origin
   // isolated.
   assert.equal(isReviewShellRoute('/editor'), false);
