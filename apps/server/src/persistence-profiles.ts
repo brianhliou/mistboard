@@ -19,6 +19,8 @@ import {
   type UserRow,
   userFromRow,
 } from './persistence-accounts.js';
+import { getUserAchievements, type UserAchievement } from './persistence-achievements.js';
+import { seatWonGame } from './persistence-counted-games.js';
 import { getPool, withTransaction } from './persistence-db.js';
 import type { GameMode, GameTermination, GameVisibility } from './persistence-game-lifecycle.js';
 import type { GameParticipantColor, GameResult, ProfileGameRecord } from './persistence-games.js';
@@ -145,6 +147,8 @@ export type UserProfile = {
   // caller passed (the viewer's browser; exact for your own profile, a close
   // read for anyone else's).
   puzzleStreak: { current: number; best: number };
+  // Earned achievements, oldest first (persistence-achievements.ts).
+  achievements: UserAchievement[];
   // First page of games (newest first). Older pages load via getUserGamesPage.
   games: ProfileGameRecord[];
   // Total completed games visible to the viewer, so the client can show an
@@ -418,13 +422,7 @@ export type ProfileGameFilters = {
 // on its own east-wins or west-wins, any other seat on white-wins, and every
 // non-draw that is not a win is a loss. If the two disagreed, "Wins" would list
 // a row painted as a loss.
-const OWNER_WON_SQL = `(
-  (game_participants.color = 'red' AND games.result = 'red-wins')
-  OR (game_participants.color = 'black' AND games.result = 'black-wins')
-  OR (game_participants.color = 'east' AND games.result = 'east-wins')
-  OR (game_participants.color = 'west' AND games.result = 'west-wins')
-  OR (game_participants.color NOT IN ('red', 'black', 'east', 'west') AND games.result = 'white-wins')
-)`;
+const OWNER_WON_SQL = seatWonGame('game_participants', 'games');
 
 function resultFilterSql(result: ProfileGameResultFilter): string {
   if (result === 'draw') return `AND games.result = 'draw'`;
@@ -735,7 +733,10 @@ export async function getUserProfileByHandle(
     attempts: row.attempts,
   }));
 
-  const puzzleStreak = await getPuzzleStreak(user.id, { timeZone: options.timeZone });
+  const [puzzleStreak, achievements] = await Promise.all([
+    getPuzzleStreak(user.id, { timeZone: options.timeZone }),
+    getUserAchievements(user.id),
+  ]);
 
   return {
     user: {
@@ -754,6 +755,7 @@ export async function getUserProfileByHandle(
     ratings,
     puzzleRatings,
     puzzleStreak: { current: puzzleStreak.current, best: puzzleStreak.best },
+    achievements,
     games,
     gamesTotal,
   };

@@ -23,6 +23,10 @@ import {
   titleFullName,
 } from './player-titles.js';
 import {
+  buildProfileAchievementsSummary,
+  type ProfileAchievement,
+} from './profile-achievements.js';
+import {
   buildProfileGamesToolbar,
   hasProfileGamesFilter,
   NO_PROFILE_GAMES_FILTER,
@@ -121,6 +125,8 @@ type UserProfile = {
   // Consecutive days with a puzzle solved, on the viewer's calendar; absent
   // from older payloads.
   puzzleStreak?: { current: number; best: number };
+  // Earned achievements, oldest first; absent from older payloads.
+  achievements?: ProfileAchievement[];
   games: FeaturedGame[];
   gamesTotal: number;
 };
@@ -1091,6 +1097,15 @@ export function buildProfileIdentity(
   // Counts strip under the name (lichess user-infos row): compact activity
   // figures, not the descriptive text (which sits in the side column).
   identity.append(buildProfileCounts(profile, locale));
+
+  // Achievements: a link to their page, plus badge-tier ones when held
+  // (profile-achievements.ts). Nothing when the account holds none.
+  const achievements = buildProfileAchievementsSummary(
+    profile.user.handle,
+    profile.achievements,
+    locale,
+  );
+  if (achievements) identity.append(achievements);
 
   return identity;
 }

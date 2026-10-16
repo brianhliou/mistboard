@@ -191,3 +191,33 @@ export function countedAuthor(authorColumn: string): string {
     WHERE xa.id = ${authorColumn} AND xa.stats_excluded_at IS NOT NULL
   )`;
 }
+
+// A game that counts toward one account's own record (achievements,
+// persistence-achievements.ts): a completed pvp/pve game where both sides moved,
+// in a variant that is still live. Not an aggregate, so it carries neither the
+// launch date nor the excluded-seat clause: a stats-excluded account still
+// earns its own achievements, and its games still count for the person across
+// the board. Public holder counts drop excluded accounts with COUNTED_USER.
+export function playedHumanGame(gamesAlias = 'g'): string {
+  return `${gamesAlias}.status = 'completed' AND ${gamesAlias}.mode IN ('pvp', 'pve')
+    AND ${gamesAlias}.ended_at IS NOT NULL
+    AND ${bothSidesMoved(gamesAlias)}
+    AND ${notRetiredVariant(gamesAlias)}`;
+}
+
+// The seat won the game: a red seat on red-wins, a black seat on black-wins,
+// any other seat on white-wins. The profile's Wins filter and row tone
+// (persistence-profiles.ts, apps/web/src/profile-ui.ts) and the wins
+// achievement family read this one definition, so "Wins" on the profile and
+// the count on the card agree.
+export function seatWonGame(participantsAlias = 'p', gamesAlias = 'g'): string {
+  const p = participantsAlias;
+  const g = gamesAlias;
+  return `(
+  (${p}.color = 'red' AND ${g}.result = 'red-wins')
+  OR (${p}.color = 'black' AND ${g}.result = 'black-wins')
+  OR (${p}.color = 'east' AND ${g}.result = 'east-wins')
+  OR (${p}.color = 'west' AND ${g}.result = 'west-wins')
+  OR (${p}.color NOT IN ('red', 'black', 'east', 'west') AND ${g}.result = 'white-wins')
+)`;
+}

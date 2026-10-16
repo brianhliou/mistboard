@@ -7,21 +7,27 @@
 import {
   Bell,
   Bot,
+  ChessKnight,
   Crown,
   createElement,
   Globe,
+  Handshake,
   Heart,
   type IconNode,
   Info,
+  Lock,
   Mail,
   Megaphone,
+  MessageSquare,
   MessagesSquare,
   Newspaper,
+  Puzzle,
   RadioTower,
   Sparkles,
   SquarePen,
   Store,
   Swords,
+  TrendingUp,
   Trophy,
   User,
   Users,
@@ -30,6 +36,13 @@ import './ui-icon.css';
 import type { AnnouncementKind } from './announcements.js';
 
 export type UiIconName =
+  | 'achievement-first-game'
+  | 'achievement-forum'
+  | 'achievement-lock'
+  | 'achievement-puzzle'
+  | 'achievement-rated'
+  | 'achievement-versus'
+  | 'achievement-wins'
   | 'announcement-release'
   | 'announcement-article'
   | 'announcement-status'
@@ -54,6 +67,15 @@ export type UiIconName =
 // Semantic app concept → Lucide glyph. Keep the mapping here, not at call sites,
 // so the icon language is swappable in one place.
 const UI_ICON_NODES: Record<UiIconName, IconNode> = {
+  // Achievement glyphs, keyed by the definition's icon (@mistboard/game
+  // achievements.ts) as `achievement-<icon>`.
+  'achievement-first-game': ChessKnight,
+  'achievement-forum': MessageSquare,
+  'achievement-lock': Lock,
+  'achievement-puzzle': Puzzle,
+  'achievement-rated': TrendingUp,
+  'achievement-versus': Handshake,
+  'achievement-wins': Trophy,
   'announcement-release': Megaphone,
   'announcement-article': Newspaper,
   'announcement-status': Info,

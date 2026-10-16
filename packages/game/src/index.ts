@@ -1,3 +1,4 @@
+export * from './achievements.js';
 export * from './analysis.js';
 export * from './atomic-xiangqi-notation.js';
 export * from './banqi-fen.js';

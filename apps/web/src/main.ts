@@ -390,6 +390,7 @@ const botProfileId = path.startsWith('/bot/')
   ? decodeURIComponent(path.slice('/bot/'.length))
   : null;
 const profileHandle = profileHandleFromPath(path);
+const profileAchievementsHandle = profileAchievementsHandleFromPath(path);
 // Standalone analysis boards (lichess.org/analysis): /analysis opens the
 // flagship (xiangqi); /analysis/<variant> opens any catalog variant. Unknown
 // slugs return null and fall through to 404 (fail-closed — see analysis-catalog).
@@ -669,6 +670,13 @@ if (replaySample) {
   setTitle('Bot');
   void mountOrReport(() =>
     import('./bots.js').then(({ mountBotProfile }) => mountBotProfile(appRoot, botProfileId)),
+  );
+} else if (profileAchievementsHandle) {
+  setTitle(`@${profileAchievementsHandle}`);
+  void mountOrReport(() =>
+    import('./profile-achievements.js').then(({ mountProfileAchievements }) =>
+      mountProfileAchievements(appRoot, profileAchievementsHandle),
+    ),
   );
 } else if (profileHandle) {
   setTitle(`@${profileHandle}`);
@@ -1215,6 +1223,12 @@ function historicalXiangqiGameIdFromPath(value: string): string | null {
 
 function profileHandleFromPath(value: string): string | null {
   const match = value.match(/^\/@\/([^/]+)$/);
+  return match ? decodeURIComponent(match[1]!) : null;
+}
+
+// /@/<handle>/achievements: the account's achievements as cards.
+function profileAchievementsHandleFromPath(value: string): string | null {
+  const match = value.match(/^\/@\/([^/]+)\/achievements$/);
   return match ? decodeURIComponent(match[1]!) : null;
 }
 
