@@ -21,10 +21,10 @@ import {
 import './live-xiangqi.css';
 import './drop-reserve.css';
 import {
+  crazyhouseXiangqiBoardMarks,
   crazyhouseXiangqiBoardMoves,
   crazyhouseXiangqiBoardView,
   crazyhouseXiangqiDropTargets,
-  crazyhouseXiangqiLastDrop,
   crazyhouseXiangqiMoveLabel,
   crazyhouseXiangqiReasonPhrase,
   fillCrazyhouseXiangqiReserve,
@@ -282,7 +282,7 @@ function renderBoard(liveRefs: LiveRefs, view: CrazyhouseXiangqiPlayerView | nul
     arrows: drawn.arrows,
     markers: drawn.markers,
     dropTargets: crazyhouseXiangqiDropTargets(view, selectedDropRole),
-    lastDropSquare: crazyhouseXiangqiLastDrop(view),
+    ...crazyhouseXiangqiBoardMarks(view),
   });
 }
 

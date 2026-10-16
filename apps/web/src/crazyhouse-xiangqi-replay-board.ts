@@ -25,8 +25,8 @@ import {
   parseCrazyhouseXiangqiFen,
 } from '@mistboard/game';
 import {
+  crazyhouseXiangqiBoardMarks,
   crazyhouseXiangqiBoardView,
-  crazyhouseXiangqiLastDrop,
   crazyhouseXiangqiMoveLabel,
   fillCrazyhouseXiangqiReserve,
 } from './crazyhouse-xiangqi-view.js';
@@ -114,7 +114,7 @@ export function mountCrazyhouseXiangqiReplayBoard(
       selectedSquare: null,
       draggingFrom: null,
       coordinates: false,
-      lastDropSquare: crazyhouseXiangqiLastDrop(view),
+      ...crazyhouseXiangqiBoardMarks(view),
     });
     // The game room's pocket: a slot for every droppable role, the ones held
     // none of faded in place, a count badge from two up.

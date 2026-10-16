@@ -20,8 +20,8 @@ import {
   postgameViewAtPly,
 } from './crazyhouse-xiangqi-postgame.js';
 import {
+  crazyhouseXiangqiBoardMarks,
   crazyhouseXiangqiBoardView,
-  crazyhouseXiangqiLastDrop,
   crazyhouseXiangqiMoveLabel,
   fillCrazyhouseXiangqiReserve,
 } from './crazyhouse-xiangqi-view.js';
@@ -63,7 +63,7 @@ export function mountCrazyhouseXiangqiWatchReplay(
         selectedSquare: null,
         draggingFrom: null,
         coordinates: false,
-        lastDropSquare: crazyhouseXiangqiLastDrop(view),
+        ...crazyhouseXiangqiBoardMarks(view),
       }),
     // The hand IS the position: every droppable role in a fixed slot, ghosted
     // when held none of. allRoles, not the live room's pocket bar: the showcase

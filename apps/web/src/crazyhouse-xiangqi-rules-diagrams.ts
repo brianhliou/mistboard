@@ -251,6 +251,8 @@ export const CRAZYHOUSE_XIANGQI_CAPTURE_PAIR = () => {
 
 // ── Where each piece may drop ───────────────────────────────────────────────
 
+// FEN pocket letters, Fairy-Stockfish's (B = elephant): engine dialect fed to
+// the kernel's parser, never shown. Display letters are crazyhouse-xiangqi-view's.
 const DROP_LETTER: Record<CrazyhouseXiangqiDropRole, string> = {
   chariot: 'R',
   horse: 'N',
