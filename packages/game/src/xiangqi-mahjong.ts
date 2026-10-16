@@ -359,6 +359,12 @@ export interface XmjHandState {
   readonly hands: readonly [readonly XmjTile[], readonly XmjTile[]];
   readonly melds: readonly [readonly XmjMeld[], readonly XmjMeld[]];
   readonly discards: readonly [readonly XmjTile[], readonly XmjTile[]];
+  /**
+   * Beside each discard: whether it was the tile just drawn, thrown straight
+   * back. At a real table everyone sees which slot a tile leaves, so this is
+   * public; the tile's place in a concealed hand is not.
+   */
+  readonly drawnDiscards: readonly [readonly boolean[], readonly boolean[]];
   readonly turn: XmjSeatIndex;
   readonly phase: XmjPhase;
   /** Wall draws each seat has made this hand (地胡 is the non-dealer's first). */
@@ -384,6 +390,7 @@ export function xmjDeal(wall: readonly XmjTile[], dealer: XmjSeatIndex): XmjHand
     hands,
     melds: [[], []],
     discards: [[], []],
+    drawnDiscards: [[], []],
     turn: dealer,
     // Dealer discards first, without drawing; 天胡 is declared from here.
     phase: { type: 'discard', mayWin: true, drawn: null },
@@ -419,15 +426,26 @@ export function xmjCanDiscard(state: XmjHandState, tile: XmjTile): boolean {
  * holds a claim: a window that opened only when a claim existed would tell the
  * discarder the opponent's hand fits the tile. The room settles a window with
  * no claim in it as a pass (see `xmjPendingAction`).
+ *
+ * A discard of the drawn tile's face counts as the drawn tile itself unless
+ * `handCopy` says the player threw an identical tile from the hand instead.
+ * Either way the hand left behind is the same; only the table sees which slot
+ * the tile left.
  */
-export function xmjDiscard(state: XmjHandState, tile: XmjTile): XmjHandState {
+export function xmjDiscard(state: XmjHandState, tile: XmjTile, handCopy = false): XmjHandState {
   if (!xmjCanDiscard(state, tile)) return state;
   const seat = state.turn;
   const hand = removeTiles(state.hands[seat], [tile]) as XmjTile[];
+  // A hand copy needs a second tile of that face in the hand; otherwise the
+  // flag is ignored, so a client cannot misreport where a tile came from.
+  const copies = state.hands[seat].filter((t) => t === tile).length;
+  const fromDraw =
+    state.phase.type === 'discard' && state.phase.drawn === tile && !(handCopy && copies > 1);
   const next: XmjHandState = {
     ...state,
     hands: setSeat(state.hands, seat, hand),
     discards: setSeat(state.discards, seat, [...state.discards[seat], tile]),
+    drawnDiscards: setSeat(state.drawnDiscards, seat, [...state.drawnDiscards[seat], fromDraw]),
     phase: { type: 'claim', discard: tile, discarder: seat },
   };
   return next;
@@ -462,6 +480,11 @@ export function xmjClaim(state: XmjHandState, claim: XmjClaim): XmjHandState {
   // The claimed tile leaves the discarder's pile: it lives in the meld now.
   const pile = state.discards[discarder].slice(0, -1);
   const discards = setSeat(state.discards, discarder, pile);
+  const drawnDiscards = setSeat(
+    state.drawnDiscards,
+    discarder,
+    state.drawnDiscards[discarder].slice(0, -1),
+  );
   if (legal.kind === 'win') {
     const concealed = xmjSortTiles([...state.hands[seat], discard]);
     const score = xmjScore({
@@ -476,6 +499,7 @@ export function xmjClaim(state: XmjHandState, claim: XmjClaim): XmjHandState {
     return {
       ...state,
       discards,
+      drawnDiscards,
       hands: setSeat(state.hands, seat, concealed),
       turn: seat,
       phase: { type: 'won', winner: seat, selfDrawn: false, winningTile: discard, score },
@@ -490,6 +514,7 @@ export function xmjClaim(state: XmjHandState, claim: XmjClaim): XmjHandState {
   return {
     ...state,
     discards,
+    drawnDiscards,
     hands: setSeat(state.hands, seat, hand),
     melds: setSeat(state.melds, seat, [...state.melds[seat], meld]),
     turn: seat,

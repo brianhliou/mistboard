@@ -107,6 +107,83 @@ test('a seat sees its own tiles, never the other hand or the other seat’s draw
   if (own.phase.type === 'discard') assert.notEqual(own.phase.drawn, null);
 });
 
+test('each discard says whether it was the tile just drawn; the opponent learns only that', () => {
+  // East deals and throws from the hand; west draws rP and throws it straight
+  // back; east draws bP and throws rK from the hand.
+  const wall = wallWith(['rK', 'rA', 'rE', 'rR', 'rH'], ['bK', 'bA', 'bE', 'bR'], ['rP', 'bP']);
+  let state = createXmjRoomState({ walls: [wall], firstDealer: 'east' }, 'xmj_flag');
+  state = play(state, 'east', { action: 'discard', tile: 'rH' });
+  state = play(state, 'west', { action: 'pass' });
+
+  // West holds its draw. East sees a count and no tiles: not the draw, not the hand.
+  const east = xmjViewFor(state, 'east');
+  assert.equal(east.hands.west, null);
+  assert.equal(east.handCounts.west, 5);
+  assert.ok(east.phase.type === 'discard' && east.phase.drawn === null);
+  const westView = xmjViewFor(state, 'west');
+  assert.ok(westView.phase.type === 'discard' && westView.phase.drawn === 'rP');
+  for (const viewer of [east, xmjViewFor(state, 'spectator')]) {
+    const wire = JSON.stringify(viewer);
+    for (const tile of ['rP', 'bK', 'bA', 'bE', 'bR']) {
+      assert.equal(
+        wire.includes(`"${tile}"`),
+        false,
+        `${tile} reached a client that may not see it`,
+      );
+    }
+  }
+
+  state = play(state, 'west', { action: 'discard', tile: 'rP' });
+  state = play(state, 'east', { action: 'pass' });
+  state = play(state, 'east', { action: 'discard', tile: 'rK' });
+  for (const seat of [...XMJ_SEATS, 'spectator'] as const) {
+    const view = xmjViewFor(state, seat);
+    assert.deepEqual(view.discards, { east: ['rH', 'rK'], west: ['rP'] });
+    assert.deepEqual(view.drawnDiscards, { east: [false, false], west: [true] });
+  }
+  // West still may not see east's draw (bP) or hand, only the flags.
+  const west = JSON.stringify(xmjViewFor(state, 'west'));
+  for (const tile of ['bP', 'rA', 'rE', 'rR']) assert.equal(west.includes(`"${tile}"`), false);
+});
+
+test('a twin of the drawn tile thrown from the hand is flagged as a hand discard', () => {
+  const wall = wallWith(['rK', 'rA', 'rE', 'rR', 'rH'], ['bK', 'bA', 'bE', 'rP'], ['rP']);
+  const start = play(
+    play(createXmjRoomState({ walls: [wall], firstDealer: 'east' }, 'xmj_twin'), 'east', {
+      action: 'discard',
+      tile: 'rH',
+    }),
+    'west',
+    { action: 'pass' },
+  );
+  const drawn = play(start, 'west', { action: 'discard', tile: 'rP' });
+  assert.deepEqual(drawn.match.hand.drawnDiscards[1], [true]);
+  const twin = play(start, 'west', { action: 'discard', tile: 'rP', handCopy: true });
+  assert.deepEqual(twin.match.hand.drawnDiscards[1], [false]);
+  // A claim takes the tile and its flag off the pile together.
+  const view = xmjViewFor(twin, 'east');
+  assert.equal(view.discards.west.length, view.drawnDiscards.west.length);
+  // The wire names the hand copy; a bare discard leaves it to the kernel.
+  assert.deepEqual(xmjMoveFromMessage({ action: 'discard-hand', tiles: ['rP'] }), {
+    by: 'east',
+    at: 0,
+    action: 'discard',
+    tile: 'rP',
+    handCopy: true,
+  });
+  assert.ok(isXmjMove({ by: 'west', at: 3, action: 'discard', tile: 'rP', handCopy: true }));
+  assert.ok(!isXmjMove({ by: 'west', at: 3, action: 'discard', tile: 'rP', handCopy: 'yes' }));
+});
+
+test('a hand-copy claim with no twin in the hand is ignored', () => {
+  const wall = wallWith(['rK', 'rA', 'rE', 'rR', 'rH'], ['bK', 'bA', 'bE', 'bR'], ['rP']);
+  let state = createXmjRoomState({ walls: [wall], firstDealer: 'east' }, 'xmj_lie');
+  state = play(state, 'east', { action: 'discard', tile: 'rH' });
+  state = play(state, 'west', { action: 'pass' });
+  state = play(state, 'west', { action: 'discard', tile: 'rP', handCopy: true });
+  assert.deepEqual(state.match.hand.drawnDiscards[1], [true]);
+});
+
 test('a claim window belongs to the claimant and settles as its pass', () => {
   const wall = wallWith(['bE', 'rA', 'rR', 'bH', 'rC'], ['bK', 'bA', 'rP', 'rH'], ['rH']);
   let state = createXmjRoomState({ walls: [wall], firstDealer: 'east' });

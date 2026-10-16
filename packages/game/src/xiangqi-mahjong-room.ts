@@ -78,7 +78,12 @@ export const XMJ_CLAIM_KINDS: readonly XmjClaimKind[] = ['win', 'pung', 'chow'];
 
 /** What a client asks to do. Carries no identity and no time. */
 export type XmjAction =
-  | { readonly action: 'discard'; readonly tile: XmjTile }
+  | {
+      readonly action: 'discard';
+      readonly tile: XmjTile;
+      /** The drawn tile has a twin in the hand, and the twin was thrown. */
+      readonly handCopy?: true;
+    }
   | { readonly action: 'self-draw' }
   | { readonly action: 'claim'; readonly kind: XmjClaimKind; readonly fromHand: readonly XmjTile[] }
   | { readonly action: 'pass' }
@@ -263,7 +268,7 @@ export function applyXmjMove(state: XmjRoomState, move: XmjMove): XmjRoomState {
   let after = hand;
   switch (move.action) {
     case 'discard':
-      after = xmjDiscard(hand, move.tile);
+      after = xmjDiscard(hand, move.tile, move.handCopy === true);
       break;
     case 'self-draw':
       after = xmjSelfDraw(hand);
@@ -402,10 +407,12 @@ export function xmjMoveFromMessage(message: { action?: string; tiles?: string[] 
   const tiles = message.tiles ?? [];
   if (!Array.isArray(tiles) || !tiles.every(isXmjTile)) return null;
   switch (message.action) {
-    case 'discard': {
+    case 'discard':
+    case 'discard-hand': {
       const [tile] = tiles;
-      return tile === undefined || tiles.length !== 1
-        ? null
+      if (tile === undefined || tiles.length !== 1) return null;
+      return message.action === 'discard-hand'
+        ? { ...placeholder, action: 'discard', tile, handCopy: true }
         : { ...placeholder, action: 'discard', tile };
     }
     case 'self-draw':
@@ -436,7 +443,7 @@ export function isXmjMove(value: unknown): value is XmjMove {
     case 'timeout':
       return true;
     case 'discard':
-      return isXmjTile(move.tile);
+      return isXmjTile(move.tile) && (move.handCopy === undefined || move.handCopy === true);
     case 'claim':
       return (
         XMJ_CLAIM_KINDS.includes(move.kind as XmjClaimKind) &&
@@ -502,6 +509,12 @@ export interface XmjPlayerView {
   readonly handCounts: Readonly<Record<XmjSeat, number>>;
   readonly melds: Readonly<Record<XmjSeat, readonly XmjMeld[]>>;
   readonly discards: Readonly<Record<XmjSeat, readonly XmjTile[]>>;
+  /**
+   * Beside each discard: true when it was the tile just drawn, thrown straight
+   * back. Public for both seats, as at a table; it never says where in a
+   * concealed hand any other discard sat.
+   */
+  readonly drawnDiscards: Readonly<Record<XmjSeat, readonly boolean[]>>;
   readonly phase: XmjViewPhase;
   readonly between: boolean;
   readonly ready: readonly XmjSeat[];
@@ -592,6 +605,7 @@ export function xmjViewFor(state: XmjRoomState, perspective: XmjSeat | 'spectato
     handCounts: bySeat((i) => hand.hands[i].length),
     melds: bySeat((i) => hand.melds[i]),
     discards: bySeat((i) => hand.discards[i]),
+    drawnDiscards: bySeat((i) => hand.drawnDiscards[i]),
     phase: viewPhase(state, perspective),
     between: match.between,
     ready: state.ready,
