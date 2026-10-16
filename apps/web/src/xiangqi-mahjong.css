@@ -1378,9 +1378,18 @@ ol.xmj-log {
   font-weight: 700;
 }
 
+/* The hand being played is one band down its column: only the header's top
+   corners and the last row's bottom corners are rounded. */
 .xmj-hands .xmj-hands__now {
-  border-radius: 4px;
   background: color-mix(in srgb, var(--site-accent) 14%, transparent);
+}
+
+.xmj-hands thead .xmj-hands__now {
+  border-radius: 4px 4px 0 0;
+}
+
+.xmj-hands tbody tr:last-child .xmj-hands__now {
+  border-radius: 0 0 4px 4px;
 }
 
 .xmj-hands .xmj-hands__total {
