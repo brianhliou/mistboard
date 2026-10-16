@@ -1,8 +1,9 @@
 /**
- * Xiangqi mahjong registry entry. Narrow on purpose: no TV channel, no export,
- * no correspondence. A room is PvE (the in-process bot takes the other seat) or
- * PvP (a friend room, or a Find opponent pairing through the lobby). The rated
- * unit is the whole match, since the room finishes when the match does.
+ * Xiangqi mahjong registry entry. Narrow on purpose: no TV channel, no export.
+ * A room is PvE (the in-process bot takes the other seat), PvP (a friend room,
+ * or a Find opponent pairing through the lobby), or correspondence (a seek or
+ * challenge between two granted accounts, casual only). The rated unit is the
+ * whole match, since the room finishes when the match does.
  */
 
 import {
@@ -24,6 +25,7 @@ import {
   XMJ_BOT_CLIENT_ID,
   XMJ_BOT_ID,
 } from './server-xiangqi-mahjong-bots.js';
+import { tenantCorrespondenceBinding } from './variant-tenant/correspondence.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
 import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
@@ -121,6 +123,25 @@ export function getOrLoadXiangqiMahjongRoom(roomId: string): Promise<XmjRuntimeR
   return getOrLoadTenantRoom(xiangqiMahjongTenant, xiangqiMahjongRooms, roomId);
 }
 
+// Correspondence (days per move): accepting a seek seats both accounts, the
+// sweeper flags a missed deadline. No seatBoard: the inbox carries no board for
+// this game, so no card or listing can show a concealed tile. The seek routes
+// admit it only between granted accounts and never rated
+// (CORRESPONDENCE_ALLOWLISTED_SPEC_IDS).
+const xiangqiMahjongCorrespondence = tenantCorrespondenceBinding(xiangqiMahjongTenant, {
+  factoryContext: () => ({
+    rooms: xiangqiMahjongRooms,
+    isRoomIdTaken: (roomId) => variantTenantRoomIdTaken(roomId, xiangqiMahjongTenant.kind),
+    appendRoomEvent: (roomId, seq, event: XmjEvent) =>
+      persistence.appendRoomEvent(roomId, seq, event),
+    isPersistenceEnabled: persistence.isInitialized,
+    recordPersistenceError: (roomId, seq, eventType, err) =>
+      recordTenantPersistenceError(xiangqiMahjongTenant, roomId, seq, eventType, err),
+  }),
+  getOrLoadRoom: getOrLoadXiangqiMahjongRoom,
+  lifecycleCtx: xiangqiMahjongWs.lifecycleCtx,
+});
+
 registerVariantTenant({
   kind: xiangqiMahjongTenant.kind,
   gameSpecId: xiangqiMahjongTenant.gameSpecId,
@@ -176,6 +197,5 @@ registerVariantTenant({
   },
   // No export binding: there is no record format for this game here.
   export: null,
-  sweepDueDeadline: null,
-  createCorrespondenceGameForSeek: null,
+  ...xiangqiMahjongCorrespondence,
 });

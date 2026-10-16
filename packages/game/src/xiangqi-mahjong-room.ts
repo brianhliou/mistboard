@@ -94,6 +94,13 @@ export type XmjMove = XmjAction & { readonly by: XmjSeat; readonly at: number };
 export interface XmjRoomSetup {
   readonly walls: readonly (readonly XmjTile[])[];
   readonly firstDealer: XmjSeat;
+  /**
+   * A days-per-move game. The move deadline is the only clock: the claimant's
+   * turn opens with the claim decision (claim or pass, then draw and discard on
+   * a pass), with no claim window and no pause, and the next hand deals at
+   * once. Absent on a live room's setup.
+   */
+  readonly correspondence?: boolean;
 }
 
 /** Mirrors @mistboard/game's AbortReason (the server tenant checks they agree). */
@@ -122,12 +129,25 @@ export interface XmjRoomState {
   readonly nextHandAt: number | null;
   /** Seats that have asked for the next deal. Empty unless between hands. */
   readonly ready: readonly XmjSeat[];
+  /** A days-per-move game (XmjRoomSetup.correspondence). Optional so older states read. */
+  readonly correspondence?: boolean;
 }
 
-/** A fresh match setup: one shuffled wall per hand and a random first dealer. */
-export function createXmjSetup(random: () => number): XmjRoomSetup {
+/**
+ * A fresh match setup: one shuffled wall per hand and a random first dealer.
+ *
+ * A correspondence match always opens with east dealing. The seek seats its
+ * first mover in east, and the days-per-move pregame deadline (who owes the
+ * first move, then the reply) is read from seat order, so the dealer must be
+ * the first seat. The deal still alternates hand by hand.
+ */
+export function createXmjSetup(
+  random: () => number,
+  options: { correspondence?: boolean } = {},
+): XmjRoomSetup {
   const walls: XmjTile[][] = [];
   for (let i = 0; i < XMJ_MATCH_HANDS; i += 1) walls.push(xmjShuffle(random));
+  if (options.correspondence) return { walls, firstDealer: 'east', correspondence: true };
   return { walls, firstDealer: random() < 0.5 ? 'east' : 'west' };
 }
 
@@ -138,6 +158,7 @@ export function isXmjRoomSetup(value: unknown): value is XmjRoomSetup {
   if (typeof value !== 'object' || value === null) return false;
   const setup = value as Record<string, unknown>;
   if (!isXmjSeat(setup.firstDealer) || !Array.isArray(setup.walls)) return false;
+  if (setup.correspondence !== undefined && typeof setup.correspondence !== 'boolean') return false;
   if (setup.walls.length < 1 || setup.walls.length > XMJ_MATCH_HANDS) return false;
   return setup.walls.every(
     (wall) =>
@@ -158,6 +179,7 @@ export function createXmjRoomState(setup: XmjRoomSetup, id = ''): XmjRoomState {
     claimPauseEndsAt: null,
     nextHandAt: null,
     ready: [],
+    ...(setup.correspondence ? { correspondence: true } : {}),
   };
 }
 
@@ -190,7 +212,8 @@ export function xmjIsLegalMove(state: XmjRoomState, move: XmjMove): boolean {
   if (state.status.type !== 'playing') return false;
   const { match } = state;
   if (match.between) {
-    if (move.action === 'next-hand') return !state.ready.includes(move.by);
+    // Correspondence deals by itself; nobody presses Next hand (legalFor agrees).
+    if (move.action === 'next-hand') return !state.correspondence && !state.ready.includes(move.by);
     return move.action === 'timeout';
   }
   const hand = match.hand;
@@ -283,10 +306,14 @@ function withHand(state: XmjRoomState, at: number): XmjRoomState {
       status: { type: 'playing', turn },
       windowClosesAt: null,
       claimPauseEndsAt: null,
-      nextHandAt: state.nextHandAt ?? at + XMJ_BETWEEN_HANDS_MS,
+      // Correspondence deals the next hand at once: nobody waits days on a
+      // score screen, and nobody has to come back to press Next hand.
+      nextHandAt: state.nextHandAt ?? (state.correspondence ? at : at + XMJ_BETWEEN_HANDS_MS),
     };
   }
-  const inWindow = match.hand.phase.type === 'claim';
+  // Correspondence has no claim window: the claim decision is the claimant's
+  // turn, under the move deadline like any other.
+  const inWindow = match.hand.phase.type === 'claim' && !state.correspondence;
   return {
     ...state,
     status: { type: 'playing', turn },
@@ -354,10 +381,19 @@ function lastResult(match: XmjMatchState): XmjHandResult {
   return match.results[match.results.length - 1] as XmjHandResult;
 }
 
-/** The seat whose clock runs: the seat to discard. Nobody during a window or between hands. */
+/**
+ * The seat whose clock runs: the seat to discard. Nobody during a window or
+ * between hands. In correspondence the claimant owns the claim decision too, so
+ * its claim or pass, draw and discard spend one move deadline, and the clock
+ * passes to the other seat on every discard whether a claim was there or not.
+ */
 export function xmjClockOwner(state: XmjRoomState): XmjSeat | null {
   if (state.status.type !== 'playing' || state.match.between) return null;
-  return state.match.hand.phase.type === 'discard' ? xmjSeatName(state.match.hand.turn) : null;
+  const phase = state.match.hand.phase;
+  if (phase.type === 'claim' && state.correspondence) {
+    return xmjSeatName(xmjOtherSeat(phase.discarder));
+  }
+  return phase.type === 'discard' ? xmjSeatName(state.match.hand.turn) : null;
 }
 
 /** A move off the wire. `by` and `at` are placeholders the server overwrites. */
@@ -475,6 +511,8 @@ export interface XmjPlayerView {
   readonly nextHandAt: number | null;
   readonly results: readonly XmjViewResult[];
   readonly legal: XmjLegalActions;
+  /** A days-per-move game: no claim window, Pass is always offered to the claimant. */
+  readonly correspondence: boolean;
 }
 
 function bySeat<T>(pick: (index: XmjSeatIndex) => T): Record<XmjSeat, T> {
@@ -484,15 +522,19 @@ function bySeat<T>(pick: (index: XmjSeatIndex) => T): Record<XmjSeat, T> {
 function legalFor(state: XmjRoomState, seat: XmjSeat): XmjLegalActions {
   if (state.status.type !== 'playing') return NO_ACTIONS;
   if (state.match.between) {
+    // Correspondence deals the next hand itself (xmjPendingAction).
+    if (state.correspondence) return NO_ACTIONS;
     return { ...NO_ACTIONS, nextHand: !state.ready.includes(seat) };
   }
   const hand = state.match.hand;
   const index = xmjSeatIndex(seat);
   if (hand.phase.type === 'claim') {
     if (xmjOtherSeat(hand.phase.discarder) !== index) return NO_ACTIONS;
-    // Nothing to claim, nothing to press: the pause ends in a pass by itself.
+    // Live: nothing to claim, nothing to press; the pause ends in a pass by
+    // itself. Correspondence: Pass is always the claimant's to press, so every
+    // discard asks for the same answer and the discarder learns nothing.
     const claims = xmjClaimsOpen(hand);
-    return { ...NO_ACTIONS, claims, pass: claims.length > 0 };
+    return { ...NO_ACTIONS, claims, pass: claims.length > 0 || state.correspondence === true };
   }
   if (hand.phase.type !== 'discard' || hand.turn !== index) return NO_ACTIONS;
   return {
@@ -563,5 +605,6 @@ export function xmjViewFor(state: XmjRoomState, perspective: XmjSeat | 'spectato
       score: result.score,
     })),
     legal: perspective === 'spectator' ? NO_ACTIONS : legalFor(state, perspective),
+    correspondence: state.correspondence === true,
   };
 }

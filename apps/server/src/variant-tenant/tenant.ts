@@ -430,8 +430,10 @@ export type VariantTenant<
     createInitialState(roomId: string, setup?: unknown): State;
     // Optional: produce the per-game server-secret setup at room creation. The
     // runtime persists the return value in the room-created event and feeds it
-    // back to createInitialState (including on replay).
-    createSetup?(): unknown;
+    // back to createInitialState (including on replay). `timeControl` is the
+    // room's, so a tenant whose rules differ by pace (xiangqi mahjong in
+    // correspondence) can record that in the setup and replay it.
+    createSetup?(options?: { timeControl?: RoomTimeControl }): unknown;
     // Deliberately two parameters. Several tenants pass their kernel's own
     // applyMove straight through, and those already take a third options
     // argument, so a positional `at` here would land in that slot. A tenant

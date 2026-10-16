@@ -1,11 +1,12 @@
-import { CORRESPONDENCE_ELIGIBLE_SPEC_IDS, DAYS_PER_MOVE_OPTIONS } from '@mistboard/game';
+import { DAYS_PER_MOVE_OPTIONS } from '@mistboard/game';
 import './challenge-dialog.css';
 import { trackCorrespondenceSeekPosted } from './analytics.js';
-import { correspondenceRatedAvailable } from './correspondence-model.js';
+import { correspondenceRatedAvailable, correspondenceSpecIdsFor } from './correspondence-model.js';
 import { firstMoverColorName, secondMoverColorName, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import { isCorrespondenceRatedModeEnabled } from './rated-flag.js';
+import { webVariantOfferedInMenu } from './variant-tenant/registry.js';
 
 // A small modal to send a directed correspondence challenge to a specific player
 // (from their profile or the hover user-card). It posts to /api/correspondence/seeks
@@ -37,14 +38,17 @@ export function openChallengeDialog(opts: {
   const variant = document.createElement('select');
   variant.className = 'challenge-dialog-field';
   variant.setAttribute('aria-label', t('challenge.variant', {}, locale));
-  for (const specId of CORRESPONDENCE_ELIGIBLE_SPEC_IDS) {
+  // A playtest variant (xiangqi mahjong) joins only for an account the menu offers
+  // it to; the server also refuses a target without the grant.
+  const specIds = correspondenceSpecIdsFor(webVariantOfferedInMenu);
+  for (const specId of specIds) {
     const opt = document.createElement('option');
     opt.value = specId;
     opt.textContent = variantDisplayLabel(specId);
     variant.append(opt);
   }
-  variant.value = CORRESPONDENCE_ELIGIBLE_SPEC_IDS[0] ?? '';
-  variant.hidden = CORRESPONDENCE_ELIGIBLE_SPEC_IDS.length < 2;
+  variant.value = specIds[0] ?? '';
+  variant.hidden = specIds.length < 2;
 
   const days = document.createElement('select');
   days.className = 'challenge-dialog-field';

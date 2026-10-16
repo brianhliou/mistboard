@@ -18,9 +18,14 @@ import {
   isCorrespondenceRatedSpec,
   isOfficialTimeControl,
   MAHJONG_SPEC_ID,
+  XIANGQI_MAHJONG_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
-import { CORRESPONDENCE_ELIGIBLE_SPECS } from './routes/correspondence-rooms.js';
+import { isAllowlistedGameSpec } from './persistence-variant-access.js';
+import {
+  CORRESPONDENCE_ALLOWLISTED_SPECS,
+  CORRESPONDENCE_ELIGIBLE_SPECS,
+} from './routes/correspondence-rooms.js';
 // Side-effect import: registers every tenant, so this sees the set the server boots with.
 import './variant-tenant/register-tenants.js';
 import { correspondenceTenantForSpecId } from './variant-tenant/registry.js';
@@ -150,4 +155,43 @@ test('held by default: with the correspondence-rated flag off no eligible spec t
       specId,
     );
   }
+});
+
+// ---- Allowlisted playtest specs (xiangqi mahjong) ----------------------------------
+
+test('an allowlisted spec is off the public eligible list, backed by a factory and a sweeper, and never rated', async () => {
+  assert.ok(CORRESPONDENCE_ALLOWLISTED_SPECS.size > 0);
+  for (const specId of CORRESPONDENCE_ALLOWLISTED_SPECS) {
+    // Disjoint: the eligible list is public (copy, pickers, rated eligibility).
+    assert.ok(!CORRESPONDENCE_ELIGIBLE_SPECS.has(specId), `${specId} is on the public list`);
+    assert.ok(isAllowlistedGameSpec(specId), `${specId} is not behind the per-account grant`);
+    assert.equal(isCorrespondenceRatedSpec(specId), false, `${specId} would rate`);
+    const { ratedSeekError } = await import('./routes/correspondence-seeks.js');
+    assert.equal(
+      ratedSeekError(specId, correspondenceTimeControl(3), true),
+      'rated_unsupported_spec',
+      `${specId}: a rated seek is refused even with the rated flag on`,
+    );
+    const tenant = correspondenceTenantForSpecId(specId);
+    assert.equal(typeof tenant?.createCorrespondenceGameForSeek, 'function', specId);
+    assert.equal(typeof tenant?.sweepDueDeadline, 'function', specId);
+  }
+});
+
+test('a seek on an allowlisted spec is listed only to a reader holding the grant', async () => {
+  const { seeksVisibleTo } = await import('./routes/correspondence-seeks.js');
+  const seeks = [{ gameSpecId: XIANGQI_SPEC_ID }, { gameSpecId: XIANGQI_MAHJONG_SPEC_ID }];
+  const reader = { id: 'u1' } as NonNullable<Parameters<typeof seeksVisibleTo>[1]>;
+  const granted = async () => [XIANGQI_MAHJONG_SPEC_ID];
+  const ungranted = async () => [];
+  assert.deepEqual(await seeksVisibleTo(seeks, reader, granted), seeks);
+  assert.deepEqual(await seeksVisibleTo(seeks, reader, ungranted), [seeks[0]]);
+  assert.deepEqual(await seeksVisibleTo(seeks, null, granted), [seeks[0]], 'anonymous sees none');
+  // A list with no allowlisted seek costs no lookup.
+  let looked = false;
+  await seeksVisibleTo([seeks[0]!], reader, async () => {
+    looked = true;
+    return [];
+  });
+  assert.equal(looked, false);
 });

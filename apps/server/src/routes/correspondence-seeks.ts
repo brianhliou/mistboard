@@ -25,6 +25,7 @@ import * as persistence from './../persistence.js';
 import { notifySeekPosted, type SeekAlertNotice } from './../seek-alert-email.js';
 import { correspondenceTenantForSpecId } from './../variant-tenant/registry.js';
 import {
+  CORRESPONDENCE_ALLOWLISTED_SPECS,
   CORRESPONDENCE_ELIGIBLE_SPECS,
   parseCorrespondenceTimeControl,
 } from './correspondence-rooms.js';
@@ -109,6 +110,27 @@ export function challengeAcceptError(
   if (seek.creatorUserId === userId) return 'cannot_accept_own_seek';
   if (seek.targetUserId !== null && seek.targetUserId !== userId) return 'not_your_challenge';
   return null;
+}
+
+/**
+ * Seeks this reader may see, dropping any on an allowlisted spec (xiangqi mahjong)
+ * unless the reader holds its grant. An anonymous reader sees none of them. Costs a
+ * query only when the list holds such a seek.
+ */
+export async function seeksVisibleTo<T extends { gameSpecId: string; creatorUserId?: string }>(
+  seeks: readonly T[],
+  user: UserAccount | null,
+  playableSpecs: (user: UserAccount) => Promise<readonly string[]> = (reader) =>
+    persistence.playableAllowlistedSpecs(reader),
+): Promise<T[]> {
+  if (!seeks.some((seek) => CORRESPONDENCE_ALLOWLISTED_SPECS.has(seek.gameSpecId))) {
+    return [...seeks];
+  }
+  const playable = new Set(user ? await playableSpecs(user) : []);
+  return seeks.filter(
+    (seek) =>
+      !CORRESPONDENCE_ALLOWLISTED_SPECS.has(seek.gameSpecId) || playable.has(seek.gameSpecId),
+  );
 }
 
 // Pure view model for the challenge landing page, shared by the view route and
@@ -342,7 +364,7 @@ export function openSeekPayload(
 }
 
 async function listOpenSeeks(user: UserAccount | null, response: ServerResponse): Promise<boolean> {
-  const seeks = await persistence.listOpenCorrespondenceSeeks();
+  const seeks = await seeksVisibleTo(await persistence.listOpenCorrespondenceSeeks(), user);
   writeJson(response, 200, {
     seeks: seeks.map((seek) => openSeekPayload(seek, user?.id ?? null)),
   });
@@ -353,7 +375,7 @@ async function listIncomingChallenges(
   user: UserAccount,
   response: ServerResponse,
 ): Promise<boolean> {
-  const challenges = await persistence.listChallengesForUser(user.id);
+  const challenges = await seeksVisibleTo(await persistence.listChallengesForUser(user.id), user);
   writeJson(response, 200, {
     challenges: challenges.map((seek) => ({
       id: seek.id,
@@ -436,9 +458,14 @@ async function createSeekResult(
   if (isRetiredGameSpec(gameSpecId)) {
     return { status: 410, body: { error: 'retired_game_spec' } };
   }
-  // Fork-6 fail-closed allowlist — the same set the create route enforces.
-  if (!CORRESPONDENCE_ELIGIBLE_SPECS.has(gameSpecId)) {
+  // Fork-6 fail-closed allowlist — the same set the create route enforces — plus
+  // the allowlisted playtest specs, for an account that holds the grant.
+  const allowlisted = CORRESPONDENCE_ALLOWLISTED_SPECS.has(gameSpecId);
+  if (!CORRESPONDENCE_ELIGIBLE_SPECS.has(gameSpecId) && !allowlisted) {
     return { status: 501, body: { error: 'correspondence_unsupported_spec' } };
+  }
+  if (allowlisted && !(await persistence.mayPlayVariant(user, gameSpecId))) {
+    return { status: 403, body: { error: 'variant_not_granted' } };
   }
   // A variant whose server flag is off cannot back a game: refuse the seek now,
   // not at accept time after the row is gone.
@@ -490,6 +517,11 @@ async function createSeekResult(
     // the inbox send gate — the challenger cannot reach someone who blocked them.
     if (await persistence.hasBlock(targetUserId, user.id)) {
       return { status: 403, body: { error: 'challenge_blocked' } };
+    }
+    // An allowlisted variant is offered only to granted accounts: a challenge to
+    // anyone else could never be accepted, and would show them the variant.
+    if (allowlisted && !(await persistence.mayPlayVariantByUserId(targetUserId, gameSpecId))) {
+      return { status: 403, body: { error: 'target_variant_not_granted' } };
     }
   }
 
@@ -653,8 +685,19 @@ async function acceptSeekResult(
   if (isRetiredGameSpec(seek.gameSpecId)) {
     return { status: 410, body: { error: 'retired_game_spec' } };
   }
-  if (!CORRESPONDENCE_ELIGIBLE_SPECS.has(seek.gameSpecId)) {
+  const allowlisted = CORRESPONDENCE_ALLOWLISTED_SPECS.has(seek.gameSpecId);
+  if (!CORRESPONDENCE_ELIGIBLE_SPECS.has(seek.gameSpecId) && !allowlisted) {
     return { status: 501, body: { error: 'correspondence_unsupported_spec' } };
+  }
+  // Both seats of an allowlisted variant need the grant, checked before the race
+  // consumes the row: a refused accepter leaves the seek standing.
+  if (allowlisted) {
+    if (!(await persistence.mayPlayVariant(user, seek.gameSpecId))) {
+      return { status: 403, body: { error: 'variant_not_granted' } };
+    }
+    if (!(await persistence.mayPlayVariantByUserId(seek.creatorUserId, seek.gameSpecId))) {
+      return { status: 409, body: { error: 'opponent_variant_not_granted' } };
+    }
   }
   const timeControl = parseCorrespondenceTimeControl(seek.daysPerMove);
   if (!timeControl) {
@@ -914,7 +957,12 @@ async function viewSeek(
     return true;
   }
   const view = challengeViewModel(seek, user.id, Date.now());
-  if (!view.visible) {
+  // An allowlisted variant's challenge does not exist for an account without the grant.
+  const hidden =
+    CORRESPONDENCE_ALLOWLISTED_SPECS.has(seek.gameSpecId) &&
+    !view.isMine &&
+    !(await persistence.mayPlayVariant(user, seek.gameSpecId));
+  if (!view.visible || hidden) {
     writeJson(response, 404, { error: 'seek_not_found' });
     return true;
   }

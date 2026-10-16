@@ -1056,6 +1056,16 @@ export function webVariantTenantForSpecId(value: string | null): WebVariantTenan
   );
 }
 
+/**
+ * Whether the play menu offers this spec to this viewer: the build flag, and for
+ * an allowlisted spec the account's grant (hasLikelyVariantGrant). The
+ * correspondence pickers use it to add a playtest variant only for granted
+ * accounts, on the same predicate as the menu.
+ */
+export function webVariantOfferedInMenu(gameSpecId: string): boolean {
+  return webVariantTenantForSpecId(gameSpecId)?.landing?.offerInMenu() === true;
+}
+
 // A finished game's page: the tenant's postgame route (room-id prefix first,
 // spec id as a fallback for legacy aliases), else the dark-chess /game/:id
 // surface. Shared by the profile game rows and the bell's "game ended" rows.

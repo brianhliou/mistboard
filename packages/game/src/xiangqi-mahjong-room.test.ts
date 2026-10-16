@@ -346,3 +346,89 @@ test('an answer made at once is dated to the pause end, a late one to its own ti
   });
   assert.equal(xmjAnswerAt(fresh, 123), 123);
 });
+
+// ---- Correspondence (days per move) ------------------------------------------------
+
+function afterCorrespondenceDiscard(claimant: XmjTile[]): XmjRoomState {
+  const wall = wallWith(DEALER, claimant, ['rP']);
+  const state = createXmjRoomState({ walls: [wall], firstDealer: 'east', correspondence: true });
+  return play(state, 'east', { action: 'discard', tile: 'rR' }, 5_000);
+}
+
+test('a correspondence setup always deals east first and says so in the state', () => {
+  for (let seed = 1; seed <= 20; seed += 1) {
+    const setup = createXmjSetup(seeded(seed), { correspondence: true });
+    assert.equal(setup.firstDealer, 'east');
+    assert.equal(setup.correspondence, true);
+    assert.ok(isXmjRoomSetup(setup));
+    assert.equal(createXmjRoomState(setup).correspondence, true);
+  }
+  assert.equal(createXmjSetup(seeded(1)).correspondence, undefined, 'a live setup is unchanged');
+  assert.ok(!isXmjRoomSetup({ ...createXmjSetup(seeded(1)), correspondence: 'yes' }));
+});
+
+test('correspondence: a discard opens the claimant’s turn with no window, and it owns the clock', () => {
+  for (const claimant of [NOTHING, CAN_CHOW]) {
+    const state = afterCorrespondenceDiscard(claimant);
+    assert.equal(xmjClaimant(state), 'west');
+    assert.equal(state.windowClosesAt, null);
+    assert.equal(state.claimPauseEndsAt, null);
+    // No deadline but the move deadline: nothing for the runtime to settle.
+    assert.equal(xmjPendingAction(state), null);
+    assert.equal(xmjClockOwner(state), 'west');
+    // Pass is always the claimant's to press, claim or no claim.
+    const west = xmjViewFor(state, 'west');
+    assert.equal(west.legal.pass, true);
+    assert.equal(west.correspondence, true);
+    // An answer keeps its own time: there is no pause to snap to.
+    assert.equal(xmjAnswerAt(state, 9_999_999), 9_999_999);
+  }
+  // The discarder sees the same thing whether or not there was a claim.
+  const strip = (view: ReturnType<typeof xmjViewFor>) => ({
+    phase: view.phase,
+    legal: view.legal,
+    windowClosesAt: view.windowClosesAt,
+    claimPauseEndsAt: view.claimPauseEndsAt,
+    turn: view.turn,
+  });
+  assert.deepEqual(
+    strip(xmjViewFor(afterCorrespondenceDiscard(NOTHING), 'east')),
+    strip(xmjViewFor(afterCorrespondenceDiscard(CAN_CHOW), 'east')),
+  );
+});
+
+test('correspondence: pass, draw and discard are one turn, then the clock goes back', () => {
+  let state = afterCorrespondenceDiscard(NOTHING);
+  state = play(state, 'west', { action: 'pass' }, 6_000);
+  // The pass draws: west now holds five and must discard, still on its clock.
+  assert.equal(state.match.hand.phase.type, 'discard');
+  assert.equal(state.match.hand.hands[1].length, 5);
+  assert.equal(xmjClockOwner(state), 'west');
+  state = play(state, 'west', { action: 'discard', tile: 'bP' }, 7_000);
+  assert.equal(xmjClaimant(state), 'east');
+  assert.equal(xmjClockOwner(state), 'east');
+  assert.equal(xmjViewFor(state, 'east').legal.pass, true);
+});
+
+test('correspondence: the next hand deals at once, by the runtime, with no Next hand button', () => {
+  const walls = [
+    wallWith(['rK', 'rA', 'rE', 'rP', 'rP'], ['bR', 'bH', 'bC', 'bA']),
+    xmjShuffle(seeded(4)),
+  ];
+  let state = createXmjRoomState({ walls, firstDealer: 'east', correspondence: true });
+  state = play(state, 'east', { action: 'self-draw' }, 2_000);
+  assert.equal(state.match.between, true);
+  assert.equal(state.nextHandAt, 2_000, 'no 30s wait');
+  assert.equal(xmjClockOwner(state), null);
+  for (const seat of XMJ_SEATS) {
+    assert.equal(xmjViewFor(state, seat).legal.nextHand, false, `${seat} has nothing to press`);
+    assert.ok(!xmjIsLegalMove(state, { by: seat, at: 2_000, action: 'next-hand' }));
+  }
+  const pending = xmjPendingAction(state);
+  assert.equal(pending?.at, 2_000);
+  assert.equal(pending?.color, 'west', 'the next dealer plays the deal');
+  const dealt = applyXmjMove(state, pending?.move as XmjMove);
+  assert.equal(dealt.match.handIndex, 1);
+  assert.equal(dealt.match.between, false);
+  assert.equal(xmjClockOwner(dealt), 'west');
+});

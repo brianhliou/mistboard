@@ -51,6 +51,7 @@ import {
   type CorrespondenceGamesResponse,
   correspondenceInProgress,
   correspondenceRatedAvailable,
+  correspondenceSpecIdsFor,
   deadlineFraction,
   deadlineRemainingMs,
   deadlineUrgency,
@@ -99,6 +100,7 @@ import type { ReplayHandle } from './replay.js';
 import { accepterColorLabel, accepterSide, buildSeekAcceptAction } from './seek-accept.js';
 import { buildSeekCard } from './seek-card.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
+import { webVariantOfferedInMenu } from './variant-tenant/registry.js';
 import { formatDayClock } from './web-utils.js';
 
 const TICK_MS = 30_000;
@@ -274,7 +276,7 @@ function buildSignedIn(
   } else {
     // A link can carry the form's terms (the bell's "post it again" row for a
     // lapsed seek); the form opens set to them and scrolls into view.
-    const prefill = parseStartFormPrefill(location.search);
+    const prefill = parseStartFormPrefill(location.search, webVariantOfferedInMenu);
     const startForm = buildStartForm(refreshChallenges, prefill);
     top.append(startForm);
     // Open seeks follow your own games.
@@ -761,10 +763,12 @@ export function buildStartForm(
   form.className = 'correspondence-start-form';
   form.noValidate = true;
 
-  const defaultVariant = prefill?.gameSpecId ?? CORRESPONDENCE_ELIGIBLE_SPEC_IDS[0] ?? 'xiangqi';
+  // Public specs, plus a playtest variant for an account the menu offers it to.
+  const specIds = correspondenceSpecIdsFor(webVariantOfferedInMenu);
+  const defaultVariant = prefill?.gameSpecId ?? specIds[0] ?? 'xiangqi';
   const variant = buildSelect(
     t('correspondence.variantLabel'),
-    CORRESPONDENCE_ELIGIBLE_SPEC_IDS.map((specId) => ({
+    specIds.map((specId) => ({
       value: specId,
       label: variantDisplayLabel(specId),
     })),
@@ -774,7 +778,7 @@ export function buildStartForm(
       syncRated();
     },
   );
-  variant.root.hidden = CORRESPONDENCE_ELIGIBLE_SPEC_IDS.length < 2;
+  variant.root.hidden = specIds.length < 2;
 
   const days = buildSegmented<string>(
     t('correspondence.daysPerMoveLabel'),

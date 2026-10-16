@@ -232,6 +232,21 @@ export const CORRESPONDENCE_ELIGIBLE_SPEC_IDS: readonly GameSpecId[] = [
   JUNGLE_FLIP_SPEC_ID,
 ];
 
+// Specs that may ALSO be played by correspondence, but only by accounts the
+// per-account variant allowlist admits (variant_access_grants, migration 139), and
+// only casual. Kept apart from CORRESPONDENCE_ELIGIBLE_SPEC_IDS on purpose: that list
+// is public (the /correspondence copy names it, anonymous pickers offer it) and feeds
+// isCorrespondenceRatedSpec, and an allowlisted playtest variant must be neither. The
+// server admits a seek, challenge or accept on one of these only when every account
+// involved holds the grant (routes/correspondence-seeks.ts); the web pickers offer it
+// only to a signed-in account that looks granted. Xiangqi mahjong is two-seated
+// (east, west), so it rides the generic two-seat seek factory.
+export const CORRESPONDENCE_ALLOWLISTED_SPEC_IDS: readonly GameSpecId[] = [XIANGQI_MAHJONG_SPEC_ID];
+
+export function isCorrespondenceAllowlistedSpec(id: string | null | undefined): boolean {
+  return !!id && CORRESPONDENCE_ALLOWLISTED_SPEC_IDS.includes(id as GameSpecId);
+}
+
 // Specs a study chapter may hold, in display order. The SINGLE source of truth
 // shared by the server's fail-closed route allowlist (routes/studies.ts) and the
 // web study catalog, so a chapter the API accepts always has a board to render it.

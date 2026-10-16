@@ -1,10 +1,15 @@
-import { CORRESPONDENCE_ELIGIBLE_SPEC_IDS, GAME_SPECS } from '@mistboard/game';
+import {
+  CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+  GAME_SPECS,
+  XIANGQI_MAHJONG_SPEC_ID,
+} from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import { liveObservePolicy } from '../../server/src/server-policy.js';
 import {
   type CorrespondenceGame,
   correspondenceInProgress,
   correspondenceRatedAvailable,
+  correspondenceSpecIdsFor,
   deadlineFraction,
   deadlineRemainingMs,
   deadlineUrgency,
@@ -337,6 +342,29 @@ describe('start form prefill (the bell\'s "post it again" link)', () => {
       parseStartFormPrefill(`?gameSpecId=${CORRESPONDENCE_ELIGIBLE_SPEC_IDS[0]}&days=5`),
     ).toEqual({
       gameSpecId: CORRESPONDENCE_ELIGIBLE_SPEC_IDS[0],
+    });
+  });
+});
+
+describe('allowlisted correspondence specs (xiangqi mahjong)', () => {
+  const granted = (specId: string) => specId === XIANGQI_MAHJONG_SPEC_ID;
+
+  it('are offered only to a viewer the menu offers them to', () => {
+    expect(CORRESPONDENCE_ELIGIBLE_SPEC_IDS).not.toContain(XIANGQI_MAHJONG_SPEC_ID);
+    expect(correspondenceSpecIdsFor()).not.toContain(XIANGQI_MAHJONG_SPEC_ID);
+    expect(correspondenceSpecIdsFor(() => false)).toEqual([...CORRESPONDENCE_ELIGIBLE_SPEC_IDS]);
+    expect(correspondenceSpecIdsFor(granted)).toEqual([
+      ...CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+      XIANGQI_MAHJONG_SPEC_ID,
+    ]);
+  });
+
+  it('prefill a start form only for a granted viewer', () => {
+    const search = `?gameSpecId=${XIANGQI_MAHJONG_SPEC_ID}&days=3`;
+    expect(parseStartFormPrefill(search)).toEqual({ daysPerMove: 3 });
+    expect(parseStartFormPrefill(search, granted)).toEqual({
+      gameSpecId: XIANGQI_MAHJONG_SPEC_ID,
+      daysPerMove: 3,
     });
   });
 });

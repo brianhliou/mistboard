@@ -5,6 +5,7 @@
 // directly (correspondence-model.test.ts).
 
 import {
+  CORRESPONDENCE_ALLOWLISTED_SPEC_IDS,
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
   DAYS_PER_MOVE_OPTIONS,
   isCorrespondenceRatedSpec,
@@ -392,11 +393,44 @@ export function startFormPrefillHref(terms: {
   return `/correspondence?${params.toString()}#start`;
 }
 
-export function parseStartFormPrefill(search: string): StartFormPrefill | null {
+/**
+ * Whether the play menu offers an allowlisted spec to this viewer
+ * (webVariantOfferedInMenu). Injected so this module stays DOM- and registry-free;
+ * the default offers none, which is what a signed-out or ungranted reader gets.
+ */
+export type CorrespondenceSpecOffer = (gameSpecId: string) => boolean;
+const NONE_OFFERED: CorrespondenceSpecOffer = () => false;
+
+/**
+ * The specs this viewer may start a correspondence game in: every public one
+ * (CORRESPONDENCE_ELIGIBLE_SPEC_IDS), then each allowlisted playtest spec the
+ * menu offers them (xiangqi mahjong, casual only). The server checks the grant
+ * again on every seek; this only keeps the picker from offering a refusal.
+ */
+export function correspondenceSpecIdsFor(
+  offered: CorrespondenceSpecOffer = NONE_OFFERED,
+): readonly string[] {
+  return [
+    ...CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+    ...CORRESPONDENCE_ALLOWLISTED_SPEC_IDS.filter((specId) => offered(specId)),
+  ];
+}
+
+export function isCorrespondenceSpecFor(
+  gameSpecId: string,
+  offered: CorrespondenceSpecOffer = NONE_OFFERED,
+): boolean {
+  return correspondenceSpecIdsFor(offered).includes(gameSpecId);
+}
+
+export function parseStartFormPrefill(
+  search: string,
+  offered: CorrespondenceSpecOffer = NONE_OFFERED,
+): StartFormPrefill | null {
   const params = new URLSearchParams(search);
   const prefill: StartFormPrefill = {};
   const variant = params.get('gameSpecId');
-  if (variant && (CORRESPONDENCE_ELIGIBLE_SPEC_IDS as readonly string[]).includes(variant)) {
+  if (variant && isCorrespondenceSpecFor(variant, offered)) {
     prefill.gameSpecId = variant;
   }
   const days = Number(params.get('days'));

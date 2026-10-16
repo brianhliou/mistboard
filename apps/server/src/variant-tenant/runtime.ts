@@ -298,7 +298,7 @@ export function createTenantRuntimeRoom<
   if (isRetiredGameSpec(tenant.gameSpecId)) return { ok: false, error: 'disabled' };
 
   const now = options.now ?? Date.now();
-  const setup = tenant.rules.createSetup?.();
+  const setup = tenant.rules.createSetup?.({ timeControl: options.timeControl });
   const events: TenantRoomEvent<C, M, Spec>[] = [
     {
       type: 'room-created',

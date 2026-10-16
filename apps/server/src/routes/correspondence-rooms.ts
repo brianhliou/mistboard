@@ -1,5 +1,6 @@
 import type { ServerResponse } from 'node:http';
 import {
+  CORRESPONDENCE_ALLOWLISTED_SPEC_IDS,
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
   correspondenceTimeControl,
   DARK_CHESS_SPEC_ID,
@@ -44,6 +45,15 @@ import { writeJson } from './lib.js';
 // pickers derive from the same source; this Set is just its lookup form.
 export const CORRESPONDENCE_ELIGIBLE_SPECS: ReadonlySet<string> = new Set(
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+);
+
+// Correspondence-capable specs that only granted accounts may see or play
+// (CORRESPONDENCE_ALLOWLISTED_SPEC_IDS): the seek routes admit one only when
+// every account involved holds the grant, never rated, and hide its seeks from
+// everyone else. Disjoint from CORRESPONDENCE_ELIGIBLE_SPECS by construction
+// (correspondence-eligibility.test.ts).
+export const CORRESPONDENCE_ALLOWLISTED_SPECS: ReadonlySet<string> = new Set(
+  CORRESPONDENCE_ALLOWLISTED_SPEC_IDS,
 );
 
 // Dev/test only: accept compressed non-official allowances (fractional

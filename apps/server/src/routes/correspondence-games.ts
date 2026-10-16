@@ -195,6 +195,9 @@ export function playerWonFinishedGame(
 ): boolean {
   if (game.playerColor === 'red') return game.result === 'red-wins';
   if (game.playerColor === 'black') return game.result === 'black-wins';
+  // Xiangqi mahjong's correspondence seats.
+  if (game.playerColor === 'east') return game.result === 'east-wins';
+  if (game.playerColor === 'west') return game.result === 'west-wins';
   return game.result === 'white-wins';
 }
 

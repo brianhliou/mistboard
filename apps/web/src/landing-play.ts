@@ -31,7 +31,7 @@ import {
 } from './analytics.js';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { type BotPlayRequest, bindBotPlayControl, createBotGame } from './bot-play.js';
-import { correspondenceRatedAvailable } from './correspondence-model.js';
+import { correspondenceRatedAvailable, isCorrespondenceSpecFor } from './correspondence-model.js';
 import { correspondenceEnabled } from './feature-flags.js';
 import { variantNameKeyForSpecId } from './game-display.js';
 import { type GameStartSource, rememberGameStartSource } from './game-start-source.js';
@@ -59,6 +59,7 @@ import { renderVariantMarker } from './variant-markers.js';
 import { variantSupportsPve } from './variant-public-surfaces.js';
 import {
   defaultTimePresetForSpec,
+  webVariantOfferedInMenu,
   webVariantTenantForSpecId,
   webVariantTenants,
 } from './variant-tenant/registry.js';
@@ -2013,7 +2014,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     correspondenceRatedAvailable(selectedGameSpecId, isCorrespondenceRatedModeEnabled());
   const correspondenceAvailable = () =>
     (choice.mode === 'pvp' || choice.mode === 'lobby') &&
-    (CORRESPONDENCE_ELIGIBLE_SPEC_IDS as readonly string[]).includes(selectedGameSpecId) &&
+    isCorrespondenceSpecFor(selectedGameSpecId, webVariantOfferedInMenu) &&
     (!rated || correspondenceRatedOffered()) &&
     correspondenceEnabled();
   // Assigned once the rated toggle exists (it is built after the time section), so a

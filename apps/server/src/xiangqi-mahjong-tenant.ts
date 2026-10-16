@@ -17,6 +17,11 @@
  *     The window opens after EVERY discard: a claimant with nothing to claim
  *     passes when the short pause ends, one with a claim keeps the full window,
  *     and the discarder sees the same phase and deadlines either way.
+ *   - Correspondence (days per move) has neither deadline. The claimant's turn
+ *     opens with the claim decision on every discard (claim, or pass and then
+ *     draw and discard, all on one move deadline), and the next hand deals at
+ *     once, played by the next dealer. Unrated, and offered only to accounts
+ *     the allowlist admits (CORRESPONDENCE_ALLOWLISTED_SPEC_IDS).
  *
  * GATED TWICE, like HK mahjong: the flag is off by default, and the spec is on
  * the per-account allowlist (139). It exists for a playtest.
@@ -143,7 +148,12 @@ export const xiangqiMahjongTenant: XmjTenantType = {
   enabled: xiangqiMahjongEnabled,
   oppositeColor: (seat) => (seat === 'east' ? 'west' : 'east'),
   rules: {
-    createSetup: () => createXmjSetup(() => randomInt(2 ** 30) / 2 ** 30),
+    // A days-per-move room plays the correspondence turn (xiangqi-mahjong-room.ts):
+    // no claim window or pause, the next hand deals at once, east deals first.
+    createSetup: (options) =>
+      createXmjSetup(() => randomInt(2 ** 30) / 2 ** 30, {
+        correspondence: options?.timeControl?.daysPerMove !== undefined,
+      }),
     createInitialState: (roomId, setup) => {
       // No persisted walls is a programming error: dealing fresh ones would
       // hand a reconnecting player a different match from the one in progress.

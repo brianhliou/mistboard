@@ -1,5 +1,4 @@
 import {
-  CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
   canonicalVariantOrderIndex,
   DAYS_PER_MOVE_OPTIONS,
   defaultEngineTimeControl,
@@ -11,7 +10,7 @@ import {
 import { track } from './analytics.js';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { type BotPlayRequest, bindBotPlayControl } from './bot-play.js';
-import { correspondenceRatedAvailable } from './correspondence-model.js';
+import { correspondenceRatedAvailable, isCorrespondenceSpecFor } from './correspondence-model.js';
 import { correspondenceEnabled } from './feature-flags.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
@@ -46,6 +45,7 @@ import { isCorrespondenceRatedModeEnabled, isRatedModeEnabled } from './rated-fl
 import { buildSeekAcceptAction } from './seek-accept.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { renderVariantMarker } from './variant-markers.js';
+import { webVariantOfferedInMenu } from './variant-tenant/registry.js';
 import { variantMiniIdForGameSpec } from './variants.js';
 
 // The homepage's bot-first play panel (#491), replacing the lichess-shaped
@@ -220,7 +220,7 @@ export function panelPersonPaces(gameSpecId: LandingGameSpecId, mode: PersonMode
     (mode === 'casual' ||
       correspondenceRatedAvailable(gameSpecId, isCorrespondenceRatedModeEnabled())) &&
     correspondenceEnabled() &&
-    (CORRESPONDENCE_ELIGIBLE_SPEC_IDS as readonly string[]).includes(gameSpecId)
+    isCorrespondenceSpecFor(gameSpecId, webVariantOfferedInMenu)
       ? DAYS_PER_MOVE_OPTIONS.map((d) => ({ kind: 'days', days: d }))
       : [];
   return [...live, ...days];

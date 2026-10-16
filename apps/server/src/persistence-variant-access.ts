@@ -71,6 +71,30 @@ export async function mayPlayVariant(
 }
 
 /**
+ * mayPlayVariant for an account known only by id: the other side of a
+ * correspondence challenge or seek, who is not the caller and so has no
+ * session row in hand. One statement reads the role and the grant together. A
+ * missing or closed account is refused, the same fail-closed answer as a
+ * missing grant.
+ */
+export async function mayPlayVariantByUserId(
+  userId: string,
+  gameSpecId: string,
+  database?: VariantAccessDatabase,
+): Promise<boolean> {
+  if (!isAllowlistedGameSpec(gameSpecId)) return true;
+  const result = await (database ?? getPool()).query<{ allowed: boolean }>(
+    `SELECT (users.account_role = 'admin' OR EXISTS (
+              SELECT 1 FROM variant_access_grants
+               WHERE user_id = users.id AND game_spec_id = $2)) AS allowed
+       FROM users
+      WHERE users.id = $1 AND users.closed_at IS NULL`,
+    [userId, gameSpecId],
+  );
+  return result.rows[0]?.allowed === true;
+}
+
+/**
  * The allowlisted specs this account may actually sit down at, for
  * /api/auth/me. The client offers a gated variant only when the answer names
  * it, so the play menu and the seat check agree by construction instead of by

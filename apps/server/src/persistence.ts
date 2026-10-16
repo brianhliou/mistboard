@@ -587,6 +587,7 @@ export {
   isAllowlistedGameSpec,
   listVariantGrants,
   mayPlayVariant,
+  mayPlayVariantByUserId,
   playableAllowlistedSpecs,
   revokeVariantAccess,
 } from './persistence-variant-access.js';
