@@ -137,6 +137,10 @@ export type WebVariantTenant<C extends string> = {
   // pending, so a two-action turn's second half reads in the same spot as the
   // first, with no extra element and nothing shifting.
   turnChipLabel?(seat: C): I18nKey | null;
+  // Optional: a block for the meta card under the player rows, rebuilt with the
+  // card. Xiangqi mahjong is a match of hands, and the card's one result glyph
+  // per row could not show what each earlier hand scored.
+  metaExtra?(view: TenantWebView<C> | null): HTMLElement | null;
 };
 
 export type TenantChromeContext<C extends string> = {
@@ -596,6 +600,7 @@ export function createTenantRoomChrome<C extends string>(
         };
       }),
       status: statusLine,
+      extra: tenant.metaExtra?.(view) ?? null,
     });
     refs.gameInfo.replaceChildren(card.el);
     if (ctx.debugRequested()) {

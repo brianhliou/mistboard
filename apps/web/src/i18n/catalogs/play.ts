@@ -486,6 +486,8 @@ export const EN_PLAY = {
   'live.xmj.dealer': 'Dealer',
   'live.xmj.toDiscard': 'To discard',
   'live.xmj.handOf': 'Hand {hand} of {hands}',
+  'live.xmj.handsTable': 'Points by hand',
+  'live.xmj.handsTotal': 'Total',
   'live.xmj.wall': 'Wall {count}',
   'live.xmj.yourDiscards': 'Your discards',
   'live.xmj.theirDiscards': "{name}'s discards",

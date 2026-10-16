@@ -1210,3 +1210,55 @@ ol.xmj-log {
     width: 12px;
   }
 }
+
+/* Points by hand, in the room's meta card under the player rows. */
+.xmj-hands-card {
+  padding-top: 8px;
+}
+
+.xmj-hands {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  table-layout: fixed;
+}
+
+.xmj-hands th,
+.xmj-hands td {
+  padding: 2px 4px;
+  text-align: center;
+  font-weight: 400;
+}
+
+.xmj-hands thead th {
+  color: var(--site-muted);
+}
+
+.xmj-hands tbody th {
+  width: 40%;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.xmj-hands td {
+  color: var(--site-muted);
+}
+
+.xmj-hands .xmj-hands__win {
+  color: var(--site-text);
+  font-weight: 700;
+}
+
+.xmj-hands .xmj-hands__now {
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--site-accent) 14%, transparent);
+}
+
+.xmj-hands .xmj-hands__total {
+  border-left: 1px solid var(--site-border);
+  color: var(--site-text);
+  font-weight: 700;
+}

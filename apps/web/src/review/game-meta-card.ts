@@ -107,6 +107,8 @@ export type GameMetaCardConfig = {
   players?: GameMetaPlayer[];
   /** Bottom line under the divider (result / status). Hidden when absent. */
   status?: string | null;
+  /** A variant's own block under the player rows (xiangqi mahjong's points by hand). */
+  extra?: HTMLElement | null;
 };
 
 export type GameMetaCard = {
@@ -177,7 +179,9 @@ export function createGameMetaCard(config: GameMetaCardConfig): GameMetaCard {
   const statusEl = document.createElement('p');
   statusEl.className = 'game-meta-card__status';
 
-  el.append(head, playersEl, statusEl);
+  el.append(head, playersEl);
+  if (config.extra) el.append(config.extra);
+  el.append(statusEl);
 
   function setSubline(text: string | null): void {
     subline.textContent = text ?? '';

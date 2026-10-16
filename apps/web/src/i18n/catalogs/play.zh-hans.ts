@@ -462,6 +462,8 @@ export const ZH_HANS_PLAY = {
   'live.xmj.dealer': '庄家',
   'live.xmj.toDiscard': '出牌中',
   'live.xmj.handOf': '第 {hand}/{hands} 手',
+  'live.xmj.handsTable': '每手得分',
+  'live.xmj.handsTotal': '合计',
   'live.xmj.wall': '牌墙 {count}',
   'live.xmj.yourDiscards': '你的弃牌',
   'live.xmj.theirDiscards': '{name}的弃牌',

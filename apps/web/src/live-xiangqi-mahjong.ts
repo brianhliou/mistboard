@@ -43,6 +43,7 @@ import {
   xiangqiMahjongTableHtml,
   xmjCountdown,
   xmjFeltFromSearch,
+  xmjHandsTableHtml,
   xmjLogHtml,
   xmjReasonPhrase,
   xmjResultLine,
@@ -152,6 +153,13 @@ const xmjWebTenant: WebVariantTenant<XmjSeat> = {
   reasonPhrase: xmjReasonPhrase,
   seatPlayerName: xmjPlayerName,
   finishedLine: xmjFinishedLine,
+  metaExtra: (view) => {
+    if (!view) return null;
+    const block = document.createElement('div');
+    block.className = 'xmj-hands-card';
+    block.innerHTML = xmjHandsTableHtml(view as XmjPlayerView, seatNames());
+    return block;
+  },
   rejectedBody: 'live.xiangqiMahjongRoomNotActive',
   liveGameRejectedBody: 'live.roomLiveHandSeatedOnly',
   spectatorBody: 'live.spectatorXiangqiMahjong',

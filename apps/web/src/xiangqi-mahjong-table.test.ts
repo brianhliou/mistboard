@@ -20,6 +20,7 @@ import {
   type XmjTableOptions,
   xiangqiMahjongTableHtml,
   xmjFeltFromSearch,
+  xmjHandsTableHtml,
   xmjLogHtml,
   xmjResultLine,
   xmjTileLookFromSearch,
@@ -395,6 +396,47 @@ describe('xiangqi mahjong table', () => {
     expect(backs.length).toBe(5);
     expect(backs.at(-1)?.classList.contains('xmj-tile--drawn')).toBe(true);
     expect(backs.filter((back) => back.classList.contains('xmj-tile--drawn')).length).toBe(1);
+  });
+
+  it('lists the points of every hand for the meta card, totals matching the match score', () => {
+    let current = state;
+    let checked = 0;
+    for (let steps = 0; steps < 5000; steps += 1) {
+      const view = xmjViewFor(current, 'east');
+      const host = doc(xmjHandsTableHtml(view, NAMES));
+      const heads = [...host.querySelectorAll('thead th:not(.xmj-hands__total)')];
+      expect(heads.map((head) => head.textContent)).toEqual(
+        Array.from({ length: view.handsInMatch }, (_, index) => String(index + 1)),
+      );
+      const rows = [...host.querySelectorAll('tbody tr')];
+      // The card's player order (east, west), not the viewer first.
+      expect(rows.map((row) => row.querySelector('th')?.textContent)).toEqual(['You', 'Bot']);
+      for (const [index, seat] of (['east', 'west'] as const).entries()) {
+        const cells = [...(rows[index]?.querySelectorAll('td:not(.xmj-hands__total)') ?? [])];
+        cells.forEach((cell, hand) => {
+          const result = view.results[hand];
+          if (!result) {
+            expect(cell.textContent).toBe('·');
+            return;
+          }
+          const won = result.winner === seat;
+          expect(cell.textContent).toBe(String(won ? result.score?.total : 0));
+          expect(cell.classList.contains('xmj-hands__win')).toBe(won);
+        });
+        const sum = cells.reduce((total, cell) => total + (Number(cell.textContent) || 0), 0);
+        expect(rows[index]?.querySelector('.xmj-hands__total')?.textContent).toBe(
+          String(view.scores[seat]),
+        );
+        expect(sum).toBe(view.scores[seat]);
+      }
+      // Only the hand in play is marked, and only while it is played.
+      const marked = host.querySelectorAll('thead .xmj-hands__now');
+      expect(marked.length).toBe(view.between || view.status.type !== 'playing' ? 0 : 1);
+      if (view.results.length > 1) checked += 1;
+      if (current.status.type !== 'playing') break;
+      current = botStep(current);
+    }
+    expect(checked).toBeGreaterThan(0);
   });
 
   it('leads the result with the winner and the points, never tai, and lays it over the middle band', () => {

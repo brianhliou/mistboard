@@ -24,6 +24,7 @@ import {
   tilePiece,
   XMJ_DEALER_TILES,
   XMJ_OTHER_TILES,
+  XMJ_SEATS,
   XMJ_TAI_ORDER,
   XMJ_TAI_POINTS,
   type XmjClaim,
@@ -615,6 +616,42 @@ function outcomeText(result: XmjViewResult, names: Readonly<Record<XmjSeat, stri
   return t(result.selfDrawn ? 'live.xmj.resultSelfDraw' : 'live.xmj.resultDiscard', {
     name: escapeHtml(names[result.winner]),
   });
+}
+
+/**
+ * The match's points by hand for the room's meta card: a column per hand of the
+ * match, a row per seat in the card's player order, the hand in play marked and
+ * unplayed hands a dot. Points only accumulate, so a won hand gives its winner
+ * the hand's points and the other player nothing; the total is the match score.
+ */
+export function xmjHandsTableHtml(
+  view: XmjPlayerView,
+  names: Readonly<Record<XmjSeat, string>>,
+): string {
+  const hands = Math.max(view.handsInMatch, view.results.length);
+  const live = view.status.type === 'playing' && !view.between;
+  const now = live ? view.handNumber - 1 : -1;
+  const heads = Array.from({ length: hands }, (_, index) => {
+    const cls = index === now ? ' class="xmj-hands__now"' : '';
+    return `<th scope="col"${cls} title="${t('live.xmj.log.hand', { hand: index + 1 })}">${index + 1}</th>`;
+  }).join('');
+  const rows = XMJ_SEATS.map((seat) => {
+    const cells = Array.from({ length: hands }, (_, index) => {
+      const result = view.results[index];
+      const classes: string[] = [];
+      if (index === now) classes.push('xmj-hands__now');
+      let text = '·';
+      if (result) {
+        const won = result.winner === seat;
+        text = String(won ? (result.score?.total ?? 0) : 0);
+        if (won) classes.push('xmj-hands__win');
+      }
+      const cls = classes.length > 0 ? ` class="${classes.join(' ')}"` : '';
+      return `<td${cls}>${text}</td>`;
+    }).join('');
+    return `<tr><th scope="row">${escapeHtml(names[seat])}</th>${cells}<td class="xmj-hands__total">${view.scores[seat]}</td></tr>`;
+  }).join('');
+  return `<table class="xmj-hands" aria-label="${t('live.xmj.handsTable')}"><thead><tr><td></td>${heads}<th scope="col" class="xmj-hands__total">${t('live.xmj.handsTotal')}</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 /** The one sentence the result leads with, for a screen reader and the log. */
