@@ -486,13 +486,17 @@ export function createTenantRoomChrome<C extends string>(
   function finishedStatusLine(
     status: Extract<TenantWebView<C>['status'], { type: 'finished' }>,
   ): string {
+    // A tenant's own line is a finished sentence, often led by a handle
+    // ("brianhliou wins on points"), so it is not capitalized.
     if (tenant.finishedLine) return tenant.finishedLine(status.winner, status.reason);
-    return status.winner
-      ? t('result.colorVictorious', {
-          reason: reasonText(status.reason),
-          color: seatName(status.winner),
-        })
-      : t('result.drawByReason', { reason: reasonText(status.reason) });
+    return capitalize(
+      status.winner
+        ? t('result.colorVictorious', {
+            reason: reasonText(status.reason),
+            color: seatName(status.winner),
+          })
+        : t('result.drawByReason', { reason: reasonText(status.reason) }),
+    );
   }
 
   // The result at the end of the move list (postgame-panel.ts); null clears it.
@@ -503,7 +507,7 @@ export function createTenantRoomChrome<C extends string>(
       const winnerIndex = status.winner ? tenant.colors.indexOf(status.winner) : null;
       renderGameResult(refs.actionSection, {
         score: tenant.colors.length === 2 ? resultScore(winnerIndex) : null,
-        summary: capitalize(finishedStatusLine(status)),
+        summary: finishedStatusLine(status),
       });
     } else if (status?.type === 'aborted') {
       renderGameResult(refs.actionSection, { score: null, summary: t('live.statusGameAborted') });
@@ -537,7 +541,7 @@ export function createTenantRoomChrome<C extends string>(
     if (status?.type === 'finished') {
       // Capitalized like the result under the move list and the review card: the
       // two panels showed "points" and "Points" for the same game.
-      statusLine = capitalize(finishedStatusLine(status));
+      statusLine = finishedStatusLine(status);
     } else if (status?.type === 'aborted') {
       statusLine = t('live.statusGameAborted');
     } else if (status?.type === 'playing') {

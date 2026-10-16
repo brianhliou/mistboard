@@ -678,8 +678,17 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  justify-content: center;
   font-size: 13px;
+}
+
+/* Grouped in the middle when it fits; from the top, scrolling, when it does
+   not (justify-content: center would clip the title and the foot). */
+.xmj-result > :first-child {
+  margin-top: auto;
+}
+
+.xmj-result > :last-child {
+  margin-bottom: auto;
 }
 
 .xmj-result__title {
@@ -779,7 +788,7 @@
 .xmj-ledger th,
 .xmj-ledger td {
   text-align: left;
-  padding: 3px 8px 3px 0;
+  padding: 2px 8px 2px 0;
   border-bottom: 1px solid var(--xmj-line);
 }
 

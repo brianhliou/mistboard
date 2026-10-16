@@ -409,7 +409,9 @@ describe('tenant room chrome player names', () => {
       ...tenant,
       reasonPhrase: () => 'result.onPoints',
       seatPlayerName: (seat) => (seat === 'white' ? 'You' : 'Bot'),
-      finishedLine: (winner) => (winner === 'red' ? 'Bot wins on points' : 'You win on points'),
+      // A handle leads the line and keeps its own case.
+      finishedLine: (winner) =>
+        winner === 'red' ? 'brianhliou wins on points' : 'You win on points',
     };
     const finished: TenantWebView<Color> = {
       id: 'test_room',
@@ -418,7 +420,8 @@ describe('tenant room chrome player names', () => {
     };
     const { chrome, refs } = chromeHarness({ view: finished }, playerTenant);
     chrome.renderMeta();
-    expect(refs.gameInfo.textContent).toContain('Bot wins on points');
+    expect(refs.gameInfo.textContent).toContain('brianhliou wins on points');
+    expect(refs.gameInfo.textContent).not.toContain('Brianhliou');
     expect(refs.gameInfo.textContent).toContain('You');
     expect(refs.gameInfo.textContent).not.toMatch(/Red|White|victorious|\(/);
     const console = document.createElement('section');
@@ -428,8 +431,8 @@ describe('tenant room chrome player names', () => {
     result.hidden = true;
     console.append(refs.actionSection, result);
     chrome.renderActionStatus();
-    expect(result.textContent).toContain('Bot wins on points');
-    expect(result.textContent).not.toMatch(/Red|victorious/);
+    expect(result.textContent).toContain('brianhliou wins on points');
+    expect(result.textContent).not.toMatch(/Red|victorious|Brianhliou/);
   });
 
   it('capitalizes the finished line on the meta card like the move-list result', () => {
