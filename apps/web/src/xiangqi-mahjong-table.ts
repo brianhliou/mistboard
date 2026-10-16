@@ -826,7 +826,10 @@ function logRowsHtml(hand: XmjLogHand, options: XmjLogOptions, activeRow: number
     .map((row) => {
       const active = activeRow === row.ply;
       const ends = row.kind === 'win' || row.kind === 'self-draw' || row.kind === 'exhausted';
-      const cls = `xmj-log__row${active ? ' active' : ''}${ends ? ' xmj-log__row--end' : ''}`;
+      // A seated reader's own turns read at full strength, the other player's
+      // a step back, so the two hands alternate at a glance without colours.
+      const theirs = options.viewer !== null && 'seat' in row && row.seat !== options.viewer;
+      const cls = `xmj-log__row${active ? ' active' : ''}${ends ? ' xmj-log__row--end' : ''}${theirs ? ' xmj-log__row--theirs' : ''}`;
       const text = logRowText(row, options);
       // A row is a jump only when this client holds that position.
       return options.hasPly(row.ply)

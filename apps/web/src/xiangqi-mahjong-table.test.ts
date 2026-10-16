@@ -479,6 +479,16 @@ describe('xiangqi mahjong table', () => {
       /^Hand 1(You|Bot), (self-draw|on a discard)\d+ points?$|^Hand 1No winner$/,
     );
     expect(host.querySelectorAll('.xmj-log__rows').length).toBe(1);
+    // The other player's turns step back; the reader's own and a spectator's
+    // view stay at full strength.
+    const rows = [...host.querySelectorAll('.xmj-log__row')];
+    const theirs = rows.filter((row) => row.classList.contains('xmj-log__row--theirs'));
+    expect(theirs.length).toBeGreaterThan(0);
+    for (const row of theirs) expect(row.textContent).toMatch(/^Bot /);
+    for (const row of rows.filter((row) => /^You /.test(row.textContent ?? ''))) {
+      expect(row.classList.contains('xmj-log__row--theirs')).toBe(false);
+    }
+    expect(render({ viewer: null }).querySelector('.xmj-log__row--theirs')).toBeNull();
     // Passes and the steps between hands never show.
     expect(host.textContent).not.toMatch(/Pass|Ready/);
     // A scrub into hand 1 opens it and marks the row.

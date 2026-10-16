@@ -827,34 +827,32 @@ ol.xmj-log {
   display: block;
   list-style: none;
   margin: 0;
-  padding: 4px 0;
+  padding: 4px 6px;
 }
 
 .xmj-log__hand {
   display: block;
-  border-bottom: 1px solid var(--site-border);
-  padding: 2px 0 4px;
+  padding: 0 0 6px;
 }
 
-.xmj-log__hand:last-child {
-  border-bottom: 0;
-}
-
-.xmj-log__head {
+/* Each hand's heading is a band, so the hands read as sections. */
+.xmj-log .xmj-log__head {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 0 6px;
   width: 100%;
   box-sizing: border-box;
-  padding: 4px 8px;
+  padding: 5px 8px;
   font: inherit;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
+  letter-spacing: 0.02em;
   color: inherit;
   text-align: left;
-  background: none;
+  background: color-mix(in srgb, var(--site-hover) 70%, transparent);
   border: 0;
+  border-radius: 6px;
 }
 
 .xmj-log__head span + span::before {
@@ -863,12 +861,12 @@ ol.xmj-log {
   opacity: 0.6;
 }
 
-.xmj-log__toggle {
+.xmj-log .xmj-log__toggle {
   cursor: pointer;
-  border-radius: 6px;
+  background: none;
 }
 
-.xmj-log__toggle:hover {
+.xmj-log .xmj-log__toggle:hover {
   background: var(--site-hover);
 }
 
@@ -881,6 +879,7 @@ ol.xmj-log {
   border-left: 5px solid currentcolor;
   border-right: 0;
   opacity: 0.7;
+  transition: transform 120ms ease;
 }
 
 .xmj-log__toggle[aria-expanded="true"]::before {
@@ -889,18 +888,20 @@ ol.xmj-log {
 
 .xmj-log__rows {
   list-style: none;
-  margin: 0;
+  margin: 2px 0 0;
   padding: 0;
 }
 
-.xmj-log__row {
+/* Higher than the site's .move-jump, which otherwise resets the padding on
+   the rows that are buttons and leaves them out of line with the rest. */
+.xmj-log .xmj-log__row {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 4px;
   width: 100%;
   box-sizing: border-box;
-  padding: 2px 8px 2px 18px;
+  padding: 2px 6px 2px 10px;
   min-height: 30px;
   font: inherit;
   font-size: 13px;
@@ -911,22 +912,42 @@ ol.xmj-log {
   border-radius: 6px;
 }
 
-button.xmj-log__row {
+/* The tile ends the sentence in every catalog: pushed right, the tiles form
+   one column that reads down the hand. */
+.xmj-log__row > .xmj-tile:last-child {
+  margin-left: auto;
+}
+
+.xmj-log .xmj-log__row--theirs {
+  color: color-mix(in srgb, currentcolor 72%, transparent);
+}
+
+.xmj-log button.xmj-log__row {
   cursor: pointer;
 }
 
-button.xmj-log__row:hover {
+.xmj-log button.xmj-log__row:hover {
   background: var(--site-hover);
 }
 
-.xmj-log__row.active {
+.xmj-log .xmj-log__row.active {
   background: var(--site-hover);
   box-shadow: inset 3px 0 0 var(--site-accent);
   font-weight: 600;
 }
 
-.xmj-log__row--end {
+/* How the hand ended, set like the result's Total chip. */
+.xmj-log .xmj-log__row--end {
+  margin-top: 4px;
   font-weight: 600;
+  color: var(--site-accent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--site-accent) 55%, transparent);
+}
+
+.xmj-log .xmj-log__row--end.active {
+  box-shadow:
+    inset 3px 0 0 var(--site-accent),
+    inset 0 0 0 1px color-mix(in srgb, var(--site-accent) 55%, transparent);
 }
 
 /* ── Phones ────────────────────────────────────────────────────────────────── */
