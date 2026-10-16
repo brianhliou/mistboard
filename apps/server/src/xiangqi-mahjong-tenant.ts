@@ -6,7 +6,7 @@
  * (xiangqi-mahjong*.ts). Three things to know:
  *
  *   - Two seats, east and west, so the ordinary two-player result values and
- *     forfeit rule apply. A match is `XMJ_MATCH_HANDS` hands (four, the deal
+ *     forfeit rule apply. A match is `XMJ_MATCH_HANDS` hands (six, the deal
  *     alternating); the room finishes when the match does, on points.
  *   - The setup is server-secret: pre-shuffled walls, one per hand, so the
  *     whole match replays from the event log. It is persisted in room-created

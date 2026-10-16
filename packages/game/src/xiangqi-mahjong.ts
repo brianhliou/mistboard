@@ -588,10 +588,11 @@ export function xmjHandOver(state: XmjHandState): boolean {
 
 /**
  * Hands in a match, 流局 included. Deliberate 2-player change from spec 3,
- * which suggested eight: four, so each seat deals twice. The one constant
- * every match-length check reads, so eight can return as an option.
+ * which suggested eight: six, so each seat deals three times (was four until
+ * 2026-10-15; Brian found four too short to come back from one big hand). The
+ * one constant every match-length check reads, so eight can return as an option.
  */
-export const XMJ_MATCH_HANDS = 4;
+export const XMJ_MATCH_HANDS = 6;
 
 export interface XmjHandResult {
   readonly dealer: XmjSeatIndex;

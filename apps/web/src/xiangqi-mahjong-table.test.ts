@@ -284,7 +284,7 @@ describe('xiangqi mahjong table', () => {
       /^Match to (You|Bot), \d+ to \d+\.$|^Match drawn, \d+ points each\.$/,
     );
     expect(host.querySelector('.xmj-result__match')).toBeNull();
-    expect(host.querySelector('.xmj-centre .xmj-hand-line')?.textContent).toBe('Hand 4 of 4');
+    expect(host.querySelector('.xmj-centre .xmj-hand-line')?.textContent).toBe('Hand 6 of 6');
     const final = xmjViewFor(current, 'east');
     const points = [...host.querySelectorAll('.xmj-points')].map((node) => node.textContent);
     expect(points).toEqual(
@@ -303,7 +303,7 @@ describe('xiangqi mahjong table', () => {
       'xmj-middle',
       'xmj-seat xmj-seat--self xmj-seat--you',
     ]);
-    expect(host.querySelector('.xmj-centre .xmj-hand-line')?.textContent).toBe('Hand 1 of 4');
+    expect(host.querySelector('.xmj-centre .xmj-hand-line')?.textContent).toBe('Hand 1 of 6');
     // The wall is drawn tile by tile, with its count in words.
     expect(host.querySelectorAll('.xmj-wall .xmj-stack i').length).toBe(view.wallCount);
     expect(host.querySelector('.xmj-wall')?.getAttribute('aria-label')).toBe(
@@ -487,7 +487,7 @@ describe('xiangqi mahjong table', () => {
         // The whole sentence is the region's name; the head splits it.
         const region = host.querySelector('.xmj-result')?.getAttribute('aria-label') ?? '';
         expect(region).toMatch(
-          /^(You win|Bot wins) hand [1-4] (by self-draw|on a discard): \d+ points?$/,
+          /^(You win|Bot wins) hand [1-6] (by self-draw|on a discard): \d+ points?$/,
         );
         expect(host.querySelector('.xmj-result__title')?.textContent).toBe(
           won.winner === 'east' ? 'You win' : 'Bot wins',

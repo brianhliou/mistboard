@@ -247,7 +247,7 @@ export const xiangqiMahjong32Article: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'A match is four hands, and the deal alternates every hand, so each player deals twice. The winner of a hand adds its points to their score, and the other score stays where it was. After four hands the higher score wins the match, and equal scores are a draw.',
+          text: 'A match is six hands, and the deal alternates every hand, so each player deals three times. The winner of a hand adds its points to their score, and the other score stays where it was. After six hands the higher score wins the match, and equal scores are a draw.',
         },
       ],
     },
@@ -256,7 +256,7 @@ export const xiangqiMahjong32Article: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The game has no rulebook. These rules and the point values follow the Chinese Wikipedia article and the Eastking rule page, which agree, checked against other Taiwanese rule pages and FunTown’s online parlour. Where they are silent we chose: no kongs and no ready declaration, the deal alternating every hand, and the four-hand match, since the sources play for money and give no match format.',
+          text: 'The game has no rulebook. These rules and the point values follow the Chinese Wikipedia article and the Eastking rule page, which agree, checked against other Taiwanese rule pages and FunTown’s online parlour. Where they are silent we chose: no kongs and no ready declaration, the deal alternating every hand, and the six-hand match, since the sources play for money and give no match format.',
         },
       ],
     },

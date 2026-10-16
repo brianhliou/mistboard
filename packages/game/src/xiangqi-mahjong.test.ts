@@ -276,6 +276,18 @@ test('win on the opponent discard (胡) scores and books the hand', () => {
   assert.deepEqual(won.phase.score.shape, { meld: ['bK', 'bA', 'bE'], pair: ['rP', 'rP'] });
 });
 
+// A discard that completes the pair is claimable only as the win (單吊): there
+// is no claim that makes a pair and nothing else.
+test('a discard completing the pair is a win claim, never a pair claim', () => {
+  assert.deepEqual(xmjLegalClaims(['rK', 'rA', 'rE', 'bH'], [], 'bH'), [
+    { kind: 'win', fromHand: [] },
+  ]);
+  assert.deepEqual(xmjLegalClaims(['rR', 'rH', 'rC', 'rK'], [], 'bK'), [
+    { kind: 'win', fromHand: [] },
+  ]);
+  assert.deepEqual(xmjLegalClaims(['rK', 'bH', 'rR', 'bC'], [], 'bH'), []);
+});
+
 test('地胡: the non-dealer wins on the first draw, flat 6', () => {
   const hand = xmjDeal(
     wallWith(['rA', 'rA', 'rR', 'bH', 'rC'], ['bK', 'bA', 'rP', 'rP'], ['bE']),
@@ -375,8 +387,8 @@ test('the deal alternates after a dealer win, a non-dealer win and a 流局', ()
   assert.equal(xmjNextDealer({ dealer: 1, winner: null, selfDrawn: false, score: null }), 0);
 });
 
-test('match: four hands, each seat deals twice, the winner banks the points', () => {
-  assert.equal(XMJ_MATCH_HANDS, 4);
+test('match: six hands, each seat deals three times, the winner banks the points', () => {
+  assert.equal(XMJ_MATCH_HANDS, 6);
 
   let s = 7;
   const random = () => {
@@ -386,7 +398,7 @@ test('match: four hands, each seat deals twice, the winner banks the points', ()
   // More walls than hands: the hand count, not the wall count, ends the match.
   const walls = Array.from({ length: 8 }, () => xmjShuffle(random));
   let match = xmjNewMatch(walls, 0);
-  for (let hand = 0; hand < 4; hand += 1) {
+  for (let hand = 0; hand < XMJ_MATCH_HANDS; hand += 1) {
     // Take any win the moment it is offered, else play out.
     let state = match.hand;
     for (let guard = 0; guard < 200 && !match.between && !match.over; guard += 1) {
@@ -412,11 +424,11 @@ test('match: four hands, each seat deals twice, the winner banks the points', ()
   }
   assert.ok(match.over);
   assert.equal(match.between, false);
-  assert.equal(match.results.length, 4);
-  assert.equal(xmjNextHand(match), match, 'no fifth hand');
+  assert.equal(match.results.length, 6);
+  assert.equal(xmjNextHand(match), match, 'no seventh hand');
   assert.deepEqual(
     match.results.map((r) => r.dealer),
-    [0, 1, 0, 1],
+    [0, 1, 0, 1, 0, 1],
   );
   const winner = xmjMatchWinner(match);
   if (match.scores[0] === match.scores[1]) assert.equal(winner, null);

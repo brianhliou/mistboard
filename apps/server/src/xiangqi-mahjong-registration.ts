@@ -72,7 +72,7 @@ const xiangqiMahjongWs = createTenantWsRuntime(xiangqiMahjongTenant, {
 
 /**
  * The paces the table offers (web registry timePresetIds): every site preset.
- * A match is about 21 discards a player over four hands, and no clock runs
+ * A match is about 32 discards a player over six hands, and no clock runs
  * while a claim is open (xmjClockOwner), so even 1+1 leaves a few seconds a
  * discard. 1+1, 3+2 and 5+5 are rated, as everywhere.
  */
