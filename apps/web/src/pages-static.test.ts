@@ -18,6 +18,7 @@ import {
   renderArticlePageShellForPrerender,
   renderArticlesIndexShellForPrerender,
   renderRulesIndexShellForPrerender,
+  rulesArticleRoute,
   rulesIndexPrerenderHead,
 } from './pages-static.js';
 
@@ -454,5 +455,141 @@ describe('prerendered rules index', () => {
       '象棋与变体规则 | Mistboard',
       '象棋與變體規則 | Mistboard',
     ]);
+  });
+});
+
+// A rules-rail click was a full document load: the baked page painted before
+// its article CSS arrived, then the client rebuilt everything, rail included.
+// Between rules pages of one locale the rail now stays mounted and only the
+// content columns swap.
+describe('rules rail navigation', () => {
+  const bakedHead = (path: string) =>
+    `<!doctype html><html><head><link rel="canonical" href="https://mistboard.com${path}" />` +
+    `<meta name="description" content="baked ${path}" /></head><body></body></html>`;
+
+  async function mountRules(path: string): Promise<HTMLElement> {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: unknown) => {
+        const url = String(input);
+        if (url.startsWith('/') && url.includes('/rules/')) {
+          return { ok: true, text: async () => bakedHead(url), json: async () => ({}) };
+        }
+        return { ok: false, text: async () => '', json: async () => ({}) };
+      }),
+    );
+    window.history.replaceState(null, '', path);
+    const root = document.createElement('div');
+    root.id = 'app';
+    document.body.append(root);
+    const route = rulesArticleRoute(path);
+    await mountArticle(root, route!.slug, route!.lang);
+    return root;
+  }
+
+  const railLinks = (root: HTMLElement) => [
+    ...root.querySelectorAll<HTMLAnchorElement>('.article-variant-sidebar a.article-variant-link'),
+  ];
+
+  const click = (el: Element, init: MouseEventInit = {}) => {
+    const event = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0, ...init });
+    el.dispatchEvent(event);
+    return event;
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+    document.head
+      .querySelectorAll('link[rel="canonical"], meta[name="description"]')
+      .forEach((el) => {
+        el.remove();
+      });
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('parses rules article paths with their locale', () => {
+    expect(rulesArticleRoute('/rules/banqi')).toEqual({ prefix: '', slug: 'banqi', lang: null });
+    expect(rulesArticleRoute('/zh-hant/rules/jieqi')).toEqual({
+      prefix: '/zh-hant',
+      slug: 'jieqi',
+      lang: 'zh-Hant',
+    });
+    expect(rulesArticleRoute('/rules')).toBeNull();
+    expect(rulesArticleRoute('/blog/banqi')).toBeNull();
+  });
+
+  it('keeps the rail and swaps the content in place, then back on popstate', async () => {
+    const root = await mountRules('/rules/banqi');
+    const nav = root.querySelector('.site-nav');
+    const main = root.querySelector('main.article-page');
+    const rail = root.querySelector('.article-variant-sidebar');
+    expect(rail).not.toBeNull();
+    const target = railLinks(root).find((a) => !a.classList.contains('active'))!;
+    const targetPath = new URL(target.href).pathname;
+    const targetSlug = rulesArticleRoute(targetPath)!.slug;
+    const before = root.querySelector('h1')!.textContent;
+
+    const event = click(target);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(window.location.pathname).toBe(targetPath);
+    expect(root.querySelector('.site-nav')).toBe(nav);
+    expect(root.querySelector('main.article-page')).toBe(main);
+    expect(root.querySelector('.article-variant-sidebar')).toBe(rail);
+    expect(root.querySelectorAll('.article-variant-sidebar')).toHaveLength(1);
+    expect((main as HTMLElement).dataset.articleSlug).toBe(targetSlug);
+    expect(root.querySelector('h1')!.textContent).not.toBe(before);
+    const active = railLinks(root).filter((a) => a.classList.contains('active'));
+    expect(active).toEqual([target]);
+    expect(target.getAttribute('aria-current')).toBe('page');
+    const article = articles.find((a) => a.slug === targetSlug)!;
+    expect(document.title).toBe(`${article.seoTitle ?? article.title} | Mistboard`);
+    await vi.waitFor(() =>
+      expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(
+        `https://mistboard.com${targetPath}`,
+      ),
+    );
+
+    window.history.replaceState(null, '', '/rules/banqi');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    expect((main as HTMLElement).dataset.articleSlug).toBe('banqi');
+    expect(root.querySelector('.article-variant-sidebar')).toBe(rail);
+    expect(root.querySelector('h1')!.textContent).toBe(before);
+  });
+
+  it('leaves modified clicks to the browser', async () => {
+    const root = await mountRules('/rules/banqi');
+    const target = railLinks(root).find((a) => !a.classList.contains('active'))!;
+    let prevented: boolean | null = null;
+    const record = (event: Event) => {
+      prevented = event.defaultPrevented;
+      event.preventDefault();
+    };
+    document.addEventListener('click', record);
+    click(target, { metaKey: true });
+    document.removeEventListener('click', record);
+    expect(prevented).toBe(false);
+    expect(window.location.pathname).toBe('/rules/banqi');
+  });
+
+  it('swaps in place between zh rules pages of one locale', async () => {
+    const translated = articles.filter(
+      (a) =>
+        a.kind === 'rules' && a.status === 'published' && isArticleTranslationPublished(a.slug),
+    );
+    expect(translated.length).toBeGreaterThan(1);
+    const root = await mountRules(`/zh-hans/rules/${translated[0]!.slug}`);
+    const rail = root.querySelector('.article-variant-sidebar');
+    const target = railLinks(root).find(
+      (a) => !a.classList.contains('active') && new URL(a.href).pathname.startsWith('/zh-hans/'),
+    )!;
+    const targetPath = new URL(target.href).pathname;
+    expect(click(target).defaultPrevented).toBe(true);
+    expect(window.location.pathname).toBe(targetPath);
+    expect(root.querySelector('.article-variant-sidebar')).toBe(rail);
+    expect(root.querySelector('main.article-page')?.getAttribute('data-article-lang')).toBe(
+      'zh-Hans',
+    );
   });
 });

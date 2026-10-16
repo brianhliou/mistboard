@@ -12,6 +12,10 @@
 // This board builds the judgment badge in its own intersection geometry rather
 // than through svg-board-marker, so it imports the badge palette directly.
 import './board-glyph-marker.css';
+// Its circle markers take a brush class (`xq-marker xq-shape--green`) whose
+// colours live here; without the import a page that draws one but loads no
+// review or replay board (an article diagram) never gets them.
+import './variant-tenant/board-annotations.css';
 import type {
   StandardXiangqiPlayerView,
   XiangqiColor,

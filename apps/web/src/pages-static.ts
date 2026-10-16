@@ -3,6 +3,7 @@
 import './pages-static.css';
 
 import { loadCachedCurrentUser, readCachedUser } from './account-nav.js';
+import { track } from './analytics.js';
 import { buildContact } from './contact.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
@@ -265,41 +266,225 @@ export async function renderArticlePageShellForPrerender(
   return `${buildNav(locale).outerHTML}${buildArticlePage(slug, lang ?? undefined).outerHTML}`;
 }
 
+type ArticleLangOrNull = import('./article-i18n.js').ArticleLang | null;
+
+type ArticleModules = {
+  articles: typeof import('./articles.js');
+  findArticle: typeof import('./articles-data.js').findArticle;
+  translateArticle: typeof import('./article-i18n.js').translateArticle;
+  theme: typeof import('./theme.js');
+};
+
+// The article on screen, kept so a rules-rail click can swap its content in
+// place. `teardown` releases what the content (not the rail) mounted.
+let mountedArticle: {
+  root: HTMLElement;
+  slug: string;
+  modules: ArticleModules;
+  teardown: () => void;
+} | null = null;
+
 export async function mountArticle(
   root: HTMLElement,
   slug: string,
-  lang?: import('./article-i18n.js').ArticleLang | null,
+  lang?: ArticleLangOrNull,
 ): Promise<void> {
   // Load everything before clearing the root: a failed import then leaves the
   // prerendered article on screen instead of an empty page.
-  const {
-    buildArticlePage,
-    mountPendingWidgets,
-    mountArticleEnhancements,
-    mountArticleLightbox,
-    mountArticleThumbnails,
-  } = await import('./articles.js');
-  const { findArticle } = await import('./articles-data.js');
-  const { translateArticle } = await import('./article-i18n.js');
-  const { setBoardFamily, xiangqiAppearanceEnabled } = await import('./theme.js');
+  const modules: ArticleModules = {
+    articles: await import('./articles.js'),
+    findArticle: (await import('./articles-data.js')).findArticle,
+    translateArticle: (await import('./article-i18n.js')).translateArticle,
+    theme: await import('./theme.js'),
+  };
+  mountedArticle?.teardown();
   root.replaceChildren();
   root.classList.add(...ARTICLE_ROUTE_CLASS.split(' '));
-  const base = findArticle(slug);
+  applyArticleChrome(modules, slug, lang);
+  const articlePage = modules.articles.buildArticlePage(slug, lang ?? undefined);
+  root.append(buildNav(), articlePage);
+  // Delegated from the page, so it covers content swapped in later.
+  modules.articles.mountArticleLightbox(articlePage);
+  const rail = articlePage.querySelector<HTMLElement>(':scope > .article-variant-sidebar');
+  // The variant rail carries board-kind thumbnails that mount like index cards.
+  // It outlives a rail swap, so they mount once, outside the content teardown.
+  if (rail) modules.articles.mountArticleThumbnails(rail);
+  mountedArticle = {
+    root,
+    slug,
+    modules,
+    teardown: mountArticleContent(modules, articlePage),
+  };
+  if (rail) installRulesRailNavigation();
+}
+
+function applyArticleChrome(modules: ArticleModules, slug: string, lang?: ArticleLangOrNull): void {
+  const base = modules.findArticle(slug);
   // Show the family's board/piece pickers while the article is open so the
   // diagrams react to the right controls (each family only when its flag is on).
   const family = base?.boardFamily;
-  setBoardFamily(family === 'xiangqi' && xiangqiAppearanceEnabled() ? 'xiangqi' : 'chess');
-  const article = base && lang ? translateArticle(base, lang) : base;
+  modules.theme.setBoardFamily(
+    family === 'xiangqi' && modules.theme.xiangqiAppearanceEnabled() ? 'xiangqi' : 'chess',
+  );
+  const article = base && lang ? modules.translateArticle(base, lang) : base;
   // seoTitle, as the prerender uses: the display title here would replace the
   // search title Google indexes the moment the client mounts.
-  if (article) document.title = `${article.seoTitle ?? article.title} · Mistboard`;
-  const articlePage = buildArticlePage(slug, lang ?? undefined);
-  root.append(buildNav(), articlePage);
-  mountPendingWidgets(articlePage);
-  mountArticleEnhancements(articlePage);
-  mountArticleLightbox(articlePage);
-  // The variant rail carries board-kind thumbnails that mount like index cards.
-  mountArticleThumbnails(articlePage);
+  if (article) document.title = `${article.seoTitle ?? article.title} | Mistboard`;
+}
+
+/** Mounts the widgets, TOC tracking and thumbnails of everything in the page
+ *  except the variant rail; returns their teardown. */
+function mountArticleContent(modules: ArticleModules, page: HTMLElement): () => void {
+  const content = [...page.children].filter(
+    (el): el is HTMLElement =>
+      el instanceof HTMLElement && !el.classList.contains('article-variant-sidebar'),
+  );
+  const controllers = content.flatMap((el) => [
+    ...modules.articles.mountPendingWidgets(el),
+    ...modules.articles.mountArticleThumbnails(el),
+  ]);
+  const stopEnhancements = modules.articles.mountArticleEnhancements(page);
+  return () => {
+    stopEnhancements();
+    for (const controller of controllers) controller.destroy();
+  };
+}
+
+// --- in-place rules navigation ----------------------------------------------
+// A rules page was a full document load per rail click: the prerendered HTML
+// painted, then the client rebuilt the whole page, and the rail jumped back to
+// its top. Rail clicks between rules pages of one locale now swap the centre
+// and TOC columns in place, so the rail (its scroll and its thumbnails) stays.
+// Anything else (a modified click, a cross-locale link, a page with no rail)
+// keeps the browser's own navigation.
+
+const RULES_ARTICLE_PATH = /^(\/zh-han[st])?\/rules\/([^/]+)$/;
+
+/** The rules article a path names, with its locale prefix; null for any other
+ *  path. Mirrors main.ts's articleSlugFromPath/articleLangFromPath for rules. */
+export function rulesArticleRoute(
+  pathname: string,
+): { prefix: string; slug: string; lang: ArticleLangOrNull } | null {
+  const match = pathname.match(RULES_ARTICLE_PATH);
+  if (!match) return null;
+  const prefix = match[1] ?? '';
+  const lang = prefix === '/zh-hans' ? 'zh-Hans' : prefix === '/zh-hant' ? 'zh-Hant' : null;
+  return { prefix, slug: decodeURIComponent(match[2]!), lang };
+}
+
+let rulesNavInstalled = false;
+let rulesNavPushed = false;
+
+function installRulesRailNavigation(): void {
+  if (rulesNavInstalled) return;
+  rulesNavInstalled = true;
+  document.addEventListener('click', (event) => {
+    if (event.defaultPrevented || event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const link = (event.target as Element | null)?.closest?.('a.article-variant-link[href]');
+    if (!(link instanceof HTMLAnchorElement) || !link.closest('.article-variant-sidebar')) return;
+    if ((link.target && link.target !== '_self') || link.hasAttribute('download')) return;
+    const url = new URL(link.href, window.location.href);
+    if (url.origin !== window.location.origin) return;
+    const target = rulesArticleRoute(url.pathname);
+    const here = rulesArticleRoute(window.location.pathname);
+    if (!target || !here || target.prefix !== here.prefix) return;
+    event.preventDefault();
+    if (target.slug === here.slug) {
+      window.scrollTo(0, 0);
+      return;
+    }
+    if (!swapRulesArticle(target.slug, target.lang)) {
+      window.location.assign(url.href);
+      return;
+    }
+    window.history.pushState({ rulesArticle: true }, '', `${url.pathname}${url.search}${url.hash}`);
+    rulesNavPushed = true;
+    window.scrollTo(0, 0);
+    afterRulesSwap();
+  });
+  window.addEventListener('popstate', () => {
+    const here = rulesArticleRoute(window.location.pathname);
+    // A hash step within the page on screen: the browser scrolls it.
+    if (here && here.slug === mountedArticle?.slug) return;
+    if (here && swapRulesArticle(here.slug, here.lang)) {
+      afterRulesSwap();
+    } else if (rulesNavPushed) {
+      window.location.reload();
+    }
+  });
+}
+
+/** Replaces the mounted rules page's content columns with `slug`'s, keeping the
+ *  rail element. False when there is no rail to keep or the target has none
+ *  (not found, not a rules page): the caller then loads the page instead. */
+export function swapRulesArticle(slug: string, lang?: ArticleLangOrNull): boolean {
+  const current = mountedArticle;
+  if (!current) return false;
+  const main = current.root.querySelector<HTMLElement>(':scope > main.article-page');
+  const rail = main?.querySelector<HTMLElement>(':scope > .article-variant-sidebar');
+  if (!main || !rail) return false;
+  const { modules } = current;
+  const next = modules.articles.buildArticlePage(slug, lang ?? undefined);
+  const nextRail = next.querySelector(':scope > .article-variant-sidebar');
+  if (!nextRail) return false;
+  nextRail.remove();
+
+  current.teardown();
+  applyArticleChrome(modules, slug, lang);
+  main.className = next.className;
+  for (const key of Object.keys(main.dataset)) delete main.dataset[key];
+  Object.assign(main.dataset, next.dataset);
+  main.replaceChildren(rail, ...next.children);
+  for (const link of rail.querySelectorAll<HTMLAnchorElement>('a.article-variant-link')) {
+    const active =
+      rulesArticleRoute(new URL(link.href, window.location.href).pathname)?.slug === slug;
+    link.classList.toggle('active', active);
+    if (active) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  }
+  current.slug = slug;
+  current.teardown = mountArticleContent(modules, main);
+  return true;
+}
+
+function afterRulesSwap(): void {
+  const path = window.location.pathname;
+  // A page load counts one pageview (main.ts); a swap is a page too.
+  track('$pageview', { path });
+  const id = decodeURIComponent(window.location.hash.slice(1));
+  if (id) document.getElementById(id)?.scrollIntoView();
+  void syncHeadFromPrerender(path);
+}
+
+// Canonical, hreflang, description, Open Graph and structured data are baked
+// per page by the prerender and nowhere else, so the swap copies them from the
+// target's own baked HTML rather than re-deriving them. A response with no
+// canonical (the dev server's client shell) is not a baked page and is skipped,
+// as is one that lands after the reader has moved on.
+const SYNCED_HEAD_SELECTOR = [
+  'meta[name="description"]',
+  'meta[property^="og:"]',
+  'meta[name^="twitter:"]',
+  'link[rel="canonical"]',
+  'link[rel="alternate"][hreflang]',
+  'script[type="application/ld+json"]',
+].join(', ');
+
+export async function syncHeadFromPrerender(path: string): Promise<void> {
+  try {
+    const response = await fetch(path, { headers: { accept: 'text/html' } });
+    if (!response.ok) return;
+    const baked = new DOMParser().parseFromString(await response.text(), 'text/html');
+    if (window.location.pathname !== path) return;
+    if (!baked.head.querySelector('link[rel="canonical"]')) return;
+    for (const el of document.head.querySelectorAll(SYNCED_HEAD_SELECTOR)) el.remove();
+    for (const el of baked.head.querySelectorAll(SYNCED_HEAD_SELECTOR)) {
+      document.head.append(document.importNode(el, true));
+    }
+  } catch {
+    // The swap already showed the page; stale meta is all a failure costs.
+  }
 }
 
 function buildAbout(locale: Locale = currentLocale()): HTMLElement {
