@@ -1,5 +1,3 @@
-import { BANQI_CONVERSION_GAME, BANQI_WIN_GAME } from '../../banqi-engine-game.js';
-import { BANQI_HUNT_STEPS } from '../banqi-hunt-diagrams.js';
 import { BANQI_ENGINE_THUMBNAIL, playClosing } from '../diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
@@ -13,9 +11,26 @@ import type { Article, ArticleBlock } from '../types.js';
 // is the tldr, and its build sections (the honest yardstick, the value table and
 // adaptive domination, the search plateau, the two pathology fixes, the
 // AlphaZero de-risk) sit between this page's own sections, text unchanged. The
-// general-hunt replay is the same game (bq_e684b31b) on the site's own boards
-// (banqi-hunt-diagrams.ts). The zh strings come from that post's zh-hans and
-// zh-hant translations.
+// zh strings come from that post's zh-hans and zh-hant translations.
+//
+// The three games are chapters of the public study "MistyBanqi against people"
+// (scripts/misty-banqi-study.ts, data in scripts/data/misty-banqi-study.json,
+// which holds the deals, moves and notes); misty-banqi-study.test.ts replays
+// them and checks the embeds below against the data file. The general hunt is
+// the same game (bq_e684b31b) the blog post stepped through.
+const STUDY_ID = 'STUDY_ID_PENDING';
+
+function game(chapter: string, ply: number, title: string, caption?: string): ArticleBlock {
+  return {
+    kind: 'embed',
+    path: `/embed/study/${STUDY_ID}/${chapter}?ply=${ply}`,
+    title,
+    ...(caption ? { caption } : {}),
+    // Width-bound at the article column: a 2:1 board beside the sheet, plus
+    // the seat rows, controls and credit line (as the rules page's embed).
+    aspect: [702, 446],
+  };
+}
 
 function p(text: string): ArticleBlock {
   return { kind: 'paragraph', text };
@@ -75,18 +90,7 @@ export const banqiEngineArticle: Article = {
           text:
             "MistyBanqi will beat most people, and it does it the way a classical engine does: by calculating captures several moves deep. Step through a game where it clears the board. Banqi swings with the flips, so it even fell behind on material early here, then worked its way back until the opponent had no piece left to move. Tiles flip to their dealt piece the first time they're turned over.",
         },
-        {
-          kind: 'banqi-replay',
-          spec: {
-            red: BANQI_WIN_GAME.red,
-            black: BANQI_WIN_GAME.black,
-            event: BANQI_WIN_GAME.event,
-            outcome: BANQI_WIN_GAME.outcome,
-            resultText: BANQI_WIN_GAME.result,
-            deal: BANQI_WIN_GAME.deal,
-            moves: BANQI_WIN_GAME.moves,
-          },
-        },
+        game('WIN_CHAPTER_PENDING', 95, 'MistyBanqi wins · the opponent is left with no piece to move'),
         {
           kind: 'paragraph',
           text:
@@ -197,18 +201,12 @@ export const banqiEngineArticle: Article = {
           text:
             "Here is the same engine in a position it has completely won. It is up ten pieces to two, with nothing left to capture, and the only task is to walk the win home. It draws instead.",
         },
-        {
-          kind: 'banqi-replay',
-          spec: {
-            red: BANQI_CONVERSION_GAME.red,
-            black: BANQI_CONVERSION_GAME.black,
-            event: BANQI_CONVERSION_GAME.event,
-            outcome: BANQI_CONVERSION_GAME.outcome,
-            resultText: BANQI_CONVERSION_GAME.result,
-            deal: BANQI_CONVERSION_GAME.deal,
-            moves: BANQI_CONVERSION_GAME.moves,
-          },
-        },
+        game(
+          'CONVERSION_CHAPTER_PENDING',
+          56,
+          'Draw by repetition · MistyBanqi up 10 pieces to 2',
+          'Played before October 2026, when every threefold repetition was a draw. The chase rule the site plays under now forbids the 64th move, so this board stops at move 63.',
+        ),
         {
           kind: 'paragraph',
           text:
@@ -235,13 +233,15 @@ export const banqiEngineArticle: Article = {
           text:
             "A related blind spot involves the general. Only a soldier, the other general or a cannon's jump can take it, so a boxed-in general is in danger from one piece at a time, and the engine is slow to make room for one cornered. It will sometimes march a piece off to the far side of the board while a lone enemy soldier walks up and traps it. Same gap as the draw above: the evaluation has no real sense of a slow, quiet threat building several moves away.",
         },
-        p('Watch a single enemy soldier hunt Misty’s general down the a-file.'),
-        {
-          kind: 'raw-svg-stepper',
-          gameSpecId: 'banqi',
-          steps: BANQI_HUNT_STEPS,
-          caption: 'MistyBanqi (black) against a player on Mistboard, 18 June 2026, moves 44 to 58.',
-        } as ArticleBlock,
+        p(
+          'Watch a single enemy soldier hunt Misty’s general down the a-file. MistyBanqi has the black pieces. Its general is on b1, and the red soldier that will hunt it is on b4.',
+        ),
+        game(
+          'HUNT_CHAPTER_PENDING',
+          44,
+          'One soldier hunts the general into the corner',
+          'MistyBanqi (black) against a player on Mistboard, 18 June 2026, moves 44 to 58.',
+        ),
         p(
           'Misty (black, here) drifts its general into the a1 corner. One red soldier marches up the file, and the general is walled in: the squares next to it are still face-down, you can’t move onto a face-down tile, and a general can’t capture a soldier. It ends with no legal move at all, frozen in place, and is captured 28 moves later.',
         ),

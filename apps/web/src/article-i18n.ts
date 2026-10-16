@@ -2181,14 +2181,13 @@ const ZH_HANS: Record<string, string> = {
     '修正的做法是把真实对局的着法历史接进搜索，于是引擎能看到重复局面将至，领先时避开它，只在落后时去寻求它（一个小的蔑视值设定）。这值约 +53 Elo。另有一道防护处理最难看的情形：引擎先丢掉一个子被吃，然后还是接受和棋，这比直接接受和棋严格更糟。那一处看起来像蔑视值的 bug，但在蔑视值为零时也能复现；真正的原因是评估把这次亏子的吃子算得比和棋值高出一丝。',
   "There's an upshot for you here. If you're losing on material, you're not necessarily lost: MistyBanqi may still shuffle into a [repetition draw](/blog/banqi-perpetual-chase). It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":
     '这对你是有好处的。如果你子力落后，不代表就输了：MistyBanqi 仍可能来回挪子，走进[重复和棋](/blog/banqi-perpetual-chase)。这种事多到可以量：引擎自我对弈的 200 盘里，[每六盘就有一盘和棋](/blog/banqi-statistics)，其中一半曾经走到赢定的局面。',
-  'Watch a single enemy soldier hunt Misty’s general down the a-file.':
-    '看一个对方的兵沿 a 路把 Misty 的将追下去。',
+  'Watch a single enemy soldier hunt Misty’s general down the a-file. MistyBanqi has the black pieces. Its general is on b1, and the red soldier that will hunt it is on b4.':
+    '看一个对方的兵沿 a 路把 Misty 的将追下去。MistyBanqi 执黑。它的将在 b1，之后追猎它的那个红兵在 b4。',
+  'One soldier hunts the general into the corner': '一个兵把将追进角落',
+  'Played before October 2026, when every threefold repetition was a draw. The chase rule the site plays under now forbids the 64th move, so this board stops at move 63.':
+    '这盘棋下于 2026 年 10 月之前，当时任何三次重复局面都判和。按网站现行的长捉规则，第 64 着是禁着，所以这块棋盘停在第 63 着。',
   'MistyBanqi (black) against a player on Mistboard, 18 June 2026, moves 44 to 58.':
     'MistyBanqi（黑方）对 Mistboard 上的一位棋手，2026 年 6 月 18 日，第 44 至 58 着。',
-  'MistyBanqi has the black pieces. Its general is on b1, and the red soldier that will hunt it is on b4.':
-    'MistyBanqi 执黑。它的将在 b1，之后追猎它的那个红兵在 b4。',
-  'The soldier holds a1. The general on b1 can’t move onto the face-down tiles on c1 and b2, and a general can’t capture a soldier, so it has no legal move. It stays stuck until move 85, when it takes a red advisor flipped up on b2, and the red general captures it on move 86.':
-    '兵占住了 a1。b1 上的将不能走到 c1 和 b2 的暗子上，而将又不能吃兵，所以它无着可走。它一直被困到第 85 着，才吃掉 b2 上刚翻出的红士，随即在第 86 着被红帅吃掉。',
   'Misty (black, here) drifts its general into the a1 corner. One red soldier marches up the file, and the general is walled in: the squares next to it are still face-down, you can’t move onto a face-down tile, and a general can’t capture a soldier. It ends with no legal move at all, frozen in place, and is captured 28 moves later.':
     'Misty（此处为黑方）把将挪进了 a1 角。一个红兵沿这一路推上来，将就被围死了：它旁边的格子仍是暗子，暗子上不能走，而将又不能吃兵。最后它完全无着可走，被冻在原地，28 着之后被吃。',
   'The save is what players call making luft: flip a face-down neighbour to open the general an escape before the hunter arrives. I added a general-safety term that induces exactly that, and it cut how often Misty loses its own general from 35.5% to 26%. Look at what measuring that took: against the reference engine the win-rate barely moved, because it doesn’t hunt generals and Misty usually won these games anyway. The benchmark couldn’t see the fix, so I measured the disaster directly instead of trusting the score. (I also caught myself asking the engine’s own eval whether a save worked. An eval that’s blind to the danger can’t grade a fix for its own blindness, so I checked it by hand.)':
@@ -2212,15 +2211,9 @@ const ZH_HANS: Record<string, string> = {
     'MistyBanqi 已在 Mistboard 上线。来按你选择的强度挑战它，或阅读它的源代码。',
   'misty-banqi on GitHub': 'GitHub 上的 misty-banqi',
   'Play it': '来下一盘',
-  Human: '人类',
-  'Human vs engine · mistboard.com': '人类对引擎 · mistboard.com',
   'Draw by repetition · MistyBanqi up 10 pieces to 2': '重复局面和棋 · MistyBanqi 十子对两子领先',
   'MistyBanqi wins · the opponent is left with no piece to move':
     'MistyBanqi 获胜 · 对手已无子可走',
-  "MistyBanqi (Red) is up ten pieces to two, a trivially won position, but its evaluation gives no reward for converting a win over holding material, so it shuffles instead of pressing and the game is drawn by threefold repetition. If you're losing on material against it, keep the game going: it may shuffle its own way into a draw.":
-    'MistyBanqi（红方）以十子对两子领先，是一个轻松赢定的局面，但它的评估并不会因为「把优势转化为胜利」而比「守住子力」给更高的分，于是它只来回挪子、不去逼抢，最终因三次重复局面被判和棋。如果你对它子力落后，别放弃：它也许会来回挪子，自己走进和棋。',
-  'MistyBanqi (the first player) won this one outright, leaving the opponent with nothing to move. Banqi swings hard with the flips: it fell behind on material early here, then calculated its way back and cleared the board. Grinding down a position like this, capture by capture, is the strong half of its game.':
-    'MistyBanqi（先手）干净利落地赢下了这盘，让对手无子可走。暗棋的局势随翻子剧烈起伏：这盘里它开局子力落后，随后凭计算一步步扳回，把对手清光。像这样一子一子地碾下去，是它棋力强的那一半。',
 
   // -- Article index cards --
   'How Misty Plays': 'Misty 是怎么下棋的',
@@ -8475,14 +8468,13 @@ const ZH_HANT: Record<string, string> = {
     '修正方式是把真實棋局的著法歷史串進搜尋，讓引擎看見重複局面將至，領先時避開它，只在落後時去追求它（一個小小的蔑視值設定）。這值約 +53 Elo。另有一道防護處理最難看的版本：引擎先送掉一子任其被吃，然後還是接受和棋，嚴格來說比直接和棋更糟。那一處看起來像蔑視值的 bug，但在蔑視值為零時也會重現；真正的原因是評估值把那個送子被吃算得比和棋值高了一絲。',
   "There's an upshot for you here. If you're losing on material, you're not necessarily lost: MistyBanqi may still shuffle into a [repetition draw](/blog/banqi-perpetual-chase). It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":
     '這對你是有好處的。如果你子力落後，不代表就輸了：MistyBanqi 仍可能來回挪子，走進[重複和棋](/blog/banqi-perpetual-chase)。這種事多到可以量：引擎自我對弈的 200 盤裡，[每六盤就有一盤和棋](/blog/banqi-statistics)，其中一半曾經走到贏定的局面。',
-  'Watch a single enemy soldier hunt Misty’s general down the a-file.':
-    '看一枚敵方兵沿 a 路把 Misty 的將一路獵下來。',
+  'Watch a single enemy soldier hunt Misty’s general down the a-file. MistyBanqi has the black pieces. Its general is on b1, and the red soldier that will hunt it is on b4.':
+    '看一枚敵方兵沿 a 路把 Misty 的將一路獵下來。MistyBanqi 執黑。它的將在 b1，之後獵殺它的那枚紅兵在 b4。',
+  'One soldier hunts the general into the corner': '一枚兵把將獵進角落',
+  'Played before October 2026, when every threefold repetition was a draw. The chase rule the site plays under now forbids the 64th move, so this board stops at move 63.':
+    '這盤棋下於 2026 年 10 月之前，當時任何三次重複局面都判和。按網站現行的長捉規則，第 64 著是禁著，所以這塊棋盤停在第 63 著。',
   'MistyBanqi (black) against a player on Mistboard, 18 June 2026, moves 44 to 58.':
     'MistyBanqi（黑方）對 Mistboard 上的一位棋手，2026 年 6 月 18 日，第 44 至 58 著。',
-  'MistyBanqi has the black pieces. Its general is on b1, and the red soldier that will hunt it is on b4.':
-    'MistyBanqi 執黑。它的將在 b1，之後獵殺它的那枚紅兵在 b4。',
-  'The soldier holds a1. The general on b1 can’t move onto the face-down tiles on c1 and b2, and a general can’t capture a soldier, so it has no legal move. It stays stuck until move 85, when it takes a red advisor flipped up on b2, and the red general captures it on move 86.':
-    '兵佔住了 a1。b1 上的將不能走到 c1 和 b2 的暗子上，而將又不能吃兵，所以它無著可走。它一直被困到第 85 著，才吃掉 b2 上剛翻出的紅仕，隨即在第 86 著被紅帥吃掉。',
   'Misty (black, here) drifts its general into the a1 corner. One red soldier marches up the file, and the general is walled in: the squares next to it are still face-down, you can’t move onto a face-down tile, and a general can’t capture a soldier. It ends with no legal move at all, frozen in place, and is captured 28 moves later.':
     'Misty（此局為黑方）把將漂到 a1 角。一枚紅兵沿著這一路推進，將被圍死：它旁邊的格子還是暗子，你不能走到暗子上，而將也不能吃兵。結果它完全沒有合法著法，原地凍住，28 著之後被吃。',
   'The save is what players call making luft: flip a face-down neighbour to open the general an escape before the hunter arrives. I added a general-safety term that induces exactly that, and it cut how often Misty loses its own general from 35.5% to 26%. Look at what measuring that took: against the reference engine the win-rate barely moved, because it doesn’t hunt generals and Misty usually won these games anyway. The benchmark couldn’t see the fix, so I measured the disaster directly instead of trusting the score. (I also caught myself asking the engine’s own eval whether a save worked. An eval that’s blind to the danger can’t grade a fix for its own blindness, so I checked it by hand.)':
@@ -8506,15 +8498,9 @@ const ZH_HANT: Record<string, string> = {
     'MistyBanqi 已在 Mistboard 上線。來按你選擇的強度挑戰它，或閱讀它的原始碼。',
   'misty-banqi on GitHub': 'GitHub 上的 misty-banqi',
   'Play it': '來下一盤',
-  Human: '人類',
-  'Human vs engine · mistboard.com': '人類對引擎 · mistboard.com',
   'Draw by repetition · MistyBanqi up 10 pieces to 2': '重複局面和棋 · MistyBanqi 十子對兩子領先',
   'MistyBanqi wins · the opponent is left with no piece to move':
     'MistyBanqi 獲勝 · 對手已無子可走',
-  "MistyBanqi (Red) is up ten pieces to two, a trivially won position, but its evaluation gives no reward for converting a win over holding material, so it shuffles instead of pressing and the game is drawn by threefold repetition. If you're losing on material against it, keep the game going: it may shuffle its own way into a draw.":
-    'MistyBanqi（紅方）以十子對兩子領先，是一個輕鬆贏定的局面，但它的評估並不會因為「把優勢轉化為勝利」而比「守住子力」給更高的分，於是它只來回挪子、不去逼搶，最終因三次重複局面被判和棋。如果你對它子力落後，別放棄：它也許會來回挪子，自己走進和棋。',
-  'MistyBanqi (the first player) won this one outright, leaving the opponent with nothing to move. Banqi swings hard with the flips: it fell behind on material early here, then calculated its way back and cleared the board. Grinding down a position like this, capture by capture, is the strong half of its game.':
-    'MistyBanqi（先手）乾淨俐落地贏下了這盤，讓對手無子可走。暗棋的局勢隨翻子劇烈起伏：這盤裡它開局子力落後，隨後憑計算一步步扳回，把對手清光。像這樣一子一子地輾下去，是它棋力強的那一半。',
 
   // -- Article index cards --
   'How Misty Plays': 'Misty 是怎麼下棋的',
