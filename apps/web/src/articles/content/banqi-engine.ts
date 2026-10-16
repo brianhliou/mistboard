@@ -210,7 +210,7 @@ export const banqiEngineArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            "Nothing in the evaluation rewards converting a won position over just holding material, so a position it's winning by a mile and a position it has actually won score about the same. With no term pushing it to make progress, it shuffles, and banqi's threefold-repetition rule ends the game a draw.",
+            "Nothing in the evaluation rewards converting a won position over just holding material, so a position it's winning by a mile and a position it has actually won score about the same. With no term pushing it to make progress, it never forces the issue, and the game drifts into a threefold repetition, which banqi scores as a draw.",
         },
         p(
           'The engine was also blind to the repetition itself. In production it was handed only the current position with no history, so it could not see the repetition it was walking into.',

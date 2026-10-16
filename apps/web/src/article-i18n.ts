@@ -2127,8 +2127,8 @@ const ZH_HANS: Record<string, string> = {
   'It can draw a game it has won': '它会把赢定的棋下成和棋',
   'Here is the same engine in a position it has completely won. It is up ten pieces to two, with nothing left to capture, and the only task is to walk the win home. It draws instead.':
     '同样这个引擎，下面处在一个它已经完全赢定的局面。它以十子对两子领先，已经没有子可吃，唯一要做的就是把胜势走到底。结果它却下成了和棋。',
-  "Nothing in the evaluation rewards converting a won position over just holding material, so a position it's winning by a mile and a position it has actually won score about the same. With no term pushing it to make progress, it shuffles, and banqi's threefold-repetition rule ends the game a draw.":
-    '评估里没有任何一项会因为「把优势转化为胜利」而比「单纯守住子力」给更高的分，于是一个遥遥领先的局面和一个真正已经赢下的局面，得分几乎一样。既然没有哪一项促使它取得进展，它就只是来回挪子，而暗棋的三次重复局面规则便把这盘判成和棋。',
+  "Nothing in the evaluation rewards converting a won position over just holding material, so a position it's winning by a mile and a position it has actually won score about the same. With no term pushing it to make progress, it never forces the issue, and the game drifts into a threefold repetition, which banqi scores as a draw.":
+    '评估里没有任何一项会因为「把优势转化为胜利」而比「单纯守住子力」给更高的分，于是一个遥遥领先的局面和一个真正已经赢下的局面，得分几乎一样。既然没有哪一项促使它取得进展，它从不主动推进，棋局便滑进三次重复局面，按暗棋规则判和。',
   'It can also lose its own general': '它也可能丢掉自己的将帅',
   'Why these exist, and what’s next': '为什么会有这些问题，以及下一步',
   "These are the limits of a hand-written evaluation: it can only value what someone thought to encode, and conversion and slow king-hunts are exactly the long-horizon calls that are hard to write down. The fix the strongest Dark Chess programs use is a learned evaluation, trained from game outcomes, which lets the engine judge these on its own. That's the eventual next step for MistyBanqi. Until a learned version clears the current engine's bar in testing, the hand-written one is what you play: strong, and honest about where it cracks.":
@@ -8414,8 +8414,8 @@ const ZH_HANT: Record<string, string> = {
   'It can draw a game it has won': '它會把贏定的棋下成和棋',
   'Here is the same engine in a position it has completely won. It is up ten pieces to two, with nothing left to capture, and the only task is to walk the win home. It draws instead.':
     '同樣這個引擎，下面處在一個它已經完全贏定的局面。它以十子對兩子領先，已經沒有子可吃，唯一要做的就是把勝勢走到底。結果它卻下成了和棋。',
-  "Nothing in the evaluation rewards converting a won position over just holding material, so a position it's winning by a mile and a position it has actually won score about the same. With no term pushing it to make progress, it shuffles, and banqi's threefold-repetition rule ends the game a draw.":
-    '評估裡沒有任何一項會因為「把優勢轉化為勝利」而比「單純守住子力」給更高的分，於是一個遙遙領先的局面和一個真正已經贏下的局面，得分幾乎一樣。既然沒有哪一項促使它取得進展，它就只是來回挪子，而暗棋的三次重複局面規則便把這盤判成和棋。',
+  "Nothing in the evaluation rewards converting a won position over just holding material, so a position it's winning by a mile and a position it has actually won score about the same. With no term pushing it to make progress, it never forces the issue, and the game drifts into a threefold repetition, which banqi scores as a draw.":
+    '評估裡沒有任何一項會因為「把優勢轉化為勝利」而比「單純守住子力」給更高的分，於是一個遙遙領先的局面和一個真正已經贏下的局面，得分幾乎一樣。既然沒有哪一項促使它取得進展，它從不主動推進，棋局便滑進三次重複局面，按暗棋規則判和。',
   'It can also lose its own general': '它也可能丟掉自己的將帥',
   'Why these exist, and what’s next': '為什麼會有這些問題，以及下一步',
   "These are the limits of a hand-written evaluation: it can only value what someone thought to encode, and conversion and slow king-hunts are exactly the long-horizon calls that are hard to write down. The fix the strongest Dark Chess programs use is a learned evaluation, trained from game outcomes, which lets the engine judge these on its own. That's the eventual next step for MistyBanqi. Until a learned version clears the current engine's bar in testing, the hand-written one is what you play: strong, and honest about where it cracks.":
