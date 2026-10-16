@@ -30,6 +30,18 @@ vi.mock('./feature-flags.js', async (importOriginal) => {
   return { ...actual, mahjongEnabled: () => true };
 });
 
+const sound = vi.hoisted(() => ({ terminal: [] as unknown[][] }));
+vi.mock('./live-sound.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./live-sound.js')>();
+  return {
+    ...actual,
+    playSound: () => {},
+    playTerminalPlan: (...args: unknown[]) => {
+      sound.terminal.push(args);
+    },
+  };
+});
+
 vi.mock('./variant-tenant/socket-client.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./variant-tenant/socket-client.js')>();
   return {
@@ -140,6 +152,7 @@ function playedCells(): HTMLElement[] {
 }
 
 beforeEach(() => {
+  sound.terminal = [];
   document.body.innerHTML = '';
   vi.stubGlobal(
     'fetch',
@@ -191,5 +204,59 @@ describe('cold join to a LIVE mahjong room is unchanged', () => {
     expect(playedCells()).toHaveLength(1);
     const prev = document.querySelector<HTMLButtonElement>('[data-replay="prev"]');
     expect(prev?.disabled).toBe(true);
+  });
+});
+
+// The game-over sting marks the moment a game ends, so a reload of a finished
+// room (or the dev server's reload on every edit) must stay silent.
+describe('game-over sound', () => {
+  it('stays silent when the room is already finished on load', async () => {
+    const options = await mount();
+    options.applyHello(
+      frame('hello', {
+        seat: 'east',
+        state: mahjongRevealedView(FINAL, 'east'),
+        events: [CREATED, ...moveEvents(PLIES), FINISHED],
+      }),
+    );
+    expect(sound.terminal).toHaveLength(0);
+  });
+
+  it('plays once when a live game finishes', async () => {
+    const options = await mount();
+    options.applyHello(
+      frame('hello', {
+        seat: 'east',
+        state: mahjongViewFor(GAME.states[PLIES]!, 'east'),
+        events: [CREATED, ...moveEvents(PLIES)],
+      }),
+    );
+    const finished = frame('snapshot', {
+      seat: 'east',
+      state: mahjongRevealedView(FINAL, 'east'),
+      events: [CREATED, ...moveEvents(PLIES), FINISHED],
+    });
+    options.applySnapshot(finished);
+    options.applySnapshot(finished);
+    expect(sound.terminal).toEqual([['win', 'resignation']]);
+  });
+
+  it('stays silent for a spectator when a live game finishes', async () => {
+    const options = await mount();
+    options.applyHello(
+      frame('hello', {
+        seat: 'spectator',
+        state: mahjongViewFor(GAME.states[PLIES]!, 'spectator'),
+        events: [CREATED, ...moveEvents(PLIES)],
+      }),
+    );
+    options.applySnapshot(
+      frame('snapshot', {
+        seat: 'spectator',
+        state: mahjongRevealedView(FINAL, 'spectator'),
+        events: [CREATED, ...moveEvents(PLIES), FINISHED],
+      }),
+    );
+    expect(sound.terminal).toHaveLength(0);
   });
 });

@@ -57,6 +57,14 @@ export const X_SHORT_LINKS: Readonly<Record<string, XShortLink>> = {
 
 const UNKNOWN_CAMPAIGN = 'x-unknown';
 
+// The YouTube Shorts address, mistboard.com/yt: shown at the end of every
+// Short and used as the channel's profile link (a Short's description and
+// comments cannot hold a clickable link). A Short has just shown its problem
+// solved, so this opens the next problem's position with no solution loaded.
+// Repoint YT_NEXT_SLUG when a new Short goes up.
+const YT_NEXT_SLUG = '2';
+const YT_CAMPAIGN = 'yt-shorts-2026-10';
+
 function targetPath(target: XShortLinkPosition): string {
   // ply=0 opens the board on the problem, with the solution there to step
   // through; without it the analysis board opens on the line's last move.
@@ -75,6 +83,16 @@ function withUtm(path: string, campaign: string): string {
 
 /** The redirect target for /x/<slug>, or null when the path is not a short link. */
 export function xShortLinkRedirect(pathname: string): string | null {
+  if (/^\/yt\/?$/.test(pathname)) {
+    const fen = X_SHORT_LINKS[YT_NEXT_SLUG]!.target.fen;
+    const utm = new URLSearchParams({
+      fen,
+      utm_source: 'youtube',
+      utm_medium: 'video',
+      utm_campaign: YT_CAMPAIGN,
+    });
+    return `/analysis/xiangqi?${utm.toString()}`;
+  }
   const match = /^\/x\/([^/]+)\/?$/.exec(pathname);
   if (!match) return null;
   let slug: string;
