@@ -914,7 +914,8 @@ ol.xmj-log {
 
 /* The tile ends the sentence in every catalog: pushed right, the tiles form
    one column that reads down the hand. */
-.xmj-log__row > .xmj-tile:last-child {
+/* The row that ends a hand keeps its tile beside the words ("wins on"). */
+.xmj-log__row:not(.xmj-log__row--end) > .xmj-tile:last-child {
   margin-left: auto;
 }
 

@@ -230,22 +230,40 @@ function maybePlayTerminalSound(): void {
   playTerminalPlan(result, status.reason ?? null);
 }
 
-// ── The discard, shown leaving the hand it came from ─────────────────────────
+// ── Tiles shown moving: the draw, the discard and the claim ─────────────────
 
 /** Where the viewer's last tap on one of their own tiles was, briefly. */
 let tappedTile: { rect: DOMRect; at: number } | null = null;
 // A discard tapped once while a self-drawn win is on offer (see armedDiscard).
 let armedDiscard: { tile: XmjTile; drawn: boolean; hand: number } | null = null;
 const TAP_FRESH_MS = 3000;
-/** The ponds as last drawn, to tell a new discard from a redraw. */
-let drawnPonds: { hand: number; east: number; west: number } | null = null;
+/** The counts the table was last drawn with, to tell a move from a redraw. */
+let drawnCounts: {
+  hand: number;
+  wall: number;
+  discards: Record<XmjSeat, number>;
+  melds: Record<XmjSeat, number>;
+} | null = null;
 let lastTableHtml = '';
 
-type DiscardSources = Record<XmjSeat, { drawn: DOMRect | null; middle: DOMRect | null }>;
+const FLIGHT_EASING = 'cubic-bezier(.2,.7,.3,1)';
 
-/** Read, before the redraw, the spots a discard can come from in each rack. */
-function discardSources(board: HTMLElement): DiscardSources {
-  const read = (seat: XmjSeat) => {
+interface SeatSources {
+  readonly drawn: DOMRect | null;
+  readonly middle: DOMRect | null;
+  /** The newest tile in this seat's pond: what the other seat would claim. */
+  readonly pondLast: DOMRect | null;
+}
+
+interface TileSources {
+  readonly seats: Record<XmjSeat, SeatSources>;
+  /** The wall's next tile: draws take from its left end. */
+  readonly wallNext: DOMRect | null;
+}
+
+/** Read, before the redraw, every spot a tile can leave from. */
+function tileSources(board: HTMLElement): TileSources {
+  const read = (seat: XmjSeat): SeatSources => {
     const rack = board.querySelector<HTMLElement>(`[data-xmj-seat="${seat}"] .xmj-concealed`);
     const tiles = rack ? [...rack.children] : [];
     const drawn = rack?.querySelector('.xmj-tile--drawn') ?? null;
@@ -253,51 +271,88 @@ function discardSources(board: HTMLElement): DiscardSources {
     // is where any hand tile seems to leave from, never its true slot.
     const kept = tiles.filter((tile) => tile !== drawn);
     const middle = kept[Math.floor((kept.length - 1) / 2)] ?? null;
+    const pondLast = board.querySelector(`[data-xmj-pond="${seat}"] .xmj-pond > :last-child`);
     return {
       drawn: drawn?.getBoundingClientRect() ?? null,
       middle: middle?.getBoundingClientRect() ?? null,
+      pondLast: pondLast?.getBoundingClientRect() ?? null,
     };
   };
-  return { east: read('east'), west: read('west') };
+  const wallNext = board.querySelector('.xmj-wall .xmj-stack:not([data-h="0"]) > i');
+  return {
+    seats: { east: read('east'), west: read('west') },
+    wallNext: wallNext?.getBoundingClientRect() ?? null,
+  };
 }
 
-function animateDiscards(board: HTMLElement, view: XmjPlayerView, sources: DiscardSources): void {
-  const before = drawnPonds;
-  drawnPonds = {
+/** Play a tile in from where it was, to the place it was just drawn at. */
+function flyIn(target: Element | null, from: DOMRect | null, duration: number, delay = 0): void {
+  if (!(target instanceof HTMLElement) || !from || typeof target.animate !== 'function') return;
+  const to = target.getBoundingClientRect();
+  if (to.width === 0) return;
+  const dx = from.left + from.width / 2 - (to.left + to.width / 2);
+  const dy = from.top + from.height / 2 - (to.top + to.height / 2);
+  const scale = from.width / to.width;
+  target.animate(
+    [
+      { transform: `translate(${dx}px, ${dy}px) scale(${scale})` },
+      { transform: 'translate(0, 0) scale(1)' },
+    ],
+    { duration, delay, easing: FLIGHT_EASING, fill: 'backwards' },
+  );
+}
+
+function animateMoves(board: HTMLElement, view: XmjPlayerView, sources: TileSources): void {
+  const before = drawnCounts;
+  drawnCounts = {
     hand: view.handNumber,
-    east: view.discards.east.length,
-    west: view.discards.west.length,
+    wall: view.wallCount,
+    discards: { east: view.discards.east.length, west: view.discards.west.length },
+    melds: { east: view.melds.east.length, west: view.melds.west.length },
   };
   const tap = tappedTile && Date.now() - tappedTile.at < TAP_FRESH_MS ? tappedTile.rect : null;
   tappedTile = null;
   if (!before || before.hand !== view.handNumber) return;
   if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+  const rack = (seat: XmjSeat) => `[data-xmj-seat="${seat}"]`;
+  // A draw: the tile slides off the wall into the drawer's rack.
+  if (view.wallCount === before.wall - 1) {
+    flyIn(
+      board.querySelector(`${rack(view.turn)} .xmj-concealed .xmj-tile--drawn`),
+      sources.wallNext,
+      400,
+    );
+  }
   for (const seat of XMJ_SEATS) {
-    if (view.discards[seat].length !== before[seat] + 1) continue;
-    const target = board.querySelector<HTMLElement>(
-      `[data-xmj-pond="${seat}"] .xmj-pond > :last-child`,
-    );
-    if (!target || typeof target.animate !== 'function') continue;
-    const fromDraw = view.drawnDiscards[seat].at(-1) === true;
-    const own = seat === core?.state.seat;
-    const from =
-      (own ? tap : null) ??
-      (fromDraw ? sources[seat].drawn : null) ??
-      sources[seat].middle ??
-      sources[seat].drawn;
-    if (!from) continue;
-    const to = target.getBoundingClientRect();
-    if (to.width === 0) continue;
-    const dx = from.left + from.width / 2 - (to.left + to.width / 2);
-    const dy = from.top + from.height / 2 - (to.top + to.height / 2);
-    const scale = from.width / to.width;
-    target.animate(
-      [
-        { transform: `translate(${dx}px, ${dy}px) scale(${scale})` },
-        { transform: 'translate(0, 0) scale(1)' },
-      ],
-      { duration: 450, easing: 'cubic-bezier(.2,.7,.3,1)' },
-    );
+    const other = seat === 'east' ? 'west' : 'east';
+    // A claim: the discard leaves the other pond for the new face-up set, and
+    // the two tiles that complete it come out of the claimer's hand.
+    if (
+      view.melds[seat].length === before.melds[seat] + 1 &&
+      view.discards[other].length === before.discards[other] - 1
+    ) {
+      const meld = board.querySelector(`${rack(seat)} .xmj-meld:last-child`);
+      for (const tile of meld ? [...meld.children] : []) {
+        const claimed = tile.classList.contains('xmj-tile--claimed');
+        flyIn(
+          tile,
+          claimed ? sources.seats[other].pondLast : sources.seats[seat].middle,
+          450,
+          claimed ? 0 : 120,
+        );
+      }
+    }
+    // A discard: the tile leaves the hand for the pond.
+    if (view.discards[seat].length === before.discards[seat] + 1) {
+      const fromDraw = view.drawnDiscards[seat].at(-1) === true;
+      const own = seat === core?.state.seat;
+      const from =
+        (own ? tap : null) ??
+        (fromDraw ? sources.seats[seat].drawn : null) ??
+        sources.seats[seat].middle ??
+        sources.seats[seat].drawn;
+      flyIn(board.querySelector(`[data-xmj-pond="${seat}"] .xmj-pond > :last-child`), from, 450);
+    }
   }
 }
 
@@ -309,7 +364,7 @@ function renderTable(refs: LiveRefs, view: XmjPlayerView | null): void {
   if (!view) {
     refs.board.innerHTML = '';
     lastTableHtml = '';
-    drawnPonds = null;
+    drawnCounts = null;
     startTicker(refs.board);
     return;
   }
@@ -331,13 +386,13 @@ function renderTable(refs: LiveRefs, view: XmjPlayerView | null): void {
     startTicker(refs.board);
     return;
   }
-  // A scrubbed position is not a discard being made: no flight.
+  // A scrubbed position is not a move being made: no flight.
   const live = view === core?.state.view;
-  const sources = live ? discardSources(refs.board) : null;
+  const sources = live ? tileSources(refs.board) : null;
   refs.board.innerHTML = html;
   lastTableHtml = html;
-  if (sources) animateDiscards(refs.board, view, sources);
-  else drawnPonds = null;
+  if (sources) animateMoves(refs.board, view, sources);
+  else drawnCounts = null;
   startTicker(refs.board);
 }
 
@@ -412,7 +467,7 @@ const client = createTenantLiveClient<XmjSeat, XmjPlayerView, XmjMove>({
   resetState: () => {
     lastStatusType = null;
     lastTableHtml = '';
-    drawnPonds = null;
+    drawnCounts = null;
     openHands.clear();
     roomMode = 'pve';
     forfeitDeadline = null;
