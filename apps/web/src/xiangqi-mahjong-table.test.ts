@@ -551,15 +551,17 @@ describe('xiangqi mahjong table', () => {
     const rows = [...host.querySelectorAll('.xmj-log__row')];
     const theirs = rows.filter((row) => row.classList.contains('xmj-log__row--theirs'));
     expect(theirs.length).toBeGreaterThan(0);
-    for (const row of theirs) expect(row.textContent).toMatch(/^Bot /);
-    for (const row of rows.filter((row) => /^You /.test(row.textContent ?? ''))) {
+    const words = (row: Element) => row.querySelector('.xmj-log__text')?.textContent ?? '';
+    for (const row of theirs) expect(words(row)).toMatch(/^Bot /);
+    for (const row of rows.filter((row) => /^You /.test(words(row)))) {
       expect(row.classList.contains('xmj-log__row--theirs')).toBe(false);
     }
     expect(render({ viewer: null }).querySelector('.xmj-log__row--theirs')).toBeNull();
-    // Words then one tile cell on every row, the win row too: the tiles
-    // stood right on discards and left on the win, a ragged column.
+    // A number cell, words, then one tile cell on every row, the win row too:
+    // the tiles stood right on discards and left on the win, a ragged column.
     for (const row of rows) {
       expect([...row.children].map((child) => child.className)).toEqual([
+        'xmj-log__num',
         'xmj-log__text',
         'xmj-log__tile',
       ]);
@@ -586,6 +588,29 @@ describe('xiangqi mahjong table', () => {
     ).toBe(String(before));
     // A ply this client holds no snapshot for is not a jump.
     expect(render({ hasPly: () => false }).querySelectorAll('[data-xmj-ply]').length).toBe(0);
+    // Moves are numbered within each hand, chess style: the dealer's turn
+    // carries the number, the reply and a claim's follow-up discard do not.
+    const all = render({ expanded: new Set(hands.map((hand) => hand.hand)) });
+    const lists = [...all.querySelectorAll('.xmj-log__rows')];
+    expect(lists.length).toBe(hands.length);
+    let replies = 0;
+    lists.forEach((list, index) => {
+      const seated = (hands[index]?.rows ?? []).filter((row) => 'seat' in row);
+      const items = [...list.querySelectorAll('.xmj-log__row')];
+      const numbers = items.map((row) => row.querySelector('.xmj-log__num')?.textContent ?? '');
+      const shown = numbers.filter((text) => text !== '');
+      expect(shown).toEqual(shown.map((_, n) => `${n + 1}.`));
+      const dealer = seated[0] && 'seat' in seated[0] ? seated[0].seat : null;
+      (hands[index]?.rows ?? []).forEach((row, at) => {
+        const previous = hands[index]?.rows[at - 1];
+        const sameTurn =
+          previous && 'seat' in previous && 'seat' in row && previous.seat === row.seat;
+        const numbered = numbers[at] !== '';
+        expect(numbered).toBe('seat' in row && row.seat === dealer && !sameTurn);
+        if ('seat' in row && row.seat !== dealer && !sameTurn) replies += 1;
+      });
+    });
+    expect(replies).toBeGreaterThan(0);
   });
 });
 

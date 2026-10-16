@@ -844,16 +844,36 @@ function logRowHtml(row: XmjLogRow, options: XmjLogOptions): string {
   return `${words}<span class="xmj-log__tile">${tile}</span>`;
 }
 
+/**
+ * Move numbers within a hand, chess style: a turn is a seat's rows in a row (a
+ * claim and the discard after it are one turn), turns alternate from the
+ * dealer, and each dealer turn plus the reply is one numbered move. The number
+ * sits on the first row of the dealer's turn; every other row keeps the
+ * column empty so the tiles stay aligned.
+ */
+function logMoveNumbers(rows: readonly XmjLogRow[]): (number | null)[] {
+  let turn = -1;
+  let last: XmjSeat | null = null;
+  return rows.map((row) => {
+    if (!('seat' in row) || row.seat === last) return null;
+    last = row.seat;
+    turn += 1;
+    return turn % 2 === 0 ? turn / 2 + 1 : null;
+  });
+}
+
 function logRowsHtml(hand: XmjLogHand, options: XmjLogOptions, activeRow: number | null): string {
+  const numbers = logMoveNumbers(hand.rows);
   return hand.rows
-    .map((row) => {
+    .map((row, index) => {
       const active = activeRow === row.ply;
       const ends = row.kind === 'win' || row.kind === 'self-draw' || row.kind === 'exhausted';
       // A seated reader's own turns read at full strength, the other player's
       // a step back, so the two hands alternate at a glance without colours.
       const theirs = options.viewer !== null && 'seat' in row && row.seat !== options.viewer;
       const cls = `xmj-log__row${active ? ' active' : ''}${ends ? ' xmj-log__row--end' : ''}${theirs ? ' xmj-log__row--theirs' : ''}`;
-      const text = logRowHtml(row, options);
+      const number = numbers[index];
+      const text = `<span class="xmj-log__num">${number === null || number === undefined ? '' : `${number}.`}</span>${logRowHtml(row, options)}`;
       // A row is a jump only when this client holds that position.
       return options.hasPly(row.ply)
         ? `<li><button type="button" class="${cls} move-jump" data-xmj-ply="${row.ply}">${text}</button></li>`

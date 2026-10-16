@@ -1050,6 +1050,15 @@ ol.xmj-log {
   min-width: 0;
 }
 
+/* The move number, on the dealer's turn only; the column stays on every row. */
+.xmj-log__num {
+  flex: none;
+  min-width: 1.8em;
+  color: var(--site-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
 .xmj-log__tile {
   flex: none;
   display: inline-flex;
