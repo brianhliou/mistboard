@@ -4,7 +4,8 @@
 // the reader's piece set (no disc: the tile is the frame; a third-party set
 // lays its disc's surface over the face instead of ivory), the
 // English piece name under each tile, and a bracket naming each group (set,
-// pair).
+// pair). A set laid down after a claim has its claimed tile lying sideways, as
+// on a mahjong table.
 
 import {
   tileColor,
@@ -21,10 +22,15 @@ import {
   xiangqiTileFaceHref,
 } from './xiangqi-piece-sets.js';
 
-const TILE_W = 44;
-const TILE_H = 58;
-const TILE_GAP = 6;
-const GROUP_GAP = 22;
+export const XMJ_TILE_W = 44;
+export const XMJ_TILE_H = 58;
+export const XMJ_TILE_GAP = 6;
+const TILE_W = XMJ_TILE_W;
+const TILE_H = XMJ_TILE_H;
+const TILE_GAP = XMJ_TILE_GAP;
+/** Between groups in a row: a set laid down sits this far from the hand. */
+export const XMJ_GROUP_GAP = 22;
+const GROUP_GAP = XMJ_GROUP_GAP;
 const PAD = 4;
 
 // The live table's tile: an ivory face, a jade backing showing as a band
@@ -34,8 +40,9 @@ const FACE_LOW = '#efe7d2';
 const EDGE = '#ded3b8';
 const JADE = '#2f8a70';
 const JADE_LOW = '#22684f';
-const DEPTH = 5;
-const CLAIM = '#2f6fb3';
+export const XMJ_TILE_DEPTH = 5;
+const DEPTH = XMJ_TILE_DEPTH;
+const JADE_HIGH = '#45a587';
 // The piece's box is a little wider than the tile; the figure or character
 // inside it sits well within the tile.
 const PIECE_SIZE = 52;
@@ -54,28 +61,45 @@ export interface XmjTileGroup {
   readonly tiles: readonly XmjTile[];
   /** Under the bracket: "set", "pair", "sequence", ... Omitted: no bracket. */
   readonly label?: string;
-  /** A set laid face up after a claim. The claimed tile gets a blue edge. */
+  /** A set laid face up after a claim. The claimed tile lies sideways. */
   readonly claimed?: XmjTile;
 }
 
-function escapeText(text: string): string {
+export function escapeText(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function tileSvg(
+/** A tile's drawn box: upright, or lying sideways (a claimed tile in a set). */
+export function xmjTileBox(sideways = false): { w: number; h: number } {
+  return sideways ? { w: TILE_H, h: TILE_W } : { w: TILE_W, h: TILE_H };
+}
+
+/**
+ * One tile with its box's top-left at (x, y). `name` writes the English piece
+ * name under it (the default); a figure that labels each kind once turns it
+ * off. `sideways` lays the tile on its side, as a claimed tile lies in a set
+ * on a mahjong table: the box is as wide as a tile is tall, the piece turned a
+ * quarter to the left, the depth still along the front edge. A row lines it
+ * up on the upright tiles' bottom edge (groupsLine).
+ */
+export function xmjTileSvg(
   tile: XmjTile,
   x: number,
   y: number,
-  claimed: boolean,
   pieceSet: XiangqiPieceSet,
+  opts: { sideways?: boolean; name?: boolean } = {},
 ): string {
+  const sideways = opts.sideways ?? false;
+  const { w: W, h: H } = xmjTileBox(sideways);
   const color = tileColor(tile) === 'r' ? 'red' : 'black';
-  const piece = renderXiangqiPieceMark({ color, role: XMJ_ROLES[tilePiece(tile)] }, pieceSet, {
-    x: x + (TILE_W - PIECE_SIZE) / 2,
-    y: y + (TILE_H - PIECE_SIZE) / 2,
+  const cx = x + W / 2;
+  const cy = y + H / 2;
+  const mark = renderXiangqiPieceMark({ color, role: XMJ_ROLES[tilePiece(tile)] }, pieceSet, {
+    x: cx - PIECE_SIZE / 2,
+    y: cy - PIECE_SIZE / 2,
     size: PIECE_SIZE,
   });
-  const edge = claimed ? CLAIM : EDGE;
+  const piece = sideways ? `<g transform="rotate(-90 ${cx} ${cy})">${mark}</g>` : mark;
   const name = XMJ_PIECE_NAMES[tilePiece(tile)];
   // A third-party set's disc surface covers the whole face, as on the table.
   // Every tile at one x has the same outline in every figure, so the clip's
@@ -86,58 +110,205 @@ function tileSvg(
   const faceHref = xiangqiTileFaceHref(pieceSet, color);
   // An asset set's tile is one block of its material; Mistboard's sit on jade.
   const [, jade, jadeLow] = xiangqiTileBacking(pieceSet) ?? [JADE, JADE, JADE_LOW];
-  const clip = `xmj-face-${x}-${y}`;
+  const clip = `xmj-face-${x}-${y}${sideways ? '-s' : ''}`;
+  const side = Math.max(W, H);
   const face = faceHref
-    ? `<clipPath id="${clip}"><rect x="${x}" y="${y}" width="${TILE_W}" height="${TILE_H}" rx="6"/></clipPath><image href="${faceHref}" x="${x - (TILE_H - TILE_W) / 2}" y="${y}" width="${TILE_H}" height="${TILE_H}" clip-path="url(#${clip})"/><rect x="${x}" y="${y}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="none" stroke="${edge}" stroke-width="${claimed ? 2.5 : 1}"/>`
+    ? `<clipPath id="${clip}"><rect x="${x}" y="${y}" width="${W}" height="${H}" rx="6"/></clipPath><image href="${faceHref}" x="${cx - side / 2}" y="${cy - side / 2}" width="${side}" height="${side}" clip-path="url(#${clip})"/><rect x="${x}" y="${y}" width="${W}" height="${H}" rx="6" fill="none" stroke="${EDGE}" stroke-width="1"/>`
     : [
-        `<path d="M${x + 1} ${y + TILE_H * 0.6}H${x + TILE_W - 1}V${y + TILE_H - 6}a5 5 0 0 1-5 5H${x + 6}a5 5 0 0 1-5-5Z" fill="${FACE_LOW}" fill-opacity="0.7"/>`,
-        `<path d="M${x + 6} ${y + 1.5}H${x + TILE_W - 6}" stroke="#fff" stroke-opacity="0.9"/>`,
+        `<path d="M${x + 1} ${y + H * 0.6}H${x + W - 1}V${y + H - 6}a5 5 0 0 1-5 5H${x + 6}a5 5 0 0 1-5-5Z" fill="${FACE_LOW}" fill-opacity="0.7"/>`,
+        `<path d="M${x + 6} ${y + 1.5}H${x + W - 6}" stroke="#fff" stroke-opacity="0.9"/>`,
       ].join('');
   return [
-    `<rect x="${x}" y="${y + DEPTH}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="${jadeLow}"/>`,
-    `<rect x="${x}" y="${y + DEPTH - 1}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="${jade}"/>`,
-    `<rect x="${x}" y="${y + 1}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="${EDGE}"/>`,
-    `<rect x="${x}" y="${y}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="${FACE}" stroke="${edge}" stroke-width="${claimed ? 2.5 : 1}"/>`,
+    `<rect x="${x}" y="${y + DEPTH}" width="${W}" height="${H}" rx="6" fill="${jadeLow}"/>`,
+    `<rect x="${x}" y="${y + DEPTH - 1}" width="${W}" height="${H}" rx="6" fill="${jade}"/>`,
+    `<rect x="${x}" y="${y + 1}" width="${W}" height="${H}" rx="6" fill="${EDGE}"/>`,
+    `<rect x="${x}" y="${y}" width="${W}" height="${H}" rx="6" fill="${FACE}" stroke="${EDGE}" stroke-width="1"/>`,
     face,
     piece,
-    `<text x="${x + TILE_W / 2}" y="${y + TILE_H + DEPTH + 15}" text-anchor="middle" font-size="10.5" fill="currentColor">${escapeText(name)}</text>`,
+    opts.name === false
+      ? ''
+      : `<text x="${cx}" y="${y + H + DEPTH + 15}" text-anchor="middle" font-size="10.5" fill="currentColor" data-i18n-key="${color} ${name}">${escapeText(name)}</text>`,
   ].join('');
 }
 
 /**
- * A row of tile groups. `title` is the accessible name. The figure keeps its
- * drawn size on wide screens and shrinks to fit a phone.
+ * A tile turned over, the live table's back: jade on top, the ivory face
+ * showing along the bottom edge as depth. `w`/`h` default to a full tile; the
+ * wall draws them small.
  */
-export function xmjTileRowSvg(
+export function xmjTileBackSvg(x: number, y: number, w = TILE_W, h = TILE_H): string {
+  const r = Math.max(2, Math.round(w * 0.14));
+  const depth = Math.max(2, Math.round(h * 0.085));
+  const id = `xmj-back-${w}-${h}`;
+  return [
+    `<linearGradient id="${id}" x1="0" y1="0" x2="0.45" y2="1"><stop offset="0" stop-color="${JADE_HIGH}"/><stop offset="0.45" stop-color="${JADE}"/><stop offset="1" stop-color="${JADE_LOW}"/></linearGradient>`,
+    `<rect x="${x}" y="${y + depth}" width="${w}" height="${h}" rx="${r}" fill="${EDGE}"/>`,
+    `<rect x="${x}" y="${y + depth - 1}" width="${w}" height="${h}" rx="${r}" fill="${FACE_LOW}"/>`,
+    `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="url(#${id})" stroke="${JADE_LOW}" stroke-width="1"/>`,
+    w >= 20
+      ? `<path d="M${x + r} ${y + 1.5}H${x + w - r}" stroke="#fff" stroke-opacity="0.3"/>`
+      : '',
+  ].join('');
+}
+
+/** Which tile of a group lies sideways: the first copy of its claimed tile. */
+function sidewaysIndex(group: XmjTileGroup): number {
+  return group.claimed === undefined ? -1 : group.tiles.indexOf(group.claimed);
+}
+
+/** A group's drawn width: its tiles, one of them perhaps lying sideways. */
+function groupWidth(group: XmjTileGroup): number {
+  return group.tiles.reduce(
+    (w, _, i) => w + xmjTileBox(i === sidewaysIndex(group)).w + (i > 0 ? TILE_GAP : 0),
+    0,
+  );
+}
+
+/** One line of groups at `y`, starting at `x0`: its parts and right edge. */
+function groupsLine(
   groups: readonly XmjTileGroup[],
-  title: string,
-  pieceSet: XiangqiPieceSet = 'international',
-): string {
-  const anyLabel = groups.some((g) => g.label);
-  const height = PAD + TILE_H + DEPTH + 21 + (anyLabel ? 26 : 0);
-  let x = PAD;
+  x0: number,
+  y: number,
+  pieceSet: XiangqiPieceSet,
+): { parts: string[]; end: number } {
+  let x = x0;
   const parts: string[] = [];
   groups.forEach((group, gi) => {
     if (gi > 0) x += GROUP_GAP - TILE_GAP;
     const start = x;
-    let claimedDrawn = false;
-    for (const tile of group.tiles) {
-      const isClaimed = !claimedDrawn && group.claimed === tile;
-      if (isClaimed) claimedDrawn = true;
-      parts.push(tileSvg(tile, x, PAD, isClaimed, pieceSet));
-      x += TILE_W + TILE_GAP;
-    }
+    const turned = sidewaysIndex(group);
+    group.tiles.forEach((tile, i) => {
+      const sideways = i === turned;
+      // A tile lying sideways sits on the row's bottom edge, as on a table.
+      const box = xmjTileBox(sideways);
+      parts.push(xmjTileSvg(tile, x, y + TILE_H - box.h, pieceSet, { sideways }));
+      x += box.w + TILE_GAP;
+    });
     const end = x - TILE_GAP;
     if (group.label) {
-      const by = PAD + TILE_H + DEPTH + 23;
+      const by = y + TILE_H + DEPTH + 23;
       parts.push(
         `<path d="M${start + 2} ${by - 4}V${by}H${end - 2}V${by - 4}" fill="none" stroke="currentColor" stroke-opacity="0.45" stroke-width="1"/>`,
         `<text x="${(start + end) / 2}" y="${by + 14}" text-anchor="middle" font-size="11" font-style="italic" fill="currentColor" fill-opacity="0.75">${escapeText(group.label)}</text>`,
       );
     }
   });
-  const width = x - TILE_GAP + PAD;
-  return `<svg xmlns="http://www.w3.org/2000/svg" class="xmj-article-tiles" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="${escapeText(title)}" style="max-width:min(100%,${Math.round(width * 1.15)}px);margin:0 auto"><title>${escapeText(title)}</title>${parts.join('')}</svg>`;
+  return { parts, end: x - TILE_GAP };
+}
+
+function lineHeight(groups: readonly XmjTileGroup[]): number {
+  return TILE_H + DEPTH + 21 + (groups.some((g) => g.label) ? 26 : 0);
+}
+
+export function xmjTileFigureSvg(
+  width: number,
+  height: number,
+  title: string,
+  body: string,
+): string {
+  return wrapSvg(width, height, title, body);
+}
+
+function wrapSvg(width: number, height: number, title: string, body: string): string {
+  return `<svg xmlns="http://www.w3.org/2000/svg" class="xmj-article-tiles" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="${escapeText(title)}" style="max-width:min(100%,${Math.round(width * 1.15)}px);margin:0 auto"><title>${escapeText(title)}</title>${body}</svg>`;
+}
+
+/** A verdict mark at the left of a row: a check for a win, a cross for not. */
+export type XmjRowBadge = 'win' | 'not-win';
+
+const BADGE_R = 11;
+const BADGE_W = BADGE_R * 2 + 12;
+
+// The colours are site tokens (articles.css), so the badge follows the light
+// and dark theme; the fallbacks are for a copy outside the article.
+function badgeSvg(badge: XmjRowBadge, cx: number, cy: number): string {
+  const win = badge === 'win';
+  const label = win ? 'Winning hand' : 'Not a winning hand';
+  const fill = win ? 'var(--article-mark-win,#2c7a4b)' : 'var(--article-mark-lose,#b3362b)';
+  const mark = win
+    ? `M${cx - 5} ${cy + 0.5}l3.6 3.6 6.6-7.4`
+    : `M${cx - 4.2} ${cy - 4.2}l8.4 8.4M${cx + 4.2} ${cy - 4.2}l-8.4 8.4`;
+  return `<g class="xmj-badge xmj-badge--${badge}" role="img" aria-label="${label}"><title>${label}</title><circle cx="${cx}" cy="${cy}" r="${BADGE_R}" style="fill:${fill}"/><path d="${mark}" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--article-mark-ink,#fff)"/></g>`;
+}
+
+/**
+ * A row of tile groups. `title` is the accessible name. The figure keeps its
+ * drawn size on wide screens and shrinks to fit a phone. `badge` puts a win
+ * or not-win mark at the left of the row.
+ */
+export function xmjTileRowSvg(
+  groups: readonly XmjTileGroup[],
+  title: string,
+  pieceSet: XiangqiPieceSet = 'international',
+  badge?: XmjRowBadge,
+): string {
+  const x0 = PAD + (badge ? BADGE_W : 0);
+  const { parts, end } = groupsLine(groups, x0, PAD, pieceSet);
+  const mark = badge ? badgeSvg(badge, PAD + BADGE_R, PAD + TILE_H / 2) : '';
+  return wrapSvg(end + PAD, PAD + lineHeight(groups), title, mark + parts.join(''));
+}
+
+/**
+ * Rows of tiles, left-aligned, each row split by piece kind: a tile gap inside
+ * a kind, a wider gap between kinds, and the kind's name once, centred under
+ * it ("Advisor" under the two Advisors), instead of a name under every tile.
+ */
+export function xmjTileKindGridSvg(
+  lines: readonly (readonly XmjTile[])[],
+  title: string,
+  pieceSet: XiangqiPieceSet = 'international',
+  /** Rows after which a wider gap opens (red's block above black's). */
+  breakAfter: readonly number[] = [],
+): string {
+  const KIND_GAP = 16;
+  const ROW_H = TILE_H + DEPTH + 26;
+  const BREAK = 18;
+  const parts: string[] = [];
+  let width = 0;
+  let y = PAD;
+  lines.forEach((line, row) => {
+    if (row > 0) y += ROW_H + (breakAfter.includes(row - 1) ? BREAK : 0);
+    let x = PAD;
+    let i = 0;
+    while (i < line.length) {
+      const kind = line[i] as XmjTile;
+      const start = x;
+      while (line[i] === kind) {
+        parts.push(xmjTileSvg(kind, x, y, pieceSet, { name: false }));
+        x += TILE_W + TILE_GAP;
+        i += 1;
+      }
+      const end = x - TILE_GAP;
+      parts.push(
+        `<text x="${(start + end) / 2}" y="${y + TILE_H + DEPTH + 16}" text-anchor="middle" font-size="11" fill="currentColor" data-i18n-key="${tileColor(kind) === 'r' ? 'red' : 'black'} ${XMJ_PIECE_NAMES[tilePiece(kind)]}" class="xmj-kind-label">${escapeText(XMJ_PIECE_NAMES[tilePiece(kind)])}</text>`,
+      );
+      width = Math.max(width, end);
+      x = end + KIND_GAP;
+    }
+  });
+  return wrapSvg(width + PAD, y + ROW_H - 4, title, parts.join(''));
+}
+
+/**
+ * Several rows of tile groups stacked in one figure, each row centred on the
+ * widest. For a set too wide for one row at phone width: the figure is as wide
+ * as its longest row, so it shrinks far less on a phone than one long row.
+ */
+export function xmjTileLinesSvg(
+  lines: readonly (readonly XmjTileGroup[])[],
+  title: string,
+  pieceSet: XiangqiPieceSet = 'international',
+): string {
+  const widthOf = (groups: readonly XmjTileGroup[]) =>
+    groups.reduce((w, g) => w + groupWidth(g), 0) + (groups.length - 1) * GROUP_GAP;
+  const inner = Math.max(...lines.map(widthOf));
+  const parts: string[] = [];
+  let y = PAD;
+  for (const groups of lines) {
+    parts.push(...groupsLine(groups, PAD + (inner - widthOf(groups)) / 2, y, pieceSet).parts);
+    y += lineHeight(groups);
+  }
+  return wrapSvg(inner + 2 * PAD, y, title, parts.join(''));
 }
 
 /** Every tile in a list of groups, in the order drawn. */

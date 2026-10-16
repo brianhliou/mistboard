@@ -31,6 +31,7 @@ import {
 } from './article-i18n.js';
 import { createStepCard } from './article-step-card.js';
 import {
+  type AnimatedSvgBlock,
   type Article,
   type ArticleBlock,
   type ArticleSection,
@@ -1489,6 +1490,7 @@ export function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElemen
   if (block.kind === 'cta') return renderCtaBlock(block);
   if (block.kind === 'image-figure') return renderImageFigureBlock(block);
   if (block.kind === 'raw-svg') return renderRawSvgBlock(block, lang);
+  if (block.kind === 'animated-svg') return renderAnimatedSvgBlock(block, lang);
   if (block.kind === 'svg-row') return renderSvgRowBlock(block, lang);
   if (block.kind === 'raw-svg-stepper') return renderRawSvgStepperBlock(block, lang);
   if (block.kind === 'step-game-set') return renderStepGameSetBlock(block, lang);
@@ -1878,8 +1880,24 @@ function localizeInlineSvgText(root: ParentNode, lang?: ArticleLang): void {
     .forEach((node) => {
       const text = node.textContent;
       if (!text || node.getAttribute('translate') === 'no') return;
-      node.textContent = translateArticleText(lang, text.trim());
+      // data-i18n-key names the dictionary key when the visible English word
+      // is shared by labels that translate differently (a red and a black
+      // General are both "General", but 帥 and 將). Untranslated, it keeps the
+      // English text rather than showing the key.
+      const keyed = node.getAttribute('data-i18n-key');
+      const out = translateArticleText(lang, keyed ?? text.trim());
+      if (keyed && out === keyed) return;
+      node.textContent = out;
     });
+  // A figure's aria-label usually repeats its <title>; a screen reader reads
+  // the label, so it follows the title into the page language when the
+  // dictionary has it.
+  root.querySelectorAll<SVGSVGElement>('svg[aria-label]').forEach((svg) => {
+    const label = svg.getAttribute('aria-label')?.trim();
+    if (!label || svg.getAttribute('translate') === 'no') return;
+    const out = translateArticleText(lang, label);
+    if (out !== label) svg.setAttribute('aria-label', out);
+  });
 }
 
 function renderImageFigureBlock(block: ImageFigureBlock): HTMLElement {
@@ -1951,6 +1969,72 @@ function renderRawSvgBlock(block: RawSvgBlock, lang?: ArticleLang): HTMLElement 
     figure.append(cap);
   }
   return figure;
+}
+
+// An SVG that plays its keyframes once (AnimatedSvgBlock). The <svg> sits in a
+// stage div that is the repaint holder, so a piece-set repaint keeps the
+// Replay button and the caption. data-anim-state is 'idle' (CSS holds the
+// keyframes paused on their first frame) until the figure is half in view,
+// then 'playing'; Replay swaps in a fresh copy of the <svg>, which restarts
+// every keyframe. Reduced motion gets the static frames and no button.
+function renderAnimatedSvgBlock(block: AnimatedSvgBlock, lang?: ArticleLang): HTMLElement {
+  const figure = document.createElement('figure');
+  figure.className = 'article-figure article-figure-static article-anim';
+  const reduced = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  const source = reduced ? block.reducedSvg : block.svg;
+  const stage = document.createElement('div');
+  stage.className = 'article-anim-stage';
+  figure.append(stage);
+  if (typeof source === 'function') {
+    const thunk = () => localizeSvgMarkup(source(), lang);
+    stage.innerHTML = thunk();
+    trackXqDiagram(stage, thunk);
+    paintXqDiagram(stage, readStoredXiangqiPieceSet());
+  } else {
+    stage.innerHTML = localizeSvgMarkup(source, lang);
+  }
+  if (reduced) {
+    figure.dataset.animState = 'static';
+  } else {
+    figure.dataset.animState = 'idle';
+    const replay = document.createElement('button');
+    replay.type = 'button';
+    replay.className = 'article-anim-replay';
+    replay.textContent = translateArticleText(lang, 'Replay');
+    replay.addEventListener('click', () => {
+      for (const svg of Array.from(stage.querySelectorAll('svg'))) {
+        svg.replaceWith(svg.cloneNode(true));
+      }
+      figure.dataset.animState = 'playing';
+    });
+    figure.append(replay);
+    playWhenSeen(figure);
+  }
+  if (block.caption) {
+    const cap = document.createElement('figcaption');
+    cap.className = 'article-figure-caption';
+    cap.textContent = block.caption;
+    figure.append(cap);
+  }
+  return figure;
+}
+
+// Start an animated figure the first time half of it is on screen, once.
+// Without IntersectionObserver it plays straight away.
+function playWhenSeen(figure: HTMLElement): void {
+  if (typeof IntersectionObserver === 'undefined') {
+    figure.dataset.animState = 'playing';
+    return;
+  }
+  const observer = new IntersectionObserver(
+    (entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      if (figure.dataset.animState === 'idle') figure.dataset.animState = 'playing';
+      observer.disconnect();
+    },
+    { threshold: 0.5 },
+  );
+  observer.observe(figure);
 }
 
 // A row of raw-SVG figures. Each item goes through renderRawSvgBlock, so the
@@ -2140,11 +2224,13 @@ function renderTableBlock(block: TableBlock): HTMLElement {
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
   if (diagrams) headRow.append(document.createElement('th'));
-  for (const h of block.headers) {
+  const highlightCols = new Set(block.highlightColumns ?? []);
+  block.headers.forEach((h, col) => {
     const th = document.createElement('th');
+    if (highlightCols.has(col)) th.className = 'article-table-col-emphasis';
     appendRichText(th, h);
     headRow.append(th);
-  }
+  });
   thead.append(headRow);
   const tbody = document.createElement('tbody');
   const highlight = new Set(block.highlightRows ?? []);
@@ -2152,14 +2238,15 @@ function renderTableBlock(block: TableBlock): HTMLElement {
     const tr = document.createElement('tr');
     if (highlight.has(i)) tr.className = 'article-table-row-emphasis';
     if (diagrams) tr.append(renderTableRowDiagram(diagrams[i]));
-    for (const cell of row) {
+    row.forEach((cell, col) => {
       const td = document.createElement('td');
+      if (highlightCols.has(col)) td.className = 'article-table-col-emphasis';
       // Cells take the same inline markdown as paragraphs. They rendered as raw
       // textContent until 2026-08-27, so a [label](/href) in a cell showed its
       // own brackets.
       appendRichText(td, cell);
       tr.append(td);
-    }
+    });
     tbody.append(tr);
   });
   table.append(thead, tbody);

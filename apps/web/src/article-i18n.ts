@@ -33,6 +33,10 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Machine-drafted 2026-10-16, not native-reviewed, from the English signed
+  // off that day. Terms follow the live table's live.xmj.* strings (台, 面子,
+  // 將眼, 莊家, 自摸, 流局); tile labels name each colour's piece (帥/將, 炮/砲).
+  'xiangqi-mahjong-32',
   // Machine-drafted 2026-10-10, not native-reviewed; the 10-14 English edits
   // (shogi bakazume, the generator's limits) re-translated 2026-10-15 and
   // locked with the English, which publishes in the same release.
@@ -188,8 +192,6 @@ export const TRANSLATED_ARTICLE_SLUGS = [
 export const UNTRANSLATED_ARTICLE_SLUGS: Readonly<Record<string, string>> = {
   mahjong:
     'English only until a Hong Kong player checks the faan table; each correction would re-translate the page.',
-  'xiangqi-mahjong-32':
-    'Unlisted English draft under review; zh is translated from the signed-off English.',
   'luat-co-up': 'A Vietnamese rules page for Vietnamese search; it has no English or zh source.',
   // Vietnamese renders of a translated English article (derived-translation.ts);
   // a zh reader gets the source article's zh page.
@@ -5839,10 +5841,410 @@ const ZH_HANS: Record<string, string> = {
   Dataset: '数据集',
   '[Download the full CSV](/article-data/chess960-starting-position-evals.csv) (960 rows). Columns: `scharnagl_id`, `back_rank`, `fen`, `position_key`, `cp`, `mate`, `best_move`, `pv`, `depth`, `nodes`, `source`, `fetched_at_iso`.':
     '[下载完整 CSV](/article-data/chess960-starting-position-evals.csv)（960 行）。列：`scharnagl_id`、`back_rank`、`fen`、`position_key`、`cp`、`mate`、`best_move`、`pv`、`depth`、`nodes`、`source`、`fetched_at_iso`。',
+  // xiangqi-mahjong-32: machine-drafted 2026-10-16 from the signed-off English. Terms follow the live table (live.xmj.*): 台, 面子, 将眼, 庄家, 胡, 自摸, 吃, 碰, 流局.
+  'Xiangqi Mahjong Rules (32 tiles)': '象棋麻将规则（32 张）',
+  'The 32-tile game of Xiangqi Mahjong for two players: one xiangqi set used as tiles, five-tile hands, the winning hands drawn out, and the points each one scores.':
+    '两人对打的 32 张象棋麻将：一副象棋当作麻将牌，手牌五张，图解每种胡牌牌型，以及各自的台数。',
+  'Xiangqi Mahjong is a mahjong game played with the 32 pieces of a xiangqi set, a pastime from Taiwan. The pieces go face down as tiles, you draw and discard, and the first player to hold a complete hand wins. The hand is tiny: five tiles, which is one set of three and a pair. That makes the game fast, and it means you can learn the winning hands from the pictures on this page.':
+    '象棋麻将是用一副象棋的 32 颗棋子来打的麻将，源自台湾的民间游戏。棋子盖着当牌，轮流摸牌、打牌，先凑成一副完整手牌的人就胡了。手牌很小：只有五张，也就是一组三张的面子加一对将眼。所以一手牌打得很快，看这一页的图就能学会所有胡牌牌型。',
+  'This page describes the two-player game as Mistboard’s table plays it, with the rules the sources agree on.':
+    '本页介绍 Mistboard 牌桌上的两人玩法，采用各家来源一致的规则。',
+  'The tiles': '这副牌',
+  'The tiles are exactly one standard xiangqi set, the same 32 pieces you set up on a xiangqi board: sixteen red and sixteen black. Each side has one General, two Advisors, two Elephants, two Chariots, two Horses, two Cannons and five Soldiers. Colour works like a suit in mahjong. A set has to be all red or all black.':
+    '这副牌就是一副标准象棋，也就是摆在棋盘上的那 32 颗棋子：红黑各十六颗。每方有将帅一颗、士两颗、象两颗、车两颗、马两颗、炮两颗、兵卒五颗。颜色就像麻将的花色，一组面子必须全红或全黑。',
+  'All 32 tiles. One General, five Soldiers and two of every other piece on each side.':
+    '全部 32 张牌。每方将帅一张、兵卒五张，其余每种两张。',
+  'Each tile shows its piece in the piece set you play xiangqi with on Mistboard, so you can play with figures or with the Chinese characters of a traditional set. The pictures on this page follow your piece set too, with each piece’s English name underneath.':
+    '每张牌上的棋子，用的是你在 Mistboard 下象棋时选的棋子样式，所以可以用图案，也可以用传统的中文字棋子。本页的图也跟着你的棋子样式，每张牌下方标着棋子名称。',
+  'Sets and the pair': '面子与将眼',
+  'A **set** is three tiles of one colour, and there are only two kinds. A **sequence** is one of four fixed groups: General, Advisor and Elephant, or Chariot, Horse and Cannon, in red or in black. The order in your hand does not matter.':
+    '**面子**是同一颜色的三张牌，只有两种。**顺子**是固定的四组之一：红方的帅仕相、车马炮，黑方的将士象、车马炮。手中的排列顺序不影响。',
+  'General, Advisor, Elephant: a sequence in each colour.': '帅仕相与将士象：每种颜色各一组顺子。',
+  'Chariot, Horse, Cannon: the other sequence in each colour.':
+    '红黑车马炮：每种颜色的另一组顺子。',
+  'A **triplet** is three identical tiles. Only the Soldiers have more than two of a kind, so the only triplets are three red Soldiers and three black Soldiers.':
+    '**刻子**是三张相同的牌。只有兵卒一种多于两张，所以刻子只有三张红兵和三张黑卒两种。',
+  'The two triplets the set allows.': '这副牌仅有的两种刻子。',
+  'A **pair** is two identical tiles. There is one exception: the red General and the black General also make a pair, even though they differ in colour. Each General is a single tile, so this is the only way a General can be in the pair at all, and it scores extra.':
+    '**将眼**是两张相同的牌。唯一的例外是红帅和黑将：颜色不同，也算一对。帅和将各只有一张，所以这是将帅能当将眼的唯一方式，而且另外加台。',
+  'Pairs: two identical tiles, or the two Generals together.': '将眼：两张相同的牌，或帅将一对。',
+  'The deal and a turn': '发牌与一轮的流程',
+  'Shuffle the 32 tiles face down. The dealer takes five and the other player four; the other 23 are the wall, and both players draw from it. The table shows how many tiles are left in the wall.':
+    '把 32 张牌盖着洗匀。庄家拿五张，另一位玩家拿四张；其余 23 张是牌墙，双方都从这里摸牌。牌桌上会显示牌墙还剩几张。',
+  'A deal from your seat: the dealer has five tiles, you have four, and 23 are left in the wall.':
+    '从你的座位看发牌：庄家五张，你四张，牌墙还剩 23 张。',
+  'The dealer starts by discarding one tile, without drawing. From then on, a turn is: draw one tile from the wall, then either declare a win or discard one tile face up. Between turns you always hold four tiles, one short of a hand, and the fifth tile is the one you are waiting for.':
+    '庄家先打出一张牌，不摸牌。之后每一轮都是：从牌墙摸一张，然后宣告胡牌，或亮面打出一张。两轮之间你手上永远是四张，差一张成牌，第五张就是你在等的那张。',
+  'If you discard the tile you just drew, it shows shaded in your discard row, so the other player knows you did not keep the new tile. If you discard from your hand instead, they know you kept it, but not which of your tiles you threw: the table always shows the tile leaving from the middle of your hand, never from the place it really sat.':
+    '如果打出的是刚摸到的牌，它在你的弃牌列会显示为暗色，对手就知道你没留下新牌。如果改打手中的牌，对手知道你留下了新牌，但不知道你打的是原本哪一张：牌桌一律显示牌从你手牌中间打出，从不显示它原本的位置。',
+  'Claiming a discard': '吃碰对手的弃牌',
+  'When the other player discards, you may take that tile instead of drawing. You can claim it to win, if it completes your hand. Or you can claim it to finish a set: two tiles of a sequence and the discard as the third, or two Soldiers and a third. A claimed set goes face up, and you discard without drawing.':
+    '对手打出牌时，你可以不摸牌，改拿这张牌。如果它能凑成你的手牌，就可以拿来胡牌。也可以拿来完成一组面子：手中有顺子的两张，用弃牌补上第三张，这是吃；或手中有两张兵卒，再碰第三张。吃碰来的面子要亮出，然后不摸牌直接打出一张。',
+  'Deciding whether to claim takes time from your own clock, and there is no separate claim timer. If you pass, you draw as usual.':
+    '考虑要不要吃碰，用的是你自己的时间，没有另外的计时。选择“过”，就照常摸牌。',
+  'After every discard, the table waits about a second and a half before the next draw, whether or not anyone can claim. If it waited only when you could claim, the wait itself would tell the other player that their discard fits your hand.':
+    '每次有人打牌后，不论有没有人能吃碰，牌桌都会等大约一秒半才进行下一次摸牌。如果只在你能吃碰时才等，这段等待本身就会告诉对手：他打的牌正好是你要的。',
+  'Here is a claim. You hold the red Chariot and Horse, a black Elephant and a black Soldier. On their turn the other player draws from the wall and discards the red Cannon, the tile your sequence is missing.':
+    '来看一次吃牌。你手上有红车、红马、黑象和黑卒。轮到对手时，他从牌墙摸牌，打出红炮，正是你这组顺子缺的那张。',
+  'The other player draws a tile and discards the red Cannon. You claim it instead of drawing. Chariot, Horse and Cannon go face up, set apart from your hand, with the claimed Cannon turned sideways, and you discard the Soldier without drawing. You keep the black Elephant and wait for the other one to make the pair.':
+    '对手摸一张牌，打出红炮。你不摸牌，吃下这张。车马炮亮出，与手牌分开摆放，吃来的炮横放，然后你不摸牌直接打出卒。你留下黑象，等另一张黑象来凑成将眼。',
+  'You can lay down only one set this way, since a hand has room for one. There is no kong (four of a kind) in this game, and no declaring that you are one tile from winning.':
+    '这样亮出的面子最多一组，因为一副手牌只容得下一组。这个游戏没有杠（四张相同），也没有宣告听牌。',
+  'How a hand ends': '一手牌怎么结束',
+  'A hand ends in one of three ways. You draw the tile that completes your hand and declare a win, which is a self-drawn win. Or the other player discards that tile and you claim it. Or the wall runs out with nobody winning: the hand is void, nobody scores, and the deal passes.':
+    '一手牌有三种结束方式。你摸到凑成手牌的那张并宣告胡牌，这是自摸。或者对手打出那张牌，你拿来胡。或者牌墙摸完了没人胡：这手牌流局，双方都不计分，换人做庄。',
+  'Two wins happen before the hand has really started. If the dealer’s opening five tiles already make a winning hand, that is a **heavenly hand**. If the other player wins with their first draw, before anyone has claimed a tile, that is an **earthly hand**.':
+    '有两种胡牌发生在一手牌真正开始之前。庄家起手的五张牌已经是胡牌牌型，叫做**天胡**。另一位玩家在还没有人吃碰之前，第一次摸牌就胡，叫做**地胡**。',
+  'Winning hands and their score': '胡牌牌型与台数',
+  'A winning hand is five tiles: one set and one pair, counting a set you laid down after a claim. There are only three sets to make, a General sequence, a Chariot sequence or three Soldiers, so the first three hands below cover them all. A hand scores points; each caption gives what it scores when the player who did not deal wins it on a discard.':
+    '胡牌是五张牌：一组面子加一对将眼，吃碰亮出的面子也算在内。能凑的面子只有三种：将士象顺子、车马炮顺子、三张兵卒，所以下面前三种牌型就涵盖了全部。每副胡牌计台；每张图的说明写的是闲家胡对手弃牌时的台数。',
+  'General, Advisor and Elephant, with any pair: 1 point.': '将士象顺子，加任意将眼：1 台。',
+  'Chariot, Horse and Cannon, with any pair. The pair need not match the set’s colour: 1 point.':
+    '车马炮顺子，加任意将眼。将眼不必和面子同色：1 台。',
+  'Three Soldiers of one colour, with any pair: 1 point.': '三张同色兵卒，加任意将眼：1 台。',
+  'One colour: every tile red, or every tile black. 1 more, for 2 points.':
+    '清一色：全部红牌或全部黑牌。再加 1 台，共 2 台。',
+  'Generals pair: the red and the black General as the pair. 2 more, for 3 points.':
+    '将帅听令：红帅和黑将当将眼。再加 2 台，共 3 台。',
+  'Five Soldiers: all five Soldiers of one colour. 5 more, and it is one colour too: 7 points.':
+    '五兵合纵：同色的五张兵卒全到齐。再加 5 台，而且也是清一色：共 7 台。',
+  'Close, but not a win': '差一点，但不算胡',
+  'These look finished and are not. In each, the three tiles on the left fail to make a set or the two on the right fail to make a pair.':
+    '这些看起来成牌了，其实没有。每一副不是左边三张凑不成面子，就是右边两张凑不成将眼。',
+  'A red General and Elephant with a black Advisor. A sequence must be one colour.':
+    '红帅、红相配黑士。顺子必须同色。',
+  'General, Advisor and Horse. The two sequences do not mix; Horse belongs with Chariot and Cannon.':
+    '将、士、马。两种顺子不能混搭；马属于车马炮那一组。',
+  'Two red Soldiers and a black one. A triplet is three identical tiles.':
+    '两张红兵加一张黑卒。刻子必须是三张相同的牌。',
+  'A red and a black Advisor. Only the two Generals pair across colours.':
+    '红仕和黑士。只有帅将可以跨色成对。',
+  'Adding it up': '计算台数',
+  'Every winning hand scores 1. Add every line marked + that applies: the hand’s own lines from the pictures above, then how it was won.':
+    '每副胡牌计 1 台。再加上所有符合的 + 项目：先是上面图中牌型本身的项目，再看是怎么胡的。',
+  Line: '项目',
+  Points: '台数',
+  When: '条件',
+  'Every winning hand': '每副胡牌',
+  'One colour': '清一色',
+  'All five tiles one colour': '五张牌同一颜色',
+  'Generals pair': '将帅听令',
+  'The two Generals are the pair': '帅将两张当将眼',
+  'Five Soldiers': '五兵合纵',
+  'Five Soldiers of one colour': '同色五张兵卒',
+  'Self-draw': '自摸',
+  'You drew the winning tile': '胡的那张是自己摸到的',
+  Dealer: '庄家',
+  'The dealer won': '庄家胡牌',
+  'Last tile': '海底捞月',
+  'Self-draw on the last wall tile': '摸牌墙最后一张自摸',
+  'The two special hands are the exception. Each scores a flat 6, and nothing is added to it.':
+    '两种特殊牌型是例外，各计 6 台，不再加计其他项目。',
+  'Special hand': '特殊牌型',
+  'Heavenly hand': '天胡',
+  'The dealer’s first five tiles win': '庄家起手五张就胡',
+  'Earthly hand': '地胡',
+  'The other player wins on their first draw': '闲家第一次摸牌就胡',
+  'A worked example. The dealer holds the red Chariot, Horse and Cannon and the red General, and draws the black General from the wall. That is a set and the Generals pair: 1 for the win, 2 for the Generals pair, 2 for the self-draw and 1 because the dealer won, 6 points in all. It is not one colour, since the pair is half black.':
+    '来算一个例子。庄家手上有红车马炮和红帅，从牌墙摸到黑将。这是一组面子加帅将一对：胡牌 1 台、将帅听令 2 台、自摸 2 台、庄家 1 台，共 6 台。将眼有一半是黑的，所以不算清一色。',
+  'The dealer draws the black General and declares a win.': '庄家摸到黑将，宣告胡牌。',
+  'The match': '一场比赛',
+  'A match is six hands, and the deal alternates every hand, so each player deals three times. The winner of a hand adds its points to their score, and the other score stays where it was. After six hands the higher score wins the match, and equal scores are a draw.':
+    '一场比赛打六手，每手轮流做庄，所以每人各做三次庄。胡牌的人把这手的台数加进自己的积分，对手的积分不变。六手打完，积分高的人赢得比赛，积分相同就是和局。',
+  'Here is a whole match between Ana and Ben, kept the way a mahjong scoreboard is. Ana deals hands 1, 3 and 5, and Ben deals 2, 4 and 6. Each column is one hand, with the points its winner scored from the table above; hands 2 and 6 are void, because the wall ran out.':
+    '下面是 Ana 和 Ben 的一整场比赛，照麻将计分表的方式记录。Ana 做第 1、3、5 手的庄，Ben 做第 2、4、6 手的庄。每一栏是一手牌，填的是胡牌者依上表算出的台数；第 2 手和第 6 手流局，因为牌墙摸完了。',
+  Hand: '第几手',
+  void: '流局',
+  Ana: 'Ana',
+  Ben: 'Ben',
+  'Ana wins the match 7 to 6. The fifth hand decided it: a self-draw on the last tile while she was dealer, worth 1 for the win, 2 for the self-draw, 1 as dealer and 1 for the last tile.':
+    'Ana 以 7 比 6 赢得比赛。关键是第五手：她做庄时摸牌墙最后一张自摸，胡牌 1 台、自摸 2 台、庄家 1 台、海底捞月 1 台。',
+  'Where do these rules come from?': '这些规则从哪里来？',
+  'The game has no rulebook. The rules and point values here follow the Chinese Wikipedia article and the Eastking rule page, which agree, checked against other Taiwanese rule pages and FunTown’s online parlour. Where they leave a choice, Mistboard made it: the deal alternates every hand, and a match is six hands, since the sources play for money and give no match format.':
+    '这个游戏没有正式的规则书。本页的规则和台数依据中文维基百科条目和 Eastking 的规则页，两者说法一致，也对照过其他台湾规则网页和 FunTown 的线上牌桌。来源没有规定的地方由 Mistboard 决定：每手轮流做庄，一场比赛打六手，因为这些来源都是赌钱玩的，没有给出比赛赛制。',
+  'Can more than two people play?': '可以超过两人玩吗？',
+  'Folk sources play with two to four. With four, 17 tiles are dealt and only 15 stay in the wall, so each player gets about four draws, and claims on the other three players’ discards do much of the work. Mistboard plays the two-player game.':
+    '民间玩法是二到四人。四人玩时发出 17 张，牌墙只剩 15 张，每人大约只摸得到四次，主要靠吃碰其他三家的弃牌。Mistboard 采用两人玩法。',
+  'What if a player leaves before the match is over?': '比赛还没结束就有人离开怎么办？',
+  'The other player wins the match, whatever the score. Leaving the game, running out of time and resigning all end the match the same way they end any game on Mistboard.':
+    '不论比分如何，留下的一方赢得比赛。离开对局、超时和认输，都和 Mistboard 上任何对局一样结束比赛。',
+  'Why is there no kong or ready declaration?': '为什么没有杠，也不能宣告听牌？',
+  'Both turn up in the folk rules, but online tables mostly drop the kong from the 32-tile game, and every source treats the ready declaration as optional, so Mistboard leaves both out. A kong would hardly come up anyway: it is four identical tiles, and only the Soldiers come in more than two.':
+    '民间规则里两者都有，但线上牌桌的 32 张玩法大多不算杠，各家来源也都把宣告听牌当作可选，所以 Mistboard 两者都不采用。反正杠也很少出现：杠是四张相同的牌，而只有兵卒多于两张。',
+  'Why does the deal always alternate?': '为什么每手都要换庄？',
+  'Some tables let a dealer who wins keep the deal and score extra for it. Mistboard passes the deal every hand instead, so in a six-hand match each player deals three times.':
+    '有些牌桌让胡牌的庄家连庄，并另外加台。Mistboard 则每手都换庄，所以六手的比赛每人各做三次庄。',
+  'Five tiles, one set and a pair. Learn the hands against the computer, then play a friend.':
+    '五张牌，一组面子加一对将眼。先和电脑对打学会牌型，再找朋友来打。',
+  'All 32 tiles: the sixteen red tiles above the sixteen black tiles':
+    '全部 32 张牌：上排十六张红牌，下排十六张黑牌',
+  'red General': '帅',
+  'red Advisor': '仕',
+  'red Elephant': '相',
+  'red Chariot': '车',
+  'red Horse': '马',
+  'red Cannon': '炮',
+  'red Soldier': '兵',
+  'black General': '将',
+  'black Advisor': '士',
+  'black Elephant': '象',
+  'black Chariot': '车',
+  'black Horse': '马',
+  'black Cannon': '炮',
+  'black Soldier': '卒',
+  'General, Advisor, Elephant in red and in black': '红帅仕相与黑将士象',
+  red: '红',
+  black: '黑',
+  'Chariot, Horse, Cannon in red and in black': '红黑两色的车马炮',
+  'Three red Soldiers and three black Soldiers': '三张红兵与三张黑卒',
+  'Three pairs: two black Horses, two red Soldiers, the two Generals':
+    '三对将眼：两张黑马、两张红兵、帅将一对',
+  identical: '相同',
+  'the two Generals': '帅将一对',
+  'The deal: the dealer with five tiles face down, the 23-tile wall, and your four tiles face up':
+    '发牌：庄家五张牌盖着，23 张的牌墙，你的四张牌亮面',
+  'Dealer, 5 tiles': '庄家，5 张',
+  Wall: '牌墙',
+  '23 left': '剩 23 张',
+  'You, 4 tiles': '你，4 张',
+  'A claim: the other player draws from the wall and discards the red Cannon, you take it into Chariot, Horse, Cannon, lay the set face up apart from your hand with the Cannon sideways, and discard the black Soldier':
+    '吃牌：对手从牌墙摸牌并打出红炮，你吃下凑成车马炮，把这组面子亮出、与手牌分开，炮横放，再打出黑卒',
+  'Their hand': '对手手牌',
+  'Their discards': '对手弃牌',
+  'Your discards': '你的弃牌',
+  'Your hand': '你的手牌',
+  'claimed, face up': '吃来的，亮出',
+  'Before: the other player’s four tiles face down, the black Advisor they discarded earlier, and your four tiles':
+    '之前：对手的四张牌盖着，他先前打出的黑士，以及你的四张牌',
+  'After: the claimed set face up with the Cannon sideways, the Elephant kept, the Soldier discarded':
+    '之后：吃来的面子亮出，炮横放，留下象，打出卒',
+  kept: '留下',
+  discarded: '打出',
+  'Winning hand: General, Advisor, Elephant with a pair of Horses': '胡牌：将士象加一对马',
+  'Winning hand': '胡牌',
+  set: '面子',
+  pair: '将眼',
+  'Winning hand: Chariot, Horse, Cannon with a pair of Soldiers': '胡牌：车马炮加一对兵卒',
+  'Winning hand: Three Soldiers with a pair of Advisors': '胡牌：三张兵卒加一对士',
+  'Winning hand: One colour: every tile red': '胡牌：清一色，全是红牌',
+  'Winning hand: Generals pair: the red and the black General as the pair':
+    '胡牌：将帅听令，红帅和黑将当将眼',
+  'Winning hand: Five Soldiers: all five Soldiers of one colour':
+    '胡牌：五兵合纵，同色五张兵卒全到齐',
+  'Not a winning hand: the General, Advisor and Elephant are not all one colour':
+    '不算胡牌：将士象不是同一颜色',
+  'Not a winning hand': '不算胡牌',
+  'Not a winning hand: General, Advisor and Horse come from different sets':
+    '不算胡牌：将、士、马分属不同的顺子',
+  'Not a winning hand: two red Soldiers and a black one are not three of a kind':
+    '不算胡牌：两张红兵加一张黑卒不是刻子',
+  'Not a winning hand: a red and a black Advisor are not a pair': '不算胡牌：红仕和黑士不成对',
+  'The dealer draws the black General to win': '庄家摸到黑将胡牌',
+  Replay: '重播',
 };
 
 const ZH_HANT: Record<string, string> = {
   ...ZH_HANS,
+  // xiangqi-mahjong-32: machine-drafted 2026-10-16 from the signed-off English. Terms follow the live table (live.xmj.*): 台, 面子, 將眼, 莊家, 胡, 自摸, 吃, 碰, 流局; tile names per colour, black cannon 砲 as on the tile faces.
+  'Xiangqi Mahjong Rules (32 tiles)': '象棋麻將規則（32 張）',
+  'The 32-tile game of Xiangqi Mahjong for two players: one xiangqi set used as tiles, five-tile hands, the winning hands drawn out, and the points each one scores.':
+    '兩人對打的 32 張象棋麻將：一副象棋當作麻將牌，手牌五張，圖解每種胡牌牌型，以及各自的台數。',
+  'Xiangqi Mahjong is a mahjong game played with the 32 pieces of a xiangqi set, a pastime from Taiwan. The pieces go face down as tiles, you draw and discard, and the first player to hold a complete hand wins. The hand is tiny: five tiles, which is one set of three and a pair. That makes the game fast, and it means you can learn the winning hands from the pictures on this page.':
+    '象棋麻將是用一副象棋的 32 顆棋子來打的麻將，源自台灣的民間遊戲。棋子蓋著當牌，輪流摸牌、打牌，先湊成一副完整手牌的人就胡了。手牌很小：只有五張，也就是一組三張的面子加一對將眼。所以一手牌打得很快，看這一頁的圖就能學會所有胡牌牌型。',
+  'This page describes the two-player game as Mistboard’s table plays it, with the rules the sources agree on.':
+    '本頁介紹 Mistboard 牌桌上的兩人玩法，採用各家來源一致的規則。',
+  'The tiles': '這副牌',
+  'The tiles are exactly one standard xiangqi set, the same 32 pieces you set up on a xiangqi board: sixteen red and sixteen black. Each side has one General, two Advisors, two Elephants, two Chariots, two Horses, two Cannons and five Soldiers. Colour works like a suit in mahjong. A set has to be all red or all black.':
+    '這副牌就是一副標準象棋，也就是擺在棋盤上的那 32 顆棋子：紅黑各十六顆。每方有將帥一顆、士兩顆、象兩顆、車兩顆、馬兩顆、炮兩顆、兵卒五顆。顏色就像麻將的花色，一組面子必須全紅或全黑。',
+  'All 32 tiles. One General, five Soldiers and two of every other piece on each side.':
+    '全部 32 張牌。每方將帥一張、兵卒五張，其餘每種兩張。',
+  'Each tile shows its piece in the piece set you play xiangqi with on Mistboard, so you can play with figures or with the Chinese characters of a traditional set. The pictures on this page follow your piece set too, with each piece’s English name underneath.':
+    '每張牌上的棋子，用的是你在 Mistboard 下象棋時選的棋子樣式，所以可以用圖案，也可以用傳統的中文字棋子。本頁的圖也跟著你的棋子樣式，每張牌下方標著棋子名稱。',
+  'Sets and the pair': '面子與將眼',
+  'A **set** is three tiles of one colour, and there are only two kinds. A **sequence** is one of four fixed groups: General, Advisor and Elephant, or Chariot, Horse and Cannon, in red or in black. The order in your hand does not matter.':
+    '**面子**是同一顏色的三張牌，只有兩種。**順子**是固定的四組之一：紅方的帥仕相、俥傌炮，黑方的將士象、車馬砲。手中的排列順序不影響。',
+  'General, Advisor, Elephant: a sequence in each colour.': '帥仕相與將士象：每種顏色各一組順子。',
+  'Chariot, Horse, Cannon: the other sequence in each colour.':
+    '俥傌炮與車馬砲：每種顏色的另一組順子。',
+  'A **triplet** is three identical tiles. Only the Soldiers have more than two of a kind, so the only triplets are three red Soldiers and three black Soldiers.':
+    '**刻子**是三張相同的牌。只有兵卒一種多於兩張，所以刻子只有三張紅兵和三張黑卒兩種。',
+  'The two triplets the set allows.': '這副牌僅有的兩種刻子。',
+  'A **pair** is two identical tiles. There is one exception: the red General and the black General also make a pair, even though they differ in colour. Each General is a single tile, so this is the only way a General can be in the pair at all, and it scores extra.':
+    '**將眼**是兩張相同的牌。唯一的例外是紅帥和黑將：顏色不同，也算一對。帥和將各只有一張，所以這是將帥能當將眼的唯一方式，而且另外加台。',
+  'Pairs: two identical tiles, or the two Generals together.': '將眼：兩張相同的牌，或帥將一對。',
+  'The deal and a turn': '發牌與一輪的流程',
+  'Shuffle the 32 tiles face down. The dealer takes five and the other player four; the other 23 are the wall, and both players draw from it. The table shows how many tiles are left in the wall.':
+    '把 32 張牌蓋著洗勻。莊家拿五張，另一位玩家拿四張；其餘 23 張是牌牆，雙方都從這裡摸牌。牌桌上會顯示牌牆還剩幾張。',
+  'A deal from your seat: the dealer has five tiles, you have four, and 23 are left in the wall.':
+    '從你的座位看發牌：莊家五張，你四張，牌牆還剩 23 張。',
+  'The dealer starts by discarding one tile, without drawing. From then on, a turn is: draw one tile from the wall, then either declare a win or discard one tile face up. Between turns you always hold four tiles, one short of a hand, and the fifth tile is the one you are waiting for.':
+    '莊家先打出一張牌，不摸牌。之後每一輪都是：從牌牆摸一張，然後宣告胡牌，或亮面打出一張。兩輪之間你手上永遠是四張，差一張成牌，第五張就是你在等的那張。',
+  'If you discard the tile you just drew, it shows shaded in your discard row, so the other player knows you did not keep the new tile. If you discard from your hand instead, they know you kept it, but not which of your tiles you threw: the table always shows the tile leaving from the middle of your hand, never from the place it really sat.':
+    '如果打出的是剛摸到的牌，它在你的棄牌列會顯示為暗色，對手就知道你沒留下新牌。如果改打手中的牌，對手知道你留下了新牌，但不知道你打的是原本哪一張：牌桌一律顯示牌從你手牌中間打出，從不顯示它原本的位置。',
+  'Claiming a discard': '吃碰對手的棄牌',
+  'When the other player discards, you may take that tile instead of drawing. You can claim it to win, if it completes your hand. Or you can claim it to finish a set: two tiles of a sequence and the discard as the third, or two Soldiers and a third. A claimed set goes face up, and you discard without drawing.':
+    '對手打出牌時，你可以不摸牌，改拿這張牌。如果它能湊成你的手牌，就可以拿來胡牌。也可以拿來完成一組面子：手中有順子的兩張，用棄牌補上第三張，這是吃；或手中有兩張兵卒，再碰第三張。吃碰來的面子要亮出，然後不摸牌直接打出一張。',
+  'Deciding whether to claim takes time from your own clock, and there is no separate claim timer. If you pass, you draw as usual.':
+    '考慮要不要吃碰，用的是你自己的時間，沒有另外的計時。選擇「過」，就照常摸牌。',
+  'After every discard, the table waits about a second and a half before the next draw, whether or not anyone can claim. If it waited only when you could claim, the wait itself would tell the other player that their discard fits your hand.':
+    '每次有人打牌後，不論有沒有人能吃碰，牌桌都會等大約一秒半才進行下一次摸牌。如果只在你能吃碰時才等，這段等待本身就會告訴對手：他打的牌正好是你要的。',
+  'Here is a claim. You hold the red Chariot and Horse, a black Elephant and a black Soldier. On their turn the other player draws from the wall and discards the red Cannon, the tile your sequence is missing.':
+    '來看一次吃牌。你手上有紅俥、紅傌、黑象和黑卒。輪到對手時，他從牌牆摸牌，打出紅炮，正是你這組順子缺的那張。',
+  'The other player draws a tile and discards the red Cannon. You claim it instead of drawing. Chariot, Horse and Cannon go face up, set apart from your hand, with the claimed Cannon turned sideways, and you discard the Soldier without drawing. You keep the black Elephant and wait for the other one to make the pair.':
+    '對手摸一張牌，打出紅炮。你不摸牌，吃下這張。俥傌炮亮出，與手牌分開擺放，吃來的炮橫放，然後你不摸牌直接打出卒。你留下黑象，等另一張黑象來湊成將眼。',
+  'You can lay down only one set this way, since a hand has room for one. There is no kong (four of a kind) in this game, and no declaring that you are one tile from winning.':
+    '這樣亮出的面子最多一組，因為一副手牌只容得下一組。這個遊戲沒有槓（四張相同），也沒有宣告聽牌。',
+  'How a hand ends': '一手牌怎麼結束',
+  'A hand ends in one of three ways. You draw the tile that completes your hand and declare a win, which is a self-drawn win. Or the other player discards that tile and you claim it. Or the wall runs out with nobody winning: the hand is void, nobody scores, and the deal passes.':
+    '一手牌有三種結束方式。你摸到湊成手牌的那張並宣告胡牌，這是自摸。或者對手打出那張牌，你拿來胡。或者牌牆摸完了沒人胡：這手牌流局，雙方都不計分，換人做莊。',
+  'Two wins happen before the hand has really started. If the dealer’s opening five tiles already make a winning hand, that is a **heavenly hand**. If the other player wins with their first draw, before anyone has claimed a tile, that is an **earthly hand**.':
+    '有兩種胡牌發生在一手牌真正開始之前。莊家起手的五張牌已經是胡牌牌型，叫做**天胡**。另一位玩家在還沒有人吃碰之前，第一次摸牌就胡，叫做**地胡**。',
+  'Winning hands and their score': '胡牌牌型與台數',
+  'A winning hand is five tiles: one set and one pair, counting a set you laid down after a claim. There are only three sets to make, a General sequence, a Chariot sequence or three Soldiers, so the first three hands below cover them all. A hand scores points; each caption gives what it scores when the player who did not deal wins it on a discard.':
+    '胡牌是五張牌：一組面子加一對將眼，吃碰亮出的面子也算在內。能湊的面子只有三種：將士象順子、車馬炮順子、三張兵卒，所以下面前三種牌型就涵蓋了全部。每副胡牌計台；每張圖的說明寫的是閒家胡對手棄牌時的台數。',
+  'General, Advisor and Elephant, with any pair: 1 point.': '將士象順子，加任意將眼：1 台。',
+  'Chariot, Horse and Cannon, with any pair. The pair need not match the set’s colour: 1 point.':
+    '車馬炮順子，加任意將眼。將眼不必和面子同色：1 台。',
+  'Three Soldiers of one colour, with any pair: 1 point.': '三張同色兵卒，加任意將眼：1 台。',
+  'One colour: every tile red, or every tile black. 1 more, for 2 points.':
+    '清一色：全部紅牌或全部黑牌。再加 1 台，共 2 台。',
+  'Generals pair: the red and the black General as the pair. 2 more, for 3 points.':
+    '將帥聽令：紅帥和黑將當將眼。再加 2 台，共 3 台。',
+  'Five Soldiers: all five Soldiers of one colour. 5 more, and it is one colour too: 7 points.':
+    '五兵合縱：同色的五張兵卒全到齊。再加 5 台，而且也是清一色：共 7 台。',
+  'Close, but not a win': '差一點，但不算胡',
+  'These look finished and are not. In each, the three tiles on the left fail to make a set or the two on the right fail to make a pair.':
+    '這些看起來成牌了，其實沒有。每一副不是左邊三張湊不成面子，就是右邊兩張湊不成將眼。',
+  'A red General and Elephant with a black Advisor. A sequence must be one colour.':
+    '紅帥、紅相配黑士。順子必須同色。',
+  'General, Advisor and Horse. The two sequences do not mix; Horse belongs with Chariot and Cannon.':
+    '將、士、馬。兩種順子不能混搭；馬屬於車馬炮那一組。',
+  'Two red Soldiers and a black one. A triplet is three identical tiles.':
+    '兩張紅兵加一張黑卒。刻子必須是三張相同的牌。',
+  'A red and a black Advisor. Only the two Generals pair across colours.':
+    '紅仕和黑士。只有帥將可以跨色成對。',
+  'Adding it up': '計算台數',
+  'Every winning hand scores 1. Add every line marked + that applies: the hand’s own lines from the pictures above, then how it was won.':
+    '每副胡牌計 1 台。再加上所有符合的 + 項目：先是上面圖中牌型本身的項目，再看是怎麼胡的。',
+  Line: '項目',
+  Points: '台數',
+  When: '條件',
+  'Every winning hand': '每副胡牌',
+  'One colour': '清一色',
+  'All five tiles one colour': '五張牌同一顏色',
+  'Generals pair': '將帥聽令',
+  'The two Generals are the pair': '帥將兩張當將眼',
+  'Five Soldiers': '五兵合縱',
+  'Five Soldiers of one colour': '同色五張兵卒',
+  'Self-draw': '自摸',
+  'You drew the winning tile': '胡的那張是自己摸到的',
+  Dealer: '莊家',
+  'The dealer won': '莊家胡牌',
+  'Last tile': '海底撈月',
+  'Self-draw on the last wall tile': '摸牌牆最後一張自摸',
+  'The two special hands are the exception. Each scores a flat 6, and nothing is added to it.':
+    '兩種特殊牌型是例外，各計 6 台，不再加計其他項目。',
+  'Special hand': '特殊牌型',
+  'Heavenly hand': '天胡',
+  'The dealer’s first five tiles win': '莊家起手五張就胡',
+  'Earthly hand': '地胡',
+  'The other player wins on their first draw': '閒家第一次摸牌就胡',
+  'A worked example. The dealer holds the red Chariot, Horse and Cannon and the red General, and draws the black General from the wall. That is a set and the Generals pair: 1 for the win, 2 for the Generals pair, 2 for the self-draw and 1 because the dealer won, 6 points in all. It is not one colour, since the pair is half black.':
+    '來算一個例子。莊家手上有紅俥傌炮和紅帥，從牌牆摸到黑將。這是一組面子加帥將一對：胡牌 1 台、將帥聽令 2 台、自摸 2 台、莊家 1 台，共 6 台。將眼有一半是黑的，所以不算清一色。',
+  'The dealer draws the black General and declares a win.': '莊家摸到黑將，宣告胡牌。',
+  'The match': '一場比賽',
+  'A match is six hands, and the deal alternates every hand, so each player deals three times. The winner of a hand adds its points to their score, and the other score stays where it was. After six hands the higher score wins the match, and equal scores are a draw.':
+    '一場比賽打六手，每手輪流做莊，所以每人各做三次莊。胡牌的人把這手的台數加進自己的積分，對手的積分不變。六手打完，積分高的人贏得比賽，積分相同就是和局。',
+  'Here is a whole match between Ana and Ben, kept the way a mahjong scoreboard is. Ana deals hands 1, 3 and 5, and Ben deals 2, 4 and 6. Each column is one hand, with the points its winner scored from the table above; hands 2 and 6 are void, because the wall ran out.':
+    '下面是 Ana 和 Ben 的一整場比賽，照麻將計分表的方式記錄。Ana 做第 1、3、5 手的莊，Ben 做第 2、4、6 手的莊。每一欄是一手牌，填的是胡牌者依上表算出的台數；第 2 手和第 6 手流局，因為牌牆摸完了。',
+  Hand: '第幾手',
+  void: '流局',
+  Ana: 'Ana',
+  Ben: 'Ben',
+  'Ana wins the match 7 to 6. The fifth hand decided it: a self-draw on the last tile while she was dealer, worth 1 for the win, 2 for the self-draw, 1 as dealer and 1 for the last tile.':
+    'Ana 以 7 比 6 贏得比賽。關鍵是第五手：她做莊時摸牌牆最後一張自摸，胡牌 1 台、自摸 2 台、莊家 1 台、海底撈月 1 台。',
+  'Where do these rules come from?': '這些規則從哪裡來？',
+  'The game has no rulebook. The rules and point values here follow the Chinese Wikipedia article and the Eastking rule page, which agree, checked against other Taiwanese rule pages and FunTown’s online parlour. Where they leave a choice, Mistboard made it: the deal alternates every hand, and a match is six hands, since the sources play for money and give no match format.':
+    '這個遊戲沒有正式的規則書。本頁的規則和台數依據中文維基百科條目和 Eastking 的規則頁，兩者說法一致，也對照過其他台灣規則網頁和 FunTown 的線上牌桌。來源沒有規定的地方由 Mistboard 決定：每手輪流做莊，一場比賽打六手，因為這些來源都是賭錢玩的，沒有給出比賽賽制。',
+  'Can more than two people play?': '可以超過兩人玩嗎？',
+  'Folk sources play with two to four. With four, 17 tiles are dealt and only 15 stay in the wall, so each player gets about four draws, and claims on the other three players’ discards do much of the work. Mistboard plays the two-player game.':
+    '民間玩法是二到四人。四人玩時發出 17 張，牌牆只剩 15 張，每人大約只摸得到四次，主要靠吃碰其他三家的棄牌。Mistboard 採用兩人玩法。',
+  'What if a player leaves before the match is over?': '比賽還沒結束就有人離開怎麼辦？',
+  'The other player wins the match, whatever the score. Leaving the game, running out of time and resigning all end the match the same way they end any game on Mistboard.':
+    '不論比分如何，留下的一方贏得比賽。離開對局、超時和認輸，都和 Mistboard 上任何對局一樣結束比賽。',
+  'Why is there no kong or ready declaration?': '為什麼沒有槓，也不能宣告聽牌？',
+  'Both turn up in the folk rules, but online tables mostly drop the kong from the 32-tile game, and every source treats the ready declaration as optional, so Mistboard leaves both out. A kong would hardly come up anyway: it is four identical tiles, and only the Soldiers come in more than two.':
+    '民間規則裡兩者都有，但線上牌桌的 32 張玩法大多不算槓，各家來源也都把宣告聽牌當作可選，所以 Mistboard 兩者都不採用。反正槓也很少出現：槓是四張相同的牌，而只有兵卒多於兩張。',
+  'Why does the deal always alternate?': '為什麼每手都要換莊？',
+  'Some tables let a dealer who wins keep the deal and score extra for it. Mistboard passes the deal every hand instead, so in a six-hand match each player deals three times.':
+    '有些牌桌讓胡牌的莊家連莊，並另外加台。Mistboard 則每手都換莊，所以六手的比賽每人各做三次莊。',
+  'Five tiles, one set and a pair. Learn the hands against the computer, then play a friend.':
+    '五張牌，一組面子加一對將眼。先和電腦對打學會牌型，再找朋友來打。',
+  'All 32 tiles: the sixteen red tiles above the sixteen black tiles':
+    '全部 32 張牌：上排十六張紅牌，下排十六張黑牌',
+  'red General': '帥',
+  'red Advisor': '仕',
+  'red Elephant': '相',
+  'red Chariot': '俥',
+  'red Horse': '傌',
+  'red Cannon': '炮',
+  'red Soldier': '兵',
+  'black General': '將',
+  'black Advisor': '士',
+  'black Elephant': '象',
+  'black Chariot': '車',
+  'black Horse': '馬',
+  'black Cannon': '砲',
+  'black Soldier': '卒',
+  'General, Advisor, Elephant in red and in black': '紅帥仕相與黑將士象',
+  red: '紅',
+  black: '黑',
+  'Chariot, Horse, Cannon in red and in black': '紅俥傌炮與黑車馬砲',
+  'Three red Soldiers and three black Soldiers': '三張紅兵與三張黑卒',
+  'Three pairs: two black Horses, two red Soldiers, the two Generals':
+    '三對將眼：兩張黑馬、兩張紅兵、帥將一對',
+  identical: '相同',
+  'the two Generals': '帥將一對',
+  'The deal: the dealer with five tiles face down, the 23-tile wall, and your four tiles face up':
+    '發牌：莊家五張牌蓋著，23 張的牌牆，你的四張牌亮面',
+  'Dealer, 5 tiles': '莊家，5 張',
+  Wall: '牌牆',
+  '23 left': '剩 23 張',
+  'You, 4 tiles': '你，4 張',
+  'A claim: the other player draws from the wall and discards the red Cannon, you take it into Chariot, Horse, Cannon, lay the set face up apart from your hand with the Cannon sideways, and discard the black Soldier':
+    '吃牌：對手從牌牆摸牌並打出紅炮，你吃下湊成俥傌炮，把這組面子亮出、與手牌分開，炮橫放，再打出黑卒',
+  'Their hand': '對手手牌',
+  'Their discards': '對手棄牌',
+  'Your discards': '你的棄牌',
+  'Your hand': '你的手牌',
+  'claimed, face up': '吃來的，亮出',
+  'Before: the other player’s four tiles face down, the black Advisor they discarded earlier, and your four tiles':
+    '之前：對手的四張牌蓋著，他先前打出的黑士，以及你的四張牌',
+  'After: the claimed set face up with the Cannon sideways, the Elephant kept, the Soldier discarded':
+    '之後：吃來的面子亮出，炮橫放，留下象，打出卒',
+  kept: '留下',
+  discarded: '打出',
+  'Winning hand: General, Advisor, Elephant with a pair of Horses': '胡牌：將士象加一對馬',
+  'Winning hand': '胡牌',
+  set: '面子',
+  pair: '將眼',
+  'Winning hand: Chariot, Horse, Cannon with a pair of Soldiers': '胡牌：車馬炮加一對兵卒',
+  'Winning hand: Three Soldiers with a pair of Advisors': '胡牌：三張兵卒加一對士',
+  'Winning hand: One colour: every tile red': '胡牌：清一色，全是紅牌',
+  'Winning hand: Generals pair: the red and the black General as the pair':
+    '胡牌：將帥聽令，紅帥和黑將當將眼',
+  'Winning hand: Five Soldiers: all five Soldiers of one colour':
+    '胡牌：五兵合縱，同色五張兵卒全到齊',
+  'Not a winning hand: the General, Advisor and Elephant are not all one colour':
+    '不算胡牌：將士象不是同一顏色',
+  'Not a winning hand': '不算胡牌',
+  'Not a winning hand: General, Advisor and Horse come from different sets':
+    '不算胡牌：將、士、馬分屬不同的順子',
+  'Not a winning hand: two red Soldiers and a black one are not three of a kind':
+    '不算胡牌：兩張紅兵加一張黑卒不是刻子',
+  'Not a winning hand: a red and a black Advisor are not a pair': '不算胡牌：紅仕和黑士不成對',
+  'The dealer draws the black General to win': '莊家摸到黑將胡牌',
+  Replay: '重播',
   // jieqi-puzzle-search: machine-drafted 2026-10-10, not native-reviewed. Terms follow ab-jchess and jieqi-bot-wins (暗子, 翻子, 暗吃, 勝率, 訪客, 皮卡魚, 覆盤, 著法).
   'Looking for jieqi puzzles': '在揭棋裡找題目',
   'We searched 2,939 positions from 50 jieqi games for puzzles. 58 had one clearly best move and 15 of those turned on a hidden piece. None of the 15 passed the rules our xiangqi puzzles go through, and we stopped looking.':

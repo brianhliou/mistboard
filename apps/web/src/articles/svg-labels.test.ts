@@ -13,6 +13,14 @@ describe('svg diagram labels', () => {
     );
   });
 
+  it('looks a node carrying data-i18n-key up by that key, not its text', () => {
+    const svg = '<svg><text data-i18n-key="red General">General</text><text>General</text></svg>';
+    expect(svgTextLabels(svg)).toEqual(['red General', 'General']);
+    expect(substituteSvgText(svg, { 'red General': '帥', General: '將' })).toBe(
+      '<svg><text data-i18n-key="red General">帥</text><text>將</text></svg>',
+    );
+  });
+
   it('treats coordinates, sample sizes, identifiers and the domain as language-neutral', () => {
     for (const t of ['a', 'n=33', 'only-mate', 'mistboard.com', '车吃马']) {
       expect(isLanguageNeutralLabel(t), t).toBe(true);
@@ -33,6 +41,17 @@ describe('rendered figures carry translated labels', () => {
     expect(labels).toContain('翻子前：马位');
     expect(labels).not.toContain('SHUFFLED START');
     expect(labels).not.toContain('CAPTURE');
+  });
+
+  it('zh-Hant xiangqi mahjong page names each tile by its colour', () => {
+    const page = buildArticlePage('xiangqi-mahjong-32', 'zh-Hant');
+    const tileNames = [...page.querySelectorAll('.article-figure svg .xmj-kind-label')].map((n) =>
+      n.textContent?.trim(),
+    );
+    expect(tileNames).toEqual(['帥', '仕', '相', '俥', '傌', '炮', '兵', '將', '士', '象', '車', '馬', '砲', '卒']);
+    expect(figureText(page)).not.toContain('General');
+    const tiles = page.querySelector('.article-figure svg.xmj-article-tiles');
+    expect(tiles?.getAttribute('aria-label')).toBe('全部 32 張牌：上排十六張紅牌，下排十六張黑牌');
   });
 
   it('Vietnamese jieqi openings page', () => {

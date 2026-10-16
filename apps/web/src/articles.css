@@ -1095,6 +1095,60 @@
   display: block;
 }
 
+/* Verdict marks drawn inside article SVGs (the xiangqi mahjong win and
+   not-win rows): a filled disc with a check or a cross. Tokens, so the marks
+   hold their contrast in both themes. */
+:root {
+  --article-mark-win: hsl(145, 47%, 33%);
+  --article-mark-lose: hsl(5, 61%, 44%);
+  --article-mark-ink: #fff;
+}
+
+:root[data-effective-theme="dark"] {
+  --article-mark-win: hsl(145, 45%, 52%);
+  --article-mark-lose: hsl(5, 75%, 64%);
+  --article-mark-ink: hsl(40, 6%, 10%);
+}
+
+/* An animated figure (AnimatedSvgBlock). Its keyframes hold on their first
+   frame until the figure scrolls into view ('idle'), then play once and keep
+   the last frame. Reduced motion shows the SVG's base state, its end frame. */
+.article-anim[data-anim-state="idle"] svg * {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .article-anim svg * {
+    animation: none;
+  }
+}
+
+.article-anim-stage > svg {
+  display: block;
+}
+
+.article-anim-stage > svg + svg {
+  margin-top: 12px;
+}
+
+.article-anim-replay {
+  display: block;
+  margin: 6px auto 0;
+  padding: 3px 12px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--site-muted, #777);
+  background: transparent;
+  border: 1px solid var(--site-border, rgba(0, 0, 0, 0.14));
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.article-anim-replay:hover {
+  color: var(--site-text, #444);
+  background: var(--site-hover, rgba(0, 0, 0, 0.05));
+}
+
 /* Side-by-side figures (svg-row): two cases the reader is meant to compare.
    The row owns the columns; each child keeps being a plain .article-figure, so
    its own max-width caps still apply. Below the article's one-column breakpoint
@@ -2304,6 +2358,25 @@
 
 .article-table-row-emphasis td {
   font-weight: 600;
+}
+
+/* A column worth reading twice (TableBlock.highlightColumns): a tinted band
+   with its own even padding, so the band sits centred on its values. */
+.article-table .article-table-col-emphasis {
+  background: var(--site-accent-soft, rgba(47, 138, 112, 0.1));
+  font-weight: 600;
+  opacity: 1;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+/* Xiangqi mahjong match scoreboard: the hand columns and the total are
+   centred numbers under their hand number. */
+[data-article-slug="xiangqi-mahjong-32"]
+  .article-table:has(.article-table-col-emphasis)
+  :is(th, td):not(:first-child) {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 /* A table whose rows each lead with a board (TableBlock.rowDiagrams, the
