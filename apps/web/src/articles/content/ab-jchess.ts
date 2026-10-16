@@ -123,7 +123,7 @@ export const abJchessArticle: Article = {
   title: 'AB-JChess, a stronger jieqi bot',
   seoTitle: 'AB-JChess: the open-source jieqi engine that beat Pikafish 248 to 136',
   summary:
-    'An open-source jieqi engine with its own neural network now sits above Pikafish Level 8. It beat full-strength Pikafish 248 to 136 in 400 games.',
+    'AB-JChess, an open-source jieqi engine with its own neural network, now sits above Pikafish Level 8 on Mistboard. It beat full-strength Pikafish 248 to 136 in 400 games.',
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-10-02',
