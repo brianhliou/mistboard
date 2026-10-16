@@ -137,6 +137,12 @@
       "zh-hant": "瘋狂屋象棋規則"
     }
   },
+  "dou-shou-qi-engine": {
+    "title": "A Dou Shou Qi (Jungle Chess) Engine: Classical Search Beat the Learned Eval",
+    "kind": "article",
+    "description": "Building an engine for Jungle, also called Animal Chess: alpha-beta search and a hand-written evaluation went 11-2 with 187 draws against the strongest open-source engine I could run. A learned evaluation and a tablebase didn't help.",
+    "status": "published"
+  },
   "duck-xiangqi": {
     "title": "Duck Xiangqi Rules",
     "kind": "rules",

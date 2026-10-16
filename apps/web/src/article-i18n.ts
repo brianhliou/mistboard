@@ -204,6 +204,8 @@ export const UNTRANSLATED_ARTICLE_SLUGS: Readonly<Record<string, string>> = {
   'en-passant-under-fog': 'Moved from brianhliou.com in English; not yet translated.',
   'most-played-move': 'Moved from brianhliou.com in English; not yet translated.',
   'chess960-starting-positions': 'Moved from brianhliou.com in English; not yet translated.',
+  // The Dou Shou Qi engine post, moved on 2026-10-16.
+  'dou-shou-qi-engine': 'Moved from brianhliou.com in English; not yet translated.',
 };
 
 const TRANSLATED_ARTICLE_SLUG_SET = new Set<string>(TRANSLATED_ARTICLE_SLUGS);
@@ -1271,8 +1273,6 @@ const ZH_HANS: Record<string, string> = {
     '[将死](/watch?channel=jieqi&game=jq_dee4dda3-b78b-4c02-954d-01b954df94f6)',
   "A related blind spot involves the general. Only a soldier, the other general or a cannon's jump can take it, so a boxed-in general is in danger from one piece at a time, and the engine is slow to make room for one cornered. It will sometimes march a piece off to the far side of the board while a lone enemy soldier walks up and traps it. Same gap as the draw above: the evaluation has no real sense of a slow, quiet threat building several moves away.":
     '另一个相关的盲点跟将有关。只有卒、对方的将或炮的跳吃拿得下它，所以被围住的将一次只怕一种子，而引擎很慢才会替被逼到角落的将腾出空间。它有时候会把一颗子调到棋盘另一头，同时一颗孤零零的敌方卒走过来把它困死。跟上面那个和棋是同一个缺口：这套评估函数对于好几步之外慢慢成形的安静威胁，没有什么感觉。',
-  "There's an upshot for you here. If you're losing on material, you're not necessarily lost: MistyBanqi may shuffle into a [repetition draw](/blog/banqi-perpetual-chase) it can't see it should decline. It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":
-    '这对你是有好处的。如果你子力落后，不代表就输了：MistyBanqi 可能来回挪子，走进那个它看不出该拒绝的[重复和棋](/blog/banqi-perpetual-chase)。这种事多到可以量：引擎自我对弈的 200 盘里，[每六盘就有一盘和棋](/blog/banqi-statistics)，其中一半曾经走到赢定的局面。',
   '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
     '[MistyBanqi](/blog/mistybanqi) 自我对弈，每步搜索一千万个节点，是本站机器人的三倍棋力。用箭头一步步看。[配套研究](/study/FsA5sowX)收了这批棋的全部二十盘，一盘一章，附上每盘怎么走完的注记。同一批棋里的两百盘被整理成数字，放在[用数字看暗棋](/blog/banqi-statistics)：领先多少才算安全，一盘棋什么时候就定了。',
   // cao-yanlei (zh-Hans), machine-drafted 2026-09-25, not native-reviewed. Mainland
@@ -2127,15 +2127,88 @@ const ZH_HANS: Record<string, string> = {
   "Nothing in the evaluation rewards converting a won position over just holding material, so a position it's winning by a mile and a position it has actually won score about the same. With no term pushing it to make progress, it shuffles, and banqi's threefold-repetition rule ends the game a draw.":
     '评估里没有任何一项会因为「把优势转化为胜利」而比「单纯守住子力」给更高的分，于是一个遥遥领先的局面和一个真正已经赢下的局面，得分几乎一样。既然没有哪一项促使它取得进展，它就只是来回挪子，而暗棋的三次重复局面规则便把这盘判成和棋。',
   'It can also lose its own general': '它也可能丢掉自己的将帅',
-  'How each of these was found, reproduced, and measured is written up in detail in the engineering post linked below.':
-    '这些问题各自是如何被发现、复现并量化的，下面链接的工程博客文章里有详细记录。',
   'Why these exist, and what’s next': '为什么会有这些问题，以及下一步',
   "These are the limits of a hand-written evaluation: it can only value what someone thought to encode, and conversion and slow king-hunts are exactly the long-horizon calls that are hard to write down. The fix the strongest Dark Chess programs use is a learned evaluation, trained from game outcomes, which lets the engine judge these on its own. That's the eventual next step for MistyBanqi. Until a learned version clears the current engine's bar in testing, the hand-written one is what you play: strong, and honest about where it cracks.":
     '这些是手写评估的局限：它只能给有人想到要编码进去的东西打分，而「把胜势转化为胜利」和「缓慢围猎将帅」恰恰是那种很难写成规则的长程判断。最强的暗棋程序采用的解法，是一套从对局胜负中学习得到的评估，让引擎能自己判断这些。这也是 MistyBanqi 终将迈出的下一步。在学习版于测试中越过现有引擎这道门槛之前，你面对的仍是手写版：强，且对自己会在哪里出问题保持坦诚。',
+  // -- How MistyBanqi Plays: the build sections merged from brianhliou.com (2026-10-16),
+  // from that post's zh-hans and zh-hant translations --
+  'MistyBanqi is an open-source Banqi (Chinese Dark Chess) engine, about even with the open engine I benchmarked it against. The closed programs are stronger.':
+    'MistyBanqi 是一个开源的暗棋（中国暗棋）引擎，与我用作基准的那个开源引擎大致势均力敌。闭源程序更强。',
+  'Self-play said a search change was worth +77 Elo; against the outside engine it was worth nothing. Every later change was measured against that engine.':
+    '自我对弈说一项搜索改动值 +77 Elo；对上外部引擎却毫无价值。后续每一项改动都改用那个引擎来衡量。',
+  'The outside benchmark found the cannon and chariot values swapped. The biggest eval gain, a piece’s value rising as its capturers leave the board, took the full stack to +16.6% against the benchmark.':
+    '外部基准发现炮和车的数值被弄反了。评估上收益最大的一项是：能吃掉某个棋子的对方棋子离开棋盘后，该棋子的价值随之上升，这让整套改动对基准的胜率提升达到 +16.6%。',
+  'A cheap AlphaZero test topped out at a 35% win rate against the hand-tuned engine, so the paid run is on hold.':
+    '一次低成本的 AlphaZero 测试对上手工调参的引擎，胜率最高只到 35%，所以付费的大规模训练暂时搁置。',
+  'How it was built': '它是怎么做出来的',
+  'I built MistyBanqi, a classical Rust engine for Banqi (Chinese Dark Chess). It uses alpha-beta plus Star1 expectiminimax, a handcrafted evaluation, and no neural network in the playing version.':
+    '我做了 MistyBanqi，一个用 Rust 写的传统暗棋（中国暗棋）引擎。它使用 alpha-beta 加 Star1 expectiminimax、手工编写的评估函数，对局版本中不含神经网络。',
+  'This is not a strongest-engine claim. The strong Banqi programs, CLAP_CDC and DarkKnight, are closed and stronger. This is the build report for the strongest open-source engine I could make on the budget I was willing to spend. The useful result was not one magic eval term. Almost all the progress came from fixing how I measured strength.':
+    '这不是在宣称它最强。强力的暗棋程序 CLAP_CDC 和 DarkKnight 都是闭源的，而且更强。这是一份构建报告，讲的是在我愿意花的预算内能做出的最强开源引擎。真正有用的结论不是某个神奇的评估项。几乎所有进展都来自修正我衡量棋力的方式。',
+  'I started its evaluation from [george0828Zhang’s open-source CDC engine](https://github.com/george0828Zhang/chinese-dark-chess-hw), then kept that engine as the fixed opponent I measured every change against. MistyBanqi is now competent, about even with that benchmark, and open-source.':
+    '它的评估函数起初来自[george0828Zhang 的开源 CDC 引擎](https://github.com/george0828Zhang/chinese-dark-chess-hw)，之后我把那个引擎留作固定对手，用来衡量每一项改动。现在 MistyBanqi 已经相当称职，与这个基准大致势均力敌，并且开源。',
+  'Don’t measure against yourself': '不要拿自己当尺子',
+  'My first upgrade was the usual search machinery, a transposition table and repetition detection. I measured it against an earlier build of my own engine in paired self-play. It scored 60.9%, about +77 Elo, and every statistic said the gain was real.':
+    '我的第一次升级是常规的搜索机件：置换表和重复局面检测。我用成对的自我对弈，拿它对上自己引擎的早期版本来衡量。它得分 60.9%，约 +77 Elo，各项统计都说这个提升是真的。',
+  'Then I ran the same change against the reference engine. The +77 Elo was gone; the result was even. A bot tuned against itself optimizes for beating its own blind spots, and the self-play number was measuring my engine’s idea of a hard opponent, which is just my engine. So I made that engine the yardstick and ran every later change as a large paired bakeoff against it, a few hundred games a side fanned across containers on Modal so each run lands in under an hour. Banqi draws a lot, so a few-percent edge needs that many games to see; the 20-game matches I started with were noise.':
+    '然后我把同一项改动拿去对上参考引擎。那 +77 Elo 消失了；结果是打平。一个拿自己调参的机器人，优化的是打败自己的盲点，而自我对弈的数字衡量的是我的引擎心中「难缠对手」的样子，也就是我的引擎本身。于是我把那个引擎定为标尺，后续每一项改动都拿它做大规模成对比试，每方几百局，散布在 Modal 的多个容器上，让每轮跑完不到一小时。暗棋和棋很多，几个百分点的优势需要这么多局才看得出来；我一开始用的 20 局对抗赛纯粹是噪声。',
+  'Tuning the evaluation': '调评估函数',
+  'The first thing the honest yardstick found was a bug I’d been carrying the whole time, in the piece-value table. Here is the corrected version:':
+    '这把诚实的标尺首先找出的，是我一直带着的一个 bug，在子力价值表里。下面是修正后的版本：',
+  '16 (was 12)': '16（原为 12）',
+  '9 (was 14)': '9（原为 14）',
+  'The cannon and the chariot were backwards. The cannon captures by jumping a screen piece, which makes it the most tactically dangerous piece on the board even though it sits low in the capture order; the chariot is a plain slider. That one fix was worth a few points by itself and most of the eval gain. Self-play could never have shown it to me, because every version of my own engine carried the same wrong table; it took an outside opponent to expose it.':
+    '炮和车弄反了。炮靠隔一个炮架吃子，这让它成为盘面上战术威胁最大的棋子，尽管它在吃子等级里排位很低；车只是普通的直线滑行棋子。仅这一处修正本身就值几个百分点，占了评估收益的大半。自我对弈永远不可能向我揭示这一点，因为我自己引擎的每个版本都带着同一张错误的表；只有外部对手才能把它暴露出来。',
+  'The more interesting tuning is that a piece’s value depends on what’s left on the board, not a constant. The reference engine already did a small version of this for the general, the one piece a soldier can capture: its value climbs as enemy soldiers come off, because the only thing that threatens it is disappearing. I generalized that to every piece. Each piece has a set of enemy pieces that can capture it, and as those are traded away its value rises toward untouchable. That term, adaptive domination, was the single biggest eval gain, and the whole stack reached +16.6% against the reference engine with two-thirds fewer losses. It still gave +8.7% when I deliberately paired it with the old, wrong value table, which is the sign it captures real Banqi structure instead of numbers fit to one opponent.':
+    '更有意思的调参是：一个棋子的价值取决于盘面上还剩什么，而不是常数。参考引擎对将／帅已经做了一个小规模版本，将／帅是唯一会被兵吃掉的棋子：随着对方的兵被吃掉，它的价值上升，因为唯一威胁它的东西正在消失。我把这个思路推广到每个棋子。每个棋子都有一组能吃它的对方棋子，随着这些棋子被换掉，它的价值就朝「无人能碰」上升。这个项叫自适应压制，是评估上收益最大的单项，整套改动对参考引擎达到 +16.6%，负局减少了三分之二。即使我故意把它和旧的、错误的价值表搭配，也仍有 +8.7%，这说明它抓住的是暗棋的真实结构，而不是只对一个对手拟合出来的数字。',
+  'The whole term is a dozen lines. For every piece on the board, count the enemy pieces still alive (on the board or in the bag) that could capture it, and scale a bonus inversely:':
+    '整个项只有十来行。对盘面上每个棋子，数一数还存活（在盘上或在袋中）且能吃掉它的对方棋子数量，再按反比缩放一个加分：',
+  'A general with the enemy soldiers all traded off, or any piece whose capturers have left the board, drifts toward untouchable, which is exactly the intuition a fixed table can’t hold. ([the full function](https://github.com/brianhliou/misty-banqi/blob/main/banqi_rust/src/engine.rs))':
+    '当对方的兵全被换掉后的将／帅，或任何能吃它的棋子都已离开盘面的棋子，会趋向于无人能碰，而这正是固定数值表无法承载的直觉。（[完整函数](https://github.com/brianhliou/misty-banqi/blob/main/banqi_rust/src/engine.rs)）',
+  'The strength wasn’t in more search': '棋力不在于搜得更多',
+  'The static eval terms plateaued, so next I went after depth. Two things stopped me.':
+    '静态评估项到了瓶颈，于是我转向搜索深度。两件事拦住了我。',
+  'First, the flips. At a flip node the engine has to average over every piece the tile might turn out to be, so a single flip fans out into a dozen-odd weighted outcomes, and there are many flippable tiles. That chance branching makes the tree explode; you can’t naively search deep in Banqi the way you can in chess. (Star1 expectiminimax prunes the chance branches, which helps, but it doesn’t make the problem go away.)':
+    '第一是翻棋。在一个翻棋节点上，引擎必须对这枚暗子可能翻出的每种棋子取加权平均，于是一次翻棋就散开成十几个加权结果，而可翻的暗子又有很多。这种机会分支让搜索树爆炸；暗棋里没法像国际象棋那样直白地搜得很深。（Star1 expectiminimax 会剪掉一些机会分支，有帮助，但并不能让问题消失。）',
+  'Second, and more important: even with more nodes, the results stopped moving. Past a few hundred thousand nodes per move, deeper play didn’t beat the reference engine any better. The bottleneck wasn’t depth. It was the evaluation, the function that scores a position the search bottoms out on. So I stopped trying to search my way to strength and started watching games. A win-rate tells you that you’re losing; it never tells you which move to look at.':
+    '第二点更重要：即使给更多节点，结果也不再变化。每着超过几十万节点之后，搜得更深并没有让它更能打赢参考引擎。瓶颈不是深度，而是评估，也就是搜索到底部时给局面打分的那个函数。于是我不再试图靠搜索堆出棋力，而开始看棋。胜率只告诉你在输，它从不告诉你该去看哪一着。',
+  'The engine was also blind to the repetition itself. In production it was handed only the current position with no history, so it could not see the repetition it was walking into.':
+    '引擎也看不见重复局面本身。在生产环境里，它只拿到当前局面，没有历史，所以它对自己正走进的重复局面一无所知。',
+  'The fix threaded the real game’s move history into the search, so the engine sees a repetition coming and avoids it when ahead, seeking it only when losing (a small contempt setting). That was worth about +53 Elo. A separate guard handles the ugliest version, where the engine sheds a piece into a losing capture and then takes the draw anyway, strictly worse than just taking it. That one looked like a contempt bug, but it reproduced at contempt zero; the real cause was the eval scoring the losing capture a hair above the draw value.':
+    '修正的做法是把真实对局的着法历史接进搜索，于是引擎能看到重复局面将至，领先时避开它，只在落后时去寻求它（一个小的蔑视值设定）。这值约 +53 Elo。另有一道防护处理最难看的情形：引擎先丢掉一个子被吃，然后还是接受和棋，这比直接接受和棋严格更糟。那一处看起来像蔑视值的 bug，但在蔑视值为零时也能复现；真正的原因是评估把这次亏子的吃子算得比和棋值高出一丝。',
+  "There's an upshot for you here. If you're losing on material, you're not necessarily lost: MistyBanqi may still shuffle into a [repetition draw](/blog/banqi-perpetual-chase). It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":
+    '这对你是有好处的。如果你子力落后，不代表就输了：MistyBanqi 仍可能来回挪子，走进[重复和棋](/blog/banqi-perpetual-chase)。这种事多到可以量：引擎自我对弈的 200 盘里，[每六盘就有一盘和棋](/blog/banqi-statistics)，其中一半曾经走到赢定的局面。',
+  'Watch a single enemy soldier hunt Misty’s general down the a-file.':
+    '看一个对方的兵沿 a 路把 Misty 的将追下去。',
+  'MistyBanqi (black) against a player on Mistboard, 18 June 2026, moves 44 to 58.':
+    'MistyBanqi（黑方）对 Mistboard 上的一位棋手，2026 年 6 月 18 日，第 44 至 58 着。',
+  'MistyBanqi has the black pieces. Its general is on b1, and the red soldier that will hunt it is on b4.':
+    'MistyBanqi 执黑。它的将在 b1，之后追猎它的那个红兵在 b4。',
+  'The soldier holds a1. The general on b1 can’t move onto the face-down tiles on c1 and b2, and a general can’t capture a soldier, so it has no legal move. It stays stuck until move 85, when it takes a red advisor flipped up on b2, and the red general captures it on move 86.':
+    '兵占住了 a1。b1 上的将不能走到 c1 和 b2 的暗子上，而将又不能吃兵，所以它无着可走。它一直被困到第 85 着，才吃掉 b2 上刚翻出的红士，随即在第 86 着被红帅吃掉。',
+  'Misty (black, here) drifts its general into the a1 corner. One red soldier marches up the file, and the general is walled in: the squares next to it are still face-down, you can’t move onto a face-down tile, and a general can’t capture a soldier. It ends with no legal move at all, frozen in place, and is captured 28 moves later.':
+    'Misty（此处为黑方）把将挪进了 a1 角。一个红兵沿这一路推上来，将就被围死了：它旁边的格子仍是暗子，暗子上不能走，而将又不能吃兵。最后它完全无着可走，被冻在原地，28 着之后被吃。',
+  'The save is what players call making luft: flip a face-down neighbour to open the general an escape before the hunter arrives. I added a general-safety term that induces exactly that, and it cut how often Misty loses its own general from 35.5% to 26%. Look at what measuring that took: against the reference engine the win-rate barely moved, because it doesn’t hunt generals and Misty usually won these games anyway. The benchmark couldn’t see the fix, so I measured the disaster directly instead of trusting the score. (I also caught myself asking the engine’s own eval whether a save worked. An eval that’s blind to the danger can’t grade a fix for its own blindness, so I checked it by hand.)':
+    '救法就是棋手说的「开气孔」：在追猎者到来之前翻开旁边的一枚暗子，给将／帅开出退路。我加了一个将／帅安全项，正好诱导出这种走法，把 Misty 丢掉自己将／帅的频率从 35.5% 降到 26%。看看衡量这一点需要什么：对上参考引擎时胜率几乎没动，因为它不追猎将／帅，而这些棋 Misty 本来多半也赢。基准看不到这项修正，所以我直接衡量灾难本身，而不是相信分数。（我还发现自己在拿引擎自己的评估去问一次救援是否奏效。一个对危险视而不见的评估，无法为自己的盲区打分，所以我手动核对了。）',
+  'This is the honest edge of what handcrafting reaches. The threat is a slow, quiet, multi-move march that no static term sees until it’s too late, which is exactly the long-horizon judgment a learned evaluation is for.':
+    '这就是手工编写能达到的诚实边界。威胁是一次缓慢、安静、跨越多着的行军，任何静态项都看不见，直到为时已晚，而这恰恰是学习型评估要解决的长视野判断。',
+  'The last measurement: is the climb worth paying for?': '最后一次衡量：这段攀升值不值得付费？',
+  'The cheap gains are spent, and both pathologies point at the same fix: an evaluation that understands positions instead of counting them. That’s a learned value network, the AlphaZero recipe CLAP_CDC used to win the Computer Olympiad at this game.':
+    '便宜的收益已经用光，而两个病症都指向同一个解法：一个理解局面而不是数子的评估。那就是学习型价值网络，也就是 CLAP_CDC 用来在这个项目上赢下计算机奥林匹克的 AlphaZero 配方。',
+  'So I built the pipeline (board encoding, a small ResNet, chance-aware MCTS, gated self-play so a bad generation can’t poison the next), and then, before paying for a full run, made one more measurement: a cheap local de-risk to check whether the value net would actually beat the hand-tuned engine.':
+    '于是我搭好了流水线（棋盘编码、一个小型 ResNet、考虑随机性的 MCTS、带门限的自我对弈以防坏的一代污染下一代），然后在为完整训练付费之前，又做了一次衡量：一次低成本的本地风险排除，看看价值网络是否真能打败手工调参的引擎。',
+  'It didn’t. I ran the de-risk on my laptop’s GPU, and across three runs the network capped around a 35% win-rate against the alpha-beta engine, never reaching the 55% that would count as an improvement. Doubling the search budget barely moved it, so this isn’t a case of too few games; the likeliest causes are the noisy value targets the chance nodes produce and a network that’s too small. Those are fixable, but testing the fixes needs far more compute than a laptop that throttles after a few hours, and cloud GPUs aren’t plug-and-play here: the game logic is single-threaded Python, so a fast GPU sits starved waiting on it until that path is rewritten in Rust behind a batched inference server. That’s a week or two of work, then hundreds to low thousands of dollars to run. On the evidence I have, it’s a bet, not a sure step, so I haven’t taken it; the cheaper local experiments come first.':
+    '它没能做到。我在笔记本的 GPU 上跑了这次风险排除，三次运行中网络对上 alpha-beta 引擎的胜率都封顶在 35% 左右，从未达到算得上改进的 55%。把搜索预算翻倍几乎没有变化，所以这不是对局太少的问题；最可能的原因是机会节点产生的价值目标噪声太大，以及网络太小。这些都可以修，但测试这些修正所需的算力远超一台跑几小时就降频的笔记本，而云 GPU 在这里也不是即插即用：对局逻辑是单线程 Python，所以快速 GPU 只能饿着等它，除非那条路径用 Rust 重写并放在一个批量推理服务后面。这是一两周的工作量，之后还要花几百到一两千美元来跑。就我手上的证据看，这是一次赌博，而不是稳妥的一步，所以我还没下注；更便宜的本地实验排在前面。',
+  'So MistyBanqi is a competent alpha-beta engine, not a state-of-the-art claim, and that’s a measured choice, not a dead end. I haven’t run a reproducible head-to-head against CLAP_CDC, DarkKnight, or other top CDC programs; the learned net is the next climb, the day a de-risk says it’s worth paying for.':
+    '所以 MistyBanqi 是一个称职的 alpha-beta 引擎，不是最先进水平的宣称，而这是衡量之后的选择，不是走进了死路。我还没有对 CLAP_CDC、DarkKnight 或其他顶级 CDC 程序做过可复现的正面较量；学习型网络是下一段攀升，等哪天风险排除说它值得付费。',
+  'The pattern under every section here: the cheapest, highest-leverage decision in the whole project was choosing what to measure. The self-play score, the win-rate, the general-loss rate, the de-risk gate, each time picking an instrument that could see what I actually cared about did more than any change to the engine itself.':
+    '贯穿这里每一节的模式是：整个项目中最便宜、最高杠杆的决定，是选择衡量什么。自我对弈得分、胜率、丢将／帅的比率、风险排除门限，每一次挑一件能看见我真正在意的东西的量具，作用都大于对引擎本身的任何改动。',
+  '[misty-banqi](https://github.com/brianhliou/misty-banqi) is the engine, MIT-licensed, alpha-beta + Star1 search and the eval terms above. [chinese-dark-chess-hw](https://github.com/george0828Zhang/chinese-dark-chess-hw) is the open engine I started the evaluation from and used as the fixed benchmark. More in the engine series: [the Dou Shou Qi engine](/blog/dou-shou-qi-engine), the perfect-information cousin on a bigger board.':
+    '[misty-banqi](https://github.com/brianhliou/misty-banqi) 是引擎本体，MIT 许可，alpha-beta + Star1 搜索以及上文的评估项。[chinese-dark-chess-hw](https://github.com/george0828Zhang/chinese-dark-chess-hw) 是我的评估函数起初取自、并用作固定基准的开源引擎。引擎系列更多内容：[斗兽棋引擎](/blog/dou-shou-qi-engine)，棋盘更大的完全信息表亲。',
+  'MistyBanqi is live on Mistboard. Take it on at the strength you pick, or read its source.':
+    'MistyBanqi 已在 Mistboard 上线。来按你选择的强度挑战它，或阅读它的源代码。',
+  'misty-banqi on GitHub': 'GitHub 上的 misty-banqi',
   'Play it': '来下一盘',
-  'MistyBanqi is live on Mistboard. Take it on at the strength you pick, or read the full writeup of how it was built and measured.':
-    'MistyBanqi 已在 Mistboard 上线。来按你选择的强度挑战它，或阅读它如何被构建与衡量的完整记录。',
-  'The engineering story': '工程幕后故事',
   Human: '人类',
   'Human vs engine · mistboard.com': '人类对引擎 · mistboard.com',
   'Draw by repetition · MistyBanqi up 10 pieces to 2': '重复局面和棋 · MistyBanqi 十子对两子领先',
@@ -7120,8 +7193,6 @@ const ZH_HANT: Record<string, string> = {
   'Jungle Chess rules': '鬥獸棋規則',
   '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
     '[MistyBanqi](/blog/mistybanqi) 自我對弈，每步搜尋一千萬個節點，是本站機器人的三倍棋力。用箭頭一步步看。[配套研究](/study/FsA5sowX)收了這批棋的全部二十盤，一盤一章，附上每盤怎麼走完的註記。同一批棋裡的兩百盤被整理成數字，放在[用數字看暗棋](/blog/banqi-statistics)：領先多少才算安全，一盤棋什麼時候就定了。',
-  "There's an upshot for you here. If you're losing on material, you're not necessarily lost: MistyBanqi may shuffle into a [repetition draw](/blog/banqi-perpetual-chase) it can't see it should decline. It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":
-    '這對你是有好處的。如果你子力落後，不代表就輸了：MistyBanqi 可能來回挪子，走進那個它看不出該拒絕的[重複和棋](/blog/banqi-perpetual-chase)。這種事多到可以量：引擎自我對弈的 200 盤裡，[每六盤就有一盤和棋](/blog/banqi-statistics)，其中一半曾經走到贏定的局面。',
   "A related blind spot involves the general. Only a soldier, the other general or a cannon's jump can take it, so a boxed-in general is in danger from one piece at a time, and the engine is slow to make room for one cornered. It will sometimes march a piece off to the far side of the board while a lone enemy soldier walks up and traps it. Same gap as the draw above: the evaluation has no real sense of a slow, quiet threat building several moves away.":
     '另一個相關的盲點跟將有關。只有卒、對方的將或砲的跳吃拿得下它，所以被圍住的將一次只怕一種子，而引擎很慢才會替被逼到角落的將騰出空間。它有時候會把一顆子調到棋盤另一頭，同時一顆孤零零的敵方卒走過來把它困死。跟上面那個和棋是同一個缺口：這套評估函數對於好幾步之外慢慢成形的安靜威脅，沒有什麼感覺。',
   // one-thousand-games: machine-drafted 2026-10-01, not native-reviewed. Variant names follow the
@@ -8347,15 +8418,88 @@ const ZH_HANT: Record<string, string> = {
   "Nothing in the evaluation rewards converting a won position over just holding material, so a position it's winning by a mile and a position it has actually won score about the same. With no term pushing it to make progress, it shuffles, and banqi's threefold-repetition rule ends the game a draw.":
     '評估裡沒有任何一項會因為「把優勢轉化為勝利」而比「單純守住子力」給更高的分，於是一個遙遙領先的局面和一個真正已經贏下的局面，得分幾乎一樣。既然沒有哪一項促使它取得進展，它就只是來回挪子，而暗棋的三次重複局面規則便把這盤判成和棋。',
   'It can also lose its own general': '它也可能丟掉自己的將帥',
-  'How each of these was found, reproduced, and measured is written up in detail in the engineering post linked below.':
-    '這些問題各自是如何被發現、重現並量化的，下面連結的工程部落格文章裡有詳細記錄。',
   'Why these exist, and what’s next': '為什麼會有這些問題，以及下一步',
   "These are the limits of a hand-written evaluation: it can only value what someone thought to encode, and conversion and slow king-hunts are exactly the long-horizon calls that are hard to write down. The fix the strongest Dark Chess programs use is a learned evaluation, trained from game outcomes, which lets the engine judge these on its own. That's the eventual next step for MistyBanqi. Until a learned version clears the current engine's bar in testing, the hand-written one is what you play: strong, and honest about where it cracks.":
     '這些是手寫評估的侷限：它只能給有人想到要編碼進去的東西打分，而「把勝勢轉化為勝利」和「緩慢圍獵將帥」恰恰是那種很難寫成規則的長程判斷。最強的暗棋程式採用的解法，是一套從對局勝負中學習得到的評估，讓引擎能自己判斷這些。這也是 MistyBanqi 終將邁出的下一步。在學習版於測試中越過現有引擎這道門檻之前，你面對的仍是手寫版：強，且對自己會在哪裡出問題保持坦誠。',
+  // -- How MistyBanqi Plays: the build sections merged from brianhliou.com (2026-10-16),
+  // from that post's zh-hans and zh-hant translations --
+  'MistyBanqi is an open-source Banqi (Chinese Dark Chess) engine, about even with the open engine I benchmarked it against. The closed programs are stronger.':
+    'MistyBanqi 是一個開源的暗棋（中國暗棋）引擎，與我拿來做基準的那個開源引擎大致打成平手。閉源程式更強。',
+  'Self-play said a search change was worth +77 Elo; against the outside engine it was worth nothing. Every later change was measured against that engine.':
+    '自我對弈說某項搜尋改動值 +77 Elo；對上那個外部引擎卻毫無價值。之後每一項改動都改以該引擎來衡量。',
+  'The outside benchmark found the cannon and chariot values swapped. The biggest eval gain, a piece’s value rising as its capturers leave the board, took the full stack to +16.6% against the benchmark.':
+    '外部基準測試找出砲與車的子力值被互換了。評估值上收益最大的一項是：能吃掉某枚棋子的敵方棋子離開棋盤後，該子的價值隨之上升，讓整套改動對基準引擎的勝率提升達到 +16.6%。',
+  'A cheap AlphaZero test topped out at a 35% win rate against the hand-tuned engine, so the paid run is on hold.':
+    '一次低成本的 AlphaZero 測試對上手調引擎，勝率最高只到 35%，因此付費的正式訓練暫緩。',
+  'How it was built': '它是怎麼做出來的',
+  'I built MistyBanqi, a classical Rust engine for Banqi (Chinese Dark Chess). It uses alpha-beta plus Star1 expectiminimax, a handcrafted evaluation, and no neural network in the playing version.':
+    '我做了 MistyBanqi，一個用 Rust 寫的古典暗棋（中國暗棋）引擎。它使用 alpha-beta 加上 Star1 expectiminimax、手工打造的評估函式，對弈版本不含神經網路。',
+  'This is not a strongest-engine claim. The strong Banqi programs, CLAP_CDC and DarkKnight, are closed and stronger. This is the build report for the strongest open-source engine I could make on the budget I was willing to spend. The useful result was not one magic eval term. Almost all the progress came from fixing how I measured strength.':
+    '這不是在宣稱它最強。強力的暗棋程式 CLAP_CDC 與 DarkKnight 都是閉源且更強。這是在我願意花的預算內，能做出的最強開源引擎的建置報告。有用的結果不是某個神奇的評估項。幾乎所有進展都來自修正我衡量棋力的方式。',
+  'I started its evaluation from [george0828Zhang’s open-source CDC engine](https://github.com/george0828Zhang/chinese-dark-chess-hw), then kept that engine as the fixed opponent I measured every change against. MistyBanqi is now competent, about even with that benchmark, and open-source.':
+    '我的評估函式是從[george0828Zhang 的開源 CDC 引擎](https://github.com/george0828Zhang/chinese-dark-chess-hw)起步，然後就把那個引擎留作固定對手，用來衡量每一項改動。MistyBanqi 現在已有相當水準，與該基準大致平手，而且是開源的。',
+  'Don’t measure against yourself': '不要拿自己當尺子',
+  'My first upgrade was the usual search machinery, a transposition table and repetition detection. I measured it against an earlier build of my own engine in paired self-play. It scored 60.9%, about +77 Elo, and every statistic said the gain was real.':
+    '我第一次升級是慣常的搜尋機制，置換表與重複偵測。我用配對自我對弈，拿它跟自己引擎的舊版本比。它拿下 60.9%，約 +77 Elo，所有統計數字都說這個收益是真的。',
+  'Then I ran the same change against the reference engine. The +77 Elo was gone; the result was even. A bot tuned against itself optimizes for beating its own blind spots, and the self-play number was measuring my engine’s idea of a hard opponent, which is just my engine. So I made that engine the yardstick and ran every later change as a large paired bakeoff against it, a few hundred games a side fanned across containers on Modal so each run lands in under an hour. Banqi draws a lot, so a few-percent edge needs that many games to see; the 20-game matches I started with were noise.':
+    '接著我拿同一項改動對上參考引擎。+77 Elo 不見了；結果是平手。一個拿自己調校的機器人，只會最佳化到打贏自己的盲點，而自我對弈的數字衡量的是我的引擎對「強對手」的想像，也就是我的引擎本身。於是我把那個引擎當成尺，之後每項改動都對它跑一場大型配對比試，每邊幾百局，分散到 Modal 上的多個容器，讓每次執行都在一小時內完成。暗棋和棋很多，幾個百分點的優勢需要這麼多局才看得出來；我一開始跑的 20 局對抗賽全是雜訊。',
+  'Tuning the evaluation': '調校評估函式',
+  'The first thing the honest yardstick found was a bug I’d been carrying the whole time, in the piece-value table. Here is the corrected version:':
+    '誠實的尺找出的第一件事，是我一路帶著的一個 bug，在子力值表裡。以下是修正後的版本：',
+  '16 (was 12)': '16（原為 12）',
+  '9 (was 14)': '9（原為 14）',
+  'The cannon and the chariot were backwards. The cannon captures by jumping a screen piece, which makes it the most tactically dangerous piece on the board even though it sits low in the capture order; the chariot is a plain slider. That one fix was worth a few points by itself and most of the eval gain. Self-play could never have shown it to me, because every version of my own engine carried the same wrong table; it took an outside opponent to expose it.':
+    '砲和車寫反了。砲靠隔一個砲架吃子，儘管在吃子等級裡排得低，卻是盤面上戰術威脅最大的子；車只是普通的直線走子。光這一處修正本身就值好幾個百分點，也是評估值收益的大半。自我對弈永遠不可能讓我看到這點，因為我自己引擎的每個版本都帶著同一張錯的表；要揭穿它得靠外部對手。',
+  'The more interesting tuning is that a piece’s value depends on what’s left on the board, not a constant. The reference engine already did a small version of this for the general, the one piece a soldier can capture: its value climbs as enemy soldiers come off, because the only thing that threatens it is disappearing. I generalized that to every piece. Each piece has a set of enemy pieces that can capture it, and as those are traded away its value rises toward untouchable. That term, adaptive domination, was the single biggest eval gain, and the whole stack reached +16.6% against the reference engine with two-thirds fewer losses. It still gave +8.7% when I deliberately paired it with the old, wrong value table, which is the sign it captures real Banqi structure instead of numbers fit to one opponent.':
+    '更有意思的調校是，一枚棋子的價值取決於盤面上還剩什麼，而不是常數。參考引擎已經對將／帥做了一個小版本：它是唯一會被卒／兵吃掉的子，隨著敵方兵卒被吃掉，它的價值上升，因為唯一威脅它的東西正在消失。我把這點推廣到每一枚棋子。每枚棋子都有一組能吃它的敵方棋子，隨著這些子被換掉，它的價值就朝「無敵」上升。這個項，也就是自適應制霸，是單項最大的評估值收益，整套改動對參考引擎達到 +16.6%，敗局少了三分之二。就算我故意把它和舊的錯誤子力值表搭在一起，它仍給出 +8.7%，這正說明它抓到的是真正的暗棋結構，而不是硬套在單一對手身上的數字。',
+  'The whole term is a dozen lines. For every piece on the board, count the enemy pieces still alive (on the board or in the bag) that could capture it, and scale a bonus inversely:':
+    '整個項只有十幾行。對盤面上每一枚棋子，數出仍存活（在盤面上或在子堆裡）且能吃它的敵方棋子數量，並以反比縮放一個加分：',
+  'A general with the enemy soldiers all traded off, or any piece whose capturers have left the board, drifts toward untouchable, which is exactly the intuition a fixed table can’t hold. ([the full function](https://github.com/brianhliou/misty-banqi/blob/main/banqi_rust/src/engine.rs))':
+    '當敵方兵卒全被換掉的將／帥，或任何能吃它的子都已離開盤面的棋子，都會朝「無敵」漂移，而這正是固定表格無法承載的直覺。（[完整函式](https://github.com/brianhliou/misty-banqi/blob/main/banqi_rust/src/engine.rs)）',
+  'The strength wasn’t in more search': '棋力不在於搜得更多',
+  'The static eval terms plateaued, so next I went after depth. Two things stopped me.':
+    '靜態評估項到了瓶頸，接著我去追搜尋深度。兩件事擋住了我。',
+  'First, the flips. At a flip node the engine has to average over every piece the tile might turn out to be, so a single flip fans out into a dozen-odd weighted outcomes, and there are many flippable tiles. That chance branching makes the tree explode; you can’t naively search deep in Banqi the way you can in chess. (Star1 expectiminimax prunes the chance branches, which helps, but it doesn’t make the problem go away.)':
+    '第一是翻棋。在翻棋節點，引擎得對這枚暗子可能翻出的每種棋子取平均，所以單一次翻棋就散開成十幾種加權結果，而可翻的暗子又很多。這種機率分支讓樹爆炸；你沒辦法像下西洋棋那樣在暗棋裡天真地搜得很深。（Star1 expectiminimax 會修剪機率分支，有幫助，但問題不會消失。）',
+  'Second, and more important: even with more nodes, the results stopped moving. Past a few hundred thousand nodes per move, deeper play didn’t beat the reference engine any better. The bottleneck wasn’t depth. It was the evaluation, the function that scores a position the search bottoms out on. So I stopped trying to search my way to strength and started watching games. A win-rate tells you that you’re losing; it never tells you which move to look at.':
+    '第二點更重要：即使給更多節點，結果也不再動了。超過每著幾十萬節點之後，搜得更深並沒有讓它打參考引擎打得更好。瓶頸不在深度，而在評估函式，也就是搜尋觸底時為局面評分的那個函式。所以我停止想靠搜尋堆出棋力，開始看棋。勝率只告訴你你在輸；它從不告訴你該去看哪一著。',
+  'The engine was also blind to the repetition itself. In production it was handed only the current position with no history, so it could not see the repetition it was walking into.':
+    '引擎也看不見重複局面本身。在正式環境中，它只拿到當前局面而沒有歷史，所以對自己正走進去的重複局面視而不見。',
+  'The fix threaded the real game’s move history into the search, so the engine sees a repetition coming and avoids it when ahead, seeking it only when losing (a small contempt setting). That was worth about +53 Elo. A separate guard handles the ugliest version, where the engine sheds a piece into a losing capture and then takes the draw anyway, strictly worse than just taking it. That one looked like a contempt bug, but it reproduced at contempt zero; the real cause was the eval scoring the losing capture a hair above the draw value.':
+    '修正方式是把真實棋局的著法歷史串進搜尋，讓引擎看見重複局面將至，領先時避開它，只在落後時去追求它（一個小小的蔑視值設定）。這值約 +53 Elo。另有一道防護處理最難看的版本：引擎先送掉一子任其被吃，然後還是接受和棋，嚴格來說比直接和棋更糟。那一處看起來像蔑視值的 bug，但在蔑視值為零時也會重現；真正的原因是評估值把那個送子被吃算得比和棋值高了一絲。',
+  "There's an upshot for you here. If you're losing on material, you're not necessarily lost: MistyBanqi may still shuffle into a [repetition draw](/blog/banqi-perpetual-chase). It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":
+    '這對你是有好處的。如果你子力落後，不代表就輸了：MistyBanqi 仍可能來回挪子，走進[重複和棋](/blog/banqi-perpetual-chase)。這種事多到可以量：引擎自我對弈的 200 盤裡，[每六盤就有一盤和棋](/blog/banqi-statistics)，其中一半曾經走到贏定的局面。',
+  'Watch a single enemy soldier hunt Misty’s general down the a-file.':
+    '看一枚敵方兵沿 a 路把 Misty 的將一路獵下來。',
+  'MistyBanqi (black) against a player on Mistboard, 18 June 2026, moves 44 to 58.':
+    'MistyBanqi（黑方）對 Mistboard 上的一位棋手，2026 年 6 月 18 日，第 44 至 58 著。',
+  'MistyBanqi has the black pieces. Its general is on b1, and the red soldier that will hunt it is on b4.':
+    'MistyBanqi 執黑。它的將在 b1，之後獵殺它的那枚紅兵在 b4。',
+  'The soldier holds a1. The general on b1 can’t move onto the face-down tiles on c1 and b2, and a general can’t capture a soldier, so it has no legal move. It stays stuck until move 85, when it takes a red advisor flipped up on b2, and the red general captures it on move 86.':
+    '兵佔住了 a1。b1 上的將不能走到 c1 和 b2 的暗子上，而將又不能吃兵，所以它無著可走。它一直被困到第 85 著，才吃掉 b2 上剛翻出的紅仕，隨即在第 86 著被紅帥吃掉。',
+  'Misty (black, here) drifts its general into the a1 corner. One red soldier marches up the file, and the general is walled in: the squares next to it are still face-down, you can’t move onto a face-down tile, and a general can’t capture a soldier. It ends with no legal move at all, frozen in place, and is captured 28 moves later.':
+    'Misty（此局為黑方）把將漂到 a1 角。一枚紅兵沿著這一路推進，將被圍死：它旁邊的格子還是暗子，你不能走到暗子上，而將也不能吃兵。結果它完全沒有合法著法，原地凍住，28 著之後被吃。',
+  'The save is what players call making luft: flip a face-down neighbour to open the general an escape before the hunter arrives. I added a general-safety term that induces exactly that, and it cut how often Misty loses its own general from 35.5% to 26%. Look at what measuring that took: against the reference engine the win-rate barely moved, because it doesn’t hunt generals and Misty usually won these games anyway. The benchmark couldn’t see the fix, so I measured the disaster directly instead of trusting the score. (I also caught myself asking the engine’s own eval whether a save worked. An eval that’s blind to the danger can’t grade a fix for its own blindness, so I checked it by hand.)':
+    '解法就是棋手所說的製造出路：在獵手抵達前翻開一個相鄰的暗子，為將開出一條逃路。我加了一個將／帥安全項來誘導這件事，把 Misty 丟掉自己將／帥的頻率從 35.5% 降到 26%。看看衡量這件事需要什麼：對參考引擎的勝率幾乎沒動，因為它不獵將，而這些棋局 Misty 本來大多也贏了。基準看不見這個修正，所以我改成直接衡量那場災難，而不是相信分數。（我還抓到自己去問引擎自己的評估值，判斷這個解法有沒有用。一個對危險視而不見的評估函式，無法為自己盲點的修正打分，所以我改用手工檢查。）',
+  'This is the honest edge of what handcrafting reaches. The threat is a slow, quiet, multi-move march that no static term sees until it’s too late, which is exactly the long-horizon judgment a learned evaluation is for.':
+    '這就是手工打造能達到的誠實邊界。威脅是一場緩慢、安靜、多著的行軍，任何靜態項都要到來不及時才看見，而這正是學習式評估函式要處理的長程判斷。',
+  'The last measurement: is the climb worth paying for?': '最後一次衡量：這趟攀升值得付錢嗎？',
+  'The cheap gains are spent, and both pathologies point at the same fix: an evaluation that understands positions instead of counting them. That’s a learned value network, the AlphaZero recipe CLAP_CDC used to win the Computer Olympiad at this game.':
+    '便宜的收益已經用完，而兩個病症都指向同一個解法：一個理解局面、而不是在數東西的評估函式。那就是學習式價值網路，也就是 CLAP_CDC 用來在電腦奧林匹亞這個項目奪冠的 AlphaZero 配方。',
+  'So I built the pipeline (board encoding, a small ResNet, chance-aware MCTS, gated self-play so a bad generation can’t poison the next), and then, before paying for a full run, made one more measurement: a cheap local de-risk to check whether the value net would actually beat the hand-tuned engine.':
+    '所以我把整條流程建好了（棋盤編碼、一個小型 ResNet、機率感知的 MCTS、帶閘門的自我對弈，讓壞世代無法污染下一代），然後在付錢跑完整訓練之前，再做了一次衡量：一次低成本的本地風險排除，看看價值網路是否真的能打贏手調的引擎。',
+  'It didn’t. I ran the de-risk on my laptop’s GPU, and across three runs the network capped around a 35% win-rate against the alpha-beta engine, never reaching the 55% that would count as an improvement. Doubling the search budget barely moved it, so this isn’t a case of too few games; the likeliest causes are the noisy value targets the chance nodes produce and a network that’s too small. Those are fixable, but testing the fixes needs far more compute than a laptop that throttles after a few hours, and cloud GPUs aren’t plug-and-play here: the game logic is single-threaded Python, so a fast GPU sits starved waiting on it until that path is rewritten in Rust behind a batched inference server. That’s a week or two of work, then hundreds to low thousands of dollars to run. On the evidence I have, it’s a bet, not a sure step, so I haven’t taken it; the cheaper local experiments come first.':
+    '它打不贏。我在筆電的 GPU 上跑這次風險排除，三次執行下來，網路對 alpha-beta 引擎的勝率都封頂在 35% 左右，從未達到足以算改進的 55%。把搜尋預算加倍幾乎沒有改變，所以這不是局數太少的問題；最可能的原因是機率節點產生的雜訊價值目標，以及網路太小。這些都可以修，但測試修正需要的算力遠超過一台幾小時後就降頻的筆電，而雲端 GPU 在這裡不是隨插即用：遊戲邏輯是單執行緒的 Python，所以快速 GPU 只能餓著等它，除非把那條路徑用 Rust 重寫在一個批次推論伺服器後面。那是一兩週的工作，再加上數百到一兩千美元的執行費用。就我手上的證據，這是一場賭注，不是一步穩贏，所以我還沒下手；先做更便宜的本地實驗。',
+  'So MistyBanqi is a competent alpha-beta engine, not a state-of-the-art claim, and that’s a measured choice, not a dead end. I haven’t run a reproducible head-to-head against CLAP_CDC, DarkKnight, or other top CDC programs; the learned net is the next climb, the day a de-risk says it’s worth paying for.':
+    '所以 MistyBanqi 是一個有相當水準的 alpha-beta 引擎，不是最先進的宣稱，而這是衡量後的選擇，不是死路。我還沒有對 CLAP_CDC、DarkKnight 或其他頂尖 CDC 程式跑過可重現的對決；學習式網路是下一段攀升，等到哪天風險排除說它值得付錢的時候。',
+  'The pattern under every section here: the cheapest, highest-leverage decision in the whole project was choosing what to measure. The self-play score, the win-rate, the general-loss rate, the de-risk gate, each time picking an instrument that could see what I actually cared about did more than any change to the engine itself.':
+    '貫穿本文每一節的模式是：整個專案裡最便宜、槓桿最高的決定，是選擇要衡量什麼。自我對弈分數、勝率、丟將率、風險排除閘門，每一次挑到一個能看見我真正在意的東西的量測工具，效果都勝過對引擎本身做的任何改動。',
+  '[misty-banqi](https://github.com/brianhliou/misty-banqi) is the engine, MIT-licensed, alpha-beta + Star1 search and the eval terms above. [chinese-dark-chess-hw](https://github.com/george0828Zhang/chinese-dark-chess-hw) is the open engine I started the evaluation from and used as the fixed benchmark. More in the engine series: [the Dou Shou Qi engine](/blog/dou-shou-qi-engine), the perfect-information cousin on a bigger board.':
+    '[misty-banqi](https://github.com/brianhliou/misty-banqi) 是引擎本體，MIT 授權，alpha-beta + Star1 搜尋以及上述評估項。[chinese-dark-chess-hw](https://github.com/george0828Zhang/chinese-dark-chess-hw) 是我用來起步評估函式、並當成固定基準的開源引擎。引擎系列更多內容：[鬥獸棋引擎](/blog/dou-shou-qi-engine)，棋盤更大的完全資訊近親。',
+  'MistyBanqi is live on Mistboard. Take it on at the strength you pick, or read its source.':
+    'MistyBanqi 已在 Mistboard 上線。來按你選擇的強度挑戰它，或閱讀它的原始碼。',
+  'misty-banqi on GitHub': 'GitHub 上的 misty-banqi',
   'Play it': '來下一盤',
-  'MistyBanqi is live on Mistboard. Take it on at the strength you pick, or read the full writeup of how it was built and measured.':
-    'MistyBanqi 已在 Mistboard 上線。來按你選擇的強度挑戰它，或閱讀它如何被打造與衡量的完整記錄。',
-  'The engineering story': '工程幕後故事',
   Human: '人類',
   'Human vs engine · mistboard.com': '人類對引擎 · mistboard.com',
   'Draw by repetition · MistyBanqi up 10 pieces to 2': '重複局面和棋 · MistyBanqi 十子對兩子領先',

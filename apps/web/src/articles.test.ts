@@ -154,6 +154,8 @@ describe('article public listing gates', () => {
       '/blog/skill-vs-luck',
       '/blog/fog-openings',
       '/blog/flip-jungle-skill-ceiling',
+      // Moved from brianhliou.com (2026-06-27) on 2026-10-16.
+      '/blog/dou-shou-qi-engine',
       '/blog/misty',
       '/blog/mistybanqi',
       '/blog/server-enforced-fog',
@@ -345,6 +347,8 @@ describe('article public listing gates', () => {
       '/blog/skill-vs-luck',
       '/blog/fog-openings',
       '/blog/flip-jungle-skill-ceiling',
+      // Moved from brianhliou.com (2026-06-27) on 2026-10-16.
+      '/blog/dou-shou-qi-engine',
       '/blog/misty',
       '/blog/mistybanqi',
       '/blog/server-enforced-fog',
