@@ -269,7 +269,7 @@ export const xiangqiMahjong32Article: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Here is a whole match between Ana and Ben, kept the way a mahjong scoreboard is. Ana deals hands 1, 3 and 5, and Ben deals 2, 4 and 6. Each column is one hand, with the points its winner scored from the table above; hands 2 and 6 are void, because the wall ran out. The shaded hand decided the match.',
+          text: 'Here is a whole match between Ana and Ben, kept the way a mahjong scoreboard is. Ana deals hands 1, 3 and 5, and Ben deals 2, 4 and 6. Each column is one hand, with the points its winner scored from the table above; hands 2 and 6 are void, because the wall ran out.',
         },
         {
           kind: 'table',
@@ -277,7 +277,6 @@ export const xiangqiMahjong32Article: Article = {
           compact: true,
           headers: [...XMJ32_MATCH_HEADERS],
           rows: xmj32MatchRows(),
-          highlightColumns: [5],
         },
         {
           kind: 'paragraph',
