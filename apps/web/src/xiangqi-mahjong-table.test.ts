@@ -415,7 +415,33 @@ describe('xiangqi mahjong table', () => {
       expect(tiles).toHaveLength(meld?.tiles.length ?? 0);
       expect(tiles.some((tile) => tile.classList.contains('xmj-tile--back'))).toBe(false);
       expect(tiles.filter((tile) => tile.classList.contains('xmj-tile--claimed'))).toHaveLength(1);
+      // The claimed tile lies sideways, and it is the only one that does.
+      const sideways = tiles.filter((tile) => tile.classList.contains('xmj-tile--sideways'));
+      expect(sideways).toHaveLength(1);
+      expect(sideways[0]?.classList.contains('xmj-tile--claimed')).toBe(true);
+      expect(sideways[0]?.getAttribute('aria-label')).toBe(xmjTileName(meld?.claimed as XmjTile));
+      // The set stands apart from the hand, in its own group in the rack.
+      const rack = tray?.closest('.xmj-rack');
+      expect(rack?.querySelector(':scope > .xmj-concealed')).not.toBeNull();
+      expect(rack?.querySelector(':scope > .xmj-melds')?.contains(tray ?? null)).toBe(true);
     }
+    // In three Soldiers only the claimed copy lies sideways.
+    const view = xmjViewFor(state, seat);
+    const triplet = {
+      ...view,
+      melds: {
+        ...view.melds,
+        [seat]: [{ kind: 'triplet', tiles: ['bP', 'bP', 'bP'], claimed: 'bP' }],
+      },
+    } as XmjPlayerView;
+    const root = doc(xiangqiMahjongTableHtml(triplet, opts(false)));
+    const soldiers = [...root.querySelectorAll(`[data-xmj-seat="${seat}"] .xmj-meld .xmj-tile`)];
+    expect(soldiers).toHaveLength(3);
+    expect(soldiers.map((tile) => tile.classList.contains('xmj-tile--sideways'))).toEqual([
+      true,
+      false,
+      false,
+    ]);
   });
 
   it('stands the opponent tile just drawn apart, as a back', () => {

@@ -244,19 +244,25 @@ function back(extra = ''): string {
 
 /**
  * The sets made by claiming a discard: face up for both players, so each sits
- * on its own tray with a caption saying so. The claimed tile keeps its mark.
+ * on its own tray with a caption saying so, apart from the hand. The claimed
+ * tile lies sideways, as at a mahjong table; in a set of three Soldiers only
+ * one of them does.
  */
+/** The claimed tile in a set: marked for the fly-in, and lying sideways. */
+const CLAIMED_TILE_CLASS = 'xmj-tile--claimed xmj-tile--sideways';
+
 function meldsHtml(melds: readonly XmjMeld[]): string {
   if (melds.length === 0) return '';
   const caption = t('live.xmj.meldShown');
   const title = t('live.xmj.meldShownTitle');
   const html = melds
-    .map(
-      (meld) =>
-        `<span class="xmj-meld" title="${title}"><span class="xmj-meld__tiles">${meld.tiles
-          .map((tile) => tileSpan(tile, tile === meld.claimed ? 'xmj-tile--claimed' : ''))
-          .join('')}</span><span class="xmj-meld__cap">${caption}</span></span>`,
-    )
+    .map((meld) => {
+      const turned = meld.claimed ? meld.tiles.indexOf(meld.claimed) : -1;
+      const tiles = meld.tiles
+        .map((tile, i) => tileSpan(tile, i === turned ? CLAIMED_TILE_CLASS : ''))
+        .join('');
+      return `<span class="xmj-meld" title="${title}"><span class="xmj-meld__tiles">${tiles}</span><span class="xmj-meld__cap">${caption}</span></span>`;
+    })
     .join('');
   return `<span class="xmj-melds">${html}</span>`;
 }
@@ -458,7 +464,7 @@ function chips(tiles: readonly XmjTile[], discard: XmjTile): string {
     .map((tile) => {
       const isDiscard = !marked && tile === discard;
       if (isDiscard) marked = true;
-      return tileSpan(tile, isDiscard ? 'xmj-tile--xs xmj-tile--claimed' : 'xmj-tile--xs');
+      return tileSpan(tile, isDiscard ? `xmj-tile--xs ${CLAIMED_TILE_CLASS}` : 'xmj-tile--xs');
     })
     .join('');
   return `<span class="xmj-chips">${html}</span>`;

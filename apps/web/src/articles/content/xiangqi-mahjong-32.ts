@@ -160,7 +160,7 @@ export const xiangqiMahjong32Article: Article = {
           kind: 'animated-svg',
           svg: XMJ32_CLAIM_ANIMATION_SVG,
           reducedSvg: XMJ32_CLAIM_STATIC_SVG,
-          caption: 'You claim the Cannon instead of drawing. Chariot, Horse and Cannon go face up, the claimed Cannon edged in blue, and you discard the Soldier without drawing. You keep the black Elephant and wait for the other one to make the pair.',
+          caption: 'You claim the Cannon instead of drawing. Chariot, Horse and Cannon go face up, set apart from your hand, with the claimed Cannon turned sideways, and you discard the Soldier without drawing. You keep the black Elephant and wait for the other one to make the pair.',
         },
         {
           kind: 'paragraph',
@@ -300,6 +300,11 @@ export const xiangqiMahjong32Article: Article = {
               question: 'Can more than two people play?',
               answer:
                 'Folk sources play with two to four. With four, 17 tiles are dealt and only 15 stay in the wall, so each player gets about four draws, and claims on the other three players’ discards do much of the work. Mistboard plays the two-player game.',
+            },
+            {
+              question: 'What if a player leaves before the match is over?',
+              answer:
+                'The other player wins the match, whatever the score. Leaving the game, running out of time and resigning all end the match the same way they end any game on Mistboard.',
             },
             {
               question: 'Why is there no kong or ready declaration?',

@@ -4,7 +4,8 @@
 // the reader's piece set (no disc: the tile is the frame; a third-party set
 // lays its disc's surface over the face instead of ivory), the
 // English piece name under each tile, and a bracket naming each group (set,
-// pair).
+// pair). A set laid down after a claim has its claimed tile lying sideways, as
+// on a mahjong table.
 
 import {
   tileColor,
@@ -27,7 +28,9 @@ export const XMJ_TILE_GAP = 6;
 const TILE_W = XMJ_TILE_W;
 const TILE_H = XMJ_TILE_H;
 const TILE_GAP = XMJ_TILE_GAP;
-const GROUP_GAP = 22;
+/** Between groups in a row: a set laid down sits this far from the hand. */
+export const XMJ_GROUP_GAP = 22;
+const GROUP_GAP = XMJ_GROUP_GAP;
 const PAD = 4;
 
 // The live table's tile: an ivory face, a jade backing showing as a band
@@ -39,8 +42,6 @@ const JADE = '#2f8a70';
 const JADE_LOW = '#22684f';
 export const XMJ_TILE_DEPTH = 5;
 const DEPTH = XMJ_TILE_DEPTH;
-export const XMJ_CLAIM_EDGE = '#2f6fb3';
-const CLAIM = XMJ_CLAIM_EDGE;
 const JADE_HIGH = '#45a587';
 // The piece's box is a little wider than the tile; the figure or character
 // inside it sits well within the tile.
@@ -60,7 +61,7 @@ export interface XmjTileGroup {
   readonly tiles: readonly XmjTile[];
   /** Under the bracket: "set", "pair", "sequence", ... Omitted: no bracket. */
   readonly label?: string;
-  /** A set laid face up after a claim. The claimed tile gets a blue edge. */
+  /** A set laid face up after a claim. The claimed tile lies sideways. */
   readonly claimed?: XmjTile;
 }
 
@@ -68,25 +69,37 @@ export function escapeText(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+/** A tile's drawn box: upright, or lying sideways (a claimed tile in a set). */
+export function xmjTileBox(sideways = false): { w: number; h: number } {
+  return sideways ? { w: TILE_H, h: TILE_W } : { w: TILE_W, h: TILE_H };
+}
+
 /**
- * One tile with its top-left at (x, y). `name` writes the English piece name
- * under it (the default); a figure that labels each kind once turns it off.
+ * One tile with its box's top-left at (x, y). `name` writes the English piece
+ * name under it (the default); a figure that labels each kind once turns it
+ * off. `sideways` lays the tile on its side, as a claimed tile lies in a set
+ * on a mahjong table: the box is as wide as a tile is tall, the piece turned a
+ * quarter to the left, the depth still along the front edge. A row lines it
+ * up on the upright tiles' bottom edge (groupsLine).
  */
 export function xmjTileSvg(
   tile: XmjTile,
   x: number,
   y: number,
   pieceSet: XiangqiPieceSet,
-  opts: { claimed?: boolean; name?: boolean } = {},
+  opts: { sideways?: boolean; name?: boolean } = {},
 ): string {
-  const claimed = opts.claimed ?? false;
+  const sideways = opts.sideways ?? false;
+  const { w: W, h: H } = xmjTileBox(sideways);
   const color = tileColor(tile) === 'r' ? 'red' : 'black';
-  const piece = renderXiangqiPieceMark({ color, role: XMJ_ROLES[tilePiece(tile)] }, pieceSet, {
-    x: x + (TILE_W - PIECE_SIZE) / 2,
-    y: y + (TILE_H - PIECE_SIZE) / 2,
+  const cx = x + W / 2;
+  const cy = y + H / 2;
+  const mark = renderXiangqiPieceMark({ color, role: XMJ_ROLES[tilePiece(tile)] }, pieceSet, {
+    x: cx - PIECE_SIZE / 2,
+    y: cy - PIECE_SIZE / 2,
     size: PIECE_SIZE,
   });
-  const edge = claimed ? CLAIM : EDGE;
+  const piece = sideways ? `<g transform="rotate(-90 ${cx} ${cy})">${mark}</g>` : mark;
   const name = XMJ_PIECE_NAMES[tilePiece(tile)];
   // A third-party set's disc surface covers the whole face, as on the table.
   // Every tile at one x has the same outline in every figure, so the clip's
@@ -97,23 +110,24 @@ export function xmjTileSvg(
   const faceHref = xiangqiTileFaceHref(pieceSet, color);
   // An asset set's tile is one block of its material; Mistboard's sit on jade.
   const [, jade, jadeLow] = xiangqiTileBacking(pieceSet) ?? [JADE, JADE, JADE_LOW];
-  const clip = `xmj-face-${x}-${y}`;
+  const clip = `xmj-face-${x}-${y}${sideways ? '-s' : ''}`;
+  const side = Math.max(W, H);
   const face = faceHref
-    ? `<clipPath id="${clip}"><rect x="${x}" y="${y}" width="${TILE_W}" height="${TILE_H}" rx="6"/></clipPath><image href="${faceHref}" x="${x - (TILE_H - TILE_W) / 2}" y="${y}" width="${TILE_H}" height="${TILE_H}" clip-path="url(#${clip})"/><rect x="${x}" y="${y}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="none" stroke="${edge}" stroke-width="${claimed ? 2.5 : 1}"/>`
+    ? `<clipPath id="${clip}"><rect x="${x}" y="${y}" width="${W}" height="${H}" rx="6"/></clipPath><image href="${faceHref}" x="${cx - side / 2}" y="${cy - side / 2}" width="${side}" height="${side}" clip-path="url(#${clip})"/><rect x="${x}" y="${y}" width="${W}" height="${H}" rx="6" fill="none" stroke="${EDGE}" stroke-width="1"/>`
     : [
-        `<path d="M${x + 1} ${y + TILE_H * 0.6}H${x + TILE_W - 1}V${y + TILE_H - 6}a5 5 0 0 1-5 5H${x + 6}a5 5 0 0 1-5-5Z" fill="${FACE_LOW}" fill-opacity="0.7"/>`,
-        `<path d="M${x + 6} ${y + 1.5}H${x + TILE_W - 6}" stroke="#fff" stroke-opacity="0.9"/>`,
+        `<path d="M${x + 1} ${y + H * 0.6}H${x + W - 1}V${y + H - 6}a5 5 0 0 1-5 5H${x + 6}a5 5 0 0 1-5-5Z" fill="${FACE_LOW}" fill-opacity="0.7"/>`,
+        `<path d="M${x + 6} ${y + 1.5}H${x + W - 6}" stroke="#fff" stroke-opacity="0.9"/>`,
       ].join('');
   return [
-    `<rect x="${x}" y="${y + DEPTH}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="${jadeLow}"/>`,
-    `<rect x="${x}" y="${y + DEPTH - 1}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="${jade}"/>`,
-    `<rect x="${x}" y="${y + 1}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="${EDGE}"/>`,
-    `<rect x="${x}" y="${y}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="${FACE}" stroke="${edge}" stroke-width="${claimed ? 2.5 : 1}"/>`,
+    `<rect x="${x}" y="${y + DEPTH}" width="${W}" height="${H}" rx="6" fill="${jadeLow}"/>`,
+    `<rect x="${x}" y="${y + DEPTH - 1}" width="${W}" height="${H}" rx="6" fill="${jade}"/>`,
+    `<rect x="${x}" y="${y + 1}" width="${W}" height="${H}" rx="6" fill="${EDGE}"/>`,
+    `<rect x="${x}" y="${y}" width="${W}" height="${H}" rx="6" fill="${FACE}" stroke="${EDGE}" stroke-width="1"/>`,
     face,
     piece,
     opts.name === false
       ? ''
-      : `<text x="${x + TILE_W / 2}" y="${y + TILE_H + DEPTH + 15}" text-anchor="middle" font-size="10.5" fill="currentColor">${escapeText(name)}</text>`,
+      : `<text x="${cx}" y="${y + H + DEPTH + 15}" text-anchor="middle" font-size="10.5" fill="currentColor">${escapeText(name)}</text>`,
   ].join('');
 }
 
@@ -137,13 +151,18 @@ export function xmjTileBackSvg(x: number, y: number, w = TILE_W, h = TILE_H): st
   ].join('');
 }
 
-const tileSvg = (
-  tile: XmjTile,
-  x: number,
-  y: number,
-  claimed: boolean,
-  pieceSet: XiangqiPieceSet,
-): string => xmjTileSvg(tile, x, y, pieceSet, { claimed });
+/** Which tile of a group lies sideways: the first copy of its claimed tile. */
+function sidewaysIndex(group: XmjTileGroup): number {
+  return group.claimed === undefined ? -1 : group.tiles.indexOf(group.claimed);
+}
+
+/** A group's drawn width: its tiles, one of them perhaps lying sideways. */
+function groupWidth(group: XmjTileGroup): number {
+  return group.tiles.reduce(
+    (w, _, i) => w + xmjTileBox(i === sidewaysIndex(group)).w + (i > 0 ? TILE_GAP : 0),
+    0,
+  );
+}
 
 /** One line of groups at `y`, starting at `x0`: its parts and right edge. */
 function groupsLine(
@@ -157,13 +176,14 @@ function groupsLine(
   groups.forEach((group, gi) => {
     if (gi > 0) x += GROUP_GAP - TILE_GAP;
     const start = x;
-    let claimedDrawn = false;
-    for (const tile of group.tiles) {
-      const isClaimed = !claimedDrawn && group.claimed === tile;
-      if (isClaimed) claimedDrawn = true;
-      parts.push(tileSvg(tile, x, y, isClaimed, pieceSet));
-      x += TILE_W + TILE_GAP;
-    }
+    const turned = sidewaysIndex(group);
+    group.tiles.forEach((tile, i) => {
+      const sideways = i === turned;
+      // A tile lying sideways sits on the row's bottom edge, as on a table.
+      const box = xmjTileBox(sideways);
+      parts.push(xmjTileSvg(tile, x, y + TILE_H - box.h, pieceSet, { sideways }));
+      x += box.w + TILE_GAP;
+    });
     const end = x - TILE_GAP;
     if (group.label) {
       const by = y + TILE_H + DEPTH + 23;
@@ -280,9 +300,7 @@ export function xmjTileLinesSvg(
   pieceSet: XiangqiPieceSet = 'international',
 ): string {
   const widthOf = (groups: readonly XmjTileGroup[]) =>
-    groups.reduce((w, g) => w + g.tiles.length * (TILE_W + TILE_GAP), 0) -
-    TILE_GAP +
-    (groups.length - 1) * (GROUP_GAP - TILE_GAP);
+    groups.reduce((w, g) => w + groupWidth(g), 0) + (groups.length - 1) * GROUP_GAP;
   const inner = Math.max(...lines.map(widthOf));
   const parts: string[] = [];
   let y = PAD;

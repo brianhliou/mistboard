@@ -22,9 +22,12 @@ import {
   XMJ32_CLAIM_EARLIER_DISCARD,
   XMJ32_CLAIM_HAND,
   XMJ32_CLAIM_KEPT,
+  XMJ32_CLAIM_SECONDS,
   XMJ32_CLAIM_SET,
+  XMJ32_CLAIM_SLOTS,
   XMJ32_CLAIM_STATIC_SVG,
   XMJ32_CLAIM_THROWN,
+  XMJ32_CLAIM_TRACKS,
   XMJ32_DEAL,
   XMJ32_DEAL_SVG,
   XMJ32_MATCH,
@@ -37,11 +40,13 @@ import {
   XMJ32_TRIPLETS,
   XMJ32_WINS,
   XMJ32_WORKED,
+  xmj32ClaimBoxes,
   xmj32MatchRows,
   xmj32NotWinSvg,
   xmj32WinSvg,
   xmjExampleHand,
 } from './xiangqi-mahjong-32-rules-diagrams.js';
+import { XMJ_GROUP_GAP, XMJ_TILE_GAP, XMJ_TILE_H, XMJ_TILE_W } from './xiangqi-mahjong-tile-svg.js';
 
 // The rules page draws these hands; the kernel decides whether they win and
 // what they score. A diagram that disagrees with xmjWinShape / xmjScore is a
@@ -175,21 +180,84 @@ describe('xiangqi mahjong 32 rules diagrams', () => {
   it('draws the claim animation playing once, with a static before and after', () => {
     const svg = XMJ32_CLAIM_ANIMATION_SVG();
     expect(svg.match(/class="xmj-article-tiles"/g)).toHaveLength(1);
-    // Every keyframe holds its end state and none loops.
-    expect(svg.match(/s ease-in-out both/g)).toHaveLength(4);
+    // Every keyframe holds its end state and none loops: one animation per
+    // moving tile and per fade (their Cannon, the flying Cannon, the mark).
+    const moving = XMJ32_CLAIM_TRACKS.filter((t) => t.poses.length > 1).length;
+    const fading = XMJ32_CLAIM_TRACKS.filter((t) => t.fades).length + 1;
+    expect(svg.match(/s ease-in-out both/g)).toHaveLength(moving + fading);
     expect(svg).not.toContain('infinite');
     for (const cls of [
       'xmj-claim-cannon',
       'xmj-claim-kept',
-      'xmj-claim-mark',
+      'xmj-claim-mark-fade',
       'xmj-claim-thrown',
     ]) {
       expect(svg).toContain(`class="${cls}"`);
     }
+    // No blue edge anywhere: the claimed Cannon lies sideways instead.
+    expect(svg).not.toContain('#2f6fb3');
+    expect(svg).toContain('rotate(-90 ');
     const still = XMJ32_CLAIM_STATIC_SVG();
     expect(still.match(/class="xmj-article-tiles"/g)).toHaveLength(2);
     expect(still).toContain('<title>Before: ');
     expect(still).toContain('<title>After: ');
+    expect(still).not.toContain('#2f6fb3');
+    expect(still.match(/rotate\(-90 /g)).toHaveLength(1);
+  });
+
+  it('rests every claim tile on a slot, and ends the set apart with the Cannon sideways', () => {
+    const S = XMJ32_CLAIM_SLOTS;
+    const rows = Object.values(S.rows);
+    const xs = [...S.col, ...S.set, S.kept, S.parked];
+    for (const track of XMJ32_CLAIM_TRACKS) {
+      for (const pose of track.poses) {
+        expect(xs, `${track.id} at ${pose.at}s`).toContain(pose.x);
+        // A tile lying sideways rests on its row's bottom edge.
+        const y = track.sideways && !pose.turned ? pose.y - S.sidewaysDrop : pose.y;
+        expect(rows, `${track.id} at ${pose.at}s`).toContain(y);
+      }
+    }
+    const end = (id: string) => XMJ32_CLAIM_TRACKS.find((t) => t.id === id)?.poses.at(-1);
+    // The set: Chariot, Horse, then the claimed Cannon lying sideways on the
+    // hand row's bottom edge.
+    expect(end('chariot')).toMatchObject({ x: S.set[0], y: S.rows.hand });
+    expect(end('horse')).toMatchObject({ x: S.set[1], y: S.rows.hand });
+    const cannon = XMJ32_CLAIM_TRACKS.find((t) => t.id === 'cannon');
+    expect(cannon?.sideways).toBe(true);
+    expect(cannon?.tile).toBe(XMJ32_CLAIM_DISCARD);
+    expect(end('cannon')).toMatchObject({ x: S.set[2], y: S.sidewaysY });
+    expect(S.sidewaysY + XMJ_TILE_W).toBe(S.rows.hand + XMJ_TILE_H);
+    // Apart from the hand: the kept Elephant a group gap past the set.
+    expect(end('kept')).toMatchObject({ x: S.kept, y: S.rows.hand });
+    expect(S.kept - S.setEnd).toBe(XMJ_GROUP_GAP);
+    expect(XMJ_GROUP_GAP).toBeGreaterThan(XMJ_TILE_GAP * 3);
+    expect(end('thrown')).toMatchObject({ x: S.col[0], y: S.rows.yours });
+  });
+
+  it('never lets two claim tiles overlap, at any keyframe or between', () => {
+    const keyframes = XMJ32_CLAIM_TRACKS.flatMap((t) => [
+      ...t.poses.map((p) => p.at),
+      ...(t.fades ?? []).map((f) => f.at),
+    ]);
+    const samples = Array.from({ length: 101 }, (_, i) => (i / 100) * XMJ32_CLAIM_SECONDS);
+    const times = [...new Set([0, ...keyframes, ...samples, XMJ32_CLAIM_SECONDS])];
+    expect(times.length).toBeGreaterThan(100);
+    for (const time of times) {
+      const boxes = xmj32ClaimBoxes(time).filter((b) => b.shown);
+      for (let i = 0; i < boxes.length; i += 1) {
+        for (let j = i + 1; j < boxes.length; j += 1) {
+          const [a, b] = [boxes[i], boxes[j]];
+          if (!a || !b || a.body === b.body) continue;
+          const overlap = a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+          expect(overlap, `${a.id} and ${b.id} at ${time.toFixed(2)}s`).toBe(false);
+        }
+      }
+    }
+    // The start frame: your four tiles on the grid, the Cannon in their discards.
+    const start = Object.fromEntries(xmj32ClaimBoxes(0).map((b) => [b.id, b]));
+    expect(start.kept?.x).toBe(XMJ32_CLAIM_SLOTS.col[2]);
+    expect(start.thrown?.x).toBe(XMJ32_CLAIM_SLOTS.col[3]);
+    expect(start.cannon?.shown).toBe(false);
   });
 
   it('plays the match as the rules say: six hands, the deal alternating', () => {

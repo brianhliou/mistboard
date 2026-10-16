@@ -176,12 +176,13 @@
   font-weight: 600;
 }
 
-/* A rack holds its height with no tiles in it, so a seat never jumps. */
+/* A rack holds its height with no tiles in it, so a seat never jumps. A
+   claimed set stands well apart from the hand, as at a mahjong table. */
 .xmj-rack {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  gap: 10px;
+  gap: 8px 20px;
   flex-wrap: wrap;
   min-height: calc(var(--xmj-tile-h) + var(--xmj-depth));
   padding-bottom: var(--xmj-depth);
@@ -201,7 +202,8 @@
 }
 
 /* A claimed set is face up for both players: it sits on a pale tray, its
-   caption under it, apart from the hand that only its owner sees. */
+   caption under it, apart from the hand that only its owner sees. The
+   claimed tile lies sideways on the tray's bottom edge. */
 .xmj-meld {
   display: inline-flex;
   flex-direction: column;
@@ -215,6 +217,7 @@
 
 .xmj-meld__tiles {
   display: inline-flex;
+  align-items: flex-end;
   gap: 2px;
 }
 
@@ -403,12 +406,25 @@
   margin-left: 12px;
 }
 
-/* The claimed tile in a laid-down set sits a step lower, turned to the table. */
-.xmj-tile--claimed {
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.9),
-    0 calc(var(--xmj-depth, 5px) - 1px) 0 var(--xmj-accent),
-    0 var(--xmj-depth, 5px) 0 var(--xmj-jade-low);
+/* The claimed tile in a laid-down set lies sideways, as at a mahjong table:
+   the tile's box turned a quarter, the piece turned with it. */
+.xmj-tile--sideways {
+  width: var(--xmj-tile-h);
+  height: var(--xmj-tile-w);
+}
+
+.xmj-tile--sideways .xmj-tile-art {
+  width: calc(var(--xmj-tile-w) * 1.12);
+  transform: rotate(-90deg);
+}
+
+.xmj-tile--xs.xmj-tile--sideways {
+  width: 26px;
+  height: 20px;
+}
+
+.xmj-tile--xs.xmj-tile--sideways .xmj-tile-art {
+  width: 22.4px;
 }
 
 /* The winning tile: an outline hugging the whole tile, depth included. */
@@ -679,7 +695,7 @@
 .xmj-chips {
   display: inline-flex;
   gap: 2px;
-  align-items: center;
+  align-items: flex-end;
   padding-bottom: 2px;
 }
 
@@ -1147,7 +1163,7 @@ ol.xmj-log {
   }
 
   .xmj-rack {
-    gap: 8px;
+    gap: 8px 14px;
   }
 
   .xmj-concealed {

@@ -279,18 +279,29 @@ function tileSources(board: HTMLElement): TileSources {
   };
 }
 
-/** Play a tile in from where it was, to the place it was just drawn at. */
-function flyIn(target: Element | null, from: DOMRect | null, duration: number, delay = 0): void {
+/**
+ * Play a tile in from where it was, to the place it was just drawn at. A
+ * tile that lands sideways (`turned`) leaves upright and turns in flight, so
+ * it is measured where it lands and scaled by its upright width.
+ */
+function flyIn(
+  target: Element | null,
+  from: DOMRect | null,
+  duration: number,
+  delay = 0,
+  turned = false,
+): void {
   if (!(target instanceof HTMLElement) || !from || typeof target.animate !== 'function') return;
   const to = target.getBoundingClientRect();
   if (to.width === 0) return;
   const dx = from.left + from.width / 2 - (to.left + to.width / 2);
   const dy = from.top + from.height / 2 - (to.top + to.height / 2);
-  const scale = from.width / to.width;
+  const scale = from.width / (turned ? to.height : to.width);
+  const turn = turned ? 90 : 0;
   target.animate(
     [
-      { transform: `translate(${dx}px, ${dy}px) scale(${scale})` },
-      { transform: 'translate(0, 0) scale(1)' },
+      { transform: `translate(${dx}px, ${dy}px) rotate(${turn}deg) scale(${scale})` },
+      { transform: 'translate(0, 0) rotate(0deg) scale(1)' },
     ],
     { duration, delay, easing: FLIGHT_EASING, fill: 'backwards' },
   );
@@ -327,12 +338,14 @@ function animateMoves(board: HTMLElement, view: XmjPlayerView, sources: TileSour
     ) {
       const meld = board.querySelector(`${rack(seat)} .xmj-meld:last-child`);
       for (const tile of meld ? [...meld.querySelectorAll('.xmj-tile')] : []) {
+        // The claimed tile leaves the pond upright and lands sideways.
         const claimed = tile.classList.contains('xmj-tile--claimed');
         flyIn(
           tile,
           claimed ? sources.seats[other].pondLast : sources.seats[seat].middle,
           450,
           claimed ? 0 : 120,
+          claimed && tile.classList.contains('xmj-tile--sideways'),
         );
       }
     }

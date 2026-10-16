@@ -4,6 +4,8 @@
 // claim a win, a non-win or a score the game itself would not give.
 
 import {
+  tilePiece,
+  XMJ_PIECE_NAMES,
   type XmjHandState,
   type XmjMeld,
   type XmjTile,
@@ -15,13 +17,15 @@ import { activeXiangqiPieceSet } from './articles/diagrams.js';
 import {
   escapeText,
   xmjTileRowSvg as tileRow,
-  XMJ_CLAIM_EDGE,
+  XMJ_GROUP_GAP,
+  XMJ_TILE_DEPTH,
   XMJ_TILE_GAP,
   XMJ_TILE_H,
   XMJ_TILE_W,
   type XmjRowBadge,
   type XmjTileGroup,
   xmjTileBackSvg,
+  xmjTileBox,
   xmjTileFigureSvg,
   xmjTileKindGridSvg,
   xmjTileSvg,
@@ -269,9 +273,10 @@ export function xmj32WinSvg(id: string): () => string {
 
 /**
  * The claim the page animates: you hold four tiles, the other player discards
- * the red Cannon, you claim it into Chariot, Horse, Cannon (face up, the
- * claimed tile edged in blue) and discard the Soldier without drawing. The
- * test checks the kernel allows this claim and that the set is a sequence.
+ * the red Cannon, you claim it into Chariot, Horse, Cannon (face up, apart
+ * from your hand, the claimed Cannon lying sideways) and discard the Soldier
+ * without drawing. The test checks the kernel allows this claim and that the
+ * set is a sequence.
  */
 export const XMJ32_CLAIM_HAND: readonly XmjTile[] = ['rR', 'rH', 'bE', 'bP'];
 export const XMJ32_CLAIM_DISCARD: XmjTile = 'rC';
@@ -291,63 +296,295 @@ const CLAIM_AFTER_GROUPS: readonly XmjTileGroup[] = [
   { tiles: [XMJ32_CLAIM_THROWN], label: 'discarded' },
 ];
 
-const CLAIM_SECONDS = 5;
+export const XMJ32_CLAIM_SECONDS = 6;
+
+const CLAIM_PITCH = XMJ_TILE_W + XMJ_TILE_GAP;
+const CLAIM_X0 = 4;
+const CLAIM_SIDEWAYS = xmjTileBox(true);
 
 /**
- * The claim as one animated figure (an animated-svg block). Every tile is
- * drawn where it ends; keyframes (fill-mode both) start each one where it
- * begins, so the SVG's still state is the end frame. Timeline of the 5 s:
- * the Cannon lands in their discards (0 to 0.5 s), moves into your hand
- * beside the Horse as the Elephant steps right (1.3 to 2.2 s), the set is
- * marked face up with the blue edge on the Cannon (2.4 to 2.9 s), then the
- * Soldier goes to your discards (3.3 to 4.2 s) and the frame holds.
+ * Every place a tile rests in the claim figure: the one source of its x and y.
+ * `col` is the upright grid every row shares (the discards, and your hand
+ * before the claim). After the claim your hand row is the set (its third tile
+ * lying sideways on the row's bottom edge), a group gap, then your own tiles
+ * on the same pitch: `kept` for the Elephant, `parked` for the Soldier while
+ * the set is shown.
+ */
+export const XMJ32_CLAIM_SLOTS = (() => {
+  const col = [0, 1, 2, 3].map((i) => CLAIM_X0 + i * CLAIM_PITCH);
+  const set = col.slice(0, 3);
+  const setEnd = (set[2] ?? 0) + CLAIM_SIDEWAYS.w;
+  const kept = setEnd + XMJ_GROUP_GAP;
+  const rows = { theirs: 20, yours: 123, hand: 226 } as const;
+  return {
+    rows,
+    col,
+    set,
+    setEnd,
+    kept,
+    parked: kept + CLAIM_PITCH,
+    /** How far a sideways tile sits below its row's top: on the upright tiles' bottom edge. */
+    sidewaysDrop: XMJ_TILE_H - CLAIM_SIDEWAYS.h,
+    /** The top of the claimed Cannon, lying sideways in your hand row. */
+    sidewaysY: rows.hand + XMJ_TILE_H - CLAIM_SIDEWAYS.h,
+  } as const;
+})();
+
+/** Where a tile is at one moment: its box's top-left, and turned upright. */
+export interface XmjClaimPose {
+  readonly at: number;
+  readonly x: number;
+  readonly y: number;
+  /** A sideways tile turned a quarter back to upright (as it lay in the discards). */
+  readonly turned?: boolean;
+}
+
+/** One tile's part in the claim: drawn where its last pose puts it. */
+export interface XmjClaimTrack {
+  /** Its class, `xmj-claim-<id>`. */
+  readonly id: string;
+  /** The physical tile; two tracks of one body are its two looks crossfading. */
+  readonly body: string;
+  readonly tile: XmjTile;
+  readonly sideways?: boolean;
+  /** The piece name under it; off for the Cannon in flight (the mark adds it). */
+  readonly name?: boolean;
+  readonly poses: readonly XmjClaimPose[];
+  /** When it shows; shown throughout when omitted. */
+  readonly fades?: readonly { readonly at: number; readonly shown: boolean }[];
+}
+
+/**
+ * The claim's timeline, in seconds of the 6. The Cannon lands in their
+ * discards (0 to 0.5 s). From 1.3 to 2 s it slides along their row to the
+ * set's third slot, turning to lie sideways, while the Elephant and the
+ * Soldier step right in your hand to make room; from 2 to 2.6 s it drops
+ * straight down into the set. The set's bracket comes up (2.8 to 3.3 s). Then
+ * the Soldier goes up to your discards' row and along it to the first slot
+ * (3.6 to 4.5 s), and the frame holds. Every pose is a slot (XMJ32_CLAIM_SLOTS), and the test
+ * checks no two tiles overlap at any moment.
+ */
+export const XMJ32_CLAIM_TRACKS: readonly XmjClaimTrack[] = (() => {
+  const S = XMJ32_CLAIM_SLOTS;
+  const { theirs, yours, hand } = S.rows;
+  const [c0 = 0, c1 = 0, c2 = 0, c3 = 0] = S.col;
+  return [
+    {
+      id: 'earlier',
+      body: 'earlier',
+      tile: XMJ32_CLAIM_EARLIER_DISCARD,
+      poses: [{ at: 0, x: c0, y: theirs }],
+    },
+    {
+      id: 'their-cannon',
+      body: 'cannon',
+      tile: XMJ32_CLAIM_DISCARD,
+      poses: [{ at: 0, x: c1, y: theirs }],
+      fades: [
+        { at: 0, shown: false },
+        { at: 0.5, shown: true },
+        { at: 1.3, shown: true },
+        { at: 1.45, shown: false },
+      ],
+    },
+    { id: 'chariot', body: 'chariot', tile: 'rR', poses: [{ at: 0, x: c0, y: hand }] },
+    { id: 'horse', body: 'horse', tile: 'rH', poses: [{ at: 0, x: c1, y: hand }] },
+    {
+      id: 'kept',
+      body: 'elephant',
+      tile: XMJ32_CLAIM_KEPT,
+      poses: [
+        { at: 1.3, x: c2, y: hand },
+        { at: 2, x: S.kept, y: hand },
+      ],
+    },
+    {
+      id: 'thrown',
+      body: 'soldier',
+      tile: XMJ32_CLAIM_THROWN,
+      poses: [
+        { at: 1.3, x: c3, y: hand },
+        { at: 2, x: S.parked, y: hand },
+        { at: 3.6, x: S.parked, y: hand },
+        { at: 4.05, x: S.parked, y: yours },
+        { at: 4.5, x: c0, y: yours },
+      ],
+    },
+    {
+      id: 'cannon',
+      body: 'cannon',
+      tile: XMJ32_CLAIM_DISCARD,
+      sideways: true,
+      name: false,
+      // Turned upright, it fills the slot it lay in among their discards.
+      poses: [
+        { at: 1.3, x: c1, y: theirs, turned: true },
+        { at: 2, x: S.set[2] ?? 0, y: theirs + S.sidewaysDrop },
+        { at: 2.6, x: S.set[2] ?? 0, y: S.sidewaysY },
+      ],
+      fades: [
+        { at: 1.3, shown: false },
+        { at: 1.45, shown: true },
+      ],
+    },
+  ];
+})();
+
+/** A track's box (upright, or as it lies), before any turn. */
+const trackBox = (track: XmjClaimTrack) => xmjTileBox(track.sideways === true);
+
+/**
+ * Every tile's box at `time` seconds, with whether it shows. Between poses a
+ * tile moves on a straight line and turns evenly; every moving tile in one
+ * step shares its start and end, so the CSS easing moves them in step and
+ * this linear model keeps their relative places. A box includes the tile's
+ * depth below it.
+ */
+export function xmj32ClaimBoxes(time: number): {
+  id: string;
+  body: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  shown: boolean;
+}[] {
+  return XMJ32_CLAIM_TRACKS.map((track) => {
+    const { w, h } = trackBox(track);
+    const poses = track.poses;
+    // The poses either side of `time`; before the first or after the last, it holds.
+    const a = [...poses].reverse().find((p) => p.at <= time) ?? (poses[0] as XmjClaimPose);
+    const b = poses.find((p) => p.at >= time) ?? (poses.at(-1) as XmjClaimPose);
+    const f = b.at > a.at ? (time - a.at) / (b.at - a.at) : 0;
+    const centre = (p: XmjClaimPose) => {
+      const [pw, ph] = p.turned ? [h, w] : [w, h];
+      return { x: p.x + pw / 2, y: p.y + ph / 2 };
+    };
+    const [ca, cb] = [centre(a), centre(b)];
+    const angle = ((a.turned ? 1 - f : 0) + (b.turned ? f : 0)) * (Math.PI / 2);
+    const bw = w * Math.abs(Math.cos(angle)) + h * Math.abs(Math.sin(angle));
+    const bh = w * Math.abs(Math.sin(angle)) + h * Math.abs(Math.cos(angle));
+    const cx = ca.x + (cb.x - ca.x) * f;
+    const cy = ca.y + (cb.y - ca.y) * f;
+    // Shown while its opacity is above 0: fading in counts from the start.
+    const fades = track.fades ?? [];
+    let shown = fades[0]?.shown ?? true;
+    fades.forEach((fade, i) => {
+      if (fade.at > time) return;
+      const next = fades[i + 1];
+      shown = fade.shown || (next?.shown === true && time > fade.at);
+    });
+    return {
+      id: track.id,
+      body: track.body,
+      x: cx - bw / 2,
+      y: cy - bh / 2,
+      w: bw,
+      h: bh + XMJ_TILE_DEPTH,
+      shown,
+    };
+  });
+}
+
+const claimPct = (at: number) => `${+((at / XMJ32_CLAIM_SECONDS) * 100).toFixed(3)}%`;
+
+/** A track's keyframes: transform from its end pose, then opacity. */
+function claimTrackCss(track: XmjClaimTrack): string {
+  const css: string[] = [];
+  const { w, h } = trackBox(track);
+  const end = track.poses.at(-1) as XmjClaimPose;
+  const anim = (name: string) => `${name} ${XMJ32_CLAIM_SECONDS}s ease-in-out both`;
+  // A keyframe list holds its first value from 0% and its last to 100%.
+  const frames = <T>(list: readonly (T & { at: number })[], value: (item: T) => string) =>
+    list
+      .map((item, i) => {
+        const stops = [
+          i === 0 && item.at > 0 ? '0%' : '',
+          claimPct(item.at),
+          i === list.length - 1 && item.at < XMJ32_CLAIM_SECONDS ? '100%' : '',
+        ].filter(Boolean);
+        return `${stops.join(',')}{${value(item)}}`;
+      })
+      .join('');
+  if (track.poses.length > 1) {
+    const ex = end.x + w / 2;
+    const ey = end.y + h / 2;
+    const value = (p: XmjClaimPose) => {
+      const [pw, ph] = p.turned ? [h, w] : [w, h];
+      const dx = +(p.x + pw / 2 - ex).toFixed(2);
+      const dy = +(p.y + ph / 2 - ey).toFixed(2);
+      return `transform:translate(${dx}px,${dy}px) rotate(${p.turned ? 90 : 0}deg)`;
+    };
+    css.push(
+      `@keyframes xmj-claim-${track.id}{${frames(track.poses, value)}}`,
+      `.xmj-claim-${track.id}{transform-origin:${ex}px ${ey}px;animation:${anim(`xmj-claim-${track.id}`)}}`,
+    );
+  }
+  if (track.fades) {
+    css.push(
+      `@keyframes xmj-claim-${track.id}-fade{${frames(track.fades, (f) => `opacity:${f.shown ? 1 : 0}`)}}`,
+      `.xmj-claim-${track.id}-fade{animation:${anim(`xmj-claim-${track.id}-fade`)}}`,
+    );
+  }
+  return css.join('');
+}
+
+/**
+ * The claim as one animated figure (an animated-svg block), built from
+ * XMJ32_CLAIM_TRACKS. Every tile is drawn where it ends and keyframes (fill
+ * mode both) start it where it begins, so the SVG's still state is the end
+ * frame: the set apart on the left with the Cannon lying sideways, the
+ * Elephant kept, the Soldier in your discards.
  */
 export const XMJ32_CLAIM_ANIMATION_SVG = (): string => {
   const P = activeXiangqiPieceSet;
-  const pitch = XMJ_TILE_W + XMJ_TILE_GAP;
-  const x0 = 4;
-  const theirY = 20;
-  const discardY = 123;
-  const handY = 226;
-  const keptX = x0 + 3 * pitch + 22 - XMJ_TILE_GAP;
+  const S = XMJ32_CLAIM_SLOTS;
+  const hand = S.rows.hand;
   const label = (y: number, text: string) =>
-    `<text x="${x0}" y="${y}" font-size="11.5" font-weight="600" fill="currentColor" fill-opacity="0.7">${escapeText(text)}</text>`;
-  const cannonX = x0 + 2 * pitch;
-  const cannonFrom = { x: x0 + pitch - cannonX, y: theirY - handY };
-  const elephantFrom = x0 + 2 * pitch - keptX;
-  const soldierFrom = { x: x0 + 3 * pitch - x0, y: handY - discardY };
-  const setEnd = x0 + 3 * pitch - XMJ_TILE_GAP;
-  const by = handY + XMJ_TILE_H + 5 + 23;
-  const t = (n: number) => `${(n / CLAIM_SECONDS) * 100}%`;
-  const style = [
-    `@keyframes xmj-claim-cannon{0%{transform:translate(${cannonFrom.x}px,${cannonFrom.y}px);opacity:0}${t(0.5)},${t(1.3)}{transform:translate(${cannonFrom.x}px,${cannonFrom.y}px);opacity:1}${t(2.2)},100%{transform:none;opacity:1}}`,
-    `@keyframes xmj-claim-shift{0%,${t(1.3)}{transform:translateX(${elephantFrom}px)}${t(2.2)},100%{transform:none}}`,
-    `@keyframes xmj-claim-show{0%,${t(2.4)}{opacity:0}${t(2.9)},100%{opacity:1}}`,
-    `@keyframes xmj-claim-throw{0%,${t(3.3)}{transform:translate(${soldierFrom.x}px,${soldierFrom.y}px)}${t(4.2)},100%{transform:none}}`,
-    `.xmj-claim-cannon{animation:xmj-claim-cannon ${CLAIM_SECONDS}s ease-in-out both}`,
-    `.xmj-claim-kept{animation:xmj-claim-shift ${CLAIM_SECONDS}s ease-in-out both}`,
-    `.xmj-claim-mark{animation:xmj-claim-show ${CLAIM_SECONDS}s ease-in-out both}`,
-    `.xmj-claim-thrown{animation:xmj-claim-throw ${CLAIM_SECONDS}s ease-in-out both}`,
-  ].join('');
+    `<text x="${CLAIM_X0}" y="${y}" font-size="11.5" font-weight="600" fill="currentColor" fill-opacity="0.7">${escapeText(text)}</text>`;
+  const tracks = XMJ32_CLAIM_TRACKS.map((track) => {
+    const end = track.poses.at(-1) as XmjClaimPose;
+    const opts = { sideways: track.sideways === true, name: track.name !== false };
+    let svg = xmjTileSvg(track.tile, end.x, end.y, P, opts);
+    if (track.poses.length > 1) svg = `<g class="xmj-claim-${track.id}">${svg}</g>`;
+    if (track.fades) {
+      // Its still state is its last fade, as the end frame shows it.
+      const hidden = track.fades.at(-1)?.shown === false ? ' opacity="0"' : '';
+      svg = `<g class="xmj-claim-${track.id}-fade"${hidden}>${svg}</g>`;
+    }
+    return svg;
+  });
+  const markFade: XmjClaimTrack = {
+    id: 'mark',
+    body: 'mark',
+    tile: XMJ32_CLAIM_DISCARD,
+    poses: [{ at: 0, x: 0, y: 0 }],
+    fades: [
+      { at: 2.8, shown: false },
+      { at: 3.3, shown: true },
+    ],
+  };
+  const style = [...XMJ32_CLAIM_TRACKS, markFade].map(claimTrackCss).join('');
+  const nameY = hand + XMJ_TILE_H + XMJ_TILE_DEPTH + 15;
+  const by = hand + XMJ_TILE_H + XMJ_TILE_DEPTH + 23;
+  const set0 = S.set[0] ?? 0;
+  const set2 = S.set[2] ?? 0;
+  const width = S.parked + XMJ_TILE_W + 4;
   const parts = [
     `<style>${style}</style>`,
     label(13, 'Their discards'),
-    xmjTileSvg(XMJ32_CLAIM_EARLIER_DISCARD, x0, theirY, P),
     label(116, 'Your discards'),
     label(219, 'Your hand'),
-    xmjTileSvg('rR', x0, handY, P),
-    xmjTileSvg('rH', x0 + pitch, handY, P),
-    `<g class="xmj-claim-kept">${xmjTileSvg(XMJ32_CLAIM_KEPT, keptX, handY, P)}</g>`,
-    `<g class="xmj-claim-mark">`,
-    `<path d="M${x0 + 2} ${by - 4}V${by}H${setEnd - 2}V${by - 4}" fill="none" stroke="currentColor" stroke-opacity="0.45" stroke-width="1"/>`,
-    `<text x="${(x0 + setEnd) / 2}" y="${by + 14}" text-anchor="middle" font-size="11" font-style="italic" fill="currentColor" fill-opacity="0.75">claimed, face up</text></g>`,
-    `<g class="xmj-claim-cannon">${xmjTileSvg(XMJ32_CLAIM_DISCARD, cannonX, handY, P)}<rect class="xmj-claim-mark" x="${cannonX}" y="${handY}" width="${XMJ_TILE_W}" height="${XMJ_TILE_H}" rx="6" fill="none" stroke="${XMJ_CLAIM_EDGE}" stroke-width="2.5"/></g>`,
-    `<g class="xmj-claim-thrown">${xmjTileSvg(XMJ32_CLAIM_THROWN, x0, discardY, P)}</g>`,
+    `<g class="xmj-claim-mark-fade">`,
+    `<text x="${set2 + CLAIM_SIDEWAYS.w / 2}" y="${nameY}" text-anchor="middle" font-size="10.5" fill="currentColor">${escapeText(XMJ_PIECE_NAMES[tilePiece(XMJ32_CLAIM_DISCARD)])}</text>`,
+    `<path d="M${set0 + 2} ${by - 4}V${by}H${S.setEnd - 2}V${by - 4}" fill="none" stroke="currentColor" stroke-opacity="0.45" stroke-width="1"/>`,
+    `<text x="${(set0 + S.setEnd) / 2}" y="${by + 14}" text-anchor="middle" font-size="11" font-style="italic" fill="currentColor" fill-opacity="0.75">claimed, face up</text></g>`,
+    ...tracks,
   ];
   return xmjTileFigureSvg(
-    keptX + XMJ_TILE_W + 4,
+    width,
     by + 22,
-    'A claim: the other player discards the red Cannon, you take it into Chariot, Horse, Cannon, lay the set face up and discard the black Soldier',
+    'A claim: the other player discards the red Cannon, you take it into Chariot, Horse, Cannon, lay the set face up apart from your hand with the Cannon sideways, and discard the black Soldier',
     parts.join(''),
   );
 };
@@ -357,7 +594,7 @@ export const XMJ32_CLAIM_STATIC_SVG = (): string =>
   xmjTileRowSvg(CLAIM_BEFORE_GROUPS, 'Before: your four tiles, and the red Cannon they discard') +
   xmjTileRowSvg(
     CLAIM_AFTER_GROUPS,
-    'After: the claimed set face up, the Elephant kept, the Soldier discarded',
+    'After: the claimed set face up with the Cannon sideways, the Elephant kept, the Soldier discarded',
   );
 
 // --- Not a win ---------------------------------------------------------------
