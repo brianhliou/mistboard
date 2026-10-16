@@ -48,6 +48,9 @@ const NON_INDEXED_ARTICLE_SLUGS = new Set([
   // The Atomic Xiangqi launch post, served by URL only since the variant
   // retired (web side: `noindex: true` on the article).
   'atomic-xiangqi-build',
+  // Xiangqi Mahjong rules, by URL only while under review (web side:
+  // HIDDEN_RULES_SLUGS in variant-public-surfaces.ts).
+  'xiangqi-mahjong-32',
 ]);
 
 // Rules pages for DELETED variants (docs-private/variant-retirement-plan.md,

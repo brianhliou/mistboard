@@ -215,6 +215,33 @@ export function xiangqiPieceTilePreview(set: XiangqiPieceSet): XiangqiPieceTileP
   };
 }
 
+/**
+ * A piece's own mark with no disc or ring: the figure for the image sets, the
+ * character for the character sets, in the 100-unit piece box. For surfaces
+ * that supply their own frame (the Xiangqi Mahjong tile is the frame). The
+ * third-party asset sets draw disc and character as one file, so they fall
+ * back to the traditional character in the board's ink.
+ */
+export function renderXiangqiPieceMark(
+  piece: XiangqiPiece,
+  set: XiangqiPieceSet,
+  opts: { x?: number; y?: number; size?: number } = {},
+): string {
+  const colorHex = piece.color === 'red' ? '#b91c1c' : '#1f2937';
+  const size = opts.size ?? 100;
+  const open = `<svg x="${opts.x ?? 0}" y="${opts.y ?? 0}" width="${size}" height="${size}" viewBox="0 0 100 100" aria-hidden="true">`;
+  let inner: string;
+  if (set === 'international') {
+    inner = internationalImageMark(internationalPieceHref(piece), piece.role);
+  } else if (isAnimalPieceSet(set)) {
+    inner = `<image href="${escapeAttr(animalPieceHref(piece, set))}" x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid meet"/>`;
+  } else {
+    const glyphSet = isAssetPieceSet(set) ? 'traditional' : set;
+    inner = cjkGlyphMark(xiangqiGlyph(glyphSet, piece.color, piece.role), colorHex);
+  }
+  return `${open}${inner}</svg>`;
+}
+
 export function renderXiangqiPieceGlyphed(
   piece: XiangqiPiece,
   set: XiangqiPieceSet,

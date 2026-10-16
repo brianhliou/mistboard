@@ -699,6 +699,27 @@ describe('rules variant sidebar', () => {
     expect(fortress.querySelector('a[href*="gameSpecId=crazyhouse-xiangqi"]')).not.toBeNull();
   });
 
+  // Under review (2026-10-15): by URL only, noindex, and on no list. No
+  // gameSpecId, so they stay off the lists when the variant itself goes public.
+  it('serves the Xiangqi Mahjong rules pages by URL, noindex and unlisted', () => {
+    vi.stubEnv('DEV', false);
+    const index = buildRulesIndex();
+    for (const slug of ['xiangqi-mahjong-32']) {
+      const article = articles.find((a) => a.slug === slug);
+      expect(article?.gameSpecId, slug).toBeUndefined();
+      expect(articleIsNoindex(article!), slug).toBe(true);
+      expect(rulesSlugPublicSurfaceEnabled(slug), slug).toBe(false);
+      expect(index.querySelector(`a[href="/rules/${slug}"]`), slug).toBeNull();
+      expect(buildArticlesIndex().querySelector(`a[href$="/${slug}"]`), slug).toBeNull();
+      const page = buildArticlePage(slug);
+      expect(page.querySelector('h1')?.textContent, slug).toBe(article?.title);
+      expect(page.querySelectorAll('svg.xmj-article-tiles').length, slug).toBeGreaterThan(10);
+      expect(page.querySelector('.article-cta-row.article-play-cta'), slug).toBeNull();
+      const rail = page.querySelector('.article-variant-sidebar');
+      expect(rail?.querySelector('a[href*="xiangqi-mahjong"]') ?? null, slug).toBeNull();
+    }
+  });
+
   // The Atomic Xiangqi launch post outlived its variant (retired 2026-10-11):
   // its URL still answers, so inbound links land, but no surface offers it.
   it('serves a noindex post by URL and lists it nowhere', () => {

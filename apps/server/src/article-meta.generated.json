@@ -555,6 +555,12 @@
       "zh-hant": "象棋殘局：哪些子力能贏，哪些只能和"
     }
   },
+  "xiangqi-mahjong-32": {
+    "title": "Xiangqi Mahjong Rules (32 tiles)",
+    "kind": "rules",
+    "description": "The 32-tile game of Xiangqi Mahjong for two players: one xiangqi set used as tiles, five-tile hands, the winning hands drawn out, and the 台 table we score with.",
+    "status": "published"
+  },
   "xiangqi-match-fixing": {
     "title": "The Xiangqi Match-Fixing Case",
     "kind": "article",

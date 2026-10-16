@@ -2,7 +2,6 @@ import {
   applyXmjMove,
   createXmjRoomState,
   createXmjSetup,
-  XMJ_GLYPHS,
   type XmjPlayerView,
   type XmjRoomState,
   type XmjSeat,
@@ -20,6 +19,7 @@ import {
   xiangqiMahjongTableHtml,
   xmjFeltFromSearch,
   xmjResultLine,
+  xmjTileName,
   xmjViewOffersAction,
 } from './xiangqi-mahjong-table.js';
 
@@ -47,6 +47,8 @@ function doc(html: string): HTMLElement {
   host.innerHTML = html;
   return host;
 }
+
+const labelOf = (tile: Element): string | null => tile.getAttribute('aria-label');
 
 const NAMES = { east: 'You', west: 'Bot' } as const;
 function opts(canAct: boolean, extra: Partial<XmjTableOptions> = {}): XmjTableOptions {
@@ -105,6 +107,23 @@ describe('xiangqi mahjong table', () => {
     expect(host.querySelectorAll('button').length).toBe(0);
   });
 
+  it('draws each tile in the viewer piece set, with no disc', () => {
+    const view = xmjViewFor(afterDiscard(['bP', 'bP', 'bA', 'rE']), 'west');
+    const last = (pieceSet: XmjTableOptions['pieceSet']) =>
+      doc(xiangqiMahjongTableHtml(view, opts(false, { pieceSet }))).querySelector(
+        '[data-xmj-pond="east"] .xmj-tile--last .xmj-tile-art',
+      );
+    const figure = last('international');
+    expect(figure?.querySelector('image')?.getAttribute('href')).toContain(
+      '/international/red-chariot.png',
+    );
+    const character = last('traditional');
+    expect(character?.querySelector('image')).toBeNull();
+    expect(character?.querySelector('path')).not.toBeNull();
+    // No disc or ring: the tile itself is the frame.
+    expect(character?.querySelector('circle')).toBeNull();
+  });
+
   it('keeps one pond per player, labelled, and notches the latest discard', () => {
     const after = afterDiscard(['bP', 'bP', 'bA', 'rE']);
     const host = doc(xiangqiMahjongTableHtml(xmjViewFor(after, 'west'), opts(false)));
@@ -113,7 +132,9 @@ describe('xiangqi mahjong table', () => {
     expect(east?.querySelector('.xmj-pond-label')?.textContent).toBe("You's discards");
     expect(west?.querySelector('.xmj-pond-label')?.textContent).toBe('Your discards');
     expect(east?.querySelectorAll('.xmj-tile').length).toBe(1);
-    expect(east?.querySelector('.xmj-tile--last')?.textContent).toBe(XMJ_GLYPHS.rR);
+    expect(east?.querySelector('.xmj-tile--last')?.getAttribute('aria-label')).toBe(
+      xmjTileName('rR'),
+    );
     expect(west?.querySelectorAll('.xmj-tile').length).toBe(0);
   });
 
@@ -124,12 +145,15 @@ describe('xiangqi mahjong table', () => {
     const html = xiangqiMahjongTableHtml(view, opts(true, { now: 12_000 }));
     const host = doc(html);
     const take = host.querySelector('[data-xmj-claim="chow"]');
-    expect(take?.textContent).toBe(`Take${XMJ_GLYPHS.rR}${XMJ_GLYPHS.rH}${XMJ_GLYPHS.rC}`);
+    expect(take?.textContent).toBe('Take');
+    expect([...(take?.querySelectorAll('.xmj-tile') ?? [])].map(labelOf)).toEqual(
+      (['rR', 'rH', 'rC'] as const).map(xmjTileName),
+    );
     expect(host.querySelector('[data-xmj-pass]')?.textContent).toBe('Pass');
     const timer = host.querySelector<HTMLElement>('.xmj-timer-line');
     expect(Number(timer?.dataset.xmjDeadline)).toBe(view.windowClosesAt);
     expect(timer?.querySelector('[data-xmj-secs]')?.textContent).toBe('8s');
-    expect(host.querySelector('.xmj-bubble')?.textContent).toContain(XMJ_GLYPHS.rR);
+    expect(host.querySelector('.xmj-bubble')?.textContent).toContain(xmjTileName('rR'));
     // A queued pass spends every button until it goes.
     const queued = doc(xiangqiMahjongTableHtml(view, opts(true, { passQueued: true })));
     for (const button of queued.querySelectorAll<HTMLButtonElement>('.xmj-actions button')) {
@@ -175,9 +199,9 @@ describe('xiangqi mahjong table', () => {
           const { meld, pair } = view.phase.score.shape;
           const groups = [...host.querySelectorAll('.xmj-group')];
           const shown = groups.flatMap((group) =>
-            [...group.querySelectorAll('.xmj-tile')].map((tile) => tile.textContent),
+            [...group.querySelectorAll('.xmj-tile')].map(labelOf),
           );
-          expect(shown).toEqual([...meld, ...pair].map((tile) => XMJ_GLYPHS[tile]));
+          expect(shown).toEqual([...meld, ...pair].map((tile) => xmjTileName(tile)));
           expect(host.querySelectorAll('.xmj-tile--win').length).toBe(1);
           const caps = groups.map((group) => group.querySelector('.xmj-group__cap')?.textContent);
           expect(caps).toEqual(caps.length === 1 ? ['five soldiers'] : ['set', 'pair']);

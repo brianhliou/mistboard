@@ -22,6 +22,7 @@ import { xiangqiMahjongEnabled } from './feature-flags.js';
 import { t } from './i18n/catalog.js';
 import { playSound, playTerminalPlan } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
+import { xiangqiAppearanceChangedEvent } from './theme.js';
 import {
   createTenantLiveClient,
   type TenantLiveClientContext,
@@ -30,6 +31,7 @@ import {
 } from './variant-tenant/live-client.js';
 import type { WebVariantTenant } from './variant-tenant/room-chrome.js';
 import './xiangqi-mahjong.css';
+import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import {
   xiangqiMahjongTableHtml,
   xmjCountdown,
@@ -230,6 +232,7 @@ function renderTable(refs: LiveRefs, view: XmjPlayerView | null): void {
     names: seatNames(),
     now: serverNow(),
     passQueued: queuedPass !== null,
+    pieceSet: readStoredXiangqiPieceSet(),
   });
   startTicker(refs.board);
 }
@@ -267,6 +270,8 @@ const client = createTenantLiveClient<XmjSeat, XmjPlayerView, XmjMove>({
   setup: (ctx) => {
     core = ctx;
     installTableInteraction(ctx);
+    // A piece-set change in the appearance picker redraws the tiles.
+    window.addEventListener(xiangqiAppearanceChangedEvent, ctx.renderAll);
   },
   moveList: {
     rowClass: 'move-row xiangqi-mahjong-move-row',

@@ -46,7 +46,10 @@ const gameSpecIds = new Set<string>(GAME_SPECS.map((spec) => spec.id));
 // NON_INDEXED_ARTICLE_SLUGS carries the same slugs (articles-meta-sync.test.ts
 // holds the two together). /rules/crazyhouse-xiangqi was held here for polish
 // on 2026-10-02 and went public the same day (Brian).
-const HIDDEN_RULES_SLUGS = new Set(['shogi4']);
+// The two Xiangqi Mahjong rules pages are held here while Brian reviews them
+// (2026-10-15); they carry no gameSpecId, so they stay unlisted when the
+// variant goes public, until their slugs leave this set.
+const HIDDEN_RULES_SLUGS = new Set(['shogi4', 'xiangqi-mahjong-32']);
 const RULES_GAME_SPEC_BY_SLUG: Record<string, GameSpecId> = {
   'fog-chess': 'dark-chess',
   'fog-xiangqi': 'dark-xiangqi',
