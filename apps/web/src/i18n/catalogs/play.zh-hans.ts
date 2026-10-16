@@ -127,6 +127,8 @@ export const ZH_HANS_PLAY = {
   'live.resign': '认输',
   'live.makeFirstMoveAbortingIn': '请走第一步，否则 {seconds} 秒后中止',
   'live.waitingFirstMoveAbortingIn': '等待第一步，{seconds} 秒后中止',
+  'live.makeFirstMoveOrLoseIn': '请走第一步，否则 {seconds} 秒后判负',
+  'live.waitingFirstMoveWinIn': '等待对手第一步，{seconds} 秒后你获胜',
   'live.opponentNotConnectedAbortingIn': '对手尚未连接，{seconds} 秒后中止',
   'live.makeFirstMoveAbortingInTime': '请走第一步，否则 {time} 后中止',
   'live.waitingFirstMoveAbortingInTime': '等待第一步，{time} 后中止',

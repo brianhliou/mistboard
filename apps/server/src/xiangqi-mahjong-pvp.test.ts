@@ -12,7 +12,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import test, { mock } from 'node:test';
 import {
   createXmjSetup,
   XIANGQI_MAHJONG_SPEC_ID,
@@ -26,6 +26,11 @@ import { mayPlayVariant } from './persistence-variant-access.js';
 import { xmjPveEngineSeat } from './routes/xiangqi-mahjong-rooms.js';
 import { canObserveRoom } from './server-policy.js';
 import { isXmjBotClientId, XMJ_BOT_CLIENT_ID, xmjBotMove } from './server-xiangqi-mahjong-bots.js';
+import {
+  clearTenantRuntimeTimers,
+  scheduleTenantLifecycleTimers,
+  tenantPregameTimeoutLoser,
+} from './variant-tenant/lifecycle.js';
 import {
   appendTenantRuntimeEvent,
   createTenantRuntimeRoomFromEvents,
@@ -157,8 +162,8 @@ function hydrate(events: XmjEvent[]): XmjRuntimeRoom {
   return created.room as XmjRuntimeRoom;
 }
 
-/** A rated 5+5 PvP room with both seats taken by humans. */
-function pvpRoom(seed: number): XmjRuntimeRoom {
+/** A 5+5 PvP room (rated unless told otherwise) with both seats taken by humans. */
+function pvpRoom(seed: number, rated = true): XmjRuntimeRoom {
   const roomId = `xmj_pvp-wire-${seed}`;
   return hydrate([
     {
@@ -167,7 +172,7 @@ function pvpRoom(seed: number): XmjRuntimeRoom {
       roomId,
       gameSpecId: XIANGQI_MAHJONG_SPEC_ID,
       creatorPreference: 'random',
-      rated: true,
+      rated,
       timeControl: FIVE_FIVE,
       setup: createXmjSetup(seeded(seed)),
     },
@@ -391,4 +396,56 @@ test('xmj pvp: neither seat can abort its deal, and either can resign from move 
   const turn = (state.status as { turn: string }).turn;
   assert.equal(tenantSeatMayAbort({}, state, turn), true, 'a default tenant keeps abort');
   assert.equal(tenantSeatMayResign({}, state), false, 'and resigns only after move 2');
+});
+
+test('xmj pvp: a rated seat that saw its deal and lets the first move lapse loses; others abort', () => {
+  const dealer = (room: XmjRuntimeRoom) => (room.projection.state.status as { turn: XmjSeat }).turn;
+
+  const unseen = pvpRoom(11);
+  assert.equal(tenantPregameTimeoutLoser(tenant, unseen), null, 'never connected: it aborts');
+
+  const seen = pvpRoom(11);
+  seen.seatsSeen = { [dealer(seen)]: true };
+  assert.equal(tenantPregameTimeoutLoser(tenant, seen), dealer(seen));
+
+  const casual = pvpRoom(11, false);
+  casual.seatsSeen = { east: true, west: true };
+  assert.equal(tenantPregameTimeoutLoser(tenant, casual), null, 'unrated always aborts');
+
+  const otherSeatOnly = pvpRoom(11);
+  otherSeatOnly.seatsSeen = { [dealer(otherSeatOnly) === 'east' ? 'west' : 'east']: true };
+  assert.equal(tenantPregameTimeoutLoser(tenant, otherSeatOnly), null, 'only the seat that owes');
+
+  const { userAbort: _userAbort, ratedPregameTimeoutForfeits: _rule, ...plain } = tenant;
+  assert.equal(tenantPregameTimeoutLoser(plain, seen), null, 'a tenant without the rule aborts');
+});
+
+test('xmj pvp: the first-move timer ends a rated room as a loss for the seat that stalled', async () => {
+  mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 10_000 });
+  const room = pvpRoom(12);
+  const stalled = (room.projection.state.status as { turn: XmjSeat }).turn;
+  room.seatsSeen = { east: true, west: true };
+  try {
+    const fired = new Promise<XmjEvent>((resolve) => {
+      scheduleTenantLifecycleTimers(tenant, room, {
+        appendEvent: async (_room, event) => {
+          resolve(event as XmjEvent);
+          return 0;
+        },
+        broadcastEventAppended: () => {},
+        now: () => Date.now(),
+      });
+    });
+    mock.timers.tick(10 * 60_000);
+    const event = await fired;
+    assert.equal(event.type, 'seat-forfeited');
+    assert.equal((event as { color: XmjSeat }).color, stalled);
+    appendTenantRuntimeEvent(tenant, room, event);
+    const status = room.projection.state.status as { type: string; winner?: XmjSeat };
+    assert.equal(status.type, 'finished');
+    assert.notEqual(status.winner, stalled);
+  } finally {
+    clearTenantRuntimeTimers(room);
+    mock.timers.reset();
+  }
 });

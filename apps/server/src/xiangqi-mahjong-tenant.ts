@@ -147,6 +147,7 @@ export const xiangqiMahjongTenant: XmjTenantType = {
   armsClockOnFirstMove: true,
   // Each seat sees its deal before its first move: no free redeal.
   userAbort: false,
+  ratedPregameTimeoutForfeits: true,
   // The seat that must discard is on the clock, and after a discard the
   // claimant, whose claim decision has no timer of its own. Nobody between hands.
   clockOwner: xmjClockOwner,

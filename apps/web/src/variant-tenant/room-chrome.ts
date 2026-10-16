@@ -89,6 +89,9 @@ export type WebVariantTenant<C extends string> = {
   // move (the server tenant's userAbort). No Abort button; Resign is offered
   // from the first move instead, beside the no-show countdown.
   userAbort?: false;
+  // Mirrors the server tenant's ratedPregameTimeoutForfeits: in a rated room the
+  // first-move countdown is a loss for the seat that owes the move, not an abort.
+  ratedPregameTimeoutForfeits?: true;
   oppositeColor(color: C): C;
   enabled(): boolean;
   reviewUrl(roomId: string): string;
@@ -1074,6 +1077,11 @@ export function createTenantRoomChrome<C extends string>(
       return isSideToMove
         ? t('live.makeFirstMoveAbortingInTime', { time })
         : t('live.waitingFirstMoveAbortingInTime', { time });
+    }
+    if (tenant.ratedPregameTimeoutForfeits === true && ctx.rated?.() === true) {
+      return isSideToMove
+        ? t('live.makeFirstMoveOrLoseIn', { seconds })
+        : t('live.waitingFirstMoveWinIn', { seconds });
     }
     return isSideToMove
       ? t('live.makeFirstMoveAbortingIn', { seconds })

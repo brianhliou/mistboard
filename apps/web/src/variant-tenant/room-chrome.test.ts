@@ -780,6 +780,25 @@ describe('tenant room chrome lobby rooms', () => {
     ]);
   });
 
+  it('warns of a loss, not an abort, on a rated first move where the tenant forfeits it', () => {
+    const forfeits: WebVariantTenant<Color> = {
+      ...tenant,
+      userAbort: false,
+      ratedPregameTimeoutForfeits: true,
+    };
+    const deadline = Date.now() + 20_000;
+    const rated = chromeHarness(
+      { view: playingView(), abortDeadline: deadline, rated: true },
+      forfeits,
+    );
+    rated.chrome.renderGameControls();
+    expect(rated.refs.gameControls.textContent).toContain('Make your first move or lose in');
+    // Casual games keep the abort, and say so.
+    const casual = chromeHarness({ view: playingView(), abortDeadline: deadline }, forfeits);
+    casual.chrome.renderGameControls();
+    expect(casual.refs.gameControls.textContent).toContain('Make your first move, aborting in');
+  });
+
   it('counts a correspondence first-move window in hours, not seconds', () => {
     const { chrome, refs } = chromeHarness({
       timeControl: dayPerMove,

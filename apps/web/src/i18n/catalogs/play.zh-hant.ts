@@ -127,6 +127,8 @@ export const ZH_HANT_PLAY = {
   'live.resign': '認輸',
   'live.makeFirstMoveAbortingIn': '請走第一步，否則 {seconds} 秒後中止',
   'live.waitingFirstMoveAbortingIn': '等待第一步，{seconds} 秒後中止',
+  'live.makeFirstMoveOrLoseIn': '請走第一步，否則 {seconds} 秒後判負',
+  'live.waitingFirstMoveWinIn': '等待對手第一步，{seconds} 秒後你獲勝',
   'live.opponentNotConnectedAbortingIn': '對手尚未連線，{seconds} 秒後中止',
   'live.makeFirstMoveAbortingInTime': '請走第一步，否則 {time} 後中止',
   'live.waitingFirstMoveAbortingInTime': '等待第一步，{time} 後中止',

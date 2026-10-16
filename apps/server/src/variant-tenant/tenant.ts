@@ -329,6 +329,9 @@ export type TenantRuntimeRoom<
   resumeTimer?: ReturnType<typeof setTimeout> | null;
   resumeDeadline?: number | null;
   forfeitSeat: C | null;
+  // Seats a player has connected to since the room was loaded. Memory-only: a
+  // restart forgets it, which errs toward an abort, never toward a loss.
+  seatsSeen?: Partial<Record<C, true>>;
   gameEndRecorded: boolean;
   /**
    * Debug artifacts (per-move engine decisions) an engine loop produced before
@@ -413,6 +416,14 @@ export type VariantTenant<
    * from the first move instead. The pregame timeout still aborts a no-show.
    */
   userAbort?: false;
+  /**
+   * In a rated game, a seat that has opened the game and lets its first-move
+   * window run out loses it, instead of the game aborting. Without this, a
+   * player who dislikes the hand they were dealt could wait out the timer for a
+   * free redeal. A seat that never connected never saw its deal, so it still
+   * aborts; unrated games always abort.
+   */
+  ratedPregameTimeoutForfeits?: true;
   /**
    * Whose clock runs in this state, or null for nobody's.
    *

@@ -319,6 +319,7 @@ export function createTenantWsRuntime<
       userId: accountUser?.id ?? null,
     };
     room.clients.add(client);
+    room.seatsSeen = { ...room.seatsSeen, [assignment.seat]: true };
     displaceOlderTenantSeatClients(room, client);
     scheduleLifecycleTimers(room);
 

@@ -144,6 +144,7 @@ function xmjFinishedLine(winner: XmjSeat | null, reason: string): string {
 const xmjWebTenant: WebVariantTenant<XmjSeat> = {
   // Each seat sees its deal before its first move: no free redeal.
   userAbort: false,
+  ratedPregameTimeoutForfeits: true,
   displayName: 'variant.xiangqiMahjong.name',
   colors: XMJ_SEATS,
   isColor: isXmjSeat,

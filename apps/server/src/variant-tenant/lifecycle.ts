@@ -104,6 +104,7 @@ export type TenantLifecycleTenant<C extends string> = {
   colors: readonly C[];
   engine?: { isEngineClientId(clientId: string | undefined): boolean };
   persistence: { logKindPrefix: string; logLabel: string };
+  ratedPregameTimeoutForfeits?: true;
 };
 
 export function clearTenantRuntimeTimers(room: {
@@ -514,6 +515,24 @@ export async function sweepTenantRoomDeadline<
 // refill starts the game, and the window, afresh. The second mover's window
 // starts at the first move. Deterministic over the event log, so hydration
 // recomputes the same deadline a restart interrupted.
+// The seat that loses when the first-move window runs out, or null when the
+// window aborts the game. See `ratedPregameTimeoutForfeits` on the tenant.
+export function tenantPregameTimeoutLoser<
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  Spec extends string,
+>(tenant: TenantLifecycleTenant<C>, room: TenantLifecycleRoom<C, M, State, Spec>): C | null {
+  if (tenant.ratedPregameTimeoutForfeits !== true || !room.rated) return null;
+  const phase = tenantAbortPhaseFor(tenant, room);
+  if (phase === null || phase === 'unjoined') return null;
+  // The seat that owes the move, not the phase's name: the phase counts moves
+  // from the first color, and a dealt game may open with either seat.
+  const { status } = room.projection.state;
+  const seat = status.type === 'playing' ? (status as { turn?: C }).turn : undefined;
+  return seat !== undefined && room.seatsSeen?.[seat] ? seat : null;
+}
+
 export function tenantAbortAnchorAt<
   C extends string,
   M,
@@ -674,13 +693,14 @@ function scheduleTenantAbortTimeout<
   const delay = Math.max(0, room.abortDeadline - now);
   room.abortTimer = setTimeout(() => {
     if (tenantAbortPhaseFor(tenant, room) === null) return;
+    const loser = tenantPregameTimeoutLoser(tenant, room);
     void ctx
-      .appendEvent(room, {
-        type: 'game-aborted',
-        at: Date.now(),
-        roomId: room.id,
-        reason: 'pregame-timeout',
-      })
+      .appendEvent(
+        room,
+        loser === null
+          ? { type: 'game-aborted', at: Date.now(), roomId: room.id, reason: 'pregame-timeout' }
+          : { type: 'seat-forfeited', at: Date.now(), roomId: room.id, color: loser },
+      )
       .then((seq) => {
         const event = room.events[seq];
         if (event) ctx.broadcastEventAppended(room, event, seq);
