@@ -42,6 +42,7 @@ import type { XmjLogHand, XmjLogRow } from './xiangqi-mahjong-log.js';
 import {
   renderXiangqiPieceMark,
   type XiangqiPieceSet,
+  xiangqiTileBacking,
   xiangqiTileFaceHref,
 } from './xiangqi-piece-sets.js';
 
@@ -95,11 +96,20 @@ function tileArt(tile: XmjTile): string {
   return `<svg class="xmj-tile-art" viewBox="0 0 100 100" aria-hidden="true">${renderXiangqiPieceMark(piece, activePieceSet)}</svg>`;
 }
 
+// The set's own tile body (its band, its backs, the wall) as the jade custom
+// properties, so every rule drawn in jade follows it; empty for Mistboard's sets.
+function backingVars(): string {
+  const backing = xiangqiTileBacking(activePieceSet);
+  if (!backing) return '';
+  const [high, mid, low] = backing;
+  return `--xmj-jade-high:${high};--xmj-jade:${mid};--xmj-jade-low:${low};`;
+}
+
 // A third-party set's disc surface laid over the whole face (lacquer, grain,
-// paper), edge to edge in every look.
+// paper), edge to edge in every look, on the set's own body.
 function tileFaceStyle(tile: XmjTile): string {
   const href = xiangqiTileFaceHref(activePieceSet, tilePieceOf(tile).color);
-  return href ? ` style="background-image:url('${href}')"` : '';
+  return href ? ` style="background-image:url('${href}');${backingVars()}"` : '';
 }
 
 /** The felts the table can be laid on (`?felt=`); green is the default. */
@@ -226,7 +236,8 @@ function tileButton(tile: XmjTile, extra = ''): string {
 }
 
 function back(extra = ''): string {
-  return `<span class="xmj-tile xmj-tile--back${extra ? ` ${extra}` : ''}" aria-hidden="true"></span>`;
+  const vars = backingVars();
+  return `<span class="xmj-tile xmj-tile--back${extra ? ` ${extra}` : ''}"${vars ? ` style="${vars}"` : ''} aria-hidden="true"></span>`;
 }
 
 function meldsHtml(melds: readonly XmjMeld[]): string {
@@ -397,12 +408,14 @@ function wallHtml(count: number): string {
   const stacks = Math.ceil(XMJ_WALL_AT_DEAL / 2);
   const left = Math.max(0, Math.min(XMJ_WALL_AT_DEAL, count));
   const html: string[] = [];
+  const vars = backingVars();
+  const stackStyle = vars ? ` style="${vars}"` : '';
   // The last stack of an odd wall is a single tile; draws take from the left.
   for (let index = 0; index < stacks; index += 1) {
     const fromRight = stacks - 1 - index;
     const height = Math.max(0, Math.min(2, left - fromRight * 2));
     html.push(
-      `<span class="xmj-stack" data-h="${height}">${height > 0 ? '<i></i>'.repeat(height) : ''}</span>`,
+      `<span class="xmj-stack" data-h="${height}"${stackStyle}>${height > 0 ? '<i></i>'.repeat(height) : ''}</span>`,
     );
   }
   const label = t('live.xmj.wall', { count: left });

@@ -17,6 +17,7 @@ import {
 import {
   renderXiangqiPieceMark,
   type XiangqiPieceSet,
+  xiangqiTileBacking,
   xiangqiTileFaceHref,
 } from './xiangqi-piece-sets.js';
 
@@ -83,6 +84,8 @@ function tileSvg(
   // SVG image's square viewBox to the width and paints the disc's rim above
   // and below it.
   const faceHref = xiangqiTileFaceHref(pieceSet, color);
+  // An asset set's tile is one block of its material; Mistboard's sit on jade.
+  const [, jade, jadeLow] = xiangqiTileBacking(pieceSet) ?? [JADE, JADE, JADE_LOW];
   const clip = `xmj-face-${x}-${y}`;
   const face = faceHref
     ? `<clipPath id="${clip}"><rect x="${x}" y="${y}" width="${TILE_W}" height="${TILE_H}" rx="6"/></clipPath><image href="${faceHref}" x="${x - (TILE_H - TILE_W) / 2}" y="${y}" width="${TILE_H}" height="${TILE_H}" clip-path="url(#${clip})"/><rect x="${x}" y="${y}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="none" stroke="${edge}" stroke-width="${claimed ? 2.5 : 1}"/>`
@@ -91,8 +94,8 @@ function tileSvg(
         `<path d="M${x + 6} ${y + 1.5}H${x + TILE_W - 6}" stroke="#fff" stroke-opacity="0.9"/>`,
       ].join('');
   return [
-    `<rect x="${x}" y="${y + DEPTH}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="${JADE_LOW}"/>`,
-    `<rect x="${x}" y="${y + DEPTH - 1}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="${JADE}"/>`,
+    `<rect x="${x}" y="${y + DEPTH}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="${jadeLow}"/>`,
+    `<rect x="${x}" y="${y + DEPTH - 1}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="${jade}"/>`,
     `<rect x="${x}" y="${y + 1}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="${EDGE}"/>`,
     `<rect x="${x}" y="${y}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="${FACE}" stroke="${edge}" stroke-width="${claimed ? 2.5 : 1}"/>`,
     face,

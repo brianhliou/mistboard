@@ -159,6 +159,25 @@ describe('xiangqi mahjong table', () => {
     expect(card?.querySelector('.xmj-tile-art')?.getAttribute('aria-hidden')).toBe('true');
   });
 
+  it('gives a third-party set its own tile body: the band, the backs and the wall', () => {
+    const view = xmjViewFor(afterDiscard(['bP', 'bP', 'bA', 'rE']), 'west');
+    const host = (pieceSet: XmjTableOptions['pieceSet']) =>
+      doc(xiangqiMahjongTableHtml(view, opts(false, { pieceSet })));
+    const wood = host('wood');
+    const body = '--xmj-jade:#a4692f;';
+    expect(
+      wood.querySelector('[data-xmj-pond="east"] .xmj-tile--last')?.getAttribute('style'),
+    ).toContain(body);
+    const backs = [...wood.querySelectorAll('.xmj-tile--back')];
+    expect(backs.length).toBeGreaterThan(0);
+    for (const back of backs) expect(back.getAttribute('style')).toContain(body);
+    expect(wood.querySelector('.xmj-stack')?.getAttribute('style')).toContain(body);
+    // A set Mistboard draws keeps the jade the stylesheet gives it.
+    const jade = host('traditional');
+    expect(jade.querySelector('.xmj-tile--back')?.hasAttribute('style')).toBe(false);
+    expect(jade.querySelector('.xmj-stack')?.hasAttribute('style')).toBe(false);
+  });
+
   it('keeps one pond per player, labelled, and notches the latest discard', () => {
     const after = afterDiscard(['bP', 'bP', 'bA', 'rE']);
     const host = doc(xiangqiMahjongTableHtml(xmjViewFor(after, 'west'), opts(false)));

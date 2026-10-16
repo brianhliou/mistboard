@@ -253,6 +253,27 @@ export function xiangqiTileFaceHref(set: XiangqiPieceSet, color: XiangqiColor): 
   return isAssetPieceSet(set) ? assetTileHref(set, color, 'face') : null;
 }
 
+/** A tile's body below the face: light, mid and dark, top to bottom. */
+export type XiangqiTileBacking = readonly [high: string, mid: string, low: string];
+
+// Each asset set's tile is one block of its own material, so the band under
+// the face and a turned-over tile's back are that material too: jade under a
+// wooden face reads as a plastic tile. Lacquer backs are black lacquer; the
+// printed sets (book, brush, clerical) get a darker ground than their face,
+// so a back never reads as a blank face.
+const ASSET_TILE_BACKING: Readonly<Record<AssetXiangqiPieceSet, XiangqiTileBacking>> = {
+  wood: ['#c98b4a', '#a4692f', '#78471c'],
+  lacquer: ['#4a3424', '#2f1f15', '#1b120c'],
+  book: ['#b8463a', '#96322a', '#6e231d'],
+  brush: ['#a87556', '#87573c', '#623e2a'],
+  clerical: ['#a87556', '#87573c', '#623e2a'],
+};
+
+/** An asset set's tile body; null for the sets Mistboard draws, which sit on jade. */
+export function xiangqiTileBacking(set: XiangqiPieceSet): XiangqiTileBacking | null {
+  return isAssetPieceSet(set) ? ASSET_TILE_BACKING[set] : null;
+}
+
 export function renderXiangqiPieceGlyphed(
   piece: XiangqiPiece,
   set: XiangqiPieceSet,
