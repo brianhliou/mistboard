@@ -78,11 +78,14 @@ function tileSvg(
   const name = XMJ_PIECE_NAMES[tilePiece(tile)];
   // A third-party set's disc surface covers the whole face, as on the table.
   // Every tile at one x has the same outline in every figure, so the clip's
-  // id may repeat across figures on a page.
+  // id may repeat across figures on a page. The face is drawn as a square as
+  // tall as the tile and clipped, not stretched with `slice`: Chrome fits an
+  // SVG image's square viewBox to the width and paints the disc's rim above
+  // and below it.
   const faceHref = xiangqiTileFaceHref(pieceSet, color);
   const clip = `xmj-face-${x}-${y}`;
   const face = faceHref
-    ? `<clipPath id="${clip}"><rect x="${x}" y="${y}" width="${TILE_W}" height="${TILE_H}" rx="6"/></clipPath><image href="${faceHref}" x="${x}" y="${y}" width="${TILE_W}" height="${TILE_H}" preserveAspectRatio="xMidYMid slice" clip-path="url(#${clip})"/><rect x="${x}" y="${y}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="none" stroke="${edge}" stroke-width="${claimed ? 2.5 : 1}"/>`
+    ? `<clipPath id="${clip}"><rect x="${x}" y="${y}" width="${TILE_W}" height="${TILE_H}" rx="6"/></clipPath><image href="${faceHref}" x="${x - (TILE_H - TILE_W) / 2}" y="${y}" width="${TILE_H}" height="${TILE_H}" clip-path="url(#${clip})"/><rect x="${x}" y="${y}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="none" stroke="${edge}" stroke-width="${claimed ? 2.5 : 1}"/>`
     : [
         `<path d="M${x + 1} ${y + TILE_H * 0.6}H${x + TILE_W - 1}V${y + TILE_H - 6}a5 5 0 0 1-5 5H${x + 6}a5 5 0 0 1-5-5Z" fill="${FACE_LOW}" fill-opacity="0.7"/>`,
         `<path d="M${x + 6} ${y + 1.5}H${x + TILE_W - 6}" stroke="#fff" stroke-opacity="0.9"/>`,

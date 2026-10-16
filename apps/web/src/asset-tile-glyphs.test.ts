@@ -126,6 +126,15 @@ describe('asset tile layers', () => {
     const row = xmjTileRowSvg([{ tiles: XMJ32_RED_TILES.slice(0, 2) }], 'row', 'wood');
     expect(row).toContain('/piece-sets/xiangqi/wood/tile/red-face.svg');
     expect(row).toContain('clip-path="url(#xmj-face-');
+    // Each face is drawn square and clipped. Stretched to the tile with
+    // `slice`, Chrome fit the square to the width and showed the disc rim
+    // above and below it (Brian, 10-15: "the bottom of some of the rounded discs").
+    for (const image of row.match(/<image href="[^"]*face\.svg[^>]*>/g) ?? []) {
+      expect(image).not.toContain('preserveAspectRatio');
+      const w = image.match(/ width="([\d.]+)"/)?.[1];
+      expect(w).toBeDefined();
+      expect(image.match(/ height="([\d.]+)"/)?.[1]).toBe(w);
+    }
     expect(
       xmjTileRowSvg([{ tiles: XMJ32_RED_TILES.slice(0, 2) }], 'row', 'traditional'),
     ).not.toContain('face.svg');
