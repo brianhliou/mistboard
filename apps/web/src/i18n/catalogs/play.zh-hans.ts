@@ -488,6 +488,8 @@ export const ZH_HANS_PLAY = {
   'live.xmj.nextHandIn': '{count} 秒后发下一手',
   'live.xmj.exhausted': '第 {hand} 手：流局，牌墙已摸完。',
   'live.xmj.handUnfinished': '第 {hand} 手未打完。',
+  'live.xmj.meldShown': '亮出',
+  'live.xmj.meldShownTitle': '吃来的面子，双方都看得到',
   'live.xmj.set': '面子',
   'live.xmj.pair': '将眼',
   'live.xmj.fiveSoldiers': '五兵',

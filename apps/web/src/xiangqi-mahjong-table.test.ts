@@ -387,6 +387,37 @@ describe('xiangqi mahjong table', () => {
     expect(armed.querySelector('[data-xmj-selfdraw]')).not.toBeNull();
   });
 
+  it('lays a claimed set face up on a captioned tray, the same for both players', () => {
+    let found: { state: XmjRoomState; seat: XmjSeat } | null = null;
+    for (let seed = 1; seed <= 60 && !found; seed += 1) {
+      let state = createXmjRoomState(createXmjSetup(seeded(seed)), `xmj_meld_${seed}`);
+      for (let step = 0; step < 300 && state.status.type === 'playing'; step += 1) {
+        state = botStep(state);
+        const view = xmjViewFor(state, 'east');
+        const seat = (['east', 'west'] as const).find((s) => view.melds[s].length > 0);
+        if (seat && !view.between) {
+          found = { state, seat };
+          break;
+        }
+      }
+    }
+    if (!found) throw new Error('no bot match claimed a set');
+    const { state, seat } = found;
+    const meld = xmjViewFor(state, seat).melds[seat][0];
+    for (const viewer of [seat, seat === 'east' ? 'west' : 'east'] as const) {
+      const root = doc(xiangqiMahjongTableHtml(xmjViewFor(state, viewer), opts(false)));
+      const tray = root.querySelector(`[data-xmj-seat="${seat}"] .xmj-meld`);
+      expect(tray, viewer).not.toBeNull();
+      expect(tray?.querySelector('.xmj-meld__cap')?.textContent).toBe('Shown');
+      expect(tray?.getAttribute('title')).toMatch(/both players/);
+      // Faces, never backs: the set is public.
+      const tiles = [...(tray?.querySelectorAll('.xmj-tile') ?? [])];
+      expect(tiles).toHaveLength(meld?.tiles.length ?? 0);
+      expect(tiles.some((tile) => tile.classList.contains('xmj-tile--back'))).toBe(false);
+      expect(tiles.filter((tile) => tile.classList.contains('xmj-tile--claimed'))).toHaveLength(1);
+    }
+  });
+
   it('stands the opponent tile just drawn apart, as a back', () => {
     // East discards, west passes and draws: east sees west's drawn back apart.
     const after = afterDiscard(['bP', 'bP', 'bA', 'rE']);
@@ -398,7 +429,7 @@ describe('xiangqi mahjong table', () => {
     expect(backs.filter((back) => back.classList.contains('xmj-tile--drawn')).length).toBe(1);
   });
 
-  it('lists the points of every hand for the meta card, totals matching the match score', () => {
+  it('lists the points of every hand for under the table, totals matching the match score', () => {
     let current = state;
     let checked = 0;
     for (let steps = 0; steps < 5000; steps += 1) {

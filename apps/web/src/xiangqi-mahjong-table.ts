@@ -242,14 +242,20 @@ function back(extra = ''): string {
   return `<span class="xmj-tile xmj-tile--back${extra ? ` ${extra}` : ''}"${vars ? ` style="${vars}"` : ''} aria-hidden="true"></span>`;
 }
 
+/**
+ * The sets made by claiming a discard: face up for both players, so each sits
+ * on its own tray with a caption saying so. The claimed tile keeps its mark.
+ */
 function meldsHtml(melds: readonly XmjMeld[]): string {
   if (melds.length === 0) return '';
+  const caption = t('live.xmj.meldShown');
+  const title = t('live.xmj.meldShownTitle');
   const html = melds
     .map(
       (meld) =>
-        `<span class="xmj-meld">${meld.tiles
+        `<span class="xmj-meld" title="${title}"><span class="xmj-meld__tiles">${meld.tiles
           .map((tile) => tileSpan(tile, tile === meld.claimed ? 'xmj-tile--claimed' : ''))
-          .join('')}</span>`,
+          .join('')}</span><span class="xmj-meld__cap">${caption}</span></span>`,
     )
     .join('');
   return `<span class="xmj-melds">${html}</span>`;

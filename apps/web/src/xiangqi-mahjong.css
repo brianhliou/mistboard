@@ -200,9 +200,31 @@
   flex-wrap: wrap;
 }
 
+/* A claimed set is face up for both players: it sits on a pale tray, its
+   caption under it, apart from the hand that only its owner sees. */
 .xmj-meld {
   display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 5px 3px;
+  border: 1px dashed rgb(255 255 255 / 0.32);
+  border-radius: 9px;
+  background: rgb(255 255 255 / 0.08);
+}
+
+.xmj-meld__tiles {
+  display: inline-flex;
   gap: 2px;
+}
+
+.xmj-meld__cap {
+  color: rgb(255 255 255 / 0.75);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-transform: uppercase;
 }
 
 /* ── Tiles ─────────────────────────────────────────────────────────────────── */

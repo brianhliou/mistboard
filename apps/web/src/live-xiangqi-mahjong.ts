@@ -325,7 +325,7 @@ function animateMoves(board: HTMLElement, view: XmjPlayerView, sources: TileSour
       view.discards[other].length === before.discards[other] - 1
     ) {
       const meld = board.querySelector(`${rack(seat)} .xmj-meld:last-child`);
-      for (const tile of meld ? [...meld.children] : []) {
+      for (const tile of meld ? [...meld.querySelectorAll('.xmj-tile')] : []) {
         const claimed = tile.classList.contains('xmj-tile--claimed');
         flyIn(
           tile,

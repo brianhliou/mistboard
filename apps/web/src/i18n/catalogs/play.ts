@@ -512,6 +512,8 @@ export const EN_PLAY = {
   'live.xmj.nextHandIn': 'Next deal in {count}s',
   'live.xmj.exhausted': 'Hand {hand}: no winner. The wall ran out.',
   'live.xmj.handUnfinished': 'Hand {hand} was not finished.',
+  'live.xmj.meldShown': 'Shown',
+  'live.xmj.meldShownTitle': 'Claimed from a discard: both players see this set',
   'live.xmj.set': 'set',
   'live.xmj.pair': 'pair',
   'live.xmj.fiveSoldiers': 'five soldiers',
