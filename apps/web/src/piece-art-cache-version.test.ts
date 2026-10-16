@@ -84,6 +84,12 @@ const SERVED: Record<string, () => number> = {
   'xiangqi/book': () => assetSetVersion('book'),
   'xiangqi/brush': () => assetSetVersion('brush'),
   'xiangqi/clerical': () => assetSetVersion('clerical'),
+  // The mahjong tile layers ride their piece set's version (assetTileHref).
+  'xiangqi/book/tile': () => assetSetVersion('book'),
+  'xiangqi/brush/tile': () => assetSetVersion('brush'),
+  'xiangqi/clerical/tile': () => assetSetVersion('clerical'),
+  'xiangqi/lacquer/tile': () => assetSetVersion('lacquer'),
+  'xiangqi/wood/tile': () => assetSetVersion('wood'),
   'jungle/dobutsu': () => versionOf(jungleDobutsuPieceHref('red', 'elephant')),
   'jungle/dobutsu/board': () => versionOf(jungleBoardAssetHref('water')),
 };

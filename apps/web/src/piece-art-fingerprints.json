@@ -32,13 +32,25 @@
       "version": 1,
       "sha": "187c6387436e9611"
     },
+    "xiangqi/book/tile": {
+      "version": 1,
+      "sha": "d4b132ac090724ae"
+    },
     "xiangqi/brush": {
       "version": 2,
       "sha": "2dc19e4590e60864"
     },
+    "xiangqi/brush/tile": {
+      "version": 2,
+      "sha": "215a20f7f945d13c"
+    },
     "xiangqi/clerical": {
       "version": 2,
       "sha": "1fdfa63a8b120ea3"
+    },
+    "xiangqi/clerical/tile": {
+      "version": 2,
+      "sha": "d226d5916bf32fdc"
     },
     "xiangqi/international": {
       "version": 18,
@@ -52,9 +64,17 @@
       "version": 1,
       "sha": "8e2158277e728b6a"
     },
+    "xiangqi/lacquer/tile": {
+      "version": 1,
+      "sha": "82adb9abb464cb98"
+    },
     "xiangqi/wood": {
       "version": 1,
       "sha": "c6cda2c5d4516b89"
+    },
+    "xiangqi/wood/tile": {
+      "version": 1,
+      "sha": "f4f3a98f6392e9a1"
     }
   },
   "og": {
