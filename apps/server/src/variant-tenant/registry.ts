@@ -127,7 +127,8 @@ export type TenantExportPly = {
   // Hidden-piece tenants only (jieqi, banqi, jungle-flip): the identity this ply
   // turned over, and the identity of a face-down piece it captured. Absent when
   // the ply did neither, and never stated for a piece whose identity the game
-  // never determined.
+  // never determined. Jieqi never states `capturedHidden`: only the capturer may
+  // know a piece taken face-down (Brian, 2026-10-16).
   revealed?: HiddenPieceIdentity;
   capturedHidden?: HiddenPieceIdentity;
 };

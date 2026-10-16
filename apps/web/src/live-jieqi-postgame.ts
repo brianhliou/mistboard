@@ -4,7 +4,6 @@ import {
   type JieqiGameStatus,
   type JieqiMove,
   type JieqiPlayerView,
-  jieqiStateToDealtFen,
   jieqiStateToPikafishFen,
 } from '@mistboard/game';
 import { gameOutcome, variantDisplayLabel } from './game-display.js';
@@ -36,21 +35,21 @@ import { analysisHref, editorHref } from './review/position-links.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
 
-// Postgame review for Jieqi. Jieqi hides piece IDENTITIES
-// symmetrically (positions are public), so there is a single review board. As of the
-// review standardization it rides the shared interactive tree (mountJieqiReview →
-// mountTreeReview): the deal is reconstructed from the fully-revealed `history.truth`
-// stream (jieqi's spoiler key is 'truth'), baked into the truth, and the client
-// replays the move list + lets you branch. The board renders MASKED as-played; a
-// dark piece reveals when a move in a line moves it. The server per-ply snapshots are
+// Postgame review for Jieqi. Positions are public, so there is a single review
+// board. It rides the shared interactive tree (mountJieqiReview → mountTreeReview):
+// the deal is reconstructed from the `history.truth` stream, baked into the truth,
+// and the client replays the move list + lets you branch. Since 2026-10-16 that
+// stream is the PUBLIC deal: only pieces that moved carry their role, and every
+// other piece (face-down at the end, or captured face-down) is `unknown`, so the
+// review never knows more than a spectator did (Brian: a dark capture is known
+// only to its capturer, after the game too). A branch that moves an unknown piece
+// reveals a random role from the public pool. The server per-ply snapshots are
 // used only by the watch adapter (postgameViewAtPly below).
 
-// 'red' | 'black' are the review payload's per-color views; 'truth' is the fully
-// revealed board (and the deal seed the review reconstructs from); 'masked' is the
-// as-played board the TV/watch payload carries, where a never-moved piece is still
-// face-down. Unlike the jungle-flip watch adapter — where 'truth' IS the mask —
-// jieqi keeps 'truth' meaning fully revealed, because the review payload and
-// recoverJieqiDeal already depend on that meaning.
+// 'truth' is the public board with every piece that moved face-up and the rest
+// marked unknown (the deal seed the review reconstructs from); 'masked' is the
+// as-played board the TV/watch payload carries. 'red' | 'black' are kept for the
+// type only: the review payload no longer sends per-color views.
 export type JieqiPostgameViewKey = JieqiColor | 'truth' | 'masked';
 
 export type JieqiPostgameResponse = {
@@ -218,11 +217,13 @@ function renderPostgame(root: HTMLElement, postgame: JieqiPostgameResponse): voi
     ...(postgame.game.mode === 'imported'
       ? {}
       : crosstableConfig(postgame.game.roomId, postgame.game.players)),
-    // Position hand-offs. The analysis link carries the DEALT fen (the exact
-    // reveals of this game continue there); the editor link carries only the
-    // public fen (it edits what is visible).
-    analyseFromHere: (truth) => analysisHref('jieqi', jieqiStateToDealtFen(truth)),
-    boardEditorHref: (truth) => editorHref('jieqi', jieqiStateToPikafishFen(truth)),
+    // Position hand-offs carry the PUBLIC fen: the board as played, and a pool
+    // of every piece no one has seen (face-down, or captured face-down). The deal
+    // is never sent, so the analysis board deals the face-down pieces afresh.
+    analyseFromHere: (truth) =>
+      analysisHref('jieqi', jieqiStateToPikafishFen(truth, { public: true })),
+    boardEditorHref: (truth) =>
+      editorHref('jieqi', jieqiStateToPikafishFen(truth, { public: true })),
     ...gameExportShareExtra('jieqi', postgame.game.roomId),
     // Server-side PikaJieQi whole-game analysis, DB-cached: an already-analysed game loads
     // straight from cache on open (a GET that never computes). Requesting a fresh compute is

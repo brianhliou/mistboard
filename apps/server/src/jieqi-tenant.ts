@@ -35,9 +35,11 @@ import {
   type JieqiSquare,
   jieqiCheckMark,
   jieqiPerpetualCheckLoser,
+  jieqiPublicDeal,
   jieqiTruthBoard,
   jieqiTruthCaptures,
   oppositeJieqiColor,
+  STANDARD_JIEQI_DEAL,
 } from '@mistboard/game';
 import { jieqiEnabled } from './feature-flags.js';
 import {
@@ -152,6 +154,29 @@ export type JieqiSetup = JieqiDeal & { repetition?: true };
 export function enforcesRepetition(setup: unknown): boolean {
   if (setup === undefined || setup === null) return true;
   return typeof setup === 'object' && (setup as { repetition?: unknown }).repetition === true;
+}
+
+type JieqiEvent = TenantRoomEvent<JieqiColor, JieqiMove, typeof JIEQI_SPEC_ID>;
+
+// A finished game's log as every reader may know it (jieqiPublicDeal in
+// @mistboard/game): the room-created deal keeps only the identities of pieces
+// that moved, so nothing replayed from it can name a piece captured face-down
+// or one never turned over. Every surface that serves a finished jieqi game
+// outside its live room (review API, watch replay, exports, analysis) replays
+// this log, never the stored one. Legality and the result do not depend on a
+// face-down piece's identity (it moves as its home square's role), so the
+// replay finishes exactly as the game did.
+export function jieqiPublicEvents<E extends JieqiEvent>(events: readonly E[]): E[] {
+  const moves = events.flatMap((event) => (event.type === 'move-played' ? [event.move] : []));
+  return events.map((event) => {
+    if (event.type !== 'room-created') return event;
+    const deal = asJieqiDeal(event.setup) ?? STANDARD_JIEQI_DEAL;
+    const setup: JieqiSetup = {
+      ...jieqiPublicDeal(deal, moves),
+      ...(enforcesRepetition(event.setup) ? { repetition: true as const } : {}),
+    };
+    return { ...event, setup };
+  });
 }
 
 // Identity is hidden, position is not: moves are public to both seats and to a
@@ -295,7 +320,9 @@ export const jieqiTenant: JieqiTenant = {
   visibility: {
     clientEventFor: jieqiClientEventFor,
     viewForClient: (state, client) => getJieqiClientView(state, client),
-    truthView: (state) => getJieqiTruthView(state),
+    // No truthView: a finished room keeps serving each seat its own view and a
+    // spectator the public one. A piece captured face-down stays known only to
+    // its capturer, after the game too (Brian, 2026-10-16).
   },
   engine: {
     terminalContext: 'repetition-window',

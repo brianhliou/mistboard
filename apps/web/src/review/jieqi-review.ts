@@ -85,7 +85,10 @@ function makeJieqiPresentation(
     engine: {
       panelVariant: 'jieqi',
       positionMode: 'fen',
-      fen: jieqiStateToPikafishFen,
+      // The public pool: every piece no one has seen, face-down or captured
+      // face-down. A review's deal may hold placeholders for those (a finished
+      // game's public deal), so the default pool would hand the engine guesses.
+      fen: (truth) => jieqiStateToPikafishFen(truth, { public: true }),
       canEvaluatePosition: (truth) => truth.status.type === 'playing',
       formatPvMove: formatJieqiBestMove,
       moveFromEngineUci: pikafishUciToJieqiMove,

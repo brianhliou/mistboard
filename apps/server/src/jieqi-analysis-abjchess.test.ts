@@ -266,54 +266,40 @@ test('decisions fall back the same way: a PikaJieQi blob is served under its own
   assert.equal(computes, 0);
 });
 
-test('each decomposition re-key (#487 mover view, d5 capture pool) keeps the old rows served', async () => {
-  // New computes file under the d5-capture ids, never under the d4 (captures graded on the
-  // identity hit) or all-knowing d3 ones.
-  assert.match(ABJCHESS_JIEQI_DECISIONS_ENGINE_ID, /^ab-jchess-jieqi-decisions@2\+.*\+d5-capture$/);
-  assert.match(JIEQI_DECISIONS_ENGINE_ID, /^pikafish-jieqi-decisions@.*\+d5-capture$/);
-  for (const legacy of JIEQI_LEGACY_DECISIONS_ENGINE_IDS) {
-    assert.match(legacy, /\+(d3|d4-mover)$/);
-    assert.notEqual(legacy, ABJCHESS_JIEQI_DECISIONS_ENGINE_ID);
-    assert.notEqual(legacy, JIEQI_DECISIONS_ENGINE_ID);
-  }
+test('the public re-key (d6) serves no row graded from the real deal', async () => {
+  // Since 2026-10-16 decisions are graded from the public deal. Every earlier row was graded
+  // from the real one, so none is served: a read recomputes under the d6-public id.
+  assert.match(ABJCHESS_JIEQI_DECISIONS_ENGINE_ID, /^ab-jchess-jieqi-decisions@2\+.*\+d6-public$/);
+  assert.match(JIEQI_DECISIONS_ENGINE_ID, /^pikafish-jieqi-decisions@.*\+d6-public$/);
+  assert.deepEqual(JIEQI_LEGACY_DECISIONS_ENGINE_IDS, []);
   const old: JieqiDecision[] = [
     { ply: 3, mover: 'red', bestWin: 55, playedWin: 50, realizedWin: 30, playedRank: 2 },
   ];
-  for (const legacy of JIEQI_LEGACY_DECISIONS_ENGINE_IDS) {
+  const fresh: JieqiDecision[] = [
+    { ply: 3, mover: 'red', bestWin: 55, playedWin: 50, realizedWin: 50, playedRank: 2 },
+  ];
+  const retired = [
+    ABJCHESS_JIEQI_DECISIONS_ENGINE_ID.replace(/d6-public$/, 'd5-capture'),
+    JIEQI_DECISIONS_ENGINE_ID.replace(/d6-public$/, 'd5-capture'),
+    JIEQI_DECISIONS_ENGINE_ID.replace(/d6-public$/, 'd4-mover'),
+  ];
+  for (const id of retired) {
     for (const profile of [ABJCHESS_JIEQI_ANALYSIS_PROFILE, PIKAFISH_JIEQI_ANALYSIS_PROFILE]) {
       const cache = keyedCache<JieqiDecision[]>();
-      await cache.save('room-legacy', legacy, 16, old);
-      let computes = 0;
+      await cache.save('room-legacy', id, 16, old);
       const result = await resolveJieqiDecisions(
         'room-legacy',
         [],
         STANDARD_JIEQI_DEAL,
         cache as JieqiDecisionsCache,
-        async () => {
-          computes += 1;
-          return [];
-        },
+        async () => fresh,
         true,
         profile,
       );
-      assert.equal(result?.engineId, legacy);
-      assert.deepEqual(result?.decisions, old);
-      assert.equal(computes, 0);
+      assert.equal(result?.engineId, profile.decisionsEngineId);
+      assert.deepEqual(result?.decisions, fresh);
     }
   }
-  // A game with no stored row computes fresh under the new id.
-  const cache = keyedCache<JieqiDecision[]>();
-  const fresh = await resolveJieqiDecisions(
-    'room-new',
-    [],
-    STANDARD_JIEQI_DEAL,
-    cache as JieqiDecisionsCache,
-    async () => old,
-    true,
-    ABJCHESS_JIEQI_ANALYSIS_PROFILE,
-  );
-  assert.equal(fresh?.engineId, ABJCHESS_JIEQI_DECISIONS_ENGINE_ID);
-  assert.deepEqual(cache.saved, [ABJCHESS_JIEQI_DECISIONS_ENGINE_ID]);
 });
 
 // ── Each engine's cp on its own curve ────────────────────────────────────────

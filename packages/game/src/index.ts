@@ -17,6 +17,7 @@ export * from './games-search.js';
 export * from './hidden-piece-record.js';
 export * from './hidden-pool.js';
 export * from './jieqi-fen.js';
+export * from './jieqi-public-deal.js';
 export * from './js-compat.js';
 export * from './jungle-fen.js';
 export * from './jungle-flip-fen.js';

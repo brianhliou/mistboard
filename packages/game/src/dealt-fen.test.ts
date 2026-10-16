@@ -437,7 +437,7 @@ test('jieqi: structural rejections carry a readable message', () => {
       ['4k4/9/9/9/9/9/9/9/9/4K3Q w - 0 1', /Unknown piece "Q"/],
       ['4k4/9/9/9/9/9/9/9/9/4K4 x - 0 1', /side-to-move "x"/],
       ['4k4/9/9/9/9/9/9/9/9/4K4 w K1 0 1', /Unreadable pool/],
-      ['4k4/9/9/9/9/9/9/9/9/4K4 w R1 0 1', /pool lists 1 hidden red pieces but the board has 0/],
+      ['4k4/9/9/9/9/9/9/9/9/X3K4 w - 0 1', /pool lists 0 hidden red pieces but the board has 1/],
       ['4k4/9/9/9/9/9/9/9/9/RRRK5 w - 0 1', /Too many red chariots/],
       ['4k4/9/9/9/9/9/9/9/9/4K4 w - -1 1', /clock field/],
       ['4k4/9/9/9/9/9/9/9/9/4K4 w - 0 1.5', /move-number field/],
@@ -452,4 +452,21 @@ test('jieqi: structural rejections carry a readable message', () => {
   const ok = parseJieqiFen('4k4/9/9/9/9/9/9/9/9/X3K4 w R1 0 1 R');
   assert.ok(ok.ok, `rejected: ${!ok.ok && ok.error}`);
   assert.deepEqual(ok.state.board.a1, { color: 'red', role: 'chariot', faceDown: true });
+  // A public FEN's pool also holds the pieces a side lost face-down (their
+  // identities were never shown), so a pool larger than the dark pieces parses
+  // in the five-field form, the surplus becoming face-down captures.
+  const surplus = parseJieqiFen('4k4/9/9/9/9/9/9/9/9/X3K4 w R1N1 0 1', { rng: () => 0 });
+  assert.ok(surplus.ok, `rejected: ${!surplus.ok && surplus.error}`);
+  const dark = surplus.state.captures.filter((c) => !c.revealedAtCapture);
+  assert.deepEqual(
+    dark.map((c) => c.owner),
+    ['red'],
+  );
+  assert.equal(
+    jieqiStateToPikafishFen(surplus.state, { public: true }).split(' ')[2],
+    'R1A0C0P0N1B0r0a0c0p0n0b0',
+  );
+  // The exact dealt form stays exact.
+  const exact = parseJieqiFen('4k4/9/9/9/9/9/9/9/9/X3K4 w R1N1 0 1 R');
+  assert.equal(exact.ok, false);
 });

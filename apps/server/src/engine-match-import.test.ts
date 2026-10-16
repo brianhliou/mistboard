@@ -369,11 +369,7 @@ test('engine match: the truth view never states an identity the lab never decide
   );
   const unknown = neverDealt(game);
   const unknownSquares = new Set([...unknown.red, ...unknown.black]);
-  const truths = [
-    payload.view,
-    payload.views?.truth,
-    ...(payload.history.truth ?? []).map((s) => s.view),
-  ];
+  const truths = [payload.view, ...(payload.history.truth ?? []).map((s) => s.view)];
   for (const view of truths) {
     assert.ok(view);
     for (const square of unknownSquares) {
@@ -384,9 +380,11 @@ test('engine match: the truth view never states an identity the lab never decide
         unknown: true,
       });
     }
-    // Every other piece on the board is shown with its identity.
+    // A face-down piece never carries an identity: the ones the lab never
+    // decided, and (since 2026-10-16) every other piece that never moved.
     for (const [square, entry] of Object.entries(view.board)) {
-      if (!unknownSquares.has(square)) assert.equal(entry?.faceDown, false, square);
+      if (entry?.faceDown)
+        assert.deepEqual(entry, { color: entry.color, faceDown: true, unknown: true }, square);
     }
   }
 });
@@ -418,8 +416,8 @@ test('engine match: the export names the event, the credit, the unknown squares 
   // No deal: the lab drew each identity at reveal time, so the stored deal's
   // never-revealed squares are a completion nobody played (#484).
   assert.equal(json.deal_fen, undefined);
-  // Every identity the export states is one the lab decided while playing: a
-  // ply's reveal, and a face-down piece it captured. Nothing else.
+  // Every identity the export states is a ply's reveal. Nothing else: not even
+  // a face-down piece the lab captured, which only its capturer saw (2026-10-16).
   assert.equal(json.plies.length, game.moves.length);
   game.moves.forEach((record, index) => {
     const ply = json.plies[index]!;
@@ -428,10 +426,7 @@ test('engine match: the export names the event, the credit, the unknown squares 
       record.reveal ? { color: record.color, role: record.reveal } : null,
       `ply ${record.ply} reveal`,
     );
-    const hidden = record.capture?.wasFaceDown
-      ? { color: record.capture.color, role: record.capture.role }
-      : null;
-    assert.deepEqual(ply.captured_hidden ?? null, hidden, `ply ${record.ply} capture`);
+    assert.equal('captured_hidden' in ply, false, `ply ${record.ply} capture`);
   });
   // And the PGN carries no DealFEN either.
   const pgn = buildTenantGamePgn(recordFor(built.value), finished, '/jieqi/game');
@@ -451,12 +446,12 @@ test('engine match: every fixture game replays from its export alone to the lab 
     const json = buildTenantGamePublicationJson(record, finished, '/jieqi/game');
     const fromJson = replayHiddenPieceRecord(json);
     assert.ok(fromJson.ok, `${game.game}: ${JSON.stringify(fromJson)}`);
-    // Board, non-zero pool counts, clocks: the lab omits zero counts, and a
-    // finished kernel state has no side to move.
+    // Board and clocks: a finished kernel state has no side to move, and the
+    // replay's pool is the public one (face-down pieces plus dark captures, by
+    // what the set has left), never the lab's true identities.
     const comparable = (fen: string) => {
-      const [board, , pool = '', clock, fullmove] = fen.split(' ');
-      const counts = (pool.match(/[A-Za-z]\d+/g) ?? []).filter((c) => !/^[A-Za-z]0$/.test(c));
-      return [board, counts.join(''), clock, fullmove].join(' ');
+      const [board, , , clock, fullmove] = fen.split(' ');
+      return [board, clock, fullmove].join(' ');
     };
     assert.equal(comparable(fromJson.finalFen), comparable(game.final_fen), String(game.game));
     const pgn = buildTenantGamePgn(record, finished, '/jieqi/game');

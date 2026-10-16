@@ -8,15 +8,14 @@
 
 import {
   jieqiPlyReveal,
-  jieqiStateToDealtFen,
   jieqiStateToPikafishFen,
   jieqiUnknownSquares,
   type RoomTimeControl,
 } from '@mistboard/game';
 import { tenantCardBinding } from './game-card-tenant.js';
 import { tenantExportBinding } from './game-export-tenant.js';
-import type { JieqiCreatorPreference, JieqiRuntimeRoom } from './jieqi-runtime.js';
-import { jieqiTenant } from './jieqi-tenant.js';
+import type { JieqiCreatorPreference, JieqiEvent, JieqiRuntimeRoom } from './jieqi-runtime.js';
+import { jieqiPublicEvents, jieqiTenant } from './jieqi-tenant.js';
 import * as persistence from './persistence.js';
 import { handleJieqiCreate, requestsJieqi } from './routes/jieqi-rooms.js';
 import { isAllowedFullTimeControl } from './routes/lib.js';
@@ -157,12 +156,16 @@ registerVariantTenant({
     },
   },
   // Moves are ICCS coordinates on the shared 9x10 board. Each ply names what it
-  // turned over and any face-down piece it captured, and a site game carries
-  // its deal, so the JSON and the PGN both replay (#484, hidden-piece-record.ts).
+  // turned over, so the JSON and the PGN both replay (#484,
+  // hidden-piece-record.ts). Nothing names a piece captured face-down or one
+  // never turned over, and no deal is exported: the export replays the public
+  // log (jieqiPublicEvents), so every square never revealed is listed in
+  // neverRevealed instead.
   export: tenantExportBinding(jieqiTenant, {
     gameRouteBase: '/jieqi/game',
     uci: xiangqiExportUci,
-    hiddenPieces: { variant: 'jieqi', reveal: jieqiPlyReveal, dealFen: jieqiStateToDealtFen },
+    publicEvents: (events) => jieqiPublicEvents(events as JieqiEvent[]),
+    hiddenPieces: { variant: 'jieqi', reveal: jieqiPlyReveal },
     neverRevealed: (state) => {
       const squares = jieqiUnknownSquares(state);
       if (squares.length === 0) return null;
@@ -178,7 +181,8 @@ registerVariantTenant({
   card: tenantCardBinding(jieqiTenant, {
     variant: 'jieqi',
     analysis: null,
-    fen: jieqiStateToPikafishFen,
+    // The public FEN: a dark-captured piece stays in its side's pool.
+    fen: (state) => jieqiStateToPikafishFen(state, { public: true }),
   }),
   ...jieqiCorrespondence,
 });

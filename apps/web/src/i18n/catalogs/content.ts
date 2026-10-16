@@ -554,10 +554,10 @@ export const EN_CONTENT = {
   'data.fieldResult':
     'The winning color or draw, and how the game ended: checkmate, timeout, resignation and so on.',
   'data.fieldPlies':
-    "Every move in order: the mover, the move as uci, san where the variant has a notation (otherwise null), and each side's clock after the move. In Jieqi, Banqi and Flip Jungle a move that turned a piece over also has revealed, and a Jieqi move that captured a face-down piece has captured_hidden, each a color and a role.",
+    "Every move in order: the mover, the move as uci, san where the variant has a notation (otherwise null), and each side's clock after the move. In Jieqi, Banqi and Flip Jungle a move that turned a piece over also has revealed, a color and a role.",
   'data.fieldInk': 'Banqi and Flip Jungle only: the color the first player turned up.',
   'data.fieldDeal':
-    'Jieqi, Banqi and Flip Jungle games played on the site: the starting deal, as a FEN that names every face-down piece. Engine matches have none.',
+    'Banqi and Flip Jungle games played on the site: the starting deal, as a FEN that names every face-down piece. Jieqi games and engine matches have none.',
   'data.fieldOrigin':
     'Engine match downloads only: the event, the credit, and any squares whose piece was never revealed.',
   'data.formatMoves':
@@ -580,17 +580,17 @@ export const EN_CONTENT = {
   'data.hiddenFlip':
     'Jieqi, Banqi and Flip Jungle start with pieces face down. Their files say what every reveal turned out to be, so a downloaded game replays from its moves alone, in either format.',
   'data.hiddenReveal':
-    "Moves carry reveals. In PGN the piece a move turned over follows it after =, upper case for red and lower case for black, so any PGN reader keeps it as part of the move: e3e4=R in Jieqi, @c3=E in Flip Jungle. A Jieqi capture of a face-down piece adds x= and the captured piece: b0b7=Cx=n. The letters are each FEN's own: Jieqi R chariot, N horse, B elephant, A advisor, C cannon, P soldier; Flip Jungle R rat, C cat, D dog, W wolf, P leopard, T tiger, L lion, E elephant.",
+    "Moves carry reveals. In PGN the piece a move turned over follows it after =, upper case for red and lower case for black, so any PGN reader keeps it as part of the move: e3e4=R in Jieqi, @c3=E in Flip Jungle. A Jieqi capture of a face-down piece names nothing, because only the player who took it saw it. The letters are each FEN's own: Jieqi R chariot, N horse, B elephant, A advisor, C cannon, P soldier; Flip Jungle R rat, C cat, D dog, W wolf, P leopard, T tiger, L lion, E elephant.",
   'data.hiddenBanqi':
     "Banqi PGN follows the notation of Chen, Shen and Hsu (ICGA Journal, 2010): b4-b2 moves a piece, and a flip the paper writes d8(P) is written d8=P here, because PGN reads parentheses as a side line. The letters are the paper's: K king, G guard, M minister, R rook, N knight, C cannon, P pawn. Its board is 4 columns by 8 rows, so the site's coordinates swap: site files a to h are ICGA rows 1 to 8, and site ranks 1 to 4 are ICGA columns a to d. JSON keeps the site's coordinates.",
   'data.hiddenBanqiLetters':
     'Careful with G: in Banqi moves it is a guard, but in the Banqi FEN it is the general. The FEN letters are G general, A advisor, E elephant, R chariot, H horse, C cannon, S soldier.',
   'data.hiddenDeal':
-    "The deal is included when there is one. Every game played on the site is dealt in full when it starts, so its JSON has deal_fen and its PGN a DealFEN tag: the variant's FEN with a sixth field naming each face-down piece in board order, top rank first. The FEN tag is the face-down start. Every reveal in the moves matches the deal, and both FENs use the site's coordinates and letters.",
+    "Banqi and Flip Jungle games include the deal. They are dealt in full when they start, so the JSON has deal_fen and the PGN a DealFEN tag: the variant's FEN with a sixth field naming each face-down piece in board order, top rank first. The FEN tag is the face-down start. Every reveal in the moves matches the deal, and both FENs use the site's coordinates and letters. Jieqi files have no deal: a piece captured face-down was seen only by the player who took it, and a piece never turned over was seen by no one, so no file names either.",
   'data.hiddenNeverRevealed':
     "Engine match downloads have no deal. The match's own referee decided each piece when it was turned over, so a piece still face down at the end never had an identity: origin.never_revealed lists those squares, and no file names a piece for them. Their moves carry every reveal, so they replay the same way.",
   'data.hiddenReplayer':
-    'The open-source game code has a reference replayer, replayHiddenPieceRecord, that rebuilds a game from either file and checks every reveal against the deal.',
+    'The open-source game code has a reference replayer, replayHiddenPieceRecord, that rebuilds a game from either file and checks every reveal against the deal when the file has one.',
   'data.filesHeading': 'Files and checksums',
   'data.filesBuilt':
     'A file is built from the database the first time anyone downloads it and never changes after that. Its size and SHA-256 appear on the game data page once it exists, so a download can be checked with sha256sum.',
