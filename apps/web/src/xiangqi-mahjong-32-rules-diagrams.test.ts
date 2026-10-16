@@ -26,6 +26,8 @@ import {
   XMJ32_CLAIM_SET,
   XMJ32_CLAIM_SLOTS,
   XMJ32_CLAIM_STATIC_SVG,
+  XMJ32_CLAIM_STEPS,
+  XMJ32_CLAIM_THEIR_TILES,
   XMJ32_CLAIM_THROWN,
   XMJ32_CLAIM_TRACKS,
   XMJ32_DEAL,
@@ -197,18 +199,76 @@ describe('xiangqi mahjong 32 rules diagrams', () => {
     // No blue edge anywhere: the claimed Cannon lies sideways instead.
     expect(svg).not.toContain('#2f6fb3');
     expect(svg).toContain('rotate(-90 ');
+    // Every face-down tile (their hand, the wall, the discard before it turns)
+    // is a drawn back, one gradient each.
+    const backs = XMJ32_CLAIM_TRACKS.filter((t) => t.tile === 'back').length;
+    expect(svg.match(/<linearGradient /g)).toHaveLength(backs);
+    for (const text of ['Their hand', 'Their discards', 'Wall', 'Your discards', 'Your hand']) {
+      expect(svg).toContain(`>${text}</text>`);
+    }
     const still = XMJ32_CLAIM_STATIC_SVG();
     expect(still.match(/class="xmj-article-tiles"/g)).toHaveLength(2);
-    expect(still).toContain('<title>Before: ');
-    expect(still).toContain('<title>After: ');
+    // The two figures, split at the second's opening tag (piece marks nest svgs).
+    const figure = 'class="xmj-article-tiles"';
+    const second = still.indexOf(figure, still.indexOf(figure) + 1);
+    const at = still.lastIndexOf('<svg', second);
+    const [before, after] = [still.slice(0, at), still.slice(at)];
+    // Before: their four backs, the Advisor in their discards, your hand; the
+    // Cannon not yet discarded.
+    expect(before).toContain('<title>Before: ');
+    expect(before.match(/<linearGradient /g)).toHaveLength(XMJ32_CLAIM_THEIR_TILES);
+    expect(before).toContain('>Advisor</text>');
+    expect(before).not.toContain('>Cannon</text>');
+    for (const name of ['Chariot', 'Horse', 'Elephant', 'Soldier']) {
+      expect(before).toContain(`>${name}</text>`);
+    }
+    expect(after).toContain('<title>After: ');
     expect(still).not.toContain('#2f6fb3');
     expect(still.match(/rotate\(-90 /g)).toHaveLength(1);
   });
 
+  it('shows their turn first: four tiles in hand, five after the draw, four after the discard', () => {
+    const S = XMJ32_CLAIM_SLOTS;
+    const T = XMJ32_CLAIM_STEPS;
+    const shownBacks = (time: number) => xmj32ClaimBoxes(time).filter((b) => b.back && b.shown);
+    const inTheirHand = (time: number) =>
+      shownBacks(time).filter((b) => Math.abs(b.y - S.rows.theirHand) < 1e-9).length;
+    const inWall = (time: number) =>
+      shownBacks(time).filter((b) => b.stack && b.y >= S.rows.theirs).length;
+    expect(inTheirHand(0)).toBe(XMJ32_CLAIM_THEIR_TILES);
+    expect(inWall(0)).toBe(4);
+    // Drawn: five in hand, one fewer in the wall.
+    expect(inTheirHand((T.drawn + T.discard) / 2)).toBe(XMJ32_CLAIM_THEIR_TILES + 1);
+    expect(inWall((T.drawn + T.discard) / 2)).toBe(3);
+    // Discarded, closed up, and so to the end.
+    for (const time of [T.closed, T.claim, XMJ32_CLAIM_SECONDS]) {
+      expect(inTheirHand(time), `at ${time}s`).toBe(XMJ32_CLAIM_THEIR_TILES);
+      expect(inWall(time), `at ${time}s`).toBe(3);
+    }
+    // Their hand closes up on the grid's first four columns.
+    const end = shownBacks(XMJ32_CLAIM_SECONDS)
+      .filter((b) => Math.abs(b.y - S.rows.theirHand) < 1e-9)
+      .map((b) => b.x)
+      .sort((a, b) => a - b);
+    expect(end).toEqual(S.col);
+    // The discard leaves face down and lands face up as the Cannon, beside the Advisor.
+    const at = (time: number) => Object.fromEntries(xmj32ClaimBoxes(time).map((b) => [b.id, b]));
+    expect(at(T.discard)['their-back']).toMatchObject({ shown: true, y: S.rows.theirHand });
+    expect(at(T.discard)['their-cannon']?.shown).toBe(false);
+    const landed = at(T.discarded);
+    expect(landed['their-back']?.shown).toBe(false);
+    expect(landed['their-cannon']).toMatchObject({ shown: true, x: S.col[1], y: S.rows.theirs });
+    expect(landed.earlier).toMatchObject({ x: S.col[0], y: S.rows.theirs });
+    // In order: the draw, the discard, the closing up, then your claim.
+    const steps = Object.values(T);
+    expect([...steps].sort((a, b) => a - b)).toEqual(steps);
+    expect(T.thrown).toBeLessThan(XMJ32_CLAIM_SECONDS);
+  });
+
   it('rests every claim tile on a slot, and ends the set apart with the Cannon sideways', () => {
     const S = XMJ32_CLAIM_SLOTS;
-    const rows = Object.values(S.rows);
-    const xs = [...S.col, ...S.set, S.kept, S.parked];
+    const rows = [...Object.values(S.rows), S.wallUnder];
+    const xs = [...S.col, ...S.set, S.kept, S.parked, ...S.wall];
     for (const track of XMJ32_CLAIM_TRACKS) {
       for (const pose of track.poses) {
         expect(xs, `${track.id} at ${pose.at}s`).toContain(pose.x);
@@ -232,6 +292,9 @@ describe('xiangqi mahjong 32 rules diagrams', () => {
     expect(S.kept - S.setEnd).toBe(XMJ_GROUP_GAP);
     expect(XMJ_GROUP_GAP).toBeGreaterThan(XMJ_TILE_GAP * 3);
     expect(end('thrown')).toMatchObject({ x: S.col[0], y: S.rows.yours });
+    // The wall stands clear of their discards, even of the Cannon lying sideways.
+    expect(S.wall[0]).toBeGreaterThan((S.set[2] ?? 0) + XMJ_TILE_H + XMJ_TILE_GAP);
+    expect(S.wall.at(-1)).toBe(S.parked);
   });
 
   it('never lets two claim tiles overlap, at any keyframe or between', () => {
@@ -248,16 +311,21 @@ describe('xiangqi mahjong 32 rules diagrams', () => {
         for (let j = i + 1; j < boxes.length; j += 1) {
           const [a, b] = [boxes[i], boxes[j]];
           if (!a || !b || a.body === b.body) continue;
+          // The wall's layers lie on one another, and the drawn tile lifts off
+          // its stack; once in their hand it is checked like any other.
+          const drawnOut = time > XMJ32_CLAIM_STEPS.drawn && (a.id === 'drawn' || b.id === 'drawn');
+          if (a.stack && b.stack && !drawnOut) continue;
           const overlap = a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
           expect(overlap, `${a.id} and ${b.id} at ${time.toFixed(2)}s`).toBe(false);
         }
       }
     }
-    // The start frame: your four tiles on the grid, the Cannon in their discards.
+    // The start frame: your four tiles on the grid, no Cannon anywhere yet.
     const start = Object.fromEntries(xmj32ClaimBoxes(0).map((b) => [b.id, b]));
     expect(start.kept?.x).toBe(XMJ32_CLAIM_SLOTS.col[2]);
     expect(start.thrown?.x).toBe(XMJ32_CLAIM_SLOTS.col[3]);
     expect(start.cannon?.shown).toBe(false);
+    expect(start['their-cannon']?.shown).toBe(false);
   });
 
   it('plays the match as the rules say: six hands, the deal alternating', () => {

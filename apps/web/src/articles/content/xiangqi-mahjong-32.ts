@@ -154,13 +154,13 @@ export const xiangqiMahjong32Article: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Here is a claim. You hold the red Chariot and Horse, a black Elephant and a black Soldier, and the other player discards the red Cannon, the tile your sequence is missing.',
+          text: 'Here is a claim. You hold the red Chariot and Horse, a black Elephant and a black Soldier. On their turn the other player draws from the wall and discards the red Cannon, the tile your sequence is missing.',
         },
         {
           kind: 'animated-svg',
           svg: XMJ32_CLAIM_ANIMATION_SVG,
           reducedSvg: XMJ32_CLAIM_STATIC_SVG,
-          caption: 'You claim the Cannon instead of drawing. Chariot, Horse and Cannon go face up, set apart from your hand, with the claimed Cannon turned sideways, and you discard the Soldier without drawing. You keep the black Elephant and wait for the other one to make the pair.',
+          caption: 'The other player draws a tile and discards the red Cannon. You claim it instead of drawing. Chariot, Horse and Cannon go face up, set apart from your hand, with the claimed Cannon turned sideways, and you discard the Soldier without drawing. You keep the black Elephant and wait for the other one to make the pair.',
         },
         {
           kind: 'paragraph',
@@ -269,7 +269,7 @@ export const xiangqiMahjong32Article: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Here is a whole match between Ana and Ben, kept the way a mahjong scoreboard is. Ana deals hands 1, 3 and 5, and Ben deals 2, 4 and 6. Each column is one hand, with the points its winner scored from the table above; hands 2 and 6 are void, because the wall ran out.',
+          text: 'Here is a whole match between Ana and Ben, kept the way a mahjong scoreboard is. Ana deals hands 1, 3 and 5, and Ben deals 2, 4 and 6. Each column is one hand, with the points its winner scored from the table above; hands 2 and 6 are void, because the wall ran out. The shaded hand decided the match.',
         },
         {
           kind: 'table',
@@ -281,7 +281,7 @@ export const xiangqiMahjong32Article: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Ana wins the match 7 to 6. The hand that decided it was the fifth: a self-draw on the last tile while she was dealer, worth 1 for the win, 2 for the self-draw, 1 as dealer and 1 for the last tile.',
+          text: 'Ana wins the match 7 to 6. The fifth hand decided it: a self-draw on the last tile while she was dealer, worth 1 for the win, 2 for the self-draw, 1 as dealer and 1 for the last tile.',
         },
       ],
     },
@@ -294,7 +294,7 @@ export const xiangqiMahjong32Article: Article = {
             {
               question: 'Where do these rules come from?',
               answer:
-                'The game has no rulebook. The rules and point values here follow the Chinese Wikipedia article and the Eastking rule page, which agree, checked against other Taiwanese rule pages and FunTown’s online parlour. Where they are silent, Mistboard chose: the deal alternates every hand, and a match is six hands, since the sources play for money and give no match format.',
+                'The game has no rulebook. The rules and point values here follow the Chinese Wikipedia article and the Eastking rule page, which agree, checked against other Taiwanese rule pages and FunTown’s online parlour. Where they leave a choice, Mistboard made it: the deal alternates every hand, and a match is six hands, since the sources play for money and give no match format.',
             },
             {
               question: 'Can more than two people play?',
@@ -309,7 +309,12 @@ export const xiangqiMahjong32Article: Article = {
             {
               question: 'Why is there no kong or ready declaration?',
               answer:
-                'The sources are silent on both, so Mistboard leaves them out. A kong would hardly come up anyway: it is four identical tiles, and only the Soldiers come in more than two.',
+                'Both turn up in the folk rules, but online tables mostly drop the kong from the 32-tile game, and every source treats the ready declaration as optional, so Mistboard leaves both out. A kong would hardly come up anyway: it is four identical tiles, and only the Soldiers come in more than two.',
+            },
+            {
+              question: 'Why does the deal always alternate?',
+              answer:
+                'Some tables let a dealer who wins keep the deal and score extra for it. Mistboard passes the deal every hand instead, so in a six-hand match each player deals three times.',
             },
           ],
         },
