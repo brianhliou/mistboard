@@ -14,3 +14,9 @@
   `*-back.svg` files are the disc and ring layers with no character.
 - Not drawn by this set: crossed soldier (plain soldier is used), Fortress
   treasure and Duck Xiangqi duck (Mistboard draws them on this set's back).
+- Xiangqi Mahjong tile layers (2026-10-15), in `tile/`: each piece file split
+  by `apps/web/scripts/asset-tile-glyphs.mjs` into the character alone
+  (`tile/<color>-<role>.svg`) and the disc's surface with the character
+  removed, its `viewBox` cropped to a square inside the rim
+  (`tile/<color>-face.svg`, from the general). Derived, never edited by hand;
+  `apps/web/src/asset-tile-glyphs.test.ts` re-derives them.

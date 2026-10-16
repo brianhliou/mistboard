@@ -39,7 +39,12 @@ import { localizedHref } from './i18n/locale.js';
 import type { TenantReasonKey } from './variant-tenant/room-chrome.js';
 import { escapeHtml } from './web-utils.js';
 import type { XmjLogHand, XmjLogRow } from './xiangqi-mahjong-log.js';
-import { renderXiangqiPieceMark, type XiangqiPieceSet } from './xiangqi-piece-sets.js';
+import {
+  renderXiangqiPieceGlyphed,
+  renderXiangqiPieceMark,
+  type XiangqiPieceSet,
+  xiangqiTileFaceHref,
+} from './xiangqi-piece-sets.js';
 
 export interface XmjTableOptions {
   /** The room's "may act now": live, seated, and something on offer. */
@@ -52,6 +57,8 @@ export interface XmjTableOptions {
   readonly passQueued?: boolean;
   /** The viewer's xiangqi piece set; each tile draws its piece in it. */
   readonly pieceSet?: XiangqiPieceSet;
+  /** The tile look (`?tiles=`); `disc` prints the whole piece, disc and all. */
+  readonly tileLook?: XmjTileLook;
 }
 
 /** The wall at the deal: 32 tiles less both hands. */
@@ -64,6 +71,7 @@ export const XMJ_SCORING_HREF = '/rules/xiangqi-mahjong-32#winning-hands-and-the
 // The piece set for the render in progress. The table is one synchronous
 // string render, so xiangqiMahjongTableHtml sets it and restores it after.
 let activePieceSet: XiangqiPieceSet = 'international';
+let activeTileLook: XmjTileLook = 'jade';
 
 const XMJ_ROLES = {
   K: 'general',
@@ -75,13 +83,33 @@ const XMJ_ROLES = {
   P: 'soldier',
 } as const;
 
-// The piece's figure or character with no disc: the tile is the frame.
-function tileArt(tile: XmjTile): string {
-  const piece = {
+function tilePieceOf(tile: XmjTile) {
+  return {
     color: tileColor(tile) === 'r' ? ('red' as const) : ('black' as const),
     role: XMJ_ROLES[tilePiece(tile)],
   };
+}
+
+// The piece's figure or character with no disc: the tile is the frame. The
+// disc look prints the whole piece instead.
+function tileArt(tile: XmjTile): string {
+  const piece = tilePieceOf(tile);
+  if (activeTileLook === 'disc') {
+    return renderXiangqiPieceGlyphed(piece, activePieceSet, {
+      className: 'xmj-tile-art xmj-tile-art--disc',
+      ariaLabel: '',
+      shadow: false,
+    }).replace(' aria-label=""', ' aria-hidden="true"');
+  }
   return `<svg class="xmj-tile-art" viewBox="0 0 100 100" aria-hidden="true">${renderXiangqiPieceMark(piece, activePieceSet)}</svg>`;
+}
+
+// A third-party set's disc surface laid over the whole face (lacquer, grain,
+// paper), in every look but disc, which prints the disc itself.
+function tileFaceStyle(tile: XmjTile): string {
+  if (activeTileLook === 'disc') return '';
+  const href = xiangqiTileFaceHref(activePieceSet, tilePieceOf(tile).color);
+  return href ? ` style="background-image:url('${href}')"` : '';
 }
 
 /** The felts the table can be laid on (`?felt=`); green is the default. */
@@ -93,8 +121,12 @@ export function xmjFeltFromSearch(search: string): XmjFelt {
   return (XMJ_FELTS as readonly string[]).includes(felt) ? (felt as XmjFelt) : 'green';
 }
 
-/** The tile looks (`?tiles=`): ivory on jade by default, or on bamboo. */
-export const XMJ_TILE_LOOKS = ['jade', 'bamboo'] as const;
+/**
+ * The tile looks (`?tiles=`): ivory on jade by default; a thin printed card;
+ * an ivory tile with the whole piece, disc and all, printed on it; ivory on
+ * bamboo.
+ */
+export const XMJ_TILE_LOOKS = ['jade', 'card', 'disc', 'bamboo'] as const;
 export type XmjTileLook = (typeof XMJ_TILE_LOOKS)[number];
 
 export function xmjTileLookFromSearch(search: string): XmjTileLook {
@@ -190,17 +222,18 @@ export function signed(points: number): string {
 
 function tileClass(tile: XmjTile, extra = ''): string {
   const ink = tileColor(tile) === 'r' ? 'xmj-tile--red' : 'xmj-tile--black';
-  return `xmj-tile ${ink}${extra ? ` ${extra}` : ''}`;
+  const faced = tileFaceStyle(tile) ? ' xmj-tile--faced' : '';
+  return `xmj-tile ${ink}${faced}${extra ? ` ${extra}` : ''}`;
 }
 
 function tileSpan(tile: XmjTile, extra = '', label = xmjTileName(tile)): string {
-  return `<span class="${tileClass(tile, extra)}" role="img" aria-label="${label}">${tileArt(tile)}</span>`;
+  return `<span class="${tileClass(tile, extra)}"${tileFaceStyle(tile)} role="img" aria-label="${label}">${tileArt(tile)}</span>`;
 }
 
 function tileButton(tile: XmjTile, extra = ''): string {
   const cls = tileClass(tile, `xmj-tile--button${extra ? ` ${extra}` : ''}`);
   const label = t('live.xmj.discardTile', { tile: xmjTileName(tile) });
-  return `<button type="button" class="${cls}" data-xmj-tile="${tile}" aria-label="${label}">${tileArt(tile)}</button>`;
+  return `<button type="button" class="${cls}"${tileFaceStyle(tile)} data-xmj-tile="${tile}" aria-label="${label}">${tileArt(tile)}</button>`;
 }
 
 function back(extra = ''): string {
@@ -658,12 +691,13 @@ function resultHtml(view: XmjPlayerView, options: XmjTableOptions): string {
 
 /** The whole table for one view. */
 export function xiangqiMahjongTableHtml(view: XmjPlayerView, options: XmjTableOptions): string {
-  const previous = activePieceSet;
+  const previous = [activePieceSet, activeTileLook] as const;
   activePieceSet = options.pieceSet ?? 'international';
+  activeTileLook = options.tileLook ?? 'jade';
   try {
     return tableHtml(view, options);
   } finally {
-    activePieceSet = previous;
+    [activePieceSet, activeTileLook] = previous;
   }
 }
 
@@ -694,6 +728,7 @@ export interface XmjLogOptions {
   /** Whether a row's ply can be shown (the client holds that snapshot). */
   readonly hasPly: (ply: number) => boolean;
   readonly pieceSet?: XiangqiPieceSet;
+  readonly tileLook?: XmjTileLook;
 }
 
 function logRowText(row: XmjLogRow, options: XmjLogOptions): string {
@@ -773,8 +808,9 @@ function activeRowPly(hands: readonly XmjLogHand[], activePly: number | null): n
  */
 export function xmjLogHtml(hands: readonly XmjLogHand[], options: XmjLogOptions): string {
   const activeRow = activeRowPly(hands, options.activePly);
-  const previous = activePieceSet;
+  const previous = [activePieceSet, activeTileLook] as const;
   activePieceSet = options.pieceSet ?? 'international';
+  activeTileLook = options.tileLook ?? 'jade';
   try {
     return hands
       .map((hand, index) => {
@@ -792,6 +828,6 @@ export function xmjLogHtml(hands: readonly XmjLogHand[], options: XmjLogOptions)
       })
       .join('');
   } finally {
-    activePieceSet = previous;
+    [activePieceSet, activeTileLook] = previous;
   }
 }

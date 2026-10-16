@@ -36,6 +36,7 @@ import './xiangqi-mahjong.css';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import { xmjHandLog } from './xiangqi-mahjong-log.js';
 import {
+  XMJ_TILE_LOOKS,
   xiangqiMahjongTableHtml,
   xmjCountdown,
   xmjFeltFromSearch,
@@ -316,6 +317,7 @@ function renderTable(refs: LiveRefs, view: XmjPlayerView | null): void {
     now: serverNow(),
     passQueued: queuedPass !== null,
     pieceSet: readStoredXiangqiPieceSet(),
+    tileLook: look,
   });
   // The room redraws on every frame and clock tick; most change nothing here.
   if (html === lastTableHtml && refs.board.firstElementChild) {
@@ -343,6 +345,10 @@ function renderMoveLog(ctx: TenantMoveListRenderContext<XmjSeat, XmjMove>): void
   // Plies count the move events in order, as the replay files them.
   const hands = xmjHandLog(ctx.moves.map((event, index) => ({ move: event.move, ply: index + 1 })));
   const seat = core?.state.seat;
+  const look = xmjTileLookFromSearch(window.location.search);
+  for (const each of XMJ_TILE_LOOKS) {
+    ctx.refs.moveList.classList.toggle(`xmj-tiles--${each}`, each === look && look !== 'jade');
+  }
   ctx.refs.moveList.innerHTML = xmjLogHtml(hands, {
     names: seatNames(),
     viewer: seat === 'east' || seat === 'west' ? seat : null,
@@ -351,6 +357,7 @@ function renderMoveLog(ctx: TenantMoveListRenderContext<XmjSeat, XmjMove>): void
     expanded: openHands,
     hasPly: ctx.hasPly,
     pieceSet: readStoredXiangqiPieceSet(),
+    tileLook: look,
   });
   syncMoveListScroll(ctx.refs.moveList, { live: ctx.isLive, plyCount: ctx.latestPly });
 }

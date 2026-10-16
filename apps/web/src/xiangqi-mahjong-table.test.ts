@@ -139,6 +139,31 @@ describe('xiangqi mahjong table', () => {
     expect(character?.querySelector('circle')).toBeNull();
   });
 
+  it('lays a third-party set on its own disc surface, and prints the disc in the disc look', () => {
+    const view = xmjViewFor(afterDiscard(['bP', 'bP', 'bA', 'rE']), 'west');
+    const tile = (options: Partial<XmjTableOptions>) =>
+      doc(xiangqiMahjongTableHtml(view, opts(false, options))).querySelector<HTMLElement>(
+        '[data-xmj-pond="east"] .xmj-tile--last',
+      );
+    const wood = tile({ pieceSet: 'wood' });
+    expect(wood?.classList.contains('xmj-tile--faced')).toBe(true);
+    expect(wood?.getAttribute('style')).toContain('/piece-sets/xiangqi/wood/tile/red-face.svg');
+    expect(wood?.querySelector('image')?.getAttribute('href')).toContain(
+      '/piece-sets/xiangqi/wood/tile/red-chariot.svg',
+    );
+    // A set Mistboard draws keeps the ivory.
+    expect(tile({ pieceSet: 'traditional' })?.hasAttribute('style')).toBe(false);
+    // The disc look prints the whole piece on ivory, in any set.
+    const disc = tile({ pieceSet: 'wood', tileLook: 'disc' });
+    expect(disc?.hasAttribute('style')).toBe(false);
+    expect(disc?.querySelector('image')?.getAttribute('href')).toContain(
+      '/piece-sets/xiangqi/wood/red-chariot.svg',
+    );
+    const drawn = tile({ pieceSet: 'traditional', tileLook: 'disc' });
+    expect(drawn?.querySelector('.xmj-tile-art--disc circle')).not.toBeNull();
+    expect(drawn?.querySelector('.xmj-tile-art')?.getAttribute('aria-hidden')).toBe('true');
+  });
+
   it('keeps one pond per player, labelled, and notches the latest discard', () => {
     const after = afterDiscard(['bP', 'bP', 'bA', 'rE']);
     const host = doc(xiangqiMahjongTableHtml(xmjViewFor(after, 'west'), opts(false)));
@@ -201,6 +226,8 @@ describe('xiangqi mahjong table', () => {
   it('reads the tile look from the query string, jade by default', () => {
     expect(xmjTileLookFromSearch('')).toBe('jade');
     expect(xmjTileLookFromSearch('?tiles=bamboo')).toBe('bamboo');
+    expect(xmjTileLookFromSearch('?tiles=card')).toBe('card');
+    expect(xmjTileLookFromSearch('?tiles=disc')).toBe('disc');
     expect(xmjTileLookFromSearch('?tiles=<b>')).toBe('jade');
   });
 

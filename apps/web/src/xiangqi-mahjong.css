@@ -68,7 +68,8 @@
 }
 
 /* A bamboo backing, the older tiles' look. */
-.xiangqi-mahjong-live-board.xmj-tiles--bamboo {
+.xiangqi-mahjong-live-board.xmj-tiles--bamboo,
+.xmj-log.xmj-tiles--bamboo {
   --xmj-jade: #c39a3e;
   --xmj-jade-low: #92702a;
   --xmj-jade-high: #d9b65e;
@@ -256,6 +257,55 @@
 
 .xmj-tile--black {
   color: var(--xmj-black);
+}
+
+/* A third-party piece set's disc surface (lacquer, grain, paper) as the whole
+   face, set inline as the background image; the depth edge and the back stay
+   the look's own, so every set shares them. */
+.xmj-tile--faced {
+  background-color: var(--xmj-face);
+  background-size: cover;
+  background-position: center;
+}
+
+.xmj-tile--faced .xmj-tile-art {
+  filter: none;
+}
+
+/* ?tiles=card: a thin printed card, a ruled border in the piece's ink, no
+   depth; the back a red lattice. */
+.xmj-tiles--card .xmj-tile {
+  --xmj-tile-r: 4px;
+  background: #fffdf7;
+  border: 1px solid #cfc6b0;
+  box-shadow:
+    inset 0 0 0 2px #fffdf7,
+    inset 0 0 0 3px color-mix(in srgb, currentColor 55%, transparent),
+    0 1px 2px rgb(0 0 0 / 0.28);
+}
+
+.xmj-tiles--card .xmj-tile-art {
+  filter: none;
+}
+
+.xmj-tiles--card .xmj-tile--back {
+  background: repeating-linear-gradient(45deg, #9e2a22 0 3px, #b8392f 3px 6px);
+  border-color: #cfc6b0;
+  box-shadow:
+    inset 0 0 0 2px #fffdf7,
+    inset 0 0 0 3px #9e2a22,
+    0 1px 2px rgb(0 0 0 / 0.28);
+}
+
+.xmj-tiles--card .xmj-tile--xs,
+.xmj-tiles--card .xmj-tile--xs.xmj-tile--back {
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.25);
+}
+
+/* ?tiles=disc: the whole piece, disc and all, printed on the ivory. */
+.xmj-tile-art--disc {
+  width: 94%;
+  filter: drop-shadow(0 1px 1px rgb(60 40 10 / 0.3));
 }
 
 /* A tile turned over: jade on top, the ivory face showing along the edge. */

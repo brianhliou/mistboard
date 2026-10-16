@@ -1,7 +1,8 @@
 // Tile pictures for the Xiangqi Mahjong rules page (/rules/xiangqi-mahjong-32):
 // a row of ivory tiles on a jade backing (the live table's look,
 // xiangqi-mahjong.css), each carrying a xiangqi piece's figure or character in
-// the reader's piece set (no disc: the tile is the frame), the
+// the reader's piece set (no disc: the tile is the frame; a third-party set
+// lays its disc's surface over the face instead of ivory), the
 // English piece name under each tile, and a bracket naming each group (set,
 // pair).
 
@@ -13,7 +14,11 @@ import {
   type XmjPiece,
   type XmjTile,
 } from '@mistboard/game';
-import { renderXiangqiPieceMark, type XiangqiPieceSet } from './xiangqi-piece-sets.js';
+import {
+  renderXiangqiPieceMark,
+  type XiangqiPieceSet,
+  xiangqiTileFaceHref,
+} from './xiangqi-piece-sets.js';
 
 const TILE_W = 44;
 const TILE_H = 58;
@@ -63,20 +68,31 @@ function tileSvg(
   claimed: boolean,
   pieceSet: XiangqiPieceSet,
 ): string {
-  const piece = renderXiangqiPieceMark(
-    { color: tileColor(tile) === 'r' ? 'red' : 'black', role: XMJ_ROLES[tilePiece(tile)] },
-    pieceSet,
-    { x: x + (TILE_W - PIECE_SIZE) / 2, y: y + (TILE_H - PIECE_SIZE) / 2, size: PIECE_SIZE },
-  );
+  const color = tileColor(tile) === 'r' ? 'red' : 'black';
+  const piece = renderXiangqiPieceMark({ color, role: XMJ_ROLES[tilePiece(tile)] }, pieceSet, {
+    x: x + (TILE_W - PIECE_SIZE) / 2,
+    y: y + (TILE_H - PIECE_SIZE) / 2,
+    size: PIECE_SIZE,
+  });
   const edge = claimed ? CLAIM : EDGE;
   const name = XMJ_PIECE_NAMES[tilePiece(tile)];
+  // A third-party set's disc surface covers the whole face, as on the table.
+  // Every tile at one x has the same outline in every figure, so the clip's
+  // id may repeat across figures on a page.
+  const faceHref = xiangqiTileFaceHref(pieceSet, color);
+  const clip = `xmj-face-${x}-${y}`;
+  const face = faceHref
+    ? `<clipPath id="${clip}"><rect x="${x}" y="${y}" width="${TILE_W}" height="${TILE_H}" rx="6"/></clipPath><image href="${faceHref}" x="${x}" y="${y}" width="${TILE_W}" height="${TILE_H}" preserveAspectRatio="xMidYMid slice" clip-path="url(#${clip})"/><rect x="${x}" y="${y}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="none" stroke="${edge}" stroke-width="${claimed ? 2.5 : 1}"/>`
+    : [
+        `<path d="M${x + 1} ${y + TILE_H * 0.6}H${x + TILE_W - 1}V${y + TILE_H - 6}a5 5 0 0 1-5 5H${x + 6}a5 5 0 0 1-5-5Z" fill="${FACE_LOW}" fill-opacity="0.7"/>`,
+        `<path d="M${x + 6} ${y + 1.5}H${x + TILE_W - 6}" stroke="#fff" stroke-opacity="0.9"/>`,
+      ].join('');
   return [
     `<rect x="${x}" y="${y + DEPTH}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="${JADE_LOW}"/>`,
     `<rect x="${x}" y="${y + DEPTH - 1}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="${JADE}"/>`,
     `<rect x="${x}" y="${y + 1}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="${EDGE}"/>`,
     `<rect x="${x}" y="${y}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="${FACE}" stroke="${edge}" stroke-width="${claimed ? 2.5 : 1}"/>`,
-    `<path d="M${x + 1} ${y + TILE_H * 0.6}H${x + TILE_W - 1}V${y + TILE_H - 6}a5 5 0 0 1-5 5H${x + 6}a5 5 0 0 1-5-5Z" fill="${FACE_LOW}" fill-opacity="0.7"/>`,
-    `<path d="M${x + 6} ${y + 1.5}H${x + TILE_W - 6}" stroke="#fff" stroke-opacity="0.9"/>`,
+    face,
     piece,
     `<text x="${x + TILE_W / 2}" y="${y + TILE_H + DEPTH + 15}" text-anchor="middle" font-size="10.5" fill="currentColor">${escapeText(name)}</text>`,
   ].join('');

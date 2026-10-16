@@ -218,9 +218,10 @@ export function xiangqiPieceTilePreview(set: XiangqiPieceSet): XiangqiPieceTileP
 /**
  * A piece's own mark with no disc or ring: the figure for the image sets, the
  * character for the character sets, in the 100-unit piece box. For surfaces
- * that supply their own frame (the Xiangqi Mahjong tile is the frame). The
- * third-party asset sets draw disc and character as one file, so they fall
- * back to the traditional character in the board's ink.
+ * that supply their own frame (the Xiangqi Mahjong tile is the frame). For
+ * the third-party asset sets this is the character layer split out of the
+ * set's own file (`scripts/asset-tile-glyphs.mjs`); the frame takes the disc's
+ * surface from xiangqiTileFaceHref.
  */
 export function renderXiangqiPieceMark(
   piece: XiangqiPiece,
@@ -235,11 +236,21 @@ export function renderXiangqiPieceMark(
     inner = internationalImageMark(internationalPieceHref(piece), piece.role);
   } else if (isAnimalPieceSet(set)) {
     inner = `<image href="${escapeAttr(animalPieceHref(piece, set))}" x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid meet"/>`;
+  } else if (isAssetPieceSet(set)) {
+    inner = assetImageMark(assetTileHref(set, piece.color, piece.role));
   } else {
-    const glyphSet = isAssetPieceSet(set) ? 'traditional' : set;
-    inner = cjkGlyphMark(xiangqiGlyph(glyphSet, piece.color, piece.role), colorHex);
+    inner = cjkGlyphMark(xiangqiGlyph(set, piece.color, piece.role), colorHex);
   }
   return `${open}${inner}</svg>`;
+}
+
+/**
+ * The surface of an asset set's disc (lacquer, wood grain, paper, ground) with
+ * no character, cropped square from inside the rim, for a frame that takes
+ * the set's material as its face; null for the sets Mistboard draws itself.
+ */
+export function xiangqiTileFaceHref(set: XiangqiPieceSet, color: XiangqiColor): string | null {
+  return isAssetPieceSet(set) ? assetTileHref(set, color, 'face') : null;
 }
 
 export function renderXiangqiPieceGlyphed(
@@ -584,6 +595,15 @@ function assetPieceHref(
   role: XiangqiPieceRole | 'back',
 ): string {
   return `/piece-sets/xiangqi/${set}/${color}-${role}.svg?v=${ASSET_SETS[set].version}`;
+}
+
+// The tile layers derived from each piece file (scripts/asset-tile-glyphs.mjs).
+function assetTileHref(
+  set: AssetXiangqiPieceSet,
+  color: XiangqiColor,
+  role: XiangqiPieceRole | 'face',
+): string {
+  return `/piece-sets/xiangqi/${set}/tile/${color}-${role}.svg?v=${ASSET_SETS[set].version}`;
 }
 
 function assetImageMark(href: string): string {
