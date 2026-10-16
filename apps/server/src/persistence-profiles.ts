@@ -27,6 +27,7 @@ import { getPuzzleStreak } from './persistence-puzzle-streak.js';
 import type { PlayerTitle } from './persistence-titles.js';
 import {
   bucketForGame,
+  isPublicRatingPool,
   PUBLIC_RATING_TIME_CLASS,
   publicRatingPoolSql,
   type RatingTimeClass,
@@ -41,24 +42,47 @@ import {
 //
 // It has to be SQL rather than the TS ratingPoolForSpec because it also
 // absorbs the pre-rename variant string 'fog' that never became a spec id.
+// Built from a map keyed by every rating pool, so a pool added to RatingVariant
+// fails the build here instead of its games counting as Fog Chess (Xiangqi
+// Mahjong, 2026-10-15, was missing from the hand-written CASE).
+export const GAME_VARIANTS_BY_RATING_POOL = {
+  fog: ['dark-chess', 'fog'],
+  dark_xiangqi: ['dark-xiangqi'],
+  jieqi: ['jieqi'],
+  banqi: ['banqi'],
+  jungle: ['jungle'],
+  jungle_flip: ['jungle-flip'],
+  xiangqi: ['xiangqi'],
+  fortress_xiangqi: ['fortress-xiangqi'],
+  duck_xiangqi: ['duck-xiangqi'],
+  atomic_xiangqi: ['atomic-xiangqi'],
+  crazyhouse_xiangqi: ['crazyhouse-xiangqi'],
+  xiangqi_mahjong: ['xiangqi-mahjong'],
+} as const satisfies Record<RatingVariant, readonly string[]>;
+
+const sqlString = (value: string): string => {
+  if (!/^[a-z_-]+$/.test(value)) throw new Error(`"${value}" is not a plain identifier`);
+  return `'${value}'`;
+};
+
 const RATING_POOL_FROM_GAME_SQL = `CASE
-         WHEN games.variant = 'dark-xiangqi' THEN 'dark_xiangqi'
-         WHEN games.variant = 'jieqi' THEN 'jieqi'
-         WHEN games.variant = 'banqi' THEN 'banqi'
-         WHEN games.variant = 'jungle' THEN 'jungle'
-         WHEN games.variant = 'jungle-flip' THEN 'jungle_flip'
-         WHEN games.variant = 'xiangqi' THEN 'xiangqi'
-         WHEN games.variant = 'fortress-xiangqi' THEN 'fortress_xiangqi'
-         WHEN games.variant = 'duck-xiangqi' THEN 'duck_xiangqi'
-         WHEN games.variant = 'atomic-xiangqi' THEN 'atomic_xiangqi'
-         WHEN games.variant = 'crazyhouse-xiangqi' THEN 'crazyhouse_xiangqi'
+${Object.entries(GAME_VARIANTS_BY_RATING_POOL)
+  .filter(([pool]) => pool !== 'fog')
+  .map(
+    ([pool, variants]) =>
+      `         WHEN games.variant IN (${variants.map(sqlString).join(', ')}) THEN ${sqlString(pool)}`,
+  )
+  .join('\n')}
          ELSE 'fog'
        END`;
 
 // The stored variant strings the pool mapping above is defined over. Anything
 // outside this set has no pool, so it is excluded rather than falling into the
 // CASE's 'fog' default.
-const RATED_POOL_VARIANTS_SQL = `games.variant IN ('dark-chess', 'fog', 'dark-xiangqi', 'xiangqi', 'jieqi', 'banqi', 'jungle', 'jungle-flip', 'fortress-xiangqi', 'duck-xiangqi', 'atomic-xiangqi', 'crazyhouse-xiangqi')`;
+const RATED_POOL_VARIANTS_SQL = `games.variant IN (${Object.values(GAME_VARIANTS_BY_RATING_POOL)
+  .flat()
+  .map(sqlString)
+  .join(', ')})`;
 
 export type UpdateUserProfileResult =
   | { ok: true; user: UserAccount }
@@ -653,6 +677,9 @@ export async function getUserProfileByHandle(
   ]);
   const ratings: ProfileBucketRating[] = [];
   for (const variant of variantKeys) {
+    // A private pool (an allowlisted playtest) stays off the public rail, its
+    // casual games included, as its ratings already are (publicRatingPoolSql).
+    if (!isPublicRatingPool(variant)) continue;
     const totalGames = variantGameCounts.get(variant) ?? 0;
     const byClass = ratingsByVariant.get(variant);
     // visibleRatingTimeClasses: a correspondence rating stays off the profile while
