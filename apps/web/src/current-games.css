@@ -630,7 +630,9 @@
 .current-game-board .replay-captures,
 .current-game-board .captures-strip,
 .current-game-board .replay-control-bar,
-.current-game-board .replay-ply-line {
+.current-game-board .replay-ply-line,
+.current-game-board .replay-clock-row,
+.current-game-board .replay-pane-clock-slot {
   display: none;
 }
 
@@ -658,7 +660,13 @@
   padding: 0;
 }
 
-.current-game-board .replay-layout-solo {
+/* Fog of War chess mounts the replay with one seat's pane
+   (replay-layout-single-*), not the solo layout; without these the board kept
+   the replay page's 200px and the card clipped its last file and rank, and the
+   pane's clock rows squeezed it further. */
+.current-game-board .replay-layout-solo,
+.current-game-board .replay-layout-single-white,
+.current-game-board .replay-layout-single-black {
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -667,7 +675,11 @@
 }
 
 .current-game-board .replay-layout-solo .replay-pane,
-.current-game-board .replay-layout-solo .replay-board {
+.current-game-board .replay-layout-solo .replay-board,
+.current-game-board .replay-layout-single-white .replay-pane,
+.current-game-board .replay-layout-single-white .replay-board,
+.current-game-board .replay-layout-single-black .replay-pane,
+.current-game-board .replay-layout-single-black .replay-board {
   width: 100%;
   height: 100%;
   min-width: 0;
