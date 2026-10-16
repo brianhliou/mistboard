@@ -106,8 +106,13 @@ export async function mountArticlesIndex(
 ): Promise<void> {
   root.replaceChildren();
   root.classList.add('landing-page', 'articles-route');
-  const { buildArticlesIndex, mountArticleThumbnails } = await import('./articles.js');
-  const index = buildArticlesIndex(lang ?? undefined, view);
+  const { articleTopicFromSearch, buildArticlesIndex, mountArticleThumbnails } = await import(
+    './articles.js'
+  );
+  // ?topic= narrows the list here, on the client: the prerendered /blog is the
+  // whole list whatever the query, and its canonical stays /blog.
+  const topic = articleTopicFromSearch(window.location.search);
+  const index = buildArticlesIndex(lang ?? undefined, view, topic);
   root.append(buildNav(), index);
   mountArticleThumbnails(index);
 }

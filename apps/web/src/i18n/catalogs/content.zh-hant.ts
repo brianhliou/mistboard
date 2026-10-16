@@ -50,6 +50,8 @@ export const ZH_HANT_CONTENT = {
   'articles.heading': '文章',
   'articles.latest': '最新動態',
   'articles.deepDives': '象棋深度文章',
+  'articles.topicAll': '全部',
+  'articles.topicsLabel': '主題',
   'articles.read': '閱讀',
   'articles.intro': '原創策略遊戲的文章、規則說明與引擎工作。',
   'articles.allArticles': '全部文章',

@@ -50,6 +50,8 @@ export const ZH_HANS_CONTENT = {
   'articles.heading': '文章',
   'articles.latest': '最新动态',
   'articles.deepDives': '象棋深度文章',
+  'articles.topicAll': '全部',
+  'articles.topicsLabel': '主题',
   'articles.read': '阅读',
   'articles.intro': '原创策略游戏的文章、规则说明与引擎工作。',
   'articles.allArticles': '全部文章',

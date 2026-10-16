@@ -60,6 +60,50 @@
   margin: 0 0 42px;
 }
 
+/* Topic chips under the blog heading (/blog?topic=<id>). Same pill as the
+   video library's tag chips; the active one is filled. */
+.articles-topic-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 18px;
+}
+
+.articles-topic-chip {
+  padding: 6px 12px;
+  font-size: 14px;
+  line-height: 1.2;
+  color: var(--site-text);
+  background: var(--site-panel-soft);
+  border: 1px solid var(--site-border);
+  border-radius: 999px;
+  text-decoration: none;
+}
+
+.articles-topic-chip:hover {
+  background: var(--site-hover);
+}
+
+.articles-topic-chip[aria-current="true"] {
+  color: var(--site-on-accent);
+  background: var(--site-accent);
+  border-color: var(--site-accent-strong);
+}
+
+@media (pointer: coarse) {
+  .articles-topic-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}
+
+/* The list is a grid, and an author display rule would beat the UA's
+   [hidden] default; a card outside the chosen topic must leave the grid. */
+.articles-index-list > li[hidden] {
+  display: none;
+}
+
 .articles-index-list {
   list-style: none;
   padding: 0;
