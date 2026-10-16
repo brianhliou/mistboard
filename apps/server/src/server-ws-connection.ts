@@ -35,6 +35,7 @@ import {
   isAdminDebugToken,
   isAllowedWebSocketOrigin,
   isProductionLikeRuntime,
+  parseNetworkClientId,
   recordMessageTimestamp,
   seatTokenFromProtocolHeader,
 } from './server-policy.js';
@@ -139,7 +140,7 @@ export async function handleWebSocketConnection(
   const accountUser = await currentAccountUser(request);
   const room = await ctx.getOrCreateRoom(roomId, parseVariantId(url.searchParams.get('variant')));
   if (randomEngine) await ctx.enableRandomEngine(room);
-  const clientId = parseClientId(url.searchParams.get('client')) ?? randomUUID();
+  const clientId = parseNetworkClientId(url.searchParams.get('client')) ?? randomUUID();
   // The browser's durable id (same alphabet as the per-room client id); a
   // guest seat is attributed to it at game end. Absent from old clients.
   const deviceId = parseClientId(url.searchParams.get('device'));

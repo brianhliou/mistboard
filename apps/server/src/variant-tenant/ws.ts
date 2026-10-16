@@ -25,6 +25,7 @@ import {
   canObserveRoom,
   isAdminDebugToken,
   isProductionLikeRuntime,
+  parseNetworkClientId,
   recordMessageTimestamp,
   seatTokenFromProtocolHeader,
 } from '../server-policy.js';
@@ -226,7 +227,13 @@ export function createTenantWsRuntime<
     room: LiveRoom,
   ): Promise<void> {
     const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
-    const clientId = parseClientId(url.searchParams.get('client')) ?? randomUUID();
+    // A network id never names an engine, the chess stack's or this tenant's:
+    // an engine seat is authorised by its id alone (see parseNetworkClientId).
+    const requestedClientId = parseNetworkClientId(url.searchParams.get('client'));
+    const clientId =
+      requestedClientId && !tenant.engine?.isEngineClientId(requestedClientId)
+        ? requestedClientId
+        : randomUUID();
     // The browser's durable id; a guest seat is attributed to it at game end.
     const deviceId = parseClientId(url.searchParams.get('device'));
     const accountUser = await currentAccountUser(request);
