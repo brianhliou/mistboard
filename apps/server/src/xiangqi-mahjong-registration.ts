@@ -152,7 +152,8 @@ registerVariantTenant({
   replays: tenantReplayCheck(xiangqiMahjongTenant),
   errorPrefix: 'xiangqi_mahjong',
   enabled: xiangqiMahjongTenant.enabled,
-  // No TV channel: a playtest variant is never the homepage board.
+  // No TV channel: the hands are concealed, so there is nothing a spectator
+  // can follow live (xiangqi-mahjong-tenant.test.ts pins it).
   watch: null,
   rooms: xiangqiMahjongRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,
   activeGameCount: () => countActiveTenantGames(xiangqiMahjongRooms.values()),

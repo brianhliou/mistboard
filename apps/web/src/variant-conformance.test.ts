@@ -12,7 +12,10 @@ import {
   XIANGQI_MAHJONG_SPEC_ID,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
+import { ANALYSIS_VARIANTS } from './analysis-catalog.js';
 import { articles } from './articles-data.js';
+import { EDITOR_VARIANT_IDS } from './editor/editor-catalog.js';
+import { LANDING_BOT_GAME_SPEC_IDS } from './landing-bot-policy.js';
 import {
   type LandingRoomSetup,
   roomCreationGameSpecId,
@@ -20,10 +23,12 @@ import {
 } from './landing-play.js';
 import { panelPersonPaces } from './landing-play-panel.js';
 import { buildReviewMeta } from './review/game-review-meta.js';
+import { STUDY_VARIANTS } from './study-catalog.js';
 import { gameSpecIdFromRulesSlug, rulesSlugForGameSpec } from './variant-public-surfaces.js';
 import { finishedGameHref, webVariantTenants } from './variant-tenant/registry.js';
 import { roomMarkerId } from './variant-tenant/room-chrome.js';
 import { variantMiniIdForGameSpec } from './variants.js';
+import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
 
 // Variant-wiring conformance. Adding a variant touches ~12 scattered sites; the
 // create-request builders are the ones that fail SILENTLY when missed —
@@ -231,5 +236,26 @@ describe('rules link conformance', () => {
       expect(gameSpecIdFromRulesSlug(slug), slug).toBe(spec.id);
     }
     expect(rulesSlugForGameSpec(XIANGQI_MAHJONG_SPEC_ID)).toBe('xiangqi-mahjong-32');
+  });
+});
+
+// Launch-playbook rule 3: a surface a variant is left off is left off on
+// purpose and pinned, so it fails closed. Xiangqi Mahjong has no position an
+// analysis board, editor or study can hold (hands are concealed tiles, not a
+// board), no TV channel (concealed hands, nothing a spectator can follow live),
+// and no first-game bot on the homepage shelf. Adding it to any of these is a
+// product decision: change the pin with it.
+describe('Xiangqi Mahjong deliberate exclusions', () => {
+  const XMJ = 'xiangqi-mahjong';
+
+  it('is not an analysis, editor or study variant', () => {
+    expect(ANALYSIS_VARIANTS.map((variant) => variant.id)).not.toContain(XMJ);
+    expect(EDITOR_VARIANT_IDS as readonly string[]).not.toContain(XMJ);
+    expect(STUDY_VARIANTS.map((variant) => variant.id)).not.toContain(XMJ);
+  });
+
+  it('has no homepage bot offer and no watch channel', () => {
+    expect(LANDING_BOT_GAME_SPEC_IDS as readonly string[]).not.toContain(XMJ);
+    expect(Object.keys(WATCH_CHANNEL_MINI_IDS)).not.toContain(XMJ);
   });
 });
