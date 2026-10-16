@@ -36,6 +36,7 @@ import {
 } from './variant-tenant/runtime.js';
 import { assignTenantSeat } from './variant-tenant/seat-session.js';
 import type { TenantSeat } from './variant-tenant/tenant.js';
+import { tenantSeatMayAbort, tenantSeatMayResign } from './variant-tenant/ws.js';
 import type { XmjRuntimeRoom } from './xiangqi-mahjong-registration.js';
 import {
   createXiangqiMahjongRoom,
@@ -373,4 +374,21 @@ test('xmj pvp: Find opponent offers every site pace, and nothing off the list', 
   assert.equal(xmjLobbyAllowsTimeControl({ initialMs: 300_000, incrementMs: 5_000 }), true);
   assert.equal(xmjLobbyAllowsTimeControl({ initialMs: 600_000, incrementMs: 5_000 }), true);
   assert.equal(xmjLobbyAllowsTimeControl({ initialMs: 420_000, incrementMs: 3_000 }), false);
+});
+
+// A seat sees its deal before its first move, so abort was a free redeal of a
+// bad hand (Brian, 2026-10-15). No abort from either seat at any move; resign
+// is open from the first move instead. A default tenant keeps abort.
+test('xmj pvp: neither seat can abort its deal, and either can resign from move 0', () => {
+  const room = pvpRoom(7);
+  const state = room.projection.state;
+  assert.equal(state.status.type, 'playing');
+  assert.equal(state.moveNumber, 0);
+  for (const seat of tenant.colors) {
+    assert.equal(tenantSeatMayAbort(tenant, state, seat), false, `${seat} may not abort`);
+  }
+  assert.equal(tenantSeatMayResign(tenant, state), true);
+  const turn = (state.status as { turn: string }).turn;
+  assert.equal(tenantSeatMayAbort({}, state, turn), true, 'a default tenant keeps abort');
+  assert.equal(tenantSeatMayResign({}, state), false, 'and resigns only after move 2');
 });

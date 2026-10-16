@@ -85,6 +85,10 @@ export type WebVariantTenant<C extends string> = {
   // client offers. A tenant that widens one without the other gets a button
   // that does nothing, or a legal action with no way to take it.
   seatMayAct?(view: unknown, seat: C): boolean;
+  // Optional: false where a player sees hidden information before their first
+  // move (the server tenant's userAbort). No Abort button; Resign is offered
+  // from the first move instead, beside the no-show countdown.
+  userAbort?: false;
   oppositeColor(color: C): C;
   enabled(): boolean;
   reviewUrl(roomId: string): string;
@@ -958,7 +962,7 @@ export function createTenantRoomChrome<C extends string>(
     const children: HTMLElement[] = [];
     const isSideToMove = view.status.turn === ctx.seat();
 
-    if (view.moveNumber < 2) {
+    if (view.moveNumber < 2 && tenant.userAbort !== false) {
       // The abort countdown shows to both seats (timing only, no board state) so
       // the waiting side understands the pause; only the side to move gets the
       // button.
@@ -995,6 +999,15 @@ export function createTenantRoomChrome<C extends string>(
       return;
     }
 
+    // A tenant with no abort still shows the no-show countdown before every
+    // seat has moved; Resign is the way out.
+    if (view.moveNumber < 2 && ctx.abortDeadline() !== null) {
+      const countdown = document.createElement('span');
+      countdown.className = 'abort-countdown';
+      countdown.dataset.abortCountdown = '';
+      countdown.textContent = abortCountdownText(isSideToMove);
+      children.push(countdown);
+    }
     // Post-move-1: only the present winning seat receives forfeitDeadline, so
     // this banner always reads from the beneficiary's point of view.
     if (ctx.forfeitDeadline() !== null) {

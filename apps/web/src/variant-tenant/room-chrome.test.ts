@@ -759,6 +759,27 @@ describe('tenant room chrome lobby rooms', () => {
     expect(refs.roomActions.textContent).toContain('Copy invite');
   });
 
+  it('offers Resign, never Abort, before the first moves where the tenant has no abort', () => {
+    const noAbort: WebVariantTenant<Color> = { ...tenant, userAbort: false };
+    for (const moveNumber of [0, 1]) {
+      const { chrome, refs } = chromeHarness(
+        { view: playingView({ moveNumber }), abortDeadline: Date.now() + 20_000 },
+        noAbort,
+      );
+      chrome.renderGameControls();
+      const labels = [...refs.gameControls.querySelectorAll('button')].map((b) => b.textContent);
+      expect(labels).toEqual(['Resign']);
+      // The no-show countdown stays: a first mover who never moves still aborts.
+      expect(refs.gameControls.textContent).toContain('Make your first move, aborting in');
+    }
+    // The default keeps Abort.
+    const { chrome, refs } = chromeHarness({ view: playingView({ moveNumber: 0 }) });
+    chrome.renderGameControls();
+    expect([...refs.gameControls.querySelectorAll('button')].map((b) => b.textContent)).toEqual([
+      'Abort',
+    ]);
+  });
+
   it('counts a correspondence first-move window in hours, not seconds', () => {
     const { chrome, refs } = chromeHarness({
       timeControl: dayPerMove,

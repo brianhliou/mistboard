@@ -145,6 +145,8 @@ export const xiangqiMahjongTenant: XmjTenantType = {
   rematch: { optOut: 'allowlisted playtest: the rematch conformance test seats guests' },
   // A move here is an action, not a turn; the clock runs from the first one.
   armsClockOnFirstMove: true,
+  // Each seat sees its deal before its first move: no free redeal.
+  userAbort: false,
   // The seat that must discard is on the clock, and after a discard the
   // claimant, whose claim decision has no timer of its own. Nobody between hands.
   clockOwner: xmjClockOwner,

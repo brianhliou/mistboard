@@ -404,6 +404,16 @@ export type VariantTenant<
    */
   armsClockOnFirstMove?: boolean;
   /**
+   * Set false where a player sees hidden information before their first move.
+   *
+   * The default lets the side to move abort until every seat has moved once,
+   * which is free in chess because nobody has seen anything yet. Xiangqi
+   * mahjong deals each seat its tiles first, so an abort was a free redeal of a
+   * bad hand. With false there is no abort from a player, and resigning is open
+   * from the first move instead. The pregame timeout still aborts a no-show.
+   */
+  userAbort?: false;
+  /**
    * Whose clock runs in this state, or null for nobody's.
    *
    * The default charges the seat whose turn it is and only advances when THAT

@@ -138,6 +138,30 @@ export type TenantWsRuntime<
   lifecycleCtx: TenantLifecycleContext<C, M, State, Spec, TenantLiveRoom<Kind, C, M, State, Spec>>;
 };
 
+/**
+ * Abort is open to the side to move until every seat has moved once, unless
+ * the tenant has none (userAbort: false: a player saw hidden information, its
+ * deal, before moving, so an abort would be a free redeal).
+ */
+export function tenantSeatMayAbort<C extends string>(
+  tenant: { userAbort?: false },
+  state: { status: { type: string; turn?: C }; moveNumber: number },
+  seat: C,
+): boolean {
+  if (tenant.userAbort === false) return false;
+  const { status } = state;
+  return status.type === 'playing' && state.moveNumber < 2 && status.turn === seat;
+}
+
+/** Resign opens where abort ends: after the first go-around, or from the start without abort. */
+export function tenantSeatMayResign(
+  tenant: { userAbort?: false },
+  state: { status: { type: string }; moveNumber: number },
+): boolean {
+  if (state.status.type !== 'playing') return false;
+  return state.moveNumber >= 2 || tenant.userAbort === false;
+}
+
 export function createTenantWsRuntime<
   Kind extends string,
   C extends string,
@@ -572,8 +596,7 @@ export function createTenantWsRuntime<
 
   // `seat` is the caller's read-only-guarded color (never 'spectator').
   async function handleResign(room: LiveRoom, client: LiveClient, seat: C): Promise<void> {
-    if (room.projection.state.status.type !== 'playing') return;
-    if (room.projection.state.moveNumber < 2) return;
+    if (!tenantSeatMayResign(tenant, room.projection.state)) return;
     const event: TenantRoomEvent<C, M, Spec> = {
       type: 'seat-resigned',
       at: Date.now(),
@@ -593,10 +616,7 @@ export function createTenantWsRuntime<
 
   // `seat` is the caller's read-only-guarded color (never 'spectator').
   async function handleAbort(room: LiveRoom, client: LiveClient, seat: C): Promise<void> {
-    const status = room.projection.state.status;
-    if (status.type !== 'playing') return;
-    if (room.projection.state.moveNumber >= 2) return;
-    if (status.turn !== seat) return;
+    if (!tenantSeatMayAbort(tenant, room.projection.state, seat)) return;
     const event: TenantRoomEvent<C, M, Spec> = {
       type: 'game-aborted',
       at: Date.now(),
