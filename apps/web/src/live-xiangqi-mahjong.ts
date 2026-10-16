@@ -16,6 +16,7 @@ import {
   type XmjClaimKind,
   type XmjMove,
   type XmjPlayerView,
+  type XmjRoomStatus,
   type XmjSeat,
   type XmjTile,
 } from '@mistboard/game';
@@ -47,6 +48,7 @@ import {
   xmjTileLookFromSearch,
   xmjViewOffersAction,
 } from './xiangqi-mahjong-table.js';
+import { xmjTerminalSound } from './xiangqi-mahjong-terminal-sound.js';
 
 let core: TenantLiveClientContext<XmjSeat, XmjPlayerView> | null = null;
 let roomMode: 'pvp' | 'pve' = 'pve';
@@ -219,15 +221,13 @@ function soundForEvent(event: unknown, seat: unknown): void {
   else if (action === 'claim' || action === 'self-draw') playSound('capture');
 }
 
-let lastStatusType: string | null = null;
+let lastStatusType: XmjRoomStatus['type'] | null = null;
 function maybePlayTerminalSound(): void {
   const status = core?.state.view?.status;
-  if (!status || status.type === lastStatusType) return;
+  if (!status) return;
+  const result = xmjTerminalSound(lastStatusType, status, core?.state.seat);
   lastStatusType = status.type;
-  if (status.type !== 'finished') return;
-  const seat = core?.state.seat;
-  const result = status.winner === null ? 'draw' : status.winner === seat ? 'win' : 'lose';
-  playTerminalPlan(result, status.reason ?? null);
+  if (result && status.type === 'finished') playTerminalPlan(result, status.reason);
 }
 
 // ── Tiles shown moving: the draw, the discard and the claim ─────────────────
