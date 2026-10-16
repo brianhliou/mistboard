@@ -86,7 +86,7 @@ function deps(
   };
 }
 
-test('Jieqi postgame returns a full-truth view revealing every identity', async () => {
+test('Jieqi postgame names only pieces that moved, never a dark capture or a never-moved piece', async () => {
   const payload = await jieqiPostgameForApi(ROOM_ID, deps(gameRecord(), finishedCaptureEvents()));
   assert.ok(payload);
 
@@ -99,53 +99,20 @@ test('Jieqi postgame returns a full-truth view revealing every identity', async 
     reason: 'resignation',
   });
 
-  // Truth view: every occupied square is revealed (faceDown:false), including
-  // both sides' dealt pieces and the captured black piece's full role.
-  for (const [square, entry] of Object.entries(payload.view.board)) {
-    assert.equal(entry?.faceDown, false, `truth square ${square} must be revealed`);
-  }
-  // The black piece on h8 (dealt as a cannon) is revealed in the truth view.
-  assert.deepEqual(payload.view.board.h8, { color: 'black', role: 'cannon', faceDown: false });
-  // Red's revealed cannon sits on b10 after the capture.
+  // Red's cannon moved, so both seats saw it: named.
   assert.deepEqual(payload.view.board.b10, { color: 'red', role: 'cannon', faceDown: false });
-  // The captured (still-dark-at-capture) black piece carries its full role.
-  assert.deepEqual(payload.view.captured, [{ owner: 'black', role: 'horse' }]);
-});
-
-// ── The hidden-info regression assertion ────────────────────────────────────
-test('Jieqi postgame per-color views MASK the opponent dark pieces and captures', async () => {
-  const payload = await jieqiPostgameForApi(ROOM_ID, deps(gameRecord(), finishedCaptureEvents()));
-  assert.ok(payload);
-
-  const red = payload.views.red;
-  const black = payload.views.black;
-  assert.ok(red);
-  assert.ok(black);
-  assert.equal(red.perspective, 'red');
-  assert.equal(black.perspective, 'black');
-
-  // Red's view must NEVER expose Black's still-face-down piece as an identified
-  // piece: h8 (a black cannon in truth) is faceDown with no role for Red.
-  const redH8 = red.board.h8;
-  assert.ok(redH8);
-  assert.equal(redH8.faceDown, true);
-  assert.equal('role' in redH8, false);
-
-  // Captured-pool reveal is capturer-only. Red captured the black dark piece, so
-  // Red learns its identity (role: 'horse')...
-  assert.deepEqual(red.captured, [{ owner: 'black', role: 'horse' }]);
-  // ...but Black (the former owner of the still-dark piece) learns nothing: the
-  // captured entry is masked with role:null.
-  assert.deepEqual(black.captured, [{ owner: 'black', role: null }]);
-
-  // Sanity: no per-color board entry leaks the opponent's hidden role. Black
-  // never moved here, so the ONLY legitimately revealed black piece is the
-  // always-face-up general; any other revealed black identity would be a leak.
-  for (const [square, entry] of Object.entries(red.board)) {
-    if (entry && entry.faceDown === false && entry.color === 'black' && entry.role !== 'general') {
-      assert.fail(`Red view leaks a revealed black identity on ${square}`);
-    }
+  // Nothing else moved: every other piece but the generals stays face-down and
+  // unknown after the game (Brian, 2026-10-16), Red's as much as Black's.
+  for (const [square, entry] of Object.entries(payload.view.board)) {
+    if (square === 'b10' || (entry && 'role' in entry && entry.role === 'general')) continue;
+    assert.deepEqual(entry, { color: entry?.color, faceDown: true, unknown: true }, square);
   }
+  // The b10 horse was face-down when Red took it: only Red ever learns that.
+  assert.deepEqual(payload.view.captured, [{ owner: 'black', role: null }]);
+  assert.equal(JSON.stringify(payload).includes('horse'), false);
+  // No per-seat views: this route has no seat, so it serves one public payload.
+  assert.equal('views' in payload, false);
+  assert.deepEqual(Object.keys(payload.history), ['truth']);
 });
 
 test('Jieqi postgame exposes players sourced from persisted participants', async () => {
@@ -249,7 +216,7 @@ test('Jieqi postgame returns an empty players array when no participants are rec
   assert.deepEqual(payload.game.players, []);
 });
 
-test('Jieqi postgame history snapshots every perspective per ply', async () => {
+test('Jieqi postgame history snapshots the public board per ply', async () => {
   const payload = await jieqiPostgameForApi(ROOM_ID, deps(gameRecord(), finishedCaptureEvents()));
   assert.ok(payload);
 
@@ -258,8 +225,12 @@ test('Jieqi postgame history snapshots every perspective per ply', async () => {
     payload.history.truth?.map((snapshot) => snapshot.ply),
     [0, 1],
   );
-  assert.equal(payload.history.red?.length, 2);
-  assert.equal(payload.history.black?.length, 2);
+  // At ply 0 the b10 piece Red later took dark sits on its home square: unknown.
+  assert.deepEqual(payload.history.truth?.[0]?.view.board.b10, {
+    color: 'black',
+    faceDown: true,
+    unknown: true,
+  });
 });
 
 test('Jieqi watch postgame emits truth AND as-played masked history', async () => {
@@ -283,13 +254,15 @@ test('Jieqi watch postgame emits truth AND as-played masked history', async () =
     [0, 1],
   );
 
-  // Reveal turns face-up the side that lost nothing face-down (Red), and keeps
-  // the side that did (Black, its b10 piece taken dark) face-down at every ply:
-  // only Red, the capturer, may know what b10 was, after the game too.
+  // Reveal turns face-up only what moved (Red's cannon): a never-moved piece
+  // stays unknown to everyone after the game, and the b10 piece Red took dark
+  // is known only to Red (Brian, 2026-10-16).
   for (const snapshot of payload.history.truth) {
     assert.deepEqual(snapshot.view.legalMoves, []);
     for (const [square, entry] of Object.entries(snapshot.view.board)) {
-      if (entry?.color === 'red' || (entry && 'role' in entry && entry.role === 'general')) {
+      const general = entry && 'role' in entry && entry.role === 'general';
+      const cannon = square === (snapshot.ply === 0 ? 'b3' : 'b10');
+      if (general || cannon) {
         assert.equal(entry?.faceDown, false, `watch reveal square ${square} must be face-up`);
       } else {
         assert.ok(entry && !('role' in entry), `watch reveal square ${square} must stay sealed`);
@@ -298,7 +271,6 @@ test('Jieqi watch postgame emits truth AND as-played masked history', async () =
   }
   assert.deepEqual(payload.history.truth[1]?.view.captured, [{ owner: 'black', role: null }]);
   assert.deepEqual(payload.view.captured, [{ owner: 'black', role: null }]);
-  assert.deepEqual(payload.view.legalMoves, []);
 });
 
 // ── The as-played regression assertion ──────────────────────────────────────
@@ -327,11 +299,10 @@ test('Jieqi watch masked history keeps a never-moved piece face-down', async () 
   assert.ok(blackH8);
   assert.equal(blackH8.faceDown, true);
   assert.equal('role' in blackH8, false);
-  // Red never-moved pieces are what Reveal turns over (Black lost a piece dark, so
-  // Black's stay sealed in both tracks).
+  // A never-moved piece stays unknown on Reveal too, on either side.
   assert.equal(masked.board.h3?.faceDown, true);
-  assert.deepEqual(truth.board.h3, { color: 'red', role: 'cannon', faceDown: false });
-  assert.deepEqual(truth.board.h8, masked.board.h8);
+  assert.deepEqual(truth.board.h3, { color: 'red', faceDown: true, unknown: true });
+  assert.deepEqual(truth.board.h8, { color: 'black', faceDown: true, unknown: true });
 
   // Red's cannon moved and captured, so IT is face-up in the masked track too:
   // the mask replays the reveals that actually happened.
@@ -550,16 +521,26 @@ test('Jieqi finished TV payload never names a dark capture, on either track', as
   for (const track of [payload.history.masked, payload.history.truth]) {
     assert.deepEqual(track.at(-1)?.view.captured, expected);
     assert.deepEqual(track[1]?.view.captured, [{ owner: 'black', role: null }]);
-    // Before the capture, b10 sits on its home square face-down, with no role.
-    assert.deepEqual(track[0]?.view.board.b10, { color: 'black', faceDown: true });
+    // Before the capture, b10 sits on its home square face-down, with no role
+    // (Reveal marks it never revealed): no reader of a finished game learns it.
+    assert.deepEqual(track[0]?.view.board.b10, {
+      color: 'black',
+      faceDown: true,
+      ...(track === payload.history.truth ? { unknown: true } : {}),
+    });
   }
   assert.deepEqual(payload.view.captured, expected);
-  // Red lost only a face-up piece, so Reveal still turns Red's survivors over:
-  // the control is not inert, and the test is not passing on an empty board.
-  assert.deepEqual(payload.history.truth.at(-1)?.view.board.a1, {
-    color: 'red',
+  // Reveal names what moved (Black's a10 chariot took the cannon on b10), so
+  // the test is not passing on an empty board; Red's never-moved a1 stays unknown.
+  assert.deepEqual(payload.history.truth.at(-1)?.view.board.b10, {
+    color: 'black',
     role: 'chariot',
     faceDown: false,
+  });
+  assert.deepEqual(payload.history.truth.at(-1)?.view.board.a1, {
+    color: 'red',
+    faceDown: true,
+    unknown: true,
   });
   assert.equal(payload.history.masked.at(-1)?.view.board.a1?.faceDown, true);
 });

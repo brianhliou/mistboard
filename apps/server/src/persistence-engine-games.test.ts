@@ -341,7 +341,9 @@ definePersistenceTests('scheduled engine games as public data', () => {
     };
     assert.equal(record.game_id, gameId);
     assert.equal(record.mode, 'eve');
-    assert.ok(record.deal_fen, 'a server deal is exported');
+    // No jieqi export carries its deal: it names pieces captured face-down and never
+    // turned over (Brian, 2026-10-16). The record still replays from its moves.
+    assert.equal(record.deal_fen, undefined);
     assert.equal(replayHiddenPieceRecord(record).ok, true);
 
     const all = await download('/api/data/engine-monthly/2026-08/all.jsonl.gz');

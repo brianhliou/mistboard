@@ -24,9 +24,11 @@
 //                                   board move alone.
 // `san` is null unless the tenant has a real notation for the ply (xiangqi
 // WXF). Clocks-after ride under `<color>_clock_ms_after` for each tenant color.
-// Hidden-piece tenants (jieqi, banqi, jungle-flip) add `revealed` and
-// `captured_hidden` to a ply that turned a piece over or captured a face-down
-// one, and `deal_fen` to a game that had a real deal (#484).
+// Hidden-piece tenants (jieqi, banqi, jungle-flip) add `revealed` to a ply
+// that turned a piece over, and banqi and Flip Jungle add `deal_fen` to a game
+// that had a real deal (#484). Jieqi writes neither a deal nor
+// `captured_hidden`: a piece captured face-down is known only to its capturer,
+// and one never turned over to no one (2026-10-16).
 
 import {
   exportFormatsForVariant,
@@ -131,8 +133,14 @@ export type TenantExportOptions<M, State> = {
   hiddenPieces?: {
     variant: HiddenPieceVariant;
     reveal: (before: State, move: M) => HiddenPieceReveal;
-    dealFen: (start: State) => string;
+    // Omitted when the deal itself is secret after the game (jieqi: it names
+    // pieces never turned over), so no export carries it.
+    dealFen?: (start: State) => string;
   };
+  // The log as a reader may know it, replayed instead of the stored one (jieqi:
+  // jieqiPublicEvents, so no identity hidden from both seats reaches an export).
+  // Takes and returns the tenant's own validated log.
+  publicEvents?: (events: readonly unknown[]) => unknown[];
 };
 
 // A game's deal is real when the room was dealt by this site: a room-created
@@ -180,8 +188,11 @@ export function tenantExportBinding<
 ): VariantTenantExport {
   return {
     gameRouteBase: options.gameRouteBase,
-    finishedGame(events, roomId) {
-      if (!isTenantEventLog(tenant, events, roomId)) return null;
+    finishedGame(storedEvents, roomId) {
+      if (!isTenantEventLog(tenant, storedEvents, roomId)) return null;
+      const events = options.publicEvents
+        ? (options.publicEvents(storedEvents) as typeof storedEvents)
+        : storedEvents;
       const projection = replayTenantEvents(tenant, events);
       if (projection.state.status.type !== 'finished') return null;
       const moveEvents = events.filter(
@@ -204,7 +215,8 @@ export function tenantExportBinding<
         }
       }
       const created = events[0]?.type === 'room-created' ? events[0] : undefined;
-      const dealFen = hidden && start ? exportedDealFen(created, start, hidden.dealFen) : null;
+      const dealFen =
+        hidden?.dealFen && start ? exportedDealFen(created, start, hidden.dealFen) : null;
       const plies: TenantExportPly[] = moveEvents.map((event, index) => ({
         ply: index + 1,
         mover: event.color,
@@ -279,8 +291,8 @@ export type TenantGamePublication = {
   // Flip variants only: which ink the first-mover seat played (results are
   // recorded by seat).
   first_mover_ink?: string | null;
-  // Hidden-piece variants only, when the game had a real deal (every site game,
-  // never an imported one): the start as the variant's dealt FEN, the public FEN
+  // Banqi and Flip Jungle only, when the game had a real deal (every site
+  // game, never an imported one): the start as the variant's dealt FEN, the public FEN
   // plus a sixth field naming each face-down piece in board order.
   deal_fen?: string;
   // Imported games only (a game played elsewhere, e.g. an off-site engine match):

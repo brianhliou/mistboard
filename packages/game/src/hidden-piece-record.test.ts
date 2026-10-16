@@ -69,6 +69,8 @@ type Played = {
   record: HiddenPieceRecord & { deal_fen: string };
   finalFen: string;
   finalDealtFen: string;
+  /** Face-down pieces the game captured (jieqi only). */
+  darkCaptures: number;
 };
 
 function ply(
@@ -98,8 +100,11 @@ function playJieqi(seed: number, maxPlies: number): Played {
   }
   return {
     record: { variant: 'jieqi', deal_fen: dealFen, plies },
-    finalFen: jieqiStateToPikafishFen(state),
+    // The replayer reports the public FEN: a side's dark-captured pieces stay
+    // in its pool, since nobody but the capturer learned them.
+    finalFen: jieqiStateToPikafishFen(state, { public: true }),
     finalDealtFen: jieqiStateToDealtFen(state),
+    darkCaptures: state.captures.filter((c) => !c.revealedAtCapture).length,
   };
 }
 
@@ -122,6 +127,7 @@ function playBanqi(seed: number, maxPlies: number): Played {
     record: { variant: 'banqi', deal_fen: dealFen, plies },
     finalFen: banqiStateToEngineFen(state),
     finalDealtFen: banqiStateToDealtFen(state),
+    darkCaptures: 0,
   };
 }
 
@@ -140,6 +146,7 @@ function playJungleFlip(seed: number, maxPlies: number): Played {
     record: { variant: 'jungle-flip', deal_fen: dealFen, plies },
     finalFen: jungleFlipStateToEngineFen(state),
     finalDealtFen: jungleFlipStateToDealtFen(state),
+    darkCaptures: 0,
   };
 }
 
@@ -154,7 +161,9 @@ for (const [variant, play] of Object.entries(PLAYERS)) {
     let hiddenCaptures = 0;
     for (let seed = 1; seed <= 25; seed += 1) {
       const played = play(seed, 300);
-      hiddenCaptures += played.record.plies.filter((p) => p.captured_hidden).length;
+      // No ply names a captured face-down piece (only its capturer learns it).
+      assert.equal(played.record.plies.filter((p) => p.captured_hidden).length, 0);
+      hiddenCaptures += played.darkCaptures;
       const withDeal = replayHiddenPieceRecord(played.record);
       assert.ok(withDeal.ok, `seed ${seed}: ${JSON.stringify(withDeal)}`);
       assert.equal(withDeal.finalFen, played.finalFen, `seed ${seed}`);
@@ -168,7 +177,7 @@ for (const [variant, play] of Object.entries(PLAYERS)) {
       assert.deepEqual(alone.status, withDeal.status, `seed ${seed}`);
     }
     // Only jieqi can capture a face-down piece; its games here do, so the
-    // captured identity is exercised too.
+    // unnamed capture is exercised too.
     if (variant === 'jieqi') assert.ok(hiddenCaptures > 0);
     else assert.equal(hiddenCaptures, 0);
   });

@@ -5,7 +5,13 @@
 //
 // Everything here is pure: the draw odds and the size buckets. The SVG lives in
 // board-luck-mark.ts, the hover card in luck-mark-card.ts.
-import type { JieqiGameState, JieqiMove, JieqiPieceRole } from '@mistboard/game';
+import {
+  type JieqiColor,
+  type JieqiGameState,
+  type JieqiMove,
+  type JieqiPieceRole,
+  STANDARD_JIEQI_DEAL,
+} from '@mistboard/game';
 
 /** One identity the face-down piece could have been, with how many of it were in the bag. */
 export type RevealPoolEntry = { role: JieqiPieceRole; count: number };
@@ -39,9 +45,13 @@ const ROLE_ORDER: readonly JieqiPieceRole[] = [
  * still face-down, which it never saw. Using the same pool is what lets the card say
  * "2 in 9" next to a luck number computed against those same nine.
  *
- * Null when `move` is not a reveal (the piece on `from` is face-up or absent), or when any
- * identity in play was never determined (an imported game's lazy deal): there are no odds
- * to state for a piece nobody dealt.
+ * When an identity in the bag was never determined (an imported game's lazy deal, or a
+ * finished game's public deal, where every piece that never moved is a placeholder), the
+ * bag is read off the public record instead: the mover's set minus every piece of it seen
+ * face-up, on the board or when captured. That is the same multiset, from what everyone saw.
+ *
+ * Null when `move` is not a reveal (the piece on `from` is face-up, absent, or itself never
+ * determined).
  */
 export function jieqiRevealOdds(before: JieqiGameState, move: JieqiMove): RevealOdds | null {
   const source = before.board[move.from];
@@ -59,14 +69,40 @@ export function jieqiRevealOdds(before: JieqiGameState, move: JieqiMove): Reveal
   for (const capture of before.captures) {
     if (capture.owner === mover && !capture.revealedAtCapture) bump(capture.role, capture.unknown);
   }
-  if (undetermined) return null;
-  return oddsFrom(source.role, counts);
+  if (!undetermined) return oddsFrom(source.role, counts);
+  const bag = publicBag(before, mover);
+  return bag && (bag.get(source.role) ?? 0) > 0 ? oddsFrom(source.role, bag) : null;
+}
+
+// The mover's hidden identities as anyone can count them: its dealt set minus each of its
+// pieces seen face-up (the general is never in the set). Null when the record does not fit
+// the set.
+function publicBag(state: JieqiGameState, mover: JieqiColor): Map<JieqiPieceRole, number> | null {
+  const counts = new Map<JieqiPieceRole, number>();
+  for (const role of STANDARD_JIEQI_DEAL[mover]) counts.set(role, (counts.get(role) ?? 0) + 1);
+  const seen: JieqiPieceRole[] = [];
+  for (const piece of Object.values(state.board)) {
+    if (piece?.color === mover && !piece.faceDown && piece.role !== 'general')
+      seen.push(piece.role);
+  }
+  for (const capture of state.captures) {
+    if (capture.owner === mover && capture.revealedAtCapture) seen.push(capture.role);
+  }
+  for (const role of seen) {
+    const left = (counts.get(role) ?? 0) - 1;
+    if (left < 0) return null;
+    if (left === 0) counts.delete(role);
+    else counts.set(role, left);
+  }
+  return counts;
 }
 
 /**
  * The odds behind a FACE-DOWN CAPTURE, from the CAPTURER's knowledge just before it: the
- * victim's face-down pieces still on the board. Mirrors the server's victimDarkPool
- * (jieqi-analysis.ts), the pool its capture luck is averaged over. Under capturer-only reveal
+ * victim's face-down pieces still on the board. A finished game's review never has one: its
+ * deal is the public deal, where every face-down target is undetermined, and the server grades
+ * a face-down capture as one public position with no luck (jieqi-analysis.ts poolMeanWin,
+ * Brian 2026-10-16). It stays for states dealt in full. Under capturer-only reveal
  * the capturer has seen every victim piece it took (dark or not) and every one the victim
  * revealed by moving, so the victim's dealt set minus all of that is exactly this on-board
  * multiset; the victim's own pieces captured face-down are NOT in it (the capturer saw them).

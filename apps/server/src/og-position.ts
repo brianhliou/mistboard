@@ -346,7 +346,7 @@ export function resolvePositionOg(
       }
       return {
         variant,
-        publicFen: jieqiStateToPikafishFen(parsed.state),
+        publicFen: jieqiStateToPikafishFen(parsed.state, { public: true }),
         toMove: inkToMove(parsed.state.status.type === 'playing' ? parsed.state.status.turn : null),
         board: { kind: 'intersection', ...XIANGQI_GEOMETRY, pieces, extras },
       };
