@@ -333,6 +333,43 @@ describe('xiangqi mahjong table', () => {
     expect(marked).toBeGreaterThan(0);
   });
 
+  it('with a win on offer, raises one tapped discard and asks for a second tap', () => {
+    let found: { view: XmjPlayerView; seat: XmjSeat } | null = null;
+    for (let seed = 1; seed < 200 && !found; seed += 1) {
+      let current = createXmjRoomState(createXmjSetup(seeded(seed)), 'xmj_test');
+      for (let steps = 0; current.status.type === 'playing' && steps < 400 && !found; steps += 1) {
+        for (const seat of ['east', 'west'] as const) {
+          const view = xmjViewFor(current, seat);
+          if (view.legal.selfDraw && view.phase.type === 'discard' && view.phase.drawn) {
+            found = { view, seat };
+          }
+        }
+        current = botStep(current);
+      }
+    }
+    if (!found) throw new Error('no self-draw position in 200 seeds');
+    const { view } = found;
+    const drawn = view.phase.type === 'discard' ? (view.phase.drawn as XmjTile) : null;
+    const plain = doc(xiangqiMahjongTableHtml(view, opts(true)));
+    expect(plain.querySelectorAll('.xmj-tile--armed').length).toBe(0);
+    expect(plain.querySelector('.xmj-actions__hint')?.textContent).toBe(
+      'You can win. Declare it, or discard a tile.',
+    );
+    const armed = doc(
+      xiangqiMahjongTableHtml(
+        view,
+        opts(true, { armedDiscard: { tile: drawn as XmjTile, drawn: true } }),
+      ),
+    );
+    const raised = [...armed.querySelectorAll('.xmj-tile--armed')];
+    expect(raised.length).toBe(1);
+    expect(raised[0]?.classList.contains('xmj-tile--drawn')).toBe(true);
+    expect(armed.querySelector('.xmj-actions__hint')?.textContent).toBe(
+      `Tap the ${xmjTileName(drawn as XmjTile)} again to discard it and play on.`,
+    );
+    expect(armed.querySelector('[data-xmj-selfdraw]')).not.toBeNull();
+  });
+
   it('stands the opponent tile just drawn apart, as a back', () => {
     // East discards, west passes and draws: east sees west's drawn back apart.
     const after = afterDiscard(['bP', 'bP', 'bA', 'rE']);
@@ -361,13 +398,26 @@ describe('xiangqi mahjong table', () => {
           /^(You win|Bot wins) hand [1-4] (by self-draw|on a discard): \d+ points?$/,
         );
         expect(title).toContain(`${view.phase.score.total} point`);
-        const lines = [...host.querySelectorAll('.xmj-breakdown li')];
+        const lines = [...host.querySelectorAll('.xmj-breakdown li:not(.xmj-breakdown__sum)')];
         expect(lines.length).toBe(view.phase.score.lines.length);
+        const won = view.phase;
+        const total = won.score.total;
+        expect(host.querySelector('.xmj-breakdown__sum b')?.textContent).toBe(String(total));
+        // Who pays: the winner's gain is the other player's loss.
+        const loser = won.winner === 'east' ? 'west' : 'east';
+        expect(host.querySelector('.xmj-breakdown__paid')?.textContent).toBe(
+          `The other player pays it: ${NAMES[won.winner]} ${signed(total)}, ${NAMES[loser]} ${signed(-total)}.`,
+        );
         expect(host.querySelector('.xmj-result__how')?.getAttribute('href')).toBe(XMJ_SCORING_HREF);
-        // The hand table runs each player's total; its last row is the score now.
+        // Each row is that hand's change; the foot is the score now.
         const last = [...host.querySelectorAll('.xmj-ledger tbody tr')].at(-1);
         const cells = [...(last?.querySelectorAll('td') ?? [])].map((cell) => cell.textContent);
-        expect(cells.slice(-2)).toEqual([signed(view.scores.east), signed(view.scores.west)]);
+        const delta = (seat: XmjSeat) => (seat === won.winner ? total : -total);
+        expect(cells.slice(-2)).toEqual([signed(delta('east')), signed(delta('west'))]);
+        const foot = [...host.querySelectorAll('.xmj-ledger tfoot td')].map(
+          (cell) => cell.textContent,
+        );
+        expect(foot.slice(-2)).toEqual([signed(view.scores.east), signed(view.scores.west)]);
       }
       current = botStep(current);
     }

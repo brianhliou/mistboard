@@ -17,6 +17,7 @@ import {
   type XmjMove,
   type XmjPlayerView,
   type XmjSeat,
+  type XmjTile,
 } from '@mistboard/game';
 import { xiangqiMahjongEnabled } from './feature-flags.js';
 import { t } from './i18n/catalog.js';
@@ -233,6 +234,8 @@ function maybePlayTerminalSound(): void {
 
 /** Where the viewer's last tap on one of their own tiles was, briefly. */
 let tappedTile: { rect: DOMRect; at: number } | null = null;
+// A discard tapped once while a self-drawn win is on offer (see armedDiscard).
+let armedDiscard: { tile: XmjTile; drawn: boolean; hand: number } | null = null;
 const TAP_FRESH_MS = 3000;
 /** The ponds as last drawn, to tell a new discard from a redraw. */
 let drawnPonds: { hand: number; east: number; west: number } | null = null;
@@ -293,7 +296,7 @@ function animateDiscards(board: HTMLElement, view: XmjPlayerView, sources: Disca
         { transform: `translate(${dx}px, ${dy}px) scale(${scale})` },
         { transform: 'translate(0, 0) scale(1)' },
       ],
-      { duration: 320, easing: 'cubic-bezier(.2,.7,.3,1)' },
+      { duration: 450, easing: 'cubic-bezier(.2,.7,.3,1)' },
     );
   }
 }
@@ -311,6 +314,9 @@ function renderTable(refs: LiveRefs, view: XmjPlayerView | null): void {
     return;
   }
   if (queuedPass && view.windowClosesAt !== queuedPass.window) clearQueuedPass();
+  if (armedDiscard && (!view.legal.selfDraw || armedDiscard.hand !== view.handNumber)) {
+    armedDiscard = null;
+  }
   const html = xiangqiMahjongTableHtml(view, {
     canAct: core?.canActNow() === true,
     names: seatNames(),
@@ -318,6 +324,7 @@ function renderTable(refs: LiveRefs, view: XmjPlayerView | null): void {
     passQueued: queuedPass !== null,
     pieceSet: readStoredXiangqiPieceSet(),
     tileLook: look,
+    armedDiscard,
   });
   // The room redraws on every frame and clock tick; most change nothing here.
   if (html === lastTableHtml && refs.board.firstElementChild) {
@@ -460,14 +467,25 @@ function installTableInteraction(ctx: TenantLiveClientContext<XmjSeat, XmjPlayer
       // what is public is whether it was the tile just drawn. A copy of the
       // drawn tile played from the hand says so, and the opponent sees it
       // leave the hand rather than the drawn slot.
-      tappedTile = { rect: target.getBoundingClientRect(), at: Date.now() };
-      const phase = ctx.state.view?.phase;
+      const view = ctx.state.view;
+      const phase = view?.phase;
       const drawn = phase?.type === 'discard' ? phase.drawn : null;
-      const fromHand = drawn === data.xmjTile && !target.classList.contains('xmj-tile--drawn');
+      const tile = data.xmjTile as XmjTile;
+      const fromDrawnSlot = target.classList.contains('xmj-tile--drawn');
+      const fromHand = drawn === tile && !fromDrawnSlot;
+      // With a win on offer, the first tap only raises the tile: a slip next
+      // to the Win button must not throw the hand away.
+      if (view?.legal.selfDraw && !target.classList.contains('xmj-tile--armed')) {
+        armedDiscard = { tile, drawn: fromDrawnSlot, hand: view.handNumber };
+        ctx.renderAll();
+        return;
+      }
+      armedDiscard = null;
+      tappedTile = { rect: target.getBoundingClientRect(), at: Date.now() };
       ctx.send({
         type: 'move',
         action: fromHand ? 'discard-hand' : 'discard',
-        tiles: [data.xmjTile],
+        tiles: [tile],
       });
     }
   });

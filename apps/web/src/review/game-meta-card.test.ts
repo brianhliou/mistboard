@@ -47,3 +47,27 @@ describe('game meta card head', () => {
     expect(card.el.querySelector('.game-meta-card__headline')).toBeNull();
   });
 });
+
+describe('game meta card players', () => {
+  it('draws a disc per player, and none for a game whose seats have no colour', () => {
+    const coloured = createGameMetaCard({
+      headline: [],
+      variantName: 'Xiangqi',
+      players: [
+        { color: 'red', name: 'A' },
+        { color: 'black', name: 'B' },
+      ],
+    });
+    expect(coloured.el.querySelectorAll('.game-meta-card__disc').length).toBe(2);
+    const mahjong = createGameMetaCard({
+      headline: [],
+      variantName: 'Xiangqi Mahjong',
+      players: [
+        { color: 'east', noDisc: true, name: 'You' },
+        { color: 'west', noDisc: true, name: 'Bot' },
+      ],
+    });
+    expect(mahjong.el.querySelectorAll('.game-meta-card__disc').length).toBe(0);
+    expect(mahjong.el.querySelectorAll('.game-meta-card__name').length).toBe(2);
+  });
+});

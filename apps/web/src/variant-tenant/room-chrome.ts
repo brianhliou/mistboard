@@ -22,6 +22,7 @@ import {
 import { loginHrefForCurrentPage } from '../auth-redirect.js';
 import { applyClockEmphasis, setClockFace } from '../clock-emphasis.js';
 import { openConfirmDialog } from '../confirm-dialog.js';
+import { variantSeatsHaveInk } from '../flip-seat-ink.js';
 import { type I18nKey, t } from '../i18n/catalog.js';
 import { maybePlayLowTimeSound } from '../live-sound.js';
 import type { LiveRefs } from '../live-state.js';
@@ -576,6 +577,7 @@ export function createTenantRoomChrome<C extends string>(
           // left on the row — a raw seat here is silently wrong for half of all flip
           // games rather than merely inconsistent.
           color: tenant.seatInk ? tenant.seatInk(color) : color,
+          noDisc: !variantSeatsHaveInk(ctx.gameSpecId),
           // Same rule as the clock rows: only a server-supplied name links.
           profile: serverName ? profileTargetFor(ctx.seatProfiles()[color]) : null,
           name:
