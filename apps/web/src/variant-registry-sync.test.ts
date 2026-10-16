@@ -18,7 +18,9 @@ import {
   defaultEngineTimeControl,
   ENGINE_FLOORED_GAME_SPEC_IDS,
   isAllowedEngineTimeControl,
+  isRetiredGameSpec,
   maybeGameSpecForId,
+  RETIRED_GAME_SPEC_IDS,
   TIME_CONTROLS,
   VARIANT_DEFAULT_GAME_SPEC_IDS,
   variantDefaultTimeControl,
@@ -369,5 +371,38 @@ describe('play deep links are gated on their own variant', () => {
       }
     }
     expect(mismatched, mismatched.join('\n')).toEqual([]);
+  });
+});
+
+// A retired variant (Fortress and Atomic Xiangqi, 2026-10-11) keeps its tenant
+// on BOTH sides, so its finished games still have a review page and a server
+// that hydrates them, while no web surface offers it and no deep link starts
+// one. Dropping it from either registry would 404 every game ever played.
+describe('retired variants: replay kept on both sides, play offered on neither', () => {
+  it('every retired spec keeps a web and a server tenant', () => {
+    expect(RETIRED_GAME_SPEC_IDS.length).toBeGreaterThan(0);
+    const webSpecs = new Set<string>(webVariantTenants().map((tenant) => tenant.gameSpecId));
+    const serverSpecs = new Set<string>(
+      registeredVariantTenants().map((registration) => registration.gameSpecId),
+    );
+    for (const id of RETIRED_GAME_SPEC_IDS) {
+      expect(webSpecs.has(id), `${id}: web tenant`).toBe(true);
+      expect(serverSpecs.has(id), `${id}: server tenant`).toBe(true);
+      const tenant = webVariantTenants().find((candidate) => candidate.gameSpecId === id);
+      expect(tenant?.gameRouteBase, `${id}: postgame route`).toBeTruthy();
+      expect(
+        isClientRoute(`${tenant?.gameRouteBase}/${tenant?.roomIdPrefix}${SAMPLE_ROOM_SUFFIX}`),
+        `${id}: a finished game's page must still serve`,
+      ).toBe(true);
+    }
+  });
+
+  it('no retired spec is offered in the menu or accepts a play deep link', () => {
+    for (const tenant of webVariantTenants()) {
+      if (!isRetiredGameSpec(tenant.gameSpecId)) continue;
+      expect(tenant.landing?.offerInMenu() ?? false, tenant.gameSpecId).toBe(false);
+      expect(tenant.landing?.acceptsDeepLink() ?? false, tenant.gameSpecId).toBe(false);
+      expect(landingBotOffer(tenant.gameSpecId), tenant.gameSpecId).toBeNull();
+    }
   });
 });

@@ -72,6 +72,7 @@ import {
   mountAtomicXiangqiReplay,
 } from './atomic-xiangqi-replay.js';
 import { type BanqiReplayController, mountBanqiReplay } from './banqi-replay.js';
+import { variantDiagramGlides } from './board-anim.js';
 import { type ChessReplayController, mountChessReplay } from './chess-replay.js';
 import {
   type CrazyhouseXiangqiReplayController,
@@ -79,6 +80,7 @@ import {
 } from './crazyhouse-xiangqi-replay.js';
 import { type DuckXiangqiReplayController, mountDuckXiangqiReplay } from './duck-xiangqi-replay.js';
 import { autosizeEmbedFrame } from './embed/embed-autosize.js';
+import { embedPathWithSolutionHidden } from './embed/embed-route.js';
 import {
   type FortressXiangqiReplayController,
   mountFortressXiangqiReplay,
@@ -106,7 +108,6 @@ import {
   isGameSpecId,
   rulesHrefPublicSurfaceEnabled,
   rulesSlugPublicSurfaceEnabled,
-  rulesSlugRetired,
   variantPublicSurfaceEnabled,
   variantSupportsPve,
 } from './variant-public-surfaces.js';
@@ -135,7 +136,7 @@ function isArticleVisibleInThisEnv(article: Article): boolean {
 
 function isArticleListedInThisEnv(article: Article): boolean {
   if (!isArticleVisibleInThisEnv(article)) return false;
-  if (article.showInIndex === false) return false;
+  if (article.showInIndex === false || article.noindex === true) return false;
   // A page written in a language the interface does not speak never lists here.
   // The index is one reader's shelf, and a Vietnamese card in an English list is
   // noise to everyone: an English reader cannot read it, and a Vietnamese reader
@@ -881,9 +882,6 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
   const locale = articleLocale(articleLang);
   if (!base) return buildArticleNotFound(locale);
   if (!isArticleVisibleInThisEnv(base)) return buildArticleNotFound(locale);
-  // The server serves 410 for a retired variant's rules page; a client-side
-  // navigation must not render what the server has declared gone.
-  if (base.kind === 'rules' && rulesSlugRetired(base.slug)) return buildArticleNotFound(locale);
   const article = articleLang ? translateArticle(base, articleLang) : base;
 
   const main = document.createElement('main');
@@ -1068,10 +1066,13 @@ function buildArticleFooter(article: Article, lang?: ArticleLang): HTMLElement |
   heading.className = 'article-footer-heading';
   heading.textContent = t('articles.readNext', {}, locale);
 
+  // An English-only page read with a zh UI still offers the zh version of each
+  // onward post that has one, as the heading and dates already follow the UI.
+  const cardLang = lang ?? (locale === 'zh-Hans' || locale === 'zh-Hant' ? locale : undefined);
   const list = document.createElement('ul');
   list.className = 'articles-index-list article-footer-list';
   for (const entry of related) {
-    list.append(articleCard(entry, lang, { showStarBadge: false }));
+    list.append(articleCard(entry, cardLang, { showStarBadge: false }));
   }
 
   footer.append(heading, list);
@@ -2006,7 +2007,8 @@ function renderRawSvgStepperBlock(block: RawSvgStepperBlock, lang?: ArticleLang)
       lang,
       title: block.header?.players,
       subtitle: block.header?.event,
-      wide,
+      // A game is one board, so its sheet sits beside it however wide it is.
+      wide: wide && !asGame,
     },
     {
       count: block.steps.length,
@@ -2022,6 +2024,11 @@ function renderRawSvgStepperBlock(block: RawSvgStepperBlock, lang?: ArticleLang)
         : { narratives: block.steps.map((step) => step.narrative) }),
       ...(block.seats ? { seats: block.seats } : {}),
       ...(block.result ? { result: block.result } : {}),
+      // A step glides its mover only when the block names a variant that may
+      // show the move (board-anim.ts variantDiagramGlides); fog stays static.
+      ...(variantDiagramGlides(block.gameSpecId) && block.steps.some((step) => step.motion)
+        ? { motion: (index: number) => block.steps[index]?.motion ?? null }
+        : {}),
     },
   );
   figure.append(card.el);
@@ -2103,7 +2110,7 @@ function renderEmbedBlock(block: EmbedBlock): HTMLElement {
   figure.className = 'article-figure article-figure-embed';
   const iframe = document.createElement('iframe');
   iframe.className = 'article-embed-frame';
-  iframe.src = block.path;
+  iframe.src = block.hideSolution ? embedPathWithSolutionHidden(block.path) : block.path;
   iframe.title = block.title;
   iframe.setAttribute('loading', 'lazy');
   const [w, h] = block.aspect ?? [EMBED_DEFAULT_WIDTH, EMBED_DEFAULT_HEIGHT];

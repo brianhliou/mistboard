@@ -1025,11 +1025,11 @@ test('resumeRoomIfReady: appends resume when both seated players have matching t
   assert.equal(room.projection.state.clock?.remainingMs.black, 60_000);
 });
 
-test('resumeRoomIfReady: no-op when only one player is present', async () => {
+test('resumeRoomIfReady: no-op when only the player not on move is present', async () => {
   const room = makePausedSeatedRoom('room-resume-half');
-  const white = makeClient('white-client', 'white', false);
-  white.seatTokenHash = 'hash-white';
-  room.clients.add(white);
+  const black = makeClient('black-client', 'black', false);
+  black.seatTokenHash = 'hash-black';
+  room.clients.add(black);
   const ctx = makeCtx();
   const before = room.events.length;
 
@@ -1327,21 +1327,52 @@ test('resumeRoomIfReady (EvE): resumes even with zero clients (engines are auto-
   assert.equal(resumed, true, 'with both seats engine-held, neither needs a client to be present');
 });
 
-test('resumeRoomIfReady (PvP): still requires both human seats — regression guard', async () => {
-  const room = makePausedSeatedRoom('room-pvp-still-strict');
-  // Only one human present.
+// #567, lichess-like: only the side to move has a running clock after a
+// resume, so the mover being back is enough. Before, a returning mover sat on a
+// frozen board, unable to move, until the opponent or the 90s grace arrived.
+test('resumeRoomIfReady (PvP): resumes once the player on move is back, opponent still away', async () => {
+  const room = makePausedSeatedRoom('room-pvp-mover-back');
   const white = makeClient('white-client', 'white', false);
   white.seatTokenHash = 'hash-white';
   room.clients.add(white);
   const ctx = makeCtx();
 
-  const resumed = await resumeRoomIfReady(ctx, room, 1000);
+  const resumed = await resumeRoomIfReady(ctx, room, 603_500);
 
+  assert.equal(resumed, true);
+  assert.equal(room.projection.paused, false);
+  assert.equal(room.projection.state.clock?.activeColor, 'white');
   assert.equal(
-    resumed,
-    false,
-    'PvP requires BOTH humans — engine-presence relaxation must not apply here',
+    room.projection.state.clock?.runningSince,
+    603_500,
+    'the outage is charged to nobody',
   );
+  assert.equal(room.projection.state.clock?.remainingMs.white, 57_500);
+  assert.equal(room.projection.state.clock?.remainingMs.black, 60_000);
+});
+
+test('resumeRoomIfReady (PvP): the mover needs a matching seat token to resume alone', async () => {
+  const room = makePausedSeatedRoom('room-pvp-mover-no-token');
+  const white = makeClient('white-client', 'white', false);
+  white.seatTokenHash = 'hash-forged';
+  room.clients.add(white);
+
+  const resumed = await resumeRoomIfReady(makeCtx(), room, 603_500);
+
+  assert.equal(resumed, false);
+  assert.equal(room.projection.paused, true);
+});
+
+test('resumeRoomIfReady (PvE): an engine on move does not resume without its human', async () => {
+  const room = makePausedPveRoom('room-pve-engine-on-move');
+  room.projection = {
+    ...room.projection,
+    state: { ...room.projection.state, status: { type: 'playing', turn: 'black' } },
+  };
+
+  const resumed = await resumeRoomIfReady(makeCtx(), room, 1000);
+
+  assert.equal(resumed, false);
   assert.equal(room.projection.paused, true);
 });
 

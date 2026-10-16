@@ -66,7 +66,9 @@
      this much and start level with the panel's card (2026-10-11). */
   --landing-lobby-tabs-height: 40px;
   --landing-col-gap: clamp(10px, 0.9vw, 15px);
-  --landing-row-gap: clamp(14px, 1.8vw, 24px);
+  /* Rows sit as close as columns: the three bands read as one page, not
+     three stacked sections (Brian, 2026-10-14; was 14-24px). */
+  --landing-row-gap: var(--landing-col-gap);
   column-gap: var(--landing-col-gap);
   row-gap: var(--landing-row-gap);
   align-items: start;
@@ -206,37 +208,6 @@
   display: block;
   width: 100%;
   height: 100%;
-}
-
-/* Drop reserve: one narrow column on the outer edge, both hands stacked. */
-.home-puzzle-reserve {
-  flex: 0 0 auto;
-  align-self: center;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.home-puzzle-widget .home-puzzle-hand {
-  --drop-mini-hand-piece-size: 26px;
-  --drop-mini-hand-tile-size: calc(var(--drop-mini-hand-piece-size) + 6px);
-  --drop-mini-hand-band-height: calc(var(--drop-mini-hand-piece-size) + 14px);
-  height: auto;
-  min-height: 0;
-  padding: 0;
-}
-
-.home-puzzle-hand .drop-mini-reserve-row {
-  flex-direction: column;
-  flex-wrap: nowrap;
-  width: auto;
-  min-height: 0;
-  gap: 5px;
-}
-
-.home-puzzle-hand .drop-mini-reserve-piece {
-  border-color: color-mix(in srgb, var(--site-border-soft) 64%, transparent);
-  background: color-mix(in srgb, var(--site-panel) 58%, transparent);
 }
 
 /* Captions inside the box, dressed as the viewer's seat rows one band up: the

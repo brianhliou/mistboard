@@ -39,8 +39,6 @@ test('canonical display order contains exactly the current public variant shelf'
     BANQI_SPEC_ID,
     DUCK_XIANGQI_SPEC_ID,
     CRAZYHOUSE_XIANGQI_SPEC_ID,
-    FORTRESS_XIANGQI_SPEC_ID,
-    ATOMIC_XIANGQI_SPEC_ID,
     DARK_XIANGQI_SPEC_ID,
     DARK_CHESS_SPEC_ID,
     JUNGLE_SPEC_ID,
@@ -218,14 +216,15 @@ test('every study-eligible spec is a real spec that can be rooted at a position'
 
 // The retired set is derived from the entries' own runtimeStatus, so this is
 // the one list of what is going (docs-private/variant-retirement-plan.md, #396).
-test('no spec is retired: every variant the plan named has been deleted', () => {
-  // The retired set is empty as of 2026-09-12; a future retirement lands here
-  // first (runtimeStatus 'retired', publicSurface 'hidden') and is deleted from
-  // its own commit later.
-  assert.deepEqual([...RETIRED_GAME_SPEC_IDS], []);
+test('retired specs: Fortress and Atomic Xiangqi, hidden but still resolvable', () => {
+  // Retired 2026-10-11: closed to new games, kept so finished games replay.
+  assert.deepEqual([...RETIRED_GAME_SPEC_IDS], [FORTRESS_XIANGQI_SPEC_ID, ATOMIC_XIANGQI_SPEC_ID]);
   for (const id of RETIRED_GAME_SPEC_IDS) {
     assert.equal(gameSpecForId(id).publicSurface, 'hidden', id);
+    assert.equal(gameSpecForId(id).runtimeStatus, 'retired', id);
     assert.equal(isRetiredGameSpec(id), true, id);
+    assert.ok(!CANONICAL_VARIANT_ORDER.includes(id), id);
+    assert.ok(!CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(id), id);
   }
   for (const id of [XIANGQI_SPEC_ID, DARK_CHESS_SPEC_ID, JIEQI_SPEC_ID, BANQI_SPEC_ID]) {
     assert.equal(isRetiredGameSpec(id), false, id);

@@ -122,6 +122,21 @@ describe('home puzzle widget', () => {
     // The rejected payload is not cached either.
     expect(cachedHomeDailyPuzzle()).toBeNull();
   });
+
+  it('treats a Fortress Xiangqi daily (retired, puzzles deleted) as a miss', async () => {
+    // A visitor's cache, or a server mid-deploy, may still hold a Fortress daily.
+    const puzzle = XIANGQI_PUZZLES[0]!;
+    const fortressDaily = dailyBody(puzzle, 'fortress-xiangqi') as { puzzle: { id: string } };
+    fortressDaily.puzzle.id = 'fortress-xiangqi-mined-v2-001';
+    window.localStorage.setItem('mistboard:home-daily-puzzle', JSON.stringify(fortressDaily));
+    expect(cachedHomeDailyPuzzle()).toBeNull();
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse(fortressDaily)),
+    );
+    expect(await buildHomePuzzleWidget()).toBeNull();
+  });
 });
 
 function dailyBody(puzzle: XiangqiPuzzle, variant?: string): unknown {

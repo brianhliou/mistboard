@@ -494,3 +494,55 @@ test('a results-only board that has since gained moves is left to its record', a
   if (!built.ok) return;
   assert.ok(!built.sources.some((source) => source.resultsOnly?.sourceBoardId === 'r07t03'));
 });
+
+// The 2026 women's league, 19:08Z: one 10s dpxq timeout failed the poll, and
+// after-event polling waits 30 minutes before the next one, so a single
+// transient fault held the round repair back half an hour.
+test('a game list or latest round page that times out once is fetched again', async () => {
+  const { input, fetched } = asianInput();
+  const pages = input.fetchImpl;
+  const failedOnce = new Set<string>();
+  input.fetchImpl = async (url: string) => {
+    if ((url === tourGameListUrl('9503') || url === roundPageUrl('9503')) && !failedOnce.has(url)) {
+      failedOnce.add(url);
+      fetched.push(url);
+      throw new DOMException('This operation was aborted', 'AbortError');
+    }
+    return pages(url);
+  };
+  const result = await dpxqTourDiscoveryProvider.discover(input);
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.boards.length, 4);
+  assert.equal(result.pairings?.length, 31);
+  assert.equal(fetched.filter((url) => url === tourGameListUrl('9503')).length, 2);
+  assert.equal(fetched.filter((url) => url === roundPageUrl('9503')).length, 2);
+});
+
+test('an answer that is not transient is not fetched again', async () => {
+  // A 404 is the page's answer; a retry would only double dpxq's load.
+  const { input, fetched } = asianInput();
+  const pages = input.fetchImpl;
+  input.fetchImpl = async (url: string) => {
+    if (url !== tourGameListUrl('9503')) return pages(url);
+    fetched.push(url);
+    return new Response('', { status: 404 });
+  };
+  const result = await dpxqTourDiscoveryProvider.discover(input);
+  assert.equal(result.ok, true);
+  assert.equal(fetched.filter((url) => url === tourGameListUrl('9503')).length, 1);
+});
+
+test('a source that stays down still fails after the one retry', async () => {
+  const { input, fetched } = asianInput();
+  input.fetchImpl = async (url: string) => {
+    fetched.push(url);
+    return new Response('busy', { status: 503 });
+  };
+  const result = await dpxqTourDiscoveryProvider.discover(input);
+  assert.equal(result.ok, false);
+  if (result.ok) return;
+  assert.match(result.message, /unreachable/);
+  assert.equal(fetched.filter((url) => url === tourGameListUrl('9503')).length, 2);
+  assert.equal(fetched.filter((url) => url === roundPageUrl('9503')).length, 2);
+});

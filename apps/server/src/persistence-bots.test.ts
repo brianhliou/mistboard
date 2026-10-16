@@ -292,6 +292,52 @@ definePersistenceTests('bot profiles', () => {
     assert.equal(hiddenVariantResponse.status, 404);
   });
 
+  test('bot games route pages one variant past the profile cap (#550)', async () => {
+    // The profile payload carries only the newest 10 games per variant; the
+    // bot page had no way to reach older ones. This route is its "Load more".
+    await insertBotProfile('pager-bot', 'Pager Bot', 'public', {
+      supportedGameSpecIds: ['dark-chess', 'banqi'],
+    });
+    await insertBotProfile('private-pager-bot', 'Private Pager Bot', 'private');
+    for (let index = 1; index <= 12; index += 1) {
+      const hour = String(index).padStart(2, '0');
+      await endBotGame('pager-bot', `pg-dc-${hour}`, 'dark-chess', `2026-01-01T${hour}:00:00Z`);
+    }
+    // Newer than every dark-chess game, so a missing variant filter would
+    // put it on the page.
+    await endBotGame('pager-bot', 'pg-bq-1', 'banqi', '2026-01-01T13:00:00Z');
+    await endBotGame('private-pager-bot', 'pg-private-1', 'dark-chess', '2026-01-01T01:00:00Z');
+
+    const page = await routeGet('/api/bots/pager-bot/games?variant=dark-chess&offset=10&limit=15');
+    assert.equal(page.status, 200);
+    const payload = JSON.parse(page.body) as {
+      games: Array<{ roomId: string; variant: string; playerColor: string }>;
+    };
+    assert.deepEqual(
+      payload.games.map((game) => game.roomId),
+      ['pg-dc-02', 'pg-dc-01'],
+    );
+    assert.equal(payload.games[0]?.playerColor, 'black');
+
+    const first = await routeGet('/api/bots/pager-bot/games?variant=dark-chess&offset=0&limit=3');
+    assert.deepEqual(
+      (JSON.parse(first.body) as { games: Array<{ roomId: string }> }).games.map(
+        (game) => game.roomId,
+      ),
+      ['pg-dc-12', 'pg-dc-11', 'pg-dc-10'],
+    );
+
+    assert.equal((await routeGet('/api/bots/pager-bot/games')).status, 400);
+    assert.equal((await routeGet('/api/bots/pager-bot/games?variant=no-such')).status, 400);
+    // A spec on no public surface is not listed on a public bot page.
+    assert.equal((await routeGet('/api/bots/pager-bot/games?variant=chess')).status, 404);
+    assert.equal(
+      (await routeGet('/api/bots/private-pager-bot/games?variant=dark-chess')).status,
+      404,
+    );
+    assert.equal((await routeGet('/api/bots/missing-bot/games?variant=dark-chess')).status, 404);
+  });
+
   test('bot rating snapshot audit query separates latest, public, and history views', async () => {
     await insertBotProfile('audit-bot', 'Audit Bot', 'public');
     await insertBotRatingSnapshot('audit-bot', {
@@ -385,16 +431,61 @@ definePersistenceTests('bot profiles', () => {
   });
 });
 
-async function routeGet(pathname: string): Promise<ResponseCapture> {
+async function routeGet(path: string): Promise<ResponseCapture> {
   const response = captureResponse();
+  const parsedUrl = new URL(path, 'http://localhost');
   const handled = await tryHandleBotsRoute(
     {},
     { method: 'GET', headers: {} } as unknown as IncomingMessage,
     response,
-    pathname,
+    parsedUrl.pathname,
+    parsedUrl,
   );
   assert.equal(handled, true);
   return response;
+}
+
+// One completed public PvE game with the bot in the black seat.
+async function endBotGame(
+  botId: string,
+  roomId: string,
+  variant: string,
+  endedAt: string,
+): Promise<void> {
+  await recordGameEnd(roomId, {
+    variant,
+    mode: 'pve',
+    result: 'black-wins',
+    termination: 'king-captured',
+    plyCount: 20,
+    startedAt: new Date('2026-01-01T00:00:00Z'),
+    endedAt: new Date(endedAt),
+    whiteClient: 'human-client',
+    blackClient: 'python-v2-v1.5',
+    whiteName: null,
+    blackName: botId,
+    corpusId: null,
+    rated: false,
+    visibility: 'public',
+    initialMs: 180_000,
+    incrementMs: 2_000,
+    participants: [
+      {
+        color: 'white',
+        displayName: 'Guest',
+        subjectType: 'guest',
+        subjectId: null,
+        visibility: 'public',
+      },
+      {
+        color: 'black',
+        displayName: botId,
+        subjectType: 'bot',
+        subjectId: botId,
+        visibility: 'public',
+      },
+    ],
+  });
 }
 
 function captureResponse(): ServerResponse & ResponseCapture {

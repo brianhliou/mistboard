@@ -31,13 +31,12 @@
 import {
   exportFormatsForVariant,
   type FortressXiangqiMove,
-  fortressXiangqiPuzzleMoveLabel,
+  fortressXiangqiMoveToFsfUci,
   type GameEvent,
   type GameExportFormat,
   type HiddenPieceIdentity,
   type HiddenPieceReveal,
   type HiddenPieceVariant,
-  isFortressXiangqiDropMove,
   maybeGameSpecForId,
   writeHiddenPiecePgn,
 } from '@mistboard/game';
@@ -104,11 +103,10 @@ export function duckXiangqiExportUci(move: { from: string; to: string; duckTo: s
   return move.duckTo === null ? boardMoveUci(move) : `${boardMoveUci(move)}${flipUci(move.duckTo)}`;
 }
 
-// Fortress: drops reuse the puzzle label ("R@d4"); board moves drop the dash.
+// Fortress: the engine's own UCI, drops as "R@d4" and board moves without the
+// dash (the same strings the retired puzzle label produced).
 export function fortressXiangqiExportUci(move: FortressXiangqiMove): string {
-  return isFortressXiangqiDropMove(move)
-    ? fortressXiangqiPuzzleMoveLabel(move)
-    : boardMoveUci(move);
+  return fortressXiangqiMoveToFsfUci(move);
 }
 
 // --- registration binding ------------------------------------------------------

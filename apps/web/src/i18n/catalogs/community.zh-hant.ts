@@ -99,6 +99,7 @@ export const ZH_HANT_COMMUNITY = {
   'profile.ratingStatsVariant': '評分變體',
   'profile.ratingStatsSummary': '{count} 位 {variant} 計分玩家。平均評分為 {average}。',
   'profile.ratingStatsChartLabel': '{variant} 評分分布',
+  'profile.ratingStatsEmptyPool': '這個用時還沒有計分對局。',
   'profile.bots': '機器人',
   'profile.onlinePlayers': '線上玩家',
   'profile.activePlayers': '活躍玩家',

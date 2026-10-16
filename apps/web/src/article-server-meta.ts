@@ -11,6 +11,7 @@
 // Adding, renaming, publishing or re-describing an article is an edit to its
 // content module plus that one command; nobody hand-edits the server table.
 
+import { isArticleTranslationPublished, translateArticleText } from './article-i18n.js';
 import type { Article } from './articles/types.js';
 
 /** Repo-relative path of the generated file. */
@@ -23,13 +24,22 @@ export const SERVER_ARTICLE_META_COMMAND = 'npm run articles:meta';
  * different articles touch different lines. `description` is the article's
  * summary, which is what the prerendered page already serves as its meta and
  * share-card description; the server only uses it for pages it serves from the
- * shell (drafts), so the two can no longer disagree.
+ * shell (drafts), so the two can no longer disagree. `zhTitles` is the
+ * published zh-Hans / zh-Hant title (the zh page's own H1) for an article whose
+ * translation is published, and absent otherwise: the share card of a zh page
+ * captions in the page's language (apps/server/src/og-image.ts).
  */
 export function renderServerArticleMeta(articles: readonly Article[]): string {
   const sorted = [...articles].sort((a, b) => (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0));
   const table: Record<
     string,
-    { title: string; kind: Article['kind']; description: string; status: Article['status'] }
+    {
+      title: string;
+      kind: Article['kind'];
+      description: string;
+      status: Article['status'];
+      zhTitles?: { 'zh-hans': string; 'zh-hant': string };
+    }
   > = {};
   for (const article of sorted) {
     table[article.slug] = {
@@ -37,6 +47,14 @@ export function renderServerArticleMeta(articles: readonly Article[]): string {
       kind: article.kind,
       description: article.summary,
       status: article.status,
+      ...(isArticleTranslationPublished(article.slug)
+        ? {
+            zhTitles: {
+              'zh-hans': translateArticleText('zh-Hans', article.title),
+              'zh-hant': translateArticleText('zh-Hant', article.title),
+            },
+          }
+        : {}),
     };
   }
   return `${JSON.stringify(table, null, 2)}\n`;

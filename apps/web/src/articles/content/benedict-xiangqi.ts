@@ -62,6 +62,7 @@ export const benedictXiangqiArticle: Article = {
         },
         {
           kind: 'raw-svg-stepper',
+          gameSpecId: 'xiangqi',
           steps: benedictSteps('benedict-rule', BENEDICT_RULE, [
             'Red to move. The chariot on d1 attacks nothing. Two black soldiers stand on the fourth rank, where it is going.',
             'Both soldiers change sides. Nothing was captured and nothing left the board, so Red is two pieces up and Black two down from one move.',
@@ -198,6 +199,7 @@ export const benedictXiangqiArticle: Article = {
         },
         {
           kind: 'raw-svg-stepper',
+          gameSpecId: 'xiangqi',
           steps: benedictSteps('benedict-threat', BENEDICT_THREAT, [
             'The starting array, Red to move.',
             'The cannon fires up the b-file over Black’s own cannon and turns the horse on b10. It also threatens b5e5, with Black’s soldier on e7 as the screen and the general behind it. 32 of Black’s 38 replies lose at once, and b5e5 wins against every one of them.',

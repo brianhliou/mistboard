@@ -115,6 +115,18 @@ export type WebVariantTenant<C extends string> = {
   // than guessing. Defined-but-null is meaningfully different from undefined here, so
   // the chrome tests for the method instead of using `?? seat` as a fallback.
   seatInk?(seat: C): string | null;
+  // Optional: name a seat by its PLAYER, for a tenant whose seat ids are not a side
+  // anyone plays as. Xiangqi mahjong's east/west only alternate the deal; its table
+  // says "You", the handle or the bot, so the chrome printing "West" beside it read
+  // as a third party. When present it replaces the seat word everywhere the chrome
+  // names a seat (player rows, "to move", the debug line), and must come with
+  // finishedLine below, because "You is victorious" is not a sentence.
+  seatPlayerName?(seat: C): string;
+  // Optional: the whole finished-game line (meta card status, the result under the
+  // move list, the notice body), already localized and capitalized. For a tenant
+  // whose winner is a player name, so the line can say "You win on points" rather
+  // than slot a name into the colour template.
+  finishedLine?(winner: C | null, reason: string): string;
   // Optional: mark the side-to-move on the unarmed (pregame) clock rows, so the opening
   // "to move" is clear before the clock starts. Default off; banqi opts in because its
   // colors do not exist until the first flip, making the mover otherwise ambiguous.
@@ -215,6 +227,7 @@ export function createTenantRoomChrome<C extends string>(
 
   // A seat's display label: the tenant's ink-aware override (banqi) or the seat name.
   function seatName(color: C): string {
+    if (tenant.seatPlayerName) return tenant.seatPlayerName(color);
     const key = tenant.seatLabel?.(color) ?? SEAT_WORD_KEYS[color];
     return key ? t(key) : capitalize(color);
   }
@@ -472,6 +485,7 @@ export function createTenantRoomChrome<C extends string>(
   function finishedStatusLine(
     status: Extract<TenantWebView<C>['status'], { type: 'finished' }>,
   ): string {
+    if (tenant.finishedLine) return tenant.finishedLine(status.winner, status.reason);
     return status.winner
       ? t('result.colorVictorious', {
           reason: reasonText(status.reason),
@@ -520,7 +534,9 @@ export function createTenantRoomChrome<C extends string>(
     let subline: string | null = null;
     let statusLine: string | null = null;
     if (status?.type === 'finished') {
-      statusLine = finishedStatusLine(status);
+      // Capitalized like the result under the move list and the review card: the
+      // two panels showed "points" and "Points" for the same game.
+      statusLine = capitalize(finishedStatusLine(status));
     } else if (status?.type === 'aborted') {
       statusLine = t('live.statusGameAborted');
     } else if (status?.type === 'playing') {
@@ -564,11 +580,13 @@ export function createTenantRoomChrome<C extends string>(
           profile: serverName ? profileTargetFor(ctx.seatProfiles()[color]) : null,
           name:
             serverName ??
-            (color === seat
-              ? t('live.youAre', { color: seatName(color) })
-              : ctx.seats()[color]
-                ? t('live.guestAre', { color: seatName(color) })
-                : seatName(color)),
+            (tenant.seatPlayerName
+              ? tenant.seatPlayerName(color)
+              : color === seat
+                ? t('live.youAre', { color: seatName(color) })
+                : ctx.seats()[color]
+                  ? t('live.guestAre', { color: seatName(color) })
+                  : seatName(color)),
         };
       }),
       status: statusLine,
@@ -634,9 +652,10 @@ export function createTenantRoomChrome<C extends string>(
     if (view?.status.type === 'finished') {
       // Rematch / New opponent / Review game (postgame-panel.ts). Only a seated
       // player gets the first two: a spectator used to be offered "Play again",
-      // which opened a game of their own from someone else's room. Tenants have
-      // no mutual PvP rematch yet (rematchControls defaults to null), so a
-      // seated PvP player gets New opponent and Review.
+      // which opened a game of their own from someone else's room. A PvP seat
+      // gets the tenant's mutual rematch block (jieqi: tenant-rematch.ts);
+      // tenants without one (rematchControls defaults to null) get New
+      // opponent and Review.
       const seated = seatColor() !== null;
       const mode = ctx.roomMode();
       const rematch = !seated
@@ -907,6 +926,9 @@ export function createTenantRoomChrome<C extends string>(
     if (lobbyOpponentMissing()) return t('live.roomWaitingOpponentConnect');
     if (inviteWindowOpen()) return t('live.roomInviteBody');
     if (view.status.type === 'finished') {
+      if (tenant.finishedLine) {
+        return `${tenant.finishedLine(view.status.winner, view.status.reason)}.`;
+      }
       const reason = reasonText(view.status.reason);
       return view.status.winner
         ? t('result.colorWinsBy', { color: seatName(view.status.winner), reason })

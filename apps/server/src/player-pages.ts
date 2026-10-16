@@ -25,7 +25,9 @@ import {
 } from './player-reference.js';
 import { escapeHtml } from './study-page-body.js';
 
-export const PLAYER_OG_IMAGE_VERSION = 2;
+// v3 (2026-10-15): the piece look of 2026-10-14: one dark ring on both sides, pieces at 98% of the point gap (banqi 92%), no shadow, full-size face-down backs, Jungle rounded squares.
+// v4 (2026-10-15): the international pieces with smooth edges, one line width on the straight figures.
+export const PLAYER_OG_IMAGE_VERSION = 4;
 
 /** Games listed in a player's crawler body, newest first. */
 const BODY_GAME_CAP = 60;

@@ -172,13 +172,56 @@ describe('Dark Xiangqi last-move marks', () => {
     lastMove: { from, to },
   });
 
-  it('draws the same origin wash and destination halo as the open board', () => {
+  it('draws the same origin wash and destination band as the open board', () => {
     const svg = renderDarkXiangqiBoardSvg(withLastMove('b3', 'b4'));
 
     expect(svg).toContain('xq-live-lastmove-cell xq-live-lastmove-from');
     expect(svg).toContain('xq-live-lastmove-ring');
     // The old treatment: two bare -cell circles, no -from, no ring.
     expect(svg).not.toMatch(/class="xq-live-lastmove-cell"/);
+    // Wash and band both under the pieces: the band hugs the disc from outside.
+    const pieces = svg.indexOf('<g class="xq-live-pieces">');
+    expect(svg.indexOf('xq-live-lastmove-from')).toBeLessThan(pieces);
+    expect(svg.indexOf('xq-live-lastmove-ring')).toBeLessThan(pieces);
+    expect(svg.match(/xq-live-lastmove-ring/g)).toHaveLength(1);
+  });
+
+  it('draws the square-grid marks on the square grid, only where the viewer can see', () => {
+    window.history.replaceState({}, '', '/?xqLayout=cell');
+    try {
+      const svg = renderDarkXiangqiBoardSvg(withLastMove('b3', 'b4'));
+      expect(svg).toContain(
+        'class="xq-live-lastmove-origin xq-live-lastmove-from" fill="#f59e0b" fill-opacity="0.65"',
+      );
+      expect(svg).toContain('xq-live-lastmove-square xq-live-lastmove-to');
+      expect(svg).toContain('class="xq-live-lastmove-piece-ring"');
+      expect(svg.indexOf('xq-live-lastmove-piece-ring')).toBeGreaterThan(
+        svg.indexOf('<g class="xq-live-lastmove-over"'),
+      );
+      expect(svg).not.toContain('xq-live-lastmove-ring');
+      expect(svg).not.toContain('xq-live-lastmove-cell');
+      // Only what the viewer can see: b7 is in the fog, so neither the
+      // destination tint nor the ring may say where the piece went.
+      const half = renderDarkXiangqiBoardSvg(withLastMove('b8', 'b7'));
+      expect(half).toContain('xq-live-lastmove-origin');
+      expect(half).not.toContain('xq-live-lastmove-to');
+      expect(half).not.toContain('xq-live-lastmove-piece-ring');
+      // Arriving on a visible square from a hidden one: ring, no origin.
+      const arriving = renderDarkXiangqiBoardSvg({
+        ...viewFixture(),
+        lastMove: { from: 'i1', to: 'b4' },
+      });
+      expect(arriving).toContain('xq-live-lastmove-piece-ring');
+      expect(arriving).not.toContain('xq-live-lastmove-from');
+      // A move wholly in the fog marks nothing.
+      const hidden = renderDarkXiangqiBoardSvg({
+        ...viewFixture(),
+        lastMove: { from: 'i1', to: 'i2' },
+      });
+      expect(hidden).not.toMatch(/xq-live-lastmove-(origin|square|piece-ring)/);
+    } finally {
+      window.history.replaceState({}, '', '/');
+    }
   });
 
   it('marks only the endpoints this viewer can see', () => {

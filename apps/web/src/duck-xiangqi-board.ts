@@ -28,6 +28,7 @@ import {
 import {
   LIVE_BOARD_GEO,
   LIVE_BOARD_SURFACE,
+  mountedXiangqiBoardLayout,
   XIANGQI_LIVE_PIECE_SIZE,
   type XiangqiBoardArrow,
   type XiangqiBoardMarker,
@@ -44,7 +45,13 @@ import {
   xiangqiSurfaceStartMarkers,
 } from './xiangqi-board-surface.js';
 import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
-import { duckPieceMarks, type XiangqiPieceSet } from './xiangqi-piece-sets.js';
+import {
+  duckPieceMarks,
+  type XiangqiPieceSet,
+  xiangqiPieceFrameOutline,
+  xiangqiPieceSetShape,
+  xiangqiPieceShapeForLayout,
+} from './xiangqi-piece-sets.js';
 
 // This board draws no coordinate labels, so it must not reserve their gutter -
 // the standard board swaps the same way when labels are off. Leaving it in put
@@ -54,7 +61,14 @@ const DUCK_SURFACE = {
   geo: { ...LIVE_BOARD_SURFACE.geo, coordGutter: 0 },
 };
 
-import { boardLastMoveMarkersSvg } from './board-lastmove.js';
+import {
+  BOARD_LASTMOVE_OVER_GROUP_ATTRS,
+  type BoardLastMoveLayer,
+  boardLastMoveCellMarksSvg,
+  boardLastMoveMarkersSvg,
+  boardLastMovePiece,
+} from './board-lastmove.js';
+import { tokenPieceSize } from './board-metrics.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import { renderXiangqiPiece } from './xiangqi-pieces.js';
 
@@ -100,19 +114,22 @@ export type DuckXiangqiBoardState = {
 };
 
 /**
- * The duck is drawn 10% larger than a piece. It is the one token both players
- * move and the one that blocks everything, so it should be the first thing the
- * eye finds; at piece size it read as one more disc. 1.1 still clears the
- * neighbouring points' pieces on both board layouts.
+ * The duck's box against a piece's. It was 1.1 (10% larger) while pieces spanned
+ * 85% of the gap; since pieces reach 98% (2026-10-14) the duck is drawn in the
+ * same box, because anything larger runs into the neighbouring pieces. Its thick
+ * bright-gold ring is what makes it the first thing the eye finds now: at this
+ * box its outer edge reaches 30.2 of the 30.6 between it and a neighbour's edge.
  */
-export const DUCK_TOKEN_SCALE = 1.1;
+export const DUCK_TOKEN_SCALE = 1;
 
 /** The duck's ring: a brighter, thicker gold than the variant accent it frames. */
 const DUCK_POP_RING = '#f2b705';
 
-/** The set's own duck frame plus the duck's ring, in the 100-unit piece box. */
-function duckTokenMarks(set: XiangqiPieceSet): string {
-  return `${duckPieceMarks(set)}<circle class="dkx-duck-ring" cx="50" cy="50" r="46" fill="none" stroke="${DUCK_POP_RING}" stroke-width="5.5"/>`;
+/** The set's own duck frame plus the duck's ring, in the 100-unit piece box,
+ *  in the outline the board's layout asks of this set. */
+function duckTokenMarks(set: XiangqiPieceSet, layout: XiangqiBoardLayout): string {
+  const shape = xiangqiPieceSetShape(set, xiangqiPieceShapeForLayout(layout));
+  return `${duckPieceMarks(set, shape)}${xiangqiPieceFrameOutline(shape, 46, `class="dkx-duck-ring" fill="none" stroke="${DUCK_POP_RING}" stroke-width="5.5"`)}`;
 }
 
 const SQUARES = (() => {
@@ -161,7 +178,7 @@ function duckLayer(
     // board: Brian wants to see where it came from (2026-10-10).
     `<g class="dkx-duck${landed ? ' dkx-duck--landed' : ''}${duck === lifted ? ' xq-piece--drag-source' : ''}" data-duck-square="${duck}" aria-label="duck">`,
     `<g transform="translate(${p.x - size / 2},${p.y - size / 2}) scale(${size / 100})">`,
-    duckTokenMarks(resolved),
+    duckTokenMarks(resolved, layout),
     `</g>`,
     `</g>`,
   ].join('');
@@ -191,6 +208,7 @@ function pieceLayer(
           size,
           pieceSet,
           crossed: drawsCrossedSoldier(piece, coordOf(square).rank),
+          shape: xiangqiPieceShapeForLayout(layout),
         } as never,
       ),
       `</g>`,
@@ -264,7 +282,7 @@ export function duckXiangqiGhostSvg(
   const resolved = pieceSet ?? readStoredXiangqiPieceSet();
   return [
     `<g class="dkx-duck-ghost-token" transform="translate(${p.x - size / 2},${p.y - size / 2}) scale(${size / 100})">`,
-    duckTokenMarks(resolved),
+    duckTokenMarks(resolved, layout),
     `</g>`,
   ].join('');
 }
@@ -334,28 +352,38 @@ function lastMoveLayer(
   view: DuckXiangqiPlayerView,
   perspective: Color,
   layout: XiangqiBoardLayout,
+  layer: BoardLastMoveLayer,
+  pieceSet: DuckXiangqiBoardState['pieceSet'],
 ): string {
   if (!view.lastMove) return '';
-  // Square grid: tint the two cells, the cell boards' grammar (the intersection
-  // layout rings the piece instead). Same classes as the standard board.
+  // Square grid: the standard board's square-grid marks (amber origin cell,
+  // amber ring on the moved piece), from the same shared renderer.
   if (layout === 'cell') {
-    const c = LIVE_BOARD_GEO.cell;
-    const from = point(view.lastMove.from, perspective, layout);
-    const to = point(view.lastMove.to, perspective, layout);
-    return (
-      `<rect class="xq-live-lastmove-square xq-live-lastmove-from" x="${from.x - c / 2}" y="${from.y - c / 2}" width="${c}" height="${c}"/>` +
-      `<rect class="xq-live-lastmove-square xq-live-lastmove-to" x="${to.x - c / 2}" y="${to.y - c / 2}" width="${c}" height="${c}"/>`
+    return boardLastMoveCellMarksSvg(
+      {
+        from: point(view.lastMove.from, perspective, layout),
+        to: point(view.lastMove.to, perspective, layout),
+      },
+      LIVE_BOARD_GEO.cell,
+      layer,
+      {
+        size: XIANGQI_LIVE_PIECE_SIZE,
+        shape: xiangqiPieceSetShape(pieceSet ?? readStoredXiangqiPieceSet(), 'square'),
+      },
     );
   }
-  // The SHARED marker markup, not an invented class: origin shadow disc plus a
-  // gold destination ring, tuned on the standard xiangqi board and used by every
-  // token board here. Rolling my own gave two unstyled circles.
+  // The SHARED marker markup, not an invented class: origin wash plus a gold
+  // destination band hugging the drawn piece, tuned on the standard xiangqi
+  // board and used by every token board here. Rolling my own gave two unstyled
+  // circles.
   return boardLastMoveMarkersSvg(
     {
       from: point(view.lastMove.from, perspective, layout),
       to: point(view.lastMove.to, perspective, layout),
     },
-    XIANGQI_LIVE_PIECE_SIZE,
+    tokenPieceSize(LIVE_BOARD_GEO.cell),
+    layer,
+    boardLastMovePiece(XIANGQI_LIVE_PIECE_SIZE, pieceSet ?? readStoredXiangqiPieceSet()),
   );
 }
 
@@ -372,7 +400,8 @@ function clickLayer(
   // (`.xq-live-hit--target:hover .xq-live-target-hover`, live-xiangqi.css), so
   // a dragged piece or duck shows the point it will snap to exactly as a piece
   // dragged on the xiangqi board does.
-  const half = XIANGQI_LIVE_PIECE_SIZE * 0.5;
+  // Hit areas keep the layout size (0.9 of the gap), not the grown drawing.
+  const half = tokenPieceSize(LIVE_BOARD_GEO.cell) * 0.5;
   const hover = new Set(hoverTargets);
   return SQUARES.map((square) => {
     const p = point(square, perspective, layout);
@@ -455,11 +484,12 @@ export function duckXiangqiBoardSvg(
       <g class="xq-live-palace-bands">${xiangqiSurfacePalaceBands(DUCK_SURFACE, perspective, layout)}</g>
       <g class="xq-live-palace">${xiangqiSurfacePalace(DUCK_SURFACE, perspective, layout)}</g>
       <g class="xq-live-river" aria-hidden="true" pointer-events="none">${xiangqiSurfaceRiver(DUCK_SURFACE, perspective, layout)}</g>
-      <g class="xq-live-lastmove">${lastMoveLayer(view, perspective, layout)}</g>
+      <g class="xq-live-lastmove">${lastMoveLayer(view, perspective, layout, 'under', state.pieceSet)}</g>
       <g class="xq-live-selection">${selectionSvg}</g>
       <g class="dkx-live-targets">${state.interactive ? targetLayer(state.targets, state.phase, perspective, layout, duckAnywhere, shown.board) : ''}</g>
       <g class="xq-live-pieces">${pieceLayer(shown, perspective, layout, state.pieceSet, state.lifted ?? null)}</g>
       <g class="dkx-live-duck">${duckLayer(view.duck, perspective, layout, state.pieceSet, state.duckLanded === true, state.lifted ?? null)}</g>
+      <g ${BOARD_LASTMOVE_OVER_GROUP_ATTRS}>${lastMoveLayer(view, perspective, layout, 'over', state.pieceSet)}</g>
       <g class="dkx-duck-ghost" aria-hidden="true" pointer-events="none"></g>
       <g class="xq-live-markers" aria-hidden="true" pointer-events="none">${markerBand(state.markers ?? [], perspective, layout, 'point')}</g>
       <g class="xq-live-arrows" aria-hidden="true" pointer-events="none">${(state.arrows ?? [])
@@ -543,14 +573,17 @@ export function duckXiangqiDragSource(opts: {
 }
 
 /** The duck token as a standalone SVG for the floating drag ghost. */
-export function duckXiangqiDuckGhostSvg(pieceSet?: XiangqiPieceSet): string {
+export function duckXiangqiDuckGhostSvg(
+  pieceSet?: XiangqiPieceSet,
+  layout: XiangqiBoardLayout = readStoredXiangqiBoardLayout(),
+): string {
   // The ghost box is piece-sized (board-drag sizes every ghost the same), so the
-  // token is scaled up inside it to keep the duck's 10% lead over the pieces.
+  // token is scaled inside it by the duck's own box ratio.
   const s = DUCK_TOKEN_SCALE;
   return [
     '<svg viewBox="0 0 100 100" overflow="visible" xmlns="http://www.w3.org/2000/svg" aria-label="duck">',
     `<g transform="translate(50 50) scale(${s}) translate(-50 -50)">`,
-    duckTokenMarks(pieceSet ?? readStoredXiangqiPieceSet()),
+    duckTokenMarks(pieceSet ?? readStoredXiangqiPieceSet(), layout),
     '</g></svg>',
   ].join('');
 }
@@ -586,6 +619,7 @@ export function installDuckXiangqiDrag(opts: {
     return duckXiangqiDragSource({ view, seat: opts.seat(view), phase: opts.phase(), square });
   };
 
+  const layout = () => mountedXiangqiBoardLayout(opts.board);
   installBoardDrag({
     board: opts.board,
     ghostSizePx: XIANGQI_LIVE_PIECE_SIZE,
@@ -594,10 +628,14 @@ export function installDuckXiangqiDrag(opts: {
     ghostHtml: (square) => {
       const from = square as DuckXiangqiSquare;
       const source = sourceAt(from);
-      if (source === 'duck') return duckXiangqiDuckGhostSvg();
+      if (source === 'duck') return duckXiangqiDuckGhostSvg(undefined, layout());
       const piece = source === 'piece' ? opts.view()?.board[from] : undefined;
       if (!piece) return null;
-      return xiangqiPieceGhostSvg(piece as never, drawsCrossedSoldier(piece, coordOf(from).rank));
+      return xiangqiPieceGhostSvg(
+        piece as never,
+        drawsCrossedSoldier(piece, coordOf(from).rank),
+        layout(),
+      );
     },
     onDragStart: (square) => {
       const from = square as DuckXiangqiSquare;

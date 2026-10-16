@@ -1,6 +1,6 @@
 /**
  * Jieqi registry entry. Owns the tenant's live-room map, the room-factory
- * binding, and hydration. No rematch flow yet. Matchmaking is random-seat,
+ * binding and hydration. Matchmaking is random-seat,
  * rated or casual (lobby.supportsRated); PvP, live-clock only (PvE and
  * correspondence come later). Imported
  * for side effects by variant-tenant/register-tenants.ts.
@@ -118,7 +118,7 @@ registerVariantTenant({
   errorPrefix: 'jieqi',
   enabled: jieqiTenant.enabled,
   rooms: jieqiRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,
-  activeGameCount: () => countActiveTenantGames(jieqiRooms.values()),
+  activeGameCount: () => countActiveTenantGames(jieqiRooms.values(), jieqiTenant),
   getOrLoadRoom: (roomId) => getOrLoadJieqiRoom(roomId) as Promise<TenantManagedRoom | null>,
   attachWebSocket: (ctx, socket, request, room) =>
     handleJieqiWebSocketConnection(

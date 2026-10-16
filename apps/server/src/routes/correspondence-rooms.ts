@@ -6,8 +6,10 @@ import {
   DAY_MS,
   DAYS_PER_MOVE_OPTIONS,
   type DaysPerMove,
+  isRetiredGameSpec,
   type RoomTimeControl,
 } from '@mistboard/game';
+import type { DrainCreate } from '../deploy-gate.js';
 import { correspondenceEnabled } from './../feature-flags.js';
 import type { UserAccount } from './../persistence.js';
 import * as persistence from './../persistence.js';
@@ -54,7 +56,7 @@ export function devCorrespondenceTimeControlsEnabled(): boolean {
 
 export type CorrespondenceCreateContext = {
   databaseRequired: boolean;
-  isDraining(): boolean;
+  refusesCreate(create?: DrainCreate): boolean;
   drainDeadlineMs(): number | null;
   // Defaults to the real persistence module; injectable for tests.
   isPersistenceInitialized?(): boolean;
@@ -84,6 +86,10 @@ export async function handleCorrespondenceCreate(
     writeJson(response, 404, { error: 'correspondence_disabled' });
     return;
   }
+  if (typeof body.gameSpecId === 'string' && isRetiredGameSpec(body.gameSpecId)) {
+    writeJson(response, 410, { error: 'retired_game_spec' });
+    return;
+  }
   // The matcher already narrows to dark chess; this is the fork-6 allowlist
   // staying fail-closed even if a future matcher widens.
   if (typeof body.gameSpecId !== 'string' || !CORRESPONDENCE_ELIGIBLE_SPECS.has(body.gameSpecId)) {
@@ -109,7 +115,7 @@ export async function handleCorrespondenceCreate(
     writeJson(response, 503, { error: 'persistence_disabled' });
     return;
   }
-  if (ctx.isDraining()) {
+  if (ctx.refusesCreate()) {
     writeJson(response, 503, { error: 'server_draining', restartAt: ctx.drainDeadlineMs() });
     return;
   }

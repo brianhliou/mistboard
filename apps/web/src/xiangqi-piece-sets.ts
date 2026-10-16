@@ -2,9 +2,9 @@
 //
 // Covers all seven xiangqi roles (general/advisor/elephant/horse/chariot/cannon/
 // soldier) so the same sets serve every xiangqi-family surface. Image sets are the international default and the
-// Dobutsu animal set. The Chess-style prototype reuses the international art
-// without its surrounding disc, and 'Animal (no disc)' does the same for the
-// Dobutsu heads; glyph sets cover traditional/simplified Hanzi. The asset sets
+// Dobutsu animal set; glyph sets cover traditional/simplified Hanzi. All four draw a
+// disc on the lined board and a rounded square on the square grid (image sets
+// 2026-10-14, glyph sets 2026-10-15). The asset sets
 // (lacquer, wood, book, brush, clerical; 2026-10-08) are third-party SVG discs,
 // each with its own face-down back; sources and licences sit beside the files
 // in public/piece-sets/xiangqi/<id>/README.md.
@@ -21,9 +21,7 @@ import {
 
 export type XiangqiPieceSet =
   | 'international'
-  | 'international-flat'
   | 'animal-dobutsu'
-  | 'animal-flat'
   | 'traditional'
   | 'simplified'
   | AssetXiangqiPieceSet;
@@ -40,13 +38,7 @@ export const XIANGQI_PIECE_SETS: ReadonlyArray<{
   labelKey: `prefs.xqPieceSet.${XiangqiPieceSet}`;
 }> = [
   { id: 'international', label: 'International', labelKey: 'prefs.xqPieceSet.international' },
-  {
-    id: 'international-flat',
-    label: 'Chess-style',
-    labelKey: 'prefs.xqPieceSet.international-flat',
-  },
   { id: 'animal-dobutsu', label: 'Animal Dobutsu', labelKey: 'prefs.xqPieceSet.animal-dobutsu' },
-  { id: 'animal-flat', label: 'Animal (no disc)', labelKey: 'prefs.xqPieceSet.animal-flat' },
   { id: 'traditional', label: 'Traditional', labelKey: 'prefs.xqPieceSet.traditional' },
   { id: 'simplified', label: 'Simplified', labelKey: 'prefs.xqPieceSet.simplified' },
   { id: 'lacquer', label: 'Lacquer', labelKey: 'prefs.xqPieceSet.lacquer' },
@@ -57,9 +49,16 @@ export const XIANGQI_PIECE_SETS: ReadonlyArray<{
 ];
 
 // Sets that were offered once and removed (2026-10-08: the Latin-initial and
-// line-icon diagram sets). A stored pick of one reads as "no pick", so the
-// browser follows the default inference again.
-export const RETIRED_XIANGQI_PIECE_SETS: ReadonlySet<string> = new Set(['western', 'symbols']);
+// line-icon diagram sets; 2026-10-14: Chess-style and Animal (no disc), the two
+// disc-less sets, when the international set took the new figures). A stored
+// pick of one reads as "no pick", so the browser follows the default inference
+// again.
+export const RETIRED_XIANGQI_PIECE_SETS: ReadonlySet<string> = new Set([
+  'western',
+  'symbols',
+  'international-flat',
+  'animal-flat',
+]);
 
 export const DEFAULT_XIANGQI_PIECE_SET: XiangqiPieceSet = 'international';
 
@@ -110,14 +109,67 @@ const SIMPLIFIED: Record<XiangqiColor, Record<XiangqiPieceRole, string>> = {
 };
 
 type ImageXiangqiPieceSet =
-  | Extract<
-      XiangqiPieceSet,
-      'animal-dobutsu' | 'animal-flat' | 'international' | 'international-flat'
-    >
+  | Extract<XiangqiPieceSet, 'animal-dobutsu' | 'international'>
   | AssetXiangqiPieceSet;
 type AnimalXiangqiPieceSet = Extract<XiangqiPieceSet, 'animal-dobutsu'>;
 
 export type XiangqiPieceTilePreview = { kind: 'svg'; markup: string };
+
+/**
+ * The outline a piece is drawn in (2026-10-14). A lined board puts pieces on
+ * points, so they are discs; the square grid puts them in cells, where the
+ * international and Dobutsu sets draw a rounded square of the same half-width
+ * (rect 4..96, rx 14, the same ring). The character sets joined them on
+ * 2026-10-15 (Brian: "use rounded squares at 98% like the picture sets, to
+ * unify"), keeping their own ring colours. The five asset sets are whole
+ * third-party disc files and keep their disc on every board.
+ */
+export type XiangqiPieceShape = 'disc' | 'square';
+
+/** The shape a board of this layout asks for: a rounded square on the square grid. */
+export function xiangqiPieceShapeForLayout(layout: 'intersection' | 'cell'): XiangqiPieceShape {
+  return layout === 'cell' ? 'square' : 'disc';
+}
+
+/** Whether this set draws the square when a board asks for one. */
+export function xiangqiPieceSetHasSquare(set: XiangqiPieceSet): boolean {
+  return (
+    set === 'international' ||
+    set === 'animal-dobutsu' ||
+    set === 'traditional' ||
+    set === 'simplified'
+  );
+}
+
+/** The shape this set actually draws on a board that asks for `shape`. */
+export function xiangqiPieceSetShape(
+  set: XiangqiPieceSet,
+  shape: XiangqiPieceShape | undefined,
+): XiangqiPieceShape {
+  return shape === 'square' && xiangqiPieceSetHasSquare(set) ? 'square' : 'disc';
+}
+const frameShape = xiangqiPieceSetShape;
+
+/** Corner radius of the rounded square per unit of half-width (14 at 46). */
+const SQUARE_CORNER_PER_HALF = 14 / 46;
+
+/**
+ * A disc of radius `half`, or the rounded square of the same half-width, centred
+ * on (cx, cy). `attrs` carries the paint (fill, stroke, class).
+ */
+export function xiangqiPieceFrameOutline(
+  shape: XiangqiPieceShape,
+  half: number,
+  attrs: string,
+  cx = 50,
+  cy = 50,
+): string {
+  if (shape === 'square') {
+    const rx = frameValue(half * SQUARE_CORNER_PER_HALF);
+    return `<rect x="${frameValue(cx - half)}" y="${frameValue(cy - half)}" width="${frameValue(2 * half)}" height="${frameValue(2 * half)}" rx="${rx}" ${attrs}/>`;
+  }
+  return `<circle cx="${frameValue(cx)}" cy="${frameValue(cy)}" r="${frameValue(half)}" ${attrs}/>`;
+}
 
 export type XiangqiPieceRenderOptions = {
   ariaLabel?: string;
@@ -132,8 +184,11 @@ export type XiangqiPieceRenderOptions = {
   // to the plain soldier glyph/art.
   crossed?: boolean;
   // The soft shadow under the disc (xiangqiPieceShadowMarks). Defaults to the
-  // reader's "Piece shadow" switch; disc-less sets never draw one.
+  // reader's "Piece shadow" switch, which is off unless the reader turns it on.
   shadow?: boolean;
+  // The board's outline for the piece (xiangqiPieceShapeForLayout). The image and
+  // character sets draw the square; the asset sets stay discs. Default disc.
+  shape?: XiangqiPieceShape;
 };
 
 export function xiangqiGlyph(
@@ -167,19 +222,11 @@ export function renderXiangqiPieceGlyphed(
 ): string {
   const colorHex = piece.color === 'red' ? '#b91c1c' : '#1f2937';
   const baseFill = '#f3e6c4';
-  const ringWidth = 2.5;
+  const shape = frameShape(set, opts.shape);
   const ariaLabel =
     opts.ariaLabel ??
     (opts.shrouded ? `${piece.color} hidden piece` : `${piece.color} ${piece.role}`);
-  // The disc-less animal heads carry a class of their own so the lined board can
-  // outline them (live-xiangqi.css): with no disc, the grid lines run straight
-  // into the head and it stops reading as a piece standing on the point.
-  const className =
-    set === 'animal-flat' && !opts.shrouded
-      ? [opts.className, 'xq-piece--bare-animal'].filter(Boolean).join(' ')
-      : opts.className;
-  const classAttr = className ? ` class="${escapeAttr(className)}"` : '';
-  const styleAttr = set === 'international-flat' && !opts.shrouded ? ' style="filter:none"' : '';
+  const classAttr = opts.className ? ` class="${escapeAttr(opts.className)}"` : '';
   const shadow = xiangqiPieceDiscShadow(set, opts);
   // The shadow falls a little below the 100-unit box, which a nested <svg>
   // clips by default. Only disc sets draw one, and their art sits well inside
@@ -189,95 +236,93 @@ export function renderXiangqiPieceGlyphed(
     (opts.size !== undefined || opts.x !== undefined || opts.y !== undefined
       ? ` x="${opts.x ?? 0}" y="${opts.y ?? 0}" width="${opts.size ?? 100}" height="${opts.size ?? 100}"`
       : '') + overflowAttr;
+  const open = `<svg${classAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`;
   if (isAssetPieceSet(set)) {
-    const open = `<svg${classAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">${shadow}`;
     if (!opts.shrouded) {
-      return `${open}${assetImageMark(assetPieceHref(set, piece.color, piece.role))}</svg>`;
+      return `${open}${shadow}${assetImageMark(assetPieceHref(set, piece.color, piece.role))}</svg>`;
     }
     // Face-down (jieqi, banqi diagrams) shows the set's own back; a fog "?"
     // token draws the mark over that same back in the set's ink.
     const question =
       opts.shroudedStyle === 'back' ? '' : glyphMark('?', ASSET_SETS[set].ink[piece.color]);
-    return `${open}${assetImageMark(assetPieceHref(set, piece.color, 'back'))}${question}</svg>`;
+    return `${open}${shadow}${assetImageMark(assetPieceHref(set, piece.color, 'back'))}${question}</svg>`;
   }
   if (opts.shrouded && opts.shroudedStyle === 'back') {
-    return [
-      `<svg${classAttr}${styleAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
-      shadow,
-      pieceBackMark(piece.color),
-      `</svg>`,
-    ].join('');
+    return [open, shadow, pieceBackMark(piece.color, shape), `</svg>`].join('');
   }
   // A shrouded "?" token on an image set (international / animal) draws over that
   // set's single-ring disc so the hidden token sits flush with its revealed
   // neighbours. Without these branches it falls through to the generic
   // double-ring disc below and shows an extra inner ring the image-set pieces
   // never have.
-  if (opts.shrouded && (set === 'international' || set === 'international-flat')) {
+  if (opts.shrouded && set === 'international') {
     return [
-      `<svg${classAttr}${styleAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
+      open,
       shadow,
-      internationalDiscMark(piece.color),
+      internationalDiscMark(piece.color, shape),
       glyphMark('?', colorHex),
       `</svg>`,
     ].join('');
   }
-  // A hidden token keeps the Dobutsu disc on the disc-less set too: a lone "?"
-  // with no disc would not read as a piece at all.
-  if (opts.shrouded && (isAnimalPieceSet(set) || set === 'animal-flat')) {
+  if (opts.shrouded && isAnimalPieceSet(set)) {
     return [
-      `<svg${classAttr}${styleAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
+      open,
       shadow,
-      animalDiscMark(),
+      animalDiscMark(shape),
       glyphMark('?', colorHex),
-      animalRingMark(piece.color),
+      animalRingMark(piece.color, shape),
       `</svg>`,
     ].join('');
   }
   if (!opts.shrouded && set === 'international') {
     return [
-      `<svg${classAttr}${styleAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
+      open,
       shadow,
-      internationalDiscMark(piece.color),
-      internationalImageMark(internationalPieceHref(piece, opts.crossed), piece.role),
-      `</svg>`,
-    ].join('');
-  }
-  if (!opts.shrouded && set === 'international-flat') {
-    return [
-      `<svg${classAttr}${styleAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
-      internationalFlatImageMark(internationalFlatPieceHref(piece, opts.crossed), piece.role),
+      internationalDiscMark(piece.color, shape),
+      internationalImageMark(internationalPieceHref(piece, opts.crossed, shape), piece.role),
       `</svg>`,
     ].join('');
   }
   if (!opts.shrouded && isAnimalPieceSet(set)) {
     return [
-      `<svg${classAttr}${styleAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
+      open,
       shadow,
-      animalDiscMark(),
+      animalDiscMark(shape),
       `<image href="${escapeAttr(animalPieceHref(piece, set))}" x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid meet"/>`,
-      animalRingMark(piece.color),
-      `</svg>`,
-    ].join('');
-  }
-  if (!opts.shrouded && set === 'animal-flat') {
-    return [
-      `<svg${classAttr}${styleAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
-      animalFlatImageMark(animalPieceHref(piece, 'animal-dobutsu')),
+      animalRingMark(piece.color, shape),
       `</svg>`,
     ].join('');
   }
   const inner = opts.shrouded
     ? glyphMark('?', colorHex)
     : cjkGlyphMark(xiangqiGlyph(set, piece.color, piece.role), colorHex);
-  return [
-    `<svg${classAttr}${styleAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
-    shadow,
-    `<circle cx="50" cy="50" r="46" fill="${baseFill}" stroke="${colorHex}" stroke-width="${ringWidth}"/>`,
-    `<circle cx="50" cy="50" r="38" fill="none" stroke="${colorHex}" stroke-width="1.5"/>`,
-    inner,
-    `</svg>`,
-  ].join('');
+  return [open, shadow, xiangqiGlyphFrameMarks(colorHex, shape, baseFill), inner, `</svg>`].join(
+    '',
+  );
+}
+
+/**
+ * The character sets' double ring in the 100-unit box: the outer ring on the
+ * edge (r 46, 2.5 wide) and a thin inner ring (r 38) the character sits inside.
+ * On the square grid both become rounded squares of the same half-widths; the
+ * inner corner (rx 9) is the one Brian reviewed on 2026-10-15.
+ */
+export function xiangqiGlyphFrameMarks(
+  stroke: string,
+  shape: XiangqiPieceShape = 'disc',
+  fill = '#f3e6c4',
+): string {
+  const inner =
+    shape === 'square'
+      ? `<rect x="12" y="12" width="76" height="76" rx="9" fill="none" stroke="${stroke}" stroke-width="1.5"/>`
+      : `<circle cx="50" cy="50" r="38" fill="none" stroke="${stroke}" stroke-width="1.5"/>`;
+  return (
+    xiangqiPieceFrameOutline(
+      shape,
+      PIECE_EDGE,
+      `fill="${fill}" stroke="${stroke}" stroke-width="2.5"`,
+    ) + inner
+  );
 }
 
 // PIECE SHADOW (2026-10-08). One soft shadow under every disc piece, on every
@@ -287,9 +332,10 @@ export function renderXiangqiPieceGlyphed(
 // `filter: drop-shadow`: a filter is an offscreen surface and a blur per piece,
 // about 32 of them per board, and the stack is a few static shapes with a
 // feathered edge. Nothing animates. The "Piece shadow" switch in the gear's Board
-// panel turns it off (root data-xiangqi-piece-shadow, stamped by theme.ts); every
-// board re-renders on an appearance change, and app-base.css hides a shadow a
-// board drew before the switch flipped.
+// panel turns it on and off (root data-xiangqi-piece-shadow, stamped by theme.ts);
+// every board re-renders on an appearance change, and app-base.css hides a shadow
+// a board drew before the switch flipped. Off by default since 2026-10-14 (the new
+// piece look: Brian could barely tell the shadowed and flat pieces apart).
 export const XIANGQI_PIECE_SHADOW = {
   /** Downward offset, in the 100-unit piece box. */
   dy: 3.5,
@@ -300,57 +346,68 @@ export const XIANGQI_PIECE_SHADOW = {
   color: '#231b12',
 } as const;
 
-/** Whether the reader's "Piece shadow" switch is on. On wherever there is no
- *  document (tests, server-side renders) and before theme.ts stamps the root. */
+/** Whether the reader's "Piece shadow" switch is on. Off wherever there is no
+ *  document (tests, server-side renders) and until theme.ts stamps the root 'on'. */
 export function xiangqiPieceShadowEnabled(): boolean {
   return (
-    typeof document === 'undefined' || document.documentElement.dataset.xiangqiPieceShadow !== 'off'
+    typeof document !== 'undefined' && document.documentElement.dataset.xiangqiPieceShadow === 'on'
   );
 }
 
 /** The shadow under a disc of outer radius `radius` centred on (cx, cy), in
- *  units where the piece box is `box` wide (100 for the piece box itself). */
-export function xiangqiPieceShadowMarks(radius: number, cx = 50, cy = 50, box = 100): string {
+ *  units where the piece box is `box` wide (100 for the piece box itself). A
+ *  square piece gets rounded squares of the same half-widths. */
+export function xiangqiPieceShadowMarks(
+  radius: number,
+  cx = 50,
+  cy = 50,
+  box = 100,
+  shape: XiangqiPieceShape = 'disc',
+): string {
   const k = box / 100;
   const { dy, spread, opacity, color } = XIANGQI_PIECE_SHADOW;
   // One translate on the group instead of cx/cy on every circle: an article
   // diagram draws this under every piece, and its markup budget is per board.
-  const circles = spread.map((s) => `<circle r="${frameValue(radius + s * k)}"/>`).join('');
-  return `<g class="xq-piece-shadow" fill="${color}" fill-opacity="${opacity}" transform="translate(${frameValue(cx)} ${frameValue(cy + dy * k)})">${circles}</g>`;
+  const layers = spread
+    .map((s) => {
+      const half = frameValue(radius + s * k);
+      if (shape === 'disc') return `<circle r="${half}"/>`;
+      return `<rect x="${-half}" y="${-half}" width="${frameValue(2 * half)}" height="${frameValue(2 * half)}" rx="${frameValue(half * SQUARE_CORNER_PER_HALF)}"/>`;
+    })
+    .join('');
+  return `<g class="xq-piece-shadow" fill="${color}" fill-opacity="${opacity}" transform="translate(${frameValue(cx)} ${frameValue(cy + dy * k)})">${layers}</g>`;
 }
 
 /** The shadow a piece of this set draws under its disc in the 100-unit box, or
- *  '' when the switch is off or the set has no disc. For callers that draw a disc
- *  of their own in a set's style (the Fortress Treasure); give the <svg> that
- *  holds it overflow="visible", as renderXiangqiPieceGlyphed does. */
+ *  '' when the switch is off. For callers that draw a disc of their own in a
+ *  set's style (the Fortress Treasure); give the <svg> that holds it
+ *  overflow="visible", as renderXiangqiPieceGlyphed does. */
 export function xiangqiPieceDiscShadow(
   set: XiangqiPieceSet,
-  opts: Pick<XiangqiPieceRenderOptions, 'shrouded' | 'shroudedStyle' | 'shadow'> = {},
+  opts: Pick<XiangqiPieceRenderOptions, 'shrouded' | 'shroudedStyle' | 'shadow' | 'shape'> = {},
 ): string {
   if (!(opts.shadow ?? xiangqiPieceShadowEnabled())) return '';
-  const radius = xiangqiPieceDiscRadius(set, opts);
-  return radius === null ? '' : xiangqiPieceShadowMarks(radius);
+  return xiangqiPieceShadowMarks(
+    xiangqiPieceOuterRadius(set, opts),
+    50,
+    50,
+    100,
+    frameShape(set, opts.shape),
+  );
 }
 
-// The outer radius of the disc a set draws (stroke included), in the 100-unit
-// box, or null for the disc-less sets, which get no disc shadow.
-function xiangqiPieceDiscRadius(
+/** The outer radius (half-width, for a square) of the outline a set draws,
+ *  stroke included, in the 100-unit box. */
+export function xiangqiPieceOuterRadius(
   set: XiangqiPieceSet,
-  opts: Pick<XiangqiPieceRenderOptions, 'shrouded' | 'shroudedStyle'>,
-): number | null {
+  opts: Pick<XiangqiPieceRenderOptions, 'shrouded' | 'shroudedStyle'> = {},
+): number {
   // The asset files are normalised to a radius-45 disc (see ASSET_SETS).
   if (isAssetPieceSet(set)) return 45;
-  // pieceBackMark: r 43 with a 3-unit stroke.
-  if (opts.shrouded && opts.shroudedStyle === 'back') return 44.5;
-  if (set === 'international' || set === 'international-flat') {
-    // internationalDiscMark: r 46 with a 2.8 stroke. The chess-style figures
-    // stand on no disc, so only their fog "?" token (drawn on the disc) gets one.
-    return set === 'international' || opts.shrouded ? 47.4 : null;
-  }
-  // animalDiscMark: r 48.5; the disc-less heads only on their "?" token.
-  if (isAnimalPieceSet(set) || set === 'animal-flat') {
-    return set === 'animal-dobutsu' || opts.shrouded ? 48.5 : null;
-  }
+  // pieceBackMark: r 46 with a 3-unit stroke.
+  if (opts.shrouded && opts.shroudedStyle === 'back') return PIECE_EDGE + BACK_STROKE / 2;
+  // internationalDiscMark, animalDiscMark + animalRingMark: r 46 with a 2.8 ring.
+  if (set === 'international' || isAnimalPieceSet(set)) return PIECE_EDGE + IMAGE_RING / 2;
   // The drawn glyph disc: r 46 with a 2.5 stroke.
   return 47.25;
 }
@@ -372,37 +429,58 @@ function glyphMark(glyph: string, colorHex: string): string {
   return `<text x="50" y="50" font-family="serif" font-size="46" font-weight="700" fill="${colorHex}" text-anchor="middle" dominant-baseline="central">${glyph}</text>`;
 }
 
-function pieceBackMark(color: XiangqiColor): string {
+// Every image-set piece and every face-down back ends at the same edge: the
+// outline's centre line at 46 in the 100-unit box, so a face-down tile is the
+// size of the face-up piece beside it (2026-10-14; the back was r 43).
+const PIECE_EDGE = 46;
+/** The image sets' ring (international and Dobutsu alike). */
+const IMAGE_RING = 2.8;
+const BACK_STROKE = 3;
+
+function pieceBackMark(color: XiangqiColor, shape: XiangqiPieceShape = 'disc'): string {
   const fill = color === 'red' ? '#a95f4a' : '#2f7d62';
   const stroke = color === 'red' ? '#6f342c' : '#174536';
-  return [
-    `<circle class="xq-piece-back-mark" cx="50" cy="50" r="43" fill="${fill}" stroke="${stroke}" stroke-width="3"/>`,
-  ].join('');
+  return xiangqiPieceFrameOutline(
+    shape,
+    PIECE_EDGE,
+    `class="xq-piece-back-mark" fill="${fill}" stroke="${stroke}" stroke-width="${BACK_STROKE}"`,
+  );
 }
 
-function animalDiscMark(): string {
-  return `<circle cx="50" cy="50" r="48.5" fill="#fff2cf"/>`;
+// The Dobutsu piece is drawn as the international one is (2026-10-14): cream to
+// the ring and the ring on the outer edge, nothing outside it. It used to fill
+// cream to r 48.5 with the ring inset at r 45, which left a pale band outside
+// the outline.
+function animalDiscMark(shape: XiangqiPieceShape = 'disc'): string {
+  return xiangqiPieceFrameOutline(shape, PIECE_EDGE, 'fill="#fff2cf"');
 }
 
-function animalRingMark(color: XiangqiColor): string {
-  const stroke = color === 'red' ? '#c2261e' : '#283a47';
-  return `<circle cx="50" cy="50" r="45" fill="none" stroke="${stroke}" stroke-width="3.2"/>`;
+// One dark ring on both sides, as the international set (Brian, 2026-10-14): the
+// animal art is filled red or slate by side, so the ring need not say it again.
+export const ANIMAL_RING_STROKE = '#283a47';
+
+function animalRingMark(_color: XiangqiColor, shape: XiangqiPieceShape = 'disc'): string {
+  return animalRingOutline(ANIMAL_RING_STROKE, shape);
 }
 
-// With no disc to fill, the heads grow 15% to carry the square, as the
-// Chess-style figures do. The masters leave 16-20% padding on every side, so at
-// this scale the drawing still lands inside the 100-unit box (about 11-92).
-const ANIMAL_FLAT_SCALE = 1.15;
-
-function animalFlatImageMark(href: string): string {
-  const box = frameValue(100 * ANIMAL_FLAT_SCALE);
-  const inset = frameValue((100 - box) / 2);
-  return `<image href="${escapeAttr(href)}" x="${inset}" y="${inset}" width="${box}" height="${box}" preserveAspectRatio="xMidYMid meet"/>`;
+function animalRingOutline(stroke: string, shape: XiangqiPieceShape): string {
+  return xiangqiPieceFrameOutline(
+    shape,
+    PIECE_EDGE,
+    `fill="none" stroke="${stroke}" stroke-width="${IMAGE_RING}"`,
+  );
 }
 
-function internationalDiscMark(color: XiangqiColor): string {
-  const stroke = color === 'red' ? '#c30d0d' : '#202427';
-  return `<circle cx="50" cy="50" r="46" fill="#fef0d7" stroke="${stroke}" stroke-width="2.8"/>`;
+// One dark ring on both sides (Brian, 2026-10-14): the art carries the colour, so
+// red wears black's ring on every board, lines or grid.
+export const INTERNATIONAL_RING_STROKE = '#202427';
+
+function internationalDiscMark(_color: XiangqiColor, shape: XiangqiPieceShape = 'disc'): string {
+  return xiangqiPieceFrameOutline(
+    shape,
+    PIECE_EDGE,
+    `fill="#fef0d7" stroke="${INTERNATIONAL_RING_STROKE}" stroke-width="${IMAGE_RING}"`,
+  );
 }
 
 type InternationalArtRole = XiangqiPieceRole | 'treasure';
@@ -426,7 +504,7 @@ const INTERNATIONAL_IMAGE_FRAMES: Record<InternationalArtRole, InternationalImag
 
 // The treasure diamond is top-heavy (a wide table over a point), so centred by
 // its box it reads high on the disc; it drops 2 units to sit visually centred
-// (2026-09-25). The disc set only: the Chess-style figure has its own fits.
+// (2026-09-25).
 const INTERNATIONAL_DISC_Y_NUDGE: Partial<Record<InternationalArtRole, number>> = {
   treasure: 2,
 };
@@ -435,35 +513,6 @@ function internationalImageMark(href: string, role: InternationalArtRole): strin
   const frame = INTERNATIONAL_IMAGE_FRAMES[role];
   const y = frame.y + (INTERNATIONAL_DISC_Y_NUDGE[role] ?? 0);
   return `<image href="${escapeAttr(href)}" x="${frame.x}" y="${y}" width="${frame.width}" height="${frame.height}" preserveAspectRatio="xMidYMid meet"/>`;
-}
-
-const INTERNATIONAL_FLAT_IMAGE_SCALE = 1.34;
-// The flat (disc-less) art is chess-style figurines whose content sits at a
-// different vertical offset inside each 1024px source box, so at a uniform scale
-// their flat bases land at different board-y values (measured content bottoms, as
-// % down the box: general 76.2, advisor 77.0, soldier 77.2, chariot 72.6). These
-// per-role yOffsets pull the general/advisor/soldier/chariot bases onto a common
-// baseline (~y=90, the general's), and the chariot — the smallest figure — is
-// scaled up to sit at the same visual weight as its neighbours.
-const INTERNATIONAL_FLAT_IMAGE_FITS: Partial<
-  Record<InternationalArtRole, { scale?: number; yOffset?: number }>
-> = {
-  advisor: { yOffset: -1.2 },
-  chariot: { scale: 1.46, yOffset: 3.4 },
-  cannon: { scale: 1.4 },
-  elephant: { scale: INTERNATIONAL_FLAT_IMAGE_SCALE, yOffset: -3 },
-  soldier: { yOffset: 3.6 },
-};
-
-function internationalFlatImageMark(href: string, role: InternationalArtRole): string {
-  const frame = INTERNATIONAL_IMAGE_FRAMES[role];
-  const fit = INTERNATIONAL_FLAT_IMAGE_FITS[role];
-  const scale = fit?.scale ?? INTERNATIONAL_FLAT_IMAGE_SCALE;
-  const x = frameValue(50 + (frame.x - 50) * scale);
-  const y = frameValue(50 + (frame.y - 50) * scale + (fit?.yOffset ?? 0));
-  const width = frameValue(frame.width * scale);
-  const height = frameValue(frame.height * scale);
-  return `<image href="${escapeAttr(href)}" x="${x}" y="${y}" width="${width}" height="${height}" preserveAspectRatio="xMidYMid meet"/>`;
 }
 
 function frameValue(value: number): number {
@@ -475,13 +524,7 @@ function isAnimalPieceSet(set: XiangqiPieceSet): set is AnimalXiangqiPieceSet {
 }
 
 function isImagePieceSet(set: XiangqiPieceSet): set is ImageXiangqiPieceSet {
-  return (
-    set === 'international' ||
-    set === 'international-flat' ||
-    set === 'animal-dobutsu' ||
-    set === 'animal-flat' ||
-    isAssetPieceSet(set)
-  );
+  return set === 'international' || set === 'animal-dobutsu' || isAssetPieceSet(set);
 }
 
 export function isAssetPieceSet(set: XiangqiPieceSet): set is AssetXiangqiPieceSet {
@@ -548,25 +591,30 @@ export function assetTreasureMarks(set: AssetXiangqiPieceSet, color: XiangqiColo
 // query is needed to bust CDN/browser caches when the art changes (e.g. the v2
 // dobutsu-minimal swap). Bump on every animal-art change.
 const ANIMAL_ART_VERSION = 4;
-const INTERNATIONAL_ART_VERSION = 15;
-const INTERNATIONAL_FLAT_ART_VERSION = 2;
+// 16 (2026-10-14): the figures rebuilt from the Chess-style art, grown to radius
+// 43, ivory tusks and advisor neck band, cannon turned 15 degrees.
+// 17 (2026-10-15): smooth edges. Chariot, advisor and cannon redrawn from geometry
+// at one line width; the curved figures re-traced with the wobble smoothed out.
+// 18 (2026-10-15): the disc cannon drawn 3.6% smaller inside its 122 frame (the
+// muzzle reached 44.2 of the disc's 46, now 42.6 like the general and horse), its
+// line 23 px at 1024 so it lands on the disc at 2.74, with the chariot and advisor.
+const INTERNATIONAL_ART_VERSION = 18;
 
-function internationalPieceHref(piece: XiangqiPiece, crossed = false): string {
+// On the square grid the cannon has a figure of its own (international-grid/):
+// turned 17 degrees and 6% bigger, so it clears the square's inner edge. Every
+// other role uses the same art on both boards.
+function internationalPieceHref(
+  piece: XiangqiPiece,
+  crossed = false,
+  shape: XiangqiPieceShape = 'disc',
+): string {
   const role = crossed && piece.role === 'soldier' ? 'crossed-soldier' : piece.role;
-  return `/piece-sets/xiangqi/international/${piece.color}-${role}.png?v=${INTERNATIONAL_ART_VERSION}`;
-}
-
-function internationalFlatPieceHref(piece: XiangqiPiece, crossed = false): string {
-  const role = crossed && piece.role === 'soldier' ? 'crossed-soldier' : piece.role;
-  return `/piece-sets/xiangqi/international-flat/${piece.color}-${role}.png?v=${INTERNATIONAL_FLAT_ART_VERSION}`;
+  const dir = shape === 'square' && role === 'cannon' ? 'international-grid' : 'international';
+  return `/piece-sets/xiangqi/${dir}/${piece.color}-${role}.png?v=${INTERNATIONAL_ART_VERSION}`;
 }
 
 export function internationalTreasureHref(color: XiangqiColor): string {
   return `/piece-sets/xiangqi/international/${color}-treasure.png?v=${INTERNATIONAL_ART_VERSION}`;
-}
-
-function internationalFlatTreasureHref(color: XiangqiColor): string {
-  return `/piece-sets/xiangqi/international-flat/${color}-treasure.png?v=${INTERNATIONAL_FLAT_ART_VERSION}`;
 }
 
 function animalPieceHref(piece: XiangqiPiece, set: AnimalXiangqiPieceSet): string {
@@ -584,11 +632,14 @@ export function animalTreasureHref(color: XiangqiColor): string {
 // in the 100-unit piece box like every other animal disc so the full board and
 // the mini-boards render it identically. Treasure is not a XiangqiPieceRole, so
 // it can't go through renderXiangqiPieceGlyphed; this is the shared source.
-export function animalTreasureMarks(color: XiangqiColor): string {
+export function animalTreasureMarks(
+  color: XiangqiColor,
+  shape: XiangqiPieceShape = 'disc',
+): string {
   return [
-    animalDiscMark(),
+    animalDiscMark(shape),
     `<image href="${animalTreasureHref(color)}" x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid meet"/>`,
-    animalRingMark(color),
+    animalRingMark(color, shape),
   ].join('');
 }
 
@@ -628,8 +679,8 @@ export function animalDuckHref(): string {
 //
 // What DOES change per set is the FRAME. Each set has its own disc grammar and
 // the duck keeps it, so it sits in the board's furniture correctly: the Dobutsu
-// cream disc, the international disc, the flat set's bare image, and the glyph
-// sets' disc. The ring ink is the variant's own gold in all of them, because
+// cream disc, the international disc (each a rounded square on the square grid),
+// and the glyph sets' disc. The ring ink is the variant's own gold in all of them, because
 // the board needs a way to say "no seat" and the duck has none.
 //
 // SIZING. The master carries 15.7% padding on every side: the duck fills 79.6%
@@ -652,27 +703,23 @@ function duckImageMark(box: number): string {
   return `<image href="${animalDuckHref()}" x="${inset}" y="${inset}" width="${box}" height="${box}" preserveAspectRatio="xMidYMid meet"/>`;
 }
 
-export function duckPieceMarks(set: XiangqiPieceSet): string {
+export function duckPieceMarks(set: XiangqiPieceSet, shapeAsked?: XiangqiPieceShape): string {
+  const shape = frameShape(set, shapeAsked);
   if (isAnimalPieceSet(set)) {
     // 0.88 inside the disc: the set's animals run 62-70% of the square tall and
     // this master is 76.2%, so it is fitted down into the same band rather than
     // crowding the ring (physical-set MANIFEST, render scale).
-    return [
-      animalDiscMark(),
-      duckImageMark(88),
-      `<circle cx="50" cy="50" r="45" fill="none" stroke="${DUCK_RING}" stroke-width="3.2"/>`,
-    ].join('');
+    return [animalDiscMark(shape), duckImageMark(88), animalRingOutline(DUCK_RING, shape)].join('');
   }
   if (set === 'international') {
     return [
-      `<circle cx="50" cy="50" r="46" fill="#fef0d7" stroke="${DUCK_RING}" stroke-width="2.8"/>`,
+      xiangqiPieceFrameOutline(
+        shape,
+        PIECE_EDGE,
+        `fill="#fef0d7" stroke="${DUCK_RING}" stroke-width="${IMAGE_RING}"`,
+      ),
       duckImageMark(84),
     ].join('');
-  }
-  if (set === 'international-flat' || set === 'animal-flat') {
-    // No disc in these sets, so nothing frames the figure and it carries the whole
-    // square. The other flat pieces are scaled up for the same reason.
-    return duckImageMark(100);
   }
   // The asset sets frame the duck on their own neutral back where they have one
   // (the wood sets); the lacquer and book backs are red or black, which would
@@ -684,26 +731,17 @@ export function duckPieceMarks(set: XiangqiPieceSet): string {
   // sets put their character: the master is ~80% content inside its own box, so
   // a 74-unit box lands ~59 units tall against the inner ring's 76 diameter,
   // which is the same visual weight as a 46pt glyph.
-  return [
-    `<circle cx="50" cy="50" r="46" fill="#f3e6c4" stroke="${DUCK_RING}" stroke-width="2.5"/>`,
-    `<circle cx="50" cy="50" r="38" fill="none" stroke="${DUCK_RING}" stroke-width="1.5"/>`,
-    duckImageMark(74),
-  ].join('');
+  return [xiangqiGlyphFrameMarks(DUCK_RING, shape), duckImageMark(74)].join('');
 }
 
-export function animalFlatTreasureMarks(color: XiangqiColor): string {
-  return animalFlatImageMark(animalTreasureHref(color));
-}
-
-export function internationalTreasureMarks(color: XiangqiColor): string {
+export function internationalTreasureMarks(
+  color: XiangqiColor,
+  shape: XiangqiPieceShape = 'disc',
+): string {
   return [
-    internationalDiscMark(color),
+    internationalDiscMark(color, shape),
     internationalImageMark(internationalTreasureHref(color), 'treasure'),
   ].join('');
-}
-
-export function internationalFlatTreasureMarks(color: XiangqiColor): string {
-  return internationalFlatImageMark(internationalFlatTreasureHref(color), 'treasure');
 }
 
 function escapeAttr(value: string): string {

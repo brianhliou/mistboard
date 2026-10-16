@@ -12,6 +12,7 @@ import {
   type FeaturedGame,
   firstMoverColorName,
   type GameParticipant,
+  gameOutcome,
   matchupLabel,
   matchupSeats,
   secondMoverColorName,
@@ -186,6 +187,20 @@ describe('displayParticipantName', () => {
   });
 });
 
+// Xiangqi mahjong's seat ids are bookkeeping; with no names at hand the outcome
+// is seat-neutral, never "West wins". The Hong Kong table keeps its winds.
+describe('gameOutcome for wind seats', () => {
+  it('is seat-neutral for xiangqi mahjong and keeps the wind for mahjong', () => {
+    expect(gameOutcome('west-wins', 'xiangqi-mahjong')).toEqual({ label: 'Won' });
+    expect(gameOutcome('east-wins', 'xiangqi-mahjong')).toEqual({ label: 'Won' });
+    expect(gameOutcome('east-wins', 'mahjong')).toEqual({ winner: 'East' });
+  });
+
+  it('pairs xiangqi mahjong seats east vs west', () => {
+    expect(matchupSeats(game('xiangqi-mahjong'))).toEqual(['east', 'west']);
+  });
+});
+
 // The watch meta card humanized the kebab code ("General captured") in every
 // locale; every persisted GameTermination now has a catalog entry.
 describe('terminationLabel', () => {
@@ -251,12 +266,13 @@ describe('correspondence side names', () => {
       banqi: 'First/Second',
       'duck-xiangqi': 'Red/Black',
       'crazyhouse-xiangqi': 'Red/Black',
-      'fortress-xiangqi': 'Red/Black',
-      'atomic-xiangqi': 'Red/Black',
       'dark-xiangqi': 'Red/Black',
       jungle: 'Red/Black',
       'jungle-flip': 'First/Second',
     });
+    // A retired variant left the create list, but a game in progress still
+    // names its sides.
+    expect(firstMoverColorName('fortress-xiangqi')).toBe('Red');
     expect(firstMoverColorName('no-such-spec')).toBe('White');
   });
 });

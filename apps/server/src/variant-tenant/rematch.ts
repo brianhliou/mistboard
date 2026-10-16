@@ -46,6 +46,9 @@ export type TenantRematchContext<
   Client extends TenantRematchClient<C>,
 > = {
   send: (client: Client, payload: unknown) => void;
+  // `rated` is true only when the finished room was rated and both seats are
+  // accounts; the tenant still owes the other rated gates (ratedEnabled, a
+  // rated time control) and must create a casual room when they fail.
   createRoom: (
     timeControl: RoomTimeControl | undefined,
     rated: boolean,
@@ -58,7 +61,16 @@ export type TenantRematchContext<
     identity: { userId: string | null; userHandle: string | null; userDisplayName: string | null },
   ) => Promise<{ rawToken: string; state: TenantSeatTokenState<C> }>;
   buildRoomUrl: (roomId: string) => string;
+  // The per-account play lock (126) normally runs on the new-seat path, which
+  // pre-issued rematch tokens skip; a tenant that persists accounts checks it
+  // here. False for either account seat cancels the rematch.
+  accountMayPlay?: (userId: string) => Promise<boolean>;
 };
+
+// Rooms with a finalize in flight. Finalize awaits room creation before it
+// marks the room finalized, so a repeated offer arriving in that window would
+// otherwise create a second room.
+const finalizing = new WeakSet<object>();
 
 function activeSeatTokenForClient<
   Kind extends string,
@@ -202,6 +214,7 @@ export async function finalizeTenantRematchIfReady<
   room: TenantRematchRoom<Kind, C, M, State, Spec, Client>,
 ): Promise<TenantRuntimeRoom<Kind, C, M, State, Spec> | null> {
   if (!isRematchAllowed(room)) return null;
+  if (finalizing.has(room)) return null;
   const [first, second] = tenant.colors;
   const firstOffer = room.rematch.offers[first];
   const secondOffer = room.rematch.offers[second];
@@ -219,7 +232,47 @@ export async function finalizeTenantRematchIfReady<
     return null;
   }
 
-  const created = await ctx.createRoom(room.projection.timeControl, room.rated);
+  finalizing.add(room);
+  try {
+    return await createRematchRoom(tenant, ctx, room, firstToken, secondToken);
+  } finally {
+    finalizing.delete(room);
+  }
+}
+
+async function createRematchRoom<
+  Kind extends string,
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  Spec extends string,
+  Client extends TenantRematchClient<C>,
+>(
+  tenant: { colors: readonly C[] },
+  ctx: TenantRematchContext<Kind, C, M, State, Spec, Client>,
+  room: TenantRematchRoom<Kind, C, M, State, Spec, Client>,
+  firstToken: TenantSeatTokenState<C>,
+  secondToken: TenantSeatTokenState<C>,
+): Promise<TenantRuntimeRoom<Kind, C, M, State, Spec> | null> {
+  const [first, second] = tenant.colors as [C, C];
+  if (ctx.accountMayPlay) {
+    for (const token of [firstToken, secondToken]) {
+      if (token.userId === null) continue;
+      if (await ctx.accountMayPlay(token.userId)) continue;
+      room.rematch.offers = {};
+      broadcastTenantRematchState(tenant, ctx, room);
+      return null;
+    }
+    // A cancel or decline may have landed during the lookups.
+    if (!room.rematch.offers[first] || !room.rematch.offers[second]) return null;
+  }
+
+  // A rated game rematches rated only while both seats are still accounts (the
+  // seat rule: 'rated requires account'). The pre-issued tokens below skip the
+  // new-seat path where that rule normally runs, so it is applied here. The
+  // tenant's createRoom applies the rest (the rated switch, a rated pace).
+  const rated = room.rated && firstToken.userId !== null && secondToken.userId !== null;
+  const created = await ctx.createRoom(room.projection.timeControl, rated);
   if (!created.ok) return null;
   const newRoom = created.room;
 

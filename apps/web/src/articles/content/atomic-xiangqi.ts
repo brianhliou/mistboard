@@ -6,7 +6,7 @@ import {
   ATOMIC_XIANGQI_SOLDIER_PAIR,
   ATOMIC_XIANGQI_THUMBNAIL,
 } from '../../atomic-xiangqi-rules-diagrams.js';
-import { playClosing } from '../diagrams.js';
+import { relatedClosing } from '../diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
 // The rules page is the front door: the variant is listed in the rails and
@@ -17,7 +17,8 @@ export const atomicXiangqiArticle: Article = {
   gameSpecId: 'atomic-xiangqi',
   boardFamily: 'xiangqi',
   kind: 'rules',
-  playableOnMistboard: true,
+  // Retired 2026-10-11: the page stays up by URL, unlisted and unindexed.
+  playableOnMistboard: false,
   title: 'Atomic Xiangqi Rules',
   summary:
     'Xiangqi where a capture is an explosion. The capturer, the captured piece and the four neighbouring pieces go; soldiers survive; a cannon shot takes only its target; and a blast threat on the general is check.',
@@ -162,14 +163,11 @@ export const atomicXiangqiArticle: Article = {
         } as ArticleBlock,
       ],
     },
-    playClosing({
-      heading: 'Play on Mistboard',
-      lead: 'Play it against the engine at any of eight strengths, or against a friend with an invite link. The [launch note](/blog/atomic-xiangqi-build) is what decides a first game; the study has all twelve engine games, with every explosion marked and a note on the move that decided each.',
-      playLabel: 'Play Atomic Xiangqi',
-      playHref: '/?play=computer&gameSpecId=atomic-xiangqi',
-      secondary: [
-        { label: 'The twelve engine games', href: '/study/dPKhvJKb', emphasis: 'secondary' },
-      ],
+    // Retired 2026-10-11: no play buttons; the page and its companions stay up.
+    relatedClosing({
+      heading: 'Further reading',
+      lead: 'Atomic Xiangqi is no longer open for new games; finished games still replay. The [launch note](/blog/atomic-xiangqi-build) is what decided a first game; the study has all twelve engine games, with every explosion marked and a note on the move that decided each.',
+      links: [{ label: 'The twelve engine games', href: '/study/dPKhvJKb', emphasis: 'primary' }],
     }),
   ],
 };

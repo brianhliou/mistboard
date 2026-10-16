@@ -83,8 +83,8 @@ const REVEAL_STEP_MS = 650;
 
 // Variants surfaced in the Settings variant picker (order = display order; the
 // first is the default view). Standard Xiangqi (the mined real-game corpus,
-// the bet variant) is the only surfaced trainer. Fortress and Jungle stay in
-// the corpus + API for direct links, but are hidden from discovery for now.
+// the bet variant) is the only surfaced trainer. Jungle stays in the corpus +
+// API for direct links, but is hidden from discovery for now.
 // Add a spec id here to unhide it.
 const PUZZLE_VARIANT_FILTERS: readonly PuzzleVariantFilter[] = [XIANGQI_SPEC_ID];
 
@@ -337,7 +337,7 @@ export async function mountPuzzles(
   // drives variant selection and queue matching below.
   if (selectedId) selectedId = resolveToFullPuzzleId(selectedId, summaries);
   const directSummary = selectedId ? summaries.find((puzzle) => puzzle.id === selectedId) : null;
-  // A normal visit defaults to the surfaced variant (Fortress); a direct deep
+  // A normal visit defaults to the surfaced variant (Xiangqi); a direct deep
   // link into any puzzle still resolves so shared/bookmarked URLs keep working.
   if (directSummary) variantFilter = directSummary.variant;
   else if (!summaries.some((puzzle) => puzzle.variant === variantFilter) && summaries[0]) {
@@ -397,7 +397,6 @@ function createPuzzleSession(puzzle: PuzzleDetail): PuzzleSession {
     revealed: false,
     focusNext: false,
     vote: null,
-    streak: null,
   };
 }
 
@@ -654,7 +653,7 @@ async function submitMove(
     session.qualitySessionId,
   ).catch(playLockRefusal);
   if (submitted === PLAY_LOCKED) return showPlayLocked(session, renderSession);
-  const { attempt, rating, streak } = submitted;
+  const { attempt, rating } = submitted;
   session.submitting = false;
   session.selectedSquare = null;
   session.selectedDrop = null;
@@ -666,7 +665,6 @@ async function submitMove(
     if (attempt.complete) {
       session.solved = true;
       session.focusNext = true;
-      session.streak = streak;
       trackPuzzleAttempted(session, 'solved');
       onSolved?.(session.puzzle.id);
     }
@@ -810,8 +808,8 @@ function playbackSolution(session: PuzzleSession, renderSession: () => void): vo
 }
 
 // The painted board inside a .puzzle-board column, across every variant adapter:
-// the drop/fortress shells wrap board plus reserves, the rest paint a board
-// element straight in. Falls back to the column so the grip still has something
+// a reserve shell (none since Fortress Xiangqi was retired, 2026-10-11) wraps
+// board plus reserves, the rest paint a board element straight in. Falls back to the column so the grip still has something
 // to measure if an adapter paints something new.
 function paintedPuzzleBoard(column: HTMLElement): HTMLElement {
   return (
@@ -824,12 +822,25 @@ function paintedPuzzleBoard(column: HTMLElement): HTMLElement {
 // Park the resize grip on the painted board's corner rather than the column's.
 // The column track carries the height budget, so on a wide screen it is wider
 // than the board and the grip would otherwise float in the gutter beside it.
+//
+// The same measurement hands the board's DRAWN height to the right column
+// (--puzzle-board-height, #536). --puzzle-surface-size is only the height
+// budget: when the column track is narrower than that budget allows, the 9x10
+// board binds on width and draws shorter (616 vs 704 at 1440x900), and a side
+// panel sized from the budget ran 88px past the board's bottom edge. The value
+// lives on .puzzle-detail, which survives renderSession's repaint, so the next
+// render starts from the last measurement instead of flashing the budget.
 function fitPuzzleGrip(column: HTMLElement): void {
   requestAnimationFrame(() => {
     if (!column.isConnected) return;
     const painted = paintedPuzzleBoard(column);
-    const gutter = column.getBoundingClientRect().width - painted.getBoundingClientRect().width;
+    const paintedRect = painted.getBoundingClientRect();
+    const gutter = column.getBoundingClientRect().width - paintedRect.width;
     column.style.setProperty('--puzzle-board-inset', `${Math.max(0, Math.round(gutter / 2))}px`);
+    const detail = column.closest<HTMLElement>('.puzzle-detail');
+    if (detail && paintedRect.height > 0) {
+      detail.style.setProperty('--puzzle-board-height', `${Math.round(paintedRect.height)}px`);
+    }
   });
 }
 

@@ -51,7 +51,7 @@ function createContext(
   return {
     created,
     databaseRequired: false,
-    isDraining: () => false,
+    refusesCreate: () => false,
     drainDeadlineMs: () => null,
     isPersistenceInitialized: () => true,
     createCorrespondenceRoom: async (timeControl, creatorPreference) => {

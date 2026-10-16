@@ -36,6 +36,7 @@ import {
 } from './server-lifecycle.js';
 import {
   releaseLiveEngineReservation,
+  releaseLiveEngineSeatsOnShutdown,
   reserveHydratedLiveEngineSeat,
   reserveLiveEngineSeat,
 } from './server-live-engine-reservations.js';
@@ -362,6 +363,27 @@ async function pauseTenantRoomsForShutdown(at: number): Promise<void> {
   }
 }
 
+// Every room is paused and its timers cleared, so no engine turn starts after
+// this; hand the engine-worker seats back so the next server can reserve its
+// own (#567). Never throws: a failed release is logged and the TTL frees it.
+async function releaseEngineSeatsForShutdown(): Promise<void> {
+  const holders: Array<{ id: string; engineReservationId?: string | null }> = [...rooms.values()];
+  for (const registration of registeredVariantTenants()) {
+    holders.push(...registration.rooms.values());
+  }
+  const { released, failed } = await releaseLiveEngineSeatsOnShutdown(holders);
+  if (released + failed === 0) return;
+  console.log(
+    JSON.stringify({
+      level: failed > 0 ? 'warn' : 'info',
+      kind: 'shutdown_engine_seats_released',
+      released,
+      failed,
+      at: Date.now(),
+    }),
+  );
+}
+
 // Tear down for tests / hot restart. Mirrors shutdown() but does NOT call
 // process.exit, so the runner stays alive across tests.
 export async function stopServer(): Promise<void> {
@@ -376,6 +398,7 @@ export async function stopServer(): Promise<void> {
       registration.clearRuntimeTimers(room);
     }
   }
+  await releaseEngineSeatsForShutdown();
   roomLifecycle.stopSweeps();
   deadlineSweeper?.stop();
   deadlineSweeper = null;
@@ -592,6 +615,7 @@ async function shutdown(signal: 'SIGINT' | 'SIGTERM'): Promise<void> {
       registration.clearRuntimeTimers(room);
     }
   }
+  await releaseEngineSeatsForShutdown();
   roomLifecycle.stopSweeps();
   deadlineSweeper?.stop();
   deadlineSweeper = null;

@@ -34,6 +34,7 @@ import { t } from './i18n/catalog.js';
 import type { TenantReasonKey } from './variant-tenant/room-chrome.js';
 import { LIVE_BOARD_GEO, XIANGQI_PIECE_SIZE, type XiangqiBoardMarker } from './xiangqi-board.js';
 import { xiangqiBoardPoint } from './xiangqi-board-geometry.js';
+import { xiangqiPieceShapeForLayout } from './xiangqi-piece-sets.js';
 import { renderXiangqiPiece } from './xiangqi-pieces.js';
 
 /** Identity of the position a view shows, for "is this ply new on screen". */
@@ -132,6 +133,7 @@ export function animateAtomicXiangqiCapture(
       size: XIANGQI_PIECE_SIZE,
       className: 'xq-piece',
       crossed,
+      shape: xiangqiPieceShapeForLayout(layout),
     });
     return slot;
   };

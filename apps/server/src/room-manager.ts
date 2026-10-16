@@ -1008,8 +1008,14 @@ export async function resumeRoom(
   }
 }
 
-// Fire resume if the room is paused AND every seat is "present." Returns true
-// if resume was appended.
+// Fire resume if the room is paused AND either every seat is "present" or the
+// human on move is. Returns true if resume was appended.
+//
+// Only the side to move has a running clock after a resume, so its player being
+// back is enough (#567, lichess-like): a returning mover no longer waits on a
+// frozen board, unable to move, for a slower opponent or the grace window. The
+// absent opponent's clock does not run until the mover has moved, the same as
+// any disconnect. An engine on move does not count: PvE waits for its human.
 //
 // Presence rules:
 // - Engine seats (isServerEngineClient) are always present while the server is
@@ -1019,7 +1025,7 @@ export async function resumeRoom(
 //   attacker without the token cannot force-resume by connecting.
 //
 // Implications by mode:
-// - PvP: needs both human seats to have valid tokens — same as before.
+// - PvP: the player on move with a valid token, or both players.
 // - PvE: resumes the moment the human reconnects (engine is auto-present).
 // - EvE: resumes on the first connection of any kind (both engines auto-present).
 export async function resumeRoomIfReady(
@@ -1044,7 +1050,9 @@ export async function resumeRoomIfReady(
     return false;
   };
 
-  if (!seatPresent('white') || !seatPresent('black')) return false;
+  const mover = room.projection.state.status.turn;
+  const moverBack = !isServerEngineClient(room.projection.seats[mover]) && seatPresent(mover);
+  if (!moverBack && (!seatPresent('white') || !seatPresent('black'))) return false;
   await resumeRoom(ctx, room, at, 'both-present');
   return true;
 }
@@ -1378,6 +1386,11 @@ export async function playRandomEngineMoveIfReady(
   const decisionAt = Date.now();
   if (room.projection.state.status.type !== 'playing') return;
   if (room.projection.state.status.turn !== engineSeat) return;
+  // The room can pause while the engine thinks: a shutdown lands mid-turn. A
+  // reply appended after the pause would play a move on a frozen clock and
+  // restart the human's clock running through the outage (the reducer does not
+  // refuse moves while paused). Drop it; the resume re-schedules the turn.
+  if (room.projection.paused) return;
   if (
     room.projection.state.clock &&
     clockRemainingMs(room.projection.state.clock, engineSeat, decisionAt) <= 0

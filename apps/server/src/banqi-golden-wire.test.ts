@@ -564,15 +564,22 @@ test('banqi golden wire: snapshot marks room mode and omits chess-only wire keys
     const snapshot = pvp.snapshots[seat] as SeatRecord;
     assert.equal(snapshot.roomMode, 'pvp', 'a human-vs-human room is roomMode:pvp');
     assert.ok(!('pveEngineId' in snapshot), 'a PvP room carries no engine id');
-    for (const key of ['mode', 'rated', 'forfeitDeadline', 'rematch']) {
+    for (const key of ['mode', 'rated', 'forfeitDeadline']) {
       assert.ok(!(key in snapshot), `banqi snapshot must not carry '${key}'`);
     }
+    // Finished PvP: the shared rematch offer flags (2026-10-14, rematch on by
+    // default), which name seats and nothing about the deal.
+    const rematch = (snapshot as Record<string, unknown>).rematch as
+      | { offers: Record<string, boolean>; finalizedRoomId: string | null }
+      | undefined;
+    assert.deepEqual(rematch, { offers: { red: false, black: false }, finalizedRoomId: null });
   }
   const pve = runScriptB().steps.at(-1)!;
   for (const seat of SEATS) {
     const snapshot = pve.snapshots[seat] as SeatRecord;
     assert.equal(snapshot.roomMode, 'pve', 'an engine-seated room is roomMode:pve');
     assert.equal(snapshot.pveEngineId, BANQI_DEFAULT_ENGINE_ID, 'and carries the engine id');
+    assert.ok(!('rematch' in snapshot), 'a bot room never carries PvP rematch offers');
   }
 });
 

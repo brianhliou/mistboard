@@ -172,15 +172,16 @@ button.drop-mini-reserve-piece:disabled {
    instead of omitted. Held-only rows render the common empty pocket as a blank
    band, and move the pieces already in hand every time a new one arrives.
 
-   These slots are sized against the BOARD, not the rail. A board piece is
-   TOKEN_PIECE_RATIO (0.9) of a 72px cell in a 516px-wide board, so 62/516 puts a
-   pocket piece at ~95% of the piece it depicts. The pane is the container query
+   These slots are sized against the BOARD, not the rail. A board piece's outline
+   spans 98% of a 72px cell in a 516px-wide board (board-metrics.ts
+   XIANGQI_PIECE_REACH, the piece look of 2026-10-14; was 0.9), so 72/516 puts a
+   pocket piece at about the size of the piece it depicts. The pane is the container query
    ancestor (fillFortressXiangqiReserve tags .replay-pane), so this tracks the
    board's own width. The tile chrome goes with it: a bordered, filled square
    around each piece spent its space on the frame rather than the piece, and read
    as a second, darker disc next to the ones on the board. */
 .replay-captures.drop-mini-reserve-strip--all-roles {
-  --drop-mini-hand-piece-size: clamp(26px, calc(100cqw * 62 / 516), 68px);
+  --drop-mini-hand-piece-size: clamp(26px, calc(100cqw * 72 / 516), 79px);
   --drop-mini-hand-tile-size: var(--drop-mini-hand-piece-size);
   --drop-mini-hand-band-height: calc(var(--drop-mini-hand-piece-size) + 6px);
 

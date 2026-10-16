@@ -1,8 +1,18 @@
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
-import { isIsolatedEngineAssetPath, isPageNavigationRequest, robotsTxt } from './server-http.js';
+import {
+  createHttpRequestHandler,
+  isHashedBuildAssetPath,
+  isIsolatedEngineAssetPath,
+  isPageNavigationRequest,
+  robotsTxt,
+} from './server-http.js';
 
 const HTML_ACCEPT = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8';
 
@@ -97,4 +107,133 @@ test('robots.txt keeps crawlers off the data downloads and nothing else under /a
     assert.ok(lines.includes(kept), kept);
   }
   assert.ok(lines.includes('Sitemap: https://mistboard.com/sitemap.xml'));
+});
+
+test('hashed build assets: only Vite-named files under /assets qualify', () => {
+  assert.equal(isHashedBuildAssetPath('/assets/index-CkdYnPwB.js'), true);
+  assert.equal(isHashedBuildAssetPath('/assets/account-profile-C4OBlOPq.css'), true);
+  assert.equal(isHashedBuildAssetPath('/assets/worker-a_b-C9d8.wasm'), true);
+  assert.equal(isHashedBuildAssetPath('/assets/readme.js'), false);
+  assert.equal(isHashedBuildAssetPath('/assets/nested/index-CkdYnPwB.js'), false);
+  assert.equal(isHashedBuildAssetPath('/index-CkdYnPwB.js'), false);
+  assert.equal(isHashedBuildAssetPath('/feed.xml'), false);
+});
+
+// Drives the real handler over a temp build: a hashed chunk is pinned for a
+// year, while the HTML that names the chunks (and a chunk this build lacks)
+// must never be.
+test('hashed build assets are served immutable; HTML and missing chunks are not', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await mkdir(join(staticDir, 'assets'), { recursive: true });
+  await writeFile(join(staticDir, 'index.html'), '<!doctype html><title>x</title>', 'utf-8');
+  await writeFile(join(staticDir, 'home.html'), '<!doctype html><title>home</title>', 'utf-8');
+  await writeFile(join(staticDir, 'assets', 'index-CkdYnPwB.js'), 'console.log(1);', 'utf-8');
+  const handler = createHttpRequestHandler({
+    staticDir,
+    publicHost: 'https://mistboard.com',
+    drainController: { isDraining: () => false },
+  } as unknown as Parameters<typeof createHttpRequestHandler>[0]);
+  const server = createServer(handler);
+  await new Promise<void>((done) => server.listen(0, '127.0.0.1', done));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  try {
+    const asset = await fetch(`${base}/assets/index-CkdYnPwB.js`);
+    assert.equal(asset.status, 200);
+    assert.equal(asset.headers.get('cache-control'), 'public, max-age=31536000, immutable');
+    await asset.text();
+
+    const missing = await fetch(`${base}/assets/index-Zz9Yy8Xx.js`);
+    assert.equal(missing.status, 404);
+    assert.equal(missing.headers.get('cache-control'), null);
+    await missing.text();
+
+    const page = await fetch(`${base}/`, { headers: { accept: 'text/html' } });
+    assert.equal(page.status, 200);
+    assert.equal(page.headers.get('cache-control'), null);
+    await page.text();
+  } finally {
+    await new Promise<void>((done) => server.close(() => done()));
+  }
+});
+
+// #276: WebKit ignores COEP credentialless, so the review routes must send
+// require-corp to every browser, or no iPhone/iPad browser and no desktop
+// Safari ever isolates and the threaded engines never start. One policy for
+// every user agent, not a WebKit-only branch: the UA must not change it.
+test('review routes send COOP same-origin + COEP require-corp to every browser', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await mkdir(join(staticDir, 'engine', 'fairy-stockfish'), { recursive: true });
+  await writeFile(join(staticDir, 'index.html'), '<!doctype html><title>x</title>', 'utf-8');
+  await writeFile(join(staticDir, 'engine', 'fairy-stockfish', 'stockfish.worker.js'), '', 'utf-8');
+  const handler = createHttpRequestHandler({
+    staticDir,
+    publicHost: 'https://mistboard.com',
+    drainController: { isDraining: () => false },
+  } as unknown as Parameters<typeof createHttpRequestHandler>[0]);
+  const server = createServer(handler);
+  await new Promise<void>((done) => server.listen(0, '127.0.0.1', done));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  const userAgents = {
+    iphoneChrome:
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/138.0.7204.156 Mobile/15E148 Safari/604.1',
+    iphoneSafari:
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1',
+    macSafari:
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15',
+    chrome:
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
+    firefox: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:143.0) Gecko/20100101 Firefox/143.0',
+  };
+  const reviewRoutes = [
+    '/analysis',
+    '/analysis/xiangqi',
+    '/analysis/jieqi',
+    '/game/abc123',
+    '/xiangqi/game/abc123',
+    '/historical-xiangqi/game/abc123',
+    '/study/AbC123',
+    '/zh-hans/study/AbC123/Ch1',
+    '/practice/position',
+    '/puzzles',
+    '/puzzles/42',
+    '/broadcast/xiangqi/some-event',
+  ];
+  try {
+    for (const [name, userAgent] of Object.entries(userAgents)) {
+      for (const route of reviewRoutes) {
+        const page = await fetch(`${base}${route}`, {
+          headers: { accept: HTML_ACCEPT, 'user-agent': userAgent },
+        });
+        await page.text();
+        assert.equal(
+          page.headers.get('cross-origin-opener-policy'),
+          'same-origin',
+          `${name} ${route}`,
+        );
+        assert.equal(
+          page.headers.get('cross-origin-embedder-policy'),
+          'require-corp',
+          `${name} ${route}`,
+        );
+      }
+      // The rest of the site stays non-isolated.
+      for (const route of ['/', '/videos', '/broadcast/xiangqi/ops', '/engine/misty-banqi']) {
+        const page = await fetch(`${base}${route}`, {
+          headers: { accept: HTML_ACCEPT, 'user-agent': userAgent },
+        });
+        await page.text();
+        assert.equal(page.headers.get('cross-origin-opener-policy'), null, `${name} ${route}`);
+        assert.equal(page.headers.get('cross-origin-embedder-policy'), null, `${name} ${route}`);
+      }
+      // The engine worker isolates itself and is loadable from a require-corp document.
+      const worker = await fetch(`${base}/engine/fairy-stockfish/stockfish.worker.js?v=1`, {
+        headers: { 'user-agent': userAgent },
+      });
+      await worker.text();
+      assert.equal(worker.headers.get('cross-origin-embedder-policy'), 'require-corp', name);
+      assert.equal(worker.headers.get('cross-origin-resource-policy'), 'same-origin', name);
+    }
+  } finally {
+    await new Promise<void>((done) => server.close(() => done()));
+  }
 });

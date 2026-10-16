@@ -35,6 +35,10 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-10-13 (Fortress and Atomic on hold) ── 堡垒象棋 / 原子象棋 / 疯狂屋象棋 / 打入 follow the launch entries.
+  'Fortress and Atomic Xiangqi are back on the drawing board.': '堡垒象棋和原子象棋回到设计阶段。',
+  'Both are on hold while we redesign them: no new games, but finished games still replay and the rules pages stay up. Fortress needs a smaller xiangqi that keeps the feel of the full game without drops taking over. Atomic needs a cannon that follows the same rule as every other piece. Until then, drops live in Crazyhouse Xiangqi.':
+    '两者都已暂停，等待重新设计：不能开新对局，但已完成的对局仍可回放，规则页面也保留。堡垒象棋需要做成一种更小、但仍有完整象棋手感的象棋，并且不让打入主导一切。原子象棋需要一门和其他棋子遵守同一条规则的炮。在那之前，打入可以在疯狂屋象棋里下。',
   // ── 2026-10-11 (player photos) ── 永乐象棋棋谱网 is the archive's own name for itself (the owner's wording, 2026-10-11).
   'Pro player pages now have photos.': '职业棋手页面现在有照片了。',
   "Seventy-five of the pro players we follow now have a portrait on their page, from the xiangqiqipu.com archive, which gave us permission to use them; each photo links back to that player's page there. Every player page also has their games, results by event, openings and official CXA rating.":
@@ -44,6 +48,21 @@ const ZH_HANS: Record<string, string> = {
   'Looking for jieqi puzzles: what 50 games turned up.': '在揭棋里找题目：50 盘对局找到了什么。',
   'We scored 2,939 positions from 50 jieqi games, looking for puzzles. Four passed the rules our xiangqi puzzles go through, and none of them turns on a face-down piece: the hidden-piece answers were bets, or moves the tile hardly touched. Where skill does show is in timing a capture a face-down piece can make whatever it turns out to be. Every example is on a board you can step through.':
     '我们给 50 盘揭棋对局中的 2,939 个局面打分，寻找题目。有四个局面通过了我们象棋题目要过的规则，没有一个取决于暗子：取决于暗子的答案，要么是赌博，要么是暗子几乎无关的着法。实力真正体现的地方，是一枚暗子无论翻出什么都能完成的吃子，何时去吃。每个例子都在可以逐着演示的棋盘上。',
+  // ── 2026-10-15 (piece look) ── 国际 / 國際 follow prefs.xqPieceSet.international.
+  'A new look for the International pieces.': '国际棋子换了新样子。',
+  'The International set is redrawn: one dark ring on both sides, larger pieces, and rounded squares on the Square grid board. On the Square grid, the last move now lights the square the piece left and rings the piece that moved. Change the set or the board in your display settings.':
+    '国际棋子重新绘制：双方都用同一道深色外圈，棋子更大，在方格棋盘上是圆角方块。在方格棋盘上，上一步现在会点亮棋子离开的格子，并给走动的棋子加一道外圈。可以在显示设置中更换棋子或棋盘。',
+  'Play xiangqi': '下象棋',
+  // ── 2026-10-14 (banqi reveal odds) ── 暗子 / 暗子概率 follow the banqi room's own strings.
+  'Banqi now shows reveal odds.': '暗棋现在显示暗子概率。',
+  'The face-down tally under a banqi board now gives the chance of each piece turning up on the next flip, counted only from what both players can already see. It is on for both players and spectators, rated games included. Banqi boards also show coordinates when Board coordinates is on in your display settings, and a finished room keeps the tally of what stayed face-down.':
+    '暗棋棋盘下方的暗子统计，现在会给出下一次翻开时每种棋子出现的概率，只根据双方都已看得到的信息计算。双方棋手和观战者都能看到，等级分对局也包括在内。在显示设置中打开“棋盘坐标”后，暗棋棋盘也会显示坐标；对局结束后，房间会保留最后仍是暗子的统计。',
+  'Play banqi': '下暗棋',
+  // ── 2026-10-12 (banqi perpetual chase article) ── 长捉 / 重复局面 follow the banqi-perpetual-chase article.
+  'Why banqi needs a perpetual chase rule, shown with real games.':
+    '暗棋为什么需要长捉规则，用真实对局说明。',
+  'In banqi a chased piece often has only one safe square, so the chaser could force a draw by repetition. The article plays through the Mistboard games where that happened, compares what tournament rules and the popular apps do, and sets out our rule in full for anyone implementing it.':
+    '暗棋里被捉的子常常只有一个安全的格子，所以捉的一方可以靠重复局面逼和。这篇文章逐步重放 Mistboard 上发生过这种事的对局，比较比赛规则和常见应用的做法，并为要实现这条规则的人完整列出我们的规则。',
   // ── 2026-10-09 (banqi chase rule) ── 长捉 / 翻子 / 三次重复 follow the banqi rules article.
   'Banqi: a chase can no longer force a repetition draw.': '暗棋：长捉不能再逼成重复和棋。',
   'In banqi a player could chase the same piece back and forth until the position came up three times and the game was drawn. Now a chasing move may not make a position appear for the third time, so the chasing side has to play something else, and a repetition caused by a chase is never a draw. A chase that drives a piece onto new squares is not affected. Games started before the change keep the old rules.':
@@ -83,6 +102,9 @@ const ZH_HANS: Record<string, string> = {
   "Game chapters in Mistboard's own xiangqi studies now open with the advantage chart, the move marks and accuracy, as in a game review. Chapters set up from a position, such as compositions, have no chart. On the player pages, a board whose game is in the broadcast archive has the chart under it: click it to jump to any move, or hide it from the board menu.":
     'Mistboard 自己的象棋研习中，对局章节现在一打开就显示优势图、着法评注和准确率，和对局复盘一样。从摆好的局面开始的章节（例如排局）没有优势图。在棋手页面上，如果棋盘上的对局在直播档案里，棋盘下方会显示它的优势图：点击优势图可以跳到任意一步，也可以在棋盘菜单里隐藏它。',
   'See the Cao Yanlei page': '查看曹岩磊的页面',
+  'A player page for Zuo Wenjing.': '左文静有了自己的棋手页面。',
+  "The 2022 women's world champion, and a double gold medallist at the 2023 Asian Games. The page follows her title run in Kuching and her 2026 season, with five of her games on the board, in English and Chinese. All 32 of her games are in a study with the engine's judgments and lines.":
+    '2022 年女子世锦赛冠军，2023 年亚运会两枚金牌得主。页面讲述她在古晋的夺冠历程和 2026 赛季，棋盘上有她的五盘对局，提供英文和中文版。她的全部 32 盘对局都收在一个研习里，附引擎的判断和变化。',
   'A player page for Tony Fung.': '冯家俊有了自己的棋手页面。',
   "Hong Kong's 2022 world championship finalist, who scored nine points from ten in this year's qualifier for China's top league. The page follows his last fourteen months and his run to the 2022 final in Kuching, with five of his games on the board, in English and Chinese. All 47 of his games are in a study with the engine's judgments and lines.":
     '打进 2022 年世锦赛决赛的香港棋手，今年象甲预选赛十分拿下九分。页面讲述他最近十四个月的比赛和 2022 年在古晋打进决赛的经历，棋盘上有他的五盘对局，提供英文和中文版。他的全部 47 盘对局都收在一个研习里，附引擎的判断和变化。',
@@ -481,6 +503,10 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-10-13 (Fortress and Atomic on hold) ── 堡壘象棋 / 原子象棋 / 瘋狂屋象棋 / 打入 follow the launch entries.
+  'Fortress and Atomic Xiangqi are back on the drawing board.': '堡壘象棋和原子象棋回到設計階段。',
+  'Both are on hold while we redesign them: no new games, but finished games still replay and the rules pages stay up. Fortress needs a smaller xiangqi that keeps the feel of the full game without drops taking over. Atomic needs a cannon that follows the same rule as every other piece. Until then, drops live in Crazyhouse Xiangqi.':
+    '兩者都已暫停，等待重新設計：不能開新對局，但已完成的對局仍可回放，規則頁面也保留。堡壘象棋需要做成一種更小、但仍有完整象棋手感的象棋，並且不讓打入主導一切。原子象棋需要一門和其他棋子遵守同一條規則的炮。在那之前，打入可以在瘋狂屋象棋裡下。',
   // ── 2026-10-11 (player photos) ── 永樂象棋棋譜網 is the archive's own name for itself (the owner's wording, 2026-10-11).
   'Pro player pages now have photos.': '職業棋手頁面現在有照片了。',
   "Seventy-five of the pro players we follow now have a portrait on their page, from the xiangqiqipu.com archive, which gave us permission to use them; each photo links back to that player's page there. Every player page also has their games, results by event, openings and official CXA rating.":
@@ -490,6 +516,21 @@ const ZH_HANT: Record<string, string> = {
   'Looking for jieqi puzzles: what 50 games turned up.': '在揭棋裡找題目：50 盤對局找到了什麼。',
   'We scored 2,939 positions from 50 jieqi games, looking for puzzles. Four passed the rules our xiangqi puzzles go through, and none of them turns on a face-down piece: the hidden-piece answers were bets, or moves the tile hardly touched. Where skill does show is in timing a capture a face-down piece can make whatever it turns out to be. Every example is on a board you can step through.':
     '我們給 50 盤揭棋對局中的 2,939 個局面評分，尋找題目。有四個局面通過了我們象棋題目要過的規則，沒有一個取決於暗子：取決於暗子的答案，要麼是賭博，要麼是暗子幾乎無關的著法。實力真正體現的地方，是一枚暗子無論翻出什麼都能完成的吃子，何時去吃。每個例子都在可以逐著演示的棋盤上。',
+  // ── 2026-10-15 (piece look) ── 國際 / 国际 follow prefs.xqPieceSet.international.
+  'A new look for the International pieces.': '國際棋子換了新樣子。',
+  'The International set is redrawn: one dark ring on both sides, larger pieces, and rounded squares on the Square grid board. On the Square grid, the last move now lights the square the piece left and rings the piece that moved. Change the set or the board in your display settings.':
+    '國際棋子重新繪製：雙方都用同一道深色外圈，棋子更大，在方格棋盤上是圓角方塊。在方格棋盤上，上一步現在會點亮棋子離開的格子，並給走動的棋子加一道外圈。可以在顯示設定中更換棋子或棋盤。',
+  'Play xiangqi': '下象棋',
+  // ── 2026-10-14 (banqi reveal odds) ── 暗子 / 暗子概率 follow the banqi room's own strings.
+  'Banqi now shows reveal odds.': '暗棋現在顯示暗子機率。',
+  'The face-down tally under a banqi board now gives the chance of each piece turning up on the next flip, counted only from what both players can already see. It is on for both players and spectators, rated games included. Banqi boards also show coordinates when Board coordinates is on in your display settings, and a finished room keeps the tally of what stayed face-down.':
+    '暗棋棋盤下方的暗子統計，現在會給出下一次翻開時每種棋子出現的機率，只根據雙方都已看得到的資訊計算。雙方棋手和觀戰者都能看到，等級分對局也包括在內。在顯示設定中打開「棋盤座標」後，暗棋棋盤也會顯示座標；對局結束後，房間會保留最後仍是暗子的統計。',
+  'Play banqi': '下暗棋',
+  // ── 2026-10-12 (banqi perpetual chase article) ── 長捉 / 重複局面 follow the banqi-perpetual-chase article.
+  'Why banqi needs a perpetual chase rule, shown with real games.':
+    '暗棋為什麼需要長捉規則，用真實對局說明。',
+  'In banqi a chased piece often has only one safe square, so the chaser could force a draw by repetition. The article plays through the Mistboard games where that happened, compares what tournament rules and the popular apps do, and sets out our rule in full for anyone implementing it.':
+    '暗棋裡被捉的子常常只有一個安全的格子，所以捉的一方可以靠重複局面逼和。這篇文章逐步重放 Mistboard 上發生過這種事的對局，比較比賽規則和常見應用的做法，並為要實作這條規則的人完整列出我們的規則。',
   // ── 2026-10-09 (banqi chase rule) ── 長捉 / 翻子 / 三次重複 follow the banqi rules article.
   'Banqi: a chase can no longer force a repetition draw.': '暗棋：長捉不能再逼成重複和棋。',
   'In banqi a player could chase the same piece back and forth until the position came up three times and the game was drawn. Now a chasing move may not make a position appear for the third time, so the chasing side has to play something else, and a repetition caused by a chase is never a draw. A chase that drives a piece onto new squares is not affected. Games started before the change keep the old rules.':
@@ -529,6 +570,9 @@ const ZH_HANT: Record<string, string> = {
   "Game chapters in Mistboard's own xiangqi studies now open with the advantage chart, the move marks and accuracy, as in a game review. Chapters set up from a position, such as compositions, have no chart. On the player pages, a board whose game is in the broadcast archive has the chart under it: click it to jump to any move, or hide it from the board menu.":
     'Mistboard 自己的象棋研習中，對局章節現在一打開就顯示優勢圖、著法評註和準確率，和對局復盤一樣。從擺好的局面開始的章節（例如排局）沒有優勢圖。在棋手頁面上，如果棋盤上的對局在直播檔案裡，棋盤下方會顯示它的優勢圖：點擊優勢圖可以跳到任意一步，也可以在棋盤選單裡隱藏它。',
   'See the Cao Yanlei page': '查看曹岩磊的頁面',
+  'A player page for Zuo Wenjing.': '左文静有了自己的棋手頁面。',
+  "The 2022 women's world champion, and a double gold medallist at the 2023 Asian Games. The page follows her title run in Kuching and her 2026 season, with five of her games on the board, in English and Chinese. All 32 of her games are in a study with the engine's judgments and lines.":
+    '2022 年女子世錦賽冠軍，2023 年亞運會兩枚金牌得主。頁面講述她在古晉的奪冠歷程和 2026 賽季，棋盤上有她的五盤對局，提供英文和中文版。她的全部 32 盤對局都收在一個研習裡，附引擎的判斷和變化。',
   'A player page for Tony Fung.': '馮家俊有了自己的棋手頁面。',
   "Hong Kong's 2022 world championship finalist, who scored nine points from ten in this year's qualifier for China's top league. The page follows his last fourteen months and his run to the 2022 final in Kuching, with five of his games on the board, in English and Chinese. All 47 of his games are in a study with the engine's judgments and lines.":
     '打進 2022 年世錦賽決賽的香港棋手，今年象甲預選賽十分拿下九分。頁面講述他最近十四個月的比賽和 2022 年在古晉打進決賽的經歷，棋盤上有他的五盤對局，提供英文和中文版。他的全部 47 盤對局都收在一個研習裡，附引擎的判斷和變化。',

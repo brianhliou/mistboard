@@ -244,17 +244,14 @@
    board-lastmove.css on 2026-08-27 when jieqi, mini, and fortress adopted them;
    only the square-grid rects below are still xiangqi's alone. */
 
-/* Square-grid boards use the same spatial language as Western chess boards:
-   tint the complete source and destination cells instead of drawing token-sized
-   circles. RGBA fills keep the grid visible and let the destination marker's
-   arrival animation control element opacity without briefly becoming solid. */
+/* Square-grid boards tint the destination cell, as Western chess boards do.
+   The RGBA fill keeps the grid visible and lets the arrival animation control
+   element opacity without briefly becoming solid. The origin cell and the ring
+   on the moved piece are painted by board-lastmove.ts (boardLastMoveCellMarksSvg,
+   Brian's 2026-10-15 pick) as attributes, so no rule here may set their fill. */
 .xq-live-lastmove-square {
   fill: rgba(245, 158, 11, 0.28);
   pointer-events: none;
-}
-
-.xq-live-lastmove-square.xq-live-lastmove-from {
-  fill: rgba(161, 98, 7, 0.3);
 }
 
 /* Engine candidate arrows. The renderer paints a default blue as presentation
@@ -343,17 +340,6 @@
 
 .xq-piece {
   pointer-events: none;
-}
-
-/* Disc pieces carry their shadow in their own markup (xiangqiPieceShadowMarks).
-   The disc-less animal heads have no disc to shadow, so they keep the soft CSS
-   drop shadow that follows their outline; the Piece shadow switch drops it. */
-.xq-piece--bare-animal {
-  filter: drop-shadow(0 3px 4px rgba(35, 27, 18, 0.25));
-}
-
-:root[data-xiangqi-piece-shadow="off"] .xq-piece--bare-animal {
-  filter: none;
 }
 
 .xq-piece--drag-source {

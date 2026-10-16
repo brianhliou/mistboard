@@ -54,6 +54,17 @@
   }
 }
 
+/* Banqi's captured discs (#546) grow toward the board's own (58 / 568 of the
+   board's width), capped so seven sit on one row: a side's 16 pieces are at
+   most seven roles, one disc each with its count badge, so a whole side's
+   losses fit the reserved one-row band and the rail never grows. Under the
+   base clamp they were about half the board's disc. */
+@media (min-width: 800px) {
+  .live-route--banqi .live-review__cluster .rail-material {
+    --capture-piece-size: min(calc(var(--uni-board-width) * 0.102), calc((100cqw - 20px) / 7));
+  }
+}
+
 /* With the console gap collapsed (clock joins the table), keep a little air
    between the material strips and the clock tabs. */
 .live-review__cluster .captures-strip-top {

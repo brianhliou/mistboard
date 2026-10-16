@@ -1,21 +1,10 @@
 import {
-  FORTRESS_XIANGQI_SPEC_ID,
-  type FortressXiangqiColor,
-  type FortressXiangqiGameState,
-  type FortressXiangqiPlayerView,
-  getFortressXiangqiPlayerView,
   getStandardXiangqiPlayerView,
   XIANGQI_SPEC_ID,
   type XiangqiColor,
   type XiangqiGameState,
 } from '@mistboard/game';
-import './drop-reserve.css';
 import './live-xiangqi.css';
-import {
-  installFortressXiangqiBoardStyles,
-  renderFortressXiangqiBoardSvg,
-} from './fortress-xiangqi-render.js';
-import { fillFortressXiangqiReserve } from './fortress-xiangqi-view.js';
 import { variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
@@ -24,11 +13,9 @@ import { renderXiangqiBoardSvg } from './xiangqi-board.js';
 // Daily variants this widget knows how to paint. The payload gate (fail-closed)
 // treats any other variant as a miss: no widget beats the wrong board. Extend
 // this list together with renderHomePuzzleBox when the daily rotation grows.
-const HOME_PUZZLE_VARIANTS: readonly string[] = [
-  // Fortress omitted: the daily rotation no longer selects it (demoted, awaiting
-  // a re-mine). Re-add when the Fortress daily provider is restored.
-  XIANGQI_SPEC_ID,
-];
+// Fortress Xiangqi was retired on 2026-10-11 and its puzzles deleted, so a
+// Fortress daily still sitting in a visitor's cache reads as a miss here.
+const HOME_PUZZLE_VARIANTS: readonly string[] = [XIANGQI_SPEC_ID];
 
 type HomeDailyPuzzle = {
   daily: {
@@ -43,7 +30,7 @@ type HomeDailyPuzzle = {
       | { type: 'checkmate'; winner?: XiangqiColor }
       | { type: 'winning-advantage'; winner?: XiangqiColor; centipawns?: number };
     id: string;
-    initial: FortressXiangqiGameState | XiangqiGameState;
+    initial: XiangqiGameState;
     sideToMove: XiangqiColor | null;
     solutionPlyCount: number;
     themes: string[];
@@ -94,7 +81,6 @@ export async function loadHomeDailyPuzzle(): Promise<HomeDailyPuzzle | null> {
 }
 
 export function renderHomePuzzleWidget(daily: HomeDailyPuzzle): HTMLElement {
-  installFortressXiangqiBoardStyles();
   const { puzzle } = daily;
   const link = document.createElement('a');
   link.className = 'home-puzzle-widget';
@@ -120,30 +106,18 @@ function renderHomePuzzleWidgetContent(puzzle: HomeDailyPuzzle['puzzle']): HTMLE
 }
 
 // The flush board box: a square filling the rail, with the board hugging the inner
-// (center-facing) edge and any drop reserve stacked as a single column on the outer
-// edge. Title/turn captions sit outside the box (see landing.css).
+// (center-facing) edge. Title/turn captions sit outside the box (see landing.css).
 function renderHomePuzzleBox(puzzle: HomeDailyPuzzle['puzzle']): HTMLElement {
   const box = document.createElement('div');
   box.className = 'home-puzzle-box';
   const turn = puzzle.sideToMove ?? 'red';
-
-  if (puzzle.variant === FORTRESS_XIANGQI_SPEC_ID) {
-    const view = getFortressXiangqiPlayerView(puzzle.initial as FortressXiangqiGameState, turn);
-    box.append(
-      homePuzzleBoardSurface(
-        renderFortressXiangqiBoardSvg(view, turn, { interactive: false, coordinates: false }),
-      ),
-      fortressReserveColumn(view, turn),
-    );
-    return box;
-  }
 
   if (puzzle.variant === XIANGQI_SPEC_ID) {
     // The standard 9x10 board renders from the solver's perspective; no reserve.
     box.append(
       homePuzzleBoardSurface(
         renderXiangqiBoardSvg(
-          getStandardXiangqiPlayerView(puzzle.initial as XiangqiGameState, turn),
+          getStandardXiangqiPlayerView(puzzle.initial, turn),
           turn,
           // A thumbnail that links to the puzzle, not a board anyone plays on.
           // Suppressing the labels also keeps the box's authored aspect ratio
@@ -158,25 +132,6 @@ function renderHomePuzzleBox(puzzle: HomeDailyPuzzle['puzzle']): HTMLElement {
   // Fail-closed: isHomeDailyPuzzle already filters unknown variants, so this is
   // unreachable from the fetch/cache paths. Never fall back to another board.
   throw new Error(`Unsupported daily puzzle variant: ${puzzle.variant}`);
-}
-
-// Both hands stacked in one column on the outer edge (opponent above, side-to-play
-// below). Each fill already collapses identical pieces to a chip + count badge.
-function fortressReserveColumn(
-  view: FortressXiangqiPlayerView,
-  perspective: FortressXiangqiColor,
-): HTMLElement {
-  const col = document.createElement('div');
-  col.className = 'home-puzzle-reserve';
-  const opponent: FortressXiangqiColor = perspective === 'red' ? 'black' : 'red';
-  for (const owner of [opponent, perspective] as const) {
-    const hand = document.createElement('div');
-    hand.className = 'home-puzzle-hand';
-    hand.setAttribute('aria-label', t('homePuzzle.reserve', { color: colorLabel(owner) }));
-    fillFortressXiangqiReserve(hand, view, owner);
-    col.append(hand);
-  }
-  return col;
 }
 
 function homePuzzleBoardSurface(svg: string): HTMLElement {

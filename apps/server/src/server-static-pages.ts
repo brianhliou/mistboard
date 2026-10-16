@@ -12,11 +12,7 @@ import { botPageMeta } from './bot-page-meta.js';
 import { botsDirectoryBody } from './bots-page-body.js';
 import { broadcastPageMeta } from './og-broadcast.js';
 import { type TenantGamePageMeta, tenantGamePageMeta } from './og-game-tenant.js';
-import {
-  ARTICLE_OG_IMAGE_VERSION,
-  GAME_OG_IMAGE_VERSION,
-  STUDY_OG_IMAGE_VERSION,
-} from './og-image.js';
+import { articleOgImageUrl, GAME_OG_IMAGE_VERSION, STUDY_OG_IMAGE_VERSION } from './og-image.js';
 import {
   isPositionOgVariant,
   POSITION_OG_IMAGE_VERSION,
@@ -62,22 +58,24 @@ type SpaRouteMeta = {
   localeGroup?: string;
 };
 
-const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
+export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
   '/videos': {
     title: 'Xiangqi Video Library | Mistboard',
     description:
-      'Curated xiangqi (Chinese chess) videos in English and Chinese: rules, openings, tactics, endgames, and commented games.',
+      'Curated xiangqi (Chinese chess) videos in English and Chinese: rules, openings, tactics, endgames and commented games. Search by title or author, or by topic.',
     localeGroup: '/videos',
   },
   '/zh-hans/videos': {
-    title: '象棋视频库 | Mistboard',
-    description: '精选中文与英文象棋视频：规则、开局、战术、残局与讲解对局。',
+    title: '象棋视频库：规则、开局与残局 | Mistboard',
+    description:
+      '精心挑选的中文与英文象棋（中国象棋）视频，内容涵盖规则、开局、战术、残局和讲解对局。可以按标题或作者搜索，也可以按主题筛选。',
     htmlLang: 'zh-Hans',
     localeGroup: '/videos',
   },
   '/zh-hant/videos': {
-    title: '象棋影片庫 | Mistboard',
-    description: '精選中文與英文象棋影片：規則、開局、戰術、殘局與講解對局。',
+    title: '象棋影片庫：規則、開局與殘局 | Mistboard',
+    description:
+      '精心挑選的中文與英文象棋（中國象棋）影片，內容涵蓋規則、開局、戰術、殘局和講解對局。可以按標題或作者搜尋，也可以按主題篩選。',
     htmlLang: 'zh-Hant',
     localeGroup: '/videos',
   },
@@ -97,14 +95,14 @@ const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
   '/zh-hans/bots': {
     title: '象棋人机对战 · 八个等级与皮卡鱼 | Mistboard',
     description:
-      '和电脑下象棋：八个难度等级，从入门到很强，最强的对手是皮卡鱼。免费网页版，无需下载，无需注册。',
+      '和电脑下象棋：八个难度等级，从入门一直到很强，最高一级的对手是皮卡鱼。免费网页版，直接在浏览器里下，无需下载，也无需注册账号。',
     htmlLang: 'zh-Hans',
     localeGroup: '/bots',
   },
   '/zh-hant/bots': {
     title: '象棋人機對戰 · 八個等級與皮卡魚 | Mistboard',
     description:
-      '和電腦下象棋：八個難度等級，從入門到很強，最強的對手是皮卡魚。免費網頁版，無需下載，無需註冊。',
+      '和電腦下象棋：八個難度等級，從入門一直到很強，最高一級的對手是皮卡魚。免費網頁版，直接在瀏覽器裡下，無需下載，也無需註冊帳號。',
     htmlLang: 'zh-Hant',
     localeGroup: '/bots',
   },
@@ -114,42 +112,44 @@ const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
       'A free, open-source place to play xiangqi (Chinese chess) in English, built for serious play. What the site is, and who it is for.',
   },
   '/faq': {
-    title: 'FAQ | Mistboard',
+    title: 'Frequently Asked Questions | Mistboard',
     description:
       'Which games are hosted, whether you need an account, how rated play and cheat prevention work, and where the game library comes from.',
   },
   '/developers': {
-    title: 'Developers | Mistboard',
+    title: 'Developers: Embeds and API | Mistboard',
     description:
       'Embed a xiangqi board with engine annotations in your own page. A public study chapter runs in an iframe with no API key, and Mistboard is an oEmbed provider.',
   },
   '/api-docs': {
-    title: 'API | Mistboard',
+    title: 'Public Read API Reference | Mistboard',
     description:
       'The public read API behind mistboard.com: games, watch feeds, puzzles, studies, ratings, the xiangqi opening explorer and the forum, as an OpenAPI 3.1 document.',
   },
   '/forum': {
-    title: 'Forum | Mistboard',
+    title: 'Community Forum | Mistboard',
     description:
-      'Community discussion: general games talk, game analysis, site feedback, and off-topic.',
+      'The Mistboard community forum: talk about xiangqi and the other games, post a game for analysis, give feedback on the site, or chat about anything else.',
   },
   '/coach': {
     title: 'Xiangqi Coaches | Mistboard',
     description:
-      'Find a coach to study with. Every coach listed here holds a verified xiangqi or chess title.',
+      'Find a xiangqi (Chinese chess) or chess coach to study with. Every coach listed holds a verified title, with their languages, rate and how to reach them.',
   },
   '/streamer': {
     title: 'Xiangqi Streamers | Mistboard',
-    description: 'Chinese chess (xiangqi) and variant streamers to watch live and on demand.',
+    description:
+      'Chinese chess (xiangqi) and variant streamers to watch live and on demand on Twitch and YouTube, with the language each streams in and a link to their channel.',
   },
   '/player': {
     title: 'Xiangqi Leaderboard | Mistboard',
-    description: 'The highest rated players on Mistboard, by game and time control.',
+    description:
+      'The highest rated players on Mistboard, by game and time control. Rated games are played between signed-in accounts in xiangqi, jieqi, banqi, Jungle and more.',
   },
   '/player/rating-stats': {
     title: 'Rating Distribution | Mistboard',
     description:
-      'How Mistboard ratings are spread across each rated game, with player counts and averages.',
+      'How Mistboard ratings are spread across each rated game, with player counts and averages. Ratings use Glicko-2 and count rated games between signed-in players.',
   },
   '/patron': {
     title: 'Become a Patron | Mistboard',
@@ -157,16 +157,17 @@ const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
       'Mistboard is independent and ad-free. Core play and learning stay free. Patron is an optional monthly subscription with a profile badge.',
   },
   '/source': {
-    title: 'Source Code | Mistboard',
+    title: 'Open Source Code | Mistboard',
     description:
       'Mistboard is an independent open-source project, published under AGPL-3.0-or-later. Browse the repository and the license.',
   },
   '/contribute': {
-    title: 'Contribute | Mistboard',
-    description: 'Mistboard is free and open source. Ways to help, whether or not you write code.',
+    title: 'How to Contribute | Mistboard',
+    description:
+      'Mistboard is free and open source. Ways to help, whether or not you write code: play and give feedback, report bugs, help translate, or improve the code.',
   },
   '/creators': {
-    title: 'Work With Us | Mistboard',
+    title: 'Work With Us: Creators and Players | Mistboard',
     description:
       'Work with Mistboard: titled players and coaches, creators and streamers, event organizers and clubs, writers and composers, and engine authors.',
   },
@@ -180,21 +181,21 @@ const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     localeGroup: '/champions',
   },
   '/zh-hans/champions': {
-    title: '引擎冠军 | Mistboard',
+    title: '引擎冠军与挑战赛 | Mistboard',
     description:
       '揭棋、暗棋、斗兽棋和翻翻棋的现任冠军引擎：就是你在 Mistboard 上对弈的机器人，附头衔历史，以及任何引擎如何在公开对抗赛中挑战头衔。',
     htmlLang: 'zh-Hans',
     localeGroup: '/champions',
   },
   '/zh-hant/champions': {
-    title: '引擎冠軍 | Mistboard',
+    title: '引擎冠軍與挑戰賽 | Mistboard',
     description:
       '揭棋、暗棋、鬥獸棋和翻翻棋的現任冠軍引擎：就是你在 Mistboard 上對弈的機器人，附頭銜歷史，以及任何引擎如何在公開對抗賽中挑戰頭銜。',
     htmlLang: 'zh-Hant',
     localeGroup: '/champions',
   },
   '/changelog': {
-    title: 'Changelog | Mistboard',
+    title: 'Changelog: Every Change, Month by Month | Mistboard',
     description:
       'Every change to mistboard.com, month by month, newest first: playing, learning, watching, community, the site, removals and fixes, each linking its commit.',
   },
@@ -207,14 +208,16 @@ const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
   // The course ships in all three interface locales; before 2026-09-22 only the
   // English URL was routable, so the Chinese course had no indexable address.
   '/zh-hans/learn/xiangqi': {
-    title: '学下象棋 | Mistboard',
-    description: '免费的互动象棋入门课程：边玩边学棋子走法、规则和基本战术。',
+    title: '学下象棋：免费互动入门课程 | Mistboard',
+    description:
+      '免费的互动象棋入门课程，边玩边学：从七种棋子的走法和摆棋开始，再学吃子、保护、将军、应将、将死、困毙和长将等规则与基本战术。',
     htmlLang: 'zh-Hans',
     localeGroup: '/learn/xiangqi',
   },
   '/zh-hant/learn/xiangqi': {
-    title: '學下象棋 | Mistboard',
-    description: '免費的互動象棋入門課程：邊玩邊學棋子走法、規則和基本戰術。',
+    title: '學下象棋：免費互動入門課程 | Mistboard',
+    description:
+      '免費的互動象棋入門課程，邊玩邊學：從七種棋子的走法和擺棋開始，再學吃子、保護、將軍、應將、將死、困斃和長將等規則與基本戰術。',
     htmlLang: 'zh-Hant',
     localeGroup: '/learn/xiangqi',
   },
@@ -240,14 +243,16 @@ const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     localeGroup: '/practice',
   },
   '/zh-hans/practice': {
-    title: '象棋残局练习 | Mistboard',
-    description: '和电脑练习象棋残局：每个局面都有目标，电脑负责防守，胜势丢掉时会提示你。',
+    title: '象棋残局练习：与电脑对练 | Mistboard',
+    description:
+      '和电脑练习象棋残局：每个局面都设定一个目标，比如将死对方或守和若干回合，电脑负责防守，一旦你把胜势丢掉，它会马上提示你。',
     htmlLang: 'zh-Hans',
     localeGroup: '/practice',
   },
   '/zh-hant/practice': {
-    title: '象棋殘局練習 | Mistboard',
-    description: '和電腦練習象棋殘局：每個局面都有目標，電腦負責防守，勝勢丟掉時會提示你。',
+    title: '象棋殘局練習：與電腦對練 | Mistboard',
+    description:
+      '和電腦練習象棋殘局：每個局面都設定一個目標，比如將死對方或守和若干回合，電腦負責防守，一旦你把勝勢丟掉，它會馬上提示你。',
     htmlLang: 'zh-Hant',
     localeGroup: '/practice',
   },
@@ -290,7 +295,7 @@ const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
       'Paste a xiangqi (Chinese chess) game and get a browsable board with free engine analysis. Reads PGN, WXF, Chinese notation, ICCS coordinates, and dpxq records.',
   },
   '/stats': {
-    title: 'Statistics | Mistboard',
+    title: 'Site Statistics | Mistboard',
     description:
       'Live statistics for Mistboard: total xiangqi and variant games played, activity over time, and a breakdown by variant and game type.',
   },
@@ -354,44 +359,50 @@ export function positionRouteMeta(pathname: string, search: string): PositionRou
   };
 }
 
-const ARTICLES_INDEX_META: Record<
+export const ARTICLES_INDEX_META: Record<
   'en' | 'zh-hans' | 'zh-hant',
   { title: string; description: string; htmlLang: string }
 > = {
   en: {
-    title: 'Articles | Mistboard',
-    description: 'Long-form writing on original strategy games, rules, and engine research.',
+    title: 'Xiangqi and Variant Articles | Mistboard',
+    description:
+      'Long-form articles on xiangqi (Chinese chess) and its variants: rules explained, champions and players, engine research, puzzles, and how Mistboard is built.',
     htmlLang: 'en',
   },
   'zh-hans': {
-    title: '文章 | Mistboard',
-    description: '原创策略游戏的文章、规则说明与引擎工作。',
+    title: '象棋与变体文章 | Mistboard',
+    description:
+      '关于象棋（中国象棋）及其变体的长文：规则详解、历届冠军与棋手、引擎研究、残局题目，以及 Mistboard 是怎样做出来的。',
     htmlLang: 'zh-Hans',
   },
   'zh-hant': {
-    title: '文章 | Mistboard',
-    description: '原創策略遊戲的文章、規則說明與引擎工作。',
+    title: '象棋與變體文章 | Mistboard',
+    description:
+      '關於象棋（中國象棋）及其變體的長文：規則詳解、歷屆冠軍與棋手、引擎研究、殘局題目，以及 Mistboard 是怎樣做出來的。',
     htmlLang: 'zh-Hant',
   },
 };
 
-const RULES_INDEX_META: Record<
+export const RULES_INDEX_META: Record<
   'en' | 'zh-hans' | 'zh-hant',
   { title: string; description: string; htmlLang: string }
 > = {
   en: {
-    title: 'Rules | Mistboard',
-    description: 'Reference rules for Mistboard games, classic bases, and Fog of War variants.',
+    title: 'Xiangqi and Variant Rules | Mistboard',
+    description:
+      'Full rules for every game on Mistboard: xiangqi (Chinese chess), jieqi, banqi, Jungle and chess, plus Fog of War, Duck Xiangqi and other xiangqi variants.',
     htmlLang: 'en',
   },
   'zh-hans': {
-    title: '规则 | Mistboard',
-    description: 'Mistboard 游戏、经典基础规则与战争迷雾变体的规则参考。',
+    title: '象棋与变体规则 | Mistboard',
+    description:
+      'Mistboard 上每一种棋的完整规则：象棋（中国象棋）、揭棋、暗棋、斗兽棋和国际象棋，以及迷雾、鸭子等各种象棋变体。',
     htmlLang: 'zh-Hans',
   },
   'zh-hant': {
-    title: '規則 | Mistboard',
-    description: 'Mistboard 遊戲、經典基礎規則與戰爭迷霧變體的規則參考。',
+    title: '象棋與變體規則 | Mistboard',
+    description:
+      'Mistboard 上每一種棋的完整規則：象棋（中國象棋）、揭棋、暗棋、鬥獸棋和國際象棋，以及迷霧、鴨子等各種象棋變體。',
     htmlLang: 'zh-Hant',
   },
 };
@@ -414,6 +425,19 @@ const RENAMED_ARTICLE_SLUGS: Record<string, string> = {
   // Retitled from the launch post to a strategy guide on 2026-09-25.
   'duck-xiangqi-build': 'duck-xiangqi-strategy',
 };
+
+const ROBOTS_META = /<meta\s+name="robots"\s+content="[^"]*"\s*\/?>/;
+
+/** Sets the page's one robots tag. The shell carries `max-image-preview:large`
+ *  for indexable pages; a noindex page REPLACES that tag rather than adding a
+ *  second one, because crawlers merge every robots tag they find and two tags
+ *  is a page whose directives nobody wrote down in one place. */
+export function setRobotsMeta(html: string, content: string): string {
+  const tag = `<meta name="robots" content="${content}">`;
+  return ROBOTS_META.test(html)
+    ? html.replace(ROBOTS_META, tag)
+    : html.replace('</head>', `${tag}</head>`);
+}
 
 export function injectPageMeta(html: string, meta: PageMeta): string {
   let out = html
@@ -616,7 +640,7 @@ export async function serveSpaShellWithRoutePreloads(params: {
     );
   }
   if (noindex) {
-    html = html.replace('</head>', '<meta name="robots" content="noindex, follow"></head>');
+    html = setRobotsMeta(html, 'noindex, follow');
   }
   if (links) html = html.replace('</head>', `${links}</head>`);
   // A client route that exists to answer a search (/bots) also carries its text
@@ -657,7 +681,7 @@ export async function serveGamePage(params: {
   // (SEO backlog D8, 2026-09-17 Search Console read). The page still serves and
   // still previews when shared. Tenant games live at /<variant>/game/:id and go
   // through serveSpaShellWithRoutePreloads, not here, so they are unaffected.
-  html = html.replace('</head>', '<meta name="robots" content="noindex, follow"></head>');
+  html = setRobotsMeta(html, 'noindex, follow');
 
   // /game/:id bypasses the isClientRoute shell path, so bake the route's chunk
   // preloads here too (the replay/board graph is the heaviest cold load).
@@ -796,7 +820,7 @@ export async function serveStudyPage(params: {
     // Unlisted means anyone with the link, not anyone with a search box: the
     // page still serves, it just stops advertising itself. `follow` because the
     // links on it are ordinary site links.
-    html = html.replace('</head>', '<meta name="robots" content="noindex, follow"></head>');
+    html = setRobotsMeta(html, 'noindex, follow');
   }
 
   const preloadLinks = await routePreloadLinksForPath({
@@ -822,9 +846,10 @@ export async function serveNotFoundShell(params: {
 }): Promise<void> {
   const indexPath = resolve(params.staticDir, 'index.html');
   let html = await fs.readFile(indexPath, 'utf-8');
-  html = html
-    .replace(/<title>[^<]*<\/title>/, '<title>Page not found · Mistboard</title>')
-    .replace('</head>', '<meta name="robots" content="noindex, follow"></head>');
+  html = setRobotsMeta(
+    html.replace(/<title>[^<]*<\/title>/, '<title>Page not found · Mistboard</title>'),
+    'noindex, follow',
+  );
   params.response.writeHead(404, { 'content-type': 'text/html; charset=utf-8' });
   params.response.end(html);
 }
@@ -838,9 +863,10 @@ export async function serveGoneShell(params: {
 }): Promise<void> {
   const indexPath = resolve(params.staticDir, 'index.html');
   let html = await fs.readFile(indexPath, 'utf-8');
-  html = html
-    .replace(/<title>[^<]*<\/title>/, '<title>Page retired · Mistboard</title>')
-    .replace('</head>', '<meta name="robots" content="noindex, nofollow"></head>');
+  html = setRobotsMeta(
+    html.replace(/<title>[^<]*<\/title>/, '<title>Page retired · Mistboard</title>'),
+    'noindex, nofollow',
+  );
   params.response.writeHead(410, { 'content-type': 'text/html; charset=utf-8' });
   params.response.end(html);
 }
@@ -1200,10 +1226,10 @@ export async function serveArticlePage(params: {
       title: `${article.title} | Mistboard`,
       description: article.description,
       url,
-      imageUrl: `${params.publicHost}/og/article/${encodeURIComponent(params.slug)}.png?v=${ARTICLE_OG_IMAGE_VERSION}`,
+      imageUrl: articleOgImageUrl(params.publicHost, params.slug, params.langPrefix),
     });
     if (!articleIsIndexable(params.slug)) {
-      html = html.replace('</head>', '<meta name="robots" content="noindex, follow"></head>');
+      html = setRobotsMeta(html, 'noindex, follow');
     }
   }
   params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });

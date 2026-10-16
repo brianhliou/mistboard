@@ -266,11 +266,18 @@ export function benedictSteps(
   id: string,
   frames: Frame[],
   notes: ReadonlyArray<string | undefined>,
-): Array<{ svg: () => string; narrative?: string; move?: string }> {
+): Array<{
+  svg: () => string;
+  narrative?: string;
+  move?: string;
+  motion?: { from: string; to: string };
+}> {
   return frames.map((frame, i) => ({
     svg: benedictFrame(`${id}-${i}`, frame),
     ...(notes[i] ? { narrative: notes[i] } : {}),
-    ...(frame.from && frame.to ? { move: `${frame.from}${frame.to}` } : {}),
+    ...(frame.from && frame.to
+      ? { move: `${frame.from}${frame.to}`, motion: { from: frame.from, to: frame.to } }
+      : {}),
   }));
 }
 
@@ -295,7 +302,7 @@ export const BENEDICT_PIE_FRAMES: Array<() => string> = [
           perspective: 'red',
           arrows: [{ from: from as XiangqiSquare, to: to as XiangqiSquare }],
         }),
-      ).replace(/viewBox="0 0 ([\d.]+) [\d.]+"/, (_, w) => `viewBox="0 131 ${w} 216"`),
+      ).replace(/viewBox="0 0 ([\d.]+) [\d.]+"/, (_, w) => `viewBox="0 127.5 ${w} 219.5"`),
 );
 
 /** Red's 42 first moves and Red's score after each, three move/score pairs a

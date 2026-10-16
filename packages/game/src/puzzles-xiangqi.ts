@@ -1,6 +1,6 @@
 // Standard (9x10, open-information) Xiangqi puzzle model.
 //
-// Parallels puzzles-fortress-xiangqi.ts, but for the standard xiangqi kernel
+// Parallels the deleted Fortress Xiangqi puzzle model, but for the standard xiangqi kernel
 // (variants-xiangqi-standard.ts): a puzzle is a legal position with the solver
 // to move and a scripted solution line; solver plies are the even indices
 // (0, 2, 4, ...), defender replies the odd ones.

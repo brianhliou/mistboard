@@ -21,6 +21,10 @@ import { VARIANT_SMOKE_CONFIGS } from './lib/variant-smoke-configs.mjs';
 const EXEMPT: Readonly<Record<string, string>> = {
   // Covered by prod:smoke:engines, which plays the fog-chess engine directly.
   'dark-chess': 'prod:smoke:engines',
+  // Retired 2026-10-11: every create path answers 410, so there is no PvE to
+  // smoke. Their config rows and prod:smoke:<name> scripts are dead until deleted.
+  'fortress-xiangqi': 'retired',
+  'atomic-xiangqi': 'retired',
 };
 
 function pveGameSpecIds(): string[] {
@@ -102,6 +106,13 @@ test('every smoked variant is wired into the release gate', async () => {
   // A config row that no release row invokes is coverage that never runs — the
   // exact shape of the original gap, one level down.
   for (const config of Object.values(VARIANT_SMOKE_CONFIGS)) {
+    if (EXEMPT[config.gameSpecId] === 'retired') {
+      assert.ok(
+        !releaseSource.includes(`'prod:smoke:${config.name}'`),
+        `prod:smoke:${config.name} smokes a retired variant, whose games the server refuses`,
+      );
+      continue;
+    }
     assert.ok(
       releaseSource.includes(`'prod:smoke:${config.name}'`),
       `prod:smoke:${config.name} is configured but not run by the release smoke tier`,

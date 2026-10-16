@@ -1266,8 +1266,12 @@ definePersistenceTests('xiangqi broadcasts', () => {
         startsAt: '2025-09-21T00:00:00.000Z',
         endsAt: '2025-09-27T00:00:00.000Z',
         createdAt,
+        hasBoards: false,
       },
     ]);
+    // Its first board is what ends the scheduler's late tail (#493).
+    await importXiangqiBroadcastPack(pack);
+    assert.equal((await listXiangqiBroadcastScheduledTours())[0]?.hasBoards, true);
     // The 2025 fixture event is long past, but the tour was seeded just now:
     // a backfill polls for the tail counted from its creation.
     const fresh = await getXiangqiBroadcastTour('2025-wxc-sample');

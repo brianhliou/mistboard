@@ -9,7 +9,10 @@
 //   start      "Jieqi by correspondence". Guests: a link to sign-up whose return
 //              path carries ?corr=jieqi, and the homepage runs the quick pair on
 //              arrival, so there is no second click. Signed in: runs it here.
-//   your-move  you owe a move in some correspondence game: links to the first.
+//   your-move  you owe a move in some correspondence game: one game links to
+//              it; two or more link to /correspondence, whose "Your move"
+//              section lists them all (a phone showed "Your move in 3 games"
+//              and opened only the first, 2026-10-14).
 //   waiting    your quick-pair seek is up: links to /correspondence.
 
 import {
@@ -32,6 +35,7 @@ export const CORRESPONDENCE_INTENT_PARAM = 'corr';
 const INTENT_VALUE = 'jieqi';
 const QUICK_PAIR_URL = '/api/correspondence/quick-pair';
 const START_SOURCE = 'home-correspondence' as const;
+const INBOX_HREF = '/correspondence';
 
 export type CorrespondenceCardState =
   | { kind: 'start' }
@@ -49,7 +53,8 @@ type SeeksPayload = {
 };
 
 /** Pure: which state a signed-in visitor sees, from the two reads. A move owed
- *  anywhere outranks waiting, which outranks the offer. */
+ *  anywhere outranks waiting, which outranks the offer. One game owed links
+ *  straight to it; more than one links to the inbox that lists them. */
 export function correspondenceCardState(
   games: GamesPayload | null,
   seeks: SeeksPayload | null,
@@ -59,7 +64,8 @@ export function correspondenceCardState(
   );
   const first = yourMove[0];
   if (first && typeof first.url === 'string') {
-    return { kind: 'your-move', count: yourMove.length, href: first.url };
+    const href = yourMove.length === 1 ? first.url : INBOX_HREF;
+    return { kind: 'your-move', count: yourMove.length, href };
   }
   const waiting = (seeks?.seeks ?? []).some(
     (seek) =>
@@ -128,14 +134,17 @@ export function buildLandingCorrespondenceCard(
         next.count === 1
           ? t('home.corrYourMoveOne', {}, locale)
           : t('home.corrYourMoveMany', { count: String(next.count) }, locale);
-      subline.textContent = t('home.corrYourMoveSubline', {}, locale);
+      subline.textContent =
+        next.count === 1
+          ? t('home.corrYourMoveSubline', {}, locale)
+          : t('home.corrYourMoveManySubline', {}, locale);
       card.href = next.href;
       return;
     }
     if (next.kind === 'waiting') {
       title.textContent = t('home.corrWaiting', {}, locale);
       subline.textContent = t('home.corrWaitingSubline', {}, locale);
-      card.href = '/correspondence';
+      card.href = INBOX_HREF;
       return;
     }
     title.textContent = t('home.corrTitle', {}, locale);

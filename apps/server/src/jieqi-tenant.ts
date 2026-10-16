@@ -306,7 +306,8 @@ export const jieqiTenant: JieqiTenant = {
   },
   // Emit the room mode + engine id so the client knows a finished PvE game was
   // PvE and "Play again" re-creates a PvE game vs the same engine (not a PvP
-  // invite). Mirrors DMX; Jieqi's core snapshot carries no extras.
+  // invite), and check marks. A finished PvP room's rematch offers ride the
+  // shared snapshot (tenantSnapshotPayload), as for every tenant.
   wire: {
     snapshotExtras: (room) => {
       const pveEngineId = tenantPveEngineId(jieqiTenant, room);

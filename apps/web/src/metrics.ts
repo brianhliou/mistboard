@@ -29,10 +29,14 @@ import { buildWeeklyChart, type WeeklySeries } from './weekly-chart.js';
 // The live variants shown on the public /stats surface: the public shelf
 // (game-specs.ts CANONICAL_VARIANT_ORDER) minus anything retired, derived so a
 // launch or a retirement moves /stats with it. A hand list here once missed
-// atomic xiangqi for weeks. Retired variants stay off the breakdown and chart
-// filter; their games still count in the headline total, which the breakdown
-// says in a note. Admin /metrics applies the same shelf to the human split; the
-// engines block at the bottom lists every variant the bots played.
+// atomic xiangqi for weeks. The server already leaves retired variants' games
+// out of every number on /api/stats/public (countedPublicGame in
+// apps/server/src/persistence-counted-games.ts), so the headline total, the
+// series and the breakdowns carry no retired variant and need no note; this
+// filter keeps the breakdown and chart filter to the public shelf. Admin
+// /metrics applies the same shelf to the human split, but its own series
+// still count retired variants' games; the engines block at the bottom lists
+// every variant the bots played.
 const STATS_VARIANTS: readonly string[] = CANONICAL_VARIANT_ORDER.filter(
   (id) => !isRetiredGameSpec(id),
 );
@@ -170,15 +174,7 @@ async function mountPublicStats(root: HTMLElement): Promise<void> {
     .filter((v) => STATS_VARIANTS.includes(v.variant))
     .map((v) => ({ label: variantPublicName(v.variant, locale), count: v.count }));
   if (variantEntries.length > 0) {
-    const variantSection = buildBreakdownSection(t('stats.byVariant', {}, locale), variantEntries);
-    const listed = variantEntries.reduce((sum, entry) => sum + entry.count, 0);
-    if (listed < publicStats.totalCompletedGames) {
-      const note = document.createElement('p');
-      note.className = 'stats-breakdown-note';
-      note.textContent = t('stats.byVariantRetiredNote', {}, locale);
-      variantSection.append(note);
-    }
-    parts.push(variantSection);
+    parts.push(buildBreakdownSection(t('stats.byVariant', {}, locale), variantEntries));
   }
   parts.push(
     buildBreakdownSection(

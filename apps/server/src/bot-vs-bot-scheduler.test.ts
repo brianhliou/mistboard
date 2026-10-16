@@ -325,16 +325,14 @@ test('the default plan: six variants, modest caps (fortress and atomic cut 2026-
 test('fail closed: an admin-only, adapterless or unknown variant is skipped, never defaulted', () => {
   const config = botVsBotConfigFromEnv({
     MISTBOARD_BOT_VS_BOT_VARIANTS:
-      'mahjong, crazyhouse-xiangqi, jungle-flip, dark-xiangqi, nope, jieqi, jieqi, fortress-xiangqi',
+      'mahjong, crazyhouse-xiangqi, jungle-flip, dark-xiangqi, nope, jieqi, jieqi, fortress-xiangqi, atomic-xiangqi',
   } as NodeJS.ProcessEnv);
-  // Cut from the defaults, fortress still runs when named: its adapter stays.
-  // Crazyhouse (public 2026-10-02) has no default either, so it runs when named.
+  // Crazyhouse (public 2026-10-02) has no default, so it runs when named.
   assert.deepEqual(
     config.plans.map((plan) => [plan.variant, plan.dailyMax]),
     [
       ['crazyhouse-xiangqi', 1],
       ['jieqi', 2],
-      ['fortress-xiangqi', 1],
     ],
   );
   assert.deepEqual(config.skipped, [
@@ -343,6 +341,10 @@ test('fail closed: an admin-only, adapterless or unknown variant is skipped, nev
     { variant: 'jungle-flip', reason: 'no-eve-adapter' },
     { variant: 'dark-xiangqi', reason: 'no-eve-adapter' },
     { variant: 'nope', reason: 'unknown-variant' },
+    // Retired 2026-10-11: skipped even when a stale env names them, though
+    // their adapters stay for the games already played.
+    { variant: 'fortress-xiangqi', reason: 'not-live' },
+    { variant: 'atomic-xiangqi', reason: 'not-live' },
   ]);
 });
 

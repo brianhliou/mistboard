@@ -5,6 +5,7 @@ import {
   DAY_MS,
   isCorrespondenceRatedSpec,
   isOfficialCorrespondenceTimeControl,
+  isRetiredGameSpec,
   type RoomTimeControl,
 } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
@@ -418,7 +419,7 @@ async function createSeek(
 }
 
 async function createSeekResult(
-  ctx: Pick<HttpApiContext, 'isDraining' | 'drainDeadlineMs'>,
+  ctx: Pick<HttpApiContext, 'refusesCreate' | 'drainDeadlineMs'>,
   user: UserAccount,
   body: Record<string, unknown>,
   source: SeekAlertNotice['source'],
@@ -431,6 +432,10 @@ async function createSeekResult(
     return { status: 403, body: { error: 'play_disabled' } };
   }
   const gameSpecId = typeof body.gameSpecId === 'string' ? body.gameSpecId : DARK_CHESS_SPEC_ID;
+  // A retired variant takes no new games: the same 410 the request gate gives.
+  if (isRetiredGameSpec(gameSpecId)) {
+    return { status: 410, body: { error: 'retired_game_spec' } };
+  }
   // Fork-6 fail-closed allowlist — the same set the create route enforces.
   if (!CORRESPONDENCE_ELIGIBLE_SPECS.has(gameSpecId)) {
     return { status: 501, body: { error: 'correspondence_unsupported_spec' } };
@@ -488,7 +493,7 @@ async function createSeekResult(
     }
   }
 
-  if (ctx.isDraining()) {
+  if (ctx.refusesCreate()) {
     return { status: 503, body: { error: 'server_draining', restartAt: ctx.drainDeadlineMs() } };
   }
   // The same board offer posted twice returns the live one instead of stacking a
@@ -617,14 +622,14 @@ async function acceptSeek(
 }
 
 async function acceptSeekResult(
-  ctx: Pick<HttpApiContext, 'isDraining' | 'drainDeadlineMs'>,
+  ctx: Pick<HttpApiContext, 'refusesCreate' | 'drainDeadlineMs'>,
   user: UserAccount,
   seekId: string,
 ): Promise<SeekRouteResult> {
   if (persistence.isPlayDisabled(user)) {
     return { status: 403, body: { error: 'play_disabled' } };
   }
-  if (ctx.isDraining()) {
+  if (ctx.refusesCreate()) {
     return { status: 503, body: { error: 'server_draining', restartAt: ctx.drainDeadlineMs() } };
   }
   const seek = await persistence.getCorrespondenceSeek(seekId);
@@ -642,6 +647,11 @@ async function acceptSeekResult(
   // reclaims the row. expiresAt is the effective expiry, board TTL included.
   if (seek.expiresAt && seek.expiresAt.getTime() <= Date.now()) {
     return { status: 410, body: { error: 'challenge_expired' } };
+  }
+  // A seek posted before its variant retired cannot start a game now; the row
+  // lapses on its own TTL like any other unanswered seek.
+  if (isRetiredGameSpec(seek.gameSpecId)) {
+    return { status: 410, body: { error: 'retired_game_spec' } };
   }
   if (!CORRESPONDENCE_ELIGIBLE_SPECS.has(seek.gameSpecId)) {
     return { status: 501, body: { error: 'correspondence_unsupported_spec' } };
@@ -789,7 +799,9 @@ export type QuickPairDeps = {
 function defaultQuickPairDeps(ctx: HttpApiContext): QuickPairDeps {
   return {
     correspondenceEnabled,
-    variantEnabled: (gameSpecId) => correspondenceTenantForSpecId(gameSpecId)?.enabled() === true,
+    variantEnabled: (gameSpecId) =>
+      !isRetiredGameSpec(gameSpecId) &&
+      correspondenceTenantForSpecId(gameSpecId)?.enabled() === true,
     listOwnSeeks: (userId) => persistence.listOutgoingSeeksForUser(userId),
     listBoardSeeks: () => persistence.listOpenCorrespondenceSeeks(),
     accept: (user, seekId) => acceptSeekResult(ctx, user, seekId),

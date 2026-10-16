@@ -43,12 +43,13 @@ export const EDITOR_VARIANT_IDS = [
   'banqi',
   'duck-xiangqi',
   'crazyhouse-xiangqi',
-  'fortress-xiangqi',
-  'atomic-xiangqi',
   'dark-xiangqi',
   'dark-chess',
   'jungle',
   'jungle-flip',
+  // Retired 2026-10-11: at the tail, matching the analysis catalog.
+  'fortress-xiangqi',
+  'atomic-xiangqi',
 ] as const satisfies readonly AnalysisVariantId[];
 
 /** Slugs the /editor route serves. A strict subset of AnalysisVariantId. */

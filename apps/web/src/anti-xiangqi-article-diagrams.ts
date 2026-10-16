@@ -509,16 +509,17 @@ function antiFrame(id: string, board: Board, from?: string, to?: string): () => 
     );
 }
 
+type AntiStep = {
+  svg: () => string;
+  narrative?: string;
+  move?: string;
+  motion?: { from: string; to: string };
+};
+
 /** One stepper frame per ply, opening on the array. */
-export function antiSteps(
-  id: string,
-  line: Line,
-  start?: string,
-): Array<{ svg: () => string; narrative?: string; move?: string }> {
+export function antiSteps(id: string, line: Line, start?: string): AntiStep[] {
   let board: Board = { ...ANTI_START };
-  const steps: Array<{ svg: () => string; narrative?: string; move?: string }> = [
-    { svg: antiFrame(`${id}-0`, board), narrative: start },
-  ];
+  const steps: AntiStep[] = [{ svg: antiFrame(`${id}-0`, board), narrative: start }];
   line.forEach(([from, to, note, move], i) => {
     const next: Board = { ...board };
     next[to as XiangqiSquare] = next[from as XiangqiSquare];
@@ -528,6 +529,7 @@ export function antiSteps(
       svg: antiFrame(`${id}-${i + 1}`, next, from, to),
       narrative: note || undefined,
       move,
+      motion: { from, to },
     });
   });
   return steps;

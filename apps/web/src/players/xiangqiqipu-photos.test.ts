@@ -73,6 +73,19 @@ describe('xiangqiqipu.com player photos', () => {
     expect(tile?.textContent).toBe('王');
   });
 
+  // Portraits that show the player as a child or teen (OUTDATED_PHOTOS in the
+  // harvest script, reviewed 2026-10-11). The page keeps the tile, or a photo
+  // chosen by hand (zuo-wenjing's 2023 Xinhua photo), never the old portrait.
+  it('never uses an outdated portrait', () => {
+    for (const slug of ['wang-jiarui', 'wang-yuhang', 'wang-zihan', 'xu-wenzhang', 'zuo-wenjing']) {
+      expect(sourcedPhotoFor(slug), slug).toBeNull();
+      expect(existsSync(join(PUBLIC_DIR, `player-photos/${slug}.jpg`)), slug).toBe(false);
+      const figure = playerPortrait({ slug, name: '王天一', nameEn: null });
+      const src = figure.querySelector('img')?.getAttribute('src') ?? '';
+      expect(src, slug).not.toContain('/player-photos/');
+    }
+  });
+
   it('shows a sourced photo in a list row, lazily, at the tile size', () => {
     const entry = XIANGQIQIPU_PHOTOS[0];
     if (!entry) throw new Error('no photos');
@@ -111,13 +124,17 @@ describe('xiangqiqipu.com player photos', () => {
     expect(link?.rel).toBe('noopener');
   });
 
-  it('gives Cao Yanlei the xiangqiqipu portrait, here and on his article card', async () => {
+  // His article card matches the photo on his article (Brian, 2026-10-11: the
+  // card and the page disagreed); his player page keeps the credited portrait.
+  it('gives Cao Yanlei the xiangqiqipu portrait here, his article photo on its card', async () => {
     expect(PLAYER_PROFILES['cao-yanlei']?.photo).toBeUndefined();
     expect(sourcedPhotoFor('cao-yanlei')?.photo).toBe('/player-photos/cao-yanlei.jpg');
     const { caoYanleiArticle } = await import('../articles/content/cao-yanlei.js');
     expect(caoYanleiArticle.thumbnail).toMatchObject({
       kind: 'image',
-      src: '/player-photos/cao-yanlei.jpg',
+      src: '/article-thumbs/cao-yanlei-2024-face.jpg',
     });
+    const figure = caoYanleiArticle.intro?.find((block) => block.kind === 'image-figure');
+    expect(figure).toMatchObject({ src: '/article-thumbs/cao-yanlei-2024.jpg' });
   });
 });

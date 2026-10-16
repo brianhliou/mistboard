@@ -132,17 +132,29 @@ const EMPTY_TREE: SerializedTree = { version: 1, root: { children: [] } };
 const studyMountTokens = new WeakMap<HTMLElement, object>();
 const studyMountCleanups = new WeakMap<HTMLElement, () => void>();
 
-export function mountStudy(root: HTMLElement, studyId: string, initialChapterId?: string): void {
+/**
+ * Mount a study page into `root`.
+ *
+ * The returned promise settles once the first chapter's board has landed (or
+ * the error page has rendered); it never rejects. The board stacks are
+ * code-split, so the page is not usable until then. The app shell fires and
+ * forgets it; tests await it instead of polling for the board.
+ */
+export function mountStudy(
+  root: HTMLElement,
+  studyId: string,
+  initialChapterId?: string,
+): Promise<void> {
   studyMountCleanups.get(root)?.();
   const token = {};
   studyMountTokens.set(root, token);
   root.classList.add('landing-page', 'xiangqi-postgame-route');
   root.replaceChildren(buildNav(), notice(t('study.loadingOne')));
-  void loadStudy(studyId)
+  return loadStudy(studyId)
     .then((result) => {
       if (studyMountTokens.get(root) !== token) return;
-      if (result.ok) renderStudy(root, result.study, result.chapters, initialChapterId);
-      else renderError(root, result.status);
+      if (result.ok) return renderStudy(root, result.study, result.chapters, initialChapterId);
+      renderError(root, result.status);
     })
     .catch(() => {
       if (studyMountTokens.get(root) === token) renderError(root, 0);
@@ -186,10 +198,10 @@ function renderStudy(
   study: StudyDto,
   chapters: ChapterDto[],
   initialChapterId?: string,
-): void {
+): Promise<void> {
   if (chapters.length === 0) {
     renderError(root, 415);
-    return;
+    return Promise.resolve();
   }
   let activeId = chapters.some((chapter) => chapter.id === initialChapterId)
     ? initialChapterId!
@@ -663,7 +675,8 @@ function renderStudy(
     });
   };
 
-  function renderActive(): void {
+  /** Rebuilds the page; resolves once the chapter's async board (if any) has mounted. */
+  function renderActive(): Promise<void> {
     // Captured before the rebuild tears the old rail out of the DOM, so a
     // chapter switch keeps the reader's place in a long chapter list.
     const previousListScrollTop =
@@ -674,7 +687,7 @@ function renderStudy(
     // rather than rendering some other variant's board.
     if (!chapter || !isStudyVariantId(chapter.variant)) {
       renderError(root, 415);
-      return;
+      return Promise.resolve();
     }
     const variant = chapter.variant;
     activeId = chapter.id;
@@ -807,25 +820,27 @@ function renderStudy(
       const practiceNav = buildNav();
       const practiceIndex = chapters.findIndex((entry) => entry.id === chapter.id);
       const nextChapter = chapters[practiceIndex + 1];
-      void import('./review/study-practice.js').then(({ mountPracticeChapter }) => {
-        mountPracticeChapter(root, {
-          chapter,
-          nav: practiceNav,
-          goal: practiceGoal,
-          // No centred page header: the set's name lives in the rail card, the
-          // exercise's goal lives under the board. A title floating above the
-          // three columns belongs to neither and reads as a stray caption.
-          aside,
-          chapterId: chapter.id,
-          studyId: study.id,
-          progress: { index: practiceIndex + 1, total: chapters.length },
-          // Omitted on the last chapter, so the button is not offered at all
-          // rather than offered and inert.
-          ...(nextChapter ? { onNext: () => void switchTo(nextChapter.id) } : {}),
-        });
-      });
+      const practiceMounted = import('./review/study-practice.js').then(
+        ({ mountPracticeChapter }) => {
+          mountPracticeChapter(root, {
+            chapter,
+            nav: practiceNav,
+            goal: practiceGoal,
+            // No centred page header: the set's name lives in the rail card, the
+            // exercise's goal lives under the board. A title floating above the
+            // three columns belongs to neither and reads as a stray caption.
+            aside,
+            chapterId: chapter.id,
+            studyId: study.id,
+            progress: { index: practiceIndex + 1, total: chapters.length },
+            // Omitted on the last chapter, so the button is not offered at all
+            // rather than offered and inert.
+            ...(nextChapter ? { onNext: () => void switchTo(nextChapter.id) } : {}),
+          });
+        },
+      );
       attachStudyTitleRow(root, study.id, studyVariant(), studyActions(study));
-      return;
+      return practiceMounted;
     }
 
     // A gamebook chapter is played (guess-the-move) by viewers and by the owner in
@@ -882,7 +897,7 @@ function renderStudy(
         ...(game ? { game } : {}),
         ...(players ? { seats: { red: players.red, black: players.black } } : {}),
       });
-      return;
+      return Promise.resolve();
     }
 
     const gameFocus = studyFocusPlayer(chapters);
@@ -953,7 +968,7 @@ function renderStudy(
     const storedAnalysis = chapter.hasAnalysis
       ? fetchStudyChapterAnalysis(study.id, chapter.id, mountedTree)
       : null;
-    void mountStudyReview(variant, root, {
+    return mountStudyReview(variant, root, {
       storedAnalysis,
       reviewSurface: 'study',
       pageClassName: `${variant}-review study-review`,
@@ -1079,7 +1094,7 @@ function renderStudy(
       .catch(() => renderError(root, 415));
   }
 
-  renderActive();
+  return renderActive();
 }
 
 /**

@@ -270,8 +270,7 @@
    thumbnail the blur is about a pixel, and the piece disc and stroke carry the
    silhouette without it. Two classes to out-specify .xq-piece in live-xiangqi.css,
    for the same chunk-order reason as the rules below. */
-.xqb-card-board .xq-piece,
-.xqb-card-board .xq-live-lastmove-ring {
+.xqb-card-board .xq-piece {
   filter: none;
 }
 
@@ -1591,8 +1590,11 @@
   --seat-disc-size: 9px;
 }
 
+/* Clips for the ellipsis, so it sets its own line box instead of the card's
+   1.2, which cut descenders (#543). */
 .xqb-card-seat-name {
   overflow: hidden;
+  line-height: 1.4;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

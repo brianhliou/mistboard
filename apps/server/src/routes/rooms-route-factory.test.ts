@@ -46,7 +46,7 @@ function json(response: Capture): Record<string, unknown> {
 
 const baseCtx: TenantRoomCreateBaseContext = {
   databaseRequired: false,
-  isDraining: () => false,
+  refusesCreate: () => false,
   drainDeadlineMs: () => null,
 };
 
@@ -250,6 +250,56 @@ test('factory: PvE seats the engine opposite the human seat', async () => {
       seat: 'red',
       botId: 'some-bot',
     });
+  });
+});
+
+// #559 step 2: a release drain no longer turns away a bot game on a spec
+// whose PvE survives the restart (banqi is one); a human game still waits.
+test('factory: a pending drain lets a resumable PvE create through and refuses PvP', async () => {
+  await withFlag(BANQI_FLAG, 'true', async () => {
+    let created = 0;
+    const route = createTenantRoomsRoute<
+      TenantRoomCreateBaseContext,
+      'red' | 'black' | 'random',
+      'red' | 'black'
+    >({
+      gameSpecId: BANQI_SPEC_ID,
+      errorPrefix: 'banqi',
+      hasDisabledFlag: true,
+      preferredColors: ['red', 'black', 'random'],
+      engine: {
+        kind: 'seated',
+        defaultEngineId: GOOD_ENGINE,
+        isEngineClientId: (id) => id === GOOD_ENGINE,
+        seats: SEATS,
+      },
+      createRoom: (): Promise<TenantRoomCreateResult> => {
+        created += 1;
+        return Promise.resolve({ ok: true, room: { id: 'bq_drain', gameSpecId: BANQI_SPEC_ID } });
+      },
+    });
+    const asked: unknown[] = [];
+    // A pending drain, as server-drain.ts answers it.
+    const draining: TenantRoomCreateBaseContext = {
+      databaseRequired: false,
+      refusesCreate: (create) => {
+        asked.push(create);
+        return create?.resumablePve !== true;
+      },
+      drainDeadlineMs: () => 123,
+    };
+
+    const pve = captureResponse();
+    await route.handleCreate(draining, pve, { gameSpecId: BANQI_SPEC_ID, mode: 'pve' });
+    assert.equal(pve.status, 201);
+
+    const pvp = captureResponse();
+    await route.handleCreate(draining, pvp, { gameSpecId: BANQI_SPEC_ID, mode: 'pvp' });
+    assert.equal(pvp.status, 503);
+    assert.deepEqual(json(pvp), { error: 'server_draining', restartAt: 123 });
+
+    assert.deepEqual(asked, [{ resumablePve: true }, { resumablePve: false }]);
+    assert.equal(created, 1, 'only the bot game was created');
   });
 });
 

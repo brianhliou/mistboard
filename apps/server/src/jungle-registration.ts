@@ -107,7 +107,7 @@ registerVariantTenant({
   errorPrefix: 'jungle',
   enabled: jungleTenant.enabled,
   rooms: jungleRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,
-  activeGameCount: () => countActiveTenantGames(jungleRooms.values()),
+  activeGameCount: () => countActiveTenantGames(jungleRooms.values(), jungleTenant),
   getOrLoadRoom: (roomId) => getOrLoadJungleRoom(roomId) as Promise<TenantManagedRoom | null>,
   attachWebSocket: (ctx, socket, request, room) =>
     handleJungleWebSocketConnection(

@@ -22,13 +22,13 @@ import {
   DUCK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   type GameSpecId,
-  isRetiredGameSpec,
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
   MAHJONG_SPEC_ID,
   type TimeControlId,
   variantDefaultTimeControl,
+  XIANGQI_MAHJONG_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
 import {
@@ -43,6 +43,7 @@ import {
   jungleFlipEnabled,
   mahjongEnabled,
   xiangqiEnabled,
+  xiangqiMahjongEnabled,
 } from '../feature-flags.js';
 import type { I18nKey } from '../i18n/catalog.js';
 import { JIEQI_FIRST_GAME_ENGINE_ID, XIANGQI_FIRST_GAME_ENGINE_ID } from '../landing-bot-policy.js';
@@ -175,6 +176,9 @@ const alwaysEnabled = () => true;
 // cannot open, and they would land as a spectator at an empty table with
 // nothing explaining why.
 const mahjongOffered = (): boolean => mahjongEnabled() && hasLikelyVariantGrant(MAHJONG_SPEC_ID);
+// Xiangqi mahjong is gated the same way, on its own flag and its own grant.
+const xiangqiMahjongOffered = (): boolean =>
+  xiangqiMahjongEnabled() && hasLikelyVariantGrant(XIANGQI_MAHJONG_SPEC_ID);
 // Retired/hidden from the play-menu picker (2026-07-03 xiangqi pivot,
 // project_xiangqi_pivot_track). Discoverability only: acceptsDeepLink stays live
 // so existing games + physical/kids deep links keep working, and the live client
@@ -185,10 +189,9 @@ const hiddenFromMenu = () => false;
 // hiddenFromMenu (still linkable) and from a flag (still reachable in the lab).
 const retiredDeepLink = () => false;
 
-// Every tenant block, retired ones included; the retired ones are filtered
-// out below rather than deleted here, so retirement is the spec's status and
-// this file's blocks go one variant per commit (docs-private/variant-
-// retirement-plan.md, #396).
+// Every tenant block, retired ones included (see WEB_VARIANT_TENANTS below).
+// Deleting a retired variant's block is its own later commit
+// (docs-private/variant-retirement-plan.md, #396).
 const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
   {
     // Dark-chess correspondence rooms (server registration: correspondence
@@ -717,8 +720,10 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsTimeControl: true,
       },
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
-      offerInMenu: fortressXiangqiEnabled,
-      acceptsDeepLink: fortressXiangqiEnabled,
+      // Retired 2026-10-11: no menu entry and no deep link; the block stays for
+      // replays and for games already in progress.
+      offerInMenu: hiddenFromMenu,
+      acceptsDeepLink: retiredDeepLink,
       // Eight-level ladder (bot-consolidation 2026-07-21) mirroring the
       // standard-xiangqi FSF bots, ordered strongest-first like the xiangqi
       // picker. The retired amateur/strong/very-strong ids stay
@@ -849,8 +854,9 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsTimeControl: true,
       },
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
+      // Retired 2026-10-11 after five days unlisted: no deep link either.
       offerInMenu: hiddenFromMenu,
-      acceptsDeepLink: atomicXiangqiEnabled,
+      acceptsDeepLink: retiredDeepLink,
       // Eight-level Fairy-Stockfish ladder on the patched atomic binary, ordered
       // strongest-first like the other xiangqi pickers.
       engineOptions: [8, 7, 6, 5, 4, 3, 2, 1].map((level) => ({
@@ -976,11 +982,60 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       hideColorPicker: true,
     },
   },
+  {
+    // Xiangqi mahjong (象棋麻將): 32 tiles, two players, a hand of five.
+    //
+    // PvE only and gated like Hong Kong mahjong: the build flag plus the
+    // server's per-account allowlist. It exists so Brian can play the rules
+    // against a bot and say whether the scoring is right, so nobody else is
+    // offered it, and no lobby or watch surface knows it exists.
+    gameSpecId: XIANGQI_MAHJONG_SPEC_ID,
+    roomIdPrefix: 'xmj_',
+    enabled: xiangqiMahjongEnabled,
+    pageTitleKey: 'variant.xiangqiMahjong.name',
+    loadLiveRoomClient: () =>
+      import('../live-xiangqi-mahjong.js').then(
+        ({ bootstrapXiangqiMahjongLiveRoom }) =>
+          () =>
+            bootstrapXiangqiMahjongLiveRoom(),
+      ),
+    landing: {
+      capabilities: {
+        firstColor: 'red',
+        firstGlyph: '東',
+        firstLabel: 'East',
+        secondColor: 'black',
+        secondGlyph: '西',
+        secondLabel: 'West',
+        neutralGlyphColor: true,
+        supportsRated: false,
+        supportsTimeControl: true,
+      },
+      timePresetIds: ['5m5', '10m5'],
+      // One predicate for both, as for Hong Kong mahjong.
+      offerInMenu: xiangqiMahjongOffered,
+      acceptsDeepLink: xiangqiMahjongOffered,
+      // Exactly one option: the dialog sends one global engine id, and a
+      // variant with no option of its own would ask the server for Misty.
+      engineOptions: [
+        {
+          id: 'xiangqi-mahjong-bot',
+          name: 'Xiangqi mahjong bot',
+          familyName: 'Mistboard',
+          kind: 'container',
+        },
+      ],
+      defaultEngineId: 'xiangqi-mahjong-bot',
+      hideColorPicker: true,
+    },
+  },
 ];
 
-const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = ALL_WEB_VARIANT_TENANTS.filter(
-  (tenant) => !isRetiredGameSpec(tenant.gameSpecId),
-);
+// A retired spec's block stays registered (2026-10-11, Fortress and Atomic
+// Xiangqi): its routes are how a finished game replays and a game in progress
+// finishes. Retirement shows up as offerInMenu and acceptsDeepLink returning
+// false, and the server refuses a new game with 410 retired_game_spec.
+const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = ALL_WEB_VARIANT_TENANTS;
 
 export function webVariantTenants(): readonly WebVariantTenant[] {
   return WEB_VARIANT_TENANTS;
@@ -999,6 +1054,15 @@ export function webVariantTenantForSpecId(value: string | null): WebVariantTenan
       (tenant) => tenant.gameSpecId === value || tenant.legacyGameSpecIds?.includes(value),
     ) ?? null
   );
+}
+
+// A finished game's page: the tenant's postgame route (room-id prefix first,
+// spec id as a fallback for legacy aliases), else the dark-chess /game/:id
+// surface. Shared by the profile game rows and the bell's "game ended" rows.
+export function finishedGameHref(roomId: string, gameSpecId: string | null): string {
+  const tenant = webVariantTenantForRoomId(roomId) ?? webVariantTenantForSpecId(gameSpecId);
+  if (tenant?.gameRouteBase) return `${tenant.gameRouteBase}/${encodeURIComponent(roomId)}`;
+  return `/game/${encodeURIComponent(roomId)}`;
 }
 
 /**

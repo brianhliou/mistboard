@@ -274,11 +274,21 @@ export type RawSvgStepperStep = {
    *  names one, the card's rail is a score sheet and the narrative is the
    *  note under the move. */
   move?: string;
+  /** The squares the move into this step went from and to, from the generator's
+   *  own move data (never parsed from `move`). The card glides the piece slot
+   *  keyed by these squares (board-piece-slot.ts); from === to (a flip) and a
+   *  step without one only repaint. Needs the block's `gameSpecId`. */
+  motion?: { from: string; to: string };
 };
 
 export type RawSvgStepperBlock = {
   kind: 'raw-svg-stepper';
   steps: RawSvgStepperStep[];
+  /** The variant the board shows, whose visibility decides whether a step may
+   *  glide: only 'open' and 'hidden-identity' do. A fog board, an unknown id or
+   *  none at all stays static. An article-only open variant (Benedict, Anti
+   *  Xiangqi) names the board it is drawn on. */
+  gameSpecId?: GameSpecId;
   header?: { players: string; event: string }; // optional title above the frame (engine-game style)
   /** Seat rows above and below the board, as in the study embed. */
   seats?: {
@@ -330,6 +340,11 @@ export type EmbedBlock = {
   caption?: string;
   /** Frame aspect as [width, height]; defaults to the embed contract's 760x700. */
   aspect?: [number, number];
+  /** A study or line embed opens on the start position with the score sheet,
+   *  its comments and the result covered, so the reader tries the problem
+   *  first; a button or the first step forward reveals them. Rides to the
+   *  frame as `?solution=hidden`. */
+  hideSolution?: boolean;
 };
 
 /**
@@ -538,6 +553,13 @@ type ArticleBase = {
   // (chess). Hiding a whole variant from public surfaces, or
   // an unindexed rules page, is variant-public-surfaces.ts instead.
   showInIndex?: boolean;
+  // true serves the page by URL only: off every listing (index, homepage rows,
+  // related ring) like showInIndex: false, out of /blog/feed.xml and the
+  // sitemap, and stamped `noindex, follow` in every language. For a post whose
+  // subject is gone but whose inbound links should still land (the Atomic
+  // Xiangqi launch post, retired 2026-10-11). The server's
+  // NON_INDEXED_ARTICLE_SLUGS must carry the same slug (articles-meta-sync.test.ts).
+  noindex?: boolean;
   // Which homepage row the card sits in. Unset is the general row, so a new
   // article lands on the homepage with no second edit; 'deep-dives' moves it to
   // the row beneath (player pages and game deep dives).

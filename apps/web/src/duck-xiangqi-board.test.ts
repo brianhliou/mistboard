@@ -161,7 +161,6 @@ describe('duckXiangqiBoardSvg', () => {
     const view = getDuckXiangqiPlayerView(afterOneTurn(), 'red');
     const sets = [
       'international',
-      'international-flat',
       'animal-dobutsu',
       'traditional',
       'simplified',
@@ -171,9 +170,9 @@ describe('duckXiangqiBoardSvg', () => {
       'brush',
       'clerical',
     ] as const;
-    // Sets that seat the duck on no disc of its own: the disc-less Chess-style
-    // set, and the asset sets that frame it on their colour-neutral back.
-    const ringless = new Set<string>(['international-flat', 'wood', 'brush', 'clerical']);
+    // Sets that seat the duck on no disc of its own: the asset sets that frame
+    // it on their colour-neutral back.
+    const ringless = new Set<string>(['wood', 'brush', 'clerical']);
     for (const pieceSet of sets) {
       const svg = duckXiangqiBoardSvg(view, 'red', {
         interactive: false,
@@ -186,8 +185,7 @@ describe('duckXiangqiBoardSvg', () => {
       // (#b8860b, the variant's accent), never a seat's red or black: it is how
       // this board says "no seat", and the duck has none. It was a neutral grey
       // until 2026-09-11, which said the same thing by being absent and read as
-      // a missing ring at board size. `international-flat` is the one set with
-      // no disc at all, so it has no ring to colour. Asserted positively only:
+      // a missing ring at board size. Asserted positively only:
       // the SVG is the WHOLE board, so a "never red" check would trip on the
       // red pieces standing next to the duck.
       if (!ringless.has(pieceSet)) {
@@ -241,7 +239,7 @@ describe('duckXiangqiBoardSvg', () => {
 
   // 'Square grid' never reached this board: the renderer defaulted to the lined
   // board and no caller passed a layout, while the page CSS already sized for it.
-  it('follows the square-grid preference, tinting the last-move cells', () => {
+  it('follows the square-grid preference, with the square-grid last-move marks', () => {
     window.history.replaceState({}, '', '/?xqLayout=cell');
     try {
       const svg = duckXiangqiBoardSvg(
@@ -254,7 +252,9 @@ describe('duckXiangqiBoardSvg', () => {
         },
       );
       expect(svg).toContain('data-xiangqi-layout="cell"');
-      expect(svg.match(/xq-live-lastmove-square/g)).toHaveLength(2);
+      expect(svg.match(/xq-live-lastmove-origin/g)).toHaveLength(1);
+      expect(svg.match(/xq-live-lastmove-square/g)).toHaveLength(1);
+      expect(svg.match(/xq-live-lastmove-piece-ring/g)).toHaveLength(1);
     } finally {
       window.history.replaceState({}, '', '/');
     }
@@ -284,7 +284,7 @@ describe('the duck token', () => {
     return svg.slice(start, svg.indexOf('</g></g>', start) + 8);
   };
 
-  it('is drawn larger than a piece, with the gold ring and no shadow', () => {
+  it('is drawn the size of a piece, with the gold ring and no shadow', () => {
     const svg = duckXiangqiBoardSvg(view(), 'red', {
       interactive: true,
       phase: PIECE_PHASE(null),
@@ -292,7 +292,9 @@ describe('the duck token', () => {
       pieceSet: 'international',
     });
     const duck = duckGroup(svg);
-    expect(DUCK_TOKEN_SCALE).toBeGreaterThan(1);
+    // Pieces reach 98% of the gap since 2026-10-14, so a larger duck would run
+    // into its neighbours; the ring is what makes it pop.
+    expect(DUCK_TOKEN_SCALE).toBe(1);
     expect(duck).toContain(`scale(${(XIANGQI_LIVE_PIECE_SIZE * DUCK_TOKEN_SCALE) / 100})`);
     expect(duck).toContain('class="dkx-duck-ring"');
     expect(duck).toContain('stroke="#f2b705"');

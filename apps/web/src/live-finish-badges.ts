@@ -4,6 +4,14 @@
 // badge, grows over the piece, and a pill label pops above it. A draw marks
 // both generals in grey.
 //
+// A checkmate is the one exception (Brian, 2026-10-15, after the X clip): the
+// mated general alone gets a red slash drawn through it, with no disc, no crown
+// on the winner and no pills. It draws outward from the general's centre, and
+// rides the same layer as the badges, so it replays and never stacks the same
+// way. The badges are
+// decoration (aria-hidden); screen readers get the result from the move list's
+// result line and the meta card's status ("Checkmate • Red is victorious").
+//
 // The layer is an HTML sibling of the board inside `.board-stage`, not part of
 // the board SVG: tenant boards rebuild their SVG with an innerHTML swap on every
 // render, which would restart a baked-in animation each time. Badges are
@@ -25,8 +33,8 @@ import './live-finish-badges.css';
 import { terminationLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 
-export type FinishBadgeKind = 'loser' | 'winner' | 'draw';
-export type FinishBadgeIcon = 'mate' | 'resign' | 'timeout' | 'loss' | 'crown' | 'draw';
+export type FinishBadgeKind = 'loser' | 'winner' | 'draw' | 'mated';
+export type FinishBadgeIcon = 'resign' | 'timeout' | 'loss' | 'crown' | 'draw' | 'slash';
 
 export type FinishBadge = {
   square: string;
@@ -36,7 +44,6 @@ export type FinishBadge = {
 };
 
 const LOSER_ICONS: Record<string, FinishBadgeIcon> = {
-  checkmate: 'mate',
   resignation: 'resign',
   timeout: 'timeout',
 };
@@ -46,6 +53,8 @@ const LOSER_ICONS: Record<string, FinishBadgeIcon> = {
  * its general (xiangqi family; for a captured general, where it stood before
  * the last move) or, in jungle, its den. A side with no such square gets no
  * badge; the other side's still shows.
+ *
+ * A checkmate marks only the mated general, with the slash and no label.
  */
 export function finishBadgesForResult<C extends string>(result: {
   colors: readonly C[];
@@ -53,6 +62,11 @@ export function finishBadgesForResult<C extends string>(result: {
   reason: string;
   generalSquare: (color: C) => string | null | undefined;
 }): FinishBadge[] {
+  if (result.reason === 'checkmate' && result.winner !== null) {
+    const mated = result.colors.find((color) => color !== result.winner);
+    const square = mated === undefined ? null : result.generalSquare(mated);
+    return square ? [{ square, kind: 'mated', icon: 'slash', label: '' }] : [];
+  }
   const badges: FinishBadge[] = [];
   const reasonLabel = terminationLabel(result.reason);
   for (const color of result.colors) {
@@ -125,10 +139,30 @@ export function generalSquareOn(
   return null;
 }
 
+// The checkmate slash: two half-strokes from the general's centre, each drawn
+// outward (Brian, 2026-10-15: grow "from a single point rather than expanding
+// from a top right badge"). A light under-stroke keeps the red line legible over
+// red and black art alike. It fills the disc box (the piece's, inset 4%), so it
+// scales with the piece at every board size and on both piece shapes.
+const SLASH_HALVES = ['M12 12 19 5', 'M12 12 5 19'];
+const SLASH_SVG = (
+  [
+    ['#fff8ec', 3.6],
+    ['#d33a2c', 2.2],
+  ] as const
+)
+  .flatMap(([stroke, width]) =>
+    SLASH_HALVES.map(
+      (d) =>
+        `<path class="finish-badge__slash" d="${d}" pathLength="1" fill="none" stroke="${stroke}" stroke-width="${width}" stroke-linecap="round"/>`,
+    ),
+  )
+  .join('');
+
 // 24-unit icons, white on the badge disc.
 const ICON_SVG: Record<FinishBadgeIcon, string> = {
   crown: '<path d="M3 8.5 7.6 12 12 5l4.4 7L21 8.5 19.2 18H4.8z"/>',
-  mate: '<path d="M8.6 3.5h2.3L9.4 20.5H7.1zM14.6 3.5h2.3l-1.5 17h-2.3zM3.5 8h17v2.2h-17zM3.5 13.8h17V16h-17z"/>',
+  slash: SLASH_SVG,
   resign:
     '<path d="M5.5 3h2v18h-2z"/><path d="M8 4.2c3.4-1.6 5.8 1.6 10.5 0v8.3c-4.7 1.6-7.1-1.6-10.5 0z"/>',
   timeout:

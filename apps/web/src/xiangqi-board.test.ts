@@ -58,7 +58,8 @@ describe('standard Xiangqi board SVG', () => {
     // at 318. Red a1 shifts with its half and remains centered in its square.
     expect(svg).toContain('x="6" y="246" width="60" height="60"');
     expect(svg).toContain('x="6" y="318" width="60" height="60"');
-    expect(svg).toContain('x="9" y="561" width="54" height="54"');
+    // A piece's outer edge spans 98% of its cell (2026-10-14): a 62 box at cell 60.
+    expect(svg).toContain('x="5" y="557" width="62" height="62"');
   });
 
   it('retains the traditional palace diagonals on intersection boards', () => {
@@ -104,7 +105,7 @@ describe('standard Xiangqi board SVG', () => {
 
     // Red perspective geometry: x = 36 + file*60, y = 36 + (10 - rank)*60.
     // b3 -> (96, 456); e3 -> (276, 456). Origin = the darker -from shadow disc;
-    // destination = the gold ring around the moved piece (r=29 > piece r=27).
+    // destination = the gold band hugging the moved piece from outside.
     // Positions are asserted here; the radii belong to board-lastmove.test.ts,
     // which derives them. Restating them meant this failed on a deliberate
     // geometry change rather than on a bug.
@@ -112,7 +113,9 @@ describe('standard Xiangqi board SVG', () => {
     expect(svg).toMatch(
       /<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="96" cy="456" r="[\d.]+"\/>/,
     );
-    expect(svg).toMatch(/<circle class="xq-live-lastmove-ring" cx="276" cy="456" r="[\d.]+"\/>/);
+    expect(svg).toMatch(
+      /<circle class="xq-live-lastmove-ring" cx="276" cy="456" r="[\d.]+" stroke-width="[\d.]+"\/>/,
+    );
     expect(svg.match(/xq-live-lastmove-from/g)).toHaveLength(1);
     expect(svg.match(/xq-live-lastmove-ring/g)).toHaveLength(1);
 
@@ -123,11 +126,11 @@ describe('standard Xiangqi board SVG', () => {
       /<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="456" cy="156" r="[\d.]+"\/>/,
     );
     expect(flipped).toMatch(
-      /<circle class="xq-live-lastmove-ring" cx="276" cy="156" r="[\d.]+"\/>/,
+      /<circle class="xq-live-lastmove-ring" cx="276" cy="156" r="[\d.]+" stroke-width="[\d.]+"\/>/,
     );
   });
 
-  it('marks the last move with complete source and destination cells on a square grid', () => {
+  it('marks the last move with a solid origin cell and a ringed destination on a square grid', () => {
     const state = applyXiangqiMove(createInitialXiangqiState('xq-board-cell-lastmove'), {
       from: 'b3',
       to: 'e3',
@@ -138,17 +141,21 @@ describe('standard Xiangqi board SVG', () => {
     // b3 center=(96,468), e3 center=(276,468), then inset half a 60-unit cell.
     const svg = renderSharedXiangqiBoardSvg(view, 'red', { layout: 'cell' });
     expect(svg).toContain(
-      '<rect class="xq-live-lastmove-square xq-live-lastmove-from" x="66" y="438" width="60" height="60"/>',
+      '<rect class="xq-live-lastmove-origin xq-live-lastmove-from" fill="#f59e0b" fill-opacity="0.65" pointer-events="none" x="66" y="438" width="60" height="60"/>',
     );
     expect(svg).toContain(
       '<rect class="xq-live-lastmove-square xq-live-lastmove-to" x="246" y="438" width="60" height="60"/>',
+    );
+    // The ring traces the moved piece's outline (62-unit box: rect 4..96).
+    expect(svg).toContain(
+      '<rect x="247.48" y="439.48" width="57.04" height="57.04" rx="8.68" class="xq-live-lastmove-piece-ring" fill="none" stroke="#f59e0b" stroke-width="2.6"/>',
     );
     expect(svg).not.toContain('xq-live-lastmove-cell');
     expect(svg).not.toContain('xq-live-lastmove-ring');
 
     const flipped = renderSharedXiangqiBoardSvg(view, 'black', { layout: 'cell' });
     expect(flipped).toContain(
-      '<rect class="xq-live-lastmove-square xq-live-lastmove-from" x="426" y="126" width="60" height="60"/>',
+      '<rect class="xq-live-lastmove-origin xq-live-lastmove-from" fill="#f59e0b" fill-opacity="0.65" pointer-events="none" x="426" y="126" width="60" height="60"/>',
     );
     expect(flipped).toContain(
       '<rect class="xq-live-lastmove-square xq-live-lastmove-to" x="246" y="126" width="60" height="60"/>',
@@ -161,6 +168,9 @@ describe('standard Xiangqi board SVG', () => {
     expect(renderSharedXiangqiBoardSvg(view)).not.toContain('xq-live-lastmove-cell');
     expect(renderSharedXiangqiBoardSvg(view)).not.toContain('xq-live-lastmove-ring');
     expect(renderSharedXiangqiBoardSvg(view)).not.toContain('xq-live-lastmove-square');
+    const cell = renderSharedXiangqiBoardSvg(view, 'red', { layout: 'cell' });
+    expect(cell).not.toContain('xq-live-lastmove-origin');
+    expect(cell).not.toContain('xq-live-lastmove-piece-ring');
   });
 });
 
@@ -197,6 +207,35 @@ describe('keyed piece slots + animateXiangqiBoardMove', () => {
       { transform: 'none' },
     ]);
     expect(animate.mock.calls[0]![1]).toMatchObject({ duration: 250 });
+  });
+
+  it('carries the destination band with the piece, on the same glide', () => {
+    const host = mountMovedBoard();
+    const slot = host.querySelector('[data-piece-square="e3"]');
+    const ring = host.querySelector('.xq-live-lastmove-ring');
+    expect(ring).not.toBeNull();
+    const slotAnimate = vi.fn();
+    const ringAnimate = vi.fn();
+    Object.assign(slot as object, { animate: slotAnimate });
+    Object.assign(ring as object, { animate: ringAnimate, getAnimations: () => [] });
+    animateXiangqiBoardMove(host, { from: 'b3', to: 'e3' }, 'red');
+    // Same keyframes and timing as the piece: the band is visible the whole way
+    // (no opacity keyframes) and stays when the piece lands.
+    expect(ringAnimate).toHaveBeenCalledTimes(1);
+    expect(ringAnimate.mock.calls[0]![0]).toEqual(slotAnimate.mock.calls[0]![0]);
+    expect(ringAnimate.mock.calls[0]![1]).toEqual(slotAnimate.mock.calls[0]![1]);
+    for (const frame of ringAnimate.mock.calls[0]![0] as Keyframe[]) {
+      expect(frame).not.toHaveProperty('opacity');
+    }
+  });
+
+  it('leaves the band alone on a back-step', () => {
+    const host = mountMovedBoard();
+    const ring = host.querySelector('.xq-live-lastmove-ring');
+    const ringAnimate = vi.fn();
+    Object.assign(ring as object, { animate: ringAnimate, getAnimations: () => [] });
+    animateXiangqiBoardMove(host, { from: 'b3', to: 'e3' }, 'red', { reverse: true });
+    expect(ringAnimate).not.toHaveBeenCalled();
   });
 
   it('includes the mounted river gutter in a cross-river glide', () => {

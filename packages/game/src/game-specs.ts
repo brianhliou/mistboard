@@ -11,10 +11,13 @@ export type BoardGeometryId =
   // Mahjong has no board. This dimension names the material instead: the 144
   // tiles, being the 136 core plus eight flowers. Forcing a geometry here would
   // be a fiction, and the honest alternative is to say what is actually shared.
-  | 'mahjong-144';
+  | 'mahjong-144'
+  // Xiangqi mahjong: 32 tiles, no board at all.
+  | 'xiangqi-mahjong-32';
 export type MovementRulesId =
   // Draw, discard, and claim out of turn. Nothing moves on a board.
   | 'mahjong-hk'
+  | 'xiangqi-mahjong'
   | 'orthodox-chess'
   | 'xiangqi'
   | 'banqi'
@@ -49,7 +52,9 @@ export type ObjectiveRulesId =
   | 'den-or-race'
   // Mahjong: assemble four sets and a pair from a concealed hand. No royal
   // piece, no capture, and no position to win on.
-  | 'four-sets-and-a-pair';
+  | 'four-sets-and-a-pair'
+  // Xiangqi mahjong: five tiles, one set and a pair.
+  | 'one-set-and-a-pair';
 // 'open' = perfect-information; 'dark' is
 // fog of war (positions hidden); 'hidden-identity' is jieqi/banqi (positions
 // public, piece identities hidden until revealed).
@@ -69,7 +74,9 @@ export type SetupRulesId =
   // Crazyhouse Xiangqi: xiangqi's array without advisors and elephants, which
   // start in each side's hand.
   | 'defenders-in-hand'
-  | 'mahjong-deal';
+  | 'mahjong-deal'
+  // Xiangqi mahjong: eight pre-shuffled walls, one per hand of the match.
+  | 'xiangqi-mahjong-deal';
 export type ReserveRulesId = 'none' | 'crazyhouse';
 export type DropPolicyId =
   | 'none'
@@ -87,9 +94,15 @@ export type DropPolicyId =
 export type GameSpecSurface = 'hidden' | 'beta' | 'casual' | 'rated';
 /**
  * `live`: built and served (offered or hidden, per publicSurface). `future`: an
- * id reserved ahead of any code. `retired`: was built, is not coming back; the
- * gate refuses it, no tenant registers for it, `npm run variants` omits it, and
- * its code is being removed under docs-private/variant-retirement-plan.md (#396).
+ * id reserved ahead of any code. `retired`: was launched, is closed to new
+ * games. Every create path refuses it (the request gate's 410
+ * `retired_game_spec`, and createTenantRuntimeRoom as the backstop), every
+ * listing omits it, and `npm run variants` lists it only under `--all`. Its
+ * tenant stays registered on both sides, so a game in progress finishes and
+ * every finished game still replays, exports and embeds; its rules page stays
+ * up by URL, unlisted and unindexed. Deleting a retired variant's code is a
+ * separate, later job (docs-private/variant-retirement-plan.md, #396); a
+ * deleted variant has no spec at all.
  */
 export type GameSpecRuntimeStatus = 'live' | 'future' | 'retired';
 
@@ -102,6 +115,7 @@ export type RatingPoolBaseId =
   | 'jungle_flip'
   | 'fortress_xiangqi'
   | 'mahjong_hk'
+  | 'xiangqi_mahjong'
   | 'xiangqi'
   // Owes a user_ratings CHECK migration adding 'duck_xiangqi' before it is rated.
   | 'duck_xiangqi'
@@ -142,6 +156,9 @@ export type GameSpecId =
   // Hong Kong mahjong. Playable behind a server flag AND a per-account grant;
   // runtimeStatus is 'future' because nothing is built behind it yet.
   | 'mahjong'
+  // Xiangqi mahjong (象棋麻將), the 32-tile two-player Taiwan game. Playtest
+  // only: behind a server flag AND the per-account allowlist, like 'mahjong'.
+  | 'xiangqi-mahjong'
   // Standard chess, STUDY-ONLY (set 2026-09-20). Exists so chess studies can be
   // written, reviewed and embedded (the shallow-labels puzzles on the blog);
   // never playable here: no tenant on either side, the request gate answers
@@ -178,6 +195,7 @@ export const DARK_XIANGQI_SPEC_ID = 'dark-xiangqi' satisfies GameSpecId;
 export const JIEQI_SPEC_ID = 'jieqi' satisfies GameSpecId;
 export const BANQI_SPEC_ID = 'banqi' satisfies GameSpecId;
 export const MAHJONG_SPEC_ID = 'mahjong' satisfies GameSpecId;
+export const XIANGQI_MAHJONG_SPEC_ID = 'xiangqi-mahjong' satisfies GameSpecId;
 export const JUNGLE_SPEC_ID = 'jungle' satisfies GameSpecId;
 export const JUNGLE_FLIP_SPEC_ID = 'jungle-flip' satisfies GameSpecId;
 export const FORTRESS_XIANGQI_SPEC_ID = 'fortress-xiangqi' satisfies GameSpecId;
@@ -208,8 +226,6 @@ export const CORRESPONDENCE_ELIGIBLE_SPEC_IDS: readonly GameSpecId[] = [
   BANQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   CRAZYHOUSE_XIANGQI_SPEC_ID,
-  FORTRESS_XIANGQI_SPEC_ID,
-  ATOMIC_XIANGQI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
@@ -238,14 +254,16 @@ export const STUDY_ELIGIBLE_SPEC_IDS: readonly GameSpecId[] = [
   // adapter.ts + -review.ts) and the standard start; a chapter's rootFen
   // carries both hands in the pocket brackets.
   CRAZYHOUSE_XIANGQI_SPEC_ID,
-  FORTRESS_XIANGQI_SPEC_ID,
-  // Atomic Xiangqi: a tree-review stack (review/atomic-xiangqi-tree-adapter.ts
-  // + -review.ts) over the standard board, and the standard start.
-  ATOMIC_XIANGQI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
+  // Retired 2026-10-11 (Fortress; Atomic, which has a tree-review stack over the
+  // standard board and start): off the canonical order, so at the tail. They
+  // stay eligible so existing chapters keep loading; the picker no longer
+  // offers them for a new one.
+  FORTRESS_XIANGQI_SPEC_ID,
+  ATOMIC_XIANGQI_SPEC_ID,
   // Standard chess: a tree-review stack (review/chess-tree-adapter.ts +
   // chess-review.ts) and an ordinary chess FEN. The only spec that is
   // study-eligible without a play route; see the GameSpecId comment.
@@ -272,14 +290,14 @@ export const CANONICAL_VARIANT_ORDER: readonly GameSpecId[] = [
   // xiangqi 36, fortress 16, atomic 9). Duck leads; crazyhouse and fortress sit
   // side by side so neither gets a placement edge until the 2026-10-30 read
   // decides between them; then atomic, then fog xiangqi, which bridges to fog
-  // chess; then the rest of the games.
+  // chess; then the rest of the games. Fortress and Atomic Xiangqi were retired
+  // 2026-10-11 (Brian), which settled that read early: both are off the shelf
+  // and sort with the unlisted specs.
   XIANGQI_SPEC_ID,
   JIEQI_SPEC_ID,
   BANQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   CRAZYHOUSE_XIANGQI_SPEC_ID,
-  FORTRESS_XIANGQI_SPEC_ID,
-  ATOMIC_XIANGQI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   JUNGLE_SPEC_ID,
@@ -355,8 +373,11 @@ export const GAME_SPECS: readonly GameSpec[] = [
     // Rating-ready like Dark Xiangqi / Banqi / Jieqi: the pool lights up the
     // moment the global rated flag flips.
     rated: true,
-    publicSurface: 'casual',
-    runtimeStatus: 'live',
+    // Retired 2026-10-11 (Brian): closed to new games, unlisted everywhere.
+    // Finished games replay, the rules page is up by URL (noindex), and the
+    // rating rows stay in the database, hidden from every listing.
+    publicSurface: 'hidden',
+    runtimeStatus: 'retired',
   },
   {
     // Standard (open-information) Xiangqi — ordinary 9x10 Chinese chess. The
@@ -462,6 +483,25 @@ export const GAME_SPECS: readonly GameSpec[] = [
     runtimeStatus: 'live',
   },
   {
+    // Xiangqi mahjong (象棋麻將): the 32 xiangqi pieces as tiles, two players,
+    // five-tile hands of one set and a pair, an eight-hand match. Hidden
+    // and allowlisted: it exists for a playtest, and nobody who plays the game
+    // has checked it yet. Imports nothing from the HK mahjong package.
+    id: XIANGQI_MAHJONG_SPEC_ID,
+    publicName: 'Xiangqi Mahjong',
+    family: 'mahjong',
+    board: 'xiangqi-mahjong-32',
+    movement: 'xiangqi-mahjong',
+    objective: 'one-set-and-a-pair',
+    visibility: 'concealed-hands',
+    setup: 'xiangqi-mahjong-deal',
+    reserves: 'none',
+    dropPolicy: 'none',
+    ratingPoolBase: 'xiangqi_mahjong',
+    publicSurface: 'hidden',
+    runtimeStatus: 'live',
+  },
+  {
     // Duck Xiangqi: W. D. Troyka's... no - Dr Tim Paulden's Duck Chess (2016),
     // applied to the 9x10 xiangqi board. A turn is a legal xiangqi move, then the
     // shared duck moves to any other empty point. The duck can never be captured
@@ -505,13 +545,12 @@ export const GAME_SPECS: readonly GameSpec[] = [
     // Rules engine: packages/game/src/variants-atomic-xiangqi.ts. Why these
     // rules and not the plain port: docs-private/variant-lab/atomic-xiangqi/.
     //
-    // Unlisted 2026-10-06 while the rules are reworked (Brian: "hide it for
-    // now"; the cannon exception is the part being replaced). Not in the play
-    // menu, News, rules rails, the rules index or the sitemap, and no bot
-    // profile or Mistboard TV names it. Still reachable by URL: the rules page
-    // (unindexed), play deep links (?play=computer&gameSpecId=atomic-xiangqi
-    // opens setup) and every finished game's replay. Rated pool and
-    // correspondence are unchanged for anyone who arrives by link.
+    // Unlisted 2026-10-06 while the rules were reworked, then retired
+    // 2026-10-11 (Brian): closed to new games, deep links and correspondence
+    // included. Not in the play menu, News, rules rails, the rules index or the
+    // sitemap, and no bot profile or Mistboard TV names it. Still reachable by
+    // URL: the rules page (unindexed), the design articles, and every finished
+    // game's replay. Rating rows stay in the database, hidden.
     id: ATOMIC_XIANGQI_SPEC_ID,
     publicName: 'Atomic Xiangqi',
     family: 'xiangqi',
@@ -524,7 +563,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     dropPolicy: 'none',
     ratingPoolBase: 'atomic_xiangqi',
     publicSurface: 'hidden',
-    runtimeStatus: 'live',
+    runtimeStatus: 'retired',
     // Rating-ready like duck and fortress: the pool lights up under the global
     // rated flag. Migration 147 added 'atomic_xiangqi' to the user_ratings
     // CHECK, which is what makes this honest; before it, a rated game failed

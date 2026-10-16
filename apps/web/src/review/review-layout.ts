@@ -346,6 +346,17 @@ export function createReviewScaffold(
     ].filter((el): el is HTMLElement => el != null),
   );
   const center = config.underboard ? centerColumn(stage.el, config.underboard) : stage.el;
+  // Phone stack (col1): the center column and the right rail dissolve and each
+  // piece takes its own row, so the arrows sit right under the board instead of
+  // after the underboard and the whole move list (review-shell.css "col1 stack").
+  markCol1Areas({
+    board: stage.el,
+    nav: fuseNavigation ? undefined : config.navigation,
+    moves: boardTrackingBox,
+    extra: config.railFooter,
+    under: config.underboard,
+    summary: config.analysisSummary,
+  });
 
   const shell = createReviewShell({
     ariaLabel: config.ariaLabel,
@@ -357,6 +368,7 @@ export function createReviewScaffold(
     right,
     embedded: config.embedded,
   });
+  shell.querySelector('.review-shell__cluster')?.classList.add(COL1_STACK_CLASS);
   if (config.gauge) {
     const cluster = shell.querySelector<HTMLElement>('.review-shell__cluster');
     if (cluster) {
@@ -541,8 +553,11 @@ function fitPrimaryToViewport(
       : null;
     // Below-the-fold underboards (lichess analyse chart) don't shrink the board:
     // they contribute 0 to the height budget and the page scrolls to them.
+    // On the phone stack the underboard sits below the arrows and the moves,
+    // so it never shares the board's screen and must not shrink it either.
+    const stacked = col1Stacked(stageEl);
     const underboardPx =
-      underboard && !opts?.underboardOverflows
+      underboard && !opts?.underboardOverflows && !stacked
         ? underboard.getBoundingClientRect().height + STACK_GAP_PX
         : 0;
     const cluster = stageEl.closest<HTMLElement>('.review-shell__cluster');
@@ -589,7 +604,9 @@ function fitPrimaryToViewport(
     const nonBoardChrome = Math.max(0, contentHeight - boardWidth / aspect);
     const centerEl = stageEl.closest<HTMLElement>('.review-shell__center');
     const gaugePx = stageEl.querySelector('.review-eval-bar') ? EVAL_GAUGE_PX : 0;
-    const measuredCap = centerEl ? centerEl.getBoundingClientRect().width - gaugePx : 0;
+    // A dissolved center column has no box (width 0): the cluster is the column.
+    const columnEl = stacked ? cluster : centerEl;
+    const measuredCap = columnEl ? columnEl.getBoundingClientRect().width - gaugePx : 0;
     const widthCap =
       measuredCap > 0 ? measuredCap : Math.max(240, window.innerWidth - RAILS_AND_GUTTERS_PX);
     const targetBoardWidth = Math.floor(
@@ -705,6 +722,41 @@ function deferredRailGroup(children: HTMLElement[]): HTMLElement {
   const group = railGroup(children);
   group.classList.add('review-rail-group--deferred');
   return group;
+}
+
+/** Cluster class that opts a scaffold into the col1 phone stack. Only the
+ *  scaffold sets it: the live room and /watch share the cluster classes but put
+ *  other things in the rails, and dissolving those scrambles their stack. */
+export const COL1_STACK_CLASS = 'review-shell__cluster--col1-stack';
+
+/** The rows of the col1 phone stack, top to bottom. review-shell.css gives each
+ *  one an `order`; the left rail's groups follow as `side` and `aside`. */
+export const COL1_AREAS = [
+  'board',
+  'nav',
+  'moves',
+  'extra',
+  'under',
+  'side',
+  'summary',
+  'aside',
+] as const;
+
+/** The areas the scaffold tags; `side` and `aside` are the left rail's groups,
+ *  placed by their own classes. */
+type Col1Area = Exclude<(typeof COL1_AREAS)[number], 'side' | 'aside'>;
+
+function markCol1Areas(pieces: Partial<Record<Col1Area, HTMLElement>>): void {
+  for (const [area, el] of Object.entries(pieces)) {
+    if (el) el.dataset.col1Area = area;
+  }
+}
+
+/** True when the phone stack has dissolved the center column, so the board is
+ *  a row of its own and nothing beside or under it shares its height budget. */
+function col1Stacked(stageEl: HTMLElement): boolean {
+  const center = stageEl.closest<HTMLElement>('.review-shell__center');
+  return Boolean(center && getComputedStyle(center).display === 'contents');
 }
 
 function centerColumn(stageEl: HTMLElement, underboard: HTMLElement): HTMLElement {

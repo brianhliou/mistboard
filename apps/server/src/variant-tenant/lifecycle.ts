@@ -193,7 +193,10 @@ export function scheduleTenantLifecycleTimers<
 }
 
 // Resume at once when every human seat is back (engine seats are always
-// present while the server is up), otherwise when the grace window runs out.
+// present while the server is up) or the human on move is, otherwise when the
+// grace window runs out. Only the side to move has a running clock after the
+// resume, so its player being back is enough (#567, lichess-like); an engine on
+// move does not count, so a PvE room still waits for its human.
 // The window opens on the first schedule after the pause, which is the first
 // seated connection to the rehydrated room; a spectator never opens it.
 function scheduleTenantResume<
@@ -214,7 +217,12 @@ function scheduleTenantResume<
     (color) =>
       connected[color] || (tenant.engine?.isEngineClientId(room.projection.seats[color]) ?? false),
   );
-  if (everyoneBack) {
+  const mover = room.projection.paused?.activeColor ?? null;
+  const moverBack =
+    mover !== null &&
+    connected[mover] &&
+    !(tenant.engine?.isEngineClientId(room.projection.seats[mover]) ?? false);
+  if (everyoneBack || moverBack) {
     resumeTenantRoom(tenant, room, ctx, now, 'players-returned');
     return;
   }

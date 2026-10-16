@@ -6,13 +6,14 @@ import {
   ATOMIC_XIANGQI_SOLDIER_PAIR,
   ATOMIC_XIANGQI_THUMBNAIL,
 } from '../../atomic-xiangqi-rules-diagrams.js';
-import { playClosing } from '../diagrams.js';
+import { relatedClosing } from '../diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
 // The launch piece: what decides a first game, in the shape of the duck
-// launch article. On the /blog index and in the sitemap since the variant was
-// listed (2026-09-17); linked from the rules page and the brianhliou.com post;
-// off the homepage row until the play menu opens (home-article-row.test.ts).
+// launch article. Listed and indexed from 2026-09-17; since the variant retired
+// (2026-10-11, Brian) it is served by URL only: off the /blog index, homepage
+// rows, related ring, blog feed and sitemap, and noindex in every language.
+// Inbound links (the rules page, the brianhliou.com post) still land.
 export const atomicXiangqiBuildArticle: Article = {
   slug: 'atomic-xiangqi-build',
   kind: 'article',
@@ -26,6 +27,7 @@ export const atomicXiangqiBuildArticle: Article = {
     'Chinese chess where a capture is an explosion. The rules take a minute. What decides your first game is the three points beside your general, the cannon that no longer clears a rank, and a chariot on your advisor file counting as check.',
   showSummaryOnPage: false,
   status: 'published',
+  noindex: true,
   publishedAt: '2026-09-16',
   audience:
     'Anyone who has just read the Atomic Xiangqi rules and is about to play, and xiangqi players wondering what an explosion does to a game they already know.',
@@ -141,18 +143,12 @@ export const atomicXiangqiBuildArticle: Article = {
         },
       ],
     },
-    playClosing({
-      heading: 'Play it',
-      lead: 'Eight engine strengths, or a friend by invite link. The rules page has the whole thing with diagrams.',
-      playLabel: 'Play Atomic Xiangqi',
-      playHref: '/?play=computer&gameSpecId=atomic-xiangqi',
-      secondary: [
+    // Retired 2026-10-11: the piece stays up and indexed, without play buttons.
+    relatedClosing({
+      heading: 'Further reading',
+      lead: 'Atomic Xiangqi was retired on 2026-10-11: it no longer takes new games, and finished games still replay. The rules page has the whole thing with diagrams.',
+      links: [
         { label: 'Rules', href: '/rules/atomic-xiangqi', emphasis: 'secondary' },
-        {
-          label: 'Invite a friend',
-          href: '/?play=friend&gameSpecId=atomic-xiangqi',
-          emphasis: 'secondary',
-        },
         { label: 'The twelve engine games', href: '/study/dPKhvJKb', emphasis: 'secondary' },
       ],
     }),

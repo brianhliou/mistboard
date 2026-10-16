@@ -20,8 +20,6 @@
 import {
   deriveXiangqiPuzzleDifficulty,
   detectXiangqiPuzzleMotifs,
-  FORTRESS_XIANGQI_SPEC_ID,
-  type FortressXiangqiPuzzle,
   isRetiredGameSpec,
   JUNGLE_SPEC_ID,
   type JunglePuzzle,
@@ -37,7 +35,7 @@ import {
 import type pg from 'pg';
 import { getPool, isInitialized, withTransaction } from './persistence-db.js';
 
-export type StoredPuzzle = FortressXiangqiPuzzle | JunglePuzzle | XiangqiPuzzle;
+export type StoredPuzzle = JunglePuzzle | XiangqiPuzzle;
 
 export type PuzzleStoreSnapshot = {
   // Every stored puzzle (including hidden-from-discovery variants), seq order.
@@ -63,11 +61,7 @@ export type PuzzleStoreSnapshot = {
   source: 'database' | 'seed';
 };
 
-const KNOWN_PUZZLE_VARIANTS: ReadonlySet<string> = new Set([
-  FORTRESS_XIANGQI_SPEC_ID,
-  JUNGLE_SPEC_ID,
-  XIANGQI_SPEC_ID,
-]);
+const KNOWN_PUZZLE_VARIANTS: ReadonlySet<string> = new Set([JUNGLE_SPEC_ID, XIANGQI_SPEC_ID]);
 
 const SEED_SYNC_SLOT = 'puzzles';
 const SEED_SYNC_LOCK_KEY = 'mistboard:puzzle-seed-sync';
@@ -123,6 +117,11 @@ async function loadFromDatabase(): Promise<PuzzleStoreSnapshot> {
   );
   const puzzles: StoredPuzzle[] = [];
   for (const row of rows) {
+    // A retired variant's rows (Fortress Xiangqi's mined puzzles, 2026-10-11)
+    // stay in the table but are never served: every route then answers their
+    // ids with a clean 404. Skipped quietly, since they are expected, not a
+    // bad insert worth a warning on every snapshot reload.
+    if (isRetiredGameSpec(row.data.variant)) continue;
     // Fail-closed: a row with an unknown variant (bad insert, future variant
     // deployed out of order) is withheld from serving, never dispatched.
     if (!KNOWN_PUZZLE_VARIANTS.has(row.data.variant)) {
@@ -227,7 +226,7 @@ async function ensureSeedSynced(): Promise<void> {
     );
 
     const sourceGames = loadSeedSourceGames();
-    const games = [...sourceGames.jungle, ...sourceGames.fortressXiangqi];
+    const games = [...sourceGames.jungle];
     for (const game of games) {
       await client.query(
         `INSERT INTO puzzle_source_games (id, variant, data, source_kind)

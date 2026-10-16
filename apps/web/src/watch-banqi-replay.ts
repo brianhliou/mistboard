@@ -4,6 +4,7 @@
 // surface (no per-color triptych) and there is no fog to pass to the renderer.
 import type { BanqiPlayerView } from '@mistboard/game';
 import { banqiResultLabel, seatInkLabel } from './banqi-result-label.js';
+import { boardCoordinatesEnabled } from './display-preferences.js';
 import { flipSeatInk } from './flip-seat-ink.js';
 import {
   type BanqiPostgameResponse,
@@ -61,6 +62,7 @@ export function mountBanqiWatchReplay(
         renderBanqiBoardSvg(view, orientation, {
           arrows: overlay.arrows as readonly BanqiBoardArrow[],
           markers: overlay.glyphs as readonly BanqiBoardMarker[],
+          coordinates: boardCoordinatesEnabled(),
         }),
       // One-ply steps glide: forward animates the newly rendered view's lastMove,
       // a back step reverse-animates the move the previous ply carried.

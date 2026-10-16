@@ -5,7 +5,10 @@ import {
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
   DAYS_PER_MOVE_OPTIONS,
   type GameSpecId,
+  isRetiredGameSpec,
   MAHJONG_SPEC_ID,
+  RETIRED_GAME_SPEC_IDS,
+  XIANGQI_MAHJONG_SPEC_ID,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import {
@@ -66,6 +69,28 @@ describe('variant create-request conformance', () => {
   });
 });
 
+// Retired variants (Fortress and Atomic Xiangqi, 2026-10-11) leave the picker
+// and the correspondence list, but a stale request for one must still carry its
+// own id, so the server answers 410 retired_game_spec instead of the builder
+// quietly turning it into a dark-chess game.
+describe('retired variant conformance', () => {
+  it('no picker variant and no correspondence variant is retired', () => {
+    for (const tenant of pickerTenants) {
+      expect(isRetiredGameSpec(tenant.gameSpecId), tenant.gameSpecId).toBe(false);
+    }
+    for (const id of CORRESPONDENCE_ELIGIBLE_SPEC_IDS) {
+      expect(isRetiredGameSpec(id), id).toBe(false);
+    }
+  });
+
+  it('a retired spec still resolves to itself, never to dark chess', () => {
+    for (const id of RETIRED_GAME_SPEC_IDS) {
+      expect(roomCreationGameSpecId(setupFor(id as never)), id).toBe(id);
+      expect(roomCreationRequestBody('pvp', setupFor(id as never)).gameSpecId, id).toBe(id);
+    }
+  });
+});
+
 // Correspondence on every variant (2026-10-02). The picker offers a variant's
 // days-per-move paces only when it is on the shared eligible list, so a variant
 // added to the menu without joining that list silently gets real time only.
@@ -74,6 +99,7 @@ describe('variant correspondence conformance', () => {
   it('every picker variant offers every days-per-move pace, casual', () => {
     for (const tenant of pickerTenants) {
       if (tenant.gameSpecId === MAHJONG_SPEC_ID) continue;
+      if (tenant.gameSpecId === XIANGQI_MAHJONG_SPEC_ID) continue;
       expect(CORRESPONDENCE_ELIGIBLE_SPEC_IDS, tenant.gameSpecId).toContain(tenant.gameSpecId);
       const days = panelPersonPaces(tenant.gameSpecId as never, 'casual').filter(
         (pace) => pace.kind === 'days',
@@ -98,9 +124,10 @@ describe('variant correspondence conformance', () => {
 // marker id) while every other surface derived it from the spec. Both cards now
 // take only the spec and look the marker up in variants.ts; these pin that.
 describe('variant marker conformance', () => {
-  // Mahjong is behind a flag and never shown as a variant: no marker, no icon.
+  // Both mahjongs are behind a flag and never shown as a variant: no marker, no icon.
   const markedTenants = webVariantTenants().filter(
-    (tenant) => tenant.gameSpecId !== MAHJONG_SPEC_ID,
+    (tenant) =>
+      tenant.gameSpecId !== MAHJONG_SPEC_ID && tenant.gameSpecId !== XIANGQI_MAHJONG_SPEC_ID,
   );
 
   it('every tenant room resolves its OWN spec marker', () => {

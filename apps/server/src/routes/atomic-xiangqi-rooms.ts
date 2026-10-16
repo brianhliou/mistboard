@@ -4,6 +4,7 @@
  */
 
 import { ATOMIC_XIANGQI_SPEC_ID, type RoomTimeControl } from '@mistboard/game';
+import type { DrainCreate } from '../deploy-gate.js';
 import {
   ATOMIC_XIANGQI_DEFAULT_ENGINE_ID,
   isAtomicXiangqiEngineClientId,
@@ -12,7 +13,7 @@ import { createTenantRoomsRoute } from './../variant-tenant/rooms-route.js';
 
 export type AtomicXiangqiCreateContext = {
   databaseRequired: boolean;
-  isDraining(): boolean;
+  refusesCreate(create?: DrainCreate): boolean;
   drainDeadlineMs(): number | null;
   createAtomicXiangqiRoom(
     timeControl?: RoomTimeControl,

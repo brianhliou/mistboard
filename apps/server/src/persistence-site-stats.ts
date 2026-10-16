@@ -1,4 +1,4 @@
-import { COUNTED_USER, countedHumanGame } from './persistence-counted-games.js';
+import { COUNTED_USER, countedPublicGame, notRetiredVariant } from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
 import type { GameMode } from './persistence-game-lifecycle.js';
 
@@ -118,11 +118,14 @@ export async function getSiteStats(): Promise<SiteStats> {
   };
 }
 
-// Every query below is over `games g` with the shared counted-game filter:
-// completed pvp/pve, no stats-excluded seat. The by-mode split keeps its eve
-// row (an admin-only figure the client hides on the public page) but applies
-// the same seat exclusion to the human rows.
-const COUNTED = countedHumanGame('g');
+// Every query below is over `games g` with the shared public filter:
+// completed pvp/pve, no stats-excluded seat, and not in a retired variant
+// (countedPublicGame), so no public number counts a variant a visitor can no
+// longer play. The by-mode split keeps its eve row (an admin-only figure the
+// client hides on the public page) but applies the same seat exclusion to the
+// human rows and the retired-variant exclusion to every row.
+const COUNTED = countedPublicGame('g');
+const NOT_RETIRED = notRetiredVariant('g');
 
 export interface SiteGameTotals {
   totalCompletedGames: number;
@@ -180,7 +183,7 @@ export async function getPublicSiteStats(
   const byMode = await pool.query<{ mode: PublicStatsMode; n: number }>(
     `SELECT g.mode, count(*)::int AS n
      FROM games g
-     WHERE (${COUNTED}) OR (g.status = 'completed' AND g.mode = 'eve')
+     WHERE (${COUNTED}) OR (g.status = 'completed' AND g.mode = 'eve' AND ${NOT_RETIRED})
      GROUP BY g.mode`,
   );
 

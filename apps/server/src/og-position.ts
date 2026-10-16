@@ -73,7 +73,9 @@ import { createPngCache, redirectToDefault, svgToPng, writePng } from './og-rast
  *  FEN is in the URL. */
 // v2 (2026-09-12): the live board and the site's default piece set, board at full
 // height with the caption beside it (og-card-board.ts).
-export const POSITION_OG_IMAGE_VERSION = 3;
+// v4 (2026-10-15): the piece look of 2026-10-14: one dark ring on both sides, pieces at 98% of the point gap (banqi 92%), no shadow, full-size face-down backs, Jungle rounded squares.
+// v5 (2026-10-15): the international pieces with smooth edges, one line width on the straight figures.
+export const POSITION_OG_IMAGE_VERSION = 5;
 
 /** Variants with a position card, i.e. the /analysis and /editor catalog. Slugs
  *  double as GameSpecIds. Order is the analysis dropdown's. */

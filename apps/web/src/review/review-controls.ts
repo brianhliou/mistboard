@@ -10,6 +10,7 @@
 import { BookOpenText, createElement } from 'lucide';
 import { t } from '../i18n/catalog.js';
 import { createMoveNavBar, type MoveNavMenuItem } from '../move-nav-bar.js';
+import { explorerOpenPreferred, setExplorerOpenPreferred } from './explorer-pref.js';
 
 export type ReviewMenuItem = MoveNavMenuItem;
 
@@ -23,9 +24,9 @@ export type ReviewControlsOptions = {
   /** Menu rows (2-col grid). Flip leads; the opening book follows it. */
   menuItems: ReviewMenuItem[];
   /** The opening book, a toggle row in the menu. Omitted on surfaces with no
-   *  corpus behind them. The book starts OPEN (#523: a reader should see what
-   *  was played here without hunting for it), so this is called with true while
-   *  the bar is built. */
+   *  corpus behind them. The book starts CLOSED unless the reader left it open
+   *  last time (#534, explorer-pref.ts); this is called with that remembered
+   *  state while the bar is built. */
   onToggleExplorer?(open: boolean): void;
 };
 
@@ -38,7 +39,7 @@ export function createReviewControls(opts: ReviewControlsOptions): ReviewControl
   const menuItems = [...opts.menuItems];
   const onToggleExplorer = opts.onToggleExplorer;
   if (onToggleExplorer) {
-    let explorerOpen = true;
+    let explorerOpen = explorerOpenPreferred();
     // Right after Flip: the two things a reader reaches for most.
     menuItems.splice(Math.min(1, menuItems.length), 0, {
       label: t('underboard.explorer'),
@@ -47,10 +48,11 @@ export function createReviewControls(opts: ReviewControlsOptions): ReviewControl
       pressed: () => explorerOpen,
       onClick: () => {
         explorerOpen = !explorerOpen;
+        setExplorerOpenPreferred(explorerOpen);
         onToggleExplorer(explorerOpen);
       },
     });
-    onToggleExplorer(true);
+    onToggleExplorer(explorerOpen);
   }
   const bar = createMoveNavBar({
     className: 'review-controls',

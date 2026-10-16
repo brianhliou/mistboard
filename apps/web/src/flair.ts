@@ -14,7 +14,7 @@ import './flair.css';
 // which is the piece's name in Chinese and needs no translation; English adds
 // the role word alongside it.
 
-import type { XiangqiColor, XiangqiPieceRole } from '@mistboard/game';
+import { isRetiredGameSpec, type XiangqiColor, type XiangqiPieceRole } from '@mistboard/game';
 import { readDisplayPreferences } from './display-preferences.js';
 import { variantDisplayLabel } from './game-display.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
@@ -108,6 +108,13 @@ const FLAIR_KEY_SET: ReadonlySet<string> = new Set(FLAIR_KEYS);
 
 export function isFlairKey(value: unknown): value is FlairKey {
   return typeof value === 'string' && FLAIR_KEY_SET.has(value);
+}
+
+// A retired variant's flair stays valid, so a player who already wears it
+// keeps it, but the picker stops offering it to anyone else.
+export function flairOfferedInPicker(key: FlairKey): boolean {
+  const variant = VARIANT_FLAIR[key];
+  return !variant || !isRetiredGameSpec(variant.specId);
 }
 
 export function flairLabel(key: FlairKey, locale: Locale = currentLocale()): string {

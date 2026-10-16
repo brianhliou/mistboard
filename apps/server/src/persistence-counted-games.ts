@@ -31,6 +31,8 @@
 // the count uses the same line: 25 of 324 counted games sat under it on
 // 2026-09-12. Set 2026-09-12.
 
+import { RETIRED_GAME_SPEC_IDS } from '@mistboard/game';
+
 export const STATS_COUNTED_FROM = '2026-06-01';
 export const MIN_COUNTED_PLIES = 2;
 
@@ -70,6 +72,32 @@ export function countedHumanGame(gamesAlias = 'g'): string {
     AND ${sinceLaunch(gamesAlias)}
     AND ${bothSidesMoved(gamesAlias)}
     AND NOT ${excludedSeatExists(gamesAlias)}`;
+}
+
+// The public figures (/stats, the homepage counts, the play panel's variant
+// order) also leave out games in retired variants, so every public number
+// adds up to the variants a visitor can still play. The ids come from
+// RETIRED_GAME_SPEC_IDS (a spec's runtimeStatus), never a hand list. Admin
+// /metrics and the readout keep counting them: those games happened, and the
+// operator's history should not shift when a variant retires. Set 2026-10-11
+// with the Fortress and Atomic retirement.
+export function notRetiredVariant(
+  gamesAlias = 'g',
+  retiredIds: readonly string[] = RETIRED_GAME_SPEC_IDS,
+): string {
+  if (retiredIds.length === 0) return 'TRUE';
+  for (const id of retiredIds) {
+    // Spec ids are inlined as SQL literals; refuse anything that is not one.
+    if (!/^[a-z0-9-]+$/.test(id)) throw new Error(`unexpected game spec id: ${JSON.stringify(id)}`);
+  }
+  return `${gamesAlias}.variant NOT IN (${retiredIds.map((id) => `'${id}'`).join(', ')})`;
+}
+
+// A counted game in a variant that is still live: the filter behind every
+// public aggregate.
+export function countedPublicGame(gamesAlias = 'g'): string {
+  return `${countedHumanGame(gamesAlias)}
+    AND ${notRetiredVariant(gamesAlias)}`;
 }
 
 // A person sat in the game: at least one guest or user seat. The prod smoke

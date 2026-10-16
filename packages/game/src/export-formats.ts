@@ -59,5 +59,6 @@ export function exportFormatsForVariant(variant: string): readonly GameExportFor
  *  card's LOOK changes: the PNG is served immutable for a year, so the scraper
  *  and the CDN (which keys on the query) re-fetch only under a new `?v=`. The
  *  content is fixed per game (finished, immutable), so nothing else needs one.
- *  2: piece art drawn from a halving within 2x of its output size (it aliased). */
-export const GAME_IMAGE_VERSION = 2;
+ *  2: piece art drawn from a halving within 2x of its output size (it aliased).
+ *  3 (2026-10-15): the piece look of 2026-10-14: one dark ring on both sides, pieces at 98% of the point gap (banqi 92%), no shadow, full-size face-down backs, Jungle rounded squares. */
+export const GAME_IMAGE_VERSION = 3;

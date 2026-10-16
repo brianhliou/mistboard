@@ -1,8 +1,9 @@
 import './notification-nav.css';
 import { readAccountPreferences } from './account-preferences.js';
 import { startFormPrefillHref } from './correspondence-model.js';
-import { variantDisplayLabel } from './game-display.js';
+import { terminationLabel, variantDisplayLabel } from './game-display.js';
 import { type I18nKey, t } from './i18n/catalog.js';
+import { finishedGameHref } from './variant-tenant/registry.js';
 
 // A reusable nav notification button: a bell + count badge that aggregates every
 // registered source. account-nav owns signed-in detection and the nav
@@ -30,7 +31,8 @@ export type NotificationKind =
   | 'follower'
   | 'reply'
   | 'quote'
-  | 'expired';
+  | 'expired'
+  | 'ended';
 
 export type NotificationEntry = {
   label: string;
@@ -85,6 +87,18 @@ export type SeekExpiryNotification = {
   ttlDays: number;
 };
 
+// One correspondence game that ended since the player last looked, not by
+// their own act. Only the result, how it ended, the variant and the opponent's
+// name: never a board, so a fog game says nothing its replay would hide.
+export type CorrespondenceEndedNotification = {
+  roomId: string;
+  gameSpecId: string;
+  outcome: 'won' | 'lost' | 'draw';
+  termination: string;
+  // handle is null when the opponent's profile may not be linked.
+  opponent: { handle: string | null; displayName: string } | null;
+};
+
 // Mirrors the payload of GET /api/notifications (apps/server/src/routes/notifications.ts).
 export type NotificationCounts = {
   inboxUnread: number;
@@ -101,6 +115,10 @@ export type NotificationCounts = {
   // Lapsed board seeks not yet seen, and the newest of them (capped server-side).
   seekExpiries: number;
   seekExpired: SeekExpiryNotification[];
+  // Correspondence games that ended unseen, and the newest of them (capped
+  // server-side). Same watermark as the /correspondence page's "New" tag.
+  correspondenceFinished: number;
+  correspondenceFinishedGames: CorrespondenceEndedNotification[];
 };
 
 const EMPTY_COUNTS: NotificationCounts = {
@@ -113,6 +131,8 @@ const EMPTY_COUNTS: NotificationCounts = {
   incomingChallenges: 0,
   seekExpiries: 0,
   seekExpired: [],
+  correspondenceFinished: 0,
+  correspondenceFinishedGames: [],
 };
 
 export type NotificationSource = {
@@ -151,7 +171,9 @@ function plural(count: number, one: string, many: string): string {
   return count === 1 ? one : many;
 }
 
-async function markKindSeen(kind: 'followers' | 'forum-replies' | 'seek-expiries'): Promise<void> {
+async function markKindSeen(
+  kind: 'followers' | 'forum-replies' | 'seek-expiries' | 'correspondence-finished',
+): Promise<void> {
   await fetch('/api/notifications/seen', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -314,6 +336,57 @@ export const seekExpiryNotificationSource: NotificationSource = {
   kind: 'expired',
 };
 
+// Correspondence games that ended while the player was away (Brian,
+// 2026-10-14: a lost game simply vanished). One row per game (the server caps
+// them), saying who it was against and whether they won, lost or drew, with how
+// it ended and the variant under it, linked to the finished game. Never for a
+// game the player ended themselves (resigned, or made the winning move). Seen
+// on open, and opening /correspondence clears it too: one watermark for both.
+export const correspondenceFinishedNotificationSource: NotificationSource = {
+  read: (counts) => {
+    if (!readAccountPreferences().correspondenceBell) return { count: 0, entries: [] };
+    const count = counts.correspondenceFinished;
+    if (count === 0) return { count: 0, entries: [] };
+    const entries: NotificationEntry[] = counts.correspondenceFinishedGames
+      .slice(0, count)
+      .map((game) => {
+        const opponent = game.opponent
+          ? game.opponent.handle
+            ? `@${game.opponent.handle}`
+            : game.opponent.displayName
+          : t('correspondence.bellEndedOpponent');
+        const key: I18nKey =
+          game.outcome === 'won'
+            ? 'correspondence.bellEndedWon'
+            : game.outcome === 'lost'
+              ? 'correspondence.bellEndedLost'
+              : 'correspondence.bellEndedDraw';
+        const reason = terminationLabel(game.termination);
+        const variant = variantDisplayLabel(game.gameSpecId);
+        return {
+          label: t(key, { opponent }),
+          detail: reason ? `${reason} · ${variant}` : variant,
+          href: finishedGameHref(game.roomId, game.gameSpecId),
+        };
+      });
+    const more = count - entries.length;
+    if (more > 0) {
+      const key: I18nKey =
+        entries.length > 0
+          ? more === 1
+            ? 'correspondence.bellEndedMoreOne'
+            : 'correspondence.bellEndedMoreMany'
+          : more === 1
+            ? 'correspondence.bellEndedOne'
+            : 'correspondence.bellEndedMany';
+      entries.push({ label: t(key, { count: more }), href: '/correspondence' });
+    }
+    return { count, entries };
+  },
+  markSeen: () => markKindSeen('correspondence-finished'),
+  kind: 'ended',
+};
+
 export function mountNotificationBell(nav: HTMLElement): void {
   if (sources.length === 0) return;
   const utilities = nav.querySelector<HTMLElement>('.site-nav-utilities');
@@ -437,7 +510,40 @@ async function fetchNotificationCounts(): Promise<NotificationCounts> {
     incomingChallenges: read(data.incomingChallenges),
     seekExpiries: read(data.seekExpiries),
     seekExpired: readSeekExpired(data.seekExpired),
+    correspondenceFinished: read(data.correspondenceFinished),
+    correspondenceFinishedGames: readCorrespondenceFinished(data.correspondenceFinishedGames),
   };
+}
+
+// Defensive parse of the ended-game rows, same posture as readForumWatched: a
+// row with no room or variant is dropped rather than linked to nowhere.
+function readCorrespondenceFinished(value: unknown): CorrespondenceEndedNotification[] {
+  if (!Array.isArray(value)) return [];
+  const rows: CorrespondenceEndedNotification[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as Record<string, unknown>;
+    if (typeof row.roomId !== 'string' || row.roomId === '' || typeof row.gameSpecId !== 'string')
+      continue;
+    const outcome = row.outcome;
+    if (outcome !== 'won' && outcome !== 'lost' && outcome !== 'draw') continue;
+    const seat = row.opponent as Record<string, unknown> | null | undefined;
+    const opponent =
+      seat && typeof seat === 'object' && typeof seat.displayName === 'string'
+        ? {
+            handle: typeof seat.handle === 'string' && seat.handle !== '' ? seat.handle : null,
+            displayName: seat.displayName,
+          }
+        : null;
+    rows.push({
+      roomId: row.roomId,
+      gameSpecId: row.gameSpecId,
+      outcome,
+      termination: typeof row.termination === 'string' ? row.termination : '',
+      opponent,
+    });
+  }
+  return rows;
 }
 
 // Defensive parse of the new-follower rows, same posture as readForumWatched:
@@ -704,5 +810,7 @@ const KIND_ICONS: Record<NotificationKind | 'generic', string> = {
   expired: icon(
     '<path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.17a2 2 0 0 0-.59-1.42L12 12l-4.41 4.41A2 2 0 0 0 7 17.83V22"/><path d="M7 2v4.17a2 2 0 0 0 .59 1.42L12 12l4.41-4.41A2 2 0 0 0 17 6.17V2"/>',
   ),
+  // A flag: the game is over.
+  ended: icon('<path d="M4 22V4"/><path d="M4 4h12l-2 4 2 4H4"/>'),
   generic: BELL_ICON.replace('width="18" height="18"', 'width="16" height="16"'),
 };

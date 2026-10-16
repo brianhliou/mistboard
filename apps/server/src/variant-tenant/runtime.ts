@@ -14,8 +14,13 @@
  */
 
 import type { ClockPolicyKind, RoomTimeControl } from '@mistboard/game';
-import { clockPolicyKindFor, isAbortReason, maybeGameSpecForId } from '@mistboard/game';
-import { countDeployGatingRooms } from '../deploy-gate.js';
+import {
+  clockPolicyKindFor,
+  isAbortReason,
+  isRetiredGameSpec,
+  maybeGameSpecForId,
+} from '@mistboard/game';
+import { countDeployGatingRooms, resumablePveRoomPredicate } from '../deploy-gate.js';
 import {
   firstPartyBotForEngine,
   firstPartyBotForId,
@@ -286,6 +291,11 @@ export function createTenantRuntimeRoom<
   // room rather than discovering it mid-game.
   assertForfeitPolicy(tenant);
   if (!tenant.enabled()) return { ok: false, error: 'disabled' };
+  // The backstop for a retired spec: every path that starts a game (rooms,
+  // lobby matches, correspondence, rematches, bot-vs-bot) comes through here,
+  // while a game in progress rehydrates through createTenantRuntimeRoomFromEvents
+  // and is untouched. The routes answer 410 before they get this far.
+  if (isRetiredGameSpec(tenant.gameSpecId)) return { ok: false, error: 'disabled' };
 
   const now = options.now ?? Date.now();
   const setup = tenant.rules.createSetup?.();
@@ -891,6 +901,17 @@ export function tenantSnapshotPayload<
     // banqi, jungle, flip jungle and Fog Xiangqi rated games, lobby-paired ones
     // included, showed "Casual". Only on rated rooms, so casual wire is unchanged.
     ...(room.rated ? { rated: true } : {}),
+    // PvP rematch offers (rematch.ts), for every tenant that rematches, only
+    // once the game is over: a reload shows a pending offer, and a live room's
+    // wire is unchanged. The flags say which seat offered, nothing else.
+    ...(room.projection.state.status.type === 'finished' && tenantRoomOffersRematch(tenant, room)
+      ? {
+          rematch: {
+            offers: tenantRematchOfferFlags(tenant, room),
+            finalizedRoomId: room.rematch.finalizedRoomId ?? null,
+          },
+        }
+      : {}),
     ...(tenant.wire?.snapshotExtras?.(room, client) ?? {}),
   };
 }
@@ -995,6 +1016,33 @@ export function tenantPerPlyViews<
 export function tenantRoomIsLobbyMatch(room: { events: readonly { type: string }[] }): boolean {
   const first = room.events[0] as { type: string; lobbyMatch?: unknown } | undefined;
   return first?.type === 'room-created' && first.lobbyMatch === true;
+}
+
+/**
+ * Does this room offer the mutual-confirm rematch (rematch.ts)? Every tenant
+ * does by default. The exceptions are structural, so a new tenant inherits them:
+ * a tenant that opts out (mahjong's table of four, correspondence-only dark
+ * chess), a table of more than two (the rematch swaps two seats), a bot game
+ * (the engine never offers: the web Rematch button opens a new bot room
+ * instead), a correspondence room (#531), and a retired variant, which opens no
+ * new rooms (createTenantRuntimeRoom), so its Rematch could only fail.
+ */
+export function tenantRoomOffersRematch<
+  Kind extends string,
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  View,
+  Spec extends string,
+>(
+  tenant: VariantTenant<Kind, C, M, State, View, Spec>,
+  room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
+): boolean {
+  if (tenant.rematch) return false;
+  if (tenant.colors.length !== 2) return false;
+  if (isRetiredGameSpec(tenant.gameSpecId)) return false;
+  if (room.projection.timeControl?.daysPerMove !== undefined) return false;
+  return tenantPveEngineId(tenant, room) === null;
 }
 
 export function tenantRematchOfferFlags<C extends string>(
@@ -1340,13 +1388,26 @@ export function isTenantClockState<C extends string>(
 // chess map agree on what "live" means. They used to disagree: this side
 // dropped correspondence and the chess side didn't, so a single chess
 // correspondence room could block every deploy forever.
+//
+// Pass the tenant to stop counting its resumable PvE games (#559): a spec in
+// RESUMABLE_PVE_GAME_SPECS whose room has an engine in a seat. Same predicate
+// as the registry's census, so the gate and its explanation agree.
 export function countActiveTenantGames(
   rooms: Iterable<{
     events?: readonly { at?: number }[];
-    projection: { state: { status: { type: string } }; timeControl?: RoomTimeControl };
+    projection: {
+      state: { status: { type: string } };
+      timeControl?: RoomTimeControl;
+      seats?: object;
+    };
   }>,
+  tenant?: Parameters<typeof resumablePveRoomPredicate>[0],
 ): number {
-  return countDeployGatingRooms(rooms);
+  return countDeployGatingRooms(
+    rooms,
+    Date.now(),
+    tenant ? resumablePveRoomPredicate(tenant) : undefined,
+  );
 }
 
 export function computeTenantConnectedSeats<C extends string>(

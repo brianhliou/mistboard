@@ -54,6 +54,7 @@ export const EN_REVIEW = {
   // Whole-phrase keys for the lines the watch page used to glue together in
   // English word order ("{color} wins", "{result} by {reason}", "{a} vs {b}").
   'watch.colorWins': '{color} wins',
+  'watch.won': 'Won',
   'watch.resultByReason': '{result} by {reason}',
   'watch.matchup': '{first} vs {second}',
   'watch.reviewMatchup': 'Review {matchup}',
@@ -199,6 +200,8 @@ export const EN_REVIEW = {
   'historical.allVariants': 'All variants',
   'historical.anySource': 'Any source',
   'historical.sourcePlayedHere': 'Played on Mistboard',
+  'historical.sourcePlayedVsPeople': 'Played on Mistboard: vs people',
+  'historical.sourcePlayedVsBots': 'Played on Mistboard: vs bots',
   'historical.sourceEngineMatches': 'Engine matches',
   'historical.sourceEngineMatch': 'Engine match',
   'historical.sourceEngineGames': 'Engine games',
@@ -761,7 +764,6 @@ export const EN_REVIEW = {
   'underboard.crosstableGuest':
     'Head-to-head records are kept for signed-in players and engines. Guest seats have no record.',
   'underboard.crosstablePrivate': 'One of these seats is private, so there is no public record.',
-  'underboard.crosstableFirstGame': 'First game between {a} and {b}.',
   'underboard.crosstableShowingLast': 'Showing the last {shown} of {total} games.',
   'annotate.comment': 'Comment',
   'annotate.glyphs': 'Glyphs',
@@ -913,6 +915,10 @@ export const EN_REVIEW = {
   'review.luckCard.bothEffect.unlucky':
     'Cost {side} {points} points of win chance vs. an average outcome',
   'review.luckCard.bothEffect.even': 'About as good for {side} as an average outcome',
+  'replay.solutionHidden': 'Find the mate.',
+  'replay.showSolution': 'Show the solution',
+  // A hidden-solution embed's header until the reveal: the study, then the chapter's number.
+  'replay.solutionHiddenHeader': '{study} · chapter {n}',
 } as const;
 
 export type ReviewI18nKey = keyof typeof EN_REVIEW;

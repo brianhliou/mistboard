@@ -20,7 +20,9 @@ import { resolvePositionOg } from './og-position.js';
 import { createPngCache, redirectToDefault, svgToPng, writePng } from './og-raster.js';
 import * as persistence from './persistence.js';
 
-export const BROADCAST_OG_IMAGE_VERSION = 2;
+// v3 (2026-10-15): the piece look of 2026-10-14: one dark ring on both sides, pieces at 98% of the point gap (banqi 92%), no shadow, full-size face-down backs, Jungle rounded squares.
+// v4 (2026-10-15): the international pieces with smooth edges, one line width on the straight figures.
+export const BROADCAST_OG_IMAGE_VERSION = 4;
 
 const cache = createPngCache(64);
 
@@ -96,7 +98,7 @@ export function eventDateRange(startsAt?: string, endsAt?: string): string | nul
 }
 
 /** The site's own card, for an event with no game to show yet. */
-export const BROADCAST_FALLBACK_IMAGE_PATH = '/og-image.png?v=8';
+export const BROADCAST_FALLBACK_IMAGE_PATH = '/og-image.png?v=10';
 
 /** Meta for an event page before any of its games has moves: the event's
  *  name, its dates and place, the site card. Without it a link shared before

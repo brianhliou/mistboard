@@ -43,6 +43,46 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-10-15',
+    kind: 'update',
+    headline: 'A new look for the International pieces.',
+    body: 'The International set is redrawn: one dark ring on both sides, larger pieces, and rounded squares on the Square grid board. On the Square grid, the last move now lights the square the piece left and rings the piece that moved. Change the set or the board in your display settings.',
+    href: '/?play=computer&gameSpecId=xiangqi',
+    cta: 'Play xiangqi',
+  },
+  {
+    date: '2026-10-16',
+    kind: 'article',
+    headline: 'A player page for Zuo Wenjing.',
+    body: "The 2022 women's world champion, and a double gold medallist at the 2023 Asian Games. The page follows her title run in Kuching and her 2026 season, with five of her games on the board, in English and Chinese. All 32 of her games are in a study with the engine's judgments and lines.",
+    href: '/blog/zuo-wenjing',
+    cta: 'Read the article',
+  },
+  {
+    date: '2026-10-14',
+    kind: 'update',
+    headline: 'Banqi now shows reveal odds.',
+    body: 'The face-down tally under a banqi board now gives the chance of each piece turning up on the next flip, counted only from what both players can already see. It is on for both players and spectators, rated games included. Banqi boards also show coordinates when Board coordinates is on in your display settings, and a finished room keeps the tally of what stayed face-down.',
+    href: '/?play=computer&gameSpecId=banqi',
+    cta: 'Play banqi',
+  },
+  {
+    date: '2026-10-13',
+    kind: 'article',
+    headline: 'Fortress and Atomic Xiangqi are back on the drawing board.',
+    body: 'Both are on hold while we redesign them: no new games, but finished games still replay and the rules pages stay up. Fortress needs a smaller xiangqi that keeps the feel of the full game without drops taking over. Atomic needs a cannon that follows the same rule as every other piece. Until then, drops live in Crazyhouse Xiangqi.',
+    href: '/blog/fortress-and-atomic-xiangqi-on-hold',
+    cta: 'Read the article',
+  },
+  {
+    date: '2026-10-12',
+    kind: 'article',
+    headline: 'Why banqi needs a perpetual chase rule, shown with real games.',
+    body: 'In banqi a chased piece often has only one safe square, so the chaser could force a draw by repetition. The article plays through the Mistboard games where that happened, compares what tournament rules and the popular apps do, and sets out our rule in full for anyone implementing it.',
+    href: '/blog/banqi-perpetual-chase',
+    cta: 'Read the article',
+  },
+  {
     date: '2026-10-11',
     kind: 'update',
     headline: 'Pro player pages now have photos.',

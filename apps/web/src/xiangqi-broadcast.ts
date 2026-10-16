@@ -1446,7 +1446,7 @@ function renderBoardsTab(
     const live = new Set(boards.map((board) => board.id));
     for (const id of [...cards.keys()]) if (!live.has(id)) cards.delete(id);
   }
-  const credit = recordsCreditLine(data.boards);
+  const credit = recordsCreditLine(data.boards, data.tour);
   if (credit) wrap.append(credit);
   return wrap;
 }
@@ -1953,7 +1953,7 @@ function renderOverviewTab(data: BroadcastRoundResponse, state?: EventPageState)
       ),
     );
   }
-  const credit = broadcastRecordsCredit(data.boards);
+  const credit = broadcastRecordsCredit(data.boards, data.tour);
   if (credit) {
     const line = document.createElement('p');
     line.className = 'xqb-records-credit';
@@ -2320,8 +2320,11 @@ function boardCardFor(
 
 export { broadcastRecordsCredit };
 
-function recordsCreditLine(boards: readonly { sourceUrl?: string }[]): HTMLElement | null {
-  return creditLineFrom(broadcastRecordsCredit(boards));
+function recordsCreditLine(
+  boards: readonly { sourceUrl?: string }[],
+  tour: { slug: string; sourceUrl?: string | null },
+): HTMLElement | null {
+  return creditLineFrom(broadcastRecordsCredit(boards, tour));
 }
 
 function creditLineFrom(

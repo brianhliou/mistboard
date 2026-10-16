@@ -55,6 +55,7 @@ import {
   splitSections,
 } from './current-games-model.js';
 import { watchQueueResultLabel } from './finished-result-label.js';
+import { type FlipSeat, payloadFirstColor, seatInkForVariant } from './flip-seat-ink.js';
 import {
   displayLiveName,
   displayParticipantName,
@@ -70,11 +71,13 @@ import { currentLocale } from './i18n/locale.js';
 import { playerNameEl, profileTargetFor } from './profile-link.js';
 import { formatGameTime, profileGameHref } from './profile-ui.js';
 import type { ReplayHandle } from './replay.js';
+import { seatDiscClass, seatDiscEl } from './seat-disc.js';
 import { accepterColorLabel, accepterSide, buildSeekAcceptAction } from './seek-accept.js';
 import { buildKindBadge, buildSeekCard } from './seek-card.js';
 import { specIdForShowcaseVariant } from './showcase-dispatch.js';
 import { buildNav, buildNotice } from './site-shell.js';
 import { renderVariantMarker } from './variant-markers.js';
+import { seatInkFamily } from './variant-seat-label.js';
 import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
 import { formatClock, formatDayClock } from './web-utils.js';
 
@@ -114,6 +117,9 @@ type CardState = {
   handle: ReplayHandle | null;
   mounting: Promise<void> | null;
   payload: Record<string, unknown> | null;
+  // A flip game's bound ink, read from the last board payload. The server sends
+  // a payload only when the ply moved, so this persists between polls.
+  firstColor: FlipSeat | null;
   shownPly: number;
 };
 
@@ -338,12 +344,16 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
 
     const [top, bottom] = seatOrder(game);
     const clockEls: Record<string, HTMLElement> = {};
-    const topRow = buildSeatRow(top, clockEls);
+    const firstColor = payloadFirstColor(game.payload);
+    const ink = (seat: CurrentGamePlayer | null): string | null =>
+      seat ? seatInkForVariant(game.gameSpecId, seat.color, firstColor) : null;
+    const topRow = buildSeatRow(top, clockEls, ink(top));
     const boardRoot = document.createElement('div');
     boardRoot.className = 'current-game-board';
     renderBoardPlaceholder(boardRoot, game);
-    const bottomRow = buildSeatRow(bottom, clockEls);
+    const bottomRow = buildSeatRow(bottom, clockEls, ink(bottom));
     article.append(open, topRow, boardRoot, bottomRow);
+    stampSeatInkFamily(article, game.gameSpecId);
 
     let bar: HTMLElement | null = null;
     if (correspondence) {
@@ -365,6 +375,7 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
       boardRoot,
       clockEls,
       clockReceivedAt: Date.now(),
+      firstColor,
       game,
       handle: null,
       meta,
@@ -389,6 +400,13 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
   // Serialized per card so a slow mount and a fast poll cannot interleave.
   function showBoard(card: CardState, payload: Record<string, unknown>): Promise<void> {
     card.payload = payload;
+    // A flip game binds its inks on the opening flip, which only the board
+    // payload carries; repaint the circles the first time it does.
+    const firstColor = payloadFirstColor(payload);
+    if (firstColor && firstColor !== card.firstColor) {
+      card.firstColor = firstColor;
+      paintSeatDiscs(card.root, card.game.gameSpecId, firstColor);
+    }
     const run = async (): Promise<void> => {
       if (!isConnected() || !cards.has(card.game.roomId)) return;
       const { mountShowcaseBoard } = await import('./showcase-board.js');
@@ -674,15 +692,19 @@ function seatOrder(game: CurrentGame): [CurrentGamePlayer | null, CurrentGamePla
   return [second, first];
 }
 
-function buildSeatRow(
+// `ink` is the colour the seat plays (seatInkForVariant), drawn as the shared
+// seat disc /watch uses; null is a flip game before its flip, a dashed ring.
+export function buildSeatRow(
   player: CurrentGamePlayer | null,
   clockEls: Record<string, HTMLElement>,
+  ink: string | null,
 ): HTMLElement {
   const row = document.createElement('div');
   row.className = 'current-game-seat';
   if (player) row.dataset.color = player.color;
   const who = document.createElement('span');
   who.className = 'current-game-seat-who';
+  if (player) who.append(seatDiscEl(ink, 'current-game-seat-disc'));
   who.append(
     playerNameEl(
       displayLiveName(player?.name, t('games.guest')),
@@ -701,6 +723,32 @@ function buildSeatRow(
   row.append(who, clock);
   if (player) clockEls[player.color] = clock;
   return row;
+}
+
+// Recolour a card's seat discs once a flip game's opening flip is known. The
+// rows are keyed by seat (data-color); the ink each seat plays follows the flip.
+export function paintSeatDiscs(
+  root: HTMLElement,
+  variant: string,
+  firstColor: FlipSeat | null,
+): void {
+  for (const row of root.querySelectorAll<HTMLElement>('.current-game-seat[data-color]')) {
+    const disc = row.querySelector<HTMLElement>('.current-game-seat-disc');
+    const seat = row.dataset.color;
+    if (!disc || !seat) continue;
+    disc.className = seatDiscClass(
+      seatInkForVariant(variant, seat, firstColor),
+      'current-game-seat-disc',
+    );
+  }
+  stampSeatInkFamily(root, variant);
+}
+
+// The Jungle family paints its second ink blue through this ancestor stamp.
+function stampSeatInkFamily(root: HTMLElement, variant: string): void {
+  const family = seatInkFamily(variant);
+  if (family) root.dataset.seatInkFamily = family;
+  else delete root.dataset.seatInkFamily;
 }
 
 function tickCard(card: CardState, now: number): void {
@@ -940,22 +988,37 @@ export function buildFinishedTile(game: FeaturedGame): HTMLElement {
   when.textContent = formatGameTime(game.endedAt, locale);
   line.append(result, when);
   tile.append(
-    finishedSeatRow('first', first, firstName),
+    finishedSeatRow(game, 'first', first, firstName),
     board,
-    finishedSeatRow('second', second, secondName),
+    finishedSeatRow(game, 'second', second, secondName),
     line,
   );
+  stampSeatInkFamily(tile, game.variant);
   placeFinishedSeats(tile, FINISHED_BOARD_BOTTOM_SEAT);
   return tile;
 }
 
-function finishedSeatRow(seat: BoardSeat, color: string, name: string): HTMLElement {
+function finishedSeatRow(
+  game: FeaturedGame,
+  seat: BoardSeat,
+  color: string,
+  name: string,
+): HTMLElement {
   const row = document.createElement('span');
   row.className = 'current-game-finished-seat';
   row.dataset.seat = seat;
   row.dataset.color = color;
-  row.textContent = name;
   row.title = name;
+  const label = document.createElement('span');
+  label.className = 'current-game-finished-seat-name';
+  label.textContent = name;
+  row.append(
+    seatDiscEl(
+      seatInkForVariant(game.variant, color, game.firstColor ?? null),
+      'current-game-seat-disc',
+    ),
+    label,
+  );
   return row;
 }
 

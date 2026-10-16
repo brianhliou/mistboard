@@ -20,14 +20,16 @@ import type { TenantGameOrigin } from './tenant.js';
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { type HiddenPieceIdentity, isRetiredGameSpec, type RoomTimeControl } from '@mistboard/game';
+import type { HiddenPieceIdentity, RoomTimeControl } from '@mistboard/game';
 import type { WebSocket } from 'ws';
 import {
   censusDeployGate,
   type DeployGateCensus,
   type DeployGateRoom,
+  type DrainCreate,
   emptyDeployGateCensus,
   mergeDeployGateCensus,
+  resumablePveRoomPredicate,
 } from '../deploy-gate.js';
 import type { UserAccount } from '../persistence.js';
 
@@ -43,6 +45,8 @@ import type { UserAccount } from '../persistence.js';
 // TenantRuntimeRoom at runtime.
 export type TenantManagedRoom = {
   id: string;
+  // PvE: the engine-service seat, handed back by the shutdown (#567).
+  engineReservationId?: string | null;
   clients: Iterable<{
     socket: { close(code?: number, reason?: string): unknown; send(data: string): unknown };
     id?: string;
@@ -88,7 +92,7 @@ export type TenantWsAttachContext = {
 // HttpApiContext satisfies it.
 export type TenantCreateHttpContext = {
   databaseRequired: boolean;
-  isDraining(): boolean;
+  refusesCreate(create?: DrainCreate): boolean;
   drainDeadlineMs(): number | null;
   reserveLiveEngineSeat(engineId: string, color: 'white' | 'black'): Promise<string | null>;
   releaseLiveEngineReservation(reservationId: string, reason: string): void;
@@ -345,12 +349,12 @@ const registrationsByPrefix = new Map<string, VariantTenantRegistration>();
 let fallbackRoomLookup: (roomId: string) => boolean = () => false;
 
 export function registerVariantTenant(registration: VariantTenantRegistration): void {
-  // A retired spec (runtimeStatus 'retired' in packages/game) never registers:
-  // no routes, no room-id prefix claim, no watch channel, no seat for a bot.
-  // The tenant module stays on disk until its Stage 2 commit removes it
-  // (docs-private/variant-retirement-plan.md, #396); this is what makes the
-  // retirement take effect the moment the status flips, with no list to keep.
-  if (isRetiredGameSpec(registration.gameSpecId)) return;
+  // A retired spec (runtimeStatus 'retired' in packages/game) still registers:
+  // its routes are how a game in progress finishes and a finished game
+  // replays, exports and embeds. Retirement closes the doors instead: the
+  // request gate answers 410 and createTenantRuntimeRoom refuses a new room,
+  // and every listing reads isRetiredGameSpec. Until 2026-10-11 a retired spec
+  // skipped registration here, which took its replays down with it.
   const existing = registrationsByPrefix.get(registration.roomIdPrefix);
   if (existing && existing.kind !== registration.kind) {
     throw new Error(
@@ -442,7 +446,13 @@ export function variantTenantDeployGateCensus(nowMs: number = Date.now()): Deplo
     for (const room of registration.rooms.values()) {
       if (room.projection) rooms.push({ events: room.events, projection: room.projection });
     }
-    census = mergeDeployGateCensus(census, censusDeployGate(rooms, nowMs));
+    const isResumablePve = resumablePveRoomPredicate({
+      gameSpecId: registration.gameSpecId,
+      engine: registration.isEngineClientId
+        ? { isEngineClientId: registration.isEngineClientId }
+        : null,
+    });
+    census = mergeDeployGateCensus(census, censusDeployGate(rooms, nowMs, isResumablePve));
   }
   return census;
 }

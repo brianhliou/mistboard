@@ -211,7 +211,6 @@ function syncConnectionMirror(): void {
   liveState.closeReason = client.closeReason();
   liveState.clientId = client.clientId() || liveState.clientId;
   liveState.reconnectAttempt = client.reconnectAttempt();
-  liveState.latencyMs = client.latencyMs();
 }
 
 function renderFromSocket(): void {

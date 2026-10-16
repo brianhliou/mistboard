@@ -13,6 +13,7 @@
 // rings around their face-down destination.
 
 import type { BanqiMove, BanqiPlayerView, BanqiSeat, BanqiSquare } from '@mistboard/game';
+import { boardCoordinatesEnabled } from './display-preferences.js';
 import { banqiClickResult } from './live-banqi-interaction.js';
 import {
   type BanqiBoardArrow,
@@ -67,6 +68,7 @@ export function createBanqiInteractiveBoard(
       draggingFrom,
       arrows,
       markers,
+      coordinates: boardCoordinatesEnabled(),
     });
   }
 

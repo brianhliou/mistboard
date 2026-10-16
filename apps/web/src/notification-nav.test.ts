@@ -1,9 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { writeAccountPreference } from './account-preferences.js';
+import { variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import {
+  type CorrespondenceEndedNotification,
   challengesNotificationSource,
   clearNotificationBells,
+  correspondenceFinishedNotificationSource,
   correspondenceNotificationSource,
   type ForumWatchNotification,
   followersNotificationSource,
@@ -28,7 +31,22 @@ const NO_COUNTS: NotificationCounts = {
   incomingChallenges: 0,
   seekExpiries: 0,
   seekExpired: [],
+  correspondenceFinished: 0,
+  correspondenceFinishedGames: [],
 };
+
+function endedRow(
+  overrides: Partial<CorrespondenceEndedNotification> = {},
+): CorrespondenceEndedNotification {
+  return {
+    roomId: 'xq_ended',
+    gameSpecId: 'xiangqi',
+    outcome: 'lost',
+    termination: 'timeout',
+    opponent: { handle: 'bob', displayName: 'Bob' },
+    ...overrides,
+  };
+}
 
 function expiredRow(overrides: Partial<SeekExpiryNotification> = {}): SeekExpiryNotification {
   return {
@@ -434,6 +452,120 @@ describe('notification nav', () => {
     expect(posted).toEqual([{ kind: 'seek-expiries' }]);
   });
 
+  it('says which correspondence game ended, how, and links to the finished game', () => {
+    const snapshot = correspondenceFinishedNotificationSource.read(
+      counts({
+        correspondenceFinished: 3,
+        correspondenceFinishedGames: [
+          endedRow(),
+          endedRow({
+            roomId: 'dxq_fog',
+            gameSpecId: 'dark-xiangqi',
+            outcome: 'won',
+            termination: 'resignation',
+            opponent: { handle: null, displayName: 'Private Pat' },
+          }),
+          endedRow({
+            roomId: 'xq_draw',
+            outcome: 'draw',
+            termination: 'repetition',
+            opponent: null,
+          }),
+        ],
+      }),
+    );
+    expect(snapshot.count).toBe(3);
+    expect(snapshot.entries.map(({ label, detail, href }) => ({ label, detail, href }))).toEqual([
+      {
+        label: 'Your correspondence game vs @bob ended: you lost',
+        detail: 'Timeout · Xiangqi',
+        href: '/xiangqi/game/xq_ended',
+      },
+      {
+        // A fog game: the result and the reason, nothing from the board.
+        label: 'Your correspondence game vs Private Pat ended: you won',
+        detail: `Resignation · ${snapshotVariant('dark-xiangqi')}`,
+        href: '/dark-xiangqi/game/dxq_fog',
+      },
+      {
+        label: 'Your correspondence game vs your opponent ended in a draw',
+        detail: 'Repetition · Xiangqi',
+        href: '/xiangqi/game/xq_draw',
+      },
+    ]);
+    expect(correspondenceFinishedNotificationSource.read(NO_COUNTS).entries).toEqual([]);
+  });
+
+  it('adds one overflow row past the capped ended-game rows', () => {
+    const snapshot = correspondenceFinishedNotificationSource.read(
+      counts({ correspondenceFinished: 2, correspondenceFinishedGames: [endedRow()] }),
+    );
+    expect(snapshot.entries.at(-1)).toEqual({
+      label: '1 more correspondence game ended',
+      href: '/correspondence',
+    });
+  });
+
+  it('translates the ended-game rows', () => {
+    expect(t('correspondence.bellEndedLost', { opponent: '@bob' }, 'zh-Hans')).toBe(
+      '你与 @bob 的通信对局已结束：你输了',
+    );
+    expect(t('correspondence.bellEndedWon', { opponent: '@bob' }, 'zh-Hant')).toBe(
+      '你與 @bob 的通信對局已結束：你贏了',
+    );
+  });
+
+  it('renders ended games in the bell, links each to its game, and clears them on open', async () => {
+    writeAccountPreference('correspondenceBell', false);
+    expect(
+      correspondenceFinishedNotificationSource.read(
+        counts({ correspondenceFinished: 1, correspondenceFinishedGames: [endedRow()] }),
+      ),
+    ).toEqual({ count: 0, entries: [] });
+    writeAccountPreference('correspondenceBell', true);
+
+    const posted: unknown[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: unknown, init?: RequestInit) => {
+        if (String(input) === '/api/notifications/seen') {
+          posted.push(JSON.parse(String(init?.body)));
+          return new Response('{"ok":true}', { status: 200 });
+        }
+        // A malformed row is dropped by the client's parse, never rendered.
+        const payload =
+          posted.length > 0
+            ? counts()
+            : {
+                ...counts(),
+                correspondenceFinished: 1,
+                correspondenceFinishedGames: [endedRow(), { roomId: 'xq_bad', outcome: 'maybe' }],
+              };
+        return new Response(JSON.stringify(payload), { status: 200 });
+      }),
+    );
+    registerNotificationSource(correspondenceFinishedNotificationSource);
+    const nav = document.createElement('nav');
+    nav.innerHTML = '<div class="site-nav-utilities"><div data-account-nav></div></div>';
+    document.body.append(nav);
+    mountNotificationBell(nav);
+    await refreshNotifications();
+
+    const badge = nav.querySelector<HTMLElement>('.notif-nav-badge');
+    const rows = Array.from(nav.querySelectorAll<HTMLAnchorElement>('.notif-nav-item'));
+    expect(badge?.textContent).toBe('1');
+    expect(rows.map((row) => row.getAttribute('href'))).toEqual(['/xiangqi/game/xq_ended']);
+    expect(rows[0]?.querySelector('.notif-nav-label')?.textContent).toBe(
+      'Your correspondence game vs @bob ended: you lost',
+    );
+    expect(rows[0]?.dataset.kind).toBe('ended');
+    expect(rows[0]?.closest('.notif-nav-section')?.getAttribute('data-section')).toBe('new');
+
+    nav.querySelector<HTMLButtonElement>('.notif-nav-trigger')?.click();
+    await vi.waitFor(() => expect(badge?.hidden).toBe(true));
+    expect(posted).toEqual([{ kind: 'correspondence-finished' }]);
+  });
+
   describe('panel layout', () => {
     const ALL_SOURCES = [
       correspondenceNotificationSource,
@@ -619,6 +751,7 @@ describe('notification nav', () => {
     expect(challengesNotificationSource.markSeen).toBeUndefined();
     expect(inboxNotificationSource.markSeen).toBeUndefined();
     expect(correspondenceNotificationSource.markSeen).toBeUndefined();
+    expect(correspondenceFinishedNotificationSource.markSeen).toBeTypeOf('function');
   });
 });
 
@@ -634,4 +767,8 @@ function memoryStorage(): Storage {
     removeItem: (key) => values.delete(key),
     setItem: (key, value) => values.set(key, value),
   };
+}
+
+function snapshotVariant(specId: string): string {
+  return variantDisplayLabel(specId);
 }

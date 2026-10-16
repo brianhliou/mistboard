@@ -29,7 +29,15 @@
 //                                    player (his name as the specs spell it: every
 //                                    board opens from his side), short (the name
 //                                    captions use, e.g. Fung), captions (hand: a
-//                                    pre-2026-10-03 page keeps written captions)
+//                                    pre-2026-10-03 page keeps written captions),
+//                                    tldr (one line per finding, repeated: the
+//                                    page's "In short", 2-4 lines; required on a
+//                                    published page dated 2026-10-10 or later),
+//                                    thumbnailBoard (a page with no usable photo:
+//                                    `<key> ply=<n> half=top|bottom`, one of the
+//                                    page's boards replayed through the kernel to
+//                                    ply n and drawn as a half-board card from the
+//                                    player's side; thumbnailAlt is its label)
 //   <!-- a note -->                  dropped
 //   ## Heading                       starts a section; anything above the first
 //                                    one is the intro
@@ -89,10 +97,14 @@ const raw = readFileSync(draftPath, 'utf8').replace(/<!--[\s\S]*?-->/g, '');
 const fm = raw.match(/^---\n([\s\S]*?)\n---\n/);
 if (!fm) fail('no front matter');
 const meta = {};
+const tldr = [];
 for (const line of fm[1].split('\n')) {
   const m = line.match(/^(\w+):\s*(.*)$/);
-  if (m) meta[m[1]] = m[2].trim();
+  if (!m) continue;
+  if (m[1] === 'tldr') tldr.push(m[2].trim());
+  else meta[m[1]] = m[2].trim();
 }
+if (tldr.length > 4) fail(`tldr has ${tldr.length} lines; keep it to 2-4`);
 for (const k of ['slug', 'export', 'title', 'summary', 'audience']) {
   if (!meta[k]) fail(`front matter needs ${k}`);
 }
@@ -123,6 +135,11 @@ for (const chunk of chunks) {
     sections.push(section);
     target = section.blocks;
     if (lines.length > 1) fail(`put a blank line after "## ${section.heading}"`);
+    continue;
+  }
+  if (head.startsWith('### ')) {
+    if (lines.length > 1) fail(`put a blank line after "${head}"`);
+    target.push({ kind: 'sub-heading', text: head.slice(4).trim() });
     continue;
   }
   const directive = head.match(/^\[(\w+)([^\]]*)\]\s*(.*)$/);
@@ -340,15 +357,62 @@ function emitBlock(b, n) {
   return `${i}{\n${body}${i}},\n`;
 }
 
-const thumbnail = meta.thumbnail
-  ? `  thumbnail: {\n    kind: 'image',\n    src: ${q(meta.thumbnail)},\n${meta.thumbnailAlt ? `    alt: ${q(meta.thumbnailAlt)},\n` : ''}${meta.thumbnailPosition ? `    position: ${q(meta.thumbnailPosition)},\n` : ''}  },\n`
+if (meta.thumbnail && meta.thumbnailBoard) fail('set thumbnail or thumbnailBoard, not both');
+// A board card: the position is replayed from the page's own baked record, so
+// the card cannot show a position the game never reached.
+let boardThumb = null;
+if (meta.thumbnailBoard) {
+  const [key, ...rest] = meta.thumbnailBoard.split(/\s+/);
+  const a = attrs(rest.join(' '));
+  const board = boards.find((b) => b.key === key);
+  if (!board) fail(`thumbnailBoard ${key} is not a board on the page`);
+  const ply = Number(a.ply);
+  if (!Number.isInteger(ply) || ply < 0) fail('thumbnailBoard needs ply=<n>');
+  if (a.half !== 'top' && a.half !== 'bottom') fail('thumbnailBoard needs half=top|bottom');
+  if (!meta.thumbnailAlt) fail('thumbnailBoard needs thumbnailAlt (the card label)');
+  const spec = JSON.parse(readFileSync(join(playerDir, 'specs', `${key}.json`), 'utf8'));
+  const perspective =
+    a.perspective ?? (meta.player && spec.black === meta.player ? 'black' : 'red');
+  boardThumb = { constName: board.constName, ply, half: a.half, perspective };
+}
+const thumbnail = boardThumb
+  ? `  thumbnail: { kind: 'svg', svg: THUMBNAIL },\n`
+  : meta.thumbnail
+    ? `  thumbnail: {\n    kind: 'image',\n    src: ${q(meta.thumbnail)},\n${meta.thumbnailAlt ? `    alt: ${q(meta.thumbnailAlt)},\n` : ''}${meta.thumbnailPosition ? `    position: ${q(meta.thumbnailPosition)},\n` : ''}  },\n`
+    : '';
+const thumbImports = boardThumb
+  ? `import { applyStandardXiangqiMove, createInitialXiangqiState, type XiangqiSquare } from '@mistboard/game';
+import { xqHalfBoardThumbnailSvg } from '../diagrams.js';
+`
+  : '';
+const thumbConst = boardThumb
+  ? `
+
+// Card art: ${boardThumb.constName} after ${boardThumb.ply} plies, replayed through the kernel
+// from the record above (an illegal move throws), ${boardThumb.half} half from ${boardThumb.perspective}'s side.
+const THUMBNAIL_PLY = ${boardThumb.ply};
+const THUMBNAIL = (): string => {
+  let state = createInitialXiangqiState('${meta.slug}-thumb');
+  for (const tok of ${boardThumb.constName}.iccs.trim().split(/\\s+/).slice(0, THUMBNAIL_PLY)) {
+    const sq = (c: string) => \`\${c[0]}\${Number(c[1]) + 1}\` as XiangqiSquare;
+    const next = applyStandardXiangqiMove(state, { from: sq(tok.slice(0, 2)), to: sq(tok.slice(2, 4)) });
+    if (next === state) throw new Error(\`${meta.slug} thumbnail: illegal move \${tok}\`);
+    state = next;
+  }
+  return xqHalfBoardThumbnailSvg({
+    state,
+    half: '${boardThumb.half}',
+    perspective: '${boardThumb.perspective}',
+    ariaLabel: ${q(meta.thumbnailAlt)},
+  });
+};`
   : '';
 const readNext = meta.readNext
   ? `  readNext: ${q(meta.readNext.split(',').map((s) => s.trim()))},\n`
   : '';
 const rel = (p) => p.replace(`${repoRoot}/`, '').replace(/^.*?(docs-private\/)/, '$1');
 
-const ts = `import type { XiangqiReplaySpec } from '../../xiangqi-replay.js';
+const ts = `${thumbImports}import type { XiangqiReplaySpec } from '../../xiangqi-replay.js';
 import type { Article } from '../types.js';
 
 // GENERATED by scripts/player-page-article.mjs from ${rel(draftPath)}.
@@ -359,7 +423,7 @@ import type { Article } from '../types.js';
 // scripts/data/article-line-evals.json. Baked, not fetched: the page must not
 // depend on a study still existing.
 
-${specConsts.join('\n\n')}
+${specConsts.join('\n\n')}${thumbConst}
 
 export const ${meta.export}: Article = {
   slug: ${q(meta.slug)},
@@ -371,7 +435,7 @@ ${meta.seoTitle ? `  seoTitle: ${q(meta.seoTitle)},\n` : ''}  summary: ${q(meta.
   showSummaryOnPage: false,
   status: ${q(meta.status ?? 'draft')},
 ${meta.publishedAt ? `  publishedAt: ${q(meta.publishedAt)},\n` : ''}${meta.updatedAt ? `  updatedAt: ${q(meta.updatedAt)},\n` : ''}${thumbnail}  audience: ${q(meta.audience)},
-${readNext}  intro: [
+${readNext}${tldr.length ? `  tldr: ${q(tldr)},\n` : ''}  intro: [
 ${intro.map((b) => emitBlock(b, 4)).join('')}  ],
   sections: [
 ${sections

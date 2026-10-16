@@ -1,12 +1,10 @@
 import {
-  ATOMIC_XIANGQI_SPEC_ID,
   BANQI_SPEC_ID,
   CRAZYHOUSE_XIANGQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   defaultEngineTimeControl,
-  FORTRESS_XIANGQI_SPEC_ID,
   isAllowedEngineTimeControl,
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
@@ -23,9 +21,7 @@ export type LandingBotGameSpecId =
   | typeof XIANGQI_SPEC_ID
   | typeof BANQI_SPEC_ID
   | typeof JIEQI_SPEC_ID
-  | typeof FORTRESS_XIANGQI_SPEC_ID
   | typeof DUCK_XIANGQI_SPEC_ID
-  | typeof ATOMIC_XIANGQI_SPEC_ID
   | typeof CRAZYHOUSE_XIANGQI_SPEC_ID
   | typeof DARK_XIANGQI_SPEC_ID
   | typeof DARK_CHESS_SPEC_ID
@@ -45,10 +41,8 @@ export const LANDING_BOT_GAME_SPEC_IDS: readonly LandingBotGameSpecId[] = [
   XIANGQI_SPEC_ID,
   JIEQI_SPEC_ID,
   BANQI_SPEC_ID,
-  ATOMIC_XIANGQI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
-  FORTRESS_XIANGQI_SPEC_ID,
   CRAZYHOUSE_XIANGQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   JUNGLE_SPEC_ID,
@@ -59,23 +53,17 @@ export const LANDING_BOT_GAME_SPEC_IDS: readonly LandingBotGameSpecId[] = [
 // any two CONSECUTIVE buckets must cover the whole shelf, which is what stops a
 // variant from disappearing for a whole day.
 //
-// Five wide (seven tiles with the two heads). Crazyhouse made the rotating
-// pool nine, and nine splits into two five-lineups that share one variant and
-// together cover everything, so the cycle is two long: every pair of
-// consecutive buckets is the whole shelf, and each variant is on the panel at
-// least every other bucket. The shared one is jieqi, the most-played rotating
-// variant (2026-09-17 read: 59% of counted human games). Three lineups of five
-// cannot do better for nine without repeating one in all three, and a wider
-// panel is a layout change.
+// Four wide (six variants with the two heads). Fortress and Atomic Xiangqi
+// retired on 2026-10-11 and left seven rotating variants, which split into two
+// four-lineups that share one variant and together cover everything, so the
+// cycle is two long: every pair of consecutive buckets is the whole shelf, and
+// each variant is on the panel at least every other bucket. The shared one is
+// jieqi, the most-played rotating variant (2026-09-17 read: 59% of counted
+// human games). Four wide keeps the panel the height it had once Atomic was
+// unlisted (2026-10-06).
 const ROTATING_LINEUPS: readonly (readonly LandingBotGameSpecId[])[] = [
-  [
-    JIEQI_SPEC_ID,
-    FORTRESS_XIANGQI_SPEC_ID,
-    DUCK_XIANGQI_SPEC_ID,
-    ATOMIC_XIANGQI_SPEC_ID,
-    CRAZYHOUSE_XIANGQI_SPEC_ID,
-  ],
-  [BANQI_SPEC_ID, JIEQI_SPEC_ID, DARK_XIANGQI_SPEC_ID, JUNGLE_SPEC_ID, JUNGLE_FLIP_SPEC_ID],
+  [JIEQI_SPEC_ID, BANQI_SPEC_ID, DUCK_XIANGQI_SPEC_ID, CRAZYHOUSE_XIANGQI_SPEC_ID],
+  [JIEQI_SPEC_ID, DARK_XIANGQI_SPEC_ID, JUNGLE_SPEC_ID, JUNGLE_FLIP_SPEC_ID],
 ];
 
 // Xiangqi's Lobby block is a fixed difficulty ladder, not a rotation: the rungs
@@ -96,9 +84,7 @@ const XIANGQI_LADDER_LEVELS = [2, 5, 8] as const;
 // shows no name, so the control must still never rotate on its own.
 export const XIANGQI_FIRST_GAME_LEVEL = 2;
 const XIANGQI_RETURNING_LEVEL = 5;
-const FORTRESS_XIANGQI_LEVEL = 4;
 const DUCK_XIANGQI_LEVEL = 4;
-const ATOMIC_XIANGQI_LEVEL = 4;
 const CRAZYHOUSE_XIANGQI_LEVEL = 4;
 // Jieqi follows the xiangqi rule (Pikafish Level 1..7; level 8 is Pikafish
 // itself). On the middle rung a first jieqi game was Level 4 while a first
@@ -196,8 +182,8 @@ export function landingBotRotationBucket(now: Date = new Date()): number {
   return Math.floor(now.getTime() / ROTATION_BUCKET_MS);
 }
 
-// Xiangqi and Fog Chess anchor every lineup. Five other slots rotate in paired
-// families; any two consecutive buckets cover all nine rotating variants.
+// Xiangqi and Fog Chess anchor every lineup. Four other slots rotate in paired
+// families; any two consecutive buckets cover all seven rotating variants.
 export function landingBotLineup(bucket: number): readonly LandingBotGameSpecId[] {
   const rotating = ROTATING_LINEUPS[positiveModulo(bucket, ROTATING_LINEUPS.length)]!;
   return [XIANGQI_SPEC_ID, DARK_CHESS_SPEC_ID, ...rotating];
@@ -214,9 +200,7 @@ export function landingBotOffer(
   if (gameSpecId === XIANGQI_SPEC_ID) {
     return fsfOffer(gameSpecId, xiangqiPrimaryLevel(context.rememberedXiangqiBotId));
   }
-  if (gameSpecId === FORTRESS_XIANGQI_SPEC_ID) return fsfOffer(gameSpecId, FORTRESS_XIANGQI_LEVEL);
   if (gameSpecId === DUCK_XIANGQI_SPEC_ID) return fsfOffer(gameSpecId, DUCK_XIANGQI_LEVEL);
-  if (gameSpecId === ATOMIC_XIANGQI_SPEC_ID) return fsfOffer(gameSpecId, ATOMIC_XIANGQI_LEVEL);
   if (gameSpecId === CRAZYHOUSE_XIANGQI_SPEC_ID) {
     return fsfOffer(gameSpecId, CRAZYHOUSE_XIANGQI_LEVEL);
   }
@@ -360,9 +344,7 @@ export type LandingBotRung = {
 
 const FSF_LADDER_SPECS: readonly LandingBotGameSpecId[] = [
   XIANGQI_SPEC_ID,
-  FORTRESS_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
-  ATOMIC_XIANGQI_SPEC_ID,
   CRAZYHOUSE_XIANGQI_SPEC_ID,
 ];
 const JIEQI_LADDER_TOP_LEVEL = 7;

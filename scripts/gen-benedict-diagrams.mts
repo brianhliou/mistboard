@@ -74,7 +74,7 @@ const {
   xqPoint,
   XQ_BOARD_W,
   XQ_BOARD_H,
-  XQ_PIECE_SIZE,
+  XQ_PIECE_DRAW_SIZE,
   XQ_VIEWBOX_PAD,
 } = await import('../apps/web/src/articles/diagrams.js');
 const {
@@ -121,9 +121,11 @@ const localArt = (svg: string) =>
 
 // Cropping to Red's half plus the river and Black's soldier rank. The pieces on
 // rank 7 have to stay in shot: one of the balanced first moves lands there and
-// converts two of them, so a crop at the river would cut the point out.
+// converts two of them, so a crop at the river would cut the point out. The top
+// edge sits half a cell above that rank, in the gap between its pieces and the
+// cannons on rank 8; the old edge, 2px inside the soldiers, cut their tops (#547).
 const CROP_TOP_RANK = 7;
-const CROP_Y = 46 + (10 - CROP_TOP_RANK) * 31 + XQ_VIEWBOX_PAD - XQ_PIECE_SIZE / 2 + 2;
+const CROP_Y = 46 + (10 - CROP_TOP_RANK) * 31 + XQ_VIEWBOX_PAD - 31 / 2;
 const CROP_H = 28 + 315 + XQ_VIEWBOX_PAD - CROP_Y;
 
 /** One board, wrapped so it renders standalone. */
@@ -471,8 +473,8 @@ for (let f = 0; f < 9; f++) {
   for (let r = 1; r <= 10; r++) {
     const { x, y } = xqPoint(f, r, 'red', 0, 28);
     points[`${'abcdefghi'[f]}${r}`] = {
-      x: +(x - XQ_PIECE_SIZE / 2).toFixed(2),
-      y: +(y - XQ_PIECE_SIZE / 2).toFixed(2),
+      x: +(x - XQ_PIECE_DRAW_SIZE / 2).toFixed(2),
+      y: +(y - XQ_PIECE_DRAW_SIZE / 2).toFixed(2),
     };
   }
 }
@@ -556,7 +558,7 @@ const browser = [
   '    <button type="button" data-step="1" aria-label="Forward one move">&#9654;</button>',
   '    <button type="button" data-jump="end" aria-label="Last position">&#9654;&#124;</button>',
   '  </div>',
-  `  <script type="application/json" class="xq-browser-data">${JSON.stringify({ points, size: XQ_PIECE_SIZE, sprites, games: games.games })}</script>`,
+  `  <script type="application/json" class="xq-browser-data">${JSON.stringify({ points, size: XQ_PIECE_DRAW_SIZE, sprites, games: games.games })}</script>`,
   '</div>',
 ].join('\n');
 
@@ -617,7 +619,7 @@ if (!SITE) {
     '    <button type="button" data-play="reset">Reset</button>',
     '  </div>',
     '  <p class="xq-play-note"></p>',
-    `  <script type="application/json" class="xq-play-data">${JSON.stringify({ points, size: XQ_PIECE_SIZE, sprites })}</script>`,
+    `  <script type="application/json" class="xq-play-data">${JSON.stringify({ points, size: XQ_PIECE_DRAW_SIZE, sprites })}</script>`,
     '</div>',
   ].join('\n');
   writeFileSync(path.join(INCLUDES, 'benedict-xq-play.html'), play + '\n');

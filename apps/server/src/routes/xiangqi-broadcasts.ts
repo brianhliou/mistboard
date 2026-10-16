@@ -321,6 +321,7 @@ export async function xiangqiBroadcastOpsIndexForApi(
           startsAt: tour.startsAt ?? null,
           endsAt: tour.endsAt ?? null,
           createdAt: tour.createdAt,
+          hasBoards: boards.length > 0,
         }),
         roundCount: rounds.length,
         boardCount: boards.length,
@@ -491,6 +492,7 @@ function scheduleForApi(
     startsAt: string | null;
     endsAt: string | null;
     createdAt?: string | Date | null;
+    hasBoards?: boolean;
   },
   now = Date.now(),
 ): XiangqiBroadcastScheduleForApi {
@@ -563,7 +565,7 @@ export async function xiangqiBroadcastTourForApi(
     // work this out for itself -- which is why the tour PAGE credited nobody
     // while every round page did, on a tour whose 61 games all came from one
     // volunteer archive. It is also the page an outside link points at.
-    recordsSource: broadcastRecordsCredit(boardsByRound.flat()),
+    recordsSource: broadcastRecordsCredit(boardsByRound.flat(), tour),
     rounds: rounds.map((round, index) => ({
       ...round,
       ...roundBoardStats(boardsByRound[index] ?? []),

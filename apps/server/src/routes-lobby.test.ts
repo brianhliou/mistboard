@@ -156,7 +156,7 @@ function testContext(overrides: Partial<HttpApiContext> = {}): {
     databaseRequired: false,
     drainDeadlineMs: () => null,
     inMemoryGameSummary: () => null,
-    isDraining: () => false,
+    refusesCreate: () => false,
     liveClockIncrementMs: 2000,
     liveClockInitialMs: 180000,
     lobbyQueue: [],
