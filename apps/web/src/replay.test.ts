@@ -62,6 +62,59 @@ describe('mountReplay capture rows', () => {
   });
 });
 
+// Mistboard TV's rail draws the game page's capture strips from the handle at the
+// board's ply: the second mover's captures on top, the first mover's below.
+describe('mountReplay rail material', () => {
+  it('fills the rail strips with what each side has captured by the current ply', async () => {
+    const root = document.createElement('div');
+    document.body.append(root);
+    const replay = await mountReplay(root, 'review-captures-test', {
+      autoplay: false,
+      initialPly: 2,
+      loaderForId: async () => reviewCaptureEvents,
+      revealOnFinish: false,
+      showControls: false,
+    });
+    const slots = railSlots();
+
+    try {
+      expect(replay.fillMaterial).toBeTypeOf('function');
+      replay.fillMaterial?.(slots);
+      expect(slotLabels(slots.top)).toEqual([]);
+      expect(slotLabels(slots.bottom)).toEqual([]);
+      expect(slots.bottom.classList.contains('has-captures')).toBe(false);
+
+      replay.jumpToPly?.(3);
+      replay.fillMaterial?.(slots);
+      expect(slotLabels(slots.top)).toEqual([]);
+      expect(slotLabels(slots.bottom)).toEqual(['black pawn']);
+      expect(slots.bottom.classList.contains('has-captures')).toBe(true);
+
+      replay.jumpToPly?.(4);
+      replay.fillMaterial?.(slots);
+      expect(slotLabels(slots.top)).toEqual(['white pawn']);
+      expect(slotLabels(slots.bottom)).toEqual(['black pawn']);
+
+      // Scrubbing back redraws, never accumulates.
+      replay.jumpToPly?.(3);
+      replay.fillMaterial?.(slots);
+      expect(slotLabels(slots.top)).toEqual([]);
+      expect(slots.top.classList.contains('has-captures')).toBe(false);
+    } finally {
+      replay.destroy();
+      root.remove();
+    }
+  });
+});
+
+function railSlots(): { top: HTMLElement; bottom: HTMLElement; pool: HTMLElement } {
+  return {
+    top: document.createElement('div'),
+    bottom: document.createElement('div'),
+    pool: document.createElement('div'),
+  };
+}
+
 describe('resolveWallClockReplayPosition', () => {
   const samples = [
     { sampleId: 'a', plyCount: 2 },
@@ -124,6 +177,12 @@ describe('resolveWallClockReplayPosition', () => {
     expect(resolveWallClockReplayPosition([], 100, timing)).toBeNull();
   });
 });
+
+function slotLabels(slot: ParentNode): string[] {
+  return [...slot.querySelectorAll('.captures-piece')].map(
+    (piece) => piece.getAttribute('aria-label') ?? '',
+  );
+}
 
 function captureLabels(root: ParentNode, selector: string): string[] {
   const strip = root.querySelector(selector);

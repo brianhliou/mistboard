@@ -2,12 +2,13 @@
 // watch renderer (watch-tenant-replay.ts). Flip Jungle is SYMMETRIC hidden-identity
 // (the banqi pattern): one board, defaulting to the as-played masked replay with a
 // Reveal/Hide control (and the `h` key) that swaps in the full-reveal overlay. The
-// deal has no sides, so orientation is ignored. The compact TV product draws no
-// captures; the live room does (live-jungle-flip.ts renderJungleFlipMaterial).
+// deal has no sides, so orientation is ignored. The board pane draws no captures;
+// the rail draws the room's material (jungle-flip-material.ts) via railMaterial.
 import { t } from './i18n/catalog.js';
 import './live-xiangqi.css';
 import { type JungleFlipPlayerView, jungleFlipLastMoverInk } from '@mistboard/game';
 import { flipSeatInk } from './flip-seat-ink.js';
+import { renderJungleFlipMaterial } from './jungle-flip-material.js';
 import {
   animateJungleFlipBoardMove,
   type JungleFlipBoardArrow,
@@ -67,6 +68,15 @@ export function mountJungleFlipWatchReplay(
     // Spectator cue: the mover's own-move sound (watch-move-sound.ts).
     moveSound: watchJungleFlipMoveSound,
     fillCaptures: () => {},
+    // The rail draws the room's material from the view the board shows (the
+    // as-played mask on TV): each seat's captured animals and the face-down pool,
+    // public arithmetic over that mask. The first mover sits at the bottom.
+    railMaterial: (slots, view) =>
+      renderJungleFlipMaterial(
+        { capturesTop: slots.top, capturesBottom: slots.bottom, hiddenPool: slots.pool },
+        view,
+        flipSeatInk('red', view.firstColor ?? null),
+      ),
     reveal: { hiddenKey: 'truth', truthKey: 'revealed' },
     resultLabel: (result, postgame) => jungleFlipResultLabel(result, postgame.view.firstColor),
     seatLabel: (seat, postgame) => jungleFlipSeatInkLabel(seat, postgame.view.firstColor),

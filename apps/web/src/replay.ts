@@ -30,6 +30,7 @@ import {
 // belief data is present (dev / admin-gated engine review — never normal play).
 import type { BeliefConfig, BeliefPanelHandle } from './belief-panel.js';
 import { chessgroundAnimation } from './board-anim.js';
+import { captureRow } from './capture-render.js';
 import { computeCaptures } from './captures.js';
 import { t } from './i18n/catalog.js';
 import type { SoundKind } from './live-state.js';
@@ -296,6 +297,19 @@ export type ReplayHandle = {
    *  before anything loaded. OPTIONAL; TV's live follow reads it to tell a game
    *  that ended from one that went quiet. */
   gameResult?: () => string | null;
+  /** Fill the rail's material slots for the CURRENT ply: captured pieces, a drop
+   *  variant's hands, a flip variant's face-down pool. `top` belongs to the second
+   *  mover and `bottom` to the first (the /watch rail's fixed seating). Draws only
+   *  what the loaded payload already carries for the board's view; a slot it has
+   *  nothing for is left empty. OPTIONAL; /watch's rail is the only caller. */
+  fillMaterial?: (slots: ReplayMaterialSlots) => void;
+};
+
+/** The rail regions {@link ReplayHandle.fillMaterial} draws into. */
+export type ReplayMaterialSlots = {
+  top: HTMLElement;
+  bottom: HTMLElement;
+  pool: HTMLElement;
 };
 
 /** What a caller draws over a replay board at one ply. */
@@ -1542,6 +1556,15 @@ export async function mountReplay(
     },
     plyCount: () => moveCount,
     moveEntries: () => buildChessMoveEntries(events),
+    // Captured material at the ply on the board, from the same events the truth pane
+    // draws (watch serves only finished games here, and fog live games never reach
+    // this path). Each strip holds its seat's haul: black (second mover, top) shows
+    // the white pieces it took.
+    fillMaterial: (slots) => {
+      const tally = computeCaptures(sliceToPly(events, currentPly));
+      fillChessCaptureSlot(slots.top, tally.black, 'white');
+      fillChessCaptureSlot(slots.bottom, tally.white, 'black');
+    },
     // The clocks read off the same state (and the same instant) the docked clock panel
     // draws from: the ply's recorded value, projected through the think in progress while
     // the game plays back at its recorded timing. Null for an untimed game (no ClockState)
@@ -1683,6 +1706,19 @@ function defaultUrlForId(sampleId: string): string {
   const safeId = sampleId.replace(/[^a-zA-Z0-9_-]/g, '');
   if (!safeId) throw new Error(`invalid replay id: ${sampleId}`);
   return `/replay-samples/${safeId}.jsonl`;
+}
+
+// One rail strip of captured chess pieces (`capturedColor` is the side that lost
+// them), toggling has-captures the way the room's strips do (live-captures.ts).
+function fillChessCaptureSlot(
+  slot: HTMLElement,
+  capturedRoles: PieceRole[],
+  capturedColor: Color,
+): void {
+  const row = captureRow(capturedRoles, capturedColor);
+  slot.replaceChildren();
+  slot.classList.toggle('has-captures', row !== null);
+  if (row) slot.append(row);
 }
 
 async function loadEvents(

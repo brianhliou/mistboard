@@ -370,14 +370,24 @@ function renderLiveCaptureStrips(liveRefs: LiveRefs, view: DarkXiangqiWireView |
   liveRefs.capturesTop.classList.remove('has-captures');
   liveRefs.capturesBottom.classList.remove('has-captures');
   if (!view) return;
-  const bottomColor = core?.orientation() ?? view.perspective;
+  fillDarkXiangqiCaptureStrips(liveRefs, view, core?.orientation() ?? view.perspective);
+}
+
+// The strips' fill, shared with Mistboard TV's rail (watch-dark-xiangqi-replay.ts):
+// top = the bottom side's dead pieces, bottom = the top side's, both read from the
+// view's own ledger, so a strip never shows more than the view carries.
+export function fillDarkXiangqiCaptureStrips(
+  slots: { capturesTop: HTMLElement; capturesBottom: HTMLElement },
+  view: Pick<DarkXiangqiWireView, 'captures'>,
+  bottomColor: XiangqiColor,
+): void {
   const topColor: XiangqiColor = bottomColor === 'red' ? 'black' : 'red';
   const dead = [
-    ...view.captures.red.map((role) => ({ owner: 'red' as XiangqiColor, role })),
-    ...view.captures.black.map((role) => ({ owner: 'black' as XiangqiColor, role })),
+    ...(view.captures?.red ?? []).map((role) => ({ owner: 'red' as XiangqiColor, role })),
+    ...(view.captures?.black ?? []).map((role) => ({ owner: 'black' as XiangqiColor, role })),
   ];
-  fillCapturedPoolWith(liveRefs.capturesTop, dead, bottomColor, renderLiveCapturedGlyph);
-  fillCapturedPoolWith(liveRefs.capturesBottom, dead, topColor, renderLiveCapturedGlyph);
+  fillCapturedPoolWith(slots.capturesTop, dead, bottomColor, renderLiveCapturedGlyph);
+  fillCapturedPoolWith(slots.capturesBottom, dead, topColor, renderLiveCapturedGlyph);
 }
 
 function renderLiveCapturedGlyph(piece: { color: XiangqiColor; role: XiangqiPieceRole }): string {

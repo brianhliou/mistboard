@@ -45,6 +45,47 @@ describe('Dark Xiangqi watch replay', () => {
     handle.destroy();
     expect(root.childElementCount).toBe(0);
   });
+
+  // Mistboard TV's rail: each seat's captures from the ledger on the view the board
+  // shows, so the pov toggle's choice is what the strips read.
+  it('fills the TV rail capture strips from the view the board shows', async () => {
+    const postgame = postgameFixture('dxq_mat');
+    for (const key of ['red', 'truth', 'black'] as const) {
+      const ply1 = postgame.history?.[key]?.[1];
+      if (ply1) ply1.view = { ...ply1.view, captures: { red: [], black: ['soldier'] } };
+    }
+    const blackPly1 = postgame.history?.black?.[1];
+    if (blackPly1)
+      blackPly1.view = { ...blackPly1.view, captures: { red: ['horse'], black: ['soldier'] } };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse(postgame)),
+    );
+    const root = document.createElement('div');
+    const handle = await mountDarkXiangqiWatchReplay(root, 'dxq_mat', {
+      autoplay: false,
+      compact: true,
+    });
+    const slots = railSlots();
+
+    expect(handle.fillMaterial).toBeTypeOf('function');
+    handle.setPov?.('truth');
+    handle.jumpToPly?.(0);
+    handle.fillMaterial?.(slots);
+    expect(railLabels(slots.top)).toEqual([]);
+    expect(railLabels(slots.bottom)).toEqual([]);
+
+    handle.jumpToPly?.(1);
+    handle.fillMaterial?.(slots);
+    // Red (bottom) took a black soldier; nothing of red's is gone.
+    expect(railLabels(slots.top)).toEqual([]);
+    expect(railLabels(slots.bottom)).toEqual(['black soldier']);
+
+    handle.setPov?.('black');
+    handle.fillMaterial?.(slots);
+    expect(railLabels(slots.top)).toEqual(['red horse']);
+    handle.destroy();
+  });
 });
 
 function postgameFixture(roomId: string): DarkXiangqiPostgameResponse {
@@ -129,4 +170,18 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
     headers: { 'content-type': 'application/json' },
     status: init.status ?? 200,
   });
+}
+
+function railSlots(): { top: HTMLElement; bottom: HTMLElement; pool: HTMLElement } {
+  return {
+    top: document.createElement('div'),
+    bottom: document.createElement('div'),
+    pool: document.createElement('div'),
+  };
+}
+
+function railLabels(slot: HTMLElement): string[] {
+  return [...slot.querySelectorAll('.review-capture-piece')].map(
+    (piece) => piece.getAttribute('aria-label') ?? '',
+  );
 }

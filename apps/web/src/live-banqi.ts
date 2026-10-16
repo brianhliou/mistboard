@@ -26,10 +26,9 @@ import type {
   BanqiSquare,
 } from '@mistboard/game';
 import './live-xiangqi.css';
-import { banqiFaceDownAtEnd, banqiRevealOdds } from './banqi-reveal-odds.js';
+import { renderBanqiMaterial } from './banqi-material.js';
 import { boardCoordinatesEnabled } from './display-preferences.js';
 import { banqiEnabled } from './feature-flags.js';
-import { renderHiddenPoolPanel } from './hidden-pool-panel.js';
 import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
 import { t } from './i18n/catalog.js';
 import {
@@ -53,7 +52,6 @@ import {
 } from './live-banqi-sound.js';
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
-import { fillCapturedPoolWith } from './review/captured-pool.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import {
   annotationOwner,
@@ -75,8 +73,6 @@ import type {
   WebVariantTenant,
 } from './variant-tenant/room-chrome.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
-import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
-import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
 
 // ── Wire shapes (mirror BanqiPlayerView; board entries are faceDown-tagged) ──
 
@@ -502,62 +498,9 @@ function viewerInkFor(view: BanqiWireView): BanqiColor | null {
   return seat === 'red' ? view.firstColor : view.firstColor === 'red' ? 'black' : 'red';
 }
 
-// Exported for unit testing the material data path without a live socket — same
-// extraction rationale as live-banqi-render / live-banqi-interaction. `viewerInk`
-// is null before the opening flip binds it: nothing can have been captured yet,
-// and the pool rows fall back to red-then-black since no seat owns an ink.
-//
-// `moves` is the room's move log. A finished room's truth view has every tile
-// face up, which would empty the tally (#544); the log recovers which tiles were
-// still face-down when play ended, and the tally keeps showing those.
-export function renderBanqiMaterial(
-  slots: Pick<LiveRefs, 'capturesTop' | 'capturesBottom' | 'hiddenPool'>,
-  view: BanqiWireView | null,
-  viewerInk: BanqiColor | null,
-  moves: readonly BanqiMove[] = [],
-): void {
-  slots.capturesTop.replaceChildren();
-  slots.capturesBottom.replaceChildren();
-  slots.hiddenPool.replaceChildren();
-  // No view yet (or an empty board) must not read as "everything still
-  // face-down". A spectator's view is the shared masked board since 2026-09-20
-  // (banqi is symmetric), so the pools below render for a spectator too.
-  if (!view || Object.keys(view.board).length === 0) return;
-  const pieceSet = readStoredXiangqiPieceSet();
-  const glyph = (entry: { color: BanqiColor; role: BanqiPieceRole }): string =>
-    renderXiangqiPieceGlyphed(entry, pieceSet, { ariaLabel: `${entry.color} ${entry.role}` });
-  if (viewerInk !== null) {
-    const opponentInk: BanqiColor = viewerInk === 'red' ? 'black' : 'red';
-    fillCapturedPoolWith(slots.capturesTop, view.captured, viewerInk, glyph);
-    fillCapturedPoolWith(slots.capturesBottom, view.captured, opponentInk, glyph);
-  }
-  // Rows follow the board: the opponent's ink on top, the viewer's below.
-  const top: BanqiColor = viewerInk === 'black' ? 'red' : viewerInk === 'red' ? 'black' : 'red';
-  const bottom: BanqiColor = top === 'red' ? 'black' : 'red';
-  const finished = view.status.type === 'finished';
-  const poolView = finished ? banqiFaceDownAtEnd(view, moves) : view;
-  if (!poolView) return;
-  const odds = banqiRevealOdds(poolView);
-  renderHiddenPoolPanel(
-    slots.hiddenPool,
-    [
-      { color: top, label: banqiInkLabel(top), side: odds.pool[top] },
-      { color: bottom, label: banqiInkLabel(bottom), side: odds.pool[bottom] },
-    ],
-    glyph,
-    // While the game is on, each disc carries its reveal odds (#542); a finished
-    // game's tally is a record of what stayed hidden, so it carries none.
-    finished
-      ? { caption: t('live.faceDownAtEnd') }
-      : view.status.type === 'playing'
-        ? { caption: t('live.revealOdds.couldBe', { count: odds.total }), odds }
-        : {},
-  );
-}
-
-function banqiInkLabel(ink: BanqiColor): string {
-  return t(ink === 'red' ? 'setup.red' : 'setup.black');
-}
+// The material renderer lives in banqi-material.ts so the TV rail can draw the
+// same strips without pulling in the live room; re-exported for the room's tests.
+export { renderBanqiMaterial };
 
 // ── Replay capture (no fog to redact; capture every distinct position) ────────
 
