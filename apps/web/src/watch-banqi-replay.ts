@@ -3,6 +3,7 @@
 // public and only the deal is hidden, so the postgame ships a SINGLE truth
 // surface (no per-color triptych) and there is no fog to pass to the renderer.
 import type { BanqiPlayerView } from '@mistboard/game';
+import { renderBanqiMaterial } from './banqi-material.js';
 import { banqiResultLabel, seatInkLabel } from './banqi-result-label.js';
 import { boardCoordinatesEnabled } from './display-preferences.js';
 import { flipSeatInk } from './flip-seat-ink.js';
@@ -81,6 +82,18 @@ export function mountBanqiWatchReplay(
           renderXiangqiPieceGlyphed(entry, pieceSet, { ariaLabel: ` ` }),
         );
       },
+      // The rail draws the room's material from the ply's masked view: each seat's
+      // captured pool and the face-down pool (public arithmetic over that view).
+      // The first mover sits at the bottom, so the viewer ink is the ink the
+      // opening flip bound to the first seat (null before it, as in the room).
+      // The move log lets a finished game's tally keep what stayed face-down.
+      railMaterial: (slots, view, postgame, ply) =>
+        renderBanqiMaterial(
+          { capturesTop: slots.top, capturesBottom: slots.bottom, hiddenPool: slots.pool },
+          view,
+          view.firstColor,
+          postgame.timeline.flatMap((event) => (event.move ? [event.move] : [])).slice(0, ply),
+        ),
       // Banqi seats (first/second mover) are decoupled from ink; the recorded
       // result is seat-keyed, so translate it to the bound ink for display.
       resultLabel: (result, postgame) => banqiResultLabel(result, postgame.view.firstColor),

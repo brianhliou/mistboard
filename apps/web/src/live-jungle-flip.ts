@@ -22,12 +22,11 @@ import type {
   JungleFlipSeat,
   JungleFlipSquare,
 } from '@mistboard/game';
-import { jungleFlipHiddenPool, jungleFlipLastMoverInk } from '@mistboard/game';
+import { jungleFlipLastMoverInk } from '@mistboard/game';
 import './live-xiangqi.css';
 import { jungleFlipEnabled } from './feature-flags.js';
-import { renderHiddenPoolPanel } from './hidden-pool-panel.js';
 import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
-import { t } from './i18n/catalog.js';
+import { renderJungleFlipMaterial } from './jungle-flip-material.js';
 import {
   animateJungleFlipBoardMove,
   JUNGLE_FLIP_BOARD_VIEW,
@@ -44,7 +43,6 @@ import {
 } from './live-jungle-flip-sound.js';
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
-import { fillCapturedPoolWith } from './review/captured-pool.js';
 import {
   annotationOwner,
   type BoardAnnotations,
@@ -281,48 +279,9 @@ function renderCapturedPools(liveRefs: LiveRefs, view: JungleFlipWireView | null
   renderJungleFlipMaterial(liveRefs, view, jungleFlipSeatInk(viewerSeat, view));
 }
 
-// Exported for unit testing the material data path without a live socket.
-// `viewerInk` is null before the opening flip binds it: nothing can have been
-// captured yet, and the pool rows fall back to red-then-blue since no seat owns
-// an ink.
-export function renderJungleFlipMaterial(
-  slots: Pick<LiveRefs, 'capturesTop' | 'capturesBottom' | 'hiddenPool'>,
-  view: JungleFlipWireView | null,
-  viewerInk: JungleFlipColor | null,
-): void {
-  slots.capturesTop.replaceChildren();
-  slots.capturesBottom.replaceChildren();
-  slots.hiddenPool.replaceChildren();
-  // No view yet (or an empty board) must not read as "everything still
-  // face-down". A spectator's view is the shared masked board since 2026-09-20
-  // (Flip Jungle is symmetric), so the pools below render for a spectator too.
-  if (!view || Object.keys(view.board).length === 0) return;
-  const glyph = (entry: { color: JungleFlipColor; role: JungleFlipPieceRole }): string =>
-    jungleFlipPieceGhostSvg(entry);
-  if (viewerInk !== null) {
-    const opponentInk: JungleFlipColor = viewerInk === 'red' ? 'black' : 'red';
-    fillCapturedPoolWith(slots.capturesTop, view.captured, viewerInk, glyph);
-    fillCapturedPoolWith(slots.capturesBottom, view.captured, opponentInk, glyph);
-  }
-  // Rows follow the board: the opponent's ink on top, the viewer's below.
-  const top: JungleFlipColor =
-    viewerInk === 'black' ? 'red' : viewerInk === 'red' ? 'black' : 'red';
-  const bottom: JungleFlipColor = top === 'red' ? 'black' : 'red';
-  const pool = jungleFlipHiddenPool(view);
-  renderHiddenPoolPanel(
-    slots.hiddenPool,
-    [
-      { color: top, label: jungleFlipInkLabel(top), side: pool[top] },
-      { color: bottom, label: jungleFlipInkLabel(bottom), side: pool[bottom] },
-    ],
-    glyph,
-  );
-}
-
-// The Jungle family brands its navy ink "Blue" (internal ink id stays 'black').
-function jungleFlipInkLabel(ink: JungleFlipColor): string {
-  return t(ink === 'red' ? 'setup.red' : 'setup.blue');
-}
+// The material renderer lives in jungle-flip-material.ts so the TV rail can draw
+// the same strips without pulling in the live room; re-exported for the room's tests.
+export { renderJungleFlipMaterial };
 
 function jungleFlipReasonPhrase(reason: string): TenantReasonKey {
   switch (reason) {

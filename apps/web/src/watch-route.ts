@@ -32,7 +32,7 @@ import {
 import { gameMetaForGame, reviewUrlForGame, timeControlLabelForGame } from './game-meta.js';
 import { initLiveSound } from './live-sound.js';
 import { participantProfileTarget, playerNameEl, profileTargetFor } from './profile-link.js';
-import type { GameMeta, ReplayHandle } from './replay.js';
+import type { GameMeta, ReplayHandle, ReplayMaterialSlots } from './replay.js';
 import { renderWatchReplaySkeleton } from './replay-skeleton.js';
 import {
   createGameMetaCard,
@@ -527,6 +527,16 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     clockTicker = null;
   };
 
+  // The rail's material at the ply on the board: captured pieces, a drop variant's
+  // hands, a flip variant's face-down pool, the same strips the game page shows.
+  // Each pass resets the slots to their mounted shape first, so a game or variant
+  // switch never inherits the last one's pieces or pocket classes. A handle with
+  // no fillMaterial (or nothing to show) leaves them empty.
+  const { sync: syncMaterial, clear: clearMaterial } = createWatchMaterialRail(
+    { top: watch.capturesTop, bottom: watch.capturesBottom, pool: watch.hiddenPool },
+    railHandle,
+  );
+
   // Re-highlight the current move + refresh the scrubber bounds/status. Driven by
   // the handle's onPlyChange on every autoplay tick or manual jump.
   // Silent by design: plies also change on seeds, scrubs, jumps and replay
@@ -539,6 +549,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     if (moveScrubber.status)
       moveScrubber.status.textContent = maxPly > 0 ? `${ply} / ${maxPly}` : '';
     syncClocks();
+    syncMaterial();
   };
 
   const clearMoveList = (): void => {
@@ -549,6 +560,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     moveScrubber.setBounds(0, 0);
     stopClockTicker();
     clearClocks();
+    clearMaterial();
   };
 
   const clearPovToggle = (): void => {
@@ -561,7 +573,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   // channel/game switch always lands on Truth.
   const rebuildPovToggle = (feed: WatchFeed, roomId: string): void => {
     const game = feed.unlocked.find((entry) => entry.roomId === roomId) ?? null;
-    renderWatchPovToggle(watch.povRoot, game, replayHandle);
+    renderWatchPovToggle(watch.povRoot, game, replayHandle, syncMaterial);
   };
 
   // Rebuild the move list inside the shared room table from the freshly loaded
@@ -1152,6 +1164,35 @@ async function mountWatchQueuePreview(
   return handle;
 }
 
+// The rail's material driver: `sync` redraws the slots from the handle at its
+// current ply, `clear` empties them. The slots' mounted classes are captured once,
+// here, so every pass starts from the shape the shared table built.
+export function createWatchMaterialRail(
+  slots: ReplayMaterialSlots,
+  handle: () => Pick<ReplayHandle, 'fillMaterial'> | null | undefined,
+): { sync: () => void; clear: () => void } {
+  const mounted = new Map(Object.values(slots).map((slot) => [slot, slot.className] as const));
+  const clear = (): void => {
+    for (const [slot, className] of mounted) resetWatchMaterialSlot(slot, className);
+  };
+  return {
+    clear,
+    sync: () => {
+      clear();
+      handle()?.fillMaterial?.(slots);
+    },
+  };
+}
+
+// Back to the slot as the shared table mounted it: no pieces, no has-captures, and
+// none of the pocket classes, owner tag or slot count a drop variant's fill adds.
+export function resetWatchMaterialSlot(slot: HTMLElement, className: string): void {
+  slot.replaceChildren();
+  slot.className = className;
+  slot.style.removeProperty('--pocket-slots');
+  delete slot.dataset.hand;
+}
+
 function renderWatchQueuePreviewError(root: HTMLElement): void {
   root.replaceChildren();
   const message = document.createElement('span');
@@ -1538,6 +1579,9 @@ function renderWatchPovToggle(
   root: HTMLElement,
   game: FeaturedGame | null,
   handle: ReplayHandle | null,
+  // A perspective switch changes the view the board draws without moving the ply,
+  // so the rail's material (read off that view) is redrawn here.
+  onPovChange?: () => void,
 ): void {
   root.replaceChildren();
   if (!game || !handle?.setPov) return;
@@ -1563,6 +1607,7 @@ function renderWatchPovToggle(
   const buttons: HTMLButtonElement[] = [];
   const select = (kind: 'white' | 'truth' | 'black'): void => {
     handle.setPov?.(kind);
+    onPovChange?.();
     for (const button of buttons) {
       const active = button.dataset.pov === kind;
       button.classList.toggle('active', active);
@@ -1604,6 +1649,12 @@ type WatchSection = {
   // first mover below. Driven per ply from the replay handle's clockAtPly.
   clockTop: HTMLElement;
   clockBottom: HTMLElement;
+  // The table's material slots, seated the same way: the second mover's strip on
+  // top, the first mover's below, and the flip variants' face-down pool. Filled per
+  // ply from the replay handle's fillMaterial.
+  capturesTop: HTMLElement;
+  capturesBottom: HTMLElement;
+  hiddenPool: HTMLElement;
   movesRoot: HTMLElement;
   replayControlsRoot: HTMLElement;
   boardBox: HTMLElement;
@@ -1712,6 +1763,9 @@ function buildWatchSection(feed: WatchFeed | null): WatchSection {
     playerTop: gameTable.refs.playerTop,
     clockTop: gameTable.refs.clockTop,
     clockBottom: gameTable.refs.clockBottom,
+    capturesTop: gameTable.refs.capturesTop,
+    capturesBottom: gameTable.refs.capturesBottom,
+    hiddenPool: gameTable.refs.hiddenPool,
     movesRoot: gameTable.refs.movesRoot,
     replayControlsRoot: gameTable.refs.replayControlsRoot,
     boardBox,

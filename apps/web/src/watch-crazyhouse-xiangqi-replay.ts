@@ -73,6 +73,11 @@ export function mountCrazyhouseXiangqiWatchReplay(
     moveSound: watchCrazyhouseXiangqiMoveSound,
     fillCaptures: (host, view, owner) =>
       fillCrazyhouseXiangqiReserve(host, view, owner, { allRoles: true }),
+    // The rail shows each seat's hand as the room's pocket: black on top, red below.
+    railMaterial: (slots, view) => {
+      fillCrazyhouseXiangqiReserve(slots.top, view, 'black', { pocket: true });
+      fillCrazyhouseXiangqiReserve(slots.bottom, view, 'red', { pocket: true });
+    },
     sidedCaptures: true,
     // Drops have no `from`, so the default from-to label would print
     // "undefined-e5"; the room's own notation spells them `N@e5`.

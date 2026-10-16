@@ -20,7 +20,7 @@ import {
   offsetsFromTimestamps,
   positionAt,
 } from './recorded-playback.js';
-import type { GameMeta, ReplayBoardOverlay, ReplayHandle } from './replay.js';
+import type { GameMeta, ReplayBoardOverlay, ReplayHandle, ReplayMaterialSlots } from './replay.js';
 import { createPane, type ReplayPaneHandle } from './replay-board.js';
 import { createGameHeaderStrip } from './replay-meta.js';
 import type { MoveListEntry } from './review/move-list.js';
@@ -113,6 +113,13 @@ export type TenantWatchAdapter<Postgame extends WatchPostgameMeta, View, ViewKey
     overlay: ReplayBoardOverlay,
   ): string;
   fillCaptures(host: HTMLElement, view: View, owner: 'red' | 'black'): void;
+  // OPTIONAL: the material the game page's rail shows (captured pieces, a drop
+  // variant's hands, a flip variant's face-down pool), drawn from the view the
+  // board is showing at the current ply. `slots.top` is the second mover's and
+  // `slots.bottom` the first mover's, the /watch rail's fixed seating. The view
+  // is the one the board draws, so this can only show what the board's track
+  // already carries. Tenants that omit it leave the rail strips empty.
+  railMaterial?(slots: ReplayMaterialSlots, view: View, postgame: Postgame, ply: number): void;
   // Label one ply for the move list. The default writes `${from}-${to}`, which
   // is every tenant whose move IS a from/to pair. A tenant whose move carries
   // more than that (Duck Xiangqi: a piece move AND a duck placement) must pass
@@ -1297,6 +1304,25 @@ export async function mountTenantWatchReplay<
       return adapter.moveSound(prev, next);
     },
     gameResult: () => activePostgame?.game.result ?? null,
+    // The rail's material at the current ply, from the view the board draws (the
+    // reveal toggle's choice, else the pane's own key), so the strips agree with
+    // the board and never carry more than its track.
+    ...(adapter.railMaterial
+      ? {
+          fillMaterial: (slots: ReplayMaterialSlots) => {
+            const target = boardTargets[0];
+            if (!activePostgame || !target) return;
+            const key = adapter.reveal
+              ? ((revealed ? adapter.reveal.truthKey : adapter.reveal.hiddenKey) as ViewKey)
+              : target.key;
+            const view =
+              adapter.viewAtPly(activePostgame, key, currentPly) ??
+              adapter.viewAtPly(activePostgame, target.key, currentPly);
+            if (!view) return;
+            adapter.railMaterial?.(slots, view, activePostgame, currentPly);
+          },
+        }
+      : {}),
     availablePovs: () => {
       if (!activePostgame) return [];
       const kinds = new Set<'white' | 'truth' | 'black'>();

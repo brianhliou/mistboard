@@ -14,7 +14,11 @@ import {
   postgameViewAtPly,
   postgameViewEntries,
 } from './dark-xiangqi-postgame.js';
-import { type DarkXiangqiWireView, renderDarkXiangqiBoardSvg } from './live-dark-xiangqi.js';
+import {
+  type DarkXiangqiWireView,
+  fillDarkXiangqiCaptureStrips,
+  renderDarkXiangqiBoardSvg,
+} from './live-dark-xiangqi.js';
 import type { ReplayHandle } from './replay.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { watchDarkXiangqiMoveSound } from './watch-move-sound.js';
@@ -53,10 +57,17 @@ export function mountDarkXiangqiWatchReplay(
     // so the three panes never collide on a shared mask id.
     renderBoard: (view, orientation, key) =>
       renderDarkXiangqiBoardSvg(view, orientation, { showFog: key !== 'truth' }),
-    // Dark Xiangqi's wire view carries no captured-pool, so there is nothing to
-    // render in the per-pane capture strips.
+    // The per-pane capture strips stay empty; the rail draws the room's strips
+    // from the view the board shows (the pov toggle's choice), each seat's
+    // captures read from that view's own ledger, the first mover at the bottom.
     // Spectator cue: the mover's own-move sound (watch-move-sound.ts).
     moveSound: watchDarkXiangqiMoveSound,
     fillCaptures: () => {},
+    railMaterial: (slots, view) =>
+      fillDarkXiangqiCaptureStrips(
+        { capturesTop: slots.top, capturesBottom: slots.bottom },
+        view,
+        'red',
+      ),
   });
 }
