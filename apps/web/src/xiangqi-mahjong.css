@@ -939,25 +939,6 @@
   border-color: var(--xmj-accent);
 }
 
-/* The match, one line under the hand: how far in, then each player's points. */
-.xmj-result__match {
-  margin: 0;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 2px 14px;
-  font-size: 12px;
-}
-
-.xmj-result__match > :first-child {
-  opacity: 0.7;
-}
-
-.xmj-result__match b {
-  font-size: 14px;
-  font-variant-numeric: tabular-nums;
-}
-
 .xmj-result__foot {
   display: flex;
   align-items: center;

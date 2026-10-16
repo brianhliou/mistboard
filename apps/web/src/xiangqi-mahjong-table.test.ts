@@ -407,7 +407,7 @@ describe('xiangqi mahjong table', () => {
           won.winner === 'east' ? 'You win' : 'Bot wins',
         );
         expect(host.querySelector('.xmj-result__sub')?.textContent).toBe(
-          `Hand ${view.handNumber} · ${won.selfDrawn ? 'self-drawn' : 'on a discard'}`,
+          `Hand ${view.handNumber} of ${view.handsInMatch} · ${won.selfDrawn ? 'self-drawn' : 'on a discard'}`,
         );
         expect(host.querySelector('.xmj-result__total')?.textContent).toBe(
           `${total}${total === 1 ? 'point' : 'points'}`,
@@ -425,14 +425,9 @@ describe('xiangqi mahjong table', () => {
           total,
         );
         expect(host.querySelector('.xmj-result__how')?.getAttribute('href')).toBe(XMJ_SCORING_HREF);
-        // While the match runs, one line: how far in, then the points, the
-        // viewer first. Points only grow: nobody's score goes below zero.
-        const match = host.querySelector('.xmj-result__match');
-        if (view.status.type === 'playing') {
-          expect(match?.textContent).toBe(
-            `Match after hand ${view.results.length} of ${view.handsInMatch}You ${view.scores.east}Bot ${view.scores.west}`,
-          );
-        }
+        // The panel is this hand's result: the match score stays on the seat rows.
+        expect(host.querySelector('.xmj-result__match')).toBeNull();
+        // Points only grow: nobody's score goes below zero.
         expect(view.scores.east).toBeGreaterThanOrEqual(0);
         expect(view.scores.west).toBeGreaterThanOrEqual(0);
       }

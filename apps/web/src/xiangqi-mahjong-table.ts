@@ -618,24 +618,6 @@ function outcomeText(result: XmjViewResult, names: Readonly<Record<XmjSeat, stri
   });
 }
 
-/**
- * The match in one line under the hand, while it runs: how far in, and each
- * player's points (the viewer first). The panel is this hand's result; each
- * earlier hand is a line in the move list.
- */
-function matchLineHtml(view: XmjPlayerView, names: Readonly<Record<XmjSeat, string>>): string {
-  if (view.results.length === 0) return '';
-  const self: XmjSeat = view.perspective === 'spectator' ? 'east' : view.perspective;
-  const players = [self, other(self)]
-    .map((seat) => `<span>${escapeHtml(names[seat])} <b>${view.scores[seat]}</b></span>`)
-    .join('');
-  const after = t('live.xmj.matchAfter', {
-    hand: view.results.length,
-    hands: Math.max(view.handsInMatch, view.results.length),
-  });
-  return `<p class="xmj-result__match"><span>${after}</span>${players}</p>`;
-}
-
 /** The one sentence the result leads with, for a screen reader and the log. */
 export function xmjResultTitle(
   view: XmjPlayerView,
@@ -684,6 +666,7 @@ function resultHeadHtml(
     : t('live.xmj.nameWins', { name: escapeHtml(names[phase.winner]) });
   const how = t(phase.selfDrawn ? 'live.xmj.handSelfDraw' : 'live.xmj.handDiscard', {
     hand: view.handNumber,
+    hands: Math.max(view.handsInMatch, view.handNumber),
   });
   const total = phase.score.total;
   const unit = t(total === 1 ? 'live.xmj.pointUnit' : 'live.xmj.pointsUnit');
@@ -706,8 +689,6 @@ function resultHtml(view: XmjPlayerView, options: XmjTableOptions): string {
     phase.type === 'won'
       ? `<div class="xmj-won">${winningHandHtml(phase.score, phase.winningTile)}</div>${scoringHtml(phase.score)}`
       : '';
-  // A finished match says its result in the foot; one still running gets a line.
-  const match = view.status.type === 'playing' ? matchLineHtml(view, names) : '';
   let foot: string;
   if (view.status.type === 'finished' && !ON_POINTS.has(view.status.reason)) {
     // Ended by the clock, a resignation or abandonment: the score says nothing
@@ -746,7 +727,7 @@ function resultHtml(view: XmjPlayerView, options: XmjTableOptions): string {
     }
     foot = `<div class="xmj-result__foot">${parts.join('')}</div>`;
   }
-  return `<div class="xmj-result" role="region" aria-label="${title}">${resultHeadHtml(view, names, title)}${body}${match}${foot}</div>`;
+  return `<div class="xmj-result" role="region" aria-label="${title}">${resultHeadHtml(view, names, title)}${body}${foot}</div>`;
 }
 
 // ── The table ────────────────────────────────────────────────────────────────
