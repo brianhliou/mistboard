@@ -555,15 +555,16 @@
   text-align: right;
 }
 
+/* Plain inline text: a flex gap would also open a space before the period. */
 .xmj-message {
   margin: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  flex-wrap: wrap;
   font-size: 15px;
+  line-height: 1.9;
   text-align: center;
+}
+
+.xmj-message .xmj-tile--xs {
+  margin: 0 1px;
 }
 
 .xmj-note {
