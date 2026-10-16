@@ -1,13 +1,15 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
   getJieqiPlayerView,
+  getJieqiPublicView,
   JIEQI_SPEC_ID,
   type JieqiColor,
   type JieqiDeal,
   type JieqiGameState,
   type JieqiMove,
+  type JieqiPlayerBoard,
   type JieqiPlayerView,
-  jieqiMaskedBoard,
+  jieqiTruthBoard,
   jieqiTruthView,
   oppositeJieqiColor,
 } from '@mistboard/game';
@@ -194,23 +196,35 @@ async function buildJieqiWatchPostgame(roomId: string, deps: JieqiPostgamePersis
   // the Reveal control swaps in. Before 2026-08-27 only `truth` shipped, so a
   // finished game replayed on /watch and on the homepage with every identity
   // already face-up, which the review page never did.
+  //
+  // Since 2026-10-16 neither track names a piece captured face-down: only its
+  // capturer ever learns it, after the game too (Brian's rule). See
+  // jieqiWatchRevealView for what Reveal may still show.
   let projection = replayTenantEvents(jieqiTenant, [created]);
   let ply = 0;
-  const truth = [{ ply, view: jieqiWatchTruthView(projection.state) }];
   const masked = [{ ply, view: jieqiWatchMaskedView(projection.state) }];
+  const truthBoards = [jieqiTruthBoard(projection.state)];
   for (const event of events.slice(1)) {
     projection = applyTenantEvent(jieqiTenant, projection, event);
     if (event.type !== 'move-played') continue;
     ply += 1;
-    truth.push({ ply, view: jieqiWatchTruthView(projection.state) });
     masked.push({ ply, view: jieqiWatchMaskedView(projection.state) });
+    truthBoards.push(jieqiTruthBoard(projection.state));
   }
 
   // This check is the truth-release boundary. Never cache or return an
   // in-progress projection, even though it was reconstructed above.
   if (projection.state.status.type !== 'finished') return null;
 
-  const view = truth.at(-1)?.view ?? jieqiWatchTruthView(projection.state);
+  // Which sides stay sealed is a fact about the WHOLE game (a piece captured
+  // face-down at ply 40 sat on its home square from ply 0), so it is read from
+  // the final state and applied to every ply.
+  const sealed = jieqiSidesWithDarkLosses(projection.state);
+  const truth = masked.map((snapshot, index) => ({
+    ply: snapshot.ply,
+    view: jieqiWatchRevealView(snapshot.view, truthBoards[index] ?? {}, sealed),
+  }));
+  const view = truth.at(-1)?.view ?? jieqiWatchMaskedView(projection.state);
   return {
     game: postgameGameSummary(game),
     state: {
@@ -225,24 +239,53 @@ async function buildJieqiWatchPostgame(roomId: string, deps: JieqiPostgamePersis
   };
 }
 
-// Keep the renderer-compatible shape without transmitting any captured-piece
-// knowledge. jieqiTruthView already emits no legal moves; clearing captured
-// keeps TV independent of the future per-player knowledge presentation.
-function jieqiWatchTruthView(state: JieqiGameState): JieqiPlayerView {
-  return { ...jieqiTruthView(state), captured: [] };
+// The sides that lost at least one piece face-down. Only the capturer may know
+// such a piece, so nothing on TV may name it, directly or by elimination.
+function jieqiSidesWithDarkLosses(state: JieqiGameState): ReadonlySet<JieqiColor> {
+  return new Set(state.captures.filter((c) => !c.revealedAtCapture).map((c) => c.owner));
 }
 
-// The as-played board for the same ply: identical envelope, masked squares. Built
-// from the shared jieqiMaskedBoard so TV hides exactly what the live per-color view
-// hid, and no legal moves are generated (this pass runs once per ply per game).
+// The Reveal (spoiler) track for a FINISHED game, built on the as-played public
+// view: the capture list stays public (a dark capture is `role: null`), and the
+// never-moved pieces are turned face-up only for a side that lost NO piece
+// face-down. A side that did stays face-down at every ply, for two reasons:
+//   - directly: before its capture, the dark piece sits on its home square, so a
+//     revealed board at that ply names it;
+//   - by elimination: each side's 15 roles are a fixed set, so revealing every
+//     survivor names the dark losses (exactly, when there is one).
+// No legal moves. Never built for an in-progress room.
+function jieqiWatchRevealView(
+  publicView: JieqiPlayerView,
+  truthBoard: JieqiPlayerBoard,
+  sealed: ReadonlySet<JieqiColor>,
+): JieqiPlayerView {
+  if (sealed.size === 2) return publicView;
+  const board: JieqiPlayerBoard = {};
+  for (const [square, entry] of Object.entries(truthBoard) as [
+    keyof JieqiPlayerBoard,
+    JieqiPlayerBoard[keyof JieqiPlayerBoard],
+  ][]) {
+    if (!entry) continue;
+    board[square] = sealed.has(entry.color) ? publicView.board[square] : entry;
+  }
+  return { ...publicView, board };
+}
+
+// The as-played board for the same ply: the live room's SPECTATOR view
+// (getJieqiPublicView), never a projection of canonical state. The shared masked
+// board, and captures by owner with a role only where the piece was face-up when
+// taken; a dark capture is `role: null`, which is what its victim saw. Under
+// capturer-only reveal no seat's pool is honest for a spectator, so this is the
+// one capture list TV may carry while a game is on. No legal moves are generated
+// (this pass runs once per ply per game).
 function jieqiWatchMaskedView(state: JieqiGameState): JieqiPlayerView {
-  return { ...jieqiWatchTruthView(state), board: jieqiMaskedBoard(state) };
+  return getJieqiPublicView(state);
 }
 
 // The masked per-ply track alone, for an IN-PROGRESS room. The finished builder
-// above walks the same events and adds the truth track beside it; this one must
-// never, because the truth track is the deal (every face-down identity at every
-// ply) and the game is still being played.
+// above walks the same events and adds the Reveal track beside it; this one must
+// never, because the Reveal track turns never-moved pieces face-up and the game is
+// still being played.
 function jieqiLiveMaskedHistory(events: readonly JieqiEvent[]): JieqiPostgameSnapshot[] {
   const created = events[0];
   if (created?.type !== 'room-created') return [];
@@ -260,11 +303,11 @@ function jieqiLiveMaskedHistory(events: readonly JieqiEvent[]): JieqiPostgameSna
 
 // Mistboard TV live payload for an IN-PROGRESS jieqi room. Jieqi is ASYMMETRIC
 // hidden-identity (the capturer alone learns a dark capture), so no seat's view
-// is honest for a spectator; TV serves the public view instead: the shared
-// masked board, and no captures at all (the compact TV product never draws
-// them). The finished route's `view` (truth) and `history.truth` ARE the deal
-// and are excluded here; the client's Reveal control is inert for a live game.
-// Regression: jieqi-games.test.ts.
+// is honest for a spectator; TV serves the public view instead, the same one the
+// live room's spectator seat gets: the shared masked board, and the public
+// capture list (a dark capture carries no role). The finished route's `view`
+// (truth) and `history.truth` ARE the deal and are excluded here; the client's
+// Reveal control is inert for a live game. Regression: jieqi-games.test.ts.
 export function jieqiLiveWatchPayloadFor(
   roomId: string,
   room: Pick<JieqiLiveRoom, 'id' | 'events' | 'projection'>,
