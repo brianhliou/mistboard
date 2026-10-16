@@ -28,6 +28,7 @@ import type { PlayerTitle } from './persistence-titles.js';
 import {
   bucketForGame,
   PUBLIC_RATING_TIME_CLASS,
+  publicRatingPoolSql,
   type RatingTimeClass,
   type RatingVariant,
   visibleRatingTimeClasses,
@@ -593,7 +594,8 @@ export async function getUserProfileByHandle(
   }>(
     `SELECT variant, time_class, elo_rating, rating_deviation, games_played
      FROM user_ratings
-     WHERE user_id = $1`,
+     WHERE user_id = $1
+       AND ${publicRatingPoolSql('variant')}`,
     [user.id],
   );
   const ratingsByVariant = new Map<

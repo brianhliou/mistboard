@@ -1,11 +1,16 @@
 import assert from 'node:assert/strict';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import test from 'node:test';
-import { JIEQI_SPEC_ID, JUNGLE_SPEC_ID, type RoomTimeControl } from '@mistboard/game';
-import { jieqiEnabled, jungleEnabled } from './feature-flags.js';
+import {
+  JIEQI_SPEC_ID,
+  JUNGLE_SPEC_ID,
+  type RoomTimeControl,
+  XIANGQI_MAHJONG_SPEC_ID,
+} from '@mistboard/game';
+import { jieqiEnabled, jungleEnabled, xiangqiMahjongEnabled } from './feature-flags.js';
 import { type HttpApiContext, isAllowedFullTimeControl } from './routes/lib.js';
 import { LOBBY_TICKET_STALE_MS, tryHandle } from './routes/lobby.js';
-import type { Room } from './server-types.js';
+import type { LobbyTicket, Room } from './server-types.js';
 import { registerVariantTenant } from './variant-tenant/registry.js';
 
 const jieqiFlag = 'MISTBOARD_JIEQI_ENABLED';
@@ -560,4 +565,78 @@ test('lobby liveness: polling does not extend the 5-minute cap', async () => {
   }
   assert.equal(status, 404, 'the ticket must expire at the TTL even while polled');
   assert.equal((await openRequests(ctx)).length, 0);
+});
+
+// ── Allowlisted variants (139) ──────────────────────────────────────────────
+//
+// Xiangqi mahjong is behind the flag AND the per-account grant. The seat check
+// refuses a stranger, but the lobby is a public list and a matcher: a seek must
+// not come from an account without the grant, and its existence must not reach
+// a reader without one. No persistence here, so every request is a guest.
+
+const xmjCalls: TenantLobbyCall[] = [];
+registerFakeLobbyTenant({
+  kind: 'xiangqi-mahjong',
+  gameSpecId: XIANGQI_MAHJONG_SPEC_ID,
+  roomIdPrefix: 'xmj_',
+  errorPrefix: 'xiangqi_mahjong',
+  enabled: xiangqiMahjongEnabled,
+  supportsRated: true,
+  allowsTimeControl: () => true,
+  createRoom: async (timeControl, rated) => {
+    xmjCalls.push([timeControl, rated]);
+    return { id: `xmj_lobby_${xmjCalls.length}`, region: 'global' };
+  },
+});
+
+async function withXmjFlag(run: () => Promise<void>): Promise<void> {
+  const flag = 'MISTBOARD_XIANGQI_MAHJONG_ENABLED';
+  const before = process.env[flag];
+  process.env[flag] = 'true';
+  try {
+    await run();
+  } finally {
+    if (before === undefined) delete process.env[flag];
+    else process.env[flag] = before;
+  }
+}
+
+const xmjPace = { initialMs: 300_000, incrementMs: 5_000 };
+
+test('lobby: a guest cannot seek an allowlisted variant (xiangqi mahjong)', async () => {
+  await withXmjFlag(async () => {
+    xmjCalls.length = 0;
+    const { ctx } = testContext();
+    const res = await post(ctx, { gameSpecId: XIANGQI_MAHJONG_SPEC_ID, timeControl: xmjPace });
+    assert.equal(res.status, 403);
+    assert.equal(responseJson(res).error, 'variant_not_granted');
+    assert.equal(ctx.lobbyQueue.length, 0, 'no ticket is queued');
+    assert.equal(xmjCalls.length, 0);
+  });
+});
+
+test('lobby: the open list hides an allowlisted seek from a reader without the grant', async () => {
+  await withXmjFlag(async () => {
+    const { ctx } = testContext({ now: () => 1_000_000 });
+    // A granted player's seek, queued the way POST queues one.
+    const ticket: LobbyTicket = {
+      id: 'xmj-ticket',
+      createdAt: 1_000_000,
+      lastPolledAt: 1_000_000,
+      gameSpecId: XIANGQI_MAHJONG_SPEC_ID,
+      rated: true,
+      region: null,
+      matchedAt: null,
+      roomId: null,
+      timeControl: xmjPace,
+    };
+    ctx.lobbyQueue.push(ticket);
+    ctx.lobbyTickets.set(ticket.id, ticket);
+    // A public chess seek beside it.
+    await post(ctx, { timeControl: tc });
+    assert.equal(ctx.lobbyQueue.length, 2);
+    const listed = (await openRequests(ctx)) as Array<{ gameSpecId: string }>;
+    assert.equal(listed.length, 1, 'only the public seek is listed');
+    assert.notEqual(listed[0]?.gameSpecId, XIANGQI_MAHJONG_SPEC_ID);
+  });
 });

@@ -1,15 +1,17 @@
 /**
- * Xiangqi mahjong registry entry. Narrow on purpose, like HK mahjong's: no TV
- * channel, no lobby, no export, no correspondence. The room is PvE: the creator
- * takes one seat and the in-process bot takes the other.
+ * Xiangqi mahjong registry entry. Narrow on purpose: no TV channel, no export,
+ * no correspondence. A room is PvE (the in-process bot takes the other seat) or
+ * PvP (a friend room, or a Find opponent pairing through the lobby). The rated
+ * unit is the whole match, since the room finishes when the match does.
  */
 
-import type {
-  RoomTimeControl,
-  XIANGQI_MAHJONG_SPEC_ID,
-  XmjMove,
-  XmjRoomState,
-  XmjSeat,
+import {
+  findTimeControl,
+  type RoomTimeControl,
+  type XIANGQI_MAHJONG_SPEC_ID,
+  type XmjMove,
+  type XmjRoomState,
+  type XmjSeat,
 } from '@mistboard/game';
 import * as persistence from './persistence.js';
 import {
@@ -66,13 +68,24 @@ const xiangqiMahjongWs = createTenantWsRuntime(xiangqiMahjongTenant, {
   scheduleEngineMove: (ctx, room) => scheduleXmjBotMove(ctx, room as XmjRuntimeRoom),
 });
 
+/**
+ * The paces the table offers (web registry timePresetIds: 5+5 and 10+5). A
+ * match is about 21 decisions a player over four hands; 3+2 and 1+1 would
+ * flag players who stop to read a claim. Only 5+5 is a rated pace.
+ */
+const XMJ_LOBBY_TIME_CONTROL_IDS: ReadonlySet<string> = new Set(['5m5', '10m5']);
+
+export function xmjLobbyAllowsTimeControl(timeControl: RoomTimeControl): boolean {
+  const spec = findTimeControl(timeControl.initialMs, timeControl.incrementMs);
+  return spec !== null && XMJ_LOBBY_TIME_CONTROL_IDS.has(spec.id);
+}
+
 export async function createXiangqiMahjongRoom(
   timeControl?: RoomTimeControl,
   creatorPreference?: XmjSeat | 'random',
+  engine?: { engineId: string; seat: XmjSeat; botId?: string },
+  rated = false,
 ): Promise<XmjLiveRoomCreation> {
-  // A 'random' preference is pinned to east; the bot takes the other seat.
-  const humanSeat: XmjSeat =
-    creatorPreference && creatorPreference !== 'random' ? creatorPreference : 'east';
   const created = await createTenantLiveRoom(
     xiangqiMahjongTenant,
     {
@@ -85,15 +98,16 @@ export async function createXiangqiMahjongRoom(
       recordPersistenceError: (roomId, seq, eventType, err) =>
         recordTenantPersistenceError(xiangqiMahjongTenant, roomId, seq, eventType, err),
     },
-    {
-      timeControl,
-      creatorPreference: humanSeat,
-      // Seated at creation, so the bot is in the initial event log and
-      // survives hydration.
-      engines: xiangqiMahjongTenant.colors
-        .filter((seat) => seat !== humanSeat)
-        .map((seat) => ({ engineId: XMJ_BOT_CLIENT_ID, seat, botId: XMJ_BOT_ID })),
-    },
+    engine
+      ? {
+          timeControl,
+          creatorPreference: xiangqiMahjongTenant.oppositeColor(engine.seat),
+          // Seated at creation, so the bot is in the initial event log and
+          // survives hydration. A bot game never rates.
+          engine: { engineId: XMJ_BOT_CLIENT_ID, seat: engine.seat, botId: XMJ_BOT_ID },
+        }
+      : // PvP: both seats are human and handed out on connect.
+        { timeControl, creatorPreference, rated },
   );
   if (!created.ok) {
     return created.error === 'disabled'
@@ -145,11 +159,21 @@ registerVariantTenant({
   clearRooms: () => xiangqiMahjongRooms.clear(),
   http: {
     matchesCreateRequest: requestsXiangqiMahjong,
-    handleCreate: async (ctx, _request, response, body) => {
-      await handleXiangqiMahjongCreate({ ...ctx, createXiangqiMahjongRoom }, response, body, null);
+    // POST /api/rooms resolves the account for a rated request (registry.ts).
+    handleCreate: (ctx, _request, response, body, accountUser) =>
+      handleXiangqiMahjongCreate({ ...ctx, createXiangqiMahjongRoom }, response, body, accountUser),
+  },
+  // Find opponent. Both seats still pass the grant check when they connect, and
+  // the lobby route refuses a seek from an account without the grant.
+  lobby: {
+    supportsRated: true,
+    allowsTimeControl: xmjLobbyAllowsTimeControl,
+    createRoom: async (timeControl, rated) => {
+      const created = await createXiangqiMahjongRoom(timeControl, 'random', undefined, rated);
+      if (!created.ok) throw new Error(`xiangqi_mahjong_room_create_failed:${created.error}`);
+      return { id: created.room.id, region: 'global' };
     },
   },
-  lobby: null,
   // No export binding: there is no record format for this game here.
   export: null,
   sweepDueDeadline: null,

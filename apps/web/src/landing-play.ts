@@ -3386,6 +3386,18 @@ export function roomCreationRequestBody(
       ...(mode === 'pve' && engineId ? { engineId } : {}),
     };
   }
+  if (setup.gameSpecId === XIANGQI_MAHJONG_SPEC_ID) {
+    // The seats are east and west and the dialog hides the color picker: a
+    // friend room draws the deal, and the bot table keeps the creator east.
+    return {
+      mode,
+      gameSpecId,
+      timeControl: setup.timeControl,
+      rated,
+      preferredColor: mode === 'pvp' ? 'random' : 'east',
+      ...(mode === 'pve' && engineId ? { engineId } : {}),
+    };
+  }
   if (setup.gameSpecId === DARK_XIANGQI_SPEC_ID) {
     return {
       // Xiangqi fog engines are defaulted server-side, so no engine id is sent.

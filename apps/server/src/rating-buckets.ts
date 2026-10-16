@@ -11,6 +11,7 @@ import {
   ratingPoolForSpec,
 } from '@mistboard/game';
 import { correspondenceRatedEnabled } from './feature-flags.js';
+import { ALLOWLISTED_GAME_SPEC_IDS } from './persistence-variant-access.js';
 
 // Rated-pool vocabulary lives on the game spec (single source of truth):
 // RatingVariant + ratingPoolForSpec derive from each spec's `rated` flag.
@@ -95,12 +96,38 @@ export function bucketForGame(input: BucketInput): RatingBucket | null {
   return { variant, timeClass: spec.timeClass };
 }
 
+// The pools of allowlisted specs (139): rated, written like any other pool, and
+// shown on NO public rating surface (leaderboard, profile, best-rating badges,
+// rating history) while the spec needs a grant. A variant nobody may see must
+// not surface through somebody's rating either.
+export const PRIVATE_RATING_POOLS: readonly RatingVariant[] = ALLOWLISTED_GAME_SPEC_IDS.flatMap(
+  (specId) => {
+    const pool = ratingPoolForSpec(specId);
+    return pool ? [pool] : [];
+  },
+);
+
+export function isPublicRatingPool(pool: string): boolean {
+  return !(PRIVATE_RATING_POOLS as readonly string[]).includes(pool);
+}
+
+/** A SQL predicate keeping `column` (a user_ratings.variant) to public pools.
+ * Built from code constants only, never from input. */
+export function publicRatingPoolSql(column: string): string {
+  if (PRIVATE_RATING_POOLS.length === 0) return 'TRUE';
+  for (const pool of PRIVATE_RATING_POOLS) {
+    if (!/^[a-z_]+$/.test(pool)) throw new Error(`rating pool "${pool}" is not a plain identifier`);
+  }
+  return `${column} NOT IN (${PRIVATE_RATING_POOLS.map((pool) => `'${pool}'`).join(', ')})`;
+}
+
 // Accepts a canonical pool name ('fog') or a game spec id ('dark-chess') and
-// returns the rated pool, or null if casual.
+// returns the rated pool, or null if casual. A public surface's parser: a
+// private pool (above) reads as no pool.
 export function parseRatingVariant(value: string | null | undefined): RatingVariant | null {
-  if (isRatedPoolBase(value)) return value;
-  const spec = maybeGameSpecForId(value);
-  return spec ? ratingPoolForSpec(spec.id) : null;
+  const spec = isRatedPoolBase(value) ? null : maybeGameSpecForId(value);
+  const pool = isRatedPoolBase(value) ? value : spec ? ratingPoolForSpec(spec.id) : null;
+  return pool && isPublicRatingPool(pool) ? pool : null;
 }
 
 // The time classes a rating SURFACE may show (profile rail, players page, rating

@@ -11,7 +11,7 @@ import { defaultRating, type Glicko2, rate } from './glicko.js';
 import type { RatingBucket } from './rating-buckets.js';
 
 export type RatedResult = 'white-wins' | 'black-wins' | 'draw';
-export type RatedParticipantColor = 'white' | 'black' | 'red';
+export type RatedParticipantColor = 'white' | 'black' | 'red' | 'east' | 'west';
 
 /**
  * Apply one finished rated PvP game to both players' Glicko-2 ratings, inside

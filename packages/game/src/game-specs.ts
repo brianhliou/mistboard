@@ -115,6 +115,7 @@ export type RatingPoolBaseId =
   | 'jungle_flip'
   | 'fortress_xiangqi'
   | 'mahjong_hk'
+  // Migration 168 added it to the user_ratings CHECK.
   | 'xiangqi_mahjong'
   | 'xiangqi'
   // Owes a user_ratings CHECK migration adding 'duck_xiangqi' before it is rated.
@@ -484,9 +485,13 @@ export const GAME_SPECS: readonly GameSpec[] = [
   },
   {
     // Xiangqi mahjong (象棋麻將): the 32 xiangqi pieces as tiles, two players,
-    // five-tile hands of one set and a pair, an eight-hand match. Hidden
+    // five-tile hands of one set and a pair, a four-hand match. Hidden
     // and allowlisted: it exists for a playtest, and nobody who plays the game
     // has checked it yet. Imports nothing from the HK mahjong package.
+    // Rated (Brian, 2026-10-15): the rated unit is the whole match, since the
+    // room finishes when the match does. Migration 168 added the pool to the
+    // user_ratings CHECK. The pool stays off the leaderboard and profiles while
+    // the spec is allowlisted (persistence-variant-access.ts).
     id: XIANGQI_MAHJONG_SPEC_ID,
     publicName: 'Xiangqi Mahjong',
     family: 'mahjong',
@@ -500,6 +505,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     ratingPoolBase: 'xiangqi_mahjong',
     publicSurface: 'hidden',
     runtimeStatus: 'live',
+    rated: true,
   },
   {
     // Duck Xiangqi: W. D. Troyka's... no - Dr Tim Paulden's Duck Chess (2016),
@@ -717,6 +723,8 @@ export type RatingVariant = Extract<
   | 'duck_xiangqi'
   | 'atomic_xiangqi'
   | 'crazyhouse_xiangqi'
+  // Migration 168. Allowlisted: rated, but off every public rating surface.
+  | 'xiangqi_mahjong'
 >;
 
 // The active rated-pool set, derived from the `rated` flag. This is the ONE

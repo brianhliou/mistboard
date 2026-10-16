@@ -1628,11 +1628,16 @@ function ratedParticipantColors(participants: readonly { color: GameParticipantC
   // (xiangqi at the #151 flip, then atomic, duck, dark xiangqi and both jungles).
   if (participants.some((participant) => participant.color === 'red'))
     return { white: 'red', black: 'black' };
+  // Xiangqi mahjong seats east and west; east, the first dealer, takes the
+  // white slot (east-wins -> white-wins, west-wins -> black-wins below).
+  if (participants.some((participant) => participant.color === 'east'))
+    return { white: 'east', black: 'west' };
   return { white: 'white', black: 'black' };
 }
 
 function ratedResultForGame(result: GameResult): RatedResult {
-  if (result === 'red-wins') return 'white-wins';
+  if (result === 'red-wins' || result === 'east-wins') return 'white-wins';
+  if (result === 'west-wins') return 'black-wins';
   if (result === 'white-wins' || result === 'black-wins' || result === 'draw') return result;
   return 'draw';
 }

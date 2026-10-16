@@ -985,10 +985,10 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
   {
     // Xiangqi mahjong (象棋麻將): 32 tiles, two players, a hand of five.
     //
-    // PvE only and gated like Hong Kong mahjong: the build flag plus the
-    // server's per-account allowlist. It exists so Brian can play the rules
-    // against a bot and say whether the scoring is right, so nobody else is
-    // offered it, and no lobby or watch surface knows it exists.
+    // Gated like Hong Kong mahjong: the build flag plus the server's
+    // per-account allowlist. Against the bot, a friend room, or Find opponent
+    // (rated at 5+5; the rated unit is the whole four-hand match). The lobby
+    // lists its seeks only to granted accounts, and there is no watch surface.
     gameSpecId: XIANGQI_MAHJONG_SPEC_ID,
     roomIdPrefix: 'xmj_',
     enabled: xiangqiMahjongEnabled,
@@ -1008,7 +1008,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         secondGlyph: '西',
         secondLabel: 'West',
         neutralGlyphColor: true,
-        supportsRated: false,
+        supportsRated: true,
         supportsTimeControl: true,
       },
       timePresetIds: ['5m5', '10m5'],

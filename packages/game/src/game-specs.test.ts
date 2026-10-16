@@ -172,6 +172,7 @@ test('RATED_POOL_BASES derives from the rated flag and matches the RatingVariant
     duck_xiangqi: true,
     atomic_xiangqi: true,
     crazyhouse_xiangqi: true,
+    xiangqi_mahjong: true,
   };
   assert.deepEqual(Object.keys(unionMembers).sort(), [...RATED_POOL_BASES].sort());
 });

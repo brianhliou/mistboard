@@ -6,7 +6,7 @@ import { PROVISIONAL_RD } from './glicko.js';
 import { COUNTED_USER, countedAccountSeat } from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
 import type { PlayerTitle } from './persistence-titles.js';
-import type { RatingTimeClass, RatingVariant } from './rating-buckets.js';
+import { publicRatingPoolSql, type RatingTimeClass, type RatingVariant } from './rating-buckets.js';
 
 export type LeaderboardEntry = {
   rank: number;
@@ -109,6 +109,7 @@ export async function getLeaderboardSummary(query: {
        FROM user_ratings r
        JOIN users u ON u.id = r.user_id
        WHERE r.time_class = $1
+         AND ${publicRatingPoolSql('r.variant')}
          AND u.profile_visibility IN ('public', 'unlisted')
          AND r.games_played > 0
          -- Stats-excluded accounts (the operator, QA) rate mostly test games.
@@ -203,6 +204,7 @@ export async function getBestRatings(
     `SELECT DISTINCT ON (user_id) user_id, variant, elo_rating, rating_deviation
      FROM user_ratings
      WHERE user_id = ANY($1) AND time_class = $2 AND games_played > 0
+       AND ${publicRatingPoolSql('variant')}
      ORDER BY user_id, elo_rating DESC`,
     [userIds, timeClass],
   );
@@ -234,6 +236,7 @@ export async function getBestRatingsAnyTimeClass(
     `SELECT DISTINCT ON (user_id) user_id, variant, elo_rating, rating_deviation
      FROM user_ratings
      WHERE user_id = ANY($1) AND games_played > 0
+       AND ${publicRatingPoolSql('variant')}
      ORDER BY user_id, elo_rating DESC`,
     [userIds],
   );

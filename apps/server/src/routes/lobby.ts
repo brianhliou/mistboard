@@ -56,7 +56,7 @@ export async function tryHandle(
   if (pathname === '/api/lobby') {
     if (method === 'GET') {
       pruneLobbyTickets(ctx, lobbyNow(ctx));
-      writeJson(response, 200, { requests: lobbyOpenRequests(ctx) });
+      writeJson(response, 200, { requests: await lobbyOpenRequests(ctx, request) });
       return true;
     }
     if (!requireMethod(request, response, 'POST')) return true;
@@ -80,6 +80,16 @@ export async function tryHandle(
         // chess gate used to give for an enabled-but-unrouted spec.
         writeJson(response, 501, { error: `${registration.errorPrefix}_not_integrated` });
         return true;
+      }
+      // An allowlisted variant (139) seeks only for an account holding the
+      // grant. Without this a stranger's seek could pair a granted player into
+      // a room whose other seat nobody is allowed to take.
+      if (persistence.isAllowlistedGameSpec(registration.gameSpecId)) {
+        const seeker = await currentAccountUser(request);
+        if (!(await persistence.mayPlayVariant(seeker, registration.gameSpecId))) {
+          writeJson(response, 403, { error: 'variant_not_granted' });
+          return true;
+        }
       }
     } else {
       const gameSpecGate = gateGameSpecRequest({
@@ -314,10 +324,34 @@ function lobbyTicketResponse(ticket: LobbyTicket): Record<string, unknown> {
   };
 }
 
-function lobbyOpenRequests(ctx: HttpApiContext): Array<Record<string, unknown>> {
+// The public seek list. A seek on an allowlisted variant (139) is listed only to
+// a reader who may play it: to everyone else the variant does not exist yet, so
+// its name must not reach them through the lobby either.
+async function lobbyOpenRequests(
+  ctx: HttpApiContext,
+  request: IncomingMessage,
+): Promise<Array<Record<string, unknown>>> {
   const now = lobbyNow(ctx);
-  return ctx.lobbyQueue
-    .filter((ticket) => isLiveSeek(ticket, now))
+  const live = ctx.lobbyQueue.filter((ticket) => isLiveSeek(ticket, now));
+  const gated = [
+    ...new Set(
+      live
+        .map((ticket) => ticket.gameSpecId as string)
+        .filter((specId) => persistence.isAllowlistedGameSpec(specId)),
+    ),
+  ];
+  const visible = new Set<string>();
+  if (gated.length > 0) {
+    const reader = await currentAccountUser(request);
+    for (const specId of gated) {
+      if (await persistence.mayPlayVariant(reader, specId)) visible.add(specId);
+    }
+  }
+  return live
+    .filter(
+      (ticket) =>
+        !persistence.isAllowlistedGameSpec(ticket.gameSpecId) || visible.has(ticket.gameSpecId),
+    )
     .slice(0, 20)
     .map((ticket) => ({
       gameSpecId: ticket.gameSpecId,

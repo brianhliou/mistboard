@@ -208,6 +208,9 @@ const PROFILE_VARIANT_LABEL_KEY: Record<ProfileRatingVariant, I18nKey> = {
   atomic_xiangqi: 'variant.atomicXiangqi.name',
   crazyhouse_xiangqi: 'variant.crazyhouseXiangqi.name',
   xiangqi: 'variant.xiangqi.name',
+  // Rated, but allowlisted: the server keeps this pool off every profile, and it
+  // is not in PROFILE_VARIANT_ORDER. The entry only completes the Record.
+  xiangqi_mahjong: 'variant.xiangqiMahjong.name',
 };
 
 // Profile rating grid is subject-scoped and follows the baseline rating variant

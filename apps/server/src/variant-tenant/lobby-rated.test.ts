@@ -22,13 +22,23 @@ import { duckXiangqiTenant } from '../duck-xiangqi-tenant.js';
 import { jieqiTenant } from '../jieqi-tenant.js';
 import { jungleFlipTenant } from '../jungle-flip-tenant.js';
 import { jungleTenant } from '../jungle-tenant.js';
-import { createUser, recordGameEnd, type UserAccount } from '../persistence.js';
+import {
+  createUser,
+  getBestRatingsAnyTimeClass,
+  getLeaderboardSummary,
+  getUserProfileByHandle,
+  recordGameEnd,
+  type UserAccount,
+} from '../persistence.js';
 import {
   definePersistenceTests,
   test as persistenceTest,
   pg,
   TEST_DATABASE_URL,
 } from '../persistence-test-support.js';
+import { XMJ_BOT_CLIENT_ID } from '../server-xiangqi-mahjong-bots.js';
+import { createXiangqiMahjongRoom } from '../xiangqi-mahjong-registration.js';
+import { xiangqiMahjongTenant } from '../xiangqi-mahjong-tenant.js';
 import { xiangqiTenant } from '../xiangqi-tenant.js';
 import { buildTenantGameSummary } from './events.js';
 import './register-tenants.js';
@@ -373,6 +383,7 @@ const RATED_LOBBY_TENANTS = [
   jungleTenant,
   jungleFlipTenant,
   darkXiangqiTenant,
+  xiangqiMahjongTenant,
 ] as unknown as readonly AnyTenant[];
 
 function userSeatToken(color: string, userId: string): TenantSeatTokenState<string> {
@@ -617,6 +628,145 @@ definePersistenceTests('lobby rated', () => {
       assert.ok(red && black, `both seats got a jieqi rating row: ${JSON.stringify(rows)}`);
       assert.ok(red.elo_rating > 1500, `winner ${red.elo_rating}`);
       assert.ok(black.elo_rating < 1500, `loser ${black.elo_rating}`);
+    } finally {
+      await client.end();
+    }
+  });
+
+  // Xiangqi mahjong rates the whole four-hand match (the room finishes when the
+  // match does) at 5+5, the one rated pace its lobby offers. Seats are east and
+  // west, so this is the write that needs the east->white slot mapping; and the
+  // spec is allowlisted, so the rating must reach no public rating surface.
+  persistenceTest(
+    'a rated Xiangqi Mahjong match moves both ratings and stays private',
+    async () => {
+      const registration = registeredVariantTenants().find(
+        (candidate) => candidate.gameSpecId === xiangqiMahjongTenant.gameSpecId,
+      );
+      assert.ok(registration?.lobby?.supportsRated, 'xiangqi mahjong lobby must offer rated seeks');
+      const now = new Date();
+      for (const id of ['user_xmj_east', 'user_xmj_west']) {
+        await createUser({
+          id,
+          email: `${id}@example.com`,
+          emailVerifiedAt: now,
+          handle: id.replace(/_/g, ''),
+          displayName: id,
+          now,
+        });
+      }
+      const pace = { initialMs: 300_000, incrementMs: 5_000 };
+      await withTenantEnabled(registration, async () => {
+        const created = await registration.lobby!.createRoom(pace, true);
+        const room = registration.rooms.get(created.id) as unknown as
+          | (ReturnType<typeof createTenantRuntimeRoom> & { ok: true })['room']
+          | undefined;
+        assert.ok(room, 'the lobby room is live');
+        assert.equal(room.rated, true);
+        room.seatTokens = {
+          east: userSeatToken('east', 'user_xmj_east'),
+          west: userSeatToken('west', 'user_xmj_west'),
+        };
+        const tenant = xiangqiMahjongTenant as unknown as AnyTenant;
+        room.projection.state = tenant.rules.finish(room.projection.state, 'west', 'resignation');
+        const summary =
+          tenant.persistence.buildGameSummary?.(room) ?? buildTenantGameSummary(tenant, room);
+        assert.equal(summary.rated, true);
+        assert.equal(summary.result, 'west-wins');
+        await recordGameEnd(created.id, summary);
+      });
+
+      const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+      await client.connect();
+      try {
+        const { rows } = await client.query<{ user_id: string; elo_rating: number }>(
+          `SELECT user_id, elo_rating FROM user_ratings WHERE variant = 'xiangqi_mahjong'`,
+        );
+        const east = rows.find((row) => row.user_id === 'user_xmj_east');
+        const west = rows.find((row) => row.user_id === 'user_xmj_west');
+        assert.ok(east && west, `both seats got a xiangqi_mahjong rating: ${JSON.stringify(rows)}`);
+        assert.ok(west.elo_rating > 1500, `winner ${west.elo_rating}`);
+        assert.ok(east.elo_rating < 1500, `loser ${east.elo_rating}`);
+        const { rows: participants } = await client.query<{ color: string; elo_after: number }>(
+          `SELECT color, elo_after FROM game_participants
+         WHERE game_id IN (SELECT room_id FROM games WHERE variant = 'xiangqi-mahjong')
+         ORDER BY color`,
+        );
+        assert.deepEqual(
+          participants.map((row) => row.color),
+          ['east', 'west'],
+        );
+        assert.ok(
+          participants.every((row) => row.elo_after !== null),
+          'per-game ratings recorded',
+        );
+      } finally {
+        await client.end();
+      }
+
+      // Allowlisted: no ladder, no profile rail row, no best-rating badge.
+      for (const timeClass of ['bullet', 'blitz', 'rapid'] as const) {
+        const ladders = await getLeaderboardSummary({ timeClass });
+        assert.ok(
+          ladders.every((ladder) => ladder.variant !== 'xiangqi_mahjong'),
+          `xiangqi_mahjong ladder on the ${timeClass} leaderboard`,
+        );
+      }
+      const best = await getBestRatingsAnyTimeClass(['user_xmj_east', 'user_xmj_west']);
+      assert.deepEqual([...best.values()].length, 0, 'no best-rating badge from a private pool');
+      const profile = await getUserProfileByHandle('userxmjwest', null);
+      assert.ok(profile, 'the profile loads');
+      assert.ok(
+        profile.ratings.every((rating) => rating.variant !== 'xiangqi_mahjong'),
+        'xiangqi_mahjong on a public profile',
+      );
+    },
+  );
+
+  persistenceTest('a Xiangqi Mahjong bot match never rates', async () => {
+    const now = new Date();
+    await createUser({
+      id: 'user_xmj_pve',
+      email: 'user_xmj_pve@example.com',
+      emailVerifiedAt: now,
+      handle: 'userxmjpve',
+      displayName: 'user_xmj_pve',
+      now,
+    });
+    const registration = registeredVariantTenants().find(
+      (candidate) => candidate.gameSpecId === xiangqiMahjongTenant.gameSpecId,
+    );
+    assert.ok(registration);
+    await withTenantEnabled(registration, async () => {
+      // Asked for rated: the factory drops it for a bot seat.
+      const created = await createXiangqiMahjongRoom(
+        { initialMs: 300_000, incrementMs: 5_000 },
+        'east',
+        { engineId: XMJ_BOT_CLIENT_ID, seat: 'west' },
+        true,
+      );
+      assert.ok(created.ok);
+      if (!created.ok) return;
+      const room = created.room as unknown as (ReturnType<typeof createTenantRuntimeRoom> & {
+        ok: true;
+      })['room'];
+      assert.equal(room.rated, false, 'a bot room is casual');
+      room.seatTokens = { east: userSeatToken('east', 'user_xmj_pve') };
+      const tenant = xiangqiMahjongTenant as unknown as AnyTenant;
+      room.projection.state = tenant.rules.finish(room.projection.state, 'east', 'resignation');
+      const summary =
+        tenant.persistence.buildGameSummary?.(room) ?? buildTenantGameSummary(tenant, room);
+      assert.equal(summary.mode, 'pve');
+      assert.equal(summary.rated, false);
+      await recordGameEnd(room.id, summary);
+    });
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      const { rows } = await client.query(
+        `SELECT 1 FROM user_ratings WHERE user_id = 'user_xmj_pve'`,
+      );
+      assert.equal(rows.length, 0, 'a bot match wrote a rating');
     } finally {
       await client.end();
     }

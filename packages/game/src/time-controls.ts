@@ -12,6 +12,7 @@ import {
   DUCK_XIANGQI_SPEC_ID,
   type GameSpecId,
   JIEQI_SPEC_ID,
+  XIANGQI_MAHJONG_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from './game-specs.js';
 
@@ -192,6 +193,9 @@ const VARIANT_DEFAULT_TIME_CONTROLS: Readonly<Partial<Record<GameSpecId, TimeCon
   [ATOMIC_XIANGQI_SPEC_ID]: '10m5',
   // Xiangqi's pace, and every capture hands the opponent a piece to place.
   [CRAZYHOUSE_XIANGQI_SPEC_ID]: '10m5',
+  // The table offers 5+5 and 10+5 only (a claim is read, not calculated, but
+  // 3+2 would still flag a player reading one). 5+5 is the rated pace.
+  [XIANGQI_MAHJONG_SPEC_ID]: '5m5',
 };
 
 /** The house pace, for every variant that does not name its own. */

@@ -130,8 +130,11 @@ export const xiangqiMahjongTenant: XmjTenantType = {
   gameSpecId: XIANGQI_MAHJONG_SPEC_ID,
   roomIdPrefix: XIANGQI_MAHJONG_ROOM_ID_PREFIX,
   colors: XMJ_SEATS,
-  // Rematch rides the lobby factory, and this room is PvE with no lobby.
-  rematch: { optOut: 'PvE only, no lobby' },
+  // Rematch rides the lobby factory, which this table now has, but the
+  // conformance test (variant-tenant-rematch.test.ts) seats two guests and the
+  // per-account grant refuses guests. Opted out until that test can seat
+  // granted accounts; a PvP seat gets New opponent and Review meanwhile.
+  rematch: { optOut: 'allowlisted playtest: the rematch conformance test seats guests' },
   // A move here is an action, not a turn; the clock runs from the first one.
   armsClockOnFirstMove: true,
   // The seat that must discard is on the clock. Nobody is during a claim

@@ -3,11 +3,13 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import test from 'node:test';
 import { type Color, isRetiredGameSpec } from '@mistboard/game';
 import { darkChessTenant } from '../dark-chess-tenant.js';
+import { isAllowlistedGameSpec } from '../persistence.js';
 import type { HttpApiContext } from '../routes/lib.js';
 import { tryHandle } from '../routes/lobby.js';
 import type { Room } from '../server-types.js';
 import './register-tenants.js';
 import { registeredVariantTenants } from './registry.js';
+import { createAsLobbyMatch } from './room-factory.js';
 import {
   createTenantRuntimeRoom,
   tenantRoomIsLobbyMatch,
@@ -33,6 +35,7 @@ const TENANT_FLAGS = [
   'MISTBOARD_JUNGLE_ENABLED',
   'MISTBOARD_JUNGLE_FLIP_ENABLED',
   'MISTBOARD_XIANGQI_ENABLED',
+  'MISTBOARD_XIANGQI_MAHJONG_ENABLED',
 ];
 
 const tc = { initialMs: 180_000, incrementMs: 2_000 };
@@ -103,6 +106,18 @@ test('every tenant lobby match creates a room marked as a lobby match', async ()
     assert.ok(lobbyTenants.length >= 8, `expected every lobby tenant, got ${lobbyTenants.length}`);
     for (const registration of lobbyTenants) {
       assert.ok(registration.enabled(), `${registration.kind} must be enabled for the test`);
+      if (isAllowlistedGameSpec(registration.gameSpecId)) {
+        // The route refuses a seek without the per-account grant (139), and every
+        // request here is a guest. Its room is made in the route's own scope;
+        // routes-lobby.test.ts covers the refusal.
+        const created = await createAsLobbyMatch(() => registration.lobby!.createRoom(tc, false));
+        const room = registration.rooms.get(created.id) as
+          | { events: readonly { type: string }[] }
+          | undefined;
+        assert.ok(room, `${registration.kind}: lobby room must be live`);
+        assert.equal(tenantRoomIsLobbyMatch(room), true, `${registration.kind}: room not marked`);
+        continue;
+      }
       const ctx = lobbyContext();
       const seek = await postSeek(ctx, registration.gameSpecId);
       assert.equal(seek.status, 'waiting', registration.kind);
