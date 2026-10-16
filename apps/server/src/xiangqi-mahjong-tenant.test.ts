@@ -83,6 +83,23 @@ test('the walls never reach a client', () => {
   assert.equal(JSON.stringify(out).includes('walls'), false);
 });
 
+// Audit 2026-10-16 finding 6: `handCopy` told the opponent the discarder still
+// held a twin of the thrown tile. Serialize the whole event for every recipient.
+test('a discard never says whether a twin of the tile is still in hand', () => {
+  const event = {
+    type: 'move-played',
+    at: 2,
+    roomId: 'xmj_test',
+    color: 'east',
+    move: { action: 'discard', tile: 'rC', handCopy: true, by: 'east', at: 2 },
+  } as unknown as XmjEvent;
+  for (const seat of ['east', 'west', 'spectator'] as const) {
+    const wire = JSON.stringify(xmjClientEventFor(event, seat, 3));
+    assert.equal(wire.includes('handCopy'), false, seat);
+    assert.ok(wire.includes('"tile":"rC"'), seat);
+  }
+});
+
 test('a player view hides the other hand while the hand is live', () => {
   const state = newState(3);
   const view = getXmjClientView(state, { seat: 'east' } as never);

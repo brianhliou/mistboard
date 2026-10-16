@@ -169,10 +169,19 @@ export function mahjongClientEventFor(
     delete redacted.setup;
     return redacted;
   }
-  // A move is safe to broadcast as-is: a draw names no tile (the tile comes off
-  // the wall, which lives in state), and a discard or a claim is face up on the
-  // mat the moment it happens.
-  if (event.type === 'move-played') return { ...event, ply };
+  // A draw names no tile (the tile comes off the wall, which lives in state) and
+  // a discard is face up the moment it happens. A claim's `fromHand` is not: a
+  // claim that is still pending, or loses to a higher one, would tell every
+  // seat which concealed tiles the claimant holds. It goes out empty to every
+  // recipient (the shape a win claim already has); a claim that wins puts its
+  // tiles face up through the view's melds, and no client reads `fromHand` off
+  // the event.
+  if (event.type === 'move-played') {
+    if (event.move.action === 'claim' && event.move.fromHand.length > 0) {
+      return { ...event, move: { ...event.move, fromHand: [] }, ply };
+    }
+    return { ...event, ply };
+  }
   return event;
 }
 
