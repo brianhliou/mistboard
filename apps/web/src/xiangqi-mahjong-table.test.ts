@@ -461,7 +461,7 @@ describe('xiangqi mahjong table', () => {
         cells.forEach((cell, hand) => {
           const result = view.results[hand];
           if (!result) {
-            expect(cell.textContent).toBe('·');
+            expect(cell.textContent).toBe('');
             return;
           }
           const won = result.winner === seat;

@@ -641,7 +641,9 @@ export function xmjHandsTableHtml(
       const result = view.results[index];
       const classes: string[] = [];
       if (index === now) classes.push('xmj-hands__now');
-      let text = '·';
+      // A hand not yet played is a blank cell, like an unplayed frame on a
+      // scoreboard; a void hand still shows its zeros.
+      let text = '';
       if (result) {
         const won = result.winner === seat;
         text = String(won ? (result.score?.total ?? 0) : 0);

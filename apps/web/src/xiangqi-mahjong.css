@@ -16,17 +16,37 @@
  * `?felt=wood|slate|site` swaps the cloth; `?tiles=bamboo` swaps the backing.
  */
 
-/* The table is a little taller than it is wide (0.85 at its 560px design
-   size), so the board column is sized to that, not to a wide 1.2 that left
-   ~300px of empty column beside a capped table (Brian, 2026-10-16). The move
-   list gets a wider rail than a board game's, so a row like "<name> draws,
-   discards" stays on one line. */
+/* The table's tiles scale with its width but its type and padding do not:
+   measured, its height is about 0.625 x width + 323px. So the board width is
+   (height budget - 405px) x 1.6, which fills a short laptop screen exactly
+   and grows on a tall one, where one fixed ratio overflowed the first and
+   wasted the second (Brian, 2026-10-16). The 410px reserve is that 405px plus
+   slack, and it holds the points table under the board. The move list gets a
+   wider rail than a board game's, so a row like "<name> draws, discards"
+   stays on one line. */
 .live-route--xiangqi-mahjong {
-  --uni-board-aspect: 0.85;
-  /* The points table under the board shares the height budget. */
-  --uni-board-chrome-h: 100px;
+  --uni-board-aspect: 1.6;
+  --uni-board-chrome-h: 410px;
+  /* Past this the tiles stop gaining legibility and the move list loses the
+     width it needs for one line per row. */
+  --uni-board-max: 680px;
   --uni-table-min: 300px;
   --uni-table-max: 360px;
+}
+
+/* The side columns size themselves to width / aspect, which is the board's
+   height only for a board drawn at a fixed ratio. The table is not one, so
+   both rails take its measured height instead and still line up with it. */
+@media (min-width: 800px) {
+  .live-route--xiangqi-mahjong .live-review__cluster .moves-panel {
+    min-height: calc(var(--uni-board-width) * 0.625 + 323px);
+  }
+}
+
+@media (min-width: 1260px) {
+  .live-route--xiangqi-mahjong .live-review__cluster .meta-panel {
+    max-height: calc(var(--uni-board-width) * 0.625 + 323px);
+  }
 }
 
 .live-route--xiangqi-mahjong .live-review__cluster .board-stage,
@@ -56,6 +76,14 @@
     --xmj-pond-h: calc(47 * var(--xmj-u));
     --xmj-pond-gap: calc(4 * var(--xmj-u));
     max-width: none;
+  }
+
+  /* Your own hand reads largest: the opponent's backs and the discards keep
+     the base size, so the table's height barely moves. */
+  .live-route--xiangqi-mahjong .xmj-seat--self {
+    --xmj-tile-w: calc(64 * var(--xmj-u));
+    --xmj-tile-h: calc(84 * var(--xmj-u));
+    --xmj-depth: calc(6 * var(--xmj-u));
   }
 }
 
@@ -1004,12 +1032,12 @@ ol.xmj-log {
   padding: 0 0 6px;
 }
 
-/* A hand log is taller than a chess move list, so on a tall screen the
-   window grows past the shared 170px (game-shell.css). 730px is the rest of
-   the rail at 1440x900, where 170px is exactly what fits without a page
-   scroll; every extra pixel of viewport goes to the log. */
+/* A hand log is taller than a chess move list, so beside a tall table the
+   window grows past the shared 170px (game-shell.css): it takes the table's
+   height (see the rails above) less the ~490px of clocks, names and buttons
+   around it, so the rail ends where the table does. */
 .live-route--xiangqi-mahjong .round-table__box .game-table-moves {
-  max-height: max(170px, calc(100svh - 730px));
+  max-height: max(170px, calc(var(--uni-board-width) * 0.625 + 323px - 490px));
 }
 
 /* Each hand's heading is one line: the hand, who won and how, the points
@@ -1174,6 +1202,12 @@ ol.xmj-log {
     --xmj-pond-w: 32px;
     --xmj-pond-h: 42px;
     --xmj-pond-gap: 3px;
+  }
+
+  .xiangqi-mahjong-live-board .xmj-seat--self {
+    --xmj-tile-w: 52px;
+    --xmj-tile-h: 68px;
+    --xmj-depth: 5px;
   }
 
   .xmj-table {
