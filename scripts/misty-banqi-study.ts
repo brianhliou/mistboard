@@ -2,6 +2,8 @@
 // article (/blog/mistybanqi) embeds, one chapter each.
 //
 //   npx tsx scripts/misty-banqi-study.ts                       # dry run over the data file
+//   npx tsx scripts/misty-banqi-study.ts --plan <file> --public # study:edit plan, @mistboard, no cookie
+//   npx tsx scripts/misty-banqi-study.ts --fill <studyId>       # after the plan is applied: write the ids
 //   npx tsx scripts/misty-banqi-study.ts --create --public --cookie ~/.mistboard-cookie
 //   npx tsx scripts/misty-banqi-study.ts --update <studyId> --cookie ~/.mistboard-cookie
 //   npx tsx scripts/misty-banqi-study.ts --create --base http://localhost:3171 --dev-login you@example.com
@@ -10,7 +12,10 @@
 // and moves (real prod PvE games, rebuilt from the finished games' truth
 // history), the chapter intro, and notes keyed by ply. Every game is replayed
 // under LEGACY_BANQI_RULES (all three predate the 長捉 rule) and must reach the
-// recorded result before anything is sent. A production --create writes the new
+// recorded result before anything is sent. --plan is the route (2026-10-16): it
+// writes a study:edit plan that creates the study as @mistboard (no cookie;
+// docs-private/players/README.md step 5b), and --fill <id> then reads the
+// applied study back. --fill and a production --create write the new
 // study and chapter ids back into the data file and into the article's
 // placeholder ids (apps/web/src/articles/content/banqi-engine.ts);
 // apps/web/src/articles/misty-banqi-study.test.ts checks the two agree. The cookie is read from a FILE and used as a header; it is never printed.
@@ -155,6 +160,42 @@ async function devLogin(email: string): Promise<string> {
   return cookie;
 }
 
+/** Read a study's chapter ids back by name and, for production, write them into
+ *  the data file and the article's placeholder ids. */
+async function fillIds(data: StudyData, studyId: string): Promise<void> {
+  // Read the chapter ids back by name, in the order the data file lists them.
+  const study = (await send('GET', `/api/studies/${studyId}`)).json;
+  const ids = new Map<string, string>(
+    study.chapters.map((c: { name: string; id: string }) => [c.name, c.id]),
+  );
+  for (const game of data.games) {
+    const id = ids.get(game.name);
+    console.log(`  ${id}  ${game.name}  /embed/study/${studyId}/${id}?ply=${game.embedPly}`);
+  }
+  // Only production ids belong in the data file the article is tested against.
+  if (BASE === 'https://mistboard.com') {
+    data.studyId = studyId;
+    for (const game of data.games) game.chapterId = ids.get(game.name) ?? null;
+    // One deal tile per line, as the file was written.
+    const json = JSON.stringify(data, null, 2).replace(
+      /\{\n\s+"color": "(\w+)",\n\s+"role": "(\w+)"\n\s+\}/g,
+      '{ "color": "$1", "role": "$2" }',
+    );
+    writeFileSync(DATA, `${json}\n`);
+    console.log(`wrote the ids to ${DATA}`);
+    // The article ships with placeholder ids until the study exists; fill them.
+    let article = readFileSync(ARTICLE, 'utf8').replace(`'STUDY_ID_PENDING'`, `'${studyId}'`);
+    for (const game of data.games)
+      article = article.replace(
+        `'${game.key.toUpperCase()}_CHAPTER_PENDING'`,
+        `'${ids.get(game.name)}'`,
+      );
+    writeFileSync(ARTICLE, article);
+    console.log(`wrote the ids to ${ARTICLE}`);
+  }
+  console.log(`\n${BASE}/study/${studyId}`);
+}
+
 async function main(): Promise<void> {
   const data = JSON.parse(readFileSync(DATA, 'utf8')) as StudyData;
   for (const game of data.games) {
@@ -163,11 +204,50 @@ async function main(): Promise<void> {
       `${game.name.padEnd(48)} ${String(states.length - 1).padStart(3)} plies, ${game.result}, embed ply ${game.embedPly}`,
     );
   }
+  const planPath = flag('plan');
+  if (planPath) {
+    // The same study as a `study:edit` plan owned by @mistboard: no cookie, no
+    // sign-in. Apply it with study:edit (dry run, then --apply) under railway run.
+    const [first, ...rest] = data.games.map(chapterFor);
+    const plan = {
+      create: {
+        owner: 'mistboard',
+        name: data.name,
+        description: data.description,
+        visibility: has('public') ? 'public' : 'unlisted',
+        chapter: {
+          name: first.name,
+          variant: first.variant,
+          orientation: first.orientation,
+          tree: first.root,
+          tags: first.tags,
+        },
+      },
+      ops: rest.map((c) => ({
+        op: 'add',
+        name: c.name,
+        orientation: c.orientation,
+        tree: c.root,
+        tags: c.tags,
+      })),
+    };
+    writeFileSync(resolve(planPath), `${JSON.stringify(plan)}\n`);
+    console.log(
+      `\nplan for @mistboard (${plan.create.visibility}) -> ${planPath}; apply with study:edit (dry run, then --apply)`,
+    );
+    return;
+  }
+  const fill = flag('fill');
+  if (fill) {
+    // After a --plan is applied: no cookie, the study is read back over the public API.
+    await fillIds(data, fill);
+    return;
+  }
   const create = has('create');
   const update = flag('update');
   if (!create && !update) {
     console.log(
-      `\ndry run: ${data.games.length} chapters replay cleanly. --create writes a new study.`,
+      `\ndry run: ${data.games.length} chapters replay cleanly. --plan <file> writes a study:edit plan; --create writes a new study.`,
     );
     return;
   }
@@ -225,36 +305,7 @@ async function main(): Promise<void> {
     await send('POST', `/api/studies/${studyId}/chapters`, chapterFor(game), cookie);
     console.log(`  + ${game.name}`);
   }
-  // Read the chapter ids back by name, in the order the data file lists them.
-  const study = (await send('GET', `/api/studies/${studyId}`)).json;
-  const ids = new Map<string, string>(
-    study.chapters.map((c: { name: string; id: string }) => [c.name, c.id]),
-  );
-  for (const game of data.games) {
-    const id = ids.get(game.name);
-    console.log(`  ${id}  ${game.name}  /embed/study/${studyId}/${id}?ply=${game.embedPly}`);
-  }
-  // Only production ids belong in the data file the article is tested against.
-  if (BASE === 'https://mistboard.com') {
-    data.studyId = studyId;
-    for (const game of data.games) game.chapterId = ids.get(game.name) ?? null;
-    // One deal tile per line, as the file was written.
-    const json = JSON.stringify(data, null, 2).replace(
-      /\{\n\s+"color": "(\w+)",\n\s+"role": "(\w+)"\n\s+\}/g,
-      '{ "color": "$1", "role": "$2" }',
-    );
-    writeFileSync(DATA, `${json}\n`);
-    console.log(`wrote the ids to ${DATA}`);
-    // The article ships with placeholder ids until the study exists; fill them.
-    let article = readFileSync(ARTICLE, 'utf8').replace(`'STUDY_ID_PENDING'`, `'${studyId}'`);
-    for (const game of data.games)
-      article = article.replace(
-        `'${game.key.toUpperCase()}_CHAPTER_PENDING'`,
-        `'${ids.get(game.name)}'`,
-      );
-    writeFileSync(ARTICLE, article);
-    console.log(`wrote the ids to ${ARTICLE}`);
-  }
+  await fillIds(data, studyId);
   console.log(`\n${BASE}/study/${studyId}`);
 }
 
