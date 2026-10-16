@@ -367,6 +367,12 @@
     "description": "Nhà vô địch cờ tướng thế giới đầu tiên không đến từ Trung Quốc, bất bại ở Thượng Hải và thắng trận chung kết khi cầm quân Đen. Hành trình lên ngôi và một năm sau đó, năm ván thắng trên bàn cờ, 38 ván được phân tích.",
     "status": "published"
   },
+  "lichess-analysis-accuracy": {
+    "title": "Lichess Analysis: What a Million Nodes a Move Buys",
+    "kind": "article",
+    "description": "Lichess analyses each move at a million nodes, about a second of one core. I re-ran 300 games at twenty times that to see what the budget trades away: the blunders hold, the inaccuracies move.",
+    "status": "published"
+  },
   "longest-forced-mates-xiangqi": {
     "title": "The Longest Forced Mates in Xiangqi",
     "kind": "article",
