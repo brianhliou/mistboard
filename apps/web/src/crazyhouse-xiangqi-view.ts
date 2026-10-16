@@ -4,7 +4,8 @@
 //   - the BOARD VIEW: a CrazyhouseXiangqiPlayerView narrowed to the standard
 //     xiangqi view the shared board renders (xiangqi-board.ts). Drops leave
 //     legalMoves (the board's click layer only knows from/to), and a drop as
-//     the last move becomes `lastDropSquare`, the destination ring alone;
+//     the last move becomes `lastDropSquare`, the destination ring alone,
+//     and the general in check gets the check glow (crazyhouseXiangqiBoardMarks);
 //   - the HANDS: the shared drop pocket (drop-pocket.ts) in the reader's
 //     xiangqi piece set;
 //   - drop targets, move notation, the end-of-game phrase.
@@ -17,6 +18,7 @@ import {
   type CrazyhouseXiangqiMove,
   type CrazyhouseXiangqiPlayerView,
   type CrazyhouseXiangqiSquare,
+  crazyhouseXiangqiCheckedGeneral,
   isCrazyhouseXiangqiDropMove,
   type StandardXiangqiPlayerView,
 } from '@mistboard/game';
@@ -48,6 +50,22 @@ export function crazyhouseXiangqiLastDrop(
   return lastMove && isCrazyhouseXiangqiDropMove(lastMove) ? lastMove.to : null;
 }
 
+/**
+ * The marks every Crazyhouse Xiangqi board draws from its view, beside the
+ * shared board's own: the landing ring after a drop, and the check glow on
+ * the general facing the move (the kernel's check rule, a dropped checker
+ * included). One helper so the live room, /watch and the replays agree.
+ */
+export function crazyhouseXiangqiBoardMarks(view: CrazyhouseXiangqiPlayerView): {
+  lastDropSquare: CrazyhouseXiangqiSquare | null;
+  checkSquare: CrazyhouseXiangqiSquare | null;
+} {
+  return {
+    lastDropSquare: crazyhouseXiangqiLastDrop(view),
+    checkSquare: crazyhouseXiangqiCheckedGeneral(view.board, view.status),
+  };
+}
+
 export function crazyhouseXiangqiBoardMoves(
   view: CrazyhouseXiangqiPlayerView,
   from?: CrazyhouseXiangqiSquare | null,
@@ -71,12 +89,14 @@ export function crazyhouseXiangqiDropTargets(
   return targets;
 }
 
-// The drop letters are Fairy-Stockfish's for this variant (B = elephant), the
-// same spelling the engine and the JSON export use.
+// Display letters for drops, the site's xiangqi letters (E = elephant, as
+// Fortress shows it). Display only: the stored move, the engine and the FEN
+// keep Fairy-Stockfish's spelling, B for the elephant
+// (crazyhouseXiangqiMoveToUci / crazyhouseXiangqiMoveFromUci).
 const DROP_ROLE_LETTER: Record<CrazyhouseXiangqiDropRole, string> = {
   chariot: 'R',
   horse: 'N',
-  elephant: 'B',
+  elephant: 'E',
   advisor: 'A',
   cannon: 'C',
   soldier: 'P',

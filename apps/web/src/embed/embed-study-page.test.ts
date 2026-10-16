@@ -560,7 +560,7 @@ describe('mountEmbedStudy', () => {
     const moves = Array.from(root.querySelectorAll('.review-move-list__move')).map((el) =>
       el.textContent?.trim(),
     );
-    expect(moves).toEqual(['h3-h10', 'i10-h10', 'N@e5', 'A@e9', 'e5-f7', 'B@c8']);
+    expect(moves).toEqual(['h3-h10', 'i10-h10', 'N@e5', 'A@e9', 'e5-f7', 'E@c8']);
 
     // Step to the drop: the horse leaves red's hand and stands on e5.
     const next = root.querySelector<HTMLButtonElement>('[aria-label="Next move"]');

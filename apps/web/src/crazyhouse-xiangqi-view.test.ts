@@ -2,12 +2,17 @@ import {
   applyCrazyhouseXiangqiMove,
   CRAZYHOUSE_XIANGQI_DROP_ROLES,
   type CrazyhouseXiangqiMove,
+  crazyhouseXiangqiMoveFromUci,
+  crazyhouseXiangqiMoveToUci,
   createInitialCrazyhouseXiangqiState,
   getCrazyhouseXiangqiPlayerView,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
+import { replayCrazyhouseXiangqiNotation } from './crazyhouse-xiangqi-replay.js';
+import { CRAZYHOUSE_XIANGQI_SAMPLE_GAME_MOVES } from './crazyhouse-xiangqi-sample-game.js';
 import {
   CRAZYHOUSE_XIANGQI_POCKET_ORDER,
+  crazyhouseXiangqiBoardMarks,
   crazyhouseXiangqiBoardView,
   crazyhouseXiangqiDropTargets,
   crazyhouseXiangqiLastDrop,
@@ -51,7 +56,7 @@ describe('crazyhouse xiangqi board view', () => {
     expect(host.querySelector('[data-square="e5"].xq-live-hit--target')).not.toBeNull();
   });
 
-  it('rings only the landing point after a drop, and labels drops with the engine letters', () => {
+  it('rings only the landing point after a drop, and labels drops with display letters', () => {
     const state = applyCrazyhouseXiangqiMove(afterTrade(), { drop: 'horse', to: 'e5' });
     const view = getCrazyhouseXiangqiPlayerView(state, 'red');
     expect(crazyhouseXiangqiLastDrop(view)).toBe('e5');
@@ -68,8 +73,34 @@ describe('crazyhouse xiangqi board view', () => {
     expect(host.querySelectorAll('.xq-live-lastmove-ring').length).toBe(1);
     expect(host.querySelector('.xq-live-lastmove-from')).toBeNull();
 
-    expect(crazyhouseXiangqiMoveLabel({ drop: 'elephant', to: 'c1' })).toBe('B@c1');
+    expect(crazyhouseXiangqiMoveLabel({ drop: 'horse', to: 'e5' })).toBe('N@e5');
     expect(crazyhouseXiangqiMoveLabel({ from: 'h3', to: 'h10' })).toBe('h3-h10');
+  });
+
+  it('shows the elephant as E while the stored and engine token stays B', () => {
+    const drop = { drop: 'elephant', to: 'c1' } as const;
+    expect(crazyhouseXiangqiMoveLabel(drop)).toBe('E@c1');
+    expect(crazyhouseXiangqiMoveToUci(drop)).toBe('B@c1');
+    expect(crazyhouseXiangqiMoveFromUci('B@c1')).toEqual(drop);
+    expect(crazyhouseXiangqiMoveFromUci('E@c1')).toBeNull();
+  });
+
+  it('glows the general in check, a dropped checker included, and nothing otherwise', () => {
+    // Red's move 31 in the sample game drops a cannon on e6 with check.
+    const replay = replayCrazyhouseXiangqiNotation(CRAZYHOUSE_XIANGQI_SAMPLE_GAME_MOVES);
+    const glow = (ply: number) => {
+      const view = getCrazyhouseXiangqiPlayerView(replay.states[ply]!, 'red');
+      const host = document.createElement('div');
+      host.innerHTML = xiangqiBoardSvg(crazyhouseXiangqiBoardView(view), 'red', {
+        interactive: false,
+        selectedSquare: null,
+        draggingFrom: null,
+        ...crazyhouseXiangqiBoardMarks(view),
+      });
+      return host.querySelectorAll('.board-check').length;
+    };
+    expect(glow(2 * 31 - 1)).toBe(1);
+    expect(glow(0)).toBe(0);
   });
 
   it('draws a hand as a strip of held pieces when the pocket is off, interactive only when asked', () => {
