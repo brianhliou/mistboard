@@ -25,6 +25,7 @@ type ServerMessage = {
   seq?: number; // event-appended only
   mode?: 'pvp' | 'pve' | 'eve' | 'imported' | 'manual';
   seat: Color | 'spectator';
+  seats?: Partial<Record<Color, string>>;
   seatToken?: string;
   state: PlayerView;
 };
@@ -224,20 +225,92 @@ test('delta: live PvE third client is rejected before any frame', async (t) => {
   assert.deepEqual(rejected.messages, []);
 });
 
-test('delta: live EvE third client is rejected before any frame', async (t) => {
+// An engine seat holds no seat token: its id is its credential, and that id is
+// public (snapshot `seats`, /api/games/current). A socket that names the bot's
+// id in ?client= must not be seated as the bot, act for it, or see its view.
+test('delta: a socket claiming the bot seat id in a live PvE room gets no seat and no frame', async (t) => {
   const port = serverPort;
   const clients: TestClient[] = [];
   t.after(async () => closeClients(clients));
 
-  const room = uniqueRoomId('ws-delta-eve');
-  const white = await connectForHello(port, `room=${room}&client=engine:white&reset=1`);
-  const black = await connectForHello(port, `room=${room}&client=engine:black`);
-  clients.push(white, black);
+  // A real PvE room whose bot id passes the client-id grammar (the prod Misty
+  // id carries a '.', which the grammar already refused; this one does not).
+  const created = await fetch(`http://127.0.0.1:${port}/api/rooms`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      mode: 'pve',
+      variant: 'dark-chess',
+      engineId: 'builtin-random-legal',
+      preferredColor: 'white',
+    }),
+  });
+  assert.equal(created.status, 201);
+  const { roomId: room } = (await created.json()) as { roomId: string };
+  const human = await connectForHello(
+    port,
+    `room=${encodeURIComponent(room)}&client=pve-human-0002`,
+  );
+  clients.push(human);
+  const hello = human.messages[0];
+  assert.equal(hello?.mode, 'pve');
+  assert.equal(hello?.seat, 'white');
+  const botId = hello?.seats?.black;
+  assert.equal(botId, 'builtin-random-legal', 'the bot holds black');
 
-  const rejected = await connectForClose(port, `room=${room}&client=eve-observer-01`);
-  assert.equal(rejected.code, 1008);
-  assert.equal(rejected.reason, 'private room');
-  assert.deepEqual(rejected.messages, []);
+  for (const spoofed of [botId, 'engine:black', 'random-engine']) {
+    const attempt = await connectAndSettle(
+      port,
+      `room=${encodeURIComponent(room)}&client=${encodeURIComponent(spoofed)}`,
+    );
+    if (attempt.open) {
+      // Pre-fix the spoof was seated as black: an abort from it ended the
+      // human's game. Prove it cannot act before failing on the seat.
+      attempt.socket.send(JSON.stringify({ type: 'abort' }));
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      attempt.socket.close();
+    }
+    assert.deepEqual(
+      attempt.messages.map((message) => message.seat),
+      [],
+      `${spoofed}: no frame, so no seat and no black-only view`,
+    );
+    assert.equal(attempt.code, 1008, `${spoofed}: closed as a spectator of a fog room`);
+    assert.equal(attempt.reason, 'private room');
+  }
+
+  const latest = human.messages[human.messages.length - 1];
+  assert.notEqual(latest?.state.status.type, 'aborted', 'the bot seat took no action');
+});
+
+// Self-declared engine ids on a vacant seat: the id is ignored, the socket
+// plays as an ordinary guest (random id, seat token), and the room stays PvP.
+test('delta: client-chosen engine ids cannot declare an engine seat', async (t) => {
+  const port = serverPort;
+  const clients: TestClient[] = [];
+  t.after(async () => closeClients(clients));
+
+  const room = uniqueRoomId('ws-delta-eve-spoof');
+  const white = await connectForHello(port, `room=${room}&client=engine:white&reset=1`);
+  clients.push(white);
+  const black = await connectForHello(port, `room=${room}&client=engine:black`);
+  clients.push(black);
+
+  for (const [client, seat, spoofed] of [
+    [white, 'white', 'engine:white'],
+    [black, 'black', 'engine:black'],
+  ] as const) {
+    const hello = client.messages[0];
+    assert.equal(hello?.seat, seat);
+    assert.notEqual(hello?.clientId, spoofed);
+    assert.match(hello?.seatToken ?? '', /^[a-zA-Z0-9_-]{32,128}$/);
+  }
+  const latest = black.messages[black.messages.length - 1];
+  assert.equal(latest?.mode, 'pvp');
+  assert.deepEqual(
+    Object.values(latest?.seats ?? {}).sort(),
+    [black.messages[0]?.clientId, white.messages[0]?.clientId].sort(),
+  );
 });
 
 // ── Delta-specific assertions ────────────────────────────────────────────
@@ -502,6 +575,7 @@ async function startServer(): Promise<{ port: number; child: ServerProcess }> {
   const child = spawn(process.execPath, [entry], {
     env: {
       MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE: 'true',
+      MISTBOARD_EXTRA_PLAYABLE_ENGINES: 'builtin-random-legal',
       NODE_ENV: 'test',
       PORT: String(port),
     },
@@ -638,6 +712,40 @@ function connectForClose(
     socket.once('close', (code, reason) => {
       clearTimeout(timeout);
       resolve({ code, messages, reason: reason.toString('utf8') });
+    });
+  });
+}
+
+// Resolves on close, or shortly after the first frame if the server keeps the
+// socket open, so an unexpected admission fails an assertion, not a timeout.
+function connectAndSettle(
+  port: number,
+  query: string,
+): Promise<{
+  code: number | null;
+  messages: ServerMessage[];
+  open: boolean;
+  reason: string;
+  socket: WebSocket;
+}> {
+  const socket = new WebSocket(`ws://127.0.0.1:${port}/?${query}`);
+  const messages: ServerMessage[] = [];
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error(`no frame or close for ${query}`)), 3_000);
+    socket.once('error', reject);
+    socket.on('message', (raw) => {
+      const message = JSON.parse(String(raw)) as ServerMessage;
+      if (message.type !== 'hello' && message.type !== 'snapshot') return;
+      messages.push(message);
+      if (messages.length > 1) return;
+      setTimeout(() => {
+        clearTimeout(timeout);
+        resolve({ code: null, messages, open: true, reason: '', socket });
+      }, 200);
+    });
+    socket.once('close', (code, reason) => {
+      clearTimeout(timeout);
+      resolve({ code, messages, open: false, reason: reason.toString('utf8'), socket });
     });
   });
 }
