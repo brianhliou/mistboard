@@ -25,6 +25,7 @@ import {
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
+  legacyLiveRoomForGameSpec,
   MAHJONG_SPEC_ID,
   type TimeControlId,
   variantDefaultTimeControl,
@@ -1087,6 +1088,32 @@ export function finishedGameHref(roomId: string, gameSpecId: string | null): str
   if (routeBase) return `${routeBase}/${id}`;
   if (tenant?.finishedGameOpensRoom) return `/room/${id}`;
   return `/game/${id}`;
+}
+
+// What the legacy /game/:id route does with a room id. That page is the chess
+// shell, which reads only the chess stack's event log and 403s
+// (game_not_public) on any tenant's, so a tenant game never mounts it: it goes
+// to the tenant's own finished-game page (postgame route, or the room for a
+// table whose finished room is its page), or reads as not found when the
+// tenant has none (Hong Kong mahjong) or its build flag is off. Only an id with
+// no tenant (a bare Fog Chess room) or a chess-stack tenant (dark-chess
+// correspondence, dchx_) mounts the shell. Fail-closed: a new tenant lands on
+// not found until it names a page, never on the chess shell.
+export type LegacyGameRoute =
+  | { kind: 'chess' }
+  | { kind: 'redirect'; href: string }
+  | { kind: 'not-found' };
+
+export function legacyGameRouteForRoomId(roomId: string): LegacyGameRoute {
+  const tenant = webVariantTenantForRoomId(roomId);
+  if (!tenant || legacyLiveRoomForGameSpec(tenant.gameSpecId)) return { kind: 'chess' };
+  if (!tenant.enabled()) return { kind: 'not-found' };
+  const id = encodeURIComponent(roomId);
+  if (tenant.gameRouteBase && tenant.mountPostgame) {
+    return { kind: 'redirect', href: `${tenant.gameRouteBase}/${id}` };
+  }
+  if (tenant.finishedGameOpensRoom) return { kind: 'redirect', href: `/room/${id}` };
+  return { kind: 'not-found' };
 }
 
 /**

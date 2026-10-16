@@ -29,7 +29,11 @@ import { t } from '../i18n/catalog.js';
 import { jungleFlipResultLabel } from '../jungle-flip-result-label.js';
 import type { GameMeta, ReplayHandle } from '../replay.js';
 import { reviewResultLabel } from '../review/game-review-meta.js';
-import { showcaseRendererKindForSpec, specIdForShowcaseVariant } from '../showcase-dispatch.js';
+import {
+  embedRendererKindForVariant,
+  showcaseRendererKindForSpec,
+  specIdForShowcaseVariant,
+} from '../showcase-dispatch.js';
 import { seatColorWord, seatInkFamily } from '../variant-seat-label.js';
 import { webVariantTenantForSpecId } from '../variant-tenant/registry.js';
 import { type EmbedAnalysis, embedAnalysisVariant, loadEmbedAnalysis } from './embed-analysis.js';
@@ -177,6 +181,12 @@ export async function mountEmbedGame(
   }
   if (!game || (game as { visibility?: string }).visibility === 'private') {
     note(root, 'This game is not available.');
+    return;
+  }
+  // A variant with no board that draws in a frame (Xiangqi Mahjong's table)
+  // says so, rather than mounting the chess board and failing on its events.
+  if (embedRendererKindForVariant(game.variant) === null) {
+    note(root, 'This game cannot be embedded. Open it on mistboard.com.');
     return;
   }
 

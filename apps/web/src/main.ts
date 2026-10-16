@@ -50,6 +50,7 @@ import { mountRestartBanner, refreshRestartBanner, setRestartBanner } from './re
 import { captureServerRender } from './server-render-fallback.js';
 import { initializeThemeSettings, pinSiteTheme } from './theme.js';
 import {
+  legacyGameRouteForRoomId,
   type WebVariantTenant,
   webVariantTenantForRoomId,
   webVariantTenants,
@@ -212,7 +213,7 @@ const wantsLive =
   (params.has('room') || params.has('variant') || params.has('dev'));
 const page = params.get('page');
 const gameRoomId = gameRoomIdFromPath(path);
-const gameRoomTenantRedirect = gameRoomId ? tenantRedirectForGameRoomId(gameRoomId) : null;
+const legacyGameRoute = gameRoomId ? legacyGameRouteForRoomId(gameRoomId) : null;
 const tenantPostgame = tenantPostgameFromPath(path);
 const liveRoomId = liveRoomIdFromPath(path);
 const wantsAbout = path === '/about' || page === 'about';
@@ -485,13 +486,21 @@ if (replaySample) {
   appRoot.dataset.favoriteGameId = roomId;
   setTitleKey(tenant.pageTitleKey);
   void mountOrReport(() => mount(appRoot, roomId).then(() => undefined));
-} else if (gameRoomTenantRedirect) {
-  // A stale/shared /game/<tenant-id> link (e.g. /game/dxq_...): variant-tenant
-  // games replay ONLY under their tenant postgame route; the legacy chess shell
-  // 403s (game_not_public) on their event log. Redirect to the canonical route
-  // so the link works and the URL is correct (replace, not push, so the broken
-  // URL leaves no history entry). The reload lands on the tenantPostgame branch.
-  window.location.replace(gameRoomTenantRedirect);
+} else if (legacyGameRoute?.kind === 'redirect') {
+  // A stale/shared /game/<tenant-id> link (e.g. /game/dxq_..., /game/xmj_...):
+  // variant-tenant games replay ONLY on their own page (postgame route, or the
+  // room for Xiangqi Mahjong); the legacy chess shell 403s (game_not_public) on
+  // their event log. Redirect to the canonical route so the link works and the
+  // URL is correct (replace, not push, so the broken URL leaves no history
+  // entry). The reload lands on the tenantPostgame or live-room branch.
+  window.location.replace(legacyGameRoute.href);
+} else if (legacyGameRoute?.kind === 'not-found') {
+  // A tenant game with no finished-game page (Hong Kong mahjong) or a build
+  // flag that is off: not found, never the chess shell's "Page failed to load".
+  setTitleKey('notFound.heading');
+  void mountOrReport(() =>
+    import('./pages-static.js').then(({ mountNotFound }) => mountNotFound(appRoot)),
+  );
 } else if (gameRoomId) {
   appRoot.dataset.favoriteGameId = gameRoomId;
   setTitle('Game');
@@ -1163,17 +1172,6 @@ function tenantPostgameFromPath(value: string): {
     return { tenant, mount: tenant.mountPostgame.bind(tenant), roomId: decodeURIComponent(rest) };
   }
   return null;
-}
-
-// Canonical tenant postgame URL for a room-id reached via the legacy /game/:id
-// route, or null when the id is a chess-family game that belongs on /game/:id.
-// Resolves the tenant by room-id prefix; a tenant with a postgame surface
-// (gameRouteBase + mountPostgame) owns the replay, so /game/<its id> is a stale
-// link that must redirect there rather than 403 on the chess shell.
-function tenantRedirectForGameRoomId(roomId: string): string | null {
-  const tenant = webVariantTenantForRoomId(roomId);
-  if (!tenant?.gameRouteBase || !tenant.mountPostgame || !tenant.enabled()) return null;
-  return `${tenant.gameRouteBase}/${encodeURIComponent(roomId)}`;
 }
 
 function liveRoomIdFromPath(value: string): string | null {
