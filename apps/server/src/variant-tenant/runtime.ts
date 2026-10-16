@@ -640,7 +640,10 @@ export function applyTenantEvent<
   }
   if (event.type === 'game-aborted') {
     if (status.type !== 'playing') return projection;
-    if (projection.state.moveNumber !== 1) return projection;
+    // The same window tenantAbortPhaseFor opens (lifecycle.ts): before either
+    // seat's first move. A tenant counting from 0 (xiangqi mahjong) is at 0
+    // here; `!== 1` refused its abort and left the room playing for good.
+    if (projection.state.moveNumber >= 2) return projection;
     return {
       ...projection,
       clock: event.clock ?? freezeTenantClock(projection.clock, event.at),

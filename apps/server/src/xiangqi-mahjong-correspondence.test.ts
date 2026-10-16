@@ -182,6 +182,42 @@ test('the sweeper flags the seat that let its turn lapse: a loss on time', async
   }
 });
 
+/** The accepted log, moved to epoch-era time so a one-day allowance is long gone. */
+function overdueRoom(room: XmjRuntimeRoom): { overdue: XmjRuntimeRoom; at: number } {
+  const events = room.events.map((event, index) => ({ ...event, at: 1_000 + index * 1_000 }));
+  const hydrated = createTenantRuntimeRoomFromEvents(tenant, events as XmjEvent[]);
+  assert.ok(hydrated.ok);
+  return { overdue: hydrated.room as XmjRuntimeRoom, at: 1_000 + events.length * 1_000 };
+}
+
+test('a first move never made aborts the table with no result, as in every other variant', async () => {
+  try {
+    const { overdue } = overdueRoom(await acceptSeek(1));
+    // The match counts its moves from 0, where every other tenant starts at 1.
+    assert.equal(state(overdue).moveNumber, 0);
+    assert.equal(deadlineSeat(overdue), 'east');
+    liveRooms().set(overdue.id, overdue as unknown as TenantManagedRoom);
+    await registration().sweepDueDeadline?.(overdue.id);
+    assert.deepEqual(state(overdue).status, { type: 'aborted', reason: 'pregame-timeout' });
+    assert.equal(overdue.events.at(-1)?.type, 'game-aborted');
+  } finally {
+    registration().clearRooms();
+  }
+});
+
+test('west never answering the first discard aborts too: neither seat has made a turn of its own', async () => {
+  try {
+    const { overdue, at } = overdueRoom(await acceptSeek(1));
+    play(overdue, { by: 'east', at, action: 'discard', tile: firstDiscard(overdue, 'east') });
+    assert.equal(deadlineSeat(overdue), 'west');
+    liveRooms().set(overdue.id, overdue as unknown as TenantManagedRoom);
+    await registration().sweepDueDeadline?.(overdue.id);
+    assert.deepEqual(state(overdue).status, { type: 'aborted', reason: 'pregame-timeout' });
+  } finally {
+    registration().clearRooms();
+  }
+});
+
 // ---- A whole match, with the hidden-information boundary checked at every step -------
 
 function keysOf(value: unknown, into = new Set<string>()): Set<string> {
@@ -231,7 +267,11 @@ async function assertSeatSeesOnlyItsOwn(room: XmjRuntimeRoom, seat: XmjSeat, whe
     }
     if (handLive) {
       const concealed = s.match.hand.hands[other === 'east' ? 0 : 1];
-      if (concealed.length > 1) {
+      // Longer than a meld: a hand of two or three tiles can equal, tile for
+      // tile, a pair or meld shown in an earlier hand's winning shape, which is
+      // public (a 1-in-6 false alarm on ["bP","bP"]). The null hand above
+      // covers the short hands.
+      if (concealed.length > 3) {
         assert.ok(
           !json.includes(JSON.stringify(concealed)),
           `${where} ${name}/${seat}: ${other}'s concealed tiles`,
