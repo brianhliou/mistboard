@@ -43,6 +43,15 @@ function collectDhtmlxqTags(text: string): Map<string, string> {
   return tags;
 }
 
+// An archive game that carries variations stores its moves as a branch list
+// instead: var DhtmlXQ_movelist = '[0_1_0]…[/0_1_0][0_57_1]…[/0_57_1]', each
+// key parent_startPly_branch, with branch 0 the game as played. The page's
+// [DhtmlXQ_movelist] tag is then empty, so read branch 0 and leave the
+// variations behind (2026 North American Championship, view_m_140550).
+function mainLineFromBranchedMovelist(text: string): string {
+  return text.match(/\[0_1_0\](\d*)\[\/0_1_0\]/)?.[1] ?? '';
+}
+
 function extractTitle(text: string): string | undefined {
   const match = text.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
   const value = match?.[1]?.replace(/\s+/g, ' ').trim();
@@ -73,15 +82,23 @@ function splitTeamAndPlayer(raw: string | undefined): { team?: string; player?: 
   return { ...(team ? { team } : {}), ...(player ? { player } : {}) };
 }
 
+// An ECCO opening code at the start of a title part: A00 to E99.
+const ECCO_OPENING = /^[A-E]\d{2}(\s|$)/;
+
 // dpxq archive titles read
 //   "RedTeam RedName <和|胜|负> BlackTeam BlackName - Event - Round - Opening - Site".
 // The middle marker between the two players encodes the result relative to red.
 function parseDpxqTitle(title: string): TitleParts {
   const segments = title.split(/\s+-\s+/).map((part) => part.trim());
   const head = segments[0] ?? '';
+  // A game filed with no round (a match's 十番棋, an exhibition) has a title of
+  // four parts, "players - event - opening - site", so its third part is the
+  // opening, an ECCO code ("C72 五七炮…"). Read as the round, every game of
+  // the 2026 春丘大叶杯 ten-game match became a round named after its opening.
+  const third = segments.length >= 5 ? segments[2] : undefined;
   const parts: TitleParts = {
     event: segments[1] || undefined,
-    round: segments[2] || undefined,
+    round: third && !ECCO_OPENING.test(third) ? third : undefined,
   };
 
   const markerMatch = head.match(/\s(和|胜|负|先和|先胜|先负)\s/);
@@ -100,6 +117,18 @@ function parseDpxqTitle(title: string): TitleParts {
   return parts;
 }
 
+// dpxq game tags carried through to board.details (see XiangqiBroadcastGameDetails).
+const GAME_DETAIL_TAGS = [
+  'event',
+  'group',
+  'table',
+  'other',
+  'gametype',
+  'timerule',
+  'date',
+  'open',
+];
+
 function escapeFrameValue(value: string): string {
   // Guard the frame delimiters; a stray "[/DhtmlXQ_x]" inside a name would
   // otherwise truncate a tag when the converter re-parses the synthesized page.
@@ -112,7 +141,7 @@ export function normalizeDpxqPageToFrameHtml(text: string): DpxqNormalizeResult 
   }
 
   const tags = collectDhtmlxqTags(text);
-  const movelist = tags.get('movelist') ?? '';
+  const movelist = tags.get('movelist') || mainLineFromBranchedMovelist(text);
   const title = extractTitle(text);
   const titleParts = title ? parseDpxqTitle(title) : {};
 
@@ -125,21 +154,36 @@ export function normalizeDpxqPageToFrameHtml(text: string): DpxqNormalizeResult 
   // list of anonymous pairings, so it is kept beside the name, not discarded.
   const side = (
     nameTag: string,
+    teamTag: string,
     combinedTag: string,
     titleName: string | undefined,
     titleTeam: string | undefined,
   ): { player: string; team?: string } => {
-    const combined = splitTeamAndPlayer(tags.get(combinedTag));
+    const combinedRaw = tags.get(combinedTag)?.trim();
+    const combined = splitTeamAndPlayer(combinedRaw);
     const clean = tags.get(nameTag)?.trim();
     const player = clean || combined.player || titleName || '';
-    // Only trust the combined tag's team when it agrees on the player, so a
-    // mismatched pair of tags yields no affiliation rather than a wrong one.
-    const team = combined.team && (!clean || clean === combined.player) ? combined.team : titleTeam;
+    // The dedicated team tag first. Failing that, a combined tag that ends
+    // with the clean name gives the team as what precedes it: a Latin name
+    // has spaces, so "Katy Van Nguyen" split at its last space made the team
+    // "Katy Van" (2026 North American Championship). Otherwise only trust a
+    // split that agrees on the player, so a mismatched pair of tags yields no
+    // affiliation rather than a wrong one; the title splits the same way.
+    const statedTeam = tags.get(teamTag)?.trim();
+    const beforeClean =
+      clean && combinedRaw?.endsWith(` ${clean}`)
+        ? combinedRaw.slice(0, -clean.length - 1).trim()
+        : undefined;
+    const team =
+      statedTeam ||
+      beforeClean ||
+      (combined.team && (!clean || clean === combined.player) ? combined.team : undefined) ||
+      (!clean || clean === titleName ? titleTeam : undefined);
     return { player, ...(team ? { team } : {}) };
   };
 
-  const redSide = side('redname', 'red', titleParts.red, titleParts.redTeam);
-  const blackSide = side('blackname', 'black', titleParts.black, titleParts.blackTeam);
+  const redSide = side('redname', 'redteam', 'red', titleParts.red, titleParts.redTeam);
+  const blackSide = side('blackname', 'blackteam', 'black', titleParts.black, titleParts.blackTeam);
   const red = redSide.player;
   const black = blackSide.player;
   if (!red || !black) {
@@ -172,6 +216,13 @@ export function normalizeDpxqPageToFrameHtml(text: string): DpxqNormalizeResult 
     ...(redTeam ? [`[DhtmlXQ_redteam]${escapeFrameValue(redTeam)}[/DhtmlXQ_redteam]`] : []),
     ...(blackTeam ? [`[DhtmlXQ_blackteam]${escapeFrameValue(blackTeam)}[/DhtmlXQ_blackteam]`] : []),
     `[DhtmlXQ_result]${escapeFrameValue(result)}[/DhtmlXQ_result]`,
+    // What the game was, beyond its moves: the team match, table, which game
+    // of the pair, how it was played, when, and the opening. The converter
+    // reads them into board.details; a page without them carries none.
+    ...GAME_DETAIL_TAGS.flatMap((tag) => {
+      const value = tags.get(tag)?.trim();
+      return value ? [`[DhtmlXQ_${tag}]${escapeFrameValue(value)}[/DhtmlXQ_${tag}]`] : [];
+    }),
     `[DhtmlXQ_movelist]${movelist}[/DhtmlXQ_movelist]`,
     '[/DhtmlXQiFrame]',
   ].join('\n');

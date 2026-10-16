@@ -68,9 +68,11 @@ function seedRoot<Truth>(
   return parsed?.ok ? { truth: parsed.state, custom: true } : { truth: fallback(), custom: false };
 }
 
-/** `?moves=` tokens to moves. The dash is cosmetic (`a1-b1` is the UCI `a1b1`),
- *  so it is stripped before the adapter's own parser runs. */
-function movesFromParam<Move, Truth>(
+/** `?moves=` tokens to moves. The dash and a check mark are cosmetic (`a1-b1+`
+ *  is the UCI `a1b1`), so they are stripped before the adapter's own parser
+ *  runs: the import box is filled from the move labels, which carry + and #.
+ *  Exported for tests. */
+export function movesFromParam<Move, Truth>(
   raw: string | null,
   codec: MoveCodec<Move, Truth>,
   rootTruth: Truth,
@@ -80,7 +82,7 @@ function movesFromParam<Move, Truth>(
   let truth = rootTruth;
   let legalSoFar = true;
   for (const token of raw.split(/[\s,]+/).filter(Boolean)) {
-    const move = codec.fromUci(token.replace(/-/g, ''), truth);
+    const move = codec.fromUci(token.replace(/[-+#]/g, ''), truth);
     if (!move) continue;
     moves.push(move);
     // Keep parsing in context while the line is legal; after the first illegal
@@ -468,6 +470,34 @@ export async function mountVariantAnalysisPage(
         importPanel: makeImportPanel(id, atomicXiangqiTreeAdapter, rootTruth),
         onLineChange: syncLineToUrl(atomicXiangqiTreeAdapter),
         boardEditorHref: (node) => editorHref(id, atomicXiangqiFen(node)),
+      });
+      return;
+    }
+    case 'crazyhouse-xiangqi': {
+      // Fairy-Stockfish's crazyhousexiangqi FEN, pocket in brackets, so a
+      // pasted position keeps its hands. The editor has no hands (it writes an
+      // empty pocket), so the hand-off carries the board and the turn.
+      const [
+        { mountCrazyhouseXiangqiReview },
+        { crazyhouseXiangqiTreeAdapter },
+        { crazyhouseXiangqiFen, parseCrazyhouseXiangqiFen },
+      ] = await Promise.all([
+        import('./review/crazyhouse-xiangqi-review.js'),
+        import('./review/crazyhouse-xiangqi-tree-adapter.js'),
+        import('@mistboard/game'),
+      ]);
+      const parsed = fenParam ? parseCrazyhouseXiangqiFen(fenParam, ANALYSIS_GAME_ID) : null;
+      const rootTruth = parsed?.ok ? parsed.state : crazyhouseXiangqiTreeAdapter.initialTruth();
+      mountCrazyhouseXiangqiReview(root, {
+        ...base,
+        summary: summaryFor(parsed?.ok === true),
+        root: parsed?.ok
+          ? { truth: parsed.state, fen: crazyhouseXiangqiFen(parsed.state) }
+          : undefined,
+        moves: movesFromParam(movesParam, crazyhouseXiangqiTreeAdapter, rootTruth),
+        importPanel: makeImportPanel(id, crazyhouseXiangqiTreeAdapter, rootTruth),
+        onLineChange: syncLineToUrl(crazyhouseXiangqiTreeAdapter),
+        boardEditorHref: (node) => editorHref(id, crazyhouseXiangqiFen(node)),
       });
       return;
     }

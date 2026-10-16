@@ -2,12 +2,27 @@
 // Push a production release only through the safe CI -> deploy -> smoke order.
 
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir, hostname } from 'node:os';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
+import {
+  currentMonth,
+  insertChangelogEntries,
+  parseChangelogArg,
+  previewInsertion,
+} from './lib/changelog-entry.mjs';
 import { ciOutcome, classifyJobs } from './lib/ci-run-verdict.mjs';
 import { describeDrainToken } from './lib/drain-token.mjs';
+import {
+  acquireReleaseLock,
+  DEFAULT_LOCK_TIMEOUT_MS,
+  defaultLockPath,
+  describeHolder,
+  lockInfo,
+  readLock,
+  releaseOnExit,
+} from './lib/release-lock.mjs';
 import {
   DEFAULT_TEST_DATABASE_URL,
   isDatabaseReachable,
@@ -55,8 +70,12 @@ const VALID_SMOKE_TIERS = new Set(['full', 'web', 'lite', 'none']);
 // that directory is gone the spawn itself dies with "process.cwd failed".
 const releaseRoot = process.cwd();
 let workdir = releaseRoot;
+// The control worktree, once the post-push steps have moved into it (see
+// enterPostPushWorkdir); null while they run from releaseRoot. Kept apart from
+// `workdir` so an adopted tip can fast-forward it again (settleExpectedRevision).
+let controlWorktree = null;
 
-const options = parseArgs(process.argv.slice(2));
+const options = parseArgsOrExit(process.argv.slice(2));
 if (options.help) {
   printHelp();
   process.exit(0);
@@ -73,15 +92,55 @@ const release = {
   drainRequired: false,
   deployRequired: false,
   headRevision: null,
+  // The revision production is expected to serve, which the revision wait, the
+  // smoke tier and --expect-revision all track. It is headRevision until
+  // another session's push supersedes ours during the hosted CI wait and the
+  // release adopts the new tip (see waitForGithubCi); headRevision then stays
+  // the commit this release pushed, for the summary.
+  expectedRevision: null,
+  // Every tip adopted during the CI wait, oldest first.
+  adopted: [],
   planReason: null,
   productionRevision: null,
   pushCompleted: false,
   targetRevision: null,
+  // The record this release appends to the release log at exit: every timed
+  // stage with its duration, the gate it chose, the smoke tier, the CI run.
+  // Until 2026-09-23 the only record of a release was the session transcript.
+  startedAtIso: new Date().toISOString(),
+  stages: [],
+  gate: null,
+  smokeTier: null,
+  ciRunUrl: null,
+  // The commit the --changelog lines link (HEAD when the release started), and
+  // the changelog commit made on top of it; null without --changelog.
+  featureRevision: null,
+  changelogCommit: null,
+  // How long this release queued behind another for the machine-wide lock.
+  lockWaitMs: null,
+  lockWaited: false,
 };
+
+// Module state the run below reads. It must be declared ABOVE the run block:
+// the functions are hoisted and callable from it, a `const` is not, and one
+// declared further down throws "Cannot access before initialization" the
+// first time a rare path reaches it (release-prod-structure.test.mjs).
+// confirmAncestor's answers, keyed pushed..tip.
+const ancestryCache = new Map();
 
 try {
   if (!options.plan) ensureCleanWorktree();
+  if (options.changelog.length > 0) checkChangelogPreconditions();
+  // One release at a time on this machine, taken before anything reads or
+  // fetches origin/main: a release that queued finds main moved by the one it
+  // waited for, and the catch-up below has to see that move.
+  if (options.push && !options.plan) {
+    await takeReleaseLock();
+    catchUpBeforeGate();
+  }
+  if (options.changelog.length > 0 && !options.plan) commitChangelog();
   release.headRevision = git(['rev-parse', '--verify', options.head]);
+  release.expectedRevision = release.headRevision;
   release.targetRevision = readRemoteTargetRevision();
 
   if (options.plan) {
@@ -124,28 +183,18 @@ try {
     } else {
       console.log('production drain: not required (0 active games)');
     }
-    // Precondition only. safe-deploy resolves the token itself from the same
-    // two sources, so the value never crosses this process's argv or output;
-    // checking here just keeps a release from running ci:quick and then dying
+    // Precondition only: keeps a release from running ci:quick and then dying
     // at the drain step.
-    if (release.drainRequired) {
-      // describeDrainToken separates "never stored" from "stored but this
-      // process cannot read it" — remedies that share nothing. The old message
-      // named only the first, which on 2026-09-09 sent a session to the
-      // Railway dashboard for an answer the lookup already had.
-      const token = describeDrainToken();
-      if (!token.ok) {
-        throw new Error(
-          `A drain token is required for this deploy (${
-            liveGames === null ? 'active game count unreadable' : `${liveGames} active game(s)`
-          }), and it is not usable here (${token.status}). ${token.detail}`,
-        );
-      }
-    }
+    if (release.drainRequired) requireUsableDrainToken(liveGames);
   }
 
   if (options.localCi) {
-    runTimed('local ci:quick', ['npm', 'run', 'ci:quick']);
+    const gate = localGateFor(ciPlan.changedFiles, release.targetRevision, options.fullCi);
+    release.gate = { kind: gate.kind, reason: gate.reason };
+    console.log(`local gate: ${gate.kind} (${gate.reason})`);
+    for (const command of gate.commands) {
+      runTimed(`local ${command.slice(2).join(' ')}`, command);
+    }
     // ci:quick does NOT include test:persistent, and the push below goes out
     // with --no-verify, which skips the pre-push hook that WOULD have run it.
     // So without this a persistence change reaches hosted CI unproven: that is
@@ -153,10 +202,29 @@ try {
     // the next deploy behind them.
     await runReleasePersistenceGate(ciPlan.changedFiles);
   } else {
-    console.log('skip: local ci:quick (--skip-local-ci)');
+    console.log('skip: local gate (--skip-local-ci)');
   }
 
   if (options.push) {
+    catchUpWithMain();
+    // The first count was read before the local gate, minutes ago. A game that
+    // started since would be killed by the container swap undrained (2026-10-01:
+    // the 10:38 PDT swap logged shutdown_without_drain with one game live), so
+    // read it again right before the push that triggers the deploy.
+    if (release.deployRequired && !release.drainRequired) {
+      const liveGames = await fetchActiveGameCount();
+      if (liveGames !== 0) {
+        release.drainRequired = true;
+        console.log(
+          `production drain: required at push (${
+            liveGames === null
+              ? 'could not read active game count; failing safe'
+              : `${liveGames} active game(s) started during the release`
+          })`,
+        );
+        requireUsableDrainToken(liveGames);
+      }
+    }
     if (release.drainRequired) {
       runTimed('production drain', [
         'node',
@@ -179,7 +247,10 @@ try {
   }
 
   if (release.ciRequired && options.ciWait) {
-    await waitForGithubCi({ headRevision: release.headRevision });
+    const verified = await timedStage('hosted CI wait', () =>
+      waitForGithubCi({ headRevision: release.headRevision }),
+    );
+    if (verified.tip !== release.headRevision) settleExpectedRevision(verified);
   } else if (!release.ciRequired) {
     console.log(`skip: hosted CI wait (${release.ciReason})`);
   } else {
@@ -187,38 +258,62 @@ try {
   }
 
   if (release.deployRequired) {
-    runTimed('production revision wait', prodWaitCommand(release.headRevision));
+    runTimed('production revision wait', prodWaitCommand(release.expectedRevision));
   } else {
     console.log(
-      `skip: exact revision wait; production is not expected to serve ${release.headRevision.slice(
-        0,
-        12,
+      `skip: exact revision wait; production is not expected to serve ${shortRevision(
+        release.expectedRevision,
       )} (${release.planReason})`,
     );
   }
 
-  await runSmoke({ deployRequired: release.deployRequired, headRevision: release.headRevision });
+  await runSmoke({
+    deployRequired: release.deployRequired,
+    headRevision: release.expectedRevision,
+  });
 
   announceNews({ deployRequired: release.deployRequired });
 
+  submitIndexNow({ deployRequired: release.deployRequired });
+
   const elapsedMs = Math.round(performance.now() - startedAt);
-  console.log(`release: ok in ${formatDuration(elapsedMs)}`);
+  console.log(`release: ok in ${formatDuration(elapsedMs)}${adoptionSummary()}`);
+  writeReleaseRecord({ elapsedMs, outcome: 'ok' });
 } catch (error) {
   cancelUnpublishedDrain();
   const elapsedMs = Math.round(performance.now() - startedAt);
-  console.error(`release: failed after ${formatDuration(elapsedMs)}`);
+  console.error(`release: failed after ${formatDuration(elapsedMs)}${adoptionSummary()}`);
   console.error(error instanceof Error ? error.message : String(error));
+  writeReleaseRecord({
+    elapsedMs,
+    outcome: 'failed',
+    error: (error instanceof Error ? error.message : String(error)).split('\n')[0].slice(0, 300),
+  });
   process.exit(1);
+}
+
+// A bad flag is a usage error, not a crash: one line, exit 2.
+function parseArgsOrExit(args) {
+  try {
+    return parseArgs(args);
+  } catch (error) {
+    console.error(`release-prod: ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(2);
+  }
 }
 
 function parseArgs(args) {
   const parsed = {
     baseUrl: null,
+    changelog: [],
+    changelogSummary: null,
     ciWait: true,
     ciWorkflow: DEFAULT_CI_WORKFLOW,
     head: 'HEAD',
     help: false,
     localCi: true,
+    lockTimeoutMs: DEFAULT_LOCK_TIMEOUT_MS,
+    fullCi: false,
     plan: false,
     planBase: null,
     planFiles: [],
@@ -234,12 +329,18 @@ function parseArgs(args) {
     const arg = args[index];
     if (arg === '--base') {
       parsed.baseUrl = requiredValue(args, ++index, arg);
+    } else if (arg === '--changelog') {
+      parsed.changelog.push(parseChangelogArg(requiredValue(args, ++index, arg)));
+    } else if (arg === '--changelog-summary') {
+      parsed.changelogSummary = requiredValue(args, ++index, arg);
     } else if (arg === '--ci-workflow') {
       parsed.ciWorkflow = requiredValue(args, ++index, arg);
     } else if (arg === '--head') {
       parsed.head = requiredValue(args, ++index, arg);
-    } else if (arg === '--plan') {
+    } else if (arg === '--plan' || arg === '--dry-run') {
       parsed.plan = true;
+    } else if (arg === '--lock-timeout-ms') {
+      parsed.lockTimeoutMs = parsePositiveInteger(requiredValue(args, ++index, arg), arg);
     } else if (arg === '--plan-base') {
       parsed.planBase = requiredValue(args, ++index, arg);
       parsed.plan = true;
@@ -252,6 +353,8 @@ function parseArgs(args) {
       parsed.remote = requiredValue(args, ++index, arg);
     } else if (arg === '--skip-ci-wait') {
       parsed.ciWait = false;
+    } else if (arg === '--full-ci') {
+      parsed.fullCi = true;
     } else if (arg === '--skip-local-ci') {
       parsed.localCi = false;
     } else if (arg === '--smoke') {
@@ -269,6 +372,20 @@ function parseArgs(args) {
     } else {
       throw new Error(`unknown argument: ${arg}`);
     }
+  }
+
+  if (parsed.changelog.length > 0 && !parsed.help) {
+    if (parsed.head !== 'HEAD') {
+      throw new Error('--changelog commits on top of HEAD; it cannot be combined with --head');
+    }
+    if (!parsed.push && !parsed.plan) {
+      throw new Error(
+        '--changelog commits the line for the push to carry: pass --push, or --dry-run to preview it',
+      );
+    }
+  }
+  if (parsed.changelogSummary !== null && parsed.changelog.length === 0) {
+    throw new Error('--changelog-summary needs at least one --changelog');
   }
 
   return parsed;
@@ -385,6 +502,17 @@ function runPlanModeAndExit() {
   console.log(`head: ${release.headRevision}`);
   console.log(`target: ${options.remote}/${options.targetBranch}`);
   console.log(`target_head: ${release.targetRevision ?? 'unknown'}`);
+  const lock = readLock(defaultLockPath());
+  console.log(
+    `release lock: ${lock.exists ? `held by ${describeHolder(lock.holder)}` : 'free'} (not taken in a dry run)`,
+  );
+  if (options.changelog.length > 0) {
+    const planned = planChangelog(release.headRevision);
+    console.log('');
+    console.log(`# changelog (dry run: CHANGELOG.md is not written, nothing is committed)`);
+    console.log(previewInsertion(planned.before, planned.after));
+    console.log(`commit: ${planned.message}`);
+  }
 
   const changedOverride = planChangedFiles();
   if (changedOverride === null) {
@@ -421,6 +549,61 @@ function planChangedFiles() {
   return null;
 }
 
+/**
+ * The local gate, chosen by what changed. It used to be ci:quick every time:
+ * the whole repo's suite for an article edit, 8-12 minutes, which is long
+ * enough on a busy day for main to move and the push to be rejected (three
+ * attempts on 2026-09-22). The path rules live in scripts/pre-push-check.mjs
+ * and are asked for as data rather than copied, so the release gate and the
+ * pre-push gate cannot drift apart. This is the ONLY local gate on the release
+ * path, because the push goes out with --no-verify.
+ *
+ * Falls back to ci:quick whenever the classifier cannot be trusted: --full-ci,
+ * an unreadable diff or base, or a change set large enough that argv is the
+ * wrong channel for it.
+ *
+ * The base revision goes with the file list: the targeted plan ends in
+ * `verify --since <base>`, and without a base it fell back to `verify --changed`,
+ * which reads the working tree. A release tree is clean, so that verified 0 files
+ * and ran no tests (2026-10-02, b40cb193 shipped a red web test to hosted CI).
+ */
+function localGateFor(changedFiles, baseRevision, fullCi) {
+  const FULL = { kind: 'full', reason: 'ci:quick', commands: [['npm', 'run', 'ci:quick']] };
+  if (fullCi) return { ...FULL, reason: '--full-ci' };
+  if (!Array.isArray(changedFiles) || changedFiles.length === 0) {
+    return { ...FULL, reason: 'no readable change set' };
+  }
+  if (!baseRevision) return { ...FULL, reason: 'no base revision for the change set' };
+  if (changedFiles.length > 400) {
+    return { ...FULL, reason: `${changedFiles.length} changed files` };
+  }
+  const result = spawnSync(
+    'node',
+    [
+      'scripts/pre-push-check.mjs',
+      '--plan',
+      '--json',
+      '--base',
+      baseRevision,
+      '--files',
+      ...changedFiles,
+    ],
+    { encoding: 'utf8' },
+  );
+  if (result.status !== 0 || !result.stdout) {
+    return { ...FULL, reason: 'could not read the path plan' };
+  }
+  try {
+    const plan = JSON.parse(result.stdout);
+    if (!Array.isArray(plan.commands) || plan.commands.length === 0) {
+      return { ...FULL, reason: `${plan.kind} plan had no commands` };
+    }
+    return { kind: plan.kind, reason: plan.reason, commands: plan.commands };
+  } catch {
+    return { ...FULL, reason: 'could not parse the path plan' };
+  }
+}
+
 function printHostedCiPlan({ changedFiles, ciRequired, matched, reason, unmatched }) {
   console.log('# hosted CI plan');
   console.log(`hosted_ci_required=${ciRequired ? 'true' : 'false'}`);
@@ -435,27 +618,73 @@ function printHostedCiPlan({ changedFiles, ciRequired, matched, reason, unmatche
   console.log('');
 }
 
+/**
+ * Wait for hosted CI to pass on `headRevision`, or on whatever main's tip
+ * becomes while we wait. Resolves to `{ revision, tip, adopted }`: the
+ * revision whose run passed, the newest tip of main confirmed to contain it
+ * (equal to `revision` unless a run-less descendant landed meanwhile), and the
+ * tips adopted on the way (empty when the pushed commit's own run passed).
+ *
+ * Another session can win the push race at any point in the several minutes
+ * this wait runs for, and the moment it does, ci.yml's cancel-in-progress kills
+ * the run we are watching. Until 2026-09-22 that failed the release (eleven
+ * times in September, each a five-minute re-run from the new main). Now, when
+ * the new tip CONTAINS the pushed commit and has a run of its own, the release
+ * adopts it: the tip's run tests a tree with our change in it and Railway
+ * deploys the tip, so following it is the same verification with no re-run,
+ * and the only revision wait that can end. Adoption can repeat (the adopted
+ * tip is just as exposed to the next push), and every adoption spends the one
+ * deadline set here: a release does not earn more time by being overtaken.
+ * The decision rules, including the tips that must NOT be adopted, live in
+ * lib/ci-run-verdict.mjs.
+ */
 async function waitForGithubCi({ headRevision }) {
   const deadline = Date.now() + options.timeoutMs;
+  let revision = headRevision;
+  const adopted = [];
   let run = null;
   let attempt = 0;
 
   console.log(`# hosted CI wait`);
   while (Date.now() <= deadline) {
     attempt += 1;
-    const runs = listGithubRuns(headRevision);
-    run = runs.find((candidate) => candidate.headSha === headRevision) ?? null;
-    // Checked every poll, not once: another session can win the push race at any
-    // point in the several minutes this wait runs for, and the moment it does,
-    // ci.yml's cancel-in-progress kills the run we are watching.
-    const superseded = supersededBy(headRevision);
-    const verdict = run?.status === 'completed' ? jobVerdict(run) : null;
-    const decision = ciOutcome({ run, verdict, headRevision, superseded });
+    run = findGithubRun(revision);
+    if (run?.url) release.ciRunUrl = run.url;
+    // Checked every poll, not once (see above).
+    const superseded = supersededBy(revision);
+    const isAncestor = superseded ? confirmAncestor(revision, superseded) : false;
+    const tipRun = superseded && isAncestor === true ? findGithubRun(superseded) : null;
+    // Jobs are read while the run is still in progress too: the verdict passes
+    // as soon as every required job is green (lib/ci-run-verdict.mjs), instead
+    // of after the aggregator and issue jobs have each queued for a runner.
+    const verdict =
+      run && (run.status === 'completed' || run.status === 'in_progress') ? jobVerdict(run) : null;
+    const decision = ciOutcome({
+      run,
+      verdict,
+      headRevision: revision,
+      superseded,
+      isAncestor,
+      tipRun,
+    });
     if (decision.outcome === 'pass') {
       console.log(decision.message);
-      return;
+      const tip = superseded && isAncestor === true ? superseded : revision;
+      return { revision, tip, adopted };
     }
     if (decision.outcome === 'fail') throw new Error(decision.message);
+    if (decision.outcome === 'adopt') {
+      console.log(`attempt ${attempt}: ${decision.message}`);
+      console.log(
+        `adopt: pushed ${shortRevision(headRevision)}, main is now ` +
+          `${shortRevision(decision.adoptRevision)} which contains it; following ` +
+          `${shortRevision(decision.adoptRevision)}'s run with the same deadline`,
+      );
+      adopted.push(decision.adoptRevision);
+      revision = decision.adoptRevision;
+      run = null;
+      continue;
+    }
     console.log(`attempt ${attempt}: ${decision.message}`);
 
     if (Date.now() + GITHUB_POLL_MS > deadline) break;
@@ -463,10 +692,111 @@ async function waitForGithubCi({ headRevision }) {
   }
 
   throw new Error(
-    `timed out waiting for ${options.ciWorkflow} on ${headRevision}; last run=${
-      run ? `${run.status}/${run.conclusion ?? 'none'} ${run.url ?? ''}` : 'not found'
-    }`,
+    `timed out waiting for ${options.ciWorkflow} on ${revision}${
+      adopted.length > 0 ? ` (adopted after pushing ${headRevision})` : ''
+    }; last run=${run ? `${run.status}/${run.conclusion ?? 'none'} ${run.url ?? ''}` : 'not found'}`,
   );
+}
+
+// Whether `pushed` is an ancestor of `tip`, the commit another session moved
+// main to. True: the tip's run tests a tree containing our change and
+// production will serve the tip, so the release can follow it. False: history
+// was rewritten and nothing on main covers what we pushed. Null: not knowable on
+// this poll (the fetch failed, or main moved again between the ls-remote and
+// the fetch so the tip is not local yet); the caller polls again, inside the
+// same deadline.
+//
+// The tip is fetched, never assumed local: it is another session's commit and
+// this checkout has never seen it. The fetch lands in the shared .git, which is
+// what lets the control worktree fast-forward to the tip afterwards.
+function confirmAncestor(pushed, tip) {
+  const key = `${pushed}..${tip}`;
+  if (ancestryCache.has(key)) return ancestryCache.get(key);
+  const gitHere = (args) =>
+    spawnSync('git', args, { cwd: workdir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  const fetched = gitHere([
+    'fetch',
+    '--quiet',
+    options.remote,
+    `refs/heads/${options.targetBranch}`,
+  ]);
+  if (fetched.status !== 0) {
+    console.log(
+      `warn: could not fetch ${options.remote} ${options.targetBranch} (${firstLine(fetched.stderr)})`,
+    );
+    return null;
+  }
+  if (gitHere(['cat-file', '-e', `${tip}^{commit}`]).status !== 0) return null;
+  const ancestry = gitHere(['merge-base', '--is-ancestor', pushed, tip]);
+  if (ancestry.status !== 0 && ancestry.status !== 1) {
+    console.log(
+      `warn: could not compare ${shortRevision(pushed)} with ${shortRevision(tip)} (${firstLine(
+        ancestry.stderr,
+      )})`,
+    );
+    return null;
+  }
+  const result = ancestry.status === 0;
+  ancestryCache.set(key, result);
+  return result;
+}
+
+// Main moved past the pushed commit to `tip`, which contains it. Decide which
+// revision production will serve, since the revision wait and the smokes'
+// --expect-revision are pinned to one SHA and time out on any other: Railway
+// deploys a push only when it touches a watch pattern (railway.web.json), so
+// the tip is served when the pushed..tip diff matches one, and the pushed
+// commit stays served when it does not (a docs-only or scripts-only push). The
+// same classifier as the deploy plan answers it, against the same config. An
+// unreadable answer keeps the tip, which is what a push that cancelled our run
+// (apps/**, packages/**) deploys nearly always.
+//
+// The control worktree follows the tip when the post-push steps run from there
+// (enterPostPushWorkdir fast-forwarded it to the pushed commit; the tip is a
+// descendant, fetched by confirmAncestor). A refused fast-forward is a warning:
+// the smokes then run from the pushed commit's scripts, as before adoption.
+function settleExpectedRevision({ tip, adopted }) {
+  release.adopted = adopted;
+  const deploys = tipDeploysOver(release.headRevision, tip);
+  release.expectedRevision = deploys === false ? release.headRevision : tip;
+  console.log(
+    `release: main moved to ${tip} (${adopted.length > 0 ? `adopted ${adopted.map(shortRevision).join(' -> ')}` : 'no run of its own'}); ` +
+      (deploys === false
+        ? `production keeps serving ${shortRevision(release.headRevision)}, the newer commits match no Railway watch pattern`
+        : `production is expected to serve ${shortRevision(tip)}, not ${shortRevision(release.headRevision)}${deploys === null ? ' (watch-pattern read failed; assuming the tip deploys)' : ''}`),
+  );
+  if (!controlWorktree) return;
+  const reason = bringControlWorktreeTo(controlWorktree, tip);
+  if (reason) {
+    console.log(
+      `warn: control worktree ${controlWorktree} stays behind the adopted tip (${reason}); post-push steps keep running from it`,
+    );
+  }
+}
+
+// Whether the base..head diff matches a Railway web watch pattern, read from
+// the deploy planner so the two can never disagree. Null when it cannot be read.
+function tipDeploysOver(base, head) {
+  try {
+    const output = runCapture(
+      'adopted tip deploy plan',
+      ['node', 'scripts/prod-smoke-plan.mjs', '--base', base, '--head', head],
+      { quiet: true },
+    );
+    return parsePlan(output).deployRequired;
+  } catch (error) {
+    console.log(
+      `warn: could not classify ${shortRevision(base)}..${shortRevision(head)} (${error.message})`,
+    );
+    return null;
+  }
+}
+
+function adoptionSummary() {
+  if (release.adopted.length === 0) return '';
+  return ` (pushed ${shortRevision(release.headRevision)}, followed ${release.adopted
+    .map(shortRevision)
+    .join(' -> ')}; production serves ${shortRevision(release.expectedRevision)})`;
 }
 
 // Read a run's per-job conclusions. The decision made from them, including when
@@ -510,6 +840,11 @@ function supersededBy(headRevision) {
   }
   if (!remote || revisionMatches(remote, headRevision)) return null;
   return remote;
+}
+
+// The ci.yml push run for one revision, or null when GitHub lists none.
+function findGithubRun(revision) {
+  return listGithubRuns(revision).find((candidate) => candidate.headSha === revision) ?? null;
 }
 
 function listGithubRuns(headRevision) {
@@ -574,6 +909,226 @@ function prodWaitCommand(headRevision) {
   return command;
 }
 
+// Main moved while the local gate ran. In the 30 days to 2026-09-22, 30 of
+// 148 failed release attempts were pushes rejected as non-fast-forward, each
+// retried by hand (merge, re-gate, push) at about five minutes. Before the
+// push, read the remote once more: when it moved and this checkout is on
+// HEAD, merge it in, re-run the path-aware gate on this release's own
+// changes, and push the merge commit. One pass, since a second move during a
+// 20-second re-gate is rare and the push still rejects it as before. A merge
+// conflict aborts the merge and fails the release naming the branch to merge,
+// because resolving it is a person's call.
+//
+// The re-gate is the targeted plan for the diff against the moved main (the
+// merged-in commits passed hosted CI on their own). When that plan would be
+// ci:quick again, only lint and typecheck run here: they catch what a merge
+// breaks (a type that moved, a format the merge re-wrapped), and hosted CI
+// runs everything on the merge commit before the release calls it done.
+function catchUpWithMain() {
+  if (options.head !== 'HEAD') return;
+  const remote = readRemoteTargetRevision();
+  if (!remote || !release.targetRevision || revisionMatches(remote, release.targetRevision)) {
+    return;
+  }
+  git(['fetch', '--quiet', options.remote, `refs/heads/${options.targetBranch}`]);
+  const contained = spawnSync('git', ['merge-base', '--is-ancestor', remote, 'HEAD'], {
+    cwd: workdir,
+    stdio: 'ignore',
+  });
+  if (contained.status === 0) {
+    release.targetRevision = remote;
+    return;
+  }
+  console.log(
+    `main moved during the gate: ${shortRevision(release.targetRevision)} -> ${shortRevision(
+      remote,
+    )}; merging it in before the push`,
+  );
+  mergeRemoteTip(remote, 'during the gate');
+  release.headRevision = git(['rev-parse', '--verify', 'HEAD']);
+  release.expectedRevision = release.headRevision;
+  release.targetRevision = remote;
+  release.adopted = [];
+  const changed = readChangedFiles({ base: remote, head: release.headRevision });
+  const gate = localGateFor(changed, remote, false);
+  const commands =
+    gate.kind === 'full' || gate.kind === 'broad'
+      ? [
+          ['npm', 'run', 'lint'],
+          ['npm', 'run', 'typecheck'],
+        ]
+      : gate.commands;
+  console.log(
+    `re-gate after merge: ${gate.kind} (${gate.reason})${
+      commands === gate.commands ? '' : ', trimmed to lint + typecheck; hosted CI covers the rest'
+    }`,
+  );
+  for (const command of commands) {
+    runTimed(`local ${command.slice(2).join(' ')} (after merge)`, command);
+  }
+}
+
+// Merge the moved main into HEAD. A conflict aborts the merge and fails the
+// release naming the branch to merge, because resolving it is a person's call.
+function mergeRemoteTip(remote, when) {
+  const merge = spawnSync('git', ['merge', '--no-edit', remote], {
+    cwd: workdir,
+    stdio: 'inherit',
+  });
+  if (merge.status !== 0) {
+    spawnSync('git', ['merge', '--abort'], { cwd: workdir, stdio: 'ignore' });
+    throw new Error(
+      `main moved to ${shortRevision(remote)} ${when} and merging it conflicts; ` +
+        `run git merge ${options.remote}/${options.targetBranch}, resolve, and re-run the release`,
+    );
+  }
+}
+
+// Wait for any other release on this machine to finish (scripts/lib/release-lock.mjs).
+// Held to the end of this process, smokes included: the second push is what
+// cancels the first's hosted CI, and a deploy mid-smoke tests the wrong SHA.
+async function takeReleaseLock() {
+  const startedAt = new Date().toISOString();
+  const begun = performance.now();
+  const handle = await acquireReleaseLock({
+    file: defaultLockPath(),
+    info: lockInfo({
+      worktree: releaseRoot,
+      branch: git(['rev-parse', '--abbrev-ref', 'HEAD']),
+      head: git(['rev-parse', '--verify', 'HEAD']),
+    }),
+    timeoutMs: options.lockTimeoutMs,
+  });
+  releaseOnExit(handle);
+  release.lockWaitMs = Math.round(performance.now() - begun);
+  release.lockWaited = handle.waited;
+  if (handle.waited) {
+    recordStage({ label: 'release lock wait', startedAt, ms: release.lockWaitMs, ok: true });
+  }
+  console.log(`release lock: held by this release (${handle.file})`);
+}
+
+// Before the gate, HEAD must contain origin/main or the push is rejected as
+// non-fast-forward after the whole gate has run. The common cause is the lock:
+// the release this one queued behind has just moved main. Merge it in here, so
+// the local gate below tests the merged tree. (catchUpWithMain handles the
+// rarer move DURING the gate.) Only for HEAD; --head <ref> is pushed as given.
+function catchUpBeforeGate() {
+  if (options.head !== 'HEAD') return;
+  const remote = readRemoteTargetRevision();
+  if (!remote) return;
+  git(['fetch', '--quiet', options.remote, `refs/heads/${options.targetBranch}`]);
+  const contained = spawnSync('git', ['merge-base', '--is-ancestor', remote, 'HEAD'], {
+    cwd: workdir,
+    stdio: 'ignore',
+  });
+  if (contained.status === 0) return;
+  console.log(
+    `${options.remote}/${options.targetBranch} is at ${shortRevision(remote)}, which HEAD does not contain${
+      release.lockWaited ? ' (it moved while this release queued)' : ''
+    }; merging it in before the gate`,
+  );
+  mergeRemoteTip(remote, release.lockWaited ? 'while this release queued' : 'before the release');
+}
+
+// --changelog refuses up front, before any lock wait, on the three states that
+// would put a wrong line on the page: an edited CHANGELOG.md, a HEAD that is
+// itself a changelog commit (a retry after a failed release: the line is
+// already committed), and a HEAD the file already links.
+function checkChangelogPreconditions() {
+  if (git(['status', '--porcelain', '--', 'CHANGELOG.md']) !== '') {
+    throw new Error('--changelog: CHANGELOG.md has uncommitted edits; commit or drop them first');
+  }
+  const subject = git(['log', '-1', '--format=%s', 'HEAD']);
+  const touched = git(['diff-tree', '--no-commit-id', '--name-only', '-r', '--root', 'HEAD'])
+    .split('\n')
+    .filter(Boolean);
+  if (
+    /^docs\(changelog\)/.test(subject) ||
+    (touched.length === 1 && touched[0] === 'CHANGELOG.md')
+  ) {
+    throw new Error(
+      `--changelog: HEAD is already a changelog commit (${subject}); release without --changelog`,
+    );
+  }
+  const shortHash = git(['rev-parse', '--short=8', 'HEAD']);
+  const source = readFileSync(path.join(releaseRoot, 'CHANGELOG.md'), 'utf8');
+  if (source.includes(`/commit/${shortHash})`)) {
+    throw new Error(`--changelog: CHANGELOG.md already links ${shortHash}`);
+  }
+  release.featureRevision = git(['rev-parse', '--verify', 'HEAD']);
+}
+
+// The insertion and commit message for --changelog, computed without writing.
+function planChangelog(featureRevision) {
+  const shortHash = git(['rev-parse', '--short=8', featureRevision]);
+  const before = readFileSync(path.join(releaseRoot, 'CHANGELOG.md'), 'utf8');
+  const after = insertChangelogEntries(before, {
+    month: currentMonth(),
+    entries: options.changelog,
+    shortHash,
+  });
+  const subject = git(['log', '-1', '--format=%s', featureRevision]);
+  const summary = options.changelogSummary ?? subject.replace(/^[a-z]+(\([^)]*\))?!?:\s*/i, '');
+  return {
+    before,
+    after,
+    shortHash,
+    message: `docs(changelog): link ${summary} to its landed commit`,
+  };
+}
+
+// Write the --changelog lines, prove the file still parses, and commit them on
+// top of the feature commit, so one push carries both and the line ships in
+// the same release instead of a second, Railway-skipped one. Runs after the
+// lock and the catch-up merge, so the edit lands on the newest CHANGELOG.md
+// and cannot conflict with a line the previous release added.
+function commitChangelog() {
+  const file = path.join(releaseRoot, 'CHANGELOG.md');
+  const planned = planChangelog(release.featureRevision);
+  // Re-checked here: the catch-up merge may have brought in a line for it.
+  if (planned.before.includes(`/commit/${planned.shortHash})`)) {
+    throw new Error(`--changelog: CHANGELOG.md on main already links ${planned.shortHash}`);
+  }
+  console.log('# changelog');
+  console.log(previewInsertion(planned.before, planned.after));
+  writeFileSync(file, planned.after);
+  try {
+    runTimed('changelog grammar test', [
+      'npm',
+      'run',
+      'test:unit',
+      '--workspace',
+      '@mistboard/web',
+      '--',
+      'src/changelog-data.test.ts',
+    ]);
+  } catch (error) {
+    writeFileSync(file, planned.before);
+    throw new Error(`changelog grammar test failed; CHANGELOG.md restored (${error.message})`);
+  }
+  // SKIP_PRECOMMIT: the hook's Biome pass does not cover Markdown and its
+  // typecheck cannot see a CHANGELOG.md edit; the grammar test above is this
+  // file's gate, and the release's local gate runs right after.
+  const commit = spawnSync(
+    'git',
+    ['commit', '--quiet', '-m', planned.message, '--', 'CHANGELOG.md'],
+    {
+      cwd: workdir,
+      stdio: 'inherit',
+      env: { ...process.env, SKIP_LESSON_HINT: '1', SKIP_PRECOMMIT: '1' },
+    },
+  );
+  if (commit.status !== 0) {
+    writeFileSync(file, planned.before);
+    throw new Error('changelog commit failed; CHANGELOG.md restored');
+  }
+  release.changelogCommit = git(['rev-parse', '--verify', 'HEAD']);
+  console.log(
+    `changelog: committed ${shortRevision(release.changelogCommit)} linking ${planned.shortHash}`,
+  );
+}
+
 function pushCommand(headRevision) {
   const command = ['env', 'MISTBOARD_RELEASE_PUSH=1', 'git', 'push'];
   if (options.localCi) command.push('--no-verify');
@@ -583,6 +1138,7 @@ function pushCommand(headRevision) {
 
 async function runSmoke({ deployRequired, headRevision }) {
   const smoke = resolveSmokeTier(headRevision);
+  release.smokeTier = smoke;
   if (smoke === 'none') {
     console.log('skip: prod smoke (--smoke none)');
     return;
@@ -637,6 +1193,8 @@ async function runSmoke({ deployRequired, headRevision }) {
   // on 2026-09-02 and resigned six real games before anyone knew, because
   // nothing here ever asked it for a move. scripts/pve-smoke-coverage.test.ts
   // fails the build if a PvE variant is added without landing in this list.
+  // Retired variants (Fortress and Atomic Xiangqi, 2026-10-11) take no new
+  // games, so a smoke that starts one can only fail; they are EXEMPT there.
   await runParallelSmokes([
     {
       label: 'prod engine smoke',
@@ -644,19 +1202,14 @@ async function runSmoke({ deployRequired, headRevision }) {
       command: npmCommand('prod:smoke:engines', baseArgs()),
     },
     {
-      label: 'prod Fortress smoke',
-      tag: 'fortress',
-      command: npmCommand('prod:smoke:fortress', baseArgs()),
-    },
-    {
       label: 'prod Duck smoke',
       tag: 'duck',
       command: npmCommand('prod:smoke:duck', baseArgs()),
     },
     {
-      label: 'prod Atomic Xiangqi smoke',
-      tag: 'atomic',
-      command: npmCommand('prod:smoke:atomic', baseArgs()),
+      label: 'prod Crazyhouse Xiangqi smoke',
+      tag: 'crazyhouse',
+      command: npmCommand('prod:smoke:crazyhouse', baseArgs()),
     },
     { label: 'prod DXQ smoke', tag: 'dxq', command: npmCommand('prod:smoke:dxq', baseArgs()) },
     {
@@ -684,6 +1237,21 @@ async function runSmoke({ deployRequired, headRevision }) {
       tag: 'jungle-flip',
       command: npmCommand('prod:smoke:jungle-flip', baseArgs()),
     },
+    {
+      label: 'prod Xiangqi Pikafish L8 smoke',
+      tag: 'xiangqi-pikafish',
+      command: npmCommand('prod:smoke:xiangqi-pikafish', baseArgs()),
+    },
+    {
+      label: 'prod Jieqi AB-JChess smoke',
+      tag: 'jieqi-abjchess',
+      command: npmCommand('prod:smoke:jieqi-abjchess', baseArgs()),
+    },
+    {
+      label: 'prod Jungle KataGo smoke',
+      tag: 'jungle-katago',
+      command: npmCommand('prod:smoke:jungle-katago', baseArgs()),
+    },
   ]);
 }
 
@@ -694,6 +1262,14 @@ async function runParallelSmokes(smokes) {
   console.log(`\n# engine-family smokes (${smokes.length} in parallel)`);
   for (const smoke of smokes) console.log(`$ ${quoteCommand(smoke.command)}`);
   const results = await Promise.all(smokes.map(runSmokeProcess));
+  for (const result of results) {
+    recordStage({
+      label: result.label,
+      startedAt: result.startedAt,
+      ms: result.elapsedMs,
+      ok: result.ok,
+    });
+  }
 
   for (const result of results) {
     const verdict = result.ok
@@ -718,6 +1294,7 @@ async function runParallelSmokes(smokes) {
 
 function runSmokeProcess({ label, tag, command }) {
   return new Promise((resolve) => {
+    const startedAtIso = new Date().toISOString();
     const startedAt = performance.now();
     const child = spawn(command[0], command.slice(1), {
       cwd: workdir,
@@ -738,6 +1315,7 @@ function runSmokeProcess({ label, tag, command }) {
         status,
         signal,
         output,
+        startedAt: startedAtIso,
         elapsedMs: Math.round(performance.now() - startedAt),
       });
     child.on('error', (error) => {
@@ -809,6 +1387,23 @@ function safeDeployBaseArgs() {
   ];
 }
 
+// safe-deploy resolves the token itself from the same two sources, so the value
+// never crosses this process's argv or output; this only checks it is usable.
+// describeDrainToken separates "never stored" from "stored but this process
+// cannot read it" — remedies that share nothing. The old message named only the
+// first, which on 2026-09-09 sent a session to the Railway dashboard for an
+// answer the lookup already had.
+function requireUsableDrainToken(liveGames) {
+  const token = describeDrainToken();
+  if (!token.ok) {
+    throw new Error(
+      `A drain token is required for this deploy (${
+        liveGames === null ? 'active game count unreadable' : `${liveGames} active game(s)`
+      }), and it is not usable here (${token.status}). ${token.detail}`,
+    );
+  }
+}
+
 // Read production's live-game count so the release can decide whether a drain
 // is actually needed. Returns null (fail-safe -> drain) on any read failure.
 async function fetchActiveGameCount() {
@@ -836,7 +1431,80 @@ function npmCommand(script, args = []) {
 }
 
 function runTimed(label, command) {
-  run(['node', 'scripts/time-command.mjs', '--label', label, '--', ...command]);
+  const startedAt = new Date().toISOString();
+  const begun = performance.now();
+  try {
+    run(['node', 'scripts/time-command.mjs', '--label', label, '--', ...command]);
+    recordStage({ label, startedAt, ms: Math.round(performance.now() - begun), ok: true });
+  } catch (error) {
+    recordStage({ label, startedAt, ms: Math.round(performance.now() - begun), ok: false });
+    throw error;
+  }
+}
+
+// An async stage that has its own logging (the CI wait), timed the same way.
+async function timedStage(label, work) {
+  const startedAt = new Date().toISOString();
+  const begun = performance.now();
+  try {
+    const result = await work();
+    recordStage({ label, startedAt, ms: Math.round(performance.now() - begun), ok: true });
+    return result;
+  } catch (error) {
+    recordStage({ label, startedAt, ms: Math.round(performance.now() - begun), ok: false });
+    throw error;
+  }
+}
+
+function recordStage(stage) {
+  release.stages.push(stage);
+}
+
+// One JSON line per release attempt, passed or failed, so "where does a
+// release spend its minutes" is a query (npm run release:profile) rather than
+// an afternoon of transcript parsing. Never fails the release: a record that
+// cannot be written is a warning.
+function writeReleaseRecord({ elapsedMs, outcome, error = null }) {
+  if (options.plan) return;
+  const logPath =
+    process.env.MISTBOARD_RELEASE_LOG ||
+    path.join(homedir(), '.local', 'share', 'mistboard', 'releases.jsonl');
+  const record = {
+    v: 1,
+    source: 'release',
+    startedAt: release.startedAtIso,
+    endedAt: new Date().toISOString(),
+    elapsedMs,
+    outcome,
+    ...(error ? { error } : {}),
+    head: release.headRevision,
+    expectedRevision: release.expectedRevision,
+    adopted: release.adopted,
+    targetRevision: release.targetRevision,
+    productionRevisionBefore: release.productionRevision,
+    deployRequired: release.deployRequired,
+    ciRequired: release.ciRequired,
+    ciRunUrl: release.ciRunUrl,
+    changelogCommit: release.changelogCommit,
+    lockWaitMs: release.lockWaitMs,
+    gate: release.gate,
+    smokeTier: release.smokeTier,
+    push: options.push,
+    stages: release.stages,
+    hostname: hostname(),
+    cwd: releaseRoot,
+  };
+  try {
+    mkdirSync(path.dirname(logPath), { recursive: true });
+    appendFileSync(logPath, `${JSON.stringify(record)}\n`);
+    console.log(`release record: ${logPath}`);
+  } catch (writeError) {
+    console.warn(
+      `warn: could not write the release record to ${logPath} (${
+        writeError instanceof Error ? writeError.message : String(writeError)
+      })`,
+    );
+  }
 }
 
 // Once the push lands the branch reads as merged, and a merged task worktree
@@ -872,6 +1540,7 @@ function enterPostPushWorkdir() {
     return;
   }
   workdir = primary;
+  controlWorktree = primary;
   console.log(
     `post-push steps run from ${primary}: this task worktree reads as merged now and may be swept`,
   );
@@ -953,6 +1622,27 @@ function announceNews({ deployRequired }) {
   }
 }
 
+// Tell Bing what this release changed. The prerendered set (static routes plus
+// every article in three languages, ~130 URLs) goes out after the smokes, so a
+// page no longer waits for someone to remember `npm run indexnow` — the growth
+// plan asked for this on release and it was never built. Studies are excluded;
+// see the script's header. A failed submission is a warning: the pages are live
+// either way and a re-run costs nothing.
+function submitIndexNow({ deployRequired }) {
+  if (!deployRequired) {
+    console.log('skip: indexnow (no deploy)');
+    return;
+  }
+  const command = ['node', 'scripts/indexnow-submit.mjs', '--prerendered'];
+  console.log(`\n$ ${quoteCommand(command)}`);
+  const result = spawnSync(command[0], command.slice(1), { cwd: workdir, stdio: 'inherit' });
+  if (result.status !== 0) {
+    console.error(
+      'warning: indexnow submission failed; re-run `npm run indexnow -- --prerendered`',
+    );
+  }
+}
+
 function cancelUnpublishedDrain() {
   if (!release.drainCommitted || release.pushCompleted) return;
   console.error('release stopped before push completed; cancelling production drain');
@@ -1028,6 +1718,14 @@ function revisionMatches(left, right) {
   return left === right || left.startsWith(right) || right.startsWith(left);
 }
 
+function shortRevision(revision) {
+  return revision.slice(0, 12);
+}
+
+function firstLine(output) {
+  return (output || '').trim().split('\n')[0] || 'no output';
+}
+
 function printList(label, values) {
   if (values.length === 0) return;
   console.log(`${label}:`);
@@ -1085,13 +1783,15 @@ function printHelp() {
   console.log(`Usage:
   npm run release:prod -- --push
   npm run release:prod -- --push --smoke lite
+  npm run release:prod -- --push --changelog "Playing: Flip board in a live game"
+  node scripts/release-prod.mjs --dry-run --changelog "Fixed: ..." --plan-file CHANGELOG.md
   npm run release:prod -- --skip-local-ci --smoke web
   node scripts/release-prod.mjs --plan
   node scripts/release-prod.mjs --plan-base <rev> [--head <rev>]
   node scripts/release-prod.mjs --plan-file apps/web/src/main.ts --plan-file scripts/build.mjs
 
 Order:
-  local ci:quick -> drain to zero when games are live -> optional git push -> hosted GitHub CI when matched -> production revision wait when deploying -> smoke
+  release lock -> merge in origin/main if HEAD lacks it -> --changelog commit -> local ci:quick -> drain to zero when games are live -> optional git push -> hosted GitHub CI when matched -> production revision wait when deploying -> smoke
 
 Options:
   --push                   Push --head to origin/main. Drains production first
@@ -1100,8 +1800,29 @@ Options:
                            pool deploys token-free. Without this, assume it is
                            already pushed.
   --head <ref>             Commit/ref to release, default HEAD.
-  --plan                   Dry run: print the deploy plan, hosted CI plan, and
+  --changelog "<Heading>: <line>"
+                           Add a CHANGELOG.md line for HEAD (repeatable): under
+                           the current ## YYYY-MM and ### <Heading> (created
+                           in canonical order if missing), ending in HEAD's
+                           commit link, committed on top as
+                           "docs(changelog): link <summary> to its landed
+                           commit" so the same push carries it. Headings:
+                           Playing, Learning and puzzles, Watching and review,
+                           Community, Site, Removed, Fixed, Technical. No em
+                           dashes, no trailing period, no link of your own.
+                           Runs the changelog grammar test before committing.
+                           Needs --push, or --dry-run to preview.
+  --changelog-summary <t>  The <summary> in that commit message. Default: HEAD's
+                           subject without its type(scope): prefix.
+  --lock-timeout-ms <ms>   How long --push queues behind another release on
+                           this machine before failing, default ${DEFAULT_LOCK_TIMEOUT_MS}.
+                           Lock file: ~/.local/share/mistboard/release.lock
+                           (MISTBOARD_RELEASE_LOCK overrides); a dead holder's
+                           lock is taken over.
+  --plan, --dry-run        Dry run: print the deploy plan, hosted CI plan, and
                            resolved smoke tier, then exit. No ci, push, or smoke.
+                           With --changelog, also prints the lines it would
+                           insert and the commit message.
   --plan-base <rev>        Plan mode with the tier/CI diff taken from <rev>..head
                            instead of the live production revision. Implies --plan.
   --plan-file <path>       Plan mode with an injected changed-file list (repeat
@@ -1109,7 +1830,8 @@ Options:
   --target-branch <name>   Production branch to push/wait, default ${DEFAULT_TARGET_BRANCH}.
   --remote <name>          Git remote for --push, default ${DEFAULT_REMOTE}.
   --smoke <tier>           Smoke tier: full, web, lite, none. Default ${DEFAULT_SMOKE}.
-  --skip-local-ci          Do not run npm run ci:quick before push.
+  --skip-local-ci          Do not run the local gate before push.
+  --full-ci                Force ci:quick as the local gate, whatever changed.
   --skip-ci-wait           Do not wait for hosted GitHub CI.
   --ci-workflow <file>     GitHub CI workflow to wait for, default ${DEFAULT_CI_WORKFLOW}.
   --base <url>             Production base URL, default ${DEFAULT_BASE_URL}.
@@ -1126,5 +1848,15 @@ the exact-revision wait because production is not expected to serve that SHA,
 but still waits for hosted CI when the diff matches the CI workflow paths. When
 local ci:quick runs, --push uses git push --no-verify to avoid running the same
 broad pre-push gate twice. With --skip-local-ci, the pre-push hook still runs
-normally.`);
+normally.
+
+If another session pushes to main during the hosted CI wait, ci.yml cancels the
+run for the pushed commit. When the new tip contains that commit and has a run
+of its own, the release adopts the tip whatever its own run was doing: it waits
+for the tip's run instead, expects production to serve the tip (unless the
+newer commits match no Railway watch pattern, when production keeps serving the
+pushed commit), and runs the smokes against that, all inside the original
+--timeout-ms (adoption can repeat; the summary names the chain). A job of the
+pushed commit's own that failed still fails the release, and so does a tip
+that does not contain the pushed commit, since no run covers what was pushed.`);
 }

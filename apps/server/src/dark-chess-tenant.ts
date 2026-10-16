@@ -152,6 +152,8 @@ export const darkChessTenant: DarkChessTenant = {
   gameSpecId: DARK_CHESS_SPEC_ID,
   roomIdPrefix: DARK_CHESS_TENANT_ROOM_ID_PREFIX,
   colors: ['white', 'black'],
+  // Correspondence only (no lobby), and a correspondence rematch is #531.
+  rematch: { optOut: 'correspondence only (#531)' },
   enabled: () => true,
   oppositeColor: (color) => (color === 'white' ? 'black' : 'white'),
   rules: {

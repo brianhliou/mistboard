@@ -17,7 +17,7 @@ import {
   type AtomicXiangqiPlayerView,
   applyAtomicXiangqiMove,
   createInitialAtomicXiangqiState,
-  formatXiangqiMove,
+  formatAtomicXiangqiMove,
   fsfUciToXiangqiSquares,
   getAtomicXiangqiPlayerView,
   isAtomicXiangqiLegalMove,
@@ -53,7 +53,7 @@ export const atomicXiangqiTreeAdapter: VariantTreeAdapter<
     },
   ],
   moveLabel: (move, parentTruth) =>
-    formatXiangqiMove(parentTruth, move, currentXiangqiNotationStyle()),
+    formatAtomicXiangqiMove(parentTruth, move, currentXiangqiNotationStyle()),
   // Our square notation IS Fairy-Stockfish's for this variant (a1-i10), so the
   // node key, the engine token and the study's stored UCI are one string.
   moveKey: (move) => xiangqiMoveToFsfUci(move),

@@ -27,7 +27,8 @@ export type AnalysisVariantId =
   | 'dark-xiangqi'
   | 'dark-chess'
   | 'duck-xiangqi'
-  | 'atomic-xiangqi';
+  | 'atomic-xiangqi'
+  | 'crazyhouse-xiangqi';
 
 export type AnalysisVariant = {
   id: AnalysisVariantId;
@@ -47,13 +48,16 @@ export const ANALYSIS_VARIANTS: readonly AnalysisVariant[] = [
   entry('xiangqi'),
   entry('jieqi'),
   entry('banqi'),
-  entry('atomic-xiangqi'),
-  entry('dark-xiangqi'),
   entry('duck-xiangqi'),
-  entry('fortress-xiangqi'),
+  entry('crazyhouse-xiangqi'),
+  entry('dark-xiangqi'),
   entry('dark-chess'),
   entry('jungle'),
   entry('jungle-flip'),
+  // Retired 2026-10-11, off the canonical order so at the tail: kept so
+  // /analysis/<slug> still opens a board for a finished game's position.
+  entry('fortress-xiangqi'),
+  entry('atomic-xiangqi'),
 ];
 
 export function analysisVariantLabel(id: AnalysisVariantId): string {

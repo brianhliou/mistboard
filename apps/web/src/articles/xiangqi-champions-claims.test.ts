@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CHAMPIONS } from '@mistboard/board-render';
 import { xiangqiChampionsArticle } from './content/xiangqi-champions.js';
+import { xiangqiWorldChampionshipArticle } from './content/xiangqi-world-championship.js';
 
 // Superlatives in this article have been wrong three separate times: a caption
 // called a 70-ply game the shortest when a 60-ply game was two sections below,
@@ -172,6 +173,65 @@ describe('counts the page states about itself', () => {
         );
       }
     }
+  });
+
+  it('states annotation totals that the boards on both champion pages add up to', () => {
+    // The totals came over from the blog post this page absorbed, where they
+    // were counted once by hand. They cover this page AND the world-title page,
+    // so they are recomputed from both pages' specs: re-annotating or moving a
+    // game between the two pages must move the numbers or fail here.
+    let games = 0;
+    let mainline = 0;
+    let judged = 0;
+    let sidelines = 0;
+    let sidelineMoves = 0;
+    const glyphs: Record<string, number> = {};
+    for (const article of [xiangqiChampionsArticle, xiangqiWorldChampionshipArticle]) {
+      for (const section of article.sections) {
+        for (const block of section.blocks ?? []) {
+          if (block.kind !== 'xq-replay') continue;
+          const spec = block.spec as unknown as {
+            iccs: string;
+            annotations?: { byPly: Record<number, { glyph?: string; line?: string }> };
+          };
+          games += 1;
+          mainline += spec.iccs.trim().split(/\s+/).length;
+          for (const ann of Object.values(spec.annotations?.byPly ?? {})) {
+            judged += 1;
+            glyphs[ann.glyph ?? ''] = (glyphs[ann.glyph ?? ''] ?? 0) + 1;
+            if (ann.line) {
+              sidelines += 1;
+              sidelineMoves += ann.line.trim().split(/\s+/).length;
+            }
+          }
+        }
+      }
+    }
+    const count = (...gs: string[]) => gs.reduce((n, g) => n + (glyphs[g] ?? 0), 0);
+    const fmt = (n: number) => n.toLocaleString('en-US');
+
+    const section = xiangqiChampionsArticle.sections.find(
+      (s) => s.heading === 'How the games were annotated',
+    );
+    expect(section, 'the annotation section should exist').toBeDefined();
+    const table = section?.blocks?.find((b) => b.kind === 'table') as
+      | { rows: string[][] }
+      | undefined;
+    const cell = (label: string) => table?.rows.find((r) => r[0] === label)?.[1];
+    expect(cell('games annotated')).toBe(fmt(games));
+    expect(cell('mainline moves')).toBe(fmt(mainline));
+    expect(cell('moves judged worth marking')).toBe(fmt(judged));
+    expect(cell('engine sidelines')).toBe(fmt(sidelines));
+    expect(cell('moves inside those sidelines')).toBe(fmt(sidelineMoves));
+    expect(cell('moves in the published trees')).toBe(fmt(mainline + sidelineMoves));
+
+    const text = prose();
+    expect(text).toContain(`that comes to ${games} games`);
+    expect(text).toContain(`Of the ${judged} moves judged, ${count('?!')} are inaccuracies`);
+    expect(text).toContain(`${count('?', '??')} are mistakes or blunders`);
+    expect(text).toContain(`${count('!', '!!')} are moves the engine wanted to praise`);
+    expect(count('!!')).toBe(3);
+    expect(text).toContain('three of them marked brilliant');
   });
 
   it('promises one game per champion for as many champions as it profiles', () => {

@@ -1,3 +1,4 @@
+import { hasOwnKey } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import {
   ARTICLE_LANGS,
@@ -6,8 +7,10 @@ import {
   translateArticle,
   translateArticleText,
   translationKeys,
+  UNTRANSLATED_ARTICLE_SLUGS,
 } from './article-i18n.js';
 import { articleProse, articleTranslationSourceStrings } from './article-prose.js';
+import { articleCardLabels, articleDiagramLabels } from './articles/svg-labels.js';
 import { type Article, articles } from './articles-data.js';
 
 // Slugs whose English copy is editorially frozen AND fully translated into
@@ -38,6 +41,42 @@ describe('article translation coverage', () => {
       expect(missing, `untranslated strings:\n${missing.join('\n')}`).toEqual([]);
     });
   }
+
+  // Diagram labels live inside generated SVG, where articleProse cannot see
+  // them, so until 2026-10-01 this file read every rules page as covered while
+  // the zh jieqi page showed SHUFFLED START, BEFORE: HORSE POINT and CAPTURE in
+  // English (68 labels across eight locked pages). localizeSvgMarkup looks each
+  // <text> node up by its trimmed text; this checks the same key.
+  it('every locked article translates its diagram labels in all zh scripts', () => {
+    const missing: string[] = [];
+    for (const slug of TRANSLATED_ARTICLE_SLUGS) {
+      const article = published.find((a) => a.slug === slug);
+      if (!article) continue;
+      for (const { path, text } of articleDiagramLabels(article)) {
+        for (const lang of ARTICLE_LANGS) {
+          if (!hasTranslation(lang, text)) missing.push(`[${lang}] ${slug} ${path}: ${text}`);
+        }
+      }
+    }
+    expect(missing, `untranslated diagram labels:\n${missing.join('\n')}`).toEqual([]);
+  });
+
+  // The index card is the same gap one step earlier: a zh reader met "GAMES
+  // PLAYED" and "SINCE 1956" before opening the article. Read as each script
+  // renders it, so a card that translates its own lines (textCard) is checked as such.
+  it('every locked article translates its index card in all zh scripts', () => {
+    const missing: string[] = [];
+    for (const slug of TRANSLATED_ARTICLE_SLUGS) {
+      const article = published.find((a) => a.slug === slug);
+      if (!article) continue;
+      for (const lang of ARTICLE_LANGS) {
+        for (const text of articleCardLabels(article, lang)) {
+          if (!hasTranslation(lang, text)) missing.push(`[${lang}] ${slug} card: ${text}`);
+        }
+      }
+    }
+    expect(missing, `untranslated card words:\n${missing.join('\n')}`).toEqual([]);
+  });
 
   // seoTitle drives the document <title> and og:title but is NOT prose, so the
   // loop above cannot see it missing. A locked article without an entry ships a
@@ -78,6 +117,32 @@ describe('article translation coverage', () => {
       identical,
       `zh-Hant is byte-identical to zh-Hans for these slugs, which means their\nTraditional entries sit above the ...ZH_HANS spread in article-i18n.ts:\n${identical.join('\n')}`,
     ).toEqual([]);
+  });
+
+  // The checks above only see slugs someone remembered to list, so an article
+  // published without being added passed them all and shipped English zh pages
+  // (fortress-and-atomic-xiangqi-on-hold, 2026-10-13). Every published article
+  // is now either translated or exempt by name, with a reason.
+  it('every published article is translated or explicitly exempt', () => {
+    const translated = new Set<string>(TRANSLATED_ARTICLE_SLUGS);
+    const neither = published
+      .map((a) => a.slug)
+      .filter((slug) => !translated.has(slug) && !hasOwnKey(UNTRANSLATED_ARTICLE_SLUGS, slug));
+    expect(
+      neither,
+      `published with no zh decision; translate and add to TRANSLATED_ARTICLE_SLUGS, or add to UNTRANSLATED_ARTICLE_SLUGS with a reason:\n${neither.join('\n')}`,
+    ).toEqual([]);
+  });
+
+  it('exempt slugs are published, not also translated, and give a reason', () => {
+    const slugs = new Set(published.map((a) => a.slug));
+    const translated = new Set<string>(TRANSLATED_ARTICLE_SLUGS);
+    const problems = Object.entries(UNTRANSLATED_ARTICLE_SLUGS).flatMap(([slug, reason]) => [
+      ...(slugs.has(slug) ? [] : [`${slug}: not a published article`]),
+      ...(translated.has(slug) ? [`${slug}: also in TRANSLATED_ARTICLE_SLUGS`] : []),
+      ...(reason.trim() ? [] : [`${slug}: no reason given`]),
+    ]);
+    expect(problems, problems.join('\n')).toEqual([]);
   });
 
   it('locked slugs are real published articles', () => {

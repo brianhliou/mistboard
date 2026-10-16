@@ -5,6 +5,7 @@
 // never graded). Mirrors review/banqi-decisions.ts; kept separate as a heavier, opt-in tier.
 import { accuracyPercent, type MoveJudgment, moveJudgment } from '@mistboard/game';
 import { postAnalysisJob } from './analysis-job-poll.js';
+import type { DecisionOverlay } from './analysis-marks.js';
 
 /** One flip ply's decomposition, all win% from the MOVER's (seat's) POV (mirrors the server shape). */
 export type JungleFlipDecision = {
@@ -132,4 +133,25 @@ export async function requestJungleFlipDecisions(
     errorPrefix: 'decisions_request_failed',
   });
   return summarizeDecisions(body.decisions);
+}
+
+/** Adapt the jungle-flip decomposition summary to the review's variant-agnostic overlay shape.
+ *  Shared by the postgame review and the game embed. No candidates: the server keeps only
+ *  the played flip's rank, so a judged flip says the word and points at nothing. */
+export function jungleFlipDecisionOverlay(summary: JungleFlipDecisionSummary): DecisionOverlay {
+  return {
+    byPly: new Map(
+      [...summary.byPly].map(([ply, view]) => [
+        ply,
+        {
+          judgment: view.judgment,
+          accuracy: view.accuracy,
+          luck: view.luck,
+          playedRank: view.playedRank,
+        },
+      ]),
+    ),
+    red: { reveals: summary.red.reveals, decisionAccuracy: summary.red.decisionAccuracy },
+    black: { reveals: summary.black.reveals, decisionAccuracy: summary.black.decisionAccuracy },
+  };
 }

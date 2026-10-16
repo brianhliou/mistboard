@@ -14,12 +14,20 @@
   gap: clamp(18px, 2.2vw, 26px);
   min-height: 60px;
   /* Wider gutters than the content below, like lichess: the bar breathes at the
-     edges (~4vw) instead of hugging them. The safe-area terms only resolve to
-     anything on a notched device held in landscape (viewport-fit=cover in
-     index.html); everywhere else env() falls back to 0 and this is the old rule. */
+     edges (~4vw) instead of hugging them. Past ~1900px the bar stops growing and
+     centres, as lichess caps its header at 1780px with a 7px logo inset: the
+     brand and the account slot sit (100vw - 1766px) / 2 in from each edge, so on
+     a wide monitor they line up with lichess's instead of drifting to the
+     corners. The safe-area terms only resolve to anything on a notched device
+     held in landscape (viewport-fit=cover in index.html); everywhere else env()
+     falls back to 0. */
   padding-block: 0;
-  padding-left: max(clamp(20px, 4vw, 72px), env(safe-area-inset-left));
-  padding-right: max(clamp(20px, 4vw, 72px), env(safe-area-inset-right));
+  padding-left: max(clamp(20px, 4vw, 72px), calc((100vw - 1766px) / 2), env(safe-area-inset-left));
+  padding-right: max(
+    clamp(20px, 4vw, 72px),
+    calc((100vw - 1766px) / 2),
+    env(safe-area-inset-right)
+  );
   /* Fade down from the same warm top stop as the page, with the SAME 220px
      endpoint as the body gradient (app-base.css :root) so the two are one
      continuous gradient and there is no seam under the bar. Per-page overrides
@@ -48,18 +56,22 @@
   transform: translateY(-100%);
 }
 
-/* Bar breakpoint. The full bar (brand, seven links, sign in + register, theme)
-   needs about 1110px signed-out at the desktop gutters, and nothing in it can
-   shrink, so below that the utilities overlapped the links. Under 1100px the
-   links collapse into the hamburger drawer (lichess does the same under 980px);
+/* Bar breakpoint: under 940px the links collapse into the hamburger drawer;
    every nav media query in this file, theme.css and account-nav.css keys on the
-   1100 / 1101 pair. From 1101 to 1200px the bar keeps flat 20px gutters so it
-   fits before the 4vw gutters take over. */
-@media (min-width: 1101px) and (max-width: 1200px) {
+   939 / 940 pair. 940 is where the widest bar (admin link, 20-character handle,
+   logo alone) still fits at 20px gutters; lichess folds at 1020. Above it the
+   wordmark is fitted, not broken: fitNavBrand (site-shell.ts) drops it to the
+   logo only while it would not fit. From 940 to 1200px the gutters stay a flat
+   20px so the links keep the room before the 4vw gutters take over. */
+@media (min-width: 940px) and (max-width: 1200px) {
   .site-nav {
     padding-left: max(20px, env(safe-area-inset-left));
     padding-right: max(20px, env(safe-area-inset-right));
   }
+}
+
+.site-nav[data-brand="mark"] .site-nav-brand span {
+  display: none;
 }
 
 @media (max-width: 600px) {
@@ -259,7 +271,7 @@ a.site-nav-link[hidden],
    height and the link's 9px padding (and its neighbours' spacing) is
    untouched: the negative horizontal inset gives the pill its own breathing
    room around the icon and label. */
-@media (min-width: 1101px) {
+@media (min-width: 940px) {
   .site-nav-links > .site-nav-link-donate {
     position: relative;
     isolation: isolate;
@@ -374,7 +386,7 @@ a.site-nav-link[hidden],
   gap: 0;
 }
 
-@media (min-width: 1101px) {
+@media (min-width: 940px) {
   .site-nav-menu-open .site-nav-menu-toggle {
     color: var(--site-text);
     background: var(--site-panel);
@@ -386,7 +398,7 @@ a.site-nav-link[hidden],
    everywhere (mobile collapse keeps click-only). focus-within keeps the panel
    reachable by keyboard even when the title is a navigating link (Community):
    focusing the title reveals the panel so Tab can enter its items. */
-@media (hover: hover) and (min-width: 1101px) {
+@media (hover: hover) and (min-width: 940px) {
   .site-nav-menu:hover .site-nav-menu-panel,
   .site-nav-menu:focus-within .site-nav-menu-panel {
     display: grid;
@@ -513,7 +525,7 @@ a.site-nav-link[hidden],
   text-decoration: underline;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 939px) {
   .site-nav {
     padding: 10px 16px;
   }
@@ -554,7 +566,7 @@ a.site-nav-link[hidden],
   }
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 939px) {
   .site-nav {
     align-items: flex-start;
     flex-wrap: wrap;
@@ -598,7 +610,7 @@ a.site-nav-link[hidden],
   display: contents;
 }
 
-@media (min-width: 601px) and (max-width: 1100px) {
+@media (min-width: 601px) and (max-width: 939px) {
   .site-nav > .site-nav-account {
     display: flex;
     align-items: center;
@@ -616,7 +628,7 @@ a.site-nav-link[hidden],
   }
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 939px) {
   .site-nav {
     flex-wrap: nowrap;
     align-items: center;

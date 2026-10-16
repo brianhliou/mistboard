@@ -1,57 +1,189 @@
-/* Seat-disc ink tokens: the ONE place that says what colour a variant's
-   second ("black") seat paints as in page chrome.
+/* Seat ink tokens: the ONE place that says what colour each seat of each variant
+   family paints as in page chrome -- the eval bar, the engine chips, the advantage
+   chart, the summary dots, the move-time bars and the seat discs.
 
-   Background. Most variants seat red vs black and the disc can just be dark. The
-   Jungle family (Jungle Chess + Flip Jungle) does not: its second side is navy
-   (`JUNGLE_ART.ink.black` = #28323c) and the product brands it BLUE. That rename
-   was already done for the WORD -- `seatColorWord()` returns "Blue" for the
-   family, so a jungle game's result line reads "Blue is victorious" -- and for
-   the eval bar and advantage chart. The seat DISCS were the half that never
-   followed, so every jungle page showed a black dot beside the word Blue and
-   beside a board full of navy pieces.
+   Why one file. Each of those components used to carry its own hexes and its own
+   list of review page classes (`.xiangqi-review, .jieqi-review, ...`), so a surface
+   outside those classes -- the broadcast pages, puzzles, the next variant --
+   silently fell back to the chess palette and showed White/Black on a Red/Black
+   game (Brian, 2026-09-23). Components now read the tokens below with their old
+   value as the fallback, and a new variant is an edit to this file alone.
 
-   Why tokens rather than five scoped overrides. Five different components draw a
-   seat disc (meta card, watch player rows, review seat strips, analysis summary,
-   retro box), each owning its own stylesheet and its own hardcoded hex. Scoping
-   each one to `.jungle-review` would put the same two hexes in five files and
-   make the next variant that wants this a five-file change. A custom property
-   declared on an ancestor is also immune to the chunk-ordering hazard that bites
-   same-specificity overrides on prod builds (memory:
+   A custom property declared on an ancestor is also immune to the chunk-ordering
+   hazard that bites same-specificity overrides on prod builds (memory:
    feedback_css_chunk_order_cascade): there is no competing declaration to lose an
    order fight with, only a fallback.
 
-   Consumers write `background: var(--seat-dark-ink, <their existing hex>)`, so a
-   surface with no family scope above it renders exactly as it did before.
+   Two layers.
 
-   The blues are NOT the piece navy. #28323c is nearly black at 9-14px, which is
-   the whole defect; these are the lifted values the eval bar and advantage chart
-   already settled on for the same reason. */
+   1. INKS (`--ink-*`), per theme, on :root. Two tiers, because a filled shape and a
+      chip under text want different things from the dark theme:
+      - `--ink-red|black|white|blue`: an ink as a filled SHAPE against the page
+        ground (chart areas, dots, bars). Dark lifts them, or a black shape on a
+        near-black panel is not there at all (#34302e on the dark panel is 1.17:1).
+      - `--ink-*-chip` + `--ink-on-*`: an ink carrying TEXT. Theme-invariant, since
+        the text contrast is what sets them: #fff on the lifted dark red would be
+        3.59:1, on the chip red it is 4.52:1.
 
-/* Three hooks, because the three surfaces already scope themselves differently and
-   inventing a fourth convention would be worse than listing them:
+   2. FAMILY SLOTS (`--seat-first-*` / `--seat-second-*`): which ink each seat of a
+      family wears. "First" is the family's first-mover ink and "second" the other:
+      xiangqi red/black, jungle red/blue, chess white/black. For flip variants
+      (Banqi, Flip Jungle) that is the ink, not the move-order seat: the TS binds a
+      seat to an ink after the opening reveal (`seatColors`, `seatInkBindsOnFlip`)
+      and ink-named classes (`advantage-chart__area--black`) resolve through that.
 
+   Every family block restates ALL its slots rather than overriding one ink. A
+   custom property inherits its COMPUTED value, so `--seat-second-ink:
+   var(--ink-black)` declared on :root is already black by the time it reaches a
+   `.jungle-review` that redefines `--ink-black`; only a slot declared on the family
+   element itself resolves there. Slots name inks by var() for the same reason the
+   other way round: the ink resolves at the family element, which inherits the
+   root's theme, so no family needs a dark block of its own. */
+
+:root {
+  --ink-red: #c0563f;
+  --ink-black: #34302e;
+  --ink-white: #e9e5dc;
+  --ink-blue: #34557a;
+  /* Chess Black when the other half is White. Same as Black in light; dark lifts
+     it further (below) because Black's generic lift was tuned against Red. */
+  --ink-black-vs-white: #34302e;
+
+  --ink-red-chip: #c0563f;
+  --ink-black-chip: #34302e;
+  --ink-blue-chip: #34557a;
+  --ink-white-chip: #f2ede3;
+  --ink-on-red: #fff; /* 4.52:1 on the chip red */
+  --ink-on-black: #f2ede3; /* 11.19:1 */
+  --ink-on-blue: #fff; /* 7.70:1 */
+  --ink-on-white: #2b2724; /* 12.69:1 */
+
+  /* How much of the ink the eval gauge keeps over the panel. Light mixes it into
+     the panel so the bar's two shades are clear rather than muddy; dark runs it
+     solid, see below. */
+  --seat-gauge-first-mix: 72%;
+  --seat-gauge-second-mix: 85%;
+}
+
+/* Dark: the values the advantage chart settled on. Black stays black, lifted to a
+   charcoal that still reads as a filled shape on the near-black ground (1.91:1 vs
+   1.17:1), never a light neutral: that read as Red against WHITE on a Red/Black
+   game. Blue is lifted off the piece navy so it reads as blue at all. */
+:root[data-effective-theme="dark"] {
+  --ink-red: #d4674c;
+  --ink-black: #574f48;
+  --ink-white: #f0ece3;
+  --ink-blue: #6b96c8;
+  /* Against WHITE the charcoal collapses into one block; a mid warm grey is
+     4.05:1 against White's area and 3.21:1 against the panel. */
+  --ink-black-vs-white: #7a716a;
+
+  /* Mixed over a near-black panel both halves sank: the xiangqi track was 1.14:1
+     against the page. Solid lifted inks are the chart's own pairs: xiangqi 2.23:1
+     between the halves with the track 1.91:1 on the page; jungle red and blue
+     are near-equal in lightness (1.17:1, was 1.04:1) and separate by hue, each
+     over 4:1 on the page. */
+  --seat-gauge-first-mix: 100%;
+  --seat-gauge-second-mix: 100%;
+}
+
+/* Xiangqi family (Red vs Black), the DEFAULT for any surface with no family scope.
+   Chosen on purpose: seven of the twelve variants and every broadcast, puzzle and
+   player page are xiangqi-family, and the defect this file exists for was chess
+   colours leaking onto red/black pages. The chess family, the minority, is the one
+   that scopes itself (below), and the chart, dots and bars that paint a chess
+   White resolve that ink in TS (`CHESS_SEAT_COLORS`), not from a page class. */
+:root,
+[data-seat-ink-family="xiangqi"] {
+  --seat-first-ink: var(--ink-red);
+  --seat-second-ink: var(--ink-black);
+  --seat-first-chip: var(--ink-red-chip);
+  --seat-second-chip: var(--ink-black-chip);
+  --seat-first-on-chip: var(--ink-on-red);
+  --seat-second-on-chip: var(--ink-on-black);
+  --seat-first-gauge: color-mix(
+    in srgb,
+    var(--ink-red) var(--seat-gauge-first-mix),
+    var(--site-panel, #fff)
+  );
+  --seat-second-gauge: color-mix(
+    in srgb,
+    var(--ink-black) var(--seat-gauge-second-mix),
+    var(--site-panel, #fff)
+  );
+}
+
+/* Jungle family (Jungle Chess + Flip Jungle): Red vs BLUE. Its second side is navy
+   (`JUNGLE_ART.ink.black` = #28323c) and the product brands it Blue --
+   `seatColorWord()` returns "Blue", so a jungle game's result line reads "Blue is
+   victorious" -- which every seat-coloured element has to agree with. #28323c is
+   nearly black at 9-14px, which is why the ink is the lifted blue, not the piece.
+
+   Hooks, because the surfaces already scope themselves differently and inventing a
+   new convention would be worse than listing them:
    - Review pages carry `.jungle-review` / `.jungle-flip-review` on the review shell
-     (set by `pageClassName` in live-jungle-postgame / live-jungle-flip-postgame),
-     the same hook eval-bar.css and advantage-chart.css already scope against.
+     (`pageClassName`).
    - Live rooms carry `.live-route--jungle` / `--jungle-flip` on the route root
-     (setLiveLayoutGameSpec). Included so the room you just played in and the review
-     of that same game do not disagree about what colour you were.
-   - /watch has neither: it is ONE page that swaps variants as you change channel,
-     so it stamps `data-seat-ink-family` on the section per active game. */
+     (setLiveLayoutGameSpec), so the room you just played in and the review of that
+     same game agree about what colour you were.
+   - /watch and embed cards swap variants in place, so they stamp
+     `data-seat-ink-family` (`seatInkFamily()` in variant-seat-label.ts). */
 .jungle-review,
 .jungle-flip-review,
 .live-route--jungle,
 .live-route--jungle-flip,
 [data-seat-ink-family="jungle"] {
-  --seat-dark-ink: #34557a;
+  --seat-first-ink: var(--ink-red);
+  --seat-second-ink: var(--ink-blue);
+  --seat-first-chip: var(--ink-red-chip);
+  --seat-second-chip: var(--ink-blue-chip);
+  --seat-first-on-chip: var(--ink-on-red);
+  --seat-second-on-chip: var(--ink-on-blue);
+  --seat-first-gauge: color-mix(
+    in srgb,
+    var(--ink-red) var(--seat-gauge-first-mix),
+    var(--site-panel, #fff)
+  );
+  --seat-second-gauge: color-mix(
+    in srgb,
+    var(--ink-blue) var(--seat-gauge-second-mix),
+    var(--site-panel, #fff)
+  );
+
+  /* The seat DISC token, older than the slots above and read by five disc
+     components (meta card, watch rows, review seat strips, analysis summary,
+     retro box) as `var(--seat-dark-ink, <their own hex>)`. It stays jungle-only:
+     each disc's fallback is its own tuned dark, and defining it everywhere would
+     repaint every xiangqi disc to one value. */
+  --seat-dark-ink: var(--ink-blue);
   --seat-dark-ink-border: #22354f;
 }
-
 :root[data-effective-theme="dark"] .jungle-review,
 :root[data-effective-theme="dark"] .jungle-flip-review,
 :root[data-effective-theme="dark"] .live-route--jungle,
 :root[data-effective-theme="dark"] .live-route--jungle-flip,
 :root[data-effective-theme="dark"] [data-seat-ink-family="jungle"] {
-  --seat-dark-ink: #6b96c8;
   --seat-dark-ink-border: #3f6690;
+}
+
+/* Chess family (fog chess, chess studies): White vs Black. The gauge and chips keep
+   the cream/charcoal pair chess always had, solid rather than mixed, since White
+   mixed into a white panel would be the panel.
+
+   `.advantage-chart--white-black` is a hook too: the chart sets it from the
+   resolved inks (first White, second Black), so a chess chart on a surface with no
+   chess page class still gets the chess Black rather than the Red-tuned one. */
+.dark-chess-review,
+.chess-review,
+.live-route--chess,
+[data-seat-ink-family="chess"],
+.advantage-chart--white-black {
+  --seat-first-ink: var(--ink-white);
+  --seat-second-ink: var(--ink-black-vs-white);
+  --seat-first-chip: var(--ink-white-chip);
+  --seat-second-chip: var(--ink-black-chip);
+  --seat-first-on-chip: var(--ink-on-white);
+  --seat-second-on-chip: var(--ink-on-black);
+  --seat-first-gauge: var(--ink-white-chip);
+  --seat-second-gauge: var(--ink-black-vs-white);
 }

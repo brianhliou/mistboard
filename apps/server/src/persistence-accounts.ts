@@ -259,6 +259,18 @@ export async function createUser(user: {
 
 // Cheap existence probe by account id — used to validate a challenge target
 // before writing a directed seek (a clean 404 instead of an FK violation).
+// The play lock (126) for an account other than the requester's: a rated
+// correspondence accept seats the seek's CREATOR too, so their lock is checked
+// at that moment, not only when they posted. Missing or closed counts as locked.
+export async function isUserIdPlayDisabled(userId: string): Promise<boolean> {
+  const { rows } = await getPool().query<{ locked: boolean }>(
+    `SELECT (play_disabled_at IS NOT NULL OR closed_at IS NOT NULL) AS locked
+       FROM users WHERE id = $1`,
+    [userId],
+  );
+  return rows[0]?.locked ?? true;
+}
+
 export async function userExists(userId: string): Promise<boolean> {
   const { rows } = await getPool().query<{ one: number }>(
     `SELECT 1 AS one FROM users WHERE id = $1 AND closed_at IS NULL LIMIT 1`,

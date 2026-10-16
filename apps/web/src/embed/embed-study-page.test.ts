@@ -1,6 +1,20 @@
+import {
+  createInitialJungleFlipState,
+  type JieqiSquare,
+  jungleFlipStateToDealtFen,
+} from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { JUNGLE_ART } from '../jungle-art.js';
+import { jieqiMarkerSvg } from '../live-jieqi-render.js';
+import { STUDY_VARIANTS } from '../study-catalog.js';
 import { embedStudyRouteFromPath } from './embed-route.js';
-import { mountEmbedStudy } from './embed-study-page.js';
+import { CHAPTER_EMBED_VARIANTS, mountEmbedStudy } from './embed-study-page.js';
+
+/** Study variants the embed card deliberately refuses by name, each with why. */
+const EMBED_REFUSED_STUDY_VARIANTS: Readonly<Record<string, string>> = {
+  'dark-xiangqi':
+    'no embed board yet (found missing 2026-09-29); a fog xiangqi chapter shows the named refusal',
+};
 
 const CHAPTER = {
   id: 'Ue0EgpS7',
@@ -16,6 +30,52 @@ const CHAPTER = {
     },
   },
 };
+
+/** A mainline as the study tree stores it: each move the first child of the last. */
+function chainTree(tokens: readonly string[]): { children: unknown[] } {
+  let children: unknown[] = [];
+  for (const uci of [...tokens].reverse()) children = [{ uci, children }];
+  return { children };
+}
+
+// Prod study NUVBVjFf chapter qh5eSTC9 (fortress), the full mainline.
+const FORTRESS_GAME_1 = (
+  'd1b3 c8c6 e1d1 a7a6 f2f3 a6a5 f3f4 a5a4 f1e3 a8a5 f4f5 a5c5 d1f1 c5c3 f5g5 d8f6 e3f5 ' +
+  'c6b6 f5d4 d7d6 g5f5 d6d5 d4b5 c3c5 f5f6 c5b5 f6e6 N@f4 E@d1 d5d4 e6d6 b5c5 g2g3 f7f6 ' +
+  'd6e6 g8f7 e6f6 f7f6 f1f6 P@c2 d1f3 d4d3 d2d3 f4d3 Q@d1 P@c3 P@a5 c5a5 d1c2 c3c2 P@d2 ' +
+  'c2d2 f6d6 P@c2 g1f1 a5c5 d6d2 c2d2 P@b5 c5b5 P@a6 b6b3 b2b3 d2c2 a1b2 c2b2 c1b2 P@c2 ' +
+  'f3d1 P@f2 b1a1 c2b2 f1f2 d3f2 C@f1 f2d1 P@f6 e8f7 f6f7 f8f7 A@b1 C@e1 P@c1 d1c3 f1f6 b2b1'
+).split(' ');
+
+// Prod study wd6c7qvG chapter AMY9DrPj (jieqi): the dealt root and the mainline.
+const JIEQI_GAME_18_ROOT =
+  'xxxxkxxxx/9/1x5x1/x1x1x1x1x/9/9/X1X1X1X1X/1X5X1/9/XXXXKXXXX w ' +
+  'R2A2C2P5N2B2r2a2c2p5n2b2 0 1 prnabpbrccppanpCNPNAPAPBRPPRCB';
+const JIEQI_GAME_18 = (
+  'i4i5 a7a6 g4g5 g7g6 c4c5 h8h1 i1h1 c7c6 c5d3 g6i5 d3e5 c10e8 e5c6 b8b1 a1b1 a6a5 c6e7 ' +
+  'a5a4 h3h9 i10i9 b3b9 i9h9 e4e5 i5g4 f1e2 h9h1 e2e3 h1g1 e1e2 b10d9 g5h7 g1d1 h7f8 e10e9 ' +
+  'e7c8 e9f9 c8d10 a10d10 b1b2 d9d2'
+).split(' ');
+
+/** Where a glyph badge sits on a jieqi board: its disc's centre and label. */
+function badgeAt(board: Element | null | undefined, selector: string) {
+  const disc = board?.querySelector(`${selector} circle`);
+  return {
+    cx: disc?.getAttribute('cx'),
+    cy: disc?.getAttribute('cy'),
+    text: board?.querySelector(selector)?.textContent,
+  };
+}
+
+/** The badge the jieqi board's own marker renderer pins on `square`. */
+function expectedBadge(square: string, text: string, perspective: 'red' | 'black') {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.innerHTML = jieqiMarkerSvg(
+    { square: square as JieqiSquare, kind: 'glyph', text, className: 'probe' },
+    perspective,
+  );
+  return badgeAt(svg, '.probe');
+}
 
 function stubFetch(status: number, body: unknown) {
   vi.stubGlobal('fetch', async () => ({
@@ -67,8 +127,8 @@ describe('mountEmbedStudy', () => {
       'Li Yiting',
     ]);
     expect(seats.map((s) => s.querySelector('.embed-seat-disc')?.className)).toEqual([
-      'embed-seat-disc embed-seat-disc--black',
-      'embed-seat-disc embed-seat-disc--red',
+      'embed-seat-disc seat-disc seat-disc--black',
+      'embed-seat-disc seat-disc seat-disc--red',
     ]);
     // A chapter has no clocks; the slots stay empty rather than reading 0:00.
     expect(seats.every((s) => s.querySelector('.embed-card-seat-clock')?.textContent === '')).toBe(
@@ -182,6 +242,48 @@ describe('mountEmbedStudy', () => {
     root.remove();
   });
 
+  it('reads a composition result off its final position when the chapter has no result tag', async () => {
+    // Helpmate 1 of the helpmates study: Black first, Red's second move mates.
+    const line = ['d8e8', 'g7f7', 'd4d8', 'f7e7'];
+    let node: { uci?: string; children: unknown[] } = { children: [] };
+    const top = node;
+    for (const uci of line) {
+      const next = { uci, children: [] };
+      node.children.push(next);
+      node = next;
+    }
+    const composition = {
+      id: 'hm1',
+      name: 'A general and one soldier',
+      variant: 'xiangqi',
+      orientation: 'red',
+      root: { version: 1, rootFen: '9/4a4/3k1a2b/6P2/9/4p3c/3r5/9/4K4/9 b - - 0 1', root: top },
+    };
+    stubFetch(200, { study: { id: 's' }, chapters: [composition] });
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'hm1' });
+    expect(root.querySelector('.embed-card-result')?.textContent).toBe('Red wins');
+    root.remove();
+  });
+
+  it('leaves the result empty when an untagged line stops short of an ending', async () => {
+    const top = { children: [{ uci: 'h3e3', children: [] }] };
+    const opening = {
+      id: 'o1',
+      name: 'Central cannon',
+      variant: 'xiangqi',
+      orientation: 'red',
+      root: { version: 1, root: top },
+    };
+    stubFetch(200, { study: { id: 's' }, chapters: [opening] });
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'o1' });
+    expect(root.querySelector('.embed-card-result')?.textContent ?? '').toBe('');
+    root.remove();
+  });
+
   it('draws a duck chapter with the DUCK board, not the xiangqi one', async () => {
     // The xiangqi board cannot render the duck: it lives in the seventh FEN
     // field and has no piece to stand for it. Before the dispatch, a duck
@@ -250,6 +352,729 @@ describe('mountEmbedStudy', () => {
     );
     expect(moves).toEqual(['a1-b1', 'a9-b9', 'b1-c1']);
     root.remove();
+  });
+
+  it("shows a jungle chapter's comments, glyph and KataGo sideline, and opens on the turning ply", async () => {
+    // Shaped like the KataGo post's study: the played move carries a ?? and the
+    // story's comment; KataGo's alternative hangs off the same position as the
+    // second child, with its own comment. The jungle embed drew the mainline
+    // alone, so the post's readers never saw the argument (Brian, 2026-10-02).
+    const jungleChapter = {
+      id: 'Jngl5678',
+      name: 'Game 67, read by KataGo',
+      orientation: 'black',
+      variant: 'jungle',
+      tags: { red: 'MistyJungle', black: 'KataGo-AnimalChess', event: 'match', result: '0-1' },
+      root: {
+        rootFen: 't5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1',
+        root: {
+          children: [
+            {
+              uci: 'a1b1',
+              children: [
+                {
+                  uci: 'a9b9',
+                  annotations: {
+                    shapes: [{ kind: 'arrow', brush: 'green', orig: 'b1', dest: 'c1' }],
+                  },
+                  children: [
+                    {
+                      uci: 'g1g2',
+                      annotations: {
+                        glyphs: [4, 19],
+                        comments: [{ text: '?? The turning point, by KataGo.' }],
+                      },
+                      children: [{ uci: 'g9g8' }],
+                    },
+                    {
+                      uci: 'b1c1',
+                      annotations: { comments: [{ text: "KataGo's line." }] },
+                      children: [{ uci: 'b9c9', annotations: { glyphs: [17] } }],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    };
+    stubFetch(200, { study: { id: 's' }, chapters: [jungleChapter] });
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'Jngl5678' }, { startPly: 3 });
+
+    // Opens on the turning ply, the move marked and its comment under it, and
+    // the glyph pinned on the board where the move landed, as the review board
+    // pins it.
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('3 / 4');
+    const badge = root.querySelector('.jungle-replay-board .xq-marker--blunder');
+    expect(badge?.textContent).toContain('??');
+    expect(root.querySelector('.jungle-replay-board')?.innerHTML).toContain('g2');
+    const moves = Array.from(root.querySelectorAll('button.review-move-list__move'));
+    expect(
+      moves.map((m) => m.querySelector('.review-move-list__san')?.textContent?.trim()),
+    ).toEqual(['a1-b1', 'a9-b9', 'g1-g2 ??', 'g9-g8']);
+    const branch = root.querySelector<HTMLElement>('.review-move-list__branch');
+    expect(branch?.dataset.atPly).toBe('3');
+    expect(branch?.querySelector('.review-move-list__note')?.textContent).toBe(
+      '?? The turning point, by KataGo.',
+    );
+    expect(branch?.querySelector('.review-move-list__note--line')?.textContent).toBe(
+      "KataGo's line.",
+    );
+    // The position verdict after the played move, and the line's closing verdict.
+    expect(
+      Array.from(
+        root.querySelectorAll('button.review-move-list__move .review-move-list__eval'),
+      ).map((e) => e.textContent),
+    ).toEqual(['', '', '−+', '']);
+    expect(branch?.querySelector('.review-move-list__line-verdict')?.textContent).toBe('∓');
+    // KataGo's line beside the played move, steppable on the board and back.
+    const line = Array.from(branch?.querySelectorAll('.review-move-list__line-move') ?? []);
+    expect(line.map((m) => m.textContent)).toEqual(['b1-c1', 'b9-c9']);
+    (line[1] as HTMLButtonElement).click();
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('2+2');
+    expect(root.innerHTML).toContain('data-piece-square="c9"');
+    root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')?.click();
+    root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')?.click();
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('2 / 4');
+    // The chapter's arrow on the position the line leaves from, in the review's
+    // brush class; none on the next position, which has no shapes.
+    expect(root.querySelector('.jungle-board-arrows .xq-shape--green')).not.toBeNull();
+    expect(root.querySelector('.jungle-replay-board .xq-marker--blunder')).toBeNull();
+    // The chapter's orientation: KataGo (black) at the bottom.
+    const seats = Array.from(root.querySelectorAll('.embed-card-seat'));
+    expect(seats.at(-1)?.querySelector('.embed-card-seat-name')?.textContent).toBe(
+      'KataGo-AnimalChess',
+    );
+    root.remove();
+  });
+
+  it('draws a fortress chapter on the FORTRESS board with both hands, drops included', async () => {
+    // Prod study NUVBVjFf, chapter qh5eSTC9, as stored: no rootFen (the
+    // standard start), no tags, FSF UCI with the treasure dropped as `Q@`.
+    const fortressChapter = {
+      id: 'qh5eSTC9',
+      name: 'Game 1: Black mates on move 43',
+      orientation: 'red',
+      variant: 'fortress-xiangqi',
+      tags: {},
+      root: { root: chainTree(FORTRESS_GAME_1) },
+    };
+    stubFetch(200, { study: { id: 's' }, chapters: [fortressChapter] });
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'qh5eSTC9' }, { startPly: 999 });
+
+    // The fortress renderer's board, 7x8: a g8 square exists, no xiangqi i10.
+    const board = root.querySelector('.embed-board');
+    expect(board?.querySelector('svg.fxq-board')).not.toBeNull();
+    expect(board?.innerHTML).not.toContain('data-piece-square="i10"');
+    // Both hands, every droppable role a slot.
+    const hands = Array.from(root.querySelectorAll<HTMLElement>('.fxq-embed-hand'));
+    expect(hands.map((h) => h.dataset.owner)).toEqual(['black', 'red']);
+    expect(hands[0]?.querySelectorAll('.drop-mini-reserve-piece')).toHaveLength(7);
+    const moves = Array.from(root.querySelectorAll('.review-move-list__move')).map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(moves).toHaveLength(86);
+    expect(moves[0]).toBe('d1-b3');
+    expect(moves[27]).toBe('N@f4');
+    // The treasure's drop letter, the one spelling the article's tokens differ on.
+    expect(moves[44]).toBe('T@d1');
+    // No result tag: the mate is read off the final position.
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('86 / 86');
+    expect(root.querySelector('.embed-card-result')?.textContent).toBe('Black wins');
+    const seats = Array.from(root.querySelectorAll<HTMLElement>('.embed-card-seat'));
+    expect(seats.map((s) => s.querySelector('.embed-card-seat-name')?.textContent)).toEqual([
+      'Black',
+      'Red',
+    ]);
+    root.remove();
+  });
+
+  it('stops a fortress line at the first token the kernel refuses', async () => {
+    const tokens = [...FORTRESS_GAME_1.slice(0, 4), 'a1a8', ...FORTRESS_GAME_1.slice(4, 8)];
+    stubFetch(200, {
+      study: { id: 's' },
+      chapters: [
+        {
+          id: 'FxqBad01',
+          name: 'broken',
+          variant: 'fortress-xiangqi',
+          tags: { result: '1-0' },
+          root: { root: chainTree(tokens) },
+        },
+      ],
+    });
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'FxqBad01' }, { startPly: 999 });
+    expect(root.querySelectorAll('.review-move-list__move')).toHaveLength(4);
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('4 / 4');
+    // A tag, when the chapter has one, is the result.
+    expect(root.querySelector('.embed-card-result')?.textContent).toBe('Red wins');
+    root.remove();
+  });
+
+  it('draws a crazyhouse chapter on the xiangqi board with both pockets, drops included', async () => {
+    // As the analysis board stores one: no rootFen (the standard start, the
+    // advisors and elephants in hand), FSF UCI with drops as `N@e5`.
+    const tokens = ['h3h10', 'i10h10', 'N@e5', 'A@e9', 'e5f7', 'B@c8'];
+    stubFetch(200, {
+      study: { id: 's' },
+      chapters: [
+        {
+          id: 'Chx00001',
+          name: 'A drop line',
+          orientation: 'red',
+          variant: 'crazyhouse-xiangqi',
+          tags: {},
+          root: { root: chainTree(tokens) },
+        },
+      ],
+    });
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'Chx00001' });
+
+    // Both hands as the game room's pockets, top is the far side's.
+    const hands = Array.from(root.querySelectorAll<HTMLElement>('.chx-embed-hand'));
+    expect(hands.map((h) => h.dataset.owner)).toEqual(['black', 'red']);
+    expect(hands.every((h) => h.classList.contains('drop-pocket'))).toBe(true);
+    const held = (hand: HTMLElement | undefined) =>
+      Array.from(hand?.querySelectorAll<HTMLElement>('.drop-mini-reserve-piece') ?? [])
+        .filter((tile) => !tile.classList.contains('is-empty'))
+        .map(
+          (tile) =>
+            `${tile.dataset.role}${tile.querySelector('.captures-count-badge')?.textContent ?? ''}`,
+        );
+    // The start: every role a slot, two advisors and two elephants held a side.
+    expect(hands[0]?.querySelectorAll('.drop-mini-reserve-piece')).toHaveLength(6);
+    expect(held(hands[1])).toEqual(['elephant2', 'advisor2']);
+    expect(root.querySelector('.embed-board svg')).not.toBeNull();
+    expect(root.querySelector('.embed-board')?.innerHTML).not.toContain('data-piece-square="e5"');
+
+    const moves = Array.from(root.querySelectorAll('.review-move-list__move')).map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(moves).toEqual(['h3-h10', 'i10-h10', 'N@e5', 'A@e9', 'e5-f7', 'B@c8']);
+
+    // Step to the drop: the horse leaves red's hand and stands on e5.
+    const next = root.querySelector<HTMLButtonElement>('[aria-label="Next move"]');
+    next?.click();
+    next?.click();
+    expect(held(hands[1])).toEqual(['horse', 'elephant2', 'advisor2']);
+    expect(held(hands[0])).toEqual(['cannon', 'elephant2', 'advisor2']);
+    next?.click();
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('3 / 6');
+    expect(root.querySelector('.embed-board')?.innerHTML).toContain('data-piece-square="e5"');
+    expect(held(hands[1])).toEqual(['elephant2', 'advisor2']);
+    // No result tag and the line stops mid-game: no result.
+    expect(root.querySelector('.embed-card-result')?.textContent).toBe('');
+    root.remove();
+  });
+
+  it('stops a crazyhouse line at the first token the kernel refuses', async () => {
+    // A horse dropped while none is held, then legal moves after it.
+    const tokens = ['h3h10', 'i10h10', 'R@e5', 'h10h1'];
+    stubFetch(200, {
+      study: { id: 's' },
+      chapters: [
+        {
+          id: 'ChxBad01',
+          name: 'broken',
+          variant: 'crazyhouse-xiangqi',
+          tags: { result: '0-1' },
+          root: { root: chainTree(tokens) },
+        },
+      ],
+    });
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'ChxBad01' }, { startPly: 999 });
+    expect(root.querySelectorAll('.review-move-list__move')).toHaveLength(2);
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('2 / 2');
+    expect(root.querySelector('.embed-card-result')?.textContent).toBe('Black wins');
+    root.remove();
+  });
+
+  it('draws a jieqi chapter from its dealt root, dark pieces dark until they move', async () => {
+    // Prod study wd6c7qvG, chapter AMY9DrPj, as stored: the deal rides in the
+    // root's sixth FEN field, no tags.
+    const jieqiChapter = {
+      id: 'AMY9DrPj',
+      name: 'Game 18: Black mates on move 20',
+      orientation: 'red',
+      variant: 'jieqi',
+      tags: {},
+      root: { rootFen: JIEQI_GAME_18_ROOT, root: chainTree(JIEQI_GAME_18) },
+    };
+    stubFetch(200, { study: { id: 's' }, chapters: [jieqiChapter] });
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'AMY9DrPj' });
+
+    const board = root.querySelector('.embed-board');
+    expect(board?.querySelector('svg.jieqi-board')).not.toBeNull();
+    const hidden = () => board?.querySelectorAll('[aria-label$="hidden piece"]').length ?? 0;
+    // The start: every piece but the generals face down.
+    expect(hidden()).toBe(30);
+    root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')?.click();
+    // i4i5 moved a dark piece: it shows what the deal made it.
+    expect(hidden()).toBe(29);
+    expect(board?.querySelector('[data-piece-square="i5"]')?.innerHTML).not.toContain(
+      'hidden piece',
+    );
+    const moves = Array.from(root.querySelectorAll('.review-move-list__move')).map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(moves).toHaveLength(40);
+    expect(moves[11]).toBe('c10-e8');
+    const toEnd = [...root.querySelectorAll<HTMLButtonElement>('.embed-card-menu-item')].find(
+      (item) => item.textContent === 'Jump to the end',
+    );
+    toEnd?.click();
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('40 / 40');
+    expect(root.querySelector('.embed-card-result')?.textContent).toBe('Black wins');
+    root.remove();
+  });
+
+  it("shows a jieqi chapter's glyphs, comments, verdicts, sidelines and shapes, not the mainline alone", async () => {
+    // The opening of prod game 18 (wd6c7qvG / AMY9DrPj) annotated the way the
+    // study page shows a chapter: a ?! with a verdict and comment, a ?, a
+    // sideline off each with a closing verdict, and an arrow and ring on the
+    // position before the branch. The jieqi embed drew the mainline alone.
+    const [m1, m2, m3, m4, m5, m6] = JIEQI_GAME_18;
+    const jieqiChapter = {
+      id: 'JqAnn123',
+      name: 'Game 18, annotated',
+      orientation: 'black',
+      variant: 'jieqi',
+      tags: { red: 'Red seat', black: 'Black seat' },
+      root: {
+        rootFen: JIEQI_GAME_18_ROOT,
+        root: {
+          children: [
+            {
+              uci: m1,
+              children: [
+                {
+                  uci: m2,
+                  annotations: {
+                    shapes: [
+                      { brush: 'green', orig: 'c4', dest: 'c5' },
+                      { brush: 'red', orig: 'e4' },
+                    ],
+                  },
+                  children: [
+                    {
+                      uci: m3,
+                      annotations: {
+                        glyphs: [6, 16],
+                        comments: [{ text: 'Red loosens the flank.' }],
+                      },
+                      children: [
+                        {
+                          uci: m4,
+                          annotations: { glyphs: [2] },
+                          children: [{ uci: m5, children: [{ uci: m6 }] }],
+                        },
+                        // A sideline the kernel refuses past its first move
+                        // (e1e9 is no general's move) ends there.
+                        { uci: 'c7c6', children: [{ uci: 'e1e9' }] },
+                      ],
+                    },
+                    {
+                      uci: 'c4c5',
+                      annotations: { comments: [{ text: 'The quiet pawn.' }] },
+                      children: [{ uci: 'c7c6', annotations: { glyphs: [10] } }],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    };
+    stubFetch(200, { study: { id: 's' }, chapters: [jieqiChapter] });
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'JqAnn123' }, { startPly: 3 });
+
+    // Opens on the ?! move, its badge pinned on the square it landed on (g5),
+    // drawn by the jieqi board's own marker renderer in the chapter's
+    // orientation.
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('3 / 6');
+    const board = () => root.querySelector('.jieqi-embed-board');
+    const badge = board()?.querySelector('.xq-marker--inaccuracy');
+    expect(badge?.textContent).toContain('?!');
+    expect(badgeAt(board(), '.xq-marker--inaccuracy')).toEqual(expectedBadge('g5', '?!', 'black'));
+    const moves = Array.from(root.querySelectorAll('button.review-move-list__move'));
+    expect(
+      moves.map((m) => m.querySelector('.review-move-list__san')?.textContent?.trim()),
+    ).toEqual(['i4-i5', 'a7-a6', 'g4-g5 ?!', 'g7-g6 ?', 'c4-c5', 'h8-h1']);
+    // The verdict on the ?! move's own position, in the sheet's eval slot.
+    expect(
+      Array.from(
+        root.querySelectorAll('button.review-move-list__move .review-move-list__eval'),
+      ).map((e) => e.textContent),
+    ).toEqual(['', '', '±', '', '', '']);
+    const branches = Array.from(root.querySelectorAll<HTMLElement>('.review-move-list__branch'));
+    const branch = branches.find((b) => b.dataset.atPly === '3');
+    expect(branch?.querySelector('.review-move-list__note')?.textContent).toBe(
+      'Red loosens the flank.',
+    );
+    expect(branch?.querySelector('.review-move-list__note--line')?.textContent).toBe(
+      'The quiet pawn.',
+    );
+    expect(branch?.querySelector('.review-move-list__line-verdict')?.textContent).toBe('=');
+    // The refused sideline stops at the kernel's last accepted move.
+    const refused = branches.find((b) => b.dataset.atPly === '4');
+    expect(
+      Array.from(refused?.querySelectorAll('.review-move-list__line-move') ?? []).map(
+        (m) => m.textContent,
+      ),
+    ).toEqual(['c7-c6']);
+
+    // The sideline, steppable on the board from the position before the ?! move
+    // and back: c4c5 and c7c6 move dark pawns, which then show their dealt
+    // identity, as on the mainline.
+    const line = Array.from(branch?.querySelectorAll('.review-move-list__line-move') ?? []);
+    expect(line.map((m) => m.textContent)).toEqual(['c4-c5', 'c7-c6']);
+    expect(board()?.querySelector('[data-piece-square="c5"]')).toBeNull();
+    (line[1] as HTMLButtonElement).click();
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('2+2');
+    expect(board()?.querySelector('[data-piece-square="c5"]')).not.toBeNull();
+    expect(board()?.querySelector('[data-piece-square="c6"]')).not.toBeNull();
+    expect(board()?.querySelector('[data-piece-square="c6"]')?.innerHTML).not.toContain(
+      'hidden piece',
+    );
+    expect(board()?.querySelector('.xq-marker--inaccuracy')).toBeNull();
+    root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')?.click();
+    root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')?.click();
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('2 / 6');
+    expect(board()?.querySelector('[data-piece-square="c5"]')).toBeNull();
+    // The chapter's arrow and ring on the position the line leaves from, in the
+    // review's brush classes.
+    expect(board()?.querySelector('.jieqi-board-arrows .xq-shape--green')).not.toBeNull();
+    expect(board()?.querySelector('.jieqi-board-markers .xq-shape--red')).not.toBeNull();
+    // The ? on g7-g6 badges its own landing square one step on.
+    root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')?.click();
+    root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')?.click();
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('4 / 6');
+    expect(badgeAt(board(), '.xq-marker--mistake')).toEqual(expectedBadge('g6', '?', 'black'));
+    expect(board()?.querySelector('.jieqi-board-arrows .xq-shape--green')).toBeNull();
+    // The chapter's orientation: black at the bottom.
+    const seats = Array.from(root.querySelectorAll('.embed-card-seat'));
+    expect(seats.at(-1)?.querySelector('.embed-card-seat-name')?.textContent).toBe('Black seat');
+    root.remove();
+  });
+
+  it('refuses a jieqi chapter whose root carries no deal', async () => {
+    // A five-field FEN would have the parser sample identities: a board of
+    // pieces that were never there.
+    const publicFen = JIEQI_GAME_18_ROOT.split(' ').slice(0, 5).join(' ');
+    stubFetch(200, {
+      study: { id: 's' },
+      chapters: [
+        {
+          id: 'JqNoDeal',
+          name: 'no deal',
+          variant: 'jieqi',
+          root: { rootFen: publicFen, root: chainTree(JIEQI_GAME_18.slice(0, 4)) },
+        },
+      ],
+    });
+    const root = document.createElement('div');
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'JqNoDeal' });
+    expect(root.textContent).toBe('This chapter has no dealt position to show.');
+    expect(root.querySelector('svg')).toBeNull();
+  });
+
+  it('draws a flip jungle chapter face down until each tile is flipped', async () => {
+    // No flip jungle study exists on prod yet; this is the shape the study
+    // builder writes (scripts/banqi-study.ts): the dealt root, seat-keyed
+    // result tag, flips as self-moves. The fourth token re-flips a tile that
+    // is already face up, which the kernel refuses, so the line ends at three.
+    const start = createInitialJungleFlipState('t');
+    const flipChapter = {
+      id: 'Flip1234',
+      name: 'Game 1',
+      orientation: 'red',
+      variant: 'jungle-flip',
+      tags: { red: 'MistyFlip A', black: 'MistyFlip B', event: 'self-play', result: '1-0' },
+      root: {
+        rootFen: jungleFlipStateToDealtFen(start),
+        root: chainTree(['a1a1', 'd4d4', 'b2b2', 'a1a1', 'c3c3']),
+      },
+    };
+    stubFetch(200, { study: { id: 's' }, chapters: [flipChapter] });
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'Flip1234' });
+
+    const board = root.querySelector('.embed-board');
+    const faceDown = () =>
+      (board?.innerHTML ?? '').split(`fill="${JUNGLE_ART.faceDown.fill}"`).length - 1;
+    expect(board?.querySelector('[data-piece-square="d4"]')).not.toBeNull();
+    expect(board?.innerHTML).not.toContain('data-piece-square="e5"');
+    expect(faceDown()).toBe(16);
+    const moves = Array.from(root.querySelectorAll('.review-move-list__move')).map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(moves).toEqual(['a1', 'd4', 'b2']);
+    const toEnd = [...root.querySelectorAll<HTMLButtonElement>('.embed-card-menu-item')].find(
+      (item) => item.textContent === 'Jump to the end',
+    );
+    toEnd?.click();
+    expect(faceDown()).toBe(13);
+    // The first flip bound the first seat's ink: the discs and the result
+    // name the colour on the board, not the seat.
+    const firstInk = start.board.a1?.color;
+    const seats = Array.from(root.querySelectorAll<HTMLElement>('.embed-card-seat'));
+    expect(seats.map((s) => s.querySelector('.embed-card-seat-name')?.textContent)).toEqual([
+      'MistyFlip B',
+      'MistyFlip A',
+    ]);
+    expect(seats[1]?.querySelector('.embed-seat-disc')?.className).toBe(
+      `embed-seat-disc seat-disc seat-disc--${firstInk}`,
+    );
+    expect(root.querySelector('.embed-card')?.getAttribute('data-seat-ink-family')).toBe('jungle');
+    expect(root.querySelector('.embed-card-result')?.textContent).toBe(
+      firstInk === 'red' ? 'Red wins' : 'Blue wins',
+    );
+    root.remove();
+  });
+
+  it('draws a fog chess chapter on the truth board through castling to the king capture', async () => {
+    // A fog chess chapter used to be refused ("A dark-chess game cannot be
+    // framed yet."). It is a finished record, so the embed shows the revealed
+    // truth board, like a finished room and the study page's primary board.
+    // White castles in the kernel's spelling of the stored king-to-g1 move and
+    // Black in the king-onto-rook spelling: both must replay (#451). The game
+    // ends the way only fog chess can: Bxg8 takes the king, which the standard
+    // chess kernel would refuse as a move at all.
+    const line = [
+      'e2e4',
+      'e7e5',
+      'g1f3',
+      'g8f6',
+      'f1c4',
+      'f8e7',
+      'e1g1',
+      'e8h8',
+      'c4f7',
+      'a7a6',
+      'f7g8',
+    ];
+    const tree = line.reduceRight<{ uci?: string; children?: unknown[] }>(
+      (child, uci) => ({ uci, children: child.uci ? [child] : [] }),
+      {},
+    );
+    const fogChapter = {
+      id: 'Fog12345',
+      name: 'Seed 1: White wins in 6 moves',
+      orientation: 'red',
+      variant: 'dark-chess',
+      tags: {},
+      root: {
+        root: {
+          children: [
+            {
+              ...tree,
+              annotations: { comments: [{ text: 'Both sides open in the fog.' }] },
+            },
+          ],
+        },
+      },
+    };
+    stubFetch(200, { study: { id: 's' }, chapters: [fogChapter] });
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'Fog12345' }, { startPly: 99 });
+
+    expect(root.textContent).not.toContain('cannot be framed');
+    expect(root.querySelector('.embed-board svg')).not.toBeNull();
+    const moves = Array.from(root.querySelectorAll('button.review-move-list__move')).map((m) =>
+      m.querySelector('.review-move-list__san')?.textContent?.trim(),
+    );
+    expect(moves).toHaveLength(line.length);
+    expect(moves[6]).toBe('O-O');
+    expect(moves[7]).toBe('O-O');
+    expect(moves[10]).toBe('Bxg8');
+    // An out-of-range link clamps to the last ply: the king capture.
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('11 / 11');
+    // No result tag on the chapter: the ending is read off the final position.
+    expect(root.querySelector('.embed-card-result')?.textContent).toBe('White wins');
+    expect(root.querySelector('.review-move-list__note')?.textContent).toBe(
+      'Both sides open in the fog.',
+    );
+    // The truth board: no fog square anywhere, at the end or mid-game, where
+    // either seat's own view would shroud most of the other side's pieces.
+    expect(root.querySelector('.embed-board')?.innerHTML).not.toContain('dark-chess-fog-square');
+    const seats = Array.from(root.querySelectorAll<HTMLElement>('.embed-card-seat'));
+    expect(seats.map((s) => s.querySelector('.embed-card-seat-name')?.textContent)).toEqual([
+      'Black',
+      'White',
+    ]);
+    // Stepping works from the end.
+    root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')?.click();
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('10 / 11');
+    expect(root.querySelector('.embed-board')?.innerHTML).not.toContain('dark-chess-fog-square');
+    root.remove();
+  });
+
+  it('reads a fog chess result tag as the winner line, for a game that ended off the board', async () => {
+    // Misty's resignation and forfeit games stop mid-position: nothing on the
+    // board says who won, so the chapter's 1-0 tag must, and it must read as a
+    // localized line rather than the raw PGN token.
+    const line = ['e2e4', 'e7e5', 'g1f3'];
+    const tree = line.reduceRight<{ uci?: string; children?: unknown[] }>(
+      (child, uci) => ({ uci, children: child.uci ? [child] : [] }),
+      {},
+    );
+    const chapter = (id: string, result: string) => ({
+      id,
+      name: 'Misty wins as White by resignation',
+      orientation: 'red',
+      variant: 'dark-chess',
+      tags: { result },
+      root: { root: { children: [tree] } },
+    });
+    for (const [id, tag, label] of [
+      ['Res10000', '1-0', 'White wins'],
+      ['Res01000', '0-1', 'Black wins'],
+    ] as const) {
+      stubFetch(200, { study: { id: 's' }, chapters: [chapter(id, tag)] });
+      const root = document.createElement('div');
+      document.body.append(root);
+      await mountEmbedStudy(root, { studyId: 's', chapterId: id }, {});
+      expect(root.querySelector('.embed-card-result')?.textContent).toBe(label);
+      root.remove();
+    }
+  });
+
+  it('gives a fog chess chapter a White / Truth / Black picker that fogs the board', async () => {
+    // A reader of a fog game wants to see what each side saw: the picker swaps
+    // the truth board for a seat's fogged view, and `?pov=` can open on one.
+    const line = ['e2e4', 'e7e5', 'g1f3'];
+    const tree = line.reduceRight<{ uci?: string; children?: unknown[] }>(
+      (child, uci) => ({ uci, children: child.uci ? [child] : [] }),
+      {},
+    );
+    const chapter = {
+      id: 'Fog00001',
+      name: 'Misty against itself',
+      orientation: 'red',
+      variant: 'dark-chess',
+      root: { root: { children: [tree] } },
+    };
+    stubFetch(200, { study: { id: 's' }, chapters: [chapter] });
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'Fog00001' }, { startPly: 3 });
+    const buttons = [...root.querySelectorAll<HTMLButtonElement>('.embed-pov__button')];
+    expect(buttons.map((b) => b.dataset.pov)).toEqual(['white', 'truth', 'black']);
+    expect(root.querySelector('.embed-pov__button.active')?.getAttribute('data-pov')).toBe('truth');
+    expect(root.querySelectorAll('.dark-chess-fog-square')).toHaveLength(0);
+    const bottomSeatName = () =>
+      root.querySelector('.embed-card-board')?.lastElementChild?.previousElementSibling
+        ?.textContent;
+    expect(bottomSeatName()).toContain('White');
+    buttons[2]!.click();
+    const fogged = root.querySelectorAll('.dark-chess-fog-square').length;
+    expect(fogged).toBeGreaterThan(0);
+    // Black's view turns the board to Black, and its seat row moves under it.
+    expect(bottomSeatName()).toContain('Black');
+    expect(root.querySelector('.embed-pov__button.active')?.getAttribute('data-pov')).toBe('black');
+    buttons[1]!.click();
+    expect(root.querySelectorAll('.dark-chess-fog-square')).toHaveLength(0);
+    expect(bottomSeatName()).toContain('White');
+    root.remove();
+
+    stubFetch(200, { study: { id: 's' }, chapters: [chapter] });
+    const opened = document.createElement('div');
+    document.body.append(opened);
+    await mountEmbedStudy(opened, { studyId: 's', chapterId: 'Fog00001' }, { pov: 'white' });
+    expect(opened.querySelector('.embed-pov__button.active')?.getAttribute('data-pov')).toBe(
+      'white',
+    );
+    expect(opened.querySelectorAll('.dark-chess-fog-square').length).toBeGreaterThan(0);
+    opened.remove();
+  });
+
+  it('gives an open chess chapter no view picker', async () => {
+    stubFetch(200, {
+      study: { id: 's' },
+      chapters: [
+        {
+          id: 'Open0001',
+          name: 'Open',
+          orientation: 'red',
+          variant: 'chess',
+          root: { root: { children: [{ uci: 'e2e4', children: [] }] } },
+        },
+      ],
+    });
+    const root = document.createElement('div');
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'Open0001' }, { pov: 'black' });
+    expect(root.querySelector('.embed-pov')).toBeNull();
+    expect(root.querySelectorAll('.dark-chess-fog-square')).toHaveLength(0);
+  });
+
+  it('refuses a chapter of a variant it cannot draw, by name', async () => {
+    stubFetch(200, {
+      study: { id: 's' },
+      chapters: [{ ...CHAPTER, id: 'Unknown1', variant: 'made-up-chess' }],
+    });
+    const root = document.createElement('div');
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'Unknown1' });
+    expect(root.textContent).toBe('A made-up-chess game cannot be framed yet.');
+    expect(root.querySelector('svg')).toBeNull();
+  });
+
+  it('dispatches only study variants, fog chess among them', () => {
+    // Fail-closed: every variant the card draws is one a study can hold, and
+    // nothing else reaches a board.
+    const studyIds = new Set<string>(STUDY_VARIANTS.map((v) => v.id));
+    for (const variant of CHAPTER_EMBED_VARIANTS) {
+      expect(studyIds.has(variant), variant).toBe(true);
+    }
+    expect(CHAPTER_EMBED_VARIANTS.has('dark-chess')).toBe(true);
+    expect(CHAPTER_EMBED_VARIANTS.has('made-up-chess')).toBe(false);
+  });
+
+  it('draws every study variant, or records why the embed refuses it', () => {
+    // The other direction. Fog chess was a study variant with no embed branch,
+    // so the Misty write-up's embedded chapter showed the refusal (1477f52d).
+    // A new study variant now fails here until it gets a board or a line in
+    // EMBED_REFUSED_STUDY_VARIANTS.
+    const missing = STUDY_VARIANTS.map((v) => v.id).filter(
+      (id) => !CHAPTER_EMBED_VARIANTS.has(id) && !(id in EMBED_REFUSED_STUDY_VARIANTS),
+    );
+    expect(
+      missing,
+      missing
+        .map(
+          (id) =>
+            `study variant '${id}' has no embed board: add it to CHAPTER_EMBED_VARIANTS in apps/web/src/embed/embed-study-page.ts, or to EMBED_REFUSED_STUDY_VARIANTS in embed-study-page.test.ts with the reason`,
+        )
+        .join('\n'),
+    ).toEqual([]);
+    const stale = Object.keys(EMBED_REFUSED_STUDY_VARIANTS).filter(
+      (id) => CHAPTER_EMBED_VARIANTS.has(id) || !STUDY_VARIANTS.some((v) => v.id === id),
+    );
+    expect(
+      stale,
+      `EMBED_REFUSED_STUDY_VARIANTS names variants the embed now draws or no study holds: ${stale.join(', ')}; delete those lines`,
+    ).toEqual([]);
   });
 
   it('opens on the ply the link names, not always move one', async () => {

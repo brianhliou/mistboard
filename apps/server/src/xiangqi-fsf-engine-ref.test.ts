@@ -1,5 +1,5 @@
 // The xiangqi Fairy-Stockfish build is pinned in three places that MUST agree:
-// fairy-stockfish-xiangqi.ref (railpack checks that commit out and builds it),
+// fairy-stockfish-xiangqi.ref (the engine recipe checks that commit out and builds it),
 // XIANGQI_FSF_ENGINE_REF (part of every xiangqi FSF rung's engine configHash), and
 // the railpack net line (which net, from which commit, with which digest). If they
 // drift, prod plays one engine and rates it under another engine's identity, which
@@ -14,7 +14,11 @@ import { XIANGQI_FSF_ENGINE_REF, XIANGQI_FSF_NNUE_NET } from './xiangqi-fsf-engi
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const refFile = resolve(repoRoot, 'fairy-stockfish-xiangqi.ref');
+const recipe = readFileSync(resolve(repoRoot, 'scripts/engine-assets.sh'), 'utf8');
 const railpack = readFileSync(resolve(repoRoot, 'railpack.json'), 'utf8');
+// The net step lives in a script railpack runs (inline railpack commands were cut
+// at their first single quote, so its checks never ran).
+const netScript = readFileSync(resolve(repoRoot, 'scripts/fetch-fsf-xiangqi-net.sh'), 'utf8');
 
 function pinnedRef(): string {
   return readFileSync(refFile, 'utf8').split('\n')[0]!.trim();
@@ -35,22 +39,30 @@ test('XIANGQI_FSF_ENGINE_REF is the short form of the pinned .ref commit', () =>
   );
 });
 
-test('railpack builds from the .ref file and fetches the net the provider names', () => {
-  assert.ok(railpack.includes('/app/fairy-stockfish-xiangqi.ref'), 'build step reads the .ref');
+test('the recipe builds from the .ref file and railpack fetches the net the provider names', () => {
+  assert.ok(recipe.includes('pin fairy-stockfish-xiangqi.ref'), 'the build reads the .ref');
   assert.ok(
-    railpack.includes(`/app/bin/${XIANGQI_FSF_NNUE_NET}`),
-    `railpack must place ${XIANGQI_FSF_NNUE_NET} beside the xiangqi binary`,
+    railpack.includes('engine-assets.sh fetch /app/bin'),
+    'the image installs the published build beside the net',
+  );
+  assert.ok(
+    railpack.includes('sh /app/scripts/fetch-fsf-xiangqi-net.sh /app/bin'),
+    'railpack must run the net script into /app/bin, beside the xiangqi binary',
+  );
+  assert.ok(
+    netScript.includes(`net=${XIANGQI_FSF_NNUE_NET}`),
+    `the script must fetch ${XIANGQI_FSF_NNUE_NET}`,
   );
   // The net is named by its sha256 prefix; the build verifies the FULL digest, and
   // the digest it checks must be the one the name promises.
   const prefix = XIANGQI_FSF_NNUE_NET.replace(/^xiangqi-/, '').replace(/\.nnue$/, '');
   assert.match(
-    railpack,
-    new RegExp(`'${prefix}[0-9a-f]{52}  /app/bin/${XIANGQI_FSF_NNUE_NET.replace('.', '\\.')}'`),
-    'railpack sha256 check must pin the digest whose prefix names the net',
+    netScript,
+    new RegExp(`net_sha=${prefix}[0-9a-f]{52}\\n`),
+    'the script sha256 check must pin the digest whose prefix names the net',
   );
   assert.ok(
-    railpack.includes("grep -q 'NNUE evaluation using'"),
+    netScript.includes("grep -q 'NNUE evaluation using'"),
     'the build must prove the binary loads the net, not just that both files exist',
   );
 });

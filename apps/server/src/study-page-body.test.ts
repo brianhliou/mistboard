@@ -4,7 +4,7 @@ import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import type { StudyChapterRecord, StudyWithChapters } from './persistence-studies.js';
-import { chapterIsSubstantial, chapterPageMeta, renderStudyBody } from './study-page-body.js';
+import { chapterPageMeta, renderStudyBody } from './study-page-body.js';
 
 const NOW = new Date('2026-08-08T00:00:00Z');
 
@@ -210,21 +210,6 @@ test('a chapter with no comment falls back to study name and length', () => {
   const ch = chapter({ name: 'Untitled', root: mainline(9) });
   const meta = chapterPageMeta({ study: study({ chapters: [ch] }), chapter: ch, locale: 'en' });
   assert.equal(meta.description, 'A study. 9 moves.');
-});
-
-// The sitemap gate. A one-ply chapter with no commentary is the shape the
-// defective endgame volumes shipped in; advertising those as indexable pages
-// would be claiming work that has not been done.
-test('chapter substance gates on plies or commentary, not on existing', () => {
-  assert.equal(chapterIsSubstantial(chapter({ root: mainline(20) })), true);
-  assert.equal(chapterIsSubstantial(chapter({ root: mainline(4) })), true);
-  assert.equal(chapterIsSubstantial(chapter({ root: mainline(1) })), false);
-  assert.equal(chapterIsSubstantial(chapter({ root: mainline(0) })), false);
-  // A short entry that carries real commentary is still worth a URL.
-  assert.equal(
-    chapterIsSubstantial(chapter({ root: mainline(1, [{ text: 'A genuine one-move entry.' }]) })),
-    true,
-  );
 });
 
 // serveStudyPage injects the body by string-replacing this exact anchor in the

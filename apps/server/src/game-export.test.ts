@@ -84,11 +84,11 @@ function fixtureGame(): { summary: RecentEveGameRecord; events: GameEvent[] } {
   return { summary, events };
 }
 
-test('JSON publication has expected shape and v1.0 schema', () => {
+test('JSON publication has expected shape and v1.1 schema', () => {
   const { summary, events } = fixtureGame();
   const payload = buildGamePublicationJson(summary, events);
 
-  assert.equal(payload.schema_version, '1.0');
+  assert.equal(payload.schema_version, '1.1');
   assert.equal(payload.game_id, 'fixture-room');
   assert.equal(payload.source.name, 'Mistboard');
   assert.equal(payload.source.url, 'https://mistboard.com');
@@ -140,7 +140,7 @@ test('PGN includes full STR plus extensions and numbered moves', () => {
   // Internal termination preserved in custom tag
   assert.ok(pgn.includes('[MistboardTermination "king-captured"]'));
   assert.ok(pgn.includes('[License "CC BY 4.0"]'));
-  assert.ok(pgn.includes('[MistboardSchema "1.0"]'));
+  assert.ok(pgn.includes('[MistboardSchema "1.1"]'));
 
   assert.ok(pgn.includes('1. e4 e5 2. Nf3 1-0'));
 });
@@ -276,4 +276,30 @@ test('player names come from participants when whiteName/blackName are null', ()
   const json = buildGamePublicationJson(withParticipants, events);
   assert.equal(json.players.white.handle, '@alice-handle');
   assert.equal(json.players.black.handle, 'Mistboard Engine v3.2');
+});
+
+test('a private seat exports as Anonymous in JSON and PGN, never its name', () => {
+  const { summary, events } = fixtureGame();
+  summary.participants = [
+    {
+      color: 'white',
+      displayName: 'secret-handle',
+      subjectType: 'user',
+      subjectId: 'u1',
+      visibility: 'private',
+    },
+    {
+      color: 'black',
+      displayName: 'bob',
+      subjectType: 'user',
+      subjectId: 'u2',
+      visibility: 'public',
+    },
+  ];
+  const payload = buildGamePublicationJson(summary, events);
+  assert.equal(payload.players.white.handle, 'Anonymous');
+  assert.equal(payload.players.black.handle, 'bob');
+  const pgn = buildGamePgn(summary, events);
+  assert.ok(pgn.includes('[White "Anonymous"]'));
+  assert.ok(!pgn.includes('secret-handle'));
 });

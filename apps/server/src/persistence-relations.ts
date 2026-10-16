@@ -5,10 +5,13 @@
 //     relation per direction) and severs the target's follow of the actor;
 //   - following silently no-ops when the target has blocked the actor, so the
 //     actor cannot probe who blocked them;
-//   - lists and counts are self-only surfaces.
+//   - lists and counts are self-only surfaces. Since 2026-10-08 that includes
+//     the Followers list: the followed account sees who follows it, nobody
+//     else does, and there is no public followers count.
 // The block edge is also the send gate the inbox slice (#88) will consume via
 // hasBlock().
 
+import { linkableHandleSql } from './persistence-correspondence-seeks.js';
 import { getPool } from './persistence-db.js';
 import type { PlayerTitle } from './persistence-titles.js';
 
@@ -200,6 +203,79 @@ export async function listRelations(
       title: row.title,
       createdAt: row.created_at,
       lastSeenAt: row.last_seen_at,
+    })),
+    total: parseInt(rows[0]?.total_count ?? '0', 10),
+  };
+}
+
+// Which incoming follows the followed account gets to see, as a WHERE fragment
+// over a follow row `rel` and its actor `actor`. Shared by the Followers list
+// and the bell's new-follower rows so the badge never counts someone the list
+// leaves out. Excluded: anyone the owner has blocked (blocking severs their
+// follow, so this only guards rows that predate that rule), and closed
+// accounts (closure deletes relations; same defensive posture). Play-locked
+// accounts stay listed: the lock gates seats, not social edges, and the
+// following list does not filter them either.
+export function visibleFollowerSql(rel: string, actor: string): string {
+  return `${actor}.closed_at IS NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM user_relations blk
+            WHERE blk.actor_id = ${rel}.target_id
+              AND blk.target_id = ${rel}.actor_id
+              AND blk.relation = 'block'
+          )`;
+}
+
+export type FollowerListEntry = {
+  // Server-internal, like RelationListEntry.targetId; never serialized.
+  actorId: string;
+  // Null unless the follower's profile may be linked (linkableHandleSql): a
+  // private profile shows its name with no link, as on every other surface.
+  handle: string | null;
+  displayName: string;
+  title: PlayerTitle | null;
+  createdAt: Date;
+};
+
+export type FollowerListPage = {
+  entries: FollowerListEntry[];
+  total: number;
+};
+
+// The accounts that follow `ownerId`, newest follow first. Self-only by
+// construction: the only key is the owner's id, which routes take from the
+// session, never from the request.
+export async function listFollowers(
+  ownerId: string,
+  offset: number,
+  limit: number,
+): Promise<FollowerListPage> {
+  const { rows } = await getPool().query<{
+    actor_id: string;
+    handle: string | null;
+    display_name: string;
+    title: PlayerTitle | null;
+    created_at: Date;
+    total_count: string;
+  }>(
+    `SELECT f.id AS actor_id, ${linkableHandleSql('f')} AS handle,
+            COALESCE(NULLIF(f.display_name, ''), f.handle) AS display_name, f.title,
+            r.created_at, COUNT(*) OVER() AS total_count
+     FROM user_relations r
+     JOIN users f ON f.id = r.actor_id
+     WHERE r.target_id = $1 AND r.relation = 'follow'
+       AND ${visibleFollowerSql('r', 'f')}
+     ORDER BY r.created_at DESC, f.handle ASC
+     OFFSET $2 LIMIT $3`,
+    [ownerId, offset, limit],
+  );
+  return {
+    entries: rows.map((row) => ({
+      actorId: row.actor_id,
+      handle: row.handle,
+      displayName: row.display_name,
+      title: row.title,
+      createdAt: row.created_at,
     })),
     total: parseInt(rows[0]?.total_count ?? '0', 10),
   };

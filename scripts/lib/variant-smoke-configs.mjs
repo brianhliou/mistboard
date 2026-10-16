@@ -23,6 +23,18 @@ export const VARIANT_SMOKE_CONFIGS = {
     // knob, not part of the contract.
     engineSeat: { prefix: 'fairy-stockfish-atomic-xiangqi-' },
   },
+  crazyhouse: {
+    name: 'crazyhouse',
+    label: 'Crazyhouse Xiangqi',
+    usage: 'npm run prod:smoke:crazyhouse -- [options]',
+    gameSpecId: 'crazyhouse-xiangqi',
+    // Stock Fairy-Stockfish with crazyhouse-xiangqi.ini, classical eval; the
+    // same ceiling as atomic and fortress, which cover a cold spawn.
+    defaultTimeoutMs: 40_000,
+    // Prefix-matched like the others: the rung the room hands a player is a
+    // knob, not part of the contract.
+    engineSeat: { prefix: 'fairy-stockfish-crazyhouse-xiangqi-' },
+  },
   duck: {
     name: 'duck',
     label: 'Duck',
@@ -113,6 +125,46 @@ export const VARIANT_SMOKE_CONFIGS = {
     // Both are accepted, because which one fronts the default is a product
     // knob and pinning the current answer is the bfb02b95 failure mode.
     engineSeat: { prefixes: ['fairy-stockfish-xiangqi-level-', 'pikafish-xiangqi-'] },
+  },
+  // Top-bot rows: a variant served by more than one engine family smokes each
+  // family the default create does not reach, by naming its engine. On
+  // 2026-10-03 Pikafish Level 8 resigned every xiangqi game at move 1 for
+  // fifteen hours (its net could not load) while the xiangqi row above, which
+  // plays the default Fairy-Stockfish rung, stayed green. `equals`, not a
+  // prefix: a room that silently seated another engine must fail here.
+  // scripts/pve-smoke-coverage.test.ts derives the families from the bot
+  // roster and fails when one goes unsmoked.
+  'xiangqi-pikafish': {
+    name: 'xiangqi-pikafish',
+    label: 'Xiangqi Pikafish Level 8',
+    usage: 'npm run prod:smoke:xiangqi-pikafish -- [options]',
+    gameSpecId: 'xiangqi',
+    engineId: 'pikafish-xiangqi-level-8',
+    // 4s movetime, one retry. Measured healthy: 5.5s.
+    defaultTimeoutMs: 40_000,
+    engineSeat: { equals: 'pikafish-xiangqi-level-8' },
+  },
+  'jieqi-abjchess': {
+    name: 'jieqi-abjchess',
+    label: 'Jieqi AB-JChess',
+    usage: 'npm run prod:smoke:jieqi-abjchess -- [options]',
+    gameSpecId: 'jieqi',
+    engineId: 'ab-jchess-jieqi',
+    defaultTimeoutMs: 60_000,
+    engineSeat: { equals: 'ab-jchess-jieqi' },
+    // The build fetches the net from the authors' release and ships without it
+    // when that fails (scripts/fetch-abjchess-net.sh), which hides this slot.
+    unavailableCause:
+      'the server has no AB-JChess binary or net. The build skips the net when the download from the authors\' release fails or its sha256 does not match; search the web build log for "abjchess-net: WARNING", then redeploy once their release answers',
+  },
+  'jungle-katago': {
+    name: 'jungle-katago',
+    label: 'Jungle KataGo',
+    usage: 'npm run prod:smoke:jungle-katago -- [options]',
+    gameSpecId: 'jungle',
+    engineId: 'katago-jungle',
+    defaultTimeoutMs: 60_000,
+    engineSeat: { equals: 'katago-jungle' },
   },
 };
 

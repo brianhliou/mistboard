@@ -8,6 +8,8 @@ import './styles.css';
 import './game-shell.css';
 import './site-shell.css';
 import type { GameEvent, PlayerView } from '@mistboard/game';
+import { isFlipShortcut, setReplayFlipHandler } from './game-table.js';
+import { toggleBoardFlip } from './live-board-flip.js';
 import {
   initRender,
   reconcileInteractionState,
@@ -150,6 +152,18 @@ export function bootstrapLiveRoom(): void {
 
   if (!connOverride) connectSocket();
   window.addEventListener('keydown', handleLiveReplayKeyboard);
+  // Flip: the toolbar button and `f`, as on the review pages.
+  const flipBoard = () => {
+    toggleBoardFlip();
+    render();
+  };
+  const replayBand = app.querySelector<HTMLElement>('.game-console [data-replay-controls]');
+  if (replayBand) setReplayFlipHandler(replayBand, flipBoard);
+  window.addEventListener('keydown', (event) => {
+    if (!isFlipShortcut(event)) return;
+    event.preventDefault();
+    flipBoard();
+  });
   // The xiangqi board renders pieces as inline SVG, so a piece-set change needs a
   // re-render (the chess board picks up its set via CSS and does not).
   window.addEventListener(xiangqiAppearanceChangedEvent, () => render());

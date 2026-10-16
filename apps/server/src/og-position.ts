@@ -27,7 +27,9 @@ import {
   banqiMoverInk,
   banqiSquareOf,
   banqiStateToEngineFen,
+  crazyhouseXiangqiFen,
   createInitialBanqiState,
+  createInitialCrazyhouseXiangqiState,
   createInitialDuckXiangqiState,
   createInitialFortressXiangqiState,
   createInitialJieqiState,
@@ -51,6 +53,7 @@ import {
   jungleSquareOf,
   jungleStateToEngineFen,
   parseBanqiFen,
+  parseCrazyhouseXiangqiFen,
   parseDarkChessFen,
   parseDuckXiangqiFen,
   parseFortressXiangqiFen,
@@ -70,7 +73,9 @@ import { createPngCache, redirectToDefault, svgToPng, writePng } from './og-rast
  *  FEN is in the URL. */
 // v2 (2026-09-12): the live board and the site's default piece set, board at full
 // height with the caption beside it (og-card-board.ts).
-export const POSITION_OG_IMAGE_VERSION = 2;
+// v4 (2026-10-15): the piece look of 2026-10-14: one dark ring on both sides, pieces at 98% of the point gap (banqi 92%), no shadow, full-size face-down backs, Jungle rounded squares.
+// v5 (2026-10-15): the international pieces with smooth edges, one line width on the straight figures.
+export const POSITION_OG_IMAGE_VERSION = 5;
 
 /** Variants with a position card, i.e. the /analysis and /editor catalog. Slugs
  *  double as GameSpecIds. Order is the analysis dropdown's. */
@@ -88,6 +93,10 @@ export const POSITION_OG_VARIANTS = [
   // board and FEN as standard xiangqi: the explosion is a rule about captures,
   // not positions, so any xiangqi-legal position is an atomic one.
   'atomic-xiangqi',
+  // Admin playtest; here because its finished games export (JSON) and every
+  // exporting tenant binds a share card. The card draws the board; the hands
+  // ride in the FEN's brackets and are not drawn.
+  'crazyhouse-xiangqi',
 ] as const;
 
 export type PositionOgVariant = (typeof POSITION_OG_VARIANTS)[number];
@@ -306,6 +315,22 @@ export function resolvePositionOg(
         board: { kind: 'intersection', ...XIANGQI_GEOMETRY, pieces, extras },
       };
     }
+    case 'crazyhouse-xiangqi': {
+      // The standard board plus both hands in brackets (Fairy-Stockfish's
+      // spelling). The parser holds every piece to a point it could stand on.
+      const parsed = parseCrazyhouseXiangqiFen(trimmed, 'og-card');
+      if (!parsed.ok) return null;
+      const pieces: XiangqiOgPiece[] = Object.entries(parsed.state.board).flatMap(
+        ([square, piece]) =>
+          piece ? [{ ...xqCoord(square), color: piece.color, role: piece.role }] : [],
+      );
+      return {
+        variant,
+        publicFen: crazyhouseXiangqiFen(parsed.state),
+        toMove: inkToMove(parsed.state.status.type === 'playing' ? parsed.state.status.turn : null),
+        board: { kind: 'intersection', ...XIANGQI_GEOMETRY, pieces, extras: [] },
+      };
+    }
     case 'jieqi': {
       // The deal (sixth field, or a sample when absent) never leaves this
       // block: a face-down piece is projected to its square and ink only.
@@ -475,6 +500,8 @@ export function startPositionFen(variant: PositionOgVariant): string {
       return jungleStateToEngineFen(createInitialJungleState('og-card'));
     case 'duck-xiangqi':
       return duckXiangqiFen(createInitialDuckXiangqiState('og-card'));
+    case 'crazyhouse-xiangqi':
+      return crazyhouseXiangqiFen(createInitialCrazyhouseXiangqiState('og-card'));
     case 'dark-chess':
       return 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
     default: {
@@ -539,7 +566,7 @@ export async function servePositionOgImage(params: {
     redirectToDefault(response);
     return;
   }
-  const art = params.staticDir ? await loadCardArt(params.staticDir) : new Map<string, string>();
+  const art = params.staticDir ? await loadCardArt(params.staticDir) : new Map();
   const png = await svgToPng(renderPositionOgSvg(resolved, art));
   cache.set(key, png);
   writePng(response, png, 'MISS');

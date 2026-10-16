@@ -3,6 +3,7 @@ import { localizeAnnouncement } from './announcement-i18n.js';
 import { type AnnouncementKind, announcementSlug, announcements } from './announcements.js';
 import { localizedArticleHref } from './article-i18n.js';
 import { articles } from './articles-data.js';
+import { localizedHref } from './i18n/locale.js';
 import { buildLandingAnnouncements } from './landing-announcements.js';
 import { newsDiscInkForKind, newsDiscMarkForKind } from './news-disc.js';
 import { buildNewsPage } from './news-page.js';
@@ -53,6 +54,24 @@ describe('landing announcements', () => {
       expect(landing.textContent).not.toContain(hidden);
       expect(news.textContent).not.toContain(hidden);
     }
+  });
+
+  // Brian, 2026-10-02: the launch entry points at the board. It was written
+  // while the rules page was held back; the page is public now and the entry
+  // keeps the play link.
+  it('keeps the Crazyhouse Xiangqi launch on /feed, linking to play', () => {
+    vi.stubEnv('DEV', true);
+    const entry = announcements().find((e) => e.headline === 'Crazyhouse Xiangqi has launched.');
+    expect(entry?.href).toBe('/?play=computer&gameSpecId=crazyhouse-xiangqi');
+    expect(rulesHrefPublicSurfaceEnabled('/rules/crazyhouse-xiangqi')).toBe(true);
+
+    const news = buildNewsPage();
+    expect(news.textContent).toContain('Crazyhouse Xiangqi has launched.');
+    const links = [...news.querySelectorAll<HTMLAnchorElement>('a')].map((a) =>
+      a.getAttribute('href'),
+    );
+    expect(links).toContain('/?play=computer&gameSpecId=crazyhouse-xiangqi');
+    expect(links).not.toContain('/rules/crazyhouse-xiangqi');
   });
 
   it('retires the Drop Mini Xiangqi launch announcement from the homepage News rail', () => {
@@ -247,7 +266,9 @@ describe('landing announcements', () => {
     const article = articleSlug ? articles.find((a) => a.slug === articleSlug) : undefined;
     const newestFeatureHref = article
       ? localizedArticleHref(article, 'zh-Hant')
-      : newestRailEntry?.href;
+      : newestRailEntry
+        ? localizedHref(newestRailEntry.href ?? '', 'zh-Hant')
+        : undefined;
 
     expect(landing.getAttribute('aria-label')).toBe('新聞');
     expect(firstRow?.getAttribute('href')).toBe(newestHref);
@@ -284,8 +305,21 @@ describe('landing announcements', () => {
     };
 
     for (const variant of leaderboardVariants) {
+      // An unlisted variant (atomic xiangqi, during its rules rework) has no
+      // public surface, News included, so there is nothing to require.
+      if (!variantPublicSurfaceEnabled(variant.gameSpecId)) continue;
       const slug = readerFacingRuleSlugs[variant.gameSpecId] ?? variant.gameSpecId;
-      expect(announcementHrefs).toContain(`/rules/${slug}`);
+      // A launch may announce the rules page or the board. The board is the
+      // only choice while a rules page is held back (a /rules link to an
+      // unlisted page is filtered off News), and Crazyhouse Xiangqi's launch
+      // keeps its play link now that its page is public (Brian, 2026-10-02).
+      const rules = `/rules/${slug}`;
+      const play = `/?play=computer&gameSpecId=${variant.gameSpecId}`;
+      const accepted = rulesHrefPublicSurfaceEnabled(rules) ? [rules, play] : [play];
+      expect(
+        accepted.some((href) => announcementHrefs.has(href)),
+        `${variant.gameSpecId}: no launch announcement linking ${accepted.join(' or ')}`,
+      ).toBe(true);
     }
   });
 });

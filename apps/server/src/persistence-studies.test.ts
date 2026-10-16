@@ -14,6 +14,7 @@ import {
   listTopPublicStudies,
   renameChapter,
   reorderStudyChapters,
+  STUDY_PAGE_MAX,
   setChapterGamebook,
   setChapterOrientation,
   setChapterTags,
@@ -172,7 +173,7 @@ definePersistenceTests('studies', () => {
     assert.deepEqual(second!.chapterNames, ['Chapter 1']);
   });
 
-  test('lists public studies newest-updated first and keeps like writes idempotent', async () => {
+  test('lists public studies newest-created first and keeps like writes idempotent', async () => {
     const firstOwner = await makeUser('popular-first');
     const secondOwner = await makeUser('popular-second');
     const fanOne = await makeUser('fan-one');
@@ -191,8 +192,10 @@ definePersistenceTests('studies', () => {
     await setStudyLike(first.id, fanTwo.id, true);
     await setStudyLike(second.id, fanOne.id, true);
 
-    // Recency, not likes, orders the list: `second` was published after
-    // `first`, so it leads despite having fewer likes.
+    // Recency, not likes, orders the list: `second` was created after
+    // `first`, so it leads despite having fewer likes, and an edit to `first`
+    // afterwards does not move it back to the top.
+    await updateStudyMeta(first.id, firstOwner.id, { description: 'edited later' });
     const ranked = await listTopPublicStudies(5);
     assert.deepEqual(
       ranked.map((study) => [study.name, study.likeCount]),
@@ -209,6 +212,19 @@ definePersistenceTests('studies', () => {
       likeCount: 1,
       likedByViewer: false,
     });
+  });
+
+  test('a paged list returns a full page plus the sentinel row (#450)', async () => {
+    const owner = await makeUser('page-sentinel-owner');
+    for (let i = 0; i <= STUDY_PAGE_MAX; i += 1) {
+      const study = await makeStudy(owner.id, `Sentinel study ${i}`);
+      assert.ok(study);
+      await updateStudyMeta(study.id, owner.id, { visibility: 'public' });
+    }
+    // A route asks for limit + 1 to learn whether another page exists; the
+    // extra row must survive the clamp or hasMore reads false at the max page.
+    assert.equal((await listTopPublicStudies(STUDY_PAGE_MAX + 1)).length, STUDY_PAGE_MAX + 1);
+    assert.equal((await listTopPublicStudies(STUDY_PAGE_MAX + 50)).length, STUDY_PAGE_MAX + 1);
   });
 
   test('does not list or accept likes on non-public studies', async () => {

@@ -1,3 +1,4 @@
+import type { TenantGameOrigin } from './tenant.js';
 /**
  * VariantTenant registry — the extension point that makes "a new variant is
  * one registry entry" true at the dispatch layer.
@@ -19,15 +20,18 @@
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { isRetiredGameSpec, type RoomTimeControl } from '@mistboard/game';
+import type { HiddenPieceIdentity, RoomTimeControl } from '@mistboard/game';
 import type { WebSocket } from 'ws';
 import {
   censusDeployGate,
   type DeployGateCensus,
   type DeployGateRoom,
+  type DrainCreate,
   emptyDeployGateCensus,
   mergeDeployGateCensus,
+  resumablePveRoomPredicate,
 } from '../deploy-gate.js';
+import type { UserAccount } from '../persistence.js';
 
 // The structural slice of a live tenant room the dispatch layer touches.
 // Registration closures cast back to their concrete room type internally.
@@ -41,6 +45,8 @@ import {
 // TenantRuntimeRoom at runtime.
 export type TenantManagedRoom = {
   id: string;
+  // PvE: the engine-service seat, handed back by the shutdown (#567).
+  engineReservationId?: string | null;
   clients: Iterable<{
     socket: { close(code?: number, reason?: string): unknown; send(data: string): unknown };
     id?: string;
@@ -86,9 +92,10 @@ export type TenantWsAttachContext = {
 // HttpApiContext satisfies it.
 export type TenantCreateHttpContext = {
   databaseRequired: boolean;
-  isDraining(): boolean;
+  refusesCreate(create?: DrainCreate): boolean;
   drainDeadlineMs(): number | null;
   reserveLiveEngineSeat(engineId: string, color: 'white' | 'black'): Promise<string | null>;
+  releaseLiveEngineReservation(reservationId: string, reason: string): void;
 };
 
 // Mistboard TV channel metadata for a registered tenant. Optional: tenants
@@ -117,6 +124,12 @@ export type TenantExportPly = {
   san: string | null;
   // Remaining clock per color after the move, when the event carried a clock.
   clockMsAfter: Readonly<Record<string, number>> | null;
+  // Hidden-piece tenants only (jieqi, banqi, jungle-flip): the identity this ply
+  // turned over, and the identity of a face-down piece it captured. Absent when
+  // the ply did neither, and never stated for a piece whose identity the game
+  // never determined.
+  revealed?: HiddenPieceIdentity;
+  capturedHidden?: HiddenPieceIdentity;
 };
 
 export type TenantExportPgnResult = '1-0' | '0-1' | '1/2-1/2' | '*';
@@ -129,6 +142,16 @@ export type TenantExportGame = {
   // on its opening flip. The result is recorded by seat, so a consumer needs
   // this to know which pieces the winner actually played.
   firstMoverInk?: string | null;
+  // Imported games only: the room-created origin (event + credit).
+  origin?: TenantGameOrigin;
+  // Hidden-identity tenants only, when the game's source never determined some
+  // identities (an imported jieqi lab game): the squares, per color, holding a
+  // piece nobody ever revealed at the end. Their identity is omitted everywhere.
+  neverRevealed?: Readonly<Record<string, readonly string[]>> | null;
+  // Hidden-piece tenants only: the start as the variant's dealt FEN, when the
+  // game had a real deal (every site game). Absent for an imported game, whose
+  // source drew identities at reveal time: its stored deal is partly invented.
+  dealFen?: string;
   // Present only for tenants with an honest movetext notation. Receives the
   // full tag block the neutral builder assembled (Event, Site, Date, Round, the
   // two color-named player tags, Result, Variant, ...) and the result token;
@@ -183,6 +206,13 @@ export type VariantTenantRegistration = {
   export?: VariantTenantExport | null;
   // Share card for finished games, or null/absent (see VariantTenantCard).
   card?: VariantTenantCard | null;
+  // Does a stored log still replay under the current rules? Bound with
+  // tenantReplayCheck(tenant) (variant-tenant/runtime.ts). The list and picker
+  // surfaces (homepage TV, /watch, recent games, profile history) run it
+  // through filterReplayableGames before showing a game, so a game whose rules
+  // changed under it is skipped instead of failing to load (replay-guard.ts).
+  // Absent: only games already known to fail are skipped.
+  replays?: (events: readonly unknown[], roomId: string) => boolean;
   // Mistboard TV channel for this tenant, or null/absent when it has no watch
   // surface. Derived into WatchChannel by watch-channels.ts.
   watch?: VariantTenantWatchChannel | null;
@@ -220,6 +250,13 @@ export type VariantTenantRegistration = {
   activeGameCount(): number;
   // Hydrate a persisted room into the live map (null = unknown/invalid room).
   getOrLoadRoom(roomId: string): Promise<TenantManagedRoom | null>;
+  // The board the given seat sees in the room, exactly the `state` half of
+  // that seat's own snapshot (tenantSeatStateView), for the account-only
+  // /correspondence inbox. The caller must already have proven the requester
+  // holds `seat`. Absent, or null for anything that is not one of the tenant's
+  // colors, means no board: fail-closed, so a tenant that never opts in can
+  // never leak a position through the inbox.
+  seatBoard?: (room: TenantManagedRoom, seat: string) => unknown | null;
   // Hand a resolved live room its WebSocket connection.
   attachWebSocket(
     ctx: TenantWsAttachContext,
@@ -229,18 +266,27 @@ export type VariantTenantRegistration = {
   ): Promise<void>;
   // Shutdown sweep hook: clear this room's runtime timers.
   clearRuntimeTimers(room: TenantManagedRoom): void;
+  // Shutdown hook, run before the timer sweep: pause every live game in the
+  // room map so the outage is not charged to whoever is on move
+  // (pauseTenantRoomsOnShutdown over the ws runtime's lifecycleCtx). Required
+  // so a new tenant cannot register without it. Resolves to rooms paused.
+  pauseOnShutdown(at: number): Promise<number>;
   // Shutdown/test-teardown hook: empty the live map.
   clearRooms(): void;
   http: {
     // Claim a POST /api/rooms body (matchers are disjoint across tenants).
     matchesCreateRequest(body: Record<string, unknown>): boolean;
     // Full create flow including the tenant's own flag/rated/engine gates and
-    // error strings; writes the response itself.
+    // error strings; writes the response itself. `accountUser` is the signed-in
+    // requester, resolved once by POST /api/rooms whenever the body asks for a
+    // rated room (null otherwise), so no registration can forget to look it up;
+    // lobby-rated.test.ts holds every rated tenant to forwarding it.
     handleCreate(
       ctx: TenantCreateHttpContext,
       request: IncomingMessage,
       response: ServerResponse,
       body: Record<string, unknown>,
+      accountUser: UserAccount | null,
     ): Promise<void>;
   };
   // Matchmaking capability; null = no lobby surface (the lobby route answers
@@ -273,15 +319,21 @@ export type VariantTenantRegistration = {
   // CORRESPONDENCE_ELIGIBLE_SPECS must supply BOTH.
   // `seats` reports the concrete colors first/second landed on, so the route can name the
   // accepter's seat without knowing any variant's colors itself.
+  //
+  // `rated` (rated correspondence, 2026-10-02) asks for a rated room; the route sends true
+  // only for isCorrespondenceRatedSpec. `room.rated` reports what the room actually is, so
+  // the route can refuse to call a casual room rated; correspondence-eligibility.test.ts
+  // proves every rated-eligible spec's factory honours it.
   createCorrespondenceGameForSeek:
     | ((args: {
         timeControl: RoomTimeControl;
         first: { userId: string };
         second: { userId: string };
+        rated?: boolean;
       }) => Promise<
         | {
             ok: true;
-            room: { id: string; gameSpecId: string };
+            room: { id: string; gameSpecId: string; rated?: boolean };
             seats: { first: string; second: string };
           }
         | { ok: false; error: 'disabled' | 'persistence_failure' | 'room_id_collision' }
@@ -297,12 +349,12 @@ const registrationsByPrefix = new Map<string, VariantTenantRegistration>();
 let fallbackRoomLookup: (roomId: string) => boolean = () => false;
 
 export function registerVariantTenant(registration: VariantTenantRegistration): void {
-  // A retired spec (runtimeStatus 'retired' in packages/game) never registers:
-  // no routes, no room-id prefix claim, no watch channel, no seat for a bot.
-  // The tenant module stays on disk until its Stage 2 commit removes it
-  // (docs-private/variant-retirement-plan.md, #396); this is what makes the
-  // retirement take effect the moment the status flips, with no list to keep.
-  if (isRetiredGameSpec(registration.gameSpecId)) return;
+  // A retired spec (runtimeStatus 'retired' in packages/game) still registers:
+  // its routes are how a game in progress finishes and a finished game
+  // replays, exports and embeds. Retirement closes the doors instead: the
+  // request gate answers 410 and createTenantRuntimeRoom refuses a new room,
+  // and every listing reads isRetiredGameSpec. Until 2026-10-11 a retired spec
+  // skipped registration here, which took its replays down with it.
   const existing = registrationsByPrefix.get(registration.roomIdPrefix);
   if (existing && existing.kind !== registration.kind) {
     throw new Error(
@@ -349,6 +401,22 @@ export function correspondenceTenantForSpecId(
   return null;
 }
 
+/**
+ * Whether this spec's live games may be rated: its lobby offers rated seeks.
+ *
+ * The single source of truth for live rated play on a tenant. A friend room
+ * (POST /api/rooms, mode 'pvp') is rated on exactly the variants where Find
+ * opponent is (lichess-style challenges), so the create route reads this rather
+ * than keeping its own per-variant policy. Until 2026-10-03 each route file
+ * carried a hand-set rated policy, and when rated lobby play widened on
+ * 2026-10-02 only `lobby.supportsRated` moved: seven variants rated their seeks
+ * while their friend rooms still refused rated. lobby-rated.test.ts drives every
+ * registration's real create handler against this.
+ */
+export function lobbyOffersRated(gameSpecId: string): boolean {
+  return variantTenantForSpecId(gameSpecId)?.lobby?.supportsRated === true;
+}
+
 export function registeredVariantTenants(): VariantTenantRegistration[] {
   return [...registrationsByPrefix.values()];
 }
@@ -378,7 +446,13 @@ export function variantTenantDeployGateCensus(nowMs: number = Date.now()): Deplo
     for (const room of registration.rooms.values()) {
       if (room.projection) rooms.push({ events: room.events, projection: room.projection });
     }
-    census = mergeDeployGateCensus(census, censusDeployGate(rooms, nowMs));
+    const isResumablePve = resumablePveRoomPredicate({
+      gameSpecId: registration.gameSpecId,
+      engine: registration.isEngineClientId
+        ? { isEngineClientId: registration.isEngineClientId }
+        : null,
+    });
+    census = mergeDeployGateCensus(census, censusDeployGate(rooms, nowMs, isResumablePve));
   }
   return census;
 }

@@ -33,6 +33,7 @@ if (!options.noInstall && !existsSync('node_modules/.bin/tsc')) {
 if (!options.skipBuild) {
   run(['npm', 'run', 'build', '--workspace', '@mistboard/game']);
   run(['npm', 'run', 'build', '--workspace', '@mistboard/board-render']);
+  run(['npm', 'run', 'build', '--workspace', '@mistboard/mahjong']);
 } else {
   console.log('skip: declaration builds disabled by --skip-build');
 }

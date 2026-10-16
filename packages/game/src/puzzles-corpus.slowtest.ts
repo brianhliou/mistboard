@@ -17,11 +17,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  type FortressXiangqiPuzzle,
   type JunglePuzzle,
-  replayFortressXiangqiSourceGameToPly,
   replayJungleSourceGameToPly,
-  validateFortressXiangqiPuzzle,
   validateJunglePuzzle,
   validateStandardXiangqiPuzzle,
   type XiangqiPuzzle,
@@ -33,18 +30,6 @@ test('every seeded Jungle puzzle validates as a forced win (full corpus)', () =>
   assert.ok(puzzles.length > 0, 'corpus is non-empty');
   for (const puzzle of puzzles) {
     const result = validateJunglePuzzle(puzzle);
-    assert.ok(result.ok, `${puzzle.id} invalid: ${result.ok ? '' : result.issue.message}`);
-  }
-});
-
-test('every seeded Fortress Xiangqi puzzle validates (full corpus)', () => {
-  // Fortress ships NO puzzles as of 2026-09-03 (see the banner in
-  // puzzles-fortress-xiangqi-fixtures.ts), so there is no non-empty assertion
-  // here: an empty corpus is the intended state, and this loop is the guard for
-  // whatever a future re-mine puts back.
-  const puzzles = loadSeedPuzzleRegistry('fortress-xiangqi') as readonly FortressXiangqiPuzzle[];
-  for (const puzzle of puzzles) {
-    const result = validateFortressXiangqiPuzzle(puzzle);
     assert.ok(result.ok, `${puzzle.id} invalid: ${result.ok ? '' : result.issue.message}`);
   }
 });
@@ -68,21 +53,6 @@ test('every seeded Jungle sourceGame replays to its puzzle position', () => {
     const replayed = replayJungleSourceGameToPly(game, puzzle.sourceGame.ply);
     assert.ok(replayed, `${puzzle.id} source game does not reach ply ${puzzle.sourceGame.ply}`);
     assert.deepEqual(replayed.board, puzzle.initial.board, `${puzzle.id} board mismatch`);
-    assert.deepEqual(replayed.status, puzzle.initial.status, `${puzzle.id} turn mismatch`);
-  }
-});
-
-test('every seeded Fortress sourceGame replays to its puzzle position', () => {
-  const puzzles = loadSeedPuzzleRegistry('fortress-xiangqi') as readonly FortressXiangqiPuzzle[];
-  const games = new Map(loadSeedSourceGames().fortressXiangqi.map((game) => [game.id, game]));
-  for (const puzzle of puzzles) {
-    if (!puzzle.sourceGame) continue;
-    const game = games.get(puzzle.sourceGame.gameId);
-    assert.ok(game, `${puzzle.id} references missing source game ${puzzle.sourceGame.gameId}`);
-    const replayed = replayFortressXiangqiSourceGameToPly(game, puzzle.sourceGame.ply);
-    assert.ok(replayed, `${puzzle.id} source game does not reach ply ${puzzle.sourceGame.ply}`);
-    assert.deepEqual(replayed.board, puzzle.initial.board, `${puzzle.id} board mismatch`);
-    assert.deepEqual(replayed.hands, puzzle.initial.hands, `${puzzle.id} hands mismatch`);
     assert.deepEqual(replayed.status, puzzle.initial.status, `${puzzle.id} turn mismatch`);
   }
 });

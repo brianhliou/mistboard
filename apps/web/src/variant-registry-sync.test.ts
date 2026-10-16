@@ -9,24 +9,39 @@ import { describe, expect, it } from 'vitest';
 // chess stack. When this test landed it caught five tenants whose game routes
 // were missing from isClientRoute (fortress-xiangqi and four since-deleted
 // tenants).
-import { isClientRoute } from '../../server/src/server-policy.js';
+import { isClientRoute, isReviewShellRoute } from '../../server/src/server-policy.js';
 // Side-effect import: populates the server tenant registry exactly like
 // apps/server/src/index.ts (and registry.test.ts) do.
 import '../../server/src/variant-tenant/register-tenants.js';
 import {
-  ENGINE_PINNED_GAME_SPEC_IDS,
-  engineTimeControlPin,
+  BOT_DEFAULT_TIME_CONTROL_ID,
+  defaultEngineTimeControl,
+  ENGINE_FLOORED_GAME_SPEC_IDS,
+  isAllowedEngineTimeControl,
+  isRetiredGameSpec,
+  maybeGameSpecForId,
+  RETIRED_GAME_SPEC_IDS,
+  TIME_CONTROLS,
   VARIANT_DEFAULT_GAME_SPEC_IDS,
   variantDefaultTimeControl,
 } from '@mistboard/game';
-import { JIEQI_DEFAULT_ENGINE_ID } from '../../server/src/jieqi-engine.js';
+import { crosstableReviewUrl } from '../../server/src/crosstable.js';
+import { JIEQI_DEFAULT_ENGINE_ID, JIEQI_PLAYABLE_ENGINES } from '../../server/src/jieqi-engine.js';
+import {
+  JUNGLE_PLAYABLE_ENGINE_ID,
+  JUNGLE_PLAYABLE_ENGINE_IDS,
+  jungleEngineDisplayName,
+} from '../../server/src/server-jungle-engine.js';
 import { registeredVariantTenants } from '../../server/src/variant-tenant/registry.js';
 import {
   XIANGQI_DEFAULT_ENGINE_ID,
   XIANGQI_PUBLIC_ENGINES,
 } from '../../server/src/xiangqi-engine-catalog.js';
+import type { FeaturedGame } from './game-display.js';
+import { reviewUrlForGame } from './game-meta.js';
 import { landingBotOffer } from './landing-bot-policy.js';
-import { defaultTimePresetForSpec, webVariantTenants } from './variant-tenant/registry.js';
+import { webVariantTenants } from './variant-tenant/registry.js';
+import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
 
 const SAMPLE_ROOM_SUFFIX = 'abc123';
 
@@ -55,6 +70,27 @@ describe('web tenant routes <-> server SPA fallback allowlist', () => {
         `${tenant.gameSpecId}: review link ${url} is missing from isClientRoute() (apps/server/src/server-policy.ts)`,
       ).toBe(true);
     }
+  });
+
+  it('every tenant postgame and review route is cross-origin isolated', () => {
+    // Postgame review mounts the in-browser engine, which needs
+    // SharedArrayBuffer and so COOP/COEP; isReviewShellRoute is the server's
+    // hand-kept list of documents that get them. The dev server isolates every
+    // page, so a route missing here only breaks in prod, where Chrome readers
+    // are told the engine cannot run (the broadcast pages, f16f9e2d).
+    const missing: string[] = [];
+    for (const tenant of webVariantTenants()) {
+      const bases = new Set([tenant.gameRouteBase, tenant.reviewRouteBase ?? '/game']);
+      for (const base of bases) {
+        if (!base) continue;
+        const url = `${base}/${tenant.roomIdPrefix}${SAMPLE_ROOM_SUFFIX}`;
+        if (!isReviewShellRoute(url)) missing.push(`${tenant.gameSpecId}: ${url}`);
+      }
+    }
+    expect(
+      missing,
+      `not cross-origin isolated, so the review engine is dead in prod Chrome: add a pattern for these to isReviewShellRoute() in apps/server/src/server-policy.ts\n${missing.join('\n')}`,
+    ).toEqual([]);
   });
 });
 
@@ -89,6 +125,23 @@ describe('web tenant registry <-> server tenant registry parity', () => {
     }
   });
 
+  it('web rated capability matches the server lobby for every variant', () => {
+    // The client decides whether to OFFER a rated seek and the server lobby
+    // decides whether one is honoured. Fortress Xiangqi was rated on the server
+    // and casual on the web, so nobody could reach its pool; the reverse gives a
+    // Rated toggle whose every seek the lobby refuses (501).
+    for (const tenant of webTenants) {
+      if (!tenant.landing) continue;
+      const serverRated = serverTenants
+        .filter((registration) => registration.gameSpecId === tenant.gameSpecId)
+        .some((registration) => registration.lobby?.supportsRated === true);
+      expect(
+        tenant.landing.capabilities.supportsRated,
+        `${tenant.gameSpecId}: web supportsRated disagrees with the server lobby.supportsRated`,
+      ).toBe(serverRated);
+    }
+  });
+
   it('xiangqi picker engine options mirror the server engine catalog', () => {
     // The web engineOptions list is a hand-maintained mirror of the server's
     // XIANGQI_PUBLIC_ENGINES (apps/server/src/xiangqi-engine-catalog.ts): the
@@ -101,19 +154,111 @@ describe('web tenant registry <-> server tenant registry parity', () => {
     expect(options.map((option) => ({ id: option.id, name: option.name }))).toEqual(
       [...XIANGQI_PUBLIC_ENGINES].reverse().map((tier) => ({ id: tier.id, name: tier.name })),
     );
-    expect(tenant?.landing?.defaultEngineId).toBe(XIANGQI_DEFAULT_ENGINE_ID);
+    // The picker's newcomer default is the homepage first-game rung
+    // (landing-bot-policy), not the server's fallback for a create request that
+    // omits the engine (XIANGQI_DEFAULT_ENGINE_ID, the middle rung). Both must
+    // be seats the server can fill.
+    expect(tenant?.landing?.defaultEngineId).toBe('fairy-stockfish-xiangqi-level-2');
+    const serverIds = XIANGQI_PUBLIC_ENGINES.map((tier) => tier.id);
+    expect(serverIds).toContain(tenant?.landing?.defaultEngineId);
+    expect(serverIds).toContain(XIANGQI_DEFAULT_ENGINE_ID);
   });
 
-  it('the jieqi picker offers the tier the server actually serves', () => {
-    // Jieqi exposes ONE engine option, so the picker id IS the served tier. It
-    // pointed at the depth-capped middle rung while the uncapped tier sat
-    // unreachable (2026-08-23) — every jieqi PvE game was played at depth 10.
+  it('jieqi picker engine options mirror the server ladder', () => {
+    // Hand mirror of JIEQI_PLAYABLE_ENGINES (apps/server/src/jieqi-engine.ts),
+    // strongest first. Level 8 is named like the rungs below it (its tier name
+    // is the pre-ladder 'PikaJieQi - Strongest'); the rest wear their tier names. Drift means a picker entry that cannot seat an engine.
     const tenant = webTenants.find((candidate) => candidate.gameSpecId === 'jieqi');
     expect(tenant?.landing?.engineOptions, 'jieqi tenant must expose engineOptions').toBeTruthy();
-    expect((tenant?.landing?.engineOptions ?? []).map((option) => option.id)).toEqual([
-      JIEQI_DEFAULT_ENGINE_ID,
-    ]);
-    expect(tenant?.landing?.defaultEngineId).toBe(JIEQI_DEFAULT_ENGINE_ID);
+    const options = tenant?.landing?.engineOptions ?? [];
+    expect(options.map((option) => ({ id: option.id, name: option.name }))).toEqual(
+      [...JIEQI_PLAYABLE_ENGINES].reverse().map((tier) => ({
+        id: tier.id,
+        name: tier.id === JIEQI_DEFAULT_ENGINE_ID ? 'Pikafish Level 8' : tier.name,
+      })),
+    );
+    expect(tenant?.landing?.defaultEngineId).toBe('pikafish-jieqi-level-2');
+  });
+
+  it('jungle picker engine options mirror the server seats', () => {
+    // Hand mirror of JUNGLE_PLAYABLE_ENGINE_IDS (apps/server/src/server-jungle-engine.ts),
+    // strongest first: KataGo, then Misty, each under the name its seat shows.
+    // Drift means a picker entry the create route refuses.
+    const tenant = webTenants.find((candidate) => candidate.gameSpecId === 'jungle');
+    const options = tenant?.landing?.engineOptions ?? [];
+    expect(options.map((option) => ({ id: option.id, name: option.name }))).toEqual(
+      JUNGLE_PLAYABLE_ENGINE_IDS.map((id) => ({ id, name: jungleEngineDisplayName(id) })),
+    );
+    expect(tenant?.landing?.defaultEngineId).toBe(JUNGLE_PLAYABLE_ENGINE_ID);
+  });
+
+  it('every server watch channel has a variant marker', () => {
+    // The server derives a watch channel from each tenant's `watch` block;
+    // /watch and /games draw its marker from WATCH_CHANNEL_MINI_IDS. /games once
+    // kept its own copy of that map without duck-xiangqi, so every duck row would
+    // have rendered an empty marker slot at launch (aa91538e). Enabled or not:
+    // a channel is added before its flag turns on.
+    const channelIds = [
+      'dark-chess', // DARK_CHESS_CHANNEL, the one channel not derived from a tenant
+      ...serverTenants.flatMap((registration) =>
+        registration.watch ? [registration.watch.channelId] : [],
+      ),
+    ];
+    expect(channelIds.length, 'expected the server watch channels').toBeGreaterThan(5);
+    const missing = channelIds.filter((id) => !(id in WATCH_CHANNEL_MINI_IDS));
+    expect(
+      missing,
+      missing
+        .map(
+          (id) =>
+            `watch channel '${id}' has no marker: add '${id}' to WATCH_CHANNEL_MINI_IDS in apps/web/src/watch-channel-markers.ts`,
+        )
+        .join('\n'),
+    ).toEqual([]);
+  });
+
+  it('every searchable variant links its games where the web mounts them', () => {
+    // /games/search rows carry a server-built reviewUrl (crosstableReviewUrl,
+    // from the server registry's export.gameRouteBase). The web decides where a
+    // game actually mounts (reviewUrlForGame, from its own registry). The search
+    // offers exactly the watch-channel variants, so each one's two answers must
+    // agree, or a row links to a page that cannot replay it.
+    const searchable = [
+      { gameSpecId: 'dark-chess', roomIdPrefix: '' },
+      ...serverTenants.filter((registration) => registration.watch),
+    ];
+    expect(searchable.length).toBeGreaterThan(5);
+    const drift: string[] = [];
+    for (const { gameSpecId, roomIdPrefix } of searchable) {
+      const roomId = `${roomIdPrefix}${SAMPLE_ROOM_SUFFIX}`;
+      const server = crosstableReviewUrl(roomId, gameSpecId);
+      const web = reviewUrlForGame({ roomId, variant: gameSpecId } as FeaturedGame);
+      if (server !== web) drift.push(`${gameSpecId}: server ${server} != web ${web}`);
+    }
+    expect(drift, drift.join('\n')).toEqual([]);
+  });
+
+  it('the server marks a game unsupported exactly when the web has no page for it', () => {
+    // Profile rows for a variant with no game page are drawn without a link
+    // (server replayable-games.ts markUnavailableGames, which asks
+    // crosstableReviewUrl). The web is where a page actually mounts: its own
+    // postgame (gameRouteBase + mountPostgame), or the chess stack's /game/:id
+    // for a spec with a legacy live room. The two must agree for every
+    // registered tenant, or a playable game is greyed out or a dead link ships.
+    const drift: string[] = [];
+    for (const registration of serverTenants) {
+      const roomId = `${registration.roomIdPrefix}${SAMPLE_ROOM_SUFFIX}`;
+      const serverHasPage = crosstableReviewUrl(roomId, registration.gameSpecId) !== null;
+      const web = webTenants.find((tenant) => roomId.startsWith(tenant.roomIdPrefix));
+      const webHasPage =
+        Boolean(web?.gameRouteBase && web.mountPostgame) ||
+        Boolean(maybeGameSpecForId(registration.gameSpecId)?.legacyLiveRoom);
+      if (serverHasPage !== webHasPage)
+        drift.push(`${registration.gameSpecId}: server ${serverHasPage} != web ${webHasPage}`);
+    }
+    expect(drift, drift.join('\n')).toEqual([]);
+    // Mahjong is the live case: playable, with no page for a finished table.
+    expect(crosstableReviewUrl(`mj_${SAMPLE_ROOM_SUFFIX}`, 'mahjong')).toBeNull();
   });
 
   it('web tenant roomIdPrefixes are unique', () => {
@@ -132,24 +277,36 @@ describe('web tenant registry <-> server tenant registry parity', () => {
     }
   });
 
-  it('every engine-pinned variant offers the pace it is pinned to', () => {
-    // A pin narrows the PvE picker to a single preset and the create route to a
-    // single pace (#283). If the variant's own allowlist does not contain that
-    // preset, the picker narrows to nothing while the route rejects everything,
-    // which strands bot play on that variant entirely.
-    for (const gameSpecId of ENGINE_PINNED_GAME_SPEC_IDS) {
-      const pin = engineTimeControlPin(gameSpecId);
-      expect(pin, `${gameSpecId} is listed as pinned but resolves to no time control`).toBeTruthy();
+  it('every engine-floored variant offers a pace its bot can play', () => {
+    // An increment floor narrows the PvE picker and the create route (#283). If
+    // none of the variant's own presets clears it, the picker narrows to
+    // nothing while the route rejects everything, which strands bot play on
+    // that variant entirely.
+    for (const gameSpecId of ENGINE_FLOORED_GAME_SPEC_IDS) {
       const tenantLanding = webVariantTenants().find(
         (tenant) => tenant.gameSpecId === gameSpecId,
       )?.landing;
-      // Variants with no tenant landing config (fog chess) fall back
-      // to all three official controls in the picker, so any pin is offered.
+      // Variants with no tenant landing config (fog chess) fall back to every
+      // official pace in the picker, 10+5 among them.
       if (!tenantLanding) continue;
+      const playable = tenantLanding.timePresetIds.filter((id) => {
+        const tc = TIME_CONTROLS.find((candidate) => candidate.id === id);
+        return tc !== undefined && isAllowedEngineTimeControl(gameSpecId, tc);
+      });
+      expect(playable, `${gameSpecId} offers no pace its bot can play`).not.toEqual([]);
+    }
+  });
+
+  it('every variant offers the bot default pace', () => {
+    // Bot games preselect BOT_DEFAULT_TIME_CONTROL_ID in every variant and the
+    // server starts an omitted bot pace there, so a variant that does not render
+    // it would preselect an invisible control.
+    for (const tenant of webVariantTenants()) {
+      if (!tenant.landing) continue;
       expect(
-        tenantLanding.timePresetIds,
-        `${gameSpecId} is pinned to ${pin?.id} but its landing config does not offer it`,
-      ).toContain(pin?.id);
+        tenant.landing.timePresetIds,
+        `${tenant.gameSpecId} does not offer the bot default ${BOT_DEFAULT_TIME_CONTROL_ID}`,
+      ).toContain(BOT_DEFAULT_TIME_CONTROL_ID);
     }
   });
 
@@ -176,18 +333,17 @@ describe('web tenant registry <-> server tenant registry parity', () => {
 
   it('a bot offer advertises the pace its own picker will preselect', () => {
     // The Lobby row and Quick Pairing chip print a clock beside the bot's name;
-    // landing-play then opens the setup dialog on the variant's default. Those
-    // are computed in two places (landing-bot-policy offerPace, registry
-    // defaultTimePresetForSpec), so nothing but this test stops them drifting
-    // into advertising one pace and starting another.
+    // landing-play then opens the setup dialog on the bot default, and the
+    // server starts an omitted bot pace at defaultEngineTimeControl. Nothing but
+    // this test stops them drifting into advertising one pace and starting
+    // another.
     for (const tenant of webVariantTenants()) {
       const offer = landingBotOffer(tenant.gameSpecId);
       if (!offer) continue;
-      const pin = engineTimeControlPin(tenant.gameSpecId)?.id;
       expect(
         offer.timeControlId,
         `${tenant.gameSpecId} advertises ${offer.timeControlId} for ${offer.botName}`,
-      ).toBe(pin ?? defaultTimePresetForSpec(tenant.gameSpecId));
+      ).toBe(defaultEngineTimeControl(tenant.gameSpecId).id);
     }
   });
 });
@@ -215,5 +371,38 @@ describe('play deep links are gated on their own variant', () => {
       }
     }
     expect(mismatched, mismatched.join('\n')).toEqual([]);
+  });
+});
+
+// A retired variant (Fortress and Atomic Xiangqi, 2026-10-11) keeps its tenant
+// on BOTH sides, so its finished games still have a review page and a server
+// that hydrates them, while no web surface offers it and no deep link starts
+// one. Dropping it from either registry would 404 every game ever played.
+describe('retired variants: replay kept on both sides, play offered on neither', () => {
+  it('every retired spec keeps a web and a server tenant', () => {
+    expect(RETIRED_GAME_SPEC_IDS.length).toBeGreaterThan(0);
+    const webSpecs = new Set<string>(webVariantTenants().map((tenant) => tenant.gameSpecId));
+    const serverSpecs = new Set<string>(
+      registeredVariantTenants().map((registration) => registration.gameSpecId),
+    );
+    for (const id of RETIRED_GAME_SPEC_IDS) {
+      expect(webSpecs.has(id), `${id}: web tenant`).toBe(true);
+      expect(serverSpecs.has(id), `${id}: server tenant`).toBe(true);
+      const tenant = webVariantTenants().find((candidate) => candidate.gameSpecId === id);
+      expect(tenant?.gameRouteBase, `${id}: postgame route`).toBeTruthy();
+      expect(
+        isClientRoute(`${tenant?.gameRouteBase}/${tenant?.roomIdPrefix}${SAMPLE_ROOM_SUFFIX}`),
+        `${id}: a finished game's page must still serve`,
+      ).toBe(true);
+    }
+  });
+
+  it('no retired spec is offered in the menu or accepts a play deep link', () => {
+    for (const tenant of webVariantTenants()) {
+      if (!isRetiredGameSpec(tenant.gameSpecId)) continue;
+      expect(tenant.landing?.offerInMenu() ?? false, tenant.gameSpecId).toBe(false);
+      expect(tenant.landing?.acceptsDeepLink() ?? false, tenant.gameSpecId).toBe(false);
+      expect(landingBotOffer(tenant.gameSpecId), tenant.gameSpecId).toBeNull();
+    }
   });
 });

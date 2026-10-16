@@ -1,4 +1,4 @@
-import { COUNTED_USER, countedHumanGame } from './persistence-counted-games.js';
+import { COUNTED_USER, countedPublicGame, notRetiredVariant } from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
 import type { GameMode } from './persistence-game-lifecycle.js';
 
@@ -118,11 +118,41 @@ export async function getSiteStats(): Promise<SiteStats> {
   };
 }
 
-// Every query below is over `games g` with the shared counted-game filter:
-// completed pvp/pve, no stats-excluded seat. The by-mode split keeps its eve
-// row (an admin-only figure the client hides on the public page) but applies
-// the same seat exclusion to the human rows.
-const COUNTED = countedHumanGame('g');
+// Every query below is over `games g` with the shared public filter:
+// completed pvp/pve, no stats-excluded seat, and not in a retired variant
+// (countedPublicGame), so no public number counts a variant a visitor can no
+// longer play. The by-mode split keeps its eve row (an admin-only figure the
+// client hides on the public page) but applies the same seat exclusion to the
+// human rows and the retired-variant exclusion to every row.
+const COUNTED = countedPublicGame('g');
+const NOT_RETIRED = notRetiredVariant('g');
+
+export interface SiteGameTotals {
+  totalCompletedGames: number;
+  last30dCompletedGames: number;
+}
+
+// The two headline counts alone, for the homepage poll (site-counters.ts):
+// getPublicSiteStats runs a dozen aggregates for /stats, which a per-view
+// read on the homepage does not need. Same filter and window, so the numbers
+// agree with /stats.
+export async function getSiteGameTotals(
+  options: PublicSiteStatsOptions = {},
+): Promise<SiteGameTotals> {
+  const now = options.now ?? new Date();
+  const result = await getPool().query<{ total: number; last30d: number }>(
+    `SELECT
+       count(*)::int AS total,
+       count(*) FILTER (
+         WHERE g.ended_at > $1::timestamptz - INTERVAL '30 days'
+       )::int AS last30d
+     FROM games g
+     WHERE ${COUNTED}`,
+    [now],
+  );
+  const row = result.rows[0];
+  return { totalCompletedGames: row?.total ?? 0, last30dCompletedGames: row?.last30d ?? 0 };
+}
 
 export async function getPublicSiteStats(
   options: PublicSiteStatsOptions = {},
@@ -153,7 +183,7 @@ export async function getPublicSiteStats(
   const byMode = await pool.query<{ mode: PublicStatsMode; n: number }>(
     `SELECT g.mode, count(*)::int AS n
      FROM games g
-     WHERE (${COUNTED}) OR (g.status = 'completed' AND g.mode = 'eve')
+     WHERE (${COUNTED}) OR (g.status = 'completed' AND g.mode = 'eve' AND ${NOT_RETIRED})
      GROUP BY g.mode`,
   );
 
@@ -319,6 +349,28 @@ export async function getPublicSiteStats(
     dailyCompletedGames,
     variantDaily,
   };
+}
+
+// Counted games per variant that ENDED inside the trailing window, most first.
+// The homepage play panel orders its variants by this (variant-order.ts);
+// `games.variant` holds the game spec id ('dark-chess', 'xiangqi', ...), the
+// same key the tenants and the legacy room write at game start.
+export async function getRecentCountedGamesByVariant(
+  windowDays: number,
+  options: PublicSiteStatsOptions = {},
+): Promise<Array<{ variant: string; count: number }>> {
+  const now = options.now ?? new Date();
+  const { rows } = await getPool().query<{ variant: string; n: number }>(
+    `SELECT g.variant, count(*)::int AS n
+     FROM games g
+     WHERE ${COUNTED}
+       AND g.ended_at > $1::timestamptz - ($2::int * INTERVAL '1 day')
+       AND g.ended_at <= $1::timestamptz
+     GROUP BY g.variant
+     ORDER BY n DESC, g.variant ASC`,
+    [now, windowDays],
+  );
+  return rows.map((r) => ({ variant: r.variant, count: r.n }));
 }
 
 function isoDate(value: Date | string): string {

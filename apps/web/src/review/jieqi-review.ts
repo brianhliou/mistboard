@@ -9,22 +9,26 @@ import {
   type JieqiDeal,
   type JieqiGameState,
   type JieqiMove,
+  type JieqiPieceRole,
   type JieqiPlayerView,
   jieqiStateToPikafishFen,
   pikafishUciToJieqiMove,
 } from '@mistboard/game';
 import { createJieqiInteractiveBoard } from '../jieqi-board.js';
 import type { JieqiBoardArrow, JieqiBoardMarker } from '../live-jieqi-render.js';
-import { JIEQI_GEO } from '../live-jieqi-render.js';
+import { JIEQI_GEO, jieqiPieceGhostSvg } from '../live-jieqi-render.js';
 import { xiangqiAppearanceChangedEvent } from '../theme.js';
 import { xiangqiBoardAspect } from '../xiangqi-board-aspect.js';
 import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
 import {
   bestMoveArrowWithParser,
+  candidateArrowsWithParser,
   engineArrowsFromLinesWithParser,
 } from './engine/engine-arrows.js';
 import type { NodeShape, VariantTreeAdapter } from './game-tree.js';
+import { jieqiChanceOdds } from './jieqi-luck-mark.js';
 import { makeJieqiTreeAdapter } from './jieqi-tree-adapter.js';
+import { attachLuckBadgeCard, attachLuckMarkCard, type LuckCardDetail } from './luck-mark-card.js';
 import { formatJieqiBestMove } from './move-advice.js';
 import {
   mountTreeReview,
@@ -41,6 +45,27 @@ export type JieqiReviewConfig = TreeReviewConfig<JieqiMove, JieqiGameState>;
 /** Handle returned by mountJieqiReview: snapshot the current tree to persist it. */
 export type JieqiReviewHandle = TreeReviewHandle;
 
+/** The luck card's detail for a scored chance move: the odds from the pool the server
+ *  averaged over (the mover's own bag, the victim's, or both). Null when the move has no
+ *  mover (never for a played move). One builder for the board's die and the move-list
+ *  badge, so both open the same card. */
+export function jieqiLuckDetail(
+  move: JieqiMove,
+  info: { luck: number; before: JieqiGameState },
+): LuckCardDetail | null {
+  const mover = info.before.board[move.from]?.color;
+  if (!mover) return null;
+  const chance = jieqiChanceOdds(info.before, move);
+  return {
+    square: move.to,
+    color: mover,
+    luck: info.luck,
+    kind: chance?.kind ?? 'reveal',
+    odds: chance?.reveal ?? null,
+    capture: chance?.capture ?? null,
+  };
+}
+
 function makeJieqiPresentation(
   adapter: VariantTreeAdapter<JieqiMove, JieqiGameState, JieqiPlayerView>,
 ): TreePresentation<
@@ -51,6 +76,10 @@ function makeJieqiPresentation(
   JieqiBoardArrow,
   unknown
 > {
+  // The mark drawn now, for the hover card; the card itself checks the mark is on the board.
+  let luckDetail: LuckCardDetail | null = null;
+  const pieceArt = (role: JieqiPieceRole, color: JieqiColor): string =>
+    jieqiPieceGhostSvg({ color, role, faceDown: false });
   return {
     adapter,
     engine: {
@@ -63,6 +92,8 @@ function makeJieqiPresentation(
       engineArrowsFromLines: (lines) =>
         engineArrowsFromLinesWithParser(lines, pikafishUciToJieqiMove),
       bestMoveArrow: (best) => bestMoveArrowWithParser(best, pikafishUciToJieqiMove),
+      // A reveal's ranked alternatives, weighted: the arrows behind "?? e1-d1 was best."
+      candidateArrows: (moves) => candidateArrowsWithParser(moves, pikafishUciToJieqiMove),
     },
     // The analysis engine's best move is Pikafish UCI (0-indexed ranks, no flips); render it in
     // board coords ("e8-a8") for the "… was best" advice line, not the raw "e7a7".
@@ -84,7 +115,12 @@ function makeJieqiPresentation(
     perspective: (flipped) => (flipped ? 'black' : 'red'),
     // Review plays BOTH sides: the interactive seat is the side to move.
     seatFor: (view) => (view.status.type === 'playing' ? view.status.turn : null),
-    createBoard: (opts) => createJieqiInteractiveBoard(opts),
+    createBoard: (opts) => {
+      const board = createJieqiInteractiveBoard(opts);
+      const detachCard = attachLuckMarkCard(opts.board, () => luckDetail, pieceArt);
+      opts.signal?.addEventListener('abort', detachCard, { once: true });
+      return board;
+    },
     // No glide animation wired for jieqi yet; the board re-renders on nav.
     animateMove: () => {},
     shapeToArrow: (s: NodeShape): JieqiBoardArrow => ({
@@ -101,6 +137,26 @@ function makeJieqiPresentation(
       text: glyph.text,
       className: `xq-marker--${glyph.tone}`,
     }),
+    // A chance move's luck as a die on its destination square: where the revealed piece
+    // landed, or where the face-down piece was taken. The card states the odds from the
+    // pool the server averaged over (the mover's own bag, the victim's, or both).
+    moveLuckMarker: (move, info): JieqiBoardMarker | null => {
+      luckDetail = jieqiLuckDetail(move, info);
+      if (!luckDetail) return null;
+      return { square: move.to, kind: 'luck', luck: { luck: info.luck } };
+    },
+    // The move list's 🎲 badge opens the same card, for its own move (not only the current one).
+    moveListLuck: ({ list, luckAt, signal }) => {
+      const detach = attachLuckBadgeCard(
+        list,
+        (badge) => {
+          const at = luckAt(badge.dataset.luckPath ?? '');
+          return at ? jieqiLuckDetail(at.move, at) : null;
+        },
+        pieceArt,
+      );
+      signal.addEventListener('abort', detach, { once: true });
+    },
   };
 }
 

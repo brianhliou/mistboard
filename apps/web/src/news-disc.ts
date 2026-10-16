@@ -1,6 +1,7 @@
 // The homepage News box marks each row with a xiangqi-style disc: the
-// international piece set's cream disc and inked ring (xiangqi-piece-sets.ts,
-// internationalDiscMark) carrying a filled ink mark instead of a character.
+// international piece set's cream disc and its one dark ring (xiangqi-piece-sets.ts,
+// INTERNATIONAL_RING_STROKE; both sides share it since the piece look of
+// 2026-10-14) carrying a filled ink mark instead of a character.
 //
 // The marks are a house set drawn for a 36px disc, in the same 100-unit box
 // the piece art uses: filled silhouettes, no strokes thinner than 4 units, so
@@ -20,9 +21,11 @@ import type { AnnouncementKind } from './announcements.js';
 export type NewsDiscMark = 'horn' | 'scroll' | 'spark' | 'wrench';
 export type NewsDiscInk = 'red' | 'black';
 
-// Same hexes as the international set's disc and rings, so a marker beside a
-// board on the homepage is visibly the same object.
+// Same hexes as the international set's disc and ring, so a marker beside a
+// board on the homepage is visibly the same object. The ring is dark on every
+// disc, as on the pieces; the ink colours only the mark inside it.
 const CREAM = '#fef0d7';
+const RING = '#202427';
 const INK: Record<NewsDiscInk, string> = { red: '#c30d0d', black: '#202427' };
 
 export function newsDiscMarkForKind(kind: AnnouncementKind): NewsDiscMark {
@@ -84,7 +87,7 @@ export function newsDiscSvg(kind: AnnouncementKind): string {
   const ink = INK[newsDiscInkForKind(kind)];
   return (
     `<svg class="landing-news-disc landing-news-disc-${mark}" viewBox="0 0 100 100" aria-hidden="true" focusable="false" data-mark="${mark}">` +
-    `<circle cx="50" cy="50" r="46" fill="${CREAM}" stroke="${ink}" stroke-width="2.8"/>` +
+    `<circle cx="50" cy="50" r="46" fill="${CREAM}" stroke="${RING}" stroke-width="2.8"/>` +
     MARKS[mark](ink) +
     '</svg>'
   );
@@ -96,7 +99,7 @@ export function newsMoreDiscSvg(): string {
   const ink = INK.black;
   return (
     '<svg class="landing-news-disc landing-news-disc-more" viewBox="0 0 100 100" aria-hidden="true" focusable="false" data-mark="more">' +
-    `<circle cx="50" cy="50" r="46" fill="${CREAM}" stroke="${ink}" stroke-width="2.8"/>` +
+    `<circle cx="50" cy="50" r="46" fill="${CREAM}" stroke="${RING}" stroke-width="2.8"/>` +
     `<circle cx="30" cy="50" r="6.5" fill="${ink}"/><circle cx="50" cy="50" r="6.5" fill="${ink}"/><circle cx="70" cy="50" r="6.5" fill="${ink}"/>` +
     '</svg>'
   );

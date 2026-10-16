@@ -10,14 +10,33 @@
       "!/apps/server/loadtest/**",
       "!/apps/server/scripts/**",
       "/apps/web/**",
+      "!/apps/web/src/**/*.test.ts",
       "/packages/game/**",
+      "!/packages/game/src/**/*.test.ts",
       "/packages/board-render/**",
+      "!/packages/board-render/src/**/*.test.ts",
       "/scripts/build.mjs",
       "/scripts/start.mjs",
       "/package.json",
       "/package-lock.json",
       "/fairy-stockfish-xiangqi.ref",
       "/stockfish.ref",
+      "/fairy-stockfish-duck-xiangqi.ref",
+      "/fairy-stockfish-duck-xiangqi.patch",
+      "/fairy-stockfish-atomic-xiangqi.ref",
+      "/fairy-stockfish-atomic-xiangqi.patch",
+      "/pikafish-jieqi.ref",
+      "/pikafish.ref",
+      "/ab-jchess.ref",
+      "/katago-jungle.ref",
+      "/scripts/engine-assets.sh",
+      "/scripts/checkout-private-engine.sh",
+      "/scripts/check_engine_serveable.py",
+      "/scripts/fetch-fairy-stockfish-largeboard.sh",
+      "/scripts/fetch-fsf-xiangqi-net.sh",
+      "/scripts/fetch-abjchess-net.sh",
+      "/scripts/fetch-katago-jungle-net.sh",
+      "/scripts/fetch-release-asset.sh",
       "/railpack.json",
       "/railway.web.json",
       "/tsconfig.base.json"
@@ -25,6 +44,8 @@
   },
   "deploy": {
     "healthcheckPath": "/health",
-    "healthcheckTimeout": 30
+    "healthcheckTimeout": 30,
+    "drainingSeconds": 20,
+    "startCommand": "node scripts/start.mjs"
   }
 }

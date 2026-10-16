@@ -10,6 +10,8 @@ import {
   type PieceRole,
   replayGameEvents,
 } from '@mistboard/game';
+import type { DrawShape } from 'chessground/draw';
+import type { Key } from 'chessground/types';
 import 'chessground/assets/chessground.base.css';
 import 'chessground/assets/chessground.brown.css';
 import 'chessground/assets/chessground.cburnett.css';
@@ -30,6 +32,8 @@ import type { BeliefConfig, BeliefPanelHandle } from './belief-panel.js';
 import { chessgroundAnimation } from './board-anim.js';
 import { computeCaptures } from './captures.js';
 import { t } from './i18n/catalog.js';
+import type { SoundKind } from './live-state.js';
+import { anchorForPly, positionAt } from './recorded-playback.js';
 import {
   type AnnotationConfig,
   type AnnotationPanelHandle,
@@ -73,7 +77,12 @@ import {
   thinkingBudgetMsFromMeta,
 } from './replay-meta.js';
 import { createReplayMovesPanel, renderReplayMovesPanel } from './replay-moves-panel.js';
-import { delayForPly, moveEventAtPly, thinkingDurationForPly } from './replay-playback.js';
+import {
+  moveEventAtPly,
+  recordedPlyOffsets,
+  replayStartAt,
+  thinkingDurationForPly,
+} from './replay-playback.js';
 import {
   compactReplayClockSidesForOrientation,
   DEFAULT_BETWEEN_GAME_DELAY_MS,
@@ -86,9 +95,16 @@ import {
   type WallClockReplayPosition,
 } from './replay-wall-clock.js';
 import type { MoveListEntry } from './review/move-list.js';
+import { seatDiscEl } from './seat-disc.js';
+import type { SvgBoardSquareArrow, SvgBoardSquareGlyph } from './svg-board-arrow.js';
+import { svgBoardGlyphMarker } from './svg-board-marker.js';
 import { escapeHtml } from './web-utils.js';
 
 const replayAbortControllers = new WeakMap<HTMLElement, AbortController>();
+
+// Playback re-reads the wall clock this often: lands each ply on time and ticks the
+// clock at one second per second.
+const PLAYBACK_TICK_MS = 100;
 
 export type { AnnotationConfig } from './replay-annotations.js';
 export type { EngineReviewPanels } from './replay-engine-panels.js';
@@ -132,14 +148,13 @@ export type ReplayOptions = {
   /** When set, after each game finishes the next sample loads automatically. */
   loopSamples?: string[];
   /**
-   * When true, clamp every per-move autoplay delay to the watchable
-   * [MIN_PLAY_MS, MAX_PLAY_MS] band. PvP (recorded `at`-deltas) and the
-   * `compute_ms` path are already clamped; this only bounds the raw
-   * `thinkTimeMs` path so flat-budget EvE games (literal 5s/move) play back
-   * as a bounded pace instead of a slow metronome. Used by the landing hero;
-   * the full game viewer leaves it off to keep faithful think times.
+   * Delayed air (homepage TV channel): the wall-clock ms at which this game's
+   * start went on air. The first autoplay then shows the ply the broadcast is on
+   * NOW (at the game's recorded timing), so a visitor arriving mid-air joins
+   * mid-game rather than at ply 0. Absent, playback starts from the current ply.
+   * Autoplay always runs at the recorded timing; there is no pace option.
    */
-  clampPace?: boolean;
+  airStartMs?: number;
   /** When set, replay position is derived from wall-clock time across the sample corpus. */
   wallClockLoop?: WallClockReplayLoop;
   /** Pause length on the reveal frame before cycling to the next loop sample. */
@@ -184,6 +199,8 @@ export type ReplayOptions = {
   showCaptures?: boolean;
   /** Split captured pieces above and below POV boards instead of one strip below. */
   captureLayout?: 'single' | 'split';
+  /** Lead each clock row with a disc in that side's colour (homepage TV). */
+  seatDiscs?: boolean;
   /** Compact-mode clock placement. Defaults to the historical board-edge rows. */
   compactClockLayout?: 'board-edges' | 'stacked' | 'captures';
   /** End-result placement. Defaults to pane footer labels. */
@@ -262,6 +279,31 @@ export type ReplayHandle = {
   /** Which move-order seat the board is drawn for (sits at the bottom). OPTIONAL;
    *  the embed card reads it to put its own seat rows the right way up. */
   bottomSeat?: () => 'first' | 'second';
+  /** Draw this overlay on the board at each ply (null clears), repainting the current
+   *  ply now: arrows, and judgment badges pinned to a square. The squares are the board's
+   *  own notation. OPTIONAL. The game embed's stored best-move arrows and move badges
+   *  ride this (the chess path draws the badges through chessground's shapes). */
+  setBoardOverlay?: (overlayAtPly: ((ply: number) => ReplayBoardOverlay) | null) => void;
+  /** The game's played moves as board squares, one per ply (a drop has no `from`, a flip
+   *  has from === to). OPTIONAL; lets a caller match a stored best move against the
+   *  move played without decoding the variant's rules. */
+  playedMoves?: () => Array<{ ply: number; from?: string; to?: string }>;
+  /** The spectator sound for the move that produced `ply` (move, capture, flip,
+   *  drop, ...), derived only from the views the board draws. OPTIONAL; null
+   *  outside the game's plies. Mistboard TV's live follow is the only caller. */
+  moveSoundAtPly?: (ply: number) => SoundKind | null;
+  /** The loaded game's recorded result ('in-progress' for a live frame), or null
+   *  before anything loaded. OPTIONAL; TV's live follow reads it to tell a game
+   *  that ended from one that went quiet. */
+  gameResult?: () => string | null;
+};
+
+/** What a caller draws over a replay board at one ply. */
+export type ReplayBoardOverlay = {
+  arrows: readonly SvgBoardSquareArrow[];
+  /** Judgment badges (?!, ?, ??) in a square's top-right corner, in the shared
+   *  board-glyph-marker.css palette (`className` = `xq-marker--<tone>`). */
+  glyphs: readonly SvgBoardSquareGlyph[];
 };
 
 /** A per-ply clock snapshot, keyed by move order rather than colour so it carries across
@@ -274,6 +316,8 @@ export type ReplayClockReadout = {
   second: number;
   /** Whose clock is live at this ply; null once the game has ended. */
   toMove: 'first' | 'second' | null;
+  /** The starting time, for the rail's time-left bar; null leaves it bare. */
+  initialMs?: number | null;
 };
 
 export async function mountReplay(
@@ -294,7 +338,11 @@ export async function mountReplay(
   let loopSamples = wallClockLoop ? undefined : options.loopSamples;
   const betweenGameDelayMs = options.betweenGameDelayMs ?? DEFAULT_BETWEEN_GAME_DELAY_MS;
   const onGameEnd = options.onGameEnd;
-  const clampPace = options.clampPace === true;
+  // Consumed by the first playback (see ReplayOptions.airStartMs).
+  let airAnchor: number | null =
+    typeof options.airStartMs === 'number' && Number.isFinite(options.airStartMs)
+      ? options.airStartMs
+      : null;
   const autoplay = !wallClockLoop && (options.autoplay === true || loopSamples !== undefined);
   const urlForId = options.urlForId ?? defaultUrlForId;
   const loaderForId = options.loaderForId;
@@ -385,6 +433,10 @@ export async function mountReplay(
   if (gameMetaPanel) root.append(gameMetaPanel.el);
   if (movesPanel) root.append(movesPanel.el);
   const clockPanel = createClockPanel();
+  if (options.seatDiscs === true) {
+    clockPanel.whiteRow.prepend(seatDiscEl('white'));
+    clockPanel.blackRow.prepend(seatDiscEl('black'));
+  }
   // In compact + single-POV mode (landing hero) the truth pane is CSS-hidden,
   // so clocks hosted on truth would also be hidden. Track the current host
   // pane so we can move the clock rows when the visible pane changes across
@@ -535,6 +587,32 @@ export async function mountReplay(
   const whiteCg = createBoard(whitePane.boardEl, boardOrientation);
   const truthCg = createBoard(truthPane.boardEl, boardOrientation);
   const blackCg = createBoard(blackPane.boardEl, boardOrientation);
+  // A caller's overlay per ply (handle.setBoardOverlay: the game embed's judgment
+  // badges and stored best-move arrows), drawn as chessground auto-shapes on every pane.
+  let overlayAtPly: ((ply: number) => ReplayBoardOverlay) | null = null;
+  const applyBoardOverlay = (): void => {
+    const overlay = overlayAtPly?.(currentPly);
+    const shapes: DrawShape[] = overlay
+      ? [
+          ...overlay.arrows.map(
+            (arrow): DrawShape => ({
+              orig: arrow.from as Key,
+              dest: arrow.to as Key,
+              brush: arrow.className?.includes('best') ? 'blue' : 'paleGrey',
+            }),
+          ),
+          ...overlay.glyphs.map(
+            (glyph): DrawShape => ({
+              orig: glyph.square as Key,
+              // Chessground hands a custom shape the square as a 100x100 box; the badge
+              // is the same markup and palette every SVG board draws.
+              customSvg: { html: svgBoardGlyphMarker(glyph, { x: 50, y: 50 }, 17, 32) },
+            }),
+          ),
+        ]
+      : [];
+    for (const cg of [whiteCg, truthCg, blackCg]) cg.setAutoShapes(shapes);
+  };
 
   const annotation = options.annotation;
   const belief = options.belief;
@@ -585,11 +663,17 @@ export async function mountReplay(
   let moveCount = 0;
   let currentPly = 0;
   let shouldApplyInitialPly = !wallClockLoop && Number.isFinite(options.initialPly);
+  // Wall-anchored playback (recorded-playback.ts): while playing, the ply on the board
+  // is positionAt(playOffsets, Date.now() - playAnchor), re-read every PLAYBACK_TICK_MS.
   let playTimer: number | null = null;
+  let playAnchor: number | null = null;
+  let playOffsets: number[] = [0];
+  // The recorded instant a timed game's clock panel is showing mid-think while playing
+  // (null = the ply's static value). clockAtPly reads it so /watch's rail ticks too.
+  let playingClockAt: number | null = null;
   let loopTimer: number | null = null;
   let wallClockTimer: number | null = null;
   let wallClockLoadPromise: Promise<void> | null = null;
-  let clockTickTimer: number | null = null;
   let finishedAck = false;
   let annotationsForGame: Annotation[] = [];
   let lastNotifiedPly: number | null = null;
@@ -650,6 +734,7 @@ export async function mountReplay(
       setBoardFromView(whiteCg, whiteView, boardOrientation, animBase && moverColor === 'white');
       setBoardFromView(blackCg, blackView, boardOrientation, animBase && moverColor === 'black');
     }
+    applyBoardOverlay();
 
     const showRevealLabels = finished && reveal;
     whitePane.labelEl.textContent = showRevealLabels
@@ -938,6 +1023,7 @@ export async function mountReplay(
   function renderClockState(state: GameState, slicedEvents: GameEvent[]): void {
     renderedClockState = state;
     renderedClockEvents = slicedEvents;
+    playingClockAt = null;
     const displayAt = replayClockDisplayAt(slicedEvents, state);
     renderClockPanel(
       clockPanel,
@@ -984,95 +1070,93 @@ export async function mountReplay(
 
   function stopPlay(): void {
     if (playTimer !== null) {
-      window.clearTimeout(playTimer);
+      window.clearInterval(playTimer);
       playTimer = null;
     }
-    clearClockTickTimer();
+    playAnchor = null;
+    if (playingClockAt !== null) {
+      // Park the clock back on the ply's recorded value: a paused board does not tick.
+      playingClockAt = null;
+      if (renderedClockState && renderedClockEvents) {
+        renderClockState(renderedClockState, renderedClockEvents);
+      }
+    }
     playBtn.textContent = t('replay.playButton');
   }
 
   function startPlay(): void {
     if (playTimer !== null) return;
+    if (currentPly >= moveCount && airAnchor === null) {
+      scheduleLoopIfNeeded();
+      return;
+    }
     playBtn.textContent = t('replay.pauseButton');
-    scheduleNextPly();
+    playAnchor = airAnchor ?? anchorForPly(playOffsets, currentPly, Date.now());
+    airAnchor = null;
+    playTimer = window.setInterval(advancePlay, PLAYBACK_TICK_MS);
+    advancePlay();
   }
 
-  function scheduleNextPly(): void {
-    const nextPly = currentPly + 1;
-    if (nextPly > moveCount) {
+  // TRUE TIMING. The ply on the board is a function of the wall clock, so a stall (a
+  // hidden tab throttles timers to once a second, then once a minute) catches up to
+  // the right ply on the next tick instead of resuming wherever it stopped. Each move
+  // is on screen for exactly as long as it really took (recordedPlyOffsets), which is
+  // what makes the clock tick below honest.
+  function advancePlay(): void {
+    if (playAnchor === null) return;
+    const position = positionAt(playOffsets, Date.now() - playAnchor);
+    const target = Math.min(position.ply, moveCount);
+    if (target !== currentPly) {
+      setCurrentPly(target);
+      render();
+    }
+    if (currentPly >= moveCount) {
       stopPlay();
       scheduleLoopIfNeeded();
       return;
     }
-    const delay = delayForPly(
-      events,
-      nextPly,
-      thinkingBudgetMsFromMeta(currentMeta()?.timeControl),
-      clampPace,
-    );
-    playTimer = window.setTimeout(() => {
-      clearClockTickTimer();
-      setCurrentPly(nextPly);
-      render();
-      scheduleNextPly();
-    }, delay);
-    startClockTickTimer(nextPly, delay);
+    renderPlayingClock(position.ply === currentPly ? position.plyElapsedMs : 0);
   }
 
-  function clearClockTickTimer(): void {
-    if (clockTickTimer !== null) {
-      window.clearInterval(clockTickTimer);
-      clockTickTimer = null;
-    }
-  }
-
-  function startClockTickTimer(nextPly: number, delay: number): void {
-    clearClockTickTimer();
-    if (delay <= 0) return;
-    const sliced = sliceToPly(events, currentPly);
-    const projection = replayGameEvents(sliced);
-    const state = projection.state;
-    const meta = currentMeta();
-    if (state.status.type !== 'playing') return;
-    const activeColor = state.status.turn;
-    const nextEvent = moveEventAtPly(events, nextPly);
+  // The clock while the side to move thinks, `elapsedMs` into the think after the
+  // current ply.
+  //
+  // A timed game ticks its recorded clock at one second per second: the displayed
+  // instant is the recorded instant the think reached, never past the next move's
+  // timestamp, so the mover counts down to exactly what that move was charged and the
+  // increment lands with it. A frozen pregame clock (each side's first move) and a
+  // paused one project to their recorded value, as they did on the server. This is
+  // honest only because the playback window IS the recorded think: the clamp that
+  // squeezed it into [700, 2500] ms was retired 2026-09-26 (see the doctrine note in
+  // watch-tenant-replay.ts above liveClockNow), and with it the rule that kept this
+  // clock static.
+  //
+  // A clockless engine game has no clock, so its per-move BUDGET is the clock: the row
+  // counts that fixed allowance down at real seconds while the engine thinks. Two caps,
+  // both meaningful: thinkMs stops the countdown where the engine actually moved (the
+  // row reads the budget left when it did); budgetMs pins an overshoot (Misty routinely
+  // exceeds its budget) at 0.0s instead of a negative remainder.
+  function renderPlayingClock(elapsedMs: number): void {
+    const state = renderedClockState;
+    if (state?.status.type !== 'playing') return;
+    const nextEvent = moveEventAtPly(events, currentPly + 1);
     if (nextEvent?.type !== 'move-played') return;
-    const startWall = performance.now();
-
-    // A timed game's clock is NOT animated during playback: render() parks it on the ply's
-    // recorded value and it stays there until the next move lands. This used to walk the
-    // displayed instant from the mover's clock start to the next move's timestamp across
-    // `delay` — but clampPace squeezes `delay` into [700, 2500] ms while the timestamps span
-    // the real think, so the countdown ran at gap/delay rather than at one second per second
-    // (measured 1.00x-7.60x on one homepage game). See the doctrine note in
-    // watch-tenant-replay.ts before reinstating anything here.
-    if (state.clock) return;
-
-    // A clockless engine game has no clock to park, so its per-move BUDGET is the clock:
-    // the row counts that allowance down while the engine thinks. The budget is a fixed
-    // per-move quantity that does not depend on how long this move actually took, which is
-    // what lets this animate honestly where the old count-up could not -- it counted up to
-    // the move's REAL think time across the clamped playback window, so a 14.5 s think ran
-    // at 5.78x (measured over the 200-move bakeoff-g21 sample; median 1.14x, 82/200 above
-    // 1.5x). Elapsed is real wall time here, never a fraction of `delay`.
-    //
-    // Two caps, both meaningful. thinkMs stops the countdown where the engine actually
-    // moved, so the row reads how much budget was left when it did; budgetMs keeps an
-    // overshoot (Misty routinely exceeds its budget) pinned at 0.0s instead of going
-    // negative. Whichever the playback window reaches first is where it stops.
+    const meta = currentMeta();
+    if (state.clock) {
+      const lastMove = moveEventAtPly(events, currentPly);
+      const thinkStart = lastMove?.at ?? replayStartAt(events) ?? nextEvent.at;
+      playingClockAt = Math.min(thinkStart + Math.max(0, elapsedMs), nextEvent.at);
+      renderClockPanel(clockPanel, state.clock, state, meta, playingClockAt);
+      return;
+    }
     const budgetMs = thinkingBudgetMsFromMeta(meta?.timeControl);
-    const thinkMs = thinkingDurationForPly(events, nextPly) ?? delay;
-    if (budgetMs === null || thinkMs <= 0) return;
-    const tick = (): void => {
-      const elapsedMs = Math.min(performance.now() - startWall, thinkMs, budgetMs);
-      renderClockPanel(clockPanel, undefined, state, meta, undefined, {
-        activeColor,
-        budgetMs,
-        elapsedMs,
-      });
-    };
-    tick();
-    clockTickTimer = window.setInterval(tick, 100);
+    const thinkMs = thinkingDurationForPly(events, currentPly + 1);
+    if (budgetMs === null) return;
+    renderClockPanel(clockPanel, undefined, state, meta, undefined, {
+      activeColor: state.status.turn,
+      budgetMs,
+      elapsedMs: Math.min(Math.max(0, elapsedMs), thinkMs ?? elapsedMs, budgetMs),
+    });
   }
 
   function setCurrentPly(ply: number): void {
@@ -1113,6 +1197,7 @@ export async function mountReplay(
     annotationsForGame = [];
     events = nextEvents;
     moveCount = events.filter((e) => e.type === 'move-played').length;
+    playOffsets = recordedPlyOffsets(events, Boolean(replayGameEvents(events).state.clock));
     maybeDeriveThinkingBudget(sampleId);
     beliefPanel?.setRows(belief?.rowsForSampleId(sampleId) ?? []);
     beliefPanel?.setTraceRows(belief?.traceRowsForSampleId?.(sampleId) ?? []);
@@ -1394,6 +1479,15 @@ export async function mountReplay(
       { signal: abortController.signal },
     );
   }
+  // A tab coming back from hidden lands the right ply at once rather than waiting out a
+  // throttled interval.
+  document.addEventListener(
+    'visibilitychange',
+    () => {
+      if (document.visibilityState === 'visible') advancePlay();
+    },
+    { signal: abortController.signal },
+  );
   abortController.signal.addEventListener(
     'abort',
     () => {
@@ -1449,13 +1543,18 @@ export async function mountReplay(
     plyCount: () => moveCount,
     moveEntries: () => buildChessMoveEntries(events),
     // The clocks read off the same state (and the same instant) the docked clock panel
-    // draws from: the ply's recorded value, which holds until the next move lands. Null for
-    // an untimed game (no ClockState) so the rail shows no clock rather than a bogus zero.
+    // draws from: the ply's recorded value, projected through the think in progress while
+    // the game plays back at its recorded timing. Null for an untimed game (no ClockState)
+    // so the rail shows no clock rather than a bogus zero.
     clockAtPly: () => {
       const state = renderedClockState;
       const clock = state?.clock;
       if (!state || !clock) return null;
-      const at = replayClockDisplayAt(renderedClockEvents ?? [], state) ?? clock.runningSince ?? 0;
+      const at =
+        playingClockAt ??
+        replayClockDisplayAt(renderedClockEvents ?? [], state) ??
+        clock.runningSince ??
+        0;
       return {
         first: clockRemainingMs(clock, 'white', at),
         second: clockRemainingMs(clock, 'black', at),
@@ -1467,6 +1566,7 @@ export async function mountReplay(
               ? 'first'
               : 'second'
             : null,
+        initialMs: clock.initialMs,
       };
     },
     // Switch the visible pane via a data-attr on the replay root; watch-route.css
@@ -1481,6 +1581,10 @@ export async function mountReplay(
     },
     availablePovs: () => ['white', 'truth', 'black'],
     bottomSeat: () => (boardOrientation === 'white' ? 'first' : 'second'),
+    setBoardOverlay: (next) => {
+      overlayAtPly = next;
+      applyBoardOverlay();
+    },
     prefetchGame: (sampleId: string) => {
       if (
         abortController.signal.aborted ||
@@ -1612,5 +1716,6 @@ function endGameReasonLabel(reason: string): string {
   if (reason === 'timeout') return t('replay.endTimeout');
   if (reason === 'checkmate') return t('replay.endCheckmate');
   if (reason === 'draw') return t('replay.endDraw');
+  if (reason === 'no-legal-moves') return t('replay.endNoLegalMoves');
   return reason;
 }

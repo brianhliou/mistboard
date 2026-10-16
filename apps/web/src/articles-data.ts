@@ -9,25 +9,42 @@ export { withXiangqiBoardLayout, withXiangqiPieceSet } from './articles/diagrams
 import type { Article } from './articles/types.js';
 import { SERVER_FOG_SNAPSHOT_JSON_TEXT } from './articles/diagrams.js';
 import { banqiArticle } from './articles/content/banqi.js';
-import { banqiOnlineArticle } from './articles/content/banqi-online.js';
+import { banqiStatisticsArticle } from './articles/content/banqi-statistics.js';
 import { banqiEngineArticle } from './articles/content/banqi-engine.js';
 import { banqiLuckArticle } from './articles/content/banqi-luck.js';
+import { banqiPerpetualChaseArticle } from './articles/content/banqi-perpetual-chase.js';
 import { chessArticle } from './articles/content/chess.js';
+import { choiCoTuongVoiMayArticle } from './articles/content/choi-co-tuong-voi-may.js';
 import { coUpArticle } from './articles/content/co-up.js';
 import { luatCoUpArticle } from './articles/content/luat-co-up.js';
 import { jieqiPlatformArticle } from './articles/content/jieqi-platform.js';
 import { pikafishArticle } from './articles/content/pikafish.js';
+import { abJchessArticle } from './articles/content/ab-jchess.js';
+import { pikafishRevealBugArticle } from './articles/content/pikafish-reveal-bug.js';
+import { chariotCannonRepetitionKeyArticle } from './articles/content/chariot-cannon-repetition-key.js';
+import { flipJungleSkillCeilingArticle } from './articles/content/flip-jungle-skill-ceiling.js';
+import { katagoJungleArticle } from './articles/content/katago-jungle.js';
+import { duckXiangqiGameTreeArticle } from './articles/content/duck-xiangqi-game-tree.js';
+import { solverAuditArticle } from './articles/content/solver-audit.js';
+import { jieqiBotWinsArticle } from './articles/content/jieqi-bot-wins.js';
+import { jieqiPuzzleSearchArticle } from './articles/content/jieqi-puzzle-search.js';
+import { oneThousandGamesArticle } from './articles/content/one-thousand-games.js';
 import { darkChessArticle } from './articles/content/dark-chess.js';
 import { darkChessConceptsArticle } from './articles/content/fog-chess-concepts.js';
 import { fogOpeningsArticle } from './articles/content/fog-openings.js';
+import { enPassantUnderFogArticle } from './articles/content/en-passant-under-fog.js';
+import { mostPlayedMoveArticle } from './articles/content/most-played-move.js';
+import { chess960StartingPositionsArticle } from './articles/content/chess960-starting-positions.js';
 import { jieqiOpeningsArticle } from './articles/content/jieqi-openings.js';
 import { khaiCuocCoUpArticle } from './articles/content/khai-cuoc-co-up.js';
 import { darkXiangqiArticle } from './articles/content/dark-xiangqi.js';
 import { antiXiangqiArticle } from './articles/content/anti-xiangqi.js';
+import { benedictXiangqiArticle } from './articles/content/benedict-xiangqi.js';
 import { hordeXiangqiArticle } from './articles/content/horde-xiangqi.js';
 import { atomicXiangqiArticle } from './articles/content/atomic-xiangqi.js';
 import { atomicXiangqiBuildArticle } from './articles/content/atomic-xiangqi-build.js';
-import { duckXiangqiBuildArticle } from './articles/content/duck-xiangqi-build.js';
+import { crazyhouseXiangqiArticle } from './articles/content/crazyhouse-xiangqi.js';
+import { duckXiangqiStrategyArticle } from './articles/content/duck-xiangqi-strategy.js';
 import { duckXiangqiArticle } from './articles/content/duck-xiangqi.js';
 import { fortressXiangqiArticle } from './articles/content/fortress-xiangqi.js';
 import { jieqiArticle } from './articles/content/jieqi.js';
@@ -45,11 +62,34 @@ import { xiangqiChampionsArticle } from './articles/content/xiangqi-champions.js
 import { xiangqiMatchFixingArticle } from './articles/content/xiangqi-match-fixing.js';
 import { xiangqiWorldChampionshipArticle } from './articles/content/xiangqi-world-championship.js';
 import { xiangqiArticle } from './articles/content/xiangqi.js';
+import { xiangqiEndgamesArticle } from './articles/content/xiangqi-endgames.js';
+import { helpmatesInXiangqiArticle } from './articles/content/helpmates-in-xiangqi.js';
+import { longestForcedMatesXiangqiArticle } from './articles/content/longest-forced-mates-xiangqi.js';
 import { yinShengArticle } from './articles/content/yin-sheng.js';
+import { caoYanleiArticle } from './articles/content/cao-yanlei.js';
+import { laiLyHuynhArticle } from './articles/content/lai-ly-huynh.js';
+import { laiLyHuynhCoTuongArticle } from './articles/content/lai-ly-huynh-co-tuong.js';
+import { tonyFungGaZenArticle } from './articles/content/tony-fung-ga-zen.js';
+import { fortressAndAtomicXiangqiOnHoldArticle } from './articles/content/fortress-and-atomic-xiangqi-on-hold.js';
+import { zuoWenjingArticle } from './articles/content/zuo-wenjing.js';
 import articleSnapshotFog from './article-snapshot-fog.json' with { type: 'json' };
 
 export const articles: Article[] = [
+  helpmatesInXiangqiArticle,
+  fortressAndAtomicXiangqiOnHoldArticle,
+  jieqiPuzzleSearchArticle,
+  longestForcedMatesXiangqiArticle,
+  xiangqiEndgamesArticle,
+  duckXiangqiGameTreeArticle,
+  chariotCannonRepetitionKeyArticle,
+  solverAuditArticle,
+  pikafishRevealBugArticle,
+  katagoJungleArticle,
+  abJchessArticle,
+  jieqiBotWinsArticle,
+  oneThousandGamesArticle,
   pikafishArticle,
+  choiCoTuongVoiMayArticle,
   jieqiPlatformArticle,
   coUpArticle,
   luatCoUpArticle,
@@ -58,20 +98,30 @@ export const articles: Article[] = [
   darkChessArticle,
   darkChessConceptsArticle,
   fogOpeningsArticle,
+  enPassantUnderFogArticle,
+  mostPlayedMoveArticle,
+  chess960StartingPositionsArticle,
   jieqiOpeningsArticle,
   khaiCuocCoUpArticle,
   xiangqiArticle,
   xiangqiChampionsArticle,
   yinShengArticle,
+  caoYanleiArticle,
+  laiLyHuynhArticle,
+  laiLyHuynhCoTuongArticle,
+  tonyFungGaZenArticle,
+  zuoWenjingArticle,
   xiangqiMatchFixingArticle,
   xiangqiWorldChampionshipArticle,
   darkXiangqiArticle,
   fortressXiangqiArticle,
   duckXiangqiArticle,
-  duckXiangqiBuildArticle,
+  duckXiangqiStrategyArticle,
   atomicXiangqiArticle,
   atomicXiangqiBuildArticle,
+  crazyhouseXiangqiArticle,
   antiXiangqiArticle,
+  benedictXiangqiArticle,
   hordeXiangqiArticle,
   serverEnforcedFogArticle,
   shogi4Article,
@@ -80,9 +130,11 @@ export const articles: Article[] = [
   jungleFlipArticle,
   mahjongArticle,
   banqiArticle,
-  banqiOnlineArticle,
+  banqiStatisticsArticle,
   banqiEngineArticle,
   banqiLuckArticle,
+  banqiPerpetualChaseArticle,
+  flipJungleSkillCeilingArticle,
   puzzleMiningArticle,
   puzzleTwoAnswersArticle,
   riverbankCannonArticle,
@@ -95,6 +147,7 @@ const ARTICLE_SLUG_ALIASES: Record<string, string> = {
   'dark-chess': 'fog-chess',
   'dark-xiangqi': 'fog-xiangqi',
   'reveal-xiangqi': 'jieqi',
+  'duck-xiangqi-build': 'duck-xiangqi-strategy',
 };
 
 export function findArticle(slug: string): Article | undefined {

@@ -3,9 +3,9 @@
 Pure game logic for Mistboard. No I/O, no side effects, no server dependencies.
 
 This is the correct place to work on:
+- rules for every variant (xiangqi, Jieqi, Banqi, Jungle, the fog games, and the rest)
 - Fog of War visibility rules
 - legal move generation
-- Chess960 / Draft960 back-rank logic
 - game event projection (event log → GameState)
 - draw conditions (50-move, threefold repetition)
 
@@ -24,10 +24,11 @@ This is the correct place to work on:
 | File | Purpose |
 |------|---------|
 | `types.ts` | `GameState`, `PlayerView`, `GameEvent`, piece and square types |
-| `visibility.ts` | Fog of War visibility computation |
-| `variants.ts` | `darkChessVariant`, `draft960Variant` |
-| `chess960.ts` | `pickDraft960Offer(seed)` — seeded offer of 3 Chess960 back-ranks |
+| `game-specs.ts` | The game-spec taxonomy and stable variant ids |
+| `variants.ts` | `darkChessVariant`, the chess and Fog of War kernel |
+| `variants-xiangqi*.ts`, `variants-jieqi.ts`, `variants-banqi.ts`, `variants-jungle*.ts`, ... | One kernel per variant family |
 | `events.ts` | Event projection: sequence of `GameEvent` → `GameState` |
+| `engine-protocol.ts` | The redacted `EngineTurnRequest` / `EngineTurnResponse` types |
 
 ## Running tests
 
@@ -40,5 +41,5 @@ Tests live in `src/*.test.ts`. When adding a new rule or visibility behavior, ad
 
 ## Rules reference
 
-- Fog of War rules: [mistboard.com/rules](https://mistboard.com/rules)
+- Rules for every variant: [mistboard.com/rules](https://mistboard.com/rules)
 - Edge cases and regression targets: the visibility and replay tests in `src/*.test.ts`

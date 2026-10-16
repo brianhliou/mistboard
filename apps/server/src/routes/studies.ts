@@ -14,6 +14,7 @@
 //   PATCH  /api/studies/:id/chapters/:cid     save tree (version-guarded), rename, retag (owner)
 //   DELETE /api/studies/:id/chapters/:cid     delete a chapter (owner; refuses the last)
 //   POST   /api/studies/:id/clone             copy a readable study to the signed-in user (private)
+//   GET    /api/studies/:id/chapters/:cid/analysis  stored engine analysis of the chapter (readers)
 //   PUT    /api/admin/studies/:id/featured    feature/unfeature a public study (admin)
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -25,6 +26,7 @@ import {
 } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
 import * as persistence from './../persistence.js';
+import { STUDY_PAGE_MAX } from './../persistence-studies.js';
 import {
   readJsonBody,
   requireAdminSession,
@@ -38,12 +40,13 @@ const ID = '[A-Za-z0-9]+';
 const STUDY_PATH = new RegExp(`^/api/studies/(${ID})$`);
 const CHAPTERS_PATH = new RegExp(`^/api/studies/(${ID})/chapters$`);
 const CHAPTER_PATH = new RegExp(`^/api/studies/(${ID})/chapters/(${ID})$`);
+const CHAPTER_ANALYSIS_PATH = new RegExp(`^/api/studies/(${ID})/chapters/(${ID})/analysis$`);
 const LIKE_PATH = new RegExp(`^/api/studies/(${ID})/like$`);
 const CLONE_PATH = new RegExp(`^/api/studies/(${ID})/clone$`);
 const FEATURED_PATH = new RegExp(`^/api/admin/studies/(${ID})/featured$`);
 const SLUG_PATH = new RegExp(`^/api/admin/studies/(${ID})/slug$`);
 
-function isSerializedTree(value: unknown): boolean {
+export function isSerializedTree(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
   const tree = value as { version?: unknown; root?: unknown };
   if (tree.version !== 1) return false;
@@ -109,7 +112,26 @@ function publicStudyView(study: persistence.PublicStudySummary) {
 
 function parseLimit(params: URLSearchParams, fallback: number): number {
   const value = Number(params.get('limit'));
-  return Number.isFinite(value) && value > 0 ? value : fallback;
+  return Number.isFinite(value) && value > 0
+    ? Math.min(Math.trunc(value), STUDY_PAGE_MAX)
+    : fallback;
+}
+
+function parseOffset(params: URLSearchParams): number {
+  const value = Number(params.get('offset'));
+  return Number.isFinite(value) && value > 0 ? Math.trunc(value) : 0;
+}
+
+/** Ask for one past the page so the client knows whether to offer another.
+ *  The extra row is dropped before it is served. */
+async function pageOf(
+  list: (limit: number, q: string | undefined, offset: number) => Promise<unknown[]>,
+  params: URLSearchParams,
+  fallbackLimit: number,
+): Promise<{ studies: unknown[]; hasMore: boolean }> {
+  const limit = parseLimit(params, fallbackLimit);
+  const rows = await list(limit + 1, params.get('q') ?? undefined, parseOffset(params));
+  return { studies: rows.slice(0, limit), hasMore: rows.length > limit };
 }
 
 // Banqi, jieqi and flip jungle have no standard opening: a chapter that stores
@@ -237,11 +259,11 @@ export async function tryHandle(
     // ?limit lets the /study "All studies" browse ask for more than the homepage
     // widget's default 5. ?q filters by study name. listTopPublicStudies clamps.
     const params = new URL(request.url ?? '', 'http://localhost').searchParams;
-    const studies = await persistence.listTopPublicStudies(
-      parseLimit(params, 5),
-      params.get('q') ?? undefined,
-    );
-    writeJson(response, 200, { studies: studies.map(publicStudyView) });
+    const page = await pageOf(persistence.listTopPublicStudies, params, 5);
+    writeJson(response, 200, {
+      studies: (page.studies as persistence.PublicStudySummary[]).map(publicStudyView),
+      hasMore: page.hasMore,
+    });
     return true;
   }
 
@@ -250,11 +272,11 @@ export async function tryHandle(
     if (!requireMethod(request, response, 'GET')) return true;
     if (!requirePersistence(response)) return true;
     const params = new URL(request.url ?? '', 'http://localhost').searchParams;
-    const studies = await persistence.listFeaturedStudies(
-      parseLimit(params, 30),
-      params.get('q') ?? undefined,
-    );
-    writeJson(response, 200, { studies: studies.map(publicStudyView) });
+    const page = await pageOf(persistence.listFeaturedStudies, params, 30);
+    writeJson(response, 200, {
+      studies: (page.studies as persistence.PublicStudySummary[]).map(publicStudyView),
+      hasMore: page.hasMore,
+    });
     return true;
   }
 
@@ -343,6 +365,14 @@ export async function tryHandle(
     }
     writeJson(response, 201, { study: { id: result.study.id, name: result.study.name } });
     return true;
+  }
+
+  // ── A chapter's stored engine analysis ──
+  const analysisMatch = CHAPTER_ANALYSIS_PATH.exec(pathname);
+  if (analysisMatch) {
+    if (!requireMethod(request, response, 'GET')) return true;
+    if (!requirePersistence(response)) return true;
+    return readChapterAnalysis(request, response, analysisMatch[1]!, analysisMatch[2]!);
   }
 
   // ── Add a chapter ──
@@ -500,6 +530,11 @@ async function readStudy(
     user && practiceChapterIds.length > 0
       ? await persistence.solvedChapterIds(user.id, practiceChapterIds)
       : new Set<string>();
+  // Which chapters have a stored engine analysis, so the page fetches one only
+  // where there is one to show (one indexed read for the whole study).
+  const analysed = await persistence.analysedStudyChapterIds(
+    study.chapters.map((chapter) => chapter.id),
+  );
   writeJson(response, 200, {
     study: {
       ...studyView(study, isOwner),
@@ -509,7 +544,47 @@ async function readStudy(
     chapters: study.chapters.map((chapter) => ({
       ...chapterView(chapter),
       ...(solved.has(chapter.id) ? { solved: true } : {}),
+      ...(analysed.has(chapter.id) ? { hasAnalysis: true } : {}),
     })),
+  });
+  return true;
+}
+
+/**
+ * The chapter's stored whole-game analysis, readable by anyone who can read the
+ * study. It is served as stored, with the line it ran on: the reader compares
+ * that line with the chapter it has open and charts only the prefix they share
+ * (studyAnalysisCoveredPlies), so an edit after the run, saved or not, leaves
+ * later moves uncovered rather than showing evals for positions no longer
+ * there. 204 when the chapter has none. Who can CREATE analysis is decided
+ * elsewhere (study:analyse today, #510 later); this path serves whatever exists.
+ */
+async function readChapterAnalysis(
+  request: IncomingMessage,
+  response: ServerResponse,
+  studyId: string,
+  chapterId: string,
+): Promise<boolean> {
+  const found = await persistence.getStudyChapterAnalysisForRead(studyId, chapterId);
+  // A private study's analysis is its owner's, with the same 404-on-miss shape
+  // as the study read so existence is not leaked.
+  const user = found?.visibility === 'private' ? await currentAccountUser(request) : null;
+  if (!found || (found.visibility === 'private' && user?.id !== found.ownerId)) {
+    writeJson(response, 404, { error: 'not_found' });
+    return true;
+  }
+  const analysis = found.analysis;
+  if (!analysis) {
+    response.writeHead(204);
+    response.end();
+    return true;
+  }
+  writeJson(response, 200, {
+    engineId: analysis.engineId,
+    depth: analysis.depth,
+    rootFen: analysis.rootFen,
+    moves: analysis.moves,
+    plies: analysis.plies,
   });
   return true;
 }

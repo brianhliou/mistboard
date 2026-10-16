@@ -190,6 +190,23 @@ test('an all-machine channel (Engines) still names the engine', () => {
   assert.equal(top?.name, 'Pikafish');
 });
 
+test('channel rail names the head game player, not a higher-rated seat further down the feed', () => {
+  // Prod, 2026-10-04: the jieqi rail read "scene-1174 1662" (a rated game from
+  // ten hours earlier) while the board showed Guest vs Pikafish L4.
+  const top = channelTopPlayer([
+    record([
+      { displayName: 'Guest', subjectType: 'guest' },
+      { displayName: 'Pikafish Level 4', subjectType: 'bot', rating: 1500 },
+    ]),
+    record([
+      { displayName: 'scene-1174', subjectType: 'user', rating: 1662 },
+      { displayName: 'ada', subjectType: 'user', rating: 1500 },
+    ]),
+  ]);
+  assert.equal(top?.name, 'Guest');
+  assert.equal(top?.rating, null);
+});
+
 test('an empty channel has no headline seat', () => {
   assert.equal(channelTopPlayer([]), null);
 });

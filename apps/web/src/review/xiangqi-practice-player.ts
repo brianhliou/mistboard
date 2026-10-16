@@ -30,6 +30,7 @@ import { initLiveSound, playSound } from '../live-sound.js';
 import { soundForOwnXiangqiMove } from '../live-xiangqi-sound.js';
 import { createXiangqiInteractiveBoard } from '../xiangqi-board.js';
 import { renderXiangqiPiece } from '../xiangqi-pieces.js';
+import { fitGamebookToViewport } from './gamebook-fit.js';
 import {
   createPracticeSession,
   type PracticeEval,
@@ -74,7 +75,16 @@ export interface XiangqiPracticeOptions {
   /** Called each time an attempt fails, with the grade that ended it. A surface
    *  where every learner blunders on move one is MISCALIBRATED rather than
    *  unused, and the two are indistinguishable in a completion count alone. */
-  onFailed?: (verdict: PracticeVerdict, moves: number) => void;
+  onFailed?: (verdict: PracticeVerdict | 'defeat', moves: number) => void;
+  /**
+   * Where a GUEST signs in, asked at solve time; undefined for a signed-in
+   * learner. A guest's solve is not saved (the server drops it by design), so
+   * once they have solved something the panel offers this link, quietly and
+   * dismissibly. A function rather than a string because auth can settle after
+   * the mount, and because the return URL should be the page as it is at the
+   * solve, not as it was when the player opened.
+   */
+  guestSignInHref?: () => string | undefined;
   /**
    * Site navigation to keep above the player. The mount replaces the root's
    * children, so a caller that built a nav there first would otherwise have it
@@ -82,6 +92,9 @@ export interface XiangqiPracticeOptions {
    * to the rest of the site.
    */
   nav?: HTMLElement;
+  /** Pause before the engine's reply; defaults to PRACTICE_REPLY_DELAY_MS. A
+   *  test seam: a scripted engine has no reason to wait. */
+  replyDelayMs?: number;
 }
 
 export interface XiangqiPracticeHandle {
@@ -139,16 +152,19 @@ export function mountXiangqiPractice(
       learner: opts.orientation,
       initialTruth: opts.initialTruth,
       evaluate: opts.evaluate,
-      onMovePlayed: (move, parentTruth, by) => {
+      ...(opts.replyDelayMs === undefined ? {} : { minReplyDelayMs: opts.replyDelayMs }),
+      onMovePlayed: (move, parentTruth) => {
         // The full standard-xiangqi voice, including the cannon boom, from the
         // classifier the live rooms use: a drill that clicks where a game booms
         // teaches the wrong ear for the piece.
         playSound(soundForOwnXiangqiMove(xiangqiTreeAdapter.project(parentTruth)[0]!.view, move));
-        // Paint the learner's own move NOW rather than when the engine has
-        // finished answering. Without this the board holds the old position for
-        // the whole search and then jumps two plies at once, so the sound they
-        // just heard describes a position they cannot see yet.
-        if (by === 'learner') render();
+        // Paint every ply NOW, in the same task as its sound, rather than when
+        // the evaluation of the new position has settled. That evaluation waits
+        // on a tablebase round trip (up to PRACTICE_TABLEBASE_TIMEOUT_MS), so a
+        // repaint deferred to it let the defender's move click and then land on
+        // the board half a second or more later; for the learner's own move it
+        // held the old position for the whole search and then jumped two plies.
+        render();
       },
     }),
   );
@@ -268,6 +284,22 @@ export function mountXiangqiPractice(
   controls.append(hintBtn, retryBtn, restartBtn, nextBtn);
   coach.append(coachStrip, bubble);
   coach.append(controls);
+  // Guest only, after a solve: the progress they just made is not kept.
+  const savePrompt = document.createElement('p');
+  savePrompt.className = 'practice__save-prompt';
+  savePrompt.hidden = true;
+  const savePromptLink = document.createElement('a');
+  savePromptLink.className = 'practice__save-prompt-link';
+  savePromptLink.textContent = t('practice.signInToKeep');
+  const savePromptClose = button('\u00d7', 'practice__save-prompt-close');
+  savePromptClose.setAttribute('aria-label', t('practice.signInDismiss'));
+  savePromptClose.title = t('practice.signInDismiss');
+  savePromptClose.addEventListener('click', () => {
+    dismissPracticeSavePrompt();
+    savePrompt.hidden = true;
+  });
+  savePrompt.append(savePromptLink, savePromptClose);
+  coach.append(savePrompt);
   side.append(coach);
   wrap.append(side);
 
@@ -327,6 +359,18 @@ export function mountXiangqiPractice(
 
   /** What the coach says about the move just graded. */
   function verdictLine(view: PracticeView): string {
+    // A move the tablebase graded says so: "the tablebase says" is a fact about
+    // the position, where the engine lines below are an estimate.
+    switch (view.tablebase) {
+      case 'keepsWin':
+        return t('practice.tablebase.keepsWin');
+      case 'holdsDraw':
+        return t('practice.tablebase.holdsDraw');
+      case 'throwsWin':
+        return t('practice.tablebase.throwsWin');
+      case 'loses':
+        return t('practice.tablebase.loses');
+    }
     switch (view.verdict) {
       case 'blunder':
         return t('practice.verdictBlunder');
@@ -392,6 +436,13 @@ export function mountXiangqiPractice(
       reportedSolved = true;
       playSound('level-end');
       opts.onSolved?.(view.movesPlayed);
+      // Decided once, at the first solve of this exercise: a guest who signs in
+      // in another tab still sees it here, which is harmless and self-correcting.
+      const href = practiceSavePromptDismissed() ? undefined : opts.guestSignInHref?.();
+      if (href) {
+        savePromptLink.href = href;
+        savePrompt.hidden = false;
+      }
     }
     // On the TRANSITION into failed, so a re-render of the same failed state
     // (asking for a hint, say) does not count as a second failure.
@@ -405,6 +456,11 @@ export function mountXiangqiPractice(
     // punitive and a drill solve feel generic (learn course, 2026-07-15).
     if (view.phase === 'defeat' && lastPhase !== 'defeat') {
       playSound('learn-failure');
+      // A defeat ends the run as surely as a failed move does (a draw the
+      // engine reads as lost, a defender with no reply), so it is reported as a
+      // failure too. Without it a draw chapter that ended this way logged a
+      // start and nothing else, indistinguishable from a learner who left.
+      opts.onFailed?.('defeat', view.movesPlayed);
     }
     lastPhase = view.phase;
 
@@ -473,6 +529,7 @@ export function mountXiangqiPractice(
   }
 
   root.replaceChildren(...chrome, wrap);
+  fitGamebookToViewport(wrap);
   render();
   const started = session.start().then(render);
 
@@ -486,6 +543,26 @@ export function mountXiangqiPractice(
       root.replaceChildren();
     },
   };
+}
+
+// Per browser tab, like the visit it belongs to: a dismissed prompt stays
+// dismissed across this session's exercises and comes back on a later visit.
+const SAVE_PROMPT_DISMISSED_KEY = 'mb_practice_save_prompt_dismissed';
+
+export function practiceSavePromptDismissed(): boolean {
+  try {
+    return window.sessionStorage.getItem(SAVE_PROMPT_DISMISSED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function dismissPracticeSavePrompt(): void {
+  try {
+    window.sessionStorage.setItem(SAVE_PROMPT_DISMISSED_KEY, '1');
+  } catch {
+    // Storage unavailable: the prompt still hides for this exercise.
+  }
 }
 
 function button(label: string, className: string): HTMLButtonElement {

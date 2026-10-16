@@ -7,6 +7,7 @@ import {
 } from './mistboard-readout.js';
 import { close, init } from './persistence-db.js';
 import { generateMistboardReadout } from './persistence-mistboard-readout.js';
+import { defaultXiangqiBroadcastFetch } from './xiangqi-broadcast-fetch.js';
 
 const { values } = parseArgs({
   options: {
@@ -40,6 +41,7 @@ try {
     trigger,
     now,
     dryRun: values['dry-run'],
+    dpxqIndexFetch: defaultXiangqiBroadcastFetch,
     runtime: {
       revision: getBuildInfo().revision,
       activeGames: 0,

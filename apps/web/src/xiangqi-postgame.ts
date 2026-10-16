@@ -11,6 +11,7 @@ import {
   type XiangqiMove,
 } from '@mistboard/game';
 import { reviewSeatProfiles } from './profile-link.js';
+import { reviewMoveClocks } from './review/move-clocks.js';
 import { analysisHref, editorHref } from './review/position-links.js';
 import { DEFAULT_STUDY_VARIANT } from './study-catalog.js';
 import './game-shell.css';
@@ -144,7 +145,7 @@ function renderPostgame(root: HTMLElement, postgame: XiangqiPostgameResponse): v
 
   const status = reviewOutcomeLine(gameOutcome(postgame.game.result), postgame.game.termination);
   const { metaCard, details } = buildReviewMeta({
-    markerId: 'xiangqi',
+    gameSpecId: XIANGQI_SPEC_ID,
     variantName: variantDisplayLabel(XIANGQI_SPEC_ID),
     game: postgame.game,
     status,
@@ -162,6 +163,7 @@ function renderPostgame(root: HTMLElement, postgame: XiangqiPostgameResponse): v
     // so it matches the server truth); the server per-ply snapshots are unused.
     moves,
     moveTimes: hasMoveTimes ? moveTimes : undefined,
+    moveClocks: hasMoveTimes ? reviewMoveClocks(postgame) : undefined,
     // Name the seats at the board. The meta card carries the pairing too, but it
     // sits below the fold on a normal viewport, so without these a reader sees a
     // board and has to scroll past it to learn who is playing.
@@ -169,6 +171,8 @@ function renderPostgame(root: HTMLElement, postgame: XiangqiPostgameResponse): v
     players: playerNames,
     playerProfiles: reviewSeatProfiles(gamePlayers),
     result: { score: resultScore(postgame.game.result), label: status },
+    // A link can name a move (?ply=34), for a creator's video description (#454).
+    urlPly: true,
     ...crosstableConfig(postgame.game.roomId, postgame.game.players),
     // Position hand-offs: continue this node on /analysis, or open it in the editor.
     analyseFromHere: (truth) => analysisHref('xiangqi', standardXiangqiFen(truth)),

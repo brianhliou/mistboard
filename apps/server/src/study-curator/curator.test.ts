@@ -202,11 +202,12 @@ test('a run filters by opening, spends its analysis budget, and fills the study 
   assert.equal(study.chapters.length, 2);
   assert.equal(second.studyId, study.id);
 
-  // A third run has nothing to do and touches nothing.
+  // A third run has nothing to do and touches nothing, not even the order:
+  // a reorder re-dates the study, which lifted it to the top of the lists.
   const before = fake.calls.length;
   const [third] = await runStudyCurator([recipe], deps, { maxAnalyses: 1 });
   assert.deepEqual(third?.chapters, { added: 0, updated: 0, removed: 0, kept: 2 });
-  assert.equal(fake.calls.slice(before).filter((c) => !c.startsWith('reorder')).length, 0);
+  assert.deepEqual(fake.calls.slice(before), []);
 });
 
 test('a dry run computes nothing and writes nothing', async () => {

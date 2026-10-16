@@ -1,5 +1,11 @@
 import { JIEQI_SPEC_ID, type RoomTimeControl } from '@mistboard/game';
-import { isJieqiEngineClientId, JIEQI_DEFAULT_ENGINE_ID } from './../jieqi-engine.js';
+import type { DrainCreate } from '../deploy-gate.js';
+import {
+  abJchessAvailable,
+  isJieqiEngineClientId,
+  JIEQI_ABJCHESS_ENGINE_ID,
+  JIEQI_DEFAULT_ENGINE_ID,
+} from './../jieqi-engine.js';
 import {
   createTenantRoomsRoute,
   resolveFirstMoverHumanSeat,
@@ -9,14 +15,15 @@ import {
 // tenant's room factory in (jieqi-registration.ts).
 export type JieqiCreateContext = {
   databaseRequired: boolean;
-  isDraining(): boolean;
+  refusesCreate(create?: DrainCreate): boolean;
   drainDeadlineMs(): number | null;
   createJieqiRoom(
     timeControl?: RoomTimeControl,
     creatorPreference?: 'red' | 'black' | 'random',
     engine?: { engineId: string; seat: 'red' | 'black'; botId?: string },
+    rated?: boolean,
   ): Promise<
-    | { ok: true; room: { id: string; gameSpecId: string } }
+    | { ok: true; room: { id: string; gameSpecId: string; rated: boolean } }
     | { ok: false; error: 'jieqi_disabled' | 'persistence_failure' | 'room_id_collision' }
   >;
 };
@@ -35,12 +42,17 @@ const jieqiRoute = createTenantRoomsRoute<
   engine: {
     kind: 'seated',
     defaultEngineId: JIEQI_DEFAULT_ENGINE_ID,
-    isEngineClientId: isJieqiEngineClientId,
+    // The AB-JChess slot needs its binary and net (a dev box usually has neither);
+    // refusing here beats a room that aborts at its first engine move.
+    isEngineClientId: (engineId) =>
+      isJieqiEngineClientId(engineId) &&
+      (engineId !== JIEQI_ABJCHESS_ENGINE_ID || abJchessAvailable()),
     seats: JIEQI_SEATS,
   },
-  rated: { kind: 'reject-as-surface' },
-  createRoom: (ctx, { timeControl, preferredColor, engine }) =>
-    ctx.createJieqiRoom(timeControl, preferredColor, engine),
+  // Rated friend rooms follow the lobby (rooms-route.ts gateRatedRoomRequest):
+  // PvP may be rated wherever Find opponent is; PvE never is.
+  createRoom: (ctx, { timeControl, preferredColor, rated, engine }) =>
+    ctx.createJieqiRoom(timeControl, preferredColor, engine, rated),
 });
 
 export const requestsJieqi = jieqiRoute.matchesCreateRequest;

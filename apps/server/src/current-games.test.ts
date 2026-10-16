@@ -6,6 +6,8 @@ import {
   type CurrentGame,
   collectCurrentGames,
   currentGameBoardPayload,
+  isStaleLiveGame,
+  LIVE_STALE_AFTER_MS,
   sortCurrentGames,
   timeClassFor,
 } from './current-games.js';
@@ -287,6 +289,92 @@ test('finished, waiting, paused, engine-only and abandoned rooms are not listed'
   );
 });
 
+// #469: a player who starts a new bot game without resigning the old one left
+// the old one listed until its clock flagged (prod 2026-09-27: five jieqi vs
+// Pikafish games listed, three of them abandoned). Inside the deploy gate's 10
+// minutes, a live game with no move for its class's window is hidden.
+test('a live bot game with no move for its time-class window is hidden, not ended (#469)', () => {
+  const RAPID_TC = { initialMs: 600_000, incrementMs: 5_000 };
+  const engineSeats = { black: `${FAKE_ENGINE_PREFIX}b`, red: 'client-a' };
+  const runningClock = {
+    activeColor: 'red',
+    remainingMs: { red: 300_000, black: 590_000 },
+    runningSince: NOW - 3 * 60_000,
+  };
+  // Blitz (3+2), 3 min since the bot's reply: past the 2-min window, inside the
+  // deploy gate's 10, clock still running toward the flag.
+  hiddenRooms.set(
+    'fkh_abandoned',
+    tenantRoom({
+      id: 'fkh_abandoned',
+      seats: engineSeats,
+      lastEventAt: NOW - 3 * 60_000,
+      clock: runningClock,
+    }),
+  );
+  // Rapid (10+5), same 3 min: a player thinking, still listed.
+  hiddenRooms.set(
+    'fkh_thinking',
+    tenantRoom({
+      id: 'fkh_thinking',
+      seats: engineSeats,
+      lastEventAt: NOW - 3 * 60_000,
+      timeControl: RAPID_TC,
+      clock: runningClock,
+    }),
+  );
+  // Rapid, 6 min: past the 5-min window.
+  hiddenRooms.set(
+    'fkh_rapid_gone',
+    tenantRoom({
+      id: 'fkh_rapid_gone',
+      seats: engineSeats,
+      lastEventAt: NOW - 6 * 60_000,
+      timeControl: RAPID_TC,
+    }),
+  );
+  // A reconnect or seat event is not a move: it does not keep a game fresh.
+  const reconnected = tenantRoom({
+    id: 'fkh_reconnected',
+    seats: engineSeats,
+    lastEventAt: NOW - 3 * 60_000,
+  });
+  (reconnected.events as Array<{ type: string; at: number }>).push({
+    type: 'client-connected',
+    at: NOW - 1_000,
+  });
+  hiddenRooms.set('fkh_reconnected', reconnected);
+  // PvP follows the same rule.
+  openRooms.set('fko_pvp_gone', tenantRoom({ id: 'fko_pvp_gone', lastEventAt: NOW - 3 * 60_000 }));
+  hiddenRooms.set('fkh_fresh', tenantRoom({ id: 'fkh_fresh', seats: engineSeats }));
+
+  assert.deepEqual(
+    collectCurrentGames(context(), NOW)
+      .map((game) => game.roomId)
+      .sort(),
+    ['fkh_fresh', 'fkh_thinking'],
+  );
+  // The game itself is untouched, and its next move lists it again.
+  const abandoned = hiddenRooms.get('fkh_abandoned')!;
+  assert.equal(abandoned.projection?.state.status.type, 'playing');
+  (abandoned.events as Array<{ type: string; at: number }>).push({
+    type: 'move-played',
+    at: NOW - 500,
+  });
+  assert.ok(collectCurrentGames(context(), NOW).some((game) => game.roomId === 'fkh_abandoned'));
+});
+
+test('isStaleLiveGame: window by time class, correspondence never stale', () => {
+  assert.equal(isStaleLiveGame('blitz', NOW - LIVE_STALE_AFTER_MS.blitz, NOW), false);
+  assert.equal(isStaleLiveGame('blitz', NOW - LIVE_STALE_AFTER_MS.blitz - 1, NOW), true);
+  assert.equal(isStaleLiveGame('bullet', NOW - 61_000, NOW), true);
+  assert.equal(isStaleLiveGame('rapid', NOW - 4 * 60_000, NOW), false);
+  assert.equal(isStaleLiveGame('classical', NOW - 7 * 60_000, NOW), false);
+  assert.equal(isStaleLiveGame(null, NOW - 9 * 60_000, NOW), true);
+  assert.equal(isStaleLiveGame('correspondence', NOW - 30 * 86_400_000, NOW), false);
+  assert.equal(isStaleLiveGame('blitz', null, NOW), false);
+});
+
 test('a dormant correspondence game IS listed, with its class and deadline', () => {
   const dueAt = new Date(NOW + 20 * 3_600_000);
   openRooms.set(
@@ -302,6 +390,64 @@ test('a dormant correspondence game IS listed, with its class and deadline', () 
   assert.equal(listed[0]?.timeClass, 'correspondence');
   assert.deepEqual(listed[0]?.deadline, { seat: 'black', dueAt: dueAt.toISOString() });
   assert.equal(listed[0]?.timeControl?.daysPerMove, 1);
+});
+
+// A dormant correspondence game (hydrated from room_deadlines, nobody
+// connected) is an in-progress game like any other: an open one carries its
+// builder board, so /games draws it instead of the grey placeholder. Verified
+// live on 2026-10-02 against a real 3-days-per-move xiangqi game after a
+// server restart.
+test('a dormant open correspondence game carries its builder board', async () => {
+  openRooms.set(
+    'fko_corr',
+    tenantRoom({ id: 'fko_corr', lastEventAt: NOW - 2 * 86_400_000, timeControl: CORR_TC }),
+  );
+  const [game] = collectCurrentGames(context(), NOW);
+  assert.equal(game?.timeClass, 'correspondence');
+  assert.equal(game?.observe, 'open');
+  assert.ok(await currentGameBoardPayload(game!), 'the builder payload is served');
+  const { payload } = await getCurrent();
+  assert.equal(payload.games[0]?.timeClass, 'correspondence');
+  assert.ok(payload.games[0]?.payload, 'the route attaches it');
+});
+
+// The correspondence path must not open a side door around the fog: a
+// days-per-move fog game is sealed and carries nothing, through the route too.
+test('a dormant fog correspondence game stays a card with no board', async () => {
+  fogRooms.set(
+    'fkf_corr',
+    tenantRoom({ id: 'fkf_corr', lastEventAt: NOW - 2 * 86_400_000, timeControl: CORR_TC }),
+  );
+  const [game] = collectCurrentGames(context(), NOW);
+  assert.equal(game?.timeClass, 'correspondence');
+  assert.equal(game?.observe, 'sealed');
+  assert.equal(await currentGameBoardPayload(game!), null);
+  const { payload } = await getCurrent();
+  assert.equal('payload' in payload.games[0]!, false);
+  assert.equal(JSON.stringify(payload).includes(BOARD_MARKER), false);
+});
+
+test('a Fog Chess correspondence game never gets a board, even mislabelled open', async () => {
+  const fogChess: CurrentGame = {
+    channelId: 'dark-xiangqi',
+    clock: null,
+    composition: 'pvp',
+    deadline: { dueAt: new Date(NOW + 86_400_000).toISOString(), seat: 'white' },
+    gameSpecId: 'dark-chess',
+    lastActivityAt: NOW - 86_400_000,
+    observe: 'sealed',
+    players: [],
+    ply: 9,
+    rated: false,
+    roomId: 'fog-corr',
+    startedAt: NOW - 3 * 86_400_000,
+    timeClass: 'correspondence',
+    timeControl: { daysPerMove: 7, incrementMs: 0, initialMs: 7 * 86_400_000 },
+    url: '/room/fog-corr',
+  };
+  assert.equal(await currentGameBoardPayload(fogChess), null);
+  // canServeLiveBoard re-checks the spec, so a wrong observe label still serves nothing.
+  assert.equal(await currentGameBoardPayload({ ...fogChess, observe: 'open' }), null);
 });
 
 test('engine seats are labelled through the tenant display name, PvE composition', () => {

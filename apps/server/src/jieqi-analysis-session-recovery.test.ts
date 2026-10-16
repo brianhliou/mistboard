@@ -1,5 +1,5 @@
 // A whole-game jieqi sweep walks 40-100+ positions through ONE engine process
-// (withJieqiAnalysisSession). PikaJieQi is a research fork with its assertions
+// (withJieqiAnalysisSession; the decisions pass shares it since #482). PikaJieQi is a research fork with its assertions
 // compiled out and it does crash mid-search — deterministically, on a warm
 // process; see mistboard-engine lab/jieqi-darkmove-2026-08-31/CRASH_FINDINGS.md.
 // Without recovery a single crash discards the whole sweep. These tests pin the
@@ -102,7 +102,7 @@ test('a sweep survives the analysis engine dying mid-run', async () => {
         out.push(evaluation.cp ?? Number.NaN);
       }
       return out;
-    }),
+    }, 'pikafish-jieqi'),
   );
 
   assert.equal(scores.length, 3, 'every position in the sweep produced an eval');
@@ -118,7 +118,7 @@ test('an engine that dies every time surfaces instead of respawning forever', as
   await assert.rejects(
     () =>
       withEngine(crashAlwaysBin, sentinel, () =>
-        withJieqiAnalysisSession((evaluateFen) => evaluateFen(FEN, BUDGET)),
+        withJieqiAnalysisSession((evaluateFen) => evaluateFen(FEN, BUDGET), 'pikafish-jieqi'),
       ),
     'a permanently broken engine must fail the sweep, not spin',
   );

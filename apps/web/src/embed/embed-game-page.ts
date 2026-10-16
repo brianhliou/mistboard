@@ -15,7 +15,7 @@
 // public everywhere else too.
 
 import '../app-base.css';
-import type { EmbedPov, GameEvent } from '@mistboard/game';
+import { type EmbedPov, type GameEvent, maybeGameSpecForId } from '@mistboard/game';
 import { banqiResultLabel } from '../banqi-result-label.js';
 import { seatInkForVariant } from '../flip-seat-ink.js';
 import {
@@ -25,14 +25,22 @@ import {
   variantDisplayLabel,
 } from '../game-display.js';
 import { gameMetaForGame, reviewUrlForGame, timeControlLabelForGame } from '../game-meta.js';
+import { t } from '../i18n/catalog.js';
 import { jungleFlipResultLabel } from '../jungle-flip-result-label.js';
 import type { GameMeta, ReplayHandle } from '../replay.js';
 import { reviewResultLabel } from '../review/game-review-meta.js';
 import { showcaseRendererKindForSpec, specIdForShowcaseVariant } from '../showcase-dispatch.js';
-import { seatInkFamily } from '../variant-seat-label.js';
+import { seatColorWord, seatInkFamily } from '../variant-seat-label.js';
 import { webVariantTenantForSpecId } from '../variant-tenant/registry.js';
-import { boardAspectForSpec } from '../watch-board-aspect.js';
-import { embedRailWidthPx, mountEmbedCard } from './embed-card.js';
+import { type EmbedAnalysis, embedAnalysisVariant, loadEmbedAnalysis } from './embed-analysis.js';
+import {
+  type EmbedBoardHandle,
+  type EmbedCard,
+  embedColumnAspect,
+  embedPovPicker,
+  embedRailWidthPx,
+  mountEmbedCard,
+} from './embed-card.js';
 import type { EmbedGameRoute } from './embed-route.js';
 import './embed.css';
 
@@ -102,7 +110,6 @@ async function mountBoard(
     showControls: false,
     keyboardNav: false,
     revealOnFinish: side === null,
-    clampPace: true,
     metadataMode: 'compact',
     compactClockLayout: 'board-edges',
     endStatusMode: 'clock',
@@ -182,9 +189,47 @@ export async function mountEmbedGame(
     second: displayParticipantName(game, secondSeat),
   };
 
+  // A fog game carries the view picker the review and watch pages have. Its
+  // board fixes the view when it mounts (a side's pane stays fogged at the
+  // end; truth is revealed), so a new view is a fresh mount at the same ply.
+  let pov: EmbedPov | null = options.pov ?? null;
+  let card: EmbedCard | null = null;
+  const picker =
+    maybeGameSpecForId(specId)?.visibility === 'dark'
+      ? embedPovPicker(pov ?? 'truth', fogSideLabels(specId), (next) => {
+          pov = next;
+          void card?.remountBoard();
+        })
+      : null;
+
+  // The stored analysis, if the game has one: glyphs and "X was best." on the sheet, the
+  // better move on the board. Fetched alongside the board (a GET of the cache, never a
+  // compute); until it lands, and when there is none, the embed is the plain replay.
+  let analysis: EmbedAnalysis | null = null;
+  let eventsPromise: Promise<GameEvent[]> | null = null;
+  const events = (): Promise<GameEvent[]> => {
+    eventsPromise ??= loadEvents(roomId);
+    return eventsPromise;
+  };
+  let boardReady: (handle: EmbedBoardHandle) => void = () => {};
+  const handleReady = new Promise<EmbedBoardHandle>((resolve) => {
+    boardReady = resolve;
+  });
+  const analysisLoad = embedAnalysisVariant(specId)
+    ? loadEmbedAnalysis(specId, roomId, {
+        // The tenant boards report their moves as squares; the chess path reads the record.
+        playedMoves: async () => {
+          const handle = await handleReady;
+          return handle.playedMoves?.() ?? playedSquaresFromEvents(await events());
+        },
+        events,
+      }).catch(() => null)
+    : Promise.resolve(null);
+
   try {
-    await mountEmbedCard(root, {
+    card = await mountEmbedCard(root, {
       header: embedGameHeader(game),
+      ...(picker ? { headerControls: picker } : {}),
       seats: {
         first: { name: names.first, ink: seatDiscInk(game, 'first') },
         second: { name: names.second, ink: seatDiscInk(game, 'second') },
@@ -194,17 +239,24 @@ export async function mountEmbedGame(
         href: reviewUrlForGame(game) ?? `/game/${encodeURIComponent(roomId)}`,
         text: `${names.first} vs ${names.second} · mistboard.com`,
       },
-      aspect: boardAspectForSpec(specId),
+      // A drop variant's watch board carries both hands above and below it
+      // (embed.css, .showcase-reserve), so the column is taller than the board.
+      aspect: embedColumnAspect(specId),
       railWidthPx: embedRailWidthPx(specId),
       startPly: options.startPly ?? null,
       inkFamily: seatInkFamily(game.variant),
-      mountBoard: (host, hooks) =>
-        mountBoard(host, specId, roomId, {
+      mountBoard: async (host, hooks) => {
+        const handle = await mountBoard(host, specId, roomId, {
           metadataByRoomId,
           namesByRoomId: { [roomId]: names },
           onPlyChange: hooks.onPlyChange,
-          pov: options.pov ?? null,
-        }),
+          pov,
+        });
+        // A remount (a fog game's view change) keeps the overlay it had.
+        if (analysis) handle.setBoardOverlay?.(analysis.overlayAtPly);
+        boardReady(handle);
+        return handle;
+      },
     });
   } catch {
     note(root, 'This game could not be loaded.');
@@ -212,6 +264,38 @@ export async function mountEmbedGame(
   }
 
   document.title = `${names.first} vs ${names.second} · Mistboard`;
+
+  const loaded = await analysisLoad;
+  if (loaded && card) {
+    analysis = loaded;
+    card.setAnnotations(loaded.annotations);
+    card.handle.setBoardOverlay?.(loaded.overlayAtPly);
+  }
+}
+
+/** The side buttons' words: White and Black for fog chess, Red and the
+ *  family's second-seat word elsewhere, as the watch page's toggle reads. */
+function fogSideLabels(specId: string): { first: string; second: string } {
+  return maybeGameSpecForId(specId)?.family === 'chess'
+    ? { first: t('setup.white'), second: t('setup.black') }
+    : { first: t('setup.red'), second: seatColorWord(specId, 'black') };
+}
+
+/** The record's moves as board squares, for a board that cannot report its own (the
+ *  chess path), numbered by order of play. */
+function playedSquaresFromEvents(
+  events: readonly GameEvent[],
+): Array<{ ply: number; from?: string; to?: string }> {
+  return events
+    .filter((event) => event.type === 'move-played')
+    .map((event, index) => {
+      const move = (event as { move?: { from?: unknown; to?: unknown } }).move;
+      return {
+        ply: index + 1,
+        ...(typeof move?.from === 'string' ? { from: move.from } : {}),
+        ...(typeof move?.to === 'string' ? { to: move.to } : {}),
+      };
+    });
 }
 
 /** "Xiangqi · 10 + 5", or the variant alone for an unclocked game. */

@@ -415,14 +415,26 @@ export type XiangqiApplyMoveOptions = {
   progressClockLimit?: number;
 };
 
+// Spell the whole role: its first letter is not unique (chariot and cannon are
+// both `c`), and a shared letter makes a chariot/cannon swap read as a repeat.
 export function positionRepetitionKey(state: XiangqiGameState): string {
   const turn = state.status.type === 'playing' ? state.status.turn : '-';
   const board = Object.entries(state.board)
     .filter(([, piece]) => piece)
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([sq, p]) => `${sq}${p!.color[0]}${p!.role[0]}`)
+    .map(([sq, p]) => `${sq}:${p!.color[0]}.${p!.role}`)
     .join(',');
   return `${turn}|${board}`;
+}
+
+/**
+ * A key in the spelling used before 2026-10 (role's first letter, so chariot
+ * and cannon were both `c`). Accepts either spelling. Only for matching keys
+ * already stored that way, such as mined-puzzle position keys; never for
+ * adjudicating a game.
+ */
+export function legacyPositionRepetitionKey(key: string): string {
+  return key.replace(/:([rb])\.([a-z])[a-z]*/g, '$1$2');
 }
 
 export function applyMove(

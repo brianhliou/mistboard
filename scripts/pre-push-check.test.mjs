@@ -60,6 +60,50 @@ test('unwatched files still get the drift check', () => {
   assert.match(output, /npm run check:drift/);
 });
 
+test('--json prints the same plan as data, for the release gate to reuse', () => {
+  // scripts/release-prod.mjs asks this classifier for its local gate instead of
+  // running ci:quick every time. If the shape changes, that gate silently falls
+  // back to the full suite, which is the slow path this replaced.
+  const raw = execFileSync(
+    process.execPath,
+    [script, '--plan', '--json', '--files', 'apps/web/src/articles/content/banqi.ts'],
+    { cwd: join(scriptsDir, '..'), encoding: 'utf8' },
+  );
+  const parsed = JSON.parse(raw);
+  assert.equal(parsed.kind, 'targeted');
+  assert.ok(Array.isArray(parsed.commands) && parsed.commands.length > 0);
+  assert.deepEqual(parsed.commands[0], ['npm', 'run', 'check:drift']);
+  assert.equal(typeof parsed.reason, 'string');
+
+  const broad = JSON.parse(
+    execFileSync(
+      process.execPath,
+      [script, '--plan', '--json', '--files', 'packages/game/src/variants-banqi.ts'],
+      { cwd: join(scriptsDir, '..'), encoding: 'utf8' },
+    ),
+  );
+  assert.equal(broad.kind, 'broad');
+  assert.deepEqual(broad.commands, [['npm', 'run', 'ci:quick']]);
+});
+
+// The release gate passes the committed change set with --files. Without a base,
+// the targeted plan ended in `verify --changed`, which re-reads the working tree:
+// a release tree is clean, so verify saw 0 files and ran no tests (2026-10-02,
+// b40cb193 shipped a broken web test that only hosted CI caught). With --base,
+// verify diffs the same range the release is about to push.
+test('--base makes the targeted plan verify the committed range', () => {
+  const base = '0123456789abcdef0123456789abcdef01234567';
+  const parsed = JSON.parse(
+    execFileSync(
+      process.execPath,
+      [script, '--plan', '--json', '--base', base, '--files', 'apps/web/src/main.ts'],
+      { cwd: join(scriptsDir, '..'), encoding: 'utf8' },
+    ),
+  );
+  assert.equal(parsed.kind, 'targeted');
+  assert.deepEqual(parsed.commands.at(-1), ['npm', 'run', 'verify', '--', '--since', base]);
+});
+
 test('the git hook blocks direct pushes to main in favor of the release path', () => {
   const env = { ...process.env };
   delete env.MISTBOARD_RELEASE_PUSH;

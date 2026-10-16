@@ -24,7 +24,13 @@ import {
   type LiveSeatProfile,
   liveSeatProfileIdentity,
 } from './first-party-bots.js';
-import { ABORT_WINDOW_MS, FORFEIT_WINDOW_MS, JOIN_WINDOW_MS } from './lifecycle-windows.js';
+import {
+  ABORT_WINDOW_MS,
+  FORFEIT_WINDOW_MS,
+  JOIN_WINDOW_MS,
+  LOBBY_NO_SHOW_ABORT_MS,
+  PVP_DISCONNECT_FORFEIT_ENABLED,
+} from './lifecycle-windows.js';
 import {
   chooseLiveEngineMove,
   type LiveEngineFallbackEvent,
@@ -41,7 +47,11 @@ import type { Client, Room, SeatTokenState } from './server-types.js';
 
 // Re-exported for back-compat: these moved to lifecycle-windows.ts, but
 // room-manager.test.ts and historical importers still resolve them from here.
-export { ABORT_WINDOW_MS, FORFEIT_WINDOW_MS } from './lifecycle-windows.js';
+export {
+  ABORT_WINDOW_MS,
+  FORFEIT_WINDOW_MS,
+  PVP_DISCONNECT_FORFEIT_ENABLED,
+} from './lifecycle-windows.js';
 
 export interface RoomManagerContext {
   send: (client: Client, payload: unknown) => void;
@@ -691,10 +701,15 @@ export function scheduleAbortTimeout(ctx: RoomManagerContext, room: Room): void 
   // but 'unjoined' is exempt from that: those rooms have no clock yet by
   // construction, and skipping them is what leaked them.
   const untimedAndOwesAMove = phase !== 'unjoined' && !room.projection.state.clock;
+  // A lobby room's open seat belongs to a player the lobby already paired: it
+  // gets the short no-show window from creation, whoever sits in the room
+  // (lifecycle-windows.ts LOBBY_NO_SHOW_ABORT_MS).
+  const lobbyNoShow = phase === 'unjoined' && room.lobbyMatch === true;
   // Somebody is sitting in the room with the page open, waiting for an
   // opponent. Never abort under them, however long they wait — the leak being
-  // closed is the room nobody is in.
-  const stillWaitingWithSomeonePresent = phase === 'unjoined' && someSeatConnected(room);
+  // closed is the room nobody is in. Not for a lobby room: nobody is coming.
+  const stillWaitingWithSomeonePresent =
+    phase === 'unjoined' && !lobbyNoShow && someSeatConnected(room);
   if (
     phase === null ||
     room.projection.paused ||
@@ -710,7 +725,10 @@ export function scheduleAbortTimeout(ctx: RoomManagerContext, room: Room): void 
   // white completing move 1 flips the phase and starts black a fresh window,
   // and a seat filling flips 'unjoined' so the long join window collapses to
   // the short pregame one instead of continuing to run.
-  if (room.abortPhase !== phase || room.abortDeadline === null) {
+  if (lobbyNoShow) {
+    room.abortPhase = phase;
+    room.abortDeadline = (room.events[0]?.at ?? Date.now()) + LOBBY_NO_SHOW_ABORT_MS;
+  } else if (room.abortPhase !== phase || room.abortDeadline === null) {
     room.abortPhase = phase;
     room.abortDeadline = Date.now() + (phase === 'unjoined' ? JOIN_WINDOW_MS : ABORT_WINDOW_MS);
   }
@@ -722,7 +740,7 @@ export function scheduleAbortTimeout(ctx: RoomManagerContext, room: Room): void 
     // Re-check presence at fire time, not just at schedule time: a player can
     // reclaim a seat via seat token without appending an event, so the
     // scheduler does not always re-run on reconnect.
-    if (currentPhase === 'unjoined' && someSeatConnected(room)) return;
+    if (currentPhase === 'unjoined' && room.lobbyMatch !== true && someSeatConnected(room)) return;
     const fromSeq = room.events.length;
     void appendEvent(ctx, room, {
       type: 'game-aborted',
@@ -772,6 +790,8 @@ function forfeitingSeat(room: Room): Color | null {
   if (status.type !== 'playing' || moveNumber < 2 || room.projection.paused) return null;
   const engineSeat = engineSeatFor(room);
   if (engineSeat !== null) return null;
+  // PvP: off by policy while the flag is false (lifecycle-windows.ts, #436).
+  if (!PVP_DISCONNECT_FORFEIT_ENABLED) return null;
   const connected = computeConnectedSeats(room.clients);
   const present = (seat: Color): boolean => connected[seat];
   const whitePresent = present('white');
@@ -988,8 +1008,14 @@ export async function resumeRoom(
   }
 }
 
-// Fire resume if the room is paused AND every seat is "present." Returns true
-// if resume was appended.
+// Fire resume if the room is paused AND either every seat is "present" or the
+// human on move is. Returns true if resume was appended.
+//
+// Only the side to move has a running clock after a resume, so its player being
+// back is enough (#567, lichess-like): a returning mover no longer waits on a
+// frozen board, unable to move, for a slower opponent or the grace window. The
+// absent opponent's clock does not run until the mover has moved, the same as
+// any disconnect. An engine on move does not count: PvE waits for its human.
 //
 // Presence rules:
 // - Engine seats (isServerEngineClient) are always present while the server is
@@ -999,7 +1025,7 @@ export async function resumeRoom(
 //   attacker without the token cannot force-resume by connecting.
 //
 // Implications by mode:
-// - PvP: needs both human seats to have valid tokens — same as before.
+// - PvP: the player on move with a valid token, or both players.
 // - PvE: resumes the moment the human reconnects (engine is auto-present).
 // - EvE: resumes on the first connection of any kind (both engines auto-present).
 export async function resumeRoomIfReady(
@@ -1024,7 +1050,9 @@ export async function resumeRoomIfReady(
     return false;
   };
 
-  if (!seatPresent('white') || !seatPresent('black')) return false;
+  const mover = room.projection.state.status.turn;
+  const moverBack = !isServerEngineClient(room.projection.seats[mover]) && seatPresent(mover);
+  if (!moverBack && (!seatPresent('white') || !seatPresent('black'))) return false;
   await resumeRoom(ctx, room, at, 'both-present');
   return true;
 }
@@ -1283,14 +1311,39 @@ export async function playRandomEngineMoveIfReady(
     room.projection.state,
     engineSeat,
   );
-  if (moves.length === 0) return;
+  if (moves.length === 0) {
+    // Unreachable since 2026-09-30: applyFogMove finishes the game as a draw
+    // ('no-legal-moves') on the move that leaves the engine with none. If a
+    // rules change reopens it, the room must not sit silent: page it. A timed
+    // room still ends on the engine's clock.
+    logger.error(
+      {
+        kind: 'engine_no_legal_moves_while_playing',
+        room_id: room.id,
+        color: engineSeat,
+        engine_id: room.pveEngineId ?? null,
+        move_number: room.projection.state.moveNumber,
+      },
+      'engine to move with no legal moves in a playing room',
+    );
+    void sendEngineAlertNotification({
+      severity: 'critical',
+      alert_kind: 'engine_no_legal_moves_while_playing',
+      variant: room.projection.variant,
+      room_id: room.id,
+      color: engineSeat,
+      engine_id: room.pveEngineId ?? undefined,
+    }).catch(() => {});
+    return;
+  }
   const clock = room.projection.state.clock;
   const context = {
     baseThinkTimeMs: ctx.pveEngineMoveDelayMs,
     clockRemainingMs: clock ? clockRemainingMs(clock, engineSeat, now) : undefined,
     events: room.events,
     incrementMs: clock?.incrementMs,
-    engineReservationId: room.engineReservationId ?? undefined,
+    engineReservation: room,
+    engineReservationStillNeeded: () => room.projection.state.status.type === 'playing',
     state: room.projection.state,
     color: engineSeat,
     legalMoves: moves,
@@ -1333,6 +1386,11 @@ export async function playRandomEngineMoveIfReady(
   const decisionAt = Date.now();
   if (room.projection.state.status.type !== 'playing') return;
   if (room.projection.state.status.turn !== engineSeat) return;
+  // The room can pause while the engine thinks: a shutdown lands mid-turn. A
+  // reply appended after the pause would play a move on a frozen clock and
+  // restart the human's clock running through the outage (the reducer does not
+  // refuse moves while paused). Drop it; the resume re-schedules the turn.
+  if (room.projection.paused) return;
   if (
     room.projection.state.clock &&
     clockRemainingMs(room.projection.state.clock, engineSeat, decisionAt) <= 0

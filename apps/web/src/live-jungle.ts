@@ -23,6 +23,7 @@ import {
   junglePieceGhostSvg,
   renderJungleBoardSvg,
 } from './jungle-render.js';
+import { jungleFinishBadges } from './live-finish-badges.js';
 import {
   maybePlayJungleSnapshotSound,
   resetJungleSoundState,
@@ -43,7 +44,7 @@ import {
   type TenantLiveEvent,
   type TenantMovePlayed,
 } from './variant-tenant/live-client.js';
-import type { WebVariantTenant } from './variant-tenant/room-chrome.js';
+import type { TenantReasonKey, WebVariantTenant } from './variant-tenant/room-chrome.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
 
 // ── Wire shapes (mirror JunglePlayerView; the board is a plain piece map) ─────
@@ -82,44 +83,39 @@ function oppositeColor(color: JungleColor): JungleColor {
 }
 
 const jungleWebTenant: WebVariantTenant<JungleColor> = {
-  displayName: 'Jungle Chess',
-  metaMarkerId: 'jungle',
-  metaGlyph: '虎',
+  displayName: 'variant.jungle.name',
   colors: ['red', 'black'],
   isColor: isJungleColor,
   oppositeColor,
   enabled: jungleEnabled,
   reviewUrl: (roomId) => `/jungle/game/${encodeURIComponent(roomId)}`,
   reasonPhrase: jungleReasonPhrase,
-  disabledTitle: 'Jungle disabled',
-  disabledBody: 'This client build has the room renderer off.',
-  rejectedBody: 'This Jungle room is not active. Create a new invite to start a game.',
-  spectatorBody: 'Watching the game.',
-  selectInstruction: 'Select one of your animals, then tap where it should move.',
-  seatLabel: (seat) => (seat === 'red' ? 'Red' : 'Blue'),
+  spectatorBody: 'live.spectatorWatchingGame',
+  selectInstruction: 'live.selectJungle',
+  seatLabel: (seat) => (seat === 'red' ? 'setup.red' : 'setup.blue'),
   showPregameTurn: true,
 };
 
-function jungleReasonPhrase(reason: string): string {
+function jungleReasonPhrase(reason: string): TenantReasonKey {
   switch (reason) {
     case 'den-entered':
-      return 'reaching the den';
+      return 'result.reachingDen';
     case 'pieces-captured':
-      return 'capturing every animal';
+      return 'result.capturingEveryAnimal';
     case 'stalemate':
-      return 'no legal move';
+      return 'result.noLegalMove';
     case 'no-progress':
-      return 'no progress';
+      return 'result.noProgress';
     case 'repetition':
-      return 'repetition';
+      return 'result.repetition';
     case 'timeout':
-      return 'timeout';
+      return 'result.timeout';
     case 'resignation':
-      return 'resignation';
+      return 'result.resignation';
     case 'abandonment':
-      return 'abandonment';
+      return 'result.abandonment';
     default:
-      return 'the game rules';
+      return 'result.gameRules';
   }
 }
 
@@ -127,6 +123,7 @@ const client = createTenantLiveClient<JungleColor, JungleWireView, JungleMove>({
   tenant: jungleWebTenant,
   gameSpecId: 'jungle',
   defaultRoomId: 'jgl_dev',
+  flippable: true,
   boardClass: 'jungle-live-board',
   chrome: {
     roomMode: () => roomMode,
@@ -163,6 +160,15 @@ const client = createTenantLiveClient<JungleColor, JungleWireView, JungleMove>({
   // reverse-glide the undone one. Skipped mid-drag so a glide never fights the
   // drag ghost. Mirrors live-banqi.ts; this room had no hook at all until then,
   // so jungle glided everywhere EXCEPT the one surface people actually play on.
+  finishBadges: (view, previous) =>
+    view.status.type === 'finished'
+      ? jungleFinishBadges({
+          winner: view.status.winner,
+          reason: view.status.reason,
+          lastMove: view.lastMove,
+          previousLastMove: previous?.lastMove,
+        })
+      : [],
   animateBoard: (liveRefs, view, takePendingAnimation) => {
     if (!view || draggingFrom) return;
     const pending = takePendingAnimation();

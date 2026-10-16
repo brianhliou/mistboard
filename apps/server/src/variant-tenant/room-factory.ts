@@ -5,9 +5,10 @@
  * running-game record.
  */
 
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
 import type { RoomTimeControl } from '@mistboard/game';
-import type * as persistence from '../persistence.js';
+import * as persistence from '../persistence.js';
 import { appendTenantSeatAssigned } from './events.js';
 import { appendTenantRuntimeEvent, createTenantRuntimeRoom } from './runtime.js';
 import { mintTenantSeatToken } from './seat-session.js';
@@ -17,6 +18,18 @@ import type {
   TenantRuntimeRoom,
   VariantTenant,
 } from './tenant.js';
+
+// Set while the lobby route creates a matched room (routes/lobby.ts). Every
+// tenant's lobby.createRoom ends in createTenantLiveRoom through its own
+// positional create helpers, so marking the room here covers every tenant, and
+// any future one, without threading a flag through each of them. Scoped to the
+// one awaited call: nothing created outside it is marked.
+const lobbyMatchScope = new AsyncLocalStorage<true>();
+
+/** Run `create` so that every tenant room it makes is marked a lobby match. */
+export function createAsLobbyMatch<T>(create: () => Promise<T>): Promise<T> {
+  return lobbyMatchScope.run(true, create);
+}
 
 /** PvE: seat an engine in `seat` at creation (its clientId is the engine id),
  * holding the given engine-service seat reservation for the game. Omit
@@ -81,9 +94,12 @@ export async function createTenantLiveRoom<
      */
     engines?: readonly TenantRoomEngineSeat<C>[];
     rated?: boolean;
+    /** Made by a lobby match. Defaults to whether createAsLobbyMatch is running. */
+    lobbyMatch?: boolean;
   } = {},
 ): Promise<TenantLiveRoomCreation<Kind, C, M, State, Spec>> {
   const { timeControl, creatorPreference, engine, engines, rated = false } = options;
+  const lobbyMatch = options.lobbyMatch ?? lobbyMatchScope.getStore() === true;
   if (engine && engines) {
     throw new Error('pass either engine or engines, not both');
   }
@@ -99,6 +115,7 @@ export async function createTenantLiveRoom<
       pveBotId: firstEngine?.botId,
       rated,
       timeControl,
+      lobbyMatch: lobbyMatch && engineSeats.length === 0,
     });
     if (!created.ok) return created;
     const room = created.room;
@@ -184,9 +201,15 @@ export async function createTenantCorrespondenceGameForSeek<
     first: { userId: string };
     /** The account taking the second seat (tenant.colors[1]). */
     second: { userId: string };
+    /** A rated correspondence seek (the route admits it only for isCorrespondenceRatedSpec).
+     *  Durable in the room-created event, so a hydrated room stays rated. */
+    rated?: boolean;
   },
 ): Promise<TenantLiveRoomCreation<Kind, C, M, State, Spec>> {
-  const created = await createTenantLiveRoom(tenant, ctx, { timeControl: args.timeControl });
+  const created = await createTenantLiveRoom(tenant, ctx, {
+    timeControl: args.timeControl,
+    rated: args.rated === true,
+  });
   if (!created.ok) return created;
   const room = created.room;
   const at = Date.now();
@@ -195,8 +218,8 @@ export async function createTenantCorrespondenceGameForSeek<
     [tenant.colors[1], args.second],
   ];
   for (const [seat, identity] of seats) {
-    // handle/display resolve via the users join everywhere they're shown; the seat-token
-    // row persists only user_id, so null here is exact, not lossy.
+    // The durable token stores only user_id. Resolve public names below once
+    // both tokens are persisted, before either account needs to connect.
     const { state } = mintTenantSeatToken(room, seat, {
       userId: identity.userId,
       userHandle: null,
@@ -206,6 +229,18 @@ export async function createTenantCorrespondenceGameForSeek<
       event: { type: 'seat-assigned', at, roomId: room.id, clientId: state.clientId, seat },
       tokenState: state,
     });
+  }
+  if (ctx.isPersistenceEnabled()) {
+    const tokens = await persistence.loadRoomSeatTokens<persistence.RoomSeatTokenSeat>(room.id);
+    for (const token of Object.values(tokens)) {
+      if (!token) continue;
+      const state = room.seatTokens[token.seat as C];
+      // A reconnect can run while the lookup is pending. Fill only the public
+      // identity of the same account, preserving its current connection/token.
+      if (!state || state.userId !== token.userId) continue;
+      state.userHandle = token.userHandle;
+      state.userDisplayName = token.userDisplayName;
+    }
   }
   return { ok: true, room };
 }

@@ -29,6 +29,7 @@ const LOADERS: Record<AnalysisVariantId, () => Promise<AnalysisMount>> = {
   'dark-chess': () => variantMount('dark-chess'),
   'duck-xiangqi': () => variantMount('duck-xiangqi'),
   'atomic-xiangqi': () => variantMount('atomic-xiangqi'),
+  'crazyhouse-xiangqi': () => variantMount('crazyhouse-xiangqi'),
 };
 
 function variantMount(id: Exclude<AnalysisVariantId, 'xiangqi'>): Promise<AnalysisMount> {

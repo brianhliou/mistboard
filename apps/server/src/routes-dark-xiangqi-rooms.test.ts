@@ -65,7 +65,7 @@ test('Dark Xiangqi room route rejects unsupported create surfaces before room cr
   try {
     for (const body of [
       { gameSpecId: DARK_XIANGQI_SPEC_ID, mode: 'bogus' },
-      { gameSpecId: DARK_XIANGQI_SPEC_ID, mode: 'pvp', rated: true },
+      { gameSpecId: DARK_XIANGQI_SPEC_ID, mode: 'pve', rated: true },
       { engineId: 'engine', gameSpecId: DARK_XIANGQI_SPEC_ID, mode: 'pvp' },
     ]) {
       let createCalls = 0;
@@ -132,10 +132,11 @@ test('Dark Xiangqi PvE route seats the default engine opposite the human', async
       url: '/room/dxq_pve',
       mode: 'pve',
       gameSpecId: DARK_XIANGQI_SPEC_ID,
+      rated: false,
       region: 'global',
-      // The request named no pace, so the engine pin supplied one and the
-      // response reports it (#283) instead of staying silent about the clock.
-      timeControl: { initialMs: 300_000, incrementMs: 5_000 },
+      // The request named no pace, so the bot default supplied one and the
+      // response reports it instead of staying silent about the clock.
+      timeControl: { initialMs: 600_000, incrementMs: 5_000 },
     });
   } finally {
     restoreFlag(before);
@@ -209,6 +210,115 @@ test('Dark Xiangqi PvE route returns 503 when no engine seat is available', asyn
   }
 });
 
+// 2026-10-01 21:11 PT: a draining server answered four Fog Xiangqi bot starts
+// with 503 after each had reserved a seat, so the worker's four seats sat
+// leaked for 30 minutes and the next Fog Chess bot game got engine_busy.
+test('Dark Xiangqi PvE route takes no engine seat while the server drains', async () => {
+  const before = process.env[darkXiangqiFlag];
+  process.env[darkXiangqiFlag] = 'true';
+  try {
+    let reserveCalls = 0;
+    const response = captureResponse();
+    await handleDarkXiangqiCreate(
+      testContext({
+        refusesCreate: () => true,
+        reserveLiveEngineSeat: async () => {
+          reserveCalls += 1;
+          return 'reservation';
+        },
+      }),
+      response,
+      { gameSpecId: DARK_XIANGQI_SPEC_ID, mode: 'pve' },
+    );
+
+    assert.equal(response.status, 503);
+    assert.equal(responseJson(response).error, 'server_draining');
+    assert.equal(reserveCalls, 0);
+  } finally {
+    restoreFlag(before);
+  }
+});
+
+test('Dark Xiangqi PvE route takes no engine seat while persistence is down', async () => {
+  const before = process.env[darkXiangqiFlag];
+  process.env[darkXiangqiFlag] = 'true';
+  try {
+    let reserveCalls = 0;
+    const response = captureResponse();
+    await handleDarkXiangqiCreate(
+      testContext({
+        databaseRequired: true,
+        reserveLiveEngineSeat: async () => {
+          reserveCalls += 1;
+          return 'reservation';
+        },
+      }),
+      response,
+      { gameSpecId: DARK_XIANGQI_SPEC_ID, mode: 'pve' },
+    );
+
+    assert.equal(response.status, 503);
+    assert.deepEqual(responseJson(response), { error: 'persistence_disabled' });
+    assert.equal(reserveCalls, 0);
+  } finally {
+    restoreFlag(before);
+  }
+});
+
+test('Dark Xiangqi PvE route releases its engine seat when the room is not created', async () => {
+  const before = process.env[darkXiangqiFlag];
+  process.env[darkXiangqiFlag] = 'true';
+  try {
+    for (const failure of ['persistence_failure', 'room_id_collision', 'throws'] as const) {
+      const released: Array<[string, string]> = [];
+      const response = captureResponse();
+      const run = handleDarkXiangqiCreate(
+        testContext({
+          reserveLiveEngineSeat: async () => `reservation-${failure}`,
+          releaseLiveEngineReservation: (id, reason) => released.push([id, reason]),
+          createDarkXiangqiRoom: async () => {
+            if (failure === 'throws') throw new Error('room factory exploded');
+            return { ok: false, error: failure };
+          },
+        }),
+        response,
+        { gameSpecId: DARK_XIANGQI_SPEC_ID, mode: 'pve' },
+      );
+      if (failure === 'throws') {
+        await assert.rejects(run, /room factory exploded/);
+      } else {
+        await run;
+        assert.deepEqual(responseJson(response), { error: failure });
+      }
+      assert.deepEqual(released, [[`reservation-${failure}`, 'room-create-failed']], failure);
+    }
+  } finally {
+    restoreFlag(before);
+  }
+});
+
+test('Dark Xiangqi PvE route keeps its engine seat when the room is created', async () => {
+  const before = process.env[darkXiangqiFlag];
+  process.env[darkXiangqiFlag] = 'true';
+  try {
+    const released: string[] = [];
+    const response = captureResponse();
+    await handleDarkXiangqiCreate(
+      testContext({
+        reserveLiveEngineSeat: async () => 'reservation',
+        releaseLiveEngineReservation: (id) => released.push(id),
+      }),
+      response,
+      { gameSpecId: DARK_XIANGQI_SPEC_ID, mode: 'pve' },
+    );
+
+    assert.equal(response.status, 201);
+    assert.deepEqual(released, []);
+  } finally {
+    restoreFlag(before);
+  }
+});
+
 test('Dark Xiangqi PvE route rejects an unknown engineId before room creation', async () => {
   const before = process.env[darkXiangqiFlag];
   process.env[darkXiangqiFlag] = 'true';
@@ -262,6 +372,7 @@ test('Dark Xiangqi room route accepts valid PvP time controls', async () => {
       url: '/room/dxq_clocked',
       mode: 'pvp',
       gameSpecId: DARK_XIANGQI_SPEC_ID,
+      rated: false,
       region: 'global',
       timeControl: { initialMs: 180_000, incrementMs: 2_000 },
     });
@@ -311,6 +422,7 @@ test('Dark Xiangqi room route creates a direct PvP room response', async () => {
       url: '/room/dxq_route',
       mode: 'pvp',
       gameSpecId: DARK_XIANGQI_SPEC_ID,
+      rated: false,
       region: 'global',
     });
   } finally {
@@ -371,8 +483,8 @@ test('Dark Xiangqi room route refuses a bot game at a pace the engine cannot hon
   process.env[darkXiangqiFlag] = 'true';
   try {
     // Fog engines have a per-move floor a 1s or 2s increment cannot cover, so
-    // they lose on time in long games (#283); PvE is pinned to 5+5 until the
-    // floor is bounded. Rejected BEFORE the engine seat reservation, so a
+    // they lose on time in long games (#283); PvE needs a 5s increment until
+    // the floor is bounded. Rejected BEFORE the engine seat reservation, so a
     // refused request never holds one.
     let reservations = 0;
     const ctx = testContext({
@@ -401,7 +513,7 @@ test('Dark Xiangqi room route refuses a bot game at a pace the engine cannot hon
   }
 });
 
-test('Dark Xiangqi PvE with no named pace starts at the pin, not the house default', async () => {
+test('Dark Xiangqi PvE with no named pace starts at the bot default, not the house default', async () => {
   const before = process.env[darkXiangqiFlag];
   process.env[darkXiangqiFlag] = 'true';
   try {
@@ -425,7 +537,7 @@ test('Dark Xiangqi PvE with no named pace starts at the pin, not the house defau
     // The response echoes the effective pace, so a caller that named none can
     // see what it actually got.
     assert.deepEqual(responseJson(response).timeControl, {
-      initialMs: 300_000,
+      initialMs: 600_000,
       incrementMs: 5_000,
     });
 
@@ -437,13 +549,13 @@ test('Dark Xiangqi PvE with no named pace starts at the pin, not the house defau
     });
     assert.equal(human.status, 201);
 
-    assert.deepEqual(startedPaces, [{ initialMs: 300_000, incrementMs: 5_000 }, undefined]);
+    assert.deepEqual(startedPaces, [{ initialMs: 600_000, incrementMs: 5_000 }, undefined]);
   } finally {
     restoreFlag(before);
   }
 });
 
-test('Dark Xiangqi room route admits the pinned pace and leaves human games alone', async () => {
+test('Dark Xiangqi room route admits paces that clear the floor and leaves human games alone', async () => {
   const before = process.env[darkXiangqiFlag];
   process.env[darkXiangqiFlag] = 'true';
   try {
@@ -456,13 +568,15 @@ test('Dark Xiangqi room route admits the pinned pace and leaves human games alon
       },
     });
 
-    const pinned = captureResponse();
-    await handleDarkXiangqiCreate(ctx, pinned, {
-      gameSpecId: DARK_XIANGQI_SPEC_ID,
-      mode: 'pve',
-      timeControl: { initialMs: 300_000, incrementMs: 5_000 },
-    });
-    assert.equal(pinned.status, 201);
+    for (const initialMs of [300_000, 600_000]) {
+      const floored = captureResponse();
+      await handleDarkXiangqiCreate(ctx, floored, {
+        gameSpecId: DARK_XIANGQI_SPEC_ID,
+        mode: 'pve',
+        timeControl: { initialMs, incrementMs: 5_000 },
+      });
+      assert.equal(floored.status, 201, `${initialMs}+5000`);
+    }
 
     // The same pace the bot is refused, between humans: the floor belongs to
     // the engine, not to the variant.
@@ -476,6 +590,7 @@ test('Dark Xiangqi room route admits the pinned pace and leaves human games alon
 
     assert.deepEqual(startedPaces, [
       { initialMs: 300_000, incrementMs: 5_000 },
+      { initialMs: 600_000, incrementMs: 5_000 },
       { initialMs: 180_000, incrementMs: 2_000 },
     ]);
   } finally {
@@ -488,8 +603,9 @@ function testContext(overrides: Partial<DarkXiangqiCreateContext> = {}): DarkXia
     createDarkXiangqiRoom: async () => ({ ok: true, room: darkXiangqiRoom('dxq_route') }),
     databaseRequired: false,
     drainDeadlineMs: () => null,
-    isDraining: () => false,
+    refusesCreate: () => false,
     reserveLiveEngineSeat: async () => null,
+    releaseLiveEngineReservation: () => {},
     ...overrides,
   };
 }

@@ -5,6 +5,7 @@
 // and its rails. This is the platform layout for every variant's postgame (and,
 // later, the live room). Pair the center with review/board-stage.ts.
 
+import '../seat-disc-ink.css';
 import './review-shell.css';
 
 export type ReviewShellPanels = {
@@ -17,11 +18,21 @@ export type ReviewShellPanels = {
   ariaLabel?: string;
   /** Extra class on the <main> for per-variant board-family sizing tweaks. */
   pageClassName?: string;
+  /** Board and moves only, sized to the element it mounts in rather than the
+   *  viewport, with no left rail: a host page (a broadcast event) keeps its
+   *  own header and side column around it. A <div>, since the host owns <main>. */
+  embedded?: boolean;
 };
 
 export function createReviewShell(panels: ReviewShellPanels): HTMLElement {
-  const main = document.createElement('main');
-  main.className = ['review-shell', panels.pageClassName].filter(Boolean).join(' ');
+  const main = document.createElement(panels.embedded ? 'div' : 'main');
+  main.className = [
+    'review-shell',
+    panels.embedded ? 'review-shell--embedded' : null,
+    panels.pageClassName,
+  ]
+    .filter(Boolean)
+    .join(' ');
   if (panels.ariaLabel) main.setAttribute('aria-label', panels.ariaLabel);
 
   const cluster = document.createElement('div');
@@ -39,7 +50,8 @@ export function createReviewShell(panels: ReviewShellPanels): HTMLElement {
   right.className = 'review-shell__rail review-shell__right';
   right.append(panels.right);
 
-  cluster.append(left, center, right);
+  if (panels.embedded) cluster.append(center, right);
+  else cluster.append(left, center, right);
   main.append(cluster);
   return main;
 }

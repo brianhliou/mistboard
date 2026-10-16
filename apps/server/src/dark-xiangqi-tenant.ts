@@ -8,7 +8,9 @@
  * so hidden piece identity never reaches the wire), the spectator empty view,
  * lastMove stripping, seat-vacated acceptance in event logs, and the legacy
  * GameSummary shape (no time-control fields; guests named by color). The
- * snapshot has NO extras — it is exactly the tenant core payload.
+ * snapshot's only extra is the room mode (roomMode, and pveEngineId for a bot
+ * game), as banqi and jieqi send: without it the client took every room for
+ * PvP and a finished bot game showed no Rematch.
  */
 
 import {
@@ -33,6 +35,11 @@ import { engineVersionDisplayName, isDarkXiangqiEngineClientId } from './engines
 import { darkXiangqiEnabled } from './feature-flags.js';
 import type * as persistence from './persistence.js';
 import { tenantParticipant } from './variant-tenant/events.js';
+import {
+  applyTenantEvent,
+  replayTenantEvents,
+  tenantPveEngineId,
+} from './variant-tenant/runtime.js';
 import type {
   TenantClientEvent,
   TenantRoomEvent,
@@ -195,6 +202,73 @@ export function darkXiangqiTruthView(
   };
 }
 
+export type DarkXiangqiPlyViewKey = XiangqiColor | 'truth';
+export type DarkXiangqiPlySnapshot = { ply: number; view: DarkXiangqiWirePlayerView };
+export type DarkXiangqiPlyViews = Partial<Record<DarkXiangqiPlyViewKey, DarkXiangqiPlySnapshot[]>>;
+
+// Per-ply views (ply 0 = the start position, then one per move-played) for the
+// requested keys, replayed from the event log through the tenant. Each seat's
+// view at ply p is exactly what viewForClient served that seat after the p-th
+// move: the same builder, the capture ledger cut at p, and lastMove kept only
+// when that seat made move p. One function for the postgame route (all three
+// keys, finished games) and the live seat history (one color, playing games),
+// so the two cannot drift about what a seat saw at a ply.
+//
+// HIDDEN-INFO: callers choose the keys. 'truth' is the unredacted board and is
+// only ever requested for a FINISHED game (darkXiangqiPostgameForApi); the
+// live seat history asks for its own color alone (darkXiangqiSeatHistory).
+export function darkXiangqiPlyViews(
+  events: readonly TenantRoomEvent<XiangqiColor, XiangqiMove, DarkXiangqiSpecId>[],
+  keys: readonly DarkXiangqiPlyViewKey[],
+): DarkXiangqiPlyViews {
+  const created = events[0];
+  if (created?.type !== 'room-created') return {};
+  // Full ledger once; each ply gets the ledger truncated to captures that had
+  // happened by that ply, so a scrubbing client sees captures accumulate rather
+  // than the final tallies from the first frame.
+  const ledger = darkXiangqiCaptureLedger(events);
+  const history: DarkXiangqiPlyViews = {};
+  let projection = replayTenantEvents(darkXiangqiTenant, [created]);
+  let ply = 0;
+  let latestMoveColor: XiangqiColor | undefined;
+  const append = () => {
+    const captured = ledger.filter((capture) => capture.plyIndex < ply);
+    for (const key of keys) {
+      const view =
+        key === 'truth'
+          ? darkXiangqiTruthView(projection.state, darkXiangqiObservedCaptures(captured, 'truth'))
+          : getDarkXiangqiClientView(
+              projection.state,
+              { id: `ply-view-${key}-${ply}`, seat: key, solo: false },
+              latestMoveColor,
+              captured,
+            );
+      history[key] = [...(history[key] ?? []), { ply, view }];
+    }
+  };
+  append();
+  for (const event of events.slice(1)) {
+    projection = applyTenantEvent(darkXiangqiTenant, projection, event);
+    if (event.type !== 'move-played') continue;
+    ply += 1;
+    latestMoveColor = event.color;
+    append();
+  }
+  return history;
+}
+
+// A live seat's own history (visibility.liveHistory): its color only, never
+// truth, never the other seat. legalMoves are dropped: a scrubbed board takes
+// no input (touching it returns to live, which carries the live legal moves),
+// and they are about a third of each view's bytes on a long correspondence game.
+export function darkXiangqiSeatHistory(
+  events: readonly TenantRoomEvent<XiangqiColor, XiangqiMove, DarkXiangqiSpecId>[],
+  seat: XiangqiColor,
+): DarkXiangqiPlySnapshot[] {
+  const snapshots = darkXiangqiPlyViews(events, [seat])[seat] ?? [];
+  return snapshots.map(({ ply, view }) => ({ ply, view: { ...view, legalMoves: [] } }));
+}
+
 function allXiangqiSquares(): XiangqiSquare[] {
   const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'];
   const squares: XiangqiSquare[] = [];
@@ -252,8 +326,8 @@ function emptyDarkXiangqiView(
   };
 }
 
-// Legacy persisted-record shape, with the DXQ-specific no-clock fields kept,
-// but PvE metadata preserved so finished bot games remain attributable.
+// Persisted-record shape; PvE metadata preserved so finished bot games remain
+// attributable.
 export function buildDarkXiangqiGameSummary(room: DarkXiangqiTenantRoom): persistence.GameSummary {
   const status = room.projection.state.status;
   if (status.type !== 'finished') {
@@ -267,6 +341,17 @@ export function buildDarkXiangqiGameSummary(room: DarkXiangqiTenantRoom): persis
   // Finished Fog Xiangqi games are public like every other variant; the fog
   // live-spectate gate is separate and unaffected.
   const visibility: persistence.GameVisibility = 'public';
+  const participants = [
+    tenantParticipant(darkXiangqiTenant, 'red', room, visibility),
+    tenantParticipant(darkXiangqiTenant, 'black', room, visibility),
+  ];
+  // Same rule as buildTenantGameSummary: a rated lobby room counts only as PvP
+  // between two accounts. This was a hardcoded `false` while Fog Xiangqi
+  // matchmaking was casual-only.
+  const rated =
+    room.rated &&
+    !engineSeat &&
+    participants.every((participant) => participant.subjectType === 'user');
   return {
     variant: DARK_XIANGQI_SPEC_ID,
     mode,
@@ -280,12 +365,11 @@ export function buildDarkXiangqiGameSummary(room: DarkXiangqiTenantRoom): persis
     whiteName: null,
     blackName: null,
     corpusId: null,
-    rated: false,
+    initialMs: room.projection.timeControl?.initialMs ?? null,
+    incrementMs: room.projection.timeControl?.incrementMs ?? null,
+    rated,
     visibility,
-    participants: [
-      tenantParticipant(darkXiangqiTenant, 'red', room, visibility),
-      tenantParticipant(darkXiangqiTenant, 'black', room, visibility),
-    ],
+    participants,
     // An engine cannot abandon: record the failure, not a win for the human.
     abortedAs: engineFailureAbort({
       engineSeat,
@@ -352,6 +436,9 @@ export const darkXiangqiTenant: DarkXiangqiTenant = {
         state,
         darkXiangqiObservedCaptures(darkXiangqiCaptureLedger(events), 'truth'),
       ),
+    // Seats only: a live Fog Xiangqi spectator is shown nothing.
+    liveHistory: (events, viewer) =>
+      viewer === 'spectator' ? [] : darkXiangqiSeatHistory(events, viewer),
   },
   engine: {
     terminalContext: 'fog-observation',
@@ -362,6 +449,11 @@ export const darkXiangqiTenant: DarkXiangqiTenant = {
   },
   wire: {
     acceptsSeatVacated: true,
+    // The engine id names a bot, never a position: no hidden information.
+    snapshotExtras: (room) => {
+      const pveEngineId = tenantPveEngineId(darkXiangqiTenant, room);
+      return pveEngineId === null ? { roomMode: 'pvp' } : { roomMode: 'pve', pveEngineId };
+    },
   },
   persistence: {
     resultForWinner: darkXiangqiResult,

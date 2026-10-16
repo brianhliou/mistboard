@@ -527,7 +527,7 @@ console.log(`  figures/index.html (${figures.length} figures)`);
 
 if (process.argv.includes('--blog')) {
   const { Resvg } = await import('@resvg/resvg-js');
-  const BLOG = '/Users/brianliou/projects/brianhliou.github.io';
+  const BLOG = '/Users/brianliou/projects/brianhliou.com';
   const BLOG_ASSETS = path.join(BLOG, 'assets/posts/atomic-xiangqi');
   const BLOG_ART = '/assets/posts/atomic-xiangqi/pieces';
   const INCLUDES = path.join(BLOG, '_includes');
@@ -1173,7 +1173,7 @@ ${i18nBlock(Object.keys(NOTES))}
   const ROLE = { k: 'general', a: 'advisor', b: 'elephant', n: 'horse', r: 'chariot', c: 'cannon', p: 'soldier' };
   const ART = '${BLOG_ART}/xiangqi-international-';
   const FRAME = { general: { x: -7, y: -7, w: 114 }, advisor: { x: -7, y: -7, w: 114 }, elephant: { x: -5, y: -5, w: 110 }, horse: { x: -7, y: -7, w: 114 }, chariot: { x: -5.5, y: -7, w: 111 }, cannon: { x: -11, y: -11, w: 122 }, soldier: { x: 0, y: 0, w: 100 } };
-  const M = 18, C = 31, PIECE = 28;
+  const M = 18, C = 31, PIECE = C * 0.98 / 0.948; // the piece look of 2026-10-14: outline at 98% of the gap, one dark ring
   const STRS = {};
   const T = (k, ...a) => {
     let s = STRS[k];
@@ -1218,13 +1218,13 @@ ${i18nBlock(Object.keys(NOTES))}
         parts.push('<circle cx="' + t.x + '" cy="' + t.y + '" r="14.5" fill="rgba(224,138,30,0.18)" stroke="#e08a1e" stroke-width="2.6"/>');
         for (const g of mv.g) { const c = pt(g.slice(1)); parts.push('<circle cx="' + c.x + '" cy="' + c.y + '" r="12.5" fill="none" stroke="#e08a1e" stroke-width="2" opacity=".9"/>'); }
       } else {
-        parts.push('<circle cx="' + t.x + '" cy="' + t.y + '" r="14.5" fill="none" stroke="#d6af4e" stroke-width="2.05" style="filter:drop-shadow(0 0 1px rgba(70,45,8,0.5))"/>');
+        parts.push('<circle cx="' + t.x + '" cy="' + t.y + '" r="16.4" fill="none" stroke="#d6af4e" stroke-width="2.05" style="filter:drop-shadow(0 0 1px rgba(70,45,8,0.5))"/>');
       }
     }
     for (const s in board) {
       const p = board[s], c = pt(s), k = PIECE / 100, fr = FRAME[p.role], x = c.x - PIECE / 2, y = c.y - PIECE / 2;
       const rank = Number(s.slice(1)), crossed = p.role === 'soldier' && (p.color === 'red' ? rank >= 6 : rank <= 5);
-      parts.push('<circle cx="' + c.x + '" cy="' + c.y + '" r="' + (46 * k) + '" fill="#fef0d7" stroke="' + (p.color === 'red' ? '#c30d0d' : '#202427') + '" stroke-width="' + (2.8 * k) + '"/>');
+      parts.push('<circle cx="' + c.x + '" cy="' + c.y + '" r="' + (46 * k) + '" fill="#fef0d7" stroke="#202427" stroke-width="' + (2.8 * k) + '"/>');
       parts.push('<image href="' + ART + p.color + '-' + (crossed ? 'crossed-soldier' : p.role) + '.png" x="' + (x + fr.x * k) + '" y="' + (y + fr.y * k) + '" width="' + (fr.w * k) + '" height="' + (fr.w * k) + '" preserveAspectRatio="xMidYMid meet"/>');
     }
     svg.innerHTML = parts.join('');

@@ -3,7 +3,6 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
   DARK_CHESS_SPEC_ID,
   defaultEngineTimeControl,
-  engineTimeControlPin,
   type GameSpecId,
   isAllowedEngineTimeControl,
 } from '@mistboard/game';
@@ -41,10 +40,13 @@ export async function tryHandle(
     if (!body) return true;
     // Variant tenants claim their create requests via the registry; each
     // tenant's handler owns its flag/rated/engine gates and error strings.
-    // A registry miss falls through to the chess path below.
+    // A registry miss falls through to the chess path below. The requester's
+    // account is resolved here, once, for any rated request, so a tenant cannot
+    // forget it and turn every rated friend room into a 401.
     for (const registration of registeredVariantTenants()) {
       if (registration.http.matchesCreateRequest(body)) {
-        await registration.http.handleCreate(ctx, request, response, body);
+        const accountUser = body.rated === true ? await currentAccountUser(request) : null;
+        await registration.http.handleCreate(ctx, request, response, body, accountUser);
         return true;
       }
     }
@@ -151,20 +153,19 @@ export async function tryHandle(
       return true;
     }
     // An engine that cannot honor a pace must not be handed one. Fog Chess Misty
-    // loses on time at 3+2 and worse at 1+1 (#283), so PvE there is pinned to
-    // 5+5 by the shared policy the picker narrows to. Same defense-in-depth as
-    // the off-menu check above: the UI mirrors this, it does not enforce it.
-    // (Tenant variants delegate before this point; none is pinned today, so
-    // their own create handlers do not need the check yet.)
+    // loses on time at 3+2 and worse at 1+1 (#283), so PvE there needs a 5s
+    // increment or more, by the shared policy the picker narrows to. Same
+    // defense-in-depth as the off-menu check above: the UI mirrors this, it does
+    // not enforce it. (Tenant variants delegate before this point; none is
+    // floored today, so their own create handlers do not need the check yet.)
     //
-    // An OMITTED time control resolves to the pin rather than falling through to
-    // the room factory's default clock, which is the house 3+2 — the very pace
-    // the pin exists to refuse. Callers that name no pace (the prod engine
-    // smokes, bot clients) would otherwise bypass the pin entirely. An EXPLICIT
-    // off-pin pace is still refused, because the caller asked for something the
-    // engine cannot play.
+    // An OMITTED time control resolves to the bot default (10+5) rather than
+    // falling through to the room factory's default clock, which is the house
+    // 3+2 — the very pace the floor exists to refuse. Callers that name no pace
+    // (the prod engine smokes, bot clients) would otherwise bypass the floor
+    // entirely. An EXPLICIT pace below the floor is still refused, because the
+    // caller asked for something the engine cannot play.
     const createdGameSpecId: GameSpecId = DARK_CHESS_SPEC_ID;
-    const enginePin = mode === 'pve' ? engineTimeControlPin(createdGameSpecId) : null;
     if (
       mode === 'pve' &&
       timeControl &&
@@ -174,15 +175,18 @@ export async function tryHandle(
       response.end(JSON.stringify({ error: 'engine_time_control_unsupported' }));
       return true;
     }
+    const engineDefault = mode === 'pve' ? defaultEngineTimeControl(createdGameSpecId) : null;
     const effectiveTimeControl =
       timeControl ??
-      (enginePin ? { initialMs: enginePin.initialMs, incrementMs: enginePin.incrementMs } : null);
+      (engineDefault
+        ? { initialMs: engineDefault.initialMs, incrementMs: engineDefault.incrementMs }
+        : null);
     if (ctx.databaseRequired && !persistence.isInitialized()) {
       response.writeHead(503, { 'content-type': 'application/json' });
       response.end(JSON.stringify({ error: 'persistence_disabled' }));
       return true;
     }
-    if (ctx.isDraining()) {
+    if (ctx.refusesCreate()) {
       response.writeHead(503, { 'content-type': 'application/json' });
       response.end(JSON.stringify({ error: 'server_draining', restartAt: ctx.drainDeadlineMs() }));
       return true;
@@ -334,9 +338,9 @@ export async function resolveBotRoomRequest(
   // profile is not the authority on what pace to start, and migrating the rows
   // would only re-create this drift the next time a default moves.
   //
-  // defaultEngineTimeControl applies the pin first (a hard constraint: the fog
-  // engines lose on time at 3+2, #283), then the variant default. An EXPLICIT
-  // off-pin request still falls through to the create gate and is refused
+  // defaultEngineTimeControl is the one bot pace, 10+5 in every variant, which
+  // also clears the fog engines' increment floor (#283). An EXPLICIT request
+  // below that floor still falls through to the create gate and is refused
   // there.
   const resolved = defaultEngineTimeControl(gameSpecId);
   let timeControl = { initialMs: resolved.initialMs, incrementMs: resolved.incrementMs };

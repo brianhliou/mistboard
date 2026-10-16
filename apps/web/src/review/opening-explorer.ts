@@ -16,15 +16,24 @@
 //     block off two games cannot read as a verdict;
 //   - a position with no games says so plainly instead of rendering an empty
 //     table that looks like a loading failure.
+//
+// Endgames (lichess's model): when a tablebase panel is attached and the
+// position is a tablebase candidate, the pane asks the tablebase FIRST and shows
+// its exact table in place of the book; the book is fetched only when the
+// tablebase has no answer. One button, one pane: nothing opens on its own, and a
+// closed pane asks neither source.
 
 import './opening-explorer.css';
 import {
   formatXiangqiMove,
+  isXiangqiTablebaseCandidate,
   standardXiangqiPositionKey,
   type XiangqiGameState,
   type XiangqiMove,
+  type XiangqiTablebaseOutcome,
 } from '@mistboard/game';
 import { currentXiangqiNotationStyle, xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
+import type { XiangqiTablebasePanel } from './xiangqi-tablebase-panel.js';
 
 type ExplorerMove = {
   from: string;
@@ -73,10 +82,29 @@ export type OpeningExplorer = {
   setActive(active: boolean): void;
   /** Play a move the reader clicked in the table. */
   onPlayMove(handler: (move: XiangqiMove) => void): void;
-  /** Fires as the reader hovers a move row (the move, or null on leave), so the
-   *  board can preview it. */
-  onHoverMove(handler: (move: XiangqiMove | null) => void): void;
+  /** Fires as the reader hovers a move row, so the board can preview it: the
+   *  move and where it came from ('book', or the tablebase row's result for the
+   *  side to move), or null on leave. */
+  onHoverMove(
+    handler: (move: XiangqiMove | null, tone: OpeningExplorerHoverTone | null) => void,
+  ): void;
 };
+
+export type OpeningExplorerHoverTone = 'book' | XiangqiTablebaseOutcome;
+
+export type OpeningExplorerOptions = {
+  /** Exact endgame table shown in place of the book for covered positions. */
+  tablebase?: XiangqiTablebasePanel;
+  /** Wait this long after the position last changed before asking the server
+   *  (book or tablebase). A reader who keeps the book open (#534) would
+   *  otherwise send one request per ply while holding an arrow key; a
+   *  position already in the cache still renders at once. 0 asks immediately. */
+  settleMs?: number;
+};
+
+/** The review pages' settle delay: long enough to swallow a held arrow key,
+ *  short enough that one step still reads as instant. */
+export const OPENING_EXPLORER_SETTLE_MS = 250;
 
 const MAX_ROWS = 12;
 /** Below this many decided games the result bar is shown, but de-emphasized. */
@@ -85,7 +113,9 @@ const TOP_GAMES_SHOWN = 5;
 /** Narrower than this and a percentage inside a bar band is noise, not data. */
 const MIN_BAND_PERCENT_FOR_LABEL = 18;
 
-export function createOpeningExplorer(): OpeningExplorer {
+export function createOpeningExplorer(options: OpeningExplorerOptions = {}): OpeningExplorer {
+  const tablebase = options.tablebase ?? null;
+  const settleMs = options.settleMs ?? 0;
   const el = document.createElement('section');
   el.className = 'opening-explorer';
   el.setAttribute('aria-label', 'Opening explorer');
@@ -128,7 +158,13 @@ export function createOpeningExplorer(): OpeningExplorer {
   opening.className = 'opening-explorer__opening';
   opening.hidden = true;
 
-  el.append(head, opening, columns, status, table, topGames);
+  // The book's own parts, as one block the tablebase can stand in for. The
+  // wrapper is `display: contents`, so the book lays out exactly as before.
+  const book = document.createElement('div');
+  book.className = 'opening-explorer__book';
+  book.append(head, opening, columns, status, table, topGames);
+  if (tablebase) el.append(tablebase.el);
+  el.append(book);
 
   const cache = new Map<string, ExplorerResponse>();
   let currentKey: string | null = null;
@@ -137,15 +173,37 @@ export function createOpeningExplorer(): OpeningExplorer {
   let active = false;
   let pendingState: XiangqiGameState | null = null;
   let playMove: ((move: XiangqiMove) => void) | null = null;
-  let hoverMove: ((move: XiangqiMove | null) => void) | null = null;
+  let hoverMove:
+    | ((move: XiangqiMove | null, tone: OpeningExplorerHoverTone | null) => void)
+    | null = null;
+  /** True while the pane is waiting on the tablebase for the current position. */
+  let awaitingTablebase = false;
+  /** The pending lookup while stepping has not yet settled (settleMs). */
+  let settleTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function clearSettle(): boolean {
+    if (!settleTimer) return false;
+    clearTimeout(settleTimer);
+    settleTimer = null;
+    return true;
+  }
+
+  tablebase?.onPlayMove((move) => playMove?.(move));
+  tablebase?.onHoverMove((move, result) => hoverMove?.(move, move ? result : null));
 
   function setActive(next: boolean): void {
     if (active === next) return;
     active = next;
     el.hidden = !active;
     if (!active) {
+      // An unanswered position is forgotten, so reopening on it asks again
+      // instead of returning early on a key it never finished loading.
+      if (clearSettle() || inFlight || awaitingTablebase) currentKey = null;
       inFlight?.abort();
-      hoverMove?.(null); // closing the book must not strand a hover arrow
+      inFlight = null;
+      awaitingTablebase = false;
+      hoverMove?.(null, null); // closing the book must not strand a hover arrow
+      if (!pendingState) pendingState = currentState;
       return;
     }
     const state = pendingState;
@@ -164,31 +222,79 @@ export function createOpeningExplorer(): OpeningExplorer {
   function show(state: XiangqiGameState | null): void {
     currentState = state;
     if (!state) {
+      clearSettle();
       currentKey = null;
+      awaitingTablebase = false;
+      void tablebase?.setState(null);
+      book.hidden = false;
       render(null);
       return;
     }
     const key = standardXiangqiPositionKey(state);
+    // The same position again (a re-render) leaves a pending lookup alone.
     if (key === currentKey) return;
+    clearSettle();
     currentKey = key;
+    inFlight?.abort();
+    inFlight = null;
 
+    if (settleMs > 0 && !cache.has(key)) {
+      // Still stepping: clear the last position's rows (so they cannot be
+      // clicked against this board) and ask once the board has stopped moving.
+      awaitingTablebase = false;
+      void tablebase?.setState(null);
+      showLoading();
+      settleTimer = setTimeout(() => {
+        settleTimer = null;
+        if (currentKey === key) lookUp(state, key);
+      }, settleMs);
+      return;
+    }
+    lookUp(state, key);
+  }
+
+  function lookUp(state: XiangqiGameState, key: string): void {
+    if (tablebase && state.status.type === 'playing' && isXiangqiTablebaseCandidate(state)) {
+      // Ask the tablebase first; the book waits. Hiding the book now keeps the
+      // previous position's book rows from being clicked while the answer is out.
+      book.hidden = true;
+      awaitingTablebase = true;
+      void tablebase.setState(state).then((covered) => {
+        if (currentKey !== key || !awaitingTablebase) return;
+        awaitingTablebase = false;
+        if (!covered) showBook(key);
+      });
+      return;
+    }
+    awaitingTablebase = false;
+    void tablebase?.setState(null);
+    showBook(key);
+  }
+
+  function showBook(key: string): void {
+    book.hidden = false;
     const cached = cache.get(key);
     if (cached) {
       render(cached);
       return;
     }
-    inFlight?.abort();
     const controller = new AbortController();
     inFlight = controller;
+    showLoading();
+    void fetchExplorer(key, controller.signal).then((data) => {
+      if (controller.signal.aborted || currentKey !== key) return;
+      inFlight = null;
+      if (data) cache.set(key, data);
+      render(data);
+    });
+  }
+
+  function showLoading(): void {
+    book.hidden = false;
     status.hidden = false;
     status.textContent = 'Loading opening statistics...';
     table.replaceChildren();
     topGames.replaceChildren();
-    void fetchExplorer(key, controller.signal).then((data) => {
-      if (controller.signal.aborted || currentKey !== key) return;
-      if (data) cache.set(key, data);
-      render(data);
-    });
   }
 
   function render(data: ExplorerResponse | null): void {
@@ -216,7 +322,7 @@ export function createOpeningExplorer(): OpeningExplorer {
       table.append(
         moveRow(row, data.total, currentState, style, {
           play: (move) => playMove?.(move),
-          hover: (move) => hoverMove?.(move),
+          hover: (move) => hoverMove?.(move, move ? 'book' : null),
         }),
       );
     }

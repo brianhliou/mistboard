@@ -8,6 +8,14 @@ import {
   timeClassForPace,
   type VariantId,
 } from '@mistboard/game';
+import {
+  hasTrackedCorrespondenceStart,
+  hasTrackedLiveGameStart,
+  markCorrespondenceStartTracked,
+  markLiveGameStartTracked,
+  takeCorrespondenceStartSource,
+  takeGameStartSource,
+} from './game-start-source.js';
 import type { Locale, LocaleResolution } from './i18n/locale.js';
 import { inferredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 
@@ -27,6 +35,29 @@ export type GameSpecAnalyticsProps = {
  */
 export function classifyTimeControl(initialMs: number, incrementMs: number): TimeClass {
   return timeClassForPace(initialMs, incrementMs);
+}
+
+/** time_class as the funnel reports it: the live classes plus 'correspondence'. */
+export type AnalyticsTimeClass = TimeClass | 'correspondence';
+
+/**
+ * The time_class a game event carries. A correspondence game is 'correspondence',
+ * never the live class its millisecond allowance happens to fall in: a 1-day
+ * allowance is 86,400,000 ms, which the pace formula calls 'classical', so until
+ * 2026-10-03 every correspondence start reported as a classical game and a
+ * PostHog filter on time_class='correspondence' found nothing. Known either from
+ * the room's time control (daysPerMove, the tenant stack) or its room mode (the
+ * chess stack).
+ */
+export function analyticsTimeClass(
+  timeControl: { initialMs: number; incrementMs: number; daysPerMove?: number } | null | undefined,
+  options: { correspondence?: boolean } = {},
+): AnalyticsTimeClass | null {
+  if (options.correspondence || typeof timeControl?.daysPerMove === 'number') {
+    return 'correspondence';
+  }
+  if (!timeControl) return null;
+  return classifyTimeControl(timeControl.initialMs, timeControl.incrementMs);
 }
 
 function analyticsPropsFromSpec(spec: GameSpec): GameSpecAnalyticsProps {
@@ -168,8 +199,48 @@ type PostHogLike = {
   capture: (name: string, props?: Record<string, unknown>) => void;
   captureException?: (error: unknown, props?: Record<string, unknown>) => void;
   identify: (distinctId: string, props?: Record<string, unknown>) => void;
+  register?: (props: Record<string, unknown>) => void;
+  setPersonProperties?: (props: Record<string, unknown>) => void;
   reset: () => void;
 };
+
+// A browser a stats-excluded account (the owner, test accounts) has signed in
+// from is marked internal in PostHog two ways: the person gets
+// $internal_or_test_user, which the project's default "Internal / Test users"
+// cohort filters on (so dashboards drop it with no settings change), and every
+// event carries is_internal for SQL. Events still arrive, so the owner's own
+// errors keep reaching Error Tracking. The flag is ours, in localStorage,
+// because posthog.reset() on sign-out starts a new anonymous person and wipes
+// super properties, and the browser is still the owner's after signing out.
+const INTERNAL_BROWSER_KEY = 'mistboard-internal-browser';
+
+export function isInternalBrowser(): boolean {
+  try {
+    return window.localStorage.getItem(INTERNAL_BROWSER_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function markInternalBrowser(): void {
+  try {
+    window.localStorage.setItem(INTERNAL_BROWSER_KEY, '1');
+  } catch {
+    // Storage blocked: tag this page load only.
+  }
+  enqueue((ph) => tagInternal(ph));
+}
+
+function tagInternal(ph: Pick<PostHogLike, 'register' | 'setPersonProperties'>): void {
+  ph.register?.({ is_internal: true });
+  ph.setPersonProperties?.({ $internal_or_test_user: true });
+}
+
+// Called on the live instance before its first event (main.ts) and after every
+// reset, so a known internal browser never sends an untagged event.
+export function applyInternalTag(ph: Pick<PostHogLike, 'register' | 'setPersonProperties'>): void {
+  if (isInternalBrowser()) tagInternal(ph);
+}
 
 let posthogInstance: PostHogLike | null = null;
 // Actions queued before posthog-js finishes its async import (see main.ts).
@@ -262,7 +333,7 @@ export function createGameLifecycleTracker(): GameLifecycleTracker {
       if (statusType === lastStatusType) return;
       if (statusType === 'playing' && lastStatusType !== 'playing') {
         playingSinceMs = Date.now();
-        track('game_started', baseProps);
+        trackGameStarted(baseProps);
       }
       if (statusType === 'finished' && input.outcome) {
         track('game_finished', {
@@ -277,6 +348,31 @@ export function createGameLifecycleTracker(): GameLifecycleTracker {
       lastStatusType = statusType;
     },
   };
+}
+
+// Every page load of a seated room renders `playing` first, so the first
+// `playing` render is not a start: a live player who refreshes, or reconnects
+// after an app switch, gets a fresh page and a fresh tracker (#437), and a
+// correspondence game is reopened every day for weeks. Counted naively, one game
+// would start many times. So a start fires once per game per browser
+// (remembered by the server's game id). A correspondence start's entry source
+// can also come from the long-lived correspondence slot: the player who posted
+// the seek arrives days later from an email, long after the ten-minute live
+// source has expired.
+function trackGameStarted(baseProps: Record<string, unknown>): void {
+  const gameId = typeof baseProps.gameId === 'string' ? baseProps.gameId : null;
+  if (baseProps.time_class !== 'correspondence') {
+    if (gameId && hasTrackedLiveGameStart(gameId)) return;
+    if (gameId) markLiveGameStartTracked(gameId);
+    track('game_started', { ...baseProps, entry_source: takeGameStartSource() });
+    return;
+  }
+  if (gameId && hasTrackedCorrespondenceStart(gameId)) return;
+  const liveSource = takeGameStartSource();
+  const gameSpec = typeof baseProps.game_spec === 'string' ? baseProps.game_spec : null;
+  const entrySource = liveSource !== 'none' ? liveSource : takeCorrespondenceStartSource(gameSpec);
+  if (gameId) markCorrespondenceStartTracked(gameId);
+  track('game_started', { ...baseProps, entry_source: entrySource });
 }
 
 // Tie subsequent events to a known account. Idempotent: safe to call on every
@@ -295,7 +391,10 @@ export function resetIdentity(): void {
   if (import.meta.env.DEV) {
     console.log('[reset]');
   }
-  enqueue((ph) => ph.reset());
+  enqueue((ph) => {
+    ph.reset();
+    applyInternalTag(ph);
+  });
 }
 
 // Which locale the app actually rendered in, and which input decided it. The
@@ -311,9 +410,9 @@ export function trackLocaleResolved(resolution: LocaleResolution): void {
     locale: resolution.locale,
     locale_source: resolution.source,
     browser_tag: resolution.browserTag,
-    // The piece set this visitor is defaulted to (locale, then country), so
-    // games started can be sliced by first-impression board without a
-    // per-browser storage read.
+    // The piece set this visitor is defaulted to (locale, language list, then
+    // country), so games started can be sliced by first-impression board
+    // without a per-browser storage read.
     piece_set_default: inferredXiangqiPieceSet(resolution.locale),
   });
 }
@@ -333,4 +432,71 @@ export function trackLocaleChanged(from: Locale, to: Locale): void {
 // away from the default is countable.
 export function trackNotationChanged(from: string, to: string, path: string): void {
   track('notation_changed', { from_notation: from, to_notation: to, path });
+}
+
+// Correspondence funnel (2026-10-02). game_started already fires when a
+// correspondence room starts playing, but nothing recorded the two steps before
+// it: a seek going up, and someone taking one. `surface` says which page did it
+// (the /correspondence inbox, the homepage lobby, a profile challenge, or the
+// /challenge accept page), which is the question behind making correspondence
+// easier to find. Fired only on the server's 201, never on a re-post that
+// returned an existing seek.
+export type CorrespondenceSeekKind = 'public' | 'link' | 'direct';
+
+export function trackCorrespondenceSeekPosted(props: {
+  gameSpecId: string;
+  daysPerMove: number;
+  kind: CorrespondenceSeekKind;
+  surface: 'correspondence' | 'lobby' | 'profile' | 'home-button';
+}): void {
+  track('correspondence_seek_posted', props);
+}
+
+export function trackCorrespondenceSeekAccepted(props: {
+  gameSpecId: string;
+  daysPerMove: number;
+  surface: 'correspondence' | 'challenge' | 'games' | 'home-lobby' | 'home-panel' | 'home-button';
+}): void {
+  track('correspondence_seek_accepted', props);
+}
+
+// The homepage correspondence button (2026-10-03 jieqi test). `button_state` is
+// what the visitor saw when they clicked: 'start' (the offer; every guest),
+// 'your-move' or 'waiting'. A guest click leads to sign-up, and the quick pair
+// then runs on return with `after_auth` true, so clicks -> accounts -> games is
+// one funnel on these two events plus the server's signup_completed.
+export type CorrespondenceButtonState = 'start' | 'your-move' | 'waiting';
+
+export function trackCorrespondenceButtonClicked(props: {
+  buttonState: CorrespondenceButtonState;
+  signedIn: boolean;
+  locale: Locale;
+  gameSpecId: string;
+  daysPerMove: number;
+}): void {
+  track('correspondence_button_clicked', {
+    button_state: props.buttonState,
+    signed_in: props.signedIn,
+    locale: props.locale,
+    game_spec: props.gameSpecId,
+    days_per_move: props.daysPerMove,
+  });
+}
+
+export function trackCorrespondenceQuickPair(props: {
+  outcome: 'game' | 'seek-posted' | 'seek-existing' | 'error';
+  afterAuth: boolean;
+  locale: Locale;
+  gameSpecId: string;
+  daysPerMove: number;
+  error?: string | null;
+}): void {
+  track('correspondence_quick_pair', {
+    outcome: props.outcome,
+    after_auth: props.afterAuth,
+    locale: props.locale,
+    game_spec: props.gameSpecId,
+    days_per_move: props.daysPerMove,
+    error: props.error ?? null,
+  });
 }

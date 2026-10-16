@@ -10,8 +10,27 @@
       "!/apps/server/loadtest/**",
       "!/apps/server/scripts/**",
       "/packages/game/**",
+      "!/packages/game/src/**/*.test.ts",
       "/packages/board-render/**",
+      "!/packages/board-render/src/**/*.test.ts",
       "/stockfish.ref",
+      "/fairy-stockfish-xiangqi.ref",
+      "/fairy-stockfish-duck-xiangqi.ref",
+      "/fairy-stockfish-duck-xiangqi.patch",
+      "/fairy-stockfish-atomic-xiangqi.ref",
+      "/fairy-stockfish-atomic-xiangqi.patch",
+      "/pikafish-jieqi.ref",
+      "/pikafish.ref",
+      "/ab-jchess.ref",
+      "/katago-jungle.ref",
+      "/scripts/engine-assets.sh",
+      "/scripts/checkout-private-engine.sh",
+      "/scripts/check_engine_serveable.py",
+      "/scripts/fetch-fairy-stockfish-largeboard.sh",
+      "/scripts/fetch-fsf-xiangqi-net.sh",
+      "/scripts/fetch-abjchess-net.sh",
+      "/scripts/fetch-katago-jungle-net.sh",
+      "/scripts/fetch-release-asset.sh",
       "/engine.ref",
       "/scripts/build.mjs",
       "/scripts/start.mjs",
@@ -21,5 +40,11 @@
       "/railway.engine-worker.json",
       "/tsconfig.base.json"
     ]
+  },
+  "deploy": {
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 120,
+    "drainingSeconds": 75,
+    "startCommand": "node scripts/start.mjs"
   }
 }

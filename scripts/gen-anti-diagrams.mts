@@ -1081,13 +1081,16 @@ console.log(`  figures/index.html (${figures.length} figures)`);
 
 // ── Blog output (--blog) ───────────────────────────────────────────────────
 
-if (process.argv.includes('--blog')) {
+// `--site` runs the same pass but writes only the mistboard article's module
+// (apps/web/src/anti-xiangqi-article-diagrams.ts), never the blog repo.
+const BLOG_WRITE = process.argv.includes('--blog');
+if (BLOG_WRITE || process.argv.includes('--site')) {
   const { Resvg } = await import('@resvg/resvg-js');
-  const BLOG = '/Users/brianliou/projects/brianhliou.github.io';
+  const BLOG = '/Users/brianliou/projects/brianhliou.com';
   const BLOG_ASSETS = path.join(BLOG, 'assets/posts/anti-xiangqi');
   const BLOG_ART = '/assets/posts/anti-xiangqi/pieces';
   const INCLUDES = path.join(BLOG, '_includes');
-  mkdirSync(path.join(BLOG_ASSETS, 'pieces'), { recursive: true });
+  if (BLOG_WRITE) mkdirSync(path.join(BLOG_ASSETS, 'pieces'), { recursive: true });
   const blogArt = new Set<string>();
   const blogArtHref = (svg: string) =>
     svg.replace(/href="\/piece-sets\/([^"?]+)\.png[^"]*"/g, (_, rel: string) => {
@@ -1105,7 +1108,7 @@ if (process.argv.includes('--blog')) {
   // dispatcher, which picks the copy for the active language. The explorer
   // instance dispatcher forwards its two parameters.
   const XQ_EN = path.join(INCLUDES, 'xq', 'en');
-  mkdirSync(XQ_EN, { recursive: true });
+  if (BLOG_WRITE) mkdirSync(XQ_EN, { recursive: true });
   const dispatcher = (name: string, params = '') => `{%- comment -%}
   Dispatcher. The generated widget lives in _includes/xq/en/${name}
   (from mistboard's gen-anti-diagrams.mts --blog; drop regenerated output there).
@@ -1116,6 +1119,7 @@ if (process.argv.includes('--blog')) {
 {%- include {{ xq_path }}${params} -%}
 `;
   const emit = (name: string, html: string, params = '') => {
+    if (!BLOG_WRITE) return;
     writeFileSync(path.join(XQ_EN, name), html);
     writeFileSync(path.join(INCLUDES, name), dispatcher(name, params));
     console.log(`  _includes/xq/en/${name} (+ dispatcher)`);
@@ -1142,7 +1146,7 @@ if (process.argv.includes('--blog')) {
   // diagrams never show one, so add it to the art set by hand.
   blogArt.add('xiangqi/international/red-crossed-soldier.png');
   blogArt.add('xiangqi/international/black-crossed-soldier.png');
-  for (const rel of blogArt) {
+  for (const rel of BLOG_WRITE ? blogArt : []) {
     writeFileSync(
       path.join(BLOG_ASSETS, 'pieces', rel.replace(/\//g, '-')),
       readFileSync(path.join(PUBLIC, 'piece-sets', rel)),
@@ -1173,7 +1177,7 @@ if (process.argv.includes('--blog')) {
     const y = (height - size) / 2;
     const disc = (color: 'red' | 'black', x: number) => {
       const ink = color === 'red' ? '#c30d0d' : '#202427';
-      return `<svg x="${x}" y="${y}" width="${size}" height="${size}" viewBox="0 0 100 100"><g transform="rotate(180 50 50)"><circle cx="50" cy="50" r="46" fill="#fef0d7" stroke="${ink}" stroke-width="2.8"/>${crown(ink)}</g></svg>`;
+      return `<svg x="${x}" y="${y}" width="${size}" height="${size}" viewBox="0 0 100 100"><g transform="rotate(180 50 50)"><circle cx="50" cy="50" r="46" fill="#fef0d7" stroke="#202427" stroke-width="2.8"/>${crown(ink)}</g></svg>`;
     };
     return [
       `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Anti Xiangqi">`,
@@ -1184,6 +1188,7 @@ if (process.argv.includes('--blog')) {
     ].join('');
   };
   const renderPng = (svg: string, file: string, width: number) => {
+    if (!BLOG_WRITE) return;
     const png = new Resvg(localArt(svg), { fitTo: { mode: 'width', value: width } })
       .render()
       .asPng();
@@ -1706,7 +1711,7 @@ ${inst.credit ? `<div class="anxq-credit">${STR[inst.credit]}</div>` : ''}
   const ROLE = { k: 'general', a: 'advisor', b: 'elephant', n: 'horse', r: 'chariot', c: 'cannon', p: 'soldier' };
   const ART = '/assets/posts/anti-xiangqi/pieces/xiangqi-international-';
   const FRAME = { general: { x: -7, y: -7, w: 114 }, advisor: { x: -7, y: -7, w: 114 }, elephant: { x: -5, y: -5, w: 110 }, horse: { x: -7, y: -7, w: 114 }, chariot: { x: -5.5, y: -7, w: 111 }, cannon: { x: -11, y: -11, w: 122 }, soldier: { x: 0, y: 0, w: 100 } };
-  const M = 18, C = 31, PIECE = 28;
+  const M = 18, C = 31, PIECE = C * 0.98 / 0.948; // the piece look of 2026-10-14: outline at 98% of the gap, one dark ring
   const STRS = {};
   const T = (k, ...a) => {
     let s = STRS[k];
@@ -1750,12 +1755,12 @@ ${inst.credit ? `<div class="anxq-credit">${STR[inst.credit]}</div>` : ''}
     if (mv) {
       const { from, to } = sq(mv), f = pt(from), t = pt(to);
       parts.push('<circle cx="' + f.x + '" cy="' + f.y + '" r="13.4" fill="rgba(250,204,21,0.22)" stroke="rgba(180,83,9,0.55)" stroke-width="1.05"/>');
-      parts.push('<circle cx="' + t.x + '" cy="' + t.y + '" r="14.5" fill="none" stroke="#d6af4e" stroke-width="2.05" style="filter:drop-shadow(0 0 1px rgba(70,45,8,0.5))"/>');
+      parts.push('<circle cx="' + t.x + '" cy="' + t.y + '" r="16.4" fill="none" stroke="#d6af4e" stroke-width="2.05" style="filter:drop-shadow(0 0 1px rgba(70,45,8,0.5))"/>');
     }
     for (const s in board) {
       const p = board[s], c = pt(s), k = PIECE / 100, fr = FRAME[p.role], x = c.x - PIECE / 2, y = c.y - PIECE / 2;
       const rank = Number(s.slice(1)), crossed = p.role === 'soldier' && (p.color === 'red' ? rank >= 6 : rank <= 5);
-      parts.push('<circle cx="' + c.x + '" cy="' + c.y + '" r="' + (46 * k) + '" fill="#fef0d7" stroke="' + (p.color === 'red' ? '#c30d0d' : '#202427') + '" stroke-width="' + (2.8 * k) + '"/>');
+      parts.push('<circle cx="' + c.x + '" cy="' + c.y + '" r="' + (46 * k) + '" fill="#fef0d7" stroke="#202427" stroke-width="' + (2.8 * k) + '"/>');
       parts.push('<image href="' + ART + p.color + '-' + (crossed ? 'crossed-soldier' : p.role) + '.png" x="' + (x + fr.x * k) + '" y="' + (y + fr.y * k) + '" width="' + (fr.w * k) + '" height="' + (fr.w * k) + '" preserveAspectRatio="xMidYMid meet"/>');
     }
     // Capture hints as arrows (the analysis-board grammar), stopping at the
@@ -1763,7 +1768,7 @@ ${inst.credit ? `<div class="anxq-credit">${STR[inst.credit]}</div>` : ''}
     for (const tg of targets || []) {
       const { from, to } = sq(tg.u), f = pt(from), t = pt(to);
       const dx = t.x - f.x, dy = t.y - f.y, len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len;
-      const ex = t.x - ux * 15, ey = t.y - uy * 15, sx = f.x + ux * 6, sy = f.y + uy * 6;
+      const ex = t.x - ux * 16, ey = t.y - uy * 16, sx = f.x + ux * 6, sy = f.y + uy * 6;
       const hx = ex - ux * 9, hy = ey - uy * 9, px = -uy * 5.5, py = ux * 5.5;
       parts.push('<line x1="' + sx + '" y1="' + sy + '" x2="' + hx + '" y2="' + hy + '" stroke="' + tg.col + '" stroke-width="4" opacity=".7" stroke-linecap="round"/>');
       parts.push('<polygon points="' + ex + ',' + ey + ' ' + (hx + px) + ',' + (hy + py) + ' ' + (hx - px) + ',' + (hy - py) + '" fill="' + tg.col + '" opacity=".85"/>');
@@ -2370,7 +2375,111 @@ ${i18nBlock(keysWith(/^p-/), ['proof'])}
         throw new Error('site module: the 2M game at ply 35 still has a mobile piece');
       return st;
     })();
-    const module = `// Generated by scripts/gen-anti-diagrams.mts in this repository (--blog).
+    // The steppers. The module replays each line from the start position by
+    // moving the piece on `from` to `to` (no move in this game does anything
+    // else), so check here, every ply, that the plain replay and the kernel
+    // agree before the line is written out.
+    type Plain = Record<string, { color: string; role: string } | undefined>;
+    const plainKey = (b: Plain) =>
+      Object.entries(b)
+        .filter(([, p]) => p)
+        .sort(([a], [z]) => a.localeCompare(z))
+        .map(([sq, p]) => `${sq}:${p!.color}${p!.role}`)
+        .join(' ');
+    const moveNumber = (ply: number) => `${Math.ceil(ply / 2)}${ply % 2 ? '.' : '...'}`;
+    const stepLine = (id: string, notes: Record<number, string>) => {
+      const g = encoded.find((x) => x.id === id);
+      if (!g) throw new Error(`site module: no record ${id}`);
+      let st = kernel.initial(`site-${id}`);
+      const plain: Plain = { ...(st.board as Plain) };
+      const out: Array<[string, string, string, string]> = [];
+      g.moves.forEach((m, i) => {
+        const { from, to } = squares(m.u);
+        st = kernel.apply(st, kernel.fromUci(st, m.u)!);
+        plain[to] = plain[from];
+        delete plain[from];
+        if (plainKey(plain) !== plainKey(st.board as Plain))
+          throw new Error(
+            `site module: plain replay of ${id} drifts from the kernel at ply ${i + 1}`,
+          );
+        const ply = i + 1;
+        out.push([from, to, notes[ply] ?? '', m.s]);
+      });
+      for (const ply of Object.keys(notes).map(Number))
+        if (ply > g.moves.length)
+          throw new Error(`site module: ${id} has a note past its end (${ply})`);
+      return out;
+    };
+    const game2m = stepLine('best-2000000', NOTES['best-2000000']!);
+    const game5m = stepLine('best-5000000', NOTES['best-5000000']!);
+    const proofLine = stepLine(`proof-${P.leaf}`, NOTES.proof!);
+    if (game2m.length !== 44 || proofLine.length !== 34)
+      throw new Error(
+        `site module: the 2M game is ${game2m.length} plies and the proof line ${proofLine.length}; the article says 44 and 34`,
+      );
+    // The four forks of the opening chain, and the table cut from the
+    // explorer tree: what each capture is worth with best play, how many of
+    // the chain's endings sit below it, and how many of those are proven.
+    const FORKS = [
+      { name: 'Fork A', line: ['b3b10'] },
+      { name: 'Fork B', line: ['b3b10', 'h8h1'] },
+      { name: 'Fork C', line: ['b3b10', 'h8h1', 'b10d10'] },
+      { name: 'Fork D', line: ['b3b10', 'h8h1', 'b10d10', 'h1f1'] },
+    ];
+    const VALUE = { r: 'Red wins', b: 'Black wins', d: 'Draw' } as const;
+    const forkRows: string[][] = [];
+    const forkFrames = FORKS.map((fork) => {
+      const node = xnodes.find((n) => n.line.join(' ') === fork.line.join(' '));
+      if (!node || node.leaf || node.children.length < 2)
+        throw new Error(`site module: ${fork.name} is not a fork`);
+      const ply = fork.line.length + 1;
+      for (const c of node.children) {
+        const child = xnodes[c]!;
+        forkRows.push([
+          fork.name,
+          `${moveNumber(ply)} ${child.s}`,
+          VALUE[child.v],
+          String(child.n),
+          String(child.pv),
+        ]);
+      }
+      return {
+        board: boardLiteral(node.state),
+        label: `${fork.name.toUpperCase()}: ${ply % 2 ? 'RED' : 'BLACK'} TO MOVE`,
+        arrows: node.children.map((c) => squares(xnodes[c]!.u)),
+      };
+    });
+    const below = (line: string[]) => xnodes.find((n) => n.line.join(' ') === line.join(' '))!.n;
+    console.log(
+      `  fork D: Kxf1 ${below([...FORKS[3]!.line, 'e1f1'])}, under 2...Cxf1 ${below(FORKS[3]!.line)}, under 1. Cxb10 ${below(['b3b10'])}`,
+    );
+    const sweepRows: string[][] = (() => {
+      const byPly = new Map<number, { n: number; red: number; black: number; stall: number }>();
+      for (const r of sweep.rows) {
+        const key = r.exitPly >= 6 && r.exitPly <= 12 ? 6 : r.exitPly;
+        const row = byPly.get(key) ?? { n: 0, red: 0, black: 0, stall: 0 };
+        row.n += 1;
+        if (r.winner === 'red') row.red += 1;
+        else if (r.winner === 'black') row.black += 1;
+        else row.stall += 1;
+        byPly.set(key, row);
+      }
+      if ([...byPly.values()].reduce((a, r) => a + r.n, 0) !== 83)
+        throw new Error('site module: the sweep should hold 83 distinct endings');
+      return [...byPly.entries()]
+        .sort(([a], [b]) => a - b)
+        .map(([ply, r]) => [
+          ply === 6 ? '6 to 12' : String(ply),
+          ply === 6 ? 'Alternating' : ply % 2 ? 'Black' : 'Red',
+          String(r.n),
+          String(r.red),
+          String(r.black),
+          String(r.stall),
+        ]);
+    })();
+    const lineLiteral = (line: Array<[string, string, string, string]>) =>
+      `[\n${line.map(([f, t, n, s]) => `  ['${f}', '${t}', ${JSON.stringify(n)}, '${s}'],`).join('\n')}\n]`;
+    const module = `// Generated by scripts/gen-anti-diagrams.mts in this repository (--site).
 // Do not hand-edit: the positions are replayed through the anti-xiangqi rule
 // kernel there (scripts/variant-lab/lab/variants/anti-xiangqi.ts on
 // packages/game/src/xiangqi-rule-kernel.ts) and asserted before they are
@@ -2395,8 +2504,8 @@ const PAIR_W = XQ_BOARD_W * 2 + 28;
 const PAIR_GAP_X = XQ_BOARD_W + 28;
 const FIGURE_H = XQ_BOARD_H + 34;
 
-/** After 1. Cxb10: Black to move, and the kernel says these are the only two captures. */
-export const ANTI_AFTER_1: Board = ${boardLiteral(after1)};
+/** The array. Every stepper below replays from here. */
+export const ANTI_START: Board = ${boardLiteral(kernel.initial('site-start'))};
 /** After 1. Cxb10 Cxh1 2. Rxh1 Rxb10: the ending both sides reach, Red to move. */
 export const ANTI_SURVIVOR: Board = ${boardLiteral(survivor)};
 /** After 1. Cxb10 Cxh1 2. Cxd10 Kxd10 3. Rxh1: its cousin, Black to move. */
@@ -2404,22 +2513,85 @@ export const ANTI_COUSIN: Board = ${boardLiteral(cousin)};
 /** The 2M self-play game at ply 35: nothing left that can ever capture. */
 export const ANTI_DEAD: Board = ${boardLiteral(dead2m)};
 
-export const ANTI_XIANGQI_DECISION = () =>
-  xqSvg(
-    PAIR_W,
-    FIGURE_H,
-    xqBoardSvg({
-      state: xqVisionDemoState('anti-after-1', ANTI_AFTER_1),
-      x: PAIR_GAP_X / 2,
-      y: 0,
-      label: 'AFTER 1. Cxb10: BLACK MUST CAPTURE',
-      perspective: 'red',
-      arrows: [
-        { from: 'a10' as XiangqiSquare, to: 'b10' as XiangqiSquare },
-        { from: 'h8' as XiangqiSquare, to: 'h1' as XiangqiSquare },
-      ],
-    }),
-  );
+// ── Steppers ──────────────────────────────────────────────────────────────
+// A line is [from, to, note, move] per ply. Nothing in this game moves more
+// than one piece, so a frame is the previous board with one piece moved; the
+// generator checked that against the kernel at every ply. The note is the
+// game's note on that ply ('' where there is none); the move is its notation,
+// a row of the card's score sheet.
+type Line = ReadonlyArray<readonly [string, string, string, string]>;
+
+/** The 2M self-play game, mirrored into the 1. Cxb10 frame: dead at ply 35, drawn at 44. */
+export const ANTI_GAME_2M: Line = ${lineLiteral(game2m)};
+/** The 5M self-play game, mirrored the same way: the soldier war, drawn at ply 131. */
+export const ANTI_GAME_5M: Line = ${lineLiteral(game5m)};
+/** The main line of the certificate that 1...Rxb10 loses (1,864 positions in all). */
+export const ANTI_PROOF_LINE: Line = ${lineLiteral(proofLine)};
+
+const SINGLE_H = XQ_BOARD_H + 8;
+
+function antiFrame(id: string, board: Board, from?: string, to?: string): () => string {
+  return () =>
+    xqSvg(
+      XQ_BOARD_W,
+      SINGLE_H,
+      xqBoardSvg({
+        state: xqVisionDemoState(id, board),
+        x: 0,
+        y: -24,
+        label: '',
+        perspective: 'red',
+        arrows: from && to ? [{ from: from as XiangqiSquare, to: to as XiangqiSquare }] : undefined,
+      }),
+    );
+}
+
+/** One stepper frame per ply, opening on the array. */
+export function antiSteps(
+  id: string,
+  line: Line,
+  start?: string,
+): Array<{ svg: () => string; narrative?: string; move?: string }> {
+  let board: Board = { ...ANTI_START };
+  const steps: Array<{ svg: () => string; narrative?: string; move?: string }> = [
+    { svg: antiFrame(\`\${id}-0\`, board), narrative: start },
+  ];
+  line.forEach(([from, to, note, move], i) => {
+    const next: Board = { ...board };
+    next[to as XiangqiSquare] = next[from as XiangqiSquare];
+    delete next[from as XiangqiSquare];
+    board = next;
+    steps.push({ svg: antiFrame(\`\${id}-\${i + 1}\`, next, from, to), narrative: note || undefined, move });
+  });
+  return steps;
+}
+
+/** The four forks of the opening chain, an arrow on every capture the side to move has. */
+export const ANTI_XIANGQI_FORK_FRAMES: Array<() => string> = [
+${forkFrames
+  .map(
+    (f, i) => `  () =>
+    xqSvg(
+      XQ_BOARD_W,
+      FIGURE_H,
+      xqBoardSvg({
+        state: xqVisionDemoState('anti-fork-${i}', ${f.board}),
+        x: 0,
+        y: 0,
+        label: '${f.label}',
+        perspective: 'red',
+        arrows: [${f.arrows.map((a) => `{ from: '${a.from}' as XiangqiSquare, to: '${a.to}' as XiangqiSquare }`).join(', ')}],
+      }),
+    ),`,
+  )
+  .join('\n')}
+];
+
+/** Fork, capture, value with best play, endings below it, proven endings below it. */
+export const ANTI_XIANGQI_FORK_ROWS: string[][] = ${JSON.stringify(forkRows)};
+
+/** Ending ply, side to move first, endings, Red wins, Black wins, stalls (100k sweep). */
+export const ANTI_XIANGQI_SWEEP_ROWS: string[][] = ${JSON.stringify(sweepRows)};
 
 export const ANTI_XIANGQI_SURVIVORS = () =>
   xqSvg(
@@ -2477,14 +2649,97 @@ export const ANTI_XIANGQI_THUMBNAIL = () => {
   ].join('');
 };
 `;
-    writeFileSync(SITE_MODULE, module);
+    // ── The games viewer: every record, one card with a picker ──────────────
+    // The records go to a module the article loads on demand
+    // (anti-xiangqi-games.ts): keys and arguments only, the moves as one
+    // coordinate string and one notation string. The English templates they
+    // name go in the eager module above, inside the article, so the article
+    // translator reaches them. The browser replays a record by moving the
+    // piece on `from` to `to`; checked here against the kernel, every ply of
+    // every record, before anything is written.
+    const arrayKey = kernel.fen(kernel.initial('set-array')).split(' ')[0]!;
+    // 'game' names the picker for a screen reader.
+    const setKeys = new Set<string>(['game']);
+    const useSpec = (spec: Spec) => {
+      setKeys.add(spec.k);
+      for (const a of spec.a) if (Array.isArray(a)) setKeys.add(a[1]);
+      return spec;
+    };
+    const setRecords = encoded.map((g) => {
+      if (g.start !== arrayKey) throw new Error(`games set: ${g.id} does not start on the array`);
+      let st = kernel.initial(`set-${g.id}`);
+      const plain: Plain = { ...(st.board as Plain) };
+      g.moves.forEach((m, i) => {
+        const { from, to } = squares(m.u);
+        st = kernel.apply(st, kernel.fromUci(st, m.u)!);
+        plain[to] = plain[from];
+        delete plain[from];
+        if (plainKey(plain) !== plainKey(st.board as Plain))
+          throw new Error(
+            `games set: plain replay of ${g.id} drifts from the kernel at ply ${i + 1}`,
+          );
+      });
+      const verdict = g.result.a[0];
+      if (!Array.isArray(verdict) || !['red-wins', 'black-wins', 'draw'].includes(verdict[1]))
+        throw new Error(`games set: ${g.id} has no verdict first in its result`);
+      setKeys.add(verdict[1]);
+      if (g.extra) setKeys.add(g.extra);
+      return {
+        id: g.id,
+        group: useSpec(g.group),
+        label: useSpec(g.label),
+        result: useSpec(g.result),
+        ...(g.extra ? { extra: g.extra } : {}),
+        verdict: { k: verdict[1], a: [] },
+        red: useSpec(g.red),
+        black: useSpec(g.black),
+        moves: g.moves.map((m) => m.u).join(' '),
+        san: g.moves.map((m) => m.s).join(' '),
+      };
+    });
+    if (setRecords.length !== 169)
+      throw new Error(`games set: ${setRecords.length} records; the post steps through 169`);
+    const setStrings = Object.fromEntries(
+      [...setKeys].sort().map((k) => {
+        const v = STR[k];
+        if (v === undefined) throw new Error(`games set: no template for ${k}`);
+        return [k, v];
+      }),
+    );
+    const SET_MODULE = path.join(HERE, '../apps/web/src/anti-xiangqi-games.ts');
+    const setModule = `// Generated by scripts/gen-anti-diagrams.mts in this repository (--site).
+// Do not hand-edit. Every game the anti-xiangqi article lets a reader step
+// through, loaded on demand by its games card. Each record was replayed
+// through the anti-xiangqi rule kernel, and the plain from-to replay the
+// browser does was checked against it at every ply.
+
+import { ANTI_START } from './anti-xiangqi-article-diagrams.js';
+import type { StepGameSet } from './article-game-set.js';
+
+export const GAME_SET: StepGameSet = {
+  start: ANTI_START,
+  open: 'best-2000000',
+  records: [
+${setRecords.map((r) => `    ${JSON.stringify(r)},`).join('\n')}
+  ],
+};
+`;
+    const moduleWithStrings = `${module}
+/** The English templates the games card's records name (anti-xiangqi-games.ts). */
+export const ANTI_GAME_SET_STRINGS: Record<string, string> = ${JSON.stringify(setStrings, null, 2)};
+`;
+    writeFileSync(SITE_MODULE, moduleWithStrings);
+    writeFileSync(SET_MODULE, setModule);
     // The board literals come out on one line each; hand them to the repo's
     // formatter so the generated file passes the same gate as a written one.
-    execSync(`npx biome format --write "${SITE_MODULE}"`, {
+    execSync(`npx biome format --write "${SITE_MODULE}" "${SET_MODULE}"`, {
       cwd: path.join(HERE, '..'),
       stdio: 'ignore',
     });
     console.log('  apps/web/src/anti-xiangqi-article-diagrams.ts');
+    console.log(
+      `  apps/web/src/anti-xiangqi-games.ts (${setRecords.length} games, ${setModule.length} bytes)`,
+    );
   }
   // ── The public repository's viewer: the same widgets on one page ─────────
   // `--repo` writes games/index.html into the anti-xiangqi evidence

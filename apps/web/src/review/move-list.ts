@@ -44,6 +44,9 @@ export type MoveListLine = {
   verdict?: string;
   /** A note on the line itself (the study's comment on its first move). */
   note?: string;
+  /** The line's tag ("better was", or the author's own), leading it the way
+   *  the article widget's branch does. */
+  tag?: string;
 };
 
 /** Post-hoc per-move annotation, keyed by the move's ply. Filled once whole-game
@@ -117,6 +120,7 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
   panel.append(list);
 
   const cellsByPly = new Map<number, HTMLButtonElement>();
+  const branchesByPly = new Map<number, HTMLLIElement>();
   const lineCells = new Map<string, HTMLButtonElement>();
   let onJump: ((ply: number) => void) | null = null;
   let onJumpLine: ((atPly: number, cursor: number) => void) | null = null;
@@ -170,6 +174,7 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
     const li = document.createElement('li');
     li.className = 'review-move-list__branch';
     li.dataset.atPly = String(entry.ply);
+    branchesByPly.set(entry.ply, li);
     if (entry.note) {
       const note = document.createElement('p');
       note.className = 'review-move-list__note';
@@ -184,6 +189,12 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
       // that opens with the second mover. Without these a sideline read as a
       // bare string of moves next to a numbered game.
       const leadOffset = opts.firstMover === 'b' ? 1 : 0;
+      if (entry.line.tag) {
+        const tag = document.createElement('span');
+        tag.className = 'review-move-list__line-tag';
+        tag.textContent = entry.line.tag;
+        line.append(tag);
+      }
       entry.line.moves.forEach((label, i) => {
         const cursor = i + 1;
         const index = entry.ply - 1 + i;
@@ -254,7 +265,14 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
       cell.classList.toggle('review-move-list__move--current', isCurrent);
       if (isCurrent) current = cell;
     }
-    if (current) revealInScroller(current);
+    if (!current) return;
+    // A move with a comment or a sideline: bring that under-row into view too
+    // (an embed opened on a study's turning point showed the move at the foot
+    // of the sheet and its comment cut off below), then the move itself, so a
+    // branch taller than the sheet never pushes the current move out.
+    const branch = branchesByPly.get(currentPly);
+    if (branch) revealInScroller(branch);
+    revealInScroller(current);
   }
 
   function annotate(byPly: Map<number, MoveAnnotation>): void {

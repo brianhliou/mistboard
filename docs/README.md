@@ -13,7 +13,6 @@ setup, tokens, and internal strategy in the git-ignored `docs-private/`.
 | [../README.md](../README.md) | Product overview and quick start. |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | Contributor scope, local dev, tests, and PRs. |
 | [project-direction.md](project-direction.md) | Product focus, licensing, brand, and contribution fit. |
-| [xiangqi-broadcast-track.md](xiangqi-broadcast-track.md) | Lichess-style xiangqi tournament broadcast architecture, phases, and local testing plan. |
 
 ## Architecture
 
@@ -23,6 +22,7 @@ setup, tokens, and internal strategy in the git-ignored `docs-private/`.
 | [persistence.md](persistence.md) | Event log, game aggregates, and Postgres setup. |
 | [engine-protocol.md](engine-protocol.md) | Redacted engine request/response contract. |
 | [translations.md](translations.md) | Locale policy: English source contract, domain ownership, and critical-key coverage. |
+| [xiangqi-broadcast-track.md](xiangqi-broadcast-track.md) | Xiangqi tournament broadcasts: architecture, sources, and local testing. |
 
 ## Rules
 

@@ -342,7 +342,6 @@
  * the green that means "your work is stored". */
 .study-actions__status[data-state="viewer"] {
   color: var(--site-text-soft, #888);
-  cursor: help;
 }
 .study-actions__status[data-state="error"],
 .study-actions__status[data-state="conflict"] {
@@ -516,15 +515,15 @@
   color: var(--site-muted);
   font-style: italic;
 }
-/* The study description in the rail. Three text-lines exactly: the box must be a
+/* The study description in the rail. Two text-lines exactly: the box must be a
  * whole number of line boxes and take its spacing from margin, never padding,
  * or overflow:hidden clips past the clamp and a wrapped fourth line bleeds
  * through the bottom edge. Unclamps on hover/focus-within so the full text is
  * one gesture away without a control to maintain. */
 .study-review .review-info-card__summary {
   display: -webkit-box;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -858,5 +857,208 @@
   letter-spacing: 0.01em;
   color: var(--site-muted);
   background: var(--site-panel-soft);
+  white-space: nowrap;
+}
+
+/* Guess-the-move chapters reuse the practice rail card (review/practice.css),
+   tightened: a title-only head, the like and copy buttons on the "N Chapters"
+   line (which stays, unlike practice: the coach does not say which chapter of
+   how many this is, and an owner's preview keeps its tools there), one-line
+   rows, and a card as tall as its list rather than the whole row. */
+.gamebook__aside:has(.study-gamebook-rail) {
+  align-self: start;
+  max-height: 100%;
+}
+/* A plain title, not the practice card's saturated block: here the rail is a
+   quiet list beside the lesson, and a filled header made it the loudest thing
+   on the page. */
+.study-gamebook-rail .practice__rail-head {
+  padding: 0.7rem 14px 0.55rem;
+  background: none;
+  color: var(--site-text);
+}
+.study-gamebook-rail .practice__rail-title {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.3;
+  color: var(--site-text);
+}
+.study-gamebook-rail .study-chapters__head {
+  display: flex;
+  align-items: center;
+  padding: 0.45rem 14px;
+}
+.study-gamebook-rail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.5rem 0.6rem;
+  border-top: 1px solid var(--site-border-soft);
+}
+.study-gamebook-rail .study-actions__like,
+.study-gamebook-rail .study-actions__clone {
+  padding: 0.1rem 0.45rem;
+  font-size: 0.74rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.4;
+}
+.study-gamebook-rail .study-chapters__name {
+  -webkit-line-clamp: 1;
+  overflow-wrap: normal;
+}
+.study-gamebook-rail .study-chapters__link {
+  align-items: center;
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
+  font-size: 0.82rem;
+}
+.study-gamebook-rail .study-chapters__row {
+  min-height: 0;
+}
+
+/* A game-position row (study-game-row.ts): players, then where in the game.
+   The dot marks the side to move in that seat's ink, so a column of rows reads
+   "who is on move" at a glance without the words "Black to play" twenty times. */
+.study-game-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+.study-game-row__players,
+.study-game-row__meta {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.study-game-row__players {
+  line-height: 1.35;
+}
+.study-game-row__player.is-to-move {
+  color: var(--site-text);
+}
+.study-game-row__player:not(.is-to-move) {
+  color: var(--site-muted);
+}
+.study-chapters__row.is-active .study-game-row__player:not(.is-to-move) {
+  font-weight: 400;
+}
+.study-game-row__dot {
+  --seat-disc-size: 0.55rem;
+  margin-right: 0.3rem;
+}
+.study-game-row__meta {
+  font-size: 0.72rem;
+  line-height: 1.3;
+  color: var(--site-muted);
+  font-weight: 400;
+}
+
+/* The study title one step under the review page's: a study name is a
+ * sentence ("Tony Fung 冯家俊: 47 games, the 2022 Worlds and July 2025 to
+ * September 2026") and at the review size it took four lines of the rail. */
+.study-review .review-info-card__title {
+  font-size: clamp(15px, 1.35vw, 17px);
+  line-height: 1.2;
+}
+
+/* One line of facts from the chapter tags under the title (games, span,
+ * the focus player's score); study-chapter-games.ts. */
+.study-page__games {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--site-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.study-page__games-part {
+  white-space: nowrap;
+}
+
+/* A game chapter's row (study-chapter-games.ts): players on one line, the
+ * date under it, the result as a chip on the right. Neither line wraps; an
+ * extreme name ellipsizes, and the full chapter name is the row's title. */
+.study-chapters__link:has(.study-game-line) {
+  align-items: center;
+}
+.study-game-line {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.study-game-line__text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.study-game-line__players,
+.study-game-line__meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.study-game-line__players {
+  font-weight: 400;
+}
+.study-game-line__player.is-winner {
+  font-weight: 650;
+}
+.study-game-line__meta {
+  font-size: 0.7rem;
+  line-height: 1.3;
+  color: var(--site-muted);
+  font-weight: 400;
+}
+/* Win and loss in the player pages' result colours (xiangqi-players.css
+ * .xqp-result-win/-loss), so a result reads the same across the site. */
+.study-game-line__result {
+  flex: 0 0 auto;
+  min-width: 2.4rem;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--site-border);
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+  color: var(--site-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.study-game-line__result[data-outcome="win"] {
+  border-color: transparent;
+  background: #1a7f64;
+  color: #fff;
+}
+.study-game-line__result[data-outcome="loss"] {
+  border-color: transparent;
+  background: #b3261e;
+  color: #fff;
+}
+.study-game-line__result[data-outcome="draw"] {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--site-muted) 30%, var(--site-panel, var(--site-bg)));
+  color: var(--site-text);
+}
+
+/* An event header between runs of game chapters. Sticky, so a reader deep in
+ * a long event still sees which one it is. */
+.study-chapters__group {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0.45rem 14px 0.2rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--site-muted);
+  background: var(--site-panel, var(--site-surface, var(--site-bg)));
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }

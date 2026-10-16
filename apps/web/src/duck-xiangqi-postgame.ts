@@ -6,6 +6,7 @@ import type {
 } from '@mistboard/game';
 import { DUCK_XIANGQI_SPEC_ID } from '@mistboard/game';
 import { duckXiangqiBoardSvg } from './duck-xiangqi-board.js';
+import { duckXiangqiTurnLabel } from './duck-xiangqi-turn-label.js';
 // The xiangqi surface stylesheets, IN THIS ORDER. `live-xiangqi.css` carries the
 // board ground, grid, palace and river; `duck-xiangqi.css` only adds the duck and
 // the target marks. Without the first, every one of those is drawn and invisible:
@@ -18,9 +19,11 @@ import './game-route.css';
 import { duckXiangqiEnabled } from './feature-flags.js';
 import { gameOutcome, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
+import { gameExportShareExtra } from './review/game-export-links.js';
 import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
 import { createMoveList, type MoveListEntry } from './review/move-list.js';
 import { mountReviewLayout } from './review/review-layout.js';
+import { underboardPanel } from './review/underboard-tabs.js';
 import { buildNav } from './site-shell.js';
 import { setBoardFamily } from './theme.js';
 import { LIVE_BOARD_SURFACE } from './xiangqi-board.js';
@@ -89,29 +92,6 @@ type LoadResult =
   | { ok: true; postgame: DuckXiangqiPostgameResponse }
   | { ok: false; status: number; error: string };
 
-/**
- * A turn as the move list writes it: `from-to@duck`.
- *
- * The same grammar the live room uses (`duckTurnLabel` in live-duck-xiangqi.ts),
- * duplicated rather than imported because that module is a live-client entry
- * point and this is a static page. `x…#` is the general capture, the one turn
- * that ends the game before the duck would have moved and so the one turn with
- * no `@` half.
- *
- * Takes the STRUCTURAL shape rather than `DuckXiangqiTurn`, because the watch
- * renderer labels moves straight off the wire, where a square is only a string.
- * Narrowing there would mean casting an untrusted value into the square union.
- */
-export function duckXiangqiTurnLabel(turn: {
-  from: string;
-  to: string;
-  duckTo: string | null;
-}): string {
-  return turn.duckTo === null
-    ? `${turn.from}x${turn.to}#`
-    : `${turn.from}-${turn.to}@${turn.duckTo}`;
-}
-
 export function mountDuckXiangqiPostgame(root: HTMLElement, roomId: string): void {
   root.classList.add('landing-page', 'game-route');
   setBoardFamily('xiangqi');
@@ -174,14 +154,21 @@ function renderPostgame(root: HTMLElement, postgame: DuckXiangqiPostgameResponse
   boardHost.style.width = '100%';
   boardHost.style.aspectRatio = `${DUCK_BOARD_VIEWBOX.width} / ${DUCK_BOARD_VIEWBOX.height}`;
 
-  const moveList = createMoveList(moveEntries(postgame), { title: t('replay.moves') });
+  const entries = moveEntries(postgame);
+  const moveList = createMoveList(entries, { title: t('replay.moves') });
+  // Share & export only: a snapshot replay has no analysis, times or tree, but
+  // its game still downloads, embeds and has an image like every other.
+  const shareMoves = document.createElement('textarea');
+  shareMoves.value = entries.map((entry) => entry.label).join(' ');
+  const underboard = underboardPanel(document.createElement('div'), {
+    shareMovesInput: shareMoves,
+    gameUrl: window.location.href,
+    ...gameExportShareExtra(DUCK_XIANGQI_SPEC_ID, postgame.game.roomId),
+  });
 
   const status = reviewOutcomeLine(gameOutcome(postgame.game.result), postgame.game.termination);
-  // Glyph, not markerId: `VariantMiniId` has no 'duck-xiangqi' member yet, and a
-  // marker id that is not in that union is a compile error rather than a missing
-  // tile. The duck stands in until a mini board exists.
   const { metaCard, details } = buildReviewMeta({
-    glyph: '🦆',
+    gameSpecId: DUCK_XIANGQI_SPEC_ID,
     variantName: variantDisplayLabel(DUCK_XIANGQI_SPEC_ID),
     game: postgame.game,
     status,
@@ -196,6 +183,8 @@ function renderPostgame(root: HTMLElement, postgame: DuckXiangqiPostgameResponse
     metaCard,
     details,
     moves: moveList.el,
+    underboard,
+    underboardOverflows: true,
     boards: [{ key: 'truth', el: boardHost, tier: 'primary' }],
     boardAspect: DUCK_BOARD_VIEWBOX.width / DUCK_BOARD_VIEWBOX.height,
     boardCols: 9,

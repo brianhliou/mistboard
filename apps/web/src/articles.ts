@@ -21,6 +21,7 @@ import './community-rail.css';
 import './articles.css';
 import { localizeAnnouncementString } from './announcement-i18n.js';
 import { type Announcement, announcements } from './announcements.js';
+import { mountLazyStepGameSet, type StepGameSetController } from './article-game-set.js';
 import {
   type ArticleLang,
   localizedArticleHref,
@@ -28,6 +29,7 @@ import {
   translateArticle,
   translateArticleText,
 } from './article-i18n.js';
+import { createStepCard } from './article-step-card.js';
 import {
   type Article,
   type ArticleBlock,
@@ -38,6 +40,7 @@ import {
   type BanqiReplayBlock,
   type ChessReplayBlock,
   type CodeBlock,
+  type CrazyhouseXiangqiReplayBlock,
   type CtaBlock,
   type DuckXiangqiReplayBlock,
   type EmbedBlock,
@@ -53,10 +56,13 @@ import {
   type LiveBoardsBlock,
   type RawSvgBlock,
   type RawSvgStepperBlock,
+  type RawSvgStepperStep,
   type StaticBoardsBlock,
+  type StepGameSetBlock,
   type SubHeadingBlock,
   type SvgRowBlock,
   type TableBlock,
+  type TableRowDiagram,
   withXiangqiBoardLayout,
   withXiangqiPieceSet,
   type XiangqiReplayBlock,
@@ -66,8 +72,15 @@ import {
   mountAtomicXiangqiReplay,
 } from './atomic-xiangqi-replay.js';
 import { type BanqiReplayController, mountBanqiReplay } from './banqi-replay.js';
+import { variantDiagramGlides } from './board-anim.js';
 import { type ChessReplayController, mountChessReplay } from './chess-replay.js';
+import {
+  type CrazyhouseXiangqiReplayController,
+  mountCrazyhouseXiangqiReplay,
+} from './crazyhouse-xiangqi-replay.js';
 import { type DuckXiangqiReplayController, mountDuckXiangqiReplay } from './duck-xiangqi-replay.js';
+import { autosizeEmbedFrame } from './embed/embed-autosize.js';
+import { embedPathWithSolutionHidden } from './embed/embed-route.js';
 import {
   type FortressXiangqiReplayController,
   mountFortressXiangqiReplay,
@@ -88,14 +101,14 @@ import {
   xiangqiAppearanceChangedEvent,
 } from './theme.js';
 import { buildUiIcon, uiIconForAnnouncementKind } from './ui-icon.js';
-import { hasFinalVariantMarker, renderVariantMarker } from './variant-markers.js';
+import { renderVariantMarker } from './variant-markers.js';
 import type { VariantMiniId } from './variant-mini-boards.js';
 import {
   gameSpecIdFromRulesSlug,
   isGameSpecId,
   rulesHrefPublicSurfaceEnabled,
   rulesSlugPublicSurfaceEnabled,
-  rulesSlugRetired,
+  variantPublicSurfaceEnabled,
   variantSupportsPve,
 } from './variant-public-surfaces.js';
 import { DEFAULT_XIANGQI_PIECE_SET, type XiangqiPieceSet } from './xiangqi-piece-sets.js';
@@ -123,7 +136,7 @@ function isArticleVisibleInThisEnv(article: Article): boolean {
 
 function isArticleListedInThisEnv(article: Article): boolean {
   if (!isArticleVisibleInThisEnv(article)) return false;
-  if (article.showInIndex === false) return false;
+  if (article.showInIndex === false || article.noindex === true) return false;
   // A page written in a language the interface does not speak never lists here.
   // The index is one reader's shelf, and a Vietnamese card in an English list is
   // noise to everyone: an English reader cannot read it, and a Vietnamese reader
@@ -331,60 +344,17 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
 // articles, so the caller can omit it. Thumbnails are bound by the caller's
 // mountArticleThumbnails pass; rotation is started by initLandingCarousel once
 // the section is in the document (it needs measured widths).
-// Editorial articles only. Rules reference pages are surfaced on the /rules
-// index (and each variant's card marker), not in this homepage row, so this
-// list is curated down to blog/concept pieces; the kind guard in
-// buildHomeArticleCards drops any rules slug that slips back in.
-export const HOME_ARTICLE_SLUGS = [
-  // The Pikafish page, scheduled for 2026-09-22 (publish-time.ts): the page a
-  // reader who searched 皮卡鱼在线 lands on, one click from a game (growth plan
-  // lane 0). Leads once live, since 09-22 is newer than the player page below.
-  'pikafish',
-  // The first player page, dated 2026-09-21: a Chinese pro's month, five games
-  // on the board. The first that is about a person.
-  'yin-sheng',
-  // The Atomic Xiangqi launch note led while the variant was new, as the duck
-  // one did before it; dated 2026-09-16.
-  'atomic-xiangqi-build',
-  // The jieqi pair, shipped together on 2026-09-03 and dated a day apart. The
-  // platform page is the clearest case of a page that sends a reader straight
-  // into something they can do here rather than something to read about; the
-  // openings article is where that reader goes next, and it exists in no
-  // language but Chinese anywhere else.
-  'jieqi-openings',
-  'jieqi-platform',
-  // The Duck Xiangqi launch post LEADS the row: it shares 2026-09-11 with the
-  // puzzles post and ties break on position here, so listing it first is what
-  // promotes it. Deliberate, to put a new variant in front of people while it
-  // is new; the puzzles post keeps second. Its card art is the article's own
-  // thumbnail (the duck), because the slug carries no variant marker.
-  'duck-xiangqi-build',
-  // The anti-xiangqi and horde-xiangqi measurements, dated two and four days
-  // after the duck launch. Write-ups with no play page, so they sit behind
-  // the launch post rather than displacing it; the date alone would put them
-  // first.
-  'anti-xiangqi',
-  'horde-xiangqi',
-  // Second while the duck launch is new; it led the row before that, and
-  // takes the lead back when duck ages out.
-  'puzzles-with-more-than-one-solution',
-  // Held the lead until the jieqi pair shipped, on the same reasoning: it sends
-  // a reader into something they can do rather than something to read about,
-  // and the method it documents is not published anywhere else for xiangqi.
-  'how-puzzle-mining-works',
-  // The one page here that exists nowhere else in English. It sits directly
-  // above the two champion lists it explains, which is the order a reader
-  // wants them in.
-  'xiangqi-match-fixing',
-  'xiangqi-champions',
-  'xiangqi-world-championship',
-  'titled-players',
-  'riverbank-cannon',
-  'skill-vs-luck',
-  'misty',
-  'mistybanqi',
-  'server-enforced-fog',
-] as const;
+// Every listed editorial article is a candidate, newest first: publishing an
+// article is what puts it on the homepage, with no second list to edit. The row
+// used to render a hand-kept slug list, and articles shipped without joining it
+// (the world-championship post for a day, the jieqi-bot-wins post when its
+// session excused it). Rules reference pages live on /rules, never here.
+//
+// The one thing still hand-written is the order of articles that share a
+// publish date: a slug listed here goes ahead of an unlisted one on the same
+// day. The Duck Xiangqi launch post shares 2026-09-11 with the puzzles post and
+// leads it, to put a new variant in front of people while it is new.
+export const HOME_ARTICLE_LEAD_ON_TIE = ['duck-xiangqi-strategy'] as const;
 
 type HomeCardItem =
   | {
@@ -424,24 +394,41 @@ export type HomeArticleCardOptions = {
   maxAgeDays?: number;
   /** Cards kept regardless of age, so a quiet month cannot empty the row. */
   minCards?: number;
+  /**
+   * Which homepage row to build. 'latest' (the default) is every article with no
+   * homeRow plus the newest announcement; 'deep-dives' is the articles tagged
+   * for it, with no age cut, since a player page does not go stale in 60 days.
+   */
+  row?: HomeArticleRow;
 };
+
+export type HomeArticleRow = 'latest' | 'deep-dives';
+
+/** Cards the homepage row shows at once (landing.ts), announcement included. */
+export const HOME_ARTICLE_ROW_SIZE = 6;
 
 export function buildHomeArticleCards(
   limit = 8,
   locale: Locale = currentLocale(),
   options: HomeArticleCardOptions = {},
 ): HTMLElement | null {
-  const eligible = new Map(
-    articles.filter(isArticleListedInThisEnv).map((article) => [article.slug, article]),
-  );
-  const articleItems = HOME_ARTICLE_SLUGS.flatMap<HomeCardItem>((slug, index) => {
-    const article = eligible.get(slug);
-    // Rules reference pages live on /rules, never this editorial row.
-    return article && article.kind !== 'rules'
-      ? [{ kind: 'article', date: articleDateKey(article), order: index + 1, article }]
-      : [];
-  });
-  const latestAnnouncement = latestVisibleAnnouncement();
+  const leadOnTie = HOME_ARTICLE_LEAD_ON_TIE as readonly string[];
+  const tieRank = (article: Article): number => {
+    const index = leadOnTie.indexOf(article.slug);
+    return index === -1 ? leadOnTie.length : index;
+  };
+  const row = options.row ?? 'latest';
+  const articleItems = articles
+    .filter((article) => isArticleListedInThisEnv(article) && article.kind !== 'rules')
+    .filter((article) => (article.homeRow ?? 'latest') === row)
+    .sort((a, b) => tieRank(a) - tieRank(b) || compareArticlesNewestFirst(a, b))
+    .map<HomeCardItem>((article, index) => ({
+      kind: 'article',
+      date: articleDateKey(article),
+      order: index + 1,
+      article,
+    }));
+  const latestAnnouncement = row === 'latest' ? latestVisibleAnnouncement() : undefined;
   const announcementItems: HomeCardItem[] = latestAnnouncement
     ? [
         {
@@ -454,7 +441,9 @@ export function buildHomeArticleCards(
     : [];
   const ordered = [...announcementItems, ...articleItems].sort(compareHomeCardItems);
 
-  const maxAgeDays = options.maxAgeDays ?? HOME_CARD_MAX_AGE_DAYS;
+  const maxAgeDays =
+    options.maxAgeDays ??
+    (row === 'deep-dives' ? Number.POSITIVE_INFINITY : HOME_CARD_MAX_AGE_DAYS);
   const minCards = options.minCards ?? HOME_CARD_MIN;
   const now = options.now ?? new Date();
   // A card with an unparseable date counts as fresh rather than being dropped:
@@ -477,23 +466,48 @@ export function buildHomeArticleCards(
 
   const section = document.createElement('section');
   section.className = 'landing-articles';
-  section.setAttribute('aria-label', t('articles.heading', {}, locale));
+  section.setAttribute(
+    'aria-label',
+    t(row === 'deep-dives' ? 'articles.deepDives' : 'articles.latest', {}, locale),
+  );
 
-  // No header row: the label ("Read") and the "All articles →" link are dropped
-  // to match lichess's blog strip (cards only) and to reclaim vertical space for
-  // the taller 8:5 thumbnails. The whole /blog index stays reachable from
-  // the primary nav.
+  // Both rows carry a short label (Brian, 2026-10-03: the unlabelled first
+  // row read as nothing next to "Xiangqi deep dives"), and the first row's
+  // label line links to the blog index, which the strip had no way to reach.
+  const header = document.createElement('div');
+  header.className = 'landing-row-header';
+  const label = document.createElement('h2');
+  label.className = 'landing-row-label';
+  label.textContent = t(
+    row === 'deep-dives' ? 'articles.deepDives' : 'articles.latest',
+    {},
+    locale,
+  );
+  header.append(label);
+  if (row === 'latest') {
+    const more = document.createElement('a');
+    more.className = 'landing-row-more';
+    more.href = localizedHref('/blog', locale);
+    more.textContent = t('site.more', {}, locale);
+    // Autocapture is off, so a homepage link with no track() call is invisible
+    // in PostHog: this is the only way off the homepage into the blog index.
+    more.addEventListener('click', () => {
+      track('landing_row_more_clicked', { row, href: more.getAttribute('href') });
+    });
+    header.append(more);
+  }
+  section.append(header);
   const carousel = document.createElement('div');
   carousel.className = 'landing-carousel';
 
-  const track = document.createElement('div');
-  track.className = 'landing-carousel-track';
-  for (const card of cards) track.append(card);
+  const carouselTrack = document.createElement('div');
+  carouselTrack.className = 'landing-carousel-track';
+  for (const card of cards) carouselTrack.append(card);
 
   const prev = carouselNavButton('prev', '‹', locale);
   const next = carouselNavButton('next', '›', locale);
 
-  carousel.append(prev, track, next);
+  carousel.append(prev, carouselTrack, next);
   section.append(carousel);
   return section;
 }
@@ -568,7 +582,7 @@ function landingArticleCard(article: Article, locale: Locale): HTMLElement {
 
   const title = document.createElement('strong');
   title.className = 'landing-article-card-title';
-  title.textContent = localized.title;
+  title.textContent = localized.cardTitle ?? localized.title;
 
   link.append(thumb, title);
   return link;
@@ -741,15 +755,16 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
   const locale = articleLocale(articleLang);
   if (!base) return buildArticleNotFound(locale);
   if (!isArticleVisibleInThisEnv(base)) return buildArticleNotFound(locale);
-  // The server serves 410 for a retired variant's rules page; a client-side
-  // navigation must not render what the server has declared gone.
-  if (base.kind === 'rules' && rulesSlugRetired(base.slug)) return buildArticleNotFound(locale);
   const article = articleLang ? translateArticle(base, articleLang) : base;
 
   const main = document.createElement('main');
   main.className = 'site-section article-shell article-page';
   main.dataset.articleSlug = article.slug;
   if (articleLang) main.dataset.articleLang = articleLang;
+  // The chrome follows the UI language (articleLocale), so <html lang> can say
+  // zh-Hant over an English article. The article's own text says what it is,
+  // for screen readers, browser translate and hyphenation.
+  const contentLang: Locale = articleLang ?? 'en';
 
   // The sheet is the page's single anchoring panel; both rails sit beside
   // it directly on the page background (pychess grammar).
@@ -763,6 +778,7 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
 
   const heading = document.createElement('h1');
   heading.className = 'article-title';
+  heading.lang = contentLang;
   heading.textContent = article.title;
   header.append(heading);
 
@@ -816,6 +832,7 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
   if (showSummaryOnPage) {
     const lede = document.createElement('p');
     lede.className = 'article-lede';
+    lede.lang = contentLang;
     lede.textContent = article.summary;
     header.append(lede);
   }
@@ -839,13 +856,7 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     if (playCta) sheet.append(playCta);
   }
 
-  if (article.intro && article.intro.length > 0) {
-    const intro = document.createElement('div');
-    intro.className = 'article-intro';
-    for (const block of article.intro) intro.append(renderBlock(block, articleLang));
-    sheet.append(intro);
-  }
-
+  // First, like the blog's posts: the short version before anything else.
   if (article.tldr && article.tldr.length > 0) {
     const tldr = document.createElement('aside');
     tldr.className = 'article-tldr';
@@ -863,8 +874,16 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     sheet.append(tldr);
   }
 
+  if (article.intro && article.intro.length > 0) {
+    const intro = document.createElement('div');
+    intro.className = 'article-intro';
+    for (const block of article.intro) intro.append(renderBlock(block, articleLang));
+    sheet.append(intro);
+  }
+
   const body = document.createElement('div');
   body.className = 'article-body';
+  body.lang = contentLang;
 
   const usedIds = new Set<string>();
   let headingIndex = 0;
@@ -903,8 +922,11 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
 // social proof we don't have yet.
 //
 // Rules docs already carry the variant rail as their onward path, so they keep
-// their current shape and only /blog gets this.
+// their current shape and only /blog gets this. The one exception is the zh
+// rules pages, which end in a single line inviting a reader to review the
+// machine translation (buildRulesTranslateNote).
 function buildArticleFooter(article: Article, lang?: ArticleLang): HTMLElement | null {
+  if (article.kind === 'rules') return buildRulesTranslateNote(lang);
   if (article.kind !== 'article') return null;
   const related = relatedArticles(article);
   if (related.length === 0) return null;
@@ -917,13 +939,34 @@ function buildArticleFooter(article: Article, lang?: ArticleLang): HTMLElement |
   heading.className = 'article-footer-heading';
   heading.textContent = t('articles.readNext', {}, locale);
 
+  // An English-only page read with a zh UI still offers the zh version of each
+  // onward post that has one, as the heading and dates already follow the UI.
+  const cardLang = lang ?? (locale === 'zh-Hans' || locale === 'zh-Hant' ? locale : undefined);
   const list = document.createElement('ul');
   list.className = 'articles-index-list article-footer-list';
   for (const entry of related) {
-    list.append(articleCard(entry, lang, { showStarBadge: false }));
+    list.append(articleCard(entry, cardLang, { showStarBadge: false }));
   }
 
   footer.append(heading, list);
+  return footer;
+}
+
+// zh rules pages ship on machine translation; this line points a native reader
+// at the volunteer review role on /contribute. English pages have nothing to
+// review, so they get no line. The anchor is the id contribute-page.ts sets on
+// its translate heading.
+function buildRulesTranslateNote(lang?: ArticleLang): HTMLElement | null {
+  if (!lang) return null;
+  const locale = articleLocale(lang);
+  const footer = document.createElement('footer');
+  footer.className = 'article-translate-note';
+  const line = document.createElement('p');
+  const link = document.createElement('a');
+  link.href = '/contribute#translate';
+  link.textContent = t('rules.translateIssueLink', {}, locale);
+  line.append(t('rules.translateIssue', {}, locale), link);
+  footer.append(line);
   return footer;
 }
 
@@ -1163,7 +1206,10 @@ export function mountArticleLightbox(root: HTMLElement): () => void {
   const onClick = (event: Event): void => {
     const trigger = (event.target as HTMLElement | null)?.closest?.('.article-figure-zoom');
     if (!trigger || !root.contains(trigger)) return;
-    const source = trigger.querySelector('img, svg');
+    // A themed figure holds two images; zoom the one on screen.
+    const candidates = [...trigger.querySelectorAll<HTMLElement | SVGElement>('img, svg')];
+    const source =
+      candidates.find((el) => getComputedStyle(el).display !== 'none') ?? candidates[0];
     if (!source) return;
     frame.replaceChildren(source.cloneNode(true));
     // The caption is part of the evidence, so it comes along.
@@ -1288,13 +1334,15 @@ type PendingBlock =
   | XiangqiReplayBlock
   | ChessReplayBlock
   | FortressXiangqiReplayBlock
+  | CrazyhouseXiangqiReplayBlock
   | DuckXiangqiReplayBlock
   | HordeXiangqiReplayBlock
   | AtomicXiangqiReplayBlock
   | JieqiReplayBlock
   | BanqiReplayBlock
   | JungleReplayBlock
-  | JungleFlipReplayBlock;
+  | JungleFlipReplayBlock
+  | StepGameSetBlock;
 type PendingMount = {
   block: PendingBlock;
   lang?: ArticleLang;
@@ -1305,8 +1353,10 @@ function rememberPendingMount(figure: HTMLElement, block: PendingBlock, lang?: A
   pendingMounts.set(figure, { block, lang });
 }
 
-function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElement {
+/** One body block as DOM. Exported for tests. */
+export function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElement {
   if (block.kind === 'paragraph') return paragraphNode(block.text);
+  if (block.kind === 'note') return noteNode(block.text);
   if (block.kind === 'sub-heading') return subHeadingNode(block);
   if (block.kind === 'static-boards') return renderStaticBoardsBlock(block);
   if (block.kind === 'cta') return renderCtaBlock(block);
@@ -1314,6 +1364,7 @@ function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElement {
   if (block.kind === 'raw-svg') return renderRawSvgBlock(block, lang);
   if (block.kind === 'svg-row') return renderSvgRowBlock(block, lang);
   if (block.kind === 'raw-svg-stepper') return renderRawSvgStepperBlock(block, lang);
+  if (block.kind === 'step-game-set') return renderStepGameSetBlock(block, lang);
   if (block.kind === 'code') return renderCodeBlock(block);
   if (block.kind === 'embed') return renderEmbedBlock(block);
   if (block.kind === 'table') return renderTableBlock(block);
@@ -1322,6 +1373,8 @@ function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElement {
   if (block.kind === 'xq-replay') return renderXiangqiReplayBlock(block, lang);
   if (block.kind === 'fortress-xiangqi-replay')
     return renderFortressXiangqiReplayBlock(block, lang);
+  if (block.kind === 'crazyhouse-xiangqi-replay')
+    return renderCrazyhouseXiangqiReplayBlock(block, lang);
   if (block.kind === 'duck-xiangqi-replay') return renderDuckXiangqiReplayBlock(block, lang);
   if (block.kind === 'horde-xiangqi-replay') return renderHordeXiangqiReplayBlock(block, lang);
   if (block.kind === 'atomic-xiangqi-replay') return renderAtomicXiangqiReplayBlock(block, lang);
@@ -1478,6 +1531,25 @@ function renderHordeXiangqiReplayBlock(
   return figure;
 }
 
+function renderStepGameSetBlock(block: StepGameSetBlock, lang?: ArticleLang): HTMLElement {
+  const figure = document.createElement('figure');
+  figure.className = 'article-figure article-figure-interactive article-figure-xq';
+  figure.dataset.pendingWidget = 'step-game-set';
+
+  const mountTarget = document.createElement('div');
+  mountTarget.className = 'article-interactive-target';
+  figure.append(mountTarget);
+
+  if (block.caption) {
+    const cap = document.createElement('figcaption');
+    cap.className = 'article-figure-caption';
+    cap.textContent = block.caption;
+    figure.append(cap);
+  }
+  rememberPendingMount(figure, block, lang);
+  return figure;
+}
+
 function renderAtomicXiangqiReplayBlock(
   block: AtomicXiangqiReplayBlock,
   lang?: ArticleLang,
@@ -1509,6 +1581,30 @@ function renderDuckXiangqiReplayBlock(
   // rather than the shared reserve ones the fortress replay borrows.
   figure.className = 'article-figure article-figure-interactive article-figure-xq';
   figure.dataset.pendingWidget = 'duck-xiangqi-replay';
+
+  const mountTarget = document.createElement('div');
+  mountTarget.className = 'article-interactive-target';
+  figure.append(mountTarget);
+
+  if (block.caption) {
+    const cap = document.createElement('figcaption');
+    cap.className = 'article-figure-caption';
+    cap.textContent = block.caption;
+    figure.append(cap);
+  }
+  rememberPendingMount(figure, block, lang);
+  return figure;
+}
+
+// Same figure as the Fortress replay: the shared reserve frame, hands above
+// and below the board.
+function renderCrazyhouseXiangqiReplayBlock(
+  block: CrazyhouseXiangqiReplayBlock,
+  lang?: ArticleLang,
+): HTMLElement {
+  const figure = document.createElement('figure');
+  figure.className = 'article-figure article-figure-interactive article-figure-xq';
+  figure.dataset.pendingWidget = 'crazyhouse-xiangqi-replay';
 
   const mountTarget = document.createElement('div');
   mountTarget.className = 'article-interactive-target';
@@ -1654,7 +1750,7 @@ function localizeInlineSvgText(root: ParentNode, lang?: ArticleLang): void {
     )
     .forEach((node) => {
       const text = node.textContent;
-      if (!text) return;
+      if (!text || node.getAttribute('translate') === 'no') return;
       node.textContent = translateArticleText(lang, text.trim());
     });
 }
@@ -1667,6 +1763,17 @@ function renderImageFigureBlock(block: ImageFigureBlock): HTMLElement {
   img.src = block.src;
   img.alt = block.alt;
   img.loading = 'lazy';
+  let darkImg: HTMLImageElement | null = null;
+  if (block.darkSrc) {
+    // Both ship; CSS shows the one matching the site theme, so the page is
+    // right before any script runs and when the reader flips the theme.
+    img.classList.add('article-figure-light');
+    darkImg = document.createElement('img');
+    darkImg.src = block.darkSrc;
+    darkImg.alt = block.alt;
+    darkImg.loading = 'lazy';
+    darkImg.className = 'article-figure-dark';
+  }
   // A real <button>, so the zoom is keyboard-reachable and announced, and so the
   // markup carries the affordance rather than a click handler that the prerender
   // cannot serialize. mountArticleLightbox wires the behaviour in the browser.
@@ -1674,6 +1781,7 @@ function renderImageFigureBlock(block: ImageFigureBlock): HTMLElement {
   zoom.type = 'button';
   zoom.className = 'article-figure-zoom';
   zoom.append(img);
+  if (darkImg) zoom.append(darkImg);
   figure.append(zoom);
   if (block.caption) {
     const cap = document.createElement('figcaption');
@@ -1743,48 +1851,60 @@ function renderRawSvgStepperBlock(block: RawSvgStepperBlock, lang?: ArticleLang)
   const figure = document.createElement('figure');
   figure.className = 'article-figure article-figure-interactive article-figure-raw-svg-stepper';
 
-  const host = document.createElement('div');
-  host.className = 'raw-svg-stepper stepper';
-  host.tabIndex = 0;
-
-  const frame = document.createElement('div');
-  frame.className = 'raw-svg-stepper-frame';
-
-  const controls = document.createElement('div');
-  controls.className = 'stepper-controls';
-
-  const prev = document.createElement('button');
-  prev.type = 'button';
-  prev.className = 'stepper-button stepper-button-prev';
-  prev.setAttribute('aria-label', 'Previous step');
-  prev.textContent = '←';
-
-  const counter = document.createElement('span');
-  counter.className = 'stepper-counter';
-
-  const next = document.createElement('button');
-  next.type = 'button';
-  next.className = 'stepper-button stepper-button-next';
-  next.setAttribute('aria-label', 'Next step');
-  next.textContent = '→';
-
-  const narrative = document.createElement('div');
-  narrative.className = 'stepper-narrative';
-
-  controls.append(prev, counter, next);
-  if (block.header) {
-    const header = document.createElement('div');
-    header.className = 'xq-replay-header';
-    const players = document.createElement('div');
-    players.textContent = block.header.players;
-    const event = document.createElement('div');
-    event.className = 'xq-replay-header-event';
-    event.textContent = block.header.event;
-    header.append(players, event);
-    host.append(header);
-  }
-  host.append(frame, controls, narrative);
-  figure.append(host);
+  const markup = (step: RawSvgStepperStep | undefined): string => {
+    if (!step) return '';
+    return typeof step.svg === 'function'
+      ? localizeSvgMarkup(
+          withXiangqiBoardLayout(readStoredXiangqiBoardLayout(), () =>
+            withXiangqiPieceSet(readStoredXiangqiPieceSet(), step.svg as () => string),
+          ),
+          lang,
+        )
+      : localizeSvgMarkup(step.svg, lang);
+  };
+  // A frame wider than tall (several boards in a row, the fog stepper's
+  // three panes) takes the card's width with its text under it.
+  const view = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(markup(block.steps[0]));
+  const wide = view ? Number(view[1]) / Number(view[2]) > 1.2 : false;
+  // A game: every step after the start names its move, and the rail is the
+  // score sheet with each step's narrative as the note under its move.
+  const asGame = block.steps.length > 1 && block.steps.slice(1).every((step) => step.move);
+  let shown = -1;
+  const paint = (board: HTMLElement, index: number): void => {
+    shown = index;
+    board.innerHTML = markup(block.steps[index]);
+    if (board.querySelector('.xq-article-svg')) markXqDiagramsNoTranslate(board);
+  };
+  const card = createStepCard(
+    {
+      lang,
+      title: block.header?.players,
+      subtitle: block.header?.event,
+      // A game is one board, so its sheet sits beside it however wide it is.
+      wide: wide && !asGame,
+    },
+    {
+      count: block.steps.length,
+      paint,
+      ...(asGame
+        ? {
+            moves: block.steps.slice(1).map((step) => ({
+              label: step.move ?? '',
+              ...(step.narrative ? { note: step.narrative } : {}),
+            })),
+            intro: block.steps[0]?.narrative,
+          }
+        : { narratives: block.steps.map((step) => step.narrative) }),
+      ...(block.seats ? { seats: block.seats } : {}),
+      ...(block.result ? { result: block.result } : {}),
+      // A step glides its mover only when the block names a variant that may
+      // show the move (board-anim.ts variantDiagramGlides); fog stays static.
+      ...(variantDiagramGlides(block.gameSpecId) && block.steps.some((step) => step.motion)
+        ? { motion: (index: number) => block.steps[index]?.motion ?? null }
+        : {}),
+    },
+  );
+  figure.append(card.el);
 
   if (block.caption) {
     const cap = document.createElement('figcaption');
@@ -1793,81 +1913,17 @@ function renderRawSvgStepperBlock(block: RawSvgStepperBlock, lang?: ArticleLang)
     figure.append(cap);
   }
 
-  let stepIdx = 0;
-
-  function render(): void {
-    const step = block.steps[stepIdx];
-    if (!step) return;
-    frame.innerHTML =
-      typeof step.svg === 'function'
-        ? localizeSvgMarkup(
-            withXiangqiBoardLayout(readStoredXiangqiBoardLayout(), () =>
-              withXiangqiPieceSet(readStoredXiangqiPieceSet(), step.svg as () => string),
-            ),
-            lang,
-          )
-        : localizeSvgMarkup(step.svg, lang);
-    const hasXiangqiDiagram = Boolean(frame.querySelector('.xq-article-svg'));
-    frame.classList.toggle('raw-svg-stepper-frame-xq', hasXiangqiDiagram);
-    figure.classList.toggle('article-figure-xq', hasXiangqiDiagram);
-    if (hasXiangqiDiagram) markXqDiagramsNoTranslate(frame);
-    narrative.textContent = step.narrative ?? '';
-    counter.textContent = `${stepIdx + 1} / ${block.steps.length}`;
-
-    const willDisablePrev = stepIdx === 0;
-    const willDisableNext = stepIdx === block.steps.length - 1;
-    const focused = document.activeElement;
-    if ((focused === prev && willDisablePrev) || (focused === next && willDisableNext)) {
-      host.focus();
-    }
-    prev.disabled = willDisablePrev;
-    next.disabled = willDisableNext;
-  }
-
-  function onPrev(): void {
-    if (stepIdx <= 0) return;
-    stepIdx -= 1;
-    render();
-  }
-
-  function onNext(): void {
-    if (stepIdx >= block.steps.length - 1) return;
-    stepIdx += 1;
-    render();
-  }
-
-  function onKeyDown(event: KeyboardEvent): void {
-    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-    switch (event.key) {
-      case 'ArrowLeft':
-      case 'q':
-      case 'Q':
-        event.preventDefault();
-        onPrev();
-        return;
-      case 'ArrowRight':
-      case 'e':
-      case 'E':
-        event.preventDefault();
-        onNext();
-        return;
-    }
-  }
-
-  prev.addEventListener('click', onPrev);
-  next.addEventListener('click', onNext);
-  host.addEventListener('keydown', onKeyDown);
-  render();
-
-  // Reactive piece set: repaint the frame's current step when the picker
-  // changes. render() already painted it; the global listener handles changes.
+  // Reactive piece set: repaint the shown step when the picker changes.
   if (block.steps.some((step) => typeof step.svg === 'function')) {
-    trackXqDiagram(frame, () => {
-      const step = block.steps[stepIdx];
-      if (!step) return '';
-      const raw = typeof step.svg === 'function' ? step.svg() : step.svg;
-      return localizeSvgMarkup(raw, lang);
-    });
+    const board = card.el.querySelector<HTMLElement>('.article-step-card-board');
+    if (board) {
+      trackXqDiagram(board, () => {
+        const step = block.steps[shown];
+        if (!step) return '';
+        const raw = typeof step.svg === 'function' ? step.svg() : step.svg;
+        return localizeSvgMarkup(raw, lang);
+      });
+    }
   }
 
   return figure;
@@ -1927,11 +1983,14 @@ function renderEmbedBlock(block: EmbedBlock): HTMLElement {
   figure.className = 'article-figure article-figure-embed';
   const iframe = document.createElement('iframe');
   iframe.className = 'article-embed-frame';
-  iframe.src = block.path;
+  iframe.src = block.hideSolution ? embedPathWithSolutionHidden(block.path) : block.path;
   iframe.title = block.title;
   iframe.setAttribute('loading', 'lazy');
   const [w, h] = block.aspect ?? [EMBED_DEFAULT_WIDTH, EMBED_DEFAULT_HEIGHT];
+  // The aspect is a placeholder: the card inside reports the height that fits
+  // its width, so no block's guess leaves empty space under it.
   iframe.style.aspectRatio = `${w} / ${h}`;
+  autosizeEmbedFrame(iframe);
   figure.append(iframe);
   if (block.caption) {
     const caption = document.createElement('figcaption');
@@ -1946,8 +2005,14 @@ function renderTableBlock(block: TableBlock): HTMLElement {
   figure.className = 'article-figure article-figure-table';
   const table = document.createElement('table');
   table.className = 'article-table';
+  if (block.keyColumn) table.classList.add('article-table-key-column');
+  if (block.wrap) table.classList.add('article-table-wrap');
+  if (block.compact) table.classList.add('article-table-compact');
+  const diagrams = block.rowDiagrams;
+  if (diagrams) table.classList.add('article-table-diagrams');
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
+  if (diagrams) headRow.append(document.createElement('th'));
   for (const h of block.headers) {
     const th = document.createElement('th');
     appendRichText(th, h);
@@ -1959,6 +2024,7 @@ function renderTableBlock(block: TableBlock): HTMLElement {
   block.rows.forEach((row, i) => {
     const tr = document.createElement('tr');
     if (highlight.has(i)) tr.className = 'article-table-row-emphasis';
+    if (diagrams) tr.append(renderTableRowDiagram(diagrams[i]));
     for (const cell of row) {
       const td = document.createElement('td');
       // Cells take the same inline markdown as paragraphs. They rendered as raw
@@ -1978,6 +2044,22 @@ function renderTableBlock(block: TableBlock): HTMLElement {
     figure.append(cap);
   }
   return figure;
+}
+
+// A table row's leading board. The cell is the diagram holder, so the board
+// repaints with the reader's piece set and layout like any raw-svg figure; the
+// label goes on the <svg> itself (role="img"), inside the thunk, so a repaint
+// keeps it.
+function renderTableRowDiagram(diagram: TableRowDiagram | undefined): HTMLElement {
+  const td = document.createElement('td');
+  td.className = 'article-table-diagram';
+  if (!diagram) return td;
+  const label = diagram.label.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  const thunk = () => diagram.svg().replace(/^<svg /, `<svg aria-label="${label}" `);
+  td.innerHTML = thunk();
+  trackXqDiagram(td, thunk);
+  paintXqDiagram(td, readStoredXiangqiPieceSet());
+  return td;
 }
 
 function renderCodeBlock(block: CodeBlock): HTMLElement {
@@ -2041,7 +2123,10 @@ function ctaKindForHref(href: string): 'play' | 'nav' {
 function buildRulesPlayCta(slug: string, title: string, locale: Locale): HTMLElement | null {
   const gameSpecId = gameSpecIdFromRulesSlug(slug);
   if (!gameSpecId) return null;
-  if (!rulesSlugPublicSurfaceEnabled(slug)) return null;
+  // The variant's switch, not the page's: an unlisted rules page for a public
+  // variant (crazyhouse-xiangqi's, while it was held back for polish) still
+  // offers the board, and a hidden variant (mahjong) still does not.
+  if (!variantPublicSurfaceEnabled(gameSpecId)) return null;
 
   const game = variantNavLabel(title);
   const row = document.createElement('div');
@@ -2139,6 +2224,17 @@ function paragraphNode(text: string): HTMLParagraphElement {
   return p;
 }
 
+/** An editorial note: one paragraph of rich text in a bordered aside. */
+function noteNode(text: string): HTMLElement {
+  const aside = document.createElement('aside');
+  aside.className = 'article-note';
+  const p = document.createElement('p');
+  p.className = 'article-note-text';
+  appendRichText(p, text);
+  aside.append(p);
+  return aside;
+}
+
 // Lightweight inline parser. Recognizes Markdown-style `code`, [text](href) for
 // links, and **text** for bold. External link hrefs (http/https) open in a new
 // tab; internal hrefs (/foo, #foo) do not. Anything that isn't a recognized
@@ -2202,6 +2298,7 @@ export function mountPendingWidgets(
   | XiangqiReplayController
   | ChessReplayController
   | FortressXiangqiReplayController
+  | CrazyhouseXiangqiReplayController
   | DuckXiangqiReplayController
   | HordeXiangqiReplayController
   | AtomicXiangqiReplayController
@@ -2209,6 +2306,7 @@ export function mountPendingWidgets(
   | BanqiReplayController
   | JungleReplayController
   | JungleFlipReplayController
+  | StepGameSetController
 > {
   const controllers: Array<
     | StepperController
@@ -2219,6 +2317,7 @@ export function mountPendingWidgets(
     | BanqiReplayController
     | JungleReplayController
     | JungleFlipReplayController
+    | StepGameSetController
   > = [];
   const pending = root.querySelectorAll<HTMLElement>('[data-pending-widget]');
   pending.forEach((figure) => {
@@ -2235,10 +2334,20 @@ export function mountPendingWidgets(
       controllers.push(mountXiangqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'fortress-xiangqi-replay') {
       controllers.push(mountFortressXiangqiReplay(target, block.spec, { lang }));
+    } else if (block.kind === 'crazyhouse-xiangqi-replay') {
+      controllers.push(mountCrazyhouseXiangqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'duck-xiangqi-replay') {
       controllers.push(mountDuckXiangqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'horde-xiangqi-replay') {
       controllers.push(mountHordeXiangqiReplay(target, block.spec, { lang }));
+    } else if (block.kind === 'step-game-set') {
+      controllers.push(
+        mountLazyStepGameSet(target, block.load, {
+          lang,
+          strings: block.strings,
+          title: block.title,
+        }),
+      );
     } else if (block.kind === 'atomic-xiangqi-replay') {
       controllers.push(mountAtomicXiangqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'chess-replay') {
@@ -2377,6 +2486,9 @@ export function renderArticleThumbnail(
       template.innerHTML = raw.trim();
       const svg = template.content.firstElementChild;
       if (svg instanceof SVGSVGElement) {
+        // Card words go through the article dictionary like a figure's labels,
+        // so a zh index does not carry English cards (2026-10-01).
+        if (locale === 'zh-Hans' || locale === 'zh-Hant') localizeInlineSvgText(svg, locale);
         markNoTranslate(svg);
         svg.setAttribute('width', '100%');
         svg.setAttribute('height', '100%');
@@ -2411,6 +2523,7 @@ export function renderArticleThumbnail(
     img.style.width = '100%';
     img.style.height = '100%';
     img.style.objectFit = 'cover';
+    if (thumb.position) img.style.objectPosition = thumb.position;
     img.style.display = 'block';
     wrap.replaceChildren(img);
     return wrap;
@@ -2424,15 +2537,16 @@ export function renderArticleThumbnail(
 
 // Variant rules articles whose rail/landing thumbnail is the shared variant
 // marker. Base-game articles map to their no-fog markers so the whole rail
-// reads in one visual language.
+// reads in one visual language. Chess is study-only, not a variant, and has no
+// marker: its rules page keeps its own board thumbnail.
 const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
-  chess: 'chess',
   'fog-chess': 'dark-chess',
   xiangqi: 'xiangqi',
   'fog-xiangqi': 'dark-xiangqi',
   'fortress-xiangqi': 'fortress-xiangqi',
   'duck-xiangqi': 'duck-xiangqi',
   'atomic-xiangqi': 'atomic-xiangqi',
+  'crazyhouse-xiangqi': 'crazyhouse-xiangqi',
   jieqi: 'jieqi',
   banqi: 'banqi',
   jungle: 'jungle',
@@ -2445,9 +2559,7 @@ function renderVariantMiniThumb(slug: string): HTMLElement | null {
   const miniId = VARIANT_MINI_BY_SLUG[slug];
   if (!miniId) return null;
   const wrap = document.createElement('div');
-  wrap.className = hasFinalVariantMarker(miniId)
-    ? 'articles-index-card-thumb variant-mini-thumb variant-marker-thumb'
-    : 'articles-index-card-thumb variant-mini-thumb';
+  wrap.className = 'articles-index-card-thumb variant-mini-thumb variant-marker-thumb';
   wrap.setAttribute('aria-hidden', 'true');
   markNoTranslate(wrap);
   wrap.innerHTML = renderVariantMarker(miniId, { size: 100 });

@@ -10,6 +10,7 @@ import './bots.css';
 import { bindBotPlayControl } from './bot-play.js';
 import { buildCommunityLayout } from './community-rail.js';
 import { type FeaturedGame, variantDisplayLabel } from './game-display.js';
+import { JIEQI_FIRST_GAME_LEVEL, XIANGQI_FIRST_GAME_LEVEL } from './landing-bot-policy.js';
 import { buildBotSummaryCard } from './profile-summary-card.js';
 import {
   buildProfileDashboard,
@@ -79,8 +80,21 @@ type BotProfile = {
 
 class BotNotFound extends Error {}
 
-const LADDER_BOT_ID_PREFIX = 'fairy-stockfish-level-';
+// Games per "Load more" click on a bot profile (server routes/bots.ts).
+const BOT_GAMES_PAGE = 15;
 
+const LADDER_BOT_ID_PREFIX = 'fairy-stockfish-level-';
+// The jieqi ladder's level bots (2026-09-29); its top rung is Pikafish.
+const JIEQI_LADDER_BOT_ID_PREFIX = 'pikafish-level-';
+// The top jieqi slot above Pikafish (level 8); server first-party-bots.ts.
+const JIEQI_TOP_BOT_ID = 'ab-jchess';
+// The top jungle slot above Misty (2026-10, #434); server first-party-bots.ts.
+const JUNGLE_TOP_BOT_ID = 'katago';
+
+// /bots is the page for "play xiangqi against the computer" (象棋人机对战), in
+// all three interface languages (/zh-hans/bots, /zh-hant/bots): the heading
+// says what a searcher typed, and the ladder comes first because that is what
+// they came to play.
 export async function mountBots(root: HTMLElement): Promise<void> {
   root.replaceChildren();
   root.classList.add('landing-page', 'bots-route');
@@ -95,23 +109,22 @@ export async function mountBots(root: HTMLElement): Promise<void> {
 
   const eyebrow = document.createElement('span');
   eyebrow.className = 'account-eyebrow';
-  eyebrow.textContent = 'Play against the computer';
+  eyebrow.textContent = t('bots.eyebrow');
 
   const heading = document.createElement('h1');
   heading.className = 'site-section-heading';
-  heading.textContent = 'Choose your opponent';
+  heading.textContent = t('bots.heading');
 
   const sub = document.createElement('p');
   sub.className = 'bots-sub';
-  sub.textContent =
-    'Meet every engine, compare strength, or jump straight into a game. Every bot has a full public profile.';
+  sub.textContent = t('bots.sub');
 
   const meta = document.createElement('div');
   meta.className = 'bots-directory-meta';
   meta.append(
-    buildDirectoryMeta('Public profiles'),
-    buildDirectoryMeta('One-click play'),
-    buildDirectoryMeta('Eight strength levels'),
+    buildDirectoryMeta(t('bots.metaFree')),
+    buildDirectoryMeta(t('bots.metaNoAccount')),
+    buildDirectoryMeta(t('bots.metaLevels')),
   );
   headerCopy.append(eyebrow, heading, sub, meta);
 
@@ -130,7 +143,7 @@ export async function mountBots(root: HTMLElement): Promise<void> {
 
   const body = document.createElement('section');
   body.className = 'bots-directory';
-  body.append(statusLine('Loading bots...'));
+  body.append(statusLine(t('bots.loading')));
 
   const content = document.createElement('div');
   content.className = 'bots-main';
@@ -143,12 +156,12 @@ export async function mountBots(root: HTMLElement): Promise<void> {
   try {
     bots = await fetchBots();
   } catch {
-    body.replaceChildren(buildNotice('Bots unavailable', 'The bot directory could not load.'));
+    body.replaceChildren(buildNotice(t('bots.unavailableTitle'), t('bots.unavailableBody')));
     return;
   }
 
   if (bots.length === 0) {
-    body.replaceChildren(statusLine('No bots available.'));
+    body.replaceChildren(statusLine(t('bots.none')));
     return;
   }
 
@@ -241,32 +254,160 @@ async function fetchBotProfile(botId: string): Promise<BotProfile> {
 
 // ── Directory ───────────────────────────────────────────────────────────────
 
+// The xiangqi ladder leads, level 1 to 8 and then every other system bot that
+// plays xiangqi (Pikafish) as the top rung. Each rung is named by its level,
+// shows its one xiangqi rating, and leads with "Play xiangqi"; the level a
+// first-timer is given (XIANGQI_FIRST_GAME_LEVEL) says "Start here". Bots that
+// do not play xiangqi (Misty) follow under Other games.
 function buildBotDirectorySections(bots: BotProfile[]): HTMLElement[] {
   const system = bots.filter((bot) => bot.ownerType === 'system');
   const ladder = system
     .filter((bot) => bot.id.startsWith(LADDER_BOT_ID_PREFIX))
     .sort((a, b) => ladderLevel(a) - ladderLevel(b));
-  const featured = system.filter((bot) => !bot.id.startsWith(LADDER_BOT_ID_PREFIX));
+  const jieqiLadder = system
+    .filter((bot) => bot.id.startsWith(JIEQI_LADDER_BOT_ID_PREFIX))
+    .sort((a, b) => ladderLevel(a) - ladderLevel(b));
+  const others = system.filter(
+    (bot) =>
+      !bot.id.startsWith(LADDER_BOT_ID_PREFIX) && !bot.id.startsWith(JIEQI_LADDER_BOT_ID_PREFIX),
+  );
+  const topRungs = others.filter((bot) => playsGame(bot, 'xiangqi'));
+  // Pikafish (level 8) then the AB-JChess top slot, which alone reads Strongest.
+  const jieqiTopRungs = others
+    .filter((bot) => playsGame(bot, 'jieqi'))
+    .sort((a, b) => Number(a.id === JIEQI_TOP_BOT_ID) - Number(b.id === JIEQI_TOP_BOT_ID));
+  const jieqiStrongestId = jieqiTopRungs.some((bot) => bot.id === JIEQI_TOP_BOT_ID)
+    ? JIEQI_TOP_BOT_ID
+    : jieqiTopRungs.at(-1)?.id;
+  const otherGames = others.filter((bot) => !playsGame(bot, 'xiangqi') && !playsGame(bot, 'jieqi'));
   const community = bots.filter((bot) => bot.ownerType === 'user');
+  const xiangqiCard = { ratingGameSpecId: 'xiangqi', primaryPlayGameSpecId: 'xiangqi' };
+  const jieqiCard = { ratingGameSpecId: 'jieqi', primaryPlayGameSpecId: 'jieqi' };
 
   const groups: BotRosterGroup[] = [
     {
-      title: 'Featured opponents',
-      intro: 'Distinct engines with their own styles and variant specialties.',
-      rows: featured.map(buildBotSummaryCard),
+      title: t('bots.ladderTitle'),
+      intro: t('bots.ladderIntro'),
+      rows: [
+        ...ladder.map((bot) => {
+          const level = ladderLevel(bot);
+          return buildBotSummaryCard(bot, {
+            ...xiangqiCard,
+            name: t('bots.levelName', { level }),
+            subtitle: t('bots.ladderSubtitle'),
+            badge: level === XIANGQI_FIRST_GAME_LEVEL ? t('bots.startHere') : undefined,
+            // The stored bio restates the level and lists the games the chips
+            // already name, in English on every locale.
+            bio: null,
+          });
+        }),
+        ...topRungs.map((bot) =>
+          buildBotSummaryCard(bot, {
+            ...xiangqiCard,
+            badge: t('bots.strongest'),
+            subtitle: t('bots.firstParty'),
+            bio: systemBotBio(bot),
+          }),
+        ),
+      ],
     },
     {
-      title: 'Fairy-Stockfish ladder',
-      intro: 'Pick a level that feels competitive, then move up when you are ready.',
-      rows: ladder.map(buildBotSummaryCard),
+      title: t('bots.jieqiLadderTitle'),
+      intro: t('bots.jieqiLadderIntro'),
+      rows: jieqiLadder.length
+        ? [
+            ...jieqiLadder.map((bot) => {
+              const level = ladderLevel(bot);
+              return buildBotSummaryCard(bot, {
+                ...jieqiCard,
+                name: t('bots.levelName', { level }),
+                subtitle: 'Pikafish',
+                badge: level === JIEQI_FIRST_GAME_LEVEL ? t('bots.startHere') : undefined,
+                bio: null,
+              });
+            }),
+            ...jieqiTopRungs.map((bot) =>
+              // Pikafish is Level 8 here, named like the rungs below it; the
+              // AB-JChess slot above it keeps its own name, bio and badge.
+              bot.id !== 'pikafish'
+                ? buildBotSummaryCard(bot, {
+                    ...jieqiCard,
+                    badge: bot.id === jieqiStrongestId ? t('bots.strongest') : undefined,
+                    subtitle: t('bots.firstParty'),
+                    bio: systemBotBio(bot),
+                  })
+                : buildBotSummaryCard(bot, {
+                    ...jieqiCard,
+                    name: t('bots.levelName', { level: 8 }),
+                    subtitle: 'Pikafish',
+                    badge: bot.id === jieqiStrongestId ? t('bots.strongest') : undefined,
+                    bio: null,
+                  }),
+            ),
+          ]
+        : [],
     },
     {
-      title: 'Community bots',
-      intro: 'Engines shared by the Mistboard community.',
-      rows: community.map(buildBotSummaryCard),
+      title: t('bots.otherTitle'),
+      intro: t('bots.otherIntro'),
+      rows: otherGames.map((bot) =>
+        buildBotSummaryCard(bot, { subtitle: t('bots.firstParty'), bio: systemBotBio(bot) }),
+      ),
+    },
+    {
+      title: t('bots.communityTitle'),
+      intro: t('bots.communityIntro'),
+      rows: community.map((bot) => buildBotSummaryCard(bot)),
     },
   ];
   return groups.filter((group) => group.rows.length > 0).map(buildRosterSection);
+}
+
+// A localized one-liner for the named system bots; any other keeps its stored
+// bio (undefined leaves the card's default in place).
+function systemBotBio(bot: BotProfile): string | undefined {
+  if (bot.id === 'pikafish') return t('bots.pikafishBio');
+  if (bot.id === JIEQI_TOP_BOT_ID) return t('bots.abJchessBio');
+  if (bot.id === JUNGLE_TOP_BOT_ID) return t('bots.katagoBio');
+  if (bot.id === 'misty') return t('bots.mistyBio');
+  return undefined;
+}
+
+// Linked credits for a bot built on other people's engines and nets, shown on its
+// page under the bio. hzyhhzy agreed to KataGo running here credited
+// (hzyhhzy/KataGomo#12); the net is Kouza's, shipped in Dandelion 4.
+type BotCredit = { label: string; href: string };
+
+export function botCredits(botId: string): BotCredit[] {
+  if (botId !== JUNGLE_TOP_BOT_ID) return [];
+  return [
+    {
+      label: t('bots.katagoCreditKatagomo'),
+      href: 'https://github.com/hzyhhzy/KataGomo/tree/AnimalChess2025',
+    },
+    { label: t('bots.katagoCreditKatago'), href: 'https://github.com/lightvector/KataGo' },
+    { label: t('bots.katagoCreditNet'), href: 'https://github.com/lxsgx23/Dandelion-Chess' },
+  ];
+}
+
+function buildBotCredits(credits: readonly BotCredit[]): HTMLElement {
+  const list = document.createElement('ul');
+  list.className = 'profile-side-links bot-profile-credits';
+  for (const credit of credits) {
+    const item = document.createElement('li');
+    const link = document.createElement('a');
+    link.href = credit.href;
+    link.target = '_blank';
+    link.rel = 'noreferrer noopener';
+    link.textContent = credit.label;
+    item.append(link);
+    list.append(item);
+  }
+  return list;
+}
+
+function playsGame(bot: BotProfile, gameSpecId: string): boolean {
+  return playOptionsFor(bot).some((option) => option.gameSpecId === gameSpecId && option.playable);
 }
 
 type BotRosterGroup = {
@@ -276,7 +417,7 @@ type BotRosterGroup = {
 };
 
 function ladderLevel(bot: BotProfile): number {
-  const level = Number.parseInt(bot.id.slice(LADDER_BOT_ID_PREFIX.length), 10);
+  const level = Number.parseInt(/-level-(\d+)$/.exec(bot.id)?.[1] ?? '', 10);
   return Number.isFinite(level) ? level : Number.MAX_SAFE_INTEGER;
 }
 
@@ -299,7 +440,9 @@ function buildRosterSection(group: BotRosterGroup): HTMLElement {
 
   const count = document.createElement('span');
   count.className = 'bot-roster-count';
-  count.textContent = `${group.rows.length} ${group.rows.length === 1 ? 'bot' : 'bots'}`;
+  count.textContent = t(group.rows.length === 1 ? 'bots.countOne' : 'bots.countMany', {
+    count: group.rows.length,
+  });
 
   header.append(headerCopy, count);
 
@@ -335,14 +478,14 @@ function buildBotIdentity(bot: BotProfile, gameSpecId: string): HTMLElement {
   identity.append(heading);
 
   const meta = document.createElement('p');
-  meta.className = 'profile-header-meta';
+  meta.className = 'profile-header-meta profile-header-badges';
   const badge = document.createElement('span');
   badge.className = 'profile-role-badge profile-role-bot';
   badge.textContent = t('watch.botBadge');
   const owner = document.createElement('span');
   owner.className = 'profile-role-badge profile-role-owner';
   owner.textContent = bot.ownerType === 'system' ? 'First-party' : 'Community';
-  meta.append(badge, document.createTextNode(' · '), owner);
+  meta.append(badge, owner);
   identity.append(meta);
 
   const counts = document.createElement('div');
@@ -468,6 +611,8 @@ function buildBotSideInfo(bot: BotProfile, gameSpecId: string): HTMLElement {
     bio.textContent = bot.bio;
     side.append(bio);
   }
+  const credits = botCredits(bot.id);
+  if (credits.length > 0) side.append(buildBotCredits(credits));
 
   const rating = botRatings(bot).find((candidate) => candidate.gameSpecId === gameSpecId);
   if (rating) side.append(buildBotSideStat('Published rating', ratingLabel(rating)));
@@ -609,7 +754,77 @@ function buildRecentGames(bot: BotProfile, gameSpecId: string): HTMLElement {
   list.className = 'profile-game-list profile-activity';
   for (const game of games) list.append(buildProfileGameRow(game));
   section.append(list);
+  // The payload carries only the newest games per variant; the record counts
+  // the same rows, so a gap between the two means older games to page in.
+  const total = botRecordFor(bot, gameSpecId).games;
+  if (games.length < total) {
+    section.append(
+      buildBotGamesMore(bot.id, gameSpecId, games.length, total, (page) => {
+        for (const game of page) list.append(buildProfileGameRow(game));
+      }),
+    );
+  }
   return section;
+}
+
+// "Load more" for one variant's games, the player profile's control and stop
+// rule (profile.ts profileGamesMore). Switching variant rebuilds the panel, so
+// the page count never carries across variants.
+function buildBotGamesMore(
+  botId: string,
+  gameSpecId: string,
+  startRendered: number,
+  total: number,
+  appendGames: (games: FeaturedGame[]) => void,
+): HTMLElement {
+  let rendered = startRendered;
+  const moreWrap = document.createElement('div');
+  moreWrap.className = 'profile-games-more';
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'profile-games-more-btn';
+  button.textContent = t('profile.loadMore');
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    button.textContent = t('profile.loadingMore');
+    const page = await fetchBotGamesPage(botId, gameSpecId, rendered).catch((err) => {
+      console.warn(err);
+      return null;
+    });
+    if (!page) {
+      button.disabled = false;
+      button.textContent = t('profile.loadMore');
+      return;
+    }
+    appendGames(page);
+    rendered += page.length;
+    if (rendered >= total || page.length === 0) {
+      moreWrap.remove();
+    } else {
+      button.disabled = false;
+      button.textContent = t('profile.loadMore');
+    }
+  });
+  moreWrap.append(button);
+  return moreWrap;
+}
+
+async function fetchBotGamesPage(
+  botId: string,
+  gameSpecId: string,
+  offset: number,
+): Promise<FeaturedGame[]> {
+  const params = new URLSearchParams({
+    variant: gameSpecId,
+    offset: String(offset),
+    limit: String(BOT_GAMES_PAGE),
+  });
+  const resp = await fetch(`/api/bots/${encodeURIComponent(botId)}/games?${params}`, {
+    headers: { accept: 'application/json' },
+  });
+  if (!resp.ok) throw new Error(`bot_games_failed_${resp.status}`);
+  const data = (await resp.json()) as { games: FeaturedGame[] };
+  return data.games;
 }
 
 // The bot's record in ONE variant. Falls back to the lifetime record only when

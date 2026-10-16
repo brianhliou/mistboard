@@ -54,6 +54,17 @@
   }
 }
 
+/* Banqi's captured discs (#546) grow toward the board's own (58 / 568 of the
+   board's width), capped so seven sit on one row: a side's 16 pieces are at
+   most seven roles, one disc each with its count badge, so a whole side's
+   losses fit the reserved one-row band and the rail never grows. Under the
+   base clamp they were about half the board's disc. */
+@media (min-width: 800px) {
+  .live-route--banqi .live-review__cluster .rail-material {
+    --capture-piece-size: min(calc(var(--uni-board-width) * 0.102), calc((100cqw - 20px) / 7));
+  }
+}
+
 /* With the console gap collapsed (clock joins the table), keep a little air
    between the material strips and the clock tabs. */
 .live-review__cluster .captures-strip-top {
@@ -138,8 +149,9 @@
        rail ran ~160px past the board's bottom edge on a wide screen and the
        chat filled the void. Cap the rail at the board's rendered height (width
        over aspect, the same formula the shell uses for the board slot) so the
-       chat's bottom edge lands on the board's; the chat's own handle still
-       shrinks it below that (chat-resize.ts reads this rail's leftover). */
+       chat's bottom edge lands on the board's. The live chat has no resize
+       handle (spectator-chat.ts buildLiveRoomChat): the flex-fill below
+       outranks a manual height, and the board line is where it should end. */
     max-height: calc(var(--uni-board-width) / var(--uni-board-aspect, 1));
   }
   .live-review__cluster .review-spectator-chat--live {
@@ -173,23 +185,35 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: safe center;
     gap: 0;
   }
+  /* One scroll region, lichess round anatomy: when the board is too short for
+     the whole table, only the move window gives up height. The seat rows, the
+     arrows, the notice and the post-game actions never scroll; before
+     2026-09-30 the box itself scrolled, so a finished game showed two nested
+     scrollbars and the Rematch button scrolled away. */
   .live-review__cluster .round-table__box {
     flex: 0 1 auto;
     min-height: 0;
-    overflow: auto;
-  }
-  /* The console hugs its content (toolbar + a ~4-row move window, lichess
-     parity) instead of flex-filling the box; the bottom player row's
-     margin-top:auto absorbs the leftover height. */
-  .live-review__cluster .replay-console {
-    flex: 0 0 auto;
-    min-height: 0;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    gap: 0;
+  }
+  .live-review__cluster .round-table__box > * {
+    flex: 0 0 auto;
+  }
+  /* The console's wrapper dissolves here so the arrow band is a pinned row of
+     the box like the others and the move window is the box's one shrinking
+     item; as a shrinking wrapper it clipped the arrows away when a notice took
+     the height. */
+  .live-review__cluster .round-table__box > .replay-console {
+    display: contents;
+  }
+  /* The only region that gives up height; it keeps room for the result. */
+  .live-review__cluster .replay-console .game-table-moves {
+    flex: 0 1 auto;
+    min-height: 72px;
   }
   .live-review__cluster .replay-console .move-list {
     flex: 0 0 auto;
@@ -204,21 +228,151 @@
   .live-review__cluster .review-shell__center {
     align-items: flex-start;
   }
+  /* The console centres against the BOARD, not the row. The row is
+     viewport-tall (review-shell.css min-height) while the board is bounded by
+     its width budget and the user's grip scale, so a rail stretched to the row
+     centred ~100px below the board's middle once the board was shrunk.
+     Pin the rail to the board's rendered height (the formula the meta rail
+     uses) at the board's top edge; the centred console then lands on the
+     board's centre line. */
+  .live-review__cluster .moves-panel {
+    align-self: start;
+    box-sizing: border-box;
+    /* A FLOOR, never a cap. From 2026-09-30 to 10-02 this was `height`, and a
+       board shorter than the table (banqi's 8x4 strip is 395px; flip jungle,
+       any board shrunk by the grip) clipped the table from the bottom: the move
+       list, the seat row and Resign/Abort disappeared. The table is its
+       content's height at least; the board only stretches it. */
+    min-height: calc(var(--uni-board-width) / var(--uni-board-aspect, 1));
+  }
+}
+
+/* The flip variants whose board leaves room below it: banqi's 8x4 strip
+   (less than half the room row's height) and flip jungle's 4x4 square. The
+   centre column stacks the board and the face-down tally under it
+   (hidden-pool-placement.ts moves the pool there: the centre column has the
+   width, the right rail needs the height); on a wide screen the three columns
+   are one band (below). */
+:is(.live-route--banqi, .live-route--jungle-flip) .live-review__cluster .review-shell__center {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+}
+:is(.live-route--banqi, .live-route--jungle-flip) .live-review__cluster .hidden-pool--under-board {
+  --capture-row-gap: 3px;
+  box-sizing: border-box;
+  width: var(--uni-board-width, 100%);
+  max-width: 100%;
+  margin-top: 0;
+  /* No rule above it: the board's own edge already closes the board, and a
+     second line read as a divider between two unrelated panels. */
+  border-top: 0;
+  padding: 0 4px;
+  /* Red and black side by side: one row of the board's width, not a column
+     that leaves the right half of the board's footprint empty. Under a board
+     too narrow for two halves of 8 discs at 26px (229px each), the sides stack
+     and each gets the full width. */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 229px), 1fr));
+  column-gap: 24px;
+  row-gap: 8px;
+  /* Named: each row is a container too (its discs size off it), and an
+     unnamed query from a label or disc row would ask the row, not the pool. */
+  container: hidden-pool / inline-size;
+}
+:is(.live-route--banqi, .live-route--jungle-flip)
+  .live-review__cluster
+  .hidden-pool--under-board
+  .hidden-pool__caption {
+  grid-column: 1 / -1;
+}
+/* Each side is its label over its discs, so both halves start on the same
+   line whatever their counts. Inline, the side with more discs wrapped under
+   its label and the two labels sat at different heights (Brian, 2026-10-03). */
+:is(.live-route--banqi, .live-route--jungle-flip)
+  .live-review__cluster
+  .hidden-pool--under-board
+  .hidden-pool__row {
+  flex-direction: column;
+  align-items: flex-start;
+  align-content: flex-start;
+  gap: 4px;
+  /* The discs size off the side's own width (below), whichever layout the
+     grid picked. */
+  container-type: inline-size;
+}
+:is(.live-route--banqi, .live-route--jungle-flip)
+  .live-review__cluster
+  .hidden-pool--under-board
+  .hidden-pool__pieces {
+  /* A full side (8 discs, flip jungle's whole army, plus 7 gaps of 3px) fits
+     one line: a side that wrapped sat lower than the other. */
+  --capture-piece-size: clamp(18px, calc((100cqw - 21px) / 8), 36px);
+  flex: 0 0 auto;
+}
+/* Stacked (the grid's one-column case: two 229px halves and the gap need
+   482px), each side is one line again, its label in a fixed column so both
+   sides' discs start at the same x. */
+@container hidden-pool (width < 482px) {
+  :is(.live-route--banqi, .live-route--jungle-flip)
+    .live-review__cluster
+    .hidden-pool--under-board
+    .hidden-pool__row {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+  }
+  :is(.live-route--banqi, .live-route--jungle-flip)
+    .live-review__cluster
+    .hidden-pool--under-board
+    .hidden-pool__label {
+    flex: 0 0 3.2em;
+  }
+  :is(.live-route--banqi, .live-route--jungle-flip)
+    .live-review__cluster
+    .hidden-pool--under-board
+    .hidden-pool__pieces {
+    --capture-piece-size: clamp(18px, calc((100cqw - 21px - 3.2em - 6px) / 8), 36px);
+  }
+}
+/* The note's 100% basis is a line break in the inline row; in a column it
+   would be a height. */
+:is(.live-route--banqi, .live-route--jungle-flip)
+  .live-review__cluster
+  .hidden-pool--under-board
+  .hidden-pool__note {
+  flex-basis: auto;
 }
 
 @media (min-width: 1260px) {
-  /* Banqi's 8×4 board is much shorter than the viewport-height room
-     rails. Center it like the right-side game console instead of leaving both
-     primary game surfaces stranded at different vertical positions. */
-  .live-route--banqi .live-review__cluster .review-shell__center {
-    align-items: center;
+  /* The three columns are one band the height of the board and its tally,
+     centred in the room row: the row's height is the content's (not the
+     viewport's), both rails stretch to it, and the table stays the compact
+     centred console the tall boards use, so the two clocks sit a console's
+     height apart. Full-height rails (tried 10-02) dwarfed the short board and
+     put the clocks the screen's height apart. */
+  :is(.live-route--banqi, .live-route--jungle-flip) .live-review__cluster {
+    grid-template-rows: auto;
+    align-content: center;
+  }
+  :is(.live-route--banqi, .live-route--jungle-flip) .live-review__cluster .meta-panel {
+    max-height: none;
+  }
+  :is(.live-route--banqi, .live-route--jungle-flip) .live-review__cluster .moves-panel {
+    align-self: stretch;
+  }
+  /* All three columns start on the board's top edge. Centred, the table rode
+     up and down the rail with its content (a finished game's table is shorter
+     than a live one's) and never lined up with the board or the info card. */
+  :is(.live-route--banqi, .live-route--jungle-flip) .live-review__cluster .game-console {
+    justify-content: flex-start;
   }
 
-  /* Fortress centers for the same reason banqi does, arrived at from the
-     opposite direction: banqi's board is too SHORT for the row, fortress's 7x8
-     board is tall but still shorter than the full-height room rails, so
-     top-pinning strands ~130px of dead space under the board and leaves the
-     board and the game console reading as two surfaces at different heights.
+  /* Fortress centers its board: the 7x8 board is tall but still shorter
+     than the full-height room rails, so top-pinning strands ~130px of dead
+     space under the board and leaves the board and the game console reading
+     as two surfaces at different heights.
 
      The reserve bands are already pinned to a fixed height whether or not a
      pocket holds anything (.rail-material.drop-mini-reserve-strip above), so
@@ -226,5 +380,178 @@
      hand — the board does not move when the first capture lands. */
   .live-route--fortress-xiangqi .live-review__cluster .review-shell__center {
     align-items: center;
+  }
+  /* Its board centres in the row, so the board-height rail centres with it. */
+  .live-route--fortress-xiangqi .live-review__cluster .moves-panel {
+    align-self: center;
+  }
+}
+
+/* col1 (phone): lichess mobile round anatomy. The shared col1 stack put the
+   whole right rail (material band, clock, boxed table, clock) BELOW the board
+   and the game-meta card, so on a 390x664 phone the opponent's clock started
+   ~10px under the fold and the viewer's clock, the abort countdown and
+   Resign/Abort sat another 300px down behind an empty reserved material band.
+   A phone player never saw a clock while playing.
+
+   Here the rail's wrappers dissolve (display: contents) so the table's pieces
+   become items of the cluster, which turns into a wrapping flex row ordered by
+   hand:
+     opponent name · material · clock
+     board
+     viewer name · material · clock
+     status notice, Abort/Resign, room actions, clocks note, face-down pool
+     replay arrows + move list
+     game-meta card, then anything the rail deferred
+   A flex row (not grid areas) because an item this list does not name (a
+   tenant extra) must land at the end at full width, never auto-placed into a
+   named row that happens to be empty; `order: 50` puts it there. The three
+   seat pieces share a line; everything else takes a line of its own. */
+@media (max-width: 799px) {
+  .live-review__cluster {
+    display: flex;
+    flex-flow: row wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px 8px;
+  }
+
+  .live-review__cluster > *,
+  .live-review__cluster .moves-panel > *,
+  .live-review__cluster .game-console > *,
+  .live-review__cluster .round-table__box > * {
+    flex: 0 0 100%;
+    min-width: 0;
+    order: 50;
+  }
+
+  .live-review__cluster .moves-panel,
+  .live-review__cluster .game-console,
+  .live-review__cluster .round-table__box {
+    display: contents;
+  }
+
+  .live-review__cluster > .review-shell__center {
+    order: 20;
+    justify-content: center;
+  }
+
+  .live-review__cluster > .meta-panel {
+    order: 70;
+  }
+
+  /* Seat lines: name (ellipsised, at most ~55% of the line), the captured
+     material taking what is left, the clock pinned right. */
+  .live-review__cluster .round-table__player--top,
+  .live-review__cluster .round-table__player--bottom {
+    flex: 0 1 auto;
+    max-width: 55%;
+    min-height: 0;
+    padding: 0 2px;
+    border-top: 0;
+  }
+
+  .live-review__cluster .round-table__player--bottom:not(:empty) {
+    border-top: 0;
+  }
+
+  .live-review__cluster .captures-strip-top,
+  .live-review__cluster .captures-strip-bottom {
+    flex: 1 1 0;
+    margin: 0;
+  }
+
+  .live-review__cluster [data-clock-top],
+  .live-review__cluster [data-clock-bottom] {
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+
+  .live-review__cluster .round-table__player--top {
+    order: 10;
+  }
+  .live-review__cluster .captures-strip-top {
+    order: 11;
+  }
+  .live-review__cluster [data-clock-top] {
+    order: 12;
+  }
+  .live-review__cluster .round-table__player--bottom {
+    order: 30;
+  }
+  .live-review__cluster .captures-strip-bottom {
+    order: 31;
+  }
+  .live-review__cluster [data-clock-bottom] {
+    order: 32;
+  }
+  .live-review__cluster [data-action-section] {
+    order: 40;
+  }
+  .live-review__cluster [data-game-controls-section] {
+    order: 41;
+  }
+  .live-review__cluster .round-table__row:has(> .room-actions) {
+    order: 42;
+  }
+  .live-review__cluster .clocks-pregame-note {
+    order: 43;
+    margin: 0;
+  }
+  .live-review__cluster .hidden-pool {
+    order: 44;
+  }
+  .live-review__cluster .replay-console {
+    order: 60;
+  }
+
+  /* Material sits inside the seat line: small discs, one reserved band, so the
+     first capture does not push the board down under a finger. The console is
+     no longer a box, so cqw has no container here; size in px. */
+  .live-review__cluster .rail-material {
+    --capture-piece-size: 20px;
+    min-height: calc(var(--capture-piece-size) + 4px);
+    height: auto;
+    padding: 0;
+  }
+
+  /* Fortress hands are drop sources the player taps, so they keep full-size
+     discs on a line of their own, directly outside their seat line. */
+  .live-review__cluster .rail-material.drop-mini-reserve-strip {
+    --capture-piece-size: initial;
+    flex: 0 0 100%;
+  }
+  .live-review__cluster .captures-strip-top.drop-mini-reserve-strip {
+    order: 9;
+  }
+  .live-review__cluster .captures-strip-bottom.drop-mini-reserve-strip {
+    order: 33;
+  }
+
+  /* Compact clock tab: the seat line is ~40px, not the rail's 52px block. */
+  .live-review__cluster .clocks div {
+    width: auto;
+    min-height: 0;
+    padding: 4px 12px;
+    border: 1px solid var(--site-border);
+    border-radius: var(--site-radius-sm, 6px);
+  }
+
+  .live-review__cluster .clocks strong {
+    font-size: 26px;
+  }
+
+  /* The table's rows lose the box around them; the replay band keeps its own
+     hairlines and the notice keeps its tint. */
+  .live-review__cluster .round-table__row {
+    padding: 2px 0;
+  }
+
+  .live-review__cluster .replay-console {
+    margin-top: 6px;
+    border: 1px solid var(--site-border);
+    border-radius: var(--site-radius, 10px);
+    background: var(--site-panel, var(--site-surface));
+    overflow: hidden;
   }
 }

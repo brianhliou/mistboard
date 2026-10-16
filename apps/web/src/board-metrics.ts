@@ -14,6 +14,31 @@ export function tokenPieceSize(cell: number): number {
   return Math.round(cell * TOKEN_PIECE_RATIO);
 }
 
+// 2026-10-14 (the new piece look, Brian): a xiangqi-family piece's OUTER EDGE
+// spans 98% of the point gap or cell. Every xiangqi piece is drawn in a 100-unit
+// box whose outline ends at 94.8 (r 46 plus half a 2.8 ring), so the box is
+// cell x 0.98 / 0.948, about 1.034 cells. tokenPieceSize stays the layout size
+// the board's marks are tuned on (last-move halo, check glow, selection rings,
+// hit areas); only the piece drawing grows.
+export const XIANGQI_PIECE_REACH = 0.98;
+/** How much of its 100-unit box a xiangqi piece's outline spans. */
+export const XIANGQI_PIECE_OUTLINE_SHARE = 0.948;
+
+/**
+ * A piece box rounded to a quarter unit. Quarters (and the eighths that halving
+ * them gives) are exact in binary, so a piece placed at centre minus half its box
+ * prints as a clean coordinate instead of 4.984999999999999. The rounding moves
+ * the outer edge by at most 0.2% of a cell at board sizes.
+ */
+export function roundPieceBox(size: number): number {
+  return Math.round(size * 4) / 4;
+}
+
+/** The box a xiangqi-family piece is drawn in on a board of this cell or gap. */
+export function xiangqiPieceDrawSize(cell: number): number {
+  return roundPieceBox((cell * XIANGQI_PIECE_REACH) / XIANGQI_PIECE_OUTLINE_SHARE);
+}
+
 // Board corner rounding is defined once in @mistboard/board-render (board-svg and
 // grid-board need it, and a package cannot import from an app). Re-exported here so the
 // existing import sites keep working and there is still one number.

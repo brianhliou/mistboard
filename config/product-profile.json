@@ -4,6 +4,7 @@
     "fortress-xiangqi",
     "duck-xiangqi",
     "atomic-xiangqi",
+    "crazyhouse-xiangqi",
     "banqi",
     "jungle",
     "jungle-flip",
@@ -20,7 +21,8 @@
     "jieqi": "MISTBOARD_JIEQI_ENABLED",
     "dark-xiangqi": "MISTBOARD_DARK_XIANGQI_ENABLED",
     "duck-xiangqi": "MISTBOARD_DUCK_XIANGQI_ENABLED",
-    "atomic-xiangqi": "MISTBOARD_ATOMIC_XIANGQI_ENABLED"
+    "atomic-xiangqi": "MISTBOARD_ATOMIC_XIANGQI_ENABLED",
+    "crazyhouse-xiangqi": "MISTBOARD_CRAZYHOUSE_XIANGQI_ENABLED"
   },
   "productAdditionalServerFlags": ["MISTBOARD_CORRESPONDENCE_ENABLED"]
 }

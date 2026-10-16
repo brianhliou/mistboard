@@ -270,8 +270,7 @@
    thumbnail the blur is about a pixel, and the piece disc and stroke carry the
    silhouette without it. Two classes to out-specify .xq-piece in live-xiangqi.css,
    for the same chunk-order reason as the rules below. */
-.xqb-card-board .xq-piece,
-.xqb-card-board .xq-live-lastmove-ring {
+.xqb-card-board .xq-piece {
   filter: none;
 }
 
@@ -304,23 +303,6 @@
   min-width: 0;
   font-size: 13px;
   font-weight: 700;
-}
-
-.xqb-card-player::before {
-  content: "";
-  flex: none;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  border: 1px solid var(--site-border-soft);
-}
-
-.xqb-card-player-red::before {
-  background: #c0392b;
-}
-
-.xqb-card-player-black::before {
-  background: #2b2b2b;
 }
 
 .xqb-card-player-name {
@@ -409,15 +391,11 @@
   min-height: 0;
 }
 
+/* Colours: the seat tokens (seat-disc-ink.css), which default to Red/Black. */
 .xqb-eval-gauge .review-eval-bar {
   position: relative;
   width: 100%;
   height: 100%;
-  background: color-mix(in srgb, #34302e 85%, var(--site-panel, #fff));
-}
-
-.xqb-eval-gauge .review-eval-bar__fill {
-  background: color-mix(in srgb, #c0563f 72%, var(--site-panel, #fff));
 }
 
 /* Live engine panel: headline eval, engine name and depth, ranked lines.
@@ -510,14 +488,19 @@
   color: var(--site-text);
 }
 
+/* The review engine panel's chips (engine-panel.css), from the same seat tokens. */
 .xqb-engine-line-eval.is-red {
-  background: #f2ede3;
-  color: #2b2724;
+  background: var(--seat-first-chip, #c0563f);
+  color: var(--seat-first-on-chip, #fff);
 }
 
 .xqb-engine-line-eval.is-black {
-  background: #34302e;
-  color: #f2ede3;
+  background: var(--seat-second-chip, #34302e);
+  color: var(--seat-second-on-chip, #f2ede3);
+}
+
+:root[data-effective-theme="dark"] .xqb-engine-line-eval.is-black {
+  box-shadow: inset 0 0 0 1px rgba(242, 237, 227, 0.22);
 }
 
 .xqb-engine-line-eval.is-even {
@@ -1259,4 +1242,1700 @@
     display: block;
     overflow-x: auto;
   }
+}
+
+/* A team league round, one section per match: the two teams and the score,
+   the match name beneath, its tables, then any tiebreak. */
+.xqb-match {
+  display: grid;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--site-border-soft);
+}
+
+.xqb-match-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  color: var(--site-heading);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.xqb-match-team-won {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+.xqb-match-score {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.xqb-match-sub {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 13px;
+}
+
+.xqb-match-subheading {
+  margin: 4px 0 0;
+  color: var(--site-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* The round grid's eval gauge: the review's bar, in flow, a thin column
+   flush against the card's board. The row aligns to the top so the board
+   keeps its own aspect-ratio height (stretching it to a row with no height
+   collapsed it), and only the gauge stretches to match. */
+.xqb-card-board-row {
+  display: grid;
+  grid-template-columns: 7px minmax(0, 1fr);
+  gap: 4px;
+  align-items: start;
+}
+
+.xqb-card-gauge {
+  position: relative;
+  align-self: stretch;
+  min-height: 0;
+}
+
+.xqb-card-gauge .review-eval-bar {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  /* Colours: the seat tokens (seat-disc-ink.css), which default to Red/Black. */
+}
+
+.xqb-gauges-off .xqb-card-board-row {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.xqb-gauges-off .xqb-card-gauge {
+  display: none;
+}
+
+.xqb-gauge-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: start;
+  color: var(--site-muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* The broadcast section's own pages (index, calendar, about), lichess's
+   frame: a left rail of the section's pages and one centred panel, rather
+   than a full-width column that left the right half of the screen empty. */
+.xqb-section-page {
+  max-width: 1240px;
+}
+
+.xqb-section-layout {
+  display: grid;
+  grid-template-columns: 184px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.xqb-rail {
+  position: sticky;
+  top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 6px;
+}
+
+.xqb-rail-link {
+  padding: 7px 12px;
+  border-radius: var(--site-radius-sm);
+  color: var(--site-muted);
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.xqb-rail-link:hover,
+.xqb-rail-link:focus-visible {
+  color: var(--site-text);
+  background: color-mix(in srgb, var(--site-panel) 70%, transparent);
+}
+
+.xqb-rail-link-active {
+  color: var(--site-text);
+  background: var(--site-panel);
+  font-weight: 600;
+}
+
+/* Pro players and Pro teams start a second group, as lichess sets its FIDE
+   pages apart from the broadcast ones. */
+.xqb-rail-link-group {
+  margin-top: 22px;
+}
+
+.xqb-section-panel {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.xqb-section-title {
+  margin: 4px 0 0;
+  color: var(--site-heading);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+/* The status line leads a card, lichess's "Round 8 · in 11 hours"; live is
+   the site's live red, the same as the live badge. */
+.xqb-tour-status {
+  color: var(--site-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.xqb-tour-status-live {
+  color: #d23b2e;
+}
+
+.xqb-tour-card-name {
+  color: var(--site-heading);
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.xqb-tour-players {
+  color: var(--site-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.xqb-tour-card-live {
+  border-color: color-mix(in srgb, #d23b2e 55%, var(--site-border-soft));
+}
+
+/* The featured event: the board beside the event, larger type. */
+.xqb-tour-card-featured {
+  display: grid;
+  grid-template-columns: minmax(180px, 280px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+  padding: 14px;
+}
+
+.xqb-tour-card-featured .xqb-tour-card-copy {
+  gap: 6px;
+}
+
+.xqb-tour-card-featured .xqb-tour-card-name {
+  font-size: 22px;
+}
+
+.xqb-tour-card-featured .xqb-tour-status,
+.xqb-tour-card-featured .xqb-tour-players {
+  font-size: 14px;
+}
+
+/* Calendar rows, on the calendar page and the index's "Coming up". */
+.xqb-coming-up-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.xqb-cal-month h2 {
+  margin: 0 0 8px;
+  color: var(--site-heading);
+  font-size: 16px;
+}
+
+.xqb-cal {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.xqb-cal-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius-sm);
+  background: var(--site-panel);
+}
+
+.xqb-cal-row {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 14px;
+}
+
+.xqb-cal-row + .xqb-cal-row {
+  border-top: 1px solid var(--site-border-soft);
+}
+
+.xqb-cal-when {
+  color: var(--site-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.xqb-cal-what {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.xqb-cal-what strong {
+  color: var(--site-text);
+  font-size: 14px;
+}
+
+.xqb-cal-sub {
+  color: var(--site-muted);
+  font-size: 12px;
+}
+
+.xqb-cal-status {
+  color: var(--site-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.xqb-cal-status-live {
+  color: #d23b2e;
+}
+
+.xqb-about {
+  max-width: 68ch;
+  color: var(--site-text);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.xqb-about h2 {
+  margin: 22px 0 6px;
+  color: var(--site-heading);
+  font-size: 17px;
+}
+
+.xqb-about p {
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .xqb-section-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .xqb-rail {
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+    padding-top: 0;
+  }
+
+  .xqb-rail-link {
+    white-space: nowrap;
+  }
+
+  .xqb-rail-link-group {
+    margin-top: 0;
+    margin-left: 12px;
+  }
+
+  .xqb-tour-card-featured {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .xqb-cal-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .xqb-cal-when {
+    grid-column: 1 / -1;
+  }
+}
+
+/* lichess's board card: the players on the board's own sides, Black above
+   and Red below, each with their score. */
+.xqb-card-seat {
+  display: grid;
+  grid-template-columns: 9px minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+  min-height: 20px;
+  color: var(--site-text);
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.xqb-card-seat-disc {
+  --seat-disc-size: 9px;
+}
+
+/* Clips for the ellipsis, so it sets its own line box instead of the card's
+   1.2, which cut descenders (#543). */
+.xqb-card-seat-name {
+  overflow: hidden;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.xqb-card-seat-winner .xqb-card-seat-name {
+  font-weight: 600;
+}
+
+.xqb-score {
+  min-width: 1.2em;
+  color: var(--site-text);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.xqb-card-live {
+  color: #d23b2e;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* The left list, lichess's: a number, both players stacked with scores. */
+.xqb-rail-row {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.xqb-rail-no {
+  color: var(--site-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.xqb-rail-row .xqb-rail-players {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  white-space: normal;
+}
+
+.xqb-rail-row .xqb-card-seat {
+  min-height: 17px;
+  font-size: 12px;
+}
+
+.xqb-boards-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+}
+
+/* Playing: only live games, and a match with none of them goes too. */
+.xqb-live-only .xqb-board-card:not(.xqb-board-card-live),
+.xqb-live-only .xqb-match:not(:has(.xqb-board-card-live)),
+.xqb-live-only .xqb-match-subheading {
+  display: none;
+}
+
+.xqb-live-empty {
+  display: none;
+}
+
+.xqb-live-only .xqb-live-empty {
+  display: block;
+}
+
+/* Results off: every score and anything that gives the result away. The
+   space stays, so the layout does not jump when it comes back. */
+.xqb-results-off .xqb-score,
+.xqb-results-off .xqb-match-score,
+.xqb-results-off .xqb-match-split {
+  visibility: hidden;
+}
+
+.xqb-results-off .xqb-card-seat-winner .xqb-card-seat-name {
+  font-weight: inherit;
+}
+
+.xqb-results-off .xqb-match-team-won {
+  text-decoration: none;
+}
+
+/* ── Event page, lichess's relay layout ──────────────────────────────────────
+   The game list is the left column from the top of the page; the header, the
+   tabs and the section sit in the column beside it, and an open board takes
+   that whole column. The page uses the window's width the way the review
+   pages do, so a board has room to fill the height. */
+.xqb-shell.xqb-event {
+  /* lichess's relay page: about 1420px, centred, however wide the window. */
+  max-width: 1420px;
+}
+
+/* lichess's proportions: a 350px left column at full width, narrowing with
+   the window, then a 15px gap. */
+.xqb-event .xqb-event-layout-with-rail {
+  grid-template-columns: clamp(240px, 25%, 350px) minmax(0, 1fr);
+  gap: 15px;
+}
+
+.xqb-event-header {
+  border-bottom: 0;
+  padding: 0;
+  align-items: center;
+}
+
+.xqb-event-header h1 {
+  font-size: 26px;
+  line-height: 1.15;
+}
+
+.xqb-event-header .xqb-hero-meta {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: none;
+}
+
+.xqb-rail-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.xqb-rail-back-arrow {
+  font-size: 22px;
+  line-height: 0.8;
+  color: var(--site-muted);
+}
+
+.xqb-rail-back:hover .xqb-rail-back-arrow,
+.xqb-rail-back:focus-visible .xqb-rail-back-arrow {
+  color: var(--site-accent-strong);
+}
+
+.xqb-boards-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 18px;
+}
+
+.xqb-boards-head .xqb-round-meta {
+  margin: 0;
+}
+
+/* ── Event page, lichess's proportions (2026-09-23) ──────────────────────────
+   The left column (game list over the event's chat room) is pinned where it
+   first sits and fills the height below it, so it never moves while the
+   boards scroll. The right column is one panel: a header, pill tabs, a row of
+   switches, then the boards straight on the panel, five to a row at most,
+   each drawn as a card only under the pointer. */
+.xqb-event-layout-with-rail .xqb-event-side {
+  grid-area: rail;
+  position: sticky;
+  top: var(--xqb-side-top, 12px);
+  align-self: start;
+  /* Ends where the page's bottom padding starts (.xqb-shell, 36px), so at the
+     foot of the page the column is not pushed up by its own container. */
+  height: calc(100vh - var(--xqb-side-top, 12px) - 36px);
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.xqb-event-side .xqb-side-rail {
+  position: static;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.xqb-event-side .xqb-rail-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+}
+
+.xqb-event-chat {
+  flex: 0 0 38%;
+  min-height: 200px;
+  display: flex;
+}
+
+.xqb-event-chat .review-spectator-chat {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* An open board: the review page's alignment. The board, the moves and the
+   left column start on one line, the player strip above the board in the
+   layout's top padding rather than inside the board's column, and the left
+   column scrolls with the board and ends where it ends (matchBoardHeight).
+   One column keeps the embedded shell's own strip space. */
+@media (min-width: 901px) {
+  .xqb-event-board-open .xqb-event-layout-with-rail {
+    padding-top: 26px;
+  }
+
+  .xqb-event-board-open .xqb-event-layout-with-rail .review-shell--embedded {
+    padding-top: 0;
+  }
+
+  .xqb-event-board-open .xqb-event-layout-with-rail .xqb-event-side {
+    position: static;
+    height: var(--xqb-board-h, calc(100vh - 160px));
+  }
+}
+
+@media (max-width: 900px) {
+  .xqb-event-layout-with-rail .xqb-event-side {
+    position: static;
+    height: auto;
+    min-height: 0;
+  }
+
+  .xqb-event-chat {
+    flex: none;
+    height: 320px;
+  }
+}
+
+.xqb-event:not(.xqb-event-board-open) .xqb-event-content {
+  container-type: inline-size;
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius);
+  background: var(--site-panel);
+  padding: 0 20px 20px;
+  gap: 14px;
+}
+
+.xqb-event-content > .xqb-event-header {
+  margin: 0 -20px;
+  padding: 22px 24px 20px;
+  border-radius: var(--site-radius) var(--site-radius) 0 0;
+  background: color-mix(in srgb, var(--site-panel) 94%, var(--site-text));
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.xqb-event-content > .xqb-event-header h1 {
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.xqb-event-content > .xqb-event-header .xqb-hero-actions {
+  justify-content: flex-start;
+}
+
+.xqb-event-header .xqb-round-select {
+  min-width: min(100%, 340px);
+}
+
+/* Pill tabs, lichess's: each section a bordered button, the open one in the
+   accent. */
+.xqb-event-content .xqb-tabs {
+  flex-wrap: wrap;
+  gap: 10px;
+  border-bottom: 0;
+  padding-top: 4px;
+}
+
+.xqb-event-content .xqb-tab {
+  border: 1px solid var(--site-border-soft);
+  border-radius: 7px;
+  margin: 0;
+  padding: 8px 20px;
+  color: var(--site-text);
+  font-weight: 500;
+}
+
+.xqb-event-content .xqb-tab:hover,
+.xqb-event-content .xqb-tab:focus-visible {
+  border-color: color-mix(in srgb, var(--site-accent) 50%, var(--site-border-soft));
+}
+
+.xqb-event-content .xqb-tab-active {
+  border-color: var(--site-accent);
+  color: var(--site-accent-strong);
+}
+
+.xqb-boards-head .xqb-round-meta {
+  color: var(--site-muted);
+  font-size: 13px;
+}
+
+/* Switches, not checkboxes, for the boards toggles. */
+.xqb-gauge-toggle input {
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 30px;
+  height: 16px;
+  margin: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--site-text) 22%, transparent);
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.xqb-gauge-toggle input::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--site-panel);
+  transition: transform 120ms ease;
+}
+
+.xqb-gauge-toggle input:checked {
+  background: var(--site-accent);
+}
+
+.xqb-gauge-toggle input:checked::after {
+  transform: translateX(14px);
+}
+
+.xqb-gauge-toggle input:focus-visible {
+  outline: 2px solid var(--site-accent);
+  outline-offset: 2px;
+}
+
+/* Five boards to a row at most, fewer as the column narrows; every match's
+   tables line up under each other because the count is fixed per width. */
+.xqb-event-content .xqb-board-grid {
+  grid-template-columns: repeat(var(--xqb-grid-cols, 2), minmax(0, 1fr));
+  gap: 6px 8px;
+}
+
+@container (min-width: 560px) {
+  .xqb-event-content .xqb-board-grid {
+    --xqb-grid-cols: 3;
+  }
+}
+
+@container (min-width: 780px) {
+  .xqb-event-content .xqb-board-grid {
+    --xqb-grid-cols: 4;
+  }
+}
+
+/* Four to a row at most (tried five; four gives each board more room). */
+@container (min-width: 960px) {
+  .xqb-event-content .xqb-board-grid {
+    --xqb-grid-cols: 4;
+  }
+}
+
+.xqb-event-content .xqb-board-card {
+  gap: 4px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  padding: 5px 4px;
+}
+
+.xqb-event-content .xqb-board-card:hover,
+.xqb-event-content .xqb-board-card:focus-visible {
+  border-color: var(--site-border-soft);
+  background: color-mix(in srgb, var(--site-panel) 90%, var(--site-text));
+}
+
+.xqb-event-content .xqb-card-board {
+  box-shadow: none;
+  border-radius: 6px;
+}
+
+/* The gauge sits right of the board, lichess's side. */
+.xqb-card-board-row {
+  grid-template-columns: minmax(0, 1fr) 7px;
+}
+
+@media (max-width: 900px) {
+  .xqb-event .xqb-event-layout-with-rail {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Game list rows, lichess's (2026-09-23) ──────────────────────────────────
+   Number, an eval pill, the pair with titles, scores coloured by result; rows
+   ruled apart rather than floating as rounded chips. */
+.xqb-side-rail .xqb-rail-list {
+  gap: 0;
+}
+
+.xqb-side-rail .xqb-rail-row {
+  grid-template-columns: 18px 10px minmax(0, 1fr) auto;
+  gap: 10px;
+  border: 0;
+  border-bottom: 1px solid var(--site-border-soft);
+  border-radius: 0;
+  padding: 7px 8px 7px 2px;
+}
+
+.xqb-side-rail .xqb-rail-row:last-child {
+  border-bottom: 0;
+}
+
+.xqb-side-rail .xqb-rail-row .xqb-card-seat {
+  font-size: 13px;
+  font-weight: 500;
+  min-height: 19px;
+}
+
+.xqb-rail-gauge {
+  position: relative;
+  width: 10px;
+  height: 34px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--site-text) 14%, transparent);
+}
+
+.xqb-rail-gauge .review-eval-bar {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* The even line, lichess's tick across the middle. */
+.xqb-rail-gauge:not(.xqb-rail-gauge-empty)::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: color-mix(in srgb, var(--site-accent) 70%, transparent);
+}
+
+.xqb-score-win {
+  color: #4f8a2a;
+}
+
+.xqb-score-loss {
+  color: #c23b2e;
+}
+
+.xqb-player-title {
+  color: #a86f12;
+  font-weight: 700;
+}
+
+:root[data-effective-theme="dark"] .xqb-score-win {
+  color: #7fb24a;
+}
+
+:root[data-effective-theme="dark"] .xqb-score-loss {
+  color: #e2604f;
+}
+
+:root[data-effective-theme="dark"] .xqb-player-title {
+  color: #d4a24a;
+}
+
+/* ── Team events, lichess's (2026-09-23) ─────────────────────────────────────
+   Boards is one grid with a team filter; the round's matches are listed on
+   the Teams tab above the league table, each with a way to its games. */
+.xqb-team-filter {
+  min-width: 220px;
+}
+
+.xqb-teams-heading {
+  margin: 6px 0 0;
+  color: var(--site-heading);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.xqb-match-list {
+  display: grid;
+}
+
+.xqb-match-list .xqb-match {
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 16px;
+  row-gap: 4px;
+  padding: 12px 0;
+}
+
+.xqb-match-list .xqb-match:last-child {
+  border-bottom: 1px solid var(--site-border-soft);
+}
+
+.xqb-match-open {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  appearance: none;
+  border: 1px solid var(--site-border-soft);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--site-text);
+  padding: 6px 16px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.xqb-match-open:hover,
+.xqb-match-open:focus-visible {
+  border-color: var(--site-accent);
+  color: var(--site-accent-strong);
+}
+
+/* A filtered team's match line above its games: no rule above it. */
+.xqb-tab-panel > .xqb-match {
+  border-top: 0;
+  padding-top: 0;
+}
+
+/* The game list's scrollbar, lichess's: thin, flush with the panel's right
+   edge, a quiet thumb on no track. */
+.xqb-event-side .xqb-side-rail {
+  padding-right: 0;
+}
+
+.xqb-event-side .xqb-rail-list {
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--site-text) 28%, transparent) transparent;
+}
+
+.xqb-event-side .xqb-rail-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.xqb-event-side .xqb-rail-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.xqb-event-side .xqb-rail-list::-webkit-scrollbar-thumb {
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--site-text) 28%, transparent);
+}
+
+/* An empty card gauge keeps its column (every board the same size) and
+   draws a faint track, like the game list's empty pill. */
+.xqb-card-gauge-empty {
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--site-text) 10%, transparent);
+}
+
+.xqb-card-gauge .review-eval-bar {
+  display: block;
+}
+
+/* Packed tighter (lichess's grid): rows touch, the names hug their board, and
+   the gauge sits nearly flush against it. The hover card's padding is the only
+   space between boards. */
+.xqb-event-content .xqb-board-grid {
+  gap: 0 4px;
+}
+
+.xqb-event-content .xqb-board-card {
+  gap: 2px;
+  padding: 4px 4px 5px;
+}
+
+.xqb-event-content .xqb-card-seat {
+  min-height: 18px;
+}
+
+.xqb-event-content .xqb-card-board-row {
+  grid-template-columns: minmax(0, 1fr) 6px;
+  gap: 3px;
+}
+
+.xqb-event-content .xqb-gauges-off .xqb-card-board-row,
+.xqb-gauges-off .xqb-event-content .xqb-card-board-row {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Bigger boards, less between them: the panel's side padding and the space
+   between columns go to the boards themselves. */
+.xqb-event:not(.xqb-event-board-open) .xqb-event-content {
+  padding: 0 12px 16px;
+}
+
+.xqb-event-content > .xqb-event-header {
+  margin: 0 -12px;
+}
+
+.xqb-event-content > .xqb-tabs,
+.xqb-event-content > .xqb-event-body > .xqb-boards-head {
+  padding-inline: 4px;
+}
+
+.xqb-event-content .xqb-board-grid {
+  gap: 0 2px;
+}
+
+.xqb-event-content .xqb-board-card {
+  padding: 3px 2px 4px;
+}
+
+.xqb-event-content .xqb-card-board-row {
+  grid-template-columns: minmax(0, 1fr) 5px;
+  gap: 2px;
+}
+
+/* The card gauge a touch thicker, closer to lichess's. */
+.xqb-event-content .xqb-card-board-row {
+  grid-template-columns: minmax(0, 1fr) 8px;
+}
+
+/* Slightly rounded ends on the card gauge, filled or empty. */
+.xqb-card-gauge .review-eval-bar,
+.xqb-card-gauge-empty {
+  border-radius: 3px;
+}
+
+/* Players tab: the name is the way to the player's page. */
+a.xqb-standings-name {
+  color: var(--site-heading);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+a.xqb-standings-name:hover,
+a.xqb-standings-name:focus-visible {
+  color: var(--site-accent-strong);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ── Overview, lichess's (2026-09-23) ────────────────────────────────────────
+   One rounded strip of the event's facts and links, then the share box as a
+   disclosure. */
+.xqb-overview-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 28px;
+  border-radius: var(--site-radius);
+  background: color-mix(in srgb, var(--site-panel) 92%, var(--site-text));
+  padding: 16px 22px;
+  color: var(--site-text);
+  font-size: 14px;
+}
+
+.xqb-overview-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.xqb-overview-icon {
+  display: inline-flex;
+  color: var(--site-muted);
+}
+
+.xqb-overview-link {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--site-link, var(--site-accent-strong));
+  font: inherit;
+  font-size: 14px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.xqb-overview-link:hover,
+.xqb-overview-link:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.xqb-overview-share {
+  border-radius: var(--site-radius);
+  background: color-mix(in srgb, var(--site-panel) 92%, var(--site-text));
+  padding: 4px 22px 18px;
+}
+
+.xqb-overview-share > summary {
+  cursor: pointer;
+  padding: 12px 0;
+  color: var(--site-heading);
+  font-size: 15px;
+  font-weight: 600;
+  list-style-position: inside;
+}
+
+.xqb-overview-share:not([open]) {
+  padding-bottom: 4px;
+}
+
+.xqb-overview-share {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Boards pager, lichess's (2026-09-23) ────────────────────────────────────
+   Page buttons and the count, the team filter, the page size; the switches
+   sit on the row below. */
+.xqb-boards-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  padding-inline: 4px;
+}
+
+.xqb-pager {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.xqb-pager-button {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--site-text);
+  cursor: pointer;
+}
+
+.xqb-pager-button:hover:not(:disabled),
+.xqb-pager-button:focus-visible {
+  background: color-mix(in srgb, var(--site-text) 10%, transparent);
+  color: var(--site-accent-strong);
+}
+
+.xqb-pager-button:disabled {
+  color: color-mix(in srgb, var(--site-text) 30%, transparent);
+  cursor: default;
+}
+
+.xqb-pager-count {
+  min-width: 72px;
+  padding: 0 6px;
+  color: var(--site-text);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.xqb-per-page {
+  min-width: 150px;
+}
+
+/* ── Round picker, lichess's (2026-09-23) ────────────────────────────────────
+   A wide pill naming the round and its status, opening a panel of every round
+   with its start and status. */
+.xqb-round-picker {
+  position: relative;
+  width: min(100%, 560px);
+}
+
+.xqb-round-picker-button {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  border: 1px solid var(--site-border-soft);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--site-panel) 80%, var(--site-bg, #000));
+  color: var(--site-heading);
+  padding: 9px 14px 9px 20px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.xqb-round-picker-button:hover,
+.xqb-round-picker-button:focus-visible,
+.xqb-round-picker-button[aria-expanded="true"] {
+  border-color: color-mix(in srgb, var(--site-accent) 55%, var(--site-border-soft));
+}
+
+.xqb-round-picker-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.xqb-round-picker-caret {
+  display: inline-flex;
+  color: var(--site-accent);
+}
+
+.xqb-round-picker-panel {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: min(60vh, 420px);
+  overflow-y: auto;
+  border: 1px solid var(--site-border-soft);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--site-panel) 88%, var(--site-text));
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+  padding: 6px 0;
+  scrollbar-width: thin;
+}
+
+.xqb-round-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(88px, auto);
+  align-items: center;
+  gap: 18px;
+  padding: 9px 20px;
+  color: var(--site-text);
+  text-decoration: none;
+}
+
+.xqb-round-option-name {
+  color: var(--site-accent-strong);
+  font-size: 17px;
+}
+
+.xqb-round-option-when {
+  color: var(--site-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.xqb-round-option .xqb-round-status {
+  justify-self: end;
+}
+
+.xqb-round-option:hover,
+.xqb-round-option:focus-visible {
+  background: color-mix(in srgb, var(--site-accent) 14%, transparent);
+}
+
+.xqb-round-option-current,
+.xqb-round-option-current:hover {
+  background: var(--site-accent);
+}
+
+.xqb-round-option-current .xqb-round-option-name,
+.xqb-round-option-current .xqb-round-option-when,
+.xqb-round-option-current .xqb-round-status {
+  color: var(--site-on-accent, #fff);
+}
+
+.xqb-round-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--site-muted);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.xqb-round-status-check {
+  display: inline-flex;
+  color: #4f8a2a;
+}
+
+:root[data-effective-theme="dark"] .xqb-round-status-check {
+  color: #7fb24a;
+}
+
+.xqb-round-status-live {
+  color: #d23b2e;
+  font-weight: 700;
+}
+
+.xqb-round-option-current .xqb-round-status-check {
+  color: inherit;
+}
+
+/* ── Overview polish ──────────────────────────────────────────────────────── */
+.xqb-overview-strip {
+  justify-content: space-evenly;
+  gap: 12px 32px;
+  padding: 18px 28px;
+}
+
+.xqb-overview-icon {
+  color: var(--site-accent);
+}
+
+/* The share box: the title is a tab sitting on the box's top-right edge. */
+.xqb-overview-share {
+  position: relative;
+  margin-top: 30px;
+  padding: 34px 28px 26px;
+  gap: 22px;
+}
+
+.xqb-overview-share:not([open]) {
+  padding: 0;
+  min-height: 12px;
+}
+
+.xqb-share-tab {
+  position: absolute;
+  top: -22px;
+  right: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 12px 12px 0 0;
+  background: inherit;
+  padding: 10px 18px 8px;
+  color: var(--site-text);
+  font-size: 15px;
+  font-weight: 500;
+  list-style: none;
+  cursor: pointer;
+}
+
+.xqb-share-tab::-webkit-details-marker {
+  display: none;
+}
+
+.xqb-share-chevron {
+  display: inline-flex;
+  transform: rotate(180deg);
+  transition: transform 120ms ease;
+}
+
+.xqb-overview-share:not([open]) .xqb-share-chevron {
+  transform: none;
+}
+
+.xqb-overview-share .xqb-share-row {
+  display: grid;
+  gap: 8px;
+}
+
+.xqb-share-label {
+  color: var(--site-heading);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.xqb-share-field {
+  display: flex;
+  border: 1px solid var(--site-border-soft);
+  border-radius: 10px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--site-panel) 70%, var(--site-bg, #000));
+}
+
+.xqb-share-field .xqb-share-url {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--site-text);
+  padding: 11px 16px;
+  font: inherit;
+  font-size: 14px;
+}
+
+.xqb-share-field .xqb-share-url:focus {
+  outline: none;
+}
+
+.xqb-share-field:focus-within {
+  border-color: color-mix(in srgb, var(--site-accent) 55%, var(--site-border-soft));
+}
+
+.xqb-share-field .xqb-share-copy {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  border: 0;
+  border-left: 1px solid var(--site-border-soft);
+  border-radius: 0;
+  background: color-mix(in srgb, var(--site-text) 6%, transparent);
+  color: var(--site-text);
+  padding: 0;
+  cursor: pointer;
+}
+
+.xqb-share-field .xqb-share-copy:hover,
+.xqb-share-field .xqb-share-copy:focus-visible {
+  color: var(--site-accent-strong);
+  background: color-mix(in srgb, var(--site-accent) 14%, transparent);
+}
+
+.xqb-share-field .xqb-share-copied {
+  color: #4f8a2a;
+}
+
+:root[data-effective-theme="dark"] .xqb-round-option-current .xqb-round-status-check {
+  color: inherit;
+}
+
+/* <details> does not lay its content out as flex everywhere; space the rows
+   with margins instead. */
+.xqb-overview-share .xqb-share-row + .xqb-share-row {
+  margin-top: 24px;
+}
+
+.xqb-overview-share[open] .xqb-share-tab {
+  box-shadow: 0 -1px 0 var(--site-border-soft);
+}
+
+.xqb-overview-share[open] {
+  border-top: 1px solid var(--site-border-soft);
+}
+
+/* Centred rows (lichess's strip): a wrapped second row sits under the first
+   instead of being pulled to the edges. */
+.xqb-overview-strip {
+  justify-content: center;
+  gap: 12px 36px;
+}
+
+/* ── Event art placeholder (2026-09-24) ──────────────────────────────────────
+   A board-coloured panel with a faint grid and river, the event's Chinese
+   name large in its ink, the English name and "city · year" below. Stands in
+   for real art in the event header and on the broadcast list's cards. */
+.xqb-event-art {
+  --xqb-art-ink: #a63328;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 8px;
+  background-color: #f1dcb0;
+  background-image:
+    linear-gradient(
+      to bottom,
+      transparent calc(50% - 9px),
+      color-mix(in srgb, #f1dcb0 70%, var(--xqb-art-ink)) calc(50% - 9px),
+      color-mix(in srgb, #f1dcb0 70%, var(--xqb-art-ink)) calc(50% + 9px),
+      transparent calc(50% + 9px)
+    ),
+    repeating-linear-gradient(
+      to right,
+      color-mix(in srgb, var(--xqb-art-ink) 13%, transparent) 0 1px,
+      transparent 1px 11.11%
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--xqb-art-ink) 13%, transparent) 0 1px,
+      transparent 1px 10%
+    );
+  box-shadow:
+    inset 0 0 0 5px #f1dcb0,
+    inset 0 0 0 6px color-mix(in srgb, var(--xqb-art-ink) 45%, transparent);
+  padding: 14px 18px;
+  text-align: center;
+  color: var(--xqb-art-ink);
+}
+
+.xqb-event-art-zh {
+  max-width: 100%;
+  font-family: "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;
+  font-size: clamp(16px, 2.2cqw, 30px);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  text-wrap: balance;
+  background: #f1dcb0;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.xqb-event-art-en {
+  max-width: 100%;
+  color: #3b2a1c;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-wrap: balance;
+  background: #f1dcb0;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.xqb-event-art-meta {
+  color: color-mix(in srgb, #3b2a1c 70%, transparent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: #f1dcb0;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+/* The event header: the art on the right, flush with the header's edges. */
+.xqb-event-content > .xqb-event-header {
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 34%);
+  grid-template-areas:
+    "copy art"
+    "actions art";
+  column-gap: 24px;
+}
+
+.xqb-event-header > .xqb-hero-copy {
+  grid-area: copy;
+}
+
+.xqb-event-header > .xqb-hero-actions {
+  grid-area: actions;
+}
+
+.xqb-event-header > .xqb-event-art {
+  grid-area: art;
+  align-self: stretch;
+  aspect-ratio: auto;
+  min-height: 150px;
+  margin: -22px -24px -20px 0;
+  border-radius: 0 var(--site-radius) 0 0;
+}
+
+.xqb-event-header > .xqb-event-art .xqb-event-art-zh {
+  font-size: 24px;
+}
+
+@container (max-width: 760px) {
+  .xqb-event-content > .xqb-event-header {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "copy"
+      "actions";
+  }
+
+  .xqb-event-header > .xqb-event-art {
+    display: none;
+  }
+}
+
+/* The list's cards: the art on top, lichess's card image. */
+.xqb-tour-card > .xqb-event-art .xqb-event-art-zh {
+  font-size: 17px;
+}
+
+.xqb-tour-card > .xqb-event-art .xqb-event-art-en {
+  font-size: 11px;
+}
+
+.xqb-tour-card-featured > .xqb-event-art .xqb-event-art-zh {
+  font-size: 22px;
+}
+
+/* Card-size art: a ten-character name fits on one line. */
+.xqb-tour-card > .xqb-event-art {
+  padding: 10px 10px;
+}
+
+.xqb-tour-card > .xqb-event-art .xqb-event-art-zh {
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
+
+/* ── Live state, lichess's (2026-09-24) ──────────────────────────────────────
+   The side to move is marked where a finished game shows its score (lichess
+   runs that side's clock there in orange; the source has no clocks). A live
+   round reads "Ongoing" after a red dot. */
+.xqb-to-move::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d64f00;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #d64f00 22%, transparent);
+  vertical-align: middle;
+}
+
+.xqb-round-status-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #d23b2e;
+}
+
+.xqb-round-status-live {
+  color: var(--site-text);
+  font-weight: 500;
+}
+
+/* An event with no records yet: its format and when its games arrive, under
+   the facts strip, where the boards grid would otherwise be empty. */
+.xqb-overview-pending {
+  margin-top: 14px;
+  padding: 16px 20px;
+  border-radius: var(--site-radius);
+  background: var(--site-panel-soft);
+  color: var(--site-text);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.xqb-overview-pending p {
+  margin: 0;
+  max-width: 72ch;
+}
+
+.xqb-overview-pending p + p {
+  margin-top: 8px;
+}
+
+/* The game list of a round with no games yet. */
+.xqb-rail-empty {
+  margin: 0;
+  padding: 14px 12px;
+  color: var(--site-muted);
+  font-size: 13px;
+}
+
+/* The calendar's months before this one, one click away. */
+.xqb-cal-earlier {
+  align-self: flex-start;
+  margin: 0 0 6px;
+  padding: 7px 14px;
+  border: 1px solid var(--site-border-soft);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--site-muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.xqb-cal-earlier:hover {
+  color: var(--site-text);
+  border-color: var(--site-border);
+}
+
+/* ── Results-only boards (2026-09-25) ────────────────────────────────────────
+   A pairing the source published with its result and no moves (dpxq round
+   pages): the start position faded under a label, the seats and scores as
+   on any card, and no hover, because there is nothing to open. */
+.xqb-board-card-no-moves {
+  cursor: default;
+}
+
+.xqb-board-card-no-moves .xqb-card-board {
+  position: relative;
+}
+
+.xqb-board-card-no-moves .xqb-card-board svg {
+  opacity: 0.45;
+}
+
+/* "No record published" (2026-10-07): a calm caption, not an error box. The
+   bold muted pill over a dim board read as a board that failed to load. */
+.xqb-card-no-moves,
+.xqb-review-no-record-label {
+  position: absolute;
+  inset: 50% 10% auto;
+  transform: translateY(-50%);
+  margin: 0;
+  border: 1px solid var(--site-border-soft);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--site-panel) 92%, transparent);
+  color: var(--site-text);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.2;
+  padding: 4px 8px;
+  text-align: center;
+}
+
+/* The board view of the same game: the start position dimmed under the same
+   caption, centred on the board. */
+.xqb-review-no-record .dxq-postgame__board svg {
+  opacity: 0.45;
+}
+
+.xqb-review-no-record-label {
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.95rem;
+  padding: 6px 14px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.xqb-board-card-no-moves:hover {
+  border-color: var(--site-border-soft);
+  background: var(--site-panel);
+}
+
+.xqb-event-content .xqb-board-card-no-moves:hover {
+  border-color: transparent;
+  background: transparent;
+}
+
+/* The game list's row for the same pairing (2026-10-08): not a link, so no
+   hover at all (the old hover drew a border where the row had none), and a
+   finished one dimmed under the card's caption so the list says which rows
+   open before the cursor does. The open board's own row keeps its mark. */
+.xqb-rail-row-no-moves:not(.xqb-rail-row-current) {
+  cursor: default;
+}
+
+.xqb-rail-row-no-moves:not(.xqb-rail-row-current):hover {
+  border-color: transparent;
+  background: transparent;
+}
+
+.xqb-side-rail .xqb-rail-row-no-moves:not(.xqb-rail-row-current):hover {
+  border-color: var(--site-border-soft);
+}
+
+.xqb-rail-row-no-record:not(.xqb-rail-row-current)
+  :is(.xqb-rail-no, .xqb-rail-gauge, .xqb-card-seat) {
+  opacity: 0.5;
+}
+
+.xqb-rail-no-record {
+  color: var(--site-muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.3;
 }

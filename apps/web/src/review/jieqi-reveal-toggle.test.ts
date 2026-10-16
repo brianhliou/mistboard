@@ -30,14 +30,14 @@ function boardHtml(root: HTMLElement): string {
 }
 
 function menuItem(root: HTMLElement, label: string): HTMLButtonElement | null {
-  for (const button of root.querySelectorAll<HTMLButtonElement>('.review-menu__item')) {
-    if (button.querySelector('.review-menu__item-label')?.textContent === label) return button;
+  for (const button of root.querySelectorAll<HTMLButtonElement>('.move-nav-menu__item')) {
+    if (button.querySelector('.move-nav-menu__item-label')?.textContent === label) return button;
   }
   return null;
 }
 
 function openMenu(root: HTMLElement): void {
-  root.querySelector<HTMLButtonElement>('.review-controls__menu-button')?.click();
+  root.querySelector<HTMLButtonElement>('.move-nav-bar__menu-button')?.click();
 }
 
 describe('jieqi review reveal toggle', () => {

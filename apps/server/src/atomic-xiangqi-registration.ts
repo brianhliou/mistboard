@@ -17,7 +17,6 @@ import type {
   RoomTimeControl,
 } from '@mistboard/game';
 import { atomicXiangqiFen } from '@mistboard/game';
-import { currentAccountUser } from './account-session.js';
 import {
   ATOMIC_XIANGQI_ANALYSIS_DEPTH,
   ATOMIC_XIANGQI_ANALYSIS_ENGINE_ID,
@@ -34,8 +33,10 @@ import * as persistence from './persistence.js';
 import { handleAtomicXiangqiCreate, requestsAtomicXiangqi } from './routes/atomic-xiangqi-rooms.js';
 import { isAllowedFullTimeControl } from './routes/lib.js';
 import { scheduleAtomicXiangqiEngineMove } from './server-atomic-xiangqi-engine.js';
+import { tenantCorrespondenceBinding } from './variant-tenant/correspondence.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
+import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
 import {
   registerVariantTenant,
   type TenantManagedRoom,
@@ -43,7 +44,7 @@ import {
 } from './variant-tenant/registry.js';
 import type { TenantRoomEngineSeat } from './variant-tenant/room-factory.js';
 import { createTenantLiveRoom } from './variant-tenant/room-factory.js';
-import { countActiveTenantGames } from './variant-tenant/runtime.js';
+import { countActiveTenantGames, tenantReplayCheck } from './variant-tenant/runtime.js';
 import type { TenantRuntimeRoom } from './variant-tenant/tenant.js';
 import {
   clearTenantRuntimeTimers,
@@ -114,6 +115,21 @@ export function getOrLoadAtomicXiangqiRoom(
   return getOrLoadTenantRoom(atomicXiangqiTenant, atomicXiangqiRooms, roomId);
 }
 
+// Correspondence (days-per-move): seek accept seats both accounts, the sweeper
+// enforces the durable deadline through the ws runtime (variant-tenant/correspondence.ts).
+const atomicXiangqiCorrespondence = tenantCorrespondenceBinding(atomicXiangqiTenant, {
+  factoryContext: () => ({
+    rooms: atomicXiangqiRooms,
+    isRoomIdTaken: (roomId) => variantTenantRoomIdTaken(roomId, atomicXiangqiTenant.kind),
+    appendRoomEvent: persistence.appendRoomEvent,
+    isPersistenceEnabled: persistence.isInitialized,
+    recordPersistenceError: (roomId, seq, eventType, err) =>
+      recordTenantPersistenceError(atomicXiangqiTenant, roomId, seq, eventType, err),
+  }),
+  getOrLoadRoom: (roomId) => getOrLoadTenantRoom(atomicXiangqiTenant, atomicXiangqiRooms, roomId),
+  lifecycleCtx: atomicXiangqiWs.lifecycleCtx,
+});
+
 registerVariantTenant({
   kind: atomicXiangqiTenant.kind,
   gameSpecId: atomicXiangqiTenant.gameSpecId,
@@ -121,6 +137,7 @@ registerVariantTenant({
   isEngineClientId: atomicXiangqiTenant.engine?.isEngineClientId,
   engineDisplayName: (clientId) => atomicXiangqiTenant.engine?.displayName(clientId) ?? null,
   ownsSpecRouting: true,
+  replays: tenantReplayCheck(atomicXiangqiTenant),
   errorPrefix: 'atomic_xiangqi',
   enabled: atomicXiangqiTenant.enabled,
   // Mistboard TV channel, listed with the rules page (2026-09-17). Like the
@@ -133,7 +150,7 @@ registerVariantTenant({
     legacyVariants: ['atomic-xiangqi'],
   },
   rooms: atomicXiangqiRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,
-  activeGameCount: () => countActiveTenantGames(atomicXiangqiRooms.values()),
+  activeGameCount: () => countActiveTenantGames(atomicXiangqiRooms.values(), atomicXiangqiTenant),
   getOrLoadRoom: (roomId) =>
     getOrLoadAtomicXiangqiRoom(roomId) as Promise<TenantManagedRoom | null>,
   attachWebSocket: (ctx, socket, request, room) =>
@@ -148,18 +165,19 @@ registerVariantTenant({
       room as unknown as AtomicXiangqiLiveRoom,
     ),
   clearRuntimeTimers: (room) => clearTenantRuntimeTimers(room as unknown as AtomicXiangqiLiveRoom),
+  pauseOnShutdown: (at) =>
+    pauseTenantRoomsOnShutdown(
+      atomicXiangqiTenant,
+      atomicXiangqiRooms.values(),
+      atomicXiangqiWs.lifecycleCtx,
+      at,
+    ),
   clearRooms: () => atomicXiangqiRooms.clear(),
   http: {
     matchesCreateRequest: requestsAtomicXiangqi,
-    handleCreate: async (ctx, request, response, body) => {
-      const accountUser = body.rated === true ? await currentAccountUser(request) : null;
-      await handleAtomicXiangqiCreate(
-        { ...ctx, createAtomicXiangqiRoom },
-        response,
-        body,
-        accountUser,
-      );
-    },
+    // POST /api/rooms resolves the account for a rated request (registry.ts).
+    handleCreate: (ctx, _request, response, body, accountUser) =>
+      handleAtomicXiangqiCreate({ ...ctx, createAtomicXiangqiRoom }, response, body, accountUser),
   },
   // Find-opponent seek, rated on request: the atomic_xiangqi pool is in the
   // user_ratings CHECK since migration 147.
@@ -195,6 +213,5 @@ registerVariantTenant({
     },
     fen: atomicXiangqiFen,
   }),
-  sweepDueDeadline: null,
-  createCorrespondenceGameForSeek: null,
+  ...atomicXiangqiCorrespondence,
 });

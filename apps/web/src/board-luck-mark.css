@@ -1,0 +1,240 @@
+/* On-board luck mark for a chance move (board-luck-mark.ts) and its hover card
+   (review/luck-mark-card.ts). Nothing here animates on its own; the card fades in only
+   when the reader points at a mark.
+
+   The ink is a diverging scale tied to the die's buckets (luckInk): step 1 (one pip,
+   under 2 points) is grey; steps 2-6 deepen on each side, a light tint at 2 to a deep
+   shade at 6, so a +3 and a +40 no longer share a colour. Hues stay off red (the Red
+   player, the ?? glyph) and off the ?!/? yellow and orange, and the two sides keep apart
+   under deuteranopia and protanopia at every step. Light steps (2, 3) take dark pips:
+   white pips on them fall under 3:1. Teal for lucky, violet for unlucky (picked 2026-10-07
+   over a blue / magenta candidate). */
+
+.luck-mark,
+.luck-card {
+  --luck-even: #7a7771;
+  --luck-up-2: #8cd6ba;
+  --luck-up-3: #43b28e;
+  --luck-up-4: #07906d;
+  --luck-up-5: #016f53;
+  --luck-up-6: #00523d;
+  --luck-down-2: #c4b2ee;
+  --luck-down-3: #a080df;
+  --luck-down-4: #8355ce;
+  --luck-down-5: #692db6;
+  --luck-down-6: #4f148f;
+}
+
+.luck-mark {
+  --luck-ink: var(--luck-even);
+  --luck-pip: #fff;
+  pointer-events: none;
+}
+.luck-mark--lucky.luck-mark--s2 {
+  --luck-ink: var(--luck-up-2);
+  --luck-pip: var(--luck-up-6);
+}
+.luck-mark--lucky.luck-mark--s3 {
+  --luck-ink: var(--luck-up-3);
+  --luck-pip: var(--luck-up-6);
+}
+.luck-mark--lucky.luck-mark--s4 {
+  --luck-ink: var(--luck-up-4);
+}
+.luck-mark--lucky.luck-mark--s5 {
+  --luck-ink: var(--luck-up-5);
+}
+.luck-mark--lucky.luck-mark--s6 {
+  --luck-ink: var(--luck-up-6);
+}
+.luck-mark--unlucky.luck-mark--s2 {
+  --luck-ink: var(--luck-down-2);
+  --luck-pip: var(--luck-down-6);
+}
+.luck-mark--unlucky.luck-mark--s3 {
+  --luck-ink: var(--luck-down-3);
+  --luck-pip: var(--luck-down-6);
+}
+.luck-mark--unlucky.luck-mark--s4 {
+  --luck-ink: var(--luck-down-4);
+}
+.luck-mark--unlucky.luck-mark--s5 {
+  --luck-ink: var(--luck-down-5);
+}
+.luck-mark--unlucky.luck-mark--s6 {
+  --luck-ink: var(--luck-down-6);
+}
+/* No dark-theme override on the board mark: the board surface keeps its own colours in
+   dark mode, as the decision glyph does, so the mark keeps the inks that read on it. Only
+   the card (below), which sits on the site's panel, follows the theme. */
+
+.luck-mark__hit {
+  fill: transparent;
+  stroke: none;
+}
+
+/* The die, in the glyph's family: filled, white edge, white pips. */
+.luck-mark__cube {
+  fill: var(--luck-ink);
+  stroke: #fff;
+  stroke-width: 2;
+}
+.luck-mark__pip {
+  fill: var(--luck-pip);
+}
+
+/* Hover / tap card */
+.luck-card {
+  position: fixed;
+  z-index: 60;
+  max-width: min(280px, calc(100vw - 16px));
+  padding: 9px 12px 10px;
+  border: 1px solid var(--site-border, #ddd);
+  border-radius: 10px;
+  background: var(--site-panel, #fff);
+  color: var(--site-text, #333);
+  box-shadow: 0 8px 24px var(--site-shadow, rgba(0, 0, 0, 0.18));
+  font-size: 13px;
+  line-height: 1.35;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(3px);
+  transition:
+    opacity 120ms ease-out,
+    transform 120ms ease-out;
+}
+.luck-card[data-side="below"] {
+  transform: translateY(-3px);
+}
+.luck-card--open {
+  opacity: 1;
+  transform: none;
+}
+.luck-card[data-side="below"].luck-card--open {
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .luck-card {
+    transition: none;
+  }
+}
+.luck-card__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.luck-card__head:empty {
+  display: none;
+}
+.luck-card__piece svg {
+  display: block;
+  width: 22px;
+  height: 22px;
+}
+.luck-card__title {
+  font-weight: 700;
+  color: var(--site-heading, inherit);
+}
+/* A reveal-and-capture card names both draws, one per line, under its lead. */
+.luck-card__draw {
+  margin-top: 3px;
+}
+.luck-card__draw .luck-card__title {
+  font-weight: 500;
+}
+.luck-card__swing {
+  margin-top: 3px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.luck-card__swing--lucky {
+  color: var(--luck-up-5);
+}
+.luck-card__swing--unlucky {
+  color: var(--luck-down-5);
+}
+.luck-card__swing--even {
+  color: var(--site-muted);
+}
+/* The card's text takes a readable step of the same hue: 5 on the light panel, 2 on the
+   dark one (each over 6:1). */
+:root[data-effective-theme="dark"] .luck-card__swing--lucky {
+  color: var(--luck-up-2);
+}
+:root[data-effective-theme="dark"] .luck-card__swing--unlucky {
+  color: var(--luck-down-2);
+}
+.luck-card__pool-label {
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top: 1px solid var(--site-border-soft, #eee);
+  color: var(--site-muted);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+.luck-card__pool {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-top: 4px;
+}
+.luck-card__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 5px 1px 1px;
+  border-radius: 999px;
+  opacity: 0.62;
+}
+.luck-card__chip svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+.luck-card__chip--drawn {
+  opacity: 1;
+  background: var(--site-bg-soft, rgba(0, 0, 0, 0.06));
+  box-shadow: inset 0 0 0 1.5px currentColor;
+}
+.luck-card[data-tone="lucky"] .luck-card__chip--drawn {
+  color: var(--luck-up-5);
+}
+.luck-card[data-tone="unlucky"] .luck-card__chip--drawn {
+  color: var(--luck-down-5);
+}
+:root[data-effective-theme="dark"] .luck-card[data-tone="lucky"] .luck-card__chip--drawn {
+  color: var(--luck-up-2);
+}
+:root[data-effective-theme="dark"] .luck-card[data-tone="unlucky"] .luck-card__chip--drawn {
+  color: var(--luck-down-2);
+}
+.luck-card__count {
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--site-text);
+}
+
+.luck-card__size .luck-mark__cube {
+  stroke-width: 0;
+}
+
+/* The card's lead line may wrap (a long piece name in zh or en); the size line
+   carries the same die the board shows, so the face and its word sit together. */
+.luck-card__lead {
+  white-space: normal;
+}
+.luck-card__size {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  color: var(--site-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.luck-card__size svg {
+  display: block;
+  flex: none;
+}

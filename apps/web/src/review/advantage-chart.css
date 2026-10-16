@@ -31,8 +31,11 @@
    a gradient that fades out from the midline (see advantage-chart.ts): the cue
    survives, the hard seam that made the chart read as two stacked boxes does
    not. Colour comes from the stops, so the zone classes only carry the hue. */
-.advantage-chart__zone {
-  --advantage-zone-ink: #34302e;
+/* Black's zone is the family's second ink, like its area (Blue in jungle). Red's
+   and White's are softer tints of their own, the same in every family. */
+.advantage-chart__zone,
+.advantage-chart__zone--black {
+  --advantage-zone-ink: var(--seat-second-ink, #34302e);
 }
 .advantage-chart__zone--red {
   --advantage-zone-ink: #c7a06a;
@@ -50,13 +53,13 @@
 }
 /* The axis and dividers now cross opaque fills as well as bare ground, so they
    are drawn in the page colour rather than a muted ink: a grey line disappears
-   into the black half, while the ground colour reads against every fill. */
-.advantage-chart__axis {
-  opacity: 0.5;
-}
+   into the black half, while the ground colour reads against every fill. The
+   half strength sits on each line rather than the group, so dark mode can give
+   the dividers their own. */
 .advantage-chart__mid {
   stroke: var(--site-bg);
   stroke-width: 0.5;
+  opacity: 0.5;
 }
 /* Game-phase dividers + rotated segment labels (lichess: Opening / Middlegame /
    Endgame read downward at each phase start). Labels are HTML overlays so the
@@ -65,6 +68,14 @@
   stroke: var(--site-bg);
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
+  opacity: 0.5;
+}
+/* Dark theme: the page colour is near-black, so a divider drawn in it at half
+   strength was invisible on the ground and read only where it crossed a light
+   fill. A light ink instead, which reads on the ground and on both fills. */
+:root[data-effective-theme="dark"] .advantage-chart__phase {
+  stroke: color-mix(in srgb, var(--site-text) 55%, transparent);
+  opacity: 1;
 }
 .advantage-chart__phase-label {
   position: absolute;
@@ -78,74 +89,44 @@
   pointer-events: none;
   user-select: none;
 }
+/* Chinese labels: upright Han in vertical-rl stacks one character per line, so
+   these run horizontally on one line. Too wide for the phase's span, the label
+   is hidden by advantage-chart.ts, never wrapped. */
+.advantage-chart__phase-label--line {
+  writing-mode: horizontal-tb;
+  white-space: nowrap;
+  letter-spacing: 0;
+}
 /* The advantage area wears the leading player's bound ink at FULL strength, flat
    and opaque, the way the eval bar beside the board wears it. The lead is the one
    thing this chart is about, so it gets a solid shape rather than a wash, and the
    curve is the hard edge of that shape rather than a line laid over a tint. This
    is the reason the axis, the phase dividers and the luck band all draw above the
-   fills (see advantage-chart.ts): under an opaque fill they would not exist. */
+   fills (see advantage-chart.ts): under an opaque fill they would not exist.
+
+   The area classes name INKS, already resolved through `seatColors` in TS, so a
+   flip game's areas follow the reveal. The family's two inks come from
+   seat-disc-ink.css: `--red` is its first ink and `--black` its second, which is
+   Blue in the jungle family and the grey that separates from White in chess. The
+   dark-theme lifts (charcoal Black, #7a716a chess Black, lifted Blue) live there
+   too, so there are no theme or family rules left in this file. */
 .advantage-chart__area--red {
-  fill: #c0563f;
+  fill: var(--seat-first-ink, #c0563f);
 }
 .advantage-chart__area--black {
-  fill: #34302e;
+  fill: var(--seat-second-ink, #34302e);
 }
 /* Chess: the first analysis slot is named 'red' but plays White, so it resolves to
    a white ink. Light theme wants a near-white that still reads as a filled AREA
-   against the panel rather than as a hole in it. */
+   against the panel rather than as a hole in it; dark pulls it off pure white so
+   it does not out-glare the Black opposite it. */
 .advantage-chart__area--white {
-  fill: #e9e5dc;
+  fill: var(--ink-white, #e9e5dc);
 }
-/* Dark theme: a dark fill vanishes against the dark panel; Black's area reads as
-   a light neutral instead (lichess dark does the same). */
-:root[data-effective-theme="dark"] .advantage-chart__area--black {
-  fill: #d8d2c6;
-}
-:root[data-effective-theme="dark"] .advantage-chart__zone--black {
-  --advantage-zone-ink: #d8d2c6;
-}
-:root[data-effective-theme="dark"] .advantage-chart__area--red {
-  fill: #d4674c;
-}
-/* Dark theme: White's area keeps a light fill, but pulled off pure white so it does
-   not out-glare Black's #d8d2c6 sitting directly opposite it. */
-/* Chess pairing on dark: Black's generic lift (#d8d2c6) exists so a dark fill is
-   not lost against the panel, and it works when the other half is Red. Against
-   WHITE it collapses -- both halves render cream, 1.28:1, which reads as one
-   undifferentiated block. Black takes a mid warm grey here instead: 4.05:1
-   against White's area and 3.82:1 against the panel, so it separates from both
-   rather than trading one invisibility for another. */
-:root[data-effective-theme="dark"] .advantage-chart--white-black .advantage-chart__area--black {
-  fill: #7a716a;
-}
-:root[data-effective-theme="dark"] .advantage-chart--white-black .advantage-chart__zone--black {
-  --advantage-zone-ink: #7a716a;
-}
-:root[data-effective-theme="dark"] .advantage-chart__area--white {
-  fill: #f0ece3;
-}
+/* White's zone tint is its own lighter value in light (a wash, not the area);
+   in dark it is the area ink, as before. */
 :root[data-effective-theme="dark"] .advantage-chart__zone--white {
-  --advantage-zone-ink: #f0ece3;
-}
-/* Jungle family (Jungle Chess + Flip Jungle): the "black" side is Blue, so its
-   advantage area/zone wear the piece navy (lifted to read clearly as blue),
-   matching the eval bar. The dark-theme rule above would otherwise recolor it
-   neutral, so re-assert a lighter blue at higher specificity for dark mode. */
-.jungle-review .advantage-chart__area--black,
-.jungle-flip-review .advantage-chart__area--black {
-  fill: #34557a;
-}
-.jungle-review .advantage-chart__zone--black,
-.jungle-flip-review .advantage-chart__zone--black {
-  --advantage-zone-ink: #34557a;
-}
-:root[data-effective-theme="dark"] .jungle-review .advantage-chart__area--black,
-:root[data-effective-theme="dark"] .jungle-flip-review .advantage-chart__area--black {
-  fill: #6b96c8;
-}
-:root[data-effective-theme="dark"] .jungle-review .advantage-chart__zone--black,
-:root[data-effective-theme="dark"] .jungle-flip-review .advantage-chart__zone--black {
-  --advantage-zone-ink: #6b96c8;
+  --advantage-zone-ink: var(--ink-white, #f0ece3);
 }
 /* Accent for the eval curve + ply cursor: the site's own brand accent, which is
    already defined per theme.
@@ -223,11 +204,8 @@
   border-top-style: dashed;
   border-top-color: color-mix(in srgb, var(--site-text) 55%, transparent);
 }
-/* Hover readout: the ply under the pointer, named and scored. The chart is
-   otherwise a shape with no numbers on it, so this is where it becomes readable
-   move by move. Anchored to the cursor and pinned inside the frame at both ends
-   (see showTip), which is why it takes a percentage transform rather than a
-   fixed offset. */
+/* The dot marks the hovered ply ON the curve, so the shared hover readout
+   (chart-scrub.css) is anchored to a point rather than floating over the field. */
 .advantage-chart__dot {
   fill: var(--advantage-accent);
   stroke: var(--site-bg);
@@ -258,35 +236,4 @@
 /* While marks are up, the curve steps back so the rings read as the subject. */
 .advantage-chart--marked .advantage-chart__line {
   opacity: 0.55;
-}
-.advantage-chart__tip {
-  position: absolute;
-  top: 6px;
-  z-index: 1;
-  display: flex;
-  gap: 7px;
-  align-items: baseline;
-  padding: 3px 7px;
-  border: 1px solid var(--site-border);
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--site-panel) 92%, transparent);
-  color: var(--site-text);
-  font-size: 11px;
-  line-height: 1.4;
-  white-space: nowrap;
-  pointer-events: none;
-}
-.advantage-chart__tip--low {
-  top: auto;
-  bottom: 6px;
-}
-.advantage-chart__tip[hidden] {
-  display: none;
-}
-.advantage-chart__tip-move {
-  font-weight: 600;
-}
-.advantage-chart__tip-eval {
-  color: var(--site-muted);
-  font-variant-numeric: tabular-nums;
 }

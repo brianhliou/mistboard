@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 // Publish the canonical Jungle art to the blog. The CANONICAL set is the in-app one
 // (apps/web/public/piece-sets/jungle/dobutsu) — that's where art is dropped and locked.
-// The blog (brianhliou.github.io) is a DOWNSTREAM copy: this pushes the app's pieces up
+// The blog (brianhliou.com) is a DOWNSTREAM copy: this pushes the app's pieces up
 // so the public Dou Shou Qi / Flip Jungle posts show the same art. Run it after updating
 // art in public.
 //
 //   npm run publish:jungle-art
-//   MISTBOARD_BLOG_DIR overrides the blog repo location (default ../brianhliou.github.io).
+//   MISTBOARD_BLOG_DIR overrides the blog repo location (default ../brianhliou.com).
 //
 // Pieces are copied 1:1 (already web-sized). Board terrain is NOT published — the blog
 // keeps its own high-res board masters; add board tiles here if they become canonical
@@ -20,12 +20,12 @@ const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC = resolve(REPO_ROOT, 'apps/web/public/piece-sets/jungle/dobutsu');
 const BLOG_DIR = process.env.MISTBOARD_BLOG_DIR
   ? resolve(process.env.MISTBOARD_BLOG_DIR)
-  : resolve(REPO_ROOT, '..', 'brianhliou.github.io');
+  : resolve(REPO_ROOT, '..', 'brianhliou.com');
 const BLOG_PIECES = resolve(BLOG_DIR, 'assets/jungle-dobutsu-pieces');
 
 if (!existsSync(BLOG_PIECES)) {
   console.error(`publish:jungle-art — blog pieces dir not found: ${BLOG_PIECES}`);
-  console.error('  Set MISTBOARD_BLOG_DIR or clone brianhliou.github.io as a sibling.');
+  console.error('  Set MISTBOARD_BLOG_DIR or clone brianhliou.com as a sibling.');
   process.exit(1);
 }
 

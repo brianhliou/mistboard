@@ -25,7 +25,7 @@ import {
   readDisplayPreferences,
   writeDisplayPreference,
 } from './display-preferences.js';
-import { buildFlairIcon, FLAIR_KEYS, flairLabel } from './flair.js';
+import { buildFlairIcon, FLAIR_KEYS, flairLabel, flairOfferedInPicker } from './flair.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale, localizedHref } from './i18n/locale.js';
 import { refreshNotifications } from './notification-nav.js';
@@ -526,6 +526,7 @@ function buildFlairPicker(
 
   addOption(null, t('account.flairNone', {}, locale), null);
   for (const key of FLAIR_KEYS) {
+    if (key !== current && !flairOfferedInPicker(key)) continue;
     addOption(key, flairLabel(key, locale), buildFlairIcon(key, { labelled: false, locale }));
   }
 

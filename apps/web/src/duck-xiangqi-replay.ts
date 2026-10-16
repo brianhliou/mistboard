@@ -23,6 +23,7 @@ import {
 } from '@mistboard/game';
 import type { ArticleLang } from './article-i18n.js';
 import { duckXiangqiBoardSvg } from './duck-xiangqi-board.js';
+import { duckXiangqiTurnLabel } from './duck-xiangqi-turn-label.js';
 import './live-xiangqi.css';
 import { replayStepperCopy } from './replay-stepper-copy.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
@@ -97,26 +98,6 @@ export function replayDuckXiangqiNotation(moves: string): {
     states.push(state);
   });
   return { turns, states };
-}
-
-/**
- * The one grammar every duck surface writes a turn in: `e2-e5@c7`, and `x…#`
- * for the general capture, which ends the game before the duck would have moved
- * and is the one turn with no `@` half. Duplicated rather than imported for the
- * same bundle reason the other copies duplicate each other (`duckTurnLabel` in
- * live-duck-xiangqi.ts, `duckXiangqiTurnLabel` in review/duck-xiangqi-tree-
- * adapter.ts and duck-xiangqi-postgame.ts): this module is what the articles and
- * the embed load, and must not drag the live or review surfaces in with it.
- *
- * This copy read `e2-e5, duck c7` until 2026-09-12, which is the divergence a
- * duplicated grammar is supposed to be watched for. It cost about fourteen
- * characters against a move cell in the sheet beside the board that fits about
- * ten, so every duck turn in an embedded study truncated to `e2-e5, d…`.
- */
-function turnLabel(turn: DuckXiangqiTurn): string {
-  return turn.duckTo === null
-    ? `${turn.from}x${turn.to}#`
-    : `${turn.from}-${turn.to}@${turn.duckTo}`;
 }
 
 export function mountDuckXiangqiReplay(
@@ -207,7 +188,7 @@ export function mountDuckXiangqiReplay(
       narrative.textContent = spec.resultText;
     } else {
       const mover = index % 2 === 1 ? copy.first : copy.second;
-      narrative.textContent = `${copy.movePrefix(Math.ceil(index / 2))} · ${mover}: ${turnLabel(turns[index - 1]!)}`;
+      narrative.textContent = `${copy.movePrefix(Math.ceil(index / 2))} · ${mover}: ${duckXiangqiTurnLabel(turns[index - 1]!)}`;
     }
   }
 
@@ -320,7 +301,7 @@ export function mountDuckXiangqiReplayBoard(
       render();
     },
     plyCount: () => total,
-    moveEntries: () => turns.map((turn, i) => ({ ply: i + 1, label: turnLabel(turn) })),
+    moveEntries: () => turns.map((turn, i) => ({ ply: i + 1, label: duckXiangqiTurnLabel(turn) })),
     // Red is the first mover in xiangqi, so a red-perspective board puts the
     // first mover at the bottom.
     bottomSeat: () => (perspective === 'red' ? 'first' : 'second'),

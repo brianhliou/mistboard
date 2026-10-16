@@ -60,19 +60,34 @@ const ART_CANVAS = 1024;
  * and leaves the glyph at under half the disc's width. In the article that came
  * out at ~13 CSS pixels of actual drawing, which reads as blur at any resolution:
  * the problem was never pixel count, it was that the piece was tiny.
+ *
+ * Re-measured 2026-10-15 on the figures of the new piece look (rebuilt from the
+ * Chess-style art, grown to radius 43, the cannon turned 15 degrees): alpha > 8.
  */
 const INK: Record<string, [number, number, number, number]> = {
-  general: [263, 220, 498, 560],
-  advisor: [318, 234, 386, 554],
-  elephant: [180, 250, 670, 624],
-  horse: [289, 239, 463, 522],
-  chariot: [315, 256, 390, 487],
-  cannon: [246, 363, 553, 342],
-  soldier: [349, 186, 326, 604],
+  general: [217, 165, 589, 665],
+  advisor: [289, 193, 444, 637],
+  elephant: [162, 236, 707, 657],
+  horse: [233, 170, 579, 653],
+  chariot: [264, 190, 492, 613],
+  cannon: [233, 259, 616, 521],
+  soldier: [335, 157, 354, 658],
 };
 
-/** The ink's long side as a fraction of the disc diameter. */
-const GLYPH_FILL = 0.72;
+/** The ink's long side as a fraction of the disc diameter. 0.78 since
+ *  2026-10-15: the site's own frames put the new figures at 0.70 to 0.82 of the
+ *  disc (median about 0.79), and at this fill their outlines come out at the
+ *  ring's 2.8 weight, as on the site. */
+const GLYPH_FILL = 0.78;
+
+/** The piece look of 2026-10-14 (apps/web/src/board-metrics.ts
+ *  xiangqiPieceDrawSize, xiangqi-piece-sets.ts INTERNATIONAL_RING_STROKE): the
+ *  disc's outer edge spans 98% of the point gap, the outline ends at 94.8 of the
+ *  100-unit box (r 46 plus half a 2.8 ring), and one dark ring on both sides. */
+const PIECE_REACH = 0.98;
+const PIECE_OUTLINE_SHARE = 0.948;
+const PIECE_RING = '#202427';
+const PIECE_RING_WIDTH = 2.8;
 
 const artCache = new Map<string, string>();
 function pieceDataUri(color: string, role: string): string {
@@ -146,15 +161,14 @@ function board(pieces: XiangqiOgPiece[], centerX: number, y: number, height: num
   const margin = 0.58 * cell;
   const width = 2 * margin + (FILES - 1) * cell;
   const ox = centerX - width / 2;
-  // Mirrors apps/web/src/xiangqi-piece-sets.ts: a cream disc with a coloured rim,
+  // Mirrors apps/web/src/xiangqi-piece-sets.ts: a cream disc with one dark rim,
   // then the art on top, framed per role inside a 100x100 box. Without the disc
   // the outline art washes out against the board and grid lines show through it.
-  const size = 0.92 * cell;
+  const size = (PIECE_REACH / PIECE_OUTLINE_SHARE) * cell;
   const art = pieces.map((p) => {
     const cx = ox + margin + p.file * cell;
     const cy = y + margin + (RANKS - p.rank) * cell;
     const u = size / 100; // 100x100 piece box -> board units
-    const rim = p.color === 'red' ? '#c30d0d' : '#202427';
     const discDiameter = 92 * u;
     // Scale the art so its INK fills the disc, then offset so the ink's centre
     // (not the canvas centre) lands on the point. Fitting the long side keeps a
@@ -164,7 +178,7 @@ function board(pieces: XiangqiOgPiece[], centerX: number, y: number, height: num
     const perPx = (GLYPH_FILL * discDiameter) / Math.max(iw, ih);
     const drawn = ART_CANVAS * perPx;
     return [
-      `<circle cx="${cx}" cy="${cy}" r="${46 * u}" fill="#fef0d7" stroke="${rim}" stroke-width="${4.2 * u}"/>`,
+      `<circle cx="${cx}" cy="${cy}" r="${46 * u}" fill="#fef0d7" stroke="${PIECE_RING}" stroke-width="${PIECE_RING_WIDTH * u}"/>`,
       `<image image-rendering="optimizeQuality" href="${pieceDataUri(p.color, p.role)}" x="${cx - (ix + iw / 2) * perPx}" y="${cy - (iy + ih / 2) * perPx}" width="${drawn}" height="${drawn}"/>`,
     ].join('');
   });

@@ -154,6 +154,75 @@ describe('study index chapter previews', () => {
   });
 });
 
+// The browse fetched 30 and rendered them with no way to ask for the rest, so
+// once the classical-manual library passed 30 studies a third of the shelf was
+// unreachable from the index (2026-09-22, 42 public studies).
+describe('study index paging', () => {
+  const card = (id: string, name: string) => ({
+    id,
+    name,
+    description: '',
+    visibility: 'public',
+    chapterCount: 1,
+    chapterNames: ['One'],
+    updatedAt: '2026-09-22T12:00:00.000Z',
+    owner: { handle: 'mistboard', displayName: 'mistboard' },
+    likeCount: 0,
+  });
+
+  it('offers another page only when there is one, and appends it in place', async () => {
+    const calls: string[] = [];
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = input.toString();
+      calls.push(url);
+      return url.includes('offset=1')
+        ? jsonResponse({ studies: [card('b2', 'Second page')], hasMore: false })
+        : jsonResponse({ studies: [card('a1', 'First page')], hasMore: true });
+    });
+    vi.stubGlobal('fetch', fetcher);
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    mountStudyIndex(root);
+
+    await vi.waitFor(() =>
+      expect(root.querySelector('.study-index__name')?.textContent).toBe('First page'),
+    );
+    expect(calls[0]).toBe('/api/studies/public?limit=30');
+
+    const more = root.querySelector<HTMLButtonElement>('.study-index__more-button');
+    expect(more?.textContent).toBe('More studies');
+    more?.click();
+
+    await vi.waitFor(() => expect(root.querySelectorAll('.study-index__name')).toHaveLength(2));
+    // The second page is appended, not swapped in.
+    expect([...root.querySelectorAll('.study-index__name')].map((n) => n.textContent)).toEqual([
+      'First page',
+      'Second page',
+    ]);
+    // Offset is the count already on screen, not a page number.
+    expect(calls[1]).toBe('/api/studies/public?limit=30&offset=1');
+    // hasMore false on the last page retires the control.
+    expect(root.querySelector('.study-index__more-button')).toBeNull();
+  });
+
+  it('shows no control when the first page is the whole list', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ studies: [card('a1', 'Only page')], hasMore: false })),
+    );
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    mountStudyIndex(root);
+
+    await vi.waitFor(() =>
+      expect(root.querySelector('.study-index__name')?.textContent).toBe('Only page'),
+    );
+    expect(root.querySelector('.study-index__more-button')).toBeNull();
+  });
+});
+
 function jsonResponse(body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status: 200,

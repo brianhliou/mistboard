@@ -14,6 +14,12 @@
 // Player names are romanized pinyin-style (surname first, given name joined),
 // with an overrides map for the established spellings of famous players.
 
+import {
+  ordinalEn,
+  parseChineseNumeral,
+  XIANGQI_EVENT_GLOSSARY,
+  XIANGQI_EVENT_NAME_OVERRIDES,
+} from '@mistboard/game';
 import { pinyin } from 'pinyin-pro';
 
 const PINYIN_OPTIONS = { toneType: 'none', type: 'array', nonZh: 'removed' } as const;
@@ -38,6 +44,10 @@ const COMPOUND_SURNAMES = [
   '端木',
 ];
 
+// Surnames pinyin-pro misreads even in surname mode: 么 is Yao as a surname
+// (么毅 came out "Me Yi" on the 2026 broadcasts).
+const SURNAME_READINGS = new Map<string, string>([['么', 'yao']]);
+
 // Established English spellings of well-known players win over raw pinyin.
 const PLAYER_NAME_OVERRIDES = new Map<string, string>([
   ['吕钦', 'Lu Qin'],
@@ -53,39 +63,175 @@ const PLAYER_NAME_OVERRIDES = new Map<string, string>([
   ['唐丹', 'Tang Dan'],
   // 蹊 is polyphonic (qi/xi); in 成蹊 it reads xi.
   ['李成蹊', 'Li Chengxi'],
+  // The 2025 world champion, entered in Chinese events without a federation
+  // as often as with one; Vietnamese, spelled as the site's articles spell him.
+  ['赖理兄', 'Lại Lý Huynh'],
 ]);
 
-// Longest match wins; entries are sorted by key length at module init.
-const EVENT_GLOSSARY: Array<[string, string]> = [
-  ['全国象棋团体赛', 'National Xiangqi Team Championship'],
-  ['全国象棋个人赛', 'National Xiangqi Individual Championship'],
-  ['象棋甲级联赛', 'Xiangqi Division A League'],
-  ['世界象棋锦标赛', 'World Xiangqi Championship'],
-  ['亚洲象棋锦标赛', 'Asian Xiangqi Championship'],
-  ['五羊杯', 'Five Rams Cup'],
-  ['女子组', 'Women'],
-  ['男子组', 'Men'],
-  ['公开组', 'Open'],
-  ['女子', 'Women'],
-  ['男子', 'Men'],
-  ['个人赛', 'Individual Championship'],
-  ['团体赛', 'Team Championship'],
-  ['锦标赛', 'Championship'],
-  ['冠军赛', 'Champions Tournament'],
-  ['邀请赛', 'Invitational'],
-  ['大师赛', 'Masters'],
-  ['预选赛', 'Qualifier'],
-  ['挑战赛', 'Challenge'],
-  ['公开赛', 'Open'],
-  ['联赛', 'League'],
-  ['中国象棋', 'Xiangqi'],
-  ['象棋', 'Xiangqi'],
-  ['全国', 'National'],
-  ['世界', 'World'],
-  ['亚洲', 'Asian'],
-  ['甲级', 'Division A'],
-  ['乙级', 'Division B'],
+// The federation a source's team field names, for the players outside
+// mainland China whose own spelling is not pinyin. Keys are matched as
+// substrings, so 中国香港 and 香港象棋总会 are both Hong Kong.
+type FederationRegion =
+  | 'HK'
+  | 'MO'
+  | 'TW'
+  | 'VN'
+  | 'MY'
+  | 'SG'
+  | 'PH'
+  | 'JP'
+  | 'TH'
+  | 'BN'
+  | 'AU'
+  | 'NA';
+const FEDERATION_REGIONS: Array<[string, FederationRegion]> = [
+  ['香港', 'HK'],
+  ['澳门', 'MO'],
+  ['台北', 'TW'],
+  ['台湾', 'TW'],
+  ['越南', 'VN'],
+  ['西马', 'MY'],
+  ['东马', 'MY'],
+  ['马来西亚', 'MY'],
+  ['新加坡', 'SG'],
+  ['菲律宾', 'PH'],
+  ['日本', 'JP'],
+  ['泰国', 'TH'],
+  ['文莱', 'BN'],
+  ['澳大利亚', 'AU'],
+  ['澳洲', 'AU'],
 ];
+
+// North American teams enter as city clubs, matched whole rather than as
+// substrings: 金州 is also a district of Dalian, and a mainland team named
+// for it must keep pinyin. The set is the 2026 North American Championship's
+// (Houston, dpxq tour 12473) team field, in Chinese and as the Latin team
+// names the source gives.
+const NORTH_AMERICAN_TEAMS = new Set([
+  '洛杉矶',
+  '纽约',
+  '纽约2',
+  '北加州',
+  '新泽西',
+  '休斯顿',
+  '休斯敦',
+  '金州',
+  '温哥华',
+  '新奥尔良',
+  'HTown',
+  'Katy',
+  'UsCentralVietnamese',
+]);
+
+function federationRegion(federation: string | undefined): FederationRegion | undefined {
+  if (!federation) return undefined;
+  if (NORTH_AMERICAN_TEAMS.has(federation.trim())) return 'NA';
+  return FEDERATION_REGIONS.find(([key]) => federation.includes(key))?.[1];
+}
+
+// Players from outside mainland China, under the spelling they use
+// themselves: Vietnamese with its diacritics (as the site's articles write
+// Lại Lý Huynh), Hong Kong and Macau in their Cantonese romanisation, Chinese
+// Taipei in its Wade-Giles, Malaysia and Singapore as their federations list
+// them. Keyed by federation region, because most of these Chinese names could
+// equally be a mainland player's; a mainland team keeps pinyin. Every entry
+// is sourced (the event that lists the pair is named); a name with no source
+// stays pinyin rather than a guess.
+const FEDERATION_PLAYER_NAMES = new Map<string, string>([
+  // 2024 20th Asian Xiangqi Individual Championship (Singapore): the AXF's
+  // bilingual results sheet, which prints each entrant's Chinese and Latin
+  // names side by side (xiangqi.sg, communiqué 43). Where the 2025 WXF world
+  // championship results or the 2022 Asian Games (Hangzhou) list the same
+  // player, they agree unless noted. Vietnamese keeps its diacritics as the
+  // site's articles write it; the sheet prints them bare.
+  ['VN:武国达', 'Vũ Quốc Đạt'],
+  ['VN:阮明日光', 'Nguyễn Minh Nhật Quang'],
+  ['VN:阮黄燕', 'Nguyễn Hoàng Yến'],
+  ['HK:黄学谦', 'Wong Hok Him'],
+  ['HK:郑彦隆', 'Cheng Yin Lung'],
+  ['HK:林嘉欣', 'Lam Ka Yan'],
+  ['MO:苏俊豪', 'Sou Chon Hou'],
+  ['MO:伍子骏', 'Wu Chi Chon'],
+  ['MO:李凯雯', 'Li Kevin'],
+  ['TW:葛振衣', 'Ge Jen-yi'],
+  ['TW:蔡安爵', 'Tsai An Chueh'],
+  ['TW:李思谊', 'Li Sih-yi'],
+  ['MY:沈毅豪', 'Sim Yip How'],
+  ['MY:唐语萱', 'Thong Yu Xuan'],
+  ['MY:叶乃传', 'Yek Nai Tuong'],
+  ['MY:许鲁斌', 'Robin Hii Lu Bin'],
+  ['MY:周盈萱', 'Chiew Ying Xuan'],
+  ['SG:吴宗翰', 'Alvin Woo Tsung Han'],
+  ['SG:许正豪', 'Bob Koh Zheng Hao'],
+  ['PH:庄宏明', 'Chong Heung Ming'],
+  ['BN:林廷安', 'Ling Ting Ang'],
+  ['BN:庄力铭', 'Cheng Kah Siong'],
+  // The sheet spells him Sintuyosakul; the WXF 2025 results and the Asian
+  // Games both spell him Sinthuyodsakun.
+  ['TH:单文杰', 'Sura Sinthuyodsakun'],
+  ['TH:吴多华', 'Pong Daruganon'],
+  ['JP:可儿宏晖', 'Kani Hiroaki'],
+  ['JP:所司和晴', 'Shoshi Kazuharu'],
+  ['AU:于文彬', 'Winston Yu'],
+  // Pinyin would read Jingbin.
+  ['AU:胡敬斌', 'Hu Jinbin'],
+  // 2025 19th World Xiangqi Championship (Shanghai), WXF results.
+  ['AU:阮日光', 'Quang Nhat Nguyen'],
+  // The WXF prints "Fung Tony Ga Zen", the Hong Kong Olympic delegation list
+  // "FUNG Tong Ga Zen"; ordered here as the AXF sheet orders an English name.
+  ['HK:冯家俊', 'Tony Fung Ga Zen'],
+  // 2022 Asian Games (Hangzhou): the official Chinese round pages matched by
+  // board to the English entry lists of the same rounds.
+  ['VN:阮成保', 'Nguyễn Thành Bảo'],
+  ['VN:黎氏金鸾', 'Lê Thị Kim Loan'],
+  ['SG:吴兰香', 'Ngô Lan Hương'],
+  ['SG:刘亿豪', 'Low Yi Hao'],
+  ['SG:陈茗芳', 'Fiona Tan Min Fang'],
+  ['MY:陈有发', 'Tan Yu Huat'],
+  ['MY:余欣如', 'Jee Xin Ru'],
+  ['HK:陈振杰', 'Chan Chun Kit'],
+  ['MO:甘建希', 'Kam Kin Hei'],
+  ['TW:刘国华', 'Liu Kuo-hua'],
+  ['TW:彭柔安', 'Peng Jou-an'],
+  ['TW:赵奕帆', 'Chao Yi-fan'],
+  // 2026 10th North American Championship (Houston): the entry list in the
+  // host's special issue (houstonxiangqi.org, 北美锦标赛特刊电子版, p. 32), which
+  // prints each player's English and Chinese names side by side. North
+  // American players write the given name first, and so do these. 范志 is
+  // listed as "Klevestakt Makspringer" and stays pinyin until confirmed.
+  ['NA:王安泰', 'Antai Wang'],
+  ['NA:胡全', 'Michael Hu'],
+  ['NA:罗健文', 'Kean Mun Loh'],
+  ['NA:胡玉山', 'Yushan Hu'],
+  ['NA:杜国胜', 'Yogi Do'],
+  ['NA:谢文川', 'Richard Tse'],
+  ['NA:林年浩', 'Jimmy Lin'],
+  ['NA:张文鑫', 'Wenxin Zhang'],
+  ['NA:廖建国', 'Lien Quoc'],
+  ['NA:黎英豪', 'Anh Hao Le'],
+  ['NA:彭铂', 'Bo Peng'],
+  ['NA:彭佳文', 'Oscar Peng'],
+  ['NA:李铭坚', 'Henry Li'],
+  ['NA:孟健', 'Jian Meng'],
+  ['NA:曹智聪', 'Stephen Cho'],
+  ['NA:孙一鸣', 'Yiming Sun'],
+  ['NA:刘凯', 'Kai Liu'],
+  // The entry list names these two in English only; the host's Players page
+  // (houstonxiangqi.org/players) pairs them with their Chinese names.
+  ['NA:黎日光', 'Nhat Quang Le'],
+  ['NA:谢光平', 'Ben Ta'],
+]);
+
+function federationPlayerName(zh: string, federation: string | undefined): string | undefined {
+  const region = federationRegion(federation);
+  return region ? FEDERATION_PLAYER_NAMES.get(`${region}:${zh}`) : undefined;
+}
+
+// The event glossary and the organiser-fixed names live in @mistboard/game
+// (xiangqi-event-names.ts), shared with the study page, which translates a
+// stored Chinese Event tag at read time.
+const EVENT_NAME_OVERRIDES = XIANGQI_EVENT_NAME_OVERRIDES;
+const EVENT_GLOSSARY: Array<[string, string]> = XIANGQI_EVENT_GLOSSARY.map(([zh, en]) => [zh, en]);
 
 // Team affiliations, which arrive whenever the source is a team competition
 // (甲级联赛 is one). Only the structural parts are glossed: the sponsor and the
@@ -134,6 +280,60 @@ const PLACE_GLOSSARY: Array<[string, string]> = [
   ['台湾', 'Taiwan'],
   ['香港', 'Hong Kong'],
   ['澳门', 'Macau'],
+  // Federations at the Asian and world events, which the romaniser otherwise
+  // spells out in pinyin (越南 came out as "Yuenan", 中国 as "Zhongguo").
+  // Hong Kong and Macau enter as themselves, with the 中国 prefix dropped as
+  // the Asian and world federations' English results drop it.
+  ['中国香港', 'Hong Kong'],
+  ['中国澳门', 'Macau'],
+  ['中国台北', 'Chinese Taipei'],
+  ['中国', 'China'],
+  ['中华台北', 'Chinese Taipei'],
+  // Malaysia enters the Asian championships as two federations, 西马 and 东马
+  // (both coded MAS); the AXF's English member list names them West Malaysia
+  // (Malaysia Xiangqi Federation) and East Malaysia (Sabah and Sarawak).
+  ['西马', 'West Malaysia'],
+  ['东马', 'East Malaysia'],
+  ['台北', 'Taipei'],
+  ['越南', 'Vietnam'],
+  ['新加坡', 'Singapore'],
+  ['马来西亚', 'Malaysia'],
+  ['菲律宾', 'Philippines'],
+  ['泰国', 'Thailand'],
+  ['印度尼西亚', 'Indonesia'],
+  ['印尼', 'Indonesia'],
+  ['文莱', 'Brunei'],
+  ['缅甸', 'Myanmar'],
+  ['柬埔寨', 'Cambodia'],
+  ['日本', 'Japan'],
+  ['黎巴嫩', 'Lebanon'],
+  ['印度', 'India'],
+  ['澳洲', 'Australia'],
+  ['韩国', 'South Korea'],
+  ['蒙古', 'Mongolia'],
+  ['澳大利亚', 'Australia'],
+  ['新西兰', 'New Zealand'],
+  ['加拿大', 'Canada'],
+  ['美国', 'United States'],
+  ['英国', 'United Kingdom'],
+  // North American city teams (2026 North American Championship). 金州 is
+  // not here: it is also a district of Dalian; see TEAM_NAME_OVERRIDES.
+  ['洛杉矶', 'Los Angeles'],
+  ['纽约', 'New York'],
+  ['北加州', 'Northern California'],
+  ['新泽西', 'New Jersey'],
+  ['休斯顿', 'Houston'],
+  ['休斯敦', 'Houston'],
+  ['温哥华', 'Vancouver'],
+  ['新奥尔良', 'New Orleans'],
+  ['法国', 'France'],
+  ['德国', 'Germany'],
+  ['意大利', 'Italy'],
+  ['荷兰', 'Netherlands'],
+  ['芬兰', 'Finland'],
+  ['瑞典', 'Sweden'],
+  ['俄罗斯', 'Russia'],
+  ['大学', 'University'],
   ['济南', 'Jinan'],
   ['杭州', 'Hangzhou'],
   ['深圳', 'Shenzhen'],
@@ -154,6 +354,9 @@ const PLACE_GLOSSARY: Array<[string, string]> = [
   ['宁波', 'Ningbo'],
   ['嘉定', 'Jiading'],
   ['滨海', 'Binhai'],
+  // A district of Jinan (山东济南钢城民生实业队), which otherwise welded onto
+  // the sponsor after it ("Gangchengminsheng").
+  ['钢城', 'Gangcheng'],
 ];
 
 const TEAM_GLOSSARY: Array<[string, string]> = [
@@ -166,6 +369,41 @@ const TEAM_GLOSSARY: Array<[string, string]> = [
   // 杭州环境集团队. Left to pinyin they rendered as one welded token each
   // ("Changshuwenlujiudian").
   ['群众体育促进中心', 'Mass Sports Promotion Centre'],
+  // The 2026 national team championship is played by provincial sports
+  // bodies, whose names are administrative vocabulary rather than brands. Left
+  // to pinyin they welded into one token ("Hebei Tiyujuqipaiyundongzhongxin");
+  // glossed, they read as what they are, short where English allows.
+  ['社会体育指导与棋牌运动管理中心', 'Sports and Board Games Centre'],
+  ['社会体育运动发展中心', 'Sports Development Centre'],
+  ['文化体育广电和旅游局', 'Culture, Sports and Tourism Bureau'],
+  ['生产建设兵团', 'Production and Construction Corps'],
+  ['维吾尔自治区', ''],
+  ['棋牌运动管理中心', 'Board Games Centre'],
+  ['棋牌运动中心', 'Board Games Centre'],
+  ['智力运动管理中心', 'Mind Sports Centre'],
+  ['智力运动中心', 'Mind Sports Centre'],
+  ['智力运动队', 'Mind Sports Team'],
+  ['体育训练中心', 'Sports Training Centre'],
+  ['全民健身中心', 'Fitness Centre'],
+  ['体育事业发展中心', 'Sports Development Centre'],
+  ['体育发展中心', 'Sports Development Centre'],
+  ['体育总会', 'Sports Federation'],
+  ['体育中心', 'Sports Centre'],
+  ['体育局', 'Sports Bureau'],
+  ['中国象棋协会', 'Chinese Xiangqi Association'],
+  // The institution words on their own, so a body not listed above still
+  // reads as words around its proper noun rather than one welded pinyin
+  // token ("Xiamen Tiyushiyefazhanzhongxin" was the 2026 case).
+  ['运动管理中心', 'Sports Centre'],
+  ['运动中心', 'Sports Centre'],
+  ['管理中心', 'Centre'],
+  ['发展中心', 'Development Centre'],
+  ['中心', 'Centre'],
+  ['体育', 'Sports'],
+  ['棋牌', 'Board Games'],
+  ['运动', 'Sports'],
+  ['二沙', 'Ersha'],
+  ['玻璃', 'Glass'],
   ['文旅酒店', 'Culture and Tourism Hotel'],
   ['环境集团', 'Environment Group'],
   ['象棋俱乐部', 'Xiangqi Club'],
@@ -191,6 +429,11 @@ const TEAM_GLOSSARY: Array<[string, string]> = [
   ...PLACE_GLOSSARY,
   ...EVENT_GLOSSARY,
 ];
+
+// Whole team names whose English is not their parts' (the Golden State team
+// at the 2026 North American Championship; 金州 inside a longer name is
+// Jinzhou, Dalian, and keeps pinyin).
+const TEAM_NAME_OVERRIDES = new Map<string, string>([['金州', 'Golden State']]);
 
 const ROUND_GLOSSARY: Array<[string, string]> = [
   ['四分之一决赛', 'Quarterfinal'],
@@ -219,6 +462,7 @@ const ROUND_UNITS: NumberedUnit[] = [
   { unit: '台', render: (n) => `Board ${n}` },
   { unit: '局', render: (n) => `Game ${n}` },
   { unit: '阶段', render: (n) => `Stage ${n}` },
+  { unit: '季', render: (n) => `Season ${n}` },
 ];
 
 function byKeyLengthDesc(entries: Array<[string, string]>): Array<[string, string]> {
@@ -268,7 +512,9 @@ function romanizeChineseName(token: string): string {
   const compound = COMPOUND_SURNAMES.find((surname) => token.startsWith(surname));
   const surname = compound ?? token.slice(0, 1);
   const given = token.slice(surname.length);
-  const surnameWord = titleCase(pinyinSyllables(surname, true).join(''));
+  const surnameWord = titleCase(
+    SURNAME_READINGS.get(surname) ?? pinyinSyllables(surname, true).join(''),
+  );
   if (surnameWord.length === 0) return token;
   const givenWord = titleCase(pinyinSyllables(given).join(''));
   return givenWord ? `${surnameWord} ${givenWord}` : surnameWord;
@@ -285,9 +531,17 @@ function romanizeMixedToken(token: string): string {
     .trim();
 }
 
-export function romanizeXiangqiPlayerName(zh: string): string | undefined {
+/**
+ * A player's name, romanized. `federation` (the source's Chinese team or
+ * federation field) scopes the overrides for players from outside mainland
+ * China, whose Chinese names are common enough to belong to a mainland player
+ * too: 林嘉欣 of Hong Kong is Lam Ka Yan, a 林嘉欣 on a mainland team stays pinyin.
+ */
+export function romanizeXiangqiPlayerName(zh: string, federation?: string): string | undefined {
   const trimmed = zh.trim();
   if (trimmed.length === 0 || isFullyAscii(trimmed)) return undefined;
+  const scoped = federationPlayerName(trimmed, federation);
+  if (scoped) return scoped;
   const whole = PLAYER_NAME_OVERRIDES.get(trimmed);
   if (whole) return whole;
 
@@ -305,61 +559,6 @@ export function romanizeXiangqiPlayerName(zh: string): string | undefined {
   return result.length > 0 ? result : undefined;
 }
 
-const CN_DIGITS: Record<string, number> = {
-  零: 0,
-  一: 1,
-  二: 2,
-  两: 2,
-  三: 3,
-  四: 4,
-  五: 5,
-  六: 6,
-  七: 7,
-  八: 8,
-  九: 9,
-};
-
-// Arabic digits or Chinese numerals up to 999 (十一 -> 11, 二十一 -> 21).
-function parseNumeral(text: string): number | undefined {
-  if (/^\d+$/.test(text)) return Number.parseInt(text, 10);
-  if (text.length === 0) return undefined;
-  let total = 0;
-  let rest = text;
-  const hundred = rest.indexOf('百');
-  if (hundred >= 0) {
-    const head = rest.slice(0, hundred);
-    const value = head.length > 0 ? CN_DIGITS[head] : 1;
-    if (value === undefined) return undefined;
-    total += value * 100;
-    rest = rest.slice(hundred + 1);
-    if (rest.startsWith('零')) rest = rest.slice(1);
-  }
-  const ten = rest.indexOf('十');
-  if (ten >= 0) {
-    const head = rest.slice(0, ten);
-    const value = head.length > 0 ? CN_DIGITS[head] : 1;
-    if (value === undefined) return undefined;
-    total += value * 10;
-    rest = rest.slice(ten + 1);
-  }
-  if (rest.length > 0) {
-    const value = CN_DIGITS[rest];
-    if (value === undefined) return undefined;
-    total += value;
-  }
-  return total > 0 || text === '零' ? total : undefined;
-}
-
-function ordinalEn(n: number): string {
-  const mod100 = n % 100;
-  if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
-  const mod10 = n % 10;
-  if (mod10 === 1) return `${n}st`;
-  if (mod10 === 2) return `${n}nd`;
-  if (mod10 === 3) return `${n}rd`;
-  return `${n}th`;
-}
-
 function matchNumberedUnit(
   text: string,
   index: number,
@@ -375,7 +574,7 @@ function matchNumberedUnit(
   if (numeral.length === 0) return undefined;
   for (const { unit, render } of units) {
     if (!text.startsWith(unit, cursor)) continue;
-    const value = parseNumeral(numeral);
+    const value = parseChineseNumeral(numeral);
     if (value === undefined) return undefined;
     return { en: render(value), length: cursor + unit.length - index };
   }
@@ -441,6 +640,13 @@ function translateGlossaryText(
       if (cleaned.length > 0) tokens.push(cleaned);
       continue;
     }
+    if (char === '（' || char === '）') {
+      // A bracketed alias (北京棋院（北京市棋牌运动管理中心）) keeps its brackets.
+      flushResidual();
+      tokens.push(char === '（' ? '(' : ')');
+      i += 1;
+      continue;
+    }
     if (/[\p{P}\p{S}]/u.test(char)) {
       // CJK punctuation acts as a separator.
       flushResidual();
@@ -452,20 +658,36 @@ function translateGlossaryText(
   }
   flushResidual();
 
-  const result = tokens.join(' ').replace(/\s+/g, ' ').trim();
+  const result = tokens
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .replace(/\( /g, '(')
+    .replace(/ \)/g, ')')
+    .replace(/\(\)/g, '')
+    .trim();
   return result.length > 0 ? result : undefined;
 }
 
 export function translateXiangqiEventName(zh: string): string | undefined {
-  return translateGlossaryText(zh, EVENT_GLOSSARY_SORTED, EVENT_UNITS);
+  return (
+    EVENT_NAME_OVERRIDES.get(zh.trim()) ??
+    translateGlossaryText(zh, EVENT_GLOSSARY_SORTED, EVENT_UNITS)
+  );
 }
 
 export function translateXiangqiRoundLabel(zh: string): string | undefined {
-  return translateGlossaryText(zh, ROUND_GLOSSARY_SORTED, ROUND_UNITS);
+  // A stage heads what follows it: 第2阶段第09轮 -> "Stage 2, Round 9".
+  return translateGlossaryText(zh, ROUND_GLOSSARY_SORTED, ROUND_UNITS)?.replace(
+    /\b(Stage \d+) (?=\S)/g,
+    '$1, ',
+  );
 }
 
 export function translateXiangqiTeamName(zh: string): string | undefined {
-  return translateGlossaryText(zh, TEAM_GLOSSARY_SORTED, EVENT_UNITS);
+  return (
+    TEAM_NAME_OVERRIDES.get(zh.trim()) ??
+    translateGlossaryText(zh, TEAM_GLOSSARY_SORTED, EVENT_UNITS)
+  );
 }
 
 // Recompute `nameEn` from the current `name`. The existing nameEn (if any) is
@@ -506,20 +728,48 @@ function withRecomputedFederationEn<T extends { federation?: string; federationE
 export function translatedXiangqiBroadcastPlayerTag<
   T extends { name: string; nameEn?: string; federation?: string; federationEn?: string },
 >(player: T): T {
-  return withRecomputedFederationEn(withRecomputedNameEn(player, romanizeXiangqiPlayerName));
+  return withRecomputedFederationEn(
+    withRecomputedNameEn(player, (name) => romanizeXiangqiPlayerName(name, player.federation)),
+  );
+}
+
+/**
+ * A team match's English name, side by side ("北京-江苏" -> "Beijing-Jiangsu"),
+ * keeping the source's delimiter so a reader splits both forms the same way.
+ * Undefined unless every side translates: half-English reads worse than the
+ * Chinese. A field with no delimiter is a section the source files games
+ * under ("元老组", "第一季红帅组"), which reads as a round label does.
+ */
+export function translateXiangqiMatchName(zh: string): string | undefined {
+  const sides = zh.split('-').map((side) => side.trim());
+  if (sides.length === 1) return translateXiangqiRoundLabel(zh);
+  if (sides.some((side) => side.length === 0)) return undefined;
+  const english = sides.map((side) => translateXiangqiTeamName(side));
+  return english.every((side) => side !== undefined) ? english.join('-') : undefined;
+}
+
+// Same self-healing contract as nameEn, for the match on a board's details.
+function withRecomputedMatchEn<T extends { details?: { match?: string; matchEn?: string } }>(
+  board: T,
+): T {
+  if (!board.details) return board;
+  const { matchEn: _stale, ...rest } = board.details;
+  const matchEn = rest.match ? translateXiangqiMatchName(rest.match) : undefined;
+  return { ...board, details: matchEn === undefined ? rest : { ...rest, matchEn } };
 }
 
 export function translatedXiangqiBroadcastBoard<
   T extends {
     red: { name: string; nameEn?: string; federation?: string; federationEn?: string };
     black: { name: string; nameEn?: string; federation?: string; federationEn?: string };
+    details?: { match?: string; matchEn?: string };
   },
 >(board: T): T {
-  return {
+  return withRecomputedMatchEn({
     ...board,
     red: translatedXiangqiBroadcastPlayerTag(board.red),
     black: translatedXiangqiBroadcastPlayerTag(board.black),
-  };
+  });
 }
 
 export function translateXiangqiBroadcastSnapshot<

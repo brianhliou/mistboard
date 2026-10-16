@@ -1,4 +1,7 @@
+import { type GameStartSource, rememberGameStartSource } from './game-start-source.js';
+import { withdrawLobbySeeks } from './lobby-seek-registry.js';
 import { rememberPveEngine } from './pve-memory.js';
+import { postThroughRestart } from './room-create-retry.js';
 
 // One-click PvE room creation against a public bot identity. The server
 // resolves the per-variant engine from the bot profile (routes/rooms.ts
@@ -13,7 +16,11 @@ export type BotPlayRequest = {
 };
 
 export async function createBotGame(request: BotPlayRequest): Promise<string> {
-  const response = await fetch('/api/rooms', {
+  // A seek still open on this page would pair the next joiner into a room
+  // nobody enters once this tab leaves for the bot game.
+  const withdrawing = withdrawLobbySeeks();
+  if (withdrawing) await withdrawing;
+  const response = await postThroughRestart('/api/rooms', {
     method: 'POST',
     headers: { accept: 'application/json', 'content-type': 'application/json' },
     body: JSON.stringify({
@@ -46,6 +53,10 @@ export function bindBotPlayControl(
     pendingLabel?: string;
     errorLabel?: string;
     onStateChange?: (state: 'idle' | 'pending' | 'error') => void;
+    /** Labels the started game (game_started.entry_source). */
+    source?: GameStartSource;
+    /** Runs after the room exists, before navigating (e.g. remember the pick). */
+    onCreated?: (request: BotPlayRequest) => void;
   } = {},
 ): void {
   let pending = false;
@@ -74,6 +85,8 @@ export function bindBotPlayControl(
         // itself; otherwise the device never "remembers" the game it just
         // played and the next visit hands out the first-game rung again (#365).
         rememberPveEngine(req.gameSpecId, req.botId);
+        if (opts.source) rememberGameStartSource(opts.source);
+        opts.onCreated?.(req);
         window.location.href = url;
       },
       () => {

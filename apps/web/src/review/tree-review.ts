@@ -19,10 +19,11 @@
 
 import '../seat-disc-ink.css';
 import './seat-labels.css';
-import { type MoveJudgment, winPercent } from '@mistboard/game';
+import { winPercent, winPercentK } from '@mistboard/game';
 import { ASSESSMENT_GLYPH } from '../assessment-glyphs.js';
 import { t } from '../i18n/catalog.js';
 import { type ProfileTarget, playerNameEl } from '../profile-link.js';
+import type { ShowcaseClockPair } from '../showcase-clock.js';
 import type { StudyVariantId } from '../study-catalog.js';
 import { displayComment } from '../study-i18n.js';
 import {
@@ -30,11 +31,20 @@ import {
   type AdvantageChartMark,
   createAdvantageChart,
 } from './advantage-chart.js';
+import {
+  type AnalysisMark,
+  analysisMarks,
+  betterFromPly,
+  type DecisionOverlay,
+  type MarkArrowMove,
+  type MarkBetter,
+} from './analysis-marks.js';
 import { createAnalysisSummary, type SummaryJudgment } from './analysis-summary.js';
 import { createAnnotationEditor } from './annotations-editor.js';
 // Brush colours for the node's user-drawn shapes. Imported here, not only
 // from the editor: the board draws shapes on surfaces that hide the panel.
 import '../variant-tenant/board-annotations.css';
+import { seatDiscEl } from '../seat-disc.js';
 import {
   alternativesEnabled,
   setAlternativesEnabled,
@@ -48,10 +58,8 @@ import { advantageSymbol, formatEval } from './engine/eval-format.js';
 import {
   type GameAnalysis,
   type GamePhases,
-  judgmentGlyph,
   type MovePraise,
   mergeDecisionAnalysis,
-  praiseGlyph,
   regradeBestPlayed,
   withPraise,
 } from './game-analysis.js';
@@ -64,8 +72,9 @@ import {
   type TreePath,
   type VariantTreeAdapter,
 } from './game-tree.js';
-import { ADVICE_LABEL, defaultFormatBestMove, PRAISE_COMMENT } from './move-advice.js';
+import { defaultFormatBestMove } from './move-advice.js';
 import { type MoveGlyphTone, moveGlyphTone } from './move-glyph.js';
+import { createMoveTimesChart } from './move-times-chart.js';
 import { createMoveTree, type MoveTree, type MoveTreeAnnotation, pathKey } from './move-tree.js';
 import { createRetro, type RetroController, type RetroHost, type RetroSide } from './retro.js';
 import { createRetroPanel, type RetroPanel } from './retro-panel.js';
@@ -81,9 +90,9 @@ import { createStudyFromTree, studyExportMessage } from './study-export.js';
 import { deserializeTree, type SerializedTree, serializeTree } from './tree-serialize.js';
 import { underboardPanel } from './underboard-tabs.js';
 
-/** With the live engine off, a completed whole-game analysis still knows the
- *  best move at every mainline ply — draw it as a single arrow. Flip to false
- *  to keep arrows strictly live-engine. */
+/** With the live engine ON but before its first lines arrive, a completed
+ *  whole-game analysis still knows the best move at every mainline ply — draw
+ *  it as a single arrow. Flip to false to keep that state arrow-free. */
 const SHOW_ANALYSIS_BEST_ARROW = true;
 
 /** NAG code → move-list suffix for user-authored glyphs (annotations-editor set). */
@@ -141,6 +150,9 @@ export interface TreeBoardFactoryOptions<Move, View, Color> {
   enabled: () => boolean;
   onMove: (move: Move, view: View) => void;
   onDrawShape?: (orig: string, dest: string | null, opts: { alt: boolean }) => void;
+  /** Aborted when the review unmounts: the factory tears down anything it attached
+   *  outside the board host (a hover card on document.body, page-wide listeners). */
+  signal?: AbortSignal;
 }
 
 /** The injected, variant-specific presentation bundle. Arrow/Marker are OPAQUE to
@@ -199,6 +211,10 @@ export interface EnginePresentation<Move, Truth, Arrow, Marker> {
   bestMoveArrow?(best: string | null | undefined): Arrow[];
   /** Single best-action marker from a whole-game analysis ply. */
   bestMoveMarker?(best: string | null | undefined): Marker[];
+  /** A chance ply's ranked alternatives (engine UCI, best first, mover-POV win%) as arrows,
+   *  weighted by how much each concedes to the best. Omit and a judged chance ply draws
+   *  only its top alternative, through bestMoveArrow. Never a line: one move each. */
+  candidateArrows?(moves: readonly MarkArrowMove[]): Arrow[];
 }
 
 export interface TreePresentation<Move, Truth, View, Color, Arrow, Marker> {
@@ -276,6 +292,20 @@ export interface TreePresentation<Move, Truth, View, Color, Arrow, Marker> {
    *  Return null when the move has no drawable destination; OMIT the hook
    *  entirely for variants that show no on-board glyphs. */
   moveGlyphMarker?(move: Move, glyph: { text: string; tone: MoveGlyphTone }): Marker | null;
+  /** On-board mark for a chance move's LUCK (a jieqi reveal or face-down capture): the badge
+   *  pinned to the board. `before` is the truth the move was played from (the draw odds live
+   *  there). Called only for mainline moves the decision layer scored. Omit the hook, or
+   *  return null, to draw nothing. */
+  moveLuckMarker?(move: Move, info: { luck: number; before: Truth }): Marker | null;
+  /** Wire the move list's luck badges ("🎲 -7%") to the variant's luck card. `luckAt` maps a
+   *  badge's path key (its data-luck-path) to the scored chance move it labels, from the same
+   *  marks the badge text is built from. Called once per mount; detach on `signal`. Omit for
+   *  variants whose badges open nothing. */
+  moveListLuck?(opts: {
+    list: HTMLElement;
+    luckAt(key: string): { move: Move; luck: number; before: Truth } | null;
+    signal: AbortSignal;
+  }): void;
   /** Game-phase segmentation over the mainline truths (index 0 = start position):
    *  drives the advantage chart's Opening/Middlegame/Endgame dividers and the
    *  summary's per-phase accuracy. Omit for variants without a phase heuristic —
@@ -310,62 +340,22 @@ export type AnalysisSource = {
   /** Cached result that never computes (server path). Optional. */
   fetchCached?(): Promise<GameAnalysis | null>;
   /** Compute the whole-game analysis; report progress when known. */
-  run(onProgress: (done: number, total: number) => void): Promise<GameAnalysis>;
+  run(
+    onProgress: (done: number, total: number) => void,
+    signal?: AbortSignal,
+  ): Promise<GameAnalysis>;
 };
 
-/** Per-reveal decision-vs-luck info the review overlays onto a chance-move game (jieqi). A
- *  reveal's eval swing splits into a DECISION (graded) and LUCK (shown, ungraded); this carries
- *  both per reveal ply plus per-player rollups. Variant-agnostic: the caller adapts its own
- *  decomposition shape (e.g. review/jieqi-decisions) to this. */
-export type DecisionMoveInfo = {
-  /** Decision-quality glyph for the reveal (null = a fine choice, or within engine noise). */
-  judgment: MoveJudgment;
-  /** Luck-free accuracy of the CHOICE in [0, 100] (best-vs-played pool means). Feeds the headline
-   *  accuracy so a reveal ply is graded on skill, not the dice. */
-  accuracy: number;
-  /** Signed win% swing the reveal produced vs its own expectation (+ lucky, - unlucky).
-   *  OPTIONAL: a variant whose luck axis is not a scalar omits it rather than sending 0, which
-   *  would render as "average luck" instead of "no such number". Fog is the case — its error
-   *  classes (belief_lost_truth / sample_error / decision_error) are categorical. */
-  luck?: number;
-  /** The played reveal's rank among the alternatives (1 = best), or null when off the table. */
-  playedRank: number | null;
-  /** Ranked alternatives for this chance ply, best first, ALREADY formatted by the variant
-   *  (the move text is board notation, not engine UCI — this layer is variant-agnostic).
-   *  Absent when the analysis predates candidate capture, or the variant cannot produce one. */
-  candidates?: DecisionCandidate[];
-};
-
-/** One ranked alternative, display-ready. */
-export type DecisionCandidate = {
-  /** Board-notation move text, e.g. "e8-a8". */
-  label: string;
-  /**
-   * The engine's OWN rank for this move, 1-based. Optional: where a variant's
-   * candidate list is exactly the set it ranked (jieqi), row position already is
-   * the rank and this can be omitted. Supply it wherever the displayed rows are a
-   * SUBSET of what was ranked — otherwise the row index silently reads as a rank
-   * and tells the reader their 21st-choice move was second best.
-   */
-  rank?: number;
-  /** Luck-free win% for this choice, already rounded for display. */
-  win: number;
-  /** True when this is the move actually played. */
-  played?: boolean;
-};
-
-export type DecisionPlayerSummary = {
-  reveals: number;
-  /** Mean decision accuracy in [0, 100] (grades only the choice, not the outcome). */
-  decisionAccuracy: number;
-};
-
-export type DecisionOverlay = {
-  /** Per-reveal info keyed by ply, for move-list glyphs + the advice line. */
-  byPly: Map<number, DecisionMoveInfo>;
-  red: DecisionPlayerSummary;
-  black: DecisionPlayerSummary;
-};
+// The decision-overlay types and the per-move marks now live in analysis-marks.ts, the
+// one place both this review and the game embed read their glyphs and advice from.
+// Re-exported so existing importers keep their path.
+export type {
+  DecisionCandidate,
+  DecisionMoveInfo,
+  DecisionOverlay,
+  DecisionPlayerSummary,
+} from './analysis-marks.js';
+export { decisionBestQuote } from './analysis-marks.js';
 
 /** The heavier, opt-in decision-vs-luck tier (jieqi). Fetched/computed alongside the basic
  *  analysis; `run` is triggered right after the basic analysis compute (the decomposition needs
@@ -390,6 +380,8 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
    *  The engine derives its own base FEN from the root truth. */
   root?: { truth: Truth; fen: string };
   pageClassName?: string;
+  /** Board and moves only, inside a host page's column (review-shell.ts). */
+  embedded?: boolean;
   ariaLabel: string;
   /** Info-card eyebrow when no meta card ('Analysis' / 'Game review'). */
   eyebrow?: string;
@@ -415,6 +407,10 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
    *  annotated game on its final position asks the reader to rewind before they
    *  can begin. */
   initialPosition?: 'start' | 'end';
+  /** Keep the reader's place in the URL as `?ply=N` (a mainline position),
+   *  and open on it: a link to "the blunder at move 34" for the creators who
+   *  cover broadcast games (#454). Off by default. */
+  urlPly?: boolean;
   /** Which way the board faces on mount. False (default) puts the first player
    *  at the bottom. A study chapter passes its stored orientation here: a black
    *  repertoire read from red's side asks the reader to mentally mirror every
@@ -457,6 +453,10 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
   /** Per-ply elapsed milliseconds (index 0 = ply 1). When present, a "Move times"
    *  underboard tab renders a per-move bar chart. Only real games supply it. */
   moveTimes?: number[];
+  /** Remaining clocks per ply for the Move times clock overlay (series[0] = the
+   *  start, series[p] = after ply p; `first` = the first mover). Absent = untimed,
+   *  and the bars draw alone. Build it with `reviewMoveClocks`. */
+  moveClocks?: ShowcaseClockPair[];
   /** Real player names — label the accuracy summary and crosstable stub. Absent =
    *  the side's displayed ink is used. */
   players?: { red?: string; black?: string };
@@ -464,6 +464,9 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
    *  first-mover slot, which is White on the chess boards). Absent or null for a
    *  seat with no page, which renders as plain text. */
   playerProfiles?: { red?: ProfileTarget | null; black?: ProfileTarget | null };
+  /** A muted line after each seat strip's name, keyed like `players`: the
+   *  team for a broadcast game, where lichess puts title and rating. */
+  seatDetails?: { red?: string; black?: string };
   /**
    * Draw the names as strips above and below the board. OPT-IN, and separate
    * from `players` on purpose: every game-review surface already passes
@@ -506,8 +509,9 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
     /** Register the handler that plays a move the reader clicked in the table. */
     onPlayMove(handler: (move: Move) => void): void;
     /** Register the handler for hovering a move in the table: it hands back a
-     *  ready-built board arrow (or null on leave). The caller owns the arrow's
-     *  look so it reads as distinct from the engine's blue. */
+     *  ready-built board arrow (or null on leave). The caller builds it with the
+     *  standard hover arrow (review/hover-arrow.ts): the engine arrow's shape in
+     *  a book or result ink. */
     onHoverMove(handler: (arrow: Arrow | null) => void): void;
   };
   /** Game result appended to the move list as a terminal block (lichess: "0-1"
@@ -571,6 +575,12 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
  *  (to persist it — "save as study", autosave). */
 export interface TreeReviewHandle {
   serialize(): SerializedTree;
+  /** Stop everything the mount started: page-wide listeners, the layout's
+   *  resize work, the local engine's worker, a whole-game sweep in flight. A
+   *  surface that swaps reviews without a page load (a broadcast board opened
+   *  in place, a finished board repainting) calls this before the next mount,
+   *  or each mount leaves a Pikafish worker running behind it. */
+  destroy(): void;
 }
 
 /** Keyboard listener is document-wide; on re-mount (import re-seeds) abort the
@@ -586,6 +596,8 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   type Tree = GameTree<Move, Truth, View>;
   const { adapter } = presentation;
 
+  // One signal for everything this mount starts; destroy() aborts it.
+  const mountAbort = new AbortController();
   const tree: Tree = config.initialTree
     ? deserializeTree(adapter, config.initialTree, config.root?.truth)
     : createGameTree(adapter, config.moves, config.root?.truth);
@@ -596,7 +608,12 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   const mainlineLen = tree.mainlinePath().length;
   const notifyChange = (): void => config.onChange?.();
 
-  let currentPath: TreePath = config.initialPosition === 'start' ? [] : tree.last();
+  const defaultPath: TreePath = config.initialPosition === 'start' ? [] : tree.last();
+  let currentPath: TreePath = defaultPath;
+  if (config.urlPly) {
+    const ply = plyFromUrl();
+    if (ply !== null) currentPath = tree.mainlinePath().slice(0, Math.min(ply, mainlineLen));
+  }
   // `?flip=1` opens the review from the second seat's side: the crosstable links
   // a row's games that way, so a click reads as "this game from their side".
   // An explicit initialFlipped (the study's chapter orientation) still wins.
@@ -646,7 +663,9 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // Clicking a move in the opening explorer plays it, same as playing it on the
   // board: the explorer is a navigation surface, not a readout.
   config.explorer?.onPlayMove(handleMove);
-  // Hovering a move previews it as a distinct arrow (the caller built its look).
+  // Hovering a move previews it as an arrow (the caller built its look: the
+  // standard hover arrow, review/hover-arrow.ts). The explorer pane also hosts
+  // the xiangqi tablebase table, which previews through this same slot.
   let explorerHoverArrow: Arrow | null = null;
   config.explorer?.onHoverMove((arrow) => {
     explorerHoverArrow = arrow;
@@ -742,6 +761,9 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     const profiles = config.playerProfiles;
     const nearProfile = bottomIsRed ? profiles?.red : profiles?.black;
     const farProfile = bottomIsRed ? profiles?.black : profiles?.red;
+    const details = config.seatDetails;
+    const nearDetail = bottomIsRed ? details?.red : details?.black;
+    const farDetail = bottomIsRed ? details?.black : details?.red;
     // A nameless seat falls back to a word. Before the flip binds, no colour word
     // is true, so it falls back to the move order instead of picking a side.
     const inkWord = (ink: string, isFirstMover: boolean): string => {
@@ -763,11 +785,11 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       ink: string,
       isFirstMover: boolean,
       slot: 'top' | 'bottom',
+      detail: string | undefined,
     ): void => {
       el.className = `review-seat review-seat--${slot} review-seat--${ink}`;
       el.replaceChildren();
-      const disc = document.createElement('span');
-      disc.className = 'review-seat__disc';
+      const disc = seatDiscEl(ink === UNBOUND_SEAT_INK ? null : ink, 'review-seat__disc');
       // A seat with no name falls back to its ink word, which names nobody, so
       // the link is bound to the resolved name rather than the slot.
       const shown = displayName(name);
@@ -775,11 +797,17 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         ? playerNameEl(shown, profile ?? null, 'review-seat__name')
         : playerNameEl(inkWord(ink, isFirstMover), null, 'review-seat__name');
       el.append(disc, label);
+      if (shown && detail) {
+        const muted = document.createElement('span');
+        muted.className = 'review-seat__detail';
+        muted.textContent = detail;
+        el.append(muted);
+      }
     };
     // The first-mover SEAT is the one `perspective(false)` names, whatever ink it
     // ended up with; it is the bottom strip exactly when the board is unflipped.
-    paint(topSeat, far, farProfile, topInk, !bottomIsRed, 'top');
-    paint(bottomSeat, near, nearProfile, bottomInk, bottomIsRed, 'bottom');
+    paint(topSeat, far, farProfile, topInk, !bottomIsRed, 'top', farDetail);
+    paint(bottomSeat, near, nearProfile, bottomInk, bottomIsRed, 'bottom', nearDetail);
   }
   if (topSeat && bottomSeat) {
     // The strips are taken OUT of the flow and anchored to the wrapper. Adding
@@ -814,6 +842,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   }
   const interactive = presentation.createBoard({
     board: boardEl,
+    signal: mountAbort.signal,
     getInteractionView: () => viewForKey(currentPov),
     getPerspective: orientation,
     // A read-only board offers no seat, so nothing is draggable in the first
@@ -908,10 +937,15 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // synchronously, and that callback reads it.
   let retro: RetroController<Node> | null = null;
   let retroPanel: RetroPanel | null = null;
-  // Whether the local engine is switched on. The whole-game analysis best-move
-  // arrow is PAIRED with it: the server already judged the game, but its arrow is
-  // engine ink, so it shows only while the reader has the local engine on — an
-  // engine-off board carries no derived arrows, only what the reader drew.
+  // Whether the local engine is switched on. Two arrow sources key off it:
+  //  - engine ON: the local engine's lines (or, until they arrive, the stored best
+  //    move for the position on the board). The local engine wins outright.
+  //  - engine OFF: on the position a JUDGED mainline move was played from, the
+  //    better move the stored analysis named (the eval track's best move, or a
+  //    reveal's ranked alternatives), so "?? h5-h0 was best." is also on the board
+  //    where h5-h0 could have been played. The judged move's own position carries
+  //    its glyph badge instead. Positions whose next move was fine, sidelines, and
+  //    variants that will not quote their eval's best move draw nothing.
   let engineOn = false;
   const engineOverlaysSupported = Boolean(
     (presentation.engine?.engineArrowsFromLines || presentation.engine?.engineMarkersFromLines) &&
@@ -936,7 +970,27 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         return engine.bestMoveArrow(best);
       }
     }
+    if (!engineOn) {
+      const better = markedBetter();
+      if (!better) return [];
+      // A chance ply's ranked set, weighted; without that hook, its top move alone.
+      if (better.kind === 'candidates' && engine.candidateArrows) {
+        return engine.candidateArrows(better.moves);
+      }
+      const top = better.kind === 'move' ? better.uci : better.moves[0]?.uci;
+      return engine.bestMoveArrow ? engine.bestMoveArrow(top) : [];
+    }
     return [];
+  }
+  /** The better move(s) the stored analysis names FROM the current position: the
+   *  alternatives to the next mainline move, when that move was judged and retro is not
+   *  hiding the answer. Null otherwise (lichess: the arrow is the best move from the
+   *  position on the board, so the marked move's own position carries only its badge). */
+  function markedBetter(): MarkBetter | null {
+    const node = currentNode();
+    if (mainlineNodes()[node.ply] !== node) return null;
+    if (retro?.hidesPly(node.ply + 1)) return null;
+    return betterFromPly(analysisMarkByPly, node.ply);
   }
   function engineMarkers(): Marker[] {
     const engine = presentation.engine;
@@ -952,12 +1006,23 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         return engine.bestMoveMarker(best);
       }
     }
+    // Engine off: a judged move whose better move has no travel (a flip, a drop) gets
+    // the ring. Only a single best move: a chance ply's ranked set is drawn as arrows.
+    if (!engineOn && engine.bestMoveMarker) {
+      const better = markedBetter();
+      if (better?.kind === 'move') return engine.bestMoveMarker(better.uci);
+    }
     return [];
   }
   // The move-list annotation map (glyph suffix / eval / advice per node), kept so
   // the board badge can read the SAME entry the list renders instead of deriving
   // its own judgment. Rebuilt by refreshMoveTreeAnnotations.
   let annotationByPathKey = new Map<string, MoveTreeAnnotation>();
+  // Per-ply marks from the stored analysis (analysis-marks.ts), rebuilt with the map
+  // above; the engine-off better-move arrows read it.
+  let analysisMarkByPly = new Map<number, AnalysisMark>();
+  /** Path key → the scored chance move behind each move-list luck badge (moveListLuck). */
+  let luckByPathKey = new Map<string, { move: Move; luck: number; before: Truth }>();
 
   /** Badge for the glyph on the move that LED to the current node (so it sits on
    *  the piece that just moved). Empty at the root, for variants without the
@@ -970,6 +1035,18 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     const tone = moveGlyphTone(entry?.suffix, entry?.suffixClass);
     if (!entry?.suffix || !tone) return [];
     const marker = build(node.move, { text: entry.suffix, tone });
+    return marker ? [marker] : [];
+  }
+
+  /** Luck mark for the reveal that LED to the current node (mainline only: the decision
+   *  layer scores the game as played, so a variation's reveal has no luck number). */
+  function luckMarkers(): Marker[] {
+    const build = presentation.moveLuckMarker;
+    const node = currentNode();
+    if (!build || !node.move || !node.parent) return [];
+    const luck = analysisMarkByPly.get(node.ply)?.luck;
+    if (luck === undefined || mainlineNodes()[node.ply] !== node) return [];
+    const marker = build(node.move, { luck, before: node.parent.truth });
     return marker ? [marker] : [];
   }
 
@@ -1000,8 +1077,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     interactive.setArrows([...engineArrows(), ...retroArrows(), ...userArrows, ...hover]);
     // Glyph first so a user's own circle on the same point draws over it: the
     // annotation they just made should not be hidden by a derived badge.
+    // Luck under the glyph: when a reveal carries both, the verdict badge stays on top.
     interactive.setMarkers([
       ...engineMarkers(),
+      ...luckMarkers(),
       ...glyphMarkers(),
       ...shapes.filter((s) => s.kind === 'circle').map(presentation.shapeToMarker),
     ]);
@@ -1054,6 +1133,11 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       notifyChange();
     },
     result: config.result,
+  });
+  presentation.moveListLuck?.({
+    list: moveTree.el,
+    luckAt: (key) => luckByPathKey.get(key) ?? null,
+    signal: mountAbort.signal,
   });
 
   // ── Computer-injected refutation lines (lichess "computer variations") ──
@@ -1130,6 +1214,30 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     if (injected) moveTree.rebuild();
   }
 
+  // A judged chance move ("?! c6-b8 was best." on a reveal) gets its top-ranked
+  // alternative as a ONE-move branch, so the move the advice names can be clicked
+  // like a quiet move's refutation. Never a line: past a reveal nothing is
+  // knowable (see MarkBetter), so the branch stops at the move itself.
+  function injectCandidateMoves(marks: ReadonlyMap<number, AnalysisMark>): void {
+    const decodeUci = presentation.engine?.moveFromEngineUci;
+    const nodes = mainlineNodes();
+    let injected = false;
+    for (const [ply, mark] of marks) {
+      if (mark.better?.kind !== 'candidates') continue;
+      const top = mark.better.moves[0]?.uci;
+      const parent = nodes[ply - 1];
+      if (!top || !parent) continue;
+      const pvMove = decodeUci ? decodeUci(top, parent.truth) : adapter.fromUci(top, parent.truth);
+      if (!pvMove || adapter.moveKey(pvMove) === nodes[ply]?.id) continue;
+      if (parent.children.some((child) => child.id === adapter.moveKey(pvMove))) continue;
+      const next = tree.addMove(tree.pathTo(parent), pvMove);
+      if (!next) continue;
+      compKeys.add(pathKey(next));
+      injected = true;
+    }
+    if (injected) moveTree.rebuild();
+  }
+
   // Promoting a computer line is an explicit adoption: clear the comp flags on the
   // connected line (ancestors and descendants) so a saved study keeps it.
   function adoptCompLine(path: TreePath): void {
@@ -1170,11 +1278,15 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     });
   }
   if (config.studyExport) {
-    menuItems.push({ label: 'Study', icon: REVIEW_MENU_ICONS.study, onClick: () => saveAsStudy() });
+    menuItems.push({
+      label: t('review.menuStudy'),
+      icon: REVIEW_MENU_ICONS.study,
+      onClick: () => saveAsStudy(),
+    });
   }
   if (config.allowClearMoves) {
     menuItems.push({
-      label: 'Clear moves',
+      label: t('review.clearMoves'),
       icon: REVIEW_MENU_ICONS.clear,
       onClick: () => clearMoves(),
     });
@@ -1235,6 +1347,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     });
   }
   const controls = createReviewControls({
+    signal: mountAbort.signal,
     // The book tool appears only when a corpus is behind it (see review-controls).
     ...(config.explorer
       ? { onToggleExplorer: (open: boolean) => config.explorer?.setActive(open) }
@@ -1304,6 +1417,8 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // Live-FEN share input, refreshed on every navigation (see render()).
   const shareFenInput = document.createElement('input');
   const shareMovesInput = document.createElement('textarea');
+  // The Share link follows the position when the URL does (urlPly).
+  const shareUrlInput = document.createElement('input');
   // FEN + moves-import block below the underboard tools (analysis board only);
   // its FEN mirrors the current node, its moves box prefills with the current
   // line but never clobbers in-progress typing (see render()).
@@ -1313,7 +1428,8 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // Authored comment for the CURRENT node, under the board. The move list shows
   // only a bubble marker per commented move; navigation brings the text here.
   const commentPanelEl = document.createElement('section');
-  commentPanelEl.className = 'review-comment-panel review-comment-panel--empty';
+  commentPanelEl.className = 'review-comment-panel';
+  commentPanelEl.hidden = true;
   commentPanelEl.setAttribute('aria-live', 'polite');
   const analysisSummaryEl = document.createElement('div');
   analysisSummaryEl.className = 'review-analysis-summary-slot';
@@ -1490,7 +1606,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
           moveTree.setCurrent(currentPath); // the rebuild dropped the highlight
           const trimmed = text.trim();
           commentPanelEl.textContent = trimmed;
-          commentPanelEl.classList.toggle('review-comment-panel--empty', !trimmed);
+          commentPanelEl.hidden = !trimmed;
           notifyChange();
         },
         onClearShapes: () => {
@@ -1513,13 +1629,29 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         },
       })
     : null;
+  // Move times scrubs like the advantage chart: same move labels, same jump.
+  const moveTimesChart =
+    config.moveTimes && config.moveTimes.length > 0
+      ? createMoveTimesChart(config.moveTimes, {
+          seatColors: config.seatColors,
+          ...(config.moveClocks ? { clocks: config.moveClocks } : {}),
+          moveLabel: (ply) => {
+            const node = mainlineNodes()[ply];
+            return node?.parent ? plyMoveLabel(node) : null;
+          },
+          onJump: (ply) => {
+            const target = mainlineNodes()[ply];
+            if (target) go(tree.pathTo(target));
+          },
+        })
+      : null;
   const underboardEl = underboardPanel(underboardBody, {
     hasAnalysis: Boolean(config.analysis),
     about: config.aboutTab,
     tools: annotationEditor?.tabs,
     provenance: config.provenance,
     ...(config.initialUnderboardTab ? { initialTabId: config.initialUnderboardTab } : {}),
-    moveTimes: config.moveTimes,
+    ...(moveTimesChart ? { moveTimesChart } : {}),
     seatColors: config.seatColors,
     players: config.showCrosstable ? (config.players ?? {}) : undefined,
     ...(config.crosstable ? { crosstable: config.crosstable } : {}),
@@ -1527,6 +1659,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     ...(presentation.engine ? { shareFenInput } : {}),
     shareMovesInput,
     gameUrl: typeof window !== 'undefined' ? window.location.href : '',
+    ...(config.urlPly ? { shareUrlInput } : {}),
     shareExtra: config.shareExtra,
   });
 
@@ -1560,6 +1693,8 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   }
 
   const scaffold = createReviewScaffold(root, {
+    signal: mountAbort.signal,
+    embedded: config.embedded,
     reviewSurface: config.reviewSurface ?? 'game',
     ariaLabel: config.ariaLabel,
     pageClassName: config.pageClassName,
@@ -1790,7 +1925,11 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         ? ''
         : (displayComment(node.annotations?.comments?.[0]) ?? '');
     commentPanelEl.textContent = authoredComment;
-    commentPanelEl.classList.toggle('review-comment-panel--empty', !authoredComment);
+    // Only a move with a note gets the box. An uncommented move shows no empty
+    // box between the board and the tabs; stepping onto or off a note moves what
+    // is below the board by the note's height (Brian, 2026-10-02, over the
+    // reserved two-line box that never reflowed).
+    commentPanelEl.hidden = !authoredComment;
     moveTree.setCurrent(currentPath);
     controls.setBounds({ atStart: currentPath.length === 0, atEnd: node.children.length === 0 });
     // Opening statistics follow the board like every other per-node panel.
@@ -1799,6 +1938,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     const fenOf = presentation.fen ?? presentation.engine?.fen;
     if (fenOf) shareFenInput.value = fenOf(node.truth);
     shareMovesInput.value = uciTo(node).join(' ');
+    if (config.urlPly) {
+      writePlyToUrl(tree.mainlinePath(), currentPath, defaultPath);
+      if (typeof window !== 'undefined') shareUrlInput.value = window.location.href;
+    }
     // The import block mirrors the same live state: FEN of the current node, and
     // the current line in display notation — but never over a paste in progress.
     if (importPanel) {
@@ -1814,6 +1957,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       }
     }
     chart?.setPly(node.ply);
+    moveTimesChart?.setPly(node.ply);
     config.onLineChange?.(movesTo(node));
   }
 
@@ -1854,6 +1998,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     const evalByPly = new Map(analysis.evals.map((entry) => [entry.ply, entry]));
     const bestPlayed = new Set(analysis.bestPlayedPlies);
     const chance = new Set(analysis.chancePlies);
+    const winK = winPercentK(analysis.engineId);
     for (const move of analysis.moves) {
       if (move.judgment !== null || chance.has(move.ply)) continue;
       const parent = nodes[move.ply - 1];
@@ -1861,8 +2006,8 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       const before = evalByPly.get(move.ply - 1);
       const after = evalByPly.get(move.ply);
       if (!parent || !played?.move || !before || !after) continue;
-      const redBefore = winPercent(before.cp, before.mate);
-      const redAfter = winPercent(after.cp, after.mate);
+      const redBefore = winPercent(before.cp, before.mate, winK);
+      const redAfter = winPercent(after.cp, after.mate, winK);
       // Every win% handed to a rule is the MOVER's, so a rule never has to know
       // which seat it is looking at.
       const toMover = (red: number): number => (move.mover === 'red' ? red : 100 - red);
@@ -1882,8 +2027,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
           winAfter: toMover(redAfter),
           playedBest: bestPlayed.has(move.ply),
           pv: after.pv ?? [],
-          secondBestWin: secondBest ? toMover(winPercent(secondBest.cp, secondBest.mate)) : null,
-          winTwoPliesAgo: twoAgo ? toMover(winPercent(twoAgo.cp, twoAgo.mate)) : null,
+          secondBestWin: secondBest
+            ? toMover(winPercent(secondBest.cp, secondBest.mate, winK))
+            : null,
+          winTwoPliesAgo: twoAgo ? toMover(winPercent(twoAgo.cp, twoAgo.mate, winK)) : null,
           pvAfterCapture: after.offerLine?.pv ?? [],
         });
       } catch {
@@ -1909,6 +2056,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       : undefined;
     chart = createAdvantageChart(analysis.evals, {
       seatColors: config.seatColors,
+      winK: winPercentK(analysis.engineId),
       phases: gamePhases,
       // Names the ply under the pointer in the chart's hover readout, in the same
       // "5. b1-c3" / "5… c7-c6" form the move tree numbers its rows with, so the
@@ -1967,6 +2115,16 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     // rest of the game, which reads as confusing rather than informative. The per-move luck (🎲
     // badges) and the luck-free accuracy already carry the decision-vs-luck story. The chart's
     // setLuckOverlay() is kept intact so a future, better-signposted treatment can re-enable it.
+    if (gameAnalysis) {
+      injectCandidateMoves(
+        analysisMarks({
+          analysis: gameAnalysis,
+          decisions: overlay,
+          quoteEvalBestMove: presentation.quoteEvalBestMove !== false,
+          formatBestMove: formatBestForAdvice,
+        }),
+      );
+    }
     refreshMoveTreeAnnotations();
     render();
   }
@@ -1985,82 +2143,67 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // node where both exist (R6 — the two glyph sources are kept distinct).
   function refreshMoveTreeAnnotations(): void {
     const byPathKey = new Map<string, MoveTreeAnnotation>();
+    // The glyph, the advice and the better move per ply come from analysisMarks, the same
+    // function the game embed reads, so a "??" here is a "??" in a frame. This layer adds
+    // only what is review-only: the per-move eval, retro hiding, luck badges, the
+    // alternatives block, and the mapping from ply to tree node.
+    analysisMarkByPly = gameAnalysis
+      ? analysisMarks({
+          analysis: gameAnalysis,
+          decisions: decisionOverlay,
+          quoteEvalBestMove: presentation.quoteEvalBestMove !== false,
+          formatBestMove: formatBestForAdvice,
+        })
+      : new Map();
+    luckByPathKey = new Map();
     if (gameAnalysis) {
       const nodes = mainlineNodes();
       const evalByPly = new Map(gameAnalysis.evals.map((entry) => [entry.ply, entry]));
-      for (const move of gameAnalysis.moves) {
-        const node = nodes[move.ply];
+      for (const [ply, mark] of analysisMarkByPly) {
+        const node = nodes[ply];
         if (!node) continue;
-        const glyph = judgmentGlyph(move.judgment) ?? praiseGlyph(move.praise);
-        const entry = evalByPly.get(move.ply);
+        const entry = evalByPly.get(ply);
         // Retro mode: a mistake the reader has not solved yet keeps its glyph but
         // loses the "… was best" text and its refutation line, or the move list
         // would hand them the answer (lichess hideComputerLine).
-        const hidden = retro?.hidesPly(move.ply) ?? false;
+        const hidden = retro?.hidesPly(ply) ?? false;
         // Judged moves carry their advice INLINE in the move list (lichess:
         // "Blunder. h3-e3 was best." right under the move, ahead of the grafted
-        // refutation line).
-        const quoteBest = presentation.quoteEvalBestMove !== false;
-        const best = move.judgment && quoteBest ? evalByPly.get(move.ply - 1)?.best : null;
-        byPathKey.set(pathKey(tree.pathTo(node)), {
-          suffix: glyph?.suffix,
-          suffixClass: glyph?.suffixClass,
+        // refutation line). A reveal ply's glyph and word come from the DECISION
+        // layer (it is a chance move), and its LUCK shows inline as a badge: every
+        // reveal gets a luck readout, never graded. Chance plies get the ranked
+        // alternatives instead of a refutation line: past a reveal nothing is
+        // knowable, so a LINE would be a fiction while a ranked SET is exactly what
+        // the server scored. The top alternative alone is grafted as a one-move
+        // branch (injectCandidateMoves) so the advice's move can be clicked.
+        const luck = mark.luck;
+        const nodeKey = pathKey(tree.pathTo(node));
+        if (luck !== undefined && node.move && node.parent) {
+          luckByPathKey.set(nodeKey, { move: node.move, luck, before: node.parent.truth });
+        }
+        byPathKey.set(nodeKey, {
+          suffix: mark.suffix,
+          suffixClass: mark.suffixClass,
           eval: entry ? formatEval(entry.cp, entry.mate) : undefined,
-          comment: hidden
-            ? undefined
-            : move.judgment
-              ? `${ADVICE_LABEL[move.judgment]}.${best ? ` ${formatBestForAdvice(best)} was best.` : ''}`
-              : move.praise
-                ? PRAISE_COMMENT[move.praise]
-                : undefined,
-          commentClass: move.judgment ?? move.praise ?? undefined,
+          comment: hidden ? undefined : mark.comment,
+          commentClass: mark.commentClass,
+          ...(luck === undefined
+            ? {}
+            : {
+                luck: `🎲 ${luck > 0 ? '+' : ''}${luck}%`,
+                luckTone: luck > 0 ? 'lucky' : luck < 0 ? 'unlucky' : 'even',
+              }),
+          ...(showAlternatives && mark.candidates?.length
+            ? { candidates: trimAlternatives(mark.candidates) }
+            : {}),
         });
         if (hidden) {
-          const parent = nodes[move.ply - 1];
+          const parent = nodes[ply - 1];
           const line = parent?.children.find((child) => compKeys.has(pathKey(tree.pathTo(child))));
           if (line) {
             const key = pathKey(tree.pathTo(line));
             byPathKey.set(key, { ...byPathKey.get(key), hideLine: true });
           }
-        }
-      }
-      // Decision overlay (jieqi): a reveal ply carries no eval-swing judgment (it is a chance
-      // move), so its glyph comes from the DECISION quality, and its LUCK shows inline as a badge
-      // next to the move — every reveal gets a luck readout, right where the move is. A fine
-      // decision has no glyph (lichess-consistent); luck is always shown, never graded.
-      if (decisionOverlay) {
-        for (const [ply, info] of decisionOverlay.byPly) {
-          const node = nodes[ply];
-          if (!node) continue;
-          const key = pathKey(tree.pathTo(node));
-          const glyph = judgmentGlyph(info.judgment);
-          const luck = info.luck === undefined ? null : Math.round(info.luck);
-          byPathKey.set(key, {
-            ...byPathKey.get(key),
-            suffix: glyph?.suffix,
-            suffixClass: glyph?.suffixClass,
-            ...(luck === null
-              ? {}
-              : {
-                  luck: `🎲 ${luck > 0 ? '+' : ''}${luck}%`,
-                  luckTone: luck > 0 ? 'lucky' : luck < 0 ? 'unlucky' : 'even',
-                }),
-            // Chance plies get the ranked alternatives instead of a refutation line: past a
-            // reveal nothing is knowable, so a LINE would be a fiction while a ranked SET is
-            // exactly what the server scored.
-            // The judge supplies the word too. With the eval track no longer
-            // grading these plies there is no comment to inherit, and a bare
-            // glyph makes the reader guess at severity.
-            ...(info.judgment
-              ? {
-                  comment: `${ADVICE_LABEL[info.judgment]}.`,
-                  commentClass: info.judgment,
-                }
-              : {}),
-            ...(showAlternatives && info.candidates?.length
-              ? { candidates: trimAlternatives(info.candidates) }
-              : {}),
-          });
         }
       }
     }
@@ -2141,7 +2284,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         source
           .run((done, total) => {
             label.textContent = `Analysing… ${done}/${total}`;
-          })
+          }, mountAbort.signal)
           .then((analysis) => {
             applyAnalysis(analysis);
             // The decomposition (jieqi) is the heavier follow-on pass; kick it off once the basic
@@ -2214,8 +2357,11 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   refreshMoveTreeAnnotations();
   render();
   scaffold.refit();
+  // The module-level handle is the backstop for a surface that re-mounts
+  // without calling destroy(): the next mount still aborts the last one's
+  // page-wide listeners.
   keyboardAbort?.abort();
-  keyboardAbort = new AbortController();
+  keyboardAbort = mountAbort;
   // Some variants render pieces as inline SVG, so a piece-set change needs a
   // re-render (a board that picks up its set via CSS does not, and omits the
   // event). Reuse the per-mount abort signal so a re-mount drops the stale
@@ -2289,7 +2435,13 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     keyboardAbort.signal,
   );
 
-  return { serialize: serializeCurrentTree };
+  return {
+    serialize: serializeCurrentTree,
+    destroy() {
+      mountAbort.abort();
+      enginePanel?.dispose();
+    },
+  };
 }
 
 function resolveBoardAspect(aspect: number | (() => number)): number {
@@ -2440,4 +2592,29 @@ function revealsUngradedCaption(): HTMLElement {
   cap.className = 'review-decision-summary__caption';
   cap.textContent = 'Reveals are not graded on this game; accuracy covers the other moves.';
   return cap;
+}
+
+/** `?ply=N` from the page URL, or null when absent or not a whole number. */
+export function plyFromUrl(): number | null {
+  if (typeof window === 'undefined') return null;
+  const raw = new URLSearchParams(window.location.search).get('ply');
+  if (raw === null || !/^\d+$/.test(raw)) return null;
+  return Number(raw);
+}
+
+/** Mirror the position into `?ply=`: a mainline position other than the one
+ *  the page opens on gets its ply; the opening position or a side variation
+ *  (which a ply cannot name) drops it. replaceState, so Back leaves the game. */
+export function writePlyToUrl(mainline: TreePath, current: TreePath, opening: TreePath): void {
+  if (typeof window === 'undefined') return;
+  const onMainline = current.every((id, index) => mainline[index] === id);
+  const atOpening =
+    current.length === opening.length && current.every((id, index) => opening[index] === id);
+  const url = new URL(window.location.href);
+  if (onMainline && !atOpening) url.searchParams.set('ply', String(current.length));
+  else url.searchParams.delete('ply');
+  const next = `${url.pathname}${url.search}${url.hash}`;
+  if (next !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
+    window.history.replaceState(window.history.state, '', next);
+  }
 }

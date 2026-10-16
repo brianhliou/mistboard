@@ -90,10 +90,9 @@ export function historicalXiangqiGameApiUrl(gameId: string): string {
 }
 
 function renderHistoricalXiangqiGame(root: HTMLElement, game: HistoricalXiangqiGameDetail): void {
-  const replay = buildXiangqiReplayFromMoves(game.moves);
+  const replay = buildXiangqiReplayFromMoves(game.moves, undefined, { record: true });
   const metaCard = createGameMetaCard({
     markerId: 'xiangqi',
-    glyph: '象',
     headline: ['Historical game'],
     variantName: variantDisplayLabel(XIANGQI_SPEC_ID),
     subline: [formatDate(game.playedOn), game.eventName].filter(Boolean).join(' · '),
@@ -106,6 +105,7 @@ function renderHistoricalXiangqiGame(root: HTMLElement, game: HistoricalXiangqiG
 
   root.replaceChildren(buildNav());
   mountXiangqiReview(root, {
+    record: true,
     pageClassName: 'xiangqi-review',
     ariaLabel: 'Historical Xiangqi game review',
     title: 'Xiangqi game',
@@ -126,6 +126,8 @@ function renderHistoricalXiangqiGame(root: HTMLElement, game: HistoricalXiangqiG
       score: game.result === '1/2-1/2' ? '½-½' : game.result,
       label: resultStatus(game),
     },
+    // A link can name a move (?ply=34), for a creator's video description (#454).
+    urlPly: true,
     // Share & export: the archive PGN, only where the source is cleared for
     // republication (the server gates the endpoint the same way).
     ...(game.pgnExport ? { shareExtra: [downloadRow([historicalPgnLink(game.id)])] } : {}),

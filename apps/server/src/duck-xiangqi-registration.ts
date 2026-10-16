@@ -22,7 +22,6 @@ import type {
   RoomTimeControl,
 } from '@mistboard/game';
 import { duckXiangqiFen } from '@mistboard/game';
-import { currentAccountUser } from './account-session.js';
 import { type DuckXiangqiEvent, duckXiangqiTenant } from './duck-xiangqi-tenant.js';
 import { tenantCardBinding } from './game-card-tenant.js';
 import { duckXiangqiExportUci, tenantExportBinding } from './game-export-tenant.js';
@@ -30,8 +29,10 @@ import * as persistence from './persistence.js';
 import { handleDuckXiangqiCreate, requestsDuckXiangqi } from './routes/duck-xiangqi-rooms.js';
 import { isAllowedFullTimeControl } from './routes/lib.js';
 import { scheduleDuckXiangqiEngineMove } from './server-duck-xiangqi-engine.js';
+import { tenantCorrespondenceBinding } from './variant-tenant/correspondence.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
+import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
 import {
   registerVariantTenant,
   type TenantManagedRoom,
@@ -39,7 +40,7 @@ import {
 } from './variant-tenant/registry.js';
 import type { TenantRoomEngineSeat } from './variant-tenant/room-factory.js';
 import { createTenantLiveRoom } from './variant-tenant/room-factory.js';
-import { countActiveTenantGames } from './variant-tenant/runtime.js';
+import { countActiveTenantGames, tenantReplayCheck } from './variant-tenant/runtime.js';
 import type { TenantRuntimeRoom } from './variant-tenant/tenant.js';
 import {
   clearTenantRuntimeTimers,
@@ -108,6 +109,21 @@ export function getOrLoadDuckXiangqiRoom(roomId: string): Promise<DuckXiangqiRun
   return getOrLoadTenantRoom(duckXiangqiTenant, duckXiangqiRooms, roomId);
 }
 
+// Correspondence (days-per-move): seek accept seats both accounts, the sweeper
+// enforces the durable deadline through the ws runtime (variant-tenant/correspondence.ts).
+const duckXiangqiCorrespondence = tenantCorrespondenceBinding(duckXiangqiTenant, {
+  factoryContext: () => ({
+    rooms: duckXiangqiRooms,
+    isRoomIdTaken: (roomId) => variantTenantRoomIdTaken(roomId, duckXiangqiTenant.kind),
+    appendRoomEvent: persistence.appendRoomEvent,
+    isPersistenceEnabled: persistence.isInitialized,
+    recordPersistenceError: (roomId, seq, eventType, err) =>
+      recordTenantPersistenceError(duckXiangqiTenant, roomId, seq, eventType, err),
+  }),
+  getOrLoadRoom: (roomId) => getOrLoadTenantRoom(duckXiangqiTenant, duckXiangqiRooms, roomId),
+  lifecycleCtx: duckXiangqiWs.lifecycleCtx,
+});
+
 registerVariantTenant({
   kind: duckXiangqiTenant.kind,
   gameSpecId: duckXiangqiTenant.gameSpecId,
@@ -115,6 +131,7 @@ registerVariantTenant({
   isEngineClientId: duckXiangqiTenant.engine?.isEngineClientId,
   engineDisplayName: (clientId) => duckXiangqiTenant.engine?.displayName(clientId) ?? null,
   ownsSpecRouting: true,
+  replays: tenantReplayCheck(duckXiangqiTenant),
   errorPrefix: 'duck_xiangqi',
   enabled: duckXiangqiTenant.enabled,
   // Mistboard TV channel. This block is the whole switch: the watch channel
@@ -128,7 +145,7 @@ registerVariantTenant({
     legacyVariants: ['duck-xiangqi'],
   },
   rooms: duckXiangqiRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,
-  activeGameCount: () => countActiveTenantGames(duckXiangqiRooms.values()),
+  activeGameCount: () => countActiveTenantGames(duckXiangqiRooms.values(), duckXiangqiTenant),
   getOrLoadRoom: (roomId) => getOrLoadDuckXiangqiRoom(roomId) as Promise<TenantManagedRoom | null>,
   attachWebSocket: (ctx, socket, request, room) =>
     duckXiangqiWs.handleConnection(
@@ -142,28 +159,33 @@ registerVariantTenant({
       room as unknown as DuckXiangqiLiveRoom,
     ),
   clearRuntimeTimers: (room) => clearTenantRuntimeTimers(room as unknown as DuckXiangqiLiveRoom),
+  pauseOnShutdown: (at) =>
+    pauseTenantRoomsOnShutdown(
+      duckXiangqiTenant,
+      duckXiangqiRooms.values(),
+      duckXiangqiWs.lifecycleCtx,
+      at,
+    ),
   clearRooms: () => duckXiangqiRooms.clear(),
   http: {
     matchesCreateRequest: requestsDuckXiangqi,
-    handleCreate: async (ctx, request, response, body) => {
-      const accountUser = body.rated === true ? await currentAccountUser(request) : null;
-      await handleDuckXiangqiCreate({ ...ctx, createDuckXiangqiRoom }, response, body, accountUser);
-    },
+    // POST /api/rooms resolves the account for a rated request (registry.ts).
+    handleCreate: (ctx, _request, response, body, accountUser) =>
+      handleDuckXiangqiCreate({ ...ctx, createDuckXiangqiRoom }, response, body, accountUser),
   },
   // Lobby seek, at parity with every other tenant. It was deliberately absent
   // while the variant was dark, because a public seek would have advertised a
   // game nobody could accept; that stops being true at launch, and a variant
   // with no seek is one two humans cannot find each other in.
   //
-  // NOT rated: `supportsRated: false` matches the tenant's own landing
-  // capability. Duck has no `duck_xiangqi` rating pool (the user_ratings CHECK
-  // constraint would reject it), so a rated seek would fail at the point of
-  // writing the result rather than at the point of creating the game.
+  // Rated since 2026-10-02, in step with the web tenant's capability flag
+  // (the duck_xiangqi pool has been in the user_ratings CHECK since migration
+  // 142). lobby-rated.test.ts holds every tenant to threading the flag.
   lobby: {
-    supportsRated: false,
+    supportsRated: true,
     allowsTimeControl: isAllowedFullTimeControl,
-    createRoom: async (timeControl) => {
-      const created = await createDuckXiangqiRoom(timeControl, 'random', false);
+    createRoom: async (timeControl, rated) => {
+      const created = await createDuckXiangqiRoom(timeControl, 'random', rated);
       if (!created.ok) throw new Error(`duck_xiangqi_room_create_failed:${created.error}`);
       return { id: created.room.id, region: 'global' };
     },
@@ -178,6 +200,5 @@ registerVariantTenant({
     analysis: null,
     fen: duckXiangqiFen,
   }),
-  sweepDueDeadline: null,
-  createCorrespondenceGameForSeek: null,
+  ...duckXiangqiCorrespondence,
 });

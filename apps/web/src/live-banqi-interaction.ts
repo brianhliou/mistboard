@@ -10,7 +10,9 @@ import type { BanqiMove, BanqiPlayerView, BanqiSeat, BanqiSquare } from '@mistbo
 //     clicked DIRECTLY — it is never "selected", so a flip is a one-click move.
 //   - MOVE: clicking your own revealed piece selects it, then clicking a legal
 //     destination sends { from, to }. Selectability is "your own revealed piece
-//     with a legal board move".
+//     with a board move", counting the moves the 長捉 rule forbids.
+//   - FORBIDDEN: clicking a destination the 長捉 rule forbids (view.forbiddenMoves)
+//     sends nothing; the client says why instead.
 // Seat ink is bound on the first flip; before then only flips are legal and no
 // revealed piece exists to select.
 
@@ -18,6 +20,7 @@ export type BanqiClickResult =
   | { kind: 'select'; square: BanqiSquare }
   | { kind: 'clear' }
   | { kind: 'move'; move: BanqiMove }
+  | { kind: 'forbidden'; move: BanqiMove }
   | { kind: 'noop' };
 
 export function banqiClickResult(
@@ -42,7 +45,18 @@ export function banqiClickResult(
     (candidate) => candidate.from === selected && candidate.to === square,
   );
   if (move) return { kind: 'move', move };
+  const forbidden = banqiForbiddenMove(view, selected, square);
+  if (forbidden) return { kind: 'forbidden', move: forbidden };
   return canSelect(view, seat, square) ? { kind: 'select', square } : { kind: 'clear' };
+}
+
+/** The 長捉-forbidden move from `from` to `to` in this view, if there is one. */
+export function banqiForbiddenMove(
+  view: Pick<BanqiPlayerView, 'forbiddenMoves'>,
+  from: BanqiSquare,
+  to: BanqiSquare,
+): BanqiMove | undefined {
+  return view.forbiddenMoves?.find((move) => move.from === from && move.to === to);
 }
 
 function isBanqiSeat(value: unknown): value is BanqiSeat {
@@ -62,7 +76,8 @@ function canSelect(view: BanqiPlayerView, seat: unknown, square: BanqiSquare): b
   const ink =
     view.firstColor === null ? null : seat === 'red' ? view.firstColor : oppositeInk(view);
   if (ink === null || entry.color !== ink) return false;
-  return view.legalMoves.some((move) => move.from === square && move.to !== square);
+  const hasMove = (move: BanqiMove) => move.from === square && move.to !== square;
+  return view.legalMoves.some(hasMove) || (view.forbiddenMoves ?? []).some(hasMove);
 }
 
 function oppositeInk(view: BanqiPlayerView): 'red' | 'black' | null {

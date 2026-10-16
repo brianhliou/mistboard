@@ -19,17 +19,21 @@
 //   - Capturer-only reveal: if a dark piece is captured, only the capturer
 //     learns its identity. The owner never knew it, so they learn nothing.
 //
-// Deliberately NOT in this kernel (see commit fc810c8 "Document Jieqi long-beat
-// parity"): perpetual-check / long-beat repetition adjudication. Patched
-// Pikafish-jieqi is the behavioral oracle for that rule family and rated jieqi
-// is gated on fixture parity, so we do not hand-build a bespoke classifier here.
-// Automatic draws come only from the Guangdong/Tencent no-capture clock
-// (60 full moves = 120 plies without a capture).
+// Repetition (since 2026-10): a game created with `repetition: true` counts
+// positions, and the third occurrence of one ends it as 'repetition'. The
+// server's jieqi tenant then applies the xiangqi chasing rule on top: the side
+// that gave check on every one of its moves in the closing cycle loses
+// (jieqiPerpetualCheckLoser). Perpetual chase is not adjudicated, as in xiangqi
+// on this site. States made without the flag (replays, analysis, games created
+// before the rule) never end on repetition, so an old game replays to the end
+// it had. Automatic draws otherwise come from the Guangdong/Tencent no-capture
+// clock (60 full moves = 120 plies without a capture).
 //
 // This module owns canonical state (it knows every true identity). Hidden-info
 // masking lives entirely in getJieqiPlayerView; the server renders that view and
 // never ships the canonical board to a client.
 
+import { checkSubjectColor } from './check-subject.js';
 import type { AbortReason } from './types.js';
 import {
   coordOf,
@@ -55,6 +59,10 @@ export type JieqiPiece = {
   color: JieqiColor;
   role: JieqiPieceRole;
   faceDown: boolean;
+  // The identity was never determined: an imported game whose own referee dealt
+  // lazily and never revealed this piece (deal.undetermined). `role` is then a
+  // placeholder the kernel needs to stay a valid deal, never a fact to show.
+  unknown?: true;
 };
 
 export type JieqiBoard = Partial<Record<JieqiSquare, JieqiPiece>>;
@@ -69,6 +77,11 @@ export type JieqiMove = {
 export type JieqiDeal = {
   red: JieqiPieceRole[];
   black: JieqiPieceRole[];
+  // Home squares whose identity the game's source never determined (an imported
+  // lab game deals at reveal time; a piece still face-down at the end was never
+  // dealt). The roles above hold placeholders for them; pieces dealt there carry
+  // `unknown`, and every truth view shows them as unknown rather than a role.
+  undetermined?: { red: JieqiSquare[]; black: JieqiSquare[] };
 };
 
 export type JieqiGameEndReason =
@@ -77,7 +90,13 @@ export type JieqiGameEndReason =
   | 'no-capture-clock'
   | 'timeout'
   | 'resignation'
-  | 'abandonment';
+  | 'abandonment'
+  // Third occurrence of a position (games created with `repetition: true`), or
+  // an imported lab game whose own referee declared a threefold draw.
+  | 'repetition'
+  // Never produced by this kernel: the server tenant's perpetual-check loss, a
+  // 'repetition' the checking side manufactured (jieqiPerpetualCheckLoser).
+  | 'chasing';
 
 export type JieqiGameStatus =
   | { type: 'playing'; turn: JieqiColor }
@@ -91,6 +110,8 @@ export type JieqiCapture = {
   owner: JieqiColor;
   role: JieqiPieceRole;
   revealedAtCapture: boolean;
+  // Captured while its identity was undetermined (see JieqiPiece.unknown).
+  unknown?: true;
 };
 
 export type JieqiGameState = {
@@ -102,13 +123,30 @@ export type JieqiGameState = {
   noCaptureClock: number;
   captures: JieqiCapture[];
   lastMove?: JieqiMove;
+  // Threefold-repetition bookkeeping, present only when the game enforces the
+  // rule. Both cover the positions since the last capture or reveal: neither can
+  // be undone, so no earlier position can recur. Keys spell every TRUE identity,
+  // face-down pieces included, so this is server-only state: no view builder
+  // reads it, and it must never reach a client.
+  positionCounts?: Record<string, number>;
+  repetitionLog?: JieqiRepetitionEntry[];
+};
+
+// One position in the repetition window, and the ply that produced it (absent
+// for the window's first position).
+export type JieqiRepetitionEntry = {
+  key: string;
+  mover?: JieqiColor;
+  gaveCheck?: boolean;
 };
 
 // ── Player view (hidden-info boundary) ──────────────────────────────────────
 
 export type JieqiVisibleBoardEntry =
   | { color: JieqiColor; role: JieqiPieceRole; faceDown: false }
-  | { color: JieqiColor; faceDown: true };
+  // `unknown`: only in a truth view, for a piece whose identity was never
+  // determined (JieqiPiece.unknown). Renders as "never revealed", not a role.
+  | { color: JieqiColor; faceDown: true; unknown?: true };
 
 export type JieqiPlayerBoard = Partial<Record<JieqiSquare, JieqiVisibleBoardEntry>>;
 
@@ -233,6 +271,18 @@ export function assertValidJieqiDeal(deal: JieqiDeal): void {
   if (roleMultiset(deal.black) !== STANDARD_BLACK_MULTISET) {
     throw new Error('invalid jieqi deal: black roles are not a permutation of the standard set');
   }
+  if (deal.undetermined) {
+    for (const color of ['red', 'black'] as const) {
+      const home = new Set<JieqiSquare>(color === 'red' ? RED_HOME : BLACK_HOME);
+      for (const square of deal.undetermined[color] ?? []) {
+        if (!home.has(square)) {
+          throw new Error(
+            `invalid jieqi deal: undetermined ${square} is not a ${color} home square`,
+          );
+        }
+      }
+    }
+  }
 }
 
 function shuffleRoles(roles: JieqiPieceRole[], rng: () => number): JieqiPieceRole[] {
@@ -265,21 +315,34 @@ export function oppositeJieqiColor(color: JieqiColor): JieqiColor {
   return color === 'red' ? 'black' : 'red';
 }
 
+export type JieqiInitialStateOptions = {
+  // Enforce threefold repetition (the live rule for games created since
+  // 2026-10). Off by default so replays and analysis walk any move list.
+  repetition?: boolean;
+};
+
 export function createInitialJieqiState(
   gameId: string,
   deal: JieqiDeal = STANDARD_JIEQI_DEAL,
+  opts: JieqiInitialStateOptions = {},
 ): JieqiGameState {
   assertValidJieqiDeal(deal);
   const board: JieqiBoard = {};
   board[generalSquare('red')] = { color: 'red', role: 'general', faceDown: false };
   board[generalSquare('black')] = { color: 'black', role: 'general', faceDown: false };
+  const unknown = {
+    red: new Set<JieqiSquare>(deal.undetermined?.red ?? []),
+    black: new Set<JieqiSquare>(deal.undetermined?.black ?? []),
+  };
   RED_HOME.forEach((sq, i) => {
     board[sq] = { color: 'red', role: deal.red[i], faceDown: true };
+    if (unknown.red.has(sq)) board[sq].unknown = true;
   });
   BLACK_HOME.forEach((sq, i) => {
     board[sq] = { color: 'black', role: deal.black[i], faceDown: true };
+    if (unknown.black.has(sq)) board[sq].unknown = true;
   });
-  return {
+  const state: JieqiGameState = {
     id: gameId,
     board,
     status: { type: 'playing', turn: 'red' },
@@ -287,6 +350,27 @@ export function createInitialJieqiState(
     noCaptureClock: 0,
     captures: [],
   };
+  if (opts.repetition) {
+    const key = jieqiPositionKey(board, 'red');
+    state.positionCounts = { [key]: 1 };
+    state.repetitionLog = [{ key }];
+  }
+  return state;
+}
+
+/**
+ * The repetition key: every piece with its TRUE role and face-down flag, plus
+ * the side to move. Server-only (it names hidden identities). A dark piece can
+ * only leave its square by revealing, so within one repetition window this
+ * distinguishes exactly the positions the masked board does.
+ */
+export function jieqiPositionKey(board: JieqiBoard, turn: JieqiColor): string {
+  const pieces = (Object.entries(board) as [JieqiSquare, JieqiPiece | undefined][])
+    .filter(([, piece]) => piece)
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([sq, p]) => `${sq}:${p!.color}.${p!.role}${p!.faceDown ? '.d' : ''}`)
+    .join(',');
+  return `${turn}|${pieces}`;
 }
 
 // ── Move generation ─────────────────────────────────────────────────────────
@@ -427,13 +511,17 @@ export function findJieqiGeneral(board: JieqiBoard, color: JieqiColor): JieqiSqu
  * facing-generals rule is folded in: an enemy general with a clear file to the
  * target attacks it (moving onto that file would be an illegal face-off).
  */
-function isAttacked(board: JieqiBoard, byColor: JieqiColor, target: JieqiSquare): boolean {
+function isAttacked(
+  board: JieqiBoard,
+  byColor: JieqiColor,
+  target: JieqiSquare,
+  enemyGeneral: JieqiSquare | undefined = findJieqiGeneral(board, byColor),
+): boolean {
   for (const [sq, piece] of Object.entries(board)) {
     if (!piece || piece.color !== byColor) continue;
     if (piece.role === 'general') continue; // handled via the flying-general check below
     if (pseudoDests(board, sq as JieqiSquare).includes(target)) return true;
   }
-  const enemyGeneral = findJieqiGeneral(board, byColor);
   if (enemyGeneral) {
     const g = coordOf(enemyGeneral);
     const t = coordOf(target);
@@ -463,22 +551,43 @@ function simulateBoard(board: JieqiBoard, from: JieqiSquare, to: JieqiSquare): J
   return next;
 }
 
-function legalMovesOnBoard(board: JieqiBoard, color: JieqiColor): JieqiMove[] {
+// Both generals are located once per generation, not once per candidate: a
+// candidate moves our general only when it starts on the general's square, and
+// removes the enemy general only by capturing it. Applying a move validates and
+// scores it with this, so it runs for every move of every replayed game (#476).
+function legalMovesFromSquares(
+  board: JieqiBoard,
+  color: JieqiColor,
+  froms: Iterable<JieqiSquare>,
+  firstOnly: boolean,
+): JieqiMove[] {
   const moves: JieqiMove[] = [];
   const enemy = oppositeJieqiColor(color);
-  for (const [sq, piece] of Object.entries(board)) {
+  const ownGeneral = findJieqiGeneral(board, color);
+  const enemyGeneral = findJieqiGeneral(board, enemy);
+  for (const from of froms) {
+    const piece = board[from];
     if (!piece || piece.color !== color) continue;
-    const from = sq as JieqiSquare;
     for (const to of pseudoDests(board, from)) {
       const next = simulateBoard(board, from, to);
-      const general = findJieqiGeneral(next, color);
+      const general = from === ownGeneral ? to : ownGeneral;
       // A move that captures the enemy general (pathological after legal play)
       // leaves us with a general and no self-check — it is allowed and wins.
-      if (general && isAttacked(next, enemy, general)) continue;
+      const enemyGeneralAfter = to === enemyGeneral ? undefined : enemyGeneral;
+      if (general && isAttacked(next, enemy, general, enemyGeneralAfter)) continue;
       moves.push({ from, to });
+      if (firstOnly) return moves;
     }
   }
   return moves;
+}
+
+function legalMovesOnBoard(board: JieqiBoard, color: JieqiColor): JieqiMove[] {
+  return legalMovesFromSquares(board, color, Object.keys(board) as JieqiSquare[], false);
+}
+
+function hasLegalMove(board: JieqiBoard, color: JieqiColor): boolean {
+  return legalMovesFromSquares(board, color, Object.keys(board) as JieqiSquare[], true).length > 0;
 }
 
 export function getJieqiLegalMoves(state: JieqiGameState): JieqiMove[] {
@@ -490,7 +599,7 @@ export function getJieqiLegalMovesFrom(state: JieqiGameState, from: JieqiSquare)
   if (state.status.type !== 'playing') return [];
   const piece = state.board[from];
   if (!piece || piece.color !== state.status.turn) return [];
-  return getJieqiLegalMoves(state).filter((move) => move.from === from);
+  return legalMovesFromSquares(state.board, state.status.turn, [from], false);
 }
 
 export function isJieqiLegalMove(state: JieqiGameState, move: JieqiMove): boolean {
@@ -523,6 +632,7 @@ export function applyJieqiMove(
           owner: captured.color,
           role: captured.role,
           revealedAtCapture: !captured.faceDown,
+          ...(captured.unknown && captured.faceDown ? { unknown: true as const } : {}),
         },
       ]
     : state.captures;
@@ -530,14 +640,38 @@ export function applyJieqiMove(
   const moveNumber = turn === 'black' ? state.moveNumber + 1 : state.moveNumber;
   const limit = opts.noCaptureClockLimit ?? DEFAULT_NO_CAPTURE_PLY_LIMIT;
 
+  // Repetition window: a capture or a reveal starts a new one (neither can be
+  // undone, so no earlier position can come back).
+  let positionCounts: Record<string, number> | undefined;
+  let repetitionLog: JieqiRepetitionEntry[] | undefined;
+  let repeatedThrice = false;
+  if (state.positionCounts) {
+    const key = jieqiPositionKey(board, next);
+    const nextGeneral = findJieqiGeneral(board, next);
+    const gaveCheck = nextGeneral ? isAttacked(board, turn, nextGeneral) : false;
+    const entry: JieqiRepetitionEntry = { key, mover: turn, gaveCheck };
+    const irreversible = wasCapture || state.board[move.from]?.faceDown === true;
+    if (irreversible) {
+      positionCounts = { [key]: 1 };
+      repetitionLog = [entry];
+    } else {
+      positionCounts = { ...state.positionCounts, [key]: (state.positionCounts[key] ?? 0) + 1 };
+      repetitionLog = [...(state.repetitionLog ?? []), entry];
+    }
+    repeatedThrice = (positionCounts[key] ?? 0) >= 3;
+  }
+
+  // Order: general capture > checkmate/stalemate > threefold > no-capture clock.
   let status: JieqiGameStatus = { type: 'playing', turn: next };
   if (captured?.role === 'general') {
     // Pathological under checkmate play, but score it as a win for safety.
     status = { type: 'finished', winner: turn, reason: 'checkmate' };
-  } else if (legalMovesOnBoard(board, next).length === 0) {
+  } else if (!hasLegalMove(board, next)) {
     const general = findJieqiGeneral(board, next);
     const inCheck = general ? isAttacked(board, turn, general) : true;
     status = { type: 'finished', winner: turn, reason: inCheck ? 'checkmate' : 'stalemate' };
+  } else if (repeatedThrice) {
+    status = { type: 'finished', winner: null, reason: 'repetition' };
   } else if (noCaptureClock >= limit) {
     status = { type: 'finished', winner: null, reason: 'no-capture-clock' };
   }
@@ -550,10 +684,110 @@ export function applyJieqiMove(
     noCaptureClock,
     captures,
     lastMove: move,
+    ...(positionCounts ? { positionCounts, repetitionLog } : {}),
   };
 }
 
+// ── Perpetual-check adjudication ────────────────────────────────────────────
+
+/**
+ * Jieqi wins and losses follow xiangqi, so a perpetual check loses. When a game
+ * has just ended on 'repetition', take the cycle that closed it (the plies after
+ * the second-to-last occurrence of the repeated position, through the last) and
+ * name the side that gave check on every one of its own moves in it. Mutual
+ * perpetual check and check-free cycles return null: the draw stands. Mirrors
+ * xiangqiPerpetualCheckLoser; perpetual chase is not covered, as there.
+ */
+export function jieqiPerpetualCheckLoser(state: JieqiGameState): JieqiColor | null {
+  const log = state.repetitionLog;
+  if (!log || log.length === 0) return null;
+  const repeatedKey = log[log.length - 1]!.key;
+  const occurrences = log.flatMap((entry, i) => (entry.key === repeatedKey ? [i] : []));
+  if (occurrences.length < 3) return null;
+  const cycle = log.slice(occurrences[occurrences.length - 2]! + 1, occurrences.at(-1)! + 1);
+  const perpetualBy = (color: JieqiColor): boolean => {
+    const own = cycle.filter((entry) => entry.mover === color);
+    return own.length > 0 && own.every((entry) => entry.gaveCheck === true);
+  };
+  const red = perpetualBy('red');
+  const black = perpetualBy('black');
+  if (red && !black) return 'red';
+  if (black && !red) return 'black';
+  return null;
+}
+
 // ── Player view (redaction) ─────────────────────────────────────────────────
+
+/**
+ * Is the side to move in check? Public information: a face-down piece moves, and
+ * so attacks, as the role of its home square, so the masked board settles it and
+ * the answer is the same for both seats and a spectator. Once the game is over
+ * the side to move is the one that did not play the last move, so a checkmated
+ * position still reads as check (the mating ply in a postgame history). This is
+ * the reading for seatless views (truth, public); a seat's own view keeps the
+ * per-perspective rule every variant view shares.
+ */
+export function isJieqiSideToMoveInCheck(state: JieqiGameState): boolean {
+  const toMove = jieqiSideToMove(state);
+  if (!toMove) return false;
+  const general = findJieqiGeneral(state.board, toMove);
+  return general ? isAttacked(state.board, oppositeJieqiColor(toMove), general) : false;
+}
+
+/**
+ * The general the board should show in check, or null, from a board any viewer
+ * holds: a masked seat or spectator board works, since a face-down piece
+ * attacks as the role of its home square and its true role never matters. The
+ * side is the one facing the move (checkSubjectColor).
+ */
+export function jieqiCheckedGeneral(
+  board: JieqiBoard | JieqiPlayerBoard,
+  status: JieqiGameStatus,
+): JieqiSquare | null {
+  const color = checkSubjectColor(status);
+  if (!color) return null;
+  const attackBoard: JieqiBoard = {};
+  for (const [square, entry] of Object.entries(board)) {
+    if (!entry) continue;
+    // A face-down piece's role is never read for attacks (effectiveRole uses
+    // the home square), so a placeholder stands in for a hidden one.
+    attackBoard[square as JieqiSquare] =
+      'role' in entry && entry.role
+        ? { color: entry.color, role: entry.role, faceDown: entry.faceDown }
+        : { color: entry.color, role: 'soldier', faceDown: true };
+  }
+  const general = findJieqiGeneral(attackBoard, color);
+  if (!general) return null;
+  return isAttacked(attackBoard, oppositeJieqiColor(color), general) ? general : null;
+}
+
+/**
+ * The check suffix for the move that produced this position: `#` when it
+ * checkmated, `+` when it left the side to move in check, '' otherwise. Check
+ * is public in jieqi, so a masked view's board and status are enough.
+ */
+export function jieqiCheckMark(after: {
+  board: JieqiBoard | JieqiPlayerBoard;
+  status: JieqiGameStatus;
+}): '' | '+' | '#' {
+  if (after.status.type === 'finished' && after.status.reason === 'checkmate') return '#';
+  if (after.status.type !== 'playing') return '';
+  return jieqiCheckedGeneral(after.board, after.status) ? '+' : '';
+}
+
+/** A jieqi move label: from-to, then its check mark (jieqiCheckMark). */
+export function jieqiMoveLabel(
+  move: JieqiMove,
+  after: { board: JieqiBoard | JieqiPlayerBoard; status: JieqiGameStatus },
+): string {
+  return `${move.from}-${move.to}${jieqiCheckMark(after)}`;
+}
+
+function jieqiSideToMove(state: JieqiGameState): JieqiColor | null {
+  if (state.status.type === 'playing') return state.status.turn;
+  const mover = state.lastMove ? state.board[state.lastMove.to]?.color : undefined;
+  return mover ? oppositeJieqiColor(mover) : null;
+}
 
 // A full-information "truth" view (every identity revealed, every captured role
 // carried with its full role) for postgame review. Unlike getJieqiPlayerView,
@@ -561,23 +795,43 @@ export function applyJieqiMove(
 // shape, so the review renderer can show every face-up identity. Never ship this
 // to a live client — it is the postgame-only counterpart to the per-color views.
 export function jieqiTruthView(state: JieqiGameState): JieqiPlayerView {
-  const board: JieqiPlayerBoard = {};
-  for (const [square, piece] of Object.entries(state.board)) {
-    if (piece) {
-      board[square as JieqiSquare] = { color: piece.color, role: piece.role, faceDown: false };
-    }
-  }
   return {
     id: state.id,
     perspective: 'red',
-    board,
+    board: jieqiTruthBoard(state),
     legalMoves: [],
-    captured: state.captures.map((c) => ({ owner: c.owner, role: c.role })),
-    inCheck: false,
+    captured: jieqiTruthCaptures(state),
+    inCheck: isJieqiSideToMoveInCheck(state),
     status: state.status,
     moveNumber: state.moveNumber,
     lastMove: state.lastMove,
   };
+}
+
+/** Every identity the game determined; a never-determined piece stays unknown. */
+export function jieqiTruthBoard(state: JieqiGameState): JieqiPlayerBoard {
+  const board: JieqiPlayerBoard = {};
+  for (const [square, piece] of Object.entries(state.board)) {
+    if (!piece) continue;
+    board[square as JieqiSquare] =
+      piece.unknown && piece.faceDown
+        ? { color: piece.color, faceDown: true, unknown: true }
+        : { color: piece.color, role: piece.role, faceDown: false };
+  }
+  return board;
+}
+
+/** Every captured role, except one captured before its identity was determined. */
+export function jieqiTruthCaptures(state: JieqiGameState): JieqiCapturedView[] {
+  return state.captures.map((c) => ({ owner: c.owner, role: c.unknown ? null : c.role }));
+}
+
+/** Home squares still face-down whose identity was never determined. */
+export function jieqiUnknownSquares(state: JieqiGameState): JieqiSquare[] {
+  return (Object.entries(state.board) as [JieqiSquare, JieqiPiece | undefined][])
+    .filter(([, piece]) => piece?.unknown && piece.faceDown)
+    .map(([square]) => square)
+    .sort();
 }
 
 // The board as BOTH players see it. A face-down piece hides its role from its own
@@ -640,28 +894,21 @@ export function getJieqiPlayerView(state: JieqiGameState, color: JieqiColor): Ji
 //     role only when the piece was already face-up when taken. A dark capture
 //     stays `role: null`, which is exactly what the VICTIM sees for that piece,
 //     so the observer never holds a role that one of the seats lacks;
-//   - no legal moves (nothing to play); inCheck for the side to move, which
-//     depends only on the public board (a face-down piece moves as the role of
-//     its starting square).
+//   - no legal moves (nothing to play); inCheck for the side to move
+//     (isJieqiSideToMoveInCheck), which depends only on the public board.
 // Never use this to reveal a finished game; that is jieqiTruthView.
 export function getJieqiPublicView(state: JieqiGameState): JieqiPlayerView {
   const captured: JieqiCapturedView[] = state.captures.map((c) => ({
     owner: c.owner,
     role: c.revealedAtCapture ? c.role : null,
   }));
-  let inCheck = false;
-  if (state.status.type === 'playing') {
-    const toMove = state.status.turn;
-    const general = findJieqiGeneral(state.board, toMove);
-    inCheck = general ? isAttacked(state.board, oppositeJieqiColor(toMove), general) : false;
-  }
   return {
     id: state.id,
     perspective: 'red',
     board: jieqiMaskedBoard(state),
     legalMoves: [],
     captured,
-    inCheck,
+    inCheck: isJieqiSideToMoveInCheck(state),
     status: state.status,
     moveNumber: state.moveNumber,
     lastMove: state.lastMove,

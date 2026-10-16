@@ -4,7 +4,9 @@ import test from 'node:test';
 import { XIANGQI_GLYPH_PATHS } from '@mistboard/board-render';
 import {
   banqiStateToEngineFen,
+  crazyhouseXiangqiFen,
   createInitialBanqiState,
+  createInitialCrazyhouseXiangqiState,
   createInitialDuckXiangqiState,
   createInitialFortressXiangqiState,
   createInitialJieqiState,
@@ -45,6 +47,8 @@ const START_FENS: Record<PositionOgVariant, string> = {
   // The duck starts OFF the board ('-' in the seventh field), so the start
   // position is the one duck FEN that draws no duck.
   'duck-xiangqi': duckXiangqiFen(createInitialDuckXiangqiState('t')),
+  // The standard board with both (empty) hands in brackets.
+  'crazyhouse-xiangqi': crazyhouseXiangqiFen(createInitialCrazyhouseXiangqiState('t')),
 };
 
 // A duck on the board: Red has played, and the duck sits on e5 (the river

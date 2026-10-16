@@ -32,6 +32,7 @@ import {
   fortressXiangqiDropTargets,
   fortressXiangqiMoveLabel,
 } from './fortress-xiangqi-view.js';
+import { soundForOwnFortressXiangqiMove } from './live-fortress-xiangqi-sound.js';
 import { playSound, playTerminalPlan } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
 import { setBoardFamily, xiangqiAppearanceChangedEvent } from './theme.js';
@@ -49,7 +50,7 @@ import {
   type TenantLiveEvent,
   type TenantMovePlayed,
 } from './variant-tenant/live-client.js';
-import type { WebVariantTenant } from './variant-tenant/room-chrome.js';
+import type { TenantReasonKey, WebVariantTenant } from './variant-tenant/room-chrome.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
 
 type FortressMoveEvent = TenantMovePlayed<FortressXiangqiColor, FortressXiangqiMove>;
@@ -71,20 +72,15 @@ let forfeitDeadline: number | null = null;
 let lastStatusType: string | null = null;
 
 const fortressWebTenant: WebVariantTenant<FortressXiangqiColor> = {
-  displayName: 'Fortress Xiangqi',
-  metaMarkerId: 'fortress-xiangqi',
-  metaGlyph: '象',
+  displayName: 'variant.fortressXiangqi.name',
   colors: ['red', 'black'],
   isColor: isFortressColor,
   oppositeColor: (color) => (color === 'red' ? 'black' : 'red'),
   enabled: fortressXiangqiEnabled,
   reviewUrl: (roomId) => `/fortress-xiangqi/game/${encodeURIComponent(roomId)}`,
   reasonPhrase: fortressReasonPhrase,
-  disabledTitle: 'Fortress disabled',
-  disabledBody: 'This client build has the room renderer off.',
-  rejectedBody: 'This Fortress room is not active. Create a new invite to start a game.',
-  spectatorBody: 'Watching the full board.',
-  selectInstruction: 'Select a piece, or select a reserve and then a drop square.',
+  spectatorBody: 'live.spectatorFullBoard',
+  selectInstruction: 'live.selectFortress',
 };
 
 const client = createTenantLiveClient<
@@ -137,16 +133,14 @@ const client = createTenantLiveClient<
   renderBoard: renderBoardReconciled,
   renderExtras: (refs, view) => {
     renderReserves(refs, view);
-    renderCheckStatus(refs, view);
   },
   onDisabled: (refs) => {
     // Mirror the pre-guard renderAll steps the original ran even when the flag
-    // was off: reconcile, then paint the reserve strips + check notice, then
+    // was off: reconcile, then paint the reserve strips, then
     // clear the selection.
     reconcileInteractionState(core?.state.view ?? null);
     const view = core?.displayedView() ?? null;
     renderReserves(refs, view);
-    renderCheckStatus(refs, view);
     selectedSquare = null;
     selectedDropRole = null;
   },
@@ -241,23 +235,6 @@ function renderBoardReconciled(liveRefs: LiveRefs, view: FortressXiangqiPlayerVi
   renderBoard(liveRefs, view);
 }
 
-function renderCheckStatus(liveRefs: LiveRefs, view: FortressXiangqiPlayerView | null): void {
-  if (view?.status.type !== 'playing' || !view.inCheck || !core?.replay.isLive()) return;
-  liveRefs.actionSection.hidden = false;
-  liveRefs.actionStatus.replaceChildren();
-  const notice = document.createElement('div');
-  notice.className = 'action-notice danger';
-  const title = document.createElement('strong');
-  title.textContent = 'Check';
-  const body = document.createElement('p');
-  body.textContent =
-    core?.state.seat === view.perspective
-      ? 'Your general is in check. Answer the threat.'
-      : `${capitalize(view.perspective)} general is in check.`;
-  notice.append(title, body);
-  liveRefs.actionStatus.append(notice);
-}
-
 function renderBoard(liveRefs: LiveRefs, view: FortressXiangqiPlayerView | null): void {
   liveRefs.board.className = 'board fortress-xiangqi-live-board';
   liveRefs.board.setAttribute('aria-label', 'Fortress board');
@@ -288,8 +265,9 @@ function renderReserves(liveRefs: LiveRefs, view: FortressXiangqiPlayerView | nu
   if (!view) return;
   const bottom = orientationFor(view);
   const top = bottom === 'red' ? 'black' : 'red';
-  fillFortressXiangqiReserve(liveRefs.capturesTop, view, top);
+  fillFortressXiangqiReserve(liveRefs.capturesTop, view, top, { pocket: true });
   fillFortressXiangqiReserve(liveRefs.capturesBottom, view, bottom, {
+    pocket: true,
     interactive: canInteract(view) && core?.state.seat === bottom,
     selectedRole: selectedDropRole,
     onSelect: (role) => {
@@ -379,7 +357,7 @@ function handleSquareClick(square: FortressXiangqiSquare): void {
   if (move) {
     selectedSquare = null;
     core?.send({ type: 'move', from: move.from, to: move.to });
-    playSound(view.board[move.to] ? 'capture' : 'move');
+    playSound(soundForOwnFortressXiangqiMove(view, move));
     core?.renderAll();
     return;
   }
@@ -404,7 +382,7 @@ function dropPiece(from: FortressXiangqiSquare, to: FortressXiangqiSquare | null
   if (move && view) {
     selectedSquare = null;
     core?.send({ type: 'move', from: move.from, to: move.to });
-    playSound(view.board[move.to] ? 'capture' : 'move');
+    playSound(soundForOwnFortressXiangqiMove(view, move));
   } else {
     selectedSquare = null;
   }
@@ -529,24 +507,24 @@ function orientationFor(view: FortressXiangqiPlayerView | null): FortressXiangqi
   return view?.perspective ?? 'red';
 }
 
-function fortressReasonPhrase(reason: string): string {
+function fortressReasonPhrase(reason: string): TenantReasonKey {
   switch (reason) {
     case 'checkmate':
-      return 'checkmate';
+      return 'result.checkmate';
     case 'stalemate':
-      return 'stalemate';
+      return 'result.stalemate';
     case 'timeout':
-      return 'timeout';
+      return 'result.timeout';
     case 'resignation':
-      return 'resignation';
+      return 'result.resignation';
     case 'abandonment':
-      return 'abandonment';
+      return 'result.abandonment';
     case 'repetition':
-      return 'threefold repetition';
+      return 'result.threefoldRepetition';
     case 'chasing':
-      return 'perpetual check';
+      return 'result.perpetualCheck';
     default:
-      return 'the game rules';
+      return 'result.gameRules';
   }
 }
 
@@ -560,9 +538,4 @@ function isFortressSquare(value: string): value is FortressXiangqiSquare {
 
 function isDropRole(value: string): value is FortressXiangqiDropRole {
   return (FORTRESS_DROP_ROLES as readonly string[]).includes(value);
-}
-
-function capitalize(value: string): string {
-  if (!value) return value;
-  return `${value.slice(0, 1).toUpperCase()}${value.slice(1)}`;
 }

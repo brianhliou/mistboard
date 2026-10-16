@@ -1,0 +1,201 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {
+  isXiangqiBroadcastPollMode,
+  normalizeXiangqiBroadcastPollMode,
+  xiangqiBroadcastPollState,
+} from './xiangqi-broadcast-poll-window.js';
+
+// The 2026 Asian individual championship as prod holds it.
+const ASIAN = {
+  sourceUrl: 'mistboard-discover://dpxq-tour?tour=12526&tourSlug=2026-asian-individual-men',
+  startsAt: '2026-10-02T00:00:00+08:00',
+  endsAt: '2026-10-08T23:59:59+08:00',
+};
+const at = (iso: string) => Date.parse(iso);
+
+test('auto polls from 12 h before the start to 7 days after the end', () => {
+  const state = (now: string) =>
+    xiangqiBroadcastPollState({ ...ASIAN, pollMode: 'auto', now: at(now) });
+
+  const before = state('2026-10-01T11:59:59+08:00');
+  assert.equal(before.polling, false);
+  assert.equal(before.reason, 'auto-before');
+  // The window reads on the event's own clock.
+  assert.equal(before.opensAt, '2026-10-01T12:00:00+08:00');
+  assert.equal(before.closesAt, '2026-10-15T23:59:59+08:00');
+
+  assert.equal(state('2026-10-01T12:00:00+08:00').polling, true);
+  assert.equal(state('2026-10-05T15:00:00+08:00').reason, 'auto-open');
+  assert.equal(state('2026-10-05T15:00:00+08:00').afterEvent, false);
+
+  const tail = state('2026-10-09T20:00:00+08:00');
+  assert.equal(tail.polling, true, 'records land the evening after the last round');
+  assert.equal(tail.afterEvent, true);
+
+  assert.equal(state('2026-10-15T23:59:59+08:00').polling, true);
+  const after = state('2026-10-16T00:00:00+08:00');
+  assert.equal(after.polling, false);
+  assert.equal(after.reason, 'auto-closed');
+});
+
+test('a tour seeded after its event polls for the tail counted from its creation', () => {
+  // The 2026 women's league qualifier: played 09-20..22, seeded 10-02, after
+  // its own window had closed on 09-29.
+  const QUALIFIER = {
+    sourceUrl: 'mistboard-discover://dpxq-tour?tour=12791&tourSlug=2026-womens-league-qualifier',
+    startsAt: '2026-09-20T00:00:00+08:00',
+    endsAt: '2026-09-22T23:59:59+08:00',
+    pollMode: 'auto' as const,
+  };
+  const createdAt = new Date('2026-10-02T04:50:00Z');
+  const state = (now: string, seeded: Date | null = createdAt) =>
+    xiangqiBroadcastPollState({ ...QUALIFIER, createdAt: seeded, now: at(now) });
+
+  // Without the creation time the window is closed, which is the bug.
+  assert.equal(state('2026-10-02T05:00:00Z', null).reason, 'auto-closed');
+  assert.equal(state('2026-10-02T05:00:00Z').reason, 'auto-open');
+  assert.equal(state('2026-10-02T05:00:00Z').afterEvent, true);
+  assert.equal(state('2026-10-09T04:49:00Z').polling, true);
+  assert.equal(state('2026-10-09T04:51:00Z').reason, 'auto-closed');
+  assert.equal(state('2026-10-02T05:00:00Z').closesAt, '2026-10-09T12:50:00+08:00');
+  // A tour seeded before its event keeps the event's own window.
+  const early = xiangqiBroadcastPollState({
+    ...ASIAN,
+    pollMode: 'auto',
+    createdAt: '2026-09-25T18:31:06.212Z',
+    now: at('2026-10-16T00:00:00+08:00'),
+  });
+  assert.equal(early.reason, 'auto-closed');
+  assert.equal(early.closesAt, '2026-10-15T23:59:59+08:00');
+});
+
+test('a tour with no boards past its window polls daily for 30 more days (#493)', () => {
+  // The 2026 women's league: ended 09-27 with 0 records on dpxq; its 7-day
+  // tail closed 10-04 and nothing would ever poll it again.
+  const LEAGUE = {
+    sourceUrl: 'mistboard-discover://dpxq-tour?tour=12776&tourSlug=2026-womens-xiangqi-league',
+    startsAt: '2026-09-25T00:00:00+08:00',
+    endsAt: '2026-09-27T23:59:59+08:00',
+    createdAt: '2026-09-20T00:00:00Z',
+    pollMode: 'auto' as const,
+  };
+  const state = (now: string, hasBoards?: boolean) =>
+    xiangqiBroadcastPollState({ ...LEAGUE, hasBoards, now: at(now) });
+
+  // Inside the plain window nothing changes.
+  assert.equal(state('2026-10-02T00:00:00+08:00', false).reason, 'auto-open');
+  // Past it, an empty tour keeps a late tail; one with boards, or one whose
+  // board count the caller does not know, closes as before.
+  const late = state('2026-10-14T12:00:00+08:00', false);
+  assert.equal(late.polling, true);
+  assert.equal(late.reason, 'auto-late');
+  assert.equal(late.afterEvent, true);
+  assert.equal(late.closesAt, '2026-11-03T23:59:59+08:00');
+  assert.equal(state('2026-10-14T12:00:00+08:00', true).reason, 'auto-closed');
+  assert.equal(state('2026-10-14T12:00:00+08:00').reason, 'auto-closed');
+  assert.equal(state('2026-10-14T12:00:00+08:00').closesAt, '2026-10-04T23:59:59+08:00');
+  // The late tail ends thirty days after the window.
+  assert.equal(state('2026-11-03T23:59:59+08:00', false).polling, true);
+  const over = state('2026-11-04T00:00:00+08:00', false);
+  assert.equal(over.polling, false);
+  assert.equal(over.reason, 'auto-closed');
+  // Only `auto` earns it: off stays off.
+  assert.equal(
+    xiangqiBroadcastPollState({
+      ...LEAGUE,
+      pollMode: 'off',
+      hasBoards: false,
+      now: at('2026-10-14T12:00:00+08:00'),
+    }).polling,
+    false,
+  );
+});
+
+test('auto with no dates never polls; one missing date reads as a one-day event', () => {
+  const undated = xiangqiBroadcastPollState({
+    pollMode: 'auto',
+    sourceUrl: ASIAN.sourceUrl,
+    startsAt: null,
+    endsAt: undefined,
+    now: at('2026-10-05T00:00:00Z'),
+  });
+  assert.equal(undated.polling, false);
+  assert.equal(undated.reason, 'auto-undated');
+  assert.equal(undated.opensAt, null);
+  assert.equal(undated.closesAt, null);
+
+  const garbage = xiangqiBroadcastPollState({
+    pollMode: 'auto',
+    sourceUrl: ASIAN.sourceUrl,
+    startsAt: 'not a date',
+    endsAt: 'nor this',
+    now: at('2026-10-05T00:00:00Z'),
+  });
+  assert.equal(garbage.reason, 'auto-undated');
+
+  const startOnly = (now: string) =>
+    xiangqiBroadcastPollState({
+      pollMode: 'auto',
+      sourceUrl: ASIAN.sourceUrl,
+      startsAt: '2026-10-02T09:00:00+08:00',
+      endsAt: null,
+      now: at(now),
+    });
+  assert.equal(startOnly('2026-10-01T20:59:59+08:00').polling, false);
+  assert.equal(startOnly('2026-10-01T21:00:00+08:00').polling, true);
+  assert.equal(startOnly('2026-10-09T09:00:00+08:00').polling, true);
+  assert.equal(startOnly('2026-10-09T09:00:01+08:00').polling, false);
+});
+
+test('on always polls, off never does, and a tour with no source never polls', () => {
+  const now = at('2027-06-01T00:00:00Z');
+  const on = xiangqiBroadcastPollState({ ...ASIAN, pollMode: 'on', now });
+  assert.equal(on.polling, true);
+  assert.equal(on.reason, 'on');
+  assert.equal(on.afterEvent, true, 'past the end, so the scheduler slows it down');
+  assert.equal(
+    xiangqiBroadcastPollState({ pollMode: 'on', sourceUrl: 'x', startsAt: null, endsAt: null, now })
+      .polling,
+    true,
+  );
+
+  const off = xiangqiBroadcastPollState({
+    ...ASIAN,
+    pollMode: 'off',
+    now: at('2026-10-05T00:00:00+08:00'),
+  });
+  assert.equal(off.polling, false);
+  assert.equal(off.reason, 'off');
+
+  const sourceless = xiangqiBroadcastPollState({
+    ...ASIAN,
+    sourceUrl: null,
+    pollMode: 'on',
+    now: at('2026-10-05T00:00:00+08:00'),
+  });
+  assert.equal(sourceless.polling, false);
+  assert.equal(sourceless.reason, 'no-source');
+});
+
+test('a UTC date keeps its window in UTC', () => {
+  const state = xiangqiBroadcastPollState({
+    pollMode: 'auto',
+    sourceUrl: 'x',
+    startsAt: '2025-09-21T00:00:00.000Z',
+    endsAt: '2025-09-27T00:00:00.000Z',
+    now: 0,
+  });
+  assert.equal(state.opensAt, '2025-09-20T12:00:00.000Z');
+  assert.equal(state.closesAt, '2025-10-04T00:00:00.000Z');
+});
+
+test('poll modes parse strictly and a stored unknown reads as auto', () => {
+  assert.equal(isXiangqiBroadcastPollMode('auto'), true);
+  assert.equal(isXiangqiBroadcastPollMode('on'), true);
+  assert.equal(isXiangqiBroadcastPollMode('off'), true);
+  assert.equal(isXiangqiBroadcastPollMode('ON'), false);
+  assert.equal(isXiangqiBroadcastPollMode(true), false);
+  assert.equal(normalizeXiangqiBroadcastPollMode('bogus'), 'auto');
+  assert.equal(normalizeXiangqiBroadcastPollMode('off'), 'off');
+});

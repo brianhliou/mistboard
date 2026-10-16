@@ -26,7 +26,9 @@ import type { GameParticipant } from './game-display.js';
 /** A player-name destination: a member profile, or a bot profile. */
 export type ProfileTarget =
   | { readonly kind: 'user'; readonly handle: string }
-  | { readonly kind: 'bot'; readonly botId: string };
+  | { readonly kind: 'bot'; readonly botId: string }
+  /** A professional's page built from the broadcast archive (/players/<slug>). */
+  | { readonly kind: 'player'; readonly slug: string };
 
 /** Seat identity as the server emits it on postgame rows and the live TV feed.
  *  Both fields absent/null means "no page" — the common case (guests, corpus
@@ -40,9 +42,9 @@ export type ProfileIdentity = {
 // /bot/<id> for a bot. Encoded because a handle can legally hold characters that
 // need escaping in a path segment.
 function profileHref(target: ProfileTarget): string {
-  return target.kind === 'user'
-    ? `/@/${encodeURIComponent(target.handle)}`
-    : `/bot/${encodeURIComponent(target.botId)}`;
+  if (target.kind === 'user') return `/@/${encodeURIComponent(target.handle)}`;
+  if (target.kind === 'bot') return `/bot/${encodeURIComponent(target.botId)}`;
+  return `/players/${encodeURIComponent(target.slug)}`;
 }
 
 /** The target for a seat carrying explicit `handle`/`botId` identity (postgame
@@ -130,4 +132,36 @@ export function playerNameEl(
   link.textContent = name;
   link.title = name;
   return link;
+}
+
+// A sentinel no display name can contain, used to find where a translated
+// template puts its name placeholder.
+const NAME_SLOT = '\u0000';
+
+/**
+ * Render a translated one-placeholder template with a real ELEMENT in the
+ * placeholder's position, so the name can be a link while the words around it
+ * stay localized and in the locale's own order ('vs {opponent}' in English,
+ * '对 {opponent}' in Chinese).
+ *
+ * `render` is the t() call with the placeholder left as the caller's token, so
+ * this helper never has to reach into the catalog. If the template drops the
+ * placeholder entirely, the node is appended bare rather than lost.
+ */
+export function appendWithNameNode(
+  host: HTMLElement,
+  render: (token: string) => string,
+  node: HTMLElement,
+): void {
+  const template = render(NAME_SLOT);
+  const at = template.indexOf(NAME_SLOT);
+  if (at < 0) {
+    host.append(node);
+    return;
+  }
+  const before = template.slice(0, at);
+  const after = template.slice(at + NAME_SLOT.length);
+  if (before) host.append(document.createTextNode(before));
+  host.append(node);
+  if (after) host.append(document.createTextNode(after));
 }

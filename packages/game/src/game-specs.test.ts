@@ -4,6 +4,8 @@ import {
   ATOMIC_XIANGQI_SPEC_ID,
   BANQI_SPEC_ID,
   CANONICAL_VARIANT_ORDER,
+  CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+  CRAZYHOUSE_XIANGQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
@@ -11,6 +13,7 @@ import {
   GAME_SPECS,
   gameSpecForId,
   gameSpecForLegacyLiveRoom,
+  isCorrespondenceRatedSpec,
   isGameSpecId,
   isRatedPoolBase,
   isRetiredGameSpec,
@@ -34,10 +37,9 @@ test('canonical display order contains exactly the current public variant shelf'
     XIANGQI_SPEC_ID,
     JIEQI_SPEC_ID,
     BANQI_SPEC_ID,
-    ATOMIC_XIANGQI_SPEC_ID,
-    DARK_XIANGQI_SPEC_ID,
     DUCK_XIANGQI_SPEC_ID,
-    FORTRESS_XIANGQI_SPEC_ID,
+    CRAZYHOUSE_XIANGQI_SPEC_ID,
+    DARK_XIANGQI_SPEC_ID,
     DARK_CHESS_SPEC_ID,
     JUNGLE_SPEC_ID,
     JUNGLE_FLIP_SPEC_ID,
@@ -169,6 +171,7 @@ test('RATED_POOL_BASES derives from the rated flag and matches the RatingVariant
     xiangqi: true,
     duck_xiangqi: true,
     atomic_xiangqi: true,
+    crazyhouse_xiangqi: true,
   };
   assert.deepEqual(Object.keys(unionMembers).sort(), [...RATED_POOL_BASES].sort());
 });
@@ -181,6 +184,7 @@ test('ratingPoolForSpec is rated for launched pools and null for casual-only spe
   assert.equal(ratingPoolForSpec(JUNGLE_SPEC_ID), 'jungle');
   assert.equal(ratingPoolForSpec(JUNGLE_FLIP_SPEC_ID), 'jungle_flip');
   assert.equal(ratingPoolForSpec(ATOMIC_XIANGQI_SPEC_ID), 'atomic_xiangqi');
+  assert.equal(ratingPoolForSpec(CRAZYHOUSE_XIANGQI_SPEC_ID), 'crazyhouse_xiangqi');
   assert.equal(isRatedPoolBase('jieqi'), true);
   assert.equal(isRatedPoolBase('jungle'), true);
   assert.equal(isRatedPoolBase('jungle_flip'), true);
@@ -212,17 +216,39 @@ test('every study-eligible spec is a real spec that can be rooted at a position'
 
 // The retired set is derived from the entries' own runtimeStatus, so this is
 // the one list of what is going (docs-private/variant-retirement-plan.md, #396).
-test('no spec is retired: every variant the plan named has been deleted', () => {
-  // The retired set is empty as of 2026-09-12; a future retirement lands here
-  // first (runtimeStatus 'retired', publicSurface 'hidden') and is deleted from
-  // its own commit later.
-  assert.deepEqual([...RETIRED_GAME_SPEC_IDS], []);
+test('retired specs: Fortress and Atomic Xiangqi, hidden but still resolvable', () => {
+  // Retired 2026-10-11: closed to new games, kept so finished games replay.
+  assert.deepEqual([...RETIRED_GAME_SPEC_IDS], [FORTRESS_XIANGQI_SPEC_ID, ATOMIC_XIANGQI_SPEC_ID]);
   for (const id of RETIRED_GAME_SPEC_IDS) {
     assert.equal(gameSpecForId(id).publicSurface, 'hidden', id);
+    assert.equal(gameSpecForId(id).runtimeStatus, 'retired', id);
     assert.equal(isRetiredGameSpec(id), true, id);
+    assert.ok(!CANONICAL_VARIANT_ORDER.includes(id), id);
+    assert.ok(!CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(id), id);
   }
   for (const id of [XIANGQI_SPEC_ID, DARK_CHESS_SPEC_ID, JIEQI_SPEC_ID, BANQI_SPEC_ID]) {
     assert.equal(isRetiredGameSpec(id), false, id);
   }
   assert.equal(isRetiredGameSpec('no-such-spec'), false);
+});
+
+test('isCorrespondenceRatedSpec is exactly correspondence-eligible AND an active rating pool', () => {
+  // The one predicate the seek route, the rating bucket and the web Rated toggle share.
+  // Derived, not listed: a spec another change makes correspondence-eligible is rated
+  // exactly when it has a pool, and a casual-only spec is cleanly excluded.
+  for (const spec of GAME_SPECS) {
+    const expected =
+      CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(spec.id) && ratingPoolForSpec(spec.id) !== null;
+    assert.equal(isCorrespondenceRatedSpec(spec.id), expected, spec.id);
+  }
+  // Today's eligible set is rated in full: xiangqi and Fog chess both have pools.
+  assert.equal(isCorrespondenceRatedSpec(XIANGQI_SPEC_ID), true);
+  assert.equal(isCorrespondenceRatedSpec(DARK_CHESS_SPEC_ID), true);
+  // A live-rated spec that is not correspondence-eligible is not rated by correspondence.
+  if (!CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(JIEQI_SPEC_ID)) {
+    assert.equal(isCorrespondenceRatedSpec(JIEQI_SPEC_ID), false);
+  }
+  assert.equal(isCorrespondenceRatedSpec('not-a-spec'), false);
+  assert.equal(isCorrespondenceRatedSpec(null), false);
+  assert.equal(isCorrespondenceRatedSpec(undefined), false);
 });

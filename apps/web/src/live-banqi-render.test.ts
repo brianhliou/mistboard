@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { BANQI_BOARD_CSS, renderBanqiBoardSvg } from './live-banqi-render.js';
+import { XIANGQI_PIECE_OUTLINE_SHARE } from './board-metrics.js';
+import {
+  BANQI_BOARD_CSS,
+  BANQI_PIECE_PX,
+  BANQI_PIECE_REACH,
+  BANQI_PIECE_SHAPE,
+  banqiFaceDownRadius,
+  banqiPieceDrawSize,
+  renderBanqiBoardSvg,
+} from './live-banqi-render.js';
 
 describe('renderBanqiBoardSvg', () => {
   const view = {
@@ -179,5 +188,109 @@ describe('the board stylesheet mirror', () => {
         .trim();
     const body = file.replace(/^\/\*[\s\S]*?\*\/\n/, '');
     expect(norm(body)).toBe(norm(BANQI_BOARD_CSS));
+  });
+});
+
+describe('banqi board coordinates (#308)', () => {
+  const view = {
+    id: 'banqi-coords',
+    perspective: 'red',
+    board: { a1: { faceDown: true } },
+    legalMoves: [],
+    captured: [],
+    status: { type: 'playing', turn: 'red' },
+    ply: 0,
+    firstColor: null,
+    moveNumber: 1,
+  };
+
+  function labels(svg: string): { text: string; x: number; y: number }[] {
+    const host = document.createElement('div');
+    host.innerHTML = svg;
+    return [...host.querySelectorAll('.banqi-coord')].map((el) => ({
+      text: el.textContent ?? '',
+      x: Number(el.getAttribute('x')),
+      y: Number(el.getAttribute('y')),
+    }));
+  }
+
+  function cellCentre(svg: string, square: string): { x: number; y: number } {
+    const host = document.createElement('div');
+    host.innerHTML = svg;
+    const rect = host.querySelector(`[data-square="${square}"] rect:last-child`);
+    const x = Number(rect?.getAttribute('x'));
+    const w = Number(rect?.getAttribute('width'));
+    const y = Number(rect?.getAttribute('y'));
+    return { x: x + w / 2, y: y + w / 2 };
+  }
+
+  it('draws no labels unless asked', () => {
+    expect(labels(renderBanqiBoardSvg(view as never, 'red'))).toEqual([]);
+  });
+
+  it('names files a-h and ranks 1-4 as the move list does, on the matching cells', () => {
+    const svg = renderBanqiBoardSvg(view as never, 'red', { interactive: true, coordinates: true });
+    const drawn = labels(svg);
+    expect(drawn.map((l) => l.text)).toEqual([
+      'a',
+      'b',
+      'c',
+      'd',
+      'e',
+      'f',
+      'g',
+      'h',
+      '1',
+      '2',
+      '3',
+      '4',
+    ]);
+    // 'a' sits under the a-file, 'h' under the h-file; '1' beside rank 1 (the
+    // bottom row), '4' beside the top row.
+    expect(drawn[0]!.x).toBe(cellCentre(svg, 'a1').x);
+    expect(drawn[7]!.x).toBe(cellCentre(svg, 'h1').x);
+    expect(drawn[8]!.y).toBe(cellCentre(svg, 'a1').y);
+    expect(drawn[11]!.y).toBe(cellCentre(svg, 'a4').y);
+  });
+
+  it('is the same board for the other seat (banqi never flips)', () => {
+    const red = renderBanqiBoardSvg(view as never, 'red', { coordinates: true });
+    const black = renderBanqiBoardSvg(view as never, 'black', { coordinates: true });
+    expect(labels(black)).toEqual(labels(red));
+  });
+});
+
+// Banqi keeps round pieces on its square grid (Brian, 2026-10-14: players expect
+// round xiangqi pieces) and leaves a gap between them, as on a physical set.
+describe('banqi piece look', () => {
+  it('draws discs whose edge spans 92% of the cell', () => {
+    expect(BANQI_PIECE_SHAPE).toBe('disc');
+    for (const cell of [50, 64, 72]) {
+      const edge = (banqiPieceDrawSize(cell) * XIANGQI_PIECE_OUTLINE_SHARE) / cell;
+      expect(edge, String(cell)).toBeCloseTo(BANQI_PIECE_REACH, 2);
+    }
+  });
+
+  it('draws face-down backs as discs of the face-up outer size', () => {
+    const r = banqiFaceDownRadius(BANQI_PIECE_PX);
+    // The back's 2-unit stroke puts its outer edge at r + 1.
+    expect(r + 1).toBeCloseTo((BANQI_PIECE_PX * XIANGQI_PIECE_OUTLINE_SHARE) / 2, 1);
+    const view = {
+      id: 'banqi-look',
+      perspective: 'red',
+      board: {
+        a1: { color: 'red', role: 'chariot', faceDown: false },
+        b1: { faceDown: true },
+      },
+      legalMoves: [],
+      captured: [],
+      status: { type: 'playing', turn: 'red' },
+      ply: 0,
+      firstColor: 'red',
+      moveNumber: 1,
+    };
+    const svg = renderBanqiBoardSvg(view as never, 'red', { pieceSet: 'international' });
+    expect(svg).toContain(`r="${r}"`);
+    expect(svg).not.toContain('<rect x="4" y="4" width="92" height="92" rx="14"');
   });
 });

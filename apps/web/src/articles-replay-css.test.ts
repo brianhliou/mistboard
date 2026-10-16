@@ -73,29 +73,3 @@ describe('the move column', () => {
     expect(Number(floor?.[1])).toBeGreaterThanOrEqual(226);
   });
 });
-
-describe('the seat dots', () => {
-  // A piece colour is not a theme colour. --site-heading is the heading TEXT
-  // token, near-white on the dark theme, so binding the black seat to it drew a
-  // white dot next to the black player's name while red beside it was a literal
-  // #c0392b. The two dots exist to say which side is which, so they have to
-  // survive the theme rather than follow it.
-  it('paint both sides in literal ink, not a theme text token', () => {
-    for (const seat of ['red', 'black']) {
-      const body = rule(`.xq-replay-annotated .xq-replay-seat--${seat} .xq-replay-seat-dot {`);
-      const background = /background:\s*([^;]+);/.exec(body)?.[1]?.trim();
-      expect(background, `${seat} seat dot has no background`).toBeTruthy();
-      expect(background, `${seat} seat dot must not follow a theme token`).toMatch(
-        /^#[0-9a-f]{3,8}$/i,
-      );
-    }
-  });
-
-  it('keeps the two sides distinguishable from each other', () => {
-    const ink = (seat: string) =>
-      /background:\s*([^;]+);/
-        .exec(rule(`.xq-replay-annotated .xq-replay-seat--${seat} .xq-replay-seat-dot {`))?.[1]
-        ?.trim();
-    expect(ink('red')).not.toBe(ink('black'));
-  });
-});

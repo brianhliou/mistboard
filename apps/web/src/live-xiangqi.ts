@@ -19,6 +19,7 @@ import {
   formatXiangqiMoves,
   getStandardXiangqiPlayerView,
   type StandardXiangqiPlayerView,
+  standardXiangqiCheckedGeneral,
   XIANGQI_SPEC_ID,
   type XiangqiColor,
   type XiangqiMove,
@@ -26,6 +27,7 @@ import {
 } from '@mistboard/game';
 import './live-xiangqi.css';
 import { xiangqiEnabled } from './feature-flags.js';
+import { finishBadgesForResult, generalSquareOn } from './live-finish-badges.js';
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
 import {
@@ -33,6 +35,7 @@ import {
   resetXiangqiSoundState,
   soundForOwnXiangqiMove,
 } from './live-xiangqi-sound.js';
+import { xiangqiAppearanceChangedEvent } from './theme.js';
 import {
   annotationOwner,
   type BoardAnnotations,
@@ -46,7 +49,7 @@ import {
   type TenantLiveEvent,
   type TenantMovePlayed,
 } from './variant-tenant/live-client.js';
-import type { WebVariantTenant } from './variant-tenant/room-chrome.js';
+import type { TenantReasonKey, WebVariantTenant } from './variant-tenant/room-chrome.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
 import {
   animateXiangqiBoardMove,
@@ -73,6 +76,9 @@ type XiangqiMoveEvent = TenantMovePlayed<XiangqiColor, XiangqiMove>;
 // ── Xiangqi-owned interaction/render state ───────────────────────────────────
 
 let core: TenantLiveClientContext<XiangqiColor, StandardXiangqiPlayerView> | null = null;
+// Snapshot extras that ride the frame (read by the chrome + play-again body).
+let roomMode: 'pve' | 'pvp' = 'pvp';
+let pveEngineId: string | null = null;
 let selectedSquare: XiangqiSquare | null = null;
 // The square a piece is being dragged from. The renderer keeps a dim source
 // shadow while the shared drag layer shows the floating ghost.
@@ -83,42 +89,41 @@ let annotations: BoardAnnotations | null = null;
 // ── Shared tenant room chrome config ─────────────────────────────────────────
 
 const xiangqiWebTenant: WebVariantTenant<XiangqiColor> = {
-  displayName: 'Xiangqi',
-  metaMarkerId: 'xiangqi',
-  metaGlyph: '象',
+  displayName: 'variant.xiangqi.name',
   colors: ['red', 'black'],
   isColor: isXiangqiColor,
   oppositeColor: (color) => (color === 'red' ? 'black' : 'red'),
   enabled: xiangqiEnabled,
   reviewUrl: (roomId) => `/xiangqi/game/${encodeURIComponent(roomId)}`,
   reasonPhrase: xiangqiReasonPhrase,
-  disabledTitle: 'Xiangqi disabled',
-  disabledBody: 'This client build has the room renderer off.',
-  rejectedBody: 'This Xiangqi room is not active. Create a new invite to start a game.',
-  spectatorBody: 'Watching the full board.',
-  selectInstruction: 'Select one of your pieces, then choose a destination.',
+  spectatorBody: 'live.spectatorFullBoard',
+  selectInstruction: 'live.selectPieceThenDestination',
 };
 
-function xiangqiReasonPhrase(reason: string): string {
+// Total over the reasons the standard kernel and the room emit, so the end line
+// never falls back to "the game rules" for a reason the game knows.
+export function xiangqiReasonPhrase(reason: string): TenantReasonKey {
   switch (reason) {
     case 'checkmate':
-      return 'checkmate';
+      return 'result.checkmate';
     case 'stalemate':
-      return 'stalemate';
+      return 'result.stalemate';
     case 'general-captured':
-      return 'general capture';
+      return 'result.generalCapture';
     case 'timeout':
-      return 'timeout';
+      return 'result.timeout';
     case 'resignation':
-      return 'resignation';
+      return 'result.resignation';
     case 'abandonment':
-      return 'abandonment';
+      return 'result.abandonment';
     case 'repetition':
-      return 'threefold repetition';
+      return 'result.threefoldRepetition';
     case 'chasing':
-      return 'perpetual check';
+      return 'result.perpetualCheck';
+    case 'progress-clock':
+      return 'result.sixtyPliesNoCapture';
     default:
-      return 'the game rules';
+      return 'result.gameRules';
   }
 }
 
@@ -126,13 +131,25 @@ const client = createTenantLiveClient<XiangqiColor, StandardXiangqiPlayerView, X
   tenant: xiangqiWebTenant,
   gameSpecId: XIANGQI_SPEC_ID,
   defaultRoomId: 'xq_dev',
+  flippable: true,
   boardClass: 'xiangqi-live-board',
+  // The server sends roomMode + the bot's engine id on every frame; before
+  // 2026-09-30 this client ignored them, so a finished bot game read as PvP and
+  // its "Play again" opened a friend room instead of the same bot.
+  chrome: {
+    roomMode: () => roomMode,
+  },
   playAgainRequestBody: (state) => ({
-    mode: 'pvp',
+    mode: roomMode,
     gameSpecId: XIANGQI_SPEC_ID,
     preferredColor: 'random',
+    ...(roomMode === 'pve' && pveEngineId ? { engineId: pveEngineId } : {}),
     ...(state.timeControl ? { timeControl: state.timeControl } : {}),
   }),
+  onFrame: (frame) => {
+    if (frame.roomMode === 'pve' || frame.roomMode === 'pvp') roomMode = frame.roomMode;
+    if (typeof frame.pveEngineId === 'string') pveEngineId = frame.pveEngineId;
+  },
   onSnapshotApplied: () => {
     if (core) maybePlayXiangqiSnapshotSound(core.state.view, core.state.seat);
   },
@@ -141,6 +158,8 @@ const client = createTenantLiveClient<XiangqiColor, StandardXiangqiPlayerView, X
   },
   resetSounds: resetXiangqiSoundState,
   resetState: () => {
+    roomMode = 'pvp';
+    pveEngineId = null;
     selectedSquare = null;
     draggingFrom = null;
   },
@@ -151,6 +170,15 @@ const client = createTenantLiveClient<XiangqiColor, StandardXiangqiPlayerView, X
   // Scrubs: adjacent forward steps glide the stepped-into move; back steps
   // reverse-glide the undone move (the previous view's lastMove). Skipped
   // mid-drag so a glide never fights the drag ghost.
+  finishBadges: (view) =>
+    view.status.type === 'finished'
+      ? finishBadgesForResult({
+          colors: xiangqiWebTenant.colors,
+          winner: view.status.winner,
+          reason: view.status.reason,
+          generalSquare: (color) => generalSquareOn(view.board, color),
+        })
+      : [],
   animateBoard: (liveRefs, view, takePendingAnimation) => {
     if (!view || draggingFrom) return;
     const pending = takePendingAnimation();
@@ -185,6 +213,9 @@ const client = createTenantLiveClient<XiangqiColor, StandardXiangqiPlayerView, X
     });
     // The theme gear changes the notation mid-game; relabel the list in place.
     window.addEventListener(xiangqiNotationChangedEvent, () => ctx.renderAll());
+    // Board appearance (layout, colour, start markers, piece set) also changes
+    // mid-game; every sibling xiangqi room re-renders on it, this one did not.
+    window.addEventListener(xiangqiAppearanceChangedEvent, ctx.renderAll);
   },
   moveList: {
     rowClass: 'move-row xiangqi-move-row',
@@ -253,6 +284,7 @@ function renderBoard(liveRefs: LiveRefs, view: StandardXiangqiPlayerView | null)
     draggingFrom,
     arrows: drawn.arrows,
     markers: drawn.markers,
+    checkSquare: standardXiangqiCheckedGeneral(view.board, view.status),
   });
   // Click + drag are delegated to the persistent board container once at mount
   // (installXiangqiBoardInteraction), so they survive these innerHTML re-renders.

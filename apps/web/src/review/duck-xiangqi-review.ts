@@ -53,11 +53,15 @@ import {
   type DuckXiangqiBoardPhase,
   duckXiangqiBoardSvg,
   duckXiangqiClickResult,
+  installDuckXiangqiDrag,
 } from '../duck-xiangqi-board.js';
 import { xiangqiAppearanceChangedEvent } from '../theme.js';
-import { installBoardDrag, installBoardDraw } from '../variant-tenant/board-drag.js';
+import { installBoardDraw } from '../variant-tenant/board-drag.js';
 import { installSelectionClickAway } from '../variant-tenant/selection-click-away.js';
-import type { XiangqiBoardLayout } from '../xiangqi-appearance-storage.js';
+import {
+  readStoredXiangqiBoardLayout,
+  type XiangqiBoardLayout,
+} from '../xiangqi-appearance-storage.js';
 import {
   LIVE_BOARD_GEO,
   type XiangqiBoardArrow,
@@ -78,12 +82,15 @@ import {
 } from './tree-review.js';
 
 /**
- * The duck board draws no coordinate labels, so it renders at ONE layout, and
- * the overlay patches below have to use the same one the SVG was built with or
- * an arrow lands on the wrong point. Naming it once is what makes that true by
- * construction; duckXiangqiBoardSvg defaults to the same value.
+ * The overlay patches below have to use the layout the SVG was built with or an
+ * arrow lands on the wrong point, so every draw reads it through this one
+ * function; duckXiangqiBoardSvg defaults to the same preference. It was pinned to
+ * 'intersection' while boardAspect (xiangqiBoardAspect) already followed the
+ * stored layout, so a 'Square grid' reader got a lined board in a square box.
  */
-const DUCK_BOARD_LAYOUT: XiangqiBoardLayout = 'intersection';
+function duckBoardLayout(): XiangqiBoardLayout {
+  return readStoredXiangqiBoardLayout();
+}
 
 /**
  * Board geometry with the coordinate gutter ZEROED, unconditionally.
@@ -119,7 +126,7 @@ type DuckBoardHandle = TreeBoardHandle<
  * and every rule it applies comes from the kernel or from
  * `duckXiangqiClickResult`.
  */
-function createDuckXiangqiInteractiveBoard(
+export function createDuckXiangqiInteractiveBoard(
   opts: TreeBoardFactoryOptions<DuckXiangqiTurn, DuckXiangqiPlayerView, DuckXiangqiColor>,
 ): DuckBoardHandle {
   // The half-made turn. `piece` is the ordinary state; `duck` means a piece move
@@ -132,6 +139,8 @@ function createDuckXiangqiInteractiveBoard(
   // the SAME position the piece move was chosen from.
   let view: DuckXiangqiPlayerView | null = null;
   let perspective: DuckXiangqiColor = 'red';
+  // The point a drag has lifted its piece (or the duck) off.
+  let lifted: DuckXiangqiSquare | null = null;
 
   /** Legal destinations for whichever half of the turn is being collected. */
   function targets(): readonly DuckXiangqiSquare[] {
@@ -153,9 +162,10 @@ function createDuckXiangqiInteractiveBoard(
       interactive: opts.enabled(),
       phase,
       targets: targets(),
-      layout: DUCK_BOARD_LAYOUT,
+      layout: duckBoardLayout(),
       arrows,
       markers,
+      lifted,
     });
   }
 
@@ -178,7 +188,7 @@ function createDuckXiangqiInteractiveBoard(
     const layer = opts.board.querySelector('.xq-live-arrows');
     if (layer) {
       layer.innerHTML = arrows
-        .map((arrow) => xiangqiArrowSvg(arrow, perspective, DUCK_BOARD_LAYOUT))
+        .map((arrow) => xiangqiArrowSvg(arrow, perspective, duckBoardLayout()))
         .join('');
     }
   }
@@ -196,7 +206,7 @@ function createDuckXiangqiInteractiveBoard(
       if (!layer) continue;
       layer.innerHTML = markers
         .filter((marker) => (marker.kind === 'glyph') === glyphBand)
-        .map((marker) => xiangqiMarkerSvg(marker, perspective, DUCK_BOARD_LAYOUT))
+        .map((marker) => xiangqiMarkerSvg(marker, perspective, duckBoardLayout()))
         .join('');
     }
   }
@@ -245,18 +255,21 @@ function createDuckXiangqiInteractiveBoard(
     paint();
   }
 
-  installBoardDrag({
+  // The same drag the live room installs, resolving through handleClick.
+  installDuckXiangqiDrag({
     board: opts.board,
-    ghostSizePx: 0,
-    onSquareClick: (square) => handleClick(square as DuckXiangqiSquare),
-    // Click-only, the same call the live room makes: a drag would have to ARM
-    // phase two rather than complete a move, which is a different gesture from
-    // every other board here. Getting that wrong is worse than not having it,
-    // and adding it later is purely additive.
-    canDragFrom: () => false,
-    ghostHtml: () => null,
-    onDragStart: () => {},
-    onDrop: () => {},
+    view: () => (view && opts.enabled() ? view : null),
+    seat: (current) => opts.seatFor(current),
+    phase: () => phase,
+    setPhase: (next) => {
+      phase = next;
+    },
+    targets,
+    lift: (square) => {
+      lifted = square;
+      paint();
+    },
+    click: handleClick,
   });
 
   const onDrawShape = opts.onDrawShape;

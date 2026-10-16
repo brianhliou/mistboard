@@ -5,8 +5,11 @@ import {
   createClock,
   freezeClock,
   type GameEvent,
+  type Move,
+  parseDarkChessFen,
   replayGameEvents,
 } from '@mistboard/game';
+import { LOBBY_NO_SHOW_ABORT_MS } from './lifecycle-windows.js';
 import type { Seat } from './payloads.js';
 import { DEFAULT_ACCOUNT_PREFERENCES, type UserAccount } from './persistence.js';
 import {
@@ -17,12 +20,13 @@ import {
   buildGameSummary,
   buildLiveEngineDecisionArtifactPayload,
   clearAbortTimer,
-  clearForfeitTimer,
   expireActiveClock,
   FORFEIT_WINDOW_MS,
   forfeitEngineOnFailure,
+  PVP_DISCONNECT_FORFEIT_ENABLED,
   pauseRoomOnShutdown,
   playMove,
+  playRandomEngineMoveIfReady,
   type RoomManagerContext,
   resumeRoom,
   resumeRoomIfReady,
@@ -1021,11 +1025,11 @@ test('resumeRoomIfReady: appends resume when both seated players have matching t
   assert.equal(room.projection.state.clock?.remainingMs.black, 60_000);
 });
 
-test('resumeRoomIfReady: no-op when only one player is present', async () => {
+test('resumeRoomIfReady: no-op when only the player not on move is present', async () => {
   const room = makePausedSeatedRoom('room-resume-half');
-  const white = makeClient('white-client', 'white', false);
-  white.seatTokenHash = 'hash-white';
-  room.clients.add(white);
+  const black = makeClient('black-client', 'black', false);
+  black.seatTokenHash = 'hash-black';
+  room.clients.add(black);
   const ctx = makeCtx();
   const before = room.events.length;
 
@@ -1323,21 +1327,52 @@ test('resumeRoomIfReady (EvE): resumes even with zero clients (engines are auto-
   assert.equal(resumed, true, 'with both seats engine-held, neither needs a client to be present');
 });
 
-test('resumeRoomIfReady (PvP): still requires both human seats — regression guard', async () => {
-  const room = makePausedSeatedRoom('room-pvp-still-strict');
-  // Only one human present.
+// #567, lichess-like: only the side to move has a running clock after a
+// resume, so the mover being back is enough. Before, a returning mover sat on a
+// frozen board, unable to move, until the opponent or the 90s grace arrived.
+test('resumeRoomIfReady (PvP): resumes once the player on move is back, opponent still away', async () => {
+  const room = makePausedSeatedRoom('room-pvp-mover-back');
   const white = makeClient('white-client', 'white', false);
   white.seatTokenHash = 'hash-white';
   room.clients.add(white);
   const ctx = makeCtx();
 
-  const resumed = await resumeRoomIfReady(ctx, room, 1000);
+  const resumed = await resumeRoomIfReady(ctx, room, 603_500);
 
+  assert.equal(resumed, true);
+  assert.equal(room.projection.paused, false);
+  assert.equal(room.projection.state.clock?.activeColor, 'white');
   assert.equal(
-    resumed,
-    false,
-    'PvP requires BOTH humans — engine-presence relaxation must not apply here',
+    room.projection.state.clock?.runningSince,
+    603_500,
+    'the outage is charged to nobody',
   );
+  assert.equal(room.projection.state.clock?.remainingMs.white, 57_500);
+  assert.equal(room.projection.state.clock?.remainingMs.black, 60_000);
+});
+
+test('resumeRoomIfReady (PvP): the mover needs a matching seat token to resume alone', async () => {
+  const room = makePausedSeatedRoom('room-pvp-mover-no-token');
+  const white = makeClient('white-client', 'white', false);
+  white.seatTokenHash = 'hash-forged';
+  room.clients.add(white);
+
+  const resumed = await resumeRoomIfReady(makeCtx(), room, 603_500);
+
+  assert.equal(resumed, false);
+  assert.equal(room.projection.paused, true);
+});
+
+test('resumeRoomIfReady (PvE): an engine on move does not resume without its human', async () => {
+  const room = makePausedPveRoom('room-pve-engine-on-move');
+  room.projection = {
+    ...room.projection,
+    state: { ...room.projection.state, status: { type: 'playing', turn: 'black' } },
+  };
+
+  const resumed = await resumeRoomIfReady(makeCtx(), room, 1000);
+
+  assert.equal(resumed, false);
   assert.equal(room.projection.paused, true);
 });
 
@@ -1506,6 +1541,42 @@ test('scheduleAbortTimeout: re-running within the same phase preserves the deadl
   clearAbortTimer(room);
 });
 
+// Lobby no-show (prod, 2026-10-02): a lobby-matched room whose opponent never
+// connects must not leave the other player waiting forever, which is what an
+// invite room does (correctly) while someone sits in it.
+function oneSeatEvents(id: string): GameEvent[] {
+  return [
+    { type: 'room-created', at: 1_000, roomId: id, variant: 'dark-chess' },
+    { type: 'seat-assigned', at: 2_000, roomId: id, clientId: 'w', seat: 'white' },
+  ];
+}
+
+test('scheduleAbortTimeout: a lobby room aborts 30 s after creation when the opponent never comes', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 6_000 });
+  const room = makeRoom('lobby-no-show', 'dark-chess', oneSeatEvents('lobby-no-show'));
+  room.lobbyMatch = true;
+  room.clients.add(makeClient('w', 'white', false, room.id));
+  scheduleAbortTimeout(makeCtx(), room);
+  assert.equal(room.abortPhase, 'unjoined');
+  assert.equal(room.abortDeadline, 1_000 + LOBBY_NO_SHOW_ABORT_MS, 'anchored to creation');
+  t.mock.timers.tick(1_000 + LOBBY_NO_SHOW_ABORT_MS - 6_000 - 1);
+  await Promise.resolve();
+  assert.equal(room.projection.state.status.type, 'playing');
+  t.mock.timers.tick(100);
+  for (let i = 0; i < 5; i += 1) await Promise.resolve();
+  assert.equal(room.projection.state.status.type, 'aborted');
+  clearAbortTimer(room);
+});
+
+test('scheduleAbortTimeout: an invite room with its creator present keeps waiting', () => {
+  const room = makeRoom('invite-waiting', 'dark-chess', oneSeatEvents('invite-waiting'));
+  room.clients.add(makeClient('w', 'white', false, room.id));
+  scheduleAbortTimeout(makeCtx(), room);
+  assert.equal(room.abortPhase, null);
+  assert.equal(room.abortDeadline, null);
+  assert.equal(room.abortTimer, null);
+});
+
 // ── scheduleForfeitTimeout ────────────────────────────────────────────────────
 
 function move2Events(id: string, whiteClient = 'wc', blackClient = 'bc'): GameEvent[] {
@@ -1528,17 +1599,16 @@ test('scheduleForfeitTimeout: no forfeit while both players are present', () => 
   assert.equal(room.forfeitTimer, null);
 });
 
-test('scheduleForfeitTimeout: arms a countdown for the lone absent seat', () => {
+test('scheduleForfeitTimeout: the lone absent seat keeps its game while the PvP policy is off', () => {
   const room = makeRoom('ff-gone', 'dark-chess', move2Events('ff-gone'));
   room.clients.add(makeClient('wc', 'white')); // only white present; black is gone
-  const before = Date.now();
   scheduleForfeitTimeout(makeCtx(), room);
-  assert.equal(room.forfeitSeat, 'black');
-  assert.ok(room.forfeitTimer !== null);
-  assert.ok(
-    room.forfeitDeadline !== null && room.forfeitDeadline >= before + FORFEIT_WINDOW_MS - 50,
-  );
-  clearForfeitTimer(room);
+  assert.equal(PVP_DISCONNECT_FORFEIT_ENABLED, false, 'policy under test');
+  assert.ok(FORFEIT_WINDOW_MS > 0, 'the window survives for a re-enable');
+  // Would have been: forfeitSeat 'black', a timer, deadline now + the window.
+  assert.equal(room.forfeitSeat, null);
+  assert.equal(room.forfeitTimer, null);
+  assert.equal(room.forfeitDeadline, null);
 });
 
 test('scheduleForfeitTimeout: no forfeit before both first moves (pre-move-2)', () => {
@@ -1557,15 +1627,15 @@ test('scheduleForfeitTimeout: no forfeit when both players are absent', () => {
   assert.equal(room.forfeitTimer, null);
 });
 
-test('scheduleForfeitTimeout: reconnect (both present again) cancels the countdown', () => {
+test('scheduleForfeitTimeout: a seat that leaves and returns still has a game', () => {
   const room = makeRoom('ff-reconnect', 'dark-chess', move2Events('ff-reconnect'));
-  const white = makeClient('wc', 'white');
-  room.clients.add(white); // black gone → forfeit armed
+  room.clients.add(makeClient('wc', 'white')); // black gone
   scheduleForfeitTimeout(makeCtx(), room);
-  assert.equal(room.forfeitSeat, 'black');
-  // Black returns.
+  assert.equal(room.forfeitSeat, null, 'nothing armed to cancel');
+  // Black returns; the room is still playing, which is the whole point.
   room.clients.add(makeClient('bc', 'black'));
   scheduleForfeitTimeout(makeCtx(), room);
+  assert.equal(room.projection.state.status.type, 'playing');
   assert.equal(room.forfeitSeat, null);
   assert.equal(room.forfeitTimer, null);
 });
@@ -1590,12 +1660,102 @@ test('scheduleForfeitTimeout: a PvE room never forfeits, in either direction (#4
   assert.equal(room.forfeitTimer, null);
 });
 
-test('scheduleForfeitTimeout: PvP still forfeits a leaver, engine id absent', () => {
-  // The guard is "is there an engine seat", not "is anyone missing": a PvP room
-  // with the same shape must keep the countdown it has always had.
+test('scheduleForfeitTimeout: PvP no longer forfeits a leaver either (#436)', () => {
+  // This case kept the countdown when the PvE half shipped (aad6f186); the PvP
+  // half turned it off too. Both reasons are recorded in lifecycle-windows.ts,
+  // and they are separate flags because only this one is waiting on evidence.
   const room = makeRoom('ff-pvp', 'dark-chess', move2Events('ff-pvp'));
   room.clients.add(makeClient('wc', 'white'));
   scheduleForfeitTimeout(makeCtx(), room);
-  assert.equal(room.forfeitSeat, 'black');
-  clearForfeitTimer(room);
+  assert.equal(room.forfeitSeat, null);
+  assert.equal(room.forfeitTimer, null);
+});
+
+// ── Fog: side to move has no moves (draw) ───────────────────────────────────
+// Sven's post in hgm's 2011 Dark Chess thread (TalkChess t=37571), a game by Uri
+// Blass: after 32. Qc2 Black has no pseudo-legal move. Until 2026-09-30 the room
+// stayed `playing` with the engine to move and returned early every turn, so an
+// untimed game hung forever. Mirror of packages/game's
+// variants-dark-chess-no-moves.test.ts.
+const SVEN_NO_MOVES_UCI =
+  'b2b3 e7e5 b3b4 f8b4 g1f3 b4f8 f3e5 b7b5 e5f7 b5b4 f7h8 b4b3 a2a4 a7a6 a4a5 h7h5 ' +
+  'c1a3 b3b2 a1a2 h5h4 b1c3 b2b1b a2a1 b1a2 g2g3 h4g3 e2e4 g3f2 e1f2 g7g6 h8g6 g8e7 ' +
+  'g6e7 f8e7 a3e7 d8e7 e4e5 e7e5 d2d3 e5c3 f1g2 e8e7 d1e1 e7d6 e1c3 a2d5 c3d2 d6c6 ' +
+  'd3d4 c6b7 g2h3 a8a7 c2c4 b7a8 a1d1 d5b7 d4d5 b7c6 d5d6 c6b7 c4c5 c7c6 d2c2';
+
+function svenMoves(): Move[] {
+  return SVEN_NO_MOVES_UCI.split(' ').map((uci) => ({
+    from: uci.slice(0, 2) as Move['from'],
+    to: uci.slice(2, 4) as Move['to'],
+    ...(uci[4] === 'b' ? { promotion: 'bishop' as const } : {}),
+  }));
+}
+
+test('playMove: the move that leaves the engine with no moves ends the game as a draw', async () => {
+  const roomId = 'fog-no-moves-room';
+  const engineId = 'builtin-random-legal';
+  const now = Date.now();
+  const moves = svenMoves();
+  assert.equal(moves.length, 63);
+  // Untimed on purpose: no clock would ever have ended the hung room.
+  const events: GameEvent[] = [
+    { type: 'room-created', at: now, roomId, variant: 'dark-chess' },
+    { type: 'seat-assigned', at: now, roomId, clientId: 'human-white', seat: 'white' },
+    { type: 'seat-assigned', at: now, roomId, clientId: engineId, seat: 'black' },
+    ...moves.slice(0, 62).map(
+      (move, index): GameEvent => ({
+        type: 'move-played',
+        at: now + index + 1,
+        roomId,
+        color: index % 2 === 0 ? 'white' : 'black',
+        move,
+      }),
+    ),
+  ];
+  const room = makeRoom(roomId, 'dark-chess', events);
+  room.mode = 'pve';
+  room.randomEngine = true;
+  room.pveEngineId = engineId;
+  assert.deepEqual(room.projection.state.status, { type: 'playing', turn: 'white' });
+  const human = makeClient('human-white', 'white', /* solo= */ true, roomId);
+  room.clients.add(human);
+  const ctx = makeCtx();
+
+  const last = moves[62]!;
+  await playMove(ctx, room, human, { type: 'move', from: last.from, to: last.to });
+
+  assert.equal(room.events.length, events.length + 1);
+  assert.equal(room.events[room.events.length - 1]!.type, 'move-played');
+  assert.deepEqual(room.projection.state.status, {
+    type: 'finished',
+    winner: null,
+    reason: 'no-legal-moves',
+  });
+  assert.equal(room.engineTimer, null, 'no engine turn may be scheduled after the game ends');
+  const summary = buildGameSummary(ctx, room);
+  assert.equal(summary.result, 'draw');
+  assert.equal(summary.termination, 'no-legal-moves');
+  assert.equal(summary.plyCount, 63);
+});
+
+test('playRandomEngineMoveIfReady: engine with no moves in a playing room appends nothing and does not throw', async () => {
+  // Unreachable through moves now; forced here to pin the guard's behaviour.
+  const roomId = 'fog-no-moves-guard';
+  const engineId = 'builtin-random-legal';
+  const room = makeRoom(roomId, 'dark-chess', [
+    { type: 'room-created', at: 1, roomId, variant: 'dark-chess' },
+    { type: 'seat-assigned', at: 1, roomId, clientId: 'human-white', seat: 'white' },
+    { type: 'seat-assigned', at: 1, roomId, clientId: engineId, seat: 'black' },
+  ]);
+  room.mode = 'pve';
+  room.randomEngine = true;
+  room.pveEngineId = engineId;
+  const parsed = parseDarkChessFen('knb5/rb1p4/p1pP4/P1P5/8/7B/2Q2K1P/3R3R b - - 1 32', roomId);
+  assert.ok(parsed.ok);
+  room.projection = { ...room.projection, state: parsed.state };
+  const before = room.events.length;
+
+  await playRandomEngineMoveIfReady(makeCtx(), room);
+
+  assert.equal(room.events.length, before);
 });

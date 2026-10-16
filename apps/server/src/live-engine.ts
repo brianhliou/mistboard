@@ -8,7 +8,8 @@ import {
   loadEngine,
 } from './engine-registry.js';
 import { computeEngineBudget, type EngineBudget } from './fow-engine-budget.js';
-import { InternalEngineClientError, requestInternalEngineTurn } from './internal-engine-client.js';
+import { InternalEngineClientError } from './internal-engine-client.js';
+import { requestLiveEngineTurnWithRenewal } from './server-live-engine-reservations.js';
 
 /**
  * Per-engine secret used to derive deterministic per-turn engineSeed.
@@ -165,12 +166,33 @@ async function choosePythonSubprocessMove(
     cold: true,
   });
 
-  const result = await requestInternalEngineTurn(
-    engineTurnRequest,
-    watchdogTimeoutMs,
-    context.engineReservationId,
-    { computeBudgetMs },
-  ).catch((err) => {
+  // The holder, not a bare id: a worker restart forgets every seat, and the
+  // renewal path writes the fresh one back to the room (#477).
+  const holder = context.engineReservation ?? {
+    id: context.roomId,
+    engineReservationId: null,
+  };
+  const startedAt = Date.now();
+  const result = await requestLiveEngineTurnWithRenewal({
+    holder,
+    request: engineTurnRequest,
+    budget: { computeBudgetMs, watchdogTimeoutMs },
+    // A retry is budgeted from the clock as it stands then, not as it stood
+    // when the turn began: the engine's clock kept running through the outage.
+    rebudget: () =>
+      pythonLiveTimeoutBudgetMs(
+        context.clockRemainingMs === undefined
+          ? context
+          : {
+              ...context,
+              clockRemainingMs: Math.max(0, context.clockRemainingMs - (Date.now() - startedAt)),
+            },
+        timeoutMs,
+      ),
+    ...(context.engineReservationStillNeeded
+      ? { stillNeeded: context.engineReservationStillNeeded }
+      : {}),
+  }).catch((err) => {
     throw liveEngineErrorFromInternalEngine(err, engine.id, watchdogTimeoutMs);
   });
   return {

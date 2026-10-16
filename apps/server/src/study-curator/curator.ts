@@ -10,12 +10,15 @@
 // Everything that touches Postgres or the engine comes in through `deps`, so the
 // orchestration is testable with fakes and the CLI can run it dry.
 
-import type { XiangqiMove } from '@mistboard/game';
 import { logger } from '../obs.js';
 import * as persistence from '../persistence.js';
 import type { StudyWithChapters } from '../persistence-studies.js';
 import { resolveXiangqiAnalysis } from '../routes/xiangqi-games.js';
 import { XIANGQI_ANALYSIS_ENGINE_ID } from '../xiangqi-analysis.js';
+import {
+  broadcastAnalysisRoomId,
+  broadcastAnalysisTimeline,
+} from '../xiangqi-broadcast-analysis.js';
 import {
   ANNOTATOR_VERSION,
   buildDecisiveMomentChapter,
@@ -140,7 +143,7 @@ async function draftFor(
   if (recipe.mode === 'model-games') {
     return buildModelGameChapter(ranked.game, ranked.verdicts, recipe, explorer);
   }
-  return buildDecisiveMomentChapter(ranked.game, ranked.verdicts, recipe);
+  return buildDecisiveMomentChapter(ranked.game, ranked.verdicts);
 }
 
 function chapterInput(desired: DesiredChapter): persistence.NewChapterInput {
@@ -231,7 +234,18 @@ async function applyPlan(
   if (order.some((id) => !id)) throw new Error(`study ${recipe.id}: order references a missing id`);
   // Chapters this recipe does not own keep their place after the curated ones.
   const finalOrder = [...(order as string[]), ...plan.foreign];
-  if (finalOrder.length > 1) await studies.reorderChapters(studyId, ownerId, finalOrder);
+  // A reorder rewrites every ordinal and re-dates the study, so a run that
+  // changes nothing must skip it, or the hourly tick keeps lifting the study
+  // to the top of every list sorted by last edit.
+  const current = study?.chapters.map((chapter) => chapter.id) ?? [];
+  const sameOrder =
+    addedIds.length === 0 &&
+    plan.remove.length === 0 &&
+    current.length === finalOrder.length &&
+    current.every((id, index) => id === finalOrder[index]);
+  if (finalOrder.length > 1 && !sameOrder) {
+    await studies.reorderChapters(studyId, ownerId, finalOrder);
+  }
   return { studyId };
 }
 
@@ -338,14 +352,12 @@ export async function runStudyCurator(
 export const STUDY_CURATOR_OWNER_HANDLE =
   process.env.MISTBOARD_STUDY_CURATOR_OWNER_HANDLE ?? 'mistboard';
 
-function timelineOf(moves: readonly XiangqiMove[]) {
-  return { timeline: moves.map((move) => ({ type: 'move-played', move })) };
-}
+// The broadcast analysis key and timeline are shared with the broadcast
+// analysis sweep and endpoint, so a board either path analysed is never
+// analysed twice.
+const timelineOf = broadcastAnalysisTimeline;
 
-/** A broadcast board's analysis lives under this room key (game_analysis has no FK). */
-export function broadcastAnalysisRoomId(boardId: string): string {
-  return `broadcast:${boardId}`;
-}
+export { broadcastAnalysisRoomId };
 
 async function listBroadcastCandidates(recipe: StudyRecipe): Promise<CuratorGame[]> {
   const results = recipe.source.results ?? ['1-0', '0-1'];

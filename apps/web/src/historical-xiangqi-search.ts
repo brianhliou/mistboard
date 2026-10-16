@@ -1,12 +1,36 @@
+// The site's game database (/games/search, lichess: "Advanced search"). The
+// module name predates the variant picker: it was a xiangqi-only database until
+// 2026-09, and the API still lives at /api/historical-xiangqi/games because
+// other code and links use that path.
+//
+// Unfiltered it is a live feed of the most recently finished games across every
+// launched variant, the archive and the broadcasts (issue #321: "Do not copy
+// lichess here", lichess lands on an empty form). The rail on the left picks a
+// variant, the form narrows further, and the URL is the whole state.
+import './current-games.css';
+import './seat-disc-ink.css';
 import './historical-xiangqi-search.css';
+import {
+  GAMES_SEARCH_DEFAULT_MIN_PLIES,
+  maybeGameSpecForId,
+  XIANGQI_SPEC_ID,
+} from '@mistboard/game';
+import { flipSeatInk, isFlipSeatVariant } from './flip-seat-ink.js';
+import { colorWinsLabel, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { buildNav } from './site-shell.js';
+import { buildUiIcon } from './ui-icon.js';
+import { renderVariantMarker } from './variant-markers.js';
+import { brandsBlackAsBlue, seatColorWord } from './variant-seat-label.js';
+import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
 
 export type HistoricalXiangqiResult = '1-0' | '0-1' | '1/2-1/2' | '*';
 
 export type HistoricalXiangqiGameListItem = {
   id: string;
-  kind: 'mistboard' | 'historical' | 'broadcast';
+  kind: 'mistboard' | 'engine-match' | 'engine-game' | 'historical' | 'broadcast';
+  // The row's game spec. Absent from older responses, which were xiangqi only.
+  variant?: string;
   reviewUrl: string;
   sourceSlug: string;
   sourceName: string;
@@ -27,6 +51,8 @@ export type HistoricalXiangqiGameListItem = {
   plyCount: number;
   sortAt: string | null;
   moveFormat: string;
+  // Flip variants only: the ink the first seat bound on the opening flip.
+  firstColor?: 'red' | 'black' | null;
 };
 
 export type HistoricalXiangqiSearchResponse = {
@@ -34,12 +60,18 @@ export type HistoricalXiangqiSearchResponse = {
   total: number;
   offset: number;
   limit: number;
+  // The launched variants this server searches, in the canonical shelf order.
+  variants?: string[];
+  // The minimum length the games played here were read with when the search set
+  // none, or null (it set one, or it reads no games played here).
+  playedPlyFloor?: number | null;
 };
 
 export type GamesSort = 'recent' | 'oldest' | 'longest' | 'shortest';
 
-type Filters = {
+export type GamesSearchFilters = {
   sort: GamesSort;
+  variant: string;
   player: string;
   event: string;
   source: string;
@@ -52,14 +84,25 @@ type Filters = {
   limit: number;
 };
 
+type Filters = GamesSearchFilters;
+
 const DEFAULT_LIMIT = 50;
+
+// Min plies as the form shows it with nothing chosen: the floor the server
+// applies to games played here when the search sets none. It stays out of the
+// URL (and so out of the API query) while it is the default; clearing the field
+// means no minimum, written `plyMin=0` so a reload keeps it.
+export const DEFAULT_MIN_PLIES = String(GAMES_SEARCH_DEFAULT_MIN_PLIES);
+const NO_MIN_PLIES = '0';
 const SORTS: readonly GamesSort[] = ['recent', 'oldest', 'longest', 'shortest'];
 
 function isGamesSort(value: string): value is GamesSort {
   return (SORTS as readonly string[]).includes(value);
 }
 
+// Variant first, so a shared link reads `?variant=jieqi&event=...`.
 const STRING_FILTER_KEYS = [
+  'variant',
   'player',
   'event',
   'source',
@@ -70,6 +113,45 @@ const STRING_FILTER_KEYS = [
   'plyMax',
 ] as const;
 
+// Source values the server reads as a lane rather than an archive slug.
+const SOURCE_MISTBOARD = 'mistboard';
+// The games played here, narrowed by opponent (#533): people against people,
+// or a person against a bot.
+const SOURCE_PLAYED_PVP = 'mistboard-pvp';
+const SOURCE_PLAYED_PVE = 'mistboard-pve';
+const SOURCE_ENGINE_MATCH = 'engine-match';
+// The games the site's own bots play each other on a schedule (#488). Like
+// engine matches, off in the mixed feed until asked for.
+const SOURCE_ENGINE_GAME = 'engine-game';
+const SOURCE_BROADCAST = 'broadcast';
+const SOURCE_ARCHIVE = 'archive';
+const LANE_SOURCES: ReadonlySet<string> = new Set([
+  SOURCE_MISTBOARD,
+  SOURCE_PLAYED_PVP,
+  SOURCE_PLAYED_PVE,
+  SOURCE_ENGINE_MATCH,
+  SOURCE_ENGINE_GAME,
+  SOURCE_BROADCAST,
+  SOURCE_ARCHIVE,
+]);
+
+const EMPTY_FILTERS: Filters = {
+  sort: 'recent',
+  variant: '',
+  player: '',
+  event: '',
+  source: '',
+  result: '',
+  from: '',
+  to: '',
+  plyMin: DEFAULT_MIN_PLIES,
+  plyMax: '',
+  offset: 0,
+  limit: DEFAULT_LIMIT,
+};
+
+class InvalidVariantError extends Error {}
+
 export async function mountHistoricalXiangqiSearch(root: HTMLElement): Promise<void> {
   root.classList.add('landing-page', 'historical-xiangqi-page');
   root.replaceChildren(buildNav());
@@ -79,30 +161,84 @@ export async function mountHistoricalXiangqiSearch(root: HTMLElement): Promise<v
 
   const heading = document.createElement('h1');
   heading.className = 'site-section-heading';
-  heading.textContent = t('historical.heading');
+
+  // The /games rail, verbatim: the same anatomy picks a channel there and a
+  // variant here, so the two pages read as one surface.
+  const layout = document.createElement('div');
+  layout.className = 'current-games-layout historical-xiangqi-layout';
+  const rail = document.createElement('nav');
+  rail.className = 'current-games-rail historical-xiangqi-rail';
+  rail.setAttribute('aria-label', t('historical.variantRail'));
+  const mainCol = document.createElement('div');
+  mainCol.className = 'historical-xiangqi-main';
 
   const filtersHost = document.createElement('section');
   const summaryHost = document.createElement('section');
   const resultsHost = document.createElement('section');
-  shell.append(heading, filtersHost, summaryHost, resultsHost);
+  mainCol.append(filtersHost, summaryHost, resultsHost);
+  layout.append(rail, mainCol);
+  shell.append(heading, layout);
   root.append(shell);
 
   let filters = readFilters();
+  // Known after the first response; until then the rail offers "All variants".
+  let variants: readonly string[] = [];
+
+  const render = (): void => {
+    heading.textContent = filters.variant
+      ? t('historical.variantHeading', { variant: variantDisplayLabel(filters.variant) })
+      : t('historical.heading');
+    document.title = `${heading.textContent} · Mistboard`;
+    renderVariantRail(rail, variants, filters);
+    filtersHost.replaceChildren(buildFilterForm(filters, applyFilters));
+  };
+
+  // Two quick rail clicks race their fetches; only the latest may render.
+  let latestRun = 0;
 
   const run = async (): Promise<void> => {
+    const thisRun = ++latestRun;
     writeFilters(filters);
-    filtersHost.replaceChildren(buildFilterForm(filters, applyFilters));
-    summaryHost.replaceChildren(statusLine(t('historical.loading')));
-    resultsHost.replaceChildren();
+    render();
+    // Keep the previous results on screen, dimmed, until the new ones arrive:
+    // emptying the list collapsed the page to the form and sprang it back on
+    // every rail click. Only the very first load has nothing to keep.
+    if (resultsHost.childElementCount === 0) {
+      summaryHost.replaceChildren(statusLine(t('historical.loading')));
+    }
+    resultsHost.setAttribute('aria-busy', 'true');
     let data: HistoricalXiangqiSearchResponse;
     try {
       data = await fetchHistoricalXiangqiGames(filters);
-    } catch {
+    } catch (error) {
+      if (thisRun !== latestRun) return;
+      resultsHost.removeAttribute('aria-busy');
+      // A stale or hand-edited ?variant= (a retired variant, a typo): the server
+      // refuses it rather than guessing, so fall back to every variant.
+      if (error instanceof InvalidVariantError && filters.variant) {
+        filters = { ...filters, variant: '', offset: 0 };
+        await run();
+        return;
+      }
       summaryHost.replaceChildren(statusLine(t('historical.searchFailed')));
+      resultsHost.replaceChildren();
       return;
     }
+    if (thisRun !== latestRun) return;
+    if (data.variants) {
+      variants = data.variants;
+      renderVariantRail(rail, variants, filters);
+    }
     summaryHost.replaceChildren(totalLine(data.total));
+    if (typeof data.playedPlyFloor === 'number') {
+      summaryHost.append(
+        floorNote(data.playedPlyFloor, () =>
+          applyFilters({ ...filters, plyMin: NO_MIN_PLIES, offset: 0 }),
+        ),
+      );
+    }
     resultsHost.replaceChildren(buildResults(data, applyFilters));
+    resultsHost.removeAttribute('aria-busy');
   };
 
   function applyFilters(next: Filters): void {
@@ -110,7 +246,17 @@ export async function mountHistoricalXiangqiSearch(root: HTMLElement): Promise<v
     void run();
   }
 
-  filtersHost.replaceChildren(buildFilterForm(filters, applyFilters));
+  // Rail entries are real links (shareable, middle-clickable); a plain click
+  // re-runs the search in place.
+  rail.addEventListener('click', (event) => {
+    if (event.defaultPrevented || event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const link = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[data-variant]');
+    if (!link) return;
+    event.preventDefault();
+    applyFilters(withVariant(filters, link.dataset.variant ?? ''));
+  });
+
   await run();
 }
 
@@ -118,16 +264,34 @@ export function historicalXiangqiReviewUrl(id: string): string {
   return `/historical-xiangqi/game/${encodeURIComponent(id)}`;
 }
 
-export function historicalXiangqiSearchApiUrl(filters: Filters): string {
+function filterParams(filters: Filters): URLSearchParams {
   const params = new URLSearchParams();
   for (const key of STRING_FILTER_KEYS) {
-    const value = filters[key].trim();
+    const value = (filters[key] ?? '').trim();
+    if (key === 'plyMin' && value === DEFAULT_MIN_PLIES) continue;
     if (value) params.set(key, value);
   }
   if (filters.sort !== 'recent') params.set('sort', filters.sort);
   if (filters.offset > 0) params.set('offset', String(filters.offset));
+  return params;
+}
+
+export function historicalXiangqiSearchApiUrl(filters: Filters): string {
+  const params = filterParams(filters);
   params.set('limit', String(filters.limit));
   return `/api/historical-xiangqi/games?${params.toString()}`;
+}
+
+/** The page URL for a set of filters: the canonical path plus only what differs
+ *  from the defaults, so a plain /games/search link stays canonical. */
+export function gamesSearchPageUrl(filters: Filters): string {
+  const params = filterParams(filters);
+  if (filters.limit !== DEFAULT_LIMIT) params.set('limit', String(filters.limit));
+  const query = params.toString();
+  // Write the canonical path. `/historical-xiangqi/games` is retired: the server
+  // 301s it back here and isClientRoute rejects it, so rewriting the bar to it
+  // meant a filtered URL survived neither a copy-paste nor a reload.
+  return query ? `${SEARCH_PATH}?${query}` : SEARCH_PATH;
 }
 
 async function fetchHistoricalXiangqiGames(
@@ -136,6 +300,10 @@ async function fetchHistoricalXiangqiGames(
   const response = await fetch(historicalXiangqiSearchApiUrl(filters), {
     headers: { accept: 'application/json' },
   });
+  if (response.status === 400) {
+    const body = (await response.json().catch(() => null)) as { error?: string } | null;
+    if (body?.error === 'invalid_variant') throw new InvalidVariantError('invalid_variant');
+  }
   if (!response.ok) throw new Error(`historical_xiangqi_search_failed_${response.status}`);
   return (await response.json()) as HistoricalXiangqiSearchResponse;
 }
@@ -154,13 +322,14 @@ function readFilters(): Filters {
   const sort = str('sort');
   return {
     sort: isGamesSort(sort) ? sort : 'recent',
+    variant: str('variant').trim(),
     player: str('player'),
     event: str('event'),
     source: str('source'),
     result: str('result'),
     from: str('from'),
     to: str('to'),
-    plyMin: str('plyMin'),
+    plyMin: params.has('plyMin') ? str('plyMin').trim() || NO_MIN_PLIES : DEFAULT_MIN_PLIES,
     plyMax: str('plyMax'),
     offset: Number.isFinite(offset) && offset > 0 ? offset : 0,
     limit: Number.isFinite(limit) && limit > 0 ? Math.min(limit, 200) : DEFAULT_LIMIT,
@@ -168,19 +337,102 @@ function readFilters(): Filters {
 }
 
 function writeFilters(filters: Filters): void {
-  const params = new URLSearchParams();
-  for (const key of STRING_FILTER_KEYS) {
-    const value = filters[key].trim();
-    if (value) params.set(key, value);
+  window.history.replaceState(null, '', gamesSearchPageUrl(filters));
+}
+
+/** Broadcasts and the archive are xiangqi only; every other source spans variants. */
+function sourceFitsVariant(source: string, variant: string): boolean {
+  if (!variant || variant === XIANGQI_SPEC_ID) return true;
+  return (
+    source === '' ||
+    source === SOURCE_MISTBOARD ||
+    source === SOURCE_PLAYED_PVP ||
+    source === SOURCE_PLAYED_PVE ||
+    source === SOURCE_ENGINE_MATCH ||
+    source === SOURCE_ENGINE_GAME
+  );
+}
+
+/** The filters with another variant picked: back to the first page, and a
+ *  source the new variant cannot have (a broadcast for jieqi) is dropped
+ *  rather than left to return nothing. */
+export function withVariant(filters: Filters, variant: string): Filters {
+  return {
+    ...filters,
+    variant,
+    offset: 0,
+    source: sourceFitsVariant(filters.source, variant) ? filters.source : '',
+  };
+}
+
+function renderVariantRail(rail: HTMLElement, variants: readonly string[], filters: Filters): void {
+  // A rail click changes only which entry is active and where each link
+  // points; rebuilding every entry (icons included) on each click made the
+  // rail flash. Rebuild only when the set of entries itself changes.
+  const wanted = ['', ...railVariants(variants, filters)];
+  const current = Array.from(rail.querySelectorAll<HTMLAnchorElement>('a[data-variant]'));
+  if (
+    current.length === wanted.length &&
+    current.every((link, index) => link.dataset.variant === wanted[index])
+  ) {
+    for (const link of current) {
+      const variant = link.dataset.variant ?? '';
+      link.href = gamesSearchPageUrl(withVariant(filters, variant));
+      const active = variant === filters.variant;
+      link.classList.toggle('active', active);
+      if (active) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
+    }
+    return;
   }
-  if (filters.sort !== 'recent') params.set('sort', filters.sort);
-  if (filters.offset > 0) params.set('offset', String(filters.offset));
-  if (filters.limit !== DEFAULT_LIMIT) params.set('limit', String(filters.limit));
-  const query = params.toString();
-  // Write the canonical path. `/historical-xiangqi/games` is retired: the server
-  // 301s it back here and isClientRoute rejects it, so rewriting the bar to it
-  // meant a filtered URL survived neither a copy-paste nor a reload.
-  window.history.replaceState(null, '', query ? `${SEARCH_PATH}?${query}` : SEARCH_PATH);
+  const all = variantRailLink(filters, '', t('historical.allVariants'));
+  all
+    .querySelector('.current-games-rail-thumb')
+    ?.append(buildUiIcon('featured-channel', 'current-games-rail-crown'));
+  const links = [all];
+  for (const variant of railVariants(variants, filters)) {
+    const label = variantDisplayLabel(variant);
+    const link = variantRailLink(filters, variant, label);
+    const miniId = WATCH_CHANNEL_MINI_IDS[variant];
+    const thumb = link.querySelector<HTMLElement>('.current-games-rail-thumb');
+    if (thumb && miniId) {
+      thumb.classList.add('notranslate');
+      thumb.setAttribute('translate', 'no');
+      thumb.innerHTML = renderVariantMarker(miniId, { size: 112, label: `${label} marker` });
+    }
+    links.push(link);
+  }
+  rail.replaceChildren(...links);
+}
+
+// The selected variant stays in the rail even before (or without) the list,
+// so the page never hides what it is filtered to.
+function railVariants(variants: readonly string[], filters: Filters): readonly string[] {
+  return filters.variant && !variants.includes(filters.variant)
+    ? [...variants, filters.variant]
+    : variants;
+}
+
+function variantRailLink(filters: Filters, variant: string, label: string): HTMLAnchorElement {
+  const link = document.createElement('a');
+  link.className = 'current-games-rail-link';
+  link.dataset.variant = variant;
+  link.href = gamesSearchPageUrl(withVariant(filters, variant));
+  const text = document.createElement('span');
+  text.className = 'current-games-rail-text';
+  const name = document.createElement('span');
+  name.className = 'current-games-rail-name';
+  name.textContent = label;
+  text.append(name);
+  const thumb = document.createElement('span');
+  thumb.className = 'current-games-rail-thumb';
+  thumb.setAttribute('aria-hidden', 'true');
+  link.append(text, thumb);
+  if (variant === filters.variant) {
+    link.classList.add('active');
+    link.setAttribute('aria-current', 'page');
+  }
+  return link;
 }
 
 function buildFilterForm(filters: Filters, onApply: (next: Filters) => void): HTMLElement {
@@ -197,17 +449,18 @@ function buildFilterForm(filters: Filters, onApply: (next: Filters) => void): HT
   };
   addText('player', t('historical.playerLabel'), t('historical.playerPlaceholder'));
   addText('event', t('historical.eventLabel'), t('historical.eventPlaceholder'));
-  addText('source', t('historical.sourceLabel'), t('historical.sourcePlaceholder'));
+
+  const source = selectInput(
+    t('historical.sourceLabel'),
+    sourceOptions(filters.variant, filters.source),
+    filters.source,
+  );
+  selects.set('source', source.select);
+  form.append(source.field);
 
   const result = selectInput(
     t('historical.resultLabel'),
-    [
-      { value: '', label: t('historical.anyResult') },
-      { value: '1-0', label: t('historical.redWins') },
-      { value: '0-1', label: t('historical.blackWins') },
-      { value: '1/2-1/2', label: t('historical.draw') },
-      { value: '*', label: t('historical.unfinished') },
-    ],
+    resultOptions(filters.variant),
     filters.result,
   );
   selects.set('result', result.select);
@@ -220,6 +473,7 @@ function buildFilterForm(filters: Filters, onApply: (next: Filters) => void): HT
   inputs.set('to', to.input);
   form.append(to.field);
   const plyMin = numberInput(t('historical.minPlies'), filters.plyMin);
+  plyMin.input.title = t('historical.minPliesHint', { plies: DEFAULT_MIN_PLIES });
   inputs.set('plyMin', plyMin.input);
   form.append(plyMin.field);
   const plyMax = numberInput(t('historical.maxPlies'), filters.plyMax);
@@ -268,6 +522,8 @@ function buildFilterForm(filters: Filters, onApply: (next: Filters) => void): HT
   const collect = (offset: number): Filters => {
     const next: Filters = { ...filters, offset };
     for (const [key, input] of inputs) (next[key] as string) = input.value.trim();
+    // A cleared Min plies is a choice (no minimum), not a return to the default.
+    if (next.plyMin === '') next.plyMin = NO_MIN_PLIES;
     for (const [key, select] of selects) {
       if (key === 'limit') next.limit = Number.parseInt(select.value, 10);
       else if (key === 'sort') next.sort = isGamesSort(select.value) ? select.value : 'recent';
@@ -280,22 +536,90 @@ function buildFilterForm(filters: Filters, onApply: (next: Filters) => void): HT
     event.preventDefault();
     onApply(collect(0));
   });
+  // Reset clears the form, not the variant: the rail is where that is chosen.
   reset.addEventListener('click', () => {
-    onApply({
-      sort: 'recent',
-      player: '',
-      event: '',
-      source: '',
-      result: '',
-      from: '',
-      to: '',
-      plyMin: '',
-      plyMax: '',
-      offset: 0,
-      limit: DEFAULT_LIMIT,
-    });
+    onApply({ ...EMPTY_FILTERS, variant: filters.variant });
   });
   return form;
+}
+
+function sourceOptions(variant: string, current: string): { value: string; label: string }[] {
+  const options = [
+    { value: '', label: t('historical.anySource') },
+    { value: SOURCE_MISTBOARD, label: t('historical.sourcePlayedHere') },
+    { value: SOURCE_PLAYED_PVP, label: t('historical.sourcePlayedVsPeople') },
+    { value: SOURCE_PLAYED_PVE, label: t('historical.sourcePlayedVsBots') },
+    { value: SOURCE_ENGINE_MATCH, label: t('historical.sourceEngineMatches') },
+    { value: SOURCE_ENGINE_GAME, label: t('historical.sourceEngineGames') },
+  ];
+  if (sourceFitsVariant(SOURCE_BROADCAST, variant)) {
+    options.push(
+      { value: SOURCE_BROADCAST, label: t('historical.sourceBroadcasts') },
+      { value: SOURCE_ARCHIVE, label: t('historical.sourceArchive') },
+    );
+    // A link naming one archive source by slug (?source=xqbase) keeps it.
+    if (current && !LANE_SOURCES.has(current)) options.push({ value: current, label: current });
+  }
+  return options;
+}
+
+// Result options in the picked variant's own colours. With no variant, or a
+// flip variant whose colours bind per game, the seats are named by move order.
+function resultOptions(variant: string): { value: string; label: string }[] {
+  const seatWords = variant && !isFlipSeatVariant(variant) ? fixedSeatColors(variant) : null;
+  return [
+    { value: '', label: t('historical.anyResult') },
+    {
+      value: '1-0',
+      label: seatWords
+        ? colorWinsLabel(seatColorWord(variant, seatWords.first))
+        : t('historical.firstWins'),
+    },
+    {
+      value: '0-1',
+      label: seatWords
+        ? colorWinsLabel(seatColorWord(variant, seatWords.second))
+        : t('historical.secondWins'),
+    },
+    { value: '1/2-1/2', label: t('historical.draw') },
+    { value: '*', label: t('historical.unfinished') },
+  ];
+}
+
+/** The stored colours of a fixed-colour variant's two seats: chess plays White
+ *  first, every other family Red. The second seat is stored as black even where
+ *  the product brands it Blue (seatColorWord renders that). */
+function fixedSeatColors(variant: string): { first: 'white' | 'red'; second: 'black' } {
+  const family = maybeGameSpecForId(variant)?.family;
+  return { first: family === 'chess' ? 'white' : 'red', second: 'black' };
+}
+
+export type ResultTone = 'red' | 'black' | 'white' | 'blue' | 'draw' | 'neutral';
+
+/** The result chip for a row: the winner's colour word and the ink to paint it
+ *  in, in the row's own variant (Red/Black, White/Black, Red/Blue; a flip
+ *  variant through the ink its first seat bound on the opening flip). */
+export function resultChip(game: HistoricalXiangqiGameListItem): {
+  label: string;
+  tone: ResultTone;
+} {
+  if (game.result === '1/2-1/2') return { label: t('historical.draw'), tone: 'draw' };
+  if (game.result === '*') return { label: '*', tone: 'neutral' };
+  const firstSeat = game.result === '1-0';
+  const variant = game.variant ?? XIANGQI_SPEC_ID;
+  let color: 'red' | 'black' | 'white';
+  if (isFlipSeatVariant(variant)) {
+    const ink = flipSeatInk(firstSeat ? 'red' : 'black', game.firstColor ?? null);
+    if (ink === null) {
+      return { label: firstSeat ? t('setup.first') : t('setup.second'), tone: 'neutral' };
+    }
+    color = ink;
+  } else {
+    const seats = fixedSeatColors(variant);
+    color = firstSeat ? seats.first : seats.second;
+  }
+  const tone: ResultTone = color === 'black' && brandsBlackAsBlue(variant) ? 'blue' : color;
+  return { label: seatColorWord(variant, color), tone };
 }
 
 function buildResults(
@@ -321,24 +645,28 @@ function gameRow(game: HistoricalXiangqiGameListItem): HTMLElement {
   link.className = 'historical-xiangqi-row';
   link.href = game.reviewUrl;
 
+  const chip = resultChip(game);
   const result = document.createElement('span');
-  result.className = `historical-xiangqi-result historical-xiangqi-result-${resultTone(game.result)}`;
-  result.textContent = historicalXiangqiResultLabel(game.result);
+  result.className = `historical-xiangqi-result historical-xiangqi-result-${chip.tone}`;
+  result.textContent = chip.label;
   link.append(result);
 
   const body = document.createElement('div');
   body.className = 'historical-xiangqi-row-main';
   const matchup = document.createElement('div');
   matchup.className = 'historical-xiangqi-matchup';
+  const variant = game.variant ?? XIANGQI_SPEC_ID;
+  const firstName = resultlessSeatName(variant, 'first');
+  const secondName = resultlessSeatName(variant, 'second');
   // English primary; the original Chinese follows as a muted inline secondary
   // when a cached translation exists.
   const matchupEn = t('historical.matchup', {
-    red: game.redNameEn ?? game.redNameRaw ?? t('setup.red'),
-    black: game.blackNameEn ?? game.blackNameRaw ?? t('setup.black'),
+    red: game.redNameEn ?? game.redNameRaw ?? firstName,
+    black: game.blackNameEn ?? game.blackNameRaw ?? secondName,
   });
   const matchupRaw = t('historical.matchup', {
-    red: game.redNameRaw ?? t('setup.red'),
-    black: game.blackNameRaw ?? t('setup.black'),
+    red: game.redNameRaw ?? firstName,
+    black: game.blackNameRaw ?? secondName,
   });
   matchup.textContent = matchupEn;
   if ((game.redNameEn || game.blackNameEn) && matchupRaw !== matchupEn) {
@@ -350,13 +678,16 @@ function gameRow(game: HistoricalXiangqiGameListItem): HTMLElement {
   body.append(matchup);
   const meta = document.createElement('div');
   meta.className = 'historical-xiangqi-meta';
+  const variantPill = pill(variantDisplayLabel(variant));
+  variantPill.classList.add('historical-xiangqi-pill-variant');
   meta.append(
-    pill(formatDate(game.playedOn)),
-    pill(`${game.plyCount} plies`),
+    variantPill,
     pill(gameKindLabel(game.kind)),
-    pill(game.sourceName || game.sourceSlug),
-    pill(game.moveFormat),
+    pill(formatDate(game.playedOn)),
+    pill(t('historical.plies', { count: game.plyCount })),
   );
+  // The archive's own name (XQBase, ElephantChess) says where the game came from.
+  if (game.kind === 'historical' && game.sourceName) meta.append(pill(game.sourceName));
   body.append(meta);
   link.append(body);
 
@@ -377,6 +708,13 @@ function gameRow(game: HistoricalXiangqiGameListItem): HTMLElement {
   review.textContent = t('historical.review');
   link.append(review);
   return link;
+}
+
+// A seat's colour word for a row with no stored name.
+function resultlessSeatName(variant: string, seat: 'first' | 'second'): string {
+  if (isFlipSeatVariant(variant)) return seat === 'first' ? t('setup.first') : t('setup.second');
+  const seats = fixedSeatColors(variant);
+  return seatColorWord(variant, seat === 'first' ? seats.first : seats.second);
 }
 
 function buildPager(
@@ -499,6 +837,22 @@ function statusLine(text: string): HTMLElement {
   return p;
 }
 
+/** Says what the default floor hides, beside the count, with the way to show
+ *  it. The Min plies field holds the same number and clears the same way. */
+function floorNote(plies: number, onShowAll: () => void): HTMLElement {
+  const p = document.createElement('p');
+  p.className = 'historical-xiangqi-floor';
+  const text = document.createElement('span');
+  text.textContent = t('historical.floorNote', { plies: String(plies) });
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'historical-xiangqi-floor-clear';
+  button.textContent = t('historical.floorShowAll');
+  button.addEventListener('click', onShowAll);
+  p.append(text, ' ', button);
+  return p;
+}
+
 function totalLine(total: number): HTMLElement {
   const p = document.createElement('p');
   p.className = 'historical-xiangqi-total';
@@ -523,22 +877,30 @@ export function historicalXiangqiOutcomeLabel(result: HistoricalXiangqiResult): 
   return t('historical.unfinished');
 }
 
-function resultTone(result: HistoricalXiangqiResult): 'red' | 'black' | 'draw' {
-  if (result === '1-0') return 'red';
-  if (result === '0-1') return 'black';
-  return 'draw';
-}
-
 function gameKindLabel(kind: HistoricalXiangqiGameListItem['kind']): string {
   if (kind === 'mistboard') return t('historical.sourceMistboard');
+  if (kind === 'engine-match') return t('historical.sourceEngineMatch');
+  if (kind === 'engine-game') return t('historical.sourceEngineGame');
   if (kind === 'broadcast') return t('historical.sourceBroadcast');
   return t('historical.sourceArchive');
 }
 
-function eventLine(game: HistoricalXiangqiGameListItem): string {
-  const roundPart = game.roundNameEn ?? (game.round ? `Round ${game.round}` : null);
+/** A round as shown: a bare number becomes "Round 5"; a stored label ("Round 5",
+ *  "第5轮", "Final") is already one and is shown as it is. */
+export function roundLabel(round: string | null | undefined): string | null {
+  const value = round?.trim();
+  if (!value) return null;
+  return /^\d+$/.test(value) ? t('historical.round', { round: value }) : value;
+}
+
+export function eventLine(game: HistoricalXiangqiGameListItem): string {
+  const roundPart = roundLabel(game.roundNameEn ?? game.round);
   const parts = [game.eventNameEn ?? game.eventName, roundPart, game.site].filter(Boolean);
   if (parts.length > 0) return parts.join(' · ');
+  // A game played here has no event to name, and its room id is not one.
+  if (game.kind === 'mistboard' || game.kind === 'engine-match' || game.kind === 'engine-game') {
+    return '';
+  }
   if (game.sourceGameId) return `Source game ${game.sourceGameId}`;
   return 'No event metadata';
 }
@@ -555,7 +917,7 @@ function eventLineZh(game: HistoricalXiangqiGameListItem): string | null {
 }
 
 function formatDate(value: string | null): string {
-  if (!value) return 'Unknown date';
+  if (!value) return t('historical.unknownDate');
   const date = new Date(`${value}T00:00:00.000Z`);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });

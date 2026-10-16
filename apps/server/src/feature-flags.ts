@@ -13,6 +13,16 @@ export function ratedEnabled(): boolean {
   return process.env.MISTBOARD_RATED_ENABLED === 'true';
 }
 
+// Rated CORRESPONDENCE, on top of the switch above. Off by default (Brian,
+// 2026-10-02: held until integrity tooling exists: a report button, an
+// engine-match summary and a cheater mark that refunds opponents). Off means a
+// rated correspondence seek is refused (never stored casual), no correspondence
+// room is created rated, the client hides its Casual/Rated control, and no
+// surface shows a correspondence rating. Live rated play does not read it.
+export function correspondenceRatedEnabled(): boolean {
+  return ratedEnabled() && process.env.MISTBOARD_CORRESPONDENCE_RATED_ENABLED === 'true';
+}
+
 // Dark Xiangqi is a rules spike, not a public/live mode. Keep every future
 // server-side entry point behind this explicit opt-in so adding integration
 // code cannot accidentally expose rooms in production.
@@ -62,6 +72,21 @@ export function atomicXiangqiEnabled(): boolean {
 // launch.
 export function mahjongEnabled(): boolean {
   return process.env.MISTBOARD_MAHJONG_ENABLED === 'true';
+}
+
+// Xiangqi mahjong (象棋麻將, 32 tiles, two players) live rooms. Server-side
+// opt-in, default off, and like Hong Kong mahjong only half the gate: the spec
+// is on the per-account allowlist (139) too, so an environment with this on
+// seats admins and grant holders and nobody else. It exists for a playtest.
+export function xiangqiMahjongEnabled(): boolean {
+  return process.env.MISTBOARD_XIANGQI_MAHJONG_ENABLED === 'true';
+}
+
+// Crazyhouse Xiangqi (xiangqi where captured pieces change sides) live rooms.
+// Server-side opt-in, default off: the runtime kill-switch for room creation.
+// Launched as a public casual variant; there is no pool to rate.
+export function crazyhouseXiangqiEnabled(): boolean {
+  return process.env.MISTBOARD_CRAZYHOUSE_XIANGQI_ENABLED === 'true';
 }
 
 // Jieqi (full-board xiangqi with hidden identities) live rooms. Server-side

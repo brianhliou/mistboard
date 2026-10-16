@@ -97,6 +97,12 @@ export function findPendingAnalysisJob(
   return null;
 }
 
+/** Jobs waiting or running, across lanes. The broadcast analysis sweep only
+ *  enqueues when this is zero, so a reader's request never waits behind it. */
+export function pendingAnalysisJobCount(): number {
+  return pendingJobs().length;
+}
+
 export function getAnalysisJob(id: string): AnalysisJob | null {
   return jobs.get(id) ?? null;
 }

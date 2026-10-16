@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { buildHomeFooter, buildNav, navTabletMediaQuery, placeNavAccount } from './site-shell.js';
+import { setResolvedAdmin } from './signed-in-state.js';
+import {
+  buildHomeFooter,
+  buildNav,
+  fitNavBrand,
+  navTabletMediaQuery,
+  placeNavAccount,
+  syncAdminNavMenus,
+} from './site-shell.js';
 
 describe('site shell nav', () => {
   afterEach(() => {
@@ -33,24 +41,9 @@ describe('site shell nav', () => {
       'true',
     );
 
-    // The consolidated Admin menu stays hidden until account-nav resolves an
-    // admin (no admin hint in a fresh test DOM).
-    const adminMenu = nav.querySelector<HTMLElement>('.site-nav-menu[data-admin-only]');
-    expect(adminMenu?.querySelector('.site-nav-menu-toggle')?.textContent).toBe('Admin');
-    expect(
-      [...(adminMenu?.querySelectorAll<HTMLAnchorElement>('.site-nav-menu-panel a') ?? [])].map(
-        (link) => link.textContent,
-      ),
-    ).toEqual([
-      'Database',
-      'Engines',
-      'Accounts',
-      'Titles',
-      'Readouts',
-      'Metrics',
-      'Broadcast ops',
-    ]);
-    expect(adminMenu?.hidden).toBe(true);
+    // No admin hint in a fresh test DOM, so the admin menu is not in the DOM at
+    // all: a hidden menu still put its labels in the prerendered HTML.
+    expect(nav.querySelector('[data-admin-only]')).toBeNull();
 
     const puzzleLink = nav.querySelector<HTMLAnchorElement>('a[href="/puzzles"]');
     expect(puzzleLink?.textContent).toBe('Puzzles');
@@ -63,43 +56,48 @@ describe('site shell nav', () => {
       nav.querySelector<HTMLAnchorElement>('.site-nav-menu-toggle[href="/rules"]')?.textContent,
     ).toBe('Learn');
     // Play is a split menu now: the title navigates to the lobby, the panel
-    // carries Correspondence (signed-in only, so hidden until auth resolves).
+    // carries Correspondence, shown to everyone (signed out lands on its explainer).
     const playMenu = [...nav.querySelectorAll<HTMLElement>('.site-nav-menu')].find(
       (menu) => menu.querySelector('.site-nav-menu-toggle')?.textContent === 'Play',
     );
     const correspondence = playMenu?.querySelector<HTMLAnchorElement>('a[href="/correspondence"]');
     expect(correspondence?.textContent).toBe('Correspondence');
-    expect(correspondence?.hidden).toBe(true);
+    expect(correspondence?.hidden).toBe(false);
     expect(nav.querySelector<HTMLAnchorElement>('a[href="/forum"]')?.textContent).toBe('Forum');
-    // Community dropdown: Players (the leaderboard), Friends, Forum, Blog. The
-    // title also links to /player, so scope item lookups to the panel.
+    // Community dropdown: Leaderboard, Pro players, Bots, Friends, Forum, Blog.
+    // The title also links to /player, so scope item lookups to the panel.
     const communityMenu = [...nav.querySelectorAll<HTMLElement>('.site-nav-menu')].find(
       (menu) => menu.querySelector('.site-nav-menu-toggle')?.textContent === 'Community',
     );
     const communityPanel = communityMenu?.querySelector<HTMLElement>('.site-nav-menu-panel');
-    expect(communityPanel?.querySelector<HTMLAnchorElement>('a[href="/player"]')?.textContent).toBe(
-      'Players',
-    );
+    // Friends is signed-in only, so it renders hidden here but stays in the DOM.
     expect(
-      communityPanel?.querySelector<HTMLAnchorElement>('a[href="/following"]')?.textContent,
-    ).toBe('Friends');
-    expect(communityPanel?.querySelector<HTMLAnchorElement>('a[href="/blog"]')?.textContent).toBe(
-      'Blog',
-    );
+      [...(communityPanel?.querySelectorAll<HTMLAnchorElement>('a') ?? [])].map((link) => [
+        link.getAttribute('href'),
+        link.textContent,
+      ]),
+    ).toEqual([
+      ['/player', 'Leaderboard'],
+      ['/players', 'Pro players'],
+      ['/bots', 'Bots'],
+      ['/following', 'Friends'],
+      ['/forum', 'Forum'],
+      ['/blog', 'Blog'],
+    ]);
     // The Discord invite was pulled from this dropdown on 2026-08-28. It is
     // still in the footer, so the assertion moves rather than disappearing.
     expect(communityPanel?.querySelector('a[href^="https://discord.gg/"]')).toBeNull();
-    // The Community title is a link to the player page, not just a toggle.
+    // The Community title is a link to the leaderboard, not just a toggle.
     const communityToggle = [
       ...nav.querySelectorAll<HTMLElement>('.site-nav-menu > .site-nav-menu-toggle'),
     ].find((el) => el.textContent === 'Community');
     expect(communityToggle?.tagName).toBe('A');
     expect((communityToggle as HTMLAnchorElement).getAttribute('href')).toBe('/player');
-    // /bots moved out of the top-nav dropdown into the community rail.
-    expect(nav.querySelector<HTMLAnchorElement>('a[href="/bots"]')).toBeNull();
+    // Rating stats stays in the community rail only.
+    expect(nav.querySelector('a[href="/player/rating-stats"]')).toBeNull();
 
     // Watch is a split menu: the title links to Mistboard TV (/watch) and the
-    // panel lists Mistboard TV explicitly alongside Broadcasts.
+    // panel lists Broadcasts first, then Mistboard TV explicitly.
     const watchMenu = [...nav.querySelectorAll<HTMLElement>('.site-nav-menu')].find(
       (menu) => menu.querySelector('.site-nav-menu-toggle')?.textContent === 'Watch',
     );
@@ -117,7 +115,7 @@ describe('site shell nav', () => {
       [...(watchPanel?.querySelectorAll<HTMLAnchorElement>('a') ?? [])].map(
         (link) => link.textContent,
       ),
-    ).toEqual(['Mistboard TV', 'Current games', 'Broadcasts', 'Video library']);
+    ).toEqual(['Broadcasts', 'Mistboard TV', 'Current games', 'Video library']);
     expect(watchPanel?.querySelector<HTMLAnchorElement>('a[href="/games"]')?.textContent).toBe(
       'Current games',
     );
@@ -149,6 +147,104 @@ describe('site shell nav', () => {
     expect(
       learnMenu?.querySelector<HTMLAnchorElement>('.site-nav-menu-toggle')?.getAttribute('href'),
     ).toBe('/rules');
+  });
+
+  // Each Community entry lights up on its own page and on the pages beneath it,
+  // and lights the Community title with it. /player and /players share a
+  // prefix, so each must light only its own entry.
+  it.each([
+    ['/player', '/player'],
+    ['/leaderboard', '/player'],
+    ['/player/rating-stats', '/player'],
+    ['/players', '/players'],
+    ['/players/teams', '/players'],
+    ['/players/wang-tianyi', '/players'],
+    ['/bots', '/bots'],
+    ['/bot/misty', '/bots'],
+  ])('marks the Community entry active on %s', (path, activeHref) => {
+    window.history.replaceState(null, '', path);
+    const nav = buildNav();
+    document.body.append(nav);
+    const communityMenu = [...nav.querySelectorAll<HTMLElement>('.site-nav-menu')].find(
+      (menu) => menu.querySelector('.site-nav-menu-toggle')?.textContent === 'Community',
+    );
+    const active = [
+      ...(communityMenu?.querySelectorAll<HTMLAnchorElement>('.site-nav-menu-panel a.active') ??
+        []),
+    ].map((link) => link.getAttribute('href'));
+    expect(active).toEqual([activeHref]);
+    expect(
+      communityMenu?.querySelector('.site-nav-menu-panel a.active')?.getAttribute('aria-current'),
+    ).toBe('page');
+    expect(
+      communityMenu?.querySelector('.site-nav-menu-toggle')?.classList.contains('active'),
+    ).toBe(true);
+  });
+
+  it('labels the new Community entries in both Chinese scripts', () => {
+    for (const [locale, labels] of [
+      ['zh-Hans', ['排行榜', '职业棋手', '机器人']],
+      ['zh-Hant', ['排行榜', '職業棋手', '機器人']],
+    ] as const) {
+      const nav = buildNav(locale);
+      const panel = [...nav.querySelectorAll<HTMLElement>('.site-nav-menu')]
+        .find((menu) => menu.querySelector('.site-nav-menu-toggle[href$="/player"]'))
+        ?.querySelector('.site-nav-menu-panel');
+      expect(
+        [...(panel?.querySelectorAll<HTMLAnchorElement>('a') ?? [])]
+          .slice(0, 3)
+          .map((link) => link.textContent),
+        locale,
+      ).toEqual(labels);
+    }
+  });
+
+  it('renders the admin menu only for a likely admin, and syncs it in and out', () => {
+    setResolvedAdmin(true);
+    try {
+      const nav = buildNav();
+      document.body.append(nav);
+      const adminMenu = () => nav.querySelector<HTMLElement>('.site-nav-menu[data-admin-only]');
+      expect(adminMenu()?.querySelector('.site-nav-menu-toggle')?.textContent).toBe('Admin');
+      expect(
+        [...(adminMenu()?.querySelectorAll<HTMLAnchorElement>('.site-nav-menu-panel a') ?? [])].map(
+          (link) => link.textContent,
+        ),
+      ).toEqual([
+        'Database',
+        'Engines',
+        'Accounts',
+        'Titles',
+        'Readouts',
+        'Metrics',
+        'Broadcast ops',
+      ]);
+      // Last on the bar, right after Donate.
+      expect(adminMenu()?.previousElementSibling?.classList.contains('site-nav-link-donate')).toBe(
+        true,
+      );
+
+      syncAdminNavMenus(false);
+      expect(adminMenu()).toBeNull();
+      syncAdminNavMenus(true);
+      syncAdminNavMenus(true);
+      expect(nav.querySelectorAll('[data-admin-only]')).toHaveLength(1);
+      expect(adminMenu()?.previousElementSibling?.classList.contains('site-nav-link-donate')).toBe(
+        true,
+      );
+    } finally {
+      setResolvedAdmin(undefined);
+    }
+  });
+
+  it('keeps admin labels out of a signed-out zh nav entirely', () => {
+    window.history.replaceState(null, '', '/zh-hans');
+    const nav = buildNav('zh-Hans');
+    document.body.append(nav);
+    const html = nav.outerHTML;
+    for (const label of ['管理', '数据库', '运营简报', '转播运维', '/database', '/readouts']) {
+      expect(html, label).not.toContain(label);
+    }
   });
 
   it('localizes launch nav labels and translated content links', () => {
@@ -271,5 +367,48 @@ describe('site shell nav account placement', () => {
     placeNavAccount(nav);
     expect(account?.parentElement?.classList.contains('site-nav-utilities')).toBe(true);
     expect(nav.querySelector('.site-nav-utilities')?.firstElementChild).toBe(account);
+  });
+});
+
+describe('site shell nav wordmark fit', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  // jsdom has no layout, so pin the widths fitNavBrand reads: a 223px brand
+  // with its wordmark, 524px of links, 255px of utilities, no padding or gap.
+  function sizedNav(navWidth: number, linksShown = true): HTMLElement {
+    const nav = buildNav();
+    document.body.append(nav);
+    const pin = (el: Element | null, prop: string, value: unknown) =>
+      Object.defineProperty(el, prop, { configurable: true, get: () => value });
+    pin(nav, 'clientWidth', navWidth);
+    pin(nav.querySelector('.site-nav-brand'), 'offsetWidth', 223);
+    const links = nav.querySelector('.site-nav-links');
+    pin(links, 'scrollWidth', 524);
+    pin(links, 'offsetParent', linksShown ? nav : null);
+    pin(nav.querySelector('.site-nav-utilities'), 'scrollWidth', 255);
+    return nav;
+  }
+
+  it('keeps the wordmark while the whole bar fits', () => {
+    const nav = sizedNav(1002);
+    fitNavBrand(nav);
+    expect(nav.dataset.brand).toBeUndefined();
+  });
+
+  it('drops to the logo alone when the wordmark would not fit, and back', () => {
+    const nav = sizedNav(1001);
+    fitNavBrand(nav);
+    expect(nav.dataset.brand).toBe('mark');
+    Object.defineProperty(nav, 'clientWidth', { configurable: true, get: () => 1100 });
+    fitNavBrand(nav);
+    expect(nav.dataset.brand).toBeUndefined();
+  });
+
+  it('leaves the drawer bar alone (links folded away)', () => {
+    const nav = sizedNav(400, false);
+    fitNavBrand(nav);
+    expect(nav.dataset.brand).toBeUndefined();
   });
 });

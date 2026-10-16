@@ -6,8 +6,10 @@ import {
   DAY_MS,
   DAYS_PER_MOVE_OPTIONS,
   type DaysPerMove,
+  isRetiredGameSpec,
   type RoomTimeControl,
 } from '@mistboard/game';
+import type { DrainCreate } from '../deploy-gate.js';
 import { correspondenceEnabled } from './../feature-flags.js';
 import type { UserAccount } from './../persistence.js';
 import * as persistence from './../persistence.js';
@@ -19,13 +21,16 @@ import { writeJson } from './lib.js';
 //
 // Fork-6 (2026-06-11) originally limited this to HIDDEN-INFORMATION specs, since at
 // days-per-move cadence engine assistance is unenforceable. PARTIALLY REVERSED 2026-07-04
-// (Brian): perfect-information correspondence is allowed, because the cheating harm
-// concentrates on RATINGS and correspondence is casual-only by construction — `rated` does
-// not exist in the seek path, and isOfficialTimeControl() short-circuits on daysPerMove, so
-// a correspondence game can never produce a rating bucket (rating-buckets.ts). That
-// guardrail is what contains the harm. HARD GUARDRAIL: flag loudly if rated
-// perfect-information correspondence is ever proposed — it would undo the trade this
-// allowlist rests on.
+// (Brian): perfect-information correspondence is allowed, on the then-argument that the
+// cheating harm concentrates on RATINGS and correspondence was casual-only.
+//
+// RATED CORRESPONDENCE, 2026-10-02 (Brian, explicit gate clearance): a seek or challenge
+// may now be rated, chosen at creation, and a rated game writes the variant's OWN
+// 'correspondence' pool (rating-buckets.ts), never a live ladder, so engine assistance at
+// days-per-move cadence can inflate only that pool. Live paces still never admit a
+// correspondence time control (isOfficialTimeControl short-circuits on daysPerMove).
+// Which specs may be rated: isCorrespondenceRatedSpec (@mistboard/game). This direct
+// create route (dark chess, friend rooms) stays casual.
 //
 // Deliberately NOT derived from a capability (e.g. GameSpec.visibility): xiangqi is
 // visibility 'open', so any visibility-derived rule would exclude exactly the spec this
@@ -51,7 +56,7 @@ export function devCorrespondenceTimeControlsEnabled(): boolean {
 
 export type CorrespondenceCreateContext = {
   databaseRequired: boolean;
-  isDraining(): boolean;
+  refusesCreate(create?: DrainCreate): boolean;
   drainDeadlineMs(): number | null;
   // Defaults to the real persistence module; injectable for tests.
   isPersistenceInitialized?(): boolean;
@@ -81,6 +86,10 @@ export async function handleCorrespondenceCreate(
     writeJson(response, 404, { error: 'correspondence_disabled' });
     return;
   }
+  if (typeof body.gameSpecId === 'string' && isRetiredGameSpec(body.gameSpecId)) {
+    writeJson(response, 410, { error: 'retired_game_spec' });
+    return;
+  }
   // The matcher already narrows to dark chess; this is the fork-6 allowlist
   // staying fail-closed even if a future matcher widens.
   if (typeof body.gameSpecId !== 'string' || !CORRESPONDENCE_ELIGIBLE_SPECS.has(body.gameSpecId)) {
@@ -106,7 +115,7 @@ export async function handleCorrespondenceCreate(
     writeJson(response, 503, { error: 'persistence_disabled' });
     return;
   }
-  if (ctx.isDraining()) {
+  if (ctx.refusesCreate()) {
     writeJson(response, 503, { error: 'server_draining', restartAt: ctx.drainDeadlineMs() });
     return;
   }

@@ -3,9 +3,10 @@ import { currentAccountUser } from './../account-session.js';
 import * as persistence from './../persistence.js';
 import {
   PUBLIC_RATING_TIME_CLASS,
-  parseRatingTimeClass,
   parseRatingVariant,
+  parseVisibleRatingTimeClass,
 } from './../rating-buckets.js';
+import { markUnavailableGames } from './../replayable-games.js';
 import { requireMethod, requirePersistence, writeJson } from './lib.js';
 
 const HANDLE_PATTERN = /^[a-zA-Z0-9_-]{1,40}$/;
@@ -47,6 +48,8 @@ export async function tryHandle(
     writeJson(response, 200, {
       profile: {
         ...profile,
+        // The first page of the Games tab: same marking as the pager below.
+        games: await markUnavailableGames(profile.games),
         isViewer,
         relation: relation ? { following: relation.following, blocked: relation.blocked } : null,
       },
@@ -70,18 +73,32 @@ export async function tryHandle(
     // fail-closed: an unknown value yields null, which serves the unfiltered
     // history rather than erroring or, worse, matching nothing.
     const ratingVariant = parseRatingVariant(parsedUrl.searchParams.get('variant'));
-    const page = await persistence.getUserGamesPage(
-      handle,
-      viewer?.id ?? null,
-      offset,
-      limit,
+    // Result (from the profile owner's seat) and opponent handle. A value that
+    // is not one is a 400: unlike the pool, a typo here would otherwise read as
+    // "this player never lost".
+    const resultParam = parsedUrl.searchParams.get('result');
+    if (resultParam && !persistence.isProfileGameResultFilter(resultParam)) {
+      writeJson(response, 400, { error: 'invalid_result' });
+      return true;
+    }
+    const opponent = parsedUrl.searchParams.get('vs')?.trim() ?? '';
+    if (opponent && !HANDLE_PATTERN.test(opponent)) {
+      writeJson(response, 400, { error: 'invalid_opponent' });
+      return true;
+    }
+    const page = await persistence.getUserGamesPage(handle, viewer?.id ?? null, offset, limit, {
       ratingVariant,
-    );
+      result: persistence.isProfileGameResultFilter(resultParam) ? resultParam : null,
+      opponent: opponent || null,
+    });
     if (!page) {
       writeJson(response, 404, { error: 'not_found' });
       return true;
     }
-    writeJson(response, 200, { games: page.games, total: page.total });
+    // A game that cannot be opened (old rules, a variant with no game page)
+    // stays in the owner's history, marked, rather than vanishing from it
+    // (replayable-games.ts markUnavailableGames).
+    writeJson(response, 200, { games: await markUnavailableGames(page.games), total: page.total });
     return true;
   }
 
@@ -103,7 +120,9 @@ export async function tryHandle(
     // minted before rated widened still resolve to the same ladder.
     const timeClassParam = parsedUrl.searchParams.get('timeClass');
     const timeClass =
-      timeClassParam === null ? PUBLIC_RATING_TIME_CLASS : parseRatingTimeClass(timeClassParam);
+      timeClassParam === null
+        ? PUBLIC_RATING_TIME_CLASS
+        : parseVisibleRatingTimeClass(timeClassParam);
     if (!timeClass) {
       writeJson(response, 400, { error: 'invalid_rating_time_class' });
       return true;

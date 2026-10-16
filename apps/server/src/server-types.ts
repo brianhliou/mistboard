@@ -110,6 +110,10 @@ export type Room = {
   randomEngine: boolean;
   engineReservationId: string | null;
   randomSeating: boolean;
+  // Created by a lobby match (routes/lobby.ts): the open seat gets the short
+  // no-show window, not the invite join window. In-memory only on this stack, so
+  // a room hydrated after a restart falls back to the invite window.
+  lobbyMatch?: boolean;
   // Honored on the first PvP arrival when set: assigns that color to the creator.
   // Random preference uses randomSeating instead, so this is null in that path.
   creatorPreference: 'white' | 'black' | null;
@@ -133,6 +137,9 @@ export type Room = {
 export type LobbyTicket = {
   id: string;
   createdAt: number;
+  // Last GET /api/lobby/:id by this ticket's own tab (creation counts). An
+  // unmatched ticket older than LOBBY_TICKET_STALE_MS here is an abandoned seek.
+  lastPolledAt: number;
   gameSpecId: GameSpecId;
   rated: boolean;
   region: string | null;

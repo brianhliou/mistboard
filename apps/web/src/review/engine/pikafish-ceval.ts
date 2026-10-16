@@ -5,7 +5,8 @@
 //
 // Two things are specific to this backend. The net is 51 MB and is fetched by
 // the worker on the first preload (byte progress reaches the caller through
-// `preload(onProgress)`), and Pikafish speaks a0-i9 coordinates while every
+// `preload(onProgress)`; later visits read it from Cache Storage with no
+// progress, see worker.js), and Pikafish speaks a0-i9 coordinates while every
 // caller on this side speaks Fairy-Stockfish's a1-i10, so moves are shifted
 // down one rank on the way in and PV moves shifted back up on the way out.
 import type {
@@ -40,7 +41,7 @@ const EMPTY_UPDATE: CevalUpdate = {
 type EngineMessage =
   | { type: 'ready' }
   | { type: 'net-progress'; loaded: number; total: number }
-  | { type: 'net-written'; bytes: number }
+  | { type: 'net-written'; bytes: number; source?: 'cache' | 'network' }
   | { type: 'line'; line: string }
   | { type: 'stderr'; line: string }
   | { type: 'error'; error?: string };
@@ -53,6 +54,14 @@ export function isPikafishCevalVariant(variant: CevalVariant): boolean {
 
 export function pikafishEngineName(variant: CevalVariant): string | null {
   return isPikafishCevalVariant(variant) ? 'Pikafish' : null;
+}
+
+/** The project's home page: the analysis board names Pikafish with a link to
+ *  it wherever it analyses on the Pikafish net (credit, as /source does). */
+export const PIKAFISH_HOME_URL = 'https://pikafish.com/';
+
+export function pikafishEngineUrl(variant: CevalVariant): string | null {
+  return isPikafishCevalVariant(variant) ? PIKAFISH_HOME_URL : null;
 }
 
 /** Fairy-Stockfish a1-i10 → Pikafish a0-i9. Anything that is not a plain

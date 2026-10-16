@@ -1,3 +1,5 @@
+import { postThroughRestart } from './room-create-retry.js';
+
 export type DarkXiangqiRoomTimeControl = {
   initialMs: number;
   incrementMs: number;
@@ -15,7 +17,7 @@ export async function createDarkXiangqiPlayAgainRoom(
     options.timeControl === null
       ? null
       : (options.timeControl ?? DEFAULT_DARK_XIANGQI_TIME_CONTROL);
-  const response = await fetch('/api/rooms', {
+  const response = await postThroughRestart('/api/rooms', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({

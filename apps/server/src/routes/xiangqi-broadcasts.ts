@@ -1,11 +1,25 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { broadcastRecordsCredit } from '@mistboard/game';
 import * as persistence from './../persistence.js';
+import { XIANGQI_ANALYSIS_ENGINE_ID, XIANGQI_ANALYSIS_REQUEST_DEPTH } from '../xiangqi-analysis.js';
+import { handleXiangqiBroadcastAnalysisRoutes } from '../xiangqi-broadcast-analysis.js';
+import { roundNumberFromRoundId } from '../xiangqi-broadcast-discovery.js';
+import {
+  buildBroadcastCalendar,
+  dpxqTourIndexForCalendar,
+} from '../xiangqi-broadcast-dpxq-index.js';
+import { defaultXiangqiBroadcastFetch } from '../xiangqi-broadcast-fetch.js';
 import {
   type BroadcastLiveEval,
   cachedBroadcastLiveEval,
   requestBroadcastLiveEvalForBoard,
 } from './../xiangqi-broadcast-live-eval.js';
+import {
+  isXiangqiBroadcastPollMode,
+  type XiangqiBroadcastPollMode,
+  type XiangqiBroadcastPollState,
+  xiangqiBroadcastPollState,
+} from '../xiangqi-broadcast-poll-window.js';
 import {
   pollXiangqiBroadcastSourceOnce,
   type XiangqiBroadcastPollResult,
@@ -15,6 +29,7 @@ import {
   buildXiangqiBroadcastBoardReplay,
   finalXiangqiBoardView,
 } from './../xiangqi-broadcast-serving.js';
+import { translateXiangqiEventName } from '../xiangqi-broadcast-translate.js';
 import { type BroadcastViewerRegistry, broadcastViewers } from './../xiangqi-broadcast-viewers.js';
 import {
   type HttpApiContext,
@@ -30,7 +45,20 @@ type BroadcastStreamEnvelope<T> = {
   payload: T;
 };
 
+/** A board's eval for the round grid's gauge, Red's point of view: the final
+ *  position of a finished game's stored analysis, or the live engine layer's
+ *  read of a live game's current position. */
+export type XiangqiBroadcastBoardEvaluation = {
+  cp: number | null;
+  mate: number | null;
+  source: 'analysis' | 'live';
+};
+
 export type XiangqiBroadcastApiPersistence = {
+  /** Optional so test fakes need not model the analysis table. */
+  listXiangqiBroadcastFinalEvals?(
+    boardIds: readonly string[],
+  ): Promise<Map<string, { cp: number | null; mate: number | null }>>;
   listXiangqiBroadcastTours(): ReturnType<typeof persistence.listXiangqiBroadcastTours>;
   getXiangqiBroadcastTour(slug: string): ReturnType<typeof persistence.getXiangqiBroadcastTour>;
   listXiangqiBroadcastRounds(
@@ -64,6 +92,12 @@ const livePersistence: XiangqiBroadcastApiPersistence = {
   recordXiangqiBroadcastSyncLog: (input) => persistence.recordXiangqiBroadcastSyncLog(input),
   setXiangqiBroadcastTourSchedule: (slug, schedule) =>
     persistence.setXiangqiBroadcastTourSchedule(slug, schedule),
+  listXiangqiBroadcastFinalEvals: (boardIds) =>
+    persistence.listXiangqiBroadcastFinalEvals({
+      boardIds,
+      engineId: XIANGQI_ANALYSIS_ENGINE_ID,
+      depth: XIANGQI_ANALYSIS_REQUEST_DEPTH,
+    }),
 };
 
 type XiangqiBroadcastPollSource = typeof pollXiangqiBroadcastSourceOnce;
@@ -120,6 +154,12 @@ export async function xiangqiBroadcastIndexForApi(
         boardCount: boards.length,
         liveBoardCount: boards.filter((board) => board.status === 'live').length,
         completeBoardCount: boards.filter((board) => board.status === 'complete').length,
+        // Finished games someone can replay. A source can publish results and
+        // never the moves (dpxq's 2026 women's league: six results, zero
+        // plies), and the homepage must not count those as games to watch.
+        recordedBoardCount: boards.filter(
+          (board) => board.status === 'complete' && board.plyCount > 0,
+        ).length,
         scheduledBoardCount: boards.filter((board) => board.status === 'scheduled').length,
         totalPlies: boards.reduce((sum, board) => sum + board.plyCount, 0),
         updatedAt: latestDate([
@@ -128,6 +168,8 @@ export async function xiangqiBroadcastIndexForApi(
           ...boards.map((board) => board.updatedAt),
         ]),
         featuredBoard: featuredXiangqiBroadcastBoard(boards),
+        ...indexRoundStatus(rounds, boardsByRound),
+        players: indexPlayers(boards),
         lastSyncLog: syncLogs[0]
           ? {
               severity: syncLogs[0].severity,
@@ -141,13 +183,91 @@ export async function xiangqiBroadcastIndexForApi(
   return { tours: entries };
 }
 
+type IndexRound = {
+  id: string;
+  name: string;
+  nameEn?: string;
+  /** The seeded start, else the earliest start a game in it states. */
+  startsAt: string | null;
+  live: boolean;
+};
+
+/**
+ * The index card's status line, lichess's "Round 8 · in 11 hours": the latest
+ * round that has games, and the next round seeded with a start in the future
+ * and no games yet. Rounds are ordered by their number (`<slug>-rNN`), since a
+ * round the source named but nobody scheduled has no start to sort by.
+ */
+function indexRoundStatus(
+  rounds: readonly persistence.StoredXiangqiBroadcastRound[],
+  boardsByRound: readonly (readonly persistence.StoredXiangqiBroadcastBoard[])[],
+): { latestRound: IndexRound | null; nextRound: IndexRound | null } {
+  const now = Date.now();
+  const ordered = rounds
+    .map((round, index) => ({ round, boards: boardsByRound[index] ?? [], index }))
+    .sort(
+      (a, b) =>
+        (roundNumberFromRoundId(a.round.id) ?? a.index) -
+          (roundNumberFromRoundId(b.round.id) ?? b.index) || a.index - b.index,
+    );
+  const summary = (entry: (typeof ordered)[number]): IndexRound => {
+    const stated = entry.boards
+      .map((board) => board.details?.playedAt)
+      .filter((at): at is string => typeof at === 'string')
+      .sort((a, b) => Date.parse(a) - Date.parse(b))[0];
+    return {
+      id: entry.round.id,
+      name: entry.round.name,
+      ...(entry.round.nameEn ? { nameEn: entry.round.nameEn } : {}),
+      startsAt: stated ?? entry.round.startsAt ?? null,
+      live: entry.boards.some((board) => board.status === 'live'),
+    };
+  };
+  const withGames = ordered.filter((entry) => entry.boards.length > 0);
+  const latest = withGames[withGames.length - 1];
+  const next = ordered.find(
+    (entry) =>
+      entry.boards.length === 0 &&
+      entry.round.startsAt !== undefined &&
+      Date.parse(entry.round.startsAt) > now,
+  );
+  return {
+    latestRound: latest ? summary(latest) : null,
+    nextRound: next ? summary(next) : null,
+  };
+}
+
+// Who played, for the card's "top players" line; the page ranks them by its
+// CXA data, which lives with the player pages in the web app. One entry per
+// name, capped so a big open cannot bloat the index.
+const INDEX_PLAYER_CAP = 96;
+
+function indexPlayers(boards: readonly persistence.StoredXiangqiBroadcastBoard[]) {
+  const seen = new Map<string, { name: string; nameEn?: string; title?: string }>();
+  for (const board of boards) {
+    for (const player of [board.red, board.black]) {
+      if (seen.has(player.name) || seen.size >= INDEX_PLAYER_CAP) continue;
+      seen.set(player.name, {
+        name: player.name,
+        ...(player.nameEn ? { nameEn: player.nameEn } : {}),
+        ...(player.title ? { title: player.title } : {}),
+      });
+    }
+  }
+  return [...seen.values()];
+}
+
 // The index page shows one mini-board thumbnail per tour: the most recently
 // updated live board, else the latest complete one. The final position is
 // replayed server-side so the payload carries a single compact view instead of
 // the board's whole move list.
 function featuredXiangqiBroadcastBoard(boards: persistence.StoredXiangqiBroadcastBoard[]) {
   const live = boards.filter((board) => board.status === 'live');
-  const pool = live.length > 0 ? live : boards.filter((board) => board.status === 'complete');
+  const complete = boards.filter((board) => board.status === 'complete');
+  // A game with moves over a results-only board, whose thumbnail would be
+  // the opening position.
+  const played = complete.filter((board) => board.plyCount > 0);
+  const pool = live.length > 0 ? live : played.length > 0 ? played : complete;
   if (pool.length === 0) return null;
   const pick = pool.reduce((best, board) =>
     board.updatedAt.getTime() > best.updatedAt.getTime() ? board : best,
@@ -194,10 +314,15 @@ export async function xiangqiBroadcastOpsIndexForApi(
       return {
         tour,
         sourceUrl: tour.sourceUrl ?? null,
-        schedule: {
-          pollEnabled: tour.pollEnabled,
+        schedule: scheduleForApi({
+          sourceUrl: tour.sourceUrl ?? null,
+          pollMode: tour.pollMode,
           pollIntervalMs: tour.pollIntervalMs,
-        },
+          startsAt: tour.startsAt ?? null,
+          endsAt: tour.endsAt ?? null,
+          createdAt: tour.createdAt,
+          hasBoards: boards.length > 0,
+        }),
         roundCount: rounds.length,
         boardCount: boards.length,
         liveBoardCount: boards.filter((board) => board.status === 'live').length,
@@ -351,37 +476,73 @@ export async function manualXiangqiBroadcastSourceImportForApi(
   return { ok: true, result };
 }
 
+export type XiangqiBroadcastScheduleForApi = {
+  pollMode: XiangqiBroadcastPollMode;
+  /** Derived: whether the scheduler polls the tour now. */
+  pollEnabled: boolean;
+  pollIntervalMs: number;
+  pollState: XiangqiBroadcastPollState;
+};
+
+function scheduleForApi(
+  schedule: {
+    sourceUrl: string | null;
+    pollMode: XiangqiBroadcastPollMode;
+    pollIntervalMs: number;
+    startsAt: string | null;
+    endsAt: string | null;
+    createdAt?: string | Date | null;
+    hasBoards?: boolean;
+  },
+  now = Date.now(),
+): XiangqiBroadcastScheduleForApi {
+  const pollState = xiangqiBroadcastPollState({ ...schedule, now });
+  return {
+    pollMode: schedule.pollMode,
+    pollEnabled: pollState.polling,
+    pollIntervalMs: schedule.pollIntervalMs,
+    pollState,
+  };
+}
+
+/** The requested mode: `mode` (auto/on/off), or the pre-mode `enabled`
+ *  boolean an older console sends (true is on, false is off). */
+function requestedPollMode(body: Record<string, unknown>): XiangqiBroadcastPollMode | null {
+  if (body.mode !== undefined) return isXiangqiBroadcastPollMode(body.mode) ? body.mode : null;
+  if (typeof body.enabled === 'boolean') return body.enabled ? 'on' : 'off';
+  return null;
+}
+
 export async function xiangqiBroadcastScheduleUpdateForApi(
   tourSlug: string,
   body: Record<string, unknown>,
   deps: XiangqiBroadcastApiPersistence = livePersistence,
+  now = Date.now(),
 ): Promise<
-  | { ok: true; schedule: { pollEnabled: boolean; pollIntervalMs: number } }
+  | { ok: true; schedule: XiangqiBroadcastScheduleForApi }
   | { ok: false; status: 400 | 404; error: string }
 > {
-  if (typeof body.enabled !== 'boolean') {
-    return { ok: false, status: 400, error: 'invalid_schedule' };
-  }
+  const mode = requestedPollMode(body);
+  if (!mode) return { ok: false, status: 400, error: 'invalid_schedule' };
   if (body.intervalMs !== undefined && !Number.isInteger(body.intervalMs)) {
     return { ok: false, status: 400, error: 'invalid_schedule' };
   }
   const tour = await deps.getXiangqiBroadcastTour(tourSlug);
   if (!tour) return { ok: false, status: 404, error: 'broadcast_not_found' };
-  if (body.enabled && !tour.sourceUrl) {
+  // Auto on a sourceless tour is the default and simply never polls; forcing
+  // it on is the operator asking for something that cannot happen.
+  if (mode === 'on' && !tour.sourceUrl) {
     return { ok: false, status: 400, error: 'missing_source_url' };
   }
 
   const updated = await deps.setXiangqiBroadcastTourSchedule(tourSlug, {
-    pollEnabled: body.enabled,
+    pollMode: mode,
     pollIntervalMs: clampXiangqiBroadcastScheduleIntervalMs(
       body.intervalMs !== undefined ? body.intervalMs : tour.pollIntervalMs,
     ),
   });
   if (!updated) return { ok: false, status: 404, error: 'broadcast_not_found' };
-  return {
-    ok: true,
-    schedule: { pollEnabled: updated.pollEnabled, pollIntervalMs: updated.pollIntervalMs },
-  };
+  return { ok: true, schedule: scheduleForApi(updated, now) };
 }
 
 export async function xiangqiBroadcastTourForApi(
@@ -404,7 +565,7 @@ export async function xiangqiBroadcastTourForApi(
     // work this out for itself -- which is why the tour PAGE credited nobody
     // while every round page did, on a tour whose 61 games all came from one
     // volunteer archive. It is also the page an outside link points at.
-    recordsSource: broadcastRecordsCredit(boardsByRound.flat()),
+    recordsSource: broadcastRecordsCredit(boardsByRound.flat(), tour),
     rounds: rounds.map((round, index) => ({
       ...round,
       ...roundBoardStats(boardsByRound[index] ?? []),
@@ -416,8 +577,9 @@ export async function xiangqiBroadcastRoundForApi(
   tourSlug: string,
   roundId: string,
   deps: XiangqiBroadcastApiPersistence = livePersistence,
+  liveEval: XiangqiBroadcastLiveEvalLookup = cachedBroadcastLiveEval,
 ) {
-  const [tour, rounds, boards] = await Promise.all([
+  const [tour, rounds, storedBoards] = await Promise.all([
     deps.getXiangqiBroadcastTour(tourSlug),
     deps.listXiangqiBroadcastRounds(tourSlug),
     deps.listXiangqiBroadcastBoards(roundId),
@@ -425,12 +587,22 @@ export async function xiangqiBroadcastRoundForApi(
   if (!tour) return null;
   const round = rounds.find((entry) => entry.id === roundId);
   if (!round) return null;
+  const finals =
+    (await deps.listXiangqiBroadcastFinalEvals?.(
+      storedBoards.filter((board) => board.status === 'complete').map((board) => board.id),
+    )) ?? new Map<string, { cp: number | null; mate: number | null }>();
+  const boards = storedBoards.map((board) => {
+    const evaluation = boardEvaluation(board, finals, liveEval);
+    return evaluation ? { ...board, evaluation } : board;
+  });
   // Sibling rounds with stats power the round switcher on the round and board
   // pages. The current round reuses the boards already fetched above; the SSE
   // poller shares this path, so the extra queries scale with round count.
   const boardsByRound = await Promise.all(
     rounds.map((entry) =>
-      entry.id === roundId ? Promise.resolve(boards) : deps.listXiangqiBroadcastBoards(entry.id),
+      entry.id === roundId
+        ? Promise.resolve(storedBoards)
+        : deps.listXiangqiBroadcastBoards(entry.id),
     ),
   );
   return {
@@ -442,6 +614,43 @@ export async function xiangqiBroadcastRoundForApi(
       ...roundBoardStats(boardsByRound[index] ?? []),
     })),
   };
+}
+
+function boardEvaluation(
+  board: { id: string; status: string; plyCount: number },
+  finals: Map<string, { cp: number | null; mate: number | null }>,
+  liveEval: XiangqiBroadcastLiveEvalLookup,
+): XiangqiBroadcastBoardEvaluation | null {
+  if (board.status === 'complete') {
+    const final = finals.get(board.id);
+    return final ? { ...final, source: 'analysis' } : null;
+  }
+  if (board.status === 'live') {
+    const live = liveEval(board.id, board.plyCount);
+    return live ? { cp: live.cp, mate: live.mate, source: 'live' } : null;
+  }
+  return null;
+}
+
+// The player index folds every stored board, so a board page does not rebuild it
+// per view: a minute's staleness only delays a brand-new player's link.
+const PLAYER_INDEX_TTL_MS = 60_000;
+let playerIndexCache: {
+  at: number;
+  players: Promise<Awaited<ReturnType<typeof persistence.listXiangqiPlayers>>>;
+} | null = null;
+
+function cachedXiangqiPlayers() {
+  const now = Date.now();
+  if (!playerIndexCache || now - playerIndexCache.at > PLAYER_INDEX_TTL_MS) {
+    const players = persistence.listXiangqiPlayers();
+    // A failed read must not stick for a minute; the next view retries.
+    players.catch(() => {
+      if (playerIndexCache?.players === players) playerIndexCache = null;
+    });
+    playerIndexCache = { at: now, players };
+  }
+  return playerIndexCache.players;
 }
 
 export async function xiangqiBroadcastRoundStreamForApi(
@@ -456,7 +665,16 @@ export async function xiangqiBroadcastRoundStreamForApi(
       payload.tour.updatedAt,
       payload.round.updatedAt,
       ...payload.boards.map((board) =>
-        versionKey([board.id, board.updatedAt, board.plyCount, board.status, board.result]),
+        versionKey([
+          board.id,
+          board.updatedAt,
+          board.plyCount,
+          board.status,
+          board.result,
+          // A new live read or a finished analysis repaints the gauge.
+          'evaluation' in board ? board.evaluation?.cp : null,
+          'evaluation' in board ? board.evaluation?.mate : null,
+        ]),
       ),
     ]),
     payload,
@@ -716,6 +934,7 @@ export async function tryHandle(
   pathname: string,
   _parsedUrl: URL,
 ): Promise<boolean> {
+  if (await handleXiangqiBroadcastAnalysisRoutes(request, response, pathname)) return true;
   if (pathname === '/api/admin/xiangqi/broadcasts') {
     if (!requireMethod(request, response, 'GET')) return true;
     if (!(await requireAdminSession(request, response))) return true;
@@ -840,6 +1059,27 @@ export async function tryHandle(
     return true;
   }
 
+  // The broadcast calendar: top events from dpxq's tour index (cached six
+  // hours; the scheduler's sweep keeps it warm) merged with the events we relay.
+  if (pathname === '/api/xiangqi/broadcasts/calendar') {
+    if (!requireMethod(request, response, 'GET')) return true;
+    if (!requirePersistence(response)) return true;
+    const [rows, tours] = await Promise.all([
+      dpxqTourIndexForCalendar({ fetchImpl: defaultXiangqiBroadcastFetch }),
+      persistence.listXiangqiBroadcastTours(),
+    ]);
+    writeJson(response, 200, {
+      sourceReadable: rows !== null,
+      events: buildBroadcastCalendar({
+        rows: rows ?? [],
+        tours,
+        now: Date.now(),
+        translate: translateXiangqiEventName,
+      }),
+    });
+    return true;
+  }
+
   // Player pages, derived from the archive (docs-private/players/
   // players-surface-spec.md): the index and one player with every board they
   // sat at. Public, read-only, no persistence means no players.
@@ -877,7 +1117,18 @@ export async function tryHandle(
       writeJson(response, 404, { error: 'not_found' });
       return true;
     }
-    writeJson(response, 200, payload);
+    // Each side's player page, for the name strips around the board. The same
+    // name -> slug match the player page uses for its opponents.
+    const players = await cachedXiangqiPlayers();
+    const slugOf = (name: string): string | null =>
+      players.find((player) => player.name === name)?.slug ?? null;
+    writeJson(response, 200, {
+      ...payload,
+      playerSlugs: {
+        red: slugOf(payload.board.red.name),
+        black: slugOf(payload.board.black.name),
+      },
+    });
     return true;
   }
 
@@ -916,7 +1167,18 @@ export async function tryHandle(
       writeJson(response, 404, { error: 'not_found' });
       return true;
     }
-    writeJson(response, 200, payload);
+    // Each player's page, by Chinese name, for the Players tab's links (lichess
+    // opens a player from there). Only players who have a page are listed.
+    const players = await cachedXiangqiPlayers();
+    const slugByName = new Map(players.map((player) => [player.name, player.slug]));
+    const playerSlugs: Record<string, string> = {};
+    for (const board of payload.boards) {
+      for (const seat of [board.red, board.black]) {
+        const slug = slugByName.get(seat.name);
+        if (slug) playerSlugs[seat.name] = slug;
+      }
+    }
+    writeJson(response, 200, { ...payload, playerSlugs });
     return true;
   }
 

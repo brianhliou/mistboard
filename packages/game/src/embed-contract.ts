@@ -54,9 +54,21 @@ export function clampEmbedWidth(raw: string | number | null | undefined): number
   return Math.min(EMBED_MAX_WIDTH, Math.max(EMBED_MIN_WIDTH, Math.round(value)));
 }
 
-/** Height that preserves the default aspect ratio at `width`. */
-export function embedHeightForWidth(width: number): number {
-  return Math.round(width * (EMBED_DEFAULT_HEIGHT / EMBED_DEFAULT_WIDTH));
+/**
+ * Height at the default width for a banqi game. Its 4x8 board lies on its side,
+ * so the widget is wide and short: measured 444px tall at 760 wide and 575 at
+ * 1000, where the default 700 left a blank band under every banqi embed.
+ */
+export const EMBED_BANQI_HEIGHT = 460;
+
+/**
+ * Height that preserves the widget's aspect ratio at `width`. `variant` is the
+ * finished game's variant when the frame is a game; every board but banqi's is
+ * near-square and takes the default ratio.
+ */
+export function embedHeightForWidth(width: number, variant?: string): number {
+  const atDefaultWidth = variant === 'banqi' ? EMBED_BANQI_HEIGHT : EMBED_DEFAULT_HEIGHT;
+  return Math.round(width * (atDefaultWidth / EMBED_DEFAULT_WIDTH));
 }
 
 /** `/embed/study/:studyId/:chapterId`, the frameable page itself. */
@@ -67,6 +79,12 @@ export function embedStudyPath(studyId: string, chapterId: string): string {
 /** `/embed/game/:roomId`, a finished game rendered alone for framing. */
 export function embedGamePath(roomId: string): string {
   return `/embed/game/${roomId}`;
+}
+
+/** `/embed/broadcast/xiangqi/board/:boardId`, one relayed professional game
+ *  (live or finished), for the creators who cover them (#454). */
+export function embedBroadcastBoardPath(boardId: string): string {
+  return `/embed/broadcast/xiangqi/board/${boardId}`;
 }
 
 /** `/embed/tv`, the live board; `channel` narrows it to one watch channel. */
@@ -140,7 +158,8 @@ export type EmbedTarget =
   | { kind: 'study'; studyId: string; chapterId: string }
   | { kind: 'puzzle'; puzzleId: string | null }
   | { kind: 'tv'; channel: string | null }
-  | { kind: 'analysis' };
+  | { kind: 'analysis' }
+  | { kind: 'broadcast'; boardId: string; ply: number | null };
 
 const ID = '([A-Za-z0-9_-]{1,64})';
 // `/black` after the id is lichess's spelling for "seen from Black's side", kept
@@ -152,6 +171,8 @@ const STUDY_TARGET = new RegExp(`^/(?:embed/)?study/${ID}/${ID}/?$`);
 const PUZZLE_PERMALINK = new RegExp(`^/puzzles/${ID}/?$`);
 const PUZZLE_EMBED = new RegExp(`^/embed/puzzle(?:/${ID})?/?$`);
 const TV_EMBED = /^\/embed\/tv\/?$/;
+// A broadcast board id carries its tour and round slugs, so it runs long.
+const BROADCAST_TARGET = /^\/(?:embed\/)?broadcast\/xiangqi\/board\/([A-Za-z0-9_-]{1,160})\/?$/;
 const ANALYSIS_EMBED = /^\/embed\/analysis(?:\/xiangqi)?\/?$/;
 
 /** Accepts an absolute URL or a bare path; a string that is neither is null. */
@@ -186,6 +207,14 @@ export function embedTargetFromUrl(url: string): EmbedTarget | null {
     return { kind: 'tv', channel: channel && /^[a-z0-9-]{1,40}$/.test(channel) ? channel : null };
   }
   if (ANALYSIS_EMBED.test(pathname)) return { kind: 'analysis' };
+  const broadcast = BROADCAST_TARGET.exec(pathname);
+  if (broadcast) {
+    return {
+      kind: 'broadcast',
+      boardId: broadcast[1] as string,
+      ply: embedPly(new URLSearchParams(search).get('ply') ?? hash.slice(1)),
+    };
+  }
   return null;
 }
 
@@ -210,6 +239,11 @@ export function embedPathForTarget(target: EmbedTarget): string {
       return embedTvPath(target.channel ?? undefined);
     case 'analysis':
       return embedAnalysisPath();
+    case 'broadcast':
+      return (
+        embedBroadcastBoardPath(encodeURIComponent(target.boardId)) +
+        (target.ply !== null ? `?ply=${target.ply}` : '')
+      );
   }
 }
 

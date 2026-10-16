@@ -32,6 +32,11 @@ import {
   type JieqiMove,
   type JieqiPieceRole,
   type JieqiPlayerView,
+  type JieqiSquare,
+  jieqiCheckMark,
+  jieqiPerpetualCheckLoser,
+  jieqiTruthBoard,
+  jieqiTruthCaptures,
   oppositeJieqiColor,
 } from '@mistboard/game';
 import { jieqiEnabled } from './feature-flags.js';
@@ -41,9 +46,15 @@ import {
   jieqiEngineVersion,
 } from './jieqi-engine.js';
 import type * as persistence from './persistence.js';
-import { tenantPveEngineId } from './variant-tenant/runtime.js';
+import { isProductionLikeRuntime, type RuntimeEnv } from './server-policy.js';
+import {
+  applyTenantEvent,
+  replayTenantEvents,
+  tenantPveEngineId,
+} from './variant-tenant/runtime.js';
 import type {
   TenantClientEvent,
+  TenantProjection,
   TenantRoomEvent,
   TenantSeat,
   TenantSnapshotClient,
@@ -86,14 +97,61 @@ function cryptoRng(): number {
   return randomInt(0, RNG_RANGE) / RNG_RANGE;
 }
 
+// Dev/test only: MISTBOARD_DEV_JIEQI_DEAL_SEED=<uint32> deals every new room
+// from one seeded shuffle, so scripts/jieqi-state-gallery.mjs can replay a
+// scripted game into the same positions run after run. Only the randomness
+// changes: the deal is still a server secret in room-created, stripped from
+// every client event, and each seat still sees only its PlayerView. Fail
+// closed: a production-like runtime ignores the variable and deals from crypto.
+export function jieqiDealRng(
+  env: RuntimeEnv & { MISTBOARD_DEV_JIEQI_DEAL_SEED?: string } = process.env,
+): () => number {
+  const raw = env.MISTBOARD_DEV_JIEQI_DEAL_SEED?.trim();
+  if (!raw || isProductionLikeRuntime(env)) return cryptoRng;
+  if (!/^\d{1,10}$/.test(raw) || Number(raw) > 0xffffffff) return cryptoRng;
+  let a = Number(raw) >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 // Reconstruct a deal from the persisted room-created setup. createInitialJieqiState
 // fully validates it (throws on a corrupt multiset); this only shape-checks the
 // container so a missing setup falls back to the standard arrangement.
 function asJieqiDeal(setup: unknown): JieqiDeal | undefined {
   if (setup === null || typeof setup !== 'object') return undefined;
-  const candidate = setup as { red?: unknown; black?: unknown };
+  const candidate = setup as { red?: unknown; black?: unknown; undetermined?: unknown };
   if (!Array.isArray(candidate.red) || !Array.isArray(candidate.black)) return undefined;
-  return { red: candidate.red as JieqiPieceRole[], black: candidate.black as JieqiPieceRole[] };
+  const deal: JieqiDeal = {
+    red: candidate.red as JieqiPieceRole[],
+    black: candidate.black as JieqiPieceRole[],
+  };
+  // Imported games only: home squares the source never dealt (validated by
+  // createInitialJieqiState, which marks those pieces unknown).
+  const undetermined = candidate.undetermined as { red?: unknown; black?: unknown } | undefined;
+  if (undetermined && Array.isArray(undetermined.red) && Array.isArray(undetermined.black)) {
+    deal.undetermined = {
+      red: undetermined.red as JieqiSquare[],
+      black: undetermined.black as JieqiSquare[],
+    };
+  }
+  return deal;
+}
+
+// The room-created setup: the deal, plus `repetition: true` on every room
+// created since the threefold rule shipped (2026-10). A room created before it
+// (or an imported lab game, whose referee adjudicated repetition itself) has no
+// marker and replays under the rules it was played under, so a position that
+// recurred three times mid-game does not cut an old game short. A missing setup
+// (tests, the standard deal) gets the current rule.
+export type JieqiSetup = JieqiDeal & { repetition?: true };
+
+export function enforcesRepetition(setup: unknown): boolean {
+  if (setup === undefined || setup === null) return true;
+  return typeof setup === 'object' && (setup as { repetition?: unknown }).repetition === true;
 }
 
 // Identity is hidden, position is not: moves are public to both seats and to a
@@ -142,17 +200,44 @@ export function getJieqiClientView(
 // with the review page rather than a new disclosure.
 export function getJieqiTruthView(state: JieqiGameState): JieqiPlayerView {
   const base = getJieqiPlayerView(state, 'red');
-  const board: JieqiPlayerView['board'] = {};
-  for (const [square, piece] of Object.entries(state.board)) {
-    if (!piece) continue;
-    board[square as JieqiMove['from']] = { color: piece.color, role: piece.role, faceDown: false };
-  }
+  // An imported game's never-determined pieces stay unknown even here.
   return {
     ...base,
-    board,
-    captured: state.captures.map((capture) => ({ owner: capture.owner, role: capture.role })),
+    board: jieqiTruthBoard(state),
+    captured: jieqiTruthCaptures(state),
     legalMoves: [],
   };
+}
+
+// The live move list's + / # per ply. The client cannot derive them: a move
+// event carries no reveal, and a revealed piece checks by its true role. Check
+// itself is public (it reads only the board both seats and a spectator see),
+// so every client gets the same list. Extended incrementally per room, since
+// it rides every frame.
+type JieqiMarkCache = {
+  count: number;
+  projection: TenantProjection<JieqiColor, JieqiGameState, typeof JIEQI_SPEC_ID>;
+  marks: Array<'' | '+' | '#'>;
+};
+const jieqiMarkCache = new WeakMap<object, JieqiMarkCache>();
+
+export function jieqiLiveCheckMarks(room: {
+  events: readonly TenantRoomEvent<JieqiColor, JieqiMove, typeof JIEQI_SPEC_ID>[];
+}): Array<'' | '+' | '#'> {
+  const created = room.events?.[0];
+  if (created?.type !== 'room-created') return [];
+  let cache = jieqiMarkCache.get(room);
+  if (!cache || cache.count > room.events.length) {
+    cache = { count: 1, projection: replayTenantEvents(jieqiTenant, [created]), marks: [] };
+    jieqiMarkCache.set(room, cache);
+  }
+  for (let i = cache.count; i < room.events.length; i += 1) {
+    const event = room.events[i]!;
+    cache.projection = applyTenantEvent(jieqiTenant, cache.projection, event);
+    if (event.type === 'move-played') cache.marks.push(jieqiCheckMark(cache.projection.state));
+  }
+  cache.count = room.events.length;
+  return cache.marks;
 }
 
 export const jieqiTenant: JieqiTenant = {
@@ -163,11 +248,36 @@ export const jieqiTenant: JieqiTenant = {
   enabled: jieqiEnabled,
   oppositeColor: oppositeJieqiColor,
   rules: {
-    createInitialState: (roomId, setup) => createInitialJieqiState(roomId, asJieqiDeal(setup)),
-    createSetup: () => createJieqiDeal(cryptoRng),
-    applyMove: (state, move) => applyJieqiMove(state, move),
+    createInitialState: (roomId, setup) =>
+      createInitialJieqiState(roomId, asJieqiDeal(setup), {
+        repetition: enforcesRepetition(setup),
+      }),
+    createSetup: (): JieqiSetup => ({ ...createJieqiDeal(jieqiDealRng()), repetition: true }),
+    // Apply the move, then the xiangqi chasing rule: a threefold repetition one
+    // side reached by checking on every one of its moves is a LOSS for that
+    // side, not a draw (jieqi wins and losses follow xiangqi). The history the
+    // verdict needs rides on the state, so event replay reruns it identically.
+    applyMove: (state, move) => {
+      const next = applyJieqiMove(state, move);
+      if (next.status.type === 'finished' && next.status.reason === 'repetition') {
+        const loser = jieqiPerpetualCheckLoser(next);
+        if (loser) {
+          return {
+            ...next,
+            status: { type: 'finished', winner: oppositeJieqiColor(loser), reason: 'chasing' },
+          };
+        }
+      }
+      return next;
+    },
     isLegalMove: isJieqiLegalMove,
     finish: (state, winner, reason) => ({
+      ...state,
+      status: { type: 'finished', winner, reason },
+    }),
+    // Imported lab games only (engine-match-import.ts): the lab referee draws a
+    // threefold repetition, which this kernel deliberately does not adjudicate.
+    adjudicate: (state, winner, reason) => ({
       ...state,
       status: { type: 'finished', winner, reason },
     }),
@@ -196,11 +306,17 @@ export const jieqiTenant: JieqiTenant = {
   },
   // Emit the room mode + engine id so the client knows a finished PvE game was
   // PvE and "Play again" re-creates a PvE game vs the same engine (not a PvP
-  // invite). Mirrors DMX; Jieqi's core snapshot carries no extras.
+  // invite), and check marks. A finished PvP room's rematch offers ride the
+  // shared snapshot (tenantSnapshotPayload), as for every tenant.
   wire: {
     snapshotExtras: (room) => {
       const pveEngineId = tenantPveEngineId(jieqiTenant, room);
-      return pveEngineId === null ? { roomMode: 'pvp' } : { roomMode: 'pve', pveEngineId };
+      const marks = jieqiLiveCheckMarks(room);
+      return {
+        ...(pveEngineId === null ? { roomMode: 'pvp' } : { roomMode: 'pve', pveEngineId }),
+        // Only when a move gave check, so a check-free room's wire is unchanged.
+        ...(marks.some((mark) => mark !== '') ? { checkMarks: marks } : {}),
+      };
     },
   },
   persistence: {

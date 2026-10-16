@@ -271,12 +271,17 @@ function applyFogMove(state: GameState, move: Move): GameState {
     lastMove: legalMove,
   };
   const positionCounts = nextPositionCounts(state, nextPositionState);
+  // Order: king captured > side to move has no moves at all (a draw: every
+  // piece is blocked, so there is nothing to force into attack) > 50-move /
+  // threefold. Moving into attack is still forced whenever any move exists.
   const nextStatus =
     capturedPiece?.role === 'king'
       ? ({ type: 'finished', winner: player, reason: 'king-captured' } as const)
-      : nextHalfmoveClock >= 100 || positionCounts[positionRepetitionKey(nextPositionState)]! >= 3
-        ? ({ type: 'finished', winner: null, reason: 'draw' } as const)
-        : playingStatus;
+      : getFogMovesForPlayer(nextPositionState, playingStatus.turn).length === 0
+        ? ({ type: 'finished', winner: null, reason: 'no-legal-moves' } as const)
+        : nextHalfmoveClock >= 100 || positionCounts[positionRepetitionKey(nextPositionState)]! >= 3
+          ? ({ type: 'finished', winner: null, reason: 'draw' } as const)
+          : playingStatus;
 
   return {
     ...state,
@@ -308,7 +313,8 @@ function positionRepetitionKey(state: GameState): string {
   const board = Object.entries(state.board)
     .filter(([, piece]) => piece)
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([square, piece]) => `${square}:${piece!.color[0]}${piece!.role[0]}`)
+    // The whole role, not its first letter: king and knight both start with k.
+    .map(([square, piece]) => `${square}:${piece!.color[0]}.${piece!.role}`)
     .join(',');
   const castling = [...state.castlingRights].sort().join(',');
   return [
@@ -685,6 +691,15 @@ function withCastlingAliases(state: GameState, moves: Move[]): Move[] {
     }
   }
   return aliases.length > 0 ? [...moves, ...aliases] : moves;
+}
+
+/** A castling move in the board's own spelling, king onto its rook (`e1h1`,
+ *  `e8a8`), whichever spelling it arrived in: standard UCI (`e1g1`, `e8c8`, what
+ *  python-chess and every UCI engine write) or king-onto-rook. Any other move is
+ *  returned unchanged. For boundaries that read move tokens from outside the
+ *  kernel (a saved study tree, an engine line) so both spellings land on one key. */
+export function canonicalChessCastlingMove(state: GameState, move: Move): Move {
+  return normalizeCastlingMove(state, move) ?? move;
 }
 
 function normalizeCastlingMove(state: GameState, move: Move): Move | null {

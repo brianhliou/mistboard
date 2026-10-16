@@ -6,20 +6,31 @@
 // reads a live study chapter, which is the embed's whole promise.)
 
 import {
+  canonicalChessCastlingMove,
+  darkChessVariant,
   type GameState,
   type Move,
+  moveToAlgebraic,
   parseStandardChessFen,
   type Square,
   standardChessSan,
   standardChessVariant,
 } from '@mistboard/game';
-import { ASSESSMENT_GLYPH } from './assessment-glyphs.js';
-import { renderDarkChessBoardSvg } from './dark-chess-render.js';
+import { animateChessBoardMove, renderDarkChessBoardSvg } from './dark-chess-render.js';
+import { revealKingCaptureForLoser } from './replay-board.js';
 import { chessUciToMove } from './review/chess-tree-adapter.js';
-import type { StudyChapterPayload, StudyTreeNode } from './study-chapter-spec.js';
+import { chapterAnnotations, GLYPH_SUFFIX_CLASS } from './study-chapter-annotations.js';
+import type { StudyChapterPayload } from './study-chapter-spec.js';
 
 export type ChessReplaySpec = {
-  /** Start position; the standard opening when absent. */
+  /** Which kernel replays the line. Fog chess ('dark-chess') has no check: a
+   *  king may walk into attack and the game ends when a king is CAPTURED, so
+   *  its moves are illegal to the standard kernel and its last move is not a
+   *  legal chess move at all. Standard chess when absent. */
+  variant?: 'chess' | 'dark-chess';
+  /** Start position; the standard opening when absent. Standard chess only:
+   *  a fog chess chapter always starts from the opening, as its tree adapter
+   *  does. */
   rootFen?: string;
   /** Mainline moves, plain chess UCI. */
   moves: string[];
@@ -36,66 +47,18 @@ export type ChessReplaySpec = {
   lines?: Record<number, { moves: string[]; verdict?: string; note?: string }>;
 };
 
-/** NAG codes as the study stores them, to the glyph the board and sheet show. */
-const NAG_GLYPH: Record<number, string> = { 1: '!', 2: '?', 3: '!!', 4: '??', 6: '?!' };
-const GLYPH_SUFFIX_CLASS: Record<string, string> = {
-  '??': 'blunder',
-  '?': 'mistake',
-  '?!': 'inaccuracy',
-  '!!': 'brilliant',
-  '!': 'great',
-};
-
 /** A chess chapter's tree as the embed shows it: the FIRST child at every node
  *  is the mainline, in the tree adapter's own UCI; any later child is a
  *  sideline hung off the same position, kept with its verdict and comment so
  *  the embed shows what the chapter argues (the same walk as
  *  studyChapterToReplaySpec, which the xiangqi embed reads). */
 export function chessChapterToReplaySpec(chapter: StudyChapterPayload): ChessReplaySpec | null {
-  const moves: string[] = [];
-  const glyphs: Record<number, string> = {};
-  const notes: Record<number, string> = {};
-  const assessments: Record<number, string> = {};
-  const lines: Record<number, { moves: string[]; verdict?: string; note?: string }> = {};
-  let node: StudyTreeNode | undefined = chapter.root?.root;
-  while (node?.children?.length) {
-    const played = node.children[0];
-    if (!played?.uci) break;
-    moves.push(played.uci);
-    const ply = moves.length;
-    const glyph = (played.annotations?.glyphs ?? []).map((code) => NAG_GLYPH[code]).find(Boolean);
-    if (glyph) glyphs[ply] = glyph;
-    const note = played.annotations?.comments?.[0]?.text;
-    if (note) notes[ply] = note;
-    const assessedCode = (played.annotations?.glyphs ?? []).find(
-      (code) => ASSESSMENT_GLYPH[code] !== undefined,
-    );
-    if (assessedCode !== undefined) assessments[ply] = ASSESSMENT_GLYPH[assessedCode];
-    const sibling = node.children[1];
-    if (sibling?.uci) {
-      const line: string[] = [];
-      let verdict: string | undefined;
-      let variation: StudyTreeNode | undefined = sibling;
-      while (variation?.uci) {
-        line.push(variation.uci);
-        const assessed = (variation.annotations?.glyphs ?? []).find(
-          (code) => ASSESSMENT_GLYPH[code] !== undefined,
-        );
-        verdict = assessed === undefined ? undefined : ASSESSMENT_GLYPH[assessed];
-        variation = variation.children?.[0];
-      }
-      const lineNote = sibling.annotations?.comments?.[0]?.text;
-      lines[ply] = {
-        moves: line,
-        ...(verdict ? { verdict } : {}),
-        ...(lineNote ? { note: lineNote } : {}),
-      };
-    }
-    node = played;
-  }
+  const { moves, glyphs, notes, assessments, lines } = chapterAnnotations(chapter);
   if (!moves.length) return null;
-  const rootFen = chapter.root?.rootFen;
+  const variant = chapter.variant === 'dark-chess' ? 'dark-chess' : 'chess';
+  const rootFen = variant === 'chess' ? chapter.root?.rootFen : undefined;
   return {
+    variant,
     ...(rootFen ? { rootFen } : {}),
     moves,
     perspective: chapter.orientation === 'black' ? 'black' : 'white',
@@ -107,37 +70,72 @@ export function chessChapterToReplaySpec(chapter: StudyChapterPayload): ChessRep
 }
 
 /** Replay the line against the kernel; an unreadable or illegal move truncates
- *  the line rather than poisoning every position after it. */
-function replayChess(spec: ChessReplaySpec): { states: GameState[]; labels: string[] } {
+ *  the line rather than poisoning every position after it. Exported so the
+ *  embed can read a fog chess chapter's ending (a king capture) off the final
+ *  position when the chapter carries no result tag. */
+export function replayChess(spec: ChessReplaySpec): { states: GameState[]; labels: string[] } {
+  if (spec.variant === 'dark-chess') {
+    return replayFrom(darkChessVariant.createInitialState('embed'), spec.moves, 'dark-chess');
+  }
   const parsed = spec.rootFen ? parseStandardChessFen(spec.rootFen, 'embed') : null;
   const start: GameState = parsed?.ok
     ? parsed.state
     : standardChessVariant.createInitialState('embed');
-  return replayFrom(start, spec.moves);
+  return replayFrom(start, spec.moves, 'chess');
+}
+
+/** The move a UCI token names in this position, as the kernel's own legal move
+ *  object, or null. Fog chess goes through the same kernel calls its study tree
+ *  adapter makes (review/dark-chess-tree-adapter.ts): castling normalised to the
+ *  kernel's spelling first, so a chapter storing e1g1 or e1h1 replays past the
+ *  castle either way (#451). The adapter itself is not imported: it pulls the
+ *  chessground replay board and its stylesheet into a third party's frame. */
+function legalMoveFor(
+  state: GameState,
+  uci: string,
+  variant: 'chess' | 'dark-chess',
+): { move: Move; label: string } | null {
+  const parsed: Move | null = chessUciToMove(uci);
+  if (!parsed || state.status.type !== 'playing') return null;
+  const kernel = variant === 'dark-chess' ? darkChessVariant : standardChessVariant;
+  const move = variant === 'dark-chess' ? canonicalChessCastlingMove(state, parsed) : parsed;
+  const legal = kernel
+    .getLegalMoves(state, state.status.turn)
+    .find((m) => m.from === move.from && m.to === move.to && m.promotion === move.promotion);
+  if (!legal) return null;
+  return {
+    move: legal,
+    label:
+      variant === 'dark-chess' ? moveToAlgebraic(state, legal) : standardChessSan(state, legal),
+  };
 }
 
 /** Replay `moves` from `start`; the same truncation rule for a sideline as for
  *  the mainline. */
-function replayFrom(start: GameState, moves: string[]): { states: GameState[]; labels: string[] } {
+function replayFrom(
+  start: GameState,
+  moves: string[],
+  variant: 'chess' | 'dark-chess',
+): { states: GameState[]; labels: string[] } {
+  const kernel = variant === 'dark-chess' ? darkChessVariant : standardChessVariant;
   let state = start;
   const states = [state];
   const labels: string[] = [];
   for (const uci of moves) {
-    const move: Move | null = chessUciToMove(uci);
-    if (!move || state.status.type !== 'playing') break;
-    const legal = standardChessVariant
-      .getLegalMoves(state, state.status.turn)
-      .find((m) => m.from === move.from && m.to === move.to && m.promotion === move.promotion);
-    if (!legal) break;
-    labels.push(standardChessSan(state, legal));
-    state = standardChessVariant.applyMove(state, legal);
+    const step = legalMoveFor(state, uci, variant);
+    if (!step) break;
+    labels.push(step.label);
+    state = kernel.applyMove(state, step.move);
     states.push(state);
   }
   return { states, labels };
 }
 
 /** Every square: the open board hides nothing, so the fog-capable renderer
- *  gets the full set and paints no fog. */
+ *  gets the full set and paints no fog. A fog chess chapter opens the same
+ *  way: it is a finished record its author chose to publish, and the study
+ *  page's primary board for it is the revealed truth board too. `setPov`
+ *  switches it to one seat's fogged view. */
 const ALL_SQUARES: Square[] = (() => {
   const squares: Square[] = [];
   for (let file = 0; file < 8; file += 1) {
@@ -147,6 +145,28 @@ const ALL_SQUARES: Square[] = (() => {
   }
   return squares;
 })();
+
+/** Which board a fog chess replay shows: the revealed truth, or one seat's
+ *  fogged view of it. Open chess has only the truth. */
+export type ChessReplayPov = 'white' | 'truth' | 'black';
+
+/** What one seat saw at a position, drawn with fog. On a king capture the
+ *  loser saw their king die, so the attacker is revealed on the capture
+ *  square, as the review board and the live replay show it. */
+function fogSeatView(state: GameState, seat: 'white' | 'black') {
+  const view = darkChessVariant.getPlayerView(state, seat);
+  if (
+    state.status.type === 'finished' &&
+    state.status.reason === 'king-captured' &&
+    state.lastMove
+  ) {
+    const attacker = state.board[state.lastMove.to];
+    const loser = state.status.winner === 'white' ? 'black' : 'white';
+    if (attacker && seat === loser)
+      return revealKingCaptureForLoser(view, state.lastMove, attacker);
+  }
+  return view;
+}
 
 export function mountChessReplayBoard(
   host: HTMLElement,
@@ -168,8 +188,13 @@ export function mountChessReplayBoard(
   }>;
   bottomSeat: () => 'first' | 'second';
   moveNumbering: () => { firstMover: 'a' | 'b'; firstNumber: number };
+  /** Fog chess only: switch between the truth and a seat's fogged view. */
+  setPov: (pov: ChessReplayPov) => void;
 } {
-  const perspective = spec.perspective ?? 'white';
+  // The chapter's own orientation; a seat's fogged view turns the board to
+  // that seat, as the game embed and the review board do.
+  const chapterPerspective = spec.perspective ?? 'white';
+  let perspective = chapterPerspective;
   const { states, labels } = replayChess(spec);
   const total = labels.length;
   // Sidelines replayed from the position their judged move was played in.
@@ -178,7 +203,7 @@ export function mountChessReplayBoard(
     const ply = Number(key);
     const from = states[ply - 1];
     if (!from || ply > total) continue;
-    const replayed = replayFrom(from, line.moves);
+    const replayed = replayFrom(from, line.moves, spec.variant ?? 'chess');
     if (replayed.labels.length) lines.set(ply, replayed);
   }
   let inLine: { atPly: number; cursor: number } | null = null;
@@ -188,38 +213,75 @@ export function mountChessReplayBoard(
   host.replaceChildren(frame);
 
   let index = 0;
-  const render = (): void => {
+  let pov: ChessReplayPov = 'truth';
+  // The board for a position under the current view: the whole board, or for
+  // fog chess a seat's fogged view of it.
+  const draw = (state: GameState, glyph?: string): string => {
+    if (spec.variant !== 'dark-chess' || pov === 'truth') {
+      return renderDarkChessBoardSvg(
+        { board: state.board, visibleSquares: ALL_SQUARES, lastMove: state.lastMove },
+        { perspective, showFog: false, ...(glyph ? { glyph } : {}) },
+      );
+    }
+    const view = fogSeatView(state, pov);
+    return renderDarkChessBoardSvg(
+      { board: view.board, visibleSquares: view.visibleSquares, lastMove: view.lastMove },
+      { perspective, showFog: true, ...(glyph ? { glyph } : {}) },
+    );
+  };
+  // `glide` is the one-ply step being shown, if any: its move comes from the
+  // position that carries it (forward: the new one; back: the one just left).
+  const render = (glide?: { move: { from: Square; to: Square }; reverse: boolean }): void => {
+    // A seat's view does not glide: the move may be one that seat never saw.
+    const play = () => {
+      if (glide && pov === 'truth') {
+        animateChessBoardMove(frame, glide.move, perspective, { reverse: glide.reverse });
+      }
+    };
     if (inLine) {
       const line = lines.get(inLine.atPly);
       const state = line?.states[inLine.cursor] ?? states[inLine.atPly - 1]!;
-      frame.innerHTML = renderDarkChessBoardSvg(
-        { board: state.board, visibleSquares: ALL_SQUARES, lastMove: state.lastMove },
-        { perspective, showFog: false },
-      );
+      frame.innerHTML = draw(state);
+      play();
       return;
     }
     const state = states[index]!;
     const glyph = index > 0 ? spec.glyphs?.[index] : undefined;
-    frame.innerHTML = renderDarkChessBoardSvg(
-      { board: state.board, visibleSquares: ALL_SQUARES, lastMove: state.lastMove },
-      { perspective, showFog: false, ...(glyph ? { glyph } : {}) },
-    );
+    frame.innerHTML = draw(state, glyph);
+    play();
     hooks.onPlyChange?.(index, total);
   };
   render();
 
   return {
     destroy: () => host.replaceChildren(),
+    setPov: (next: ChessReplayPov) => {
+      if (spec.variant !== 'dark-chess' || next === pov) return;
+      pov = next;
+      perspective = next === 'truth' ? chapterPerspective : next;
+      render();
+    },
     jumpToPly: (ply: number) => {
+      const wasInLine = inLine !== null;
+      const from = index;
       inLine = null;
       index = Math.max(0, Math.min(total, Math.trunc(ply)));
-      render();
+      // One mainline step glides; a jump, or leaving a line, repaints instantly.
+      if (wasInLine || Math.abs(index - from) !== 1) return render();
+      const carrier = states[Math.max(index, from)]!.lastMove;
+      render(carrier ? { move: carrier, reverse: index < from } : undefined);
     },
     jumpToLine: (atPly: number, cursor: number) => {
       const line = lines.get(atPly);
       if (!line) return;
+      const prev = inLine;
       inLine = { atPly, cursor: Math.max(1, Math.min(line.labels.length, Math.trunc(cursor))) };
-      render();
+      // One step inside the same line glides, like the mainline.
+      if (!prev || prev.atPly !== atPly || Math.abs(inLine.cursor - prev.cursor) !== 1) {
+        return render();
+      }
+      const carrier = line.states[Math.max(inLine.cursor, prev.cursor)]?.lastMove;
+      render(carrier ? { move: carrier, reverse: inLine.cursor < prev.cursor } : undefined);
     },
     plyCount: () => total,
     moveEntries: () =>

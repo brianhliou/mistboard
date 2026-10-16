@@ -20,13 +20,19 @@
  */
 
 import {
-  classifyTimeControl,
+  analyticsTimeClass,
   createGameLifecycleTracker,
   type GameLifecycleStatusType,
   maybeGameSpecAnalyticsProps,
   roomModeAnalyticsProps,
 } from '../analytics.js';
 import { brandedEngineName } from '../game-display.js';
+import { isFlipShortcut, setReplayAnalysisHref, setReplayFlipHandler } from '../game-table.js';
+import {
+  createLiveFinishBadges,
+  type FinishBadge,
+  type LiveFinishBadges,
+} from '../live-finish-badges.js';
 import { createLiveLayout, setLiveLayoutGameSpec } from '../live-layout.js';
 import {
   createLiveLifecycleEffects,
@@ -54,6 +60,7 @@ import {
   type TenantSocketClient,
   type TenantSocketClientOptions,
 } from './socket-client.js';
+import { createTenantRematch } from './tenant-rematch.js';
 
 export type TenantLiveClock<C extends string> = {
   activeColor: C | null;
@@ -87,7 +94,7 @@ export type TenantLiveFrame<C extends string, V> = {
   connectedSeats?: Record<C, boolean>;
   abortDeadline?: number | null;
   forfeitDeadline?: number | null;
-  timeControl?: { initialMs: number; incrementMs: number } | null;
+  timeControl?: { initialMs: number; incrementMs: number; daysPerMove?: number } | null;
   events?: TenantLiveEvent[];
   event?: TenantLiveEvent;
   seq?: number;
@@ -101,7 +108,7 @@ export type TenantLiveState<C extends string, V> = {
   seat: C | 'spectator' | null;
   view: V | null;
   clock: TenantLiveClock<C> | null;
-  timeControl: { initialMs: number; incrementMs: number } | null;
+  timeControl: { initialMs: number; incrementMs: number; daysPerMove?: number } | null;
   seats: Partial<Record<C, string>>;
   seatDisplayNames: Partial<Record<C, string>>;
   // Where each seat name links, parallel to seatDisplayNames. A seat with no
@@ -111,6 +118,12 @@ export type TenantLiveState<C extends string, V> = {
   events: TenantLiveEvent[];
   abortDeadline: number | null;
   forfeitDeadline: number | null;
+  // The lobby made this room (snapshot `lobbyMatch`, sent only when true).
+  lobbyMatch: boolean;
+  // The room is rated (snapshot `rated`, a room fact every rated-capable tenant
+  // sends). Until 2026-10-02 nothing read it, so every tenant room's meta card said
+  // Casual, rated lobby games and rated correspondence alike.
+  rated: boolean;
 };
 
 // Everything a tenant's interaction/setup code needs from the core. Handed to
@@ -128,6 +141,7 @@ export type TenantLiveClientContext<C extends string, V> = {
   displayedView(): V | null;
   /** Live (not scrubbed) + seated + this seat's turn. */
   canActNow(): boolean;
+  /** The viewer's bottom-of-board colour, after the viewer's own flip. */
   orientation(): C;
 };
 
@@ -196,6 +210,13 @@ export type TenantReplayHistoryConfig<C extends string, V> = {
    * sent this client — nothing new crosses the wire. Fog tenants receive
    * redacted logs (opponent moves are omitted or stripped), CANNOT rebuild,
    * and must stay on incremental capture; never infer hidden state here.
+   * One exception: a hidden-info tenant may rebuild a FINISHED room from the
+   * truth view the server already serves it (jieqi: live-jieqi-replay-history),
+   * returning null for every unfinished view. A second: a LIVE hidden-info
+   * room may install the per-ply views the server built for this viewer alone
+   * and sent in its hello (`frame.liveHistory`, adoptLiveHistory in
+   * variant-tenant/live-history: Fog Xiangqi seats, banqi and Flip Jungle seats
+   * and spectators); it adopts them as sent and derives nothing.
    * Return null to keep the captured history (e.g. when an event fails to
    * replay through the kernel).
    */
@@ -203,6 +224,12 @@ export type TenantReplayHistoryConfig<C extends string, V> = {
     events: readonly TenantLiveEvent[];
     view: V;
     state: TenantLiveState<C, V>;
+    /**
+     * The hello/snapshot frame being applied. A hidden-info tenant reads the
+     * viewer's own per-ply views from its hello (`liveHistory`, server-built,
+     * only ever this viewer's views); every other frame lacks it.
+     */
+    frame: TenantLiveFrame<C, V>;
   }): TenantReplaySnapshot<V>[] | null;
 };
 
@@ -257,6 +284,13 @@ export type TenantLiveClientConfig<C extends string, V extends TenantWebView<C>,
   ): void;
   /** Between board and move list: hands, promotion pickers, etc. */
   renderExtras?(refs: LiveRefs, view: V | null): void;
+  /**
+   * OPTIONAL game-over badges (live-finish-badges.ts) for a view that just
+   * finished. The rendered board must key its piece slots `[data-piece-square]`.
+   */
+  finishBadges?(view: V, previous: V | null): FinishBadge[];
+  /** Hold the badges back for the board's own finishing animation. */
+  finishBadgeDelayMs?: number;
   /** Extra teardown when the tenant flag is off (captures strips, selection). */
   onDisabled?(refs: LiveRefs): void;
   /** Capture tenant snapshot extras from every frame (roomMode, forfeitDeadline...). */
@@ -274,6 +308,13 @@ export type TenantLiveClientConfig<C extends string, V extends TenantWebView<C>,
   setup(ctx: TenantLiveClientContext<C, V>): void;
   /** Viewer's bottom-of-board color. Default: seat, else view.perspective, else colors[0]. */
   orientation?(state: TenantLiveState<C, V>): C;
+  /**
+   * The board can be turned over (toolbar button + `f`). Opt-in: the board,
+   * its animation, material strips and any drop reserve must all read
+   * ctx.orientation(); a room whose renderer has no perspective, or whose
+   * reserve is bound to the bottom strip, stays off.
+   */
+  flippable?: boolean;
   moveList: TenantMoveListConfig<C, M>;
   replayCapture: TenantReplayCaptureConfig<V>;
   replayHistory?: TenantReplayHistoryConfig<C, V>;
@@ -315,6 +356,8 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     events: [],
     abortDeadline: null,
     forfeitDeadline: null,
+    lobbyMatch: false,
+    rated: false,
   };
 
   let socket: TenantSocketClient | null = null;
@@ -328,6 +371,10 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   // move that view carried (its lastMove), which the new view no longer has.
   let lastDisplayedView: V | null = null;
   let lifecycleEffects: LiveLifecycleEffects | null = null;
+  let finishBadges: LiveFinishBadges | null = null;
+  // The live view before the current one: where a general captured by the
+  // finishing move last stood.
+  let previousFinishView: V | null = null;
 
   const replay = createTenantReplayController<V>();
 
@@ -339,7 +386,20 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     return socket?.connection() ?? 'connecting';
   }
 
+  // The viewer's flip (in memory, per room visit, like the review pages').
+  let flipped = false;
+
   function orientation(): C {
+    const base = baseOrientation();
+    return flipped && tenant.colors.length === 2 ? tenant.oppositeColor(base) : base;
+  }
+
+  function toggleFlip(): void {
+    flipped = !flipped;
+    renderAll();
+  }
+
+  function baseOrientation(): C {
     if (config.orientation) return config.orientation(state);
     if (tenant.isColor(state.seat)) return state.seat;
     const perspective = (state.view as { perspective?: unknown } | null)?.perspective;
@@ -360,7 +420,19 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     return view.status.turn === state.seat;
   }
 
+  // Mutual-confirm PvP rematch, on for every two-seat tenant (2026-10-14): the
+  // server sends the offer flags on a finished PvP room's snapshot and in
+  // rematch:state frames, and socket-client follows the redirect. A bot room
+  // shows Play again instead (room-chrome), and a table of four has no swap.
+  const rematch =
+    tenant.colors.length === 2
+      ? createTenantRematch(tenant.colors as unknown as readonly [C, C], () =>
+          tenant.isColor(state.seat) ? state.seat : null,
+        )
+      : null;
+
   const chrome = createTenantRoomChrome(tenant, {
+    gameSpecId: config.gameSpecId,
     view: () => state.view,
     seat: () => state.seat,
     connectionState: () => connection(),
@@ -379,7 +451,10 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     isReplayLive: () => replay.isLive(),
     orientation,
     playAgainRequestBody: () => config.playAgainRequestBody(state),
-    rematchControls: config.chrome?.rematchControls ?? (() => null),
+    rematchControls:
+      config.chrome?.rematchControls ?? ((sendSocket) => rematch?.controls(sendSocket) ?? null),
+    lobbyMatch: () => state.lobbyMatch,
+    rated: () => state.rated,
     ...(config.chrome?.variantDetail ? { variantDetail: config.chrome.variantDetail } : {}),
   });
 
@@ -409,7 +484,12 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     // flip jungle warned nobody before their 30 s ran out (#436).
     state.forfeitDeadline =
       typeof frame.forfeitDeadline === 'number' ? frame.forfeitDeadline : null;
+    // A room fact like the countdowns, so read here for every tenant. Sticky:
+    // a room never stops being a lobby room.
+    if (frame.lobbyMatch === true) state.lobbyMatch = true;
+    if (typeof frame.rated === 'boolean') state.rated = frame.rated;
     if (frame.events) state.events = frame.events;
+    rematch?.applyFrame(frame.rematch);
     config.onFrame?.(frame);
   }
 
@@ -419,10 +499,10 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   // kernel (perfect information only; fog logs are redacted) rebuild the full
   // per-ply history here. Event-appended frames keep the incremental capture
   // path — the server view that rides each event is captured as its ply.
-  function rebuildReplayHistory(): void {
+  function rebuildReplayHistory(frame: TenantLiveFrame<C, V>): void {
     const view = state.view;
     if (!config.replayHistory || !view) return;
-    const snapshots = config.replayHistory.rebuild({ events: state.events, view, state });
+    const snapshots = config.replayHistory.rebuild({ events: state.events, view, state, frame });
     if (!snapshots || snapshots.length === 0) return;
     // The server-sent view is authoritative for the latest ply: kernel replay
     // cannot derive non-move endings (resignation, timeout, abandonment).
@@ -480,14 +560,20 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     state.room = room;
     state.forfeitDeadline = null;
     state.abortDeadline = null;
+    state.lobbyMatch = false;
+    state.rated = false;
     lastCapturedView = null;
     lastCapturedKey = null;
     pendingLiveAnimation = null;
     lastDisplayedView = null;
     lifecycleEffects?.destroy();
     lifecycleEffects = null;
+    finishBadges?.destroy();
+    finishBadges = null;
+    previousFinishView = null;
     replay.reset();
     chrome.resetState();
+    rematch?.reset();
     initLiveSound();
     resetLiveSoundState();
     config.resetSounds?.();
@@ -508,6 +594,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     const boardStage = refs.board.closest<HTMLElement>('.board-stage');
     if (!boardStage) throw new Error('missing board stage');
     lifecycleEffects = createLiveLifecycleEffects(boardStage);
+    if (config.finishBadges) finishBadges = createLiveFinishBadges(boardStage, refs.board);
     setLiveLayoutGameSpec(app, config.gameSpecId);
     chrome.setRenderTarget(refs, {
       sendSocket: send,
@@ -532,16 +619,19 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       room,
       applyHello: (frame) => {
         applyFrame(frame as TenantLiveFrame<C, V>);
-        rebuildReplayHistory();
+        rebuildReplayHistory(frame as TenantLiveFrame<C, V>);
       },
       applySnapshot: (frame) => {
         applyFrame(frame as TenantLiveFrame<C, V>);
-        rebuildReplayHistory();
+        rebuildReplayHistory(frame as TenantLiveFrame<C, V>);
         config.onSnapshotApplied?.();
       },
       applyEvent: (frame) => applyEventFrame(frame as TenantLiveFrame<C, V>),
       ...(config.onServerMessage ? { onServerMessage: config.onServerMessage } : {}),
-      ...(config.onRematchState ? { onRematchState: config.onRematchState } : {}),
+      onRematchState: (message) => {
+        rematch?.applyState(message);
+        config.onRematchState?.(message);
+      },
       render: renderAll,
     });
     socket.connect();
@@ -551,6 +641,14 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       chrome.tickCountdowns();
     }, 100);
     document.addEventListener('keydown', (event) => replay.handleKeyboard(event, renderAll));
+    if (config.flippable && tenant.colors.length === 2) {
+      setReplayFlipHandler(refs.actionSection, toggleFlip);
+      document.addEventListener('keydown', (event) => {
+        if (!isFlipShortcut(event)) return;
+        event.preventDefault();
+        toggleFlip();
+      });
+    }
     // A seated player who scrubbed back and then touches the board wants to
     // play, not to look: return to live before the tenant's click handler runs
     // (capture phase), so the same click can go on to select a piece. This
@@ -581,7 +679,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     const view = state.view;
     captureReplayView(view);
     const displayed = replay.currentView(view);
-    updateLifecycleEffects(view);
+    const lifecycleEffect = updateLifecycleEffects(view);
     trackGameLifecycle(view);
     // Drain the animation channel on EVERY render (even disabled/hook-less
     // paths) so nothing stale carries into a later, unrelated render.
@@ -589,7 +687,13 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     lastDisplayedView = displayed;
     if (moveList.listClass) refs.moveList.classList.add(moveList.listClass);
     replay.renderShell(refs, renderAll);
-    refs.boardStatus.hidden = view !== null;
+    setReplayAnalysisHref(
+      refs.actionSection,
+      view?.status.type === 'finished'
+        ? `${tenant.reviewUrl(state.room)}?ply=${replay.activePly() ?? replay.latestPly()}`
+        : null,
+    );
+    chrome.renderBoardStatus();
     chrome.renderActionStatus();
     chrome.renderGameControls();
     chrome.renderRoomActions();
@@ -612,6 +716,21 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
         return value;
       });
     }
+    syncFinishBadges(view, lifecycleEffect);
+  }
+
+  // After the board render so the badges measure the pieces they sit on.
+  function syncFinishBadges(view: V | null, effect: string | null): void {
+    if (!finishBadges || !config.finishBadges) return;
+    const previous = previousFinishView;
+    if (view !== previous) previousFinishView = view;
+    if (view && effect?.startsWith('finish')) {
+      const prior = previous?.id === view.id ? previous : null;
+      finishBadges.play(view.id, config.finishBadges(view, prior), {
+        ...(config.finishBadgeDelayMs !== undefined ? { delayMs: config.finishBadgeDelayMs } : {}),
+      });
+    }
+    finishBadges.sync(view?.id ?? null, view?.status.type === 'finished' && replay.isLive());
   }
 
   // Start/finish funnel for every tenant variant. Until 2026-08-28 this fired
@@ -659,16 +778,17 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       gameId: view.id,
       variant: config.gameSpecId,
       ...(lifecycleSpecProps ?? {}),
-      // The tenant stack carries no per-room rated flag, so this is unknown
-      // here rather than false. Do not substitute a guess: the legacy stack
-      // reports a real value and a fabricated one would silently pool with it.
-      rated: null,
+      // The room's rated fact (snapshot `rated`, read in applyFrame), so
+      // PostHog can count rated starts beside the chess stack's. Null until
+      // 2026-10-14, from before the tenant client kept the flag.
+      rated: state.rated,
       ...roomModeAnalyticsProps(config.chrome?.roomMode?.() ?? 'pvp', opponentSeatName()),
       initialMs: timeControl?.initialMs ?? null,
       incrementMs: timeControl?.incrementMs ?? null,
-      time_class: timeControl
-        ? classifyTimeControl(timeControl.initialMs, timeControl.incrementMs)
-        : null,
+      // A correspondence room's time control carries daysPerMove (the server
+      // sends the full RoomTimeControl); that, not the pace, makes it one.
+      time_class: analyticsTimeClass(timeControl),
+      days_per_move: state.timeControl?.daysPerMove ?? null,
     };
     const status = view.status;
     lifecycleTracker.update({
@@ -681,8 +801,8 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     });
   }
 
-  function updateLifecycleEffects(view: V | null): void {
-    if (!lifecycleEffects || !view) return;
+  function updateLifecycleEffects(view: V | null): string | null {
+    if (!lifecycleEffects || !view) return null;
     const seated = tenant.isColor(state.seat);
     const opponentConnected =
       seated &&
@@ -693,7 +813,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     const ready =
       roomMode !== 'correspondence' &&
       (roomMode !== 'pvp' || view.moveNumber >= 2 || opponentConnected);
-    lifecycleEffects.update({
+    return lifecycleEffects.update({
       gameId: view.id,
       status: view.status.type,
       moveNumber: view.moveNumber,
@@ -772,10 +892,12 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     // Only a ply this client can actually display is a jump target, matching the
     // chess shell (live-move-list.ts): a masked ply is one the server never sent
     // and an unplayed cell is empty, so offering either as a control would
-    // promise a position that does not exist here. The jump itself is fog-safe
-    // by construction — jumpToPly picks an index in the captured snapshot
-    // history and never reconstructs a view the server withheld.
-    const jumpable = played && !masked && !!text;
+    // promise a position that does not exist here. Nor is a played ply with no
+    // snapshot held: after a cold load a fog client may hold only the live ply,
+    // and a jump to a missing ply lands on a later one or on live, a dead click.
+    // The jump itself is fog-safe by construction: jumpToPly picks an index in
+    // the held snapshot history and never reconstructs a view the server withheld.
+    const jumpable = played && !masked && !!text && replay.hasPly(ply);
     const cell = document.createElement(jumpable ? 'button' : 'span');
     cell.className = [
       `${moveList.cellPrefix}__move`,

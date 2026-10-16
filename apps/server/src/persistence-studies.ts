@@ -548,17 +548,32 @@ export async function listStudiesForOwner(ownerId: string, q?: string): Promise<
   }));
 }
 
+/** The largest page the study browse routes serve. The paged lists below
+ *  accept one row more, so a route can fetch a full page plus the sentinel
+ *  row that says another page exists (#450: clamping the sentinel away left
+ *  hasMore false at limit=50 with studies unreachable). */
+export const STUDY_PAGE_MAX = 50;
+
 /** Public studies, most recently updated first. Likes used to lead the order,
  *  but with a handful of likes on the whole site that key pinned the first
  *  studies ever liked above everything published since; recency is the honest
  *  order until there are enough likes for a decayed "hot" score to mean
  *  something. `q` filters by study name (case-insensitive substring). */
-export async function listTopPublicStudies(limit = 5, q?: string): Promise<PublicStudySummary[]> {
+export async function listTopPublicStudies(
+  limit = 5,
+  q?: string,
+  offset = 0,
+): Promise<PublicStudySummary[]> {
   if (!isInitialized()) return [];
-  const bounded = Math.max(1, Math.min(limit, 50));
+  const bounded = Math.max(1, Math.min(limit, STUDY_PAGE_MAX + 1));
   const filter = nameFilter(q, 2);
   const params: unknown[] = [bounded];
   if (filter.value !== undefined) params.push(filter.value);
+  // Bound, not interpolated: the value is already clamped to a
+  // non-negative integer, and SQL built by concatenation is how the
+  // next one stops being.
+  params.push(Math.max(0, Math.trunc(offset)));
+  const offsetParam = `$${params.length}`;
   const { rows } = await getPool().query<PublicStudyRow>(
     `SELECT ${STUDY_COLS.split(', ')
       .map((column) => `s.${column}`)
@@ -576,8 +591,11 @@ export async function listTopPublicStudies(limit = 5, q?: string): Promise<Publi
       WHERE s.visibility = 'public'
         AND u.profile_visibility IN ('public', 'unlisted')${filter.clause}
       GROUP BY s.id, u.handle, u.display_name
-      ORDER BY s.updated_at DESC, s.id
-      LIMIT $1`,
+      -- Newest first by creation, not by last edit: an edit to an old study
+      -- (a fixed comment, a new translation) must not put it back at the top
+      -- of "Latest studies".
+      ORDER BY s.created_at DESC, s.id
+      LIMIT $1 OFFSET ${offsetParam}`,
     params,
   );
   return rows.map(mapPublicStudy);
@@ -585,12 +603,21 @@ export async function listTopPublicStudies(limit = 5, q?: string): Promise<Publi
 
 /** Staff-curated public studies, newest selection first. A pick remains invisible
  * if its study or owner is no longer publicly listable. */
-export async function listFeaturedStudies(limit = 30, q?: string): Promise<PublicStudySummary[]> {
+export async function listFeaturedStudies(
+  limit = 30,
+  q?: string,
+  offset = 0,
+): Promise<PublicStudySummary[]> {
   if (!isInitialized()) return [];
-  const bounded = Math.max(1, Math.min(limit, 50));
+  const bounded = Math.max(1, Math.min(limit, STUDY_PAGE_MAX + 1));
   const filter = nameFilter(q, 2);
   const params: unknown[] = [bounded];
   if (filter.value !== undefined) params.push(filter.value);
+  // Bound, not interpolated: the value is already clamped to a
+  // non-negative integer, and SQL built by concatenation is how the
+  // next one stops being.
+  params.push(Math.max(0, Math.trunc(offset)));
+  const offsetParam = `$${params.length}`;
   const { rows } = await getPool().query<PublicStudyRow>(
     `SELECT ${STUDY_COLS.split(', ')
       .map((column) => `s.${column}`)
@@ -610,7 +637,7 @@ export async function listFeaturedStudies(limit = 30, q?: string): Promise<Publi
         AND u.profile_visibility IN ('public', 'unlisted')${filter.clause}
       GROUP BY s.id, u.handle, u.display_name
       ORDER BY s.featured_at DESC, s.updated_at DESC, s.id
-      LIMIT $1`,
+      LIMIT $1 OFFSET ${offsetParam}`,
     params,
   );
   return rows.map(mapPublicStudy);
@@ -685,7 +712,7 @@ export async function listFavoriteStudies(
   q?: string,
 ): Promise<PublicStudySummary[]> {
   if (!isInitialized()) return [];
-  const bounded = Math.max(1, Math.min(limit, 50));
+  const bounded = Math.max(1, Math.min(limit, STUDY_PAGE_MAX));
   const filter = nameFilter(q, 3);
   const params: unknown[] = [userId, bounded];
   if (filter.value !== undefined) params.push(filter.value);

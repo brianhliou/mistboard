@@ -10,7 +10,7 @@
  */
 
 import type { LiveRefs } from '../live-state.js';
-import { isEditableKeyboardTarget } from './chrome-dom.js';
+import { moveNavKeyAction } from '../move-nav-bar.js';
 
 export type TenantReplaySnapshot<View> = { ply: number; view: View };
 
@@ -30,6 +30,12 @@ export type TenantReplayController<View> = {
    * animation channel like every other control.
    */
   jumpToPly(ply: number): void;
+  /**
+   * Whether a snapshot is held at exactly this ply. A move-list cell is a jump
+   * target only then: after a cold load a fog client may hold just the live
+   * ply, and jumpToPly on a missing ply lands on a later one (or on live).
+   */
+  hasPly(ply: number): boolean;
   historyLength(): number;
   latestPly(): number;
   isLive(): boolean;
@@ -104,6 +110,10 @@ export function createTenantReplayController<View>(): TenantReplayController<Vie
     replayIndex = index >= history.length - 1 ? null : index;
   }
 
+  function hasPly(ply: number): boolean {
+    return history.some((snapshot) => snapshot.ply === ply);
+  }
+
   function historyLength(): number {
     return history.length;
   }
@@ -139,7 +149,9 @@ export function createTenantReplayController<View>(): TenantReplayController<Vie
   }
 
   function controlDisabled(action: string): boolean {
-    if (history.length <= 1) return action !== 'latest';
+    // One ply (or none) of history: nothing to step to, and an enabled "last"
+    // would glow as if scrubbed back from a live position it is already on.
+    if (history.length <= 1) return true;
     const current = replayIndex ?? history.length - 1;
     if (action === 'latest') return isLive();
     if (action === 'next') return isLive();
@@ -200,11 +212,8 @@ export function createTenantReplayController<View>(): TenantReplayController<Vie
   }
 
   function handleKeyboard(event: KeyboardEvent, onChange: () => void): void {
-    if (event.defaultPrevented || event.metaKey || event.altKey || event.ctrlKey || event.shiftKey)
-      return;
-    if (isEditableKeyboardTarget(event.target)) return;
-
-    const action = replayActionForKey(event.key);
+    // The one move-nav key map (#523): ←/→, ↑/Home, ↓/End.
+    const action = moveNavKeyAction(event);
     if (!action || controlDisabled(action)) return;
 
     event.preventDefault();
@@ -217,6 +226,7 @@ export function createTenantReplayController<View>(): TenantReplayController<Vie
     push,
     replaceHistory,
     jumpToPly,
+    hasPly,
     historyLength,
     latestPly,
     isLive,
@@ -230,12 +240,4 @@ export function createTenantReplayController<View>(): TenantReplayController<Vie
     renderShell,
     handleKeyboard,
   };
-}
-
-function replayActionForKey(key: string): string | null {
-  if (key === 'ArrowLeft') return 'prev';
-  if (key === 'ArrowRight') return 'next';
-  if (key === 'ArrowUp') return 'first';
-  if (key === 'ArrowDown') return 'latest';
-  return null;
 }

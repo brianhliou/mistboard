@@ -1,13 +1,20 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { getBuildInfo } from '../build-info.js';
-import { darkXiangqiEnabled, ratedEnabled } from '../feature-flags.js';
+import { buildDeployHistory, DEPLOY_HISTORY_KINDS } from '../deploy-history.js';
+import { correspondenceRatedEnabled, darkXiangqiEnabled, ratedEnabled } from '../feature-flags.js';
 import { collectLiveRoomStats } from '../live-room-stats.js';
 import * as persistence from '../persistence.js';
 import { onlinePresence, refreshPresence } from '../presence.js';
 import { PUBLIC_RATING_TIME_CLASS } from '../rating-buckets.js';
 import { readEventLoopLagMs } from '../server-event-loop-lag.js';
-import { getProxyTrustWarning } from '../server-policy.js';
+import { getProxyTrustWarning, pingCorsAllowOrigin } from '../server-policy.js';
+import { getCachedSiteTotals } from '../site-counters.js';
 import { aggregateEnginePoolStats } from '../uci-engine-harness.js';
+import {
+  getVariantOrder,
+  VARIANT_ORDER_WINDOW_DAYS,
+  type VariantOrderResponse,
+} from '../variant-order.js';
 import {
   type HttpApiContext,
   isHttpAdminAuthorized,
@@ -38,6 +45,7 @@ export async function tryHandle(
       build: getBuildInfo(),
       darkXiangqiEnabled: darkXiangqiEnabled(),
       ratedEnabled: ratedEnabled(),
+      correspondenceRatedEnabled: correspondenceRatedEnabled(),
       proxyTrust: getProxyTrustWarning(),
       // Web-side in-process UCI engine-pool saturation (#203): the leading signal for
       // the non-fog engine-service split, visible before it sheds load as timeouts.
@@ -54,12 +62,20 @@ export async function tryHandle(
     // Round-trip probe for the account dropdown's connection footer. The client
     // times the request for PING; `lagMs` is the server's event-loop lag for the
     // SERVER readout. Kept trivially cheap (no DB, no allocations) and no-store
-    // so it measures live latency rather than a cached response.
+    // so it measures live latency rather than a cached response. The dropdown
+    // calls it on the socket host, not the page's origin, so the site's own
+    // origins may read it cross-origin (a simple GET, no preflight, no
+    // credentials).
+    const allowOrigin = pingCorsAllowOrigin(request.headers.origin, request.headers.host);
     writeJson(
       response,
       200,
       { now: Date.now(), lagMs: readEventLoopLagMs() },
-      { 'cache-control': 'no-store' },
+      {
+        'cache-control': 'no-store',
+        vary: 'Origin',
+        ...(allowOrigin ? { 'access-control-allow-origin': allowOrigin } : {}),
+      },
     );
     return true;
   }
@@ -104,7 +120,39 @@ export async function tryHandle(
         // Durable count is best-effort; fall back to the live-only count.
       }
     }
-    writeJson(response, 200, { playing, online: stats.onlineIdentities.size });
+    // playingBySpec stays live-only: a correspondence game nobody has open is
+    // in play but has no one at the board, which is what the per-variant
+    // "N playing" on the homepage claims.
+    // The homepage counters poll this endpoint, so the durable totals ride
+    // along from a shared cache (site-counters.ts) instead of a second fetch.
+    // Null without a database or before the first read succeeds.
+    const totals = persistence.isInitialized() ? await getCachedSiteTotals() : null;
+    writeJson(response, 200, {
+      playing,
+      online: stats.onlineIdentities.size,
+      playingBySpec: stats.playingBySpec,
+      totalCompletedGames: totals?.totalCompletedGames ?? null,
+      last30dCompletedGames: totals?.last30dCompletedGames ?? null,
+    });
+    return true;
+  }
+
+  if (pathname === '/api/play/variant-order') {
+    if (!requireMethod(request, response, 'GET')) return true;
+    // Homepage play panel order (variant-order.ts). Best-effort like the
+    // correspondence fold above: a failed read returns an empty order, which
+    // the client treats as "keep your own", and is not cached.
+    let body: VariantOrderResponse;
+    try {
+      body = await getVariantOrder();
+    } catch {
+      body = {
+        order: [],
+        windowDays: VARIANT_ORDER_WINDOW_DAYS,
+        computedAt: new Date().toISOString(),
+      };
+    }
+    writeJson(response, 200, body, { 'cache-control': 'public, max-age=600' });
     return true;
   }
 
@@ -188,8 +236,32 @@ export async function tryHandle(
     return true;
   }
 
+  if (pathname === '/api/admin/deploys') {
+    if (!requireMethod(request, response, 'GET')) return true;
+    // Same gate as /api/stats/admin: the /metrics page reads it with a cookie.
+    if (!isHttpAdminAuthorized(request) && !(await isHttpAdminSession(request))) {
+      writeJson(response, 401, { error: 'unauthorized' });
+      return true;
+    }
+    if (!requirePersistence(response)) return true;
+    const rows = await persistence.listRoomLifecycleAuditByKinds(
+      DEPLOY_HISTORY_KINDS,
+      Date.now() - DEPLOY_HISTORY_WINDOW_MS,
+    );
+    writeJson(
+      response,
+      200,
+      { deploys: buildDeployHistory(rows).slice(0, DEPLOY_HISTORY_LIMIT) },
+      { 'cache-control': 'no-store' },
+    );
+    return true;
+  }
+
   return false;
 }
+
+const DEPLOY_HISTORY_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+const DEPLOY_HISTORY_LIMIT = 30;
 
 // Cap on the online-players listing; `count` still reports the full total.
 const ONLINE_PLAYERS_LIMIT = 50;

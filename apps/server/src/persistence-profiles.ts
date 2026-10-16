@@ -28,9 +28,9 @@ import type { PlayerTitle } from './persistence-titles.js';
 import {
   bucketForGame,
   PUBLIC_RATING_TIME_CLASS,
-  PUBLIC_RATING_TIME_CLASSES,
   type RatingTimeClass,
   type RatingVariant,
+  visibleRatingTimeClasses,
 } from './rating-buckets.js';
 
 // Maps a stored `games.variant` to its rating pool, IN SQL. Extracted so the
@@ -50,13 +50,14 @@ const RATING_POOL_FROM_GAME_SQL = `CASE
          WHEN games.variant = 'fortress-xiangqi' THEN 'fortress_xiangqi'
          WHEN games.variant = 'duck-xiangqi' THEN 'duck_xiangqi'
          WHEN games.variant = 'atomic-xiangqi' THEN 'atomic_xiangqi'
+         WHEN games.variant = 'crazyhouse-xiangqi' THEN 'crazyhouse_xiangqi'
          ELSE 'fog'
        END`;
 
 // The stored variant strings the pool mapping above is defined over. Anything
 // outside this set has no pool, so it is excluded rather than falling into the
 // CASE's 'fog' default.
-const RATED_POOL_VARIANTS_SQL = `games.variant IN ('dark-chess', 'fog', 'dark-xiangqi', 'xiangqi', 'jieqi', 'banqi', 'jungle', 'jungle-flip', 'fortress-xiangqi', 'duck-xiangqi', 'atomic-xiangqi')`;
+const RATED_POOL_VARIANTS_SQL = `games.variant IN ('dark-chess', 'fog', 'dark-xiangqi', 'xiangqi', 'jieqi', 'banqi', 'jungle', 'jungle-flip', 'fortress-xiangqi', 'duck-xiangqi', 'atomic-xiangqi', 'crazyhouse-xiangqi')`;
 
 export type UpdateUserProfileResult =
   | { ok: true; user: UserAccount }
@@ -364,6 +365,107 @@ function profileVisibilityClause(isViewer: boolean): string {
        AND game_participants.visibility <> 'private'`;
 }
 
+export type ProfileGameResultFilter = 'win' | 'loss' | 'draw';
+
+export const PROFILE_GAME_RESULT_FILTERS: readonly ProfileGameResultFilter[] = [
+  'win',
+  'loss',
+  'draw',
+];
+
+export function isProfileGameResultFilter(value: unknown): value is ProfileGameResultFilter {
+  return (PROFILE_GAME_RESULT_FILTERS as readonly unknown[]).includes(value);
+}
+
+/** The profile Games list's filters, every one optional and ANDed together. */
+export type ProfileGameFilters = {
+  /** Rating pool (the rail's variant), legacy variant strings included. */
+  ratingVariant?: RatingVariant | null;
+  /** Win, loss or draw from the profile owner's seat. */
+  result?: ProfileGameResultFilter | null;
+  /** The other seat's handle, case-insensitive, exact. */
+  opponent?: string | null;
+};
+
+// Win/loss from the owner's seat, IN SQL, mirroring the row's own tone
+// (profileResultTone in apps/web/src/profile-ui.ts): a red seat wins on
+// red-wins, a black seat on black-wins, any other seat on white-wins, and every
+// non-draw that is not a win is a loss. If the two disagreed, "Wins" would list
+// a row painted as a loss.
+const OWNER_WON_SQL = `(
+  (game_participants.color = 'red' AND games.result = 'red-wins')
+  OR (game_participants.color = 'black' AND games.result = 'black-wins')
+  OR (game_participants.color NOT IN ('red', 'black') AND games.result = 'white-wins')
+)`;
+
+function resultFilterSql(result: ProfileGameResultFilter): string {
+  if (result === 'draw') return `AND games.result = 'draw'`;
+  if (result === 'win') return `AND ${OWNER_WON_SQL}`;
+  return `AND games.result IS DISTINCT FROM 'draw' AND NOT ${OWNER_WON_SQL}`;
+}
+
+// The opponent filter matches a handle only where the game row would link one:
+// a signed-in seat whose account is open and not private (the same join
+// loadGameParticipants uses). Matching a private account's handle would let
+// anyone probe who a private player has played.
+function opponentFilterSql(param: string): string {
+  return `AND EXISTS (
+       SELECT 1 FROM game_participants opponent_seat
+       JOIN users opponent_user ON opponent_user.id = opponent_seat.subject_id
+       WHERE opponent_seat.game_id = games.room_id
+         AND opponent_seat.subject_type = 'user'
+         AND opponent_seat.subject_id <> game_participants.subject_id
+         AND opponent_user.closed_at IS NULL
+         AND opponent_user.profile_visibility <> 'private'
+         AND lower(opponent_user.handle) = lower(${param})
+     )`;
+}
+
+// Filters only server callers set, never the profile route's query string.
+type UserGamesQueryFilters = ProfileGameFilters & {
+  /** Days-per-move games only (the /correspondence "Recently finished" list). */
+  correspondenceOnly?: boolean;
+  /** Games that ended strictly after this instant. */
+  endedAfter?: Date | null;
+};
+
+// A correspondence game, from the room-created event (seq 0), the durable home
+// of the time control: the same test the homepage showcase uses
+// (NOT_CORRESPONDENCE_SQL in persistence-games.ts). Read from the event rather
+// than games.initial_ms so a compressed dev allowance still counts.
+const CORRESPONDENCE_GAME_SQL = `AND EXISTS (
+         SELECT 1 FROM events rc
+         WHERE rc.room_id = games.room_id AND rc.seq = 0
+           AND rc.payload->'timeControl' ? 'daysPerMove'
+       )`;
+
+// WHERE fragments and their parameters for a filter set. `firstParam` is the
+// next free $n in the caller's query.
+function profileGameFilterSql(
+  filters: UserGamesQueryFilters,
+  firstParam: number,
+): { sql: string; params: unknown[] } {
+  const clauses: string[] = [];
+  const params: unknown[] = [];
+  if (filters.ratingVariant) {
+    params.push(filters.ratingVariant);
+    clauses.push(
+      `AND ${RATED_POOL_VARIANTS_SQL} AND ${RATING_POOL_FROM_GAME_SQL} = $${firstParam + params.length - 1}`,
+    );
+  }
+  if (filters.result) clauses.push(resultFilterSql(filters.result));
+  if (filters.opponent) {
+    params.push(filters.opponent);
+    clauses.push(opponentFilterSql(`$${firstParam + params.length - 1}`));
+  }
+  if (filters.correspondenceOnly) clauses.push(CORRESPONDENCE_GAME_SQL);
+  if (filters.endedAfter) {
+    params.push(filters.endedAfter);
+    clauses.push(`AND games.ended_at > $${firstParam + params.length - 1}`);
+  }
+  return { sql: clauses.join('\n       '), params };
+}
+
 // One page of a user's completed games, newest first. total_count is a window
 // aggregate (COUNT(*) OVER()) so the caller learns the full match count in the
 // same round-trip — used to drive the profile "Load more" pager.
@@ -372,11 +474,12 @@ async function queryUserGames(
   isViewer: boolean,
   offset: number,
   limit: number,
-  // Rating pool to scope the history to, or null for every variant. Compared
-  // against the stored spec ids AND their legacy spellings, so a pool's older
-  // rows ('fog') are not silently dropped from its own history.
-  ratingVariant: RatingVariant | null = null,
+  // Rating pool, result and opponent. The pool is compared against the stored
+  // spec ids AND their legacy spellings, so a pool's older rows ('fog') are not
+  // silently dropped from its own history.
+  filters: UserGamesQueryFilters = {},
 ): Promise<{ games: ProfileGameRecord[]; total: number }> {
+  const filterSql = profileGameFilterSql(filters, 4);
   const { rows } = await getPool().query<{
     room_id: string;
     player_color: GameParticipantColor;
@@ -408,14 +511,14 @@ async function queryUserGames(
      WHERE game_participants.subject_type = 'user'
        AND game_participants.subject_id = $1
        AND games.status = 'completed'
-       ${ratingVariant ? `AND ${RATED_POOL_VARIANTS_SQL} AND ${RATING_POOL_FROM_GAME_SQL} = $4` : ''}
+       ${filterSql.sql}
        ${profileVisibilityClause(isViewer)}
      ORDER BY games.ended_at DESC, games.room_id DESC
      LIMIT $2 OFFSET $3`,
     // COUNT(*) OVER() sits inside the same WHERE, so `total` is the FILTERED
     // total -- which is what the Games tab count and the "Load more" exhaustion
-    // check both need once a pool is selected.
-    ratingVariant ? [userId, limit, offset, ratingVariant] : [userId, limit, offset],
+    // check both need once a filter is set.
+    [userId, limit, offset, ...filterSql.params],
   );
   const total = rows.length > 0 ? Number(rows[0].total_count) : 0;
   const games = rows.map(
@@ -440,6 +543,21 @@ async function queryUserGames(
     }),
   );
   return { games: await attachGameParticipants(games), total };
+}
+
+// The player's own correspondence games that ended after `since`, newest
+// first: the /correspondence page's "Recently finished" list. Same query and
+// row shape as the profile Games list, read as the owner (their private games
+// included, as on their own profile).
+export async function listRecentFinishedCorrespondenceGames(
+  userId: string,
+  options: { since: Date; limit: number },
+): Promise<ProfileGameRecord[]> {
+  const { games } = await queryUserGames(userId, true, 0, options.limit, {
+    correspondenceOnly: true,
+    endedAfter: options.since,
+  });
+  return games;
 }
 
 // First page of a profile: identity, bucketed ratings, and the newest games.
@@ -532,7 +650,9 @@ export async function getUserProfileByHandle(
   for (const variant of variantKeys) {
     const totalGames = variantGameCounts.get(variant) ?? 0;
     const byClass = ratingsByVariant.get(variant);
-    const ratedClasses = PUBLIC_RATING_TIME_CLASSES.filter(
+    // visibleRatingTimeClasses: a correspondence rating stays off the profile while
+    // rated correspondence is held (MISTBOARD_CORRESPONDENCE_RATED_ENABLED off).
+    const ratedClasses = visibleRatingTimeClasses().filter(
       (timeClass) => (byClass?.get(timeClass)?.gamesPlayed ?? 0) > 0,
     );
     if (ratedClasses.length === 0) {
@@ -615,7 +735,7 @@ export async function getUserGamesPage(
   viewerUserId: string | null,
   offset: number,
   limit: number,
-  ratingVariant: RatingVariant | null = null,
+  filters: ProfileGameFilters = {},
 ): Promise<{ games: ProfileGameRecord[]; total: number } | null> {
   const user = await loadProfileUser(handle);
   if (!user) return null;
@@ -623,7 +743,7 @@ export async function getUserGamesPage(
   if (user.profileVisibility === 'private' && !isViewer) return null;
   const boundedLimit = Math.max(1, Math.min(limit, 50));
   const boundedOffset = Math.max(0, offset);
-  return queryUserGames(user.id, isViewer, boundedOffset, boundedLimit, ratingVariant);
+  return queryUserGames(user.id, isViewer, boundedOffset, boundedLimit, filters);
 }
 
 export async function getUserRatingHistory(

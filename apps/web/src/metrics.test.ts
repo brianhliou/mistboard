@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { mountMetrics } from './metrics.js';
+import { type DeployHistoryEntry, deployRowCells, mountMetrics } from './metrics.js';
 
 const publicStats = {
   generatedAt: '2026-07-21T00:00:00.000Z',
@@ -99,6 +99,7 @@ const week = (weekStart: string, overrides: Record<string, number> = {}) => ({
   studyChaptersCreated: 0,
   practiceSolves: 0,
   chatLines: 7,
+  gameChatLines: 2,
   dmMessages: 1,
   correspondenceSeeks: 0,
   newPatrons: 0,
@@ -185,17 +186,16 @@ describe('metrics page', () => {
     );
     // One chart: the cumulative "Games over time" was the same read, always rising.
     expect(sectionTitles).toEqual(['Games per week', 'Games by variant', 'Games by mode']);
-    // Games per week is the weekly primitive with one series and a table,
-    // plotting full weeks only: the in-progress week (07-20) is the line of
-    // text under the chart, not a dashed dive at the end of the line.
+    // Games per week is the weekly primitive with one series and no table
+    // (the admin /metrics charts keep theirs), plotting full weeks only: the
+    // in-progress week (07-20) is the line of text under the chart, not a
+    // dashed dive at the end of the line.
     const weekly = root.querySelector('.metrics-weekly-section');
     expect(weekly?.querySelector('.weekly-chart-legend')).toBeNull();
     expect(weekly?.querySelector('.weekly-chart-line-partial')).toBeNull();
-    const firstRow = weekly?.querySelector('.weekly-chart-table tr:nth-child(2)');
-    expect([...(firstRow?.querySelectorAll('td') ?? [])].map((n) => n.textContent)).toEqual([
-      '2026-07-13',
-      '31',
-    ]);
+    expect(weekly?.querySelector('.weekly-chart-table')).toBeNull();
+    const allGamesLine = weekly?.querySelector('.weekly-chart-line')?.getAttribute('points');
+    expect(allGamesLine).toBeTruthy();
     expect(weekly?.querySelector('.stats-weekly-so-far')?.textContent).toBe('4 so far this week');
     expect(root.querySelector('svg.stats-chart-svg')).toBeNull();
 
@@ -214,11 +214,10 @@ describe('metrics page', () => {
       (chip) => chip.textContent === 'Fog Xiangqi',
     );
     fogChip?.click();
-    const fogRow = weekly?.querySelector('.weekly-chart-table tr:nth-child(2)');
-    expect([...(fogRow?.querySelectorAll('td') ?? [])].map((n) => n.textContent)).toEqual([
-      '2026-07-13',
-      '11',
-    ]);
+    expect(weekly?.querySelector('.weekly-chart-line')?.getAttribute('points')).not.toBe(
+      allGamesLine,
+    );
+    expect(weekly?.querySelector('.weekly-chart-table')).toBeNull();
     expect(weekly?.querySelector('.stats-weekly-so-far')?.textContent).toBe('1 so far this week');
 
     const variantSection = [...root.querySelectorAll('.metrics-section')].find((s) =>
@@ -228,6 +227,10 @@ describe('metrics page', () => {
       ...(variantSection?.querySelectorAll('.metrics-breakdown-label') ?? []),
     ].map((n) => n.textContent);
     expect(variantLabels).toEqual(['Xiangqi', 'Fog Xiangqi']);
+    // The server leaves retired variants' games out of every public number,
+    // so the breakdown carries no "retired games count toward the total" note.
+    expect(variantSection?.querySelector('p')).toBeNull();
+    expect(variantSection?.textContent).not.toContain('retired');
 
     expect(vi.mocked(fetch)).not.toHaveBeenCalledWith('/api/stats/admin', expect.anything());
   });
@@ -372,3 +375,46 @@ function json(body: unknown, status = 200): Response {
     headers: { 'Content-Type': 'application/json' },
   });
 }
+
+describe('deploy history rows', () => {
+  const base: DeployHistoryEntry = {
+    at: '2026-09-25T20:00:00Z',
+    kind: 'restart',
+    buildRevision: 'abc',
+    drain: null,
+    withoutDrain: false,
+    activeGamesAtShutdown: 0,
+    pausedOnShutdown: 0,
+    resumedPlayersBack: 0,
+    resumedAfterGrace: 0,
+  };
+
+  it('reads a drained restart from its summary', () => {
+    const cells = deployRowCells({
+      ...base,
+      drain: {
+        durationMs: 14 * 60_000,
+        committed: true,
+        commitWaitMs: 9 * 60_000,
+        activeGamesAtStart: 1,
+        peakActiveGames: 2,
+        refusedCreates: 3,
+      },
+      pausedOnShutdown: 2,
+      resumedPlayersBack: 1,
+      resumedAfterGrace: 1,
+    });
+    expect(cells.slice(1)).toEqual(['Restart', '14m', '1 (peak 2)', '3', '0', '1 / 1 of 2']);
+  });
+
+  it('says when a restart went down with no drain', () => {
+    const cells = deployRowCells({ ...base, withoutDrain: true, activeGamesAtShutdown: 1 });
+    expect(cells.slice(1, 3)).toEqual(['Restart', 'none (undrained)']);
+    expect(cells[5]).toBe('1');
+  });
+
+  it('calls an undrained restart with nothing live the intended path, not a failure', () => {
+    const cells = deployRowCells({ ...base, withoutDrain: true, activeGamesAtShutdown: 0 });
+    expect(cells.slice(1, 3)).toEqual(['Restart', 'not needed (0 live)']);
+  });
+});

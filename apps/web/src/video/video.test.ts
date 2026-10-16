@@ -277,11 +277,47 @@ describe('renderShotSvg', () => {
     }
   });
 
-  it('places the piece where the geometry mirror says it is (drift guard)', () => {
-    const svg = renderShotSvg(plan, shot({}));
-    const center = squareCenter('e5' as XiangqiSquare, 'red');
-    expect(svg).toContain(`x="${center.x - PIECE_SIZE / 2}"`);
-    expect(svg).toContain(`y="${center.y - PIECE_SIZE / 2}"`);
+  it('places overlays where the product board draws the piece, from both sides (drift guard)', () => {
+    // e5 sits on the middle file, so a check there cannot tell a rotation from a
+    // top-to-bottom mirror; the corners can. squareCenter flipped only the rank
+    // until 2026-10-06, so every black-side overlay landed on the mirrored file.
+    for (const perspective of ['red', 'black'] as const) {
+      for (const square of ['a1', 'i10', 'e5'] as XiangqiSquare[]) {
+        const svg = renderShotSvg(
+          { ...plan, perspective },
+          shot({
+            board: { [square]: { color: 'red', role: 'chariot' } },
+            overlays: { ...shot({}).overlays, glow: [square] },
+          }),
+        );
+        const slot = new RegExp(
+          `data-piece-square="${square}">[^]*?\\sx="([\\d.-]+)"[^>]*?\\sy="([\\d.-]+)"`,
+        ).exec(svg);
+        expect(slot, `${square} piece slot`).not.toBeNull();
+        const drawn = {
+          x: Number(slot?.[1]) + PIECE_SIZE / 2,
+          y: Number(slot?.[2]) + PIECE_SIZE / 2,
+        };
+        const center = squareCenter(square, perspective);
+        expect([perspective, square, center]).toEqual([perspective, square, drawn]);
+        expect(svg).toContain(`class="xqv-glow-ring" cx="${center.x}" cy="${center.y}"`);
+      }
+    }
+  });
+
+  it('boxes a file region on that file from either side', () => {
+    // The a-file line is at the left margin for red and the right one for black
+    // (36 and 36 + 8 * 60), whatever squareCenter says.
+    for (const [perspective, x] of [
+      ['red', 36],
+      ['black', 516],
+    ] as const) {
+      const svg = renderShotSvg(
+        { ...plan, perspective },
+        shot({ overlays: { ...shot({}).overlays, region: { file: 'a' } } }),
+      );
+      expect(svg).toContain(`<rect class="xqv-region" x="${x - 20}"`);
+    }
   });
 
   it('renders kernel rays as hint markers', () => {

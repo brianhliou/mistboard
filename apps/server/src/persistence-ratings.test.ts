@@ -1,3 +1,4 @@
+import { GAME_SPECS, ratingPoolForSpec } from '@mistboard/game';
 import {
   abortRunningGame,
   createUser,
@@ -204,6 +205,96 @@ definePersistenceTests('ratings', () => {
     }
   });
 
+  test('rated PvP game rates both seats in its own pool for every rated variant', async () => {
+    // The rating block found its two seats through a hand-kept spec-id list of
+    // red/black variants. Every variant missing from it (atomic, duck, dark
+    // xiangqi, jungle, flip jungle) recorded rated=true and moved nobody's
+    // rating, the same silent skip as the #151 xiangqi regression above. Every
+    // rated spec is driven here, so a new rated variant is covered on arrival.
+    const now = new Date();
+    const ratedSpecs = GAME_SPECS.filter((spec) => ratingPoolForSpec(spec.id) !== null);
+    assert.ok(ratedSpecs.length > 0);
+    for (const [index, spec] of ratedSpecs.entries()) {
+      const pool = ratingPoolForSpec(spec.id)!;
+      const [firstColor, secondColor] = spec.board.startsWith('chess-')
+        ? (['white', 'black'] as const)
+        : (['red', 'black'] as const);
+      const firstId = `user_pool_${index}_first`;
+      const secondId = `user_pool_${index}_second`;
+      for (const [slot, id] of [firstId, secondId].entries()) {
+        await createUser({
+          id,
+          email: `${id}@example.com`,
+          emailVerifiedAt: now,
+          handle: `pool${index}${slot === 0 ? 'a' : 'b'}`,
+          displayName: id,
+          now,
+        });
+      }
+      const roomId = `rated-pool-${spec.id}`;
+      await recordGameEnd(roomId, {
+        variant: spec.id,
+        mode: 'pvp',
+        rated: true,
+        result: 'black-wins',
+        termination: 'resignation',
+        plyCount: 3,
+        startedAt: now,
+        endedAt: now,
+        initialMs: 180000,
+        incrementMs: 2000,
+        whiteClient: null,
+        blackClient: null,
+        whiteName: null,
+        blackName: null,
+        corpusId: null,
+        participants: [
+          {
+            color: firstColor,
+            displayName: firstId,
+            subjectType: 'user',
+            subjectId: firstId,
+            visibility: 'public',
+          },
+          {
+            color: secondColor,
+            displayName: secondId,
+            subjectType: 'user',
+            subjectId: secondId,
+            visibility: 'public',
+          },
+        ],
+        visibility: 'public',
+      });
+
+      const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+      await client.connect();
+      try {
+        const { rows } = await client.query<{ user_id: string; elo_rating: number }>(
+          `SELECT user_id, elo_rating FROM user_ratings
+           WHERE variant = $1 AND time_class = 'blitz' AND user_id = ANY($2)`,
+          [pool, [firstId, secondId]],
+        );
+        assert.equal(rows.length, 2, `${spec.id}: both seats got a ${pool} rating row`);
+        const first = rows.find((row) => row.user_id === firstId)!;
+        const second = rows.find((row) => row.user_id === secondId)!;
+        assert.ok(second.elo_rating > 1500, `${spec.id}: winner ${second.elo_rating}`);
+        assert.ok(first.elo_rating < 1500, `${spec.id}: loser ${first.elo_rating}`);
+        const participants = await client.query<{ elo_after: number | null }>(
+          'SELECT elo_after FROM game_participants WHERE game_id = $1',
+          [roomId],
+        );
+        assert.equal(
+          participants.rows.filter((row) => row.elo_after !== null).length,
+          2,
+          `${spec.id}: both participant rows carry the rating event`,
+        );
+      } finally {
+        await client.end();
+      }
+    }
+  });
+
   test('rated game rates on a forfeit (abandonment) termination', async () => {
     // Rating is termination-independent: any completed rated PvP game rates.
     // Forfeit (abandonment) is a real win, so it must move ratings like any other.
@@ -383,6 +474,48 @@ definePersistenceTests('ratings', () => {
     assert.equal(board[0]!.rank, 1);
   });
 
+  test('ladders leave out stats-excluded accounts (operator and QA test games)', async () => {
+    const now = new Date();
+    for (const [id, handle] of [
+      ['lx_real', 'lx-real'],
+      ['lx_test', 'lx-test'],
+    ] as const) {
+      await createUser({
+        id,
+        email: `${id}@lx.com`,
+        emailVerifiedAt: now,
+        handle,
+        displayName: handle,
+        profileVisibility: 'public',
+        now,
+      });
+    }
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      await client.query(`UPDATE users SET stats_excluded_at = now() WHERE id = 'lx_test'`);
+      await client.query(
+        `INSERT INTO user_ratings (user_id, variant, time_class, elo_rating, rating_deviation, volatility, games_played)
+         VALUES
+          ('lx_real','jieqi','bullet',1500,200,0.06,1),
+          ('lx_test','jieqi','bullet',1900,60,0.06,40)`,
+      );
+    } finally {
+      await client.end();
+    }
+
+    const board = await getLeaderboard({ variant: 'jieqi', timeClass: 'bullet', limit: 100 });
+    assert.deepEqual(
+      board.map((entry) => entry.handle),
+      ['lx-real'],
+    );
+    const summary = await getLeaderboardSummary({ timeClass: 'bullet' });
+    assert.deepEqual(
+      summary.find((ladder) => ladder.variant === 'jieqi')?.leaderboard.map((e) => e.handle),
+      ['lx-real'],
+    );
+  });
+
   test('leaderboard summary groups top-N per variant and hides private profiles', async () => {
     const now = new Date();
     const mk = (id: string, handle: string, visibility?: 'public' | 'private') =>
@@ -548,6 +681,75 @@ definePersistenceTests('ratings', () => {
     assert.equal(alpha.gamesPlayed, 2);
     assert.equal(beta.gamesPlayed, 1);
     assert.ok(alpha.rank < beta.rank, 'more games ranks higher');
+  });
+
+  test('getMostActivePlayers leaves out stats-excluded accounts', async () => {
+    const now = new Date();
+    for (const [id, handle] of [
+      ['actx_op', 'actx-operator'],
+      ['actx_real', 'actx-real'],
+    ] as const) {
+      await createUser({
+        id,
+        email: `${id}@actx.com`,
+        emailVerifiedAt: now,
+        handle,
+        displayName: handle,
+        profileVisibility: 'public',
+        now,
+      });
+    }
+    for (let i = 0; i < 3; i += 1) {
+      await recordGameEnd(`actx-game-${i}`, {
+        variant: 'jungle',
+        mode: 'pvp',
+        result: 'white-wins',
+        termination: 'resignation',
+        plyCount: 10,
+        startedAt: now,
+        endedAt: now,
+        whiteClient: 'browser',
+        blackClient: 'browser',
+        whiteName: null,
+        blackName: null,
+        corpusId: null,
+        participants: [
+          {
+            color: 'white',
+            displayName: 'Op',
+            subjectType: 'user',
+            subjectId: 'actx_op',
+            visibility: 'public',
+          },
+          {
+            color: 'black',
+            displayName: 'Real',
+            subjectType: 'user',
+            subjectId: 'actx_real',
+            visibility: 'public',
+          },
+        ],
+        visibility: 'public',
+      });
+    }
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      await client.query(`UPDATE users SET stats_excluded_at = now() WHERE id = 'actx_op'`);
+    } finally {
+      await client.end();
+    }
+
+    const active = await getMostActivePlayers(50);
+    const handles = active.map((entry) => entry.handle);
+    assert.ok(!handles.includes('actx-operator'), 'stats-excluded account left off');
+    const real = active.find((entry) => entry.handle === 'actx-real');
+    assert.ok(real, 'its opponent stays on the board');
+    assert.equal(
+      real.gamesPlayed,
+      3,
+      'games against an excluded account still count for the opponent',
+    );
   });
 
   test('getUserProfileByHandle lists completed account-attributed games', async () => {
@@ -910,30 +1112,34 @@ definePersistenceTests('ratings', () => {
     const all = await getUserGamesPage('pool-player', null, 0, 20);
     assert.equal(all?.total, 4);
 
-    const xiangqi = await getUserGamesPage('pool-player', null, 0, 20, 'xiangqi');
+    const xiangqi = await getUserGamesPage('pool-player', null, 0, 20, {
+      ratingVariant: 'xiangqi',
+    });
     assert.equal(xiangqi?.total, 2);
     assert.deepEqual(
       xiangqi?.games.map((game) => game.roomId),
       ['pool-xq-2', 'pool-xq-1'],
     );
 
-    const jieqi = await getUserGamesPage('pool-player', null, 0, 20, 'jieqi');
+    const jieqi = await getUserGamesPage('pool-player', null, 0, 20, { ratingVariant: 'jieqi' });
     assert.equal(jieqi?.total, 1);
     assert.equal(jieqi?.games[0]?.roomId, 'pool-jq-1');
 
     // The legacy row answers to its pool, not to its literal variant string.
-    const fog = await getUserGamesPage('pool-player', null, 0, 20, 'fog');
+    const fog = await getUserGamesPage('pool-player', null, 0, 20, { ratingVariant: 'fog' });
     assert.equal(fog?.total, 1);
     assert.equal(fog?.games[0]?.roomId, 'pool-legacy-1');
 
     // total is the FILTERED total, so "Load more" stops at the right place.
-    const firstPage = await getUserGamesPage('pool-player', null, 0, 1, 'xiangqi');
+    const firstPage = await getUserGamesPage('pool-player', null, 0, 1, {
+      ratingVariant: 'xiangqi',
+    });
     assert.equal(firstPage?.total, 2);
     assert.equal(firstPage?.games.length, 1);
     assert.equal(firstPage?.games[0]?.roomId, 'pool-xq-2');
 
     // A pool the player has never touched is empty, not unfiltered.
-    const banqi = await getUserGamesPage('pool-player', null, 0, 20, 'banqi');
+    const banqi = await getUserGamesPage('pool-player', null, 0, 20, { ratingVariant: 'banqi' });
     assert.equal(banqi?.total, 0);
     assert.deepEqual(banqi?.games, []);
   });

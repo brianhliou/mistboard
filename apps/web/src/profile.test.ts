@@ -21,9 +21,12 @@ describe('profile ratings rail', () => {
     const section = buildProfileRatings([]);
 
     expect(section.textContent).toContain('Fog Chess');
-    // Atomic + Duck + Fortress + Flip Jungle + Jungle + Dark Chess (always-on)
-    // = 6 rows.
-    expect(section.querySelectorAll('.profile-rating-row-empty')).toHaveLength(6);
+    // Duck + Crazyhouse + Flip Jungle + Jungle + Dark Chess (always-on) = 5
+    // rows. Fortress and Atomic Xiangqi retired on 2026-10-11: their pools are
+    // kept but no profile lists them.
+    expect(section.querySelectorAll('.profile-rating-row-empty')).toHaveLength(5);
+    expect(section.textContent).not.toContain('Fortress Xiangqi');
+    expect(section.textContent).not.toContain('Atomic Xiangqi');
   });
 
   it('localizes Traditional Chinese profile ratings rows', async () => {
@@ -31,11 +34,11 @@ describe('profile ratings rail', () => {
     const { buildProfileRatings } = await import('./profile.js');
 
     // Xiangqi pivot: Drop Mini is off the rating grids; localize an on-grid row
-    // (Fortress Xiangqi) instead.
+    // (Crazyhouse Xiangqi) instead.
     const section = buildProfileRatings(
       [
         {
-          variant: 'fortress_xiangqi',
+          variant: 'crazyhouse_xiangqi',
           timeClass: 'blitz',
           eloRating: 1520,
           ratedGamesPlayed: 2,
@@ -47,7 +50,7 @@ describe('profile ratings rail', () => {
     );
 
     expect(section.querySelector('h2')?.textContent).toBe('評分');
-    expect(section.textContent).toContain('堡壘象棋');
+    expect(section.textContent).toContain('瘋狂屋象棋');
     expect(section.textContent).toContain('2 局計分對局');
   });
 
@@ -426,7 +429,7 @@ describe('profile ratings rail', () => {
         provisional: false,
       },
       {
-        variant: 'fortress_xiangqi',
+        variant: 'crazyhouse_xiangqi',
         timeClass: 'blitz',
         eloRating: 1520,
         ratedGamesPlayed: 2,
@@ -436,13 +439,13 @@ describe('profile ratings rail', () => {
     ]);
 
     const rows = [...section.querySelectorAll<HTMLElement>('.profile-rating-row')];
-    // Canonical registry order throughout (fortress before fog), with played
+    // Canonical registry order throughout (crazyhouse before fog), with played
     // rows undimmed and every never-played row dimmed.
     const { profileRatingVariants } = await import('./variants.js');
     expect(rows.map((row) => row.dataset.variant)).toEqual(
       profileRatingVariants.map((variant) => variant.id),
     );
-    const played = new Set(['fog', 'fortress_xiangqi']);
+    const played = new Set(['fog', 'crazyhouse_xiangqi']);
     for (const row of rows) {
       expect(row.classList.contains('profile-rating-row-empty')).toBe(
         !played.has(row.dataset.variant ?? ''),
@@ -485,8 +488,11 @@ describe('profile ratings rail', () => {
 
   // Summary + online-players fetch stub for the leaderboard page. Ladders are
   // keyed by rating-pool name (the summary endpoint's vocabulary).
+  // `ladders` answers the blitz summary; `byTimeClass` sets any pace. The other
+  // paces come back empty.
   function stubLeaderboardFetch(options?: {
     ladders?: { variant: string; leaderboard: unknown[] }[];
+    byTimeClass?: Record<string, { variant: string; leaderboard: unknown[] }[]>;
     activePlayers?: unknown[];
     players?: {
       handle: string;
@@ -505,11 +511,15 @@ describe('profile ratings rail', () => {
             count: options?.players?.length ?? 0,
             anonymousOnline: options?.anonymousOnline ?? 0,
           }
-        : {
-            timeClass: 'blitz',
-            ladders: options?.ladders ?? [],
-            activePlayers: options?.activePlayers ?? [],
-          };
+        : (() => {
+            const timeClass = new URL(url, 'https://mistboard.test').searchParams.get('timeClass');
+            const byPace = options?.byTimeClass ?? { blitz: options?.ladders ?? [] };
+            return {
+              timeClass,
+              ladders: byPace[timeClass ?? ''] ?? [],
+              activePlayers: options?.activePlayers ?? [],
+            };
+          })();
       return new Response(JSON.stringify(body), {
         headers: { 'content-type': 'application/json' },
         status: 200,
@@ -517,8 +527,7 @@ describe('profile ratings rail', () => {
     });
   }
 
-  // One populated ladder, so the all-empty collapse doesn't swallow the grid
-  // that these gating assertions count panels in.
+  // One ladder with a player.
   const ONE_POPULATED_LADDER = [
     {
       variant: 'fog',
@@ -527,24 +536,57 @@ describe('profile ratings rail', () => {
       ],
     },
   ];
+  // Every rated ladder in the test registry populated, so the gating and order
+  // assertions see a panel per ladder (empty ladders get none).
+  const EVERY_LADDER = [
+    'fog',
+    'jungle',
+    'jungle_flip',
+    'fortress_xiangqi',
+    'duck_xiangqi',
+    'atomic_xiangqi',
+    'crazyhouse_xiangqi',
+    'drop_mini',
+  ].map((variant) => ({
+    variant,
+    leaderboard: [
+      {
+        rank: 1,
+        handle: `p-${variant}`,
+        displayName: `P ${variant}`,
+        eloRating: 1500,
+        provisional: true,
+      },
+    ],
+  }));
 
   it('keeps Drop Mini off the leaderboard panels', async () => {
     vi.stubEnv('DEV', false);
-    const fetchSpy = stubLeaderboardFetch({ ladders: ONE_POPULATED_LADDER });
+    const fetchSpy = stubLeaderboardFetch({ ladders: EVERY_LADDER });
     const root = document.createElement('div');
     const { mountLeaderboard } = await import('./profile.js');
 
     await mountLeaderboard(root);
 
-    // Xiangqi pivot: Drop Mini is off the grids; Fortress is an always-on ladder.
+    // Xiangqi pivot: Drop Mini is off the grids even with a ladder row, and so
+    // are the retired Fortress and Atomic Xiangqi pools (2026-10-11).
     expect(root.textContent).not.toContain('Drop Mini Xiangqi');
-    expect(root.textContent).toContain('Fortress Xiangqi');
-    expect(root.textContent).toContain('Human blitz ladders');
-    // 6 rated ladders (Dark Chess + always-on Jungle, Flip Jungle, Fortress,
-    // Duck, Atomic).
-    expect(root.querySelectorAll('.leaderboard-panel')).toHaveLength(6);
+    expect(root.textContent).not.toContain('Fortress Xiangqi');
+    expect(root.textContent).not.toContain('Atomic Xiangqi');
+    expect(root.textContent).toContain('Crazyhouse Xiangqi');
+    expect(root.textContent).toContain('Rated ladders across Mistboard variants.');
+    // 5 rated ladders (Dark Chess + always-on Jungle, Flip Jungle, Duck,
+    // Crazyhouse).
+    expect(root.querySelectorAll('.leaderboard-panel')).toHaveLength(5);
     expect(root.textContent).not.toContain('Active players');
-    expect(fetchSpy).toHaveBeenCalledWith('/api/leaderboard/summary?limit=10&timeClass=blitz');
+    // One summary per live pace; correspondence stays off while its rated
+    // switch is off.
+    for (const pace of ['bullet', 'blitz', 'rapid']) {
+      expect(fetchSpy).toHaveBeenCalledWith(`/api/leaderboard/summary?limit=10&timeClass=${pace}`);
+    }
+    expect(fetchSpy).not.toHaveBeenCalledWith(
+      '/api/leaderboard/summary?limit=10&timeClass=correspondence',
+    );
     expect(fetchSpy).toHaveBeenCalledWith('/api/players/online');
   });
 
@@ -573,7 +615,6 @@ describe('profile ratings rail', () => {
       '/player',
       '/player/rating-stats',
       '/bots',
-      '/players',
     ]);
     expect(rail?.querySelector('a[aria-current="page"]')?.textContent).toBe('Leaderboard');
 
@@ -647,15 +688,13 @@ describe('profile ratings rail', () => {
     expect(root.querySelector('.leaderboard-online-empty')?.textContent).toBe('No players online.');
   });
 
-  it('renders ladders in canonical variant order regardless of which are populated', async () => {
+  it('renders ladders in canonical variant order within a pace', async () => {
     vi.stubEnv('DEV', false);
-    // Populate Dark Chess ('fog') to prove a populated ladder no longer floats
-    // to the front (#137):
-    // the leaderboard keys off CANONICAL_VARIANT_ORDER like the picker/profile/
-    // rail, so Fortress still leads with no data and Dark Chess keeps its slot
-    // between Fortress and the Jungle pair.
+    // The leaderboard keys off CANONICAL_VARIANT_ORDER like the picker/profile/
+    // rail (#137), not the order the summary happens to list ladders in.
     stubLeaderboardFetch({
       ladders: [
+        ...EVERY_LADDER.filter((ladder) => ladder.variant !== 'fog').reverse(),
         {
           variant: 'fog',
           leaderboard: [
@@ -677,48 +716,64 @@ describe('profile ratings rail', () => {
 
     await mountLeaderboard(root);
 
-    const row = root.querySelector('.leaderboard-table tbody tr');
-    expect(row?.textContent).toContain('Misty');
-    expect(row?.querySelector('a')?.getAttribute('href')).toBe('/@/misty');
-    // Presence circle fills for players in the online set.
-    expect(row?.querySelector('.leaderboard-presence-online')).not.toBeNull();
-    // Ladders absent from the summary render the no-rated-games state.
-    expect(root.textContent).toContain('No rated games yet.');
-
-    // Canonical filtered order: Atomic, Duck, Fortress, Fog Chess, Jungle,
-    // Flip Jungle.
     const titles = [...root.querySelectorAll('.leaderboard-panel-title')].map(
       (el) => el.textContent,
     );
     expect(titles).toEqual([
-      'Atomic Xiangqi',
       'Duck Xiangqi',
-      'Fortress Xiangqi',
+      'Crazyhouse Xiangqi',
       'Fog Chess',
       'Jungle Chess',
       'Flip Jungle',
     ]);
-    const panels = [...root.querySelectorAll('.leaderboard-panel')];
-    // Fog Chess is the one ladder the summary populates. Found BY NAME, not by
-    // index: this used to be panels[1], which silently became a different
-    // ladder the moment a variant was inserted ahead of it.
-    const fogPanel = panels.find((panel) =>
+    const fogPanel = [...root.querySelectorAll('.leaderboard-panel')].find((panel) =>
       panel.querySelector('.leaderboard-panel-title')?.textContent?.includes('Fog Chess'),
     );
-    expect(fogPanel?.textContent).toContain('1520');
-    for (const panel of panels.filter((panel) => panel !== fogPanel)) {
-      expect(panel.textContent).toContain('No rated games yet.');
-    }
+    const row = fogPanel?.querySelector('.leaderboard-table tbody tr');
+    expect(row?.textContent).toContain('1520');
+    expect(row?.querySelector('a')?.getAttribute('href')).toBe('/@/misty');
+    // Presence circle fills for players in the online set.
+    expect(row?.querySelector('.leaderboard-presence-online')).not.toBeNull();
+  });
+
+  it('shows only ladders with players, grouped under a heading per pace', async () => {
+    vi.stubEnv('DEV', false);
+    // Prod, 2026-10-04: the only rated games were jieqi bullet, and the page
+    // opened on an empty Blitz tab.
+    stubLeaderboardFetch({
+      byTimeClass: {
+        bullet: ONE_POPULATED_LADDER,
+        rapid: [EVERY_LADDER.find((ladder) => ladder.variant === 'jungle')!],
+      },
+    });
+    const root = document.createElement('div');
+    const { mountLeaderboard } = await import('./profile.js');
+
+    await mountLeaderboard(root);
+
+    const sections = [...root.querySelectorAll<HTMLElement>('.leaderboard-pace-section')];
+    expect(
+      sections.map((section) => [
+        section.querySelector('.leaderboard-pace-heading')?.textContent,
+        [...section.querySelectorAll('.leaderboard-panel-title')].map((el) => el.textContent),
+      ]),
+    ).toEqual([
+      ['Bullet', ['Fog Chess']],
+      ['Rapid', ['Jungle Chess']],
+    ]);
+    // No pace pills, and no "No rated games yet" panel per empty ladder.
+    expect(root.querySelector('.leaderboard-paces')).toBeNull();
+    expect(root.textContent).not.toContain('No rated games yet.');
   });
 
   it('localizes Traditional Chinese leaderboard chrome', async () => {
     window.history.replaceState(null, '', '/zh-hant/player');
     vi.stubEnv('DEV', false);
-    // (Fortress Xiangqi) instead.
+    // (Crazyhouse Xiangqi) instead.
     stubLeaderboardFetch({
       ladders: [
         {
-          variant: 'fortress_xiangqi',
+          variant: 'crazyhouse_xiangqi',
           leaderboard: [
             {
               rank: 1,
@@ -738,9 +793,9 @@ describe('profile ratings rail', () => {
     await mountLeaderboard(root);
 
     expect(root.querySelector('h1')?.textContent).toBe('排行榜');
-    expect(root.textContent).toContain('Mistboard 公開變體的人類快棋排行榜。');
-    expect(root.textContent).toContain('堡壘象棋');
-    expect(root.textContent).toContain('還沒有計分對局。');
+    expect(root.textContent).toContain('Mistboard 各變體的等級分排行榜。');
+    expect(root.textContent).toContain('瘋狂屋象棋');
+    expect(root.querySelector('.leaderboard-pace-heading')?.textContent).toBeTruthy();
     expect(root.textContent).not.toContain('活躍玩家');
     expect(root.querySelector('.leaderboard-online-heading')?.textContent).toBe('線上玩家');
     expect(root.textContent).toContain('目前沒有玩家在線上。');
@@ -764,49 +819,37 @@ describe('profile ratings rail', () => {
     expect(root.textContent).toContain('Online players');
   });
 
-  it('keeps every ladder panel when at least one ladder has a rated game', async () => {
-    vi.stubEnv('DEV', false);
-    stubLeaderboardFetch({ ladders: ONE_POPULATED_LADDER });
-    const root = document.createElement('div');
-    const { mountLeaderboard } = await import('./profile.js');
-
-    await mountLeaderboard(root);
-
-    expect(root.querySelectorAll('.leaderboard-panel').length).toBeGreaterThan(1);
-    // Partial emptiness keeps the per-variant line: it is legible next to a
-    // ladder that has rows.
-    expect(root.textContent).toContain('No rated games yet.');
-    expect(root.textContent).toContain('Misty');
-  });
-
   it('renders rating stats from leaderboard data', async () => {
     vi.stubEnv('DEV', false);
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(
+    const entries = [
+      {
+        rank: 1,
+        handle: 'misty',
+        displayName: 'Misty',
+        eloRating: 1540,
+        gamesPlayed: 12,
+        provisional: false,
+      },
+      {
+        rank: 2,
+        handle: 'foggy',
+        displayName: 'Foggy',
+        eloRating: 1460,
+        gamesPlayed: 9,
+        provisional: false,
+      },
+    ];
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = new URL(String(input), 'https://mistboard.test');
+      const timeClass = url.searchParams.get('timeClass');
+      return new Response(
         JSON.stringify({
-          bucket: { variant: 'fog', timeClass: 'blitz' },
-          leaderboard: [
-            {
-              rank: 1,
-              handle: 'misty',
-              displayName: 'Misty',
-              eloRating: 1540,
-              gamesPlayed: 12,
-              provisional: false,
-            },
-            {
-              rank: 2,
-              handle: 'foggy',
-              displayName: 'Foggy',
-              eloRating: 1460,
-              gamesPlayed: 9,
-              provisional: false,
-            },
-          ],
+          bucket: { variant: url.searchParams.get('variant'), timeClass },
+          leaderboard: timeClass === 'blitz' ? entries : [],
         }),
         { headers: { 'content-type': 'application/json' }, status: 200 },
-      ),
-    );
+      );
+    });
     const root = document.createElement('div');
     const { mountRatingStats } = await import('./profile.js');
 
@@ -823,8 +866,98 @@ describe('profile ratings rail', () => {
       '2 rated Fog Chess players. Average rating is 1500.',
     );
     expect(root.querySelectorAll('.rating-stats-bar').length).toBeGreaterThan(0);
-    expect(fetchSpy).toHaveBeenCalledWith('/api/leaderboard?variant=fog&limit=500');
+    expect(fetchSpy).toHaveBeenCalledWith('/api/leaderboard?variant=fog&timeClass=blitz&limit=500');
   });
+
+  it('offers one chip per rated pace and opens on the pool with the most players', async () => {
+    vi.stubEnv('DEV', false);
+    const player = (handle: string, eloRating: number) => ({
+      rank: 1,
+      handle,
+      displayName: handle,
+      eloRating,
+      gamesPlayed: 5,
+      provisional: true,
+    });
+    const pools: Record<string, ReturnType<typeof player>[]> = {
+      bullet: [player('a', 1500), player('b', 1600), player('c', 1700)],
+      blitz: [player('d', 1500)],
+      rapid: [],
+    };
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = new URL(String(input), 'https://mistboard.test');
+      const timeClass = url.searchParams.get('timeClass') ?? 'blitz';
+      return new Response(
+        JSON.stringify({ bucket: { variant: 'fog', timeClass }, leaderboard: pools[timeClass] }),
+        { headers: { 'content-type': 'application/json' }, status: 200 },
+      );
+    });
+    const root = document.createElement('div');
+    const { mountRatingStats } = await import('./profile.js');
+
+    await mountRatingStats(root);
+
+    const chips = [...root.querySelectorAll<HTMLButtonElement>('.rating-stats-pace')];
+    expect(chips.map((chip) => chip.textContent)).toEqual(['Bullet', 'Blitz', 'Rapid']);
+    const pressed = () =>
+      root.querySelector<HTMLButtonElement>('.rating-stats-pace[aria-pressed="true"]')?.dataset
+        .timeClass;
+    expect(pressed()).toBe('bullet');
+    expect(root.querySelector('.rating-stats-summary')?.textContent).toBe(
+      '3 rated Fog Chess players. Average rating is 1600.',
+    );
+
+    // An empty pool says so and links to Find opponent for this variant.
+    chips[2]!.click();
+    await vi.waitFor(() =>
+      expect(root.querySelector('.rating-stats-empty')?.textContent).toContain(
+        'No rated games at this time control yet.',
+      ),
+    );
+    expect(pressed()).toBe('rapid');
+    expect(root.querySelector('.rating-stats-bar')).toBeNull();
+    const cta = root.querySelector<HTMLAnchorElement>('.rating-stats-empty-cta');
+    expect(cta?.textContent).toBe('Find opponent');
+    expect(cta?.getAttribute('href')).toBe('/?play=lobby&gameSpecId=dark-chess');
+  });
+
+  it('picks blitz when every pool ties', async () => {
+    const { ratingStatsDefaultPace } = await import('./profile.js');
+    expect(
+      ratingStatsDefaultPace([
+        { timeClass: 'bullet', players: 0 },
+        { timeClass: 'blitz', players: 0 },
+        { timeClass: 'rapid', players: 0 },
+      ]),
+    ).toBe('blitz');
+    expect(
+      ratingStatsDefaultPace([
+        { timeClass: 'bullet', players: 2 },
+        { timeClass: 'blitz', players: 1 },
+        { timeClass: 'rapid', players: 2 },
+      ]),
+    ).toBe('bullet');
+  });
+
+  it('localizes the empty pool state', async () => {
+    vi.stubEnv('DEV', false);
+    window.history.replaceState(null, '', '/zh-hant/player/rating-stats');
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async () =>
+        new Response(JSON.stringify({ bucket: {}, leaderboard: [] }), {
+          headers: { 'content-type': 'application/json' },
+          status: 200,
+        }),
+    );
+    const root = document.createElement('div');
+    const { mountRatingStats } = await import('./profile.js');
+    await mountRatingStats(root);
+    expect(root.querySelector('.rating-stats-empty')?.textContent).toContain(
+      '這個用時還沒有計分對局。',
+    );
+    expect(root.querySelector('.rating-stats-empty-cta')?.textContent).toBe('尋找對手');
+  });
+
   it('scopes the games list to the variant picked in the rating rail, and can clear it', async () => {
     // Before this, picking a variant moved the rating spotlight while the games
     // list kept showing every variant -- the list is paginated, so the filter
@@ -929,5 +1062,103 @@ describe('profile ratings rail', () => {
       expect(rowIds()).toHaveLength(2);
     });
     expect(filterBar()?.hidden).toBe(true);
+  });
+
+  it('holds result and opponent filters in the URL and sends them to the games query', async () => {
+    window.history.replaceState(null, '', '/@/urlfilter?result=win&vs=bob');
+    const game = (roomId: string) => ({
+      roomId,
+      variant: 'xiangqi',
+      mode: 'pvp' as const,
+      rated: false,
+      result: 'red-wins',
+      termination: 'resignation',
+      plyCount: 20,
+      whiteName: null,
+      blackName: null,
+      corpusId: null,
+      endedAt: '2026-07-01T12:00:00.000Z',
+      participants: [
+        {
+          color: 'red',
+          displayName: 'me',
+          subjectType: 'user',
+          subjectId: 'u1',
+          visibility: 'public',
+          handle: 'urlfilter',
+        },
+        {
+          color: 'black',
+          displayName: 'Bob',
+          subjectType: 'user',
+          subjectId: 'u2',
+          visibility: 'public',
+          handle: 'bob',
+        },
+      ],
+      playerColor: 'red',
+    });
+    const gamesRequests: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      const json = (body: unknown) =>
+        new Response(JSON.stringify(body), {
+          headers: { 'content-type': 'application/json' },
+          status: 200,
+        });
+      if (url.includes('/rating-history')) return json({ points: [] });
+      if (url.includes('/games?')) {
+        gamesRequests.push(url);
+        return json({ games: [game('xq-win')], total: 1 });
+      }
+      return json({
+        profile: {
+          isViewer: false,
+          relation: null,
+          user: {
+            handle: 'urlfilter',
+            displayName: 'urlfilter',
+            bio: '',
+            profileVisibility: 'public',
+            accountRole: 'player',
+            createdAt: '2026-05-01T00:00:00.000Z',
+          },
+          ratings: [],
+          puzzleRatings: [],
+          games: [game('xq-win'), game('xq-2')],
+          gamesTotal: 2,
+        },
+      });
+    });
+
+    const root = document.createElement('div');
+    const { mountProfile } = await import('./profile.js');
+    await mountProfile(root, 'urlfilter');
+
+    // The link opens on the filtered Games tab, already queried.
+    await vi.waitFor(() => expect(gamesRequests).toHaveLength(1));
+    expect(gamesRequests[0]).toContain('result=win');
+    expect(gamesRequests[0]).toContain('vs=bob');
+    const chip = root.querySelector<HTMLElement>('.profile-games-filter');
+    expect(chip?.hidden).toBe(false);
+    expect(chip?.textContent).toContain('Wins · vs @bob');
+    expect(
+      root
+        .querySelector<HTMLButtonElement>('.profile-games-result[data-result="win"]')
+        ?.getAttribute('aria-pressed'),
+    ).toBe('true');
+    expect(root.querySelector<HTMLInputElement>('.profile-games-opponent-input')?.value).toBe(
+      'bob',
+    );
+
+    root.querySelector<HTMLButtonElement>('.profile-games-result[data-result="loss"]')?.click();
+    await vi.waitFor(() => expect(gamesRequests).toHaveLength(2));
+    expect(gamesRequests[1]).toContain('result=loss');
+    expect(window.location.search).toBe('?result=loss&vs=bob');
+
+    chip?.querySelector<HTMLButtonElement>('.profile-games-filter-clear')?.click();
+    expect(window.location.search).toBe('');
+    expect(chip?.hidden).toBe(true);
+    window.history.replaceState(null, '', '/');
   });
 });

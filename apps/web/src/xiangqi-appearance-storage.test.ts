@@ -1,17 +1,25 @@
 import { describe, expect, it } from 'vitest';
 import {
   inferredXiangqiPieceSet,
+  inferredXiangqiRiverText,
   normalizeXiangqiBoardLayout,
   normalizeXiangqiBoardTheme,
   normalizeXiangqiPieceSet,
+  readStoredXiangqiBoardColor,
   readStoredXiangqiBoardLayout,
   readStoredXiangqiBoardTheme,
   readStoredXiangqiNotation,
   readStoredXiangqiPieceSet,
+  readStoredXiangqiPieceShadow,
+  readStoredXiangqiRiverText,
+  readStoredXiangqiStartMarkers,
+  writeStoredXiangqiBoardColor,
   writeStoredXiangqiBoardLayout,
-  writeStoredXiangqiBoardTheme,
   writeStoredXiangqiNotation,
   writeStoredXiangqiPieceSet,
+  writeStoredXiangqiPieceShadow,
+  writeStoredXiangqiRiverText,
+  writeStoredXiangqiStartMarkers,
 } from './xiangqi-appearance-storage.js';
 
 function installLocalStorage(): Storage {
@@ -63,7 +71,9 @@ describe('xiangqi appearance storage normalization', () => {
     expect(normalizeXiangqiBoardTheme('tournament')).toBe('international');
     expect(normalizeXiangqiBoardTheme('blue')).toBe('international');
     expect(normalizeXiangqiBoardTheme('mono')).toBe('international');
-    expect(normalizeXiangqiBoardTheme('traditional')).toBe('traditional');
+    // Traditional is a colour plus a river text now (migrated on read below).
+    expect(normalizeXiangqiBoardTheme('traditional')).toBe('international');
+    expect(normalizeXiangqiBoardTheme('jungle')).toBe('jungle');
   });
 
   it('migrates stored legacy board themes to International', () => {
@@ -75,10 +85,15 @@ describe('xiangqi appearance storage normalization', () => {
     expect(storage.getItem('mistboard.xiangqiBoardThemeVersion')).toBe('4');
   });
 
-  it('keeps explicit Traditional board style after the migration version is written', () => {
-    installLocalStorage();
-    writeStoredXiangqiBoardTheme('traditional');
-    expect(readStoredXiangqiBoardTheme()).toBe('traditional');
+  it('derives the Jungle theme from the Jungle colour on the square grid', () => {
+    const storage = installLocalStorage();
+    storage.setItem('mistboard.xiangqiBoardColor', 'jungle');
+    storage.setItem('mistboard.xiangqiBoardLayout', 'cell');
+    storage.setItem('mistboard.xiangqiBoardLayoutVersion', '1');
+    expect(readStoredXiangqiBoardTheme()).toBe('jungle');
+    // Jungle needs cells: on the lined board it is the standard board.
+    storage.setItem('mistboard.xiangqiBoardLayout', 'intersection');
+    expect(readStoredXiangqiBoardTheme()).toBe('international');
   });
 
   it('migrates old animal piece-set values to Dobutsu', () => {
@@ -95,6 +110,41 @@ describe('xiangqi appearance storage normalization', () => {
     for (const country of ['CN', 'TW', 'HK', 'MO', 'SG', 'MY', 'VN']) {
       expect(inferredXiangqiPieceSet('en', country)).toBe('traditional');
     }
+  });
+
+  it('infers hanzi pieces when Chinese appears anywhere in the language list', () => {
+    expect(inferredXiangqiPieceSet('en', null, ['en-US', 'zh-CN'])).toBe('traditional');
+    expect(inferredXiangqiPieceSet('en', 'US', ['en-US', 'zh-CN'])).toBe('traditional');
+    expect(inferredXiangqiPieceSet('en', 'US', ['en-US', 'fr', 'zh-Hant-TW'])).toBe('traditional');
+    expect(inferredXiangqiPieceSet('en', 'US', ['en-US', 'zh'])).toBe('traditional');
+    expect(inferredXiangqiRiverText('en', 'US', ['en-US', 'zh-CN'])).toBe('classic');
+    expect(inferredXiangqiPieceSet('en', 'US', ['en-US', 'fr'])).toBe('international');
+    expect(inferredXiangqiRiverText('en', 'US', ['en-US', 'fr'])).toBe('off');
+  });
+
+  it('falls back to locale and country when the language list is empty or missing', () => {
+    for (const languages of [[], null, undefined]) {
+      expect(inferredXiangqiPieceSet('en', 'US', languages)).toBe('international');
+      expect(inferredXiangqiPieceSet('en', 'TW', languages)).toBe('traditional');
+      expect(inferredXiangqiPieceSet('zh-Hans', null, languages)).toBe('traditional');
+    }
+  });
+
+  it('reads the browser language list but keeps a stored pick winning', () => {
+    Object.defineProperty(navigator, 'languages', {
+      configurable: true,
+      get: () => ['en-US', 'zh-CN'],
+    });
+    try {
+      const storage = installLocalStorage();
+      expect(readStoredXiangqiPieceSet()).toBe('traditional');
+      expect(storage.getItem('mistboard.xiangqiPieceSet')).toBeNull();
+      writeStoredXiangqiPieceSet('international');
+      expect(readStoredXiangqiPieceSet()).toBe('international');
+    } finally {
+      delete (navigator as unknown as Record<string, unknown>).languages;
+    }
+    expect(navigator.languages).not.toContain('zh-CN');
   });
 
   it('follows the inference when nothing is stored', () => {
@@ -121,10 +171,25 @@ describe('xiangqi appearance storage normalization', () => {
 
   it('keeps a non-default pick across the v4 rollout', () => {
     const storage = installLocalStorage();
-    storage.setItem('mistboard.xiangqiPieceSet', 'symbols');
+    storage.setItem('mistboard.xiangqiPieceSet', 'wood');
     storage.setItem('mistboard.xiangqiPieceSetVersion', '3');
-    expect(readStoredXiangqiPieceSet()).toBe('symbols');
+    expect(readStoredXiangqiPieceSet()).toBe('wood');
     expect(storage.getItem('mistboard.xiangqiPieceSetVersion')).toBe('4');
+  });
+
+  it('clears a retired set so the browser follows the inference again', () => {
+    // Chess-style and Animal (no disc) retired 2026-10-14 with the new international look.
+    for (const retired of ['western', 'symbols', 'international-flat', 'animal-flat']) {
+      const storage = installLocalStorage();
+      storage.setItem('mistboard.xiangqiPieceSet', retired);
+      storage.setItem('mistboard.xiangqiPieceSetVersion', '4');
+      document.cookie = 'mb_cc=TW';
+      expect(readStoredXiangqiPieceSet()).toBe('traditional');
+      expect(storage.getItem('mistboard.xiangqiPieceSet')).toBeNull();
+      expect(storage.getItem('mistboard.xiangqiPieceSetVersion')).toBe('4');
+      document.cookie = 'mb_cc=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      expect(readStoredXiangqiPieceSet()).toBe('international');
+    }
   });
 
   it('keeps an explicit International pick over the inference once v4 is written', () => {
@@ -141,18 +206,16 @@ describe('xiangqi appearance storage normalization', () => {
     expect(readStoredXiangqiPieceSet()).toBe('traditional');
   });
 
-  it('accepts and persists the Chess-style prototype', () => {
-    installLocalStorage();
-    expect(normalizeXiangqiPieceSet('international-flat')).toBe('international-flat');
-    writeStoredXiangqiPieceSet('international-flat');
-    expect(readStoredXiangqiPieceSet()).toBe('international-flat');
+  it('no longer accepts the retired Chess-style or Animal (no disc) sets', () => {
+    expect(normalizeXiangqiPieceSet('international-flat')).toBe('international');
+    expect(normalizeXiangqiPieceSet('animal-flat')).toBe('international');
   });
 
   it('previews a URL-pinned piece set without replacing the saved preference', () => {
     const storage = installLocalStorage();
     writeStoredXiangqiPieceSet('traditional');
-    window.history.replaceState({}, '', '/?xqPieces=international-flat');
-    expect(readStoredXiangqiPieceSet()).toBe('international-flat');
+    window.history.replaceState({}, '', '/?xqPieces=animal-dobutsu');
+    expect(readStoredXiangqiPieceSet()).toBe('animal-dobutsu');
     expect(storage.getItem('mistboard.xiangqiPieceSet')).toBe('traditional');
     window.history.replaceState({}, '', '/');
   });
@@ -192,5 +255,193 @@ describe('xiangqi move notation preference', () => {
     storage.setItem('mistboard.xiangqiNotation', 'chinese');
     expect(readStoredXiangqiNotation('en')).toBe('chinese');
     expect(storage.getItem('mistboard.xiangqiNotationVersion')).toBe('2');
+  });
+});
+
+describe('xiangqi board colour, river text and start marker storage', () => {
+  it('defaults to the International colour and round-trips a preset', () => {
+    const storage = installLocalStorage();
+    expect(readStoredXiangqiBoardColor()).toBe('international');
+    expect(storage.getItem('mistboard.xiangqiBoardColor')).toBeNull();
+    writeStoredXiangqiBoardColor('slate');
+    expect(readStoredXiangqiBoardColor()).toBe('slate');
+    writeStoredXiangqiBoardColor('international');
+    expect(storage.getItem('mistboard.xiangqiBoardColor')).toBe('international');
+    // Retired values (the custom picker's hexes, the strong presets) fall back.
+    for (const retired of ['#2a3b4c', 'walnut', 'theme', 'not-a-colour']) {
+      storage.setItem('mistboard.xiangqiBoardColor', retired);
+      expect(readStoredXiangqiBoardColor(), retired).toBe('international');
+    }
+  });
+
+  it('previews a colour or a river text from the URL without saving it', () => {
+    const storage = installLocalStorage();
+    window.history.replaceState({}, '', '/?xqBoardColor=birch&xqRiver=brand');
+    expect(readStoredXiangqiBoardColor()).toBe('birch');
+    expect(readStoredXiangqiRiverText()).toBe('brand');
+    expect(storage.getItem('mistboard.xiangqiBoardColor')).toBeNull();
+    expect(storage.getItem('mistboard.xiangqiRiverText')).toBeNull();
+    window.history.replaceState({}, '', '/');
+  });
+
+  it('has no river text by default and remembers each choice', () => {
+    const storage = installLocalStorage();
+    expect(readStoredXiangqiRiverText()).toBe('off');
+    for (const text of ['classic', 'brand', 'off'] as const) {
+      writeStoredXiangqiRiverText(text);
+      expect(readStoredXiangqiRiverText()).toBe(text);
+    }
+    storage.setItem('mistboard.xiangqiRiverText', 'wordart');
+    expect(readStoredXiangqiRiverText()).toBe('off');
+  });
+
+  it('starts Chinese readers on the classic inscription without storing it', () => {
+    expect(inferredXiangqiRiverText('en', null)).toBe('off');
+    expect(inferredXiangqiRiverText('en', 'US')).toBe('off');
+    expect(inferredXiangqiRiverText('zh-Hans', null)).toBe('classic');
+    expect(inferredXiangqiRiverText('zh-Hant', null)).toBe('classic');
+    for (const country of ['CN', 'TW', 'HK', 'MO', 'SG', 'MY', 'VN']) {
+      expect(inferredXiangqiRiverText('en', country)).toBe('classic');
+    }
+    const storage = installLocalStorage();
+    document.cookie = 'mb_cc=TW';
+    expect(readStoredXiangqiRiverText()).toBe('classic');
+    expect(storage.getItem('mistboard.xiangqiRiverText')).toBeNull();
+    writeStoredXiangqiRiverText('off');
+    expect(readStoredXiangqiRiverText()).toBe('off');
+    document.cookie = 'mb_cc=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  });
+
+  it('shows start markers by default and remembers turning them off', () => {
+    installLocalStorage();
+    expect(readStoredXiangqiStartMarkers()).toBe(true);
+    writeStoredXiangqiStartMarkers(false);
+    expect(readStoredXiangqiStartMarkers()).toBe(false);
+    writeStoredXiangqiStartMarkers(true);
+    expect(readStoredXiangqiStartMarkers()).toBe(true);
+  });
+
+  it('draws no piece shadow by default without storing it, and remembers the switch', () => {
+    const storage = installLocalStorage();
+    // Off by default since 2026-10-14 (the new piece look has none).
+    expect(readStoredXiangqiPieceShadow()).toBe(false);
+    // Reading the default writes nothing: a later change of default reaches
+    // every browser that never chose.
+    expect(storage.getItem('mistboard.xiangqiPieceShadow')).toBeNull();
+    writeStoredXiangqiPieceShadow(false);
+    expect(storage.getItem('mistboard.xiangqiPieceShadow')).toBe('off');
+    expect(readStoredXiangqiPieceShadow()).toBe(false);
+    writeStoredXiangqiPieceShadow(true);
+    expect(storage.getItem('mistboard.xiangqiPieceShadow')).toBe('on');
+    expect(readStoredXiangqiPieceShadow()).toBe(true);
+    storage.setItem('mistboard.xiangqiPieceShadow', 'sometimes');
+    expect(readStoredXiangqiPieceShadow()).toBe(false);
+  });
+
+  it('previews the piece shadow from ?xqShadow= without saving it', () => {
+    const storage = installLocalStorage();
+    window.history.replaceState({}, '', '/?xqShadow=off');
+    expect(readStoredXiangqiPieceShadow()).toBe(false);
+    writeStoredXiangqiPieceShadow(true);
+    // The preview still wins over a stored pick until a click ends it.
+    expect(readStoredXiangqiPieceShadow()).toBe(false);
+    window.history.replaceState({}, '', '/?xqShadow=on');
+    storage.setItem('mistboard.xiangqiPieceShadow', 'off');
+    expect(readStoredXiangqiPieceShadow()).toBe(true);
+    window.history.replaceState({}, '', '/');
+    expect(readStoredXiangqiPieceShadow()).toBe(false);
+  });
+});
+
+// The Traditional board theme folded into a colour and a river text on
+// 2026-10-08. A browser that picked it must see the same board afterwards.
+describe('migrating the Traditional board theme', () => {
+  it('turns a stored Traditional into its colour plus 楚河 漢界, whichever reader runs first', () => {
+    for (const first of ['theme', 'color', 'river'] as const) {
+      const storage = installLocalStorage();
+      storage.setItem('mistboard.xiangqiBoardTheme', 'traditional');
+      storage.setItem('mistboard.xiangqiBoardThemeVersion', '4');
+      if (first === 'color') readStoredXiangqiBoardColor();
+      if (first === 'river') readStoredXiangqiRiverText();
+      expect(readStoredXiangqiBoardTheme(), first).toBe('international');
+      expect(readStoredXiangqiBoardColor(), first).toBe('traditional');
+      expect(readStoredXiangqiRiverText(), first).toBe('classic');
+      expect(storage.getItem('mistboard.xiangqiBoardTheme')).toBe('international');
+      // The version is untouched, so no other pick is reset.
+      expect(storage.getItem('mistboard.xiangqiBoardThemeVersion')).toBe('4');
+    }
+  });
+
+  it('keeps the square-grid layout of a Traditional square grid', () => {
+    const storage = installLocalStorage();
+    storage.setItem('mistboard.xiangqiBoardTheme', 'traditional');
+    storage.setItem('mistboard.xiangqiBoardThemeVersion', '4');
+    storage.setItem('mistboard.xiangqiBoardLayout', 'cell');
+    storage.setItem('mistboard.xiangqiBoardLayoutVersion', '1');
+    expect(readStoredXiangqiBoardTheme()).toBe('international');
+    expect(readStoredXiangqiBoardLayout()).toBe('cell');
+    expect(readStoredXiangqiBoardColor()).toBe('traditional');
+  });
+
+  it('never overwrites a colour or river text the reader already picked', () => {
+    const storage = installLocalStorage();
+    storage.setItem('mistboard.xiangqiBoardTheme', 'traditional');
+    storage.setItem('mistboard.xiangqiBoardColor', 'slate');
+    storage.setItem('mistboard.xiangqiRiverText', 'brand');
+    expect(readStoredXiangqiBoardColor()).toBe('slate');
+    expect(readStoredXiangqiRiverText()).toBe('brand');
+    expect(readStoredXiangqiBoardTheme()).toBe('international');
+  });
+
+  it('leaves an International browser following the defaults', () => {
+    const storage = installLocalStorage();
+    storage.setItem('mistboard.xiangqiBoardTheme', 'international');
+    storage.setItem('mistboard.xiangqiBoardThemeVersion', '4');
+    expect(readStoredXiangqiBoardTheme()).toBe('international');
+    expect(readStoredXiangqiBoardColor()).toBe('international');
+    expect(readStoredXiangqiRiverText()).toBe('off');
+    expect(storage.getItem('mistboard.xiangqiBoardColor')).toBeNull();
+    expect(storage.getItem('mistboard.xiangqiRiverText')).toBeNull();
+  });
+});
+
+// The Jungle board theme became the Jungle colour on 2026-10-08. A browser that
+// stored it must see the same Jungle board afterwards.
+describe('migrating the Jungle board theme', () => {
+  it('turns a stored Jungle theme into the Jungle colour, whichever reader runs first', () => {
+    for (const first of ['theme', 'color', 'layout'] as const) {
+      const storage = installLocalStorage();
+      storage.setItem('mistboard.xiangqiBoardTheme', 'jungle');
+      storage.setItem('mistboard.xiangqiBoardThemeVersion', '4');
+      storage.setItem('mistboard.xiangqiBoardLayout', 'cell');
+      storage.setItem('mistboard.xiangqiBoardLayoutVersion', '1');
+      // A colour picked before Jungle was hidden under it, so Jungle wins.
+      storage.setItem('mistboard.xiangqiBoardColor', 'slate');
+      if (first === 'color') readStoredXiangqiBoardColor();
+      if (first === 'layout') readStoredXiangqiBoardLayout();
+      expect(readStoredXiangqiBoardTheme(), first).toBe('jungle');
+      expect(readStoredXiangqiBoardColor(), first).toBe('jungle');
+      expect(readStoredXiangqiBoardLayout(), first).toBe('cell');
+      expect(storage.getItem('mistboard.xiangqiBoardTheme')).toBe('international');
+      expect(storage.getItem('mistboard.xiangqiRiverText')).toBeNull();
+    }
+  });
+
+  it('puts a Jungle browser on the square grid even if its layout key was lined', () => {
+    const storage = installLocalStorage();
+    storage.setItem('mistboard.xiangqiBoardTheme', 'jungle');
+    storage.setItem('mistboard.xiangqiBoardLayout', 'intersection');
+    storage.setItem('mistboard.xiangqiBoardLayoutVersion', '1');
+    expect(readStoredXiangqiBoardLayout()).toBe('cell');
+    expect(readStoredXiangqiBoardTheme()).toBe('jungle');
+  });
+
+  it('migrates once: a later colour pick is not overwritten', () => {
+    const storage = installLocalStorage();
+    storage.setItem('mistboard.xiangqiBoardTheme', 'jungle');
+    expect(readStoredXiangqiBoardColor()).toBe('jungle');
+    storage.setItem('mistboard.xiangqiBoardColor', 'oak');
+    expect(readStoredXiangqiBoardColor()).toBe('oak');
+    expect(readStoredXiangqiBoardTheme()).toBe('international');
   });
 });

@@ -59,9 +59,8 @@ describe('puzzle board adapter registry', () => {
     const names = playableCorpora().map(([name]) => name);
     // If this shrinks to nothing the derivation below would vacuously pass, so
     // pin the known family corpora as a floor: the fixture registries that still
-    // ship puzzles, plus the served seed corpus. FORTRESS_XIANGQI_PUZZLES left
-    // this list on 2026-09-03 when Fortress stopped shipping puzzles; the scan
-    // skips empty arrays, so an empty registry is invisible to it by design.
+    // ship puzzles, plus the served seed corpus. The scan skips empty arrays, so
+    // an empty registry is invisible to it by design.
     expect(names).toEqual(
       expect.arrayContaining(['JUNGLE_PUZZLES', 'XIANGQI_PUZZLES', 'SEED_PUZZLES']),
     );

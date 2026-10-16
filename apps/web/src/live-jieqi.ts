@@ -24,6 +24,7 @@ import type {
 } from '@mistboard/game';
 import './live-xiangqi.css';
 import { jieqiEnabled } from './feature-flags.js';
+import { finishBadgesForResult, generalSquareOn } from './live-finish-badges.js';
 import { jieqiClickResult } from './live-jieqi-interaction.js';
 import {
   animateJieqiBoardMove,
@@ -32,6 +33,11 @@ import {
   jieqiPieceGhostSvg,
   renderJieqiBoardSvg,
 } from './live-jieqi-render.js';
+import {
+  rebuildFinishedJieqiHistory,
+  rebuildLiveJieqiHistory,
+} from './live-jieqi-replay-history.js';
+import { mountRevealOdds, type RevealOddsMount } from './live-jieqi-reveal-odds.js';
 import {
   maybePlayJieqiSnapshotSound,
   resetJieqiSoundState,
@@ -54,7 +60,7 @@ import {
   type TenantLiveEvent,
   type TenantMovePlayed,
 } from './variant-tenant/live-client.js';
-import type { WebVariantTenant } from './variant-tenant/room-chrome.js';
+import type { TenantReasonKey, WebVariantTenant } from './variant-tenant/room-chrome.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
@@ -87,34 +93,35 @@ let core: TenantLiveClientContext<JieqiColor, JieqiWireView> | null = null;
 let selectedSquare: JieqiSquare | null = null;
 // Right-click arrows/circles the player drew on this board.
 let annotations: BoardAnnotations | null = null;
+// The live reveal odds (live-jieqi-reveal-odds.ts), mounted once at setup.
+let revealOdds: RevealOddsMount | null = null;
 // The square a piece is being dragged from (its piece is lifted off the board so
 // only the floating ghost shows). Null when not dragging.
 let draggingFrom: JieqiSquare | null = null;
 // Snapshot extras that ride the frame (read by the chrome + play-again body).
 let roomMode: 'pve' | 'pvp' = 'pvp';
 let pveEngineId: string | null = null;
+// The server's + / # per ply (jieqi-tenant jieqiLiveCheckMarks). Rides every
+// frame; absent means no move has given check yet.
+let checkMarks: readonly string[] = [];
 
 const jieqiWebTenant: WebVariantTenant<JieqiColor> = {
-  displayName: 'Jieqi',
-  metaMarkerId: 'jieqi',
-  metaGlyph: '象',
+  displayName: 'variant.jieqi.name',
   colors: ['red', 'black'],
   isColor: isJieqiColor,
   oppositeColor: (color) => (color === 'red' ? 'black' : 'red'),
   enabled: jieqiEnabled,
   reviewUrl: (roomId) => `/jieqi/game/${encodeURIComponent(roomId)}`,
   reasonPhrase: jieqiReasonPhrase,
-  disabledTitle: 'Jieqi disabled',
-  disabledBody: 'This client build has the room renderer off.',
-  rejectedBody: 'This Jieqi room is not active. Create a new invite to start a game.',
-  spectatorBody: 'Watching without private information.',
-  selectInstruction: 'Select one of your pieces, then choose a destination.',
+  spectatorBody: 'live.spectatorNoPrivateInfo',
+  selectInstruction: 'live.selectPieceThenDestination',
 };
 
 const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
   tenant: jieqiWebTenant,
   gameSpecId: 'jieqi',
   defaultRoomId: 'jq_dev',
+  flippable: true,
   boardClass: 'jieqi-live-board',
   chrome: {
     roomMode: () => roomMode,
@@ -129,6 +136,7 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
   onFrame: (frame) => {
     if (frame.roomMode === 'pve' || frame.roomMode === 'pvp') roomMode = frame.roomMode;
     if (typeof frame.pveEngineId === 'string') pveEngineId = frame.pveEngineId;
+    checkMarks = jieqiFrameCheckMarks(frame.checkMarks);
   },
   onSnapshotApplied: () => {
     if (core) maybePlayJieqiSnapshotSound(core.state.view, core.state.seat);
@@ -142,6 +150,7 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
     draggingFrom = null;
     roomMode = 'pvp';
     pveEngineId = null;
+    checkMarks = [];
   },
   renderBoard,
   // Piece glides (pieceAnimation pref). Live: only REMOTE moves animate -- an own
@@ -151,6 +160,15 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
   // drag ghost. A jieqi move may also REVEAL the piece it moves; the glide
   // carries whatever the final render put on the destination square, so the
   // reveal lands with the piece rather than ahead of it.
+  finishBadges: (view) =>
+    view.status.type === 'finished'
+      ? finishBadgesForResult({
+          colors: jieqiWebTenant.colors,
+          winner: view.status.winner,
+          reason: view.status.reason,
+          generalSquare: (color) => generalSquareOn(view.board, color),
+        })
+      : [],
   animateBoard: (liveRefs, view, takePendingAnimation) => {
     if (!view || draggingFrom) return;
     const pending = takePendingAnimation();
@@ -168,7 +186,10 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
     const undone = pending.prevView?.lastMove;
     if (undone) animateJieqiBoardMove(liveRefs.board, undone, perspective, { reverse: true });
   },
-  renderExtras: (refs, view) => renderCapturedPools(refs, view),
+  renderExtras: (refs, view) => {
+    renderCapturedPools(refs, view);
+    renderRevealOdds(view);
+  },
   onDisabled: (refs) => {
     // renderCapturedPools ran before the enabled guard in the original, so it
     // paints even when the flag is off; then the selection clears.
@@ -179,6 +200,11 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
     core = ctx;
     installJieqiBoardStyles();
     installJieqiBoardInteraction(ctx.refs);
+    revealOdds = mountRevealOdds(ctx.refs, () => {
+      const pieceSet = readStoredXiangqiPieceSet();
+      return ({ color, role }) =>
+        renderXiangqiPieceGlyphed({ color, role }, pieceSet, { ariaLabel: '' });
+    });
     // Hot-reload the viewer's xiangqi piece set mid-game (board + captured pool
     // render from the stored set); mirrors the chess family's appearance hook.
     window.addEventListener(xiangqiAppearanceChangedEvent, ctx.renderAll);
@@ -198,11 +224,31 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
     listClass: 'xiangqi-move-list',
     masked: false,
     notate: (move) => `${move.from}-${move.to}`,
+    notateLine: (moves) => jieqiLiveMoveLabels(moves, checkMarks),
     isMoveEvent: isJieqiMoveEvent,
   },
   replayCapture: {
     positionKey: replayPositionKey,
-    plyForView: (view, ctx) => replayPlyForView(view, ctx.positionChanged, ctx.latestPly),
+    plyForView: (view, ctx) =>
+      replayPlyForView(
+        view,
+        ctx.positionChanged,
+        ctx.latestPly,
+        ctx.events.filter(isJieqiMoveEvent).length,
+      ),
+  },
+  // A cold join or reload gets every ply back (live-jieqi-replay-history). A
+  // FINISHED room recovers the whole deal from its truth view; a LIVE room
+  // rebuilds from this viewer's own masked view, so a role it never saw stays
+  // masked on every ply.
+  replayHistory: {
+    rebuild: ({ events, view, state }) => {
+      const moves = events.filter(isJieqiMoveEvent).map((event) => event.move);
+      const seat = isJieqiColor(state.seat) ? state.seat : null;
+      return view.status.type === 'finished'
+        ? rebuildFinishedJieqiHistory(moves, view, seat ?? view.perspective)
+        : rebuildLiveJieqiHistory(moves, view, seat);
+    },
   },
 });
 
@@ -210,22 +256,40 @@ export function bootstrapJieqiLiveRoom(): void {
   client.bootstrap();
 }
 
-function jieqiReasonPhrase(reason: string): string {
+/** The frame's check marks, or none when absent or malformed. */
+export function jieqiFrameCheckMarks(value: unknown): readonly string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((mark) => (mark === '+' || mark === '#' ? mark : ''));
+}
+
+/** from-to labels with the server's + / # for each ply. Exported for tests. */
+export function jieqiLiveMoveLabels(
+  moves: readonly JieqiMove[],
+  marks: readonly string[],
+): string[] {
+  return moves.map((move, index) => `${move.from}-${move.to}${marks[index] ?? ''}`);
+}
+
+function jieqiReasonPhrase(reason: string): TenantReasonKey {
   switch (reason) {
     case 'checkmate':
-      return 'checkmate';
+      return 'result.checkmate';
     case 'stalemate':
-      return 'stalemate';
+      return 'result.stalemate';
     case 'no-capture-clock':
-      return 'no progress';
+      return 'result.noProgress';
+    case 'repetition':
+      return 'result.threefoldRepetition';
+    case 'chasing':
+      return 'result.perpetualCheck';
     case 'timeout':
-      return 'timeout';
+      return 'result.timeout';
     case 'resignation':
-      return 'resignation';
+      return 'result.resignation';
     case 'abandonment':
-      return 'abandonment';
+      return 'result.abandonment';
     default:
-      return 'the game rules';
+      return 'result.gameRules';
   }
 }
 
@@ -359,6 +423,13 @@ function renderCapturedPools(liveRefs: LiveRefs, view: JieqiWireView | null): vo
   renderJieqiMaterial(liveRefs, view, orientationFor(view));
 }
 
+// Reveal odds from the DISPLAYED view only: the seat's own PlayerView (or the
+// spectator's public view) at the ply on screen, so a scrub shows the odds as
+// they stood then and nothing reads past what this viewer was sent.
+function renderRevealOdds(view: JieqiWireView | null): void {
+  revealOdds?.render({ view, orientation: orientationFor(view) });
+}
+
 // Exported for unit testing the material data path (revealed identity vs an
 // unidentifiable "?" dark piece) without a live socket — same
 // extraction rationale as live-jieqi-render / live-jieqi-interaction.
@@ -396,11 +467,16 @@ function replayPlyForView(
   view: JieqiWireView,
   positionChanged: boolean,
   latestPly: number,
+  moveEvents: number,
 ): number {
   if (view.status.type === 'playing') {
     const completedFullMoves = Math.max(0, view.moveNumber - 1);
     return completedFullMoves * 2 + (view.status.turn === 'black' ? 1 : 0);
   }
+  // A game that is over sits at its move count. Counting from what this client
+  // happened to capture filed a cold join's final position as ply 1 (it had
+  // captured nothing), and a resignation's reveal as a ply past the last move.
+  if (moveEvents > 0) return moveEvents;
   if (positionChanged && view.lastMove) return latestPly + 1;
   return latestPly;
 }
@@ -435,8 +511,8 @@ function isJieqiMoveEvent(event: TenantLiveEvent): event is JieqiMoveEvent {
 }
 
 function orientationFor(view: JieqiWireView | null): JieqiColor {
-  const seat = core?.state.seat;
-  if (isJieqiColor(seat)) return seat;
+  // The core's orientation carries the viewer's flip.
+  if (core) return core.orientation();
   return view?.perspective ?? 'red';
 }
 

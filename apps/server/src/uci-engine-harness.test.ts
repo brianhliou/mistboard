@@ -698,14 +698,20 @@ test('UciWarmSessionCache discards a session whose request failed and spawns afr
 // warm-session paths.
 
 test('runUciBestmove timeout reports the handshake it saw and the last line', async () => {
+  // The budget has to outlast the fake engine's start-up, not just its search:
+  // a node child answers `uci` in ~60 ms on an idle laptop and in seconds at
+  // load average 89 (2026-09-23, eight sessions running suites), and at 200 ms
+  // this test then saw "no output" and failed three release gates in a row.
+  // The engine stays mute after `readyok`, so the assertion is about the
+  // handshake being reported, not about how quickly it timed out.
   await assert.rejects(
     runUciBestmove({
       bin: warmMuteBin,
       commands: ['uci', 'isready', 'go movetime 50'],
-      timeoutMs: 200,
+      timeoutMs: 3000,
       timeoutMessage: 'engine move timed out',
     }),
-    /engine move timed out after 200ms: uciok@\d+ms, readyok@\d+ms, 0 info line\(s\), last line "readyok"/,
+    /engine move timed out after 3000ms: uciok@\d+ms, readyok@\d+ms, 0 info line\(s\), last line "readyok"/,
   );
 });
 

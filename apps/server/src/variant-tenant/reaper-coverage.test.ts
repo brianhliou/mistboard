@@ -16,7 +16,8 @@ import { appendTenantRuntimeEvent, createTenantRuntimeRoom } from './runtime.js'
 // condition, so the state space is covered only by coincidence unless something
 // asserts it. In-memory (lifecycle.ts): the clock timer needs an ARMED clock,
 // the abort timer needs moveNumber < 2, the forfeit timer needs EXACTLY ONE
-// seat absent. Durable: the guest-prestart sweep needs zero
+// seat absent AND a disconnect-forfeit policy that is on (both are off since
+// #436, so this mechanism currently claims nothing). Durable: the guest-prestart sweep needs zero
 // move-played/clock-started events AND no signed-in seat token
 // (persistence-game-lifecycle.ts:356), the stale-paused sweep needs `paused`,
 // the deadline sweeper needs days-per-move.
@@ -38,6 +39,8 @@ type Cell = {
   moves: number;
   connected: Color[];
   reaped: boolean;
+  // Created by a lobby match rather than an invite link.
+  lobby?: boolean;
 };
 
 const CELLS: Cell[] = [
@@ -58,7 +61,12 @@ const CELLS: Cell[] = [
     reaped: true,
   },
   {
-    name: 'live clock, both seated, past move 1, one gone -> leaver forfeits',
+    // The clock is the only reaper left in this cell: the disconnect forfeit is
+    // off for PvE and, since the PvP half, for human opponents too (#436,
+    // lifecycle-windows.ts). It is enough BECAUSE the clock runs through a
+    // disconnect, so the absent seat flags. The clockless version of this same
+    // shape is the row below, and it is why the create route defaults a clock.
+    name: 'live clock, both seated, past move 1, one gone -> absent seat flags',
     timeControl: LIVE_TC,
     seats: 'both',
     moves: 2,
@@ -76,6 +84,30 @@ const CELLS: Cell[] = [
     moves: 0,
     connected: [],
     reaped: true,
+  },
+  {
+    // Deliberately unclaimed, the contrast for the lobby row below: someone is
+    // sitting in an invite room waiting for the friend they sent the link to,
+    // and that wait is never cut short. The window arms when they leave.
+    name: 'invite link, opponent not joined yet, creator present -> waits',
+    timeControl: LIVE_TC,
+    seats: 'white-only',
+    moves: 0,
+    connected: ['white'],
+    reaped: false,
+  },
+  {
+    // The same shape from a lobby match (prod, 2026-10-02): the lobby paired a
+    // seeker whose tab had died, and the joiner sat alone forever under an
+    // invite prompt. Nobody is coming to a lobby room late, so the no-show
+    // window claims it even with the joiner present.
+    name: 'lobby match, opponent never connected, other player present -> no-show abort',
+    timeControl: LIVE_TC,
+    seats: 'white-only',
+    moves: 0,
+    connected: ['white'],
+    reaped: true,
+    lobby: true,
   },
   {
     // KNOWN GAP, deliberately left open -- but no longer reachable by creating
@@ -107,6 +139,7 @@ function buildRoom(cell: Cell) {
   const created = createTenantRuntimeRoom(darkChessTenant, `dchx_reaper_${CELLS.indexOf(cell)}`, {
     now: 1_000,
     ...(cell.timeControl ? { timeControl: cell.timeControl } : {}),
+    ...(cell.lobby ? { lobbyMatch: true } : {}),
   });
   assert.ok(created.ok, `fixture room must create (got ${created.ok ? '' : created.error})`);
   const room = created.room;

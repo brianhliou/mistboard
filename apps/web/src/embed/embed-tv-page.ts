@@ -23,7 +23,7 @@ import { pickHeroPovForGame } from '../landing-showcase.js';
 import { type LandingTvMode, mountLandingTv } from '../landing-tv.js';
 import type { GameMeta } from '../replay.js';
 import { renderWatchReplaySkeleton } from '../replay-skeleton.js';
-import type { ShowcaseEntry } from '../showcase-cycler.js';
+import { type ShowcaseEntry, showcaseAirFields } from '../showcase-cycler.js';
 import { specIdForShowcaseVariant } from '../showcase-dispatch.js';
 import { boardAspectForSpec } from '../watch-board-aspect.js';
 import { fitSoloBoardWidth } from './embed-game-page.js';
@@ -106,6 +106,7 @@ export async function mountEmbedTv(root: HTMLElement, options: EmbedTvOptions): 
       specId: specIdForShowcaseVariant(game.variant),
       pov: pickHeroPovForGame(game),
       endedAt: game.endedAt,
+      ...showcaseAirFields(game),
     };
   };
 

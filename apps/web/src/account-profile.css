@@ -1212,6 +1212,24 @@
   vertical-align: 1px;
 }
 
+/* A line of pills only (profile and bot headers): one flex row, every pill
+   centred on it and the same height, so a pill with an icon (Patron) and a
+   text-only pill (Admin) share a top and a bottom. The gap replaces the old
+   ' · ' separators. */
+.profile-header-meta.profile-header-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.profile-header-badges .profile-role-badge {
+  box-sizing: border-box;
+  height: 20px;
+  margin-left: 0;
+  vertical-align: middle;
+}
+
 .profile-role-badge {
   display: inline-flex;
   align-items: center;
@@ -1623,7 +1641,10 @@
 .profile-rating-games {
   color: var(--site-muted);
   font-size: 12px;
-  line-height: 1.2;
+  /* Room for descenders: overflow is hidden (for the ellipsis), so at 1.2 the
+     tail of the "g" in "games" was cut off. At 1.4 the box matches the
+     italic "Unrated" beside it; a row grows by under a pixel. */
+  line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2037,6 +2058,30 @@
   outline: none;
 }
 
+/* A game that cannot be opened (old rules, a variant with no game page): no
+   overlay link, so no hover lift and no pointer; muted so it reads as history
+   rather than a destination. The opponent link inside still works. */
+.profile-game-row.profile-game-row-unavailable {
+  cursor: default;
+}
+
+.profile-game-row.profile-game-row-unavailable:hover {
+  background: var(--site-panel);
+  box-shadow: none;
+}
+
+.profile-game-row-unavailable .profile-game-outcome,
+.profile-game-row-unavailable .profile-game-body,
+.profile-game-row-unavailable .profile-game-date {
+  opacity: 0.6;
+}
+
+.profile-game-detail.profile-game-unavailable {
+  border-color: var(--site-border);
+  background: transparent;
+  color: var(--site-heading);
+}
+
 .profile-game-row-win {
   --profile-game-tone: var(--site-accent);
 }
@@ -2167,6 +2212,29 @@
   min-width: 60px;
 }
 
+/* How the game ended (the /correspondence "Recently finished" rows): an
+   outlined pill, so it reads as the outcome's detail rather than metadata. */
+.profile-game-detail.profile-game-ending {
+  border-color: var(--site-border-soft);
+  background: transparent;
+  color: var(--site-heading);
+}
+
+/* "New" beside the opponent: a game that ended since the player last looked.
+   Small and accent-tinted; never animated. Two classes deep to beat the
+   row's .profile-game-row span size. */
+.profile-game-topline .profile-game-new {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--site-accent) 15%, var(--site-panel));
+  color: color-mix(in srgb, var(--site-accent) 80%, var(--site-heading));
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 /* Time control joins the fixed-width leading pills so the source + ply pills
    stay aligned across rows. Tabular figures keep "1 + 1" and "3 + 2" the same
    visual width; the soft accent border reads it as the game's speed. */
@@ -2190,6 +2258,105 @@
   border-color: var(--site-border-soft);
   background: transparent;
   color: var(--site-muted);
+}
+
+/* The Games list's tools: result switch and opponent search.
+   One row under the sub-tabs, in the same soft band as the tab strip, so the
+   controls read as the list's header rather than as page content. */
+.profile-games-controls[hidden] {
+  display: none;
+}
+
+.profile-games-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--site-border-soft);
+  background: var(--site-panel-soft);
+}
+
+.profile-games-results {
+  display: inline-flex;
+  border: 1px solid var(--site-border);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--site-panel);
+}
+
+.profile-games-result {
+  appearance: none;
+  min-height: 30px;
+  padding: 0 13px;
+  border: 0;
+  border-right: 1px solid var(--site-border-soft);
+  background: transparent;
+  color: var(--site-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.profile-games-result:last-child {
+  border-right: 0;
+}
+
+.profile-games-result:hover {
+  background: var(--site-hover);
+  color: var(--site-heading);
+}
+
+.profile-games-result[aria-pressed="true"] {
+  background: var(--site-accent);
+  color: var(--site-on-accent, #fff);
+}
+
+.profile-games-result:focus-visible {
+  outline: 2px solid var(--site-focus);
+  outline-offset: 2px;
+}
+
+.profile-games-opponent {
+  margin: 0;
+}
+
+.profile-games-opponent-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--site-muted);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.profile-games-opponent-input {
+  width: 10.5rem;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--site-border);
+  border-radius: 8px;
+  background: var(--site-panel);
+  color: var(--site-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.profile-games-opponent-input:focus-visible {
+  outline: 2px solid var(--site-focus);
+  outline-offset: 1px;
+}
+
+@media (max-width: 560px) {
+  .profile-games-opponent,
+  .profile-games-opponent-label,
+  .profile-games-opponent-input {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+  }
 }
 
 /* The "showing one variant" chip above a filtered games list. Sits inside the
@@ -2308,51 +2475,25 @@
   grid-template-areas:
     "online-heading heading"
     ". sub"
-    "online paces"
     "online grid";
   gap: 4px 28px;
   align-items: start;
 }
 
-/* Pace tabs above the ladder wall: each rated time control is its own Glicko
-   pool, so the grid below always shows exactly one pace. */
-.leaderboard-paces {
-  grid-area: paces;
-  display: flex;
-  gap: 6px;
-  margin-bottom: 10px;
+/* One section per rated pace that has a player (lichess /player): a quiet
+   pace heading over that pace's ladder wall. */
+.leaderboard-ladders {
+  grid-area: grid;
+  display: grid;
+  gap: 22px;
+  padding-top: 12px;
 }
 
-.leaderboard-pace {
-  appearance: none;
-  border: 1px solid var(--site-border);
-  border-radius: 4px;
-  background: transparent;
-  color: var(--site-muted);
-  cursor: pointer;
-  font: inherit;
-  font-size: 13px;
-  padding: 4px 12px;
-}
-
-/* Touch floor: the pace chips switch which ladder you are reading, so they are
-   a real control on the phone leaderboard, not decoration. */
-@media (pointer: coarse) {
-  .leaderboard-pace {
-    min-height: 44px;
-    padding: 4px 16px;
-  }
-}
-
-.leaderboard-pace:hover {
+.leaderboard-pace-heading {
+  margin: 0 0 8px;
   color: var(--site-heading);
-}
-
-.leaderboard-pace.selected {
-  background: var(--site-surface-raised, transparent);
-  border-color: var(--site-heading);
-  color: var(--site-heading);
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 400;
 }
 
 .rating-stats-body {
@@ -2590,13 +2731,11 @@
 
 /* Ladder wall: as many top-10 tables per row as fit the shell. Tight gaps and
    stretched cells (no align-items) fuse the panels into one dense surface;
-   empty ladders are re-ordered to the tail by mountLeaderboard. */
+   only ladders with a player get a panel. */
 .leaderboard-grid {
-  grid-area: grid;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
-  padding-top: 12px;
 }
 
 .leaderboard-panel {
@@ -2656,6 +2795,40 @@
   color: var(--site-muted);
   font-size: 13px;
   margin: 0;
+}
+
+.rating-stats-paces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: -14px;
+}
+
+.rating-stats-pace {
+  padding: 5px 12px;
+  border: 1px solid var(--site-border);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--site-muted);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 120ms ease;
+}
+
+.rating-stats-pace:hover {
+  color: var(--site-heading);
+}
+
+.rating-stats-pace:focus-visible {
+  outline: 2px solid var(--site-focus);
+  outline-offset: 1px;
+}
+
+.rating-stats-pace-active {
+  border-color: transparent;
+  color: var(--site-accent-strong);
+  background: var(--site-accent-soft);
 }
 
 .rating-stats-chart-shell {
@@ -2735,7 +2908,6 @@
       "sub"
       "online-heading"
       "online"
-      "paces"
       "grid";
   }
 

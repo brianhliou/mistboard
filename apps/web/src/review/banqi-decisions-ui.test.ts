@@ -52,22 +52,27 @@ describe('banqi decision overlay wiring', () => {
     document.body.append(root);
     const moves = firstMoves(3);
 
-    mountBanqiReview(root, 'room-x', STANDARD_BANQI_DEAL, {
-      ariaLabel: 'test',
-      title: 'Banqi',
-      summary: 'test',
-      moves,
-      analysis: {
-        requestLabel: 'Analyse',
-        fetchCached: async () => fakeAnalysis(moves.length),
-        run: async () => fakeAnalysis(moves.length),
+    mountBanqiReview(
+      root,
+      'room-x',
+      { deal: STANDARD_BANQI_DEAL, rules: {} },
+      {
+        ariaLabel: 'test',
+        title: 'Banqi',
+        summary: 'test',
+        moves,
+        analysis: {
+          requestLabel: 'Analyse',
+          fetchCached: async () => fakeAnalysis(moves.length),
+          run: async () => fakeAnalysis(moves.length),
+        },
+        decisions: {
+          fetchCached: async () => overlayWithFlaggedFlip(),
+          canRun: true,
+          run: async () => overlayWithFlaggedFlip(),
+        },
       },
-      decisions: {
-        fetchCached: async () => overlayWithFlaggedFlip(),
-        canRun: true,
-        run: async () => overlayWithFlaggedFlip(),
-      },
-    });
+    );
 
     // Both fetchCached calls resolve on microtasks; let them flush.
     await Promise.resolve();

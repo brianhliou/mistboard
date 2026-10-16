@@ -1,4 +1,5 @@
 import {
+  appendRoomEvent,
   createUser,
   listCorrespondenceDigestCandidates,
   markCorrespondenceDigestSent,
@@ -128,5 +129,98 @@ definePersistenceTests('correspondence digest', () => {
     );
     await markCorrespondenceDigestSent(idle.id, now);
     assert.deepEqual(await listCorrespondenceDigestCandidates({ now, sentBefore, idleSince }), []);
+  });
+
+  // Prod, jq_e7ee960b: the last move landed at 16:35 UTC and the waiting
+  // player's reconnect at 19:08 re-upserted the row (every seat-assigned event
+  // does), bumping updated_at. Keyed on updated_at, each visit by the player
+  // NOT on the move pushed the absent player's digest back by its own age.
+  test('digest candidates: the wait runs from the turn start, not the opponent reconnect', async () => {
+    const allowanceMs = 3 * 24 * HOUR_MS;
+    const turnStart = new Date('2026-10-03T16:35:00Z');
+    const reconnect = new Date(turnStart.getTime() + 7 * HOUR_MS);
+    const now = new Date(turnStart.getTime() + 13 * HOUR_MS);
+    const idleSince = new Date(now.getTime() - 12 * HOUR_MS);
+    const sentBefore = new Date(now.getTime() - HOUR_MS);
+    const roomId = 'jq_digest_reconnect';
+
+    const mk = (id: string) =>
+      createUser({
+        id,
+        email: `${id}@example.com`,
+        emailVerifiedAt: turnStart,
+        handle: id,
+        displayName: id,
+        now: turnStart,
+      });
+    const absent = await mk('digest-absent');
+    const waiting = await mk('digest-waiting');
+    await appendRoomEvent(roomId, 0, {
+      type: 'room-created',
+      at: turnStart.getTime() - 24 * HOUR_MS,
+      roomId,
+      gameSpecId: 'jieqi',
+      timeControl: { initialMs: allowanceMs, incrementMs: 0, daysPerMove: 3 },
+    });
+    await upsertRoomSeatToken(roomId, {
+      seat: 'black',
+      clientId: 'client-waiting',
+      tokenHash: sha256(`token-${roomId}`),
+      userId: waiting.id,
+      userHandle: waiting.handle,
+      userDisplayName: waiting.displayName,
+      issuedAt: turnStart,
+      lastSeenAt: reconnect,
+    });
+    // The waiting player's move at turnStart armed red's deadline; their
+    // reconnect re-upserted the same deadline, which is what moves updated_at.
+    const deadline = {
+      roomId,
+      gameSpecId: 'jieqi',
+      seat: 'red',
+      seatUserId: absent.id,
+      dueAt: new Date(turnStart.getTime() + allowanceMs),
+    };
+    await upsertRoomDeadline(deadline);
+    await upsertRoomDeadline(deadline);
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      await client.query(`UPDATE room_deadlines SET updated_at = $2 WHERE room_id = $1`, [
+        roomId,
+        reconnect,
+      ]);
+      await client.query(`UPDATE users SET last_seen_at = $2 WHERE id = $1`, [
+        absent.id,
+        new Date(turnStart.getTime() - 5 * HOUR_MS),
+      ]);
+      await client.query(`UPDATE users SET last_seen_at = $2 WHERE id = $1`, [
+        waiting.id,
+        reconnect,
+      ]);
+    } finally {
+      await client.end();
+    }
+
+    const candidates = await listCorrespondenceDigestCandidates({ now, sentBefore, idleSince });
+    assert.deepEqual(
+      candidates.map((candidate) => [
+        candidate.userId,
+        candidate.games.map((game) => [game.roomId, game.opponentName]),
+      ]),
+      [[absent.id, [[roomId, 'digest-waiting']]]],
+    );
+
+    // Two hours earlier the recipient was just as absent, but the turn was only
+    // 11h old: not yet a stalled game.
+    const earlier = new Date(now.getTime() - 2 * HOUR_MS);
+    assert.deepEqual(
+      await listCorrespondenceDigestCandidates({
+        now: earlier,
+        sentBefore: new Date(earlier.getTime() - HOUR_MS),
+        idleSince: new Date(earlier.getTime() - 12 * HOUR_MS),
+      }),
+      [],
+    );
   });
 });

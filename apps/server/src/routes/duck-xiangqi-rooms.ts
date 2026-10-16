@@ -4,6 +4,7 @@
  */
 
 import { DUCK_XIANGQI_SPEC_ID, type RoomTimeControl } from '@mistboard/game';
+import type { DrainCreate } from '../deploy-gate.js';
 import {
   DUCK_XIANGQI_DEFAULT_ENGINE_ID,
   isDuckXiangqiEngineClientId,
@@ -12,7 +13,7 @@ import { createTenantRoomsRoute } from './../variant-tenant/rooms-route.js';
 
 export type DuckXiangqiCreateContext = {
   databaseRequired: boolean;
-  isDraining(): boolean;
+  refusesCreate(create?: DrainCreate): boolean;
   drainDeadlineMs(): number | null;
   createDuckXiangqiRoom(
     timeControl?: RoomTimeControl,
@@ -45,13 +46,8 @@ const duckXiangqiRoute = createTenantRoomsRoute<
     isEngineClientId: isDuckXiangqiEngineClientId,
     seats: DUCK_XIANGQI_SEATS,
   },
-  // PvE stays UNRATED here, and the policy is unchanged by the bot shipping:
-  // the `duck_xiangqi` pool does not exist in the user_ratings CHECK and the
-  // ladder has no EvE calibration behind it. `reject-as-surface` is what the
-  // other unrated tenants use (banqi, jungle): a rated request is
-  // turned away as unsupported by the surface rather than as a
-  // rating-eligibility failure, which is the honest reason here.
-  rated: { kind: 'reject-as-surface' },
+  // Rated friend rooms follow the lobby (rooms-route.ts gateRatedRoomRequest):
+  // PvP may be rated wherever Find opponent is; PvE never is.
   createRoom: (ctx, { timeControl, preferredColor, rated, engine }) =>
     ctx.createDuckXiangqiRoom(timeControl, preferredColor, rated, engine),
 });

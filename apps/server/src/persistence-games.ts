@@ -1,17 +1,9 @@
-import {
-  BANQI_SPEC_ID,
-  type Color,
-  FORTRESS_XIANGQI_SPEC_ID,
-  JIEQI_SPEC_ID,
-  TIME_CONTROLS,
-  type TimeClass,
-  XIANGQI_SPEC_ID,
-  type XiangqiColor,
-} from '@mistboard/game';
+import { type Color, TIME_CONTROLS, type TimeClass, type XiangqiColor } from '@mistboard/game';
 import type { MahjongSeat } from '@mistboard/mahjong';
 import { engineVersionDisplayName } from './engine-registry.js';
 import { botEngineAttributions, firstPartyBotForEngine } from './first-party-bots.js';
 import { getPool, withTransaction } from './persistence-db.js';
+import { scheduledEngineGame } from './persistence-game-data.js';
 import type {
   GameMode,
   GameReviewStatus,
@@ -163,12 +155,21 @@ export type GameRecord = {
   participants: GameParticipant[];
 };
 
+// Why a listed game cannot be opened (replayable-games.ts markUnavailableGames):
+// 'old-rules' = its variant's rules changed under it and the stored log no
+// longer replays; 'unsupported-variant' = no page on the site mounts the
+// variant's finished games. The profile lists keep such a game and say so;
+// discovery surfaces drop it.
+export type GameUnavailableReason = 'old-rules' | 'unsupported-variant';
+
 export type ProfileGameRecord = GameRecord & {
   playerColor: GameParticipantColor;
   // Clock for this game (PvP/PvE store it on games.initial_ms / increment_ms;
   // null for clockless games). Drives the time-control badge on the profile row.
   initialMs: number | null;
   incrementMs: number | null;
+  // Set by the route, never by the query: absent means the game opens.
+  unavailable?: GameUnavailableReason;
 };
 
 export type RecentEveGameRecord = GameRecord & {
@@ -623,6 +624,10 @@ export async function listRecentPublicGames(limit = 10): Promise<RecentEveGameRe
      FROM games
      LEFT JOIN eve_games ON eve_games.game_id = games.room_id
      WHERE games.status = 'completed'
+       -- Played-here games only, like the watch feeds: an imported game (a
+       -- historical corpus, an off-site engine match) is dated when it was
+       -- played elsewhere, and a 400-game match import would fill this list.
+       AND games.mode <> 'imported'
        AND NOT (games.termination = 'timeout' AND games.ply_count < $1)
        AND NOT (games.mode = 'pvp' AND games.ply_count < $3)
        AND NOT (games.mode = 'pve' AND games.ply_count < 2)
@@ -757,6 +762,15 @@ export function interleaveByVariant(
   return out;
 }
 
+// The homepage airs a finished fog game at its recorded pace, so a
+// days-per-move game would sit on one ply for hours with frozen clocks. The
+// room-created event (seq 0) is the durable home of the time control.
+const NOT_CORRESPONDENCE_SQL = `NOT EXISTS (
+         SELECT 1 FROM events rc
+         WHERE rc.room_id = games.room_id AND rc.seq = 0
+           AND rc.payload->'timeControl' ? 'daysPerMove'
+       )`;
+
 // Recent substantial PvP, watch-style: any finish past the ply floor.
 async function queryShowcasePvp(
   limit: number,
@@ -774,6 +788,7 @@ async function queryShowcasePvp(
        AND EXISTS (
          SELECT 1 FROM events WHERE events.room_id = games.room_id LIMIT 1
        )
+       AND ${NOT_CORRESPONDENCE_SQL}
      ORDER BY games.ended_at DESC, games.room_id DESC
      LIMIT $2`,
     [CURATED_MIN_PLY, limit, variants],
@@ -800,6 +815,7 @@ async function queryShowcasePve(
        AND EXISTS (
          SELECT 1 FROM events WHERE events.room_id = games.room_id LIMIT 1
        )
+       AND ${NOT_CORRESPONDENCE_SQL}
      ORDER BY games.ended_at DESC, games.room_id DESC
      LIMIT $2`,
     [CURATED_MIN_PLY, limit, variants],
@@ -836,29 +852,34 @@ export async function listWatchUnlockedGames(
     values.push(CURATED_MIN_PLY);
     curatedClause = `AND games.ply_count >= $${values.length}`;
   }
+  // The last event is looked up per candidate game (a LATERAL walk down the
+  // events primary key), so Postgres reads games newest-first and stops at
+  // the limit. A DISTINCT ON over every completed game's events read the whole
+  // events table on each call and grew with every game played (1.1 s cold on
+  // prod, 2026-10-03).
   const { rows } = await getPool().query<RecentEveGameRow>(
-    `WITH last_events AS (
-       SELECT DISTINCT ON (events.room_id)
-              events.room_id,
-              events.type
+    `SELECT ${RECENT_EVE_SELECT_COLUMNS}
+     FROM games
+     LEFT JOIN eve_games ON eve_games.game_id = games.room_id
+     JOIN LATERAL (
+       SELECT events.type
        FROM events
-       JOIN games ON games.room_id = events.room_id
-       WHERE games.status = 'completed'
+       WHERE events.room_id = games.room_id
          -- Match the last GAMEPLAY-terminal event, ignoring post-game noise such
          -- as seat-assigned from a reconnect (DMX appends these after the final
          -- move, which otherwise fails the termination/last-event consistency
          -- check below and hides the game from watch).
          AND events.type IN ('move-played', 'clock-expired', 'seat-resigned', 'seat-forfeited')
-       ORDER BY events.room_id, events.seq DESC
-     )
-     SELECT ${RECENT_EVE_SELECT_COLUMNS}
-     FROM games
-     LEFT JOIN eve_games ON eve_games.game_id = games.room_id
-     JOIN last_events ON last_events.room_id = games.room_id
+       ORDER BY events.seq DESC
+       LIMIT 1
+     ) last_events ON true
      WHERE games.status = 'completed'
        ${variantClause}
        ${modeClause}
        ${curatedClause}
+       -- Watch is a live TV surface; a days-per-move game replays as frozen
+       -- 00:00 clocks there (Brian, 2026-10-14), so it stays in its room.
+       AND ${NOT_CORRESPONDENCE_SQL}
        AND games.ended_at <= $2
        AND (
          -- A move-decided ending always closes on a move-played event, whatever the
@@ -898,23 +919,20 @@ export async function countWatchSealedGames(options: WatchSealedGameOptions = {}
   values.push(watchModeFilter(options.modes));
   const modeClause = `AND games.mode = ANY($${values.length}::text[])`;
   const { rows } = await getPool().query<{ count: number }>(
-    `WITH last_events AS (
-       SELECT DISTINCT ON (events.room_id)
-              events.room_id,
-              events.type,
-              events.payload
-       FROM events
-       JOIN games ON games.room_id = events.room_id
-       WHERE games.status = 'running'
-       ORDER BY events.room_id, events.seq DESC
-     )
-     SELECT count(*)::int AS count
+    `SELECT count(*)::int AS count
      FROM games
-     JOIN last_events ON last_events.room_id = games.room_id
+     JOIN LATERAL (
+       SELECT events.type, events.payload
+       FROM events
+       WHERE events.room_id = games.room_id
+       ORDER BY events.seq DESC
+       LIMIT 1
+     ) last_events ON true
      WHERE games.status = 'running'
        ${variantClause}
        ${modeClause}
        AND games.visibility <> 'private'
+       AND ${NOT_CORRESPONDENCE_SQL}
        AND last_events.type IN ('clock-started', 'move-played', 'resume')
        AND (last_events.payload->>'at')::bigint >= $1
        AND (last_events.payload->>'at')::bigint <= $2`,
@@ -968,6 +986,26 @@ export async function getGameSummary(roomId: string): Promise<RecentEveGameRecor
   if (!row) return null;
   const [record] = await attachGameParticipants([recentEveGameRecordFromRow(row)]);
   return record ?? null;
+}
+
+// getGameSummary for many rooms in one round trip: the same columns, mapper and
+// participant attach, so a bulk export (game-data-files.ts) hands each game's
+// single-game exporter exactly the record the per-game route would. Missing or
+// unfinished rooms are absent from the map.
+export async function getGameSummaries(
+  roomIds: readonly string[],
+): Promise<Map<string, RecentEveGameRecord>> {
+  if (roomIds.length === 0) return new Map();
+  const { rows } = await getPool().query<RecentEveGameRow>(
+    `SELECT ${RECENT_EVE_SELECT_COLUMNS}
+     FROM games
+     LEFT JOIN eve_games ON eve_games.game_id = games.room_id
+     WHERE games.room_id = ANY($1)
+       AND games.status = 'completed'`,
+    [[...roomIds]],
+  );
+  const records = await attachGameParticipants(rows.map(recentEveGameRecordFromRow));
+  return new Map(records.map((record) => [record.roomId, record]));
 }
 
 // ── Head-to-head (crosstable) ────────────────────────────────────────────────
@@ -1175,6 +1213,9 @@ export type GameQueryFilters = {
   // union merges on, or a page is drawn from the wrong candidate set.
   sort?: XiangqiGameSort;
   variant?: string;
+  // Stored-variant allowlist (the public games search passes the launched
+  // variants' stored strings). Like `modes`, an empty array matches nothing.
+  variants?: readonly string[];
   mode?: GameMode;
   // Mode allowlist, for callers that want several modes but not all of them —
   // the public games DB takes 'pvp' and 'pve' and leaves engine-lab self-play
@@ -1189,6 +1230,16 @@ export type GameQueryFilters = {
   player?: string;
   event?: string;
   result?: GameResult;
+  // Result allowlist, for a seat-keyed filter that spans variants: "the first
+  // seat won" is 'red-wins' in xiangqi and 'white-wins' in chess.
+  results?: readonly GameResult[];
+  // Only imported games whose room-created event carries an `origin` (an
+  // off-site engine match, engine-match-import.ts). Older imported corpora
+  // (import-corpus.ts) carry none and stay out of every public list.
+  importedOrigin?: boolean;
+  // Only the bot-vs-bot scheduler's engine games (#488, scheduledEngineGame in
+  // persistence-game-data.ts), not lab bake-off imports that are also mode 'eve'.
+  scheduledEngine?: boolean;
   termination?: GameTermination;
   rated?: boolean;
   timeClass?: TimeClass;
@@ -1234,6 +1285,11 @@ export function buildGameQueryWhere(filters: GameQueryFilters): {
     return `$${values.length}`;
   };
   if (filters.variant) conditions.push(`games.variant = ${bind(filters.variant)}`);
+  if (filters.variants) {
+    conditions.push(
+      filters.variants.length > 0 ? `games.variant = ANY(${bind([...filters.variants])})` : 'FALSE',
+    );
+  }
   if (filters.mode) conditions.push(`games.mode = ${bind(filters.mode)}`);
   if (filters.modes) {
     conditions.push(
@@ -1251,8 +1307,36 @@ export function buildGameQueryWhere(filters: GameQueryFilters): {
         ))`,
     );
   }
-  if (filters.event) conditions.push(`games.corpus_id ILIKE ${bind(`%${filters.event}%`)}`);
+  if (filters.event) {
+    // An imported game also answers to its event's display name ("AB-JChess vs
+    // PikaJieQi"), which lives on its room-created origin, not in corpus_id.
+    // The mode test comes first so the event lookup only runs for imported rows.
+    const like = `%${filters.event}%`;
+    conditions.push(
+      `(games.corpus_id ILIKE ${bind(like)}
+        OR (games.mode = 'imported' AND EXISTS (
+          SELECT 1 FROM events origin_event
+          WHERE origin_event.room_id = games.room_id AND origin_event.seq = 0
+            AND origin_event.payload->'origin'->>'event' ILIKE ${bind(like)}
+        )))`,
+    );
+  }
+  if (filters.importedOrigin) {
+    conditions.push(
+      `(games.mode = 'imported' AND EXISTS (
+        SELECT 1 FROM events origin_event
+        WHERE origin_event.room_id = games.room_id AND origin_event.seq = 0
+          AND origin_event.payload->'origin'->>'kind' = 'imported'
+      ))`,
+    );
+  }
+  if (filters.scheduledEngine) conditions.push(scheduledEngineGame('games'));
   if (filters.result) conditions.push(`games.result = ${bind(filters.result)}`);
+  if (filters.results) {
+    conditions.push(
+      filters.results.length > 0 ? `games.result = ANY(${bind([...filters.results])})` : 'FALSE',
+    );
+  }
   if (filters.termination) conditions.push(`games.termination = ${bind(filters.termination)}`);
   if (typeof filters.rated === 'boolean') conditions.push(`games.rated = ${bind(filters.rated)}`);
   if (filters.timeClass) {
@@ -1313,6 +1397,23 @@ export async function queryGames(filters: GameQueryFilters): Promise<GameQueryPa
   );
   const games = await attachGameParticipants(rows.map(recentEveGameRecordFromRow));
   return { games, total };
+}
+
+// The event name each imported game's room-created origin carries, keyed by
+// room id, for the rows of one result page. Games without an origin are absent.
+export async function listImportedGameOriginEvents(
+  roomIds: readonly string[],
+): Promise<Map<string, string>> {
+  if (roomIds.length === 0) return new Map();
+  const { rows } = await getPool().query<{ room_id: string; event: string | null }>(
+    `SELECT room_id, payload->'origin'->>'event' AS event
+     FROM events
+     WHERE room_id = ANY($1) AND seq = 0`,
+    [[...roomIds]],
+  );
+  const events = new Map<string, string>();
+  for (const row of rows) if (row.event) events.set(row.room_id, row.event);
+  return events;
 }
 
 export async function gameAggregates(filters: GameQueryFilters): Promise<GameAggregates> {
@@ -1490,7 +1591,7 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
         initialMs: summary.initialMs,
         incrementMs: summary.incrementMs,
       });
-      const colors = ratedParticipantColorsForVariant(summary.variant);
+      const colors = ratedParticipantColors(participants);
       const whiteParticipant = participants.find((p) => p.color === colors.white);
       const blackParticipant = participants.find((p) => p.color === colors.black);
       if (
@@ -1514,19 +1615,18 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
   });
 }
 
-function ratedParticipantColorsForVariant(variant: string): {
+function ratedParticipantColors(participants: readonly { color: GameParticipantColor }[]): {
   white: RatedParticipantColor;
   black: RatedParticipantColor;
 } {
-  // Jieqi + Banqi are red/black (red = first mover = the white rating slot, like
-  // DMX; banqi keys on the SEAT, not ink). The default result mapping
-  // below then applies (red-wins -> white-wins, black-wins passthrough), so no result arm.
-  if (variant === JIEQI_SPEC_ID || variant === BANQI_SPEC_ID)
-    return { white: 'red', black: 'black' };
-  // Standard + Fortress Xiangqi are red/black too. Missing here meant the
-  // rating block found no 'white' participant and SILENTLY skipped: the #151
-  // flip's first rated game recorded rated=true but moved nobody's rating.
-  if (variant === XIANGQI_SPEC_ID || variant === FORTRESS_XIANGQI_SPEC_ID)
+  // A red/black game (every xiangqi-family tenant, banqi and both jungles) puts
+  // red, the first mover, in the white rating slot; banqi keys on the SEAT, not
+  // ink. The result mapping below then applies (red-wins -> white-wins,
+  // black-wins passthrough). Read off the seats rather than a spec-id list: the
+  // list version rated only the variants someone remembered to add, and every
+  // other rated red/black game recorded rated=true and moved nobody's rating
+  // (xiangqi at the #151 flip, then atomic, duck, dark xiangqi and both jungles).
+  if (participants.some((participant) => participant.color === 'red'))
     return { white: 'red', black: 'black' };
   return { white: 'white', black: 'black' };
 }

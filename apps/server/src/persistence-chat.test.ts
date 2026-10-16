@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import pg from 'pg';
 import {
   activeChatTimeout,
   addChatLine,
@@ -16,7 +17,12 @@ import {
   resolveChatReport,
   upsertRoomSeatToken,
 } from './persistence.js';
-import { assert, definePersistenceTests, test } from './persistence-test-support.js';
+import {
+  assert,
+  definePersistenceTests,
+  TEST_DATABASE_URL,
+  test,
+} from './persistence-test-support.js';
 import { tryHandle as tryHandleChatRoute } from './routes/chat.js';
 
 type ResponseCapture = {
@@ -352,6 +358,52 @@ definePersistenceTests('chat', () => {
       ['study room line'],
     );
     assert.equal(payload.canPost, false);
+  });
+
+  test('broadcast chat is one room per event, and only an event that exists has one', async () => {
+    delete process.env.MISTBOARD_LOBBY_CHAT_ENABLED;
+    const now = new Date('2026-07-02T11:30:00Z');
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      await client.query(
+        `INSERT INTO xiangqi_broadcast_tours (slug, name, payload) VALUES ('chat-tour', '联赛', '{}')`,
+      );
+    } finally {
+      await client.end();
+    }
+    await makeUser('chat_user_relay', 'chatrelay', now);
+    await addChatLine({
+      id: 'chln_broadcast_room_1',
+      room: 'broadcast:chat-tour',
+      authorId: 'chat_user_relay',
+      bodyText: 'relay room line',
+      now,
+    });
+
+    const read = captureResponse();
+    await tryHandleChatRoute(
+      {},
+      { method: 'GET', headers: {} } as unknown as IncomingMessage,
+      read,
+      '/api/chat/broadcast/chat-tour',
+      new URL('http://test.local/api/chat/broadcast/chat-tour'),
+    );
+    assert.equal(read.status, 200);
+    assert.deepEqual(
+      JSON.parse(read.body).lines.map((line: { text: string }) => line.text),
+      ['relay room line'],
+    );
+
+    const unknown = captureResponse();
+    await tryHandleChatRoute(
+      {},
+      { method: 'GET', headers: {} } as unknown as IncomingMessage,
+      unknown,
+      '/api/chat/broadcast/no-such-tour',
+      new URL('http://test.local/api/chat/broadcast/no-such-tour'),
+    );
+    assert.equal(unknown.status, 404);
   });
 
   test('player chat room is seat-gated and never bleeds into the spectator room', async () => {

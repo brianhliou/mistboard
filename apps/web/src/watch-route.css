@@ -615,13 +615,14 @@
   box-sizing: border-box;
 }
 
+/* Clips its overflow, so the line box must hold the glyph's descenders (#543). */
 .watch-queue-preview .showcase-seat-name {
   min-width: 0;
   overflow: hidden;
   color: var(--site-text);
   font-size: var(--showcase-seat-name-size);
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -764,54 +765,12 @@
 }
 
 /* ── Featured live-follow (mirrors the homepage viewer) ───────────────── */
-/* The LIVE pill above the featured-game card, shown while the Top channel is
-   following an in-progress game. */
-.watch-live-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  align-self: flex-start;
-  margin-bottom: 8px;
-  padding: 2px 9px;
-  border-radius: 999px;
-  background: color-mix(in srgb, #d64545 12%, transparent);
-  color: #c53434;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-
-.watch-live-badge::before {
-  content: "";
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: currentColor;
-  animation: watch-live-pulse 1.6s ease-in-out infinite;
-}
-
-@keyframes watch-live-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.35;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .watch-live-badge::before {
-    animation: none;
-  }
-}
-
 /* A live broadcast is not scrubbable: the Top channel's live board follows the
    game to the latest ply, so hide the replay controls. The move list and the
    clocks stay (the live payload carries a timeline and the server clock; the
    rail reads both off the live handle), so a live game on /watch reads like
    the room does. */
-.watch-live-mode .watch-game-table .replay-controls {
+.watch-live-mode .watch-game-table .move-nav-bar {
   display: none;
 }
 
@@ -860,11 +819,6 @@
   gap: 0;
 }
 
-.watch-game-table .clocks strong {
-  font-size: 52px;
-  letter-spacing: -0.025em;
-}
-
 .watch-game-table .round-table__box {
   width: 100%;
 }
@@ -873,36 +827,8 @@
   width: 100%;
 }
 
-.watch-game-table__player .clock-name {
-  flex: 1 1 auto;
-}
-
 .watch-player-disc {
-  flex: 0 0 auto;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 1px solid var(--site-border);
-  background: #f4f1e9;
-}
-
-.watch-player-disc--black,
-.watch-player-disc--blue {
-  background: var(--seat-dark-ink, #2b2b2b);
-  border-color: var(--seat-dark-ink-border, var(--site-border));
-}
-
-.watch-player-disc--red {
-  background: #b23b3b;
-}
-
-/* Flip variants before the opening flip binds an ink: nobody owns a colour yet, so
-   the disc is a dashed muted ring rather than a guess. Mirrors the meta card's
-   --unbound disc. */
-.watch-player-disc--unbound {
-  background: transparent;
-  border-style: dashed;
-  opacity: 0.55;
+  --seat-disc-size: 14px;
 }
 
 .watch-player-bot {
@@ -1047,10 +973,11 @@
   color: var(--site-accent);
 }
 
+/* Clips its overflow, so the line box must hold the glyph's descenders (#543). */
 .watch-channel-name {
   max-width: 100%;
   font-size: 13px;
-  line-height: 1.2;
+  line-height: 1.35;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1058,12 +985,13 @@
 
 /* The top-rated seat under the channel name (name + rating), muted and lighter
    like lichess's TV rail. */
+/* Clips its overflow, so the line box must hold the glyph's descenders (#543). */
 .watch-channel-player {
   max-width: 100%;
   color: var(--site-muted);
   font-size: 12px;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.35;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

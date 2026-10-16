@@ -197,6 +197,7 @@ const REASON_PHRASE_KEYS: Record<GameEndReason, I18nKey> = {
   checkmate: 'result.checkmate',
   draw: 'result.drawPhrase',
   'king-captured': 'result.kingCapture',
+  'no-legal-moves': 'result.noLegalMoves',
   resignation: 'result.resignation',
   timeout: 'result.timeout',
 };

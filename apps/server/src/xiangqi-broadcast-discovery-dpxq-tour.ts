@@ -24,6 +24,13 @@ import type {
   DiscoveryProvider,
   DiscoveryProviderInput,
 } from './xiangqi-broadcast-discovery.js';
+import { NOTHING_NEW_MESSAGE } from './xiangqi-broadcast-discovery.js';
+import {
+  type DpxqPairing,
+  parseDpxqRoundPage,
+  parseDpxqRoundPageHeader,
+  roundPageUrl,
+} from './xiangqi-broadcast-dpxq-pairings.js';
 
 const DPXQ_ORIGIN = 'http://www.dpxq.com';
 
@@ -35,16 +42,17 @@ export function archiveBoardUrl(id: string, origin = DPXQ_ORIGIN): string {
   return `${origin}/hldcg/search/view_m_${id}.html`;
 }
 
-export type DpxqTourGame = { id: string; roundNumber?: number };
+export type DpxqTourGame = { id: string; roundNumber?: number; table?: number };
 
 /**
- * Pull (round, game id) out of a tour's game list.
+ * Pull (round, table, game id) out of a tour's game list.
  *
- * Only the round label and the record link are read. The players and the result
- * are on the row too, but the game page states them in tagged fields, and a
- * team event writes the two sides in mirrored order ("team player" for red,
- * "player team" for black), so parsing them here would add a second, more
- * fragile source of the same facts.
+ * Only the round label, the table and the record link are read. The players
+ * and the result are on the row too, but the game page states them in tagged
+ * fields, and a team event writes the two sides in mirrored order ("team
+ * player" for red, "player team" for black), so parsing them here would add a
+ * second, more fragile source of the same facts. The table is the second
+ * cell when it is a number; a multi-game table's rows say 第1局 there instead.
  */
 export function parseDpxqTourGameList(html: string): DpxqTourGame[] {
   const games: DpxqTourGame[] = [];
@@ -56,32 +64,116 @@ export function parseDpxqTourGameList(html: string): DpxqTourGame[] {
     seen.add(id);
     const text = body.replace(/<[^>]+>/g, ' ');
     const round = Number(text.match(/第\s*(\d+)\s*轮/)?.[1]);
+    const cells = [...body.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map((cell) =>
+      (cell[1] ?? '').replace(/<[^>]+>/g, '').trim(),
+    );
+    const table = /^\d+$/.test(cells[1] ?? '') ? Number(cells[1]) : Number.NaN;
     games.push({
       id,
       ...(Number.isInteger(round) && round > 0 ? { roundNumber: round } : {}),
+      ...(Number.isInteger(table) && table > 0 ? { table } : {}),
     });
   }
   return games;
 }
 
-async function fetchText(
-  input: DiscoveryProviderInput,
-  url: string,
-): Promise<{ ok: true; text: string } | { ok: false; message: string }> {
+type FetchedText = { ok: true; text: string } | { ok: false; message: string; transient: boolean };
+
+async function fetchText(input: DiscoveryProviderInput, url: string): Promise<FetchedText> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), input.timeoutMs);
   try {
     const response = await input.fetchImpl(url, { signal: controller.signal });
-    if (!response.ok) return { ok: false, message: `${url} responded ${response.status}` };
+    if (!response.ok) {
+      return {
+        ok: false,
+        message: `${url} responded ${response.status}`,
+        transient: response.status >= 500,
+      };
+    }
     return { ok: true, text: await response.text() };
   } catch (error) {
     return {
       ok: false,
       message: `${url}: ${error instanceof Error ? error.message : String(error)}`,
+      transient: true,
     };
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * The pages a poll cannot do without (the game list, the latest round page)
+ * get one more try after a timeout, a network error or a 5xx. A failed poll
+ * waits a whole interval, 30 minutes once the event is over, so one 10s
+ * timeout at 19:08Z on the 2026 women's league held its round repair back
+ * half an hour. A 404 is the page's answer and is not asked again.
+ */
+async function fetchTextRetryingOnce(
+  input: DiscoveryProviderInput,
+  url: string,
+): Promise<FetchedText> {
+  const first = await fetchText(input, url);
+  if (first.ok || !first.transient) return first;
+  if (input.retryBackoffMs) {
+    await new Promise((resolve) => setTimeout(resolve, input.retryBackoffMs));
+  }
+  return fetchText(input, url);
+}
+
+/**
+ * Every pairing the tour's round pages list. The latest page comes first and
+ * names the round count; earlier rounds are read unless the caller says they
+ * are settled. A settled round with a record still to import is read anyway
+ * (`pendingRounds`): a round of results-only pairings counts as settled, and
+ * its records arriving later need the pairings to take the pairing's board
+ * (2026 North American Championship: the first pass stored all 108 pairings
+ * and filed 32 records; the next pass skipped every round page, and the rest
+ * were keyed by their title). A page that cannot be read or parsed
+ * contributes nothing: the game list still stands on its own.
+ *
+ * `settledSkipped` says the pages answered and named rounds this call left
+ * unread because they are settled: nothing new, rather than nothing there.
+ */
+async function readPairings(
+  input: DiscoveryProviderInput,
+  tour: string,
+  origin: string,
+  pendingRounds: ReadonlySet<number>,
+): Promise<{ pairings: Array<DpxqPairing & { pageUrl: string }>; settledSkipped: boolean }> {
+  const latestUrl = roundPageUrl(tour, undefined, origin);
+  const latest = await fetchTextRetryingOnce(input, latestUrl);
+  if (!latest.ok) return { pairings: [], settledSkipped: false };
+  const page = parseDpxqRoundPage(latest.text);
+  // A latest round with no individual table (a team league's next round,
+  // paired by team before its boards) still names the rounds before it.
+  const header = page ?? parseDpxqRoundPageHeader(latest.text);
+  if (!header) return { pairings: [], settledSkipped: false };
+  let settledSkipped = false;
+  // The page's canonical per-round address, so a board's source link names
+  // its round and does not move when the next round is paired.
+  const pairings = (page?.pairings ?? []).map((pairing) => ({
+    ...pairing,
+    pageUrl: roundPageUrl(tour, header.roundNumber, origin),
+  }));
+  for (let round = 1; round <= header.roundCount; round += 1) {
+    if (round === header.roundNumber) continue;
+    if (input.settledRounds?.has(round) && !pendingRounds.has(round)) {
+      settledSkipped = true;
+      continue;
+    }
+    if (input.spacingMs) await new Promise((resolve) => setTimeout(resolve, input.spacingMs));
+    const url = roundPageUrl(tour, round, origin);
+    const fetched = await fetchText(input, url);
+    if (!fetched.ok) continue;
+    const parsed = parseDpxqRoundPage(fetched.text);
+    // A page that answers for another round (dpxq falls back to the latest
+    // for a round it does not have) is not this round's pairings.
+    if (!parsed || parsed.roundNumber !== round) continue;
+    for (const pairing of parsed.pairings) pairings.push({ ...pairing, pageUrl: url });
+  }
+  return { pairings, settledSkipped };
 }
 
 export const dpxqTourDiscoveryProvider: DiscoveryProvider = {
@@ -94,15 +186,43 @@ export const dpxqTourDiscoveryProvider: DiscoveryProvider = {
       return { ok: false, message: 'dpxq-tour discovery needs a numeric tour id (tour=12683)' };
     }
 
+    // The game list first: which rounds still have records to import decides
+    // which settled round pages are worth reading again.
     const listUrl = tourGameListUrl(tour, origin);
-    const list = await fetchText(input, listUrl);
-    if (!list.ok) return { ok: false, message: `tour game list unreachable: ${list.message}` };
+    const list = await fetchTextRetryingOnce(input, listUrl);
+    const games = list.ok ? parseDpxqTourGameList(list.text) : [];
+    const pendingRounds = new Set<number>();
+    const completeUrls = input.completeUrls;
+    for (const game of completeUrls ? games : []) {
+      if (game.roundNumber === undefined) continue;
+      if (!completeUrls?.has(archiveBoardUrl(game.id, origin))) {
+        pendingRounds.add(game.roundNumber);
+      }
+    }
 
-    const games = parseDpxqTourGameList(list.text);
-    if (games.length === 0) {
-      // Normal before a tour has any uploaded records; the caller's backoff
-      // widens the gap rather than treating it as a fault.
-      return { ok: false, message: `tour ${tour} lists no game records yet` };
+    // `pairings=0` opts a tour out of the round pages (records only).
+    const { pairings, settledSkipped } =
+      input.config.get('pairings') === '0'
+        ? { pairings: [], settledSkipped: false }
+        : await readPairings(input, tour, origin, pendingRounds);
+    if (!list.ok && pairings.length === 0) {
+      return { ok: false, message: `tour game list unreachable: ${list.message}` };
+    }
+
+    // Every round with games is stored and finished, and the latest has none
+    // yet (a team league between rounds, or an event over with no records):
+    // nothing new, not a failing source.
+    // Before 2026-10-10 this logged source_fetch_error every poll.
+    if (games.length === 0 && pairings.length === 0 && settledSkipped) {
+      return { ok: false, message: NOTHING_NEW_MESSAGE, quiet: true };
+    }
+
+    if (games.length === 0 && pairings.length === 0) {
+      // Normal before a tour has any uploaded records: the list page answered
+      // and is empty. Marked quiet so an upcoming event polled by its auto
+      // window does not log a failure every few minutes; the caller's backoff
+      // still widens the gap. An unreachable list is a real failure (above).
+      return { ok: false, message: `tour ${tour} lists no game records yet`, quiet: true };
     }
 
     // One page per game is not fetched here: the round is already stated by the
@@ -111,7 +231,8 @@ export const dpxqTourDiscoveryProvider: DiscoveryProvider = {
     const boards: DiscoveredBoard[] = games.map((game) => ({
       url: archiveBoardUrl(game.id, origin),
       ...(game.roundNumber !== undefined ? { roundNumber: game.roundNumber } : {}),
+      ...(game.table !== undefined ? { table: game.table } : {}),
     }));
-    return { ok: true, boards };
+    return { ok: true, boards, ...(pairings.length > 0 ? { pairings } : {}) };
   },
 };

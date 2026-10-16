@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { createClock, expireClock, type GameEvent, replayGameEvents } from '@mistboard/game';
 import {
   adminDebugTokenFromProtocolHeader,
+  airsOnDelay,
   canExposeFullEventReplay,
   canObserveLiveRoom,
   canServeLiveBoard,
@@ -23,6 +24,7 @@ import {
   type RuntimeEnv,
   recordMessageTimestamp,
   seatTokenFromProtocolHeader,
+  withDelayedAir,
 } from './server-policy.js';
 import { SITEMAP_STATIC_ROUTES } from './server-static-pages.js';
 
@@ -232,6 +234,30 @@ test('canObserveLiveRoom admits a live room iff Mistboard TV may broadcast it', 
   assert.equal(live('not-a-real-variant'), false);
 });
 
+test('showcase entries air on a delay only for variants that can never be shown live', () => {
+  // Fog variants: sealed while live, so the homepage TV airs them after the fact.
+  for (const variant of ['dark-chess', 'fog', 'dark-xiangqi']) {
+    assert.equal(airsOnDelay(variant), true, `${variant} airs on a delay`);
+  }
+  // Live-capable variants had their turn on the live board: frozen only.
+  for (const variant of ['xiangqi', 'jieqi', 'banqi', 'jungle', 'jungle-flip']) {
+    assert.equal(airsOnDelay(variant), false, `${variant} is never aired after the fact`);
+  }
+  // Fail closed: an unknown variant is not airable.
+  assert.equal(airsOnDelay('not-a-real-variant'), false);
+  assert.equal(airsOnDelay(''), false);
+
+  // The route's mapper tags every entry and keeps the record intact.
+  const tagged = withDelayedAir([
+    { roomId: 'a', variant: 'dark-xiangqi' },
+    { roomId: 'b', variant: 'jieqi' },
+  ]);
+  assert.deepEqual(tagged, [
+    { roomId: 'a', variant: 'dark-xiangqi', delayedAir: true },
+    { roomId: 'b', variant: 'jieqi', delayedAir: false },
+  ]);
+});
+
 test('finished persisted events are public replay data', () => {
   const clock = expireClock(createClock(1, 1, 0), 2, 'white');
   assert.ok(clock);
@@ -380,6 +406,9 @@ const PARAMETRIC_ROUTE_SAMPLES: Record<string, readonly string[]> = {
   '^\\/inbox(?:\\/([^/]+))?$': ['/inbox', '/inbox/somehandle'],
   '^\\/coach(?:\\/([^/]+))?$': ['/coach', '/coach/somehandle'],
   '^\\/players\\/([^/]+)$': ['/players/yin-sheng'],
+  '^\\/changelog\\/\\d{4}-\\d{2}$': ['/changelog/2026-09'],
+  '^\\/practice\\/([a-z-]+)\\/([a-z0-9-]+)$': ['/practice/endgames-soldier/soldier-vs-advisor'],
+  '^\\/players\\/teams\\/([^/]+)$': ['/players/teams/hebei-team'],
   '^(?:\\/(?:zh-hans|zh-hant))?\\/study\\/([A-Za-z0-9]+)$': [
     '/study/Ab12cd',
     '/zh-hans/study/Ab12cd',
@@ -492,6 +521,11 @@ test('the announcement archive is indexable and answers on one URL', () => {
   assert.equal(legacyPageRedirect('/news'), '/feed');
   assert.equal(legacyPageRedirect('/news/'), '/feed');
   assert.equal(legacyPageRedirect('/feed'), null);
+  // Each month has its own page; only a well-formed month is a route.
+  assert.equal(isClientRoute('/feed/2026-09'), true);
+  assert.equal(isNoindexRoute('/feed/2026-09'), false);
+  assert.equal(isClientRoute('/feed/2026-9'), false);
+  assert.equal(isClientRoute('/feed/anything'), false);
 });
 
 test('isNoindexRoute ignores a trailing slash', () => {
@@ -544,6 +578,9 @@ test('isClientRoute matches parametric SPA routes', () => {
   assert.equal(isClientRoute('/players'), true);
   assert.equal(isClientRoute('/players/yin-sheng'), true);
   assert.equal(isClientRoute('/players/yin-sheng/extra'), false);
+  assert.equal(isClientRoute('/players/teams'), true);
+  assert.equal(isClientRoute('/players/teams/hebei-team'), true);
+  assert.equal(isClientRoute('/players/teams/hebei-team/extra'), false);
   assert.equal(isClientRoute('/broadcast/xiangqi'), true);
   assert.equal(isClientRoute('/broadcast/xiangqi/2025-wxc-sample'), true);
   assert.equal(isClientRoute('/broadcast/xiangqi/2025-wxc-sample/round/men-r1'), true);
@@ -582,6 +619,22 @@ test('legacyPageRedirect sends the old games-database paths to /games/search, on
   assert.equal(legacyPageRedirect('/historical-xiangqi/game/hxq_abc123'), null);
 });
 
+test('legacyPageRedirect sends /challenges to /champions in each language, once', () => {
+  assert.equal(legacyPageRedirect('/challenges'), '/champions');
+  assert.equal(legacyPageRedirect('/challenges/'), '/champions');
+  assert.equal(legacyPageRedirect('/zh-hans/challenges'), '/zh-hans/champions');
+  assert.equal(legacyPageRedirect('/zh-hant/challenges'), '/zh-hant/champions');
+  for (const target of ['/champions', '/zh-hans/champions', '/zh-hant/champions']) {
+    // The target is a client route, so the hop terminates.
+    assert.equal(legacyPageRedirect(target), null);
+    assert.equal(isClientRoute(target), true);
+  }
+  // /challenge/:id is a correspondence invite, not the old engine page.
+  assert.equal(legacyPageRedirect('/challenge/abc123'), null);
+  assert.equal(legacyPageRedirect('/challenges/abc123'), null);
+  assert.equal(legacyPageRedirect('/en/challenges'), null);
+});
+
 test('isClientRoute lets vendored ceval engine assets fall through to static', () => {
   // /engine/:id is the admin engine-profile SPA page, but /engine/fairy-stockfish/*
   // are real vendored files. They MUST NOT be rewritten to index.html, or the local
@@ -612,12 +665,39 @@ test('isReviewShellRoute matches postgame review documents (COOP/COEP scope)', (
   // isolated.
   assert.equal(isReviewShellRoute('/editor'), false);
   assert.equal(isReviewShellRoute('/editor/xiangqi'), false);
+  // Practice from a position runs the engine against the learner; the practice
+  // shelf itself mounts no board and stays a plain page. Only the exact path is
+  // a route: anything under it 404s rather than booting the runner.
+  assert.equal(isReviewShellRoute('/practice/position'), true);
+  assert.equal(isReviewShellRoute('/practice'), false);
+  assert.equal(isClientRoute('/practice/position'), true);
+  assert.equal(isClientRoute('/practice/position/'), true);
+  assert.equal(isClientRoute('/practice/position/extra'), false);
+  assert.equal(isClientRoute('/practice/positions'), false);
+  // One shelf exercise by slug (#521): a real set/position pair is a plain
+  // client page (it only redirects to the study), anything else 404s.
+  assert.equal(isClientRoute('/practice/endgames-horse/horse-vs-advisor'), true);
+  assert.equal(isReviewShellRoute('/practice/endgames-horse/horse-vs-advisor'), false);
+  assert.equal(isClientRoute('/practice/endgames-soldier/horse-vs-advisor'), false);
+  assert.equal(isClientRoute('/practice/endgames-horse/no-such-position'), false);
   // The puzzle trainer mounts the same ceval engine after a puzzle is completed.
   // Both the list and a specific puzzle must be isolated, because the isolation
   // is fixed at document load and pushState nav between puzzles never reloads.
   assert.equal(isReviewShellRoute('/puzzles'), true);
   assert.equal(isReviewShellRoute('/puzzles/xq-mined-hxq_abc123-60'), true);
   assert.equal(isReviewShellRoute('/puzzles/bMpKA'), true);
+  // Broadcast boards mount the engine and open in place from the event and
+  // index pages, so the whole reader section is isolated; the ops console is not.
+  assert.equal(isReviewShellRoute('/broadcast/xiangqi'), true);
+  assert.equal(isReviewShellRoute('/broadcast/xiangqi/2026-xiangqi-league'), true);
+  assert.equal(
+    isReviewShellRoute('/broadcast/xiangqi/2026-xiangqi-league/round/2026-xiangqi-league-r05'),
+    true,
+  );
+  assert.equal(isReviewShellRoute('/broadcast/xiangqi/board/2026-xiangqi-league-r05-b1'), true);
+  assert.equal(isReviewShellRoute('/broadcast/xiangqi/calendar'), true);
+  assert.equal(isReviewShellRoute('/broadcast/xiangqi/ops'), false);
+  assert.equal(isReviewShellRoute('/broadcast/xiangqi/ops/tour/x'), false);
 });
 
 test('isReviewShellRoute excludes non-review surfaces (keeps them non-isolated)', () => {
@@ -627,7 +707,6 @@ test('isReviewShellRoute excludes non-review surfaces (keeps them non-isolated)'
   assert.equal(isReviewShellRoute('/'), false);
   assert.equal(isReviewShellRoute('/patron'), false);
   assert.equal(isReviewShellRoute('/play'), false);
-  assert.equal(isReviewShellRoute('/broadcast/xiangqi/board/2025-wxc-sample-men-r1-b01'), false);
   assert.equal(isReviewShellRoute('/xiangqi/game/'), false); // no game id
   assert.equal(isReviewShellRoute('/historical-xiangqi/games'), false);
   assert.equal(isReviewShellRoute('/blog/dark-chess-concepts'), false);

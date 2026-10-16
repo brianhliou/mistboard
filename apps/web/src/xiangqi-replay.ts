@@ -20,19 +20,62 @@ import {
 } from '@mistboard/game';
 import { track } from './analytics.js';
 import type { ArticleLang } from './article-i18n.js';
+import { articleAnalysisLoader } from './article-replay-analysis.js';
+import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
 import './board-glyph-marker.css';
-import { boardLastMoveMarkersSvg, boardLastMoveOuterRadius } from './board-lastmove.js';
-import { tokenPieceSize } from './board-metrics.js';
+import './embed/embed-credit.css';
+import {
+  animateBoardLastMoveArrival,
+  BOARD_LASTMOVE_OVER_GROUP_ATTRS,
+  type BoardLastMoveLayer,
+  boardLastMoveCellMarksSvg,
+  boardLastMoveMarkersSvg,
+  boardLastMoveOuterRadius,
+  boardLastMovePiece,
+} from './board-lastmove.js';
+import { tokenPieceSize, xiangqiPieceDrawSize } from './board-metrics.js';
+import { readDisplayPreferences } from './display-preferences.js';
 import { type ReplayStepperCopy, replayStepperCopy } from './replay-stepper-copy.js';
+import { seatDiscEl } from './seat-disc.js';
+import { GLYPH_SUFFIX_CLASS } from './study-chapter-annotations.js';
 import { readStoredXiangqiPieceSet, xiangqiAppearanceChangedEvent } from './theme.js';
+import {
+  readStoredXiangqiBoardLayout,
+  type XiangqiBoardLayout,
+} from './xiangqi-appearance-storage.js';
+import { LIVE_BOARD_SURFACE } from './xiangqi-board.js';
+import {
+  type XiangqiBoardGeometry,
+  xiangqiBoardPoint,
+  xiangqiBoardViewBox,
+} from './xiangqi-board-geometry.js';
+import {
+  type XiangqiSurfaceConfig,
+  xiangqiSurfaceCoords,
+  xiangqiSurfaceGrid,
+  xiangqiSurfacePalace,
+  xiangqiSurfacePalaceBands,
+  xiangqiSurfaceRiver,
+  xiangqiSurfaceStartMarkers,
+} from './xiangqi-board-surface.js';
+import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
 import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle, xiangqiNotationChangedEvent } from './xiangqi-notation.js';
-import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
+import {
+  renderXiangqiPieceGlyphed,
+  XIANGQI_PIECE_SETS,
+  xiangqiPieceSetShape,
+} from './xiangqi-piece-sets.js';
+import type { ReplayChartSource } from './xiangqi-replay-chart.js';
+import { xiangqiDiagramRiverText } from './xiangqi-river-text.js';
 
 // Geometry/colours mirror the static xiangqi diagrams in articles-data.ts so
 // the replay board is visually identical to the rules diagrams.
 const CELL = 31;
+// The layout piece size the marks are tuned on; the piece itself is drawn larger,
+// its outline spanning 98% of the point gap (2026-10-14).
 const PIECE = tokenPieceSize(CELL);
+const PIECE_DRAWN = xiangqiPieceDrawSize(CELL);
 // The live board draws its judgment badge at r=13 / offset 21 on a 60px cell.
 // Same proportions here so the badge sits in the same place relative to the
 // piece; the markup and palette are the shared ones (board-glyph-marker.css).
@@ -43,8 +86,8 @@ const GLYPH_OFFSET = (21 / 60) * CELL;
  * The margin has to clear everything drawn around a piece on an EDGE
  * intersection, not just the piece. Three things reach past its centre:
  *
- *   the piece itself         PIECE / 2                 14.0 at CELL 31
- *   the last-move ring       outer radius              15.6
+ *   the piece itself         PIECE_DRAWN / 2           16.0 at CELL 31
+ *   the last-move band       outer edge                16.5 (widest rim)
  *   the judgment badge       offset + its own radius   17.6
  *
  * A previous version set this to 15 by reasoning only about the piece, which
@@ -53,7 +96,15 @@ const GLYPH_OFFSET = (21 / 60) * CELL;
  * fourth decoration that reaches further cannot silently crop it.
  */
 const MARGIN = Math.ceil(
-  Math.max(PIECE / 2, boardLastMoveOuterRadius(PIECE), GLYPH_OFFSET + GLYPH_RADIUS),
+  Math.max(
+    PIECE_DRAWN / 2,
+    // The band hugs the drawn piece, so it reaches furthest on the set with the
+    // widest rim; the reader can switch sets without a re-layout.
+    ...XIANGQI_PIECE_SETS.map(({ id }) =>
+      boardLastMoveOuterRadius(PIECE, boardLastMovePiece(PIECE_DRAWN, id)),
+    ),
+    GLYPH_OFFSET + GLYPH_RADIUS,
+  ),
 );
 const GLYPH_CLASS: Record<string, string> = {
   '??': 'xq-marker--blunder',
@@ -64,9 +115,6 @@ const GLYPH_CLASS: Record<string, string> = {
   // the badge renders as an empty disc.
   '!': 'xq-marker--good',
 };
-const PAD = 0;
-const BOARD_W = MARGIN * 2 + 8 * CELL;
-const BOARD_H = MARGIN * 2 + 9 * CELL;
 const RADIUS = 8;
 
 /**
@@ -158,132 +206,261 @@ export type XiangqiReplaySpec = {
    * whole game from there in either direction.
    */
   startPly?: number;
+  /**
+   * The game's board in the broadcast archive (`/broadcast/xiangqi/board/<id>`),
+   * when it has one. Set, a "Full game analysis" link sits under the card: an
+   * article board carries only the moves the page is about, and the board page
+   * has the advantage chart and every move's verdict. Absent, no link.
+   */
+  boardId?: string;
 };
+
+/** Where an article board's analysis link points. */
+export function broadcastBoardHref(boardId: string): string {
+  return `/broadcast/xiangqi/board/${encodeURIComponent(boardId)}`;
+}
+
+/** Where a board's advantage chart comes from: the broadcast archive when the
+ *  spec names a board, else a precomputed file for this exact record, else none. */
+function replayChartSource(spec: XiangqiReplaySpec): ReplayChartSource | null {
+  if (spec.boardId) return { boardId: spec.boardId };
+  const load = articleAnalysisLoader(spec);
+  return load ? { load } : null;
+}
+
+/** Board ids as the broadcast archive mints them: lowercase words joined by
+ *  single hyphens. A spec's `boardId` is checked against this in tests. */
+export const BROADCAST_BOARD_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export type XiangqiReplayController = { destroy: () => void };
 
-function pointXY(file: number, rank: number, perspective: XiangqiColor): { x: number; y: number } {
-  const row = perspective === 'red' ? 10 - rank : rank - 1;
-  return { x: MARGIN + file * CELL, y: MARGIN + row * CELL };
+/** One setting for every article board's eval graph, kept across visits.
+ *  Absent means shown, the default; only "hidden" is ever written. */
+export const EVAL_GRAPH_STORAGE_KEY = 'mistboard.articleEvalGraph';
+/** Fired on window when the setting changes; detail `{ hidden: boolean }`. */
+export const evalGraphChangedEvent = 'mistboard:eval-graph-changed';
+
+/** Whether the reader hid the eval graph. Storage that throws (private mode,
+ *  blocked site data) reads as the default: shown. */
+export function readEvalGraphHidden(): boolean {
+  try {
+    return window.localStorage.getItem(EVAL_GRAPH_STORAGE_KEY) === 'hidden';
+  } catch {
+    return false;
+  }
+}
+
+/** Save the setting and tell every board on the page. The boards follow even
+ *  when storage refuses the write; only the next visit forgets it then. */
+export function writeEvalGraphHidden(hidden: boolean): void {
+  try {
+    if (hidden) window.localStorage.setItem(EVAL_GRAPH_STORAGE_KEY, 'hidden');
+    else window.localStorage.removeItem(EVAL_GRAPH_STORAGE_KEY);
+  } catch {
+    // Not persisted; the page still follows.
+  }
+  window.dispatchEvent(new CustomEvent(evalGraphChangedEvent, { detail: { hidden } }));
+}
+
+// The square grid opens the river as a band, a fifth of a cell like the live
+// board's (12 on its 60-unit cell). Coordinates get the same fifth as a gutter.
+const RIVER_GAP = Math.round(CELL / 5);
+const COORD_GUTTER = Math.round(CELL / 5);
+// The square grid's outer cells end half a cell from the edge points, which
+// leaves MARGIN - CELL / 2 of board beyond them. It is kept, so the badge and
+// ring on an edge piece clear the edge on this layout too.
+const CELL_PAD = MARGIN - CELL / 2;
+
+/**
+ * How this board is drawn right now: the perspective plus the reader's Square
+ * grid and Coordinates settings (#558), resolved once per render so the
+ * surface, pieces, markers and glide all place on the same geometry. The board
+ * used to be intersection-only with its own grid, so those settings, and Start
+ * markers, never reached an article replay or an embedded study board.
+ */
+type ReplayBoard = {
+  perspective: XiangqiColor;
+  layout: XiangqiBoardLayout;
+  coords: boolean;
+  surface: XiangqiSurfaceConfig;
+};
+
+function replayBoard(perspective: XiangqiColor): ReplayBoard {
+  const layout = readStoredXiangqiBoardLayout();
+  const coords = readDisplayPreferences().boardCoordinates;
+  const gutter = coords ? COORD_GUTTER : 0;
+  const geo: XiangqiBoardGeometry = {
+    fileCount: 9,
+    rankCount: 10,
+    cell: CELL,
+    margin: MARGIN,
+    riverGap: layout === 'cell' ? RIVER_GAP : 0,
+    coordGutter: layout === 'cell' ? CELL_PAD + gutter : gutter,
+  };
+  // The intersection board keeps the diagrams' own river caption (gridSvg), so
+  // it reads the same as the static boards beside it in an article.
+  return { perspective, layout, coords, surface: { ...LIVE_BOARD_SURFACE, geo, riverText: false } };
+}
+
+/**
+ * Every point on this board goes through the shared geometry, so flipping is the
+ * same 180 degree rotation the live, study and broadcast boards draw. This file
+ * kept its own copy of the maths, which mirrored only the rank: the shared one
+ * got the file fix on 2026-08-27 and this copy did not, so a flipped article
+ * board left a1 on the reader's left, against the Chinese notation beside it.
+ */
+function pointXY(file: number, rank: number, board: ReplayBoard): { x: number; y: number } {
+  return xiangqiBoardPoint(file, rank, board.perspective, board.layout, board.surface.geo);
 }
 
 function coord(square: XiangqiSquare): { file: number; rank: number } {
   return { file: 'abcdefghi'.indexOf(square[0]!), rank: Number(square.slice(1)) };
 }
 
-function gridSvg(perspective: XiangqiColor): string {
+/** The shared board surface (xiangqi-board-surface.ts) in the diagrams' colours. */
+function gridSvg(board: ReplayBoard): string {
+  const { perspective, layout, surface } = board;
+  const { cell, margin } = surface.geo;
+  const vb = xiangqiBoardViewBox(layout, surface.geo);
   const parts: string[] = [
-    `<rect x="0" y="0" width="${BOARD_W}" height="${BOARD_H}" rx="${RADIUS}" class="xq-diagram-bg"/>`,
+    `<rect x="${vb.minX}" y="${vb.minY}" width="${vb.width}" height="${vb.height}" rx="${RADIUS}" class="xq-diagram-bg"/>`,
+    xiangqiSurfaceGrid(surface, layout),
+    xiangqiSurfaceStartMarkers(surface, perspective, layout),
   ];
-  const left = MARGIN;
-  const right = left + 8 * CELL;
-  const top = MARGIN;
-  const bottom = top + 9 * CELL;
-  const riverTop = top + 4 * CELL;
-  const riverBottom = top + 5 * CELL;
-  for (let r = 0; r < 10; r += 1) {
-    const y = top + r * CELL;
+  if (layout === 'cell') {
     parts.push(
-      `<line x1="${left}" y1="${y}" x2="${right}" y2="${y}" class="xq-diagram-line" stroke-width="1"/>`,
+      xiangqiSurfacePalaceBands(surface, perspective, layout),
+      xiangqiSurfaceRiver(surface, perspective, layout),
+    );
+  } else {
+    parts.push(
+      `<g class="xq-diagram-line" stroke-width="1">${xiangqiSurfacePalace(surface, perspective, layout)}</g>`,
+      xiangqiDiagramRiverText(margin + 4 * cell, margin + 4.5 * cell + 1),
     );
   }
-  for (let f = 0; f < 9; f += 1) {
-    const x = left + f * CELL;
-    if (f === 0 || f === 8) {
-      parts.push(
-        `<line x1="${x}" y1="${top}" x2="${x}" y2="${bottom}" class="xq-diagram-line" stroke-width="1"/>`,
-      );
-    } else {
-      parts.push(
-        `<line x1="${x}" y1="${top}" x2="${x}" y2="${riverTop}" class="xq-diagram-line" stroke-width="1"/>`,
-      );
-      parts.push(
-        `<line x1="${x}" y1="${riverBottom}" x2="${x}" y2="${bottom}" class="xq-diagram-line" stroke-width="1"/>`,
-      );
-    }
-  }
-  for (const palace of [
-    { fileMin: 3, fileMax: 5, rankBack: 1 },
-    { fileMin: 3, fileMax: 5, rankBack: 8 },
-  ]) {
-    const topRank = palace.rankBack === 1 ? 3 : 10;
-    const bottomRank = palace.rankBack;
-    const a = pointXY(palace.fileMin, topRank, perspective);
-    const b = pointXY(palace.fileMax, bottomRank, perspective);
-    const c = pointXY(palace.fileMax, topRank, perspective);
-    const d = pointXY(palace.fileMin, bottomRank, perspective);
+  if (board.coords) {
+    const labels = xiangqiCoordLabels(currentXiangqiNotationStyle(), 9, 10);
     parts.push(
-      `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" class="xq-diagram-line" stroke-width="1"/>`,
-    );
-    parts.push(
-      `<line x1="${c.x}" y1="${c.y}" x2="${d.x}" y2="${d.y}" class="xq-diagram-line" stroke-width="1"/>`,
+      `<g aria-hidden="true" pointer-events="none">${xiangqiSurfaceCoords(surface, perspective, layout, labels)}</g>`,
     );
   }
-  parts.push(
-    `<text x="${left + 4 * CELL}" y="${(riverTop + riverBottom) / 2 + 1}" font-family="serif" font-size="16" class="xq-diagram-ink xq-diagram-river-label" text-anchor="middle" dominant-baseline="central">楚 河   漢 界</text>`,
-  );
   return parts.join('');
 }
 
-function piecesSvg(board: XiangqiBoard, perspective: XiangqiColor): string {
-  return Object.entries(board)
+function piecesSvg(pieces: XiangqiBoard, board: ReplayBoard): string {
+  return Object.entries(pieces)
     .map(([sq, piece]) => {
       if (!piece) return '';
       const { file, rank } = coord(sq as XiangqiSquare);
-      const { x, y } = pointXY(file, rank, perspective);
-      return renderXiangqiPieceGlyphed(piece as XiangqiPiece, readStoredXiangqiPieceSet(), {
-        x: x - PIECE / 2,
-        y: y - PIECE / 2,
-        size: PIECE,
-        crossed: drawsCrossedSoldier(piece as XiangqiPiece, rank),
-      });
+      const { x, y } = pointXY(file, rank, board);
+      const pieceSvg = renderXiangqiPieceGlyphed(
+        piece as XiangqiPiece,
+        readStoredXiangqiPieceSet(),
+        {
+          x: x - PIECE_DRAWN / 2,
+          y: y - PIECE_DRAWN / 2,
+          size: PIECE_DRAWN,
+          shape: board.layout === 'cell' ? 'square' : 'disc',
+          crossed: drawsCrossedSoldier(piece as XiangqiPiece, rank),
+        },
+      );
+      // A keyed slot per piece, the live board's shape (xiangqi-board.ts), so a
+      // one-ply step can find the piece that moved and glide it.
+      return `<g class="xq-piece-slot" data-piece-square="${sq}">${pieceSvg}</g>`;
     })
     .join('');
 }
 
 function boardSvg(
-  board: XiangqiBoard,
+  pieces: XiangqiBoard,
   lastMove: XiangqiMove | undefined,
-  perspective: XiangqiColor,
+  board: ReplayBoard,
   _key: number,
   glyph?: string,
 ): string {
-  const pw = BOARD_W + PAD * 2;
-  const ph = BOARD_H + PAD * 2;
+  const vb = xiangqiBoardViewBox(board.layout, board.surface.geo);
   // The site marks a last move with an origin wash and a destination ring
   // (board-lastmove.ts, shared by every live board). This widget used to draw
   // its own green arrow, which made an article embed look like a different
-  // product from the game page. The markers sit under the pieces, so only the
-  // halo outside the piece radius shows.
+  // product from the game page. The origin wash sits under the pieces, the
+  // destination ring over them (the pieces cover it otherwise).
   const body = [
-    gridSvg(perspective),
-    lastMove ? lastMoveSvg(lastMove, perspective) : '',
-    piecesSvg(board, perspective),
+    gridSvg(board),
+    lastMove ? lastMoveSvg(lastMove, board, 'under') : '',
+    piecesSvg(pieces, board),
+    lastMove
+      ? `<g ${BOARD_LASTMOVE_OVER_GROUP_ATTRS}>${lastMoveSvg(lastMove, board, 'over')}</g>`
+      : '',
     // Over the pieces: the badge annotates the piece that just arrived, so it
     // has to sit on top of it rather than under.
-    lastMove && glyph ? glyphMarkerSvg(lastMove, glyph, perspective) : '',
+    lastMove && glyph ? glyphMarkerSvg(lastMove, glyph, board) : '',
   ].join('');
-  return `<svg class="xq-article-svg" data-xq-layout="single" style="--xq-svg-width: ${pw}px" viewBox="0 0 ${pw} ${ph}" role="img" xmlns="http://www.w3.org/2000/svg"><g transform="translate(${PAD} ${PAD})">${body}</g></svg>`;
+  // xq-surface scopes the shared surface's styles (xiangqi-board-surface.css).
+  return `<svg class="xq-article-svg xq-surface xq-surface--${board.layout}" data-xq-layout="single" data-xiangqi-layout="${board.layout}" style="--xq-svg-width: ${vb.width}px" viewBox="${vb.minX} ${vb.minY} ${vb.width} ${vb.height}" role="img" xmlns="http://www.w3.org/2000/svg">${body}</svg>`;
 }
 
-function lastMoveSvg(move: XiangqiMove, perspective: XiangqiColor): string {
+/**
+ * Glide the piece of a one-ply step, called right after the innerHTML swap that
+ * drew the final position: forward slides the piece now on `move.to` in from
+ * `move.from`; `reverse` (a back step) slides the piece now on `move.from` back
+ * from `move.to`. Every other change (a jump, entering or leaving a line, a
+ * flip) repaints instantly. Honours the piece-animation preference and reduced
+ * motion through pieceAnimationDurationMs.
+ */
+function glideReplayMove(
+  frame: HTMLElement,
+  move: XiangqiMove,
+  board: ReplayBoard,
+  reverse: boolean,
+): void {
+  const duration = pieceAnimationDurationMs();
+  if (duration <= 0) return;
+  const settle = reverse ? move.from : move.to;
+  const origin = reverse ? move.to : move.from;
+  const slot = frame.querySelector(`[data-piece-square="${settle}"]`);
+  if (!slot) return;
+  const o = coord(origin);
+  const s = coord(settle);
+  const from = pointXY(o.file, o.rank, board);
+  const to = pointXY(s.file, s.rank, board);
+  glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+  // Forward only: a back step draws the PRIOR move's markers somewhere else, so
+  // neither would track this glide. The gold band rides on the piece; the
+  // judgment badge fades in as the piece lands.
+  if (!reverse) {
+    animateBoardLastMoveArrival(frame, from, to, duration);
+    drawMarkerOnArrival(frame.querySelector('.xq-marker--glyph'), duration);
+  }
+}
+
+function lastMoveSvg(move: XiangqiMove, board: ReplayBoard, layer: BoardLastMoveLayer): string {
   const from = coord(move.from);
   const to = coord(move.to);
+  const ends = {
+    from: pointXY(from.file, from.rank, board),
+    to: pointXY(to.file, to.rank, board),
+  };
+  // The square grid gets its own marks (board-lastmove.ts), traced on the piece drawn.
+  if (board.layout === 'cell') {
+    return boardLastMoveCellMarksSvg(ends, board.surface.geo.cell, layer, {
+      size: PIECE_DRAWN,
+      shape: xiangqiPieceSetShape(readStoredXiangqiPieceSet(), 'square'),
+    });
+  }
   return boardLastMoveMarkersSvg(
-    {
-      from: pointXY(from.file, from.rank, perspective),
-      to: pointXY(to.file, to.rank, perspective),
-    },
+    ends,
     PIECE,
+    layer,
+    boardLastMovePiece(PIECE_DRAWN, readStoredXiangqiPieceSet()),
   );
 }
 
 /** The judgment badge, pinned to the destination of the move just played. */
-function glyphMarkerSvg(move: XiangqiMove, glyph: string, perspective: XiangqiColor): string {
+function glyphMarkerSvg(move: XiangqiMove, glyph: string, board: ReplayBoard): string {
   const kind = GLYPH_CLASS[glyph];
   if (!kind) return '';
   const to = coord(move.to);
-  const at = pointXY(to.file, to.rank, perspective);
+  const at = pointXY(to.file, to.rank, board);
   // Screen-space offset, so the badge keeps the same corner when the board flips.
   const cx = at.x + GLYPH_OFFSET;
   const cy = at.y - GLYPH_OFFSET;
@@ -359,6 +536,29 @@ function replayLine(spec: XiangqiReplaySpec): XiangqiReplayLine {
   return { moves, states, startState, firstMover, secondMover, plyOffset, total: moves.length };
 }
 
+/**
+ * The result a line's own last position settles, as a PGN tag: '1-0' when Red
+ * has mated (or left Black no legal move, 困毙), '0-1' for Black, '' when the
+ * line stops short of an ending. A composition chapter carries no result tag,
+ * so without this its embed showed no result under a line that ends in mate.
+ */
+export function resultFromFinalPosition(spec: XiangqiReplaySpec): '1-0' | '0-1' | '' {
+  // The display replay applies moves without adjudicating (it has to walk on
+  // past an arbiter's draw), so the ending is judged by the standard rules.
+  // A move those rules refuse comes back as the same state: no verdict then.
+  const { moves, startState } = replayLine(spec);
+  let last = startState;
+  for (const move of moves) {
+    const next = applyStandardXiangqiMove(last, move);
+    if (next === last) return '';
+    last = next;
+  }
+  if (last.status.type !== 'finished' || !('winner' in last.status)) return '';
+  if (last.status.winner === 'red') return '1-0';
+  if (last.status.winner === 'black') return '0-1';
+  return '';
+}
+
 export type XiangqiReplayMountOptions = { lang?: ArticleLang };
 
 /** "Red wins" for a PGN-style result tag; nothing for an unfinished `*`; the
@@ -428,7 +628,7 @@ export function mountXiangqiReplay(
   menuButton.className = 'stepper-button stepper-button-menu';
   menuButton.setAttribute('aria-haspopup', 'true');
   menuButton.setAttribute('aria-expanded', 'false');
-  menuButton.setAttribute('aria-label', 'More');
+  menuButton.setAttribute('aria-label', copy.moreActions);
   menuButton.innerHTML =
     '<svg class="stepper-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" ' +
     'focusable="false" fill="currentColor"><circle cx="8" cy="3.2" r="1.5"/>' +
@@ -492,6 +692,28 @@ export function mountXiangqiReplay(
   const resultFoot = document.createElement('div');
   resultFoot.className = 'xq-replay-result';
 
+  // The game's advantage chart, for a board whose game is in the broadcast
+  // archive or has a precomputed analysis file (see xiangqi-replay-chart.ts).
+  // The slot is placed now at the chart's full height, so a chart arriving later
+  // moves nothing on the page; it is dropped again if the game turns out to have
+  // no stored analysis, or one that does not match the record. Without
+  // IntersectionObserver there is no lazy load, so there is no slot either.
+  // A reader who hid the graph (the menu's "Hide eval graph", one setting for
+  // every article board) gets no slot and no fetch: the card is its old height.
+  const chartSource = replayChartSource(spec);
+  let chartSlot: HTMLElement | null = null;
+  if (chartSource && typeof IntersectionObserver === 'function') {
+    chartSlot = document.createElement('div');
+    chartSlot.className = 'xq-replay-chart';
+  }
+  /** The game has no stored analysis (or it did not match): never shown again. */
+  let chartGone = false;
+  let graphHidden = readEvalGraphHidden();
+  const chartShown = (): boolean => chartSlot !== null && !chartGone && !graphHidden;
+  /** Put the slot in the card, or take it out, to match chartShown(). */
+  let placeChartSlot: () => void = () => {};
+  let graphToggle: HTMLButtonElement | null = null;
+
   if (annotated) {
     // Study layout, built as ONE card rather than a board next to a bordered
     // box: seat bars top and bottom of the board the way a game page shows
@@ -508,8 +730,7 @@ export function mountXiangqiReplay(
     const seat = (name: string, side: 'red' | 'black') => {
       const el = document.createElement('div');
       el.className = `xq-replay-seat xq-replay-seat--${side}`;
-      const dot = document.createElement('span');
-      dot.className = 'xq-replay-seat-dot';
+      const dot = seatDiscEl(side, 'xq-replay-seat-dot');
       const label = document.createElement('span');
       label.className = 'xq-replay-seat-name';
       label.textContent = name;
@@ -534,27 +755,42 @@ export function mountXiangqiReplay(
     controlWrap.append(controls, menu);
     const seatTop = seat(nameOf(topSide), topSide);
     const seatBottom = seat(nameOf(bottomSide), bottomSide);
-    boardCol.append(seatTop, frame, seatBottom, controlWrap);
-
-    // Registered here, where the column's parts are in scope. The callbacks run
-    // later, and goto/render are hoisted function declarations, so referring to
-    // them before their definitions is fine.
+    // The chart sits between the board and the control bar, so the bar stays
+    // the card's bottom edge, level with the result foot beside it.
     let flipped = false;
-    menuItem('Flip the board', () => {
-      perspective = perspective === 'red' ? 'black' : 'red';
-      flipped = !flipped;
-      // An explicit re-order of the whole column. Shuffling two nodes around
-      // each other left the control bar above the board.
+    // An explicit re-order of the whole column, for a flip and for the graph
+    // coming or going. Shuffling two nodes around each other left the control
+    // bar above the board.
+    placeChartSlot = () => {
+      const slot = chartShown() && chartSlot ? [chartSlot] : [];
       boardCol.replaceChildren(
         flipped ? seatBottom : seatTop,
         frame,
         flipped ? seatTop : seatBottom,
+        ...slot,
         controlWrap,
       );
+    };
+    placeChartSlot();
+
+    // Registered here, where the column's parts are in scope. The callbacks run
+    // later, and goto/render are hoisted function declarations, so referring to
+    // them before their definitions is fine.
+    menuItem(copy.flipBoard, () => {
+      perspective = perspective === 'red' ? 'black' : 'red';
+      flipped = !flipped;
+      placeChartSlot();
       render();
     });
-    menuItem('Back to the start', () => gotoMainline(0));
-    menuItem('Jump to the end', () => gotoMainline(total));
+    menuItem(copy.backToStart, () => gotoMainline(0));
+    menuItem(copy.jumpToEnd, () => gotoMainline(total));
+    if (chartSlot) {
+      // Writes the one shared setting; every board on the page (this one
+      // included) follows through the change event, so the label is set there.
+      graphToggle = menuItem('', () => writeEvalGraphHidden(!graphHidden));
+      graphToggle.classList.add('xq-replay-menu-item--graph');
+      graphToggle.textContent = graphHidden ? copy.showEvalGraph : copy.hideEvalGraph;
+    }
     const moveCol = document.createElement('div');
     moveCol.className = 'xq-replay-move-col';
     // The move panel is taken out of flow (see the CSS) so a 180-ply list
@@ -563,7 +799,11 @@ export function mountXiangqiReplay(
     // normally inside it.
     const moveInner = document.createElement('div');
     moveInner.className = 'xq-replay-move-inner';
-    moveInner.append(moveList);
+    // The result is a fixed foot under the scrolling list, the height of the
+    // control bar beside it, so the two rules line up across the card: the
+    // embed card's shape (embed-card.ts). It used to be the last item in the
+    // scroller (9dff04c7); Brian, 2026-09-25, wanted it pinned and level.
+    moveInner.append(moveList, resultFoot);
     moveCol.append(moveInner);
     const grid = document.createElement('div');
     grid.className = 'xq-replay-grid';
@@ -571,6 +811,25 @@ export function mountXiangqiReplay(
     host.append(header, grid);
   } else {
     host.append(header, frame, controls, slider, narrative);
+    placeChartSlot = () => {
+      if (!chartSlot) return;
+      if (chartShown()) {
+        if (!chartSlot.isConnected) frame.after(chartSlot);
+      } else {
+        chartSlot.remove();
+      }
+    };
+    placeChartSlot();
+  }
+
+  // The embed card's credit line, in the same place and the same type: under
+  // the card, centred, muted until hovered (embed/embed-credit.css).
+  if (spec.boardId) {
+    const analysisLink = document.createElement('a');
+    analysisLink.className = 'embed-credit xq-replay-analysis-link';
+    analysisLink.href = broadcastBoardHref(spec.boardId);
+    analysisLink.textContent = copy.fullAnalysis;
+    host.append(analysisLink);
   }
 
   let index = Math.max(0, Math.min(total, Math.floor(spec.startPly ?? 0)));
@@ -792,10 +1051,9 @@ export function mountXiangqiReplay(
       const tag = document.createElement('span');
       tag.className = 'xq-replay-branch-tag';
       // "engine" named the source; this names the thing, which is what a reader
-      // needs. An engine branch belongs to a ?!/?/?? move, so by default it is
-      // a line that was better than the one played; an author can name it
-      // otherwise (a second answer that is not better, only different).
-      tag.textContent = a?.label ?? copy.betterWas;
+      // needs. An author can name it outright (a second answer that is not
+      // better, only different); otherwise the played move's mark decides.
+      tag.textContent = branchTag(a, copy);
       branch.appendChild(tag);
       // A line replacing a Black move starts mid-pair, so it opens the way a
       // score sheet does: the move number, then an ellipsis standing in for
@@ -838,9 +1096,6 @@ export function mountXiangqiReplay(
       }
       moveList.appendChild(branch);
     }
-    // Last item in the scroller, not a pinned footer: the result belongs at the
-    // end of the game, and reaching it should mean scrolling to the end.
-    moveList.appendChild(resultFoot);
   }
 
   /**
@@ -880,12 +1135,14 @@ export function mountXiangqiReplay(
       .join(' \u00b7 ');
   }
 
-  function render(): void {
+  function render(glide?: { move: XiangqiMove; reverse: boolean }): void {
     const view = viewState();
     // Only the mainline carries a verdict; a position inside an engine line is
     // not a move anyone played.
     const playedGlyph = !variation && index > 0 ? annotationAt(index)?.glyph : undefined;
-    frame.innerHTML = boardSvg(view.board, view.lastMove, perspective, view.key, playedGlyph);
+    const board = replayBoard(perspective);
+    frame.innerHTML = boardSvg(view.board, view.lastMove, board, view.key, playedGlyph);
+    if (glide) glideReplayMove(frame, glide.move, board, glide.reverse);
     if (counter.isConnected) counter.textContent = index === 0 ? copy.start : `${index} / ${total}`;
     // While a sideline is open the controls walk the LINE, so their enabled
     // state has to come from the line's cursor. Reading the mainline index here
@@ -897,6 +1154,10 @@ export function mountXiangqiReplay(
     // when someone clicks their way to the last move and then wants to step
     // back. Remember what was focused, and catch it below if it just went away.
     const wasFocused = document.activeElement;
+    // The move list is rebuilt below, so a focused move button is about to be
+    // detached: the first arrow press after clicking a move worked and every
+    // later one scrolled the page.
+    const focusInMoveList = wasFocused !== null && moveList.contains(wasFocused);
     if (line) {
       first.disabled = false;
       prev.disabled = false;
@@ -933,9 +1194,11 @@ export function mountXiangqiReplay(
     }
     // The card always shows the result, the way a game page does; the running
     // narrative line is the plain stepper's job.
-    resultFoot.textContent = spec.resultText;
+    resultFoot.textContent = xiangqiResultLabel(spec.resultText, copy) || spec.resultText;
+    // Inside an engine line the cursor stays on the game move the line hangs off.
+    chart?.setPly(index);
     renderMoveList();
-    if (takeFocusAfterRender) {
+    if (takeFocusAfterRender || (focusInMoveList && !wasFocused?.isConnected)) {
       takeFocusAfterRender = false;
       // Prefer the move now being shown, so the reader keeps a visible anchor;
       // `host` is the fallback at ply zero, where no move is current. Either
@@ -990,15 +1253,30 @@ export function mountXiangqiReplay(
         leaveVariation();
         return;
       }
+      const from = variation.cursor;
       variation.cursor = Math.min(variation.moves.length, next);
-      render();
+      if (variation.cursor === from) return;
+      // One step inside the line: forward plays line move `cursor`, back
+      // un-plays the move the cursor was on.
+      const forward = variation.cursor > from;
+      const move = variation.moves[(forward ? variation.cursor : from) - 1];
+      render(move ? { move, reverse: !forward } : undefined);
       return;
     }
     const clamped = Math.max(0, Math.min(total, target));
     if (clamped !== index) {
+      const from = index;
       index = clamped;
-      render();
+      render(oneStep(from, clamped));
     }
+  }
+
+  /** The glide for a mainline move from ply `from` to ply `to`, if it is one step. */
+  function oneStep(from: number, to: number): { move: XiangqiMove; reverse: boolean } | undefined {
+    if (Math.abs(to - from) !== 1) return undefined;
+    const forward = to > from;
+    const move = moves[(forward ? to : from) - 1];
+    return move ? { move, reverse: !forward } : undefined;
   }
   /**
    * Put the board on a mainline ply, leaving any line that is open.
@@ -1018,8 +1296,11 @@ export function mountXiangqiReplay(
     variation = null;
     const clamped = Math.max(0, Math.min(total, target));
     const moved = clamped !== index;
+    const from = index;
     index = clamped;
-    if (moved || wasInLine) render();
+    // Leaving a line repaints the mainline instantly: the board jumps from the
+    // line's position, which no single mainline move connects to.
+    if (moved || wasInLine) render(wasInLine ? undefined : oneStep(from, clamped));
   }
 
   const onFirst = () => goto(0);
@@ -1067,11 +1348,121 @@ export function mountXiangqiReplay(
   };
   window.addEventListener(xiangqiNotationChangedEvent, onNotation);
 
+  // --- Advantage chart (lazy) ----------------------------------------------
+  let chart: { setPly(ply: number): void } | null = null;
+  let chartJumpReported = false;
+  let destroyed = false;
+  let chartObserver: IntersectionObserver | null = null;
+
+  /** "12. h2e2" / "12\u2026 h9g7", numbered the way the move list numbers its rows. */
+  // The annotated card already holds the mainline in the reader's notation; the
+  // plain stepper does not, so the chart formats its own, per notation style.
+  let chartLabels: { style: string; labels: string[] } | null = null;
+  const chartMoveLabel = (ply: number): string | null => {
+    if (ply < 1 || ply > total) return null;
+    let labels = mainlineLabels;
+    if (labels.length === 0) {
+      const style = currentXiangqiNotationStyle();
+      if (chartLabels?.style !== style) {
+        chartLabels = { style, labels: formatXiangqiMoves(moves, style, startState) };
+      }
+      labels = chartLabels.labels;
+    }
+    const isFirst = (ply % 2 === 1) === (firstMover === 'red');
+    const n = Math.ceil((ply + plyOffset) / 2);
+    return `${n}${isFirst ? '.' : '\u2026'} ${labels[ply - 1] ?? ''}`;
+  };
+
+  async function loadChart(source: ReplayChartSource, slot: HTMLElement): Promise<void> {
+    const mod = await import('./xiangqi-replay-chart.js');
+    const analysis = await mod.loadReplayChartAnalysis(source, total);
+    if (destroyed) return;
+    if (!analysis) {
+      // No stored analysis: give the reserved height back, for good.
+      dropChart();
+      return;
+    }
+    const drawn = mod.createReplayAdvantageChart(analysis, {
+      states,
+      moveLabel: chartMoveLabel,
+      ariaLabel: copy.advantageChart,
+      phaseLabels: copy.phases,
+      onJump: (ply) => {
+        if (!chartJumpReported) {
+          chartJumpReported = true;
+          track('article_replay_chart_jump', {
+            slug:
+              document.querySelector('[data-article-slug]')?.getAttribute('data-article-slug') ??
+              '',
+            event: spec.event,
+          });
+        }
+        gotoMainline(ply);
+      },
+    });
+    slot.replaceChildren(drawn.el);
+    slot.classList.add('is-loaded');
+    chart = drawn;
+    drawn.setPly(index);
+  }
+
+  /** No chart for this game: the slot leaves the card and never comes back. */
+  function dropChart(): void {
+    chartGone = true;
+    placeChartSlot();
+  }
+
+  /** Watch for the board nearing the viewport, if the graph is wanted and has
+   *  not been fetched yet. Fetched once, within 600px of the screen. */
+  let chartRequested = false;
+  function watchChart(): void {
+    const slot = chartSlot;
+    const source = chartSource;
+    if (!slot || !source || chartRequested || chartObserver || !chartShown()) return;
+    chartObserver = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        chartObserver?.disconnect();
+        chartObserver = null;
+        chartRequested = true;
+        loadChart(source, slot).catch(() => {
+          if (!destroyed) dropChart();
+        });
+      },
+      { rootMargin: '600px 0px' },
+    );
+    chartObserver.observe(host);
+  }
+
+  // The shared show/hide setting. Every board on the page hears the change,
+  // including the one whose menu made it.
+  const onEvalGraphChanged = (event: Event): void => {
+    const hidden = (event as CustomEvent<{ hidden: boolean }>).detail?.hidden;
+    if (typeof hidden !== 'boolean' || hidden === graphHidden) return;
+    graphHidden = hidden;
+    if (graphToggle) graphToggle.textContent = hidden ? copy.showEvalGraph : copy.hideEvalGraph;
+    if (hidden) {
+      // Not fetched yet: stop watching, so a hidden graph is never fetched.
+      chartObserver?.disconnect();
+      chartObserver = null;
+    }
+    placeChartSlot();
+    if (!hidden) {
+      chart?.setPly(index);
+      watchChart();
+    }
+  };
+  if (chartSlot) window.addEventListener(evalGraphChangedEvent, onEvalGraphChanged);
+  watchChart();
+
   relabel();
   render();
 
   return {
     destroy(): void {
+      destroyed = true;
+      chartObserver?.disconnect();
+      window.removeEventListener(evalGraphChangedEvent, onEvalGraphChanged);
       first.removeEventListener('click', onFirst);
       prev.removeEventListener('click', onPrev);
       next.removeEventListener('click', onNext);
@@ -1105,7 +1496,7 @@ export type XiangqiReplayBoardHandle = {
     suffixClass?: string;
     note?: string;
     assessment?: string;
-    line?: { moves: string[]; verdict?: string; note?: string };
+    line?: { moves: string[]; tag?: string; verdict?: string; note?: string };
   }>;
   /** Show the position after `cursor` moves of the sideline hung off `atPly`.
    *  A ply with no sideline is ignored. jumpToPly leaves the line. */
@@ -1114,13 +1505,18 @@ export type XiangqiReplayBoardHandle = {
   bottomSeat: () => 'first' | 'second';
 };
 
-const GLYPH_SUFFIX_CLASS: Record<string, string> = {
-  '??': 'blunder',
-  '?': 'mistake',
-  '?!': 'inaccuracy',
-  '!!': 'brilliant',
-  '!': 'great',
-};
+const FAULT_GLYPHS: ReadonlySet<string> = new Set(['?', '??', '?!']);
+
+/**
+ * The tag on a sideline. "Better was" is a verdict, so it needs a faulted move
+ * to hang off: an engine line always has one, but a study's branch often does
+ * not (a second key, an equally fast mate), and every study embed once called
+ * those better. The author's own label still wins.
+ */
+export function branchTag(a: XiangqiReplayAnnotation | undefined, copy: ReplayStepperCopy): string {
+  if (a?.label) return a.label;
+  return a?.glyph && FAULT_GLYPHS.has(a.glyph) ? copy.betterWas : copy.alsoWas;
+}
 
 /**
  * The board alone: the position at a ply, the last-move marks, the judgment
@@ -1143,6 +1539,7 @@ export function mountXiangqiReplayBoard(
   const perspective: XiangqiColor = spec.perspective ?? 'red';
   const { moves, states, startState, firstMover, total } = replayLine(spec);
   const annotated = spec.annotations;
+  const stepperCopy = replayStepperCopy(undefined, 'xiangqi');
 
   const frame = document.createElement('div');
   frame.className = 'raw-svg-stepper-frame raw-svg-stepper-frame-xq';
@@ -1179,7 +1576,8 @@ export function mountXiangqiReplayBoard(
   // What the board is showing: a mainline ply, or a step inside a sideline.
   let inLine: { atPly: number; cursor: number } | null = null;
 
-  const render = (): void => {
+  const render = (glide?: { move: XiangqiMove; reverse: boolean }): void => {
+    const board = replayBoard(perspective);
     if (inLine) {
       // Replay the sideline from the position the judged move was played in;
       // an illegal token truncates the line rather than throwing.
@@ -1193,17 +1591,19 @@ export function mountXiangqiReplayBoard(
         state = next;
         last = mv;
       }
-      frame.innerHTML = boardSvg(state.board, last, perspective, 1000 + inLine.cursor);
+      frame.innerHTML = boardSvg(state.board, last, board, 1000 + inLine.cursor);
+      if (glide) glideReplayMove(frame, glide.move, board, glide.reverse);
       return;
     }
     const glyph = index > 0 ? annotated?.byPly[index]?.glyph : undefined;
     frame.innerHTML = boardSvg(
       states[index]!.board,
       index > 0 ? moves[index - 1] : undefined,
-      perspective,
+      board,
       index,
       glyph,
     );
+    if (glide) glideReplayMove(frame, glide.move, board, glide.reverse);
     hooks.onPlyChange?.(index, total);
   };
   const onAppearance = (): void => render();
@@ -1221,15 +1621,32 @@ export function mountXiangqiReplayBoard(
     jumpToPly: (ply) => {
       const clamped = Math.max(0, Math.min(total, ply));
       if (clamped === index && !inLine) return;
+      const wasInLine = inLine !== null;
+      const from = index;
       inLine = null;
       index = clamped;
-      render();
+      // One mainline step glides; a jump, or leaving a line, repaints instantly.
+      const forward = clamped > from;
+      const move = moves[(forward ? clamped : from) - 1];
+      render(
+        !wasInLine && Math.abs(clamped - from) === 1 && move
+          ? { move, reverse: !forward }
+          : undefined,
+      );
     },
     jumpToLine: (atPly, cursor) => {
       const line = lines.get(atPly);
       if (!line) return;
+      const prev = inLine;
       inLine = { atPly, cursor: Math.max(1, Math.min(line.moves.length, cursor)) };
-      render();
+      // One step inside the same line glides, like the mainline.
+      const step =
+        prev && prev.atPly === atPly && Math.abs(inLine.cursor - prev.cursor) === 1
+          ? inLine.cursor > prev.cursor
+            ? { move: line.moves[inLine.cursor - 1], reverse: false }
+            : { move: line.moves[prev.cursor - 1], reverse: true }
+          : undefined;
+      render(step?.move ? { move: step.move, reverse: step.reverse } : undefined);
     },
     plyCount: () => total,
     moveEntries: () =>
@@ -1248,6 +1665,8 @@ export function mountXiangqiReplayBoard(
             ? {
                 line: {
                   moves: line.labels,
+                  // Same tag as the article widget's (branchTag).
+                  tag: branchTag(a, stepperCopy),
                   ...(a?.lineEval ? { verdict: a.lineEval } : {}),
                   ...(a?.lineNote ? { note: a.lineNote } : {}),
                 },

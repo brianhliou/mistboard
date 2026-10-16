@@ -1,0 +1,181 @@
+{
+  "engineId": "ab-jchess-jieqi-analysis@1+1ae95ca6+abjchess-20260911+nodes50000+consistent-win1",
+  "depth": 16,
+  "plies": [
+    {
+      "cp": 4,
+      "ply": 0,
+      "best": "h0g2",
+      "mate": null
+    },
+    {
+      "cp": 0,
+      "ply": 1,
+      "best": "g6g5",
+      "mate": null
+    },
+    {
+      "cp": 2,
+      "ply": 2,
+      "best": "g0e2",
+      "mate": null
+    },
+    {
+      "cp": 1,
+      "ply": 3,
+      "best": "h7h0",
+      "mate": null
+    },
+    {
+      "cp": 0,
+      "ply": 4,
+      "best": "c3c4",
+      "mate": null
+    },
+    {
+      "cp": 1,
+      "ply": 5,
+      "best": "g5e5",
+      "mate": null
+    },
+    {
+      "cp": 0,
+      "ply": 6,
+      "best": "c3c4",
+      "mate": null
+    },
+    {
+      "cp": 5,
+      "ply": 7,
+      "best": "b9c7",
+      "mate": null
+    },
+    {
+      "cp": 9,
+      "ply": 8,
+      "best": "i4g2",
+      "mate": null
+    },
+    {
+      "cp": 12,
+      "ply": 9,
+      "best": "h7h0",
+      "mate": null
+    },
+    {
+      "cp": 20,
+      "ply": 10,
+      "best": "g3g4",
+      "mate": null
+    },
+    {
+      "cp": 13,
+      "ply": 11,
+      "best": "c6c5",
+      "mate": null
+    },
+    {
+      "cp": 29,
+      "ply": 12,
+      "best": "b0c2",
+      "mate": null
+    },
+    {
+      "cp": 24,
+      "ply": 13,
+      "best": "d9e8",
+      "mate": null
+    },
+    {
+      "cp": 17,
+      "ply": 14,
+      "best": "b0c2",
+      "mate": null
+    },
+    {
+      "cp": 9,
+      "ply": 15,
+      "best": "i5i0",
+      "mate": null
+    },
+    {
+      "cp": 62,
+      "ply": 16,
+      "best": "i0i5",
+      "mate": null
+    },
+    {
+      "cp": 71,
+      "ply": 17,
+      "best": "i9i5",
+      "mate": null
+    },
+    {
+      "cp": 58,
+      "ply": 18,
+      "best": "b0c2",
+      "mate": null
+    },
+    {
+      "cp": 64,
+      "ply": 19,
+      "best": "i5g6",
+      "mate": null
+    },
+    {
+      "cp": 102,
+      "ply": 20,
+      "best": "h2h9",
+      "mate": null
+    },
+    {
+      "cp": 96,
+      "ply": 21,
+      "best": "e7i7",
+      "mate": null
+    },
+    {
+      "cp": 97,
+      "ply": 22,
+      "best": "h2h9",
+      "mate": null
+    },
+    {
+      "cp": 92,
+      "ply": 23,
+      "best": "e7i7",
+      "mate": null
+    },
+    {
+      "cp": 100,
+      "ply": 24,
+      "best": "h0i2",
+      "mate": null
+    },
+    {
+      "cp": 91,
+      "ply": 25,
+      "best": "b7b0",
+      "mate": null
+    },
+    {
+      "cp": 98,
+      "ply": 26,
+      "best": "e1f2",
+      "mate": null
+    },
+    {
+      "cp": null,
+      "ply": 27,
+      "best": "h5h0",
+      "mate": -1
+    },
+    {
+      "cp": -30000,
+      "ply": 28,
+      "best": null,
+      "mate": null
+    }
+  ],
+  "chancePlies": [1, 2, 3, 4, 5, 7, 8, 10, 11, 12, 13, 14, 17, 18, 19, 23, 25, 27]
+}

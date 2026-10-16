@@ -1,7 +1,13 @@
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import { Readable } from 'node:stream';
+import { DAY_MS } from '@mistboard/game';
 import {
+  type AccountSession,
+  CORRESPONDENCE_SEEK_TTL_MS,
   closeUserAccount,
   correspondenceStartRecipient,
   countOpenSeeksForUser,
+  createAccountSession,
   createCorrespondenceSeek,
   createUser,
   deleteCorrespondenceSeek,
@@ -10,10 +16,16 @@ import {
   listChallengesForUser,
   listOpenCorrespondenceSeeks,
   listOutgoingSeeksForUser,
+  markSeekExpiryNoticesSeen,
+  unseenSeekExpiryNotices,
   updateUserAccountPreference,
   userExists,
 } from './persistence.js';
-import { assert, definePersistenceTests, test } from './persistence-test-support.js';
+import { getPool } from './persistence-db.js';
+import { assert, definePersistenceTests, sha256, test } from './persistence-test-support.js';
+import { tryHandle as tryHandleSeekRoute } from './routes/correspondence-seeks.js';
+import type { HttpApiContext } from './routes/lib.js';
+import { tryHandle as tryHandleNotificationsRoute } from './routes/notifications.js';
 
 definePersistenceTests('correspondence seeks', () => {
   const at = new Date('2026-06-13T12:00:00Z');
@@ -170,6 +182,61 @@ definePersistenceTests('correspondence seeks', () => {
     assert.equal(await deleteCorrespondenceSeek('seek-1'), true);
     assert.equal(await deleteCorrespondenceSeek('seek-1'), false);
     assert.equal(await countOpenSeeksForUser(alice.id), 1);
+  });
+
+  // Names on the correspondence pages link to /@/<handle>. The handle is carried
+  // only for an open, non-private account, the same rule as postgame rows; the
+  // display name is never withheld.
+  test('seek reads carry a linkable handle, withheld for a private profile', async () => {
+    const erin = await seedUser('hdl-erin', 'erin', 'Erin');
+    const finn = await seedUser('hdl-finn', 'finn', 'Finn');
+    await getPool().query(`UPDATE users SET profile_visibility = 'private' WHERE id = $1`, [
+      finn.id,
+    ]);
+    const base = {
+      gameSpecId: 'xiangqi',
+      daysPerMove: 3,
+      preferredColor: 'random' as const,
+      expiresAt: null,
+    };
+    await createCorrespondenceSeek({
+      ...base,
+      id: 'hdl-erin-public',
+      creatorUserId: erin.id,
+      targetUserId: null,
+      visibility: 'public',
+    });
+    await createCorrespondenceSeek({
+      ...base,
+      id: 'hdl-finn-public',
+      creatorUserId: finn.id,
+      targetUserId: null,
+      visibility: 'public',
+    });
+    await createCorrespondenceSeek({
+      ...base,
+      id: 'hdl-erin-to-finn',
+      creatorUserId: erin.id,
+      targetUserId: finn.id,
+      visibility: 'private',
+    });
+
+    const board = await listOpenCorrespondenceSeeks();
+    const byId = new Map(board.map((seek) => [seek.id, seek]));
+    assert.equal(byId.get('hdl-erin-public')?.creatorHandle, 'erin');
+    assert.equal(byId.get('hdl-finn-public')?.creatorName, 'Finn');
+    assert.equal(byId.get('hdl-finn-public')?.creatorHandle, null);
+
+    const incoming = await listChallengesForUser(finn.id);
+    assert.equal(incoming[0]?.creatorHandle, 'erin');
+
+    const outgoing = await listOutgoingSeeksForUser(erin.id);
+    const directed = outgoing.find((seek) => seek.id === 'hdl-erin-to-finn');
+    assert.equal(directed?.targetName, 'Finn');
+    assert.equal(directed?.targetHandle, null);
+    // A board post has no target: no name, no handle.
+    const posted = outgoing.find((seek) => seek.id === 'hdl-erin-public');
+    assert.equal(posted?.targetHandle, null);
   });
 
   test('owner-scoped cancel removes only the creator-owned seek', async () => {
@@ -353,4 +420,405 @@ definePersistenceTests('correspondence seeks', () => {
     );
     assert.equal(await correspondenceStartRecipient(quitter.id), null);
   });
+  // Public board seeks used to stand forever: prod's board was two identical
+  // month-old Fog Chess posts from one player, the main content of an otherwise
+  // empty /games page. A board seek now lapses CORRESPONDENCE_SEEK_TTL_MS after
+  // it was posted, judged from created_at at read time, so rows posted before
+  // the rule existed lapse too without a migration.
+  test('public board seeks lapse 14 days after posting, everywhere they are read', async () => {
+    assert.equal(CORRESPONDENCE_SEEK_TTL_MS, 14 * DAY_MS);
+    const fay = await seedUser('ttl-fay', 'ttlfay', 'Fay');
+    for (const id of ['ttl-old', 'ttl-recent']) {
+      await createCorrespondenceSeek({
+        id,
+        creatorUserId: fay.id,
+        gameSpecId: 'dark-chess',
+        daysPerMove: 7,
+        preferredColor: 'random',
+        targetUserId: null,
+        visibility: 'public',
+        expiresAt: null,
+      });
+    }
+    await backdateSeek('ttl-old', 15);
+    await backdateSeek('ttl-recent', 13);
+
+    const board = (await listOpenCorrespondenceSeeks()).map((seek) => seek.id);
+    assert.deepEqual(board, ['ttl-recent'], 'a 15-day-old board seek is off the board');
+    assert.equal(await countOpenSeeksForUser(fay.id), 1, 'a lapsed seek holds no cap slot');
+    assert.deepEqual(
+      (await listOutgoingSeeksForUser(fay.id)).map((seek) => seek.id),
+      ['ttl-recent'],
+      "the creator's own list hides it too",
+    );
+    // The accept gate reads expiresAt: the effective expiry must be reported
+    // even though the row's own expires_at column is NULL.
+    const now = Date.now();
+    const old = await getCorrespondenceSeek('ttl-old');
+    assert.ok(old?.expiresAt && old.expiresAt.getTime() <= now, 'old seek reports a past expiry');
+    const recent = await getCorrespondenceSeek('ttl-recent');
+    assert.ok(
+      recent?.expiresAt && recent.expiresAt.getTime() > now,
+      'recent seek reports a future expiry',
+    );
+    // Housekeeping reaps it on the same rule.
+    assert.equal(await deleteExpiredCorrespondenceSeeks(new Date()), 1);
+    assert.equal(await getCorrespondenceSeek('ttl-old'), null);
+    assert.notEqual(await getCorrespondenceSeek('ttl-recent'), null);
+  });
+
+  test('accepting a public seek past the TTL is refused; one inside it is not', async () => {
+    await withCorrespondenceEnabled(async () => {
+      const gus = await seedUser('ttl-gus', 'ttlgus', 'Gus');
+      const hal = await seedUser('ttl-hal', 'ttlhal', 'Hal');
+      for (const id of ['acc-old', 'acc-recent']) {
+        await createCorrespondenceSeek({
+          id,
+          creatorUserId: gus.id,
+          gameSpecId: 'dark-chess',
+          daysPerMove: 7,
+          preferredColor: 'random',
+          targetUserId: null,
+          visibility: 'public',
+          expiresAt: null,
+        });
+      }
+      await backdateSeek('acc-old', 15);
+      await backdateSeek('acc-recent', 13);
+      const cookie = await makeSessionCookie(hal.id);
+
+      const old = await callSeekRoute('POST', '/api/correspondence/seeks/acc-old/accept', cookie);
+      assert.equal(old.status, 410);
+      assert.equal(old.json.error, 'challenge_expired');
+      assert.notEqual(
+        await getCorrespondenceSeek('acc-old'),
+        null,
+        'a refused accept consumes nothing',
+      );
+
+      const recent = await callSeekRoute(
+        'POST',
+        '/api/correspondence/seeks/acc-recent/accept',
+        cookie,
+      );
+      // Past the expiry gate the accept consumes the row. No tenant is registered
+      // in this file, so the seat step answers 501; the point is that it got there.
+      assert.notEqual(recent.status, 410, 'a 13-day-old seek is still acceptable');
+      assert.equal(await getCorrespondenceSeek('acc-recent'), null, 'the accept took the seek');
+    });
+  });
+
+  test('re-posting an identical open public seek returns the existing one', async () => {
+    await withCorrespondenceEnabled(async () => {
+      const ivy = await seedUser('dup-ivy', 'dupivy', 'Ivy');
+      const cookie = await makeSessionCookie(ivy.id);
+      const body = { gameSpecId: 'dark-chess', daysPerMove: 7, preferredColor: 'random' };
+
+      const first = await callSeekRoute('POST', '/api/correspondence/seeks', cookie, body);
+      assert.equal(first.status, 201);
+      const firstId = (first.json.seek as { id: string }).id;
+
+      const again = await callSeekRoute('POST', '/api/correspondence/seeks', cookie, body);
+      assert.equal(again.status, 200, 'no error to the player, and nothing new created');
+      assert.equal((again.json.seek as { id: string }).id, firstId);
+      assert.equal(await countOpenSeeksForUser(ivy.id), 1);
+
+      // Any differing dimension is a different offer.
+      const otherDays = await callSeekRoute('POST', '/api/correspondence/seeks', cookie, {
+        ...body,
+        daysPerMove: 3,
+      });
+      assert.equal(otherDays.status, 201);
+      const otherColor = await callSeekRoute('POST', '/api/correspondence/seeks', cookie, {
+        ...body,
+        preferredColor: 'first',
+      });
+      assert.equal(otherColor.status, 201);
+      // A private link challenge is never folded into a board post.
+      const link = await callSeekRoute('POST', '/api/correspondence/seeks', cookie, {
+        ...body,
+        visibility: 'private',
+      });
+      assert.equal(link.status, 201);
+      assert.equal(await countOpenSeeksForUser(ivy.id), 4);
+
+      // A lapsed duplicate does not count: the player gets a fresh post.
+      await backdateSeek(firstId, 15);
+      const fresh = await callSeekRoute('POST', '/api/correspondence/seeks', cookie, body);
+      assert.equal(fresh.status, 201);
+      assert.notEqual((fresh.json.seek as { id: string }).id, firstId);
+    });
+  });
+
+  test('an identical re-post at the open-seek cap returns the existing seek, not 409', async () => {
+    await withCorrespondenceEnabled(async () => {
+      const jo = await seedUser('dup-jo', 'dupjo', 'Jo');
+      const cookie = await makeSessionCookie(jo.id);
+      let firstId = '';
+      for (const preferredColor of ['first', 'second']) {
+        for (const daysPerMove of [1, 3, 7]) {
+          const res = await callSeekRoute('POST', '/api/correspondence/seeks', cookie, {
+            gameSpecId: 'dark-chess',
+            daysPerMove,
+            preferredColor,
+          });
+          assert.equal(res.status, 201, `post ${preferredColor} ${daysPerMove}`);
+          if (!firstId) firstId = (res.json.seek as { id: string }).id;
+        }
+      }
+      const capped = await callSeekRoute('POST', '/api/correspondence/seeks', cookie, {
+        gameSpecId: 'dark-chess',
+        daysPerMove: 1,
+        preferredColor: 'random',
+      });
+      assert.equal(capped.status, 409, 'a new offer at the cap is still refused');
+      const dup = await callSeekRoute('POST', '/api/correspondence/seeks', cookie, {
+        gameSpecId: 'dark-chess',
+        daysPerMove: 1,
+        preferredColor: 'first',
+      });
+      assert.equal(dup.status, 200);
+      assert.equal((dup.json.seek as { id: string }).id, firstId);
+    });
+  });
+
+  // Board seeks used to lapse silently: the sweep deleted them and the creator
+  // was never told (two month-old seeks from a real player vanished on
+  // 2026-10-02). The sweep now leaves exactly one bell notice per lapsed public
+  // board seek, written by the same statement as the delete.
+  test('sweeping a lapsed board seek leaves its creator exactly one notice', async () => {
+    const ivy = await seedUser('exp-note-ivy', 'expnoteivy', 'Ivy');
+    const jon = await seedUser('exp-note-jon', 'expnotejon', 'Jon');
+    const past = new Date(Date.now() - 60_000);
+    const board = (id: string, gameSpecId = 'xiangqi') =>
+      createCorrespondenceSeek({
+        id,
+        creatorUserId: ivy.id,
+        gameSpecId,
+        daysPerMove: 3,
+        preferredColor: 'second',
+        targetUserId: null,
+        visibility: 'public',
+        expiresAt: null,
+      });
+    await board('note-board-old');
+    await board('note-board-live', 'dark-chess');
+    await createCorrespondenceSeek({
+      id: 'note-link-lapsed',
+      creatorUserId: ivy.id,
+      gameSpecId: 'xiangqi',
+      daysPerMove: 3,
+      preferredColor: 'random',
+      targetUserId: null,
+      visibility: 'private',
+      expiresAt: past,
+    });
+    await createCorrespondenceSeek({
+      id: 'note-direct-lapsed',
+      creatorUserId: ivy.id,
+      gameSpecId: 'xiangqi',
+      daysPerMove: 3,
+      preferredColor: 'random',
+      targetUserId: jon.id,
+      visibility: 'private',
+      expiresAt: past,
+    });
+    await backdateSeek('note-board-old', 15);
+    await backdateSeek('note-board-live', 13);
+
+    assert.equal(await deleteExpiredCorrespondenceSeeks(new Date()), 3);
+    assert.deepEqual(await noticeRows(), [
+      {
+        seek_id: 'note-board-old',
+        user_id: ivy.id,
+        game_spec_id: 'xiangqi',
+        days_per_move: 3,
+        preferred_color: 'second',
+      },
+    ]);
+    assert.notEqual(await getCorrespondenceSeek('note-board-live'), null);
+
+    // A second sweep finds nothing to delete and writes nothing more.
+    assert.equal(await deleteExpiredCorrespondenceSeeks(new Date()), 0);
+    assert.equal((await noticeRows()).length, 1, 'no duplicate notice');
+  });
+
+  test('a closed or play-locked creator gets no expiry notice', async () => {
+    const kim = await seedUser('exp-note-kim', 'expnotekim', 'Kim');
+    const lou = await seedUser('exp-note-lou', 'expnotelou', 'Lou');
+    for (const [id, creatorUserId] of [
+      ['note-closed', kim.id],
+      ['note-locked', lou.id],
+    ] as const) {
+      await createCorrespondenceSeek({
+        id,
+        creatorUserId,
+        gameSpecId: 'xiangqi',
+        daysPerMove: 7,
+        preferredColor: 'random',
+        targetUserId: null,
+        visibility: 'public',
+        expiresAt: null,
+      });
+      await backdateSeek(id, 15);
+    }
+    // closeUserAccount already withdraws the account's seeks; stamp closed_at
+    // directly so the sweep's own filter is what this exercises.
+    await getPool().query('UPDATE users SET closed_at = now() WHERE id = $1', [kim.id]);
+    await getPool().query('UPDATE users SET play_disabled_at = now() WHERE id = $1', [lou.id]);
+
+    assert.equal(await deleteExpiredCorrespondenceSeeks(new Date()), 2, 'both seeks still go');
+    assert.deepEqual(await noticeRows(), []);
+  });
+
+  test('the bell lists an unseen expiry notice with its terms until it is opened', async () => {
+    const mia = await seedUser('exp-note-mia', 'expnotemia', 'Mia');
+    await createCorrespondenceSeek({
+      id: 'note-bell',
+      creatorUserId: mia.id,
+      gameSpecId: 'xiangqi',
+      daysPerMove: 7,
+      preferredColor: 'first',
+      targetUserId: null,
+      visibility: 'public',
+      expiresAt: null,
+    });
+    await backdateSeek('note-bell', 15);
+    assert.equal(await deleteExpiredCorrespondenceSeeks(new Date()), 1);
+
+    const unseen = await unseenSeekExpiryNotices(mia.id);
+    assert.equal(unseen.total, 1);
+    assert.equal(unseen.notices[0]?.seekId, 'note-bell');
+    assert.equal(unseen.notices[0]?.daysPerMove, 7);
+    assert.equal(unseen.notices[0]?.preferredColor, 'first');
+
+    const cookie = await makeSessionCookie(mia.id);
+    const bell = await callNotificationsRoute('GET', '/api/notifications', cookie);
+    assert.equal(bell.status, 200);
+    assert.equal(bell.json.seekExpiries, 1);
+    const rows = bell.json.seekExpired as Array<Record<string, unknown>>;
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0]?.gameSpecId, 'xiangqi');
+    assert.equal(rows[0]?.ttlDays, 14);
+
+    // Opening the bell is the read receipt: the notice leaves and stays gone.
+    const seen = await callNotificationsRoute('POST', '/api/notifications/seen', cookie, {
+      kind: 'seek-expiries',
+    });
+    assert.equal(seen.status, 200);
+    const after = await callNotificationsRoute('GET', '/api/notifications', cookie);
+    assert.equal(after.json.seekExpiries, 0);
+    assert.deepEqual(after.json.seekExpired, []);
+    await markSeekExpiryNoticesSeen(mia.id);
+    assert.equal((await unseenSeekExpiryNotices(mia.id)).total, 0);
+  });
 });
+
+async function noticeRows(): Promise<Array<Record<string, unknown>>> {
+  const { rows } = await getPool().query(
+    `SELECT seek_id, user_id, game_spec_id, days_per_move, preferred_color
+     FROM correspondence_seek_expiry_notices ORDER BY seek_id`,
+  );
+  return rows;
+}
+
+async function callNotificationsRoute(
+  method: string,
+  path: string,
+  cookie: string,
+  body?: Record<string, unknown>,
+): Promise<{ status: number | null; json: Record<string, unknown> }> {
+  const request = Object.assign(Readable.from(body ? [Buffer.from(JSON.stringify(body))] : []), {
+    method,
+    headers: { cookie },
+  }) as unknown as IncomingMessage;
+  const capture = {
+    body: '',
+    status: null as number | null,
+    writeHead(status: number) {
+      capture.status = status;
+      return capture;
+    },
+    end(chunk?: string) {
+      capture.body += chunk ?? '';
+      return capture;
+    },
+  };
+  const handled = await tryHandleNotificationsRoute(
+    notDraining,
+    request,
+    capture as unknown as ServerResponse,
+    path,
+  );
+  assert.equal(handled, true, `${method} ${path} should be claimed`);
+  return { status: capture.status, json: JSON.parse(capture.body || '{}') };
+}
+
+async function backdateSeek(id: string, days: number): Promise<void> {
+  await getPool().query(
+    `UPDATE correspondence_seeks SET created_at = now() - make_interval(days => $2) WHERE id = $1`,
+    [id, days],
+  );
+}
+
+async function withCorrespondenceEnabled(run: () => Promise<void>): Promise<void> {
+  const prior = process.env.MISTBOARD_CORRESPONDENCE_ENABLED;
+  process.env.MISTBOARD_CORRESPONDENCE_ENABLED = 'true';
+  try {
+    await run();
+  } finally {
+    if (prior === undefined) delete process.env.MISTBOARD_CORRESPONDENCE_ENABLED;
+    else process.env.MISTBOARD_CORRESPONDENCE_ENABLED = prior;
+  }
+}
+
+async function makeSessionCookie(userId: string): Promise<string> {
+  const sessionId = `sess_${userId}`;
+  const token = `tok_${userId}`;
+  // currentAccountUser validates expiry against the real wall clock.
+  const session: AccountSession = {
+    id: sessionId,
+    userId,
+    tokenHash: sha256(token),
+    expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+  };
+  await createAccountSession(session);
+  return `mistboard_session=${sessionId}.${token}`;
+}
+
+const notDraining = {
+  refusesCreate: () => false,
+  drainDeadlineMs: () => null,
+} as unknown as HttpApiContext;
+
+async function callSeekRoute(
+  method: string,
+  path: string,
+  cookie: string,
+  body?: Record<string, unknown>,
+): Promise<{ status: number | null; json: Record<string, unknown> }> {
+  const request = Object.assign(Readable.from(body ? [Buffer.from(JSON.stringify(body))] : []), {
+    method,
+    headers: { cookie },
+  }) as unknown as IncomingMessage;
+  const capture = {
+    body: '',
+    status: null as number | null,
+    writeHead(status: number) {
+      capture.status = status;
+      return capture;
+    },
+    end(chunk?: string) {
+      capture.body += chunk ?? '';
+      return capture;
+    },
+  };
+  const handled = await tryHandleSeekRoute(
+    notDraining,
+    request,
+    capture as unknown as ServerResponse,
+    path,
+  );
+  assert.equal(handled, true, `${method} ${path} should be claimed`);
+  return { status: capture.status, json: JSON.parse(capture.body || '{}') };
+}

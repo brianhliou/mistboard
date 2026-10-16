@@ -2,7 +2,12 @@ import type { GameEvent } from '@mistboard/game';
 import './landing-play.css';
 import './landing.css';
 import './game-route.css';
-import { buildHomeArticleCards, initLandingCarousel, mountArticleThumbnails } from './articles.js';
+import {
+  buildHomeArticleCards,
+  HOME_ARTICLE_ROW_SIZE,
+  initLandingCarousel,
+  mountArticleThumbnails,
+} from './articles.js';
 import {
   displayParticipantName,
   type FeaturedGame,
@@ -22,6 +27,7 @@ import { buildLandingActivity } from './landing-activity.js';
 import { buildLandingAnnouncements } from './landing-announcements.js';
 import { buildLandingChat } from './landing-chat.js';
 import { buildTopStudiesWidget } from './landing-community-widgets.js';
+import { buildLandingCorrespondenceCard } from './landing-correspondence.js';
 import { buildLandingEventBanners, loadBroadcastBanners } from './landing-event-banners.js';
 import { buildLandingForumPreview } from './landing-forum-preview.js';
 import {
@@ -33,14 +39,15 @@ import {
   type PlayableEngine,
   setRoomNavigator,
 } from './landing-play.js';
+import { buildPlayPanel, playPanelEnabled } from './landing-play-panel.js';
 import { homepageShowcaseGames, pickHeroPovForGame } from './landing-showcase.js';
 import { type LandingTvMode, mountLandingTv } from './landing-tv.js';
-import { buildHomeLearnRow } from './learn-row.js';
+import { fetchLiveStats } from './live-stats-client.js';
 import { type GameMeta, mountReplay } from './replay.js';
 import { renderWatchReplaySkeleton } from './replay-skeleton.js';
 import { enginePanelsForReview, loadGameForReview } from './review.js';
 import { roomIdFromPath } from './room-url.js';
-import type { ShowcaseEntry } from './showcase-cycler.js';
+import { type ShowcaseEntry, showcaseAirFields } from './showcase-cycler.js';
 import { specIdForShowcaseVariant } from './showcase-dispatch.js';
 import { buildHomeFooter, buildNav, buildNotice } from './site-shell.js';
 import { type WebVariantTenant, webVariantTenantForRoomId } from './variant-tenant/registry.js';
@@ -129,6 +136,7 @@ export async function mountLanding(root: HTMLElement): Promise<void> {
       specId: specIdForShowcaseVariant(game.variant),
       pov,
       ...(game.endedAt ? { endedAt: game.endedAt } : {}),
+      ...showcaseAirFields(game),
     };
   };
   const params = new URLSearchParams(window.location.search);
@@ -184,10 +192,10 @@ export async function mountLanding(root: HTMLElement): Promise<void> {
     }
   }
 
-  // Mistboard TV controller (2026-07-20, replaces the endless replay cycler):
-  // follow the top-rated LIVE game when one exists, else air the freshest
-  // unseen completed game once, else hold the last final position. Each game
-  // shows as a single compact board; the completed pool refreshes below.
+  // Mistboard TV controller: a channel that keeps running while nobody looks.
+  // A LIVE game when one exists; else a fog game on its delayed air (joined at
+  // the ply it is on now); else the last finished game's final position. Each
+  // game shows as a single compact board; the completed pool refreshes below.
   const tv = await mountLandingTv(stage.replayRoot, cyclePool, {
     metadataByRoomId,
     namesByRoomId,
@@ -292,11 +300,9 @@ export async function mountLanding(root: HTMLElement): Promise<void> {
     }
     // live-stats only paces the NEXT tick, so it runs in parallel with the pool
     // refresh instead of serializing a round-trip in front of it.
-    const playingPromise = fetch('/api/live-stats')
-      .then(async (resp) =>
-        resp.ok ? (((await resp.json()) as { playing?: number }).playing ?? 0) : 0,
-      )
-      .catch(() => 0);
+    const playingPromise = fetchLiveStats().then((data) =>
+      typeof data?.playing === 'number' ? data.playing : 0,
+    );
     const preloaded = firstRefreshTick ? await firstShowcaseLoad : null;
     firstRefreshTick = false;
     await refreshShowcasePool(preloaded);
@@ -355,7 +361,7 @@ async function transitionToRoom(
       window.location.href = url;
       return;
     }
-    prepareRoomTransition(root, url, teardownLanding);
+    prepareRoomTransition(root, url, teardownLanding, t(tenant.pageTitleKey));
     bootstrap();
     return;
   }
@@ -367,7 +373,7 @@ async function transitionToRoom(
     window.location.href = url;
     return;
   }
-  prepareRoomTransition(root, url, teardownLanding);
+  prepareRoomTransition(root, url, teardownLanding, t('live.pageTitle'));
   liveModule.bootstrapLiveRoom();
 }
 
@@ -384,9 +390,17 @@ export function landingRoomClientKindForUrl(url: string): 'tenant' | 'standard' 
   return landingRoomTenantForUrl(url) ? 'tenant' : 'standard';
 }
 
-function prepareRoomTransition(root: HTMLElement, url: string, teardownLanding: () => void): void {
+// The room gets the tab title a full load of its URL would (main.ts setTitle);
+// without it the tab kept the homepage's English title for the whole game.
+function prepareRoomTransition(
+  root: HTMLElement,
+  url: string,
+  teardownLanding: () => void,
+  title: string,
+): void {
   teardownLanding();
   window.history.pushState(null, '', url);
+  document.title = `${title} · Mistboard`;
   root.classList.remove('landing-page', 'game-route');
   root.replaceChildren();
   window.addEventListener('popstate', reloadOnPopState);
@@ -633,7 +647,13 @@ function buildLandingStage(
   // is the complementary "join a game" surface. ──
   const lobbyPanel = document.createElement('section');
   lobbyPanel.className = 'landing-lobby-panel';
-  lobbyPanel.append(buildLobbyPanel(locale, { hydrate: !opts.skipLiveWidgets }));
+  // The bot-first play panel (#491) is the default; `?hero=lobby` brings the
+  // lichess-shaped tabs back on a device (playPanelEnabled).
+  lobbyPanel.append(
+    playPanelEnabled()
+      ? buildPlayPanel(locale, { hydrate: !opts.skipLiveWidgets })
+      : buildLobbyPanel(locale, { hydrate: !opts.skipLiveWidgets }),
+  );
 
   // ── Play column (grid-area: play, band 1 right): the small h1 tagline, then
   // the single unified Play button (the setup dialog owns the opponent choice)
@@ -645,7 +665,15 @@ function buildLandingStage(
   // Button then the activity box render their frame synchronously (placeholder /
   // skeleton rows) so the column reserves its footprint from first paint; the
   // prerendered shell carries the same frames, hydration skipped.
-  playStack.append(playPanel, buildLandingActivity({ hydrate: !opts.skipLiveWidgets }));
+  // The correspondence card (2026-10-03 jieqi test) sits under the stats as the
+  // secondary entry: same tile family as the Play button, two fixed lines in
+  // every state, so the prerendered offer reserves the space a signed-in
+  // "Your move" or "Waiting" swaps into.
+  playStack.append(
+    playPanel,
+    buildLandingActivity({ hydrate: !opts.skipLiveWidgets }),
+    buildLandingCorrespondenceCard({ hydrate: !opts.skipLiveWidgets, locale }),
+  );
   // The page's single (small) h1: the about tagline at the top of the right rail.
   const about = document.createElement('h1');
   about.className = 'landing-about';
@@ -655,22 +683,82 @@ function buildLandingStage(
   // event spotlight sits at the column's bottom edge, level with the panel's
   // bottom, so an event never moves the page's one conversion element.
   // Broadcast rows arrive from the API; the slot collapses until they do.
+  // One line under the tagline that answers what a 象棋在线 / "xiangqi online"
+  // searcher checks first: is it the web version, is it free, can I play the
+  // computer. The tagline says who the site is for; this says what it does.
+  // Each phrase is a no-wrap item carrying the · before it, so a narrow rail
+  // breaks between phrases and never inside one. The list is shifted left by
+  // one separator width inside a clipping box, so the · that starts a wrapped
+  // line falls outside it: no line ever ends or starts on a stray dot.
+  const playSummary = document.createElement('p');
+  playSummary.className = 'landing-play-summary';
+  const playSummaryList = document.createElement('span');
+  playSummaryList.className = 'landing-play-summary-list';
+  t('home.playSummary', {}, locale)
+    .split(' · ')
+    .forEach((phrase, index) => {
+      const item = document.createElement('span');
+      item.className = 'landing-play-summary-item';
+      if (index > 0) {
+        const sep = document.createElement('span');
+        sep.className = 'landing-play-summary-sep';
+        sep.textContent = '·';
+        item.append(sep);
+      }
+      const span = document.createElement('span');
+      span.className = 'landing-play-summary-phrase';
+      span.textContent = phrase;
+      item.append(span);
+      playSummaryList.append(item);
+    });
+  playSummary.append(playSummaryList);
+  // Tagline and summary read as one unit, tighter to each other than to the
+  // button below.
+  const playIntro = document.createElement('div');
+  playIntro.className = 'landing-play-intro';
+  playIntro.append(about, playSummary);
   const playCenter = document.createElement('div');
   playCenter.className = 'landing-play-center';
-  playCenter.append(about, playStack);
+  playCenter.append(playIntro, playStack);
   const eventBanners = buildLandingEventBanners();
   void loadBroadcastBanners(eventBanners, locale);
   const playColumn = document.createElement('div');
   playColumn.className = 'landing-play-column';
   playColumn.append(playCenter, eventBanners);
 
-  // ── Band 2: forum topics (center) and the lobby chat (right) beside the daily
-  // puzzle. Chat took this slot from Top studies 2026-07-21, which moved down to
-  // the band-3/4 right rail; the chat box is server-driven (the empty mount
-  // paints nothing until the chat flag is confirmed). ──
+  // ── Band 2: forum topics (center) and Top studies (right) beside the daily
+  // puzzle. Studies took this slot back from the chat 2026-09-26 (it held it
+  // until 2026-07-21): the one side slot above a desktop fold goes to something
+  // new to open, not a chat that is often quiet. ──
   const forumColumn = document.createElement('div');
   forumColumn.className = 'landing-forum-column';
   forumColumn.append(buildLandingForumPreview({ hydrate: !opts.skipLiveWidgets }));
+  const studiesColumn = document.createElement('div');
+  studiesColumn.className = 'landing-studies-column';
+  studiesColumn.append(buildTopStudiesWidget({ hydrate: !opts.skipLiveWidgets }));
+
+  // ── Band 3 (grid-area: blogs): the full-width blog row — compact article
+  // cards, an announcement can take a slot, newest first. Every article with no
+  // homeRow lands here on publish. ──
+  const articleCards = buildHomeArticleCards(HOME_ARTICLE_ROW_SIZE, locale);
+  articleCards?.classList.add('landing-articles-row');
+
+  // ── Band 4 (grid-area: dives): the deep-dives row beneath it, the same
+  // carousel filled with articles tagged homeRow: 'deep-dives' (player pages,
+  // game deep dives), no age cut. It replaced the learn row (learn-row.ts) on
+  // 2026-10-01: one learn_card_clicked in two weeks against 177 homepage
+  // visitors. ──
+  const deepDives = buildHomeArticleCards(HOME_ARTICLE_ROW_SIZE, locale, { row: 'deep-dives' });
+  deepDives?.classList.add('landing-articles-row', 'landing-dives-row');
+
+  // ── Bands 3-4 side rails: the News feed on the left (its full history stays at
+  // /feed) and the lobby chat on the right. Both span the blog AND learn rows,
+  // so each box top-aligns with the blog row and bottom-aligns with the learn
+  // row. The chat box is server-driven (the empty mount paints nothing until
+  // the chat flag is confirmed). ──
+  const newsColumn = document.createElement('div');
+  newsColumn.className = 'landing-news-column';
+  newsColumn.append(buildLandingAnnouncements(locale));
   const chatColumn = document.createElement('div');
   chatColumn.className = 'landing-chat-column';
   chatColumn.append(
@@ -679,32 +767,6 @@ function buildLandingStage(
       mode: import.meta.env.DEV ? 'mock' : 'live',
     }),
   );
-
-  // ── Band 3 (grid-area: blogs): the full-width blog row — compact article
-  // cards (six per view), an announcement can take a slot, newest first. ──
-  // Six, not eight: the row is one screen-width strip of "what's new", and the
-  // curated list keeps growing while the strip does not.
-  const articleCards = buildHomeArticleCards(6, locale);
-  articleCards?.classList.add('landing-articles-row');
-
-  // ── Band 4 (grid-area: learn): the learn row beneath the blog row — the same
-  // carousel, filled with first-party cards that walk a new player from the
-  // rules to the bot to the classical manuals (see learn-row.ts). It replaced
-  // the curated YouTube strip on 2026-09-16; unlike that strip it is never
-  // omitted, so the band and the rails beside it have one height everywhere. ──
-  const learnRow = buildHomeLearnRow({ locale });
-  learnRow.classList.add('landing-learn-row');
-
-  // ── Bands 3-4 side rails: the News feed returns to the homepage on the left
-  // (its full history stays at /feed) and Top studies takes the right. Both
-  // span the blog AND learn rows, so each box top-aligns with the blog row and
-  // bottom-aligns with the learn row. ──
-  const newsColumn = document.createElement('div');
-  newsColumn.className = 'landing-news-column';
-  newsColumn.append(buildLandingAnnouncements(locale));
-  const studiesColumn = document.createElement('div');
-  studiesColumn.className = 'landing-studies-column';
-  studiesColumn.append(buildTopStudiesWidget({ hydrate: !opts.skipLiveWidgets }));
 
   // ── Puzzle column (grid-area: puzzle, band 2 left): the daily puzzle. ──
   const puzzleColumn = document.createElement('div');
@@ -738,9 +800,9 @@ function buildLandingStage(
   };
 
   // Grid placement (see landing.css): band 1 = [banners+viewer · lobby panel ·
-  // play button+activity], band 2 = [puzzle · forum · chat], bands 3-4 = [news ·
-  // blog row then learn row · top studies], with the two side rails spanning both
-  // rows. Append order is irrelevant (grid-area governs).
+  // play button+activity], band 2 = [puzzle · forum · top studies], bands 3-4 =
+  // [news · blog row then learn row · chat], with the two side rails spanning
+  // both rows. Append order is irrelevant (grid-area governs).
   section.append(
     leftColumn,
     lobbyPanel,
@@ -752,7 +814,7 @@ function buildLandingStage(
     studiesColumn,
   );
   if (articleCards) section.append(articleCards);
-  section.append(learnRow);
+  if (deepDives) section.append(deepDives);
 
   // Center tenant (SVG) showcase boards within the square box so a non-square
   // (portrait xiangqi) board pillarboxes symmetrically rather than jamming against

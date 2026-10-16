@@ -1,6 +1,7 @@
 # Engine protocol
 
-Mistboard speaks to engines through a single redacted protocol. This document
+Mistboard speaks to Fog of War engines through this redacted protocol (other
+variants use UCI engines; see [`ARCHITECTURE.md`](ARCHITECTURE.md)). This document
 specifies what the server sends, what an engine returns, and the redaction
 guarantees that make the protocol auditable.
 
@@ -14,7 +15,6 @@ Mistboard's trust story is that no player (including first-party engines)
 can see hidden information under Fog of War rules. The same protocol applies
 to:
 
-- Built-in engines that ship in the public Mistboard repo
 - First-party engines that ship as separate binaries
 - Third-party engines that anyone is free to write
 
@@ -140,8 +140,7 @@ complete information about the game.
 - `game_over`: terminal indicator if the game ended at this ply.
 
 Piece letters in `visible_pieces` are variant-scoped. Dark chess uses
-`P N B R Q K`; Dark Mini Xiangqi uses `G H C R S`
-(general/horse/cannon/chariot/soldier); full Dark Xiangqi uses
+`P N B R Q K`; Dark Xiangqi uses
 `K A B N R C P` (general/advisor/elephant/horse/chariot/cannon/soldier).
 Shared letters are disambiguated by the request's `gameSpecId`, which is
 omitted for dark chess (engines default to it, keeping the chess wire

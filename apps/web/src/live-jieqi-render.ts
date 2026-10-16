@@ -1,11 +1,22 @@
-import type { JieqiColor, JieqiMove, JieqiPlayerView, JieqiSquare } from '@mistboard/game';
-import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
 import {
-  BOARD_LASTMOVE_MARKER_SELECTOR,
+  type JieqiColor,
+  type JieqiMove,
+  type JieqiPlayerView,
+  type JieqiSquare,
+  jieqiCheckedGeneral,
+} from '@mistboard/game';
+import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import { boardCheckGlowSvg } from './board-check.js';
+import {
+  animateBoardLastMoveArrival,
+  BOARD_LASTMOVE_OVER_GROUP_ATTRS,
+  type BoardLastMoveLayer,
+  boardLastMoveCellMarksSvg,
   boardLastMoveMarkersSvg,
   boardLastMoveStyleAttr,
 } from './board-lastmove.js';
-import { boardCornerRadius, tokenPieceSize } from './board-metrics.js';
+import { type LuckMarkSpec, svgBoardLuckMark } from './board-luck-mark.js';
+import { boardCornerRadius, tokenPieceSize, xiangqiPieceDrawSize } from './board-metrics.js';
 import { readDisplayPreferences } from './display-preferences.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
@@ -26,17 +37,25 @@ import {
   xiangqiBoardViewBox,
 } from './xiangqi-board-geometry.js';
 import {
+  XIANGQI_START_POINTS,
   type XiangqiSurfaceConfig,
   xiangqiSurfaceCoords,
   xiangqiSurfaceGrid,
   xiangqiSurfacePalace,
   xiangqiSurfacePalaceBands,
   xiangqiSurfaceRiver,
+  xiangqiSurfaceStartMarkers,
 } from './xiangqi-board-surface.js';
 import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
 import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
-import { renderXiangqiPieceGlyphed, type XiangqiPieceSet } from './xiangqi-piece-sets.js';
+import {
+  renderXiangqiPieceGlyphed,
+  type XiangqiPieceSet,
+  xiangqiPieceOuterRadius,
+  xiangqiPieceSetShape,
+  xiangqiPieceShapeForLayout,
+} from './xiangqi-piece-sets.js';
 
 // Bespoke SVG renderer for the 9x10 jieqi board. Pieces sit on intersections
 // (xiangqi convention). Unlike the Dark Xiangqi renderer there is NO fog:
@@ -46,11 +65,14 @@ import { renderXiangqiPieceGlyphed, type XiangqiPieceSet } from './xiangqi-piece
 
 const CELL = 72;
 const MARGIN = 42;
-const PIECE_SIZE = tokenPieceSize(CELL);
-// Move/selection markers wrap the disc: radii track the piece radius.
-const RING_SELECTION = PIECE_SIZE / 2 + 6;
-const RING_LAST = PIECE_SIZE / 2 + 4;
-const RING_CAPTURE = PIECE_SIZE / 2 + 1;
+// The drawn piece: its outline spans 98% of the point gap (2026-10-14).
+const PIECE_SIZE = xiangqiPieceDrawSize(CELL);
+// The layout piece size the marks are tuned on; it did not grow with the drawing.
+const MARK_PIECE_SIZE = tokenPieceSize(CELL);
+// Move/selection markers wrap the disc: radii track the layout piece radius.
+const RING_SELECTION = MARK_PIECE_SIZE / 2 + 6;
+const RING_LAST = MARK_PIECE_SIZE / 2 + 4;
+const RING_CAPTURE = MARK_PIECE_SIZE / 2 + 1;
 const FILES = 9;
 const RANKS = 10;
 const HIT_HALF = 31;
@@ -76,9 +98,13 @@ const JIEQI_SURFACE: XiangqiSurfaceConfig = {
     { fileMin: 3, fileMax: 5, rankMin: 1, rankMax: 3 },
     { fileMin: 3, fileMax: 5, rankMin: 8, rankMax: 10 },
   ],
-  // The river breaks the interior files. Jieqi carries no 楚河漢界 caption, so
-  // no riverLabel: the gap alone is the cue, as it was before this shared.
+  // The river breaks the interior files. Its caption follows the reader's River
+  // text choice, as on every other board with a river (off by default).
   riverAfterRank: 5,
+  riverText: true,
+  // Jieqi deals its face-down pieces onto the standard points, so the printed
+  // brackets mark the same places they do on a xiangqi board.
+  startPoints: XIANGQI_START_POINTS,
 };
 // The layout for the CURRENT render. The exported marker/arrow helpers take a
 // perspective but no layout (they are called for whatever board is on screen),
@@ -107,6 +133,10 @@ export type JieqiBoardRenderOptions = {
   draggingFrom?: JieqiSquare | null;
   /** Override the stored board-layout preference (tests, previews). */
   layout?: XiangqiBoardLayout;
+  /** false = no check glow. Default: glow the general of the side facing the
+   *  move when it is in check. Check is public in jieqi (a face-down piece
+   *  attacks as its home-square role), so every view of the board may show it. */
+  check?: boolean;
 };
 
 export interface JieqiBoardArrow extends SvgBoardArrowStyle {
@@ -116,9 +146,11 @@ export interface JieqiBoardArrow extends SvgBoardArrowStyle {
 
 export interface JieqiBoardMarker extends SvgBoardMarkerStyle {
   square: JieqiSquare;
-  kind: 'circle' | 'glyph';
+  kind: 'circle' | 'glyph' | 'luck';
   /** Badge label for kind 'glyph' (e.g. '??'). Ignored by 'circle'. */
   text?: string;
+  /** The reveal's luck for kind 'luck' (board-luck-mark.ts). */
+  luck?: LuckMarkSpec;
 }
 
 function jieqiCoordOf(square: JieqiSquare): { file: number; rank: number } {
@@ -168,12 +200,11 @@ export function renderJieqiBoardSvg(
   // cells are filled rects, so anything beneath them is invisible; the tint and
   // the river band have to sit on top to be seen at all.
   // Emitted only when they draw something. The intersection layout has neither a
-  // river tint nor palace bands (the gap and the diagonals are its cues), and an
-  // empty <g> would still put its class in the markup, which reads as a tint
-  // that is not there.
+  // river tint nor palace bands (the gap and the diagonals are its cues); its
+  // river group holds only the River text captions, which CSS shows or hides.
   const riverInner = xiangqiSurfaceRiver(surface, perspective, layout);
   const river = riverInner
-    ? `<g class="jieqi-river xq-live-river" aria-hidden="true" pointer-events="none">${riverInner}</g>`
+    ? `<g class="xq-live-river" aria-hidden="true" pointer-events="none">${riverInner}</g>`
     : '';
   const bandsInner =
     layout === 'cell' ? xiangqiSurfacePalaceBands(surface, perspective, layout) : '';
@@ -181,21 +212,30 @@ export function renderJieqiBoardSvg(
     ? `<g class="jieqi-palace-bands xq-live-palace-bands">${bandsInner}</g>`
     : '';
   return `
-    <svg class="jieqi-board jieqi-board--${layout} xq-surface xq-surface--${layout}" data-xiangqi-layout="${layout}"${boardLastMoveStyleAttr(PIECE_SIZE)} viewBox="${vb.minX} ${vb.minY} ${vb.width} ${vb.height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Jieqi board">
+    <svg class="jieqi-board jieqi-board--${layout} xq-surface xq-surface--${layout}" data-xiangqi-layout="${layout}"${boardLastMoveStyleAttr(MARK_PIECE_SIZE)} viewBox="${vb.minX} ${vb.minY} ${vb.width} ${vb.height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Jieqi board">
       ${backdrop}
-      <g class="jieqi-grid">${xiangqiSurfaceGrid(surface, layout)}${xiangqiSurfacePalace(surface, perspective, layout)}</g>
+      <g class="jieqi-grid">${xiangqiSurfaceGrid(surface, layout)}${xiangqiSurfaceStartMarkers(surface, perspective, layout)}${xiangqiSurfacePalace(surface, perspective, layout)}</g>
       ${river}
       ${palaceBands}
       ${coords ? `<g class="jieqi-coords xq-live-coords" aria-hidden="true" pointer-events="none">${coords}</g>` : ''}
-      ${lastMoveMarkers(view, perspective)}
+      ${lastMoveMarkers(view, perspective, 'under', pieceSet)}
+      ${options.check === false ? '' : checkGlow(view, perspective)}
       ${selectionRing(options.selectedSquare ?? null, perspective)}
       ${options.interactive ? '' : moveHints(view, legalMoves, perspective)}
       ${pieceLayer(view, perspective, pieceSet, options.draggingFrom ?? null)}
+      <g ${BOARD_LASTMOVE_OVER_GROUP_ATTRS}>${lastMoveMarkers(view, perspective, 'over', pieceSet)}</g>
       <g class="jieqi-board-markers xq-live-markers" aria-hidden="true" pointer-events="none">${(options.markers ?? []).map((marker) => jieqiMarkerSvg(marker, perspective)).join('')}</g>
       <g class="jieqi-board-arrows xq-live-arrows" aria-hidden="true" pointer-events="none">${jieqiArrowLayer(options.arrows ?? [], perspective)}</g>
       ${options.interactive ? hitLayer(perspective, view, legalMoves) : ''}
     </svg>
   `;
+}
+
+function checkGlow(view: JieqiPlayerView, perspective: JieqiColor): string {
+  const square = jieqiCheckedGeneral(view.board, view.status);
+  if (!square) return '';
+  const { file, rank } = jieqiCoordOf(square);
+  return boardCheckGlowSvg(intersection(file, rank, perspective), MARK_PIECE_SIZE);
 }
 
 export function jieqiArrowSvg(arrow: JieqiBoardArrow, perspective: JieqiColor): string {
@@ -212,6 +252,18 @@ export function jieqiArrowSvg(arrow: JieqiBoardArrow, perspective: JieqiColor): 
 export function jieqiMarkerSvg(marker: JieqiBoardMarker, perspective: JieqiColor): string {
   const { file, rank } = jieqiCoordOf(marker.square);
   const center = intersection(file, rank, perspective);
+  if (marker.kind === 'luck') {
+    if (!marker.luck) return '';
+    // The board's own rectangle, without the coordinate gutter: the die clamps inside it,
+    // which matters on the square grid, where the board ends half a cell past the edge point.
+    const board = xiangqiBoardViewBox(activeLayout, JIEQI_GEO_NO_COORDS);
+    return svgBoardLuckMark(marker.luck, center, { piece: PIECE_SIZE, cell: CELL }, marker.square, {
+      minX: board.minX,
+      minY: board.minY,
+      maxX: board.minX + board.width,
+      maxY: board.minY + board.height,
+    });
+  }
   if (marker.kind === 'glyph') {
     return svgBoardGlyphMarker(
       marker,
@@ -257,6 +309,7 @@ export function jieqiPieceGhostSvg(
         x: 0,
         y: 0,
         size: PIECE_SIZE,
+        shape: xiangqiPieceShapeForLayout(activeLayout),
       })
     : renderXiangqiPieceGlyphed({ color: entry.color, role: entry.role }, set, {
         ariaLabel: `${entry.color} ${entry.role}`,
@@ -266,8 +319,16 @@ export function jieqiPieceGhostSvg(
         x: 0,
         y: 0,
         size: PIECE_SIZE,
+        shape: xiangqiPieceShapeForLayout(activeLayout),
       });
-  return `<svg width="${PIECE_SIZE}" height="${PIECE_SIZE}" viewBox="0 0 ${PIECE_SIZE} ${PIECE_SIZE}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`;
+  return `<svg width="${PIECE_SIZE}" height="${PIECE_SIZE}" viewBox="0 0 ${PIECE_SIZE} ${PIECE_SIZE}" overflow="visible" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`;
+}
+
+// A piece whose identity the game never determined (an imported game's piece
+// still face-down at the end, shown in the truth view): the back with a "?",
+// so the reveal never reads as a face-down piece with a secret identity.
+function unknownMark(x: number, y: number): string {
+  return `<text class="jieqi-piece-unknown-mark" x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" font-size="${Math.round(PIECE_SIZE * 0.5)}" font-weight="700" aria-hidden="true">?</text>`;
 }
 
 // Each piece is wrapped in a positioned slot keyed by its square, so the glide
@@ -285,16 +346,26 @@ function pieceLayer(
       const dragSource = square === draggingFrom;
       const { file, rank } = jieqiCoordOf(square as JieqiSquare);
       const { x, y } = intersection(file, rank, perspective);
+      const unknown = entry.faceDown && entry.unknown === true;
       const pieceSvg = entry.faceDown
         ? renderXiangqiPieceGlyphed({ color: entry.color, role: 'soldier' }, pieceSet, {
-            ariaLabel: `${entry.color} hidden piece`,
-            className: dragSource ? 'jieqi-piece jieqi-piece--drag-source' : 'jieqi-piece',
+            ariaLabel: unknown
+              ? `${entry.color} piece, never revealed`
+              : `${entry.color} hidden piece`,
+            className: [
+              'jieqi-piece',
+              dragSource ? 'jieqi-piece--drag-source' : '',
+              unknown ? 'jieqi-piece--unknown' : '',
+            ]
+              .filter(Boolean)
+              .join(' '),
             shrouded: true,
             shroudedStyle: 'back',
             x: x - PIECE_SIZE / 2,
             y: y - PIECE_SIZE / 2,
             size: PIECE_SIZE,
-          })
+            shape: xiangqiPieceShapeForLayout(activeLayout),
+          }) + (unknown ? unknownMark(x, y) : '')
         : // A revealed soldier past the river draws with the promoted-soldier art,
           // same as the standard xiangqi board (red owns ranks 1-5, black 6-10).
           renderXiangqiPieceGlyphed({ color: entry.color, role: entry.role }, pieceSet, {
@@ -305,6 +376,7 @@ function pieceLayer(
             y: y - PIECE_SIZE / 2,
             size: PIECE_SIZE,
             crossed: drawsCrossedSoldier(entry, rank),
+            shape: xiangqiPieceShapeForLayout(activeLayout),
           });
       return `<g class="jieqi-piece-slot" data-piece-square="${square}">${pieceSvg}</g>`;
     })
@@ -335,11 +407,10 @@ export function animateJieqiBoardMove(
   const from = intersection(origin.file, origin.rank, perspective);
   const to = intersection(settle.file, settle.rank, perspective);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
-  // A reverse step renders the PRIOR move's marker at a different square, so
-  // fading it in would not track the reverse glide.
-  if (!opts.reverse) {
-    drawMarkerOnArrival(host.querySelector(BOARD_LASTMOVE_MARKER_SELECTOR), duration);
-  }
+  // The gold band rides on the piece for the whole glide (the square grid's
+  // marks fade in as it lands). A reverse step renders the PRIOR move's marks
+  // at a different square, so neither would track the reverse glide.
+  if (!opts.reverse) animateBoardLastMoveArrival(host, from, to, duration);
 }
 
 function selectionRing(selection: JieqiSquare | null, perspective: JieqiColor): string {
@@ -366,19 +437,38 @@ function moveHints(
     .join('');
 }
 
-// Shared with every other token board (board-lastmove.ts): a darkened origin
-// disc and a gold halo on the destination, rather than the symmetric pair of
-// soft rings this board drew until 2026-08-27.
-function lastMoveMarkers(view: JieqiPlayerView, perspective: JieqiColor): string {
+// Shared with every other token board (board-lastmove.ts): a pale origin wash
+// and a thin gold band hugging the moved piece, rather than the symmetric pair of
+// soft rings this board drew until 2026-08-27. On the square grid it draws the
+// square-grid family's marks (amber origin cell, amber ring on the moved piece;
+// Brian, 2026-10-15); until that day it drew the intersection marks there.
+function lastMoveMarkers(
+  view: JieqiPlayerView,
+  perspective: JieqiColor,
+  layer: BoardLastMoveLayer,
+  pieceSet: XiangqiPieceSet,
+): string {
   if (!view.lastMove) return '';
   const center = (square: JieqiSquare): { x: number; y: number } => {
     const { file, rank } = jieqiCoordOf(square);
     return intersection(file, rank, perspective);
   };
-  return boardLastMoveMarkersSvg(
-    { from: center(view.lastMove.from), to: center(view.lastMove.to) },
-    PIECE_SIZE,
+  const ends = { from: center(view.lastMove.from), to: center(view.lastMove.to) };
+  if (activeLayout === 'cell') {
+    return boardLastMoveCellMarksSvg(ends, CELL, layer, {
+      size: PIECE_SIZE,
+      shape: xiangqiPieceSetShape(pieceSet, 'square'),
+    });
+  }
+  // The band hugs the piece actually standing on the destination: a move
+  // reveals the piece, so it is face up, but a face-down back has a wider rim
+  // (xiangqiPieceOuterRadius) and the band must clear that too.
+  const landed = view.board[view.lastMove.to];
+  const outer = xiangqiPieceOuterRadius(
+    pieceSet,
+    landed?.faceDown ? { shrouded: true, shroudedStyle: 'back' } : {},
   );
+  return boardLastMoveMarkersSvg(ends, MARK_PIECE_SIZE, layer, { box: PIECE_SIZE, outer });
 }
 
 function hitLayer(
@@ -426,6 +516,13 @@ export function installJieqiBoardStyles(): void {
       user-select: none;
     }
     .jieqi-board-bg { fill: var(--mini-xq-board-bg, #f5dca8); }
+    .jieqi-piece-unknown-mark {
+      fill: #fff;
+      stroke: rgba(0, 0, 0, 0.45);
+      stroke-width: 1.5;
+      paint-order: stroke;
+      pointer-events: none;
+    }
     .jieqi-grid line {
       stroke: var(--mini-xq-grid, #5a3a14);
       stroke-width: 1.2;
@@ -447,7 +544,8 @@ export function installJieqiBoardStyles(): void {
     .jieqi-hit--target:hover .jieqi-hint-capture {
       opacity: 0;
     }
-    .jieqi-piece { pointer-events: none; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2)); }
+    /* The disc shadow is drawn into each piece (xiangqiPieceShadowMarks). */
+    .jieqi-piece { pointer-events: none; }
     .jieqi-piece--drag-source { opacity: 0.34; }
     .jieqi-hit rect { fill: transparent; cursor: pointer; }
   `;

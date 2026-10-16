@@ -1,4 +1,5 @@
 import type { Locale } from '../../i18n/locale.js';
+import { textCard } from '../text-card.js';
 import type { Article } from '../types.js';
 
 // Platform page for Pikafish: the page a "皮卡鱼在线 / play pikafish online"
@@ -22,45 +23,19 @@ import type { Article } from '../types.js';
 // levels; /bot/pikafish is live and its play button creates the game with no
 // setup dialog; /analysis/xiangqi and /analysis/jieqi are in the catalog.
 //
-// Same text-card thumbnail family as jieqi-platform and the champions card:
-// CJK eyebrow, one English mark, a quieter line. The eyebrow is 皮卡鱼 because
-// that is the word the reader searched.
-// The card carries two words, so it is set in the language of the page it sits
-// on: the reader's script leads and the other name sits above it, small. The
-// palette is the xiangqi board's, so the card reads as one of ours next to a
-// board thumbnail. Locale, not the piece-set thunk's job: board appearance is
-// CSS, this is language.
-const PIKAFISH_THUMBNAIL = (locale: Locale): string => {
-  const zh = locale === 'zh-Hans' || locale === 'zh-Hant';
-  const hanzi = locale === 'zh-Hant' ? '皮卡魚' : '皮卡鱼';
-  const lead = zh ? hanzi : 'PIKAFISH';
-  const above = zh ? 'PIKAFISH' : hanzi;
-  const tagline = zh
-    ? locale === 'zh-Hant'
-      ? '在瀏覽器裡直接對弈'
-      : '在浏览器里直接对弈'
-    : 'PLAY IT IN YOUR BROWSER';
-  const hanziFont =
-    "'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif";
-  const latinFont = 'Roboto, system-ui, sans-serif';
-  return [
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" ',
-    'preserveAspectRatio="xMidYMid slice" width="320" height="200" role="img" ',
-    `aria-label="A card reading ${zh ? hanzi : 'Pikafish'}, play it in your browser">`,
-    '<rect x="0" y="0" width="320" height="200" fill="var(--xq-diagram-bg, #d9bd82)"/>',
-    `<text x="160" y="62" text-anchor="middle" font-family="${zh ? latinFont : hanziFont}" `,
-    `font-size="${zh ? 22 : 26}" font-weight="700" letter-spacing="${zh ? 6 : 10}" fill="#b9832f" `,
-    `opacity="0.5">${above}</text>`,
-    `<text x="160" y="118" text-anchor="middle" font-family="${zh ? hanziFont : latinFont}" `,
-    `font-size="${zh ? 46 : 40}" font-weight="700" letter-spacing="${zh ? 8 : 0}" fill="#b9832f">`,
-    `${lead}</text>`,
-    `<text x="160" y="150" text-anchor="middle" font-family="${zh ? hanziFont : latinFont}" `,
-    `font-size="${zh ? 16 : 15}" font-weight="600" letter-spacing="${zh ? 3 : 1.4}" `,
-    'fill="#b9832f" opacity="0.62">',
-    `${tagline}</text>`,
-    '</svg>',
-  ].join('');
-};
+// Text card (text-card.ts). PIKAFISH is translated on zh pages (皮卡鱼), the word
+// a Chinese reader searches.
+const PIKAFISH_THUMBNAIL = (locale: Locale): string =>
+  textCard(
+    {
+      palette: 'xiangqi',
+      eyebrow: 'XIANGQI',
+      lead: 'PIKAFISH',
+      tagline: 'PLAY IT IN YOUR BROWSER',
+      ariaLabel: 'A card reading Pikafish, play it in your browser',
+    },
+    locale,
+  );
 
 export const pikafishArticle: Article = {
   slug: 'pikafish',
@@ -68,9 +43,10 @@ export const pikafishArticle: Article = {
   publisher: 'mistboard',
   boardFamily: 'xiangqi',
   title: 'Pikafish on Mistboard',
+  cardTitle: 'Play Pikafish online',
   seoTitle: 'Play Pikafish Online: Free Xiangqi Engine, No Download',
   summary:
-    'Play Pikafish, the strongest open-source xiangqi engine, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.',
+    'Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.',
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-09-22',
@@ -107,7 +83,7 @@ export const pikafishArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'One click starts a game. You get a colour, a clock, and Pikafish on the other side, searching three million positions a move. No account needed.',
+            'One click starts a game. You get a colour, a clock, and Pikafish on the other side, searching three million positions a move.',
         },
         {
           kind: 'paragraph',
@@ -121,6 +97,8 @@ export const pikafishArticle: Article = {
           // is re-anchored; the caption carries the date so a stale table is
           // visibly stale rather than silently wrong.
           kind: 'table',
+          compact: true,
+          wrap: true,
           headers: ['Opponent', 'Rating on the ladder'],
           rows: [
             ['Fairy-Stockfish level 1', '1637'],

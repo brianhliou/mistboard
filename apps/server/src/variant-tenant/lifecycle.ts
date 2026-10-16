@@ -16,14 +16,29 @@
  */
 
 import { clockPolicyKindFor, DAY_MS } from '@mistboard/game';
-import { ABORT_WINDOW_MS, FORFEIT_WINDOW_MS, JOIN_WINDOW_MS } from '../lifecycle-windows.js';
+import {
+  ABORT_WINDOW_MS,
+  FORFEIT_WINDOW_MS,
+  JOIN_WINDOW_MS,
+  LOBBY_NO_SHOW_ABORT_MS,
+  PVP_DISCONNECT_FORFEIT_ENABLED,
+} from '../lifecycle-windows.js';
 import { logger } from '../obs.js';
-import { expireTenantClock, tenantClockRemainingMs } from './runtime.js';
+import { recordRoomLifecycleAuditSafe } from '../room-lifecycle-audit.js';
+import { serverConfig } from '../server-config.js';
+import {
+  expireTenantClock,
+  tenantClockRemainingMs,
+  tenantPauseEventFor,
+  tenantResumeEventFor,
+  tenantRoomIsLobbyMatch,
+} from './runtime.js';
 import type {
   TenantAbortPhase,
   TenantGameStateLike,
   TenantPendingAction,
   TenantProjection,
+  TenantResumeReason,
   TenantRoomEvent,
   TenantRuntimeRoom,
   TenantSeat,
@@ -60,7 +75,17 @@ export type TenantLifecycleRoom<
 > = Omit<TenantRuntimeRoom<string, C, M, State, Spec>, 'clients' | 'kind'> & {
   kind: string;
   clients: Iterable<Client>;
+  // Set by the shutdown pause before it appends: a stopping room arms nothing,
+  // or the pause's own append would re-run the timers and resume the clock of
+  // players who are still connected for the last second of the process.
+  stopping?: boolean;
 };
+
+// How long a paused game waits for its players after the server comes back
+// before the clock runs anyway. The chess stack's setting, so both wait alike.
+export const TENANT_PAUSE_GRACE_MS = serverConfig.pauseGraceMs;
+
+export type TenantTimerKind = 'abort' | 'clock' | 'forfeit' | 'action' | 'pause' | 'resume';
 
 export type TenantLifecycleContext<
   C extends string,
@@ -71,11 +96,7 @@ export type TenantLifecycleContext<
 > = {
   appendEvent(room: Room, event: TenantRoomEvent<C, M, Spec>): Promise<number>;
   broadcastEventAppended(room: Room, event: TenantRoomEvent<C, M, Spec>, seq: number): void;
-  logTimerFailure?(
-    kind: 'abort' | 'clock' | 'forfeit' | 'action',
-    roomId: string,
-    err: Error,
-  ): void;
+  logTimerFailure?(kind: TenantTimerKind, roomId: string, err: Error): void;
   now?(): number;
 };
 
@@ -91,13 +112,22 @@ export function clearTenantRuntimeTimers(room: {
   forfeitTimer: ReturnType<typeof setTimeout> | null;
   actionTimer: ReturnType<typeof setTimeout> | null;
   engineTimer: ReturnType<typeof setTimeout> | null;
+  resumeTimer?: ReturnType<typeof setTimeout> | null;
 }): void {
   clearTenantAbortTimer(room);
   clearTenantClockTimer(room);
   clearTenantForfeitTimer(room);
   clearTenantActionTimer(room);
+  clearTenantResumeTimer(room);
   if (room.engineTimer) clearTimeout(room.engineTimer);
   room.engineTimer = null;
+}
+
+export function clearTenantResumeTimer(room: {
+  resumeTimer?: ReturnType<typeof setTimeout> | null;
+}): void {
+  if (room.resumeTimer) clearTimeout(room.resumeTimer);
+  room.resumeTimer = null;
 }
 
 export function clearTenantAbortTimer(room: {
@@ -139,10 +169,169 @@ export function scheduleTenantLifecycleTimers<
   room: Room,
   ctx: TenantLifecycleContext<C, M, State, Spec, Room>,
 ): void {
+  if (room.stopping) {
+    clearTenantRuntimeTimers(room);
+    return;
+  }
+  // A game paused by a server stop runs no game timer: its clock is frozen, it
+  // takes no moves, and nothing may flag, abort or forfeit it. The only timer
+  // is the one that ends the pause.
+  if (room.projection.paused) {
+    clearTenantAbortTimer(room);
+    clearTenantClockTimer(room);
+    clearTenantForfeitTimer(room);
+    clearTenantActionTimer(room);
+    scheduleTenantResume(tenant, room, ctx);
+    return;
+  }
+  clearTenantResumeTimer(room);
+  room.resumeDeadline = null;
   scheduleTenantAbortTimeout(tenant, room, ctx);
   scheduleTenantClockTimeout(tenant, room, ctx);
   scheduleTenantForfeitTimeout(tenant, room, ctx);
   scheduleTenantActionTimeout(tenant, room, ctx);
+}
+
+// Resume at once when every human seat is back (engine seats are always
+// present while the server is up) or the human on move is, otherwise when the
+// grace window runs out. Only the side to move has a running clock after the
+// resume, so its player being back is enough (#567, lichess-like); an engine on
+// move does not count, so a PvE room still waits for its human.
+// The window opens on the first schedule after the pause, which is the first
+// seated connection to the rehydrated room; a spectator never opens it.
+function scheduleTenantResume<
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  Spec extends string,
+  Room extends TenantLifecycleRoom<C, M, State, Spec>,
+>(
+  tenant: TenantLifecycleTenant<C>,
+  room: Room,
+  ctx: TenantLifecycleContext<C, M, State, Spec, Room>,
+): void {
+  clearTenantResumeTimer(room);
+  const now = ctx.now?.() ?? Date.now();
+  const connected = tenantConnectedSeats(tenant, room.clients);
+  const everyoneBack = tenant.colors.every(
+    (color) =>
+      connected[color] || (tenant.engine?.isEngineClientId(room.projection.seats[color]) ?? false),
+  );
+  const mover = room.projection.paused?.activeColor ?? null;
+  const moverBack =
+    mover !== null &&
+    connected[mover] &&
+    !(tenant.engine?.isEngineClientId(room.projection.seats[mover]) ?? false);
+  if (everyoneBack || moverBack) {
+    resumeTenantRoom(tenant, room, ctx, now, 'players-returned');
+    return;
+  }
+  if (room.resumeDeadline === null || room.resumeDeadline === undefined) {
+    room.resumeDeadline = now + TENANT_PAUSE_GRACE_MS;
+  }
+  room.resumeTimer = setTimeout(
+    () => {
+      room.resumeTimer = null;
+      resumeTenantRoom(tenant, room, ctx, Date.now(), 'grace-elapsed');
+    },
+    Math.max(0, room.resumeDeadline - now),
+  );
+  room.resumeTimer.unref();
+}
+
+function resumeTenantRoom<
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  Spec extends string,
+  Room extends TenantLifecycleRoom<C, M, State, Spec>,
+>(
+  tenant: TenantLifecycleTenant<C>,
+  room: Room,
+  ctx: TenantLifecycleContext<C, M, State, Spec, Room>,
+  at: number,
+  reason: TenantResumeReason,
+): void {
+  const paused = room.projection.paused;
+  const event = tenantResumeEventFor<C, M, Spec>(room.projection, at, reason);
+  if (!paused || !event) return;
+  room.resumeDeadline = null;
+  void ctx
+    .appendEvent(room, event)
+    .then(async (seq) => {
+      if (seq < 0) return; // a concurrent resume landed first
+      const appended = room.events[seq];
+      if (appended) ctx.broadcastEventAppended(room, appended, seq);
+      await recordRoomLifecycleAuditSafe({
+        roomId: room.id,
+        kind: 'resume',
+        atMs: at,
+        eventSeq: seq,
+        payload: {
+          mode: 'tenant',
+          gameSpecId: room.gameSpecId,
+          // Same vocabulary as the chess stack's resume rows, so the deploy
+          // history counts both the same way.
+          reason: reason === 'players-returned' ? 'both-present' : 'grace-elapsed',
+          pauseReason: pausedReasonOf(room.events),
+          pausedAtMs: paused.at,
+          pausedDurationMs: at - paused.at,
+        },
+      });
+    })
+    .catch((err) => {
+      (ctx.logTimerFailure ?? tenantTimerFailureLogger(tenant))('resume', room.id, err as Error);
+    });
+}
+
+function pausedReasonOf(events: readonly { type: string; reason?: unknown }[]): unknown {
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const event = events[index]!;
+    if (event.type === 'clock-paused') return event.reason === 'orphaned' ? 'orphaned' : 'shutdown';
+  }
+  return null;
+}
+
+/**
+ * Pause every live game in a tenant's room map as the server stops, so the
+ * outage is not charged to whoever was on move. Appends through the tenant's
+ * writer (persisted before the process exits: shutdown awaits room writes).
+ * Returns how many rooms it paused.
+ */
+export async function pauseTenantRoomsOnShutdown<
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  Spec extends string,
+  Room extends TenantLifecycleRoom<C, M, State, Spec>,
+>(
+  tenant: TenantLifecycleTenant<C>,
+  rooms: Iterable<Room>,
+  ctx: TenantLifecycleContext<C, M, State, Spec, Room>,
+  at: number,
+): Promise<number> {
+  let paused = 0;
+  for (const room of rooms) {
+    const event = tenantPauseEventFor<C, M, Spec>(room.projection, at, 'shutdown');
+    room.stopping = true;
+    clearTenantRuntimeTimers(room);
+    if (!event) continue;
+    try {
+      const seq = await ctx.appendEvent(room, event);
+      if (seq < 0) continue;
+      paused += 1;
+      await recordRoomLifecycleAuditSafe({
+        roomId: room.id,
+        kind: 'pause_on_shutdown',
+        atMs: at,
+        eventSeq: seq,
+        payload: { mode: 'tenant', gameSpecId: room.gameSpecId, turn: event.activeColor },
+      });
+    } catch (err) {
+      (ctx.logTimerFailure ?? tenantTimerFailureLogger(tenant))('pause', room.id, err as Error);
+    }
+  }
+  return paused;
 }
 
 /**
@@ -315,8 +504,14 @@ export async function sweepTenantRoomDeadline<
 }
 
 // Event-log anchor for a correspondence pregame abort window. The first
-// mover's window starts when the room became fully seated (the latest
-// seat-assigned, falling back to room-created); the second mover's window
+// mover's window starts when the room became fully seated: the seat-assigned
+// that filled the last empty seat, falling back to room-created. A
+// seat-assigned on a seat that is already occupied is a reconnect (a reclaim by
+// token or account, possibly from a new device and clientId) and must not move
+// it, or a player could stall the game forever by reconnecting. Tenant rooms
+// never hand an occupied seat to someone else; only a legacy seat-vacated
+// (acceptsSeatVacated) empties one, and then the room is waiting again, so the
+// refill starts the game, and the window, afresh. The second mover's window
 // starts at the first move. Deterministic over the event log, so hydration
 // recomputes the same deadline a restart interrupted.
 export function tenantAbortAnchorAt<
@@ -331,9 +526,19 @@ export function tenantAbortAnchorAt<
 ): number {
   const firstMoverPhase = phase === `${firstSeat(tenant)}-1`;
   let anchor = 0;
+  // Mirrors the projection's seat bookkeeping (applyTenantEvent).
+  const seats: Partial<Record<C, string>> = {};
   for (const event of room.events) {
     if (event.type === 'room-created') anchor = Math.max(anchor, event.at);
-    if (firstMoverPhase && event.type === 'seat-assigned') anchor = Math.max(anchor, event.at);
+    if (event.type === 'seat-vacated' && seats[event.seat] === event.clientId) {
+      delete seats[event.seat];
+    }
+    if (event.type === 'seat-assigned') {
+      const wasEmpty = seats[event.seat] === undefined;
+      seats[event.seat] = event.clientId;
+      const fullySeated = tenant.colors.every((color) => seats[color] !== undefined);
+      if (firstMoverPhase && wasEmpty && fullySeated) anchor = Math.max(anchor, event.at);
+    }
     if (!firstMoverPhase && event.type === 'move-played') anchor = Math.max(anchor, event.at);
   }
   return anchor;
@@ -363,6 +568,10 @@ export function tenantForfeitingSeat<
       if (tenant.engine.isEngineClientId(room.projection.seats[seat])) return null;
     }
   }
+  // PvP: off by policy while the flag is false (lifecycle-windows.ts, #436).
+  // Deliberately below the PvE check so the two reasons stay separable: PvE is
+  // settled, this one is waiting on measurement.
+  if (!PVP_DISCONNECT_FORFEIT_ENABLED) return null;
   const connected = tenantConnectedSeats(tenant, room.clients);
   const [first, second] = tenant.colors;
   if (connected[first] && !connected[second]) return second;
@@ -415,7 +624,14 @@ function scheduleTenantAbortTimeout<
     room.abortPhase = null;
     return;
   }
-  if (phase === 'unjoined' && someSeatConnected(tenant, room)) {
+  // A lobby room's open seat belongs to a player the lobby already paired, not
+  // a friend who may still click a link: it gets the short no-show window,
+  // anchored to creation, whoever is sitting in the room (lifecycle-windows.ts).
+  const lobbyNoShow =
+    phase === 'unjoined' &&
+    tenantRoomIsLobbyMatch(room) &&
+    clockPolicyKindFor(room.projection.timeControl) !== 'days-per-move';
+  if (phase === 'unjoined' && !lobbyNoShow && someSeatConnected(tenant, room)) {
     // Somebody is sitting in this room with the page open, waiting for an
     // opponent. That is not an abandoned room and must never be aborted under
     // them, however long they wait — the bug being fixed is the room nobody is
@@ -444,7 +660,11 @@ function scheduleTenantAbortTimeout<
     return;
   }
   const now = ctx.now?.() ?? Date.now();
-  if (room.abortPhase !== phase || room.abortDeadline === null) {
+  if (lobbyNoShow) {
+    // From the event log, not "now": reconnects and a restart never extend it.
+    room.abortPhase = phase;
+    room.abortDeadline = (room.events[0]?.at ?? now) + LOBBY_NO_SHOW_ABORT_MS;
+  } else if (room.abortPhase !== phase || room.abortDeadline === null) {
     room.abortPhase = phase;
     // The phase is part of the guard above, so a seat filling flips
     // 'unjoined' -> '<first>-1' and recomputes the deadline down to the short
@@ -573,13 +793,13 @@ function scheduleTenantForfeitTimeout<
 
 function tenantTimerFailureLogger(tenant: {
   persistence: { logKindPrefix: string; logLabel: string };
-}): (kind: 'abort' | 'clock' | 'forfeit' | 'action', roomId: string, err: Error) => void {
+}): (kind: TenantTimerKind, roomId: string, err: Error) => void {
   return (kind, roomId, err) => logTenantTimerFailure(tenant.persistence, kind, roomId, err);
 }
 
 function logTenantTimerFailure(
   identity: { logKindPrefix: string; logLabel: string },
-  kind: 'abort' | 'clock' | 'forfeit' | 'action',
+  kind: TenantTimerKind,
   roomId: string,
   err: Error,
 ): void {
@@ -588,6 +808,8 @@ function logTenantTimerFailure(
     clock: `${identity.logKindPrefix}_clock_failure`,
     forfeit: `${identity.logKindPrefix}_forfeit_window_failure`,
     action: `${identity.logKindPrefix}_pending_action_failure`,
+    pause: `${identity.logKindPrefix}_shutdown_pause_failure`,
+    resume: `${identity.logKindPrefix}_pause_resume_failure`,
   };
   logger.error(
     {

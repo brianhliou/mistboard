@@ -63,9 +63,14 @@ function participantByColor(
 
 // games.white_name / games.black_name are written as null at room creation and
 // never backfilled for live games; the actual display name lives in
-// game_participants.display_name. Prefer that, then fall back.
+// game_participants.display_name. Prefer that, then fall back. A seat whose
+// owner made it private exports as 'Anonymous', the same redaction the tenant
+// exporters get from postgamePlayers (game-export-tenant.ts playerHandles); the
+// monthly downloads publish this name in bulk.
 function displayNameForColor(summary: RecentEveGameRecord, color: Color): string | null {
-  const participantName = participantByColor(summary, color)?.displayName ?? null;
+  const participant = participantByColor(summary, color);
+  if (participant?.visibility === 'private') return 'Anonymous';
+  const participantName = participant?.displayName ?? null;
   if (participantName) return participantName;
   return color === 'white' ? summary.whiteName : summary.blackName;
 }

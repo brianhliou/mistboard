@@ -15,7 +15,7 @@ export const mistyArticle: Article = {
     showSummaryOnPage: false,
     status: 'published',
     publishedAt: '2026-06-21',
-    updatedAt: '2026-09-05',
+    updatedAt: '2026-10-07',
     audience:
       'Dark chess players and chess-engine builders curious about how the Mistboard engine works.',
     intro: [
@@ -52,7 +52,7 @@ export const mistyArticle: Article = {
           {
             kind: 'paragraph',
             text:
-              'Sampling boards and searching them is the straightforward part. Combining the answers is where fog chess stops behaving like chess, and Misty borrows its method from poker: it minimizes regret across the sampled worlds, converging toward a strategy an opponent cannot exploit, instead of taking the move with the best average score. Obscuro, the strongest published Fog of War chess engine, works the same way. The hard part is keeping that model faithful to what has actually been observed while the clock is running.',
+              'Sampling boards and searching them is the straightforward part. Combining the answers is where Fog Chess stops behaving like chess, and Misty borrows its method from poker: it minimizes regret across the sampled worlds, converging toward a strategy an opponent cannot exploit, instead of taking the move with the best average score. Obscuro, the strongest published Fog of War chess engine, works the same way. The hard part is keeping that model faithful to what has actually been observed while the clock is running.',
           },
         ],
       },
@@ -92,12 +92,12 @@ export const mistyArticle: Article = {
           {
             kind: 'paragraph',
             text:
-              "Misty's source is on GitHub under the GPL, and it installs from PyPI as misty-chess. What ships is the fog chess engine itself: the belief enumerator, the search, the guards that veto a catastrophic move at commit time, and the test suite that holds the Rust and Python implementations to byte-for-byte agreement at every ply. The variant siblings and the research lab stay private.",
+              "Misty's source is on GitHub under the GPL, and it installs from PyPI as misty-chess. What ships is the Fog Chess engine itself: the belief enumerator, the search, the guards that veto a catastrophic move at commit time, and the test suite that holds the Rust and Python implementations to byte-for-byte agreement at every ply. The variant siblings and the research lab stay private.",
           },
           {
             kind: 'paragraph',
             text:
-              'Obscuro is not public. So as far as I can find, Misty is the only Fog of War chess engine built on that architecture that anyone else can run, read, or take apart, and that is most of the reason to publish it.',
+              'Obscuro’s paper ships no code. Misty is a Python and Rust implementation of its architecture, with a documented engine protocol and a server you can play it on. The other open implementation I know of is [obscuro-chess](https://github.com/opowell/obscuro-chess), a JavaScript port started in August 2026. Misty is published so that anyone can run it, read it, or take it apart.',
           },
           {
             kind: 'cta',
@@ -132,7 +132,7 @@ export const mistyArticle: Article = {
           {
             kind: 'paragraph',
             text:
-              'Misty itself stays focused on Fog of War chess. The same redacted engine protocol now supports variant-specific siblings, including Misty DMX for Dark Mini Xiangqi and MistyBanqi for Banqi, but those are separate engines with their own rules and evaluation problems.',
+              'Misty itself stays focused on Fog of War chess. The same redacted engine protocol now supports variant-specific siblings, including Misty DMX for Dark Mini Xiangqi and MistyBanqi for banqi, but those are separate engines with their own rules and evaluation problems.',
           },
         ],
       },

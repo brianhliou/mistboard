@@ -89,25 +89,44 @@ export type MoveJudgment = 'blunder' | 'mistake' | 'inaccuracy' | null;
 const WIN_PCT_CLAMP_CP = 1000;
 // lila rawWinningChances constant (chess). Recalibrate for xiangqi if evals feel
 // too flat / too spiky.
-const WIN_PCT_K = 0.00368208;
+export const WIN_PCT_K = 0.00368208;
+
+// AB-JChess's centipawns are on their own scale, not Pikafish's: fitted on 400 of
+// its match games (mistboard-engine lab/jieqi-abjchess-2026-09-29), p(win) =
+// 1/(1+exp(-0.00985*cp)), so +112cp already reads as 75%. Same logistic form as
+// lila's 2/(1+exp(-K*cp))-1 on [-1, 1] (that is 2p-1), so only K changes. Raw cp
+// from two engines is never comparable; their win% on each engine's own K is.
+export const ABJCHESS_WIN_PCT_K = 0.00985;
+
+/**
+ * The win-curve constant for an analysis stored under `engineId`. Every surface
+ * that turns STORED engine cp into win% asks this with the engineId the analysis
+ * came back with, so a game analysed by AB-JChess is drawn and graded on AB's
+ * curve and an older PikaJieQi analysis on lila's. Unknown or absent ids get
+ * lila's constant, which is what every engine but AB-JChess has always used.
+ */
+export function winPercentK(engineId: string | null | undefined): number {
+  return engineId?.startsWith('ab-jchess') ? ABJCHESS_WIN_PCT_K : WIN_PCT_K;
+}
 
 /**
  * Centipawns / mate (from ONE side's POV) -> that side's win probability in
  * [0, 100]. A mate maps through lila's mate->cp ladder ((21 - min(10, N)) * 100,
  * so mate-in-1 reads as 2000cp and a distant mate as 1100cp) rather than
  * short-circuiting to certainty: swings between mate distances still register.
+ * `k` is the engine's curve constant (winPercentK); the default is lila's.
  */
-export function winPercent(cp: number | null, mate: number | null): number {
+export function winPercent(cp: number | null, mate: number | null, k: number = WIN_PCT_K): number {
   if (mate != null) {
     const mateCp = (21 - Math.min(10, Math.abs(mate))) * 100;
-    return logisticWinPercent(mate > 0 ? mateCp : -mateCp);
+    return logisticWinPercent(mate > 0 ? mateCp : -mateCp, k);
   }
   if (cp == null) return 50;
-  return logisticWinPercent(Math.max(-WIN_PCT_CLAMP_CP, Math.min(WIN_PCT_CLAMP_CP, cp)));
+  return logisticWinPercent(Math.max(-WIN_PCT_CLAMP_CP, Math.min(WIN_PCT_CLAMP_CP, cp)), k);
 }
 
-function logisticWinPercent(cp: number): number {
-  const chances = 2 / (1 + Math.exp(-WIN_PCT_K * cp)) - 1; // [-1, 1]
+function logisticWinPercent(cp: number, k: number): number {
+  const chances = 2 / (1 + Math.exp(-k * cp)) - 1; // [-1, 1]
   return 50 + 50 * chances;
 }
 

@@ -1,0 +1,642 @@
+{
+  "name": "Crazyhouse Xiangqi: six engine games",
+  "description": "Six games Fairy-Stockfish played against itself at five seconds a move, under the rules Mistboard plays: advisors and elephants start in hand and stay on their own half, every capture joins your hand, and a drop may give check. Five wins, three of them mated by a drop, and a draw. The first three moves of each side were picked among the engine’s near-best, so no two games open alike. Rules: mistboard.com/rules/crazyhouse-xiangqi",
+  "games": [
+    {
+      "name": "Win 1: a horse fork from hand, then a chariot drop mates (Red)",
+      "event": "Crazyhouse Xiangqi, engine games under the site rules",
+      "date": "2026-10-01",
+      "red": "Fairy-Stockfish, 5 s a move",
+      "black": "Fairy-Stockfish, 5 s a move",
+      "result": "1-0",
+      "orientation": "red",
+      "intro": "Black drops both advisors in its first six moves, the second on f7, outside the palace. The chariots come off on move 5 and go straight back into play from hand. Red wins with dropped pieces: a chariot on b9, a cannon check on b10, a horse fork on c9, and a chariot dropped beside the general to finish.",
+      "moves": [
+        "h1g3",
+        "A@e8",
+        "b1c3",
+        "h10f9",
+        "h3h5",
+        "b10c8",
+        "a1d1",
+        "a10d10",
+        "i1f1",
+        "d10d1",
+        "c3d1",
+        "A@f7",
+        "h5f5",
+        "i10f10",
+        "A@c2",
+        "c7c6",
+        "b3c3",
+        "B@a8",
+        "R@b9",
+        "c8d10",
+        "b9c9",
+        "B@e9",
+        "c3a3",
+        "R@d7",
+        "d1e3",
+        "h8h3",
+        "A@d3",
+        "g7g6",
+        "f1h1",
+        "f10h10",
+        "h1h3",
+        "h10h3",
+        "C@b10",
+        "a8c10",
+        "c9c10",
+        "R@a1",
+        "B@d1",
+        "e9c7",
+        "f5f9",
+        "h3g3",
+        "N@c9",
+        "e10e9",
+        "c9d7",
+        "e9f9",
+        "c10d10",
+        "C@c1",
+        "e1e2",
+        "e8d7",
+        "R@i9",
+        "f9f8",
+        "d10f10",
+        "f8e8",
+        "N@c9",
+        "N@d9",
+        "i9d9",
+        "g3e3",
+        "a3e3",
+        "b8b2",
+        "B@d2",
+        "N@g1",
+        "B@f1",
+        "N@g3",
+        "e2f2",
+        "a1b1",
+        "R@d8"
+      ],
+      "notes": {
+        "2": {
+          "text": "A@e8: Black drops an advisor in front of its general. Each side starts with two advisors and two elephants in hand."
+        },
+        "10": {
+          "text": "d10-d1+: the chariot takes Red’s chariot with check, and Red’s horse takes back. Both chariots go into hand, not off the board."
+        },
+        "12": {
+          "text": "A@f7: an advisor dropped outside the palace. Advisors and elephants may stand on any point of their own half."
+        },
+        "19": {
+          "text": "R@b9: the chariot Red won on move 6 lands in Black’s camp. A chariot may be dropped anywhere."
+        },
+        "33": {
+          "text": "C@b10+: a cannon from hand checks along the back rank, with Black’s horse on d10 as its screen."
+        },
+        "37": {
+          "text": "B@d1: Black dropped a chariot on a1 with check, and Red blocks with an elephant from hand."
+        },
+        "41": {
+          "glyph": "!",
+          "text": "N@c9+: the horse drop checks the general and attacks the chariot on d7. The general steps up, and the horse takes the chariot with check."
+        },
+        "65": {
+          "glyph": "!",
+          "text": "R@d8: Red’s third chariot, from hand, lands beside the general. The chariot on d9 guards it and the one on f10 holds the f-file. Mate."
+        }
+      }
+    },
+    {
+      "name": "Win 2: two cannons from hand mate on the back rank (Black)",
+      "event": "Crazyhouse Xiangqi, engine games under the site rules",
+      "date": "2026-10-01",
+      "red": "Fairy-Stockfish, 5 s a move",
+      "black": "Fairy-Stockfish, 5 s a move",
+      "result": "0-1",
+      "orientation": "black",
+      "intro": "The shortest win here, 28 moves. Red is ahead for the first twelve moves, then a cannon dropped in the corner starts Black’s attack on Red’s back rank. Black ends it by giving up a soldier and a chariot from hand to pull Red’s pieces into place, then drops two cannons.",
+      "moves": [
+        "h1g3",
+        "b10d9",
+        "b1c3",
+        "A@e8",
+        "h3h5",
+        "h10g8",
+        "a1d1",
+        "i10f10",
+        "h5e5",
+        "e7e6",
+        "e5e8",
+        "h8e8",
+        "d1d9",
+        "A@e9",
+        "d9d7",
+        "a10d10",
+        "d7d10",
+        "e9d10",
+        "R@d8",
+        "R@c1",
+        "N@d1",
+        "B@c10",
+        "d8b8",
+        "C@a1",
+        "C@b10",
+        "f10f8",
+        "A@b2",
+        "c1c3",
+        "d1c3",
+        "a1i1",
+        "A@f3",
+        "N@g1",
+        "B@h1",
+        "e8e4",
+        "R@g10",
+        "B@f10",
+        "f3e4",
+        "f8b8",
+        "A@f2",
+        "b8b3",
+        "f2g1",
+        "b3b2",
+        "N@d8",
+        "R@d9",
+        "g10g8",
+        "f10d8",
+        "C@e2",
+        "d8b10",
+        "e1f1",
+        "P@e1",
+        "f1e1",
+        "R@d1",
+        "c3d1",
+        "C@c1",
+        "d1e3",
+        "C@d1"
+      ],
+      "notes": {
+        "11": {
+          "text": "e5-e8: the cannon takes the advisor Black dropped on move 2. A captured defender goes into hand like any other piece."
+        },
+        "19": {
+          "text": "R@d8: Red drops the chariot it won a move earlier. +2.0, Red’s best moment."
+        },
+        "20": {
+          "text": "R@c1+: Black answers with a chariot on Red’s back rank, and the lead shrinks to +0.4."
+        },
+        "24": {
+          "text": "C@a1: a cannon dropped in the corner, behind the chariot on c1."
+        },
+        "28": {
+          "text": "c1-c3+: the chariot takes the horse and uncovers the cannon on a1, which checks through the horse on d1."
+        },
+        "30": {
+          "glyph": "!",
+          "text": "a1-i1: the cannon jumps over Red’s own general to take the chariot on i1."
+        },
+        "46": {
+          "text": "f10-d8: an elephant takes the horse that checked on d8, and next move it takes the cannon on b10 too."
+        },
+        "50": {
+          "text": "P@e1+: a soldier dropped on Red’s back rank. The general takes it."
+        },
+        "52": {
+          "text": "R@d1+: a chariot given away to pull Red’s horse onto d1, where it will screen a cannon."
+        },
+        "56": {
+          "glyph": "!",
+          "text": "C@d1: the second cannon from hand becomes the screen for the first. The chariot on d9 guards it, and Red’s own pieces fill e2 and f1. Mate."
+        }
+      }
+    },
+    {
+      "name": "Win 3: a comeback, and a soldier drop mates (Red)",
+      "event": "Crazyhouse Xiangqi, engine games under the site rules",
+      "date": "2026-10-01",
+      "red": "Fairy-Stockfish, 5 s a move",
+      "black": "Fairy-Stockfish, 5 s a move",
+      "result": "1-0",
+      "orientation": "red",
+      "intro": "Black is better for the first twenty moves, by as much as 2.3 after move 13. Red’s advisors play from e3, the top of the palace, and d4, in front of it. The game turns on 21. e7, and Red finishes with drops: four checks in a row from hand, then a chariot and a soldier.",
+      "moves": [
+        "b1d2",
+        "h10g8",
+        "h1g3",
+        "b10c8",
+        "i1f1",
+        "a10d10",
+        "A@e3",
+        "b8b6",
+        "a1d1",
+        "A@e8",
+        "A@d4",
+        "b6d6",
+        "g4g5",
+        "i10f10",
+        "f1f10",
+        "g8f10",
+        "R@f1",
+        "A@f7",
+        "g3f5",
+        "d6d5",
+        "h3f3",
+        "d5g5",
+        "f1g1",
+        "g7g6",
+        "B@i3",
+        "g5h5",
+        "b3d3",
+        "P@d5",
+        "d4c3",
+        "d5e5",
+        "c3d4",
+        "e5d5",
+        "d1b1",
+        "f10g8",
+        "b1b8",
+        "B@a10",
+        "f3f1",
+        "R@h2",
+        "b8b9",
+        "h8i8",
+        "f5e7",
+        "c8e7",
+        "d3d5",
+        "N@e9",
+        "d5e5",
+        "i8i4",
+        "B@e2",
+        "h5f5",
+        "P@g7",
+        "P@d5",
+        "g7f7",
+        "e7c8",
+        "e5e6",
+        "i4i6",
+        "e6i6",
+        "d5d4",
+        "f7f8",
+        "A@d9",
+        "f8g8",
+        "e9g8",
+        "C@e6",
+        "c8e7",
+        "e3d4",
+        "P@f2",
+        "f1f5",
+        "f2e2",
+        "e6e2",
+        "e7f5",
+        "A@g2",
+        "h2h9",
+        "g1f1",
+        "i7i6",
+        "f1f5",
+        "B@f6",
+        "N@f8",
+        "h9f9",
+        "P@f10",
+        "g8f10",
+        "C@g10",
+        "e10e9",
+        "N@c8",
+        "C@d8",
+        "c8d10",
+        "P@d1",
+        "e1d1",
+        "B@c9",
+        "b9c9",
+        "C@d3",
+        "d1e1",
+        "d3e3",
+        "d4e3",
+        "f9g9",
+        "R@e10",
+        "e9f9",
+        "e10e8",
+        "d8d10",
+        "P@e9"
+      ],
+      "notes": {
+        "7": {
+          "text": "A@e3, then A@d4 two moves later: one advisor at the top of the palace, one in front of it."
+        },
+        "15": {
+          "text": "f1-f10+: the chariots trade on Black’s back rank, and Red drops its new one on f1 at once."
+        },
+        "22": {
+          "text": "d5-g5: Black’s cannon wins a soldier. Black leads from here to move 20."
+        },
+        "41": {
+          "text": "f5-e7: the horse takes the middle soldier, and the game turns: +0.5, Red’s first plus since move 6."
+        },
+        "44": {
+          "text": "N@e9: Black spends the horse it just won on defence, and Red is clearly better (+3.3)."
+        },
+        "63": {
+          "text": "e3-d4: the advisor steps out of the palace to take back on d4."
+        },
+        "75": {
+          "text": "N@f8+: the first of four drops in a row, each with check: horse, soldier, cannon, horse."
+        },
+        "91": {
+          "text": "d4-e3: an advisor takes the cannon that gave check."
+        },
+        "97": {
+          "glyph": "!",
+          "text": "P@e9: a soldier dropped beside the general. The chariot on e8 guards it, and Black’s own horse blocks f10. Mate."
+        }
+      }
+    },
+    {
+      "name": "Win 4: thirty checks (Red)",
+      "event": "Crazyhouse Xiangqi, engine games under the site rules",
+      "date": "2026-10-01",
+      "red": "Fairy-Stockfish, 5 s a move",
+      "black": "Fairy-Stockfish, 5 s a move",
+      "result": "1-0",
+      "orientation": "red",
+      "intro": "Thirty checks in 91 plies, 23 of them Red’s and 17 of those in its last 24 moves. The chariots trade early and come straight back from hand. Red’s advisors take two chariots between them. Black’s last word is three checking drops in a row, which Red’s general and advisor simply take.",
+      "moves": [
+        "h1g3",
+        "b10d9",
+        "b1c3",
+        "h10g8",
+        "a1d1",
+        "A@e8",
+        "h3h5",
+        "h8h6",
+        "i1f1",
+        "A@d7",
+        "h5d5",
+        "i10f10",
+        "d5d9",
+        "f10f1",
+        "g3f1",
+        "b8d8",
+        "d9d7",
+        "d8d1",
+        "R@g10",
+        "R@f10",
+        "g10f10",
+        "g8f10",
+        "N@c9",
+        "e10e9",
+        "b3b9",
+        "e8d9",
+        "c3d1",
+        "R@f2",
+        "C@e5",
+        "h6e6",
+        "A@e2",
+        "R@f5",
+        "A@e3",
+        "f5e5",
+        "e3f2",
+        "e5e4",
+        "R@f6",
+        "e4f4",
+        "f6e6",
+        "e7e6",
+        "d7i7",
+        "R@c8",
+        "R@g9",
+        "B@f9",
+        "P@e8",
+        "e9e8",
+        "g9g8",
+        "B@f8",
+        "g8g7",
+        "C@e4",
+        "A@e3",
+        "c8c9",
+        "C@g8",
+        "f8d6",
+        "i7i8",
+        "e8e9",
+        "g7e7",
+        "N@e8",
+        "g8g9",
+        "f9h7",
+        "i8i9",
+        "f10h9",
+        "e7e8",
+        "e4e8",
+        "g9d9",
+        "h9f10",
+        "P@f9",
+        "e9e10",
+        "e3f4",
+        "c9b9",
+        "f9f10",
+        "e10e9",
+        "N@d7",
+        "e9d9",
+        "R@e9",
+        "d9d10",
+        "N@c8",
+        "C@c9",
+        "i9i10",
+        "R@h10",
+        "d7c9",
+        "C@c1",
+        "d1c3",
+        "P@d1",
+        "e1d1",
+        "P@e1",
+        "f2e1",
+        "e8d8",
+        "C@d7",
+        "d8i8",
+        "f10e10"
+      ],
+      "notes": {
+        "14": {
+          "text": "f10-f1+: the chariots trade with check, and both go into hand."
+        },
+        "19": {
+          "text": "R@g10+: the chariot comes straight back, onto Black’s back rank."
+        },
+        "35": {
+          "text": "e3-f2: an advisor takes a chariot."
+        },
+        "45": {
+          "text": "P@e8+: a soldier dropped into the palace with check. The general takes it."
+        },
+        "69": {
+          "text": "e3-f4: another advisor takes another chariot."
+        },
+        "82": {
+          "text": "C@c1+, P@d1+, P@e1+: Black’s last three drops all give check, and none of them works."
+        },
+        "91": {
+          "glyph": "!",
+          "text": "f10-e10: the soldier that took a horse on f10 steps sideways. Mate."
+        }
+      }
+    },
+    {
+      "name": "Win 5: three advisors in hand, none on the board (Black)",
+      "event": "Crazyhouse Xiangqi, engine games under the site rules",
+      "date": "2026-10-01",
+      "red": "Fairy-Stockfish, 5 s a move",
+      "black": "Fairy-Stockfish, 5 s a move",
+      "result": "0-1",
+      "orientation": "black",
+      "intro": "Red wins a horse on move 6 and leads for seventeen moves. By move 18 it holds three advisors and two elephants in hand and has dropped none of them, and no defender stands beside its general. One check from hand goes wrong, and Black’s chariot reaches d1.",
+      "moves": [
+        "h1g3",
+        "b10c8",
+        "b1c3",
+        "h10f9",
+        "i1f1",
+        "A@e8",
+        "b3b5",
+        "a10d10",
+        "b5e5",
+        "e7e6",
+        "f1f9",
+        "e6e5",
+        "f9b9",
+        "A@c9",
+        "N@g9",
+        "C@f9",
+        "g9i10",
+        "f9b9",
+        "i10h8",
+        "B@f10",
+        "e4e5",
+        "R@g1",
+        "g3f1",
+        "f10h8",
+        "a1a2",
+        "g1g4",
+        "R@i10",
+        "e10e9",
+        "i10i9",
+        "e9e10",
+        "i9c9",
+        "g4c4",
+        "c9c8",
+        "c4c3",
+        "C@c10",
+        "d10d1",
+        "e1e2",
+        "c3h3",
+        "c8e8",
+        "b9e9",
+        "A@e4",
+        "P@d2",
+        "a2d2",
+        "P@f2",
+        "e2f2",
+        "d1d2",
+        "f1d2",
+        "R@g2",
+        "f2f1",
+        "h3h1",
+        "R@g1",
+        "h1g1"
+      ],
+      "notes": {
+        "11": {
+          "text": "f1-f9: the chariot takes a horse. +2.1 for Red."
+        },
+        "16": {
+          "text": "C@f9: a cannon dropped on the horse’s leg stops the check. Next move it takes the chariot on b9, over the advisor."
+        },
+        "35": {
+          "glyph": "?",
+          "text": "C@c10+: Red checks with a cannon from hand, using Black’s chariot on d10 as the screen. +2.7 by Red’s count, and a mistake."
+        },
+        "36": {
+          "glyph": "!",
+          "text": "d10-d1+: the screen walks off the line with check of its own. The eval goes from +2.7 to -13.2. Red’s three advisors are still in hand."
+        },
+        "42": {
+          "text": "P@d2+, then P@f2+: two soldiers dropped beside the general. Red takes both, and its general ends on f2."
+        },
+        "52": {
+          "text": "h1-g1: the chariot takes the chariot Red dropped to block. Mate."
+        }
+      }
+    },
+    {
+      "name": "Draw: the chariots trade, drop back, and trade again",
+      "event": "Crazyhouse Xiangqi, engine games under the site rules",
+      "date": "2026-10-01",
+      "red": "Fairy-Stockfish, 5 s a move",
+      "black": "Fairy-Stockfish, 5 s a move",
+      "result": "1/2-1/2",
+      "orientation": "red",
+      "intro": "The level game. Both sides spend their defenders early: Red’s advisors go to e3 and d4 and its elephants to d1 and f1; Black’s advisors to g10 and e7 and its elephants to c6 and a6. Three times the chariots trade and come back from hand, and by move 22 neither side can make progress.",
+      "moves": [
+        "b1d2",
+        "h10g8",
+        "h1g3",
+        "i10f10",
+        "i1f1",
+        "b10c8",
+        "f1f10",
+        "g8f10",
+        "A@e3",
+        "f10g8",
+        "A@d4",
+        "c8e9",
+        "b3d3",
+        "A@g10",
+        "h3h5",
+        "b8d8",
+        "h5d5",
+        "R@g2",
+        "R@h1",
+        "h8h9",
+        "d2f1",
+        "g7g6",
+        "h1h2",
+        "g2h2",
+        "f1h2",
+        "a10b10",
+        "a1a2",
+        "d8d10",
+        "B@d1",
+        "e7e6",
+        "B@f1",
+        "A@e7",
+        "a2f2",
+        "B@c6",
+        "d3a3",
+        "B@a6",
+        "a3d3",
+        "a6c8",
+        "R@b2",
+        "R@b7",
+        "b2b7",
+        "b10b7",
+        "R@b2",
+        "R@b10",
+        "d3b3",
+        "b10a10",
+        "b3d3",
+        "a10b10"
+      ],
+      "notes": {
+        "7": {
+          "text": "f1-f10+: the chariots trade on move 4, and both go into hand."
+        },
+        "18": {
+          "text": "R@g2: Black’s chariot lands on Red’s second rank. Red drops one on h1, and two moves later they trade on h2."
+        },
+        "31": {
+          "text": "B@f1: Red’s second elephant from hand. Both now guard the back rank, on d1 and f1."
+        },
+        "41": {
+          "text": "b2-b7: chariots dropped on b2 and b7 trade at once, and both are dropped again on b2 and b10."
+        },
+        "48": {
+          "text": "a10-b10: a cannon and a chariot shuffle, and the position repeats. Draw."
+        }
+      }
+    }
+  ]
+}

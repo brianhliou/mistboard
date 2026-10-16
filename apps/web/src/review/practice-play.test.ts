@@ -1,6 +1,6 @@
 import type { PracticeGoal, PracticeTermination } from '@mistboard/game';
-import { expect, test } from 'vitest';
-import { createPracticeSession, type PracticeEval } from './practice-play.js';
+import { expect, test, vi } from 'vitest';
+import { createPracticeSession, type PracticeConfig, type PracticeEval } from './practice-play.js';
 
 // Thin assertion helpers so each check can carry the sentence explaining WHY it
 // holds; vitest takes the message as expect()'s second argument.
@@ -38,6 +38,7 @@ function harness(
   goal: PracticeGoal,
   start: Truth = { moves: [], turn: 'learner' },
   onMovePlayed?: (move: string, parentTruth: Truth, by: 'learner' | 'defender') => void,
+  overrides: Partial<Pick<PracticeConfig<string, Truth>, 'evaluate' | 'minReplyDelayMs'>> = {},
 ) {
   let evaluations = 0;
   const terminationAt = (truth: Truth): PracticeTermination =>
@@ -71,6 +72,7 @@ function harness(
       return found;
     },
     onMovePlayed,
+    ...overrides,
   });
   return { session, evaluations: () => evaluations };
 }
@@ -452,4 +454,186 @@ test('a run driven with no ply observer behaves identically', async () => {
   await session.attempt('a');
   expectBe(session.view().phase, 'play');
   expectBe(session.view().moves.length, 2);
+});
+
+// Tablebase grading: an exact result on both sides of the learner's move
+// outranks the win% curve. Exact results are side-to-move POV, like the score.
+const tb = (
+  cp: number | null,
+  bestUci: string | null,
+  result: 'win' | 'draw' | 'loss',
+): PracticeEval => ({ cp, mate: null, bestUci, exact: { result } });
+
+test('tablebase: a move that keeps the win passes even when the curve drops', async () => {
+  // +900 to +150 is a blunder by the curve, but the table says still won.
+  const { session } = harness(
+    {
+      evals: {
+        '': tb(900, 'a1', 'win'),
+        L: tb(-150, 'd1', 'loss'), // defender to move, lost for the defender
+        'L d1': tb(160, 'a2', 'win'),
+      },
+    },
+    WIN,
+  );
+  await session.start();
+  expectBe(await session.attempt('L'), 'good');
+  const view = session.view();
+  expectBe(view.phase, 'play');
+  expectBe(view.graded, 'tablebase');
+  expectBe(view.tablebase, 'keepsWin');
+});
+
+test('tablebase: throwing a win into a draw fails, even when the engine still likes it', async () => {
+  const { session } = harness(
+    {
+      evals: {
+        '': tb(900, 'a1', 'win'),
+        L: tb(-850, 'd1', 'draw'), // engine still thinks the learner is winning
+      },
+    },
+    WIN,
+  );
+  await session.start();
+  expectBe(await session.attempt('L'), 'mistake');
+  const view = session.view();
+  expectBe(view.phase, 'failed');
+  expectBe(view.tablebase, 'throwsWin');
+  session.retry();
+  expectBe(session.view().tablebase, null, 'retry clears the last grade');
+  expectBe(session.view().graded, null);
+});
+
+test('tablebase: a losing move from a drawn position is a blunder', async () => {
+  const DRAW: PracticeGoal = { kind: 'draw' };
+  const { session } = harness(
+    {
+      evals: {
+        '': tb(0, 'a1', 'draw'),
+        L: tb(30, 'd1', 'win'), // the defender now wins
+      },
+    },
+    DRAW,
+  );
+  await session.start();
+  expectBe(await session.attempt('L'), 'blunder');
+  expectBe(session.view().phase, 'failed');
+  expectBe(session.view().tablebase, 'loses');
+});
+
+test('tablebase: holding the draw passes', async () => {
+  const DRAW: PracticeGoal = { kind: 'draw', moves: 5 };
+  const { session } = harness(
+    {
+      evals: {
+        '': tb(-300, 'a1', 'draw'),
+        L: tb(500, 'd1', 'draw'), // the curve says lost; the table says drawn
+        'L d1': tb(-480, 'a2', 'draw'),
+      },
+    },
+    DRAW,
+  );
+  await session.start();
+  expectBe(await session.attempt('L'), 'good');
+  expectBe(session.view().tablebase, 'holdsDraw');
+  expectBe(session.view().phase, 'play');
+});
+
+test('tablebase: an exact result on one side only grades by the engine', async () => {
+  // The position after the move has no exact answer (an outage, say). That must
+  // never be read as a draw: the engine grades, as it always did.
+  const { session } = harness(
+    {
+      evals: {
+        '': tb(900, 'a1', 'win'),
+        L: ev(-880, 'd1'),
+        'L d1': ev(890, 'a2'),
+      },
+    },
+    WIN,
+  );
+  await session.start();
+  expectBe(await session.attempt('L'), 'good');
+  const view = session.view();
+  expectBe(view.graded, 'engine');
+  expectBe(view.tablebase, null);
+});
+
+test("the reply waits out the pause, counted from the learner's move rather than added to the search", async () => {
+  vi.useFakeTimers();
+  try {
+    const evals: Record<string, PracticeEval> = {
+      '': ev(300, 'a1'),
+      L: ev(-320, 'd1'),
+      'L d1': ev(310, 'a2'),
+    };
+    const plies: { by: string; at: number }[] = [];
+    const { session } = harness(
+      { evals },
+      WIN,
+      undefined,
+      (_move, _parent, by) => plies.push({ by, at: Date.now() }),
+      {
+        minReplyDelayMs: 400,
+        // A 300ms search: shorter than the pause, so the reply must still wait.
+        evaluate: (truth) =>
+          new Promise((resolve) => setTimeout(() => resolve(evals[key(truth)]!), 300)),
+      },
+    );
+    const started = session.start();
+    await vi.advanceTimersByTimeAsync(300);
+    await started;
+
+    const attempt = session.attempt('L');
+    await vi.advanceTimersByTimeAsync(399);
+    expectBe(plies.map((p) => p.by).join(), 'learner', 'no reply before the pause is out');
+    await vi.advanceTimersByTimeAsync(1);
+    expectBe(plies.map((p) => p.by).join(), 'learner,defender');
+    expectBe(plies[1]!.at - plies[0]!.at, 400, 'the search counts toward the pause');
+    await vi.advanceTimersByTimeAsync(300);
+    await attempt;
+    expectBe(session.view().phase, 'play');
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test('the learner moves while the tablebase answer is still on its way, and is graded when it lands', async () => {
+  let land: (exact: { result: 'win' | 'draw' | 'loss' } | null) => void = () => {};
+  const later = new Promise<{ result: 'win' | 'draw' | 'loss' } | null>((resolve) => {
+    land = resolve;
+  });
+  const plies: string[] = [];
+  const { session } = harness(
+    {
+      evals: {
+        '': tb(300, 'a1', 'win'),
+        L: tb(-320, 'd1', 'loss'),
+        // The position after the reply: the engine is in, the table is not.
+        'L d1': { ...ev(310, 'a2'), exactLater: later },
+        // The engine still likes this move; the table says it throws the win.
+        'L d1 M': tb(-300, 'd2', 'draw'),
+      },
+    },
+    WIN,
+    undefined,
+    (move, _parent, by) => plies.push(`${by}:${move}`),
+  );
+  await session.start();
+  await session.attempt('L');
+  expectBe(session.view().phase, 'play', 'the board is handed over before the table answers');
+
+  let settled = false;
+  const second = session.attempt('M').then((verdict) => {
+    settled = true;
+    return verdict;
+  });
+  expectBe(plies.at(-1), 'learner:M', 'the move is accepted at once');
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expectBe(settled, false, 'the grade waits for the answer it reads');
+
+  land({ result: 'win' });
+  expectBe(await second, 'mistake');
+  expectBe(session.view().phase, 'failed');
+  expectBe(session.view().tablebase, 'throwsWin');
 });

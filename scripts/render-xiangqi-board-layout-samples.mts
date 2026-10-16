@@ -51,7 +51,7 @@ async function renderSample(
   name: string,
   state: StandardXiangqiGameState,
   layout: 'intersection' | 'cell',
-  pieceSet: 'traditional' | 'western',
+  pieceSet: 'traditional' | 'international',
 ): Promise<void> {
   storage.set('mistboard.xiangqiPieceSet', pieceSet);
   storage.set('mistboard.xiangqiPieceSetVersion', '3');
@@ -78,6 +78,6 @@ const sampleGame = replay('layout-game', [
 
 await renderSample('classic-start-traditional', start, 'intersection', 'traditional');
 await renderSample('square-start-traditional', start, 'cell', 'traditional');
-await renderSample('classic-start-western', start, 'intersection', 'western');
-await renderSample('square-start-western', start, 'cell', 'western');
-await renderSample('square-game-western', sampleGame, 'cell', 'western');
+await renderSample('classic-start-international', start, 'intersection', 'international');
+await renderSample('square-start-international', start, 'cell', 'international');
+await renderSample('square-game-international', sampleGame, 'cell', 'international');

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { CRAZYHOUSE_XIANGQI_PLAYABLE_ENGINES } from './crazyhouse-xiangqi-fsf-engine.js';
 import { DUCK_XIANGQI_PLAYABLE_ENGINES } from './duck-xiangqi-fsf-engine.js';
 import {
   botEngineAttributions,
@@ -7,6 +8,8 @@ import {
   firstPartyBotEngineFor,
   firstPartyBotForEngine,
   firstPartyBotForId,
+  isTopOfLadderBot,
+  topOfLadderBotIds,
 } from './first-party-bots.js';
 import { FORTRESS_XIANGQI_PLAYABLE_ENGINES } from './fortress-xiangqi-fsf-engine.js';
 import { XIANGQI_PLAYABLE_ENGINES } from './xiangqi-engine-catalog.js';
@@ -118,6 +121,11 @@ test('every public xiangqi, fortress and duck engine resolves to a first-party b
     assert.ok(bot, `${tier.id}: no first-party bot profile claims this engine id`);
     assert.equal(firstPartyBotEngineFor(bot.id, 'duck-xiangqi'), tier.id);
   }
+  for (const tier of CRAZYHOUSE_XIANGQI_PLAYABLE_ENGINES) {
+    const bot = firstPartyBotForEngine(tier.id);
+    assert.ok(bot, `${tier.id}: no first-party bot profile claims this engine id`);
+    assert.equal(firstPartyBotEngineFor(bot.id, 'crazyhouse-xiangqi'), tier.id);
+  }
 });
 
 test('no engine id is claimed by two profiles with different identities', () => {
@@ -155,4 +163,23 @@ test('bot seats without an engine id attribute by (bot, variant) through the cur
   // No (bot, variant) pair maps to two engines.
   const keys = rows.map((row) => `${row.botId}\u0000${row.variant}`);
   assert.equal(new Set(keys).size, keys.length);
+});
+
+test('the top of each ladder is a named slot or the highest numbered level', () => {
+  assert.deepEqual(topOfLadderBotIds().sort(), [
+    'ab-jchess',
+    'fairy-stockfish-level-8',
+    'katago',
+    'misty',
+    'pikafish',
+  ]);
+  // Lower rungs never count, and neither does the jieqi ladder's Level 7: its
+  // Level 8 is Pikafish itself.
+  for (const id of ['fairy-stockfish-level-7', 'fairy-stockfish-level-4', 'pikafish-level-7']) {
+    assert.equal(isTopOfLadderBot(id), false, id);
+  }
+  // A pre-consolidation id names an old tier, and an unknown id is no bot.
+  assert.equal(isTopOfLadderBot('pikafish-xiangqi-level-1'), false);
+  assert.equal(isTopOfLadderBot('fairy-stockfish-xiangqi-level-8'), false);
+  assert.equal(isTopOfLadderBot('not-a-bot'), false);
 });

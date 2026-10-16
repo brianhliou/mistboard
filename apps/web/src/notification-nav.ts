@@ -1,5 +1,9 @@
 import './notification-nav.css';
 import { readAccountPreferences } from './account-preferences.js';
+import { startFormPrefillHref } from './correspondence-model.js';
+import { terminationLabel, variantDisplayLabel } from './game-display.js';
+import { type I18nKey, t } from './i18n/catalog.js';
+import { finishedGameHref } from './variant-tenant/registry.js';
 
 // A reusable nav notification button: a bell + count badge that aggregates every
 // registered source. account-nav owns signed-in detection and the nav
@@ -12,8 +16,54 @@ import { readAccountPreferences } from './account-preferences.js';
 // to rows, so adding a kind costs one server field and one closure and no extra
 // network traffic.
 
-export type NotificationEntry = { label: string; href: string };
+// The panel groups rows by what they ask of the user. 'waiting' is live state
+// that stays until acted on (your move, a challenge, unread messages); 'new' is
+// a watermarked feed told once (followers, forum replies, lapsed seeks); 'link'
+// is a plain shortcut in the footer (Inbox, Correspondence with nothing
+// pending), never a row. Left unset, a row takes 'new' from a source that has
+// markSeen and 'waiting' from one that does not.
+export type NotificationSection = 'waiting' | 'new' | 'link';
+// Picks the row's icon.
+export type NotificationKind =
+  | 'move'
+  | 'challenge'
+  | 'message'
+  | 'follower'
+  | 'reply'
+  | 'quote'
+  | 'expired'
+  | 'ended';
+
+export type NotificationEntry = {
+  label: string;
+  href: string;
+  // A muted second line, clamped to one line (a forum topic's title).
+  detail?: string;
+  kind?: NotificationKind;
+  section?: NotificationSection;
+};
 export type NotificationSnapshot = { count: number; entries: NotificationEntry[] };
+
+// A row as the panel draws it: section and icon resolved against its source,
+// and the unread dot set. The dot marks rows from a watermarked source, which
+// the open clears: it shows for the open that first sees the row, and the row
+// is gone on the next.
+type PanelEntry = NotificationEntry & {
+  section: NotificationSection;
+  unread: boolean;
+};
+type PanelSnapshot = { count: number; entries: PanelEntry[] };
+
+// One new follower, newest first. handle is null when their profile may not be
+// linked (private or closed): the row names them and links to your Followers
+// list instead.
+export type NewFollowerNotification = {
+  handle: string | null;
+  displayName: string;
+};
+
+// The private Followers list (the Followers tab of /following).
+export const FOLLOWERS_LIST_HREF = '/following?tab=followers';
 
 export type ForumWatchNotification = {
   topicId: string;
@@ -26,26 +76,63 @@ export type ForumWatchNotification = {
   quote: { postId: string; by: string | null } | null;
 };
 
+// One public board seek of yours that lapsed with no taker, with its terms so
+// the row can offer to post it again prefilled.
+export type SeekExpiryNotification = {
+  seekId: string;
+  gameSpecId: string;
+  daysPerMove: number;
+  preferredColor: 'first' | 'second' | 'random';
+  rated: boolean;
+  ttlDays: number;
+};
+
+// One correspondence game that ended since the player last looked, not by
+// their own act. Only the result, how it ended, the variant and the opponent's
+// name: never a board, so a fog game says nothing its replay would hide.
+export type CorrespondenceEndedNotification = {
+  roomId: string;
+  gameSpecId: string;
+  outcome: 'won' | 'lost' | 'draw';
+  termination: string;
+  // handle is null when the opponent's profile may not be linked.
+  opponent: { handle: string | null; displayName: string } | null;
+};
+
 // Mirrors the payload of GET /api/notifications (apps/server/src/routes/notifications.ts).
 export type NotificationCounts = {
   inboxUnread: number;
   correspondenceYourMove: number;
   newFollowers: number;
+  // The newest of them (capped server-side), one bell row each.
+  followedBy: NewFollowerNotification[];
   // Watched forum topics with unread replies: topics, not replies, so one
   // busy thread is a 1 on the badge, not a 40.
   forumTopics: number;
   // The rows behind forumTopics, capped server-side, most recent first.
   forumWatched: ForumWatchNotification[];
   incomingChallenges: number;
+  // Lapsed board seeks not yet seen, and the newest of them (capped server-side).
+  seekExpiries: number;
+  seekExpired: SeekExpiryNotification[];
+  // Correspondence games that ended unseen, and the newest of them (capped
+  // server-side). Same watermark as the /correspondence page's "New" tag.
+  correspondenceFinished: number;
+  correspondenceFinishedGames: CorrespondenceEndedNotification[];
 };
 
 const EMPTY_COUNTS: NotificationCounts = {
   inboxUnread: 0,
   correspondenceYourMove: 0,
   newFollowers: 0,
+  followedBy: [],
   forumTopics: 0,
   forumWatched: [],
   incomingChallenges: 0,
+  seekExpiries: 0,
+  seekExpired: [],
+  correspondenceFinished: 0,
+  correspondenceFinishedGames: [],
 };
 
 export type NotificationSource = {
@@ -57,10 +144,12 @@ export type NotificationSource = {
   // sources (unread DMs, your-move games, pending challenges) omit this: their
   // count must survive being looked at, because the work is still outstanding.
   markSeen?(): Promise<void>;
+  // The icon for rows that do not name their own kind.
+  kind?: NotificationKind;
 };
 
 const sources: NotificationSource[] = [];
-let lastSnapshot: NotificationSnapshot = { count: 0, entries: [] };
+let lastSnapshot: PanelSnapshot = { count: 0, entries: [] };
 let dismissBound = false;
 let refreshTimer: number | null = null;
 let visibilityBound = false;
@@ -82,7 +171,9 @@ function plural(count: number, one: string, many: string): string {
   return count === 1 ? one : many;
 }
 
-async function markKindSeen(kind: 'followers' | 'forum-replies'): Promise<void> {
+async function markKindSeen(
+  kind: 'followers' | 'forum-replies' | 'seek-expiries' | 'correspondence-finished',
+): Promise<void> {
   await fetch('/api/notifications/seen', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -96,11 +187,15 @@ export const correspondenceNotificationSource: NotificationSource = {
   read: (counts) => {
     if (!readAccountPreferences().correspondenceBell) return { count: 0, entries: [] };
     const count = counts.correspondenceYourMove;
-    const label =
+    const entry: NotificationEntry =
       count > 0
-        ? `${count} ${plural(count, 'game needs', 'games need')} your move`
-        : 'Correspondence games';
-    return { count, entries: [{ label, href: '/correspondence' }] };
+        ? {
+            label: `${count} ${plural(count, 'game needs', 'games need')} your move`,
+            href: '/correspondence',
+            kind: 'move',
+          }
+        : { label: 'Correspondence', href: '/correspondence', section: 'link' };
+    return { count, entries: [entry] };
   },
 };
 
@@ -110,28 +205,53 @@ export const inboxNotificationSource: NotificationSource = {
   read: (counts) => {
     if (!readAccountPreferences().inboxBell) return { count: 0, entries: [] };
     const count = counts.inboxUnread;
-    const label = count > 0 ? `${count} unread ${plural(count, 'message', 'messages')}` : 'Inbox';
-    return { count, entries: [{ label, href: '/inbox' }] };
+    const entry: NotificationEntry =
+      count > 0
+        ? {
+            label: `${count} unread ${plural(count, 'message', 'messages')}`,
+            href: '/inbox',
+            kind: 'message',
+          }
+        : { label: 'Inbox', href: '/inbox', section: 'link' };
+    return { count, entries: [entry] };
   },
 };
 
-// New followers since the user last opened the bell. Count only, and the row
-// links to /following rather than to a followers list, because there is no
-// followers surface: 069_user_relations keeps the follow edge private to the
-// actor and nothing here changes that.
+// New followers since the user last opened the bell: one row per follower
+// (the server caps them), naming them and linking to their profile, plus one
+// overflow row to the private Followers list when there are more. Only the
+// followed account sees these (2026-10-08); there is still no public
+// followers list or count.
 export const followersNotificationSource: NotificationSource = {
   read: (counts) => {
     if (!readAccountPreferences().followersBell) return { count: 0, entries: [] };
     const count = counts.newFollowers;
     if (count === 0) return { count: 0, entries: [] };
-    return {
-      count,
-      entries: [
-        { label: `${count} new ${plural(count, 'follower', 'followers')}`, href: '/following' },
-      ],
-    };
+    const entries: NotificationEntry[] = counts.followedBy.slice(0, count).map((follower) => ({
+      label: t('following.bellFollowedYou', { name: follower.displayName }),
+      href: follower.handle ? `/@/${encodeURIComponent(follower.handle)}` : FOLLOWERS_LIST_HREF,
+      kind: 'follower',
+    }));
+    const more = count - entries.length;
+    if (more > 0) {
+      const key: I18nKey =
+        entries.length > 0
+          ? more === 1
+            ? 'following.bellMoreOne'
+            : 'following.bellMoreMany'
+          : more === 1
+            ? 'following.bellNewOne'
+            : 'following.bellNewMany';
+      entries.push({
+        label: t(key, { count: more }),
+        href: FOLLOWERS_LIST_HREF,
+        kind: 'follower',
+      });
+    }
+    return { count, entries };
   },
   markSeen: () => markKindSeen('followers'),
+  kind: 'follower',
 };
 
 // Unread replies in topics the user watches (their own threads, threads they
@@ -143,11 +263,15 @@ export const forumNotificationSource: NotificationSource = {
     if (!readAccountPreferences().forumBell) return { count: 0, entries: [] };
     const count = counts.forumTopics;
     if (count === 0) return { count: 0, entries: [] };
+    // The action leads and the topic title sits under it, muted and clamped,
+    // so a long title never wraps the row to three bold lines.
     const entries: NotificationEntry[] = counts.forumWatched.map((row) => ({
       label: row.quote
-        ? `${row.quote.by ?? 'Someone'} quoted you in ${row.title}`
-        : `${row.unread} new ${plural(row.unread, 'reply', 'replies')} in ${row.title}`,
+        ? `${row.quote.by ?? 'Someone'} quoted you`
+        : `${row.unread} new ${plural(row.unread, 'reply', 'replies')}`,
+      detail: row.title,
       href: `/forum/redirect/post/${encodeURIComponent(row.quote?.postId ?? row.firstUnreadPostId)}`,
+      kind: row.quote ? 'quote' : 'reply',
     }));
     const more = count - entries.length;
     if (more > 0) {
@@ -159,6 +283,7 @@ export const forumNotificationSource: NotificationSource = {
     return { count, entries };
   },
   markSeen: () => markKindSeen('forum-replies'),
+  kind: 'reply',
 };
 
 // Direct challenges waiting on an answer. Live state, so no markSeen: an
@@ -174,11 +299,92 @@ export const challengesNotificationSource: NotificationSource = {
       entries: [
         {
           label: `${count} ${plural(count, 'challenge', 'challenges')} waiting for you`,
-          href: '/correspondence',
+          // The "Challenges for you" section, which lists the same rows
+          // (correspondence.ts INCOMING_ANCHOR).
+          href: '/correspondence#incoming',
+          kind: 'challenge',
         },
       ],
     };
   },
+};
+
+// Public board seeks that lapsed with no taker. One row per seek (the server
+// caps them), each linking to /correspondence with the start form prefilled so
+// posting it again is one click. Seen on open like the other feeds, so a lapsed
+// seek is told once and never nags.
+export const seekExpiryNotificationSource: NotificationSource = {
+  read: (counts) => {
+    if (!readAccountPreferences().correspondenceBell) return { count: 0, entries: [] };
+    const count = counts.seekExpiries;
+    if (count === 0) return { count: 0, entries: [] };
+    const entries: NotificationEntry[] = counts.seekExpired.map((notice) => ({
+      label: `Your open ${variantDisplayLabel(notice.gameSpecId)} game expired`,
+      detail: `No taker in ${notice.ttlDays} days. Post it again`,
+      href: startFormPrefillHref(notice),
+    }));
+    const more = count - entries.length;
+    if (more > 0) {
+      entries.push({
+        label: `${more} more open ${plural(more, 'game', 'games')} expired with no taker`,
+        href: '/correspondence',
+      });
+    }
+    return { count, entries };
+  },
+  markSeen: () => markKindSeen('seek-expiries'),
+  kind: 'expired',
+};
+
+// Correspondence games that ended while the player was away (Brian,
+// 2026-10-14: a lost game simply vanished). One row per game (the server caps
+// them), saying who it was against and whether they won, lost or drew, with how
+// it ended and the variant under it, linked to the finished game. Never for a
+// game the player ended themselves (resigned, or made the winning move). Seen
+// on open, and opening /correspondence clears it too: one watermark for both.
+export const correspondenceFinishedNotificationSource: NotificationSource = {
+  read: (counts) => {
+    if (!readAccountPreferences().correspondenceBell) return { count: 0, entries: [] };
+    const count = counts.correspondenceFinished;
+    if (count === 0) return { count: 0, entries: [] };
+    const entries: NotificationEntry[] = counts.correspondenceFinishedGames
+      .slice(0, count)
+      .map((game) => {
+        const opponent = game.opponent
+          ? game.opponent.handle
+            ? `@${game.opponent.handle}`
+            : game.opponent.displayName
+          : t('correspondence.bellEndedOpponent');
+        const key: I18nKey =
+          game.outcome === 'won'
+            ? 'correspondence.bellEndedWon'
+            : game.outcome === 'lost'
+              ? 'correspondence.bellEndedLost'
+              : 'correspondence.bellEndedDraw';
+        const reason = terminationLabel(game.termination);
+        const variant = variantDisplayLabel(game.gameSpecId);
+        return {
+          label: t(key, { opponent }),
+          detail: reason ? `${reason} · ${variant}` : variant,
+          href: finishedGameHref(game.roomId, game.gameSpecId),
+        };
+      });
+    const more = count - entries.length;
+    if (more > 0) {
+      const key: I18nKey =
+        entries.length > 0
+          ? more === 1
+            ? 'correspondence.bellEndedMoreOne'
+            : 'correspondence.bellEndedMoreMany'
+          : more === 1
+            ? 'correspondence.bellEndedOne'
+            : 'correspondence.bellEndedMany';
+      entries.push({ label: t(key, { count: more }), href: '/correspondence' });
+    }
+    return { count, entries };
+  },
+  markSeen: () => markKindSeen('correspondence-finished'),
+  kind: 'ended',
 };
 
 export function mountNotificationBell(nav: HTMLElement): void {
@@ -256,18 +462,32 @@ export async function refreshNotifications(): Promise<void> {
   const counts = await fetchNotificationCounts();
   const snapshots = sources.map((source) => {
     try {
-      return source.read(counts);
+      return { source, snapshot: source.read(counts) };
     } catch {
-      return { count: 0, entries: [] } as NotificationSnapshot;
+      return { source, snapshot: { count: 0, entries: [] } as NotificationSnapshot };
     }
   });
   lastSnapshot = {
-    count: snapshots.reduce((total, snapshot) => total + snapshot.count, 0),
-    entries: snapshots.flatMap((snapshot) => snapshot.entries),
+    count: snapshots.reduce((total, { snapshot }) => total + snapshot.count, 0),
+    entries: snapshots.flatMap(({ source, snapshot }) =>
+      snapshot.entries.map((entry) => panelEntry(entry, source)),
+    ),
   };
   for (const control of document.querySelectorAll<HTMLElement>('[data-notification-nav]')) {
     applySnapshot(control);
   }
+}
+
+function panelEntry(entry: NotificationEntry, source: NotificationSource): PanelEntry {
+  const watermarked = typeof source.markSeen === 'function';
+  const section = entry.section ?? (watermarked ? 'new' : 'waiting');
+  const kind = entry.kind ?? source.kind;
+  return {
+    ...entry,
+    ...(kind ? { kind } : {}),
+    section,
+    unread: watermarked && section !== 'link',
+  };
 }
 
 async function fetchNotificationCounts(): Promise<NotificationCounts> {
@@ -284,10 +504,94 @@ async function fetchNotificationCounts(): Promise<NotificationCounts> {
     inboxUnread: read(data.inboxUnread),
     correspondenceYourMove: read(data.correspondenceYourMove),
     newFollowers: read(data.newFollowers),
+    followedBy: readFollowedBy(data.followedBy),
     forumTopics: read(data.forumTopics),
     forumWatched: readForumWatched(data.forumWatched),
     incomingChallenges: read(data.incomingChallenges),
+    seekExpiries: read(data.seekExpiries),
+    seekExpired: readSeekExpired(data.seekExpired),
+    correspondenceFinished: read(data.correspondenceFinished),
+    correspondenceFinishedGames: readCorrespondenceFinished(data.correspondenceFinishedGames),
   };
+}
+
+// Defensive parse of the ended-game rows, same posture as readForumWatched: a
+// row with no room or variant is dropped rather than linked to nowhere.
+function readCorrespondenceFinished(value: unknown): CorrespondenceEndedNotification[] {
+  if (!Array.isArray(value)) return [];
+  const rows: CorrespondenceEndedNotification[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as Record<string, unknown>;
+    if (typeof row.roomId !== 'string' || row.roomId === '' || typeof row.gameSpecId !== 'string')
+      continue;
+    const outcome = row.outcome;
+    if (outcome !== 'won' && outcome !== 'lost' && outcome !== 'draw') continue;
+    const seat = row.opponent as Record<string, unknown> | null | undefined;
+    const opponent =
+      seat && typeof seat === 'object' && typeof seat.displayName === 'string'
+        ? {
+            handle: typeof seat.handle === 'string' && seat.handle !== '' ? seat.handle : null,
+            displayName: seat.displayName,
+          }
+        : null;
+    rows.push({
+      roomId: row.roomId,
+      gameSpecId: row.gameSpecId,
+      outcome,
+      termination: typeof row.termination === 'string' ? row.termination : '',
+      opponent,
+    });
+  }
+  return rows;
+}
+
+// Defensive parse of the new-follower rows, same posture as readForumWatched:
+// a row with no name is dropped, and a handle that is not a string reads as
+// "do not link".
+function readFollowedBy(value: unknown): NewFollowerNotification[] {
+  if (!Array.isArray(value)) return [];
+  const rows: NewFollowerNotification[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as Record<string, unknown>;
+    if (typeof row.displayName !== 'string' || row.displayName.trim() === '') continue;
+    rows.push({
+      handle: typeof row.handle === 'string' && row.handle !== '' ? row.handle : null,
+      displayName: row.displayName,
+    });
+  }
+  return rows;
+}
+
+// Defensive parse of the expired-seek rows, same posture as readForumWatched.
+function readSeekExpired(value: unknown): SeekExpiryNotification[] {
+  if (!Array.isArray(value)) return [];
+  const rows: SeekExpiryNotification[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as Record<string, unknown>;
+    if (
+      typeof row.seekId !== 'string' ||
+      typeof row.gameSpecId !== 'string' ||
+      typeof row.daysPerMove !== 'number' ||
+      !Number.isFinite(row.daysPerMove) ||
+      typeof row.ttlDays !== 'number' ||
+      !Number.isFinite(row.ttlDays)
+    ) {
+      continue;
+    }
+    const side = row.preferredColor;
+    rows.push({
+      seekId: row.seekId,
+      gameSpecId: row.gameSpecId,
+      daysPerMove: row.daysPerMove,
+      preferredColor: side === 'first' || side === 'second' ? side : 'random',
+      rated: row.rated === true,
+      ttlDays: row.ttlDays,
+    });
+  }
+  return rows;
 }
 
 // Defensive parse of the per-topic rows: a malformed row is dropped rather
@@ -350,22 +654,97 @@ function applySnapshot(control: HTMLElement): void {
   if (control.classList.contains('notif-nav-open')) return;
   const panel = control.querySelector<HTMLElement>('.notif-nav-panel');
   if (!panel) return;
-  panel.replaceChildren();
-  if (lastSnapshot.entries.length === 0) {
+  panel.replaceChildren(...renderPanel(lastSnapshot.entries));
+}
+
+const SECTION_TITLES: Record<Exclude<NotificationSection, 'link'>, string> = {
+  waiting: 'Waiting on you',
+  new: 'New',
+};
+
+function renderPanel(entries: PanelEntry[]): HTMLElement[] {
+  const header = document.createElement('div');
+  header.className = 'notif-nav-header';
+  header.setAttribute('aria-hidden', 'true');
+  header.textContent = 'Notifications';
+  const nodes: HTMLElement[] = [header];
+
+  for (const section of ['waiting', 'new'] as const) {
+    const rows = entries.filter((entry) => entry.section === section);
+    if (rows.length === 0) continue;
+    const group = document.createElement('div');
+    group.className = 'notif-nav-section';
+    group.dataset.section = section;
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', SECTION_TITLES[section]);
+    const title = document.createElement('div');
+    title.className = 'notif-nav-section-title';
+    title.setAttribute('aria-hidden', 'true');
+    title.textContent = SECTION_TITLES[section];
+    group.append(title, ...rows.map(renderRow));
+    nodes.push(group);
+  }
+
+  if (nodes.length === 1) {
     const empty = document.createElement('p');
     empty.className = 'notif-nav-empty';
     empty.textContent = "You're all caught up";
-    panel.append(empty);
-    return;
+    nodes.push(empty);
   }
-  for (const entry of lastSnapshot.entries) {
-    const link = document.createElement('a');
-    link.className = 'notif-nav-item';
-    link.href = entry.href;
-    link.setAttribute('role', 'menuitem');
-    link.textContent = entry.label;
-    panel.append(link);
+
+  const links = entries.filter((entry) => entry.section === 'link');
+  if (links.length > 0) {
+    const footer = document.createElement('div');
+    footer.className = 'notif-nav-footer';
+    footer.setAttribute('role', 'group');
+    footer.setAttribute('aria-label', 'Shortcuts');
+    for (const entry of links) {
+      const link = document.createElement('a');
+      link.className = 'notif-nav-link';
+      link.href = entry.href;
+      link.setAttribute('role', 'menuitem');
+      link.textContent = entry.label;
+      footer.append(link);
+    }
+    nodes.push(footer);
   }
+  return nodes;
+}
+
+function renderRow(entry: PanelEntry): HTMLElement {
+  const link = document.createElement('a');
+  link.className = 'notif-nav-item';
+  link.href = entry.href;
+  link.setAttribute('role', 'menuitem');
+  if (entry.kind) link.dataset.kind = entry.kind;
+
+  const glyph = document.createElement('span');
+  glyph.className = 'notif-nav-icon';
+  glyph.innerHTML = KIND_ICONS[entry.kind ?? 'generic'];
+
+  const text = document.createElement('span');
+  text.className = 'notif-nav-text';
+  const label = document.createElement('span');
+  label.className = 'notif-nav-label';
+  label.textContent = entry.label;
+  text.append(label);
+  if (entry.detail) {
+    const detail = document.createElement('span');
+    detail.className = 'notif-nav-detail';
+    detail.textContent = entry.detail;
+    detail.title = entry.detail;
+    text.append(detail);
+  }
+  link.append(glyph, text);
+
+  if (entry.unread) {
+    link.dataset.unread = '';
+    const dot = document.createElement('span');
+    dot.className = 'notif-nav-dot';
+    dot.setAttribute('aria-hidden', 'true');
+    link.append(dot);
+  }
+  return link;
 }
 
 function closeBell(control: HTMLElement): void {
@@ -409,3 +788,29 @@ function ensureRefreshLoop(): void {
 }
 
 const BELL_ICON = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`;
+
+// Row icons in the bell's own stroke style: 24px grid, 2px round strokes,
+// currentColor, drawn at 16px.
+const icon = (body: string): string =>
+  `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${body}</svg>`;
+
+const KIND_ICONS: Record<NotificationKind | 'generic', string> = {
+  move: icon('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
+  challenge: icon(
+    '<path d="M14.5 17.5 3 6V3h3l11.5 11.5"/><path d="m13 19 6-6"/><path d="m16 16 4 4"/><path d="m19 21 2-2"/><path d="M14.5 6.5 18 3h3v3l-3.5 3.5"/><path d="m5 14 4 4"/><path d="m7 17-3 3"/><path d="m3 19 2 2"/>',
+  ),
+  message: icon('<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>'),
+  follower: icon(
+    '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/>',
+  ),
+  reply: icon('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'),
+  quote: icon(
+    '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 8v3"/><path d="M12 8v3"/>',
+  ),
+  expired: icon(
+    '<path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.17a2 2 0 0 0-.59-1.42L12 12l-4.41 4.41A2 2 0 0 0 7 17.83V22"/><path d="M7 2v4.17a2 2 0 0 0 .59 1.42L12 12l4.41-4.41A2 2 0 0 0 17 6.17V2"/>',
+  ),
+  // A flag: the game is over.
+  ended: icon('<path d="M4 22V4"/><path d="M4 4h12l-2 4 2 4H4"/>'),
+  generic: BELL_ICON.replace('width="18" height="18"', 'width="16" height="16"'),
+};

@@ -9,15 +9,17 @@ import {
   type GameParticipant,
   matchupSeats,
   participantForColor,
+  terminationLabel,
   variantNameKeyForSpecId,
 } from './game-display.js';
 import { timeControlLabelForGame } from './game-meta.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale } from './i18n/locale.js';
-import { participantProfileTarget, playerNameEl } from './profile-link.js';
+import { appendWithNameNode, participantProfileTarget, playerNameEl } from './profile-link.js';
 import { attachBotCard } from './profile-summary-card.js';
 import { renderVariantMarker } from './variant-markers.js';
-import { webVariantTenantForRoomId, webVariantTenantForSpecId } from './variant-tenant/registry.js';
+import { seatsNamePlayers } from './variant-seat-label.js';
+import { finishedGameHref } from './variant-tenant/registry.js';
 import { variantMiniIdForRawVariant } from './variants.js';
 
 export function buildProfileDashboard(
@@ -165,7 +167,18 @@ export function buildProfileHeaderShell(opts: {
 // subject's seat). Works for a human or an engine seat alike.
 export function buildProfileGameRow(
   game: FeaturedGame,
-  opts: { locale?: Locale; neutral?: boolean; timeOnly?: boolean } = {},
+  opts: {
+    locale?: Locale;
+    neutral?: boolean;
+    timeOnly?: boolean;
+    // How the game ended (Checkmate, Resignation, Timeout) as a pill after the
+    // variant: the /correspondence "Recently finished" list, where it answers
+    // "what happened to my game".
+    ending?: boolean;
+    // A "New" tag beside the opponent: a game that ended since the player
+    // last looked (the same list).
+    isNew?: boolean;
+  } = {},
 ): HTMLElement {
   const locale = opts.locale ?? currentLocale();
   const neutral = opts.neutral === true;
@@ -178,12 +191,23 @@ export function buildProfileGameRow(
   // opponent link, which is lifted above it (see .profile-game-row-open CSS).
   const link = document.createElement('div');
   link.className = 'profile-game-row';
-  const open = document.createElement('a');
-  open.className = 'profile-game-row-open';
-  open.href = profileGameHref(game);
-  // The overlay carries no text of its own, so it needs an explicit accessible
-  // name; before the split the row's own content supplied one.
-  open.setAttribute('aria-label', t('profile.finishedGame', {}, locale));
+  // A game that cannot be opened (old rules, a variant with no game page) keeps
+  // its row but gets no overlay link at all: no anchor, no href, nothing to
+  // click or tab to. The tag in the details line says why.
+  const unavailable = profileGameUnavailableTag(game, locale);
+  let open: HTMLAnchorElement | null = null;
+  if (unavailable) {
+    link.classList.add('profile-game-row-unavailable');
+    link.setAttribute('aria-disabled', 'true');
+    link.title = unavailable.title;
+  } else {
+    open = document.createElement('a');
+    open.className = 'profile-game-row-open';
+    open.href = profileGameHref(game);
+    // The overlay carries no text of its own, so it needs an explicit accessible
+    // name; before the split the row's own content supplied one.
+    open.setAttribute('aria-label', t('profile.finishedGame', {}, locale));
+  }
   const tone = neutral ? 'neutral' : profileResultTone(game);
   link.classList.add(`profile-game-row-${tone}`);
 
@@ -237,6 +261,12 @@ export function buildProfileGameRow(
     : formatGameDate(game.endedAt, locale);
 
   topLine.append(opponent);
+  if (opts.isNew) {
+    const tag = document.createElement('span');
+    tag.className = 'profile-game-new';
+    tag.textContent = t('correspondence.finishedNew', {}, locale);
+    topLine.append(tag);
+  }
 
   // Only a head-to-head human (pvp) game can ever be rated; anything vs an
   // engine, EvE, or imported is casual by definition. Gate on mode first so a
@@ -257,7 +287,16 @@ export function buildProfileGameRow(
     variantPill.prepend(thumb);
   }
   details.append(variantPill);
-  if (!neutral)
+  const ending = opts.ending ? terminationLabel(game.termination, locale) : '';
+  if (ending) details.append(buildGameDetail(ending, 'profile-game-ending'));
+  if (unavailable) {
+    const tag = buildGameDetail(unavailable.label, 'profile-game-unavailable');
+    tag.title = unavailable.title;
+    details.append(tag);
+  }
+  // A player-named variant (xiangqi mahjong) has no side to show: its seat id is
+  // bookkeeping, and the old fallback printed "White" for an east seat.
+  if (!neutral && !seatsNamePlayers(game.variant))
     details.append(buildGameDetail(profileSideLabel(game, locale), 'profile-game-side'));
   // Only rated games get a badge; casual (the default, and every game while
   // rated is gated off) stays untagged so the feed isn't littered with "Casual".
@@ -274,7 +313,8 @@ export function buildProfileGameRow(
   body.append(topLine, details);
   // The overlay goes in FIRST so it sits under the row content in paint order;
   // the opponent link then only needs a z-index to come back out on top.
-  link.append(open, outcome, body, date);
+  if (open) link.append(open);
+  link.append(outcome, body, date);
   item.append(link);
   return item;
 }
@@ -293,38 +333,6 @@ function matchupNameEl(game: FeaturedGame, seat: GameParticipant['color']): HTML
     attachBotCard(el, participant.subjectId);
   }
   return el;
-}
-
-// A sentinel no display name can contain, used to find where a translated
-// template puts its name placeholder.
-const NAME_SLOT = '\u0000';
-
-/**
- * Render a translated one-placeholder template with a real ELEMENT in the
- * placeholder's position, so the name can be a link while the words around it
- * stay localized and in the locale's own order ('vs {opponent}' in English,
- * '对 {opponent}' in Chinese).
- *
- * `render` is the t() call with the placeholder left as the caller's token, so
- * this helper never has to reach into the catalog. If the template drops the
- * placeholder entirely, the node is appended bare rather than lost.
- */
-function appendWithNameNode(
-  host: HTMLElement,
-  render: (token: string) => string,
-  node: HTMLElement,
-): void {
-  const template = render(NAME_SLOT);
-  const at = template.indexOf(NAME_SLOT);
-  if (at < 0) {
-    host.append(node);
-    return;
-  }
-  const before = template.slice(0, at);
-  const after = template.slice(at + NAME_SLOT.length);
-  if (before) host.append(document.createTextNode(before));
-  host.append(node);
-  if (after) host.append(document.createTextNode(after));
 }
 
 function buildGameDetail(label: string, extraClass?: string): HTMLElement {
@@ -371,6 +379,9 @@ export function profileResultTone(game: FeaturedGame): 'win' | 'loss' | 'draw' {
   if (game.result === 'draw') return 'draw';
   if (game.playerColor === 'red') return game.result === 'red-wins' ? 'win' : 'loss';
   if (game.playerColor === 'black') return game.result === 'black-wins' ? 'win' : 'loss';
+  if (game.playerColor === 'east' || game.playerColor === 'west') {
+    return game.result === `${game.playerColor}-wins` ? 'win' : 'loss';
+  }
   return game.result === 'white-wins' ? 'win' : 'loss';
 }
 
@@ -386,7 +397,7 @@ function formatGameDate(value: string | undefined, locale: Locale): string {
 
 // Time-only label for the date-grouped activity feed, where the day header
 // already carries the date.
-function formatGameTime(value: string | undefined, locale: Locale): string {
+export function formatGameTime(value: string | undefined, locale: Locale): string {
   if (!value) return '';
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return '';
@@ -414,7 +425,7 @@ function localizedSeatName(name: string, locale: Locale): string {
 function opponentColor(
   game: FeaturedGame,
   color: FeaturedGame['playerColor'],
-): 'white' | 'black' | 'red' {
+): GameParticipant['color'] {
   const [first, second] = matchupSeats(game);
   return color === first ? second : first;
 }
@@ -427,10 +438,28 @@ function opponentColor(
 // legacy aliases) instead of a hand-maintained switch that silently drifts as
 // variants ship. Tenants without their own postgame (dark-chess correspondence)
 // and plain dark chess carry no gameRouteBase and fall through to /game/:id.
-function profileGameHref(game: FeaturedGame): string {
-  const tenant = webVariantTenantForRoomId(game.roomId) ?? webVariantTenantForSpecId(game.variant);
-  if (tenant?.gameRouteBase) {
-    return `${tenant.gameRouteBase}/${encodeURIComponent(game.roomId)}`;
+// The short tag and tooltip for a game the server marked unopenable, or null
+// for a game that opens.
+export function profileGameUnavailableTag(
+  game: FeaturedGame,
+  locale: Locale = currentLocale(),
+): { label: string; title: string } | null {
+  switch (game.unavailable) {
+    case undefined:
+      return null;
+    case 'old-rules':
+      return {
+        label: t('profile.gameOldRules', {}, locale),
+        title: t('profile.gameOldRulesTitle', {}, locale),
+      };
+    case 'unsupported-variant':
+      return {
+        label: t('profile.gameUnsupported', {}, locale),
+        title: t('profile.gameUnsupportedTitle', {}, locale),
+      };
   }
-  return `/game/${encodeURIComponent(game.roomId)}`;
+}
+
+export function profileGameHref(game: FeaturedGame): string {
+  return finishedGameHref(game.roomId, game.variant);
 }

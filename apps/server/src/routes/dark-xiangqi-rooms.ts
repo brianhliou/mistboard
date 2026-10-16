@@ -2,31 +2,37 @@ import { randomBytes } from 'node:crypto';
 import type { ServerResponse } from 'node:http';
 import {
   DARK_XIANGQI_SPEC_ID,
-  engineTimeControlPin,
+  defaultEngineTimeControl,
   isAllowedEngineTimeControl,
   type RoomTimeControl,
 } from '@mistboard/game';
+import type { DrainCreate } from '../deploy-gate.js';
 import {
   DARK_XIANGQI_DEFAULT_ENGINE_ID,
   isDarkXiangqiEngineClientId,
 } from './../engines/registry.js';
 import { gateGameSpecRequest } from './../game-spec-request-gate.js';
+import type { UserAccount } from './../persistence.js';
 import * as persistence from './../persistence.js';
+import { lobbyOffersRated } from './../variant-tenant/registry.js';
+import { gateRatedRoomRequest } from './../variant-tenant/rooms-route.js';
 import { parseRoomTimeControl, writeJson } from './lib.js';
 
 // The slice of server context this route needs; the registry entry binds the
 // tenant's room factory in (dark-xiangqi-registration.ts).
 export type DarkXiangqiCreateContext = {
   databaseRequired: boolean;
-  isDraining(): boolean;
+  refusesCreate(create?: DrainCreate): boolean;
   drainDeadlineMs(): number | null;
   reserveLiveEngineSeat(engineId: string, color: 'white' | 'black'): Promise<string | null>;
+  releaseLiveEngineReservation(reservationId: string, reason: string): void;
   createDarkXiangqiRoom(
     timeControl?: RoomTimeControl,
     creatorPreference?: 'red' | 'black' | 'random',
     engine?: { engineId: string; seat: 'red' | 'black'; reservationId: string; botId?: string },
+    rated?: boolean,
   ): Promise<
-    | { ok: true; room: { id: string; gameSpecId: string } }
+    | { ok: true; room: { id: string; gameSpecId: string; rated?: boolean } }
     | { ok: false; error: 'dark_xiangqi_disabled' | 'persistence_failure' | 'room_id_collision' }
   >;
 };
@@ -39,6 +45,7 @@ export async function handleDarkXiangqiCreate(
   ctx: DarkXiangqiCreateContext,
   response: ServerResponse,
   body: Record<string, unknown>,
+  accountUser: UserAccount | null = null,
 ): Promise<void> {
   const gameSpecGate = gateGameSpecRequest({
     gameSpecId: body.gameSpecId,
@@ -64,16 +71,30 @@ export async function handleDarkXiangqiCreate(
     writeJson(response, 400, { error: 'invalid_time_control' });
     return;
   }
-  if (mode === null || body.rated === true || (mode === 'pvp' && body.engineId !== undefined)) {
+  if (mode === null || (mode === 'pvp' && body.engineId !== undefined)) {
     writeJson(response, 501, { error: 'dark_xiangqi_unsupported_surface' });
     return;
   }
+  // Rated friend rooms follow the lobby, exactly as on the factory-built routes.
+  const ratedGate = gateRatedRoomRequest({
+    requested: body.rated,
+    mode,
+    offered: lobbyOffersRated(DARK_XIANGQI_SPEC_ID),
+    accountUser,
+    timeControl: timeControl ?? undefined,
+    unsupportedSurfaceError: 'dark_xiangqi_unsupported_surface',
+  });
+  if (!ratedGate.ok) {
+    writeJson(response, ratedGate.status, { error: ratedGate.error });
+    return;
+  }
+  const { rated } = ratedGate;
   // An engine that cannot honor a pace must not be handed one (#283). Checked
   // before the seat reservation below, so a rejected request never holds one.
   // Human games are untouched: the floor belongs to the engine, not the variant.
-  // An omitted pace resolves to the pin rather than the room factory's default
-  // clock, so a caller that names no pace cannot bypass this (see routes/
-  // rooms.ts for the same resolution on the fog chess side).
+  // An omitted pace resolves to the bot default (10+5) rather than the room
+  // factory's default clock, so a caller that names no pace cannot bypass this
+  // (see routes/rooms.ts for the same resolution on the fog chess side).
   if (
     mode === 'pve' &&
     timeControl &&
@@ -82,10 +103,23 @@ export async function handleDarkXiangqiCreate(
     writeJson(response, 400, { error: 'engine_time_control_unsupported' });
     return;
   }
-  const enginePin = mode === 'pve' ? engineTimeControlPin(DARK_XIANGQI_SPEC_ID) : null;
+  const engineDefault = mode === 'pve' ? defaultEngineTimeControl(DARK_XIANGQI_SPEC_ID) : null;
   const effectiveTimeControl =
     timeControl ??
-    (enginePin ? { initialMs: enginePin.initialMs, incrementMs: enginePin.incrementMs } : null);
+    (engineDefault
+      ? { initialMs: engineDefault.initialMs, incrementMs: engineDefault.incrementMs }
+      : null);
+  // Both refusals come before the seat reservation: a seat taken by a request
+  // that then 503s sits leaked on the worker until its 30-minute expiry (four
+  // of them filled every seat on 2026-10-01 during a release drain).
+  if (ctx.databaseRequired && !persistence.isInitialized()) {
+    writeJson(response, 503, { error: 'persistence_disabled' });
+    return;
+  }
+  if (ctx.refusesCreate()) {
+    writeJson(response, 503, { error: 'server_draining', restartAt: ctx.drainDeadlineMs() });
+    return;
+  }
   const botId = typeof body.botId === 'string' ? body.botId : undefined;
   let engine:
     | { engineId: string; seat: 'red' | 'black'; reservationId: string; botId?: string }
@@ -116,21 +150,21 @@ export async function handleDarkXiangqiCreate(
     }
     engine = { engineId, seat: engineSeat, reservationId, ...(botId ? { botId } : {}) };
   }
-  if (ctx.databaseRequired && !persistence.isInitialized()) {
-    writeJson(response, 503, { error: 'persistence_disabled' });
-    return;
-  }
-  if (ctx.isDraining()) {
-    writeJson(response, 503, { error: 'server_draining', restartAt: ctx.drainDeadlineMs() });
-    return;
-  }
 
-  const created = await ctx.createDarkXiangqiRoom(
-    effectiveTimeControl ?? undefined,
-    preferredColor,
-    engine,
-  );
+  let created: Awaited<ReturnType<DarkXiangqiCreateContext['createDarkXiangqiRoom']>>;
+  try {
+    created = await ctx.createDarkXiangqiRoom(
+      effectiveTimeControl ?? undefined,
+      preferredColor,
+      engine,
+      rated,
+    );
+  } catch (err) {
+    if (engine) ctx.releaseLiveEngineReservation(engine.reservationId, 'room-create-failed');
+    throw err;
+  }
   if (!created.ok) {
+    if (engine) ctx.releaseLiveEngineReservation(engine.reservationId, 'room-create-failed');
     const status =
       created.error === 'dark_xiangqi_disabled'
         ? 404
@@ -145,6 +179,7 @@ export async function handleDarkXiangqiCreate(
     url: `/room/${encodeURIComponent(created.room.id)}`,
     mode,
     gameSpecId: created.room.gameSpecId,
+    rated: created.room.rated === true,
     region: 'global',
     // The EFFECTIVE pace, so a caller that named none learns what the pin gave
     // it rather than reading back silence and assuming the house default.

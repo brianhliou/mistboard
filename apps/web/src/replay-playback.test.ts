@@ -1,9 +1,9 @@
 import type { GameEvent } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import {
-  clampPlay,
-  delayForPly,
   moveEventAtPly,
+  recordedDurationForPly,
+  recordedPlyOffsets,
   thinkingDurationForPly,
 } from './replay-playback.js';
 import { FALLBACK_PLAY_MS } from './replay-wall-clock.js';
@@ -61,14 +61,6 @@ describe('moveEventAtPly', () => {
   });
 });
 
-describe('clampPlay', () => {
-  it('clamps into the [700, 2500] watchable band', () => {
-    expect(clampPlay(100)).toBe(700);
-    expect(clampPlay(5000)).toBe(2500);
-    expect(clampPlay(1500)).toBe(1500);
-  });
-});
-
 describe('thinkingDurationForPly', () => {
   it('prefers thinkTimeMs, falls back to compute_ms, else null', () => {
     expect(thinkingDurationForPly([move({ thinkTimeMs: 1234, compute_ms: 99 })], 1)).toBe(1234);
@@ -85,53 +77,60 @@ describe('thinkingDurationForPly', () => {
   });
 });
 
-describe('delayForPly', () => {
-  it('uses recorded think time directly when no thinking budget is set', () => {
-    expect(delayForPly([move({ thinkTimeMs: 1500 })], 1, null, false)).toBe(1500);
-  });
-
-  it('floors the think-time path at 700ms when a thinking budget exists', () => {
-    expect(delayForPly([move({ thinkTimeMs: 100 })], 1, 5000, false)).toBe(700);
-    expect(delayForPly([move({ thinkTimeMs: 1200 })], 1, 5000, false)).toBe(1200);
-  });
-
-  it('ignores a negative think time and falls through', () => {
-    expect(delayForPly([move({ thinkTimeMs: -5 })], 1, null, false)).toBe(FALLBACK_PLAY_MS);
-  });
-
-  it('falls back to the scaled recorded wall-clock delta', () => {
-    // room at 0, move at 10s → 10000 * 0.12 = 1200ms, in band.
+// TRUE TIMING: every path returns the time the move really took. No clamp into a
+// watchable band, no scale, no floor.
+describe('recordedDurationForPly', () => {
+  it('plays a clocked game at its recorded timestamp gaps, however long', () => {
+    // room at 0, move at 10 s: ten seconds, not 1.2 s (the retired 0.12 scale).
     const events = [roomCreated(0), move({ at: 10_000 })];
-    expect(delayForPly(events, 1, null, false)).toBe(1200);
+    expect(recordedDurationForPly(events, 1, true)).toBe(10_000);
+    // A 45 s think stays 45 s (the retired clamp capped it at 2.5 s).
+    const long = [roomCreated(0), move({ at: 1_000 }), move({ at: 46_000, color: 'black' })];
+    expect(recordedDurationForPly(long, 2, true)).toBe(45_000);
+    // A snap move stays a snap move (the retired floor stretched it to 0.7 s).
+    const snap = [roomCreated(0), move({ at: 1_000 }), move({ at: 1_080, color: 'black' })];
+    expect(recordedDurationForPly(snap, 2, true)).toBe(80);
   });
 
-  it('skips a recorded delta below the 150ms minimum', () => {
-    const events = [roomCreated(0), move({ at: 100 })];
-    expect(delayForPly(events, 1, null, false)).toBe(FALLBACK_PLAY_MS);
+  it('uses the timestamp gap on a clocked game even when the engine recorded its think', () => {
+    // The clock was charged the gap (think + latency), so playback must span the gap.
+    const events = [roomCreated(0), move({ at: 4_000, thinkTimeMs: 3_200 })];
+    expect(recordedDurationForPly(events, 1, true)).toBe(4_000);
   });
 
-  it('uses the prior move as the delta anchor past ply 1', () => {
-    const events = [roomCreated(0), move({ at: 1000 }), move({ at: 9000, color: 'black' })];
-    // (9000 - 1000) * 0.12 = 960ms, in band.
-    expect(delayForPly(events, 2, null, false)).toBe(960);
+  it('plays a clockless game at the recorded think time, unfloored', () => {
+    expect(recordedDurationForPly([move({ thinkTimeMs: 14_000 })], 1, false)).toBe(14_000);
+    expect(recordedDurationForPly([move({ thinkTimeMs: 100 })], 1, false)).toBe(100);
+    expect(recordedDurationForPly([move({ thinkTimeMs: 0 })], 1, false)).toBe(0);
   });
 
-  it('falls back to scaled compute time when no recorded delta is available', () => {
-    // No start event → no recorded anchor; 30 * 50 = 1500ms.
-    expect(delayForPly([move({ compute_ms: 30 })], 1, null, false)).toBe(1500);
+  it('prefers think time over a recorded gap and compute time when clockless', () => {
+    const events = [roomCreated(0), move({ at: 10_000, thinkTimeMs: 1_300, compute_ms: 30 })];
+    expect(recordedDurationForPly(events, 1, false)).toBe(1_300);
   });
 
-  it('prefers think time over recorded delta and compute time', () => {
-    const events = [roomCreated(0), move({ at: 10_000, thinkTimeMs: 1300, compute_ms: 30 })];
-    expect(delayForPly(events, 1, null, false)).toBe(1300);
+  it('treats a sub-150 ms gap on a clockless log as a sequence number, not a think', () => {
+    const events = [roomCreated(0), move({ at: 1 }), move({ at: 2, color: 'black' })];
+    expect(recordedDurationForPly(events, 2, false)).toBe(FALLBACK_PLAY_MS);
+    const real = [roomCreated(0), move({ at: 1_000 }), move({ at: 9_000, color: 'black' })];
+    expect(recordedDurationForPly(real, 2, false)).toBe(8_000);
   });
 
-  it('falls back to the fixed delay when the move carries no timing signal', () => {
-    expect(delayForPly([move()], 1, null, false)).toBe(FALLBACK_PLAY_MS);
+  it('falls back to raw compute time, then the fixed step when nothing is recorded', () => {
+    expect(recordedDurationForPly([move({ compute_ms: 30 })], 1, false)).toBe(30);
+    expect(recordedDurationForPly([move()], 1, false)).toBe(FALLBACK_PLAY_MS);
+    expect(recordedDurationForPly([move({ thinkTimeMs: -5 })], 1, false)).toBe(FALLBACK_PLAY_MS);
   });
+});
 
-  it('clamps the raw think-time path into the band only when clampPace is set', () => {
-    expect(delayForPly([move({ thinkTimeMs: 5000 })], 1, null, false)).toBe(5000);
-    expect(delayForPly([move({ thinkTimeMs: 5000 })], 1, null, true)).toBe(2500);
+describe('recordedPlyOffsets', () => {
+  it('accumulates the recorded durations from the game start', () => {
+    const events = [
+      roomCreated(0),
+      move({ at: 2_000 }),
+      move({ at: 21_000, color: 'black' }),
+      move({ at: 23_500 }),
+    ];
+    expect(recordedPlyOffsets(events, true)).toEqual([0, 2_000, 21_000, 23_500]);
   });
 });

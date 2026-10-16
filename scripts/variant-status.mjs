@@ -189,7 +189,7 @@ const LEGEND = {
   'not-integrated': 'reserved in the gate, never built; every request 501s',
   planned: "runtimeStatus 'future' — an id only",
   retired:
-    "runtimeStatus 'retired' — refused by the gate, no tenant, code being removed (#396). Hidden unless --all",
+    "runtimeStatus 'retired' — refused by the gate and every listing; tenant kept so finished games replay. Hidden unless --all",
   'chess-stack': 'legacy chess path, outside the tenant registry',
 };
 

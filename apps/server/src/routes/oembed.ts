@@ -73,8 +73,14 @@ export async function tryHandle(
   const origin = `https://${request.headers.host ?? 'mistboard.com'}`;
   const width = clampEmbedWidth(parsedUrl.searchParams.get('maxwidth'));
   const height = embedHeightForWidth(width);
-  const frame = (title: string) =>
-    respondWithFrame(response, { origin, path: embedPathForTarget(embed), title, width, height });
+  const frame = (title: string, frameHeight = height) =>
+    respondWithFrame(response, {
+      origin,
+      path: embedPathForTarget(embed),
+      title,
+      width,
+      height: frameHeight,
+    });
 
   switch (embed.kind) {
     case 'game': {
@@ -97,7 +103,10 @@ export async function tryHandle(
       const first = players.find((p) => p.color !== 'black')?.name ?? game.whiteName ?? 'Anonymous';
       const second =
         players.find((p) => p.color === 'black')?.name ?? game.blackName ?? 'Anonymous';
-      frame(`${first} vs ${second} · ${game.result} · Mistboard`);
+      frame(
+        `${first} vs ${second} · ${game.result} · Mistboard`,
+        embedHeightForWidth(width, game.variant),
+      );
       return true;
     }
     case 'study': {
@@ -140,6 +149,17 @@ export async function tryHandle(
     case 'analysis':
       frame('Xiangqi analysis board · Mistboard');
       return true;
+    case 'broadcast': {
+      if (!requirePersistence(response)) return true;
+      const board = await persistence.getXiangqiBroadcastBoard(embed.boardId);
+      if (!board) {
+        writeJson(response, 404, { error: 'not_found' });
+        return true;
+      }
+      const name = (tag: { name: string; nameEn?: string }) => tag.nameEn?.trim() || tag.name;
+      frame(`${name(board.red)} vs ${name(board.black)} · ${board.result} · Mistboard`);
+      return true;
+    }
   }
 }
 

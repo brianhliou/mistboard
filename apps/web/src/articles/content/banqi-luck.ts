@@ -20,6 +20,7 @@ export const banqiLuckArticle: Article = {
   kind: 'article',
   publisher: 'mistboard',
   title: 'Separating Skill from Luck in Flip Games',
+  cardTitle: 'Skill vs. Luck in Flip Games',
   seoTitle: 'Game Review for Banqi, Jieqi and Flip Jungle: Skill vs Luck',
   summary:
     'Half the moves in banqi, jieqi, and flip jungle are dice rolls, so a chess-style review blames you for variance. Mistboard’s game review splits every flip into the decision and the tile: luck-stripped accuracy, a luck line on the advantage graph, and what 52 human-versus-engine games say about who really earned their wins.',
@@ -106,6 +107,8 @@ export const banqiLuckArticle: Article = {
         },
         {
           kind: 'table',
+          compact: true,
+          wrap: true,
           headers: ['per flip', 'meaning'],
           rows: [
             ['played', 'the average value of the flip you chose'],
@@ -131,6 +134,8 @@ export const banqiLuckArticle: Article = {
         },
         {
           kind: 'table',
+          compact: true,
+          wrap: true,
           headers: ['what the g3 tile could be', 'count', 'win% for Black'],
           rows: FLIP_POOL_ROWS,
           highlightRows: [FLIP_POOL_ACTUAL_ROW],
@@ -248,6 +253,8 @@ export const banqiLuckArticle: Article = {
         },
         {
           kind: 'table',
+          compact: true,
+          wrap: true,
           headers: ['across 52 human vs Misty games', 'value'],
           rows: [
             ['human record', '14 wins, 33 losses, 5 draws'],
@@ -270,6 +277,10 @@ export const banqiLuckArticle: Article = {
           kind: 'paragraph',
           text:
             'Jieqi gets the same treatment with a different pool. A jieqi reveal draws from your own remaining dark pieces, so you know the color and not the piece. A banqi tile is dark to both players, color included. Different bags, same arithmetic, and jungle’s flip variant makes a third. Every one of them gets the dashed line.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'How much of a flip game the flips decide is measured in [Flip Jungle’s skill ceiling](/blog/flip-jungle-skill-ceiling): an engine with 512 times the search still loses 23% of its games.',
         },
       ],
     },

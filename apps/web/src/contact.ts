@@ -235,10 +235,8 @@ export function buildContact(
     })();
   });
 
-  const card = document.createElement('div');
-  card.className = 'contact-card';
-  card.append(form);
-
-  section.append(heading, intro, forumNote, replyNote, card);
+  // The form sits straight on the page panel: a bordered card inside the
+  // panel read as boxes in boxes.
+  section.append(heading, intro, forumNote, replyNote, form);
   return { el: section, applyAuth };
 }

@@ -8,9 +8,11 @@
 // lights those plies on the advantage chart, clicking jumps to the next one after
 // the current position and cycles. Between the two players sits the "Learn from
 // your mistakes" button (retro mode) when the surface offers it.
+import '../seat-disc-ink.css';
 import './analysis-summary.css';
 import type { MoveJudgment } from '@mistboard/game';
 import { t } from '../i18n/catalog.js';
+import { seatDiscEl } from '../seat-disc.js';
 import {
   type GameAnalysis,
   type GamePhases,
@@ -18,7 +20,12 @@ import {
   type PlayerAnalysis,
   playerPhaseAccuracies,
 } from './game-analysis.js';
-import { type ReviewInk, type ReviewSeatColors, reviewColorForSeat } from './review-seat-colors.js';
+import {
+  type ReviewInk,
+  type ReviewSeatColors,
+  reviewColorForSeat,
+  reviewInkLabel,
+} from './review-seat-colors.js';
 
 /** Optional real player names; fall back to the side colors for anonymous games. */
 export type AnalysisSummaryLabels = { red?: string; black?: string };
@@ -61,7 +68,7 @@ export function createAnalysisSummary(
     options?.phases ? playerPhaseAccuracies(analysis, options.phases, mover) : {};
   el.append(
     playerBlock(
-      labels?.red || colorLabel(firstColor),
+      labels?.red || reviewInkLabel(firstColor),
       firstColor,
       'red',
       analysis.red,
@@ -73,7 +80,7 @@ export function createAnalysisSummary(
   if (options?.onLearn) el.append(learnButton(options.onLearn, options.learnActive ?? false));
   el.append(
     playerBlock(
-      labels?.black || colorLabel(secondColor),
+      labels?.black || reviewInkLabel(secondColor),
       secondColor,
       'black',
       analysis.black,
@@ -83,11 +90,6 @@ export function createAnalysisSummary(
     ),
   );
   return el;
-}
-
-function colorLabel(color: ReviewInk): string {
-  if (color === 'white') return t('summary.white');
-  return color === 'red' ? t('summary.red') : t('summary.black');
 }
 
 function learnButton(onLearn: () => void, active: boolean): HTMLElement {
@@ -123,8 +125,7 @@ function playerBlock(
 
   const head = document.createElement('div');
   head.className = 'analysis-summary__head';
-  const dot = document.createElement('span');
-  dot.className = `analysis-summary__dot analysis-summary__dot--${color}`;
+  const dot = seatDiscEl(color, 'analysis-summary__dot');
   const name = document.createElement('span');
   name.className = 'analysis-summary__name';
   name.textContent = label;

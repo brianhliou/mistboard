@@ -75,8 +75,8 @@ test('puzzle list returns surfaced summaries without solutions', async () => {
   };
 
   assert.equal(response.status, 200);
-  // Fortress and Jungle are hidden from the discoverable pool while their
-  // puzzle surfaces are parked; Mini and Drop Mini are retired variants
+  // Jungle is hidden from the discoverable pool while its puzzle surface is
+  // parked; Mini, Drop Mini and Fortress are retired variants
   // (docs-private/variant-retirement-plan.md, #396). The unfiltered list is
   // standard xiangqi alone.
   assert.equal(body.puzzles.length, XIANGQI_PUZZLES.length);
@@ -109,15 +109,47 @@ test('puzzle list filters by variant, and a retired variant filters to nothing',
   assert.equal(retired.status, 400);
 });
 
-test('puzzle list hides Fortress Xiangqi puzzles while the variant is demoted', async () => {
-  // Fortress is omitted from the discoverable pool pending a re-mine with the
-  // per-ply uniqueness gate; the list returns nothing even for an explicit
-  // variant filter. Individual fortress puzzles stay resolvable by id (below).
-  const response = await route('/api/puzzles?variant=fortress-xiangqi');
-  const body = JSON.parse(response.body) as { puzzles: unknown[] };
+// Fortress Xiangqi was retired on 2026-10-11 and its puzzle registry deleted.
+// Old links (a bookmarked /puzzles/<id>, a rating chip, a cached daily) must
+// meet a clean not-found, never a 500 or a throw from a missing adapter.
+const DELETED_FORTRESS_PUZZLE_ID = 'fortress-xiangqi-mined-v2-001';
 
-  assert.equal(response.status, 200);
-  assert.equal(body.puzzles.length, 0);
+test('a deleted Fortress puzzle id is not found on every puzzle route', async () => {
+  const detail = await route(`/api/puzzles/${DELETED_FORTRESS_PUZZLE_ID}`);
+  assert.equal(detail.status, 404);
+  assert.deepEqual(JSON.parse(detail.body), { error: 'not_found' });
+
+  // Its short code resolves to nothing either.
+  const short = await route(`/api/puzzles/${puzzleShortCode(DELETED_FORTRESS_PUZZLE_ID)}`);
+  assert.equal(short.status, 404);
+
+  const attempt = await route(`/api/puzzles/${DELETED_FORTRESS_PUZZLE_ID}/attempt`, 'POST', {
+    moves: [{ from: 'e1', to: 'e2' }],
+  });
+  assert.equal(attempt.status, 404);
+  assert.deepEqual(JSON.parse(attempt.body), { error: 'not_found' });
+
+  const reveal = await route(`/api/puzzles/${DELETED_FORTRESS_PUZZLE_ID}/reveal`, 'POST', {
+    mode: 'solution',
+  });
+  assert.equal(reveal.status, 404);
+  assert.deepEqual(JSON.parse(reveal.body), { error: 'not_found' });
+
+  const quality = await route(`/api/puzzles/${DELETED_FORTRESS_PUZZLE_ID}/quality`, 'POST', {
+    sessionId: 'a85ef43f-73b3-4ef0-bdc2-d1e907c1ff35',
+    event: 'view',
+  });
+  assert.equal(quality.status, 404);
+});
+
+test('the Fortress Xiangqi variant is no longer a puzzle filter', async () => {
+  const list = await route('/api/puzzles?variant=fortress-xiangqi');
+  assert.equal(list.status, 400);
+  assert.deepEqual(JSON.parse(list.body), { error: 'invalid_variant' });
+
+  const rating = await route('/api/puzzles/rating?variant=fortress-xiangqi');
+  assert.equal(rating.status, 400);
+  assert.deepEqual(JSON.parse(rating.body), { error: 'invalid_variant' });
 });
 
 test('puzzle list hides Jungle puzzles while the surface is parked', async () => {
@@ -217,10 +249,6 @@ test('attempt and reveal routes accept a quality session without exposing the so
   assert.deepEqual(JSON.parse(reveal.body).move, puzzle.solution[0]);
 });
 
-// REMOVED 2026-09-03: 'Fortress puzzle attempts solve the mined mate and stay
-// solution-hidden'. It drove fortress-xiangqi-mined-v2-001, and Fortress ships no
-// puzzles now (see the banner in puzzles-fortress-xiangqi-fixtures.ts). The attempt
-// flow it covered is still exercised by the jungle and xiangqi cases here.
 test('Jungle puzzle attempts solve the mined forced win and stay solution-hidden', async () => {
   // Derive from the corpus so the test tracks regeneration. Submit only the solver
   // moves (even indices); the server auto-applies the scripted defender replies.
@@ -272,8 +300,8 @@ test('daily puzzle route returns a public persisted-assignment shape without sol
   assert.equal(body.daily.source, 'ephemeral');
   assert.equal(body.daily.selectedAt, null);
   assert.equal(typeof body.puzzle.id, 'string');
-  // The daily rotation draws from the Fortress and standard xiangqi providers.
-  assert.equal(['fortress-xiangqi', 'xiangqi'].includes(body.puzzle.variant), true);
+  // The daily rotation draws from standard xiangqi.
+  assert.equal(body.puzzle.variant, 'xiangqi');
   assert.notEqual(body.puzzle.initial, undefined);
   assert.equal(body.puzzle.solution, undefined);
 });
@@ -407,15 +435,14 @@ test('puzzle rating route requires a variant', async () => {
 });
 
 test('puzzle rating route returns null for an anonymous or unrated user', async () => {
-  const response = await route('/api/puzzles/rating?variant=fortress-xiangqi');
+  const response = await route('/api/puzzles/rating?variant=jungle');
 
   assert.equal(response.status, 200);
   assert.deepEqual(JSON.parse(response.body), { rating: null });
 });
 
 test('attempts omit rating info when there is no rated session', async () => {
-  // Retargeted off Fortress on 2026-09-03: it ships no puzzles. Rating omission
-  // is variant-agnostic, so any shipped puzzle proves it.
+  // Rating omission is variant-agnostic, so any shipped puzzle proves it.
   const jungle = JUNGLE_PUZZLES[0];
   assert.ok(jungle, 'expected a jungle puzzle');
   const response = await route(`/api/puzzles/${jungle.id}/attempt`, 'POST', {
@@ -496,7 +523,6 @@ test('reveal endpoint in hint mode returns only the next move, never the full li
 });
 
 test('reveal endpoint reads the solution generically across variants', async () => {
-  // Fortress left this list on 2026-09-03 when it stopped shipping puzzles.
   for (const puzzle of [JUNGLE_PUZZLES[0], XIANGQI_PUZZLES[0]]) {
     assert.ok(puzzle, 'expected a puzzle in each variant registry');
     const reveal = await route(`/api/puzzles/${puzzle.id}/reveal`, 'POST', { mode: 'solution' });

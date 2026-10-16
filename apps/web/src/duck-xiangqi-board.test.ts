@@ -7,10 +7,13 @@ import {
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import {
+  DUCK_TOKEN_SCALE,
   type DuckXiangqiBoardPhase,
   duckXiangqiBoardSvg,
   duckXiangqiClickResult,
+  duckXiangqiGhostSvg,
 } from './duck-xiangqi-board.js';
+import { XIANGQI_LIVE_PIECE_SIZE } from './xiangqi-board.js';
 
 const PIECE_PHASE = (selected: DuckXiangqiSquare | null): DuckXiangqiBoardPhase => ({
   kind: 'piece',
@@ -158,13 +161,18 @@ describe('duckXiangqiBoardSvg', () => {
     const view = getDuckXiangqiPlayerView(afterOneTurn(), 'red');
     const sets = [
       'international',
-      'international-flat',
       'animal-dobutsu',
       'traditional',
       'simplified',
-      'western',
-      'symbols',
+      'lacquer',
+      'wood',
+      'book',
+      'brush',
+      'clerical',
     ] as const;
+    // Sets that seat the duck on no disc of its own: the asset sets that frame
+    // it on their colour-neutral back.
+    const ringless = new Set<string>(['wood', 'brush', 'clerical']);
     for (const pieceSet of sets) {
       const svg = duckXiangqiBoardSvg(view, 'red', {
         interactive: false,
@@ -177,11 +185,10 @@ describe('duckXiangqiBoardSvg', () => {
       // (#b8860b, the variant's accent), never a seat's red or black: it is how
       // this board says "no seat", and the duck has none. It was a neutral grey
       // until 2026-09-11, which said the same thing by being absent and read as
-      // a missing ring at board size. `international-flat` is the one set with
-      // no disc at all, so it has no ring to colour. Asserted positively only:
+      // a missing ring at board size. Asserted positively only:
       // the SVG is the WHOLE board, so a "never red" check would trip on the
       // red pieces standing next to the duck.
-      if (pieceSet !== 'international-flat') {
+      if (!ringless.has(pieceSet)) {
         expect(svg, pieceSet).toContain('#b8860b');
       }
     }
@@ -230,6 +237,29 @@ describe('duckXiangqiBoardSvg', () => {
     expect(svg.match(/data-square="/g)?.length).toBe(90);
   });
 
+  // 'Square grid' never reached this board: the renderer defaulted to the lined
+  // board and no caller passed a layout, while the page CSS already sized for it.
+  it('follows the square-grid preference, with the square-grid last-move marks', () => {
+    window.history.replaceState({}, '', '/?xqLayout=cell');
+    try {
+      const svg = duckXiangqiBoardSvg(
+        { ...openingView(), lastMove: { from: 'b3', to: 'e3' } },
+        'red',
+        {
+          interactive: false,
+          phase: PIECE_PHASE(null),
+          targets: [],
+        },
+      );
+      expect(svg).toContain('data-xiangqi-layout="cell"');
+      expect(svg.match(/xq-live-lastmove-origin/g)).toHaveLength(1);
+      expect(svg.match(/xq-live-lastmove-square/g)).toHaveLength(1);
+      expect(svg.match(/xq-live-lastmove-piece-ring/g)).toHaveLength(1);
+    } finally {
+      window.history.replaceState({}, '', '/');
+    }
+  });
+
   it('draws right-click arrows and circles', () => {
     const svg = duckXiangqiBoardSvg(openingView(), 'red', {
       interactive: true,
@@ -240,5 +270,56 @@ describe('duckXiangqiBoardSvg', () => {
     });
     expect(svg).toContain('xq-arrow--draw');
     expect(svg).toContain('xq-marker--circle');
+  });
+});
+
+// The duck has to be the first thing the eye finds (Brian, 2026-10-06: "more
+// popping"): larger than a piece, a thick bright ring, a shadow that lifts it
+// off the board, and a landing that plays once when it arrives. No dark outer
+// rim: that was tried in the spike and turned down.
+describe('the duck token', () => {
+  const view = () => getDuckXiangqiPlayerView(afterOneTurn(), 'red');
+  const duckGroup = (svg: string) => {
+    const start = svg.indexOf('<g class="dkx-duck');
+    return svg.slice(start, svg.indexOf('</g></g>', start) + 8);
+  };
+
+  it('is drawn the size of a piece, with the gold ring and no shadow', () => {
+    const svg = duckXiangqiBoardSvg(view(), 'red', {
+      interactive: true,
+      phase: PIECE_PHASE(null),
+      targets: [],
+      pieceSet: 'international',
+    });
+    const duck = duckGroup(svg);
+    // Pieces reach 98% of the gap since 2026-10-14, so a larger duck would run
+    // into its neighbours; the ring is what makes it pop.
+    expect(DUCK_TOKEN_SCALE).toBe(1);
+    expect(duck).toContain(`scale(${(XIANGQI_LIVE_PIECE_SIZE * DUCK_TOKEN_SCALE) / 100})`);
+    expect(duck).toContain('class="dkx-duck-ring"');
+    expect(duck).toContain('stroke="#f2b705"');
+    // Flat like every piece on the board (Brian, 2026-10-08): the ring and
+    // size make it pop; a shadow was the board's only 3D effect.
+    expect(svg).not.toContain('dkx-duck-shadow');
+    expect(duck).not.toContain('filter=');
+    // The spike's dark outer rim stays out.
+    expect(duck).not.toContain('#5c3d00');
+  });
+
+  it('plays its landing only on the render the caller marks as a landing', () => {
+    const base = { interactive: true, phase: PIECE_PHASE(null), targets: [] };
+    expect(duckXiangqiBoardSvg(view(), 'red', base)).not.toContain('dkx-duck--landed');
+    expect(duckXiangqiBoardSvg(view(), 'red', { ...base, duckLanded: false })).not.toContain(
+      'dkx-duck--landed',
+    );
+    expect(duckXiangqiBoardSvg(view(), 'red', { ...base, duckLanded: true })).toContain(
+      'dkx-duck dkx-duck--landed',
+    );
+  });
+
+  it('previews at the same size and ring as the real duck', () => {
+    const ghost = duckXiangqiGhostSvg('e5', 'red', 'intersection', 'international');
+    expect(ghost).toContain(`scale(${(XIANGQI_LIVE_PIECE_SIZE * DUCK_TOKEN_SCALE) / 100})`);
+    expect(ghost).toContain('class="dkx-duck-ring"');
   });
 });

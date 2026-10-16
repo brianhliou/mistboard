@@ -5,13 +5,52 @@
 //
 // Styled with the broadcast surface's own classes (xqb-*): a player page is the
 // same kind of page as an event page, and the reader crosses between them.
+import './seat-disc-ink.css';
 import './xiangqi-broadcast.css';
 import './xiangqi-players.css';
-import { buildCommunityLayout } from './community-rail.js';
-import { CXA_POINTS, CXA_POINTS_LISTS } from './players/cxa-points.js';
-import { CXA_LISTS, CXA_RATINGS } from './players/cxa-ratings.js';
-import { PLAYER_PROFILES, PLAYER_TITLE_LABEL, type PlayerTitle } from './players/profiles.js';
+import { t } from './i18n/catalog.js';
+import { currentLocale } from './i18n/locale.js';
+import {
+  cxaGroupFor,
+  cxaPointsFor,
+  cxaRatingsFor,
+  type PlayerGroup,
+} from './players/cxa-coverage.js';
+import { CXA_POINTS_LISTS } from './players/cxa-points.js';
+import { CXA_LISTS } from './players/cxa-ratings.js';
+import { eccoEnglish } from './players/ecco-english.js';
+import {
+  type BoardFilter,
+  type Colour,
+  ECCO_FAMILY_KEYS,
+  filterBoards,
+  filterFromSearch,
+  type Opening,
+  type OpeningRow,
+  openingsOf,
+  opponentsOf,
+  type Record3,
+  recordByColour,
+  recordOf,
+  searchFromFilter,
+} from './players/player-stats.js';
+import { playerTitleFor } from './players/player-title.js';
+import {
+  PLAYER_PROFILES,
+  PLAYER_TITLE_LABEL,
+  PLAYER_TITLES,
+  type PlayerTitle,
+} from './players/profiles.js';
+import { ratingHistoryFigure } from './players/rating-history-chart.js';
+import { MATCH_FIXING_ARTICLE_PATH, sanctionFor, sanctionSentence } from './players/sanctions.js';
+import {
+  type SourcedPlayerPhoto,
+  XIANGQIQIPU_CREDIT,
+  XIANGQIQIPU_PHOTOS,
+} from './players/xiangqiqipu-photos.js';
+import { seatDiscEl } from './seat-disc.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
+import { type BroadcastRailItem, broadcastSectionLayout } from './xiangqi-broadcast-pages.js';
 
 export type PlayerEventRecord = {
   tourSlug: string;
@@ -39,6 +78,10 @@ export type PlayerRecord = {
   events: PlayerEventRecord[];
   firstPlayedOn: string | null;
   lastPlayedOn: string | null;
+  /** On a CXA list with no game in the archive, listed by the server
+   *  (cxa-listed-players.ts): the page is the list's facts and an empty games
+   *  state. Absent on every player with games. */
+  cxaOnly?: boolean;
 };
 
 export type PlayerBoardRecord = {
@@ -48,6 +91,7 @@ export type PlayerBoardRecord = {
   tourNameEn: string | null;
   roundId: string;
   roundName: string;
+  roundNameEn?: string | null;
   playedOn: string | null;
   colour: 'red' | 'black';
   opponent: { name: string; nameEn: string | null; slug: string | null };
@@ -55,6 +99,8 @@ export type PlayerBoardRecord = {
   outcome: 'win' | 'draw' | 'loss';
   plyCount: number;
   sourceUrl: string | null;
+  /** "C70 五七炮对屏风马进３卒"; absent from responses that predate the field. */
+  opening?: string | null;
 };
 
 type PlayersIndexResponse = { players: PlayerRecord[] };
@@ -78,6 +124,29 @@ export async function mountXiangqiPlayer(root: HTMLElement, slug: string): Promi
     );
     document.title = `${displayName(data.player)} · Mistboard`;
     root.replaceChildren(buildNav(), renderPlayer(data.player, data.boards).main);
+  } catch (err) {
+    renderError(root, err);
+  }
+}
+
+export async function mountXiangqiTeamsIndex(root: HTMLElement): Promise<void> {
+  setRoot(root, 'Loading teams');
+  try {
+    const data = await fetchJson<PlayersIndexResponse>('/api/xiangqi/players');
+    root.replaceChildren(buildNav(), renderTeams(data.players).main);
+  } catch (err) {
+    renderError(root, err);
+  }
+}
+
+export async function mountXiangqiTeam(root: HTMLElement, key: string): Promise<void> {
+  setRoot(root, 'Loading team');
+  try {
+    const data = await fetchJson<PlayersIndexResponse>('/api/xiangqi/players');
+    const team = teamsOf(data.players).find((entry) => entry.key === key);
+    if (!team) throw new Error('No team by that name');
+    document.title = `${teamLabel(team)} · Mistboard`;
+    root.replaceChildren(buildNav(), renderTeam(team).main);
   } catch (err) {
     renderError(root, err);
   }
@@ -116,14 +185,68 @@ export function scorePercent(r: { games: number; wins: number; draws: number }):
   return r.games === 0 ? 0 : Math.round(((r.wins + r.draws / 2) / r.games) * 100);
 }
 
-export type IndexSort = 'games' | 'score' | 'name';
+// ---------------------------------------------------------------------------
+// The index, lichess's FIDE players page: one panel with the title and a
+// search, then one row per player, sortable by the column headers. The CXA's
+// current points list leads, the way lichess leads with classical rating.
+
+/** The player's entry on the latest CXA points list they appear on. */
+export function latestPoints(name: string): { points: number; rank: number } | null {
+  const entries = cxaPointsFor(name);
+  const last = entries[entries.length - 1];
+  return last ? { points: last.points, rank: last.rank } : null;
+}
+
+/** The player's last CXA rating (the series closed in 2026). */
+export function latestRating(name: string): number | null {
+  const entries = cxaRatingsFor(name);
+  return entries[entries.length - 1]?.rating ?? null;
+}
+
+function byNullableDesc(a: number | null, b: number | null): number {
+  if (a === null && b === null) return 0;
+  if (a === null) return 1;
+  if (b === null) return -1;
+  return b - a;
+}
+
+export type IndexSort = 'points' | 'rating' | 'games' | 'score' | 'name';
+
+function listOrder(player: PlayerRecord): number {
+  const entries = cxaPointsFor(player.name);
+  const group = entries[entries.length - 1]?.group;
+  return group === 'men' ? 0 : group === 'women' ? 1 : 2;
+}
 
 export function sortPlayers(players: readonly PlayerRecord[], sort: IndexSort): PlayerRecord[] {
   const out = [...players];
+  const byGames = (a: PlayerRecord, b: PlayerRecord) =>
+    b.games - a.games || displayName(a).localeCompare(displayName(b));
   if (sort === 'name') out.sort((a, b) => displayName(a).localeCompare(displayName(b)));
   else if (sort === 'score')
-    out.sort((a, b) => scorePercent(b) - scorePercent(a) || b.games - a.games);
-  else out.sort((a, b) => b.games - a.games || displayName(a).localeCompare(displayName(b)));
+    out.sort(
+      (a, b) =>
+        byNullableDesc(
+          a.games > 0 ? scorePercent(a) : null,
+          b.games > 0 ? scorePercent(b) : null,
+        ) || b.games - a.games,
+    );
+  else if (sort === 'points')
+    // The men's and women's lists are separate rankings on their own scales,
+    // so the men's list comes first and the women's after it, never interleaved.
+    out.sort(
+      (a, b) =>
+        listOrder(a) - listOrder(b) ||
+        byNullableDesc(
+          latestPoints(a.name)?.points ?? null,
+          latestPoints(b.name)?.points ?? null,
+        ) ||
+        byNullableDesc(latestRating(a.name), latestRating(b.name)) ||
+        byGames(a, b),
+    );
+  else if (sort === 'rating')
+    out.sort((a, b) => byNullableDesc(latestRating(a.name), latestRating(b.name)) || byGames(a, b));
+  else out.sort(byGames);
   return out;
 }
 
@@ -136,60 +259,150 @@ export function matchesQuery(player: PlayerRecord, query: string): boolean {
   );
 }
 
-/** The title tag for a player: authored first, else the last official list. */
-export function playerTitle(player: Pick<PlayerRecord, 'slug' | 'name'>): PlayerTitle | null {
-  const authored = PLAYER_PROFILES[player.slug]?.title;
-  if (authored) return authored;
-  const entries = CXA_RATINGS[player.name];
-  const last = entries?.[entries.length - 1];
-  return last?.title === '特' ? 'GM' : last?.title === '大' ? 'NM' : null;
+/** Men's or women's: the CXA list the player is on, else the events they
+ *  played (a 女子 event, or one whose slug says women; a 男子 event).
+ *  Null when neither says, rather than a guess. */
+export function playerGroup(
+  player: Pick<PlayerRecord, 'name'> & {
+    events: readonly Pick<PlayerEventRecord, 'tourSlug' | 'tourName'>[];
+  },
+): PlayerGroup | null {
+  const listed = cxaGroupFor(player.name);
+  if (listed) return listed;
+  if (
+    player.events.some((e) => e.tourName.includes('女子') || /(^|-)womens?(-|$)/.test(e.tourSlug))
+  )
+    return 'women';
+  if (player.events.some((e) => e.tourName.includes('男子') || /(^|-)men(-|$)/.test(e.tourSlug)))
+    return 'men';
+  return null;
 }
 
-// ---------------------------------------------------------------------------
-// The index: one row per player, a search box, sortable by the column headers.
+/** The season the index calls current: the latest year any player played in.
+ *  From the data, not the clock, so the filter never empties on New Year's Day. */
+export function currentSeason(
+  players: readonly Pick<PlayerRecord, 'lastPlayedOn'>[],
+): string | null {
+  let latest: string | null = null;
+  for (const p of players)
+    if (p.lastPlayedOn && (!latest || p.lastPlayedOn > latest)) latest = p.lastPlayedOn;
+  return latest ? latest.slice(0, 4) : null;
+}
 
-function renderIndex(players: PlayerRecord[]): HTMLElement & { main: HTMLElement } {
-  const main = shell();
-  const events = new Set(players.flatMap((p) => p.events.map((e) => e.tourSlug)));
+export type IndexFilter = {
+  title?: PlayerTitle | 'none';
+  group?: PlayerGroup;
+  /** Only players with a game in this season (a year, "2026"). */
+  season?: string;
+};
 
+export function matchesFilter(player: PlayerRecord, filter: IndexFilter): boolean {
+  if (filter.title) {
+    const title = playerTitle(player);
+    if (filter.title === 'none' ? title !== null : title !== filter.title) return false;
+  }
+  if (filter.group && playerGroup(player) !== filter.group) return false;
+  if (filter.season && !player.lastPlayedOn?.startsWith(filter.season)) return false;
+  return true;
+}
+
+/** ?title=GM&list=women&active=2026, keeping only values that mean something. */
+export function indexFilterFromSearch(search: string): IndexFilter {
+  const params = new URLSearchParams(search);
+  const filter: IndexFilter = {};
+  const title = params.get('title');
+  if (title === 'none' || PLAYER_TITLES.includes(title as PlayerTitle)) {
+    filter.title = title as PlayerTitle | 'none';
+  }
+  const group = params.get('list');
+  if (group === 'men' || group === 'women') filter.group = group;
+  const season = params.get('active');
+  if (season && /^\d{4}$/.test(season)) filter.season = season;
+  return filter;
+}
+
+export function indexSearchFromFilter(filter: IndexFilter): string {
+  const params = new URLSearchParams();
+  if (filter.title) params.set('title', filter.title);
+  if (filter.group) params.set('list', filter.group);
+  if (filter.season) params.set('active', filter.season);
+  const text = params.toString();
+  return text ? `?${text}` : '';
+}
+
+/** The title tag for a player (precedence: players/player-title.ts). */
+export function playerTitle(player: Pick<PlayerRecord, 'slug' | 'name'>): PlayerTitle | null {
+  return playerTitleFor(player);
+}
+
+const SEARCH_ICON =
+  '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+
+/** The panel's head: a light title on the left, lichess's search on the right. */
+function boardHead(title: HTMLElement, search?: HTMLInputElement): HTMLElement {
+  const head = document.createElement('header');
+  head.className = 'xqp-board-head';
+  head.append(title);
+  if (search) {
+    const form = document.createElement('form');
+    form.className = 'xqp-search-form';
+    form.setAttribute('role', 'search');
+    const button = document.createElement('button');
+    button.type = 'submit';
+    button.className = 'xqp-search-button';
+    button.setAttribute('aria-label', 'Search');
+    button.innerHTML = SEARCH_ICON;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      search.dispatchEvent(new Event('input'));
+    });
+    form.append(search, button);
+    head.append(form);
+  }
+  return head;
+}
+
+function searchInput(label: string): HTMLInputElement {
   const search = document.createElement('input');
   search.type = 'search';
   search.className = 'xqp-search';
   search.placeholder = 'Search';
-  search.setAttribute('aria-label', 'Search players');
-  main.append(
-    hero({
-      eyebrow: 'Players',
-      title: 'Xiangqi players',
-      meta: [
-        `${players.length} players`,
-        `${events.size} events`,
-        'Everyone with a finished game in a top-level relayed event',
-      ],
-      actions: [search],
-    }),
-  );
+  search.setAttribute('aria-label', label);
+  return search;
+}
 
-  const section = document.createElement('section');
-  section.className = 'xqb-section';
+type Column<T, K extends string> = {
+  label: string;
+  sort?: K;
+  className?: string;
+  hint?: string;
+  value: (row: T) => HTMLTableCellElement;
+};
+
+/** A sortable, searchable table in the panel; returns the table and a repaint. */
+function sortableTable<T, K extends string>(input: {
+  rows: readonly T[];
+  columns: Column<T, K>[];
+  sort: K;
+  order: (rows: readonly T[], sort: K) => T[];
+  matches: (row: T, query: string) => boolean;
+  href: (row: T) => string;
+  search?: HTMLInputElement;
+  /** Filters beyond the search box; call `repaint` after changing them. */
+  filter?: (row: T) => boolean;
+  onPaint?: (shown: number) => void;
+}): HTMLElement & { repaint: () => void } {
+  const wrap = document.createElement('div');
+  wrap.className = 'xqp-table-wrap';
   const table = document.createElement('table');
   table.className = 'xqp-index';
-  const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
-  const columns: Array<{ label: string; sort?: IndexSort; className?: string }> = [
-    { label: 'Name', sort: 'name', className: 'xqp-col-name' },
-    { label: 'Games', sort: 'games' },
-    { label: 'Score', sort: 'score' },
-    { label: 'W-D-L' },
-    { label: 'Events' },
-    { label: 'Last seen' },
-  ];
-  let sort: IndexSort = 'games';
-  let query = '';
-  const sortHeaders = new Map<IndexSort, HTMLElement>();
-  for (const column of columns) {
+  let sort = input.sort;
+  const sortHeaders = new Map<K, HTMLElement>();
+  for (const column of input.columns) {
     const th = document.createElement('th');
     if (column.className) th.className = column.className;
+    if (column.hint) th.title = column.hint;
     if (column.sort) {
       const button = document.createElement('button');
       button.type = 'button';
@@ -198,7 +411,7 @@ function renderIndex(players: PlayerRecord[]): HTMLElement & { main: HTMLElement
       const key = column.sort;
       button.addEventListener('click', () => {
         sort = key;
-        paintRows();
+        paint();
       });
       th.append(button);
       sortHeaders.set(key, th);
@@ -207,45 +420,386 @@ function renderIndex(players: PlayerRecord[]): HTMLElement & { main: HTMLElement
     }
     headRow.append(th);
   }
+  const thead = document.createElement('thead');
   thead.append(headRow);
   const tbody = document.createElement('tbody');
   table.append(thead, tbody);
-
   const empty = document.createElement('p');
   empty.className = 'xqp-empty';
   empty.hidden = true;
 
-  function paintRows(): void {
+  function paint(): void {
+    const query = input.search?.value ?? '';
     tbody.replaceChildren();
     for (const [key, th] of sortHeaders) th.classList.toggle('xqp-sorted', key === sort);
-    const shown = sortPlayers(players, sort).filter((p) => matchesQuery(p, query));
-    for (const player of shown) {
+    const shown = input
+      .order(input.rows, sort)
+      .filter((row) => input.matches(row, query) && (input.filter?.(row) ?? true));
+    for (const row of shown) {
       const tr = document.createElement('tr');
       tr.className = 'xqp-row';
-      tr.append(
-        nameCell(player),
-        cell(String(player.games)),
-        cell(`${scorePercent(player)}%`),
-        cell(recordText(player)),
-        cell(String(player.events.length)),
-        cell(player.lastPlayedOn ?? ''),
-      );
+      for (const column of input.columns) {
+        const td = column.value(row);
+        if (column.sort === sort) td.classList.add('xqp-sorted-cell');
+        tr.append(td);
+      }
       tr.addEventListener('click', (event) => {
         if ((event.target as HTMLElement).closest('a')) return;
-        window.location.href = playerHref(player);
+        window.location.href = input.href(row);
       });
       tbody.append(tr);
     }
     empty.hidden = shown.length > 0;
-    empty.textContent = shown.length > 0 ? '' : `No player matches “${query.trim()}”.`;
+    empty.textContent =
+      shown.length > 0
+        ? ''
+        : query.trim()
+          ? `Nothing matches “${query.trim()}”.`
+          : 'Nothing matches.';
+    input.onPaint?.(shown.length);
   }
-  search.addEventListener('input', () => {
-    query = search.value;
-    paintRows();
+  input.search?.addEventListener('input', paint);
+  paint();
+  wrap.append(table, empty);
+  return Object.assign(wrap, { repaint: paint });
+}
+
+function numberCell(value: number | null | undefined, suffix = ''): HTMLTableCellElement {
+  return cell(value === null || value === undefined ? '' : `${value}${suffix}`);
+}
+
+function playerColumns(showTeam: boolean): Column<PlayerRecord, IndexSort>[] {
+  return [
+    {
+      label: 'Name',
+      sort: 'name',
+      className: 'xqp-col-name',
+      value: (p) => nameCell(p, showTeam),
+    },
+    {
+      label: 'Points',
+      sort: 'points',
+      hint: 'CXA tournament points, the latest list the player is on',
+      value: (p) => numberCell(latestPoints(p.name)?.points),
+    },
+    {
+      label: 'Rating',
+      sort: 'rating',
+      hint: 'Last CXA rating (the rating lists ended in 2026)',
+      value: (p) => numberCell(latestRating(p.name)),
+    },
+    // A CXA-only player has no games to count, which is not the same as none won.
+    { label: 'Games', sort: 'games', value: (p) => numberCell(p.cxaOnly ? null : p.games) },
+    {
+      label: 'Score',
+      sort: 'score',
+      value: (p) => numberCell(p.games > 0 ? scorePercent(p) : null, '%'),
+    },
+  ];
+}
+
+function playersTable(
+  players: readonly PlayerRecord[],
+  search: HTMLInputElement | undefined,
+  showTeam: boolean,
+  extra?: Pick<Parameters<typeof sortableTable<PlayerRecord, IndexSort>>[0], 'filter' | 'onPaint'>,
+): HTMLElement & { repaint: () => void } {
+  return sortableTable<PlayerRecord, IndexSort>({
+    rows: players,
+    columns: playerColumns(showTeam),
+    sort: 'points',
+    order: sortPlayers,
+    matches: matchesQuery,
+    href: playerHref,
+    search,
+    ...extra,
   });
-  paintRows();
-  section.append(table, empty);
-  main.append(section);
+}
+
+function renderIndex(players: PlayerRecord[]): HTMLElement & { main: HTMLElement } {
+  const main = shell('players');
+  const title = document.createElement('h1');
+  title.className = 'xqp-board-title';
+  title.textContent = 'Xiangqi players';
+  const search = searchInput('Search players');
+  const panel = document.createElement('section');
+  panel.className = 'xqp-board';
+  const season = currentSeason(players);
+  const state: { filter: IndexFilter } = { filter: indexFilterFromSearch(window.location.search) };
+  const count = document.createElement('span');
+  count.className = 'xqp-filter-count';
+  const table = playersTable(players, search, true, {
+    filter: (p) => matchesFilter(p, state.filter),
+    onPaint: (shown) => {
+      count.textContent = t('broadcast.playersCount', { n: shown });
+    },
+  });
+  const apply = (next: IndexFilter): void => {
+    state.filter = next;
+    const url = `${window.location.pathname}${indexSearchFromFilter(next)}${window.location.hash}`;
+    window.history.replaceState(window.history.state, '', url);
+    table.repaint();
+  };
+  const bar = document.createElement('div');
+  bar.className = 'xqp-filters';
+  bar.append(
+    filterSelect(
+      t('broadcast.playersFilterTitle'),
+      [
+        ['', t('broadcast.playersAnyTitle')],
+        ...PLAYER_TITLES.map((title): [string, string] => [title, title]),
+        ['none', t('broadcast.playersUntitled')],
+      ],
+      state.filter.title ?? '',
+      (value) => apply({ ...state.filter, title: (value || undefined) as IndexFilter['title'] }),
+    ),
+    filterSelect(
+      t('broadcast.playersFilterGroup'),
+      [
+        ['', t('broadcast.playersMenAndWomen')],
+        ['men', t('broadcast.playersMen')],
+        ['women', t('broadcast.playersWomen')],
+      ],
+      state.filter.group ?? '',
+      (value) => apply({ ...state.filter, group: (value || undefined) as IndexFilter['group'] }),
+    ),
+  );
+  if (season) {
+    const label = document.createElement('label');
+    label.className = 'xqp-filter xqp-filter-check';
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.checked = state.filter.season === season;
+    box.addEventListener('change', () =>
+      apply({ ...state.filter, season: box.checked ? season : undefined }),
+    );
+    label.append(box, t('broadcast.playersActive', { year: season }));
+    bar.append(label);
+  }
+  bar.append(count);
+  panel.append(boardHead(title, search), bar, table);
+  // At the foot of the list, below the last row, as on a team page.
+  const credit = sourcedPhotosCredit(players);
+  if (credit) panel.append(credit);
+  main.append(panel);
+  return main;
+}
+
+/** One labelled select in a filter bar. */
+function filterSelect(
+  label: string,
+  options: readonly (readonly [string, string])[],
+  value: string,
+  onChange: (value: string) => void,
+): HTMLElement {
+  const wrap = document.createElement('label');
+  wrap.className = 'xqp-filter';
+  const caption = document.createElement('span');
+  caption.className = 'xqp-filter-label';
+  caption.textContent = label;
+  const select = document.createElement('select');
+  select.className = 'xqp-filter-select';
+  for (const [optionValue, optionLabel] of options) {
+    const option = document.createElement('option');
+    option.value = optionValue;
+    option.textContent = optionLabel;
+    select.append(option);
+  }
+  select.value = value;
+  select.addEventListener('change', () => onChange(select.value));
+  wrap.append(caption, select);
+  return wrap;
+}
+
+// ---------------------------------------------------------------------------
+// Teams, lichess's FIDE federations: the clubs and provinces the players sit
+// for, each from the players' latest team. The badge stands in for a flag.
+
+export type TeamRecord = {
+  key: string;
+  name: string;
+  nameEn: string | null;
+  players: PlayerRecord[];
+  games: number;
+  wins: number;
+  draws: number;
+  losses: number;
+};
+
+/** A URL-safe key for a team: its English name slugged, else the Chinese. */
+export function teamKey(player: Pick<PlayerRecord, 'federation' | 'federationEn'>): string | null {
+  const slug = (player.federationEn ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug || player.federation || null;
+}
+
+export function teamsOf(players: readonly PlayerRecord[]): TeamRecord[] {
+  const teams = new Map<string, TeamRecord>();
+  for (const player of players) {
+    const key = teamKey(player);
+    if (!key || !player.federation) continue;
+    let team = teams.get(key);
+    if (!team) {
+      team = {
+        key,
+        name: player.federation,
+        nameEn: player.federationEn,
+        players: [],
+        games: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+      };
+      teams.set(key, team);
+    }
+    team.players.push(player);
+    team.games += player.games;
+    team.wins += player.wins;
+    team.draws += player.draws;
+    team.losses += player.losses;
+  }
+  return [...teams.values()];
+}
+
+/** The points of the team's five best players added up, lichess's "top 10
+ *  average" for a list where most players have no points: a mean over the
+ *  ranked few would put a team with one ranked player first. */
+export function teamStrength(team: Pick<TeamRecord, 'players'>): number | null {
+  const best = team.players
+    .map((p) => latestPoints(p.name)?.points)
+    .filter((x): x is number => x !== undefined)
+    .sort((a, b) => b - a)
+    .slice(0, 5);
+  if (best.length === 0) return null;
+  return best.reduce((a, b) => a + b, 0);
+}
+
+export type TeamSort = 'name' | 'players' | 'strength' | 'games' | 'score';
+
+export function sortTeams(teams: readonly TeamRecord[], sort: TeamSort): TeamRecord[] {
+  const out = [...teams];
+  const byPlayers = (a: TeamRecord, b: TeamRecord) =>
+    b.players.length - a.players.length || b.games - a.games;
+  if (sort === 'name') out.sort((a, b) => teamLabel(a).localeCompare(teamLabel(b)));
+  else if (sort === 'players') out.sort(byPlayers);
+  else if (sort === 'games') out.sort((a, b) => b.games - a.games);
+  else if (sort === 'score')
+    out.sort((a, b) => scorePercent(b) - scorePercent(a) || byPlayers(a, b));
+  else out.sort((a, b) => byNullableDesc(teamStrength(a), teamStrength(b)) || byPlayers(a, b));
+  return out;
+}
+
+function teamLabel(team: Pick<TeamRecord, 'name' | 'nameEn'>): string {
+  return team.nameEn ?? team.name;
+}
+
+function teamHref(key: string): string {
+  return `/players/teams/${encodeURIComponent(key)}`;
+}
+
+const TEAM_INKS = ['#a63328', '#237960', '#3b4f8f', '#9a6419', '#7a3b69'] as const;
+
+/** The team's badge: its first character on an ink hashed from the key. */
+function teamBadge(
+  team: { key: string; name: string },
+  size: 'row' | 'mini' | 'page',
+): HTMLElement {
+  const badge = document.createElement('span');
+  badge.className = `xqp-team-badge xqp-team-badge-${size}`;
+  badge.setAttribute('aria-hidden', 'true');
+  let hash = 0;
+  for (const char of team.key) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  badge.style.setProperty('--xqp-team-ink', TEAM_INKS[hash % TEAM_INKS.length]!);
+  badge.textContent = Array.from(team.name)[0] ?? '';
+  return badge;
+}
+
+function teamNameCell(team: TeamRecord): HTMLTableCellElement {
+  const td = document.createElement('td');
+  td.className = 'xqp-col-name';
+  const wrap = document.createElement('span');
+  wrap.className = 'xqp-name';
+  const link = document.createElement('a');
+  link.className = 'xqp-name-link';
+  link.href = teamHref(team.key);
+  link.textContent = teamLabel(team);
+  wrap.append(link);
+  if (team.nameEn && team.nameEn !== team.name) {
+    const zh = document.createElement('span');
+    zh.className = 'xqp-team';
+    zh.textContent = team.name;
+    wrap.append(zh);
+  }
+  td.append(teamBadge(team, 'row'), wrap);
+  return td;
+}
+
+function renderTeams(players: PlayerRecord[]): HTMLElement & { main: HTMLElement } {
+  const main = shell('teams');
+  const title = document.createElement('h1');
+  title.className = 'xqp-board-title';
+  title.textContent = 'Xiangqi teams';
+  const search = searchInput('Search teams');
+  const panel = document.createElement('section');
+  panel.className = 'xqp-board';
+  panel.append(
+    boardHead(title, search),
+    sortableTable<TeamRecord, TeamSort>({
+      rows: teamsOf(players),
+      columns: [
+        { label: 'Team', sort: 'name', className: 'xqp-col-name', value: teamNameCell },
+        { label: 'Players', sort: 'players', value: (t) => numberCell(t.players.length) },
+        {
+          label: 'Top 5 points',
+          sort: 'strength',
+          hint: 'The CXA points of the team’s five best players, added up',
+          value: (t) => numberCell(teamStrength(t)),
+        },
+        { label: 'Games', sort: 'games', value: (t) => numberCell(t.games) },
+        { label: 'Score', sort: 'score', value: (t) => numberCell(scorePercent(t), '%') },
+      ],
+      sort: 'strength',
+      order: sortTeams,
+      matches: (team, query) => {
+        const q = query.trim().toLowerCase();
+        return !q || [team.name, team.nameEn].some((s) => s?.toLowerCase().includes(q));
+      },
+      href: (team) => teamHref(team.key),
+      search,
+    }),
+  );
+  main.append(panel);
+  return main;
+}
+
+function renderTeam(team: TeamRecord): HTMLElement & { main: HTMLElement } {
+  const main = shell('teams');
+  const title = document.createElement('div');
+  title.className = 'xqp-team-head';
+  const copy = document.createElement('div');
+  const h1 = document.createElement('h1');
+  h1.className = 'xqp-board-title';
+  h1.textContent = teamLabel(team);
+  copy.append(h1);
+  const meta = document.createElement('p');
+  meta.className = 'xqp-team-meta';
+  meta.textContent = [
+    team.nameEn && team.nameEn !== team.name ? team.name : null,
+    `${team.players.length} ${team.players.length === 1 ? 'player' : 'players'}`,
+    `${team.games} games, ${recordText(team)}`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  copy.append(meta);
+  title.append(teamBadge(team, 'page'), copy);
+  const panel = document.createElement('section');
+  panel.className = 'xqp-board';
+  panel.append(boardHead(title), playersTable(team.players, undefined, false));
+  const credit = sourcedPhotosCredit(team.players);
+  if (credit) panel.append(credit);
+  main.append(panel);
   return main;
 }
 
@@ -253,13 +807,36 @@ function playerHref(player: Pick<PlayerRecord, 'slug'>): string {
   return `/players/${encodeURIComponent(player.slug)}`;
 }
 
-/** Photo when we have one, else a tile with the surname character. */
-function avatar(player: Pick<PlayerRecord, 'slug' | 'name'>, size: 'row' | 'page'): HTMLElement {
+const XIANGQIQIPU_SITE = 'https://www.xiangqiqipu.com/';
+
+const SOURCED_PHOTOS: ReadonlyMap<string, SourcedPlayerPhoto> = new Map(
+  XIANGQIQIPU_PHOTOS.map((photo) => [photo.slug, photo]),
+);
+
+/** A portrait from xiangqiqipu.com (players/xiangqiqipu-photos.ts), or null.
+ *  The authored photo in profiles.ts wins over it. */
+export function sourcedPhotoFor(slug: string): SourcedPlayerPhoto | null {
+  if (PLAYER_PROFILES[slug]?.photo) return null;
+  return SOURCED_PHOTOS.get(slug) ?? null;
+}
+
+/** The authored photo when we have one, else (in a list row) a sourced
+ *  photo, else a tile with the surname character. A list that shows sourced
+ *  photos carries one credit line for them (`sourcedPhotosCredit`); the page
+ *  hero credits its own (`playerPortrait`). */
+export function avatar(
+  player: Pick<PlayerRecord, 'slug' | 'name'>,
+  size: 'row' | 'page',
+): HTMLElement {
   const profile = PLAYER_PROFILES[player.slug];
-  if (profile?.photo) {
+  // A list row shows only xiangqiqipu photos: the list carries one credit line,
+  // to that site, so an authored photo from another source (尹昇's Sohu photo)
+  // would sit under the wrong credit. Authored photos stay on the player page.
+  const src = size === 'row' ? sourcedPhotoFor(player.slug)?.photo : profile?.photo;
+  if (src) {
     const img = document.createElement('img');
     img.className = `xqp-avatar xqp-avatar-${size}`;
-    img.src = profile.photo;
+    img.src = src;
     img.alt = '';
     img.loading = 'lazy';
     img.decoding = 'async';
@@ -272,6 +849,72 @@ function avatar(player: Pick<PlayerRecord, 'slug' | 'name'>, size: 'row' | 'page
   return tile;
 }
 
+/** The page hero's portrait: the authored photo with its credit, else a
+ *  sourced photo with the credit line its owner asked for (the site name,
+ *  linked to the player's page there), else the character tile. */
+export function playerPortrait(
+  player: Pick<PlayerRecord, 'slug' | 'name' | 'nameEn'>,
+): HTMLElement {
+  const figure = document.createElement('figure');
+  figure.className = 'xqp-portrait';
+  const profile = PLAYER_PROFILES[player.slug];
+  const sourced = sourcedPhotoFor(player.slug);
+  if (!sourced) {
+    figure.append(avatar(player, 'page'));
+    if (profile?.photoCredit) {
+      const cap = document.createElement('figcaption');
+      cap.textContent = `Credit: ${profile.photoCredit}`;
+      figure.append(cap);
+    }
+    return figure;
+  }
+  const img = document.createElement('img');
+  img.className = 'xqp-avatar xqp-avatar-page';
+  img.src = sourced.photo;
+  img.width = sourced.width;
+  img.height = sourced.height;
+  img.alt = t('broadcast.playerPhotoAlt', {
+    name: currentLocale() === 'en' ? displayName(player) : player.name,
+  });
+  img.decoding = 'async';
+  const cap = document.createElement('figcaption');
+  cap.className = 'xqp-photo-credit';
+  cap.append(...creditNodes('broadcast.playerPhotoCredit', sourced.credit, sourced.sourceUrl));
+  figure.append(img, cap);
+  return figure;
+}
+
+/** A credit template with the site name linked into its {source} slot; the
+ *  template carries the word order. */
+function creditNodes(
+  key: 'broadcast.playerPhotoCredit' | 'broadcast.playersPhotosCredit',
+  source: string,
+  href: string,
+): (string | HTMLElement)[] {
+  const link = document.createElement('a');
+  link.href = href;
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.textContent = source;
+  const MARK = '\u0001';
+  const [before = '', after = ''] = t(key, { source: MARK }).split(MARK);
+  return [before, link, after];
+}
+
+/** The one credit line a list of players carries for the xiangqiqipu.com
+ *  photos in its rows, or null when none of its players has one. */
+export function sourcedPhotosCredit(
+  players: readonly Pick<PlayerRecord, 'slug'>[],
+): HTMLElement | null {
+  if (!players.some((p) => sourcedPhotoFor(p.slug))) return null;
+  const line = document.createElement('p');
+  line.className = 'xqp-photo-credit xqp-list-credit';
+  line.append(
+    ...creditNodes('broadcast.playersPhotosCredit', XIANGQIQIPU_CREDIT, XIANGQIQIPU_SITE),
+  );
+  return line;
+}
+
 function titleTag(title: PlayerTitle | null): HTMLElement | null {
   if (!title) return null;
   const tag = document.createElement('span');
@@ -281,7 +924,7 @@ function titleTag(title: PlayerTitle | null): HTMLElement | null {
   return tag;
 }
 
-function nameCell(player: PlayerRecord): HTMLTableCellElement {
+function nameCell(player: PlayerRecord, showTeam = true): HTMLTableCellElement {
   const td = document.createElement('td');
   td.className = 'xqp-col-name';
   const wrap = document.createElement('span');
@@ -292,10 +935,31 @@ function nameCell(player: PlayerRecord): HTMLTableCellElement {
   const tag = titleTag(playerTitle(player));
   if (tag) link.append(tag, ' ');
   link.append(displayName(player));
-  const team = document.createElement('span');
-  team.className = 'xqp-team';
-  team.textContent = player.federationEn ?? player.federation ?? '';
-  wrap.append(link, team);
+  wrap.append(link);
+  const key = teamKey(player);
+  if (showTeam && key && player.federation) {
+    // The team under the name, lichess's flag and country.
+    const team = document.createElement('a');
+    team.className = 'xqp-team';
+    team.href = teamHref(key);
+    team.append(
+      teamBadge({ key, name: player.federation }, 'mini'),
+      player.federationEn ?? player.federation,
+    );
+    wrap.append(team);
+  } else if (showTeam && player.cxaOnly) {
+    // No team to show: the list the player is on stands in, and says why the
+    // row has no games.
+    const group = cxaGroupFor(player.name);
+    if (group) {
+      const line = document.createElement('span');
+      line.className = 'xqp-team';
+      line.textContent = t(
+        group === 'women' ? 'broadcast.playerListWomen' : 'broadcast.playerListMen',
+      );
+      wrap.append(line);
+    }
+  }
   td.append(avatar(player, 'row'), wrap);
   return td;
 }
@@ -308,25 +972,19 @@ function cell(text: string, className?: string): HTMLTableCellElement {
 }
 
 // ---------------------------------------------------------------------------
-// One player: photo and facts, the official rating, events, every board.
+// One player: photo and facts, the official rating and its history, the
+// record cut by colour, opponent and opening, events, every board.
 
 function renderPlayer(
   player: PlayerRecord,
   boards: PlayerBoardRecord[],
 ): HTMLElement & { main: HTMLElement } {
-  const main = shell();
+  const main = shell('players');
   const profile = PLAYER_PROFILES[player.slug];
 
   const header = document.createElement('section');
   header.className = 'xqp-header';
-  const figure = document.createElement('figure');
-  figure.className = 'xqp-portrait';
-  figure.append(avatar(player, 'page'));
-  if (profile?.photoCredit) {
-    const cap = document.createElement('figcaption');
-    cap.textContent = `Credit: ${profile.photoCredit}`;
-    figure.append(cap);
-  }
+  const figure = playerPortrait(player);
   const copy = document.createElement('div');
   copy.className = 'xqp-header-copy';
   const h1 = document.createElement('h1');
@@ -340,40 +998,100 @@ function renderPlayer(
     zh.textContent = player.name;
     h1.append(' ', zh);
   }
+  // The key facts as one strip of label-over-value pairs, from data the page
+  // already has: the current CXA standing first, then team, list, the archive.
   const facts = document.createElement('dl');
   facts.className = 'xqp-facts';
-  const fact = (label: string, value: string | Node | null | undefined): void => {
+  const fact = (label: string, value: string | Node | null | undefined, title?: string): void => {
     if (!value) return;
+    const item = document.createElement('div');
+    item.className = 'xqp-fact';
     const dt = document.createElement('dt');
     dt.textContent = label;
     const dd = document.createElement('dd');
     dd.append(value);
-    facts.append(dt, dd);
+    if (title) item.title = title;
+    item.append(dt, dd);
+    facts.append(item);
   };
-  fact('Team', player.federationEn ?? player.federation);
-  fact('Born', profile?.born);
-  fact('Archive', `${player.games} games, ${recordText(player)}, ${scorePercent(player)}%`);
-  fact(
-    'Seen',
-    player.firstPlayedOn && player.lastPlayedOn
-      ? `${player.firstPlayedOn} to ${player.lastPlayedOn}`
-      : null,
-  );
-  const actions = document.createElement('div');
-  actions.className = 'xqb-hero-actions xqp-header-actions';
-  const back = document.createElement('a');
-  back.className = 'xqb-link';
-  back.href = '/players';
-  back.textContent = 'All players';
-  actions.append(back);
+  const rankText = (rank: number, size: number | null | undefined): string =>
+    size ? t('broadcast.playerFactRankOf', { rank, size }) : `#${rank}`;
+  const points = cxaPointsFor(player.name);
+  const ratings = cxaRatingsFor(player.name);
+  const lastPoints = points[points.length - 1];
+  const lastRating = ratings[ratings.length - 1];
+  if (lastPoints) {
+    const list = CXA_POINTS_LISTS.find((l) => l.id === lastPoints.list);
+    const size = list ? (lastPoints.group === 'women' ? list.women : list.men) : null;
+    fact(t('broadcast.playerFactPoints'), String(lastPoints.points));
+    fact(t('broadcast.playerFactRank'), rankText(lastPoints.rank, size));
+  } else if (lastRating) {
+    const list = CXA_LISTS.find((l) => l.id === lastRating.list);
+    fact(
+      t('broadcast.playerFactLastRating'),
+      String(lastRating.rating),
+      list ? `CXA 等级分, last list ${list.label}` : 'CXA 等级分',
+    );
+    if (lastRating.rank !== null) {
+      fact(t('broadcast.playerFactRank'), rankText(lastRating.rank, list?.size ?? null));
+    }
+  }
+  const key = teamKey(player);
+  if (key && player.federation) {
+    const team = document.createElement('a');
+    team.className = 'xqp-fact-link';
+    team.href = teamHref(key);
+    team.textContent =
+      currentLocale() === 'en' ? (player.federationEn ?? player.federation) : player.federation;
+    fact(t('broadcast.playerFactTeam'), team);
+  }
+  const group = cxaGroupFor(player.name);
+  if (player.cxaOnly && group) {
+    fact(
+      t('broadcast.playerListLabel'),
+      t(group === 'women' ? 'broadcast.playerListWomen' : 'broadcast.playerListMen'),
+    );
+  }
+  fact(t('broadcast.playerFactBorn'), profile?.born);
+  if (player.games > 0) {
+    fact(t('broadcast.playerFactGames'), String(player.games), recordText(player));
+    fact(t('broadcast.playerFactScore'), `${scorePercent(player)}%`);
+  }
+  if (player.firstPlayedOn && player.lastPlayedOn) {
+    const from = player.firstPlayedOn.slice(0, 4);
+    const to = player.lastPlayedOn.slice(0, 4);
+    fact(
+      t('broadcast.playerFactSeen'),
+      from === to ? from : t('broadcast.playerFactSeenRange', { from, to }),
+      `${player.firstPlayedOn} to ${player.lastPlayedOn}`,
+    );
+  }
+  // No "All players" link: the rail's Pro players entry is the way back.
+  copy.append(h1);
+  if (facts.childElementCount > 0) copy.append(facts);
+  // A player the match-fixing rulings named: the ruling in one neutral
+  // sentence, linked to the account of the case, and nothing beyond it.
+  const sanction = sanctionFor(player.name);
+  if (sanction) {
+    const note = document.createElement('p');
+    note.className = 'xqp-sanction';
+    note.setAttribute('role', 'note');
+    const link = document.createElement('a');
+    link.href = MATCH_FIXING_ARTICLE_PATH;
+    link.textContent = 'About the case';
+    note.append(`${sanctionSentence(sanction)} `, link);
+    copy.append(note);
+  }
   if (profile?.profileHref) {
+    const actions = document.createElement('div');
+    actions.className = 'xqb-hero-actions xqp-header-actions';
     const link = document.createElement('a');
     link.className = 'xqb-link xqb-link-primary';
     link.href = profile.profileHref;
     link.textContent = 'Read the profile';
     actions.append(link);
+    copy.append(actions);
   }
-  copy.append(h1, facts, actions);
   header.append(figure, copy);
   main.append(header);
 
@@ -381,37 +1099,384 @@ function renderPlayer(
     (x): x is HTMLElement => x !== null,
   );
   if (officialRating.length > 0) {
-    const section = document.createElement('section');
-    section.className = 'xqb-section';
-    const h2 = document.createElement('h2');
-    h2.textContent = 'Official rating';
     const cards = document.createElement('div');
     cards.className = 'xqp-rating-row';
     cards.append(...officialRating);
-    section.append(h2, cards);
-    main.append(section);
+    main.append(section('Official rating', cards));
   }
 
-  const events = document.createElement('section');
-  events.className = 'xqb-section';
-  const h2 = document.createElement('h2');
-  h2.textContent = 'Events';
-  const grid = document.createElement('div');
-  grid.className = 'xqp-events';
-  for (const event of player.events) grid.append(eventCard(event));
-  events.append(h2, grid);
+  const history = ratingHistoryFigure(cxaRatingsFor(player.name), cxaPointsFor(player.name));
+  if (history) main.append(section(t('broadcast.playerRatingHistory'), history));
 
-  const games = document.createElement('section');
-  games.className = 'xqb-section';
-  const h2b = document.createElement('h2');
-  h2b.textContent = `Games (${boards.length})`;
+  if (boards.length === 0) {
+    // A CXA-listed player the archive has not seen play: say so plainly
+    // rather than show an empty record.
+    const empty = document.createElement('div');
+    empty.className = 'xqp-no-games';
+    const title = document.createElement('p');
+    title.className = 'xqp-no-games-title';
+    title.textContent = t('broadcast.playerNoGames');
+    const body = document.createElement('p');
+    body.textContent = t('broadcast.playerNoGamesBody', { name: player.nameEn ?? player.name });
+    empty.append(title, body);
+    main.append(section(`Games (0)`, empty));
+    return main;
+  }
+
+  const view = gamesView(player, boards);
+  main.append(recordSection(boards, view));
+  const openings = openingsSection(boards, view);
+  if (openings) main.append(openings);
+
+  if (player.events.length > 0) {
+    const grid = document.createElement('div');
+    grid.className = 'xqp-events';
+    for (const event of player.events) grid.append(eventCard(event));
+    main.append(section('Events', grid));
+  }
+  main.append(view.section);
+  return main;
+}
+
+function section(title: string, ...body: Node[]): HTMLElement {
+  const wrap = document.createElement('section');
+  wrap.className = 'xqb-section';
+  const h2 = document.createElement('h2');
+  h2.textContent = title;
+  wrap.append(h2, ...body);
+  return wrap;
+}
+
+/** The games list and the one filter every control on the page drives: the
+ *  record rows, the head-to-head picker, the opening rows and the bar above
+ *  the list. Kept in the URL (?colour=red&vs=<opponent>&opening=C70) so a
+ *  filtered list is a link. */
+type GamesView = {
+  section: HTMLElement;
+  filter: () => BoardFilter;
+  set: (next: BoardFilter, scroll?: boolean) => void;
+  subscribe: (paint: (filter: BoardFilter) => void) => void;
+  href: (filter: BoardFilter) => string;
+};
+
+function gamesView(player: PlayerRecord, boards: readonly PlayerBoardRecord[]): GamesView {
+  let filter = filterFromSearch(window.location.search, boards);
+  const listeners: ((filter: BoardFilter) => void)[] = [];
+  const wrap = section(`Games (${boards.length})`);
+  wrap.id = 'games';
+  const href = (next: BoardFilter): string =>
+    `${window.location.pathname}${searchFromFilter(next)}#games`;
+  const view: GamesView = {
+    section: wrap,
+    filter: () => filter,
+    set: (next, scroll = false) => {
+      filter = next;
+      window.history.replaceState(
+        window.history.state,
+        '',
+        `${window.location.pathname}${searchFromFilter(next)}${window.location.hash}`,
+      );
+      for (const paint of listeners) paint(filter);
+      if (scroll) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    },
+    subscribe: (paint) => {
+      listeners.push(paint);
+      paint(filter);
+    },
+    href,
+  };
+
+  const bar = document.createElement('div');
+  bar.className = 'xqp-filters xqp-games-filters';
+  const colours = document.createElement('div');
+  colours.className = 'xqp-segmented';
+  colours.setAttribute('role', 'group');
+  colours.setAttribute('aria-label', t('broadcast.playerFilterColour'));
+  const colourButtons = (
+    [
+      [undefined, t('broadcast.playerFilterAll')],
+      ['red', t('broadcast.playerFilterRed')],
+      ['black', t('broadcast.playerFilterBlack')],
+    ] as const
+  ).map(([colour, label]) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'xqp-segment';
+    button.textContent = label;
+    button.addEventListener('click', () => view.set({ ...filter, colour }));
+    colours.append(button);
+    return { colour, button };
+  });
+
+  const opponents = opponentsOf(boards);
+  const opponentSelect = filterSelect(
+    t('broadcast.playerFilterOpponent'),
+    [
+      ['', t('broadcast.playerFilterAnyOpponent')],
+      ...opponents.map(
+        (o) => [o.key, `${o.nameEn ?? o.name} (${o.record.games})`] as [string, string],
+      ),
+    ],
+    filter.opponent ?? '',
+    (value) => view.set({ ...filter, opponent: value || undefined }),
+  );
+  const openingOptions = openingChoices(boards);
+  const openingSelect =
+    openingOptions.length > 0
+      ? filterSelect(
+          t('broadcast.playerFilterOpening'),
+          [
+            ['', t('broadcast.playerFilterAnyOpening')],
+            ...openingOptions.map(
+              (o) =>
+                [
+                  o.key,
+                  `${o.code ? `${o.code} ` : ''}${openingLabel(o).name} (${o.record.games})`,
+                ] as [string, string],
+            ),
+          ],
+          filter.opening ?? '',
+          (value) => view.set({ ...filter, opening: value || undefined }),
+        )
+      : null;
+  const clear = document.createElement('button');
+  clear.type = 'button';
+  clear.className = 'xqp-filter-clear';
+  clear.textContent = t('broadcast.playerFilterClear');
+  clear.addEventListener('click', () => view.set({}));
+  bar.append(colours, opponentSelect, ...(openingSelect ? [openingSelect] : []), clear);
+
+  const summary = document.createElement('p');
+  summary.className = 'xqp-games-summary';
   const list = document.createElement('div');
   list.className = 'xqp-games';
-  for (const board of boards) list.append(boardRow(board, player));
-  games.append(h2b, list);
+  wrap.append(bar, summary, list);
 
-  main.append(events, games);
-  return main;
+  view.subscribe((current) => {
+    for (const { colour, button } of colourButtons) {
+      const on = current.colour === colour;
+      button.classList.toggle('xqp-segment-on', on);
+      button.setAttribute('aria-pressed', String(on));
+    }
+    const opponentInput = opponentSelect.querySelector('select')!;
+    opponentInput.value = current.opponent ?? '';
+    const openingInput = openingSelect?.querySelector('select');
+    if (openingInput) openingInput.value = current.opening ?? '';
+    const active = Boolean(current.colour || current.opponent || current.opening);
+    clear.hidden = !active;
+    const shown = filterBoards(boards, current);
+    const r = recordOf(shown);
+    summary.textContent = [
+      active ? t('broadcast.playerGamesShown', { n: shown.length, total: boards.length }) : null,
+      active && shown.length > 0 ? `${recordText(r)} · ${scorePercent(r)}%` : null,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+    summary.hidden = !active;
+    list.replaceChildren(...shown.map((board) => boardRow(board, player)));
+  });
+  return view;
+}
+
+/** Every opening in the games, both colours together, for the bar's select. */
+function openingChoices(boards: readonly PlayerBoardRecord[]): OpeningRow[] {
+  const byKey = new Map<string, OpeningRow>();
+  for (const row of [...openingsOf(boards, 'red'), ...openingsOf(boards, 'black')]) {
+    const seen = byKey.get(row.key);
+    if (!seen) byKey.set(row.key, { ...row, record: { ...row.record } });
+    else {
+      seen.record.games += row.record.games;
+      seen.record.wins += row.record.wins;
+      seen.record.draws += row.record.draws;
+      seen.record.losses += row.record.losses;
+    }
+  }
+  return [...byKey.values()].sort((a, b) => a.key.localeCompare(b.key));
+}
+
+/** A W/D/L bar: the shares of the record, lichess's result strip. */
+function resultBar(r: Record3): HTMLElement {
+  const bar = document.createElement('span');
+  bar.className = 'xqp-result-bar';
+  bar.setAttribute('aria-hidden', 'true');
+  for (const [kind, n] of [
+    ['win', r.wins],
+    ['draw', r.draws],
+    ['loss', r.losses],
+  ] as const) {
+    if (n === 0) continue;
+    const part = document.createElement('span');
+    part.className = `xqp-result-${kind}`;
+    part.style.flexGrow = String(n);
+    bar.append(part);
+  }
+  return bar;
+}
+
+/** Overall, as red, as black, each row a link to those games. A single
+ *  opponent's games are the games list's opponent filter. */
+function recordSection(boards: readonly PlayerBoardRecord[], view: GamesView): HTMLElement {
+  const byColour = recordByColour(boards);
+  const table = document.createElement('table');
+  table.className = 'xqp-stats';
+  const head = document.createElement('tr');
+  for (const label of [
+    '',
+    'Games',
+    t('broadcast.playerWon'),
+    t('broadcast.playerDrawn'),
+    t('broadcast.playerLost'),
+    'Score',
+    '',
+  ]) {
+    const th = document.createElement('th');
+    th.textContent = label;
+    head.append(th);
+  }
+  const thead = document.createElement('thead');
+  thead.append(head);
+  const tbody = document.createElement('tbody');
+  const rows: [Colour | undefined, string, Record3][] = [
+    [undefined, t('broadcast.playerOverall'), byColour.all],
+    ['red', t('broadcast.playerAsRed'), byColour.red],
+    ['black', t('broadcast.playerAsBlack'), byColour.black],
+  ];
+  for (const [colour, label, r] of rows) {
+    const tr = document.createElement('tr');
+    tr.className = 'xqp-stats-row';
+    const name = document.createElement('th');
+    name.scope = 'row';
+    const link = document.createElement('a');
+    link.href = view.href({ colour });
+    link.className = 'xqp-stats-link';
+    if (colour) link.append(seatDiscEl(colour, 'xqp-colour-dot'));
+    link.append(label);
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      view.set({ colour }, true);
+    });
+    name.append(link);
+    tr.append(
+      name,
+      cell(String(r.games)),
+      cell(String(r.wins)),
+      cell(String(r.draws)),
+      cell(String(r.losses)),
+      cell(r.games > 0 ? `${scorePercent(r)}%` : ''),
+    );
+    const barCell = document.createElement('td');
+    barCell.className = 'xqp-stats-bar';
+    if (r.games > 0) barCell.append(resultBar(r));
+    tr.append(barCell);
+    if (r.games > 0) {
+      tr.addEventListener('click', (event) => {
+        if ((event.target as HTMLElement).closest('a')) return;
+        view.set({ colour }, true);
+      });
+    }
+    tbody.append(tr);
+  }
+  table.append(thead, tbody);
+  const wrap = document.createElement('div');
+  wrap.className = 'xqp-stats-wrap';
+  wrap.append(table);
+  return section(t('broadcast.playerRecord'), wrap);
+}
+
+const OPENINGS_SHOWN = 6;
+
+/** An opening's name as the page shows it: English on an English page when
+ *  the glossary names every term, else the source's Chinese. The title is
+ *  always the source's full string (code and Chinese), for a tooltip. */
+function openingLabel(opening: Opening): { name: string; title: string } {
+  const title = opening.code ? `${opening.code} ${opening.name}` : opening.name;
+  if (currentLocale() !== 'en') return { name: opening.name, title };
+  return { name: eccoEnglish(title).en ?? opening.name, title };
+}
+
+/** Openings by colour, as the source classifies each game, each row a link
+ *  to those games. Null when no game names an opening. */
+function openingsSection(
+  boards: readonly PlayerBoardRecord[],
+  view: GamesView,
+): HTMLElement | null {
+  const columns = (['red', 'black'] as const).map((colour) => ({
+    colour,
+    rows: openingsOf(boards, colour),
+  }));
+  if (columns.every((c) => c.rows.length === 0)) return null;
+  const grid = document.createElement('div');
+  grid.className = 'xqp-openings';
+  for (const { colour, rows } of columns) {
+    const column = document.createElement('div');
+    column.className = 'xqp-openings-col';
+    const h3 = document.createElement('h3');
+    h3.className = 'xqp-openings-head';
+    h3.append(
+      seatDiscEl(colour, 'xqp-colour-dot'),
+      t(colour === 'red' ? 'broadcast.playerAsRed' : 'broadcast.playerAsBlack'),
+    );
+    column.append(h3);
+    const list = document.createElement('ol');
+    list.className = 'xqp-opening-list';
+    rows.forEach((row, index) => {
+      const item = document.createElement('li');
+      item.className = 'xqp-opening';
+      if (index >= OPENINGS_SHOWN) item.hidden = true;
+      const link = document.createElement('a');
+      link.className = 'xqp-opening-link';
+      link.href = view.href({ colour, opening: row.key });
+      link.addEventListener('click', (event) => {
+        event.preventDefault();
+        view.set({ colour, opening: row.key }, true);
+      });
+      const name = document.createElement('span');
+      name.className = 'xqp-opening-name';
+      if (row.code) {
+        const code = document.createElement('span');
+        code.className = 'xqp-opening-code';
+        code.textContent = row.code;
+        const family = ECCO_FAMILY_KEYS[row.code[0] as keyof typeof ECCO_FAMILY_KEYS];
+        if (family) code.title = t(family);
+        name.append(code, ' ');
+      }
+      const shown = openingLabel(row);
+      name.append(shown.name);
+      link.title = shown.title;
+      const numbers = document.createElement('span');
+      numbers.className = 'xqp-opening-numbers';
+      numbers.textContent = `${row.record.games} · ${scorePercent(row.record)}%`;
+      link.append(name, numbers, resultBar(row.record));
+      item.append(link);
+      list.append(item);
+    });
+    column.append(list);
+    if (rows.length > OPENINGS_SHOWN) {
+      const more = document.createElement('button');
+      more.type = 'button';
+      more.className = 'xqp-more';
+      let open = false;
+      const label = (): void => {
+        more.textContent = open
+          ? t('broadcast.playerShowFewer')
+          : t('broadcast.playerShowAll', { n: rows.length });
+      };
+      label();
+      more.addEventListener('click', () => {
+        open = !open;
+        list.querySelectorAll<HTMLElement>('.xqp-opening').forEach((item, index) => {
+          item.hidden = !open && index >= OPENINGS_SHOWN;
+        });
+        label();
+      });
+      column.append(more);
+    }
+    grid.append(column);
+  }
+  const note = document.createElement('p');
+  note.className = 'xqp-section-note';
+  note.textContent = t('broadcast.playerOpeningsNote');
+  return section(t('broadcast.playerOpenings'), note, grid);
 }
 
 function eventCard(event: PlayerEventRecord): HTMLElement {
@@ -440,8 +1505,8 @@ function eventCard(event: PlayerEventRecord): HTMLElement {
  *  replacing 等级分 since January 2026. One list published so far, so no
  *  sparkline yet — the series grows every time the CXA posts a new one. */
 function pointsCard(player: Pick<PlayerRecord, 'name'>): HTMLElement | null {
-  const entries = CXA_POINTS[player.name];
-  if (!entries || entries.length === 0) return null;
+  const entries = cxaPointsFor(player.name);
+  if (entries.length === 0) return null;
   const last = entries[entries.length - 1];
   const list = CXA_POINTS_LISTS.find((l) => l.id === last.list);
   const size = list ? (last.group === 'men' ? list.men : list.women) : null;
@@ -473,8 +1538,8 @@ function pointsCard(player: Pick<PlayerRecord, 'name'>): HTMLElement | null {
  *  the last rank, and the shape of the series behind it. Closed history —
  *  the CXA replaced it with tournament points in January 2026. */
 function ratingCard(player: Pick<PlayerRecord, 'name'>): HTMLElement | null {
-  const entries = CXA_RATINGS[player.name];
-  if (!entries || entries.length === 0) return null;
+  const entries = cxaRatingsFor(player.name);
+  if (entries.length === 0) return null;
   const last = entries[entries.length - 1];
   const lastList = CXA_LISTS.find((l) => l.id === last.list);
   const card = document.createElement('div');
@@ -570,7 +1635,7 @@ function boardRow(board: PlayerBoardRecord, player: PlayerRecord): HTMLElement {
   meta.className = 'xqp-game-meta';
   meta.textContent = [
     board.tourNameEn ?? board.tourName,
-    board.roundName,
+    board.roundNameEn ?? board.roundName,
     board.playedOn ?? '',
     `${Math.ceil(board.plyCount / 2)} moves`,
     board.result,
@@ -584,43 +1649,13 @@ function boardRow(board: PlayerBoardRecord, player: PlayerRecord): HTMLElement {
 
 // ---------------------------------------------------------------------------
 
-/** The community shell with its rail (Leaderboard / … / Pro players), the
- *  page content in the column beside it. Returns the column; callers append
- *  sections to it and mount `main` on the root. */
-function shell(): HTMLElement & { main: HTMLElement } {
-  const main = document.createElement('main');
-  main.className = 'site-section community-shell';
-  const column = Object.assign(document.createElement('div'), { main });
-  column.className = 'xqb-shell xqp-column';
-  main.append(buildCommunityLayout('/players', column));
-  return column;
-}
-
-function hero(input: {
-  eyebrow: string;
-  title: string;
-  meta: string[];
-  actions?: HTMLElement[];
-}): HTMLElement {
-  const section = document.createElement('section');
-  section.className = 'xqb-hero';
-  const copy = document.createElement('div');
-  copy.className = 'xqb-hero-copy';
-  const eyebrow = document.createElement('p');
-  eyebrow.className = 'xqb-eyebrow';
-  eyebrow.textContent = input.eyebrow;
-  const title = document.createElement('h1');
-  title.textContent = input.title;
-  copy.append(eyebrow, title);
-  if (input.meta.length > 0) {
-    const meta = document.createElement('p');
-    meta.className = 'xqb-hero-meta';
-    meta.textContent = input.meta.join(' / ');
-    copy.append(meta);
-  }
-  const actions = document.createElement('div');
-  actions.className = 'xqb-hero-actions';
-  for (const el of input.actions ?? []) actions.append(el);
-  section.append(copy, actions);
-  return section;
+/** The broadcast section's frame: its rail (Broadcasts … Pro players, Pro
+ *  teams) and the page in the panel beside it. Returns the column; callers
+ *  append sections to it and mount `main` on the root. */
+function shell(active: BroadcastRailItem): HTMLElement & { main: HTMLElement } {
+  const column = document.createElement('div');
+  column.className = 'xqp-column';
+  const main = broadcastSectionLayout(active, column);
+  main.classList.add('xqp-page');
+  return Object.assign(column, { main });
 }

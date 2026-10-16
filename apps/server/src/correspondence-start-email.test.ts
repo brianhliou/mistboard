@@ -10,6 +10,7 @@ import { correspondenceStartNoticeFor } from './routes/correspondence-seeks.js';
 function notice(overrides: Partial<CorrespondenceStartNotice> = {}): CorrespondenceStartNotice {
   return {
     roomId: 'xq_room',
+    gameSpecId: 'xiangqi',
     creatorUserId: 'user-creator',
     accepterName: 'countallloss',
     creatorOnMove: true,
@@ -107,7 +108,7 @@ test('notifyCorrespondenceStart swallows a rejecting send', async () => {
 });
 
 test('the accept route addresses the creator and gets the mover right', async () => {
-  const seek = { creatorUserId: 'user-creator', daysPerMove: 3 };
+  const seek = { creatorUserId: 'user-creator', daysPerMove: 3, gameSpecId: 'banqi' };
   const accepter = { displayName: 'Accepter', handle: 'accepter' };
 
   // Creator took first: they owe move 1, and the mail still goes to them.
@@ -116,6 +117,7 @@ test('the accept route addresses the creator and gets the mover right', async ()
   assert.equal(first.accepterName, 'Accepter');
   assert.equal(first.creatorOnMove, true);
   assert.equal(first.daysPerMove, 3);
+  assert.equal(first.gameSpecId, 'banqi', 'the email names the variant the seek was for');
 
   // Creator took second: same recipient, opposite call to action. Getting this
   // backwards would tell a player to move when it is not their turn.
@@ -127,7 +129,7 @@ test('the accept route addresses the creator and gets the mover right', async ()
 test('falls back to the handle when an accepter has no display name', () => {
   const notice = correspondenceStartNoticeFor(
     'xq_1',
-    { creatorUserId: 'user-creator', daysPerMove: 1 },
+    { creatorUserId: 'user-creator', daysPerMove: 1, gameSpecId: 'xiangqi' },
     { displayName: '', handle: 'countallloss' },
     'first',
   );

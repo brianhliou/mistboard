@@ -33,6 +33,10 @@ export type ShowcaseBoardOptions = {
   // Completed-game grids can reveal the final chess position. The homepage keeps
   // the fogged POV throughout by default so its showcase still demonstrates fog.
   revealOnFinish?: boolean;
+  // Tenant path only: the compact board's side (watch-tenant-replay.ts `pov`).
+  // `truth` draws a fog tenant's finished game with the fog off; omitted, the
+  // tenant picks its own showcase side.
+  tenantPov?: 'white' | 'truth' | 'black';
   // Chess event loader (static bundled samples vs the games API). Tenants load
   // their own postgame payloads internally and ignore this.
   loaderForId: (roomId: string) => Promise<GameEvent[]>;
@@ -50,6 +54,14 @@ export type ShowcaseBoardOptions = {
   // whose finished record has not persisted yet) keeps its last frame on the
   // live→frozen handoff (see landing-tv.ts). The chess path ignores it.
   onLoadError?: () => boolean;
+  // Delayed air (homepage TV channel): the wall-clock ms at which the game's start
+  // went on air. Autoplay joins the broadcast at the ply it is on now and plays on
+  // at the recorded timing. Both renderer paths honor it.
+  airStartMs?: number;
+  // A disc in each seat's ink beside the player names (homepage TV), on both
+  // renderer paths. Off by default: the other compact hosts hide or restyle the
+  // seat rows.
+  seatDiscs?: boolean;
 };
 
 export async function mountShowcaseBoard(
@@ -73,11 +85,14 @@ export async function mountShowcaseBoard(
         ? { loadPostgameOverride: options.loadPostgameOverride }
         : {}),
       ...(options.onLoadError ? { onLoadError: options.onLoadError } : {}),
+      ...(options.airStartMs !== undefined ? { airStartMs: options.airStartMs } : {}),
+      ...(options.seatDiscs ? { seatDiscs: true } : {}),
+      ...(options.tenantPov ? { pov: options.tenantPov } : {}),
     });
   }
 
-  // Chess (chessground): a single fogged POV board, no controls, paced for the
-  // homepage. To match the tenant showcase boards, it drops captured-piece rows
+  // Chess (chessground): a single fogged POV board, no controls, playing at the
+  // game's recorded timing. To match the tenant showcase boards, it drops captured-piece rows
   // and puts the player name + clock in rows above/below the board (board-edges),
   // which CSS then styles into the shared `.showcase-seat` look.
   return mountReplay(root, roomId, {
@@ -85,10 +100,11 @@ export async function mountShowcaseBoard(
     showControls: false,
     keyboardNav: false,
     revealOnFinish: options.revealOnFinish ?? false,
-    clampPace: true,
+    ...(options.airStartMs !== undefined ? { airStartMs: options.airStartMs } : {}),
     metadataMode: 'compact',
     metadataByRoomId: options.metadataByRoomId,
     hideGameIdPill: true,
+    ...(options.seatDiscs ? { seatDiscs: true } : {}),
     showCaptures: false,
     compactClockLayout: 'board-edges',
     endStatusMode: 'clock',

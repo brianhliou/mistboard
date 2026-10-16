@@ -18,7 +18,7 @@ import {
   parseSmokeArgs,
   requiredValue,
 } from './lib/smoke-args.mjs';
-import { evaluateSmokeMessage } from './lib/variant-smoke.mjs';
+import { evaluateSmokeMessage, roomCreationFailure } from './lib/variant-smoke.mjs';
 import { matchesEngineSeat, VARIANT_SMOKE_CONFIGS } from './lib/variant-smoke-configs.mjs';
 
 // ── smoke-args ───────────────────────────────────────────────────────────────
@@ -213,6 +213,7 @@ test('parseJsonResponse: empty -> null, JSON -> value, garbage -> error naming u
 test('variant configs: every entry is complete and self-consistent', () => {
   const expected = {
     atomic: 'atomic-xiangqi',
+    crazyhouse: 'crazyhouse-xiangqi',
     fortress: 'fortress-xiangqi',
     duck: 'duck-xiangqi',
     dxq: 'dark-xiangqi',
@@ -221,6 +222,9 @@ test('variant configs: every entry is complete and self-consistent', () => {
     jungle: 'jungle',
     'jungle-flip': 'jungle-flip',
     xiangqi: 'xiangqi',
+    'xiangqi-pikafish': 'xiangqi',
+    'jieqi-abjchess': 'jieqi',
+    'jungle-katago': 'jungle',
   };
   assert.deepEqual(Object.keys(VARIANT_SMOKE_CONFIGS).sort(), Object.keys(expected).sort());
   for (const [key, config] of Object.entries(VARIANT_SMOKE_CONFIGS)) {
@@ -235,7 +239,29 @@ test('variant configs: every entry is complete and self-consistent', () => {
         config.engineSeat.prefixes !== undefined,
       `${key} engineSeat needs equals, prefix, or prefixes`,
     );
+    // A row that names its engine must also require that exact seat, or a room
+    // that quietly seated another engine would pass.
+    if (config.engineId !== undefined) assert.equal(config.engineSeat.equals, config.engineId);
   }
+});
+
+// The AB-JChess net can be absent by design (the build soft-fails its upstream
+// download), and then the release smoke must say so, not "400 invalid_engine".
+test('a hidden AB-JChess slot fails the smoke naming the missing net', () => {
+  const abj = VARIANT_SMOKE_CONFIGS['jieqi-abjchess'];
+  const message = roomCreationFailure(abj, 400, { error: 'invalid_engine' });
+  assert.match(message, /^Jieqi AB-JChess slot unavailable: /);
+  assert.match(message, /abjchess-net: WARNING/);
+  assert.match(message, /400 \{"error":"invalid_engine"\}/);
+  // Any other failure, and rows without a cause, keep the raw message.
+  assert.equal(
+    roomCreationFailure(abj, 500, { error: 'persistence_failure' }),
+    'room creation failed: 500 {"error":"persistence_failure"}',
+  );
+  assert.equal(
+    roomCreationFailure(VARIANT_SMOKE_CONFIGS.jieqi, 400, { error: 'invalid_engine' }),
+    'room creation failed: 400 {"error":"invalid_engine"}',
+  );
 });
 
 test('engine seat matching is version-agnostic for versioned engine ids', () => {

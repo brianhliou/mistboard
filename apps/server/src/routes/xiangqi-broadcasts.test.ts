@@ -52,6 +52,7 @@ const storedBoard: StoredXiangqiBroadcastBoard = {
 
 const storedTour = {
   ...tour,
+  pollMode: 'auto' as const,
   pollEnabled: false,
   pollIntervalMs: 30_000,
   createdAt: new Date(0),
@@ -93,8 +94,10 @@ function deps(
         ? {
             slug,
             sourceUrl: tour.sourceUrl ?? null,
-            pollEnabled: schedule.pollEnabled,
+            pollMode: schedule.pollMode,
             pollIntervalMs: schedule.pollIntervalMs,
+            startsAt: tour.startsAt ?? null,
+            endsAt: tour.endsAt ?? null,
           }
         : null,
     ...overrides,
@@ -111,12 +114,27 @@ test('broadcast index API summarizes tournaments and sync status', async () => {
   assert.equal(entry.boardCount, 1);
   assert.equal(entry.liveBoardCount, 0);
   assert.equal(entry.completeBoardCount, 1);
+  assert.equal(entry.recordedBoardCount, 1);
   assert.equal(entry.scheduledBoardCount, 0);
   assert.equal(entry.totalPlies, board.moves.length);
   assert.deepEqual(entry.updatedAt, new Date(2_000));
   assert.equal(entry.lastSyncLog?.kind, 'poll_ok');
   assert.equal(Object.hasOwn(entry.lastSyncLog ?? {}, 'payload'), false);
   assert.equal(Object.hasOwn(entry.lastSyncLog ?? {}, 'message'), false);
+});
+
+test('broadcast index does not count a result without moves as a recorded game', async () => {
+  // dpxq's 2026 women's league published six results and no moves; the
+  // homepage spotlit it as "6 games" and opened on empty boards.
+  const payload = await xiangqiBroadcastIndexForApi(
+    deps({
+      listXiangqiBroadcastBoards: async (roundId) =>
+        roundId === board.roundId ? [{ ...storedBoard, plyCount: 0 }] : [],
+    }),
+  );
+  const entry = payload.tours[0]!;
+  assert.equal(entry.completeBoardCount, 1);
+  assert.equal(entry.recordedBoardCount, 0);
 });
 
 test('broadcast ops API exposes source and operator sync log detail', async () => {
@@ -521,30 +539,64 @@ test('manual source import dry run records nothing and rejects bad URLs', async 
 
 test('schedule update validates input and persists the clamped schedule', async () => {
   const saved: unknown[] = [];
+  const saving = deps({
+    setXiangqiBroadcastTourSchedule: async (slug, schedule) => {
+      saved.push({ slug, ...schedule });
+      return {
+        slug,
+        sourceUrl: tour.sourceUrl ?? null,
+        pollMode: schedule.pollMode,
+        pollIntervalMs: schedule.pollIntervalMs,
+        startsAt: tour.startsAt ?? null,
+        endsAt: tour.endsAt ?? null,
+      };
+    },
+  });
+  // The fixture event ran 2025-09-21..27; the day after it ended sits inside
+  // the auto window, a month later outside it.
+  const dayAfter = Date.parse('2025-09-28T00:00:00Z');
+  const monthAfter = Date.parse('2025-10-28T00:00:00Z');
+
   const result = await xiangqiBroadcastScheduleUpdateForApi(
     tour.slug,
-    { enabled: true, intervalMs: 1_000 },
-    deps({
-      setXiangqiBroadcastTourSchedule: async (slug, schedule) => {
-        saved.push({ slug, ...schedule });
-        return {
-          slug,
-          sourceUrl: tour.sourceUrl ?? null,
-          pollEnabled: schedule.pollEnabled,
-          pollIntervalMs: schedule.pollIntervalMs,
-        };
-      },
-    }),
+    { mode: 'on', intervalMs: 1_000 },
+    saving,
+    monthAfter,
   );
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.schedule.pollMode, 'on');
+  assert.equal(result.schedule.pollEnabled, true);
+  assert.equal(result.schedule.pollIntervalMs, 5_000);
+  assert.equal(result.schedule.pollState.reason, 'on');
+  assert.deepEqual(saved, [{ slug: tour.slug, pollMode: 'on', pollIntervalMs: 5_000 }]);
 
-  assert.deepEqual(result, {
-    ok: true,
-    schedule: { pollEnabled: true, pollIntervalMs: 5_000 },
-  });
-  assert.deepEqual(saved, [{ slug: tour.slug, pollEnabled: true, pollIntervalMs: 5_000 }]);
+  const autoInside = await xiangqiBroadcastScheduleUpdateForApi(
+    tour.slug,
+    { mode: 'auto' },
+    saving,
+    dayAfter,
+  );
+  assert.equal(autoInside.ok && autoInside.schedule.pollEnabled, true);
+  assert.equal(autoInside.ok && autoInside.schedule.pollState.reason, 'auto-open');
+  const autoAfter = await xiangqiBroadcastScheduleUpdateForApi(
+    tour.slug,
+    { mode: 'auto' },
+    saving,
+    monthAfter,
+  );
+  assert.equal(autoAfter.ok && autoAfter.schedule.pollEnabled, false);
+  assert.equal(autoAfter.ok && autoAfter.schedule.pollState.reason, 'auto-closed');
+
+  // An older console still sends the boolean: true is on, false is off.
+  saved.length = 0;
+  await xiangqiBroadcastScheduleUpdateForApi(tour.slug, { enabled: false }, saving);
+  assert.deepEqual(saved, [{ slug: tour.slug, pollMode: 'off', pollIntervalMs: 30_000 }]);
 
   const badBody = await xiangqiBroadcastScheduleUpdateForApi(tour.slug, { enabled: 'yes' }, deps());
   assert.deepEqual(badBody, { ok: false, status: 400, error: 'invalid_schedule' });
+  const badMode = await xiangqiBroadcastScheduleUpdateForApi(tour.slug, { mode: 'always' }, deps());
+  assert.deepEqual(badMode, { ok: false, status: 400, error: 'invalid_schedule' });
 
   const badInterval = await xiangqiBroadcastScheduleUpdateForApi(
     tour.slug,
@@ -560,15 +612,35 @@ test('schedule update validates input and persists the clamped schedule', async 
   );
   assert.deepEqual(unknownTour, { ok: false, status: 404, error: 'broadcast_not_found' });
 
+  const sourceless = deps({
+    getXiangqiBroadcastTour: async (slug) =>
+      slug === tour.slug ? { ...storedTour, sourceUrl: undefined } : null,
+  });
   const noSource = await xiangqiBroadcastScheduleUpdateForApi(
     tour.slug,
-    { enabled: true },
-    deps({
-      getXiangqiBroadcastTour: async (slug) =>
-        slug === tour.slug ? { ...storedTour, sourceUrl: undefined } : null,
-    }),
+    { mode: 'on' },
+    sourceless,
   );
   assert.deepEqual(noSource, { ok: false, status: 400, error: 'missing_source_url' });
+  // Auto is the default and needs no source: it just never polls.
+  const autoNoSource = await xiangqiBroadcastScheduleUpdateForApi(
+    tour.slug,
+    { mode: 'auto' },
+    sourceless,
+  );
+  assert.equal(autoNoSource.ok, true);
+});
+
+test('ops index reports each tour mode and whether it polls now', async () => {
+  const index = await xiangqiBroadcastOpsIndexForApi(deps());
+  const schedule = index.tours[0]?.schedule;
+  assert.ok(schedule);
+  assert.equal(schedule.pollMode, 'auto');
+  // The 2025 fixture event is long past, so auto does not poll it.
+  assert.equal(schedule.pollEnabled, false);
+  assert.equal(schedule.pollState.reason, 'auto-closed');
+  assert.equal(schedule.pollState.opensAt, '2025-09-20T12:00:00.000Z');
+  assert.equal(schedule.pollState.closesAt, '2025-10-04T00:00:00.000Z');
 });
 
 test('broadcast index API features the latest live board, else the latest complete one', async () => {
@@ -657,6 +729,28 @@ test('broadcast tour API credits the records source, which the payload has no bo
   // Boards with no provenance credit nobody, rather than crediting us.
   const unsourced = await xiangqiBroadcastTourForApi(tour.slug, deps());
   assert.equal(unsourced?.recordsSource, null);
+
+  // #541: a tour relayed from a known dpxq tour credits that tour's own page.
+  const dpxqTour = await xiangqiBroadcastTourForApi(
+    tour.slug,
+    deps({
+      getXiangqiBroadcastTour: async (slug) =>
+        slug === tour.slug
+          ? {
+              ...storedTour,
+              sourceUrl: `mistboard-discover://dpxq-tour?tour=12524&tourSlug=${tour.slug}`,
+            }
+          : null,
+      listXiangqiBroadcastBoards: async (roundId) =>
+        roundId === board.roundId
+          ? [{ ...storedBoard, sourceUrl: 'http://www.dpxq.com/hldcg/search/view_m_142519.html' }]
+          : [],
+    }),
+  );
+  assert.deepEqual(dpxqTour?.recordsSource, {
+    host: 'dpxq.com',
+    href: 'http://www.dpxq.com/hldcg/tour_12524.html',
+  });
 });
 
 test('broadcast tour API rounds carry board status counts for status icons', async () => {
@@ -676,6 +770,55 @@ test('broadcast round API returns only boards under the requested round', async 
   assert.equal(payload.round.id, 'men-r1');
   assert.equal(payload.boards.length, 1);
   assert.equal(payload.boards[0]?.id, board.id);
+});
+
+test('broadcast round API gives a finished board its stored final eval for the gauge', async () => {
+  const asked: string[][] = [];
+  const payload = await xiangqiBroadcastRoundForApi(
+    tour.slug,
+    'men-r1',
+    deps({
+      listXiangqiBroadcastFinalEvals: async (ids) => {
+        asked.push([...ids]);
+        return new Map([[board.id, { cp: -135, mate: null }]]);
+      },
+    }),
+  );
+  assert.ok(payload);
+  assert.deepEqual(asked, [[board.id]]);
+  const [row] = payload.boards;
+  assert.deepEqual(row && 'evaluation' in row ? row.evaluation : null, {
+    cp: -135,
+    mate: null,
+    source: 'analysis',
+  });
+
+  // Not analysed yet: no gauge rather than a zero that reads as level.
+  const bare = await xiangqiBroadcastRoundForApi(
+    tour.slug,
+    'men-r1',
+    deps({ listXiangqiBroadcastFinalEvals: async () => new Map() }),
+  );
+  assert.equal(bare?.boards[0] && 'evaluation' in bare.boards[0], false);
+});
+
+test('broadcast round API gives a live board the live engine read', async () => {
+  const live = { ...storedBoard, status: 'live' as const, result: '*' as const };
+  const payload = await xiangqiBroadcastRoundForApi(
+    tour.slug,
+    'men-r1',
+    deps({ listXiangqiBroadcastBoards: async () => [live] }),
+    (boardId, plyCount) =>
+      boardId === live.id && plyCount === live.plyCount
+        ? { ply: plyCount, nodes: 1, depth: 10, cp: 40, mate: null, lines: [] }
+        : null,
+  );
+  const [row] = payload?.boards ?? [];
+  assert.deepEqual(row && 'evaluation' in row ? row.evaluation : null, {
+    cp: 40,
+    mate: null,
+    source: 'live',
+  });
 });
 
 test('broadcast round API lists sibling rounds with stats for the round switcher', async () => {
@@ -881,7 +1024,7 @@ function emptyCtx() {
     releaseLiveEngineReservation: () => {},
     abandonRoom: async () => ({ ok: false, error: 'not_found' as const }),
     inMemoryGameSummary: () => null,
-    isDraining: () => false,
+    refusesCreate: () => false,
     drainDeadlineMs: () => null,
     activeGameCount: () => 0,
   };

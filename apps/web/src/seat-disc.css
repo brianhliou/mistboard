@@ -1,0 +1,62 @@
+/* The seat disc: the one circle that says which colour a player has, everywhere
+   on the site (seat-disc.ts). The /watch rows, embed card, review seat strips,
+   meta card, retro box, analysis summary, broadcast cards, article replays,
+   study rows, puzzle source line, players page and homepage TV each carried
+   their own copy, with four reds, five blacks and a dark-theme fix apiece; the
+   black seat vanished on the dark panel in some and turned white in others.
+
+   Inks come from seat-disc-ink.css, so they follow the theme the same way the
+   charts and chips do and a new variant is an edit to that file alone. The dark
+   ink reads --seat-dark-ink first (the Jungle family sets it to blue), then the
+   theme's lifted black, ringed in the muted text colour so it holds on a dark
+   panel.
+
+   A host sizes it with --seat-disc-size and places it with its own class; it
+   never restates a colour. The size default lives in the var() fallback, not a
+   declaration here: a host class on the same element would otherwise tie this
+   rule on specificity and win or lose on stylesheet order. */
+.seat-disc {
+  --seat-disc-fill: var(--ink-white, #e9e5dc);
+  --seat-disc-ring: var(--site-muted);
+  flex: 0 0 auto;
+  align-self: center;
+  display: inline-block;
+  width: var(--seat-disc-size, 12px);
+  height: var(--seat-disc-size, 12px);
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 1px solid var(--seat-disc-ring);
+  background: var(--seat-disc-fill);
+  vertical-align: middle;
+}
+
+.seat-disc--red {
+  --seat-disc-fill: var(--ink-red, #c0563f);
+  --seat-disc-ring: var(--ink-red, #c0563f);
+}
+
+.seat-disc--black {
+  --seat-disc-fill: var(--seat-dark-ink, var(--ink-black, #34302e));
+  --seat-disc-ring: var(--seat-dark-ink-border, var(--site-muted));
+}
+
+/* Jungle's second ink when a caller names it outright rather than through the
+   family stamp. */
+.seat-disc--blue {
+  --seat-disc-fill: var(--ink-blue, #34557a);
+  --seat-disc-ring: var(--seat-dark-ink-border, var(--site-muted));
+}
+
+/* A flip variant before the opening flip binds an ink: nobody owns a colour yet,
+   so the disc is an empty dashed ring rather than a guess. */
+.seat-disc--unbound {
+  --seat-disc-fill: transparent;
+  border-style: dashed;
+  opacity: 0.55;
+}
+
+/* The name takes the slack after the disc, so a space-between row reads
+   disc + name ... clock rather than centring the name (homepage TV rows). */
+.seat-disc + :is(.showcase-seat-name, .replay-clock-side) {
+  margin-right: auto;
+}

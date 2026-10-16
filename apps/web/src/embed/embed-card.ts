@@ -17,11 +17,16 @@
 // card and the card's rows take over, fed by the handle's clockAtPly. One row
 // component, whatever is underneath it.
 
+import { type EmbedPov, hasOwnKey } from '@mistboard/game';
 import '../review/move-list.css';
+import { t } from '../i18n/catalog.js';
 import type { ReplayHandle } from '../replay.js';
 import { createMoveList, type MoveList, type MoveListEntry } from '../review/move-list.js';
+import { boardAspectForSpec } from '../watch-board-aspect.js';
 import { formatClock } from '../web-utils.js';
+import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
 import './embed.css';
+import { seatDiscEl } from '../seat-disc.js';
 
 // Below this frame width the move list drops under the board (mirrors the
 // @media rule in embed.css; the two must agree or the board is sized for the
@@ -38,8 +43,15 @@ const RAIL_WIDTH_PX = 226;
 // in the duck half, 94px of text plus the cell's 12px of padding, twice, plus
 // the 34px number column and the list's own 26px of padding and border.
 const DUCK_RAIL_WIDTH_PX = 276;
+// Banqi writes the shortest coordinate move (`c3-b3`: one-digit ranks, 37px of
+// text at 15px) on the widest board (8x4), so its sheet gives the board 46px.
+const BANQI_RAIL_WIDTH_PX = 180;
 // The card's own border, left and right (or top and bottom when stacked).
 const CARD_BORDER_PX = 2;
+// The mat each board sits on (embed.css, .embed-card .embed-board
+// padding-inline): the board column is this much wider than the board drawn
+// in it, at the same height.
+const BOARD_MAT_INLINE_PX = 16;
 // Two seat rows (39px each) frame the board, and the step-control row sits
 // under the bottom row. Reserved out of the box height so the board never
 // pushes them off the bottom.
@@ -48,17 +60,40 @@ const CONTROLS_PX = 39;
 // In the stacked layout the sheet keeps at least this much height: the result
 // foot and three rows of moves (embed.css keeps the same number).
 const STACKED_MOVES_MIN_PX = 112;
-// The sheet's width cap beside the board: the review page's move column. Past
-// this the sheet is empty space, so the card stops growing and centres.
-const RAIL_MAX_WIDTH_PX = 380;
 // Gap between the card and the credit line (.embed-frame in embed.css).
 const FRAME_GAP_PX = 6;
+
+/** Each hand's band, above and below the board, as a share of the board's
+ *  width, for the drop variants whose hands ride in the column. The card sizes
+ *  the column from one aspect ratio, so the hands scale with the board for that
+ *  ratio to hold; embed.css keeps the same numbers, for the study boards
+ *  (.fxq-embed-hand, .chx-embed-hand-band) and the game boards
+ *  (.showcase-reserve). Fortress: a 62/516 slot plus its gap. Crazyhouse: a
+ *  0.085 slot (an on-board disc is 54/552, so a piece in hand reads a size
+ *  smaller than one in play, as in the game room) plus the pocket bar's
+ *  padding and a gap. */
+export const EMBED_HAND_BAND_RATIO: Readonly<Record<string, number>> = {
+  'fortress-xiangqi': 0.13,
+  'crazyhouse-xiangqi': 0.12,
+};
+
+/** The board column's aspect: the board's own, made taller by both hand bands
+ *  for a variant that draws them. Cosmetic sizing like boardAspectForSpec, so an
+ *  unknown id takes the bare board's ratio. */
+export function embedColumnAspect(specId: string | null | undefined): number {
+  const board = boardAspectForSpec(specId);
+  const hand =
+    specId && hasOwnKey(EMBED_HAND_BAND_RATIO, specId) ? (EMBED_HAND_BAND_RATIO[specId] ?? 0) : 0;
+  return hand ? 1 / (1 / board + 2 * hand) : board;
+}
 
 /** The sheet's floor for a variant, by the width of the notation it writes.
  *  Same shape as boardAspectForSpec: cosmetic sizing, so an unknown id takes
  *  the default rather than throwing. */
 export function embedRailWidthPx(specId: string | null | undefined): number {
-  return specId === 'duck-xiangqi' ? DUCK_RAIL_WIDTH_PX : RAIL_WIDTH_PX;
+  if (specId === 'duck-xiangqi') return DUCK_RAIL_WIDTH_PX;
+  if (specId === 'banqi') return BANQI_RAIL_WIDTH_PX;
+  return RAIL_WIDTH_PX;
 }
 
 export type EmbedSeat = {
@@ -72,7 +107,14 @@ export type EmbedSeat = {
  *  a superset; the study board returns exactly this. */
 export type EmbedBoardHandle = Pick<
   ReplayHandle,
-  'destroy' | 'jumpToPly' | 'plyCount' | 'moveEntries' | 'clockAtPly' | 'bottomSeat'
+  | 'destroy'
+  | 'jumpToPly'
+  | 'plyCount'
+  | 'moveEntries'
+  | 'clockAtPly'
+  | 'bottomSeat'
+  | 'setBoardOverlay'
+  | 'playedMoves'
 > & {
   /** How the score sheet numbers the line: who moves first from the root and
    *  the root's move number. A board rooted mid-game (a study composition)
@@ -87,6 +129,9 @@ export type EmbedBoardHandle = Pick<
 export type EmbedCardOptions = {
   /** The line above the card: the event, or the variant and the clock. */
   header: string;
+  /** A control beside the header line (a fog game's view picker). It sits in
+   *  the header so the board fit, which measures the header, makes room. */
+  headerControls?: HTMLElement;
   seats: { first: EmbedSeat; second: EmbedSeat };
   /** "Red wins"; empty for a game without a result. */
   result: string;
@@ -99,6 +144,15 @@ export type EmbedCardOptions = {
   startPly: number | null;
   /** Stamped on the card so seat-disc-ink.css can colour the family's discs. */
   inkFamily?: string | null;
+  /** A problem shown without its answer: the card opens on the start position
+   *  with the score sheet, its notes and the result covered by a prompt and a
+   *  button. The button, or any step past the start, lifts the cover for good.
+   *  Off by default; `?solution=hidden` on a study or line embed. */
+  hideSolution?: boolean;
+  /** With hideSolution: the header and credit text shown until the reveal, in
+   *  place of options.header and options.credit.text (a chapter name that
+   *  names the idea). The real ones come back with the sheet. */
+  solutionHiddenLabels?: SolutionHiddenLabels;
   mountBoard: (
     host: HTMLElement,
     hooks: { onPlyChange: (ply: number, maxPly: number) => void },
@@ -108,7 +162,74 @@ export type EmbedCardOptions = {
 export type EmbedCard = {
   frame: HTMLElement;
   handle: EmbedBoardHandle;
+  /** Mount the board again in place and return to the ply it was on: how a
+   *  board that fixes its view at mount (a game's fog panes) changes view. */
+  remountBoard: () => Promise<void>;
+  /** Mark moves on the score sheet: a glyph after the move and a note under it (the
+   *  stored analysis's "?? … was best."), keyed by ply. Kept across sheet rebuilds. */
+  setAnnotations: (byPly: ReadonlyMap<number, EmbedSheetAnnotation>) => void;
 };
+
+/** One move's mark on the score sheet. */
+export type EmbedSheetAnnotation = { suffix?: string; suffixClass?: string; note?: string };
+
+/** The sheet's entries with any marks folded in. An entry's own note (a study's comment)
+ *  comes first; the analysis note follows it. */
+export function annotateEntries(
+  entries: readonly MoveListEntry[],
+  byPly: ReadonlyMap<number, EmbedSheetAnnotation>,
+): MoveListEntry[] {
+  return entries.map((entry) => {
+    const mark = byPly.get(entry.ply);
+    if (!mark) return entry;
+    const note = [entry.note, mark.note].filter(Boolean).join(' ');
+    return {
+      ...entry,
+      ...(mark.suffix ? { suffix: mark.suffix, suffixClass: mark.suffixClass } : {}),
+      ...(note ? { note } : {}),
+    };
+  });
+}
+
+/** The segmented first-seat / Truth / second-seat control for a fog game,
+ *  truth in the middle as on the review and watch pages. Sits in the header
+ *  (EmbedCardOptions.headerControls). */
+export function embedPovPicker(
+  initial: EmbedPov,
+  labels: { first: string; second: string },
+  onChange: (pov: EmbedPov) => void,
+): HTMLElement {
+  const group = document.createElement('div');
+  group.className = 'embed-pov';
+  group.setAttribute('role', 'group');
+  group.setAttribute('aria-label', 'Board perspective');
+  const options: Array<[EmbedPov, string]> = [
+    ['white', labels.first],
+    ['truth', t('watch.truth')],
+    ['black', labels.second],
+  ];
+  const buttons = options.map(([key, label]) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'embed-pov__button';
+    button.dataset.pov = key;
+    button.textContent = label;
+    button.addEventListener('click', () => {
+      for (const other of buttons) {
+        const active = other === button;
+        other.classList.toggle('active', active);
+        other.setAttribute('aria-pressed', active ? 'true' : 'false');
+      }
+      onChange(key);
+    });
+    const active = key === initial;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    return button;
+  });
+  group.append(...buttons);
+  return group;
+}
 
 /** Board width that fits the box: the narrower of the room beside the move
  *  sheet and the room under the seat rows and controls, at the variant's aspect
@@ -123,8 +244,35 @@ export function fitBoardWidth(
   const reservedHeight =
     SEAT_ROWS_PX + CONTROLS_PX + CARD_BORDER_PX + (stacked ? STACKED_MOVES_MIN_PX : 0);
   const availableHeight = frame.height - reservedHeight;
-  return Math.max(120, Math.floor(Math.min(availableWidth, availableHeight * aspect)));
+  return Math.max(
+    120,
+    Math.floor(Math.min(availableWidth, availableHeight * aspect + BOARD_MAT_INLINE_PX)),
+  );
 }
+
+/** The box height at which fitBoardWidth is bound by the width alone: the
+ *  height a host should give the frame so the board takes the whole width and
+ *  nothing below the card is left empty. Inverse of fitBoardWidth. */
+export function naturalBoxHeight(
+  width: number,
+  aspect: number,
+  stacked: boolean,
+  railWidthPx: number = RAIL_WIDTH_PX,
+): number {
+  const boardWidth = Math.max(
+    120,
+    Math.floor(width - CARD_BORDER_PX - (stacked ? 0 : railWidthPx)),
+  );
+  const reservedHeight =
+    SEAT_ROWS_PX + CONTROLS_PX + CARD_BORDER_PX + (stacked ? STACKED_MOVES_MIN_PX : 0);
+  return Math.ceil((boardWidth - BOARD_MAT_INLINE_PX) / aspect) + reservedHeight;
+}
+
+/** The message a framed card sends its host with the frame height it needs
+ *  (embed-autosize.ts listens). `height: null` hands the height back to the
+ *  host's own CSS. */
+export const EMBED_HEIGHT_MESSAGE = 'mistboard:embed-height';
+export type EmbedHeightMessage = { type: typeof EMBED_HEIGHT_MESSAGE; height: number | null };
 
 // Drawn, not typed: the media glyphs and the arrows resolve from different
 // fallback fonts, never match in weight, and on some platforms the media pair
@@ -134,6 +282,7 @@ const ICON = {
   prev: '<path d="M11 4.3v7.4L4.9 8z"/>',
   next: '<path d="M5 4.3v7.4L11.1 8z"/>',
   last: '<rect x="10.9" y="4" width="1.7" height="8" rx="0.7"/><path d="M3.4 4.3v7.4L9.5 8z"/>',
+  menu: '<circle cx="8" cy="3.2" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="12.8" r="1.5"/>',
 } as const;
 
 function control(icon: keyof typeof ICON, label: string, onClick: () => void): HTMLButtonElement {
@@ -154,9 +303,7 @@ function seatRow(seat: EmbedSeat, side: 'first' | 'second'): SeatRow {
   const el = document.createElement('div');
   el.className = 'embed-card-seat';
   el.dataset.seat = side;
-  const disc = document.createElement('span');
-  disc.className = `embed-seat-disc embed-seat-disc--${seat.ink ?? 'unbound'}`;
-  disc.setAttribute('aria-hidden', 'true');
+  const disc = seatDiscEl(seat.ink, 'embed-seat-disc');
   const name = document.createElement('span');
   name.className = 'embed-card-seat-name';
   name.textContent = seat.name;
@@ -166,6 +313,9 @@ function seatRow(seat: EmbedSeat, side: 'first' | 'second'): SeatRow {
   return { el, clock };
 }
 
+/** The neutral header and credit text a hidden-solution card wears. */
+export type SolutionHiddenLabels = { header: string; credit: string };
+
 export async function mountEmbedCard(
   root: HTMLElement,
   options: EmbedCardOptions,
@@ -174,7 +324,16 @@ export async function mountEmbedCard(
   frame.className = 'embed-frame';
   const header = document.createElement('div');
   header.className = 'embed-card-header';
-  header.textContent = options.header;
+  const hiddenLabels = options.hideSolution ? options.solutionHiddenLabels : undefined;
+  const headerTitle = document.createElement('span');
+  headerTitle.className = 'embed-card-header-title';
+  headerTitle.textContent = hiddenLabels?.header ?? options.header;
+  if (options.headerControls) {
+    header.classList.add('embed-card-header--controls');
+    header.append(headerTitle, options.headerControls);
+  } else {
+    header.append(headerTitle);
+  }
   const card = document.createElement('div');
   card.className = 'embed-card';
   if (options.inkFamily) card.dataset.seatInkFamily = options.inkFamily;
@@ -204,12 +363,50 @@ export async function mountEmbedCard(
   rail.append(railInner);
   card.append(boardCol, rail);
 
+  // The sheet stays built underneath (so it is current the moment it shows),
+  // hidden and inert: the moves, a study's comments under them, and the
+  // result foot all give the answer away. Stacked on a phone the rail is under
+  // the board, so the cover sits where the reader's thumb already is.
+  let solutionCover: HTMLElement | null = null;
+  // Armed once the card has landed on its start: a renderer that reports its
+  // own ply while mounting must not lift the cover before the reader acts.
+  let revealOnStep = false;
+  const revealSolution = (): void => {
+    if (!solutionCover) return;
+    solutionCover.remove();
+    solutionCover = null;
+    rail.classList.remove('embed-card-rail--solution-hidden');
+    railInner.inert = false;
+    railInner.removeAttribute('aria-hidden');
+    if (hiddenLabels) {
+      headerTitle.textContent = options.header;
+      credit.textContent = options.credit.text;
+    }
+  };
+  if (options.hideSolution) {
+    rail.classList.add('embed-card-rail--solution-hidden');
+    railInner.inert = true;
+    railInner.setAttribute('aria-hidden', 'true');
+    solutionCover = document.createElement('div');
+    solutionCover.className = 'embed-card-solution-cover';
+    const prompt = document.createElement('p');
+    prompt.className = 'embed-card-solution-prompt';
+    prompt.textContent = t('replay.solutionHidden');
+    const show = document.createElement('button');
+    show.type = 'button';
+    show.className = 'embed-card-solution-show';
+    show.textContent = t('replay.showSolution');
+    show.addEventListener('click', revealSolution);
+    solutionCover.append(prompt, show);
+    rail.append(solutionCover);
+  }
+
   const credit = document.createElement('a');
   credit.className = 'embed-credit';
   credit.href = options.credit.href;
   credit.target = '_blank';
   credit.rel = 'noopener';
-  credit.textContent = options.credit.text;
+  credit.textContent = hiddenLabels?.credit ?? options.credit.text;
   frame.append(header, card, credit);
   root.replaceChildren(frame);
 
@@ -228,7 +425,10 @@ export async function mountEmbedCard(
       line = null;
       moveList?.highlightLine(null);
     }
-    handle?.jumpToPly?.(clampPly(ply));
+    const target = clampPly(ply);
+    // Stepping forward is asking for the answer.
+    if (target > 0 && revealOnStep) revealSolution();
+    handle?.jumpToPly?.(target);
   };
 
   // The rows follow the board: whichever seat the board is drawn for sits
@@ -276,6 +476,7 @@ export async function mountEmbedCard(
   };
 
   const onPlyChange = (ply: number, max: number): void => {
+    if (ply > 0 && revealOnStep) revealSolution();
     currentPly = ply;
     maxPly = max;
     moveList?.update(ply, jump);
@@ -288,6 +489,28 @@ export async function mountEmbedCard(
   // is already the right size, and again whenever the host resizes the frame.
   // Measured from the frame, not the card: the card is only as tall as its
   // board column, so its own rect is the answer, not the question.
+  // The board's shape: the variant's table value until the renderer has drawn,
+  // then the drawn board's own. The table can be off for a renderer that draws
+  // a frame round its grid (banqi: 2.0 in the table, 1.82 drawn), and a frame
+  // sized by the wrong shape clips the card or leaves space under it.
+  let aspect = options.aspect;
+  const measureAspect = (): boolean => {
+    const r = boardHost.getBoundingClientRect();
+    const drawnWidth = r.width - BOARD_MAT_INLINE_PX;
+    if (drawnWidth < 50 || r.height < 50) return false;
+    const drawn = drawnWidth / r.height;
+    if (Math.abs(drawn - aspect) / aspect < 0.005) return false;
+    aspect = drawn;
+    return true;
+  };
+  let lastPosted: number | null | undefined;
+  const postHeight = (height: number | null): void => {
+    if (window.parent === window || height === lastPosted) return;
+    lastPosted = height;
+    const message: EmbedHeightMessage = { type: EMBED_HEIGHT_MESSAGE, height };
+    // Only a height leaves the frame, so any host may read it.
+    window.parent.postMessage(message, '*');
+  };
   const fitBoard = (): void => {
     const rect = frame.getBoundingClientRect();
     const box = {
@@ -296,16 +519,42 @@ export async function mountEmbedCard(
     };
     if (box.width <= 0 || box.height <= 0) return;
     const stacked = box.width < STACK_BELOW_PX;
-    const boardWidth = fitBoardWidth(box, options.aspect, stacked, options.railWidthPx);
+    const boardWidth = fitBoardWidth(box, aspect, stacked, options.railWidthPx);
     boardCol.style.width = `${boardWidth}px`;
-    // Beside the board the card asks for the board plus the capped sheet and
-    // the stylesheet's max-width: 100% clamps it to the frame (the sheet then
-    // gets what is left, never less than the floor the board arithmetic kept
-    // for it). Stacked, the sheet is under the board and the card takes the
-    // frame. An explicit width, not a max: with auto margins doing the
-    // centring the card is content-sized, and the sheet has no content width
-    // of its own (its scroller is out of flow).
-    card.style.width = stacked ? '' : `${boardWidth + RAIL_MAX_WIDTH_PX + CARD_BORDER_PX}px`;
+    // Beside the board the card is the board plus the sheet at its floor, the
+    // article replay's proportions, and centres in whatever the frame has
+    // left. It used to ask for a 380px sheet, so a frame bounded by height
+    // (the xiangqi rules page at 702x600) handed its spare width to the move
+    // list and spread two columns of moves across half the card (Brian,
+    // 2026-09-25: "too much space on the right column"). Stacked, the sheet is
+    // under the board and the card takes the frame. An explicit width, not a
+    // max: with auto margins doing the centring the card is content-sized, and
+    // the sheet has no content width of its own (its scroller is out of flow).
+    const railWidth = options.railWidthPx ?? RAIL_WIDTH_PX;
+    card.style.width = stacked ? '' : `${boardWidth + railWidth + CARD_BORDER_PX}px`;
+    reportHeight();
+  };
+  // Tell the host the frame height that fits this width exactly, so a host that
+  // listens (articles, the forum) sizes the frame to the card instead of a
+  // hand-set aspect that leaves empty space under it (Brian, 2026-10-03: "big
+  // vertical space after the embeds"). The height comes from the same model
+  // fitBoardWidth sizes the board by, never from a measurement: a measured card
+  // and a modelled one that disagree by a pixel make the host and the card
+  // resize each other forever. Stacked, the host's CSS keeps the height: its
+  // phone rule leaves the move sheet more room than the floor here.
+  const reportHeight = (): void => {
+    const rect = frame.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    if (rect.width < STACK_BELOW_PX) {
+      postHeight(null);
+      return;
+    }
+    const box = naturalBoxHeight(rect.width, aspect, false, options.railWidthPx);
+    // The window beyond the frame element is the frame's own padding.
+    const chrome = window.innerHeight - rect.height;
+    postHeight(
+      Math.ceil(box + header.offsetHeight + credit.offsetHeight + 2 * FRAME_GAP_PX + chrome),
+    );
   };
   fitBoard();
   if (typeof ResizeObserver !== 'undefined') {
@@ -313,23 +562,93 @@ export async function mountEmbedCard(
   }
 
   handle = await options.mountBoard(boardHost, { onPlyChange });
+  if (measureAspect()) fitBoard();
+  if (typeof ResizeObserver !== 'undefined') {
+    // A renderer that paints after its mount resolves settles its height later.
+    new ResizeObserver(() => {
+      if (measureAspect()) fitBoard();
+    }).observe(boardHost);
+  }
 
-  const entries: MoveListEntry[] = handle.moveEntries?.() ?? [];
+  // Marks from the stored analysis (setAnnotations), folded into every build of the sheet.
+  let annotations: ReadonlyMap<number, EmbedSheetAnnotation> = new Map();
+  const sheetEntries = (): MoveListEntry[] =>
+    annotateEntries(handle?.moveEntries?.() ?? [], annotations);
+  const entries: MoveListEntry[] = sheetEntries();
   maxPly = handle.plyCount?.() ?? entries.length;
   moveList = createMoveList(entries, handle.moveNumbering?.() ?? {});
   if (handle.jumpToLine) moveList.bindLine(jumpLine);
   movesRoot.append(moveList.el);
+  // The sheet is built from entries read once, so a change to what it shows (the
+  // notation, or marks arriving) rebuilds it from fresh ones in place.
+  const rebuildSheet = (): void => {
+    if (!handle) return;
+    const fresh = createMoveList(sheetEntries(), handle.moveNumbering?.() ?? {});
+    if (handle.jumpToLine) fresh.bindLine(jumpLine);
+    moveList?.el.replaceWith(fresh.el);
+    moveList = fresh;
+    moveList.update(currentPly, jump);
+    if (line) moveList.highlightLine(line);
+    // The fresh sheet has no scroll position yet: bring the current move back into
+    // view once it has been laid out (marks add notes, so the rows moved).
+    requestAnimationFrame(() => {
+      if (line) moveList?.highlightLine(line);
+      else moveList?.update(currentPly, jump);
+    });
+  };
+  // The board relabels itself when the notation changes (a xiangqi study's
+  // entries are formatted in the current notation when read).
+  window.addEventListener(xiangqiNotationChangedEvent, rebuildSheet);
 
+  // The article replay's bar (xiangqi-replay.ts), so a framed board and a board
+  // in a Mistboard post step the same way: back, a menu, forward. The two jumps
+  // are rare next to stepping and live in the menu; the ply count is read out
+  // to assistive tech but not drawn (Brian, 2026-09-25: three buttons, no
+  // count in the middle).
+  const menu = document.createElement('div');
+  menu.className = 'embed-card-menu';
+  menu.hidden = true;
+  menu.setAttribute('role', 'menu');
+  const menuButton = control('menu', 'More', () => {
+    const open = menu.hidden;
+    menu.hidden = !open;
+    menuButton.setAttribute('aria-expanded', String(open));
+    if (open) menu.querySelector<HTMLElement>('.embed-card-menu-item')?.focus();
+  });
+  menuButton.setAttribute('aria-haspopup', 'true');
+  menuButton.setAttribute('aria-expanded', 'false');
+  const closeMenu = () => {
+    menu.hidden = true;
+    menuButton.setAttribute('aria-expanded', 'false');
+  };
+  const menuItem = (label: string, onSelect: () => void) => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'embed-card-menu-item';
+    item.setAttribute('role', 'menuitem');
+    item.textContent = label;
+    item.addEventListener('click', () => {
+      closeMenu();
+      onSelect();
+    });
+    menu.append(item);
+  };
+  menuItem('Back to the start', () => jump(0));
+  menuItem('Jump to the end', () => jump(maxPly));
+  document.addEventListener('click', (event) => {
+    if (!menu.hidden && !controls.contains(event.target as Node)) closeMenu();
+  });
+  status.setAttribute('aria-live', 'polite');
   controls.append(
-    control('first', 'First move', () => jump(0)),
     control('prev', 'Previous move', () => {
       if (!stepLine(-1)) jump(currentPly - 1);
     }),
-    status,
+    menuButton,
     control('next', 'Next move', () => {
       if (!stepLine(1)) jump(currentPly + 1);
     }),
-    control('last', 'Last move', () => jump(maxPly)),
+    status,
+    menu,
   );
   document.addEventListener('keydown', (event) => {
     if (event.key === 'ArrowLeft') {
@@ -338,15 +657,43 @@ export async function mountEmbedCard(
       if (!stepLine(1)) jump(currentPly + 1);
     } else if (event.key === 'Home') jump(0);
     else if (event.key === 'End') jump(maxPly);
+    else if (event.key === 'Escape' && !menu.hidden) closeMenu();
     else return;
     event.preventDefault();
   });
 
   // Land on the requested ply, or the final position: a finished game's embed
   // opens on its result, and the reader steps back from there.
-  const start = options.startPly === null ? maxPly : options.startPly;
+  // A hidden solution opens on the problem itself, whatever ply was asked for.
+  const start = options.hideSolution ? 0 : options.startPly === null ? maxPly : options.startPly;
   if (handle.jumpToPly) jump(start);
   onPlyChange(handle.jumpToPly ? currentPly : clampPly(start), maxPly);
+  revealOnStep = true;
 
-  return { frame, handle };
+  // Serialised, so a second click waits for the first mount rather than
+  // racing it into the same host.
+  let remounting: Promise<void> = Promise.resolve();
+  const remountBoard = (): Promise<void> => {
+    remounting = remounting.then(async () => {
+      const at = currentPly;
+      handle?.destroy?.();
+      handle = await options.mountBoard(boardHost, { onPlyChange });
+      rowsForBottom = null;
+      if (handle.jumpToPly) jump(at);
+      onPlyChange(at, maxPly);
+    });
+    return remounting;
+  };
+
+  return {
+    frame,
+    get handle() {
+      return handle as EmbedBoardHandle;
+    },
+    remountBoard,
+    setAnnotations: (byPly) => {
+      annotations = byPly;
+      rebuildSheet();
+    },
+  };
 }

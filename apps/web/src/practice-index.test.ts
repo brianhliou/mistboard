@@ -1,5 +1,11 @@
+import { PRACTICE_SECTIONS } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { mountPracticeIndex } from './practice-index.js';
+import {
+  mountPracticeIndex,
+  nextPracticeSlug,
+  type PracticeSectionDto,
+  practiceTileState,
+} from './practice-index.js';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -28,7 +34,7 @@ function practiceResponse(card: Record<string, unknown>): Response {
           {
             slug: 'endgames-horse',
             title: 'Horse endgames',
-            blurb: 'Slow, and blockable',
+            blurb: 'Mind the blocked leg',
             studyId: 'PNqQaTM6',
             exerciseCount: 6,
             solvedCount: 0,
@@ -53,15 +59,17 @@ async function mount(response: Response): Promise<HTMLElement> {
 }
 
 describe('practice shelf', () => {
-  it('names a card after its study, not after the catalogue', async () => {
+  it("names a card after its study, but keeps the shelf's short subtitle", async () => {
+    // The study's description is a paragraph for the study page; the card is a
+    // title and a few words, and must not grow back into the description.
     const root = await mount(
       practiceResponse({
         name: 'Horse endgames, renamed',
-        description: 'The study says this',
+        description: 'The horse is slow and its leg can be blocked. Converting is timing.',
       }),
     );
     expect(root.querySelector('.learn-xq-tile h3')?.textContent).toBe('Horse endgames, renamed');
-    expect(root.querySelector('.learn-xq-tile p')?.textContent).toBe('The study says this');
+    expect(root.querySelector('.learn-xq-tile p')?.textContent).toBe('Mind the blocked leg');
   });
 
   it("renders the study's own locale overlay", async () => {
@@ -77,7 +85,7 @@ describe('practice shelf', () => {
       }),
     );
     expect(root.querySelector('.learn-xq-tile h3')?.textContent).toBe('马类残局');
-    expect(root.querySelector('.learn-xq-tile p')?.textContent).toBe('马走得慢，还会被蹩腿。');
+    expect(root.querySelector('.learn-xq-tile p')?.textContent).toBe('当心蹩马腿');
   });
 
   it('falls back to the catalogue when the response carries no study text', async () => {
@@ -85,7 +93,7 @@ describe('practice shelf', () => {
     // the English card rather than a blank one.
     const root = await mount(practiceResponse({}));
     expect(root.querySelector('.learn-xq-tile h3')?.textContent).toBe('Horse endgames');
-    expect(root.querySelector('.learn-xq-tile p')?.textContent).toBe('Slow, and blockable');
+    expect(root.querySelector('.learn-xq-tile p')?.textContent).toBe('Mind the blocked leg');
   });
 
   it('falls back to the served English for a section id it has no key for', async () => {
@@ -110,5 +118,135 @@ describe('practice shelf', () => {
       }),
     );
     expect(root.querySelector('.learn-xq-categ h2')?.textContent).toBe('Openings');
+    // And a slug with no subtitle key shows the catalogue's English.
+    expect(root.querySelector('.learn-xq-tile p')?.textContent).toBe('blurb');
+  });
+
+  it("renders every catalogue card's English subtitle as the catalogue states it", async () => {
+    // The English lives twice, in the catalogue (the fallback) and in the app
+    // catalog (the localized key); this keeps them the same words.
+    const sections = PRACTICE_SECTIONS.map((section) => ({
+      ...section,
+      cards: section.cards.map((card) => ({
+        ...card,
+        studyId: card.slug,
+        exerciseCount: 4,
+        solvedCount: 0,
+      })),
+    }));
+    const root = await mount(jsonResponse({ sections }));
+    const shown = [...root.querySelectorAll('.learn-xq-tile p')].map((p) => p.textContent);
+    expect(shown).toEqual(PRACTICE_SECTIONS.flatMap((s) => s.cards.map((card) => card.blurb)));
+  });
+
+  it('does not link the rail off to the blog', async () => {
+    // Practice is linked FROM the endgames article; it does not send a learner
+    // back out to it.
+    const root = await mount(practiceResponse({}));
+    const side = root.querySelector('.learn-xq-side-card');
+    expect(side).not.toBeNull();
+    expect(side?.querySelector('a')).toBeNull();
+    expect(root.querySelector('a[href*="/blog/"]')).toBeNull();
+  });
+
+  it('marks the first card Play! with the ring, and shows the rest by size', async () => {
+    const root = await mount(
+      jsonResponse({
+        sections: [
+          {
+            id: 'endgames',
+            title: 'Basic endgames',
+            cards: [
+              {
+                slug: 'endgames-soldier',
+                title: 'A',
+                blurb: 'a',
+                studyId: 'a',
+                exerciseCount: 16,
+                solvedCount: 0,
+              },
+              {
+                slug: 'endgames-chariot',
+                title: 'B',
+                blurb: 'b',
+                studyId: 'b',
+                exerciseCount: 14,
+                solvedCount: 0,
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    const [first, second] = root.querySelectorAll<HTMLElement>('.learn-xq-tile');
+    expect(first?.classList.contains('learn-xq-tile--ongoing')).toBe(true);
+    expect(first?.querySelector('.learn-xq-ribbon')?.textContent).toBe('Play!');
+    expect(first?.querySelector('.learn-xq-tile-ring')).not.toBeNull();
+    // Nothing solved yet, so no progress line to draw.
+    expect(first?.querySelector('.learn-xq-tile-line')).toBeNull();
+    expect(second?.classList.contains('learn-xq-tile--future')).toBe(true);
+    expect(second?.querySelector('.learn-xq-ribbon')?.textContent).toBe('0 / 14');
+    expect(second?.querySelector('.learn-xq-tile-ring')).toBeNull();
+  });
+
+  it('draws the progress line on a set in progress, filled to the solved share', async () => {
+    const root = await mount(practiceResponse({ solvedCount: 3 }));
+    const card = root.querySelector<HTMLElement>('.learn-xq-tile');
+    expect(card?.classList.contains('learn-xq-tile--ongoing')).toBe(true);
+    expect(card?.querySelector('.learn-xq-ribbon')?.textContent).toBe('3 / 6');
+    expect(card?.querySelector<HTMLElement>('.learn-xq-tile-line-fill')?.style.width).toBe('50%');
+  });
+
+  it('says Done on a finished set, with no ring', async () => {
+    const root = await mount(practiceResponse({ solvedCount: 6 }));
+    const card = root.querySelector<HTMLElement>('.learn-xq-tile');
+    expect(card?.classList.contains('learn-xq-tile--done')).toBe(true);
+    expect(card?.querySelector('.learn-xq-ribbon')?.textContent).toBe('Done');
+    expect(card?.querySelector('.learn-xq-tile-ring')).toBeNull();
+  });
+});
+
+describe('practiceTileState', () => {
+  it('reads done, in progress, next and untouched from the counts', () => {
+    expect(practiceTileState({ solvedCount: 6, exerciseCount: 6 }, false)).toEqual({
+      state: 'done',
+      ribbon: 'done',
+    });
+    expect(practiceTileState({ solvedCount: 2, exerciseCount: 6 }, false)).toEqual({
+      state: 'ongoing',
+      ribbon: 'progress',
+    });
+    // In progress outranks "next": a started set shows its count, not Play!.
+    expect(practiceTileState({ solvedCount: 2, exerciseCount: 6 }, true)).toEqual({
+      state: 'ongoing',
+      ribbon: 'progress',
+    });
+    expect(practiceTileState({ solvedCount: 0, exerciseCount: 6 }, true)).toEqual({
+      state: 'ongoing',
+      ribbon: 'play',
+    });
+    expect(practiceTileState({ solvedCount: 0, exerciseCount: 6 }, false)).toEqual({
+      state: 'future',
+      ribbon: 'count',
+    });
+    // An empty set is never "done".
+    expect(practiceTileState({ solvedCount: 0, exerciseCount: 0 }, false).state).toBe('future');
+  });
+
+  it('picks the first unfinished card in teaching order as next', () => {
+    const card = (slug: string, solvedCount: number) => ({
+      slug,
+      title: slug,
+      blurb: slug,
+      studyId: slug,
+      exerciseCount: 4,
+      solvedCount,
+    });
+    const sections: PracticeSectionDto[] = [
+      { id: 'a', title: 'A', cards: [card('one', 4), card('two', 1)] },
+      { id: 'b', title: 'B', cards: [card('three', 0)] },
+    ];
+    expect(nextPracticeSlug(sections)).toBe('two');
+    expect(nextPracticeSlug([{ id: 'a', title: 'A', cards: [card('one', 4)] }])).toBeNull();
   });
 });

@@ -193,7 +193,11 @@ definePersistenceTests('admin metrics', () => {
       `INSERT INTO chat_lines (id, room, author_account_id, body_text, created_at) VALUES
          ('c1', 'lobby', 'user-1', 'hi', '2026-07-15T12:00:00Z'),
          ('c2', 'lobby', 'user-1', 'hidden', '2026-07-15T12:01:00Z'),
-         ('c3', 'lobby', 'user-1', 'shadow', '2026-07-15T12:02:00Z')`,
+         ('c3', 'lobby', 'user-1', 'shadow', '2026-07-15T12:02:00Z'),
+         ('c4', 'lobby', 'user-op', 'operator', '2026-07-15T12:03:00Z'),
+         ('c5', 'player:w2-room', 'user-1', 'gg', '2026-07-15T12:04:00Z'),
+         ('c6', 'game:w2-room', 'user-op', 'watching', '2026-07-15T12:05:00Z'),
+         ('c7', 'study:s1', 'user-1', 'nice line', '2026-07-15T12:06:00Z')`,
     );
     await getPool().query(
       `UPDATE chat_lines SET hidden_at = now() WHERE id = 'c2';
@@ -240,11 +244,13 @@ definePersistenceTests('admin metrics', () => {
       [1, 2, 2],
     );
     assert.deepEqual(
-      [w1, w2, w3].map((w) => [w.newAccounts, w.newPatrons, w.chatLines]),
+      [w1, w2, w3].map((w) => [w.newAccounts, w.newPatrons, w.chatLines, w.gameChatLines]),
       [
-        [0, 0, 0],
-        [1, 0, 1],
-        [1, 1, 0],
+        [0, 0, 0, 0],
+        // Lobby: c1 only (c2 hidden, c3 shadowed, c4 by the excluded operator).
+        // Game rooms: c5 only (c6 by the operator); study chat is neither.
+        [1, 0, 1, 1],
+        [1, 1, 0, 0],
       ],
     );
 

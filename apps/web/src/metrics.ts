@@ -10,6 +10,8 @@
 // Plan and status: docs-private/metrics-roadmap.md.
 
 import './metrics.css';
+import { CANONICAL_VARIANT_ORDER, isRetiredGameSpec } from '@mistboard/game';
+import { variantNameKeyForSpecId } from './game-display.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import { buildNav, buildNotice } from './site-shell.js';
@@ -24,22 +26,20 @@ import {
 } from './stats-charts.js';
 import { buildWeeklyChart, type WeeklySeries } from './weekly-chart.js';
 
-// The curated set of live variants shown on the public /stats surface, matching
-// game-specs.ts CANONICAL_VARIANT_ORDER. Retired experiments and hidden
-// chess variants stay off the public breakdown
-// and chart filter. Admin /metrics applies the same shelf to the human split;
-// the engines block at the bottom lists every variant the bots played.
-const STATS_VARIANTS: readonly string[] = [
-  'xiangqi',
-  'banqi',
-  'jieqi',
-  'fortress-xiangqi',
-  'duck-xiangqi',
-  'dark-xiangqi',
-  'dark-chess',
-  'jungle',
-  'jungle-flip',
-];
+// The live variants shown on the public /stats surface: the public shelf
+// (game-specs.ts CANONICAL_VARIANT_ORDER) minus anything retired, derived so a
+// launch or a retirement moves /stats with it. A hand list here once missed
+// atomic xiangqi for weeks. The server already leaves retired variants' games
+// out of every number on /api/stats/public (countedPublicGame in
+// apps/server/src/persistence-counted-games.ts), so the headline total, the
+// series and the breakdowns carry no retired variant and need no note; this
+// filter keeps the breakdown and chart filter to the public shelf. Admin
+// /metrics applies the same shelf to the human split, but its own series
+// still count retired variants' games; the engines block at the bottom lists
+// every variant the bots played.
+const STATS_VARIANTS: readonly string[] = CANONICAL_VARIANT_ORDER.filter(
+  (id) => !isRetiredGameSpec(id),
+);
 
 type LiveStats = { playing: number; online: number };
 
@@ -63,6 +63,7 @@ export type AdminMetricsWeek = {
   studyChaptersCreated: number;
   practiceSolves: number;
   chatLines: number;
+  gameChatLines: number;
   dmMessages: number;
   correspondenceSeeks: number;
   newPatrons: number;
@@ -204,10 +205,11 @@ async function mountAdminMetrics(root: HTMLElement): Promise<void> {
   body.textContent = 'Loading…';
   shell.append(body);
 
-  const [publicStats, live, admin] = await Promise.all([
+  const [publicStats, live, admin, deploys] = await Promise.all([
     fetchPublicStats(),
     fetchLiveStats(),
     fetchAdminMetrics(),
+    fetchDeployHistory(),
   ]);
 
   if (!publicStats && !admin) {
@@ -264,6 +266,8 @@ async function mountAdminMetrics(root: HTMLElement): Promise<void> {
     }
     parts.push(buildEnginesSection(admin, locale));
   }
+
+  if (deploys) parts.push(buildDeploysSection(deploys));
 
   body.replaceChildren(...parts);
 }
@@ -423,6 +427,7 @@ function buildVariantWeeklyChart(publicStats: PublicSiteStats, locale: Locale): 
         ariaLabel: t('stats.gamesPerWeekLabel', { count: String(plotted.length) }, locale),
         partialLast: false,
         locale,
+        table: false,
       }),
     );
     const current = weeks.length > 1 ? weeks.at(-1) : undefined;
@@ -561,10 +566,11 @@ function buildWeeklySections(admin: AdminMetrics, locale: Locale): HTMLElement[]
       'Community per week',
       [
         { key: 'chatLines', label: 'Lobby chat' },
+        { key: 'gameChatLines', label: 'Game chat' },
         { key: 'dmMessages', label: 'Direct messages' },
         { key: 'correspondenceSeeks', label: 'Correspondence seeks' },
       ],
-      'Lobby chat lines, direct messages, and correspondence seeks per week',
+      'Lobby chat lines, chat lines in game rooms (players and spectators), direct messages, and correspondence seeks per week',
     ),
   ];
 }
@@ -690,27 +696,18 @@ function sortedEntries(record: Record<string, number>): BreakdownEntry[] {
 }
 
 // Public-facing variant names, keyed by the persisted games.variant id (which
-// equals the game-spec id). The canonical source is the lobby's exhaustive
-// switch in landing-play.ts (variantNameKeyForGameSpec); this display-only map
-// mirrors it with a safe prettify fallback, so an unmapped/new id degrades
-// gracefully instead of throwing.
-const VARIANT_NAME_KEYS: Record<string, I18nKey> = {
-  xiangqi: 'variant.xiangqi.name',
-  'dark-xiangqi': 'variant.darkXiangqi.name',
-  'dark-chess': 'variant.darkChess.name',
-  'fortress-xiangqi': 'variant.fortressXiangqi.name',
-  'duck-xiangqi': 'variant.duckXiangqi.name',
-  'atomic-xiangqi': 'variant.atomicXiangqi.name',
-  jieqi: 'variant.jieqi.name',
-  banqi: 'variant.banqi.name',
-  jungle: 'variant.jungle.name',
-  'jungle-flip': 'variant.jungleFlip.name',
+// equals the game-spec id). Live specs take the catalog's exhaustive table
+// (game-display.ts variantNameKeyForSpecId), so a new variant is named here
+// without an edit; this page still counts games in variants deleted from
+// GameSpecId, which keep their names below. Anything else degrades to a
+// prettified id instead of throwing.
+const RETIRED_VARIANT_NAME_KEYS: Record<string, I18nKey> = {
   'mini-xiangqi': 'variant.miniXiangqi.name',
   'dark-mini-xiangqi': 'variant.darkMiniXiangqi.name',
 };
 
 function variantPublicName(variant: string, locale: Locale): string {
-  const key = VARIANT_NAME_KEYS[variant];
+  const key = variantNameKeyForSpecId(variant) ?? RETIRED_VARIANT_NAME_KEYS[variant];
   if (key) return t(key, {}, locale);
   return variant
     .split('-')
@@ -757,6 +754,142 @@ async function fetchLiveStats(): Promise<LiveStats | null> {
     const data = (await resp.json()) as Partial<LiveStats>;
     if (typeof data.playing !== 'number' || typeof data.online !== 'number') return null;
     return { playing: data.playing, online: data.online };
+  } catch {
+    return null;
+  }
+}
+
+// ── restarts and drains ─────────────────────────────────────────────────────
+// Mirrors DeployHistoryEntry in apps/server/src/deploy-history.ts.
+export type DeployHistoryEntry = {
+  at: string;
+  kind: 'restart' | 'drain-cancelled' | 'drain-lapsed';
+  buildRevision: string | null;
+  drain: {
+    durationMs: number;
+    committed: boolean;
+    commitWaitMs: number | null;
+    activeGamesAtStart: number;
+    peakActiveGames: number;
+    refusedCreates: number;
+  } | null;
+  withoutDrain: boolean;
+  activeGamesAtShutdown: number | null;
+  pausedOnShutdown: number;
+  resumedPlayersBack: number;
+  resumedAfterGrace: number;
+};
+
+const DEPLOY_COLUMNS = [
+  'When',
+  'What',
+  'Drain',
+  'Games waited on',
+  'New games refused',
+  'Live at shutdown',
+  'Resumed (back / grace)',
+] as const;
+
+function formatDuration(ms: number): string {
+  const seconds = Math.round(ms / 1000);
+  if (seconds < 90) return `${seconds}s`;
+  return `${Math.round(seconds / 60)}m`;
+}
+
+// One table row per restart or drain. A restart with a drain summary reads its
+// numbers; one without says whether the server logged going down undrained or
+// simply predates the summaries.
+export function deployRowCells(entry: DeployHistoryEntry, locale = 'en-US'): string[] {
+  const when = new Date(entry.at).toLocaleString(locale, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  const what =
+    entry.kind === 'restart'
+      ? 'Restart'
+      : entry.kind === 'drain-cancelled'
+        ? 'Drain cancelled'
+        : 'Drain lapsed';
+  const drain = entry.drain;
+  const drainCell = drain
+    ? `${formatDuration(drain.durationMs)}${drain.committed ? '' : ', never committed'}`
+    : entry.withoutDrain
+      ? entry.activeGamesAtShutdown === 0
+        ? 'not needed (0 live)'
+        : 'none (undrained)'
+      : 'not recorded';
+  const waited = drain
+    ? drain.peakActiveGames > drain.activeGamesAtStart
+      ? `${drain.activeGamesAtStart} (peak ${drain.peakActiveGames})`
+      : String(drain.activeGamesAtStart)
+    : '';
+  const refused = drain ? String(drain.refusedCreates) : '';
+  const live =
+    entry.kind === 'restart' && entry.activeGamesAtShutdown !== null
+      ? String(entry.activeGamesAtShutdown)
+      : '';
+  const resumed =
+    entry.pausedOnShutdown > 0
+      ? `${entry.resumedPlayersBack} / ${entry.resumedAfterGrace} of ${entry.pausedOnShutdown}`
+      : '';
+  return [when, what, drainCell, waited, refused, live, resumed];
+}
+
+function buildDeploysSection(entries: DeployHistoryEntry[]): HTMLElement {
+  const section = document.createElement('section');
+  section.className = 'metrics-section metrics-deploys';
+  section.append(sectionHeading('Restarts and drains, last 30 days'));
+  const note = document.createElement('p');
+  note.className = 'metrics-section-note';
+  note.textContent =
+    'Live at shutdown should be 0 for a drained restart. Resumed counts chess-stack rooms paused by the shutdown: players back on both seats, or the grace timer resuming with a seat empty. Xiangqi-family rooms are not paused on shutdown and do not appear there.';
+  section.append(note);
+  if (entries.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'metrics-section-note';
+    empty.textContent = 'No restarts recorded.';
+    section.append(empty);
+    return section;
+  }
+  const scroller = document.createElement('div');
+  scroller.className = 'metrics-deploys-scroll';
+  const table = document.createElement('table');
+  table.className = 'metrics-deploys-table';
+  const head = table.createTHead().insertRow();
+  for (const label of DEPLOY_COLUMNS) {
+    const th = document.createElement('th');
+    th.textContent = label;
+    head.append(th);
+  }
+  const body = table.createTBody();
+  for (const entry of entries) {
+    const row = body.insertRow();
+    // Warn on what cost players: games live at shutdown, creates the drain
+    // refused, or an undrained restart whose live count was not recorded. An
+    // undrained restart with 0 live is release-prod's intended path (#478).
+    const live = entry.activeGamesAtShutdown;
+    if (
+      (live ?? 0) > 0 ||
+      (entry.drain?.refusedCreates ?? 0) > 0 ||
+      (entry.withoutDrain && live === null)
+    ) {
+      row.classList.add('is-warning');
+    }
+    for (const cell of deployRowCells(entry)) row.insertCell().textContent = cell;
+  }
+  scroller.append(table);
+  section.append(scroller);
+  return section;
+}
+
+async function fetchDeployHistory(): Promise<DeployHistoryEntry[] | null> {
+  try {
+    const resp = await fetch('/api/admin/deploys', { credentials: 'same-origin' });
+    if (!resp.ok) return null;
+    const data = (await resp.json()) as { deploys?: DeployHistoryEntry[] };
+    return Array.isArray(data.deploys) ? data.deploys : null;
   } catch {
     return null;
   }

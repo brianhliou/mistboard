@@ -1,5 +1,5 @@
 diff --git a/src/main.cpp b/src/main.cpp
-index 0e1c959..c3877e0 100644
+index 0e1c959b..c3877e03 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
 @@ -21,9 +21,19 @@
@@ -28,7 +28,7 @@ index 0e1c959..c3877e0 100644
    Search::clear(); // After threads are up
    Eval::NNUE::init();
 +}
-+
+ 
 +}
 +
 +#ifdef __EMSCRIPTEN__
@@ -53,7 +53,7 @@ index 0e1c959..c3877e0 100644
 +int main(int argc, char* argv[]) {
 +
 +  initialize_engine(argc, argv);
- 
++
 +#ifndef __EMSCRIPTEN__
    UCI::loop(argc, argv);
  
@@ -62,10 +62,10 @@ index 0e1c959..c3877e0 100644
    return 0;
  }
 diff --git a/src/misc.h b/src/misc.h
-index 95b3c14..6e8fdfd 100644
+index 95b3c143..533fe02a 100644
 --- a/src/misc.h
 +++ b/src/misc.h
-@@ -348,6 +348,13 @@ private:
+@@ -348,17 +348,32 @@ private:
  };
  
  
@@ -78,8 +78,19 @@ index 95b3c14..6e8fdfd 100644
 +
  class ScoreCalc {
  public:
-     ScoreCalc(int Ldepth, int depth, bool us) :
-@@ -359,6 +366,10 @@ public:
+-    ScoreCalc(int Ldepth, int depth, bool us) :
+-        _Ldepth(Ldepth), _depth(depth), _us(us){}
++    // Every caller appends -search(child), which is already from the mover's point
++    // of view. The old code flipped it for one colour, keyed on firstSideMove, a
++    // field nothing assigns (so always Red): Black's reveals (and Red's, at the
++    // ProbCut site) took the best identity instead of the worst. #497.
++    ScoreCalc(int Ldepth, int depth, bool) :
++        _Ldepth(Ldepth), _depth(depth), _us(true){}
+ 
+-    void setUs(bool us) { _us = !us; }
++    void setUs(bool) {}
+ 
+     void append(Piece p, int score, int count) {
          if (!_us) score *= -1;
          if (_min > score)_min = score;
          if (_max < score)_max = score;
@@ -90,7 +101,7 @@ index 95b3c14..6e8fdfd 100644
          score = std::clamp(score, -DARKVALRATE, DARKVALRATE);
          _totalScore += score * count;
          _totalCount += count;
-@@ -383,6 +394,10 @@ public:
+@@ -383,6 +398,10 @@ public:
          {
              v = evg;
          }
@@ -101,7 +112,7 @@ index 95b3c14..6e8fdfd 100644
          if (!_us) v *= -1;
          assert(v > -VALUE_INFINITE && v < VALUE_INFINITE);
          return Value(v);
-@@ -399,6 +414,7 @@ private:
+@@ -399,6 +418,7 @@ private:
      //int _types = 0;
      int _min = 99999999;
      int _max = -99999999;
@@ -109,8 +120,65 @@ index 95b3c14..6e8fdfd 100644
  };
  
  
+diff --git a/src/search.cpp b/src/search.cpp
+index a999a7e7..7955e968 100644
+--- a/src/search.cpp
++++ b/src/search.cpp
+@@ -1355,6 +1355,13 @@ dark_while:
+       
+ 
+ dark_calc:
++      // Each revealed identity is its own child: the re-search decisions below must
++      // read this identity's result, not the minimum over the identities searched
++      // before it, or one identity failing low skips the PV search of the rest and
++      // their null-window bounds get averaged as scores. #497.
++      if (fromWhile)
++          darkTryTimes = 0;
++
+       // Step 16. Late moves reduction / extension (LMR, ~98 Elo)
+       // We use various heuristics for the sons of a node after the first son has
+       // been searched. In general we would like to reduce them, but there are many
+@@ -1461,6 +1468,20 @@ dark_calc:
+ 
+           vTmp = -search<PV>(pos, ss+1, -beta, -alpha,
+               isDarkDepth ? 0 : std::min(maxNextDepth, newDepth), false);
++
++          // A revealed identity's score is averaged, not compared with alpha, so a
++          // fail-low is not good enough: it returns the window edge and the average
++          // took it as exact (three mated identities scored at alpha, #497). Only a
++          // fail-low over-rates the average, so re-search those, at the root only:
++          // everywhere cost ~150 Elo in depth; the root alone costs ~20 and cut the
++          // over-rated decisive reveals in our 71-position set from 16 to 3.
++          if (fromWhile && ss->ply == 0 && vTmp <= alpha)
++          {
++              (ss+1)->pv = pv;
++              (ss+1)->pv[0] = MOVE_NONE;
++              vTmp = -search<PV>(pos, ss+1, -(alpha+1), VALUE_INFINITE,
++                  isDarkDepth ? 0 : std::min(maxNextDepth, newDepth), false);
++          }
+           //get worse
+           if (darkTryTimes == 0 || vTmp < value) value = vTmp;
+           darkTryTimes++;
+@@ -1680,6 +1701,17 @@ dark_undo:
+     }
+ 
+     Thread* thisThread = pos.this_thread();
++
++    // qsearch had no time check and no stop check, and the jieqi dark-piece
++    // recursion re-enters it at depth 0 without reducing depth, so a thread in
++    // one of these tails could not be stopped by `go movetime` and bestmove
++    // waited on the slowest helper. Same contract as search(): a value returned
++    // after a stop is discarded by the caller.
++    if (thisThread == Threads.main())
++        static_cast<MainThread*>(thisThread)->check_time();
++    if (Threads.stop.load(std::memory_order_relaxed))
++        return VALUE_ZERO;
++
+     bestMove = MOVE_NONE;
+     ss->inCheck = pos.checkers();
+     moveCount = 0;
 diff --git a/src/uci.cpp b/src/uci.cpp
-index 634fe87..8382b6a 100644
+index 634fe872..8382b6aa 100644
 --- a/src/uci.cpp
 +++ b/src/uci.cpp
 @@ -262,30 +262,30 @@ namespace {
@@ -207,7 +275,7 @@ index 634fe87..8382b6a 100644
  
  /// UCI::value() converts a Value to a string by adhering to the UCI protocol specification:
 diff --git a/src/uci.h b/src/uci.h
-index c4a4200..79db5a3 100644
+index c4a42004..79db5a38 100644
 --- a/src/uci.h
 +++ b/src/uci.h
 @@ -68,6 +68,7 @@ private:
@@ -218,25 +286,3 @@ index c4a4200..79db5a3 100644
  void loop(int argc, char* argv[]);
  std::string value(Value v);
  std::string square(Square s);
-diff --git a/src/search.cpp b/src/search.cpp
-index a999a7e7..f27d3452 100644
---- a/src/search.cpp
-+++ b/src/search.cpp
-@@ -1680,6 +1680,17 @@ dark_undo:
-     }
- 
-     Thread* thisThread = pos.this_thread();
-+
-+    // qsearch had no time check and no stop check, and the jieqi dark-piece
-+    // recursion re-enters it at depth 0 without reducing depth, so a thread in
-+    // one of these tails could not be stopped by `go movetime` and bestmove
-+    // waited on the slowest helper. Same contract as search(): a value returned
-+    // after a stop is discarded by the caller.
-+    if (thisThread == Threads.main())
-+        static_cast<MainThread*>(thisThread)->check_time();
-+    if (Threads.stop.load(std::memory_order_relaxed))
-+        return VALUE_ZERO;
-+
-     bestMove = MOVE_NONE;
-     ss->inCheck = pos.checkers();
-     moveCount = 0;

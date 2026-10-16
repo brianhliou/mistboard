@@ -18,6 +18,7 @@ type SeedGame = {
   variant?: string;
   corpusId?: string | null;
   withEvent?: boolean;
+  timeControl?: { initialMs: number; incrementMs: number; daysPerMove?: number };
 };
 
 async function seed(games: SeedGame[]): Promise<void> {
@@ -46,7 +47,16 @@ async function seed(games: SeedGame[]): Promise<void> {
       if (g.withEvent !== false) {
         await client.query(
           `INSERT INTO events (room_id, seq, type, payload) VALUES ($1, 0, 'room-created', $2)`,
-          [g.roomId, { type: 'room-created', at: g.endedAt.getTime(), roomId: g.roomId, variant }],
+          [
+            g.roomId,
+            {
+              type: 'room-created',
+              at: g.endedAt.getTime(),
+              roomId: g.roomId,
+              variant,
+              ...(g.timeControl ? { timeControl: g.timeControl } : {}),
+            },
+          ],
         );
       }
     }
@@ -56,6 +66,49 @@ async function seed(games: SeedGame[]): Promise<void> {
 }
 
 definePersistenceTests('showcase + browse queries', () => {
+  test('listShowcaseGames leaves out correspondence games', async () => {
+    // The homepage airs a fog game at its recorded pace, so a one-day-per-move
+    // game sat on ply 1 for hours with both clocks frozen at 24:00:00.
+    const t = (min: number) => new Date(Date.UTC(2026, 5, 1, 12, min, 0));
+    await seed([
+      {
+        roomId: 'sc-pvp-corr',
+        mode: 'pvp',
+        result: 'black-wins',
+        termination: 'king-captured',
+        plyCount: 48,
+        endedAt: t(30),
+        variant: 'dark-xiangqi',
+        timeControl: { initialMs: 86_400_000, incrementMs: 0, daysPerMove: 1 },
+      },
+      {
+        roomId: 'sc-pvp-live',
+        mode: 'pvp',
+        result: 'white-wins',
+        termination: 'king-captured',
+        plyCount: 40,
+        endedAt: t(10),
+        variant: 'dark-xiangqi',
+        timeControl: { initialMs: 300_000, incrementMs: 3_000 },
+      },
+      {
+        roomId: 'sc-pve-corr',
+        mode: 'pve',
+        result: 'white-wins',
+        termination: 'king-captured',
+        plyCount: 40,
+        endedAt: t(20),
+        timeControl: { initialMs: 259_200_000, incrementMs: 0, daysPerMove: 3 },
+      },
+    ]);
+    const ids = (
+      await listShowcaseGames({ limit: 8, variants: ['dark-xiangqi', 'dark-chess'] })
+    ).map((g) => g.roomId);
+    assert.ok(ids.includes('sc-pvp-live'), 'a live-clock game still airs');
+    assert.ok(!ids.includes('sc-pvp-corr'), 'correspondence PvP never airs');
+    assert.ok(!ids.includes('sc-pve-corr'), 'correspondence PvE never airs');
+  });
+
   test('listShowcaseGames recency-leads, includes substantial PvP, excludes short games', async () => {
     const t = (min: number) => new Date(Date.UTC(2026, 5, 1, 12, min, 0));
     await seed([

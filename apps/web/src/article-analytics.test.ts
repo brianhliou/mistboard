@@ -31,7 +31,12 @@ describe('article instrumentation', () => {
     }
   });
 
-  it('reports a board embed once, on first interaction, not per move', () => {
+  // Explicit timeout: mountPendingWidgets mounts EVERY widget on the page, and
+  // the champions article carries fifteen replays, so this one test builds
+  // fifteen boards to click one. Measured 8.5s to 17s on the same machine
+  // depending on what else is running, which straddles the 15s default and
+  // fails a release gate at random. The cost grows with the article.
+  it('reports a board embed once, on first interaction, not per move', { timeout: 60_000 }, () => {
     const events = recorder();
     const page = buildArticlePage('xiangqi-champions');
     document.body.append(page);

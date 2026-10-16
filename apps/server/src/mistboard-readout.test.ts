@@ -13,6 +13,7 @@ import {
   scheduledReadoutTrigger,
 } from './mistboard-readout.js';
 import type { PuzzleQualityAggregate } from './persistence-puzzle-quality.js';
+import { decideReadoutEmail } from './readout-email.js';
 
 const runtime: MistboardReadoutRuntime = {
   revision: 'abc123',
@@ -385,6 +386,183 @@ test('an unservable broadcast board alerts on the increase and names the rows', 
   // A snapshot from before the section existed renders without the line.
   const legacy = reportWith(emptyFacts);
   assert.doesNotMatch(renderMistboardReadoutMarkdown(legacy), /Broadcasts:/);
+});
+
+test('a top event dpxq lists and we do not relay alerts the day it appears, not every day', () => {
+  const women = {
+    dpxqTour: '12776',
+    name: '2026年全国象棋女子甲级联赛',
+    startsOn: '2026-09-23',
+    endsOn: '2026-09-27',
+    section: 'live' as const,
+    hasGameList: false,
+  };
+  const asian = {
+    ...women,
+    dpxqTour: '12526',
+    name: '亚洲象棋个人锦标赛',
+    section: 'upcoming' as const,
+  };
+  const withEvents = (
+    untrackedEvents: NonNullable<MistboardReadoutFacts['broadcasts']>['untrackedEvents'],
+  ): MistboardReadoutFacts => ({
+    ...emptyFacts,
+    broadcasts: { boards: 376, unservableBoards: 0, unservableBoardIds: [], untrackedEvents },
+  });
+
+  const first = reportWith(withEvents([women]));
+  assert.equal(first.actions[0]!.code, 'broadcast-events-untracked');
+  assert.match(
+    first.actions[0]!.text,
+    /2026年全国象棋女子甲级联赛 \(dpxq 12776, live, 09-23 to 09-27\)/,
+  );
+  assert.match(
+    renderMistboardReadoutMarkdown(first),
+    /Broadcasts: 376 stored boards, 0 unservable, 1 top event on dpxq not relayed/,
+  );
+
+  const second = reportWith(withEvents([women]), first);
+  assert.equal(second.actions.length, 0, 'the standing list does not re-fire');
+
+  const third = reportWith(withEvents([women, asian]), second);
+  assert.equal(third.actions.length, 1);
+  assert.match(third.actions[0]!.text, /dpxq lists 1 top event we do not relay: 亚洲/);
+
+  const unreadable = reportWith(withEvents(null), third);
+  assert.equal(unreadable.actions.length, 0);
+  assert.match(renderMistboardReadoutMarkdown(unreadable), /dpxq index unreadable/);
+});
+
+// The build ships without the AB-JChess net when the authors' release does not
+// answer (scripts/fetch-abjchess-net.sh soft-fails), which hides the top jieqi
+// bot. That has to reach a person: the daily check emails the day it appears.
+test('an engine missing on the serving box emails the day it appears, then stays in the report', () => {
+  const abj = { variant: 'jieqi', binary: 'ab-jchess' };
+  const daily = (
+    missingEngines: MistboardReadoutRuntime['missingEngines'],
+    previousReport?: ReturnType<typeof buildMistboardReadout>,
+  ) =>
+    buildMistboardReadout({
+      snapshotId: 'readout_engines',
+      trigger: 'daily',
+      now: new Date('2026-10-06T17:23:00Z'),
+      runtime: { ...runtime, missingEngines },
+      facts: emptyFacts,
+      previousReport,
+    });
+
+  const healthy = daily([]);
+  assert.equal(healthy.actions.length, 0);
+
+  const first = daily([abj], healthy);
+  assert.equal(first.verdict, 'action');
+  assert.equal(first.actions[0]!.code, 'engines-missing');
+  assert.match(first.actions[0]!.text, /ab-jchess \(jieqi\)/);
+  assert.match(first.actions[0]!.text, /abjchess-net: WARNING/);
+  assert.deepEqual(
+    decideReadoutEmail({
+      report: first,
+      reused: false,
+      previousAlertKey: healthy.alertKey,
+      enabled: true,
+    }),
+    { send: true, reason: 'daily-alert' },
+  );
+
+  // The gap latches until a build fetches the net: no second email, but every
+  // report keeps naming it.
+  const second = daily([abj], first);
+  assert.equal(second.actions.length, 0);
+  assert.match(
+    renderMistboardReadoutMarkdown(second),
+    /Engines missing on the serving box: ab-jchess \(jieqi\)/,
+  );
+
+  // Fixed, then lost again: a new gap, a new email.
+  const again = daily([abj], daily([], second));
+  assert.equal(again.actions[0]!.code, 'engines-missing');
+
+  // A runtime that cannot see the box (the local CLI) says nothing.
+  assert.equal(daily(undefined).actions.length, 0);
+  assert.doesNotMatch(renderMistboardReadoutMarkdown(healthy), /Engines missing/);
+});
+
+test('new feedback alerts on arrival with paths only, and nothing else does', () => {
+  const feedback = (
+    received: number,
+    recentPaths: Array<string | null>,
+  ): MistboardReadoutFacts => ({
+    ...emptyFacts,
+    feedback: { received, recentPaths },
+  });
+
+  // No baseline (the first readout to count feedback): nothing to call new.
+  const first = reportWith(feedback(7, ['/zh-hans/blog/cao-yanlei', '/contact', null]));
+  assert.equal(first.actions.length, 0);
+  assert.equal(first.verdict, 'healthy');
+  assert.doesNotMatch(renderMistboardReadoutMarkdown(first), /Feedback/);
+
+  // Nothing new the next day: quiet.
+  const second = reportWith(feedback(7, ['/zh-hans/blog/cao-yanlei', '/contact', null]), first);
+  assert.equal(second.actions.length, 0);
+
+  // Two arrive: the line names the two newest pages and never a body or address.
+  const third = reportWith(
+    feedback(9, ['/play?ref=x', '/zh-hans/blog/cao-yanlei', '/contact']),
+    second,
+  );
+  assert.equal(third.verdict, 'action');
+  assert.equal(third.actions.length, 1);
+  assert.equal(third.actions[0]!.code, 'feedback-new');
+  assert.equal(third.actions[0]!.ownerIssue, null);
+  assert.equal(
+    third.actions[0]!.text,
+    '2 new feedback messages since the last readout (`/play`, `/zh-hans/blog/cao-yanlei`). Read with npm run feedback:inbox.',
+  );
+
+  // More than three: three paths and an ellipsis.
+  const many = reportWith(feedback(14, ['/a', '/b', '/c', '/d', '/e']), third);
+  assert.match(
+    many.actions[0]!.text,
+    /^5 new feedback messages since the last readout \(`\/a`, `\/b`, `\/c`, …\)/,
+  );
+
+  // The readout lands on a public issue, and the path is whatever the client
+  // sent: anything that is not a plain page path is not echoed.
+  const hostile = reportWith(feedback(15, ['/x [buy now](https://spam.example) `tick`']), many);
+  assert.match(
+    hostile.actions[0]!.text,
+    /^1 new feedback message since the last readout \(an unlisted page\)/,
+  );
+  assert.doesNotMatch(hostile.actions[0]!.text, /spam\.example/);
+
+  // A failed feedback collector last time is no baseline either.
+  const afterFailure = reportWith(feedback(16, ['/learn']), { ...hostile, feedback: null });
+  assert.equal(afterFailure.actions.length, 0);
+});
+
+test('new feedback on consecutive days alerts both days; a standing backlog does not', () => {
+  // The daily email and issue comment skip a report whose alert key matches
+  // the previous one ("same problem"). Each arrival is a different message,
+  // so its key has to differ, or the second day's message is never surfaced.
+  const feedback = (received: number): MistboardReadoutFacts => ({
+    ...emptyFacts,
+    feedback: { received, recentPaths: ['/contact'] },
+  });
+  const baseline = reportWith(feedback(2), reportWith(feedback(2)));
+  assert.equal(baseline.actions.length, 0);
+
+  const a = reportWith(feedback(3), baseline);
+  assert.equal(a.actions[0]?.code, 'feedback-new');
+  assert.notEqual(a.alertKey, baseline.alertKey);
+
+  const b = reportWith(feedback(4), a);
+  assert.equal(b.actions[0]?.code, 'feedback-new');
+  assert.notEqual(b.alertKey, a.alertKey, 'a second day of new feedback is not the same problem');
+
+  const c = reportWith(feedback(4), b);
+  assert.equal(c.actions.length, 0);
+  assert.equal(c.verdict, 'healthy');
 });
 
 test('the alert key holds steady while counters move under an unchanged problem', () => {

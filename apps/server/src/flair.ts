@@ -18,6 +18,7 @@ export const FLAIR_KEYS = [
   'variant-fortress-xiangqi',
   'variant-duck-xiangqi',
   'variant-atomic-xiangqi',
+  'variant-crazyhouse-xiangqi',
   'variant-jieqi',
   'variant-banqi',
   'variant-jungle',

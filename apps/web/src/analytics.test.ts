@@ -1,15 +1,25 @@
 import { DARK_CHESS_SPEC_ID, gameSpecForId } from '@mistboard/game';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  analyticsTimeClass,
+  applyInternalTag,
   classifyTimeControl,
   createGameLifecycleTracker,
   gameSpecAnalyticsProps,
+  isInternalBrowser,
+  markInternalBrowser,
   puzzleAttemptedProps,
+  resetIdentity,
   reviewOpenedProps,
   reviewRouteForAnalytics,
   roomModeAnalyticsProps,
   setPostHogInstance,
 } from './analytics.js';
+import {
+  rememberCorrespondenceStartSource,
+  rememberGameStartSource,
+  resetTrackedGameStartsForTests,
+} from './game-start-source.js';
 
 describe('classifyTimeControl', () => {
   it('classifies bullet (1+0)', () => {
@@ -60,6 +70,8 @@ describe('createGameLifecycleTracker', () => {
 
   beforeEach(() => {
     capture.mockReset();
+    Object.defineProperty(window, 'localStorage', { configurable: true, value: memoryStorage() });
+    resetTrackedGameStartsForTests();
     // track() routes through the posthog instance; install a spy so emissions
     // are observable even outside PROD (enqueue runs the action immediately).
     setPostHogInstance({ capture, identify: vi.fn(), reset: vi.fn() });
@@ -103,12 +115,47 @@ describe('createGameLifecycleTracker', () => {
     expect(named('game_finished')).toHaveLength(0);
   });
 
-  it('re-arms the start transition after reset', () => {
+  it('re-arms the start transition after reset, for the next game', () => {
     const t = createGameLifecycleTracker();
     t.update({ statusType: 'playing', baseProps: base });
     t.reset();
-    t.update({ statusType: 'playing', baseProps: base });
+    t.update({ statusType: 'playing', baseProps: { ...base, gameId: 'g2' } });
     expect(named('game_started')).toHaveLength(2);
+  });
+
+  // #437: every reload of a seated live room is a fresh page with a fresh
+  // tracker whose first render is `playing`; each one counted as a start.
+  it('fires once per live game across page reloads and reconnects', () => {
+    const live = { ...base, time_class: 'blitz', rated: true };
+    createGameLifecycleTracker().update({ statusType: 'playing', baseProps: live });
+    // Reload: a fresh page, a fresh tracker, the same game.
+    createGameLifecycleTracker().update({ statusType: 'playing', baseProps: live });
+    // Same page re-initialised (initRender resets the tracker).
+    const t = createGameLifecycleTracker();
+    t.update({ statusType: 'playing', baseProps: live });
+    t.reset();
+    t.update({ statusType: 'playing', baseProps: live });
+    expect(named('game_started')).toHaveLength(1);
+    // Properties unchanged, so the dashboard series stays comparable.
+    expect(named('game_started')[0][1]).toMatchObject({ ...live, entry_source: 'none' });
+    // The next game (a rematch is a new room and a new id) still counts.
+    createGameLifecycleTracker().update({
+      statusType: 'playing',
+      baseProps: { ...live, gameId: 'g2' },
+    });
+    expect(named('game_started')).toHaveLength(2);
+  });
+
+  it('still dedupes within the page when storage is blocked', () => {
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      get() {
+        throw new Error('blocked');
+      },
+    });
+    createGameLifecycleTracker().update({ statusType: 'playing', baseProps: base });
+    createGameLifecycleTracker().update({ statusType: 'playing', baseProps: base });
+    expect(named('game_started')).toHaveLength(1);
   });
 
   it('keeps separate trackers from bleeding transitions into each other', () => {
@@ -119,6 +166,95 @@ describe('createGameLifecycleTracker', () => {
     // Both fire independently; one tracker reaching 'playing' must not suppress
     // the other's game_started.
     expect(named('game_started')).toHaveLength(2);
+  });
+});
+
+describe('analyticsTimeClass', () => {
+  it('reports a days-per-move control as correspondence, not the classical its ms fall in', () => {
+    // 1 day = 86,400,000 ms with no increment; the pace formula says classical.
+    expect(classifyTimeControl(86_400_000, 0)).toBe('classical');
+    expect(analyticsTimeClass({ initialMs: 86_400_000, incrementMs: 0, daysPerMove: 1 })).toBe(
+      'correspondence',
+    );
+  });
+
+  it('trusts the room mode when the clock carries no daysPerMove (chess stack)', () => {
+    expect(
+      analyticsTimeClass({ initialMs: 86_400_000, incrementMs: 0 }, { correspondence: true }),
+    ).toBe('correspondence');
+  });
+
+  it('keeps the live classes and null for a room with no clock', () => {
+    expect(analyticsTimeClass({ initialMs: 5 * 60_000, incrementMs: 5_000 })).toBe('rapid');
+    expect(analyticsTimeClass(null)).toBeNull();
+  });
+});
+
+describe('correspondence game_started', () => {
+  const capture = vi.fn();
+  const started = () =>
+    (capture.mock.calls as Array<[string, Record<string, unknown>]>).filter(
+      ([name]) => name === 'game_started',
+    );
+  const corr = { gameId: 'jq_1', game_spec: 'jieqi', time_class: 'correspondence' };
+
+  beforeEach(() => {
+    capture.mockReset();
+    Object.defineProperty(window, 'localStorage', { configurable: true, value: memoryStorage() });
+    sessionStorage.clear();
+    resetTrackedGameStartsForTests();
+    setPostHogInstance({ capture, identify: vi.fn(), reset: vi.fn() });
+  });
+
+  it('fires once per game across page loads, not on every daily visit', () => {
+    createGameLifecycleTracker().update({ statusType: 'playing', baseProps: corr });
+    // The next day's visit is a fresh page with a fresh tracker.
+    createGameLifecycleTracker().update({ statusType: 'playing', baseProps: corr });
+    expect(started()).toHaveLength(1);
+    createGameLifecycleTracker().update({
+      statusType: 'playing',
+      baseProps: { ...corr, gameId: 'jq_2' },
+    });
+    expect(started()).toHaveLength(2);
+  });
+
+  it('labels the accepter from the session source and the poster from the long-lived one', () => {
+    rememberGameStartSource('home-correspondence');
+    createGameLifecycleTracker().update({ statusType: 'playing', baseProps: corr });
+    expect(started()[0]?.[1].entry_source).toBe('home-correspondence');
+
+    // The poster: no session source (they came from an email days later).
+    rememberCorrespondenceStartSource('home-correspondence', 'jieqi');
+    createGameLifecycleTracker().update({
+      statusType: 'playing',
+      baseProps: { ...corr, gameId: 'jq_3' },
+    });
+    expect(started()[1]?.[1].entry_source).toBe('home-correspondence');
+    // Consumed: a later correspondence game is unlabeled.
+    createGameLifecycleTracker().update({
+      statusType: 'playing',
+      baseProps: { ...corr, gameId: 'jq_4' },
+    });
+    expect(started()[2]?.[1].entry_source).toBe('none');
+  });
+
+  it('does not hand the long-lived source to another variant or to a live game', () => {
+    rememberCorrespondenceStartSource('home-correspondence', 'jieqi');
+    createGameLifecycleTracker().update({
+      statusType: 'playing',
+      baseProps: { ...corr, gameId: 'xq_1', game_spec: 'xiangqi' },
+    });
+    createGameLifecycleTracker().update({
+      statusType: 'playing',
+      baseProps: { gameId: 'live_1', game_spec: 'jieqi', time_class: 'blitz' },
+    });
+    expect(started().map(([, props]) => props.entry_source)).toEqual(['none', 'none']);
+    // A reload of the live game is not another start (#437).
+    createGameLifecycleTracker().update({
+      statusType: 'playing',
+      baseProps: { gameId: 'live_1', game_spec: 'jieqi', time_class: 'blitz' },
+    });
+    expect(started()).toHaveLength(2);
   });
 });
 
@@ -204,3 +340,70 @@ describe('puzzleAttemptedProps', () => {
     });
   });
 });
+
+describe('internal browser tag', () => {
+  beforeEach(() => {
+    // happy-dom here has no Storage; stub a fresh one per test (as account-nav.test does).
+    const store = new Map<string, string>();
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: {
+        getItem: (k: string) => store.get(k) ?? null,
+        setItem: (k: string, v: string) => void store.set(k, v),
+        removeItem: (k: string) => void store.delete(k),
+      },
+    });
+  });
+
+  it('tags nothing for an ordinary browser', () => {
+    const register = vi.fn();
+    applyInternalTag({ register });
+    expect(isInternalBrowser()).toBe(false);
+    expect(register).not.toHaveBeenCalled();
+  });
+
+  it('marks the browser and registers is_internal on the live instance', () => {
+    const register = vi.fn();
+    const setPersonProperties = vi.fn();
+    setPostHogInstance({
+      capture: vi.fn(),
+      identify: vi.fn(),
+      reset: vi.fn(),
+      register,
+      setPersonProperties,
+    });
+    markInternalBrowser();
+    expect(isInternalBrowser()).toBe(true);
+    expect(register).toHaveBeenCalledWith({ is_internal: true });
+    expect(setPersonProperties).toHaveBeenCalledWith({ $internal_or_test_user: true });
+  });
+
+  it('re-tags after sign-out, because posthog.reset() clears super properties', () => {
+    const calls: string[] = [];
+    const register = vi.fn(() => calls.push('register'));
+    const reset = vi.fn(() => calls.push('reset'));
+    setPostHogInstance({ capture: vi.fn(), identify: vi.fn(), reset, register });
+    markInternalBrowser();
+    calls.length = 0;
+    resetIdentity();
+    expect(calls).toEqual(['reset', 'register']);
+  });
+});
+
+function memoryStorage(): Storage {
+  const values = new Map<string, string>();
+  return {
+    get length() {
+      return values.size;
+    },
+    clear: () => values.clear(),
+    getItem: (key) => values.get(key) ?? null,
+    key: (index) => [...values.keys()][index] ?? null,
+    removeItem: (key) => {
+      values.delete(key);
+    },
+    setItem: (key, value) => {
+      values.set(key, String(value));
+    },
+  };
+}

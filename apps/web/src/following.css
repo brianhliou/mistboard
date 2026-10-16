@@ -11,6 +11,33 @@
   margin-bottom: 1rem;
 }
 
+/* Following | Followers: two plain links, the current one underlined. */
+.following-tabs {
+  display: flex;
+  gap: 1.25rem;
+  margin: 0.5rem 0 0.25rem;
+  border-bottom: 1px solid var(--site-border);
+}
+
+.following-tab {
+  color: var(--site-muted);
+  text-decoration: none;
+  font-size: 0.9rem;
+  padding: 0.35rem 0;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+}
+
+.following-tab:hover {
+  color: var(--site-text);
+}
+
+.following-tab[aria-current="page"] {
+  color: var(--site-text);
+  font-weight: 600;
+  border-bottom-color: var(--site-accent, var(--site-text));
+}
+
 .following-sub {
   margin: 0.25rem 0 0;
   color: var(--site-muted);
@@ -46,7 +73,8 @@
   text-decoration: none;
 }
 
-.following-player-link:hover {
+/* A follower with an unlinkable profile renders as a span: no hover cue. */
+a.following-player-link:hover {
   text-decoration: underline;
 }
 
@@ -56,7 +84,8 @@
   white-space: nowrap;
 }
 
-.following-last-seen {
+.following-last-seen,
+.follower-since {
   color: var(--site-muted);
   white-space: nowrap;
 }

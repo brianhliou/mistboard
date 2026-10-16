@@ -3,13 +3,15 @@ import {
   ATOMIC_XIANGQI_SPEC_ID,
   BANQI_SPEC_ID,
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+  CRAZYHOUSE_XIANGQI_SPEC_ID,
   canonicalVariantOrderIndex,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
-  engineTimeControlPin,
+  defaultEngineTimeControl,
   FORTRESS_XIANGQI_SPEC_ID,
   gameSpecForId,
+  isAllowedEngineTimeControl,
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
@@ -18,13 +20,24 @@ import {
   TIME_CONTROLS,
   type TimeClass,
   type TimeControlId,
+  XIANGQI_MAHJONG_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
-import { classifyTimeControl, gameSpecAnalyticsPropsForId, track } from './analytics.js';
-import { bindBotPlayControl } from './bot-play.js';
+import {
+  classifyTimeControl,
+  gameSpecAnalyticsPropsForId,
+  track,
+  trackCorrespondenceSeekPosted,
+} from './analytics.js';
+import { loginHrefForCurrentPage } from './auth-redirect.js';
+import { type BotPlayRequest, bindBotPlayControl, createBotGame } from './bot-play.js';
+import { correspondenceRatedAvailable } from './correspondence-model.js';
 import { correspondenceEnabled } from './feature-flags.js';
-import { type I18nKey, t } from './i18n/catalog.js';
+import { variantNameKeyForSpecId } from './game-display.js';
+import { type GameStartSource, rememberGameStartSource } from './game-start-source.js';
+import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
+import { jungleDobutsuPieceHref } from './jungle-art.js';
 import {
   LANDING_BOT_GAME_SPEC_IDS,
   landingBotLineup,
@@ -32,9 +45,14 @@ import {
   landingBotRotationBucket,
   landingLobbyBotOffer,
   landingXiangqiBotOffers,
+  pveEngineIdForRememberedPick,
 } from './landing-bot-policy.js';
+import { registerLobbySeek, withdrawLobbySeeks } from './lobby-seek-registry.js';
+import { playerNameEl, profileTargetFor } from './profile-link.js';
 import { rememberedPveEngine } from './pve-memory.js';
-import { isRatedModeEnabled } from './rated-flag.js';
+import { isCorrespondenceRatedModeEnabled, isRatedModeEnabled } from './rated-flag.js';
+import { postThroughRestart } from './room-create-retry.js';
+import { buildSeekAcceptAction } from './seek-accept.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildUiIcon, type UiIconName } from './ui-icon.js';
 import { renderVariantMarker } from './variant-markers.js';
@@ -59,7 +77,7 @@ export type PlayableEngine = {
 // the dialog's own mode switcher. Absent means an internal reopen.
 type LandingSetupSource = 'hero' | 'deep-link' | 'correspondence' | 'mode-switch';
 
-type LandingPlayChoice = {
+export type LandingPlayChoice = {
   engineId?: string;
   engines?: PlayableEngine[];
   initialGameSpecId?: LandingGameSpecId;
@@ -75,9 +93,24 @@ type LandingPlayChoice = {
   // instead of real time. The Correspondence tab's own CTA uses it so the dialog
   // it opens matches the tab the player clicked from.
   initialTimeMode?: 'realtime' | 'correspondence';
+  /** Preselects this days-per-move chip when opening on correspondence. */
+  initialCorrespondenceDays?: number;
+  /** Opens on Rated (true) or Casual (false) instead of the stored pick. The panel's
+   *  Rated mode passes it for a correspondence seek; a bot dialog's Rated click passes
+   *  true when it switches the player to Find opponent. */
+  initialRated?: boolean;
+  /** A one-line note shown at the top of the dialog (why it switched mode). */
+  notice?: string;
+  /**
+   * Opens on this side instead of the stored pick. The postgame "Challenge a
+   * friend" link passes 'random' (`&side=random`): a friend game started from a
+   * finished room should start on the coin flip, not on whichever side the
+   * player last chose in the friend dialog.
+   */
+  initialColor?: LandingColorPreference;
 };
-type LandingPlayMode = 'lobby' | 'pvp' | 'pve';
-type LandingGameSpecId =
+export type LandingPlayMode = 'lobby' | 'pvp' | 'pve';
+export type LandingGameSpecId =
   | typeof DARK_CHESS_SPEC_ID
   | typeof DARK_XIANGQI_SPEC_ID
   | typeof JIEQI_SPEC_ID
@@ -88,7 +121,9 @@ type LandingGameSpecId =
   | typeof XIANGQI_SPEC_ID
   | typeof DUCK_XIANGQI_SPEC_ID
   | typeof ATOMIC_XIANGQI_SPEC_ID
-  | typeof MAHJONG_SPEC_ID;
+  | typeof CRAZYHOUSE_XIANGQI_SPEC_ID
+  | typeof MAHJONG_SPEC_ID
+  | typeof XIANGQI_MAHJONG_SPEC_ID;
 type LandingTimePresetId = TimeControlId;
 type LandingTimePreset = {
   id: LandingTimePresetId;
@@ -139,7 +174,7 @@ type LobbyTicketResponse = {
   ticketId?: string;
   url?: string;
 };
-type OpenLobbyRequest = {
+export type OpenLobbyRequest = {
   gameSpecId?: string;
   rated?: boolean;
   timeControl: {
@@ -153,7 +188,7 @@ type RoomCreationFailure = {
 };
 
 const ENGINE_SEAT_RETRY_MS = 3_000;
-const LANDING_TIME_PRESETS: LandingTimePreset[] = TIME_CONTROLS.map((tc) => ({
+export const LANDING_TIME_PRESETS: LandingTimePreset[] = TIME_CONTROLS.map((tc) => ({
   id: tc.id,
   label: tc.label,
   initialMs: tc.initialMs,
@@ -161,12 +196,27 @@ const LANDING_TIME_PRESETS: LandingTimePreset[] = TIME_CONTROLS.map((tc) => ({
   timeClass: tc.timeClass,
 }));
 
-// The engine-pace pin for a variant, from the shared policy in @mistboard/game
-// (engineTimeControlPin) that the create route also rejects against. Fog Chess
-// PvE is pinned to 5+5 because Misty's per-move floor outruns a 2s increment
-// and it loses on time in long games (#283); see that policy for the detail.
-function pveTimePresetPin(gameSpecId: LandingGameSpecId): LandingTimePresetId | null {
-  return engineTimeControlPin(gameSpecId)?.id ?? null;
+// Whether this variant's bot can play at this pace, from the shared policy in
+// @mistboard/game (isAllowedEngineTimeControl) that the create route also
+// rejects against. The fog bots need a 5s increment or more because their
+// per-move floor outruns a 2s increment and they lose on time in long games
+// (#283); see that policy for the detail.
+function engineCanPlayPreset(gameSpecId: LandingGameSpecId, id: LandingTimePresetId): boolean {
+  const preset = LANDING_TIME_PRESETS.find((candidate) => candidate.id === id);
+  return preset !== undefined && isAllowedEngineTimeControl(gameSpecId, preset);
+}
+
+// The pace the picker preselects when the player has no stored choice: bot
+// games start at the shared bot default (10+5 everywhere), human games at the
+// variant's own default. The server resolves an omitted bot pace to the same
+// defaultEngineTimeControl, so the two cannot disagree.
+function defaultPresetForMode(
+  gameSpecId: LandingGameSpecId,
+  mode: LandingPlayMode,
+): LandingTimePresetId {
+  return mode === 'pve'
+    ? defaultEngineTimeControl(gameSpecId).id
+    : defaultTimePresetForSpec(gameSpecId);
 }
 
 // Lichess pairs every quick-pairing pool with its speed category (Bullet / Blitz /
@@ -176,20 +226,23 @@ function pveTimePresetPin(gameSpecId: LandingGameSpecId): LandingTimePresetId | 
 // three official live controls. Both the engine pin above and `rated` NARROW
 // that set rather than replacing it, so a variant that does not offer a pace
 // casually never offers it rated or against a bot either.
-function allowedTimePresetIds(
+export function allowedTimePresetIds(
   gameSpecId: LandingGameSpecId,
   rated: boolean,
   mode: LandingPlayMode,
 ): ReadonlySet<LandingTimePresetId> {
   const tenantLanding = webVariantTenantForSpecId(gameSpecId)?.landing;
-  // The no-tenant-config fallback is fog chess. Its PvE is
-  // pinned to 5+5 (#283) and the pin narrows this set below, so the 10+5 rung
-  // here only ever reaches their human games.
+  // The no-tenant-config fallback is fog chess. Its PvE needs a 5s increment
+  // (#283), which narrows this set below to 5+5 and 10+5 for bot games.
   const offered = tenantLanding
     ? new Set<LandingTimePresetId>(tenantLanding.timePresetIds)
     : new Set<LandingTimePresetId>(['1m1', '3m2', '5m5', '10m5']);
-  const pin = mode === 'pve' ? pveTimePresetPin(gameSpecId) : null;
-  const paced = pin && offered.has(pin) ? new Set<LandingTimePresetId>([pin]) : offered;
+  const paced =
+    mode === 'pve'
+      ? new Set<LandingTimePresetId>(
+          [...offered].filter((id) => engineCanPlayPreset(gameSpecId, id)),
+        )
+      : offered;
   if (!rated) return paced;
   // Same source as the server's rated allowlist: the `rated` flag on each
   // time-control spec (@mistboard/game), so the two cannot drift.
@@ -198,7 +251,7 @@ function allowedTimePresetIds(
 }
 // Dark chess is always offered. Integrated tenant variants join the normal play
 // entry points through their registry landing config.
-function enabledLandingVariantGameSpecs(
+export function enabledLandingVariantGameSpecs(
   _mode: LandingPlayMode,
   locale: Locale,
 ): { gameSpecId: LandingGameSpecId; label: string }[] {
@@ -222,36 +275,12 @@ function enabledLandingVariantGameSpecs(
   return specs;
 }
 
-function variantLabelForGameSpec(gameSpecId: LandingGameSpecId, locale: Locale): string {
-  const key = variantNameKeyForGameSpec(gameSpecId);
+export function variantLabelForGameSpec(gameSpecId: LandingGameSpecId, locale: Locale): string {
+  // The catalog's exhaustive name table, not a local switch: the switch that
+  // lived here had no duck case, so duck fell back to English in every locale
+  // while its zh strings sat unused (aa91538e).
+  const key = variantNameKeyForSpecId(gameSpecId);
   return key ? t(key, {}, locale) : gameSpecForId(gameSpecId).publicName;
-}
-
-function variantNameKeyForGameSpec(gameSpecId: LandingGameSpecId): I18nKey | null {
-  switch (gameSpecId) {
-    case DARK_CHESS_SPEC_ID:
-      return 'variant.darkChess.name';
-    case DARK_XIANGQI_SPEC_ID:
-      return 'variant.darkXiangqi.name';
-    case JIEQI_SPEC_ID:
-      return 'variant.jieqi.name';
-    case BANQI_SPEC_ID:
-      return 'variant.banqi.name';
-    case JUNGLE_SPEC_ID:
-      return 'variant.jungle.name';
-    case JUNGLE_FLIP_SPEC_ID:
-      return 'variant.jungleFlip.name';
-    case FORTRESS_XIANGQI_SPEC_ID:
-      return 'variant.fortressXiangqi.name';
-    case DUCK_XIANGQI_SPEC_ID:
-      return 'variant.duckXiangqi.name';
-    case ATOMIC_XIANGQI_SPEC_ID:
-      return 'variant.atomicXiangqi.name';
-    case XIANGQI_SPEC_ID:
-      return 'variant.xiangqi.name';
-    default:
-      return null;
-  }
 }
 
 function parseLandingGameSpecId(value: string): LandingGameSpecId {
@@ -639,6 +668,7 @@ function engineSeedRow(seed: LandingEngineSeed, locale: Locale): HTMLElement {
       preferredColor: 'random',
     }),
     {
+      source: 'lobby-bot',
       onStateChange: (state) => {
         if (state === 'pending') mode.textContent = t('lobby.botStarting', {}, locale);
         else if (state === 'error') mode.textContent = t('lobby.botStartFailed', {}, locale);
@@ -710,7 +740,7 @@ const QUICK_PAIR_COLUMN_IDS: TimeControlId[] = ['1m1', '3m2', '5m5'];
 // variant gets a pool row and the grid fills the card instead of trailing off
 // into dead space; the cap only bites in the lab profile, where the parked
 // variants would otherwise stretch the panel well past the tabs beside it.
-const QUICK_PAIR_ROW_COUNT = 10;
+const QUICK_PAIR_ROW_COUNT = 11;
 
 // One pool = one variant at one clock, the granularity a chip pairs at. Shared
 // by the chip index and the open-seek counter so the two can only agree.
@@ -859,6 +889,8 @@ function buildQuickPairPools(locale: Locale): QuickPairPools {
           },
           status,
           locale,
+          undefined,
+          { startSource: 'quick-pair' },
         );
       });
       row.append(chip);
@@ -867,13 +899,14 @@ function buildQuickPairPools(locale: Locale): QuickPairPools {
     const botOffer = landingVariantSupportsPve(gameSpecId)
       ? landingBotOffer(gameSpecId, {
           rememberedXiangqiBotId: rememberedPveEngine(XIANGQI_SPEC_ID),
+          rememberedJieqiBotId: rememberedPveEngine(JIEQI_SPEC_ID),
         })
       : null;
     if (botOffer) {
       // The shared bot policy names the pace; retain the first-offered fallback
       // so a future variant with narrower clocks cannot render a dead control.
-      // Resolved against the PvE set, not the human-pool one above, so a pinned
-      // engine pace (pveTimePresetPin) cannot be widened back here.
+      // Resolved against the PvE set, not the human-pool one above, so a pace
+      // the engine cannot play (engineCanPlayPreset) cannot be widened back here.
       //
       // Looked up in LANDING_TIME_PRESETS, NOT in `columns`: the bot chip is
       // appended after the grid rather than being one of its cells, so it is
@@ -913,6 +946,7 @@ function buildQuickPairPools(locale: Locale): QuickPairPools {
         {
           pendingLabel: t('lobby.botStarting', {}, locale),
           errorLabel: t('lobby.botStartFailed', {}, locale),
+          source: 'quick-pair',
         },
       );
       row.append(botChip);
@@ -1281,8 +1315,8 @@ function correspondenceCreateButton(locale: Locale): HTMLButtonElement {
       initialGameSpecId: defaultCorrespondenceGameSpecId(locale),
       initialTimeMode: 'correspondence',
       source: 'correspondence',
-      // Correspondence is casual-only, so the rated toggle never applies here.
-      ratedDisabled: true,
+      // Opens casual; Rated is offered where correspondence can be rated
+      // (correspondenceRatedAvailable), since 2026-10-02.
     });
   });
   return create;
@@ -1368,6 +1402,7 @@ function lobbyTableRow(request: OpenLobbyRequest, locale: Locale): HTMLElement {
     // the seek was taken in the refresh window, so fail fast instead of
     // queueing invisibly.
     joinLobbyFromPlay(join, setup, status, locale, undefined, {
+      startSource: 'lobby-seek',
       onNoInstantMatch: () => {
         modeLabel.textContent = t('play.offerTaken', {}, locale);
         window.setTimeout(() => {
@@ -1382,22 +1417,26 @@ function lobbyTableRow(request: OpenLobbyRequest, locale: Locale): HTMLElement {
   return row;
 }
 
-type LobbyCorrespondenceSeek = {
+export type LobbyCorrespondenceSeek = {
   id: string;
   gameSpecId: string;
   daysPerMove: number;
   creatorName: string | null;
+  // Profile handle, sent only for an open, non-private account; absent/null
+  // means the name renders as plain text (profile-link.ts, fail-closed).
+  creatorHandle?: string | null;
   isMine: boolean;
+  rated?: boolean;
 };
 
 // What the tab knows after one poll. `disabled` is the server's own answer
 // (404 correspondence_disabled), kept distinct from "no seeks" and from a
 // transient network failure so only the first one hides the CTA.
-type LobbyCorrespondenceFeed =
+export type LobbyCorrespondenceFeed =
   | { status: 'ok'; seeks: LobbyCorrespondenceSeek[] }
   | { status: 'disabled' };
 
-async function fetchCorrespondenceSeeks(): Promise<LobbyCorrespondenceFeed> {
+export async function fetchCorrespondenceSeeks(): Promise<LobbyCorrespondenceFeed> {
   const response = await fetch('/api/correspondence/seeks').catch(() => null);
   if (!response) return { status: 'ok', seeks: [] };
   if (response.status === 404) {
@@ -1410,31 +1449,45 @@ async function fetchCorrespondenceSeeks(): Promise<LobbyCorrespondenceFeed> {
   return { status: 'ok', seeks: Array.isArray(data.seeks) ? data.seeks : [] };
 }
 
-function corrSeekRow(seek: LobbyCorrespondenceSeek, locale: Locale): HTMLElement {
+export function corrSeekRow(
+  seek: LobbyCorrespondenceSeek,
+  locale: Locale,
+  options: { signedIn?: boolean } = {},
+): HTMLElement {
   // Correspondence seeks carry a creator name and no rating, so they keep their
   // own four-column grammar (player / game / pace / action) rather than the
   // real-time table's five.
   const row = document.createElement('div');
   row.className = 'landing-lobby-trow landing-lobby-trow-corr';
-  const who = document.createElement('span');
-  who.className = 'landing-lobby-td landing-lobby-td-game';
-  who.textContent = seek.creatorName ?? t('lobby.anonymous', {}, locale);
+  const who = playerNameEl(
+    seek.creatorName ?? t('lobby.anonymous', {}, locale),
+    profileTargetFor({ handle: seek.creatorHandle }),
+    'landing-lobby-td landing-lobby-td-game',
+  );
   const game = document.createElement('span');
   game.className = 'landing-lobby-td';
   game.textContent = variantLabelForGameSpec(parseLandingGameSpecId(seek.gameSpecId), locale);
   const time = document.createElement('span');
   time.className = 'landing-lobby-td';
-  time.textContent = t('lobby.daysPerMove', { days: seek.daysPerMove }, locale);
+  const pace = t('lobby.daysPerMove', { days: seek.daysPerMove }, locale);
+  // Rated reads on the pace cell, the way the live rows pair pace and mode.
+  time.textContent = seek.rated === true ? `${pace} · ${t('play.rated', {}, locale)}` : pace;
   if (seek.isMine) {
     const mine = document.createElement('span');
     mine.className = 'landing-lobby-join is-mine';
     mine.textContent = t('lobby.yours', {}, locale);
     row.append(who, game, time, mine);
   } else {
-    const join = document.createElement('a');
-    join.className = 'landing-lobby-join';
-    join.href = `/challenge/${encodeURIComponent(seek.id)}`;
-    join.textContent = t('play.join', {}, locale);
+    // Join accepts in place and lands in the room (seek-accept.ts); signed out
+    // it signs in and comes back to the seek's /challenge page.
+    const join = buildSeekAcceptAction({
+      className: 'landing-lobby-join',
+      label: t('play.join', {}, locale),
+      locale,
+      seek,
+      signedIn: options.signedIn,
+      surface: 'home-lobby',
+    });
     row.append(who, game, time, join);
   }
   return row;
@@ -1497,7 +1550,7 @@ function lobbyRequestRow(request: OpenLobbyRequest, locale: Locale = currentLoca
   return row;
 }
 
-async function fetchOpenLobbyRequests(): Promise<OpenLobbyRequest[]> {
+export async function fetchOpenLobbyRequests(): Promise<OpenLobbyRequest[]> {
   const response = await fetch('/api/lobby');
   if (!response.ok) throw new Error(`lobby requests failed: ${response.status}`);
   const data = (await response.json()) as { requests?: OpenLobbyRequest[] };
@@ -1546,7 +1599,8 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
         ratedDisabled: !isRatedModeEnabled() || !isLikelySignedIn(),
       });
       break;
-    case 'friend':
+    case 'friend': {
+      const side = normalizeStoredColorPreference(params.get('side'));
       openLandingSetupDialog({
         engineId: defaultEngineId,
         engines: availableEngines,
@@ -1558,9 +1612,12 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
         source: 'deep-link',
         mode: 'pvp',
         modeSwitcher: true,
-        ratedDisabled: true,
+        // Friend games rate like Find opponent (lichess-style challenges).
+        ratedDisabled: !isRatedModeEnabled() || !isLikelySignedIn(),
+        ...(side ? { initialColor: side } : {}),
       });
       break;
+    }
     case 'engine':
     case 'computer':
       openLandingSetupDialog({
@@ -1583,6 +1640,7 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
   params.delete('play');
   params.delete('gameSpecId');
   params.delete('variant');
+  params.delete('side');
   const query = params.toString();
   const url = `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`;
   window.history.replaceState(null, '', url);
@@ -1593,8 +1651,13 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
 // instead of offering a dead "Play the engine" that silently falls back to a
 // PvP room. The rule itself lives in variant-public-surfaces so that the rules
 // pages, which link straight into this dialog, cannot answer it differently.
-const landingVariantSupportsPve = (gameSpecId: LandingGameSpecId): boolean =>
+export const landingVariantSupportsPve = (gameSpecId: LandingGameSpecId): boolean =>
   variantSupportsPve(gameSpecId);
+
+/** Whether a lobby seek for this variant may be rated (its tenant capability;
+ *  the server's lobby.supportsRated agrees, variant-registry-sync.test.ts). */
+export const landingVariantSupportsRated = (gameSpecId: LandingGameSpecId): boolean =>
+  landingGameSpecCapabilities(gameSpecId).supportsRated;
 
 /** Which variant a first-time player lands on. Xiangqi is the flagship (the
  *  same one bare `/analysis` opens), so the dialog opens there rather than on
@@ -1613,18 +1676,21 @@ function defaultLandingGameSpecId(
   return first?.gameSpecId ?? DARK_CHESS_SPEC_ID;
 }
 
-function openLandingSetupDialog(choice: LandingPlayChoice): void {
+export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   const locale = choice.locale ?? currentLocale();
   const existing = document.querySelector('.landing-setup-overlay');
   existing?.remove();
 
   const storedPreference = loadSetupPreference(choice.mode);
   const wantsCorrespondence = choice.initialTimeMode === 'correspondence';
-  // Correspondence is casual-only, so opening on that segment implies casual.
+  // Opening on the correspondence segment starts casual; Rated stays one click away
+  // where the variant can be rated by correspondence.
   let rated =
-    choice.mode === 'pve' || choice.ratedDisabled || wantsCorrespondence
+    choice.mode === 'pve' || choice.ratedDisabled
       ? false
-      : (storedPreference.rated ?? true);
+      : wantsCorrespondence
+        ? choice.initialRated === true
+        : (choice.initialRated ?? storedPreference.rated ?? true);
   const publicVariantOptions = enabledLandingVariantGameSpecs(choice.mode, locale);
   const softLinkedHiddenVariant =
     choice.initialGameSpecId &&
@@ -1661,9 +1727,9 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
     ...gameSpecAnalyticsPropsForId(selectedGameSpecId),
   });
   // A stored preference is the player's own choice and always wins; otherwise
-  // the variant's own default, then the house default.
+  // the bot default for a bot game, or the variant's own default for a human one.
   let selectedPreset: LandingTimePresetId =
-    storedPreference.timePresetId ?? defaultTimePresetForSpec(selectedGameSpecId);
+    storedPreference.timePresetId ?? defaultPresetForMode(selectedGameSpecId, choice.mode);
   // Whether selectedPreset is a CHOICE or merely the variant's default. Every
   // variant offers 10+5, so switching variants no longer narrows the preset out
   // of the allowed set — without this flag, xiangqi's 10+5 default would follow
@@ -1675,7 +1741,7 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
   // over from the real-time preset above. Only offered for Challenge-a-friend
   // and Find opponent on casual dark chess.
   let selectedCorrespondenceDays: number | null = wantsCorrespondence
-    ? DEFAULT_CORRESPONDENCE_DAYS
+    ? (choice.initialCorrespondenceDays ?? DEFAULT_CORRESPONDENCE_DAYS)
     : null;
   // Which side of the time-control segmented toggle is active. Drives whether the
   // real-time presets or the correspondence day-chips show; only ever flips to
@@ -1702,7 +1768,8 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
   // the colors are variant-declared: xiangqi storing 'red' would coerce to the
   // SECOND seat in a variant whose first mover is black. A stored preference or
   // the legacy global key counts as a past explicit choice.
-  const storedColor = storedPreference.preferredColor ?? loadStoredColorPreference();
+  const storedColor =
+    choice.initialColor ?? storedPreference.preferredColor ?? loadStoredColorPreference();
   let colorIsExplicit = storedColor !== undefined;
   let preferredColor: LandingColorPreference =
     storedColor ?? defaultColorPreference(choice.mode, selectedGameSpecId);
@@ -1938,11 +2005,20 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
   // This used to hard-code dark chess, which silently drifted when xiangqi
   // joined the list on 2026-07-04: the Correspondence tab's own "Create a game"
   // opened on a non-eligible variant and offered nothing but real-time clocks.
+  // Rated correspondence (2026-10-02) is an open seek only (Find opponent): a rated
+  // pick keeps the segment only where correspondence can be rated, and Challenge a
+  // friend's direct room stays casual.
+  const correspondenceRatedOffered = () =>
+    choice.mode === 'lobby' &&
+    correspondenceRatedAvailable(selectedGameSpecId, isCorrespondenceRatedModeEnabled());
   const correspondenceAvailable = () =>
     (choice.mode === 'pvp' || choice.mode === 'lobby') &&
     (CORRESPONDENCE_ELIGIBLE_SPEC_IDS as readonly string[]).includes(selectedGameSpecId) &&
-    !rated &&
+    (!rated || correspondenceRatedOffered()) &&
     correspondenceEnabled();
+  // Assigned once the rated toggle exists (it is built after the time section), so a
+  // time-mode switch re-scopes Rated for the segment it lands on.
+  let syncRatedToggle: () => void = () => undefined;
 
   // Re-scope the picker to the current variant/rated/mode. Hides the segmented
   // toggle (and forces real time) when correspondence isn't offered; shows exactly
@@ -1967,13 +2043,13 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
 
     const allowed = allowedTimePresetIds(selectedGameSpecId, rated, choice.mode);
     // An untouched preset follows the selected variant; a chosen one sticks.
-    if (!presetIsExplicit) selectedPreset = defaultTimePresetForSpec(selectedGameSpecId);
-    // Fall back INSIDE the allowed set: the variant's default is the first
-    // choice, but a pinned engine pace or the rated allowlist can exclude it,
+    if (!presetIsExplicit) selectedPreset = defaultPresetForMode(selectedGameSpecId, choice.mode);
+    // Fall back INSIDE the allowed set: the default is the first choice, but
+    // an engine's increment floor or the rated allowlist can exclude it,
     // and selecting a hidden preset would start a game at a pace the picker
     // refuses to show.
     if (!allowed.has(selectedPreset)) {
-      const preferred = defaultTimePresetForSpec(selectedGameSpecId);
+      const preferred = defaultPresetForMode(selectedGameSpecId, choice.mode);
       selectedPreset =
         allowed.has(preferred) || allowed.size === 0
           ? preferred
@@ -1991,6 +2067,7 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
       button.classList.toggle('selected', selected);
       button.setAttribute('aria-checked', selected ? 'true' : 'false');
     }
+    syncRatedToggle();
     syncSetupAccordion();
   };
   syncTimeControls();
@@ -2014,6 +2091,7 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
         ? t('setup.createRoom', {}, locale)
         : t('setup.startGame', {}, locale);
   startButton.addEventListener('click', () => {
+    rememberGameStartSource('setup-dialog');
     if (selectedCorrespondenceDays !== null) {
       // Challenge a friend creates a private invite room; Find opponent posts an
       // open seek to the board (color server-assigned there, like the live pool).
@@ -2022,6 +2100,8 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
           startButton,
           status,
           selectedCorrespondenceDays,
+          selectedGameSpecId,
+          rated && correspondenceRatedOffered(),
           locale,
         );
       } else {
@@ -2063,24 +2143,63 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
   });
   document.addEventListener('keydown', onKeyDown);
 
-  // Keep game type visible in the bot flow too. Bot games are always
-  // casual, so Rated is present but unavailable; human modes retain their
-  // existing launch and sign-in gates.
+  // Keep game type visible in the bot flow too. Bot games are always casual,
+  // but Rated stays clickable there: it switches the player to Find opponent
+  // with Rated on (or to sign-in for a guest), since rated games are against
+  // people. Friend games rate like Find opponent (lichess-style challenges).
+  // Each unavailable case names its own reason.
   const ratingSection = buildRatedToggleSection(
     () => rated,
     (v) => {
       rated = v;
     },
-    () =>
-      choice.mode === 'pve' ||
-      Boolean(choice.ratedDisabled) ||
-      !landingGameSpecCapabilities(selectedGameSpecId).supportsRated,
+    () => {
+      if (choice.mode === 'pve') {
+        if (!isRatedModeEnabled()) return t('setup.ratedComingSoon', {}, locale);
+        return landingGameSpecCapabilities(selectedGameSpecId).supportsRated
+          ? null
+          : t('setup.ratedUnavailable', {}, locale);
+      }
+      if (choice.ratedDisabled) {
+        return isRatedModeEnabled()
+          ? t('setup.ratedSignIn', {}, locale)
+          : t('setup.ratedComingSoon', {}, locale);
+      }
+      if (selectedTimeMode === 'correspondence') {
+        return correspondenceRatedOffered() ? null : t('setup.ratedComingSoon', {}, locale);
+      }
+      return landingGameSpecCapabilities(selectedGameSpecId).supportsRated
+        ? null
+        : t('setup.ratedUnavailable', {}, locale);
+    },
     () => {
       syncTimeControls();
       openNextSetupSection('gameType');
     },
     locale,
+    // Bot games never rate: Rated means a person, so take the player there.
+    choice.mode === 'pve'
+      ? () => {
+          if (!isLikelySignedIn()) {
+            window.location.href = loginHrefForCurrentPage(locale);
+            return;
+          }
+          reopenSetupDialogInMode(choice, 'lobby', selectedGameSpecId, {
+            initialRated: true,
+            notice: t('setup.ratedSwitchedToLobby', {}, locale),
+          });
+        }
+      : undefined,
   );
+  syncRatedToggle = () => {
+    ratingSection.sync();
+    // A correspondence game shows no Casual/Rated choice at all while rated
+    // correspondence is held (server flag off). Inline display: the section's own
+    // `display: grid` would defeat the hidden attribute.
+    const hide = selectedTimeMode === 'correspondence' && !isCorrespondenceRatedModeEnabled();
+    ratingSection.section.style.display = hide ? 'none' : '';
+  };
+  syncRatedToggle();
 
   // Color picker shows for PvE and Challenge-a-friend. Hidden for casual/rated
   // lobby matchmaking — color is server-assigned there so the pool stays unified.
@@ -2278,6 +2397,13 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
   accordion.append(...setupSections.map((section) => section.wrapper));
   actions.append(startButton);
   dialog.append(header);
+  if (choice.notice) {
+    const notice = document.createElement('p');
+    notice.className = 'landing-setup-notice';
+    notice.setAttribute('role', 'status');
+    notice.textContent = choice.notice;
+    dialog.append(notice);
+  }
   dialog.append(accordion);
   dialog.append(status, actions);
   overlay.append(dialog);
@@ -2293,6 +2419,7 @@ function reopenSetupDialogInMode(
   choice: LandingPlayChoice,
   mode: LandingPlayMode,
   gameSpecId: LandingGameSpecId,
+  extra: Pick<LandingPlayChoice, 'initialRated' | 'notice'> = {},
 ): void {
   const locale = choice.locale ?? currentLocale();
   closeActiveLandingDialog();
@@ -2304,12 +2431,9 @@ function reopenSetupDialogInMode(
     mode,
     modeSwitcher: true,
     source: 'mode-switch',
-    ratedDisabled:
-      mode === 'pvp'
-        ? true
-        : mode === 'lobby'
-          ? !isRatedModeEnabled() || !isLikelySignedIn()
-          : undefined,
+    // Friend and Find opponent rate alike; bot games never do.
+    ratedDisabled: mode === 'pve' ? undefined : !isRatedModeEnabled() || !isLikelySignedIn(),
+    ...extra,
   });
 }
 
@@ -2364,7 +2488,9 @@ async function createCorrespondenceFromPlay(
   button.setAttribute('aria-busy', 'true');
   button.textContent = t('setup.creating', {}, locale);
   try {
-    const response = await fetch('/api/rooms', {
+    const withdrawing = withdrawLobbySeeks();
+    if (withdrawing) await withdrawing;
+    const response = await postThroughRestart('/api/rooms', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -2390,7 +2516,7 @@ async function createCorrespondenceFromPlay(
     } else if (failure.error === 'invalid_days_per_move') {
       status.textContent = 'Pick 1, 3, or 7 days per move.';
     } else if (failure.error === 'server_draining') {
-      status.textContent = 'The server is restarting. Try again in a minute.';
+      status.textContent = t('setup.serverRestartTimeout', {}, locale);
     } else {
       status.textContent = 'Correspondence is unavailable right now. Try again later.';
     }
@@ -2417,18 +2543,39 @@ async function postCorrespondenceSeekFromPlay(
   button: HTMLButtonElement,
   status: HTMLElement,
   daysPerMove: number,
+  gameSpecId: string,
+  rated: boolean,
   locale: Locale,
 ): Promise<void> {
   button.disabled = true;
   button.setAttribute('aria-busy', 'true');
   button.textContent = t('setup.posting', {}, locale);
   try {
-    const response = await fetch('/api/correspondence/seeks', {
+    const response = await postThroughRestart('/api/correspondence/seeks', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ daysPerMove, preferredColor: 'random' }),
+      // The picked variant, not the server's dark-chess default: before 2026-10-02 this
+      // body carried no gameSpecId, so a xiangqi seek from the lobby posted Fog Chess.
+      body: JSON.stringify({
+        gameSpecId,
+        daysPerMove,
+        preferredColor: 'random',
+        ...(rated ? { rated: true } : {}),
+      }),
     });
     if (response.ok) {
+      if (response.status === 201) {
+        const posted = (await response
+          .clone()
+          .json()
+          .catch(() => null)) as { seek?: { gameSpecId?: string } } | null;
+        trackCorrespondenceSeekPosted({
+          gameSpecId: posted?.seek?.gameSpecId ?? gameSpecId,
+          daysPerMove,
+          kind: 'public',
+          surface: 'lobby',
+        });
+      }
       if (!status.isConnected) return;
       roomNavigator('/correspondence');
       return;
@@ -2443,7 +2590,7 @@ async function postCorrespondenceSeekFromPlay(
     } else if (failure.error === 'seek_limit_reached') {
       status.textContent = 'You already have the most open games allowed. Cancel one first.';
     } else if (failure.error === 'server_draining') {
-      status.textContent = 'The server is restarting. Try again in a minute.';
+      status.textContent = t('setup.serverRestartTimeout', {}, locale);
     } else {
       status.textContent = 'Correspondence is unavailable right now. Try again later.';
     }
@@ -2494,9 +2641,12 @@ function buildEngineSetupSection(
         ? engines
         : fallbackPlayableEngines();
     choiceCount = availableEngines.length;
+    const remembered = currentEngineId
+      ? pveEngineIdForRememberedPick(gameSpecId, currentEngineId)
+      : undefined;
     const selected =
-      currentEngineId && availableEngines.some((engine) => engine.id === currentEngineId)
-        ? currentEngineId
+      remembered && availableEngines.some((engine) => engine.id === remembered)
+        ? remembered
         : defaultEngineIdForGameSpec(gameSpecId, availableEngines);
     if (selected) onSelect(selected, gameSpecId);
 
@@ -2536,9 +2686,13 @@ function defaultEngineIdForGameSpec(
 function buildRatedToggleSection(
   get: () => boolean,
   set: (v: boolean) => void,
-  isRatedDisabled: () => boolean = () => false,
+  // The disabled Rated label (its reason in parentheses), or null when Rated is selectable.
+  ratedUnavailableLabel: () => string | null = () => null,
   onChange: () => void = () => undefined,
   locale: Locale = currentLocale(),
+  // Takes over a Rated click instead of selecting it (the bot dialog sends the
+  // player to Find opponent or to sign-in).
+  onRatedRedirect?: () => void,
 ): { section: HTMLElement; sync(): void } {
   const section = document.createElement('div');
   section.className = 'landing-setup-section';
@@ -2553,12 +2707,10 @@ function buildRatedToggleSection(
   const casualButton = startOptionButton(t('play.casual', {}, locale), false);
 
   const sync = () => {
-    const ratedDisabled = isRatedDisabled();
+    const unavailableLabel = ratedUnavailableLabel();
+    const ratedDisabled = unavailableLabel !== null;
     const isRated = get();
-    updateStartOptionButtonLabel(
-      ratedButton,
-      ratedDisabled ? t('setup.ratedComingSoon', {}, locale) : t('play.rated', {}, locale),
-    );
+    updateStartOptionButtonLabel(ratedButton, unavailableLabel ?? t('play.rated', {}, locale));
     ratedButton.disabled = ratedDisabled;
     ratedButton.classList.toggle('disabled', ratedDisabled);
     ratedButton.classList.toggle('selected', isRated && !ratedDisabled);
@@ -2567,7 +2719,11 @@ function buildRatedToggleSection(
     casualButton.setAttribute('aria-checked', !isRated || ratedDisabled ? 'true' : 'false');
   };
   ratedButton.addEventListener('click', () => {
-    if (isRatedDisabled()) return;
+    if (ratedUnavailableLabel() !== null) return;
+    if (onRatedRedirect) {
+      onRatedRedirect();
+      return;
+    }
     set(true);
     sync();
     onChange();
@@ -2580,8 +2736,8 @@ function buildRatedToggleSection(
   sync();
   group.append(ratedButton, casualButton);
 
-  // The Rated segment's own "COMING SOON" badge already signals the beta state,
-  // so the explanatory helper paragraph is dropped to keep the dialog compact.
+  // The Rated segment's own badge already says why it is unavailable, so there
+  // is no explanatory helper paragraph; the dialog stays compact.
   section.append(group);
   return { section, sync };
 }
@@ -2875,7 +3031,7 @@ function jungleElephantGlyphNodes(value: LandingColorPreference): Node[] {
   const elephant = (color: 'red' | 'black') => {
     const image = document.createElement('img');
     image.className = `landing-color-piece jungle ${color}`;
-    image.src = `/piece-sets/jungle/dobutsu/${color}-elephant.png`;
+    image.src = jungleDobutsuPieceHref(color, 'elephant');
     image.alt = '';
     return image;
   };
@@ -3031,12 +3187,25 @@ async function createRoomFromPlay(
     status.textContent = mode === 'pve' ? t('setup.checkingEngineSeats', {}, locale) : '';
   }
   try {
+    // Any game this page starts ends the seeks it has open (lobby-seek-registry).
+    const withdrawing = withdrawLobbySeeks();
+    if (withdrawing) await withdrawing;
     while (true) {
-      const response = await fetch('/api/rooms', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(roomCreationRequestBody(mode, setup, engineId)),
-      });
+      const response = await postThroughRestart(
+        '/api/rooms',
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(roomCreationRequestBody(mode, setup, engineId)),
+        },
+        {
+          onRestarting: () => {
+            if (status?.isConnected) status.textContent = t('setup.serverRestarting', {}, locale);
+            setButtonLabel(button, t('setup.waitingForRestart', {}, locale));
+          },
+          isActive: () => !status || status.isConnected,
+        },
+      );
       if (status && !status.isConnected) return;
       if (response.ok) {
         const data = (await response.json()) as { url?: string };
@@ -3076,14 +3245,18 @@ export function roomCreationRequestBody(
   engineId?: string,
 ): Record<string, unknown> {
   const gameSpecId = roomCreationGameSpecId(setup);
+  // One rule for every variant: a friend room is rated exactly where Find
+  // opponent is (the variant's supportsRated capability, which the server's
+  // lobby.supportsRated mirrors); a bot game never is.
+  const rated = mode === 'pvp' && setup.rated && landingVariantSupportsRated(setup.gameSpecId);
   if (setup.gameSpecId === JUNGLE_SPEC_ID) {
-    // Jungle is perfect-info red/black Dou Shou Qi; PvP + in-process PvE bot,
-    // casual-only. PvE sends the picked Misty Jungle engine id.
+    // Jungle is perfect-info red/black Dou Shou Qi; PvP + in-process PvE bot.
+    // PvE sends the picked Misty Jungle engine id.
     return {
       mode,
       gameSpecId,
       timeControl: setup.timeControl,
-      rated: false,
+      rated,
       preferredColor:
         setup.preferredColor === 'white'
           ? 'red'
@@ -3095,13 +3268,13 @@ export function roomCreationRequestBody(
   }
   if (setup.gameSpecId === JUNGLE_FLIP_SPEC_ID) {
     // Flip Jungle is symmetric hidden-identity 4×4 flip animal chess; move-order
-    // seats (ink binds on the first flip), casual-only. PvP + in-process-spawned
+    // seats (ink binds on the first flip). PvP + in-process-spawned
     // PvE bot (MistyJungleFlip); PvE sends the picked engine id.
     return {
       mode,
       gameSpecId,
       timeControl: setup.timeControl,
-      rated: false,
+      rated,
       preferredColor:
         setup.preferredColor === 'white'
           ? 'red'
@@ -3113,11 +3286,12 @@ export function roomCreationRequestBody(
   }
   if (setup.gameSpecId === JIEQI_SPEC_ID) {
     // Jieqi PvE sends the picked engine id (unlike Dark Xiangqi, which defaults it
-    // server-side); colors are xiangqi red/black, never rated.
+    // server-side); colors are xiangqi red/black.
     return {
       mode,
       gameSpecId,
       timeControl: setup.timeControl,
+      rated,
       preferredColor:
         setup.preferredColor === 'white'
           ? 'red'
@@ -3129,11 +3303,12 @@ export function roomCreationRequestBody(
   }
   if (setup.gameSpecId === BANQI_SPEC_ID) {
     // Banqi PvE sends the picked MistyBanqi id; seats are red/black move-order
-    // (ink binds on the first flip), never rated.
+    // (ink binds on the first flip).
     return {
       mode,
       gameSpecId,
       timeControl: setup.timeControl,
+      rated,
       preferredColor:
         setup.preferredColor === 'white'
           ? 'red'
@@ -3145,13 +3320,12 @@ export function roomCreationRequestBody(
   }
   if (setup.gameSpecId === FORTRESS_XIANGQI_SPEC_ID) {
     // Fortress Xiangqi is open-info red/black 7x8 xiangqi with reserves + the
-    // Treasure. Rating-ready (rated flag off until launch); PvE sends the picked
-    // Fairy-Stockfish engine id.
+    // Treasure. PvE sends the picked Fairy-Stockfish engine id.
     return {
       mode,
       gameSpecId,
       timeControl: setup.timeControl,
-      ...(mode === 'pvp' ? { rated: setup.rated } : {}),
+      rated,
       preferredColor:
         setup.preferredColor === 'white'
           ? 'red'
@@ -3163,14 +3337,29 @@ export function roomCreationRequestBody(
   }
   if (setup.gameSpecId === DUCK_XIANGQI_SPEC_ID) {
     // Duck Xiangqi is open-info red/black 9x10 xiangqi plus the shared duck.
-    // Casual-only: there is no `duck_xiangqi` rating pool, so `rated` is pinned
-    // false here rather than read from the setup, matching the tenant's own
-    // `supportsRated: false`. PvE sends the picked Fairy-Stockfish engine id.
+    // PvE sends the picked Fairy-Stockfish engine id.
     return {
       mode,
       gameSpecId,
       timeControl: setup.timeControl,
-      rated: false,
+      rated,
+      preferredColor:
+        setup.preferredColor === 'white'
+          ? 'red'
+          : setup.preferredColor === 'red' || setup.preferredColor === 'black'
+            ? setup.preferredColor
+            : 'random',
+      ...(mode === 'pve' && engineId ? { engineId } : {}),
+    };
+  }
+  if (setup.gameSpecId === CRAZYHOUSE_XIANGQI_SPEC_ID) {
+    // Crazyhouse Xiangqi: red/black 9x10 xiangqi with hands. PvE sends the
+    // picked Fairy-Stockfish engine id.
+    return {
+      mode,
+      gameSpecId,
+      timeControl: setup.timeControl,
+      rated,
       preferredColor:
         setup.preferredColor === 'white'
           ? 'red'
@@ -3181,14 +3370,13 @@ export function roomCreationRequestBody(
     };
   }
   if (setup.gameSpecId === ATOMIC_XIANGQI_SPEC_ID) {
-    // Atomic Xiangqi: red/black 9x10 xiangqi, casual only (no rating pool), so
-    // `rated` is pinned false like duck. PvE sends the picked Fairy-Stockfish
-    // engine id.
+    // Atomic Xiangqi: red/black 9x10 xiangqi. PvE sends the picked
+    // Fairy-Stockfish engine id.
     return {
       mode,
       gameSpecId,
       timeControl: setup.timeControl,
-      rated: false,
+      rated,
       preferredColor:
         setup.preferredColor === 'white'
           ? 'red'
@@ -3204,7 +3392,7 @@ export function roomCreationRequestBody(
       mode,
       gameSpecId,
       timeControl: setup.timeControl,
-      ...(mode === 'pvp' ? { rated: setup.rated } : {}),
+      rated,
       preferredColor:
         setup.preferredColor === 'white'
           ? 'red'
@@ -3217,7 +3405,7 @@ export function roomCreationRequestBody(
     mode,
     gameSpecId,
     timeControl: setup.timeControl,
-    rated: setup.rated,
+    rated,
     preferredColor: setup.preferredColor,
     ...(mode === 'pve' && engineId ? { engineId } : {}),
   };
@@ -3234,24 +3422,29 @@ export function roomCreationGameSpecId(
   | typeof JUNGLE_FLIP_SPEC_ID
   | typeof FORTRESS_XIANGQI_SPEC_ID
   | typeof MAHJONG_SPEC_ID
+  | typeof XIANGQI_MAHJONG_SPEC_ID
   | typeof DUCK_XIANGQI_SPEC_ID
   | typeof ATOMIC_XIANGQI_SPEC_ID
+  | typeof CRAZYHOUSE_XIANGQI_SPEC_ID
   | typeof XIANGQI_SPEC_ID {
   if (setup.gameSpecId === MAHJONG_SPEC_ID) return MAHJONG_SPEC_ID;
+  if (setup.gameSpecId === XIANGQI_MAHJONG_SPEC_ID) return XIANGQI_MAHJONG_SPEC_ID;
   if (setup.gameSpecId === XIANGQI_SPEC_ID) return XIANGQI_SPEC_ID;
   if (setup.gameSpecId === FORTRESS_XIANGQI_SPEC_ID) return FORTRESS_XIANGQI_SPEC_ID;
   if (setup.gameSpecId === DUCK_XIANGQI_SPEC_ID) return DUCK_XIANGQI_SPEC_ID;
   if (setup.gameSpecId === ATOMIC_XIANGQI_SPEC_ID) return ATOMIC_XIANGQI_SPEC_ID;
+  if (setup.gameSpecId === CRAZYHOUSE_XIANGQI_SPEC_ID) return CRAZYHOUSE_XIANGQI_SPEC_ID;
   if (setup.gameSpecId === JUNGLE_SPEC_ID) return JUNGLE_SPEC_ID;
   if (setup.gameSpecId === JUNGLE_FLIP_SPEC_ID) return JUNGLE_FLIP_SPEC_ID;
   if (setup.gameSpecId === JIEQI_SPEC_ID) return JIEQI_SPEC_ID;
   if (setup.gameSpecId === BANQI_SPEC_ID) return BANQI_SPEC_ID;
   if (setup.gameSpecId === DARK_XIANGQI_SPEC_ID) return DARK_XIANGQI_SPEC_ID;
-  // NOTE: this fallback is why a variant missing from the ladder above does not
-  // fail, it becomes DARK CHESS. Mahjong hit exactly that: the dialog selected
-  // it, sent the right clock and the right engine, and asked the server for a
-  // fog chess room. Every variant offered in the play menu needs a line here.
-  return DARK_CHESS_SPEC_ID;
+  if (setup.gameSpecId === DARK_CHESS_SPEC_ID) return DARK_CHESS_SPEC_ID;
+  // Fail closed: an unlisted variant used to fall through to dark chess, which
+  // asked the server for a fog chess room with the variant's own bot (Mahjong,
+  // then Xiangqi Mahjong). The never check makes a new union member a type error.
+  const unlisted: never = setup.gameSpecId;
+  throw new Error(`room creation has no game spec mapping for ${String(unlisted)}`);
 }
 
 async function readRoomCreationFailure(response: Response): Promise<RoomCreationFailure> {
@@ -3270,23 +3463,23 @@ function roomCreationError(status: number, failure: RoomCreationFailure): Error 
 
 function roomCreationStatusText(err: unknown, mode: 'pvp' | 'pve'): string {
   if (err instanceof Error && err.name === 'invalid_time_control') {
-    return 'That time control is not available. Try another one.';
+    return t('home.setupErrorTimeControl');
   }
   if (err instanceof Error && err.name === 'persistence_disabled') {
-    return 'Room storage is not available on this server.';
+    return t('home.setupErrorStorage');
   }
   if (mode === 'pve' && err instanceof Error && err.name === 'engine_unavailable') {
-    return 'The engine service is unavailable. Try again soon.';
+    return t('home.setupErrorEngineUnavailable');
   }
-  if (mode === 'pve') return 'Could not start an engine game. Try again.';
-  return 'Could not create the room. Try again.';
+  if (mode === 'pve') return t('home.setupErrorEngineGame');
+  return t('home.setupErrorRoom');
 }
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
-function joinLobbyFromPlay(
+export function joinLobbyFromPlay(
   button: HTMLButtonElement,
   setup: LandingRoomSetup,
   status: HTMLElement,
@@ -3297,8 +3490,16 @@ function joinLobbyFromPlay(
      *  instantly (the offer was taken in the refresh window), delete the
      *  freshly-created ticket and hand control back to the caller. */
     onNoInstantMatch?: () => void;
+    /** Labels the game this wait ends in (game_started.entry_source). */
+    startSource?: GameStartSource;
+    /** The bot the 15 s "nobody came" offer starts when no engine id is given:
+     *  the homepage panel names a public bot, not an engine. */
+    botFallback?: BotPlayRequest;
+    /** This seek was withdrawn from outside (the page started another game),
+     *  so the caller can put its waiting UI away. */
+    onWithdrawn?: () => void;
   },
-): () => void {
+): () => Promise<void> {
   const controller = new AbortController();
   const originalText = button.textContent ?? '';
   const queueJoinedAt = Date.now();
@@ -3329,45 +3530,85 @@ function joinLobbyFromPlay(
     status.hidden = false;
   };
 
-  const cancel = () => {
+  // keepalive: the DELETE usually races a navigation (a bot game, a closed
+  // tab), and an ordinary fetch is dropped when the page goes away.
+  const deleteTicket = (id: string): Promise<void> =>
+    fetch(`/api/lobby/${encodeURIComponent(id)}`, { method: 'DELETE', keepalive: true }).then(
+      () => undefined,
+      () => undefined,
+    );
+
+  // Leaving the page while waiting (a link, the back button, closing the tab)
+  // withdraws the seek; sendBeacon cannot DELETE, a keepalive fetch can.
+  const onPageHide = () => {
+    if (active && ticketId) void deleteTicket(ticketId);
+  };
+  let unregister: (() => void) | null = null;
+  const release = () => {
+    unregister?.();
+    unregister = null;
+    window.removeEventListener('pagehide', onPageHide);
+  };
+
+  let starting: Promise<void> = Promise.resolve();
+  let cancelled: Promise<void> | null = null;
+  const cancel = (): Promise<void> => {
+    if (cancelled) return cancelled;
     active = false;
+    release();
     controller.abort();
     if (pollTimer !== null) window.clearTimeout(pollTimer);
     clearOfferTimer();
-    if (ticketId) {
-      void fetch(`/api/lobby/${encodeURIComponent(ticketId)}`, { method: 'DELETE' }).catch(
-        () => {},
-      );
-    }
+    // Withdrawn while the POST was in flight: start() deletes the ticket the
+    // server made anyway once the response lands, so wait for that.
+    cancelled = ticketId ? deleteTicket(ticketId) : starting;
+    return cancelled;
   };
 
   // The seek's pace is a HUMAN pace; the bot the offer starts may not be able to
-  // honor it (pveTimePresetPin). Re-pace the room here rather than let the offer
-  // become the back door that reintroduces the flag — the seek itself keeps
-  // waiting at whatever pace the player picked.
-  const enginePreset = pveTimePresetPin(setup.gameSpecId);
-  const engineTimeControl = enginePreset
-    ? LANDING_TIME_PRESETS.find((preset) => preset.id === enginePreset)
-    : undefined;
-  const engineSetup: LandingRoomSetup =
-    engineTimeControl &&
-    (engineTimeControl.initialMs !== setup.timeControl.initialMs ||
-      engineTimeControl.incrementMs !== setup.timeControl.incrementMs)
-      ? {
-          ...setup,
-          timeControl: {
-            initialMs: engineTimeControl.initialMs,
-            incrementMs: engineTimeControl.incrementMs,
-          },
-        }
-      : setup;
+  // honor it (isAllowedEngineTimeControl). Re-pace the room to the bot default
+  // here rather than let the offer become the back door that reintroduces the
+  // flag — the seek itself keeps waiting at whatever pace the player picked.
+  const engineTimeControl = isAllowedEngineTimeControl(setup.gameSpecId, setup.timeControl)
+    ? undefined
+    : defaultEngineTimeControl(setup.gameSpecId);
+  const engineSetup: LandingRoomSetup = engineTimeControl
+    ? {
+        ...setup,
+        timeControl: {
+          initialMs: engineTimeControl.initialMs,
+          incrementMs: engineTimeControl.incrementMs,
+        },
+      }
+    : setup;
   const engineRepaced = engineSetup !== setup;
 
+  const botFallback = opts?.botFallback;
+  const hasFallback = Boolean(engineId || botFallback);
   const acceptEngineOffer = (playButton: HTMLButtonElement) => {
-    if (!engineId) return;
+    if (!hasFallback) return;
     track('lobby_engine_offer_accepted', { ...bucketProps, waitMs: Date.now() - queueJoinedAt });
-    cancel();
-    void createRoomFromPlay(playButton, 'pve', engineId, engineSetup, status, locale);
+    const withdrawn = cancel();
+    rememberGameStartSource('engine-offer');
+    if (engineId) {
+      void withdrawn.then(() =>
+        createRoomFromPlay(playButton, 'pve', engineId, engineSetup, status, locale),
+      );
+      return;
+    }
+    if (!botFallback) return;
+    playButton.disabled = true;
+    withdrawn
+      .then(() => createBotGame({ ...botFallback, timeControl: engineSetup.timeControl }))
+      .then(
+        (url) => {
+          window.location.href = url;
+        },
+        () => {
+          playButton.disabled = false;
+          status.textContent = t('lobby.botStartFailed', {}, locale);
+        },
+      );
   };
 
   const dismissEngineOffer = () => {
@@ -3377,7 +3618,7 @@ function joinLobbyFromPlay(
   };
 
   const showEngineOffer = () => {
-    if (!engineId || offerEl !== null || !status.isConnected) return;
+    if (!hasFallback || offerEl !== null || !status.isConnected) return;
     status.hidden = true;
     track('lobby_engine_offer_shown', { ...bucketProps, waitMs: Date.now() - queueJoinedAt });
 
@@ -3414,7 +3655,7 @@ function joinLobbyFromPlay(
   };
 
   const scheduleEngineOffer = () => {
-    if (!engineId) return;
+    if (!hasFallback) return;
     clearOfferTimer();
     offerTimer = window.setTimeout(() => {
       offerTimer = null;
@@ -3423,7 +3664,7 @@ function joinLobbyFromPlay(
           elapsedMs: Date.now() - queueJoinedAt,
           thresholdMs: ENGINE_OFFER_AFTER_MS,
           stillWaiting: active && offerEl === null,
-          hasEngine: Boolean(engineId),
+          hasEngine: hasFallback,
         })
       ) {
         showEngineOffer();
@@ -3433,7 +3674,9 @@ function joinLobbyFromPlay(
 
   const redirectIfMatched = (ticket: LobbyTicketResponse): boolean => {
     if (ticket.status !== 'matched' || !ticket.url) return false;
+    release();
     track('lobby_match_found', { ...bucketProps, waitMs: Date.now() - queueJoinedAt });
+    if (opts?.startSource) rememberGameStartSource(opts.startSource);
     window.location.href = ticket.url;
     return true;
   };
@@ -3471,10 +3714,13 @@ function joinLobbyFromPlay(
     button.setAttribute('aria-busy', 'true');
     setButtonLabel(button, t('setup.waiting', {}, locale));
     status.textContent = t('setup.waitingForOpponent', {}, locale);
+    if (withdrawingPrior) await withdrawingPrior;
+    if (!active) return;
+    // Not aborted on cancel: the server makes the ticket whether or not this
+    // tab reads the answer, so the answer is needed to withdraw it.
     const response = await fetch('/api/lobby', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      signal: controller.signal,
       body: JSON.stringify({
         gameSpecId: setup.gameSpecId,
         timeControl: setup.timeControl,
@@ -3484,7 +3730,11 @@ function joinLobbyFromPlay(
     if (!response.ok) throw new Error(`lobby join failed: ${response.status}`);
     const ticket = (await response.json()) as LobbyTicketResponse;
     track('lobby_queue_joined', bucketProps);
-    if (!active || redirectIfMatched(ticket)) return;
+    if (!active) {
+      if (ticket.status === 'waiting' && ticket.ticketId) await deleteTicket(ticket.ticketId);
+      return;
+    }
+    if (redirectIfMatched(ticket)) return;
     if (opts?.onNoInstantMatch) {
       // The joined offer was taken between the widget refresh and the click;
       // the POST silently created a NEW ticket. Don't leave the user in an
@@ -3497,13 +3747,21 @@ function joinLobbyFromPlay(
     }
     if (!ticket.ticketId) throw new Error('lobby did not return a ticket');
     ticketId = ticket.ticketId;
+    window.addEventListener('pagehide', onPageHide);
     pollTimer = window.setTimeout(() => {
       void poll().catch(handleLobbyError);
     }, ticket.pollAfterMs ?? 1_000);
     scheduleEngineOffer();
   };
 
-  void start().catch(handleLobbyError);
+  // One seek per page: a new one (or a join) withdraws any seek still open, so
+  // the server can never pair this tab with itself or keep the old one listed.
+  const withdrawingPrior = withdrawLobbySeeks();
+  unregister = registerLobbySeek(() => {
+    opts?.onWithdrawn?.();
+    return cancel();
+  });
+  starting = start().catch(handleLobbyError);
   return cancel;
 }
 

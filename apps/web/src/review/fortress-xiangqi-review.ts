@@ -41,6 +41,7 @@ import {
   bestMoveMarkerWithParser,
   engineArrowsFromLinesWithParser,
   engineMarkersFromLinesWithParser,
+  parseFortressEngineMove,
 } from './engine/engine-arrows.js';
 import { fortressXiangqiTreeAdapter } from './fortress-xiangqi-tree-adapter.js';
 import type { NodeShape } from './game-tree.js';
@@ -57,14 +58,6 @@ import {
 function formatFortressEngineMove(uci: string): string {
   const move = fsfUciToFortressXiangqiMove(uci);
   return move ? fortressXiangqiMoveLabel(move) : uci;
-}
-
-function parseFortressBoardMove(
-  uci: string,
-): { from?: FortressXiangqiBoardArrow['from']; to: FortressXiangqiBoardArrow['to'] } | null {
-  const move = fsfUciToFortressXiangqiMove(uci);
-  if (!move) return null;
-  return isFortressXiangqiDropMove(move) ? { to: move.to } : move;
 }
 
 /** Config for a Fortress Xiangqi review mount. */
@@ -91,11 +84,11 @@ const fortressPresentation: TreePresentation<
     formatPvMove: formatFortressEngineMove,
     moveFromEngineUci: fsfUciToFortressXiangqiMove,
     engineArrowsFromLines: (lines) =>
-      engineArrowsFromLinesWithParser(lines, parseFortressBoardMove),
+      engineArrowsFromLinesWithParser(lines, parseFortressEngineMove),
     engineMarkersFromLines: (lines) =>
-      engineMarkersFromLinesWithParser(lines, parseFortressBoardMove),
-    bestMoveArrow: (best) => bestMoveArrowWithParser(best, parseFortressBoardMove),
-    bestMoveMarker: (best) => bestMoveMarkerWithParser(best, parseFortressBoardMove),
+      engineMarkersFromLinesWithParser(lines, parseFortressEngineMove),
+    bestMoveArrow: (best) => bestMoveArrowWithParser(best, parseFortressEngineMove),
+    bestMoveMarker: (best) => bestMoveMarkerWithParser(best, parseFortressEngineMove),
   },
   boardHostClassName: 'fortress-xiangqi-postgame-board fortress-xiangqi-live-board',
   boardWrapClassName: 'dxq-postgame__board-wrap review-board-host',
@@ -157,12 +150,11 @@ const fortressPresentation: TreePresentation<
     const bottom: FortressXiangqiColor = flipped ? 'black' : 'red';
     const top: FortressXiangqiColor = bottom === 'red' ? 'black' : 'red';
     const view = getFortressXiangqiPlayerView(truth, bottom);
-    // allRoles: the rail draws every droppable role and ghosts the empty ones,
-    // the way lichess draws a crazyhouse pocket. Held-only rows read as blank
-    // space for most of a game and shift as the pocket changes; a fixed set of
-    // slots states what CAN be dropped and keeps each piece in the same place.
-    fillFortressXiangqiReserve(hosts.top, view, top, { allRoles: true });
-    fillFortressXiangqiReserve(hosts.bottom, view, bottom, { allRoles: true });
+    // pocket: the rail draws every droppable role and ghosts the empty ones,
+    // the way lichess draws a crazyhouse pocket (drop-pocket.ts), the same bar
+    // the live room shows beside the clocks.
+    fillFortressXiangqiReserve(hosts.top, view, top, { pocket: true });
+    fillFortressXiangqiReserve(hosts.bottom, view, bottom, { pocket: true });
   },
 };
 

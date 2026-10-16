@@ -3,6 +3,6 @@ contact_links:
   - name: Security vulnerability
     url: https://github.com/brianhliou/mistboard/security/advisories/new
     about: Report privately via GitHub Security Advisories. Do not open a public issue for hidden-information leaks, auth bypass, or other security bugs. See SECURITY.md.
-  - name: Rules question or Fog of War discussion
-    url: https://mistboard.com/articles
-    about: Read the rules articles first — they cover most rule questions and edge cases.
+  - name: Rules question
+    url: https://mistboard.com/rules
+    about: Every variant has a rules page that covers the edge cases. Read it first.

@@ -1,5 +1,5 @@
 // The Atomic Xiangqi Fairy-Stockfish build is pinned in FOUR places that must
-// agree: fairy-stockfish-atomic-xiangqi.ref (the commit railpack checks out),
+// agree: fairy-stockfish-atomic-xiangqi.ref (the commit the engine recipe checks out),
 // fairy-stockfish-atomic-xiangqi.patch (what makes that commit able to play
 // this variant at all), and the two constants in the provider that name them.
 // The ref alone does NOT identify this engine: the patch is the blast shape,
@@ -24,6 +24,7 @@ const labPatchFile = resolve(
   repoRoot,
   'scripts/variant-lab/patches/fairy-stockfish-atomic-xiangqi.patch',
 );
+const recipe = readFileSync(resolve(repoRoot, 'scripts/engine-assets.sh'), 'utf8');
 const railpack = readFileSync(resolve(repoRoot, 'railpack.json'), 'utf8');
 
 function pinnedRef(): string {
@@ -42,7 +43,7 @@ test('ATOMIC_XIANGQI_FSF_ENGINE_REF is the short form of the pinned .ref commit'
   );
 });
 
-test('ATOMIC_XIANGQI_FSF_PATCH_SHA256 is the digest of the patch railpack applies', () => {
+test('ATOMIC_XIANGQI_FSF_PATCH_SHA256 is the digest of the patch the recipe applies', () => {
   const digest = createHash('sha256').update(readFileSync(patchFile)).digest('hex');
   assert.equal(
     digest,
@@ -62,22 +63,25 @@ test('the shipped patch is the variant lab’s patch, byte for byte', () => {
   );
 });
 
-test('railpack builds from the .ref, applies the patch, and gates on perft', () => {
+test('the recipe builds from the .ref, applies the patch, and gates on perft', () => {
+  // The recipe (scripts/engine-assets.sh) compiles on a GitHub runner and
+  // publishes a release; railpack fetches it and re-runs the same verify step.
+  assert.ok(recipe.includes('pin fairy-stockfish-atomic-xiangqi.ref'), 'the build reads the .ref');
   assert.ok(
-    railpack.includes('/app/fairy-stockfish-atomic-xiangqi.ref'),
-    'the build step reads the .ref',
+    recipe.includes('fairy-stockfish-atomic-xiangqi.patch"'),
+    'the build applies the patch; stock Fairy-Stockfish plays a different game',
   );
-  assert.ok(
-    railpack.includes('/app/fairy-stockfish-atomic-xiangqi.patch'),
-    'the build step applies the patch; stock Fairy-Stockfish plays a different game',
-  );
-  const iniGate = railpack.split('/app/apps/server/src/atomic-xiangqi.ini').length - 1;
+  const iniGate = recipe.split('atomic-xiangqi.ini" atomicxiangqi').length - 1;
   assert.equal(
     iniGate,
     3,
     'three perft gates run against the same .ini the server hands the engine',
   );
-  for (const count of ['Nodes searched: 44', 'Nodes searched: 3', 'Nodes searched: 4']) {
-    assert.ok(railpack.includes(count), `the build must be gated on ${count}`);
+  for (const gate of ['startpos 44', "3C5/9/4K4 w - - 0 1' 3", "3R5/9/4K4 w - - 0 1' 4"]) {
+    assert.ok(recipe.includes(gate), `the build must be gated on perft ${gate}`);
   }
+  assert.ok(
+    railpack.includes('engine-assets.sh verify /app/bin /app/apps/server/src'),
+    'the image re-runs the verify gates against the .ini directory the server uses',
+  );
 });
