@@ -2109,6 +2109,9 @@ const ZH_HANS: Record<string, string> = {
 
   // -- How MistyBanqi Plays (engine article) --
   'How MistyBanqi Plays': 'MistyBanqi 是怎么下棋的',
+  // seoTitle: outside articleProse, so the localized <title> needs its own entry.
+  'Banqi Engine: How MistyBanqi Plays and How It Was Built':
+    '暗棋引擎：MistyBanqi 怎么下棋，又是怎么做出来的',
   'MistyBanqi is the engine you play in banqi on Mistboard: a classical search engine with a hand-written evaluation. How it thinks, and the blind spot worth knowing: it can draw a game it has already won.':
     'MistyBanqi 是你在 Mistboard 上对弈暗棋时面对的引擎：一个采用手写评估的经典搜索引擎。它如何思考，以及一个值得知道的盲点：它会把已经赢定的棋下成和棋。',
   'How it thinks': '它如何思考',
@@ -8400,6 +8403,9 @@ const ZH_HANT: Record<string, string> = {
 
   // -- How MistyBanqi Plays (engine article) --
   'How MistyBanqi Plays': 'MistyBanqi 是怎麼下棋的',
+  // seoTitle: outside articleProse, so the localized <title> needs its own entry.
+  'Banqi Engine: How MistyBanqi Plays and How It Was Built':
+    '暗棋引擎：MistyBanqi 怎麼下棋，又是怎麼做出來的',
   'MistyBanqi is the engine you play in banqi on Mistboard: a classical search engine with a hand-written evaluation. How it thinks, and the blind spot worth knowing: it can draw a game it has already won.':
     'MistyBanqi 是你在 Mistboard 上對弈暗棋時面對的引擎：一個採用手寫評估的經典搜尋引擎。它如何思考，以及一個值得知道的盲點：它會把已經贏定的棋下成和棋。',
   'How it thinks': '它如何思考',
