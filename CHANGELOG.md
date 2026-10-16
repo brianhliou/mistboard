@@ -220,6 +220,8 @@ Conventions:
 
 ### Fixed
 
+- Chess board thumbnails on the blog are square again instead of stretched to the card ([d250631c](https://github.com/brianhliou/mistboard/commit/d250631c))
+- The mahjong game-over sound no longer plays again when you reopen a finished game ([d250631c](https://github.com/brianhliou/mistboard/commit/d250631c))
 - Jungle and Flip Jungle pieces on the board's edge now sit flush against the frame ([cd5acfaa](https://github.com/brianhliou/mistboard/commit/cd5acfaa))
 - a paused game resumes when the player on move comes back ([cd5acfaa](https://github.com/brianhliou/mistboard/commit/cd5acfaa))
 - Rules and blog pages no longer jump down as they finish loading ([a4820b25](https://github.com/brianhliou/mistboard/commit/a4820b25))
