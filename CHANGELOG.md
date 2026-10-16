@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- Xiangqi Mahjong's table grows with your screen, with bigger tiles in your hand, resizes with the grip, and its move list fits one line per hand ([0de59972](https://github.com/brianhliou/mistboard/commit/0de59972))
 - Xiangqi and jieqi bots now take a moment to think before replying, longer in complex positions and quick when the move is obvious ([3a0dd19d](https://github.com/brianhliou/mistboard/commit/3a0dd19d))
 - International pieces have smooth edges, with one even line width on the chariot, advisor and cannon ([cd5acfaa](https://github.com/brianhliou/mistboard/commit/cd5acfaa))
 - the last-move ring now hugs the outside of the moved piece, sits under it, and travels with the piece as it moves ([cd5acfaa](https://github.com/brianhliou/mistboard/commit/cd5acfaa))
@@ -107,6 +108,7 @@ Conventions:
 
 ### Watching and review
 
+- Mistboard TV shows captured pieces, hands and the face-down pool beside the board, as the game page does ([0de59972](https://github.com/brianhliou/mistboard/commit/0de59972))
 - hover or tap a ?!, ? or ?? mark to see what the move cost and the better move ([12461d24](https://github.com/brianhliou/mistboard/commit/12461d24))
 - Game search can pick games played here against people or against bots ([9ffca9cf](https://github.com/brianhliou/mistboard/commit/9ffca9cf))
 - The opening explorer starts closed and remembers if you open it ([9ffca9cf](https://github.com/brianhliou/mistboard/commit/9ffca9cf))
@@ -223,6 +225,8 @@ Conventions:
 
 ### Fixed
 
+- Crazyhouse Xiangqi now marks the general in check, and move lists show the elephant as E instead of B ([0de59972](https://github.com/brianhliou/mistboard/commit/0de59972))
+- The banqi bot now picks its best allowed move when the perpetual chase rule forbids its first choice ([0de59972](https://github.com/brianhliou/mistboard/commit/0de59972))
 - Hand-typed /game and /embed/game links to a Xiangqi Mahjong or mahjong game no longer show a broken page ([629657e2](https://github.com/brianhliou/mistboard/commit/629657e2))
 - the site no longer freezes for several seconds once a day while the daily report runs ([629657e2](https://github.com/brianhliou/mistboard/commit/629657e2))
 - Rules and blog pages, including diagram marker colours, now load styled, and the rules sidebar switches pages without reloading ([629657e2](https://github.com/brianhliou/mistboard/commit/629657e2))
