@@ -296,7 +296,7 @@ function seatRowHtml(
     view.turn === seat
       ? `<span class="xmj-badge xmj-badge--turn">${t('live.xmj.toDiscard')}</span>`
       : '';
-  return `<div class="xmj-seat-row"><span class="xmj-name">${escapeHtml(names[seat])}</span>${dealer}<span class="xmj-points">${t('live.xmj.score', { points: view.scores[seat] })}</span>${turn}</div>`;
+  return `<div class="xmj-seat-row"><span class="xmj-name">${escapeHtml(names[seat])}</span>${dealer}${turn}</div>`;
 }
 
 function opponentHtml(
@@ -419,17 +419,6 @@ function pondHtml(
 }
 
 // ── The centre: wall, status and actions ─────────────────────────────────────
-
-/**
- * What a shaded discard means, said once one is on the table. The line is
- * always laid out and only hidden before then, so the centre keeps its height
- * when the first shaded tile lands.
- */
-function shadedKeyHtml(view: XmjPlayerView): string {
-  const shown = view.drawnDiscards.east.includes(true) || view.drawnDiscards.west.includes(true);
-  const hidden = shown ? '' : ' xmj-shaded-key--hidden" aria-hidden="true';
-  return `<p class="xmj-shaded-key${hidden}"><span class="xmj-shaded-key__swatch"></span>${t('live.xmj.shadedKey')}</p>`;
-}
 
 /**
  * The wall as tile backs, stacked two high, drawn from the left end. Each
@@ -569,7 +558,7 @@ function centreHtml(
   const you = view.perspective !== 'spectator';
   const actions = handOver || !you ? '' : actionsHtml(view, options);
   const status = handOver ? '' : actions || messageHtml(view, self, options.names);
-  return `<div class="xmj-centre"><div class="xmj-centre__facts">${handLine}${wallHtml(view.wallCount)}</div><div class="xmj-centre__status">${status}</div>${handOver ? '' : shadedKeyHtml(view)}</div>`;
+  return `<div class="xmj-centre"><div class="xmj-centre__facts">${handLine}${wallHtml(view.wallCount)}</div><div class="xmj-centre__status">${status}</div></div>`;
 }
 
 // ── The result, between hands ────────────────────────────────────────────────

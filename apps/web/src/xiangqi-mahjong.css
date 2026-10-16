@@ -16,8 +16,17 @@
  * `?felt=wood|slate|site` swaps the cloth; `?tiles=bamboo` swaps the backing.
  */
 
+/* The table is a little taller than it is wide (0.85 at its 560px design
+   size), so the board column is sized to that, not to a wide 1.2 that left
+   ~300px of empty column beside a capped table (Brian, 2026-10-16). The move
+   list gets a wider rail than a board game's, so a row like "<name> draws,
+   discards" stays on one line. */
 .live-route--xiangqi-mahjong {
-  --uni-board-aspect: 1.2;
+  --uni-board-aspect: 0.85;
+  /* The points table under the board shares the height budget. */
+  --uni-board-chrome-h: 100px;
+  --uni-table-min: 300px;
+  --uni-table-max: 360px;
 }
 
 .live-route--xiangqi-mahjong .live-review__cluster .board-stage,
@@ -25,9 +34,29 @@
   aspect-ratio: auto;
 }
 
-/* The table sizes itself; a drag handle for a square board means nothing here. */
-.live-route--xiangqi-mahjong .board-resize-grip {
-  display: none;
+/* The grip scales the column like any board's; the tiles follow the column's
+   width (below), so the whole table grows and shrinks with the drag. */
+.live-route--xiangqi-mahjong .board-shell {
+  --board-resize-ink: #f1f5f2;
+}
+
+@media (min-width: 800px) {
+  .live-route--xiangqi-mahjong .xiangqi-mahjong-live-board {
+    container-type: inline-size;
+  }
+
+  /* One unit per design pixel of a 560px table: tiles, discards and their
+     depth scale with the column; type and padding stay put. */
+  .live-route--xiangqi-mahjong .xmj-table {
+    --xmj-u: calc(100cqw / 560);
+    --xmj-tile-w: calc(52 * var(--xmj-u));
+    --xmj-tile-h: calc(68 * var(--xmj-u));
+    --xmj-depth: calc(5 * var(--xmj-u));
+    --xmj-pond-w: calc(36 * var(--xmj-u));
+    --xmj-pond-h: calc(47 * var(--xmj-u));
+    --xmj-pond-gap: calc(4 * var(--xmj-u));
+    max-width: none;
+  }
 }
 
 /* The tiles, wherever they are drawn: on the table and in the move list. */
@@ -150,11 +179,6 @@
 .xmj-name {
   font-weight: 600;
   overflow-wrap: anywhere;
-}
-
-.xmj-points {
-  font-variant-numeric: tabular-nums;
-  opacity: 0.85;
 }
 
 .xmj-badge {
@@ -541,36 +565,6 @@
   font-size: 13px;
   opacity: 0.85;
   white-space: nowrap;
-}
-
-.xmj-shaded-key {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  font-size: 11px;
-  /* A footnote, not a status line (Brian, 2026-10-15: "too loud"); it comes
-     up to read on hover, and each shaded tile carries its own title. */
-  opacity: 0.45;
-  transition: opacity 120ms ease;
-}
-
-.xmj-shaded-key:hover {
-  opacity: 0.9;
-}
-
-.xmj-shaded-key--hidden {
-  visibility: hidden;
-}
-
-/* A blank tile face, dimmed the way a shaded discard is. */
-.xmj-shaded-key__swatch {
-  width: 9px;
-  height: 12px;
-  border-radius: 2px;
-  background: var(--xmj-face);
-  filter: brightness(0.7) saturate(0.6);
 }
 
 .xmj-centre__status {
@@ -1010,33 +1004,62 @@ ol.xmj-log {
   padding: 0 0 6px;
 }
 
-/* Each hand's heading is a band, so the hands read as sections. */
+/* A hand log is taller than a chess move list, so on a tall screen the
+   window grows past the shared 170px (game-shell.css). 730px is the rest of
+   the rail at 1440x900, where 170px is exactly what fits without a page
+   scroll; every extra pixel of viewport goes to the log. */
+.live-route--xiangqi-mahjong .round-table__box .game-table-moves {
+  max-height: max(170px, calc(100svh - 730px));
+}
+
+/* Each hand's heading is one line: the hand, who won and how, the points
+   flush right. No separator dots and no wrap (Brian, 2026-10-16: the dots
+   and a wrapped "· 5 points" read badly); a long name gives way first. */
 .xmj-log .xmj-log__head {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0 6px;
+  align-items: baseline;
+  gap: 8px;
   width: 100%;
   box-sizing: border-box;
-  padding: 5px 8px;
+  padding: 3px 8px 3px 18px;
   font: inherit;
   font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  line-height: 20px;
   color: inherit;
   text-align: left;
-  background: color-mix(in srgb, var(--site-hover) 70%, transparent);
+  white-space: nowrap;
+  background: none;
   border: 0;
   border-radius: 6px;
 }
 
-.xmj-log__head span + span::before {
-  content: "\00b7";
-  margin-right: 6px;
-  opacity: 0.6;
+.xmj-log__head > span:first-child {
+  flex: none;
+  font-weight: 600;
+}
+
+.xmj-log__head > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--site-muted);
+}
+
+.xmj-log__head > span:nth-child(3) {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+/* The open hand: its heading ruled off from its moves, not filled. */
+.xmj-log .xmj-log__hand--open > .xmj-log__head {
+  border-bottom: 1px solid var(--site-border);
+  border-radius: 0;
 }
 
 .xmj-log .xmj-log__toggle {
+  position: relative;
   cursor: pointer;
   background: none;
 }
@@ -1047,9 +1070,11 @@ ol.xmj-log {
 
 .xmj-log__toggle::before {
   content: "";
+  position: absolute;
+  left: 7px;
+  top: calc(50% - 4px);
   width: 0;
   height: 0;
-  margin-right: 2px;
   border: 4px solid transparent;
   border-left: 5px solid currentcolor;
   border-right: 0;
@@ -1072,7 +1097,7 @@ ol.xmj-log {
 .xmj-log .xmj-log__row {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 4px;
   width: 100%;
   box-sizing: border-box;
@@ -1093,6 +1118,9 @@ ol.xmj-log {
 .xmj-log__text {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* The move number, on the dealer's turn only; the column stays on every row. */
@@ -1124,23 +1152,15 @@ ol.xmj-log {
 }
 
 .xmj-log .xmj-log__row.active {
-  background: var(--site-hover);
-  box-shadow: inset 3px 0 0 var(--site-accent);
+  background: color-mix(in srgb, var(--site-accent) 14%, transparent);
   font-weight: 600;
 }
 
-/* How the hand ended, set like the result's Total chip. */
+/* How the hand ended: the hand's last line, in the accent, with no box. */
 .xmj-log .xmj-log__row--end {
-  margin-top: 4px;
+  margin-top: 2px;
   font-weight: 600;
   color: var(--site-accent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--site-accent) 55%, transparent);
-}
-
-.xmj-log .xmj-log__row--end.active {
-  box-shadow:
-    inset 3px 0 0 var(--site-accent),
-    inset 0 0 0 1px color-mix(in srgb, var(--site-accent) 55%, transparent);
 }
 
 /* ── Phones ────────────────────────────────────────────────────────────────── */
