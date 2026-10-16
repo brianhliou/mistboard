@@ -99,7 +99,7 @@ export const xiangqiMahjong32Article: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'A triplet is three identical tiles. Only the Soldiers come in threes, so the only triplets are three red Soldiers and three black Soldiers.',
+          text: 'A triplet is three identical tiles. Only the Soldiers have more than two of a kind, so the only triplets are three red Soldiers and three black Soldiers.',
         },
         {
           kind: 'raw-svg',
@@ -165,7 +165,7 @@ export const xiangqiMahjong32Article: Article = {
         },
         win(
           'claimed',
-          '3. Your next turn: you draw the other black Elephant and win. A set and a pair, self-drawn: 3 points.',
+          '3. Your next turn: you draw the other black Elephant and win. A set and a pair, self-drawn, and you did not deal: 3 points.',
         ),
         {
           kind: 'paragraph',
@@ -191,7 +191,7 @@ export const xiangqiMahjong32Article: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'A winning hand is five tiles: one set and one pair, counting a set you laid down after a claim. There are only three kinds of set, a General sequence, a Chariot sequence or three Soldiers, so the first three hands below cover them all. A hand scores points; each caption gives what the hand scores when won on the other player’s discard.',
+          text: 'A winning hand is five tiles: one set and one pair, counting a set you laid down after a claim. There are only three sets to make, a General sequence, a Chariot sequence or three Soldiers, so the first three hands below cover them all. A hand scores points; each caption gives what it scores when the player who did not deal wins it on a discard.',
         },
         win('palace', 'General, Advisor and Elephant, with any pair: 1 point.'),
         win('chariot', 'Chariot, Horse and Cannon, with any pair. The pair need not match the set’s colour: 1 point.'),
@@ -251,17 +251,17 @@ export const xiangqiMahjong32Article: Article = {
           headers: ['Special hand', 'Points', 'When'],
           rows: [
             ['Heavenly hand', '6', 'The dealer’s first five tiles win'],
-            ['Earthly hand', '6', 'A win on the first draw'],
+            ['Earthly hand', '6', 'The other player wins on their first draw'],
           ],
+        },
+        {
+          kind: 'paragraph',
+          text: 'A worked example. The dealer holds the red Chariot, Horse and Cannon and the red General, and draws the black General from the wall. That is a set and the Generals pair: 1 for the win, 2 for the Generals pair, 2 for the self-draw and 1 because the dealer won, 6 points in all. It is not one colour, since the pair is half black.',
         },
         {
           kind: 'raw-svg',
           svg: XMJ32_WORKED_SVG,
           caption: 'The dealer draws the black General and declares a win.',
-        },
-        {
-          kind: 'paragraph',
-          text: 'A worked example. The dealer holds the red Chariot, Horse and Cannon and the red General, and draws the black General from the wall. That is a set and the Generals pair: 1 for the win, 2 for the Generals pair, 2 for the self-draw and 1 because the dealer won, 6 points in all. It is not one colour, since the pair is half black.',
         },
       ],
     },
