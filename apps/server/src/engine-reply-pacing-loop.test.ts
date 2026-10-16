@@ -75,11 +75,25 @@ function writer(appended: string[]) {
   };
 }
 
+// The pacing wait is an unref'd timer, so it never holds a stopping server open;
+// a test awaiting it can see the event loop drain mid-await (CI, 10-16) unless
+// something keeps the loop alive.
+async function holdingLoop<T>(pending: Promise<T>): Promise<T> {
+  const keepAlive = setInterval(() => {}, 1_000);
+  try {
+    return await pending;
+  } finally {
+    clearInterval(keepAlive);
+  }
+}
+
 test('an instant engine move is held for the beat and the wait is logged', async () => {
   const room = botOnMove('xq_pace_beat');
   const appended: string[] = [];
   const startedAt = Date.now();
-  await playXiangqiEngineMoveIfReady(writer(appended) as never, room as never, decisive(room));
+  await holdingLoop(
+    playXiangqiEngineMoveIfReady(writer(appended) as never, room as never, decisive(room)),
+  );
   const elapsed = Date.now() - startedAt;
 
   assert.deepEqual(appended, ['move-played']);
@@ -103,7 +117,9 @@ test('a game that ends during the wait gets no bot move', async () => {
       color: 'red',
     });
   }, 100);
-  await playXiangqiEngineMoveIfReady(writer(appended) as never, room as never, decisive(room));
+  await holdingLoop(
+    playXiangqiEngineMoveIfReady(writer(appended) as never, room as never, decisive(room)),
+  );
 
   assert.deepEqual(appended, [], 'the held move never reached the writer');
   assert.equal(room.projection.state.status.type, 'finished');
