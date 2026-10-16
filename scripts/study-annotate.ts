@@ -123,6 +123,14 @@ function comment(node: StudyNode, text: string): void {
   const prior = node.annotations.comments?.[0]?.text;
   node.annotations.comments = [{ text: prior ? `${prior} ${text}` : text }];
 }
+/** A move token's two squares. A rank can be two digits on a ten-rank board
+ *  (xiangqi `f10e10`), so the split is on the file letter, never at index 2. */
+export function squaresOf(token: string): { orig: string; dest: string } {
+  const m = /^([a-z]\d+)([a-z]\d+)/.exec(token);
+  if (!m) throw new Error(`not a from-to move: ${token}`);
+  return { orig: m[1]!, dest: m[2]! };
+}
+
 function glyph(node: StudyNode, nag: number): void {
   node.annotations ??= {};
   node.annotations.glyphs = [...(node.annotations.glyphs ?? []), nag];
@@ -192,8 +200,7 @@ export function annotateFromEngine(input: EngineAnnotationInput): {
           {
             kind: 'arrow',
             brush: 'green',
-            orig: side.moves[0]!.slice(0, 2),
-            dest: side.moves[0]!.slice(2, 4),
+            ...squaresOf(side.moves[0]!),
           },
         ],
       };
