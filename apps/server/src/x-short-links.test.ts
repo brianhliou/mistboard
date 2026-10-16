@@ -45,6 +45,21 @@ test('x short link: an unknown slug lands on the homepage tagged x-unknown', () 
   }
 });
 
+test('youtube link: /yt opens the next problem position, no solution, tagged youtube / video', () => {
+  const location = xShortLinkRedirect('/yt');
+  assert.ok(location);
+  assert.equal(xShortLinkRedirect('/yt/'), location);
+  const url = parseTarget(location);
+  assert.equal(url.pathname, '/analysis/xiangqi');
+  assert.equal(url.searchParams.get('fen'), X_SHORT_LINKS['2']!.target.fen);
+  assert.equal(url.searchParams.get('moves'), null);
+  assert.equal(url.searchParams.get('utm_source'), 'youtube');
+  assert.equal(url.searchParams.get('utm_medium'), 'video');
+  assert.equal(url.searchParams.get('utm_campaign'), 'yt-shorts-2026-10');
+  for (const path of ['/yt/1', '/ytx', '/yt/2/extra'])
+    assert.equal(xShortLinkRedirect(path), null, path);
+});
+
 test('x short link: other paths are not short links', () => {
   for (const path of ['/x', '/x/', '/x/1/extra', '/xiangqi', '/analysis/xiangqi']) {
     assert.equal(xShortLinkRedirect(path), null, path);
