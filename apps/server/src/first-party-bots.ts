@@ -102,7 +102,7 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       jungle: 'misty-jungle-level-2',
       'jungle-flip': 'misty-jungle-flip',
       // The in-process tile bot (packages/game xiangqi-mahjong-bot.ts).
-      'xiangqi-mahjong': 'xiangqi-mahjong-bot',
+      'xiangqi-mahjong': 'misty-xiangqi-mahjong',
     },
     defaultGameSpecId: 'dark-chess',
     attributionEngineIds: [

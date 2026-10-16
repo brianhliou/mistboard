@@ -26,11 +26,13 @@ import type { TenantLifecycleContext } from './variant-tenant/lifecycle.js';
 import type { TenantRuntimeRoom } from './variant-tenant/tenant.js';
 
 /** The clientId the bot seat holds. Also what marks the seat as non-human. */
-export const XMJ_BOT_CLIENT_ID = 'xiangqi-mahjong-bot';
-export const XMJ_BOT_ID = 'xiangqi-mahjong-bot';
+export const XMJ_BOT_CLIENT_ID = 'misty-xiangqi-mahjong';
+export const XMJ_BOT_ID = 'misty-xiangqi-mahjong';
+/** The id before the misty-<variant> rename; games stored under it still replay. */
+const XMJ_LEGACY_BOT_CLIENT_ID = 'xiangqi-mahjong-bot';
 
 export function isXmjBotClientId(clientId: string | undefined): boolean {
-  return clientId === XMJ_BOT_CLIENT_ID;
+  return clientId === XMJ_BOT_CLIENT_ID || clientId === XMJ_LEGACY_BOT_CLIENT_ID;
 }
 
 /** Well inside the claim window, so the bot never lets one time out. */

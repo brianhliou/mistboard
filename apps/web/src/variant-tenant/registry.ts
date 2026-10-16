@@ -1027,13 +1027,13 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       // variant with no option of its own would ask the server for Misty.
       engineOptions: [
         {
-          id: 'xiangqi-mahjong-bot',
-          name: 'Xiangqi mahjong bot',
-          familyName: 'Mistboard',
+          id: 'misty-xiangqi-mahjong',
+          name: 'Misty',
+          familyName: 'Misty',
           kind: 'container',
         },
       ],
-      defaultEngineId: 'xiangqi-mahjong-bot',
+      defaultEngineId: 'misty-xiangqi-mahjong',
       hideColorPicker: true,
     },
   },

@@ -152,7 +152,7 @@ registerVariantTenant({
   gameSpecId: xiangqiMahjongTenant.gameSpecId,
   roomIdPrefix: xiangqiMahjongTenant.roomIdPrefix,
   isEngineClientId: isXmjBotClientId,
-  engineDisplayName: (clientId) => (isXmjBotClientId(clientId) ? 'Xiangqi mahjong bot' : null),
+  engineDisplayName: (clientId) => (isXmjBotClientId(clientId) ? 'Misty' : null),
   ownsSpecRouting: true,
   replays: tenantReplayCheck(xiangqiMahjongTenant),
   errorPrefix: 'xiangqi_mahjong',

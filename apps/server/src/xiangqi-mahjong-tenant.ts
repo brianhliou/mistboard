@@ -194,7 +194,7 @@ export const xiangqiMahjongTenant: XmjTenantType = {
   engine: {
     terminalContext: 'full-history',
     isEngineClientId: isXmjBotClientId,
-    displayName: () => 'Xiangqi mahjong bot',
+    displayName: () => 'Misty',
     reservationReleaseTag: 'xiangqi-mahjong',
   },
   visibility: {

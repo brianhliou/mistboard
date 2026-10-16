@@ -301,6 +301,9 @@ test('xmj pvp: a friend room seats no bot and carries the rated flag', async () 
     assert.equal(pvpExtras.roomMode, 'pvp');
 
     assert.equal(isXmjBotClientId(pve.room.projection.seats.west), true);
+    // Games stored before the misty-<variant> rename keep their bot seat.
+    assert.equal(isXmjBotClientId('xiangqi-mahjong-bot'), true);
+    assert.equal(isXmjBotClientId('misty'), false);
     assert.equal(pve.room.projection.seats.east, undefined);
     assert.equal(pve.room.rated, false, 'a bot game never rates');
     const pveExtras = tenant.wire?.snapshotExtras?.(pve.room, client('east')) ?? {};

@@ -279,7 +279,7 @@ definePersistenceTests('room bot play requests', () => {
       });
       assert.ok(resolved);
       assert.equal(resolved.botId, 'misty');
-      assert.equal(resolved.engineId, 'xiangqi-mahjong-bot');
+      assert.equal(resolved.engineId, 'misty-xiangqi-mahjong');
     } finally {
       if (before === undefined) delete process.env.MISTBOARD_XIANGQI_MAHJONG_ENABLED;
       else process.env.MISTBOARD_XIANGQI_MAHJONG_ENABLED = before;

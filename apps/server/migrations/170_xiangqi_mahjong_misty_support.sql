@@ -3,7 +3,7 @@
 -- can start a game against her.
 --
 -- first-party-bots.ts names the ENGINE for a (bot, variant) pair (Misty fronts
--- the in-process tile bot, 'xiangqi-mahjong-bot'); this column decides whether
+-- the in-process tile bot, 'misty-xiangqi-mahjong'); this column decides whether
 -- the pair is allowed at all (routes/rooms.ts checks bot.supportedGameSpecIds),
 -- and a new variant needs both (migration 138 is the scar).
 --
