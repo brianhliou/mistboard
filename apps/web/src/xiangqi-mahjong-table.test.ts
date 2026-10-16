@@ -317,12 +317,14 @@ describe('xiangqi mahjong table', () => {
           const tiles = [...host.querySelectorAll(`[data-xmj-pond="${pondSeat}"] .xmj-tile`)];
           const flags = tiles.map((tile) => tile.classList.contains('xmj-tile--fromdraw'));
           expect(flags).toEqual(view.drawnDiscards[pondSeat]);
+          expect(tiles.map((tile) => tile.hasAttribute('title'))).toEqual(flags);
           for (const [index, tile] of tiles.entries()) {
             if (!flags[index]) continue;
             marked += 1;
-            expect(labelOf(tile)).toBe(
-              `${xmjTileName(view.discards[pondSeat][index] as XmjTile)}, discarded as drawn`,
-            );
+            const said = `${xmjTileName(view.discards[pondSeat][index] as XmjTile)}, discarded as drawn`;
+            expect(labelOf(tile)).toBe(said);
+            // The dimming is explained on hover.
+            expect(tile.getAttribute('title')).toBe(said);
           }
         }
       }

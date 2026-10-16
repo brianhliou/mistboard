@@ -225,8 +225,9 @@ function tileClass(tile: XmjTile, extra = ''): string {
   return `xmj-tile ${ink}${faced}${extra ? ` ${extra}` : ''}`;
 }
 
-function tileSpan(tile: XmjTile, extra = '', label = xmjTileName(tile)): string {
-  return `<span class="${tileClass(tile, extra)}"${tileFaceStyle(tile)} role="img" aria-label="${label}">${tileArt(tile)}</span>`;
+function tileSpan(tile: XmjTile, extra = '', label = xmjTileName(tile), tip = false): string {
+  const title = tip ? ` title="${label}"` : '';
+  return `<span class="${tileClass(tile, extra)}"${tileFaceStyle(tile)} role="img" aria-label="${label}"${title}>${tileArt(tile)}</span>`;
 }
 
 function tileButton(tile: XmjTile, extra = ''): string {
@@ -383,7 +384,8 @@ function pondHtml(
     .map((tile, index) => {
       const classes = ['xmj-tile--sm'];
       if (marked && index === tiles.length - 1) classes.push('xmj-tile--last');
-      // Discarded straight after drawing it: a quiet dot, and said in words.
+      // Discarded straight after drawing it: dimmed (the Tenhou convention), and
+      // said in words on hover and to a screen reader.
       const drew = fromDraw[index] === true;
       if (drew) classes.push('xmj-tile--fromdraw');
       const name = xmjTileName(tile);
@@ -391,6 +393,7 @@ function pondHtml(
         tile,
         classes.join(' '),
         drew ? t('live.xmj.drawnDiscard', { tile: name }) : name,
+        drew,
       );
     })
     .join('');

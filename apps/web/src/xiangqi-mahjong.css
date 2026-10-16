@@ -396,16 +396,11 @@
   border-top-color: var(--xmj-accent);
 }
 
-/* Discarded straight after drawing it: a small jade dot in the corner. */
-.xmj-tile--fromdraw::after {
-  content: "";
-  position: absolute;
-  top: 3px;
-  right: 3px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--xmj-jade);
+/* Discarded straight after drawing it: dimmed, the Tenhou convention, so a
+   pond reads which tiles the player chose to let go of. The tile's title says
+   it in words. */
+.xmj-tile--fromdraw {
+  filter: brightness(0.7) saturate(0.6);
 }
 
 /* ── The middle band ───────────────────────────────────────────────────────── */
