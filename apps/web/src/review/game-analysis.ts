@@ -63,6 +63,9 @@ export type MoveAnalysis = {
   judgment: MoveJudgment;
   /** This move's accuracy in [0, 100]. */
   accuracy: number;
+  /** Win-chance points the mover gave up, on a judged move only (the drop the judgment was
+   *  graded on). Feeds the grade card ("lost 12 points"). */
+  winLoss?: number;
   praise?: MovePraise;
 };
 
@@ -217,7 +220,13 @@ export function computeGameAnalysis(
     const judgment =
       isChance || isUnstable || isBestPlayed ? null : moveJudgment(winBefore, winAfter);
     const accuracy = isBestPlayed ? 100 : accuracyPercent(winBefore, winAfter);
-    moves.push({ ply, mover, judgment, accuracy });
+    moves.push({
+      ply,
+      mover,
+      judgment,
+      accuracy,
+      ...(judgment ? { winLoss: Math.max(0, winBefore - winAfter) } : {}),
+    });
 
     // A chance move doesn't contribute to a player's mistake counts or ACPL — we can't say the
     // swing was their fault (or credit).

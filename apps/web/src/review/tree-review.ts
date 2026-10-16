@@ -38,6 +38,7 @@ import {
   type DecisionOverlay,
   type MarkArrowMove,
   type MarkBetter,
+  type MarkGrade,
 } from './analysis-marks.js';
 import { createAnalysisSummary, type SummaryJudgment } from './analysis-summary.js';
 import { createAnnotationEditor } from './annotations-editor.js';
@@ -72,6 +73,7 @@ import {
   type TreePath,
   type VariantTreeAdapter,
 } from './game-tree.js';
+import { attachGradeGlyphCard, attachGradeMarkCard } from './grade-mark-card.js';
 import { defaultFormatBestMove } from './move-advice.js';
 import { type MoveGlyphTone, moveGlyphTone } from './move-glyph.js';
 import { createMoveTimesChart } from './move-times-chart.js';
@@ -1023,6 +1025,23 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   let analysisMarkByPly = new Map<number, AnalysisMark>();
   /** Path key → the scored chance move behind each move-list luck badge (moveListLuck). */
   let luckByPathKey = new Map<string, { move: Move; luck: number; before: Truth }>();
+  /** Path key → the mainline ply of each graded move, for the grade card. */
+  let gradePlyByPathKey = new Map<string, number>();
+
+  /** What the grade card says for the move at `key`: the engine's grade, read when the card
+   *  opens. Null for an ungraded move, and for one whose glyph is the user's own (an
+   *  authored "?" replaces the engine's and has no numbers behind it). Retro keeps the
+   *  better move back until the reader has found it, as the advice line does. */
+  function gradeAt(key: string): MarkGrade | null {
+    const ply = gradePlyByPathKey.get(key);
+    const mark = ply === undefined ? undefined : analysisMarkByPly.get(ply);
+    if (ply === undefined || !mark?.grade) return null;
+    const shown = annotationByPathKey.get(key);
+    if (shown?.suffix !== mark.suffix || shown?.suffixClass !== mark.suffixClass) return null;
+    if (!retro?.hidesPly(ply)) return mark.grade;
+    const { best: _hidden, ...rest } = mark.grade;
+    return rest;
+  }
 
   /** Badge for the glyph on the move that LED to the current node (so it sits on
    *  the piece that just moved). Empty at the root, for variants without the
@@ -1139,6 +1158,17 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     luckAt: (key) => luckByPathKey.get(key) ?? null,
     signal: mountAbort.signal,
   });
+  // The grade card: the board badge and the move list's glyph open it, each for its own move.
+  const detachGradeBoard = attachGradeMarkCard(boardEl, () => gradeAt(pathKey(currentPath)));
+  const detachGradeList = attachGradeGlyphCard(moveTree.el, gradeAt);
+  mountAbort.signal.addEventListener(
+    'abort',
+    () => {
+      detachGradeBoard();
+      detachGradeList();
+    },
+    { once: true },
+  );
 
   // ── Computer-injected refutation lines (lichess "computer variations") ──
   // Nodes grafted from the whole-game analysis' best-play PVs at every judged
@@ -2156,6 +2186,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         })
       : new Map();
     luckByPathKey = new Map();
+    gradePlyByPathKey = new Map();
     if (gameAnalysis) {
       const nodes = mainlineNodes();
       const evalByPly = new Map(gameAnalysis.evals.map((entry) => [entry.ply, entry]));
@@ -2181,6 +2212,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         if (luck !== undefined && node.move && node.parent) {
           luckByPathKey.set(nodeKey, { move: node.move, luck, before: node.parent.truth });
         }
+        if (mark.grade) gradePlyByPathKey.set(nodeKey, ply);
         byPathKey.set(nodeKey, {
           suffix: mark.suffix,
           suffixClass: mark.suffixClass,
